@@ -1,0 +1,12 @@
+build*
+old_*
+*a.out
+install*
+*.vtk
+*.vtu
+*.vtp
+*.vscode
+.vs
+CMakeSettings.json
+docs/doxygen/*.txt
+!docs/doxygen/doxygen_template.txt
