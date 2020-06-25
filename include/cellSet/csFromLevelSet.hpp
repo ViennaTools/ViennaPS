@@ -26,14 +26,16 @@ enum struct csFromLevelsetEnum : unsigned {
 template <class LSType, class CSType> class csFromLevelSet {
   LSType *levelSet = nullptr;
   CSType *cellSet = nullptr;
-  csFromLevelsetEnum conversionType = csFromLevelsetEnum::SIMPLE; // TODO change to lookup
+  csFromLevelsetEnum conversionType =
+      csFromLevelsetEnum::SIMPLE; // TODO change to lookup
   bool calculateFillingFraction = true;
   static constexpr int D = LSType::dimensions;
 
   void convertSimple() {
     // typedef typename CSType::ValueType CellType;
     auto &grid = levelSet->getGrid();
-    CSType newCSDomain(grid, cellSet->getBackGroundValue(), cellSet->getEmptyValue());
+    CSType newCSDomain(grid, cellSet->getBackGroundValue(),
+                       cellSet->getEmptyValue());
     typename CSType::DomainType &newDomain = newCSDomain.getDomain();
     typename LSType::DomainType &domain = levelSet->getDomain();
 
@@ -95,7 +97,8 @@ public:
       : levelSet(&passedLevelSet), cellSet(&passedCellSet) {}
 
   csFromLevelSet(LSType &passedLevelSet, CSType &passedCellSet, bool cff)
-      : levelSet(&passedLevelSet), cellSet(&passedCellSet), calculateFillingFraction(cff) {}
+      : levelSet(&passedLevelSet), cellSet(&passedCellSet),
+        calculateFillingFraction(cff) {}
 
   void setLevelSet(LSType &passedLevelSet) { levelSet = &passedLevelSet; }
 
@@ -117,17 +120,16 @@ public:
       return;
     }
 
-
-    switch(conversionType) {
-      case csFromLevelsetEnum::ANALYTICAL:
-        // convertAnalytical
-        break;
-      case csFromLevelsetEnum::LOOKUP:
-        // convertLookup
-        break;
-      case csFromLevelsetEnum::SIMPLE:
-        convertSimple();
-        break;
+    switch (conversionType) {
+    case csFromLevelsetEnum::ANALYTICAL:
+      // convertAnalytical
+      break;
+    case csFromLevelsetEnum::LOOKUP:
+      // convertLookup
+      break;
+    case csFromLevelsetEnum::SIMPLE:
+      convertSimple();
+      break;
     }
   } // apply()
 };

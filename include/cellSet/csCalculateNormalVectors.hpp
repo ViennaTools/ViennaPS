@@ -48,7 +48,8 @@ public:
       p = omp_get_thread_num();
 #endif
 
-      std::vector<std::array<double, D>> &normalVectors = normalVectorsVector[p];
+      std::vector<std::array<double, D>> &normalVectors =
+          normalVectorsVector[p];
       normalVectors.reserve(pointsPerSegment);
 
       hrleVectorType<hrleIndexType, D> startVector =
@@ -72,8 +73,12 @@ public:
 
         double denominator = 0;
         for (int i = 0; i < D; i++) {
-          double pos = neighborIt.getNeighbor(i).getValue().getFillingFraction() - center.getValue().getFillingFraction();
-          double neg = center.getValue().getFillingFraction() - neighborIt.getNeighbor(i + D).getValue().getFillingFraction();
+          double pos =
+              neighborIt.getNeighbor(i).getValue().getFillingFraction() -
+              center.getValue().getFillingFraction();
+          double neg =
+              center.getValue().getFillingFraction() -
+              neighborIt.getNeighbor(i + D).getValue().getFillingFraction();
           n[i] = (pos + neg) * 0.5;
           denominator += n[i] * n[i];
         }

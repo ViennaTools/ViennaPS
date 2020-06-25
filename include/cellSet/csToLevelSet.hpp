@@ -22,10 +22,11 @@ enum struct csToLevelsetEnum : unsigned {
 template <class LSType, class CSType> class csToLevelSet {
   LSType *levelSet = nullptr;
   CSType *cellSet = nullptr;
-  csToLevelsetEnum conversionType = csToLevelsetEnum::SIMPLE; // TODO change to lookup
+  csToLevelsetEnum conversionType =
+      csToLevelsetEnum::SIMPLE; // TODO change to lookup
   static constexpr int D = LSType::dimensions;
 
-  void convertSimple(){
+  void convertSimple() {
     // typedef typename CSType::ValueType CellType;
     typename CSType::GridType &grid = cellSet->getGrid();
     LSType newLSDomain(grid);
@@ -56,10 +57,10 @@ template <class LSType, class CSType> class csToLevelSet {
 
         // skip this voxel if there is no plane inside
         if (!it.isDefined()) {
-          auto undefinedValue =
-              (it.getValue().getFillingFraction() == cellSet->getEmptyValue().getFillingFraction())
-                  ? LSType::POS_VALUE
-                  : LSType::NEG_VALUE;
+          auto undefinedValue = (it.getValue().getFillingFraction() ==
+                                 cellSet->getEmptyValue().getFillingFraction())
+                                    ? LSType::POS_VALUE
+                                    : LSType::NEG_VALUE;
           // insert an undefined point to create correct hrle structure
           newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
                                              undefinedValue);
@@ -111,16 +112,16 @@ public:
       return;
     }
 
-    switch(conversionType) {
-      case csToLevelsetEnum::ANALYTICAL:
-        // convertAnalytical
-        break;
-      case csToLevelsetEnum::LOOKUP:
-        // convertLookup
-        break;
-      case csToLevelsetEnum::SIMPLE:
-        convertSimple();
-        break;
+    switch (conversionType) {
+    case csToLevelsetEnum::ANALYTICAL:
+      // convertAnalytical
+      break;
+    case csToLevelsetEnum::LOOKUP:
+      // convertLookup
+      break;
+    case csToLevelsetEnum::SIMPLE:
+      convertSimple();
+      break;
     }
   }
 };

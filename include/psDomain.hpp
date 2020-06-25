@@ -29,16 +29,18 @@ public:
   /// a level set describing a plane substrate will be instantiatied.
   psDomain(double gridDelta = 1.0) {
     double bounds[2 * D] = {-20, 20, -20, 20};
-    if(D == 3){
+    if (D == 3) {
       bounds[4] = -20;
       bounds[5] = 20;
     }
 
     typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
-    for(unsigned i = 0; i < D - 1; ++i) {
-      boundaryCons[i] = lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+    for (unsigned i = 0; i < D - 1; ++i) {
+      boundaryCons[i] =
+          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
     }
-    boundaryCons[D - 1] = lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+    boundaryCons[D - 1] =
+        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
     lsDomain<NumericType, D> substrate(bounds, boundaryCons, gridDelta);
     NumericType origin[3] = {0., 0., 0.};
     NumericType planeNormal[3] = {0, D == 2, D == 3};

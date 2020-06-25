@@ -76,7 +76,7 @@ public:
       auto index = it.getStartIndices();
 
       hrleVectorType<double, 3> point(double(0));
-      for(unsigned i = 0; i < D; ++i) {
+      for (unsigned i = 0; i < D; ++i) {
         point[i] = index[i] * gridDelta;
       }
 
@@ -195,7 +195,8 @@ public:
       // rgrid->GetPoint(pointId, p);
       // hrleVectorType<float, D> point(p);
       // point /= gridDelta;
-      // std::cout << "grid: " << point << ", cs: " << it.getIndices() << std::endl;
+      // std::cout << "grid: " << point << ", cs: " << it.getIndices() <<
+      // std::endl;
       //
       // while(point < it.getStartIndices()){
       //   rgrid->GetPoint(pointId, p);
