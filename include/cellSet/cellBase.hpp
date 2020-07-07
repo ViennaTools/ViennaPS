@@ -16,33 +16,50 @@
 /// be returned by a call to "std::ostream serialize(std::ostream)"
 /// which should also call serialize of this base class.
 class cellBase {
-  double fillingFraction = 0.;
+  using materialFractionType = std::vector<std::pair<unsigned, float>>;
+  materialFractionType materialFractions;
 
 public:
-  cellBase() {}
+  // cellBase() {
+  //   materialFractions.push_back(std::make_pair(0, 1.0));
+  // }
 
-  cellBase(const cellBase &passedCell) {
-    fillingFraction = passedCell.fillingFraction;
+  cellBase(unsigned baseMaterial = 0) {
+    materialFractions.push_back(std::make_pair(baseMaterial, 1.0));
   }
 
-  double getFillingFraction() const { return fillingFraction; }
+  cellBase(const cellBase &passedCell) {
+    materialFractions = passedCell.materialFractions;
+  }
 
-  void setFillingFraction(double passedFillingFraction) {
-    fillingFraction = passedFillingFraction;
+  const materialFractionType getMaterialFractions() const { return materialFractions; }
+
+  materialFractionType getMaterialFractions() { return materialFractions; }
+
+  void setMaterialFractions(materialFractionType passedMaterialFractions) {
+    materialFractions = passedMaterialFractions;
   }
 
   virtual bool operator==(cellBase passedCell) {
-    return fillingFraction == passedCell.fillingFraction;
+    for(unsigned i = 0; i < materialFractions.size(); ++i) {
+      if(materialFractions[i].first != passedCell.materialFractions[i].first) {
+        return false;
+      }
+      if(materialFractions[i].second != passedCell.materialFractions[i].second) {
+        return false;
+      }
+    }
+    return true;
   }
 
   virtual std::ostream &serialize(std::ostream &s) {
-    s.write(reinterpret_cast<const char *>(&fillingFraction),
-            sizeof(fillingFraction));
+    s.write(reinterpret_cast<const char *>(&materialFractions),
+            sizeof(materialFractions));
     return s;
   }
 
   virtual std::istream &deserialize(std::istream &s) {
-    s.read(reinterpret_cast<char *>(&fillingFraction), sizeof(fillingFraction));
+    s.read(reinterpret_cast<char *>(&materialFractions), sizeof(materialFractions));
     return s;
   }
 
@@ -50,7 +67,11 @@ public:
 };
 
 template <class S> S &operator<<(S &s, const cellBase &cell) {
-  s << "fillingFraction: " << cell.getFillingFraction();
+  s << "materialFractions: ";
+  const auto &fractions = cell.getMaterialFractions();
+  for(auto& f : fractions) {
+    s << "[" << f.first << ": " << f.second << "], ";
+  }
   return s;
 }
 

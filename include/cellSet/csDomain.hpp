@@ -25,7 +25,6 @@ public:
 
   csDomain(hrleCoordType gridDelta = 1.0, T backGround = T(), T empty = T())
       : backGroundValue(backGround), emptyValue(empty) {
-    backGroundValue.setFillingFraction(1.0);
     hrleIndexType gridMin[D], gridMax[D];
     BoundaryType boundaryCons[D];
     for (unsigned i = 0; i < D; ++i) {
@@ -41,7 +40,6 @@ public:
   /// construct empty csDomain from the passed grid
   csDomain(const GridType &passedGrid, T backGround = T(), T empty = T())
       : grid(passedGrid), backGroundValue(backGround), emptyValue(empty) {
-    backGroundValue.setFillingFraction(1.0);
     domain.deepCopy(grid, DomainType(grid, backGroundValue));
   }
 

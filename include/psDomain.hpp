@@ -5,8 +5,8 @@
 #include <lsMakeGeometry.hpp>
 
 #include <csDomain.hpp>
-#include <csFromLevelSet.hpp>
-#include <csToLevelSet.hpp>
+#include <csFromLevelSets.hpp>
+#include <csToLevelSets.hpp>
 
 /**
   This class represents one material in the simulation domain.
@@ -18,11 +18,12 @@
 template <class CellType, class NumericType = float, int D = 3> class psDomain {
 public:
   typedef lsDomain<NumericType, D> lsDomainType;
+  typedef std::vector<lsSmartPointer<lsDomainType>> lsDomainsType;
   typedef csDomain<CellType, D> csDomainType;
 
 private:
-  lsDomainType levelSet;
-  csDomainType cellSet;
+  lsDomainsType levelSets;
+  lsSmartPointer<csDomainType> cellSet;
 
 public:
   /// If no other geometry is passed to psDomain,
@@ -41,44 +42,51 @@ public:
     }
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
-    lsDomain<NumericType, D> substrate(bounds, boundaryCons, gridDelta);
+        
+    auto substrate = lsSmartPointer<lsDomain<NumericType, D>>::New(bounds, boundaryCons, gridDelta);
     NumericType origin[3] = {0., 0., 0.};
     NumericType planeNormal[3] = {0, D == 2, D == 3};
 
     // set up the level set
     lsMakeGeometry<NumericType, D>(substrate,
-                                   lsPlane<NumericType, D>(origin, planeNormal))
+                                   lsSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal))
         .apply();
     // copy level set
-    levelSet.deepCopy(substrate);
+    levelSets.push_back(substrate);
 
     // generate the cell set from the levelset
     generateCellSet();
   }
 
-  psDomain(lsDomainType passedLevelSet) : levelSet(passedLevelSet) {}
+  psDomain(lsSmartPointer<lsDomainType> passedLevelSet) {
+    levelSets.push_back(passedLevelSet);
+  }
 
-  psDomain(csDomainType passedCellSet) : cellSet(passedCellSet) {}
+  psDomain(csDomainType passedCellSet) {
+    cellSet = lsSmartPointer<csDomainType>::New(passedCellSet);
+  }
 
   void generateCellSet(bool calculateFillingFraction = true) {
-    csFromLevelSet<lsDomainType, csDomainType>(levelSet, cellSet,
+    csFromLevelSets<lsDomainsType, lsSmartPointer<csDomainType>>(levelSets, cellSet,
                                                calculateFillingFraction)
         .apply();
   }
 
   void generateLevelSet() {
-    csToLevelSet<lsDomainType, csDomainType>(levelSet, cellSet).apply();
+    csToLevelSets<lsDomainsType, lsSmartPointer<csDomainType>>(levelSets, cellSet).apply();
   }
 
-  lsDomainType &getLevelSet() { return levelSet; }
+  auto &getLevelSets() { return levelSets; }
 
-  csDomainType &getCellSet() { return cellSet; }
+  auto &getCellSet() { return cellSet; }
 
   void print() {
     std::cout << "Process Simulation Domain:" << std::endl;
     std::cout << "**************************" << std::endl;
-    levelSet.print();
-    cellSet.print();
+    for(auto& ls : levelSets) {
+      ls->print();
+    }
+    cellSet->print();
     std::cout << "**************************" << std::endl;
   }
 };

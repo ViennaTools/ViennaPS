@@ -1,43 +1,37 @@
-#ifndef CS_FROM_LEVEL_SET_HPP
-#define CS_FROM_LEVEL_SET_HPP
-
-// #include <set>
-// #include <unordered_set>
+#ifndef CS_TO_LEVEL_SET_HPP
+#define CS_TO_LEVEL_SET_HPP
 
 #include <hrleFillDomainFromPointList.hpp>
 #include <hrleFillDomainWithSignedDistance.hpp>
 #include <hrleVectorType.hpp>
 
 #include <lsCalculateNormalVectors.hpp>
-// #include <lsConvexHull.hpp>
-
-#include <csDomain.hpp>
+#include <lsExpand.hpp>
 
 /// Enumeration for the different types of conversion
-enum struct csFromLevelsetEnum : unsigned {
+enum struct csToLevelSetsEnum : unsigned {
   ANALYTICAL = 0,
   LOOKUP = 1,
   SIMPLE = 2,
 };
 
-/// This class constructs a csDomain from an lsDomain.
-/// Filling fraction can be calculated by cutting each voxel
-/// by the plane of an LS disk (normal and ls value) and computing the volume.
-template <class LSType, class CSType> class csFromLevelSet {
+/// This algorithm converts a cellSet into a levelSet by
+/// calculating the surface normal from neighbouring cells
+/// and using the filling fraction to find a point on the surface,
+/// which can then be converted to a level set value.
+template <class LSType, class CSType> class csToLevelSets {
   LSType *levelSet = nullptr;
   CSType *cellSet = nullptr;
-  csFromLevelsetEnum conversionType =
-      csFromLevelsetEnum::SIMPLE; // TODO change to lookup
-  bool calculateFillingFraction = true;
+  csToLevelSetsEnum conversionType =
+      csToLevelSetsEnum::SIMPLE; // TODO change to lookup
   static constexpr int D = LSType::dimensions;
 
   void convertSimple() {
     // typedef typename CSType::ValueType CellType;
-    auto &grid = levelSet->getGrid();
-    CSType newCSDomain(grid, cellSet->getBackGroundValue(),
-                       cellSet->getEmptyValue());
-    typename CSType::DomainType &newDomain = newCSDomain.getDomain();
-    typename LSType::DomainType &domain = levelSet->getDomain();
+    typename CSType::GridType &grid = cellSet->getGrid();
+    LSType newLSDomain(grid);
+    typename LSType::DomainType &newDomain = newLSDomain.getDomain();
+    typename CSType::DomainType &domain = cellSet->getDomain();
 
     newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
 
@@ -57,54 +51,52 @@ template <class LSType, class CSType> class csFromLevelSet {
               ? domain.getSegmentation()[p]
               : grid.incrementIndices(grid.getMaxGridPoint());
 
-      for (hrleConstSparseIterator<typename LSType::DomainType> it(domain,
+      for (hrleConstSparseIterator<typename CSType::DomainType> it(domain,
                                                                    startVector);
            it.getStartIndices() < endVector; it.next()) {
 
         // skip this voxel if there is no plane inside
-        if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-          auto undefinedValue = (it.getValue() > 0)
-                                    ? cellSet->getEmptyValue()
-                                    : cellSet->getBackGroundValue();
+        if (!it.isDefined()) {
+          auto undefinedValue = (it.getValue().getFillingFraction() ==
+                                 cellSet->getEmptyValue().getFillingFraction())
+                                    ? LSType::POS_VALUE
+                                    : LSType::NEG_VALUE;
           // insert an undefined point to create correct hrle structure
           newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
                                              undefinedValue);
           continue;
         }
 
-        typename CSType::ValueType cell;
+        // generate the normal vector by considering neighbours
+        auto fillingFraction = it.getValue().getFillingFraction();
 
-        // this is the function to convert an LS value to a CS value
-        cell.setFillingFraction(0.5 - it.getValue());
-
-        newDomain.insertNextDefinedPoint(p, it.getStartIndices(), cell);
-      } // end of ls loop
-    }   // end of parallel
+        newDomain.insertNextDefinedPoint(p, it.getStartIndices(),
+                                         0.5 - fillingFraction);
+      }
+    }
 
     // distribute evenly across segments and copy
     newDomain.finalize();
     newDomain.segment();
-    // copy new domain into old csdomain
-    cellSet->deepCopy(newCSDomain);
+    // copy new domain into old lsdomain
+    levelSet->getDomain().deepCopy(grid, newDomain);
+    levelSet->setLevelSetWidth(1);
+
+    // pad to width of 2, so it is normalised again
+    lsExpand<typename LSType::ValueType, D>(*levelSet, 2).apply();
   }
 
 public:
-  csFromLevelSet() {}
+  csToLevelSets() {}
 
-  csFromLevelSet(LSType &passedLevelSet) : levelSet(&passedLevelSet) {}
+  csToLevelSets(LSType &passedLevelSet) : levelSet(&passedLevelSet) {}
 
-  csFromLevelSet(LSType &passedLevelSet, CSType &passedCellSet)
+  csToLevelSets(LSType &passedLevelSet, CSType &passedCellSet)
       : levelSet(&passedLevelSet), cellSet(&passedCellSet) {}
-
-  csFromLevelSet(LSType &passedLevelSet, CSType &passedCellSet, bool cff)
-      : levelSet(&passedLevelSet), cellSet(&passedCellSet),
-        calculateFillingFraction(cff) {}
 
   void setLevelSet(LSType &passedLevelSet) { levelSet = &passedLevelSet; }
 
   void setCellSet(CSType &passedCellSet) { cellSet = &passedCellSet; }
-
-  void setCalculateFillingFraction(bool cff) { calculateFillingFraction = cff; }
 
   void apply() {
     if (levelSet == nullptr) {
@@ -121,17 +113,17 @@ public:
     }
 
     switch (conversionType) {
-    case csFromLevelsetEnum::ANALYTICAL:
+    case csToLevelSetsEnum::ANALYTICAL:
       // convertAnalytical
       break;
-    case csFromLevelsetEnum::LOOKUP:
+    case csToLevelSetsEnum::LOOKUP:
       // convertLookup
       break;
-    case csFromLevelsetEnum::SIMPLE:
+    case csToLevelSetsEnum::SIMPLE:
       convertSimple();
       break;
     }
-  } // apply()
+  }
 };
 
-#endif // CS_FROM_LEVEL_SET_HPP
+#endif // CS_TO_LEVEL_SET_HPP
