@@ -24,8 +24,8 @@ public:
   //   materialFractions.push_back(std::make_pair(0, 1.0));
   // }
 
-  cellBase(unsigned baseMaterial = 0) {
-    materialFractions.push_back(std::make_pair(baseMaterial, 1.0));
+  cellBase(float fillingFraction = 0.0, unsigned baseMaterial = 0) {
+    materialFractions.push_back(std::make_pair(baseMaterial, fillingFraction));
   }
 
   cellBase(const cellBase &passedCell) {

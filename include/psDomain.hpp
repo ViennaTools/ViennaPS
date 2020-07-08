@@ -9,21 +9,21 @@
 #include <csToLevelSets.hpp>
 
 /**
-  This class represents one material in the simulation domain.
-  It contains a level set for the accurate surface representation
+  This class represents all materials in the simulation domain.
+  It contains level sets for the accurate surface representation
   and a cell-based structure for the storage of volume information.
   These structures are used depending on the process applied to the material.
   Processes may use one of either structures or both.
 */
 template <class CellType, class NumericType = float, int D = 3> class psDomain {
 public:
-  typedef lsDomain<NumericType, D> lsDomainType;
-  typedef std::vector<lsSmartPointer<lsDomainType>> lsDomainsType;
-  typedef csDomain<CellType, D> csDomainType;
+  typedef lsSmartPointer<lsDomain<NumericType, D>> lsDomainType;
+  typedef std::vector<lsDomainType> lsDomainsType;
+  typedef lsSmartPointer<csDomain<CellType, D>> csDomainType;
 
 private:
   lsDomainsType levelSets;
-  lsSmartPointer<csDomainType> cellSet;
+  csDomainType cellSet;
 
 public:
   /// If no other geometry is passed to psDomain,
@@ -51,34 +51,38 @@ public:
     lsMakeGeometry<NumericType, D>(substrate,
                                    lsSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal))
         .apply();
-    // copy level set
+    // push level set into list
     levelSets.push_back(substrate);
 
     // generate the cell set from the levelset
     generateCellSet();
   }
 
-  psDomain(lsSmartPointer<lsDomainType> passedLevelSet) {
+  psDomain(lsDomainType passedLevelSet) {
     levelSets.push_back(passedLevelSet);
   }
 
-  psDomain(csDomainType passedCellSet) {
-    cellSet = lsSmartPointer<csDomainType>::New(passedCellSet);
+  psDomain(csDomain<CellType, D> &passedCellSet) {
+    cellSet = csDomainType::New(passedCellSet);
   }
 
+  psDomain(csDomainType passedCellSet) : cellSet(passedCellSet) {}
+
   void generateCellSet(bool calculateFillingFraction = true) {
-    csFromLevelSets<lsDomainsType, lsSmartPointer<csDomainType>>(levelSets, cellSet,
+    csFromLevelSets<lsDomainsType, csDomainType>(levelSets, cellSet,
                                                calculateFillingFraction)
         .apply();
   }
 
   void generateLevelSet() {
-    csToLevelSets<lsDomainsType, lsSmartPointer<csDomainType>>(levelSets, cellSet).apply();
+    csToLevelSets<lsDomainsType, csDomainType>(levelSets, cellSet).apply();
   }
 
   auto &getLevelSets() { return levelSets; }
 
   auto &getCellSet() { return cellSet; }
+
+  auto &getGrid() { return levelSets[0]->getGrid(); }
 
   void print() {
     std::cout << "Process Simulation Domain:" << std::endl;

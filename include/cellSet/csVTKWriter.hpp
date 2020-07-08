@@ -18,18 +18,19 @@
 #include <csDomain.hpp>
 
 template <class T, int D> class csVTKWriter {
-  const csDomain<T, D> *cellSet = nullptr;
+  using csDomainType = lsSmartPointer<const csDomain<T, D>>;
+  csDomainType cellSet = nullptr;
   std::string fileName;
 
 public:
   csVTKWriter() {}
 
-  csVTKWriter(csDomain<T, D> &passedCellSet) : cellSet(&passedCellSet) {}
+  csVTKWriter(csDomainType passedCellSet) : cellSet(&passedCellSet) {}
 
-  csVTKWriter(csDomain<T, D> &passedCellSet, std::string passedFileName)
-      : cellSet(&passedCellSet), fileName(passedFileName) {}
+  csVTKWriter(csDomainType passedCellSet, std::string passedFileName)
+      : cellSet(passedCellSet), fileName(passedFileName) {}
 
-  void setCellSet(csDomain<T, D> &passedCellSet) { cellSet = &passedCellSet; }
+  void setCellSet(csDomainType passedCellSet) { cellSet = &passedCellSet; }
 
   void setFileName(std::string passedFileName) { fileName = passedFileName; }
 
@@ -61,13 +62,11 @@ public:
     vtkSmartPointer<vtkPoints> polyPoints = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> polyCells =
         vtkSmartPointer<vtkCellArray>::New();
-    vtkSmartPointer<vtkFloatArray> pointData =
-        vtkSmartPointer<vtkFloatArray>::New();
-    pointData->SetNumberOfComponents(1);
-    pointData->SetName("fillingFraction");
+
+    std::map<unsigned, vtkSmartPointer<vtkFloatArray>> pointDataMap;
 
     unsigned counter = 0;
-    for (hrleConstSparseIterator<typename csDomain<T, D>::DomainType> it(
+    for (hrleConstSparseIterator<typename csDomainType::element_type::DomainType> it(
              cellSet->getDomain());
          !it.isFinished(); ++it) {
       if (!it.isDefined())
@@ -87,8 +86,26 @@ public:
       polyCells->InsertNextCell(1);
       polyCells->InsertCellPoint(counter);
 
-      // insert LS value
-      pointData->InsertNextValue(it.getValue().getFillingFraction());
+      // insert material fraction to correct pointData value
+      auto& materialFractions = it.getValue().getMaterialFractions();
+      // try if each material of the cell already exists
+      for(auto& material : materialFractions) {
+        auto it = pointDataMap.find(material.first);
+        // if material array does not exist yet
+        if(it == pointDataMap.end()) {
+          auto pointData = vtkSmartPointer<vtkFloatArray>::New();
+          pointData->SetNumberOfComponents(1);
+          pointData->SetName(("Material " + std::to_string(material.first)).c_str());
+          // fill up until current index
+          for(unsigned i = 0; i < counter; ++i) {
+            pointData->InsertNextValue(0);
+          }
+          // now insert into map
+          it = pointDataMap.insert(std::make_pair(material.first, pointData)).first;
+        }
+
+        it->second->InsertNextValue(material.second);
+      }
 
       ++counter;
     }
@@ -96,7 +113,9 @@ public:
     vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
     polyData->SetPoints(polyPoints);
     polyData->SetVerts(polyCells);
-    polyData->GetCellData()->AddArray(pointData);
+    for(auto it : pointDataMap) {
+      polyData->GetCellData()->AddArray(it.second);
+    }
 
     vtkSmartPointer<vtkXMLPolyDataWriter> pwriter =
         vtkSmartPointer<vtkXMLPolyDataWriter>::New();
@@ -149,7 +168,7 @@ public:
       coords[i] = vtkSmartPointer<vtkDoubleArray>::New();
 
       if (grid.getBoundaryConditions(i) ==
-          csDomain<T, D>::GridType::boundaryType::INFINITE_BOUNDARY) {
+          csDomainType::element_type::GridType::boundaryType::INFINITE_BOUNDARY) {
         gridMin = domain.getMinRunBreak(i);
         gridMax = domain.getMaxRunBreak(i);
       } else {
@@ -178,16 +197,17 @@ public:
     rgrid->SetZCoordinates(coords[2]);
 
     // Make array to store filling fractions
-    vtkSmartPointer<vtkDoubleArray> fillingFractions =
-        vtkSmartPointer<vtkDoubleArray>::New();
-    fillingFractions->SetNumberOfComponents(1);
-    fillingFractions->SetName("FillingFractions");
+    std::map<unsigned, vtkSmartPointer<vtkFloatArray>> pointDataMap;
+    // vtkSmartPointer<vtkDoubleArray> fillingFractions =
+    //     vtkSmartPointer<vtkDoubleArray>::New();
+    // fillingFractions->SetNumberOfComponents(1);
+    // fillingFractions->SetName("FillingFractions");
 
     vtkIdType pointId = 0;
     // int yValue = -10000000;
     // std::cout << std::endl << "RECTILINEAR GRID" << std::endl;
     // std::cout << gridMinima << " - " << gridMaxima << std::endl;
-    for (hrleConstDenseIterator<typename csDomain<T, D>::DomainType> it(domain);
+    for (hrleConstDenseIterator<typename csDomainType::element_type::DomainType> it(domain);
          !it.isFinished(); it.next()) {
 
       // TODO DENSE ITERATOR IS BROKEN, IT SKIPS ONE POINT FOR EACH NEW LINE
@@ -206,7 +226,7 @@ public:
       //   it.getValue().getFillingFraction() << std::endl;
       //   ++pointId;
       // }
-      fillingFractions->InsertNextValue(it.getValue().getFillingFraction());
+      // fillingFractions->InsertNextValue(it.getValue().getFillingFraction());
       // std::cout << it.getIndices() << ": " <<
       // it.getValue().getFillingFraction() << std::endl; std::cout <<
       // it.getIndices() << ": " << it.getIteratorIndices() << std::endl;
@@ -215,13 +235,36 @@ public:
       //   std::cout << std::endl;
       // }
       // std::cout << std::setw(8) << it.getValue() << "  ";
+      // insert material fraction to correct pointData value
+      auto& materialFractions = it.getValue().getMaterialFractions();
+      // try if each material of the cell already exists
+      for(auto& material : materialFractions) {
+        auto it = pointDataMap.find(material.first);
+        // if material array does not exist yet
+        if(it == pointDataMap.end()) {
+          auto pointData = vtkSmartPointer<vtkFloatArray>::New();
+          pointData->SetNumberOfComponents(1);
+          pointData->SetName(("Material " + std::to_string(material.first)).c_str());
+          // fill up until current index
+          for(unsigned i = 0; i < pointId; ++i) {
+            pointData->InsertNextValue(0);
+          }
+          // now insert into map
+          it = pointDataMap.insert(std::make_pair(material.first, pointData)).first;
+        }
+
+        it->second->InsertNextValue(material.second);
+      }
 
       ++pointId;
       if (pointId >= rgrid->GetNumberOfPoints())
         break;
     }
 
-    rgrid->GetPointData()->SetScalars(fillingFractions);
+    // rgrid->GetPointData()->SetScalars(fillingFractions);
+    for(auto it : pointDataMap) {
+      rgrid->GetCellData()->AddArray(it.second);
+    }
 
     vtkSmartPointer<vtkXMLRectilinearGridWriter> gwriter =
         vtkSmartPointer<vtkXMLRectilinearGridWriter>::New();

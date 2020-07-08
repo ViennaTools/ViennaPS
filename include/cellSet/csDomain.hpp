@@ -2,6 +2,7 @@
 #define CS_DOMAIN_HPP
 
 #include <hrleDomain.hpp>
+#include <lsSmartPointer.hpp>
 
 #include <cellBase.hpp>
 
@@ -23,7 +24,7 @@ private:
 public:
   static constexpr int dimensions = D;
 
-  csDomain(hrleCoordType gridDelta = 1.0, T backGround = T(), T empty = T())
+  csDomain(hrleCoordType gridDelta = 1.0, T backGround = T(1.0), T empty = T())
       : backGroundValue(backGround), emptyValue(empty) {
     hrleIndexType gridMin[D], gridMax[D];
     BoundaryType boundaryCons[D];

@@ -7,7 +7,7 @@
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
-#include <csFromLevelSet.hpp>
+#include <csFromLevelSets.hpp>
 #include <csVTKWriter.hpp>
 #include <psDomain.hpp>
 
@@ -27,29 +27,29 @@ int main() {
   if (D == 3)
     origin[2] = 0;
   NumericType radius = 15.3;
-  lsMakeGeometry<NumericType, D>(myDomain.getLevelSet(),
-                                 lsSphere<NumericType, D>(origin, radius))
+  lsMakeGeometry<NumericType, D>(myDomain.getLevelSets()[0],
+                                 lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
   origin[0] = 15.0;
   radius = 8.7;
-  lsDomain<NumericType, D> secondSphere(myDomain.getLevelSet().getGrid());
+  auto secondSphere = lsSmartPointer<lsDomain<NumericType, D>>::New(myDomain.getGrid());
   lsMakeGeometry<NumericType, D>(secondSphere,
-                                 lsSphere<NumericType, D>(origin, radius))
+                                 lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  lsBooleanOperation<NumericType, D>(myDomain.getLevelSet(), secondSphere,
+  lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()[0], secondSphere,
                                      lsBooleanOperationEnum::UNION)
       .apply();
 
-  lsMesh mesh;
-  lsToMesh<NumericType, D>(myDomain.getLevelSet(), mesh).apply();
+  auto mesh = lsSmartPointer<lsMesh>::New();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
   lsVTKWriter(mesh, "points.vtk").apply();
-  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSet(), mesh).apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
   lsVTKWriter(mesh, "surface.vtk").apply();
 
-  csFromLevelSet<typename psDomainType::lsDomainType,
+  csFromLevelSets<typename psDomainType::lsDomainsType,
                  typename psDomainType::csDomainType>
-      converter(myDomain.getLevelSet(), myDomain.getCellSet());
+      converter(myDomain.getLevelSets(), myDomain.getCellSet());
   // converter.setCalculateFillingFraction(false);
   converter.apply();
 
