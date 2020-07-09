@@ -28,7 +28,7 @@ private:
 public:
   /// If no other geometry is passed to psDomain,
   /// a level set describing a plane substrate will be instantiatied.
-  psDomain(double gridDelta = 1.0) {
+  psDomain(double gridDelta = 1.0, CellType backGroundCell = CellType(), CellType emptyCell = CellType()) {
     double bounds[2 * D] = {-20, 20, -20, 20};
     if (D == 3) {
       bounds[4] = -20;
@@ -54,12 +54,15 @@ public:
     // push level set into list
     levelSets.push_back(substrate);
 
+    cellSet = csDomainType::New(substrate->getGrid(), backGroundCell, emptyCell);
+
     // generate the cell set from the levelset
     generateCellSet();
   }
 
   psDomain(lsDomainType passedLevelSet) {
     levelSets.push_back(passedLevelSet);
+    cellSet = csDomainType::New(passedLevelSet->getGrid());
   }
 
   psDomain(csDomain<CellType, D> &passedCellSet) {

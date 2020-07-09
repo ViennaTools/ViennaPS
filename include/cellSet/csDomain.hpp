@@ -24,7 +24,7 @@ private:
 public:
   static constexpr int dimensions = D;
 
-  csDomain(hrleCoordType gridDelta = 1.0, T backGround = T(1.0), T empty = T())
+  csDomain(hrleCoordType gridDelta = 1.0, T backGround = T(), T empty = T())
       : backGroundValue(backGround), emptyValue(empty) {
     hrleIndexType gridMin[D], gridMax[D];
     BoundaryType boundaryCons[D];
@@ -45,18 +45,18 @@ public:
   }
 
   /// deep copy a csDomain
-  csDomain(const csDomain<T, D> &passedCellSet)
-      : emptyValue(passedCellSet.emptyValue),
-        backGroundValue(passedCellSet.backGroundValue) {
+  csDomain(lsSmartPointer<const csDomain<T, D>> passedCellSet)
+      : emptyValue(passedCellSet->emptyValue),
+        backGroundValue(passedCellSet->backGroundValue) {
     deepCopy(passedCellSet);
   }
 
   /// deep copy the passed csDomain into this one
-  void deepCopy(const csDomain<T, D> &passedCellSet) {
-    grid = passedCellSet.grid;
-    backGroundValue = passedCellSet.backGroundValue;
-    emptyValue = passedCellSet.emptyValue;
-    domain.deepCopy(grid, passedCellSet.domain);
+  void deepCopy(lsSmartPointer<const csDomain<T, D>> passedCellSet) {
+    grid = passedCellSet->grid;
+    backGroundValue = passedCellSet->backGroundValue;
+    emptyValue = passedCellSet->emptyValue;
+    domain.deepCopy(grid, passedCellSet->domain);
   }
 
   /// get reference to the grid on which the cell set is defined

@@ -16,8 +16,11 @@
 /// be returned by a call to "std::ostream serialize(std::ostream)"
 /// which should also call serialize of this base class.
 class cellBase {
-  using materialFractionType = std::vector<std::pair<unsigned, float>>;
-  materialFractionType materialFractions;
+public:
+  using MaterialFractionType = std::vector<std::pair<unsigned, float>>;
+
+private:
+  MaterialFractionType materialFractions;
 
 public:
   // cellBase() {
@@ -32,11 +35,11 @@ public:
     materialFractions = passedCell.materialFractions;
   }
 
-  const materialFractionType getMaterialFractions() const { return materialFractions; }
+  const MaterialFractionType &getMaterialFractions() const { return materialFractions; }
 
-  materialFractionType getMaterialFractions() { return materialFractions; }
+  MaterialFractionType &getMaterialFractions() { return materialFractions; }
 
-  void setMaterialFractions(materialFractionType passedMaterialFractions) {
+  void setMaterialFractions(MaterialFractionType passedMaterialFractions) {
     materialFractions = passedMaterialFractions;
   }
 

@@ -24,6 +24,9 @@ enum struct csFromLevelSetsEnum : unsigned {
 /// Filling fraction can be calculated by cutting each voxel
 /// by the plane of an LS disk (normal and ls value) and computing the volume.
 template <class LSType, class CSType> class csFromLevelSets {
+  using CellType = typename CSType::element_type::ValueType;
+  using DataDomainType = typename LSType::value_type::element_type::DomainType;
+
   LSType levelSets;
   CSType cellSet = nullptr;
   csFromLevelSetsEnum conversionType =
@@ -32,60 +35,61 @@ template <class LSType, class CSType> class csFromLevelSets {
   static constexpr int D = LSType::value_type::element_type::dimensions;
 
   void convertSimple() {
-    // typedef typename CSType::ValueType CellType;
-//     auto &grid = levelSets[0]->getGrid();
-//     CSType newCSDomain(grid, cellSet->getBackGroundValue(),
-//                        cellSet->getEmptyValue());
-//     auto &newDomain = newCSDomain->getDomain();
-//     auto &domain = levelSets->getDomain();
+    
+    auto &grid = levelSets[0]->getGrid();
+    auto newCSDomain = CSType::New(grid, cellSet->getBackGroundValue(),
+                       cellSet->getEmptyValue());
+    auto &newDomain = newCSDomain->getDomain();
+    auto &domain = levelSets.back()->getDomain();
 
-//     newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
+    newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
 
-// // go over each point and calculate the filling fraction
-// #pragma omp parallel num_threads(domain.getNumberOfSegments())
-//     {
-//       int p = 0;
-// #ifdef _OPENMP
-//       p = omp_get_thread_num();
-// #endif
+// go over each point and calculate the filling fraction
+#pragma omp parallel num_threads(domain.getNumberOfSegments())
+    {
+      int p = 0;
+#ifdef _OPENMP
+      p = omp_get_thread_num();
+#endif
 
-//       hrleVectorType<hrleIndexType, D> startVector =
-//           (p == 0) ? grid.getMinGridPoint() : domain.getSegmentation()[p - 1];
+      hrleVectorType<hrleIndexType, D> startVector =
+          (p == 0) ? grid.getMinGridPoint() : domain.getSegmentation()[p - 1];
 
-//       hrleVectorType<hrleIndexType, D> endVector =
-//           (p != static_cast<int>(domain.getNumberOfSegments() - 1))
-//               ? domain.getSegmentation()[p]
-//               : grid.incrementIndices(grid.getMaxGridPoint());
+      hrleVectorType<hrleIndexType, D> endVector =
+          (p != static_cast<int>(domain.getNumberOfSegments() - 1))
+              ? domain.getSegmentation()[p]
+              : grid.incrementIndices(grid.getMaxGridPoint());
 
-//       for (hrleConstSparseIterator<typename LSType::DomainType> it(domain,
-//                                                                    startVector);
-//            it.getStartIndices() < endVector; it.next()) {
+      for (hrleConstSparseIterator<DataDomainType> it(domain,
+                                                                   startVector);
+           it.getStartIndices() < endVector; it.next()) {
 
-//         // skip this voxel if there is no plane inside
-//         if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-//           auto undefinedValue = (it.getValue() > 0)
-//                                     ? cellSet->getEmptyValue()
-//                                     : cellSet->getBackGroundValue();
-//           // insert an undefined point to create correct hrle structure
-//           newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
-//                                              undefinedValue);
-//           continue;
-//         }
+        // skip this voxel if there is no plane inside
+        if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
+          auto undefinedValue = (it.getValue() > 0)
+                                    ? cellSet->getEmptyValue()
+                                    : cellSet->getBackGroundValue();
+          // insert an undefined point to create correct hrle structure
+          newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
+                                             undefinedValue);
+        } else {
+          CellType cell;
+          typename CellType::MaterialFractionType materialFractions(1, std::make_pair(0, 0.5 - it.getValue()));
+          cell.setMaterialFractions(materialFractions);
 
-//         typename CSType::ValueType cell;
+          // // this is the function to convert an LS value to a CS value
+          // cell.setFillingFraction(0.5 - it.getValue());
 
-//         // this is the function to convert an LS value to a CS value
-//         cell.setFillingFraction(0.5 - it.getValue());
+          newDomain.insertNextDefinedPoint(p, it.getStartIndices(), cell);
+        }        
+      } // end of ls loop
+    }   // end of parallel
 
-//         newDomain.insertNextDefinedPoint(p, it.getStartIndices(), cell);
-//       } // end of ls loop
-//     }   // end of parallel
-
-//     // distribute evenly across segments and copy
-//     newDomain.finalize();
-//     newDomain.segment();
-//     // copy new domain into old csdomain
-//     cellSet->deepCopy(newCSDomain);
+    // distribute evenly across segments and copy
+    newDomain.finalize();
+    newDomain.segment();
+    // copy new domain into old csdomain
+    cellSet->deepCopy(newCSDomain);
   }
 
 public:

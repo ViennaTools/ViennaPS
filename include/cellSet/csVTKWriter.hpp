@@ -176,7 +176,9 @@ public:
         gridMax = grid.getMaxBounds(i) + 1;
       }
 
-      for (int x = gridMin; x < gridMax; ++x) {
+      std::cout << "min: " << gridMin << ", max: " << gridMax << std::endl;
+
+      for (int x = gridMin; x <= gridMax; ++x) {
         coords[i]->InsertNextValue(x * gridDelta);
       }
     }
@@ -198,10 +200,11 @@ public:
 
     // Make array to store filling fractions
     std::map<unsigned, vtkSmartPointer<vtkFloatArray>> pointDataMap;
-    // vtkSmartPointer<vtkDoubleArray> fillingFractions =
-    //     vtkSmartPointer<vtkDoubleArray>::New();
+    // vtkSmartPointer<vtkFloatArray> fillingFractions =
+    //     vtkSmartPointer<vtkFloatArray>::New();
     // fillingFractions->SetNumberOfComponents(1);
     // fillingFractions->SetName("FillingFractions");
+    // pointDataMap.insert(std::make_pair(0, fillingFractions));
 
     vtkIdType pointId = 0;
     // int yValue = -10000000;
@@ -235,9 +238,15 @@ public:
       //   std::cout << std::endl;
       // }
       // std::cout << std::setw(8) << it.getValue() << "  ";
+
+      // pointDataMap.find(0)->second->InsertNextValue(0);
       // insert material fraction to correct pointData value
-      auto& materialFractions = it.getValue().getMaterialFractions();
+      auto materialFractions = it.getValue().getMaterialFractions();
       // try if each material of the cell already exists
+      // if(materialFractions.empty()) {
+      //   materialFractions.push_back(std::make_pair(0, 0));
+      // }
+
       for(auto& material : materialFractions) {
         auto it = pointDataMap.find(material.first);
         // if material array does not exist yet
@@ -255,11 +264,17 @@ public:
 
         it->second->InsertNextValue(material.second);
       }
+      if(pointId == 0 || pointId+1 >= rgrid->GetNumberOfPoints()) {
+        std::cout << it.getIndices() << std::endl;
+      }
 
       ++pointId;
       if (pointId >= rgrid->GetNumberOfPoints())
         break;
     }
+
+    std::cout << "id: " << pointId << ", No.Points: " << cellSet->getNumberOfCells() << std::endl;
+    std::cout << "Grid Points: " << rgrid->GetNumberOfPoints() << std::endl;
 
     // rgrid->GetPointData()->SetScalars(fillingFractions);
     for(auto it : pointDataMap) {
