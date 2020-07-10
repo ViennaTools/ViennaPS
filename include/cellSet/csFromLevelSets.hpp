@@ -12,6 +12,7 @@
 // #include <lsConvexHull.hpp>
 
 #include <csDomain.hpp>
+#include <csSimpleConversion.hpp>
 
 /// Enumeration for the different types of conversion
 enum struct csFromLevelSetsEnum : unsigned {
@@ -26,6 +27,7 @@ enum struct csFromLevelSetsEnum : unsigned {
 template <class LSType, class CSType> class csFromLevelSets {
   using CellType = typename CSType::element_type::ValueType;
   using DataDomainType = typename LSType::value_type::element_type::DomainType;
+  using NumericType = typename LSType::value_type::element_type::ValueType;
 
   LSType levelSets;
   CSType cellSet = nullptr;
@@ -34,11 +36,11 @@ template <class LSType, class CSType> class csFromLevelSets {
   bool calculateFillingFraction = true;
   static constexpr int D = LSType::value_type::element_type::dimensions;
 
-  void convertSimple() {
-    
+  template <class ConversionType> void convert() {
+
     auto &grid = levelSets[0]->getGrid();
     auto newCSDomain = CSType::New(grid, cellSet->getBackGroundValue(),
-                       cellSet->getEmptyValue());
+                                   cellSet->getEmptyValue());
     auto &newDomain = newCSDomain->getDomain();
     auto &domain = levelSets.back()->getDomain();
 
@@ -60,28 +62,37 @@ template <class LSType, class CSType> class csFromLevelSets {
               ? domain.getSegmentation()[p]
               : grid.incrementIndices(grid.getMaxGridPoint());
 
-      for (hrleConstSparseIterator<DataDomainType> it(domain,
-                                                                   startVector);
-           it.getStartIndices() < endVector; it.next()) {
+      // an iterator for each level set
+      std::vector<hrleConstSparseStarIterator<DataDomainType>> iterators;
+      for (auto it = levelSets.begin(); it != levelSets.end(); ++it) {
+        iterators.push_back(
+            hrleConstSparseStarIterator<DataDomainType>((*it)->getDomain()));
+      }
 
-        // skip this voxel if there is no plane inside
-        if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-          auto undefinedValue = (it.getValue() > 0)
+      for (iterators.back().goToIndices(startVector);
+           iterators.back().getIndices() < endVector; iterators.back().next()) {
+
+        // check top levelset first, if there is no surface inside, skip point
+
+        // skip this voxel if there is no surface inside
+        if (!iterators.back().getCenter().isDefined() ||
+            std::abs(iterators.back().getCenter().getValue()) > 0.5) {
+          auto undefinedValue = (iterators.back().getCenter().getValue() > 0)
                                     ? cellSet->getEmptyValue()
                                     : cellSet->getBackGroundValue();
           // insert an undefined point to create correct hrle structure
-          newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
+          newDomain.insertNextUndefinedPoint(p, iterators.back().getIndices(),
                                              undefinedValue);
         } else {
           CellType cell;
-          typename CellType::MaterialFractionType materialFractions(1, std::make_pair(0, 0.5 - it.getValue()));
-          cell.setMaterialFractions(materialFractions);
 
-          // // this is the function to convert an LS value to a CS value
-          // cell.setFillingFraction(0.5 - it.getValue());
+          // convert LS value to filling Fraction
+          float fillingFraction =
+              ConversionType(iterators.back()).getFillingFraction();
+          cell.setInitialFillingFraction(fillingFraction);
 
-          newDomain.insertNextDefinedPoint(p, it.getStartIndices(), cell);
-        }        
+          newDomain.insertNextDefinedPoint(p, iterators.back().getIndices(), cell);
+        }
       } // end of ls loop
     }   // end of parallel
 
@@ -97,12 +108,14 @@ public:
 
   csFromLevelSets(LSType passedlevelSets) : levelSets(passedlevelSets) {}
 
-  csFromLevelSets(LSType passedlevelSets, CSType passedCellSet)
-      : levelSets(passedlevelSets), cellSet(passedCellSet) {}
-
-  csFromLevelSets(LSType passedlevelSets, CSType passedCellSet, bool cff)
+  csFromLevelSets(LSType passedlevelSets, CSType passedCellSet, bool cff = true)
       : levelSets(passedlevelSets), cellSet(passedCellSet),
         calculateFillingFraction(cff) {}
+
+  csFromLevelSets(LSType passedlevelSets, CSType passedCellSet,
+                  csFromLevelSetsEnum conversionEnum, bool cff = true)
+      : levelSets(passedlevelSets), cellSet(passedCellSet),
+        conversionType(conversionEnum), calculateFillingFraction(cff) {}
 
   void setlevelSets(LSType passedlevelSets) { levelSets = passedlevelSets; }
 
@@ -132,7 +145,7 @@ public:
       // convertLookup
       break;
     case csFromLevelSetsEnum::SIMPLE:
-      convertSimple();
+      convert<csSimpleConversion<NumericType, D>>();
       break;
     }
   } // apply()

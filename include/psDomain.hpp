@@ -28,7 +28,8 @@ private:
 public:
   /// If no other geometry is passed to psDomain,
   /// a level set describing a plane substrate will be instantiatied.
-  psDomain(double gridDelta = 1.0, CellType backGroundCell = CellType(), CellType emptyCell = CellType()) {
+  psDomain(double gridDelta = 1.0, CellType backGroundCell = CellType(),
+           CellType emptyCell = CellType()) {
     double bounds[2 * D] = {-20, 20, -20, 20};
     if (D == 3) {
       bounds[4] = -20;
@@ -42,19 +43,22 @@ public:
     }
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
-        
-    auto substrate = lsSmartPointer<lsDomain<NumericType, D>>::New(bounds, boundaryCons, gridDelta);
+
+    auto substrate = lsSmartPointer<lsDomain<NumericType, D>>::New(
+        bounds, boundaryCons, gridDelta);
     NumericType origin[3] = {0., 0., 0.};
     NumericType planeNormal[3] = {0, D == 2, D == 3};
 
     // set up the level set
-    lsMakeGeometry<NumericType, D>(substrate,
-                                   lsSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal))
+    lsMakeGeometry<NumericType, D>(
+        substrate,
+        lsSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal))
         .apply();
     // push level set into list
     levelSets.push_back(substrate);
 
-    cellSet = csDomainType::New(substrate->getGrid(), backGroundCell, emptyCell);
+    cellSet =
+        csDomainType::New(substrate->getGrid(), backGroundCell, emptyCell);
 
     // generate the cell set from the levelset
     generateCellSet();
@@ -73,7 +77,7 @@ public:
 
   void generateCellSet(bool calculateFillingFraction = true) {
     csFromLevelSets<lsDomainsType, csDomainType>(levelSets, cellSet,
-                                               calculateFillingFraction)
+                                                 calculateFillingFraction)
         .apply();
   }
 
@@ -90,7 +94,7 @@ public:
   void print() {
     std::cout << "Process Simulation Domain:" << std::endl;
     std::cout << "**************************" << std::endl;
-    for(auto& ls : levelSets) {
+    for (auto &ls : levelSets) {
       ls->print();
     }
     cellSet->print();

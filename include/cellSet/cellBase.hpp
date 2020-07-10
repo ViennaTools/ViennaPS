@@ -35,7 +35,15 @@ public:
     materialFractions = passedCell.materialFractions;
   }
 
-  const MaterialFractionType &getMaterialFractions() const { return materialFractions; }
+  void setInitialFillingFraction(float fillingFraction,
+                                 unsigned baseMaterial = 0) {
+    materialFractions.resize(1);
+    materialFractions[0] = std::make_pair(baseMaterial, fillingFraction);
+  }
+
+  const MaterialFractionType &getMaterialFractions() const {
+    return materialFractions;
+  }
 
   MaterialFractionType &getMaterialFractions() { return materialFractions; }
 
@@ -44,11 +52,12 @@ public:
   }
 
   virtual bool operator==(cellBase passedCell) {
-    for(unsigned i = 0; i < materialFractions.size(); ++i) {
-      if(materialFractions[i].first != passedCell.materialFractions[i].first) {
+    for (unsigned i = 0; i < materialFractions.size(); ++i) {
+      if (materialFractions[i].first != passedCell.materialFractions[i].first) {
         return false;
       }
-      if(materialFractions[i].second != passedCell.materialFractions[i].second) {
+      if (materialFractions[i].second !=
+          passedCell.materialFractions[i].second) {
         return false;
       }
     }
@@ -62,7 +71,8 @@ public:
   }
 
   virtual std::istream &deserialize(std::istream &s) {
-    s.read(reinterpret_cast<char *>(&materialFractions), sizeof(materialFractions));
+    s.read(reinterpret_cast<char *>(&materialFractions),
+           sizeof(materialFractions));
     return s;
   }
 
@@ -72,7 +82,7 @@ public:
 template <class S> S &operator<<(S &s, const cellBase &cell) {
   s << "materialFractions: ";
   const auto &fractions = cell.getMaterialFractions();
-  for(auto& f : fractions) {
+  for (auto &f : fractions) {
     s << "[" << f.first << ": " << f.second << "], ";
   }
   return s;

@@ -66,8 +66,9 @@ public:
     std::map<unsigned, vtkSmartPointer<vtkFloatArray>> pointDataMap;
 
     unsigned counter = 0;
-    for (hrleConstSparseIterator<typename csDomainType::element_type::DomainType> it(
-             cellSet->getDomain());
+    for (hrleConstSparseIterator<
+             typename csDomainType::element_type::DomainType>
+             it(cellSet->getDomain());
          !it.isFinished(); ++it) {
       if (!it.isDefined())
         continue;
@@ -87,21 +88,23 @@ public:
       polyCells->InsertCellPoint(counter);
 
       // insert material fraction to correct pointData value
-      auto& materialFractions = it.getValue().getMaterialFractions();
+      auto &materialFractions = it.getValue().getMaterialFractions();
       // try if each material of the cell already exists
-      for(auto& material : materialFractions) {
+      for (auto &material : materialFractions) {
         auto it = pointDataMap.find(material.first);
         // if material array does not exist yet
-        if(it == pointDataMap.end()) {
+        if (it == pointDataMap.end()) {
           auto pointData = vtkSmartPointer<vtkFloatArray>::New();
           pointData->SetNumberOfComponents(1);
-          pointData->SetName(("Material " + std::to_string(material.first)).c_str());
+          pointData->SetName(
+              ("Material " + std::to_string(material.first)).c_str());
           // fill up until current index
-          for(unsigned i = 0; i < counter; ++i) {
+          for (unsigned i = 0; i < counter; ++i) {
             pointData->InsertNextValue(0);
           }
           // now insert into map
-          it = pointDataMap.insert(std::make_pair(material.first, pointData)).first;
+          it = pointDataMap.insert(std::make_pair(material.first, pointData))
+                   .first;
         }
 
         it->second->InsertNextValue(material.second);
@@ -113,7 +116,7 @@ public:
     vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
     polyData->SetPoints(polyPoints);
     polyData->SetVerts(polyCells);
-    for(auto it : pointDataMap) {
+    for (auto it : pointDataMap) {
       polyData->GetCellData()->AddArray(it.second);
     }
 
@@ -168,7 +171,8 @@ public:
       coords[i] = vtkSmartPointer<vtkDoubleArray>::New();
 
       if (grid.getBoundaryConditions(i) ==
-          csDomainType::element_type::GridType::boundaryType::INFINITE_BOUNDARY) {
+          csDomainType::element_type::GridType::boundaryType::
+              INFINITE_BOUNDARY) {
         gridMin = domain.getMinRunBreak(i);
         gridMax = domain.getMaxRunBreak(i);
       } else {
@@ -176,10 +180,8 @@ public:
         gridMax = grid.getMaxBounds(i) + 1;
       }
 
-      std::cout << "min: " << gridMin << ", max: " << gridMax << std::endl;
-
       for (int x = gridMin; x <= gridMax; ++x) {
-        coords[i]->InsertNextValue(x * gridDelta);
+        coords[i]->InsertNextValue((double(x) - 0.5) * gridDelta);
       }
     }
 
@@ -210,7 +212,8 @@ public:
     // int yValue = -10000000;
     // std::cout << std::endl << "RECTILINEAR GRID" << std::endl;
     // std::cout << gridMinima << " - " << gridMaxima << std::endl;
-    for (hrleConstDenseIterator<typename csDomainType::element_type::DomainType> it(domain);
+    for (hrleConstDenseIterator<typename csDomainType::element_type::DomainType>
+             it(domain);
          !it.isFinished(); it.next()) {
 
       // TODO DENSE ITERATOR IS BROKEN, IT SKIPS ONE POINT FOR EACH NEW LINE
@@ -247,25 +250,24 @@ public:
       //   materialFractions.push_back(std::make_pair(0, 0));
       // }
 
-      for(auto& material : materialFractions) {
+      for (auto &material : materialFractions) {
         auto it = pointDataMap.find(material.first);
         // if material array does not exist yet
-        if(it == pointDataMap.end()) {
+        if (it == pointDataMap.end()) {
           auto pointData = vtkSmartPointer<vtkFloatArray>::New();
           pointData->SetNumberOfComponents(1);
-          pointData->SetName(("Material " + std::to_string(material.first)).c_str());
+          pointData->SetName(
+              ("Material " + std::to_string(material.first)).c_str());
           // fill up until current index
-          for(unsigned i = 0; i < pointId; ++i) {
+          for (unsigned i = 0; i < pointId; ++i) {
             pointData->InsertNextValue(0);
           }
           // now insert into map
-          it = pointDataMap.insert(std::make_pair(material.first, pointData)).first;
+          it = pointDataMap.insert(std::make_pair(material.first, pointData))
+                   .first;
         }
 
         it->second->InsertNextValue(material.second);
-      }
-      if(pointId == 0 || pointId+1 >= rgrid->GetNumberOfPoints()) {
-        std::cout << it.getIndices() << std::endl;
       }
 
       ++pointId;
@@ -273,11 +275,8 @@ public:
         break;
     }
 
-    std::cout << "id: " << pointId << ", No.Points: " << cellSet->getNumberOfCells() << std::endl;
-    std::cout << "Grid Points: " << rgrid->GetNumberOfPoints() << std::endl;
-
     // rgrid->GetPointData()->SetScalars(fillingFractions);
-    for(auto it : pointDataMap) {
+    for (auto it : pointDataMap) {
       rgrid->GetCellData()->AddArray(it.second);
     }
 

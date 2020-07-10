@@ -12,17 +12,18 @@
 #include <csVTKWriter.hpp>
 #include <psDomain.hpp>
 
-class myCellType : public cellBase {};
+class myCellType : public cellBase {
+  using cellBase::cellBase;
+};
 
 int main() {
   omp_set_num_threads(1);
 
-  constexpr int D = 2;
+  constexpr int D = 3;
   typedef double NumericType;
   typedef psDomain<myCellType, NumericType, D> psDomainType;
 
-  myCellType backGroundCell;
-  backGroundCell.getMaterialFractions()[0].second = 1.0;
+  myCellType backGroundCell(1.0);
 
   psDomainType myDomain(1.0, backGroundCell);
 
@@ -31,15 +32,18 @@ int main() {
   if (D == 3)
     origin[2] = 0;
   NumericType radius = 15.3;
-  lsMakeGeometry<NumericType, D>(myDomain.getLevelSets()[0],
-                                 lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
+  lsMakeGeometry<NumericType, D>(
+      myDomain.getLevelSets()[0],
+      lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
   origin[0] = 15.0;
   radius = 8.7;
-  auto secondSphere = lsSmartPointer<lsDomain<NumericType, D>>::New(myDomain.getGrid());
-  lsMakeGeometry<NumericType, D>(secondSphere,
-                                 lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
+  auto secondSphere =
+      lsSmartPointer<lsDomain<NumericType, D>>::New(myDomain.getGrid());
+  lsMakeGeometry<NumericType, D>(
+      secondSphere,
+      lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
   lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()[0], secondSphere,
@@ -56,12 +60,12 @@ int main() {
   lsVTKWriter(mesh, "surface.vtk").apply();
 
   csFromLevelSets<typename psDomainType::lsDomainsType,
-                 typename psDomainType::csDomainType>
+                  typename psDomainType::csDomainType>
       cellConverter(myDomain.getLevelSets(), myDomain.getCellSet());
   // cellConverter.setCalculateFillingFraction(false);
   cellConverter.apply();
   // myDomain.generateCellSet();
-  std::cout << myDomain.getCellSet()->getBackGroundValue() << std::endl;
+  // std::cout << myDomain.getCellSet()->getBackGroundValue() << std::endl;
 
   // myDomain.getCellSet()->print();
 
