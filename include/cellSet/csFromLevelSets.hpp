@@ -7,6 +7,7 @@
 #include <hrleFillDomainFromPointList.hpp>
 #include <hrleFillDomainWithSignedDistance.hpp>
 #include <hrleVectorType.hpp>
+#include <hrleSparseMultiIterator.hpp>
 
 #include <lsCalculateNormalVectors.hpp>
 // #include <lsConvexHull.hpp>
@@ -62,36 +63,40 @@ template <class LSType, class CSType> class csFromLevelSets {
               ? domain.getSegmentation()[p]
               : grid.incrementIndices(grid.getMaxGridPoint());
 
-      // an iterator for each level set
-      std::vector<hrleConstSparseStarIterator<DataDomainType>> iterators;
-      for (auto it = levelSets.begin(); it != levelSets.end(); ++it) {
-        iterators.push_back(
-            hrleConstSparseStarIterator<DataDomainType>((*it)->getDomain()));
-      }
+      // // an iterator for each level set
+      // std::vector<hrleConstSparseStarIterator<DataDomainType>> iterators;
+      // for (auto it = levelSets.begin(); it != levelSets.end(); ++it) {
+      //   iterators.push_back(
+      //       hrleConstSparseStarIterator<DataDomainType>((*it)->getDomain()));
+      // }
 
-      for (iterators.back().goToIndices(startVector);
-           iterators.back().getIndices() < endVector; iterators.back().next()) {
+      // std::cout << "Inside convert: " << std::endl;
+      // domain.print();
 
+      // for (iterators.back().goToIndices(startVector);
+      //      iterators.back().getIndices() < endVector; iterators.back().next()) {
+      for(hrleConstSparseIterator<DataDomainType> it(domain, startVector); it.getStartIndices() < endVector; it.next()) {
+      // for(hrleConstSparseMultiIterator<DataDomainType> it(domain); it.getIndices() < endVector; it.next()) {
+        // std::cout << it.getStartIndices();
         // check top levelset first, if there is no surface inside, skip point
 
         // skip this voxel if there is no surface inside
-        if (!iterators.back().getCenter().isDefined() ||
-            std::abs(iterators.back().getCenter().getValue()) > 0.5) {
-          auto undefinedValue = (iterators.back().getCenter().getValue() > 0)
+        if (!it.isDefined() ||
+            std::abs(it.getValue()) > 0.5) {
+          auto undefinedValue = (it.getValue() > 0)
                                     ? cellSet->getEmptyValue()
                                     : cellSet->getBackGroundValue();
           // insert an undefined point to create correct hrle structure
-          newDomain.insertNextUndefinedPoint(p, iterators.back().getIndices(),
+          newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
                                              undefinedValue);
         } else {
           CellType cell;
 
           // convert LS value to filling Fraction
-          float fillingFraction =
-              ConversionType(iterators.back()).getFillingFraction();
+          float fillingFraction = 0.5 - it.getValue();
+              //ConversionType(iterators.back()).getFillingFraction();
           cell.setInitialFillingFraction(fillingFraction);
-
-          newDomain.insertNextDefinedPoint(p, iterators.back().getIndices(), cell);
+          newDomain.insertNextDefinedPoint(p, it.getStartIndices(), cell);
         }
       } // end of ls loop
     }   // end of parallel
@@ -101,6 +106,7 @@ template <class LSType, class CSType> class csFromLevelSets {
     newDomain.segment();
     // copy new domain into old csdomain
     cellSet->deepCopy(newCSDomain);
+
   }
 
 public:

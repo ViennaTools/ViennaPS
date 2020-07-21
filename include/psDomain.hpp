@@ -61,7 +61,7 @@ public:
         csDomainType::New(substrate->getGrid(), backGroundCell, emptyCell);
 
     // generate the cell set from the levelset
-    generateCellSet();
+    // generateCellSet();
   }
 
   psDomain(lsDomainType passedLevelSet) {
