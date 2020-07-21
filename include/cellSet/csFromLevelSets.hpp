@@ -63,40 +63,25 @@ template <class LSType, class CSType> class csFromLevelSets {
               ? domain.getSegmentation()[p]
               : grid.incrementIndices(grid.getMaxGridPoint());
 
-      // // an iterator for each level set
-      // std::vector<hrleConstSparseStarIterator<DataDomainType>> iterators;
-      // for (auto it = levelSets.begin(); it != levelSets.end(); ++it) {
-      //   iterators.push_back(
-      //       hrleConstSparseStarIterator<DataDomainType>((*it)->getDomain()));
-      // }
-
-      // std::cout << "Inside convert: " << std::endl;
-      // domain.print();
-
-      // for (iterators.back().goToIndices(startVector);
-      //      iterators.back().getIndices() < endVector; iterators.back().next()) {
-      for(hrleConstSparseIterator<DataDomainType> it(domain, startVector); it.getStartIndices() < endVector; it.next()) {
-      // for(hrleConstSparseMultiIterator<DataDomainType> it(domain); it.getIndices() < endVector; it.next()) {
-        // std::cout << it.getStartIndices();
-        // check top levelset first, if there is no surface inside, skip point
+      for(hrleConstSparseMultiIterator<DataDomainType> it(domain); it.getIndices() < endVector; it.next()) {
 
         // skip this voxel if there is no surface inside
-        if (!it.isDefined() ||
-            std::abs(it.getValue()) > 0.5) {
-          auto undefinedValue = (it.getValue() > 0)
+        if (!it.getIterator(0).isDefined() ||
+            std::abs(it.getIterator(0).getValue()) > 0.5) {
+          auto undefinedValue = (it.getIterator(0).getValue() > 0)
                                     ? cellSet->getEmptyValue()
                                     : cellSet->getBackGroundValue();
           // insert an undefined point to create correct hrle structure
-          newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
+          newDomain.insertNextUndefinedPoint(p, it.getIterator(0).getStartIndices(),
                                              undefinedValue);
         } else {
           CellType cell;
 
           // convert LS value to filling Fraction
-          float fillingFraction = 0.5 - it.getValue();
+          float fillingFraction = 0.5 - it.getIterator(0).getValue();
               //ConversionType(iterators.back()).getFillingFraction();
           cell.setInitialFillingFraction(fillingFraction);
-          newDomain.insertNextDefinedPoint(p, it.getStartIndices(), cell);
+          newDomain.insertNextDefinedPoint(p, it.getIterator(0).getStartIndices(), cell);
         }
       } // end of ls loop
     }   // end of parallel
