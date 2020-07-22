@@ -28,8 +28,8 @@ private:
 public:
   /// If no other geometry is passed to psDomain,
   /// a level set describing a plane substrate will be instantiatied.
-  psDomain(double gridDelta = 1.0, CellType backGroundCell = CellType(),
-           CellType emptyCell = CellType()) {
+  psDomain(double gridDelta = 1.0, CellType backGroundCell = CellType(1.0),
+           CellType emptyCell = CellType(0.0)) {
     double bounds[2 * D] = {-20, 20, -20, 20};
     if (D == 3) {
       bounds[4] = -20;

@@ -66,8 +66,7 @@ template <class LSType, class CSType> class csFromLevelSets {
       for(hrleConstSparseMultiIterator<DataDomainType> it(domain); it.getIndices() < endVector; it.next()) {
 
         // skip this voxel if there is no surface inside
-        if (!it.getIterator(0).isDefined() ||
-            std::abs(it.getIterator(0).getValue()) > 0.5) {
+        if (!it.isDefined()) {
           auto undefinedValue = (it.getIterator(0).getValue() > 0)
                                     ? cellSet->getEmptyValue()
                                     : cellSet->getBackGroundValue();
@@ -76,12 +75,30 @@ template <class LSType, class CSType> class csFromLevelSets {
                                              undefinedValue);
         } else {
           CellType cell;
+          auto& materialFractions = cell.getMaterialFractions();
+          float lastFillingFraction = 0.0;
 
-          // convert LS value to filling Fraction
-          float fillingFraction = 0.5 - it.getIterator(0).getValue();
-              //ConversionType(iterators.back()).getFillingFraction();
-          cell.setInitialFillingFraction(fillingFraction);
-          newDomain.insertNextDefinedPoint(p, it.getIterator(0).getStartIndices(), cell);
+          auto iterators = it.getDefinedIterators();
+          for(auto& defIt : iterators) {
+            if(std::abs(defIt.second.getValue()) < 0.5 && lastFillingFraction < 1.0) {
+              // convert LS value to filling Fraction
+              float fillingFraction = 0.5 - defIt.second.getValue();
+              materialFractions.push_back(std::make_pair(defIt.first, fillingFraction - lastFillingFraction));
+              lastFillingFraction = fillingFraction;
+            }
+          }
+
+          // if there was no actual defined point < 0.5
+          if(materialFractions.empty()) {
+            auto undefinedValue = (iterators[0].second.getValue() > 0)
+                                    ? cellSet->getEmptyValue()
+                                    : cellSet->getBackGroundValue();
+            // insert an undefined point to create correct hrle structure
+            newDomain.insertNextUndefinedPoint(p, it.getIterator(0).getStartIndices(),
+                                              undefinedValue);
+          } else {
+            newDomain.insertNextDefinedPoint(p, it.getIterator(0).getStartIndices(), cell);
+          }
         }
       } // end of ls loop
     }   // end of parallel
