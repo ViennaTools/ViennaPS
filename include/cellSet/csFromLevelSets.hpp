@@ -55,6 +55,12 @@ template <class LSType, class CSType> class csFromLevelSets {
       p = omp_get_thread_num();
 #endif
 
+      // collect domain pointers
+      std::vector<const DataDomainType*> domains;
+      for(auto &it : levelSets) {
+        domains.push_back(&it->getDomain());
+      }
+
       hrleVectorType<hrleIndexType, D> startVector =
           (p == 0) ? grid.getMinGridPoint() : domain.getSegmentation()[p - 1];
 
@@ -63,7 +69,7 @@ template <class LSType, class CSType> class csFromLevelSets {
               ? domain.getSegmentation()[p]
               : grid.incrementIndices(grid.getMaxGridPoint());
 
-      for(hrleConstSparseMultiIterator<DataDomainType> it(domain); it.getIndices() < endVector; it.next()) {
+      for(hrleConstSparseMultiIterator<DataDomainType> it(domains); it.getIndices() < endVector; it.next()) {
 
         // skip this voxel if there is no surface inside
         if (!it.isDefined()) {

@@ -75,6 +75,10 @@ public:
 
   psDomain(csDomainType passedCellSet) : cellSet(passedCellSet) {}
 
+  void insertNextLevelSet(lsDomainType passedLevelSet) {
+    levelSets.push_back(passedLevelSet);
+  }
+
   void generateCellSet(bool calculateFillingFraction = true) {
     csFromLevelSets<lsDomainsType, csDomainType>(levelSets, cellSet,
                                                  calculateFillingFraction)

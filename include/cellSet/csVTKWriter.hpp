@@ -100,7 +100,7 @@ public:
               ("Material " + std::to_string(material.first)).c_str());
           // fill up until current index
           for (unsigned i = 0; i < counter; ++i) {
-            pointData->InsertNextValue(0);
+            pointData->InsertNextValue(material.first);
           }
           // now insert into map
           it = pointDataMap.insert(std::make_pair(material.first, pointData))
