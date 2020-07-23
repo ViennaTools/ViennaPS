@@ -19,7 +19,7 @@ class myCellType : public cellBase {
 int main() {
   omp_set_num_threads(1);
 
-  constexpr int D = 2;
+  constexpr int D = 3;
   typedef double NumericType;
   typedef psDomain<myCellType, NumericType, D> psDomainType;
 

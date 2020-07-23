@@ -89,7 +89,6 @@ template <class LSType, class CSType> class csFromLevelSets {
           }
           
           // insert an undefined point to create correct hrle structure
-          std::cout << "U: " << it.getIndices() << " = " << cell << std::endl;
           newDomain.insertNextUndefinedPoint(p, it.getIndices(),
                                              cell);
 
@@ -122,11 +121,9 @@ template <class LSType, class CSType> class csFromLevelSets {
           if(materialFractions.empty()) {
             auto undefinedValue = cellSet->getEmptyValue();
             // insert an undefined point to create correct hrle structure
-            std::cout << "U: " << it.getIndices() << " = " << undefinedValue << std::endl;
             newDomain.insertNextUndefinedPoint(p, it.getIndices(),
                                               undefinedValue);
           } else {
-            std::cout << "D: " << it.getIndices() << " = " << cell << std::endl;
             newDomain.insertNextDefinedPoint(p, it.getIndices(), cell);
           }
         }
