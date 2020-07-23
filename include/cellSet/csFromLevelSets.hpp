@@ -1,8 +1,7 @@
 #ifndef CS_FROM_LEVEL_SET_HPP
 #define CS_FROM_LEVEL_SET_HPP
 
-// #include <set>
-// #include <unordered_set>
+#include <unordered_set>
 
 #include <hrleFillDomainFromPointList.hpp>
 #include <hrleFillDomainWithSignedDistance.hpp>
@@ -47,6 +46,10 @@ template <class LSType, class CSType> class csFromLevelSets {
 
     newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
 
+    // record different number of materials
+    std::vector<std::unordered_set<unsigned>> materialSets;
+    materialSets.resize(domain.getNumberOfSegments());
+
 // go over each point and calculate the filling fraction
 #pragma omp parallel num_threads(domain.getNumberOfSegments())
     {
@@ -77,7 +80,8 @@ template <class LSType, class CSType> class csFromLevelSets {
                                     ? cellSet->getEmptyValue()
                                     : cellSet->getBackGroundValue();
           // insert an undefined point to create correct hrle structure
-          newDomain.insertNextUndefinedPoint(p, it.getIterator(0).getStartIndices(),
+          std::cout << "U: " << it.getIndices() << " = " << undefinedValue << std::endl;
+          newDomain.insertNextUndefinedPoint(p, it.getIndices(),
                                              undefinedValue);
         } else {
           CellType cell;
@@ -90,6 +94,7 @@ template <class LSType, class CSType> class csFromLevelSets {
               // convert LS value to filling Fraction
               float fillingFraction = 0.5 - defIt.second.getValue();
               materialFractions.push_back(std::make_pair(defIt.first, fillingFraction - lastFillingFraction));
+              materialSets[p].insert(defIt.first);
               lastFillingFraction = fillingFraction;
             }
           }
@@ -100,21 +105,27 @@ template <class LSType, class CSType> class csFromLevelSets {
                                     ? cellSet->getEmptyValue()
                                     : cellSet->getBackGroundValue();
             // insert an undefined point to create correct hrle structure
-            newDomain.insertNextUndefinedPoint(p, it.getIterator(0).getStartIndices(),
+            std::cout << "U: " << it.getIndices() << " = " << undefinedValue << std::endl;
+            newDomain.insertNextUndefinedPoint(p, it.getIndices(),
                                               undefinedValue);
           } else {
-            newDomain.insertNextDefinedPoint(p, it.getIterator(0).getStartIndices(), cell);
+            std::cout << "D: " << it.getIndices() << " = " << cell << std::endl;
+            newDomain.insertNextDefinedPoint(p, it.getIndices(), cell);
           }
         }
       } // end of ls loop
-    }   // end of parallel
+    }  // end of parallel
+
+    for(unsigned i = 1; i < materialSets.size(); ++i) {
+      materialSets[0].insert(materialSets[i].begin(), materialSets[i].end());
+    }
 
     // distribute evenly across segments and copy
     newDomain.finalize();
     newDomain.segment();
     // copy new domain into old csdomain
     cellSet->deepCopy(newCSDomain);
-
+    cellSet->setNumberOfMaterials(materialSets[0].size());
   }
 
 public:

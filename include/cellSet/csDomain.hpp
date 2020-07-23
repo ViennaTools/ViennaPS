@@ -20,6 +20,7 @@ private:
   DomainType domain;
   T backGroundValue;
   T emptyValue;
+  unsigned numberOfMaterials = 0;
 
 public:
   static constexpr int dimensions = D;
@@ -77,6 +78,14 @@ public:
 
   /// returns the number of defined points
   unsigned getNumberOfCells() const { return domain.getNumberOfPoints(); }
+
+  /// set the number of materials currently saved in the cell set
+  void setNumberOfMaterials(unsigned number) {
+    numberOfMaterials = number;
+  }
+
+  /// returns the number of different materials currently saved in the cell set
+  unsigned getNumberOfMaterials() const { return numberOfMaterials; }
 
   /// get reference to the normalVectors of all points
   NormalVectorType &getNormalVectors() { return normalVectors; }

@@ -63,7 +63,13 @@ public:
     vtkSmartPointer<vtkCellArray> polyCells =
         vtkSmartPointer<vtkCellArray>::New();
 
-    std::map<unsigned, vtkSmartPointer<vtkFloatArray>> pointDataMap;
+    std::vector<vtkSmartPointer<vtkFloatArray>> pointData;
+    for(unsigned i = 0; i < cellSet->getNumberOfMaterials(); ++i) {
+      pointData.push_back(vtkSmartPointer<vtkFloatArray>::New());
+      pointData.back()->SetNumberOfComponents(1);
+          pointData.back()->SetName(
+              ("Material " + std::to_string(i)).c_str());
+    }
 
     unsigned counter = 0;
     for (hrleConstSparseIterator<
@@ -89,25 +95,14 @@ public:
 
       // insert material fraction to correct pointData value
       auto &materialFractions = it.getValue().getMaterialFractions();
-      // try if each material of the cell already exists
-      for (auto &material : materialFractions) {
-        auto it = pointDataMap.find(material.first);
-        // if material array does not exist yet
-        if (it == pointDataMap.end()) {
-          auto pointData = vtkSmartPointer<vtkFloatArray>::New();
-          pointData->SetNumberOfComponents(1);
-          pointData->SetName(
-              ("Material " + std::to_string(material.first)).c_str());
-          // fill up until current index
-          for (unsigned i = 0; i < counter; ++i) {
-            pointData->InsertNextValue(material.first);
-          }
-          // now insert into map
-          it = pointDataMap.insert(std::make_pair(material.first, pointData))
-                   .first;
+      auto materialFractionIt = materialFractions.begin();
+      for(unsigned i = 0; i < pointData.size(); ++i) {
+        if(materialFractionIt != materialFractions.end() && materialFractionIt->first == i) {
+          pointData[i]->InsertNextValue(materialFractionIt->second);
+          ++materialFractionIt;
+        } else {
+          pointData[i]->InsertNextValue(0.0);
         }
-
-        it->second->InsertNextValue(material.second);
       }
 
       ++counter;
@@ -116,8 +111,8 @@ public:
     vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
     polyData->SetPoints(polyPoints);
     polyData->SetVerts(polyCells);
-    for (auto it : pointDataMap) {
-      polyData->GetCellData()->AddArray(it.second);
+    for (auto& it : pointData) {
+      polyData->GetCellData()->AddArray(it);
     }
 
     vtkSmartPointer<vtkXMLPolyDataWriter> pwriter =
@@ -148,14 +143,6 @@ public:
           .print();
       return;
     }
-
-    // convert csDomain into vtkImageData
-    // vtkSmartPointer<vtkImageData> imageData =
-    // vtkSmartPointer<vtkImageData>::New(); imageData->SetDimensions(extent[0],
-    // extent[1], extent[2]); imageData->SetOrigin(min[0], min[1], min[2]);
-    // imageData->SetSpacing(gridDelta, gridDelta, gridDelta);
-    // imageData->SetScalarTypeToDouble();
-    // imageData->AllocateScalars();
 
     auto &grid = cellSet->getGrid();
     auto &domain = cellSet->getDomain();
@@ -201,7 +188,13 @@ public:
     rgrid->SetZCoordinates(coords[2]);
 
     // Make array to store filling fractions
-    std::map<unsigned, vtkSmartPointer<vtkFloatArray>> pointDataMap;
+    std::vector<vtkSmartPointer<vtkFloatArray>> pointData;
+    for(unsigned i = 0; i < cellSet->getNumberOfMaterials(); ++i) {
+      pointData.push_back(vtkSmartPointer<vtkFloatArray>::New());
+      pointData.back()->SetNumberOfComponents(1);
+          pointData.back()->SetName(
+              ("Material " + std::to_string(i)).c_str());
+    }
     // vtkSmartPointer<vtkFloatArray> fillingFractions =
     //     vtkSmartPointer<vtkFloatArray>::New();
     // fillingFractions->SetNumberOfComponents(1);
@@ -250,24 +243,14 @@ public:
       //   materialFractions.push_back(std::make_pair(0, 0));
       // }
 
-      for (auto &material : materialFractions) {
-        auto it = pointDataMap.find(material.first);
-        // if material array does not exist yet
-        if (it == pointDataMap.end()) {
-          auto pointData = vtkSmartPointer<vtkFloatArray>::New();
-          pointData->SetNumberOfComponents(1);
-          pointData->SetName(
-              ("Material " + std::to_string(material.first)).c_str());
-          // fill up until current index
-          for (unsigned i = 0; i < pointId; ++i) {
-            pointData->InsertNextValue(0);
-          }
-          // now insert into map
-          it = pointDataMap.insert(std::make_pair(material.first, pointData))
-                   .first;
+      auto materialFractionIt = materialFractions.begin();
+      for(unsigned i = 0; i < pointData.size(); ++i) {
+        if(materialFractionIt != materialFractions.end() && materialFractionIt->first == i) {
+          pointData[i]->InsertNextValue(materialFractionIt->second);
+          ++materialFractionIt;
+        } else {
+          pointData[i]->InsertNextValue(0.0);
         }
-
-        it->second->InsertNextValue(material.second);
       }
 
       ++pointId;
@@ -276,8 +259,8 @@ public:
     }
 
     // rgrid->GetPointData()->SetScalars(fillingFractions);
-    for (auto it : pointDataMap) {
-      rgrid->GetCellData()->AddArray(it.second);
+    for (auto& it : pointData) {
+      rgrid->GetCellData()->AddArray(it);
     }
 
     vtkSmartPointer<vtkXMLRectilinearGridWriter> gwriter =

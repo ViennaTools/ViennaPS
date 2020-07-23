@@ -12,32 +12,33 @@
 #include <csVTKWriter.hpp>
 #include <psDomain.hpp>
 
-class myCellType : public cellBase {};
+class myCellType : public cellBase {
+  using cellBase::cellBase;
+};
 
 int main() {
   omp_set_num_threads(1);
 
-  constexpr int D = 3;
+  constexpr int D = 2;
   typedef double NumericType;
   typedef psDomain<myCellType, NumericType, D> psDomainType;
 
-  myCellType backGroundCell;
-  backGroundCell.setInitialFillingFraction(1.0);
+  myCellType backGroundCell(1.0);
 
   psDomainType myDomain(1.0, backGroundCell);
 
   // create a sphere in the level set
-  NumericType origin[D] = {0., 0.};
+  NumericType origin[D] = {15., 0.};
   if (D == 3)
     origin[2] = 0;
-  NumericType radius = 15.3;
+  NumericType radius = 8.7;
   lsMakeGeometry<NumericType, D>(
       myDomain.getLevelSets()[0],
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  origin[0] = 15.0;
-  radius = 8.7;
+  origin[0] = 0.0;
+  radius = 15.3;
   auto secondSphere =
       lsSmartPointer<lsDomain<NumericType, D>>::New(myDomain.getGrid());
   lsMakeGeometry<NumericType, D>(
@@ -45,18 +46,24 @@ int main() {
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()[0], secondSphere,
+  lsBooleanOperation<NumericType, D>(secondSphere, myDomain.getLevelSets()[0], 
                                      lsBooleanOperationEnum::UNION)
       .apply();
+
+  myDomain.insertNextLevelSet(secondSphere);
 
   // lsExpand<NumericType, D>(myDomain.getLevelSet(), 5).apply();
   // std::cout << "width: " << myDomain.getLevelSet().getLevelSetWidth() <<
   // std::endl;
   auto mesh = lsSmartPointer<lsMesh>::New();
   lsToMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
-  lsVTKWriter(mesh, "points.vtk").apply();
+  lsVTKWriter(mesh, "points-0.vtk").apply();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsVTKWriter(mesh, "points-1.vtk").apply();
   lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
-  lsVTKWriter(mesh, "surface.vtk").apply();
+  lsVTKWriter(mesh, "surface-0.vtk").apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsVTKWriter(mesh, "surface-1.vtk").apply();
 
   csFromLevelSets<typename psDomainType::lsDomainsType,
                   typename psDomainType::csDomainType>
@@ -67,7 +74,7 @@ int main() {
   // std::cout << myDomain.getCellSet()->getBackGroundValue() << std::endl;
 
   // myDomain.getCellSet()->print();
-
+  std::cout << "Number of materials: " << myDomain.getCellSet()->getNumberOfMaterials() << std::endl;
   std::cout << "Converted to Cells" << std::endl;
 
   // myDomain.print();
