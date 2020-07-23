@@ -76,34 +76,51 @@ template <class LSType, class CSType> class csFromLevelSets {
 
         // skip this voxel if there is no surface inside
         if (!it.isDefined()) {
-          auto undefinedValue = (it.getIterator(0).getValue() > 0)
-                                    ? cellSet->getEmptyValue()
-                                    : cellSet->getBackGroundValue();
+          CellType cell;
+          auto& materialFractions = cell.getMaterialFractions();
+          for(unsigned i = 0; i < it.getNumberOfDomains(); ++i) {
+            if(it.getIterator(i).getValue() < 0.0) {
+              materialFractions.push_back(std::make_pair(i, 1.0));
+              break;
+            }
+          }
+          if(materialFractions.empty()) {
+            materialFractions.push_back(std::make_pair(0, 0.0));
+          }
+          
           // insert an undefined point to create correct hrle structure
-          std::cout << "U: " << it.getIndices() << " = " << undefinedValue << std::endl;
+          std::cout << "U: " << it.getIndices() << " = " << cell << std::endl;
           newDomain.insertNextUndefinedPoint(p, it.getIndices(),
-                                             undefinedValue);
+                                             cell);
+
         } else {
           CellType cell;
           auto& materialFractions = cell.getMaterialFractions();
           float lastFillingFraction = 0.0;
 
-          auto iterators = it.getDefinedIterators();
-          for(auto& defIt : iterators) {
-            if(std::abs(defIt.second.getValue()) < 0.5 && lastFillingFraction < 1.0) {
-              // convert LS value to filling Fraction
-              float fillingFraction = 0.5 - defIt.second.getValue();
-              materialFractions.push_back(std::make_pair(defIt.first, fillingFraction - lastFillingFraction));
-              materialSets[p].insert(defIt.first);
-              lastFillingFraction = fillingFraction;
+          for(unsigned i = 0; i < it.getNumberOfDomains(); ++i) {
+            if(lastFillingFraction < 1.0) {
+              auto &lsValue = it.getIterator(i).getValue();
+
+              if(std::abs(lsValue) < 0.5) {
+                // convert LS value to filling Fraction
+                float fillingFraction = 0.5 - lsValue;
+                materialFractions.push_back(std::make_pair(i, fillingFraction - lastFillingFraction));
+                materialSets[p].insert(i);
+                lastFillingFraction = fillingFraction;
+              } else if(lsValue <= -0.5) {
+                // point is definetly inside material
+                materialFractions.push_back(std::make_pair(i, 1.0 - lastFillingFraction));
+                materialSets[p].insert(i);
+                // lastFillingFraction = 1.0;
+                break;
+              }
             }
           }
 
           // if there was no actual defined point < 0.5
           if(materialFractions.empty()) {
-            auto undefinedValue = (iterators[0].second.getValue() > 0)
-                                    ? cellSet->getEmptyValue()
-                                    : cellSet->getBackGroundValue();
+            auto undefinedValue = cellSet->getEmptyValue();
             // insert an undefined point to create correct hrle structure
             std::cout << "U: " << it.getIndices() << " = " << undefinedValue << std::endl;
             newDomain.insertNextUndefinedPoint(p, it.getIndices(),
