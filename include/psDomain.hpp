@@ -8,6 +8,8 @@
 #include <csFromLevelSets.hpp>
 #include <csToLevelSets.hpp>
 
+#include <psSmartPointer.hpp>
+
 /**
   This class represents all materials in the simulation domain.
   It contains level sets for the accurate surface representation
@@ -17,19 +19,34 @@
 */
 template <class CellType, class NumericType = float, int D = 3> class psDomain {
 public:
-  typedef lsSmartPointer<lsDomain<NumericType, D>> lsDomainType;
+  typedef psSmartPointer<lsDomain<NumericType, D>> lsDomainType;
   typedef std::vector<lsDomainType> lsDomainsType;
-  typedef lsSmartPointer<csDomain<CellType, D>> csDomainType;
+  typedef psSmartPointer<csDomain<CellType, D>> csDomainType;
 
 private:
   lsDomainsType levelSets;
   csDomainType cellSet;
+  bool syncData = true;
 
 public:
+  psDomain(double gridDelta = 1.0, bool sync = true) : syncData(sync) {
+    CellType backGroundCell;
+    backGroundCell.setInitialFillingFraction(1.0);
+    CellType emptyCell;
+    emptyCell.setInitialFillingFraction(0.0);
+    *this = psDomain(gridDelta, backGroundCell, emptyCell);
+  }
+
+  psDomain(double gridDelta, CellType backGroundCell, bool sync = true) : syncData(sync) {
+    CellType emptyCell;
+    emptyCell.setInitialFillingFraction(0.0);
+    *this = psDomain(gridDelta, backGroundCell, emptyCell);
+  }
+
   /// If no other geometry is passed to psDomain,
   /// a level set describing a plane substrate will be instantiatied.
-  psDomain(double gridDelta = 1.0, CellType backGroundCell = CellType(1.0),
-           CellType emptyCell = CellType(0.0)) {
+  psDomain(double gridDelta, CellType backGroundCell,
+           CellType emptyCell, bool sync = true) : syncData(sync) {
     double bounds[2 * D] = {-20, 20, -20, 20};
     if (D == 3) {
       bounds[4] = -20;
@@ -44,7 +61,7 @@ public:
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    auto substrate = lsSmartPointer<lsDomain<NumericType, D>>::New(
+    auto substrate = psSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
     NumericType origin[3] = {0., 0., 0.};
     NumericType planeNormal[3] = {0, D == 2, D == 3};
@@ -52,7 +69,7 @@ public:
     // set up the level set
     lsMakeGeometry<NumericType, D>(
         substrate,
-        lsSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal))
+        psSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal))
         .apply();
     // push level set into list
     levelSets.push_back(substrate);
@@ -61,22 +78,46 @@ public:
         csDomainType::New(substrate->getGrid(), backGroundCell, emptyCell);
 
     // generate the cell set from the levelset
-    // generateCellSet();
+    if(syncData) {
+      generateCellSet();
+    }
   }
 
   psDomain(lsDomainType passedLevelSet) {
     levelSets.push_back(passedLevelSet);
     cellSet = csDomainType::New(passedLevelSet->getGrid());
+    // generate CellSet
+    if(syncData) {
+      generateCellSet();
+    }
   }
 
-  psDomain(csDomain<CellType, D> &passedCellSet) {
-    cellSet = csDomainType::New(passedCellSet);
+  psDomain(csDomainType passedCellSet) {
+    cellSet->deepCopy(passedCellSet);
   }
 
-  psDomain(csDomainType passedCellSet) : cellSet(passedCellSet) {}
+  void deepCopy(psSmartPointer<psDomain> passedDomain) {
+    levelSets.resize(passedDomain->levelSets.size());
+    for(unsigned i = 0; i < levelSets.size(); ++i) {
+      levelSets[i]->deepCopy(passedDomain->levelSets[i]);
+    }
+    cellSet->deepCopy(passedDomain->cellSet);
+    syncData = passedDomain->syncData;
+  }
 
   void insertNextLevelSet(lsDomainType passedLevelSet) {
+    // TODO: should we automatically wrap lower level set here??
+    // Would make sense, unless there is a situation where this is not wanted.
+    // Cannot think of one now though...
+    // copy LS
+    auto tmpLS = psSmartPointer<lsDomainType>::New(passedLevelSet);
+    // now bool with underlying LS if it exists
+
+
     levelSets.push_back(passedLevelSet);
+    if(syncData) {
+      generateCellSet();
+    }
   }
 
   void generateCellSet(bool calculateFillingFraction = true) {
@@ -85,7 +126,7 @@ public:
         .apply();
   }
 
-  void generateLevelSet() {
+  void generateLevelSets() {
     csToLevelSets<lsDomainsType, csDomainType>(levelSets, cellSet).apply();
   }
 
@@ -94,6 +135,14 @@ public:
   auto &getCellSet() { return cellSet; }
 
   auto &getGrid() { return levelSets[0]->getGrid(); }
+
+  void setSyncData(bool sync) {
+    syncData = sync;
+  }
+
+  bool getSyncData() {
+    return syncData;
+  }
 
   void print() {
     std::cout << "Process Simulation Domain:" << std::endl;

@@ -18,7 +18,7 @@
 #include <csDomain.hpp>
 
 template <class T, int D> class csVTKWriter {
-  using csDomainType = lsSmartPointer<const csDomain<T, D>>;
+  using csDomainType = csSmartPointer<const csDomain<T, D>>;
   csDomainType cellSet = nullptr;
   std::string fileName;
 
@@ -95,11 +95,12 @@ public:
 
       // insert material fraction to correct pointData value
       auto &materialFractions = it.getValue().getMaterialFractions();
-      auto materialFractionIt = materialFractions.begin();
+      // auto materialFractionIt = materialFractions.begin();
       for(unsigned i = 0; i < pointData.size(); ++i) {
-        if(materialFractionIt != materialFractions.end() && materialFractionIt->first == i) {
-          pointData[i]->InsertNextValue(materialFractionIt->second);
-          ++materialFractionIt;
+        auto it = materialFractions.find(i);
+        if(it != materialFractions.end()) {
+          pointData[i]->InsertNextValue(it->second);
+          // ++materialFractionIt;
         } else {
           pointData[i]->InsertNextValue(0.0);
         }
@@ -237,21 +238,36 @@ public:
 
       // pointDataMap.find(0)->second->InsertNextValue(0);
       // insert material fraction to correct pointData value
-      auto materialFractions = it.getValue().getMaterialFractions();
       // try if each material of the cell already exists
       // if(materialFractions.empty()) {
       //   materialFractions.push_back(std::make_pair(0, 0));
       // }
 
-      auto materialFractionIt = materialFractions.begin();
+      // auto materialFractions = it.getValue().getMaterialFractions();
+
+      // auto materialFractionIt = materialFractions.begin();
+      // for(unsigned i = 0; i < pointData.size(); ++i) {
+      //   if(materialFractionIt != materialFractions.end() && materialFractionIt->first == i) {
+      //     pointData[i]->InsertNextValue(materialFractionIt->second);
+      //     ++materialFractionIt;
+      //   } else {
+      //     pointData[i]->InsertNextValue(0.0);
+      //   }
+      // }
+
+      // insert material fraction to correct pointData value
+      auto &materialFractions = it.getValue().getMaterialFractions();
+      // auto materialFractionIt = materialFractions.begin();
       for(unsigned i = 0; i < pointData.size(); ++i) {
-        if(materialFractionIt != materialFractions.end() && materialFractionIt->first == i) {
-          pointData[i]->InsertNextValue(materialFractionIt->second);
-          ++materialFractionIt;
+        auto it = materialFractions.find(i);
+        if(it != materialFractions.end()) {
+          pointData[i]->InsertNextValue(it->second);
+          // ++materialFractionIt;
         } else {
           pointData[i]->InsertNextValue(0.0);
         }
       }
+
 
       ++pointId;
       if (pointId >= rgrid->GetNumberOfPoints())

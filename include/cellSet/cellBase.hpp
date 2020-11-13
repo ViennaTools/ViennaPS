@@ -3,7 +3,7 @@
 
 #include <istream>
 #include <ostream>
-#include <vector>
+#include <unordered_map>
 
 /// Base class for a cell describing a volume voxel
 /// of the simulation domain. It implements the
@@ -17,7 +17,7 @@
 /// which should also call serialize of this base class.
 class cellBase {
 public:
-  using MaterialFractionType = std::vector<std::pair<unsigned, float>>;
+  using MaterialFractionType = std::unordered_map<unsigned, float>;
 
 private:
   MaterialFractionType materialFractions;
@@ -26,48 +26,58 @@ public:
   cellBase() {}
 
   cellBase(float fillingFraction, unsigned baseMaterial = 0) {
-    materialFractions.push_back(std::make_pair(baseMaterial, fillingFraction));
+    materialFractions.insert(std::make_pair(baseMaterial, fillingFraction));
   }
 
   cellBase(const cellBase &passedCell) {
     materialFractions = passedCell.materialFractions;
   }
 
+  /// Only used internally to initialize a cell
   void setInitialFillingFraction(float fillingFraction,
                                  unsigned baseMaterial = 0) {
-    materialFractions.resize(1);
-    materialFractions[0] = std::make_pair(baseMaterial, fillingFraction);
+    materialFractions.insert(std::make_pair(baseMaterial, fillingFraction));
   }
 
+  /// Return the filling fractions of each material, which
+  /// is stored as a std::vector<std::pair<unsigned material, float filling fraction>>
   const MaterialFractionType &getMaterialFractions() const {
     return materialFractions;
   }
 
+  /// Return the filling fractions of each material, which
+  /// is stored as a std::vector<std::pair<unsigned material, float filling fraction>>
   MaterialFractionType &getMaterialFractions() { return materialFractions; }
 
+  /// Set a MaterialFractionType to describe the filling fractions of this cell
   void setMaterialFractions(MaterialFractionType passedMaterialFractions) {
     materialFractions = passedMaterialFractions;
   }
 
+  /// Compare all fililng fractions of two cells. Only returns true if all of them
+  /// are the same.
   virtual bool operator==(cellBase passedCell) {
-    for (unsigned i = 0; i < materialFractions.size(); ++i) {
-      if (materialFractions[i].first != passedCell.materialFractions[i].first) {
-        return false;
-      }
-      if (materialFractions[i].second !=
-          passedCell.materialFractions[i].second) {
-        return false;
-      }
-    }
-    return true;
+    // for (unsigned i = 0; i < materialFractions.size(); ++i) {
+    //   if (materialFractions[i].first != passedCell.materialFractions[i].first) {
+    //     return false;
+    //   }
+    //   if (std::abs(materialFractions[i].second -
+    //       passedCell.materialFractions[i].second) > 1e-6) {
+    //     return false;
+    //   }
+    // }
+    // return true;
+    return materialFractions == passedCell.materialFractions;
   }
 
+  /// Serialize this cell into a binary stream.
   virtual std::ostream &serialize(std::ostream &s) {
     s.write(reinterpret_cast<const char *>(&materialFractions),
             sizeof(materialFractions));
     return s;
   }
 
+  /// Deserialize this cell from a binary stream.
   virtual std::istream &deserialize(std::istream &s) {
     s.read(reinterpret_cast<char *>(&materialFractions),
            sizeof(materialFractions));
@@ -77,6 +87,7 @@ public:
   virtual ~cellBase(){};
 };
 
+/// Write this cell to a character stream (e.g. stdout)
 template <class S> S &operator<<(S &s, const cellBase &cell) {
   s << "materialFractions: ";
   const auto &fractions = cell.getMaterialFractions();

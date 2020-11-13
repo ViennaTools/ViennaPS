@@ -80,12 +80,12 @@ template <class LSType, class CSType> class csFromLevelSets {
           auto& materialFractions = cell.getMaterialFractions();
           for(unsigned i = 0; i < it.getNumberOfDomains(); ++i) {
             if(it.getIterator(i).getValue() < 0.0) {
-              materialFractions.push_back(std::make_pair(i, 1.0));
+              materialFractions.insert(std::make_pair(i, 1.0));
               break;
             }
           }
           if(materialFractions.empty()) {
-            materialFractions.push_back(std::make_pair(0, 0.0));
+            materialFractions.insert(std::make_pair(0, 0.0));
           }
           
           // insert an undefined point to create correct hrle structure
@@ -104,12 +104,12 @@ template <class LSType, class CSType> class csFromLevelSets {
               if(std::abs(lsValue) < 0.5) {
                 // convert LS value to filling Fraction
                 float fillingFraction = 0.5 - lsValue;
-                materialFractions.push_back(std::make_pair(i, fillingFraction - lastFillingFraction));
+                materialFractions.insert(std::make_pair(i, fillingFraction - lastFillingFraction));
                 materialSets[p].insert(i);
                 lastFillingFraction = fillingFraction;
               } else if(lsValue <= -0.5) {
-                // point is definetly inside material
-                materialFractions.push_back(std::make_pair(i, 1.0 - lastFillingFraction));
+                // point is definitely inside material
+                materialFractions.insert(std::make_pair(i, 1.0 - lastFillingFraction));
                 materialSets[p].insert(i);
                 // lastFillingFraction = 1.0;
                 break;

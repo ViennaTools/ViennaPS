@@ -2,8 +2,8 @@
 #define CS_DOMAIN_HPP
 
 #include <hrleDomain.hpp>
-#include <lsSmartPointer.hpp>
 
+#include <csSmartPointer.hpp>
 #include <cellBase.hpp>
 
 template <class T, int D> class csDomain {
@@ -26,7 +26,7 @@ public:
   static constexpr int dimensions = D;
 
   csDomain(hrleCoordType gridDelta = 1.0, T backGround = T(), T empty = T())
-      : backGroundValue(backGround), emptyValue(empty) {
+      : backGroundValue(backGround), emptyValue(empty), numberOfMaterials(1) {
     hrleIndexType gridMin[D], gridMax[D];
     BoundaryType boundaryCons[D];
     for (unsigned i = 0; i < D; ++i) {
@@ -46,14 +46,14 @@ public:
   }
 
   /// deep copy a csDomain
-  csDomain(lsSmartPointer<const csDomain<T, D>> passedCellSet)
+  csDomain(csSmartPointer<const csDomain<T, D>> passedCellSet)
       : emptyValue(passedCellSet->emptyValue),
         backGroundValue(passedCellSet->backGroundValue) {
     deepCopy(passedCellSet);
   }
 
   /// deep copy the passed csDomain into this one
-  void deepCopy(lsSmartPointer<const csDomain<T, D>> passedCellSet) {
+  void deepCopy(csSmartPointer<const csDomain<T, D>> passedCellSet) {
     grid = passedCellSet->grid;
     backGroundValue = passedCellSet->backGroundValue;
     emptyValue = passedCellSet->emptyValue;

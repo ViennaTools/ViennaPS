@@ -5,8 +5,12 @@
 #include <hrleFillDomainWithSignedDistance.hpp>
 #include <hrleVectorType.hpp>
 
+#include <lsBooleanOperation.hpp>
 #include <lsCalculateNormalVectors.hpp>
 #include <lsExpand.hpp>
+#include <lsMessage.hpp>
+
+#include <psSmartPointer.hpp>
 
 /// Enumeration for the different types of conversion
 enum struct csToLevelSetsEnum : unsigned {
@@ -20,20 +24,34 @@ enum struct csToLevelSetsEnum : unsigned {
 /// and using the filling fraction to find a point on the surface,
 /// which can then be converted to a level set value.
 template <class LSType, class CSType> class csToLevelSets {
-  LSType *levelSet = nullptr;
-  CSType *cellSet = nullptr;
+  using CellType = typename CSType::element_type::ValueType;
+  using LevelSetType = typename LSType::value_type::element_type;
+  using DataDomainType = typename LevelSetType::DomainType;
+  using NumericType = typename LevelSetType::ValueType;
+
+  LSType* levelSets = nullptr;
+  CSType cellSet = nullptr;
   csToLevelSetsEnum conversionType =
       csToLevelSetsEnum::SIMPLE; // TODO change to lookup
-  static constexpr int D = LSType::dimensions;
+  static constexpr int D = LevelSetType::dimensions;
+  static constexpr typename LevelSetType::ValueType eps = 1e-6;
 
   void convertSimple() {
     // typedef typename CSType::ValueType CellType;
-    typename CSType::GridType &grid = cellSet->getGrid();
-    LSType newLSDomain(grid);
-    typename LSType::DomainType &newDomain = newLSDomain.getDomain();
-    typename CSType::DomainType &domain = cellSet->getDomain();
+    auto &grid = cellSet->getGrid();
+    auto &domain = cellSet->getDomain();
 
-    newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
+    // auto newLSDomain = LSType::New(grid);
+    // typename LSType::DomainType &newDomain = newLSDomain.getDomain();
+    // newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
+
+    // Initialize the correct number of level sets
+    const unsigned numberOfMaterials = cellSet->getNumberOfMaterials();
+    levelSets->resize(numberOfMaterials);
+    for(auto &it : *levelSets) {
+      it = LSType::value_type::New(grid);
+      it->getDomain().initialize(domain.getNewSegmentation(), domain.getAllocation());
+    }
 
 // go over each point and calculate the filling fraction
 #pragma omp parallel num_threads(domain.getNumberOfSegments())
@@ -51,66 +69,95 @@ template <class LSType, class CSType> class csToLevelSets {
               ? domain.getSegmentation()[p]
               : grid.incrementIndices(grid.getMaxGridPoint());
 
-      for (hrleConstSparseIterator<typename CSType::DomainType> it(domain,
+      for (hrleConstSparseIterator<typename CSType::element_type::DomainType> it(domain,
                                                                    startVector);
            it.getStartIndices() < endVector; it.next()) {
 
-        // skip this voxel if there is no plane inside
-        if (!it.isDefined()) {
-          auto undefinedValue = (it.getValue().getFillingFraction() ==
-                                 cellSet->getEmptyValue().getFillingFraction())
-                                    ? LSType::POS_VALUE
-                                    : LSType::NEG_VALUE;
-          // insert an undefined point to create correct hrle structure
-          newDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
-                                             undefinedValue);
-          continue;
+        // map containing all material IDs and filling fractions
+        auto &materialMap = it.getValue().getMaterialFractions();
+
+        // go over all possible material ids
+        const bool isDefined = it.isDefined();
+        for(unsigned i = 0; i < numberOfMaterials; ++i) {
+          auto &dataDomain = levelSets->at(i)->getDomain();
+          auto material = materialMap.find(i);
+
+          // ff is defined for material
+          if(material != materialMap.end()) {
+            if(isDefined && (material->second > eps) && (material->second < (1.0 - eps))) { // defined point in cellSet
+              dataDomain.insertNextDefinedPoint(p, it.getStartIndices(), 0.5 - material->second);
+            } else { // currently on undefined point in cellSet
+              if(material->second < eps) { // ff is empty
+                dataDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
+                  LevelSetType::POS_VALUE);
+              } else if(material->second > (1.0 - eps)) { // ff is full
+                dataDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
+                  LevelSetType::NEG_VALUE);
+              } else { // invalid ff for undefined point
+                lsMessage::getInstance().addWarning("Background cell value should not have a filling fraction other than 0 or 1!").print();
+              }
+            }
+          } else { // id is not found --> ff must be 0
+              dataDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
+                  LevelSetType::POS_VALUE);
+          }
         }
-
-        // generate the normal vector by considering neighbours
-        auto fillingFraction = it.getValue().getFillingFraction();
-
-        newDomain.insertNextDefinedPoint(p, it.getStartIndices(),
-                                         0.5 - fillingFraction);
       }
     }
 
-    // distribute evenly across segments and copy
-    newDomain.finalize();
-    newDomain.segment();
-    // copy new domain into old lsdomain
-    levelSet->getDomain().deepCopy(grid, newDomain);
-    levelSet->setLevelSetWidth(1);
+    // finalize all level sets
+    for(unsigned i = 0; i < levelSets->size(); ++i) {
+      auto &currentLS = levelSets->at(i);
+      auto &dataDomain = currentLS->getDomain();
+      // distribute evenly across segments and copy
+      dataDomain.finalize();
+      dataDomain.segment();
+      currentLS->setLevelSetWidth(1);
 
-    // pad to width of 2, so it is normalised again
-    lsExpand<typename LSType::ValueType, D>(*levelSet, 2).apply();
+      // pad to width of 2, so it is normalised again
+      lsExpand<typename LevelSetType::ValueType, D>(currentLS, 2).apply();
+
+      // Wrap with lower level sets to achieve original wrapping
+      if(i > 0) {
+        lsBooleanOperation<typename LevelSetType::ValueType, D>(currentLS, levelSets->at(i-1), lsBooleanOperationEnum::UNION).apply();
+      }
+
+#ifndef NDEBUG
+      auto mesh = lsSmartPointer<lsMesh>::New();
+      lsToMesh<typename LevelSetType::ValueType, D>(currentLS, mesh).apply();
+      lsVTKWriter(mesh, lsFileFormatEnum::VTP, "csToLevelSets_DEBUG-" + std::to_string(i) + ".vtp").apply();
+#endif
+    }
   }
 
 public:
   csToLevelSets() {}
 
-  csToLevelSets(LSType &passedLevelSet) : levelSet(&passedLevelSet) {}
+  csToLevelSets(LSType &passedLevelSets) : levelSets(&passedLevelSets) {}
 
-  csToLevelSets(LSType &passedLevelSet, CSType &passedCellSet)
-      : levelSet(&passedLevelSet), cellSet(&passedCellSet) {}
+  csToLevelSets(LSType &passedLevelSets, CSType passedCellSet)
+      : levelSets(&passedLevelSets), cellSet(passedCellSet) {}
 
-  void setLevelSet(LSType &passedLevelSet) { levelSet = &passedLevelSet; }
+  void setLevelSets(LSType &passedLevelSets) { levelSets = &passedLevelSets; }
 
-  void setCellSet(CSType &passedCellSet) { cellSet = &passedCellSet; }
+  void setCellSet(CSType passedCellSet) { cellSet = passedCellSet; }
 
   void apply() {
-    if (levelSet == nullptr) {
+    if (levelSets == nullptr) {
       lsMessage::getInstance()
-          .addWarning("No level set was passed to csFromLevelSet.")
+          .addWarning("No level set container was passed to csToLevelSets.")
           .print();
       return;
     }
     if (cellSet == nullptr) {
       lsMessage::getInstance()
-          .addWarning("No cell set was passed to csFromLevelSet.")
+          .addWarning("No cell set was passed to csToLevelSets.")
           .print();
       return;
     }
+
+    // remove all old level sets
+    levelSets->clear();
 
     switch (conversionType) {
     case csToLevelSetsEnum::ANALYTICAL:

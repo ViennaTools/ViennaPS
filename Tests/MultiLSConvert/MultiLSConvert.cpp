@@ -23,9 +23,9 @@ int main() {
   typedef double NumericType;
   typedef psDomain<myCellType, NumericType, D> psDomainType;
 
-  myCellType backGroundCell(1.0);
+  // myCellType backGroundCell(1.0);
 
-  psDomainType myDomain(1.0, backGroundCell);
+  psDomainType myDomain(1.0);//, backGroundCell);
 
   // create a sphere in the level set
   NumericType origin[D] = {15., 0.};
@@ -65,11 +65,11 @@ int main() {
   lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
   lsVTKWriter(mesh, "surface-1.vtk").apply();
 
-  csFromLevelSets<typename psDomainType::lsDomainsType,
-                  typename psDomainType::csDomainType>
-      cellConverter(myDomain.getLevelSets(), myDomain.getCellSet());
-  // cellConverter.setCalculateFillingFraction(false);
-  cellConverter.apply();
+  // csFromLevelSets<typename psDomainType::lsDomainsType,
+  //                 typename psDomainType::csDomainType>
+  //     cellConverter(myDomain.getLevelSets(), myDomain.getCellSet());
+  // // cellConverter.setCalculateFillingFraction(false);
+  // cellConverter.apply();
   // myDomain.generateCellSet();
   // std::cout << myDomain.getCellSet()->getBackGroundValue() << std::endl;
 
@@ -82,15 +82,21 @@ int main() {
   csVTKWriter<myCellType, D>(myDomain.getCellSet(), "cells.vtp").writeVTP();
   csVTKWriter<myCellType, D>(myDomain.getCellSet(), "cells.vtr").apply();
 
-  // csToLevelSets<typename psDomainType::lsDomainType,
-  //              typename psDomainType::csDomainType>
-  //     lsConverter(myDomain.getLevelSets(), myDomain.getCellSet());
-  // lsConverter.apply();
+  // convert cells back into levelSets
+  csToLevelSets<typename psDomainType::lsDomainsType,
+               typename psDomainType::csDomainType>
+      lsConverter(myDomain.getLevelSets(), myDomain.getCellSet());
+  lsConverter.apply();
 
-  // lsToMesh<NumericType, D>(myDomain.getLevelSet(), mesh).apply();
-  // lsVTKWriter(mesh, "newPoints.vtk").apply();
-  // lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSet(), mesh).apply();
-  // lsVTKWriter(mesh, "newSurface.vtk").apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsVTKWriter(mesh, "newSurface-0.vtk").apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsVTKWriter(mesh, "newSurface-1.vtk").apply();
+
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsVTKWriter(mesh, "newPoints-0.vtk").apply();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsVTKWriter(mesh, "newPoints-1.vtk").apply();
 
   return 0;
 }
