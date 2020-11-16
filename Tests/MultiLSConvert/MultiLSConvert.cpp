@@ -33,7 +33,7 @@ int main() {
     origin[2] = 0;
   NumericType radius = 8.7;
   lsMakeGeometry<NumericType, D>(
-      myDomain.getLevelSets()[0],
+      myDomain.getLevelSets()->at(0),
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
@@ -46,7 +46,7 @@ int main() {
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  lsBooleanOperation<NumericType, D>(secondSphere, myDomain.getLevelSets()[0], 
+  lsBooleanOperation<NumericType, D>(secondSphere, myDomain.getLevelSets()->at(0), 
                                      lsBooleanOperationEnum::UNION)
       .apply();
 
@@ -56,13 +56,13 @@ int main() {
   // std::cout << "width: " << myDomain.getLevelSet().getLevelSetWidth() <<
   // std::endl;
   auto mesh = lsSmartPointer<lsMesh>::New();
-  lsToMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "points-0.vtk").apply();
-  lsToMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(1), mesh).apply();
   lsVTKWriter(mesh, "points-1.vtk").apply();
-  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "surface-0.vtk").apply();
-  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(1), mesh).apply();
   lsVTKWriter(mesh, "surface-1.vtk").apply();
 
   // csFromLevelSets<typename psDomainType::lsDomainsType,
@@ -88,14 +88,14 @@ int main() {
       lsConverter(myDomain.getLevelSets(), myDomain.getCellSet());
   lsConverter.apply();
 
-  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "newSurface-0.vtk").apply();
-  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(1), mesh).apply();
   lsVTKWriter(mesh, "newSurface-1.vtk").apply();
 
-  lsToMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "newPoints-0.vtk").apply();
-  lsToMesh<NumericType, D>(myDomain.getLevelSets()[1], mesh).apply();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(1), mesh).apply();
   lsVTKWriter(mesh, "newPoints-1.vtk").apply();
 
   return 0;

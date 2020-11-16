@@ -28,7 +28,7 @@ int main() {
     origin[2] = 0;
   NumericType radius = 15.3;
   lsMakeGeometry<NumericType, D>(
-      myDomain.getLevelSets()[0],
+      myDomain.getLevelSets()->at(0),
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
   origin[0] = 15.0;
@@ -40,14 +40,14 @@ int main() {
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()[0], secondSphere,
+  lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()->at(0), secondSphere,
                                      lsBooleanOperationEnum::UNION)
       .apply();
 
   auto mesh = lsSmartPointer<lsMesh>::New();
-  lsToMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "points.vtk").apply();
-  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()[0], mesh).apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "surface.vtk").apply();
 
   csFromLevelSets<typename psDomainType::lsDomainsType,

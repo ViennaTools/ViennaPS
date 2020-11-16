@@ -25,11 +25,11 @@ enum struct csToLevelSetsEnum : unsigned {
 /// which can then be converted to a level set value.
 template <class LSType, class CSType> class csToLevelSets {
   using CellType = typename CSType::element_type::ValueType;
-  using LevelSetType = typename LSType::value_type::element_type;
+  using LevelSetType = typename LSType::element_type::value_type::element_type;
   using DataDomainType = typename LevelSetType::DomainType;
   using NumericType = typename LevelSetType::ValueType;
 
-  LSType* levelSets = nullptr;
+  LSType levelSets = nullptr;
   CSType cellSet = nullptr;
   csToLevelSetsEnum conversionType =
       csToLevelSetsEnum::SIMPLE; // TODO change to lookup
@@ -49,7 +49,7 @@ template <class LSType, class CSType> class csToLevelSets {
     const unsigned numberOfMaterials = cellSet->getNumberOfMaterials();
     levelSets->resize(numberOfMaterials);
     for(auto &it : *levelSets) {
-      it = LSType::value_type::New(grid);
+      it = LSType::element_type::value_type::New(grid);
       it->getDomain().initialize(domain.getNewSegmentation(), domain.getAllocation());
     }
 
@@ -78,24 +78,34 @@ template <class LSType, class CSType> class csToLevelSets {
 
         // go over all possible material ids
         const bool isDefined = it.isDefined();
+        typename CellType::MaterialFractionType::mapped_type cumulativeFF=0.0;
         for(unsigned i = 0; i < numberOfMaterials; ++i) {
           auto &dataDomain = levelSets->at(i)->getDomain();
           auto material = materialMap.find(i);
 
           // ff is defined for material
           if(material != materialMap.end()) {
-            if(isDefined && (material->second > eps) && (material->second < (1.0 - eps))) { // defined point in cellSet
-              dataDomain.insertNextDefinedPoint(p, it.getStartIndices(), 0.5 - material->second);
+            cumulativeFF += material->second;
+            if(isDefined && (cumulativeFF > eps) && (cumulativeFF < (1.0 - eps))) { // defined point in cellSet
+              dataDomain.insertNextDefinedPoint(p, it.getStartIndices(), 0.5 - cumulativeFF);
             } else { // currently on undefined point in cellSet
-              if(material->second < eps) { // ff is empty
+              if(cumulativeFF < eps) { // ff is empty
                 dataDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
                   LevelSetType::POS_VALUE);
-              } else if(material->second > (1.0 - eps)) { // ff is full
+              } else if(cumulativeFF > (1.0 - eps)) { // ff is full
                 dataDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
                   LevelSetType::NEG_VALUE);
+                cumulativeFF = 1.0;
               } else { // invalid ff for undefined point
                 lsMessage::getInstance().addWarning("Background cell value should not have a filling fraction other than 0 or 1!").print();
               }
+            }
+          } else if (cumulativeFF > eps) { // if material is not defined, but material below was
+            if(cumulativeFF > (1.0 - eps)) { // ff is full
+                dataDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
+                  LevelSetType::NEG_VALUE);
+            } else { // take the same value as material below
+              dataDomain.insertNextDefinedPoint(p, it.getStartIndices(), 0.5 - cumulativeFF);
             }
           } else { // id is not found --> ff must be 0
               dataDomain.insertNextUndefinedPoint(p, it.getStartIndices(),
@@ -117,28 +127,25 @@ template <class LSType, class CSType> class csToLevelSets {
       // pad to width of 2, so it is normalised again
       lsExpand<typename LevelSetType::ValueType, D>(currentLS, 2).apply();
 
-      // Wrap with lower level sets to achieve original wrapping
-      if(i > 0) {
-        lsBooleanOperation<typename LevelSetType::ValueType, D>(currentLS, levelSets->at(i-1), lsBooleanOperationEnum::UNION).apply();
-      }
-
-#ifndef NDEBUG
-      auto mesh = lsSmartPointer<lsMesh>::New();
-      lsToMesh<typename LevelSetType::ValueType, D>(currentLS, mesh).apply();
-      lsVTKWriter(mesh, lsFileFormatEnum::VTP, "csToLevelSets_DEBUG-" + std::to_string(i) + ".vtp").apply();
-#endif
+//       #ifndef NDEBUG
+//       auto mesh = lsSmartPointer<lsMesh>::New();
+//       lsToMesh<typename LevelSetType::ValueType, D>(currentLS, mesh).apply();
+//       lsVTKWriter(mesh, lsFileFormatEnum::VTP, "csToLevelSets_DEBUG-" + std::to_string(i) + ".vtp").apply();
+//       lsToSurfaceMesh<typename LevelSetType::ValueType, D>(currentLS, mesh).apply();
+//       lsVTKWriter(mesh, lsFileFormatEnum::VTP, "csToLevelSets_DEBUG-surface-" + std::to_string(i) + ".vtp").apply();
+// #endif
     }
   }
 
 public:
   csToLevelSets() {}
 
-  csToLevelSets(LSType &passedLevelSets) : levelSets(&passedLevelSets) {}
+  csToLevelSets(LSType passedLevelSets) : levelSets(passedLevelSets) {}
 
-  csToLevelSets(LSType &passedLevelSets, CSType passedCellSet)
-      : levelSets(&passedLevelSets), cellSet(passedCellSet) {}
+  csToLevelSets(LSType passedLevelSets, CSType passedCellSet)
+      : levelSets(passedLevelSets), cellSet(passedCellSet) {}
 
-  void setLevelSets(LSType &passedLevelSets) { levelSets = &passedLevelSets; }
+  void setLevelSets(LSType passedLevelSets) { levelSets = passedLevelSets; }
 
   void setCellSet(CSType passedCellSet) { cellSet = passedCellSet; }
 

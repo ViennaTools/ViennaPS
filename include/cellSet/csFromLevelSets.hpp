@@ -26,23 +26,23 @@ enum struct csFromLevelSetsEnum : unsigned {
 /// by the plane of an LS disk (normal and ls value) and computing the volume.
 template <class LSType, class CSType> class csFromLevelSets {
   using CellType = typename CSType::element_type::ValueType;
-  using DataDomainType = typename LSType::value_type::element_type::DomainType;
-  using NumericType = typename LSType::value_type::element_type::ValueType;
+  using DataDomainType = typename LSType::element_type::value_type::element_type::DomainType;
+  using NumericType = typename LSType::element_type::value_type::element_type::ValueType;
 
   LSType levelSets;
   CSType cellSet = nullptr;
   csFromLevelSetsEnum conversionType =
       csFromLevelSetsEnum::SIMPLE; // TODO change to lookup
   bool calculateFillingFraction = true;
-  static constexpr int D = LSType::value_type::element_type::dimensions;
+  static constexpr int D = LSType::element_type::value_type::element_type::dimensions;
 
   template <class ConversionType> void convert() {
 
-    auto &grid = levelSets[0]->getGrid();
+    auto &grid = levelSets->at(0)->getGrid();
     auto newCSDomain = CSType::New(grid, cellSet->getBackGroundValue(),
                                    cellSet->getEmptyValue());
     auto &newDomain = newCSDomain->getDomain();
-    auto &domain = levelSets.back()->getDomain();
+    auto &domain = levelSets->back()->getDomain();
 
     newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
 
@@ -60,7 +60,7 @@ template <class LSType, class CSType> class csFromLevelSets {
 
       // collect domain pointers
       std::vector<const DataDomainType*> domains;
-      for(auto &it : levelSets) {
+      for(auto &it : *levelSets) {
         domains.push_back(&it->getDomain());
       }
 
@@ -163,7 +163,7 @@ public:
   void setCalculateFillingFraction(bool cff) { calculateFillingFraction = cff; }
 
   void apply() {
-    if (levelSets.empty()) {
+    if (levelSets->empty()) {
       lsMessage::getInstance()
           .addWarning("No level set was passed to csFromLevelSets.")
           .print();

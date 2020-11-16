@@ -20,12 +20,12 @@
 template <class CellType, class NumericType = float, int D = 3> class psDomain {
 public:
   typedef psSmartPointer<lsDomain<NumericType, D>> lsDomainType;
-  typedef std::vector<lsDomainType> lsDomainsType;
+  typedef psSmartPointer<std::vector<lsDomainType>> lsDomainsType;
   typedef psSmartPointer<csDomain<CellType, D>> csDomainType;
 
 private:
-  lsDomainsType levelSets;
-  csDomainType cellSet;
+  lsDomainsType levelSets = nullptr;
+  csDomainType cellSet = nullptr;
   bool syncData = true;
 
 public:
@@ -72,7 +72,8 @@ public:
         psSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal))
         .apply();
     // push level set into list
-    levelSets.push_back(substrate);
+    levelSets = lsDomainsType::New();
+    levelSets->push_back(substrate);
 
     cellSet =
         csDomainType::New(substrate->getGrid(), backGroundCell, emptyCell);
@@ -84,7 +85,7 @@ public:
   }
 
   psDomain(lsDomainType passedLevelSet) {
-    levelSets.push_back(passedLevelSet);
+    levelSets = lsDomainsType::New(passedLevelSet);
     cellSet = csDomainType::New(passedLevelSet->getGrid());
     // generate CellSet
     if(syncData) {
@@ -93,12 +94,16 @@ public:
   }
 
   psDomain(csDomainType passedCellSet) {
-    cellSet->deepCopy(passedCellSet);
+    cellSet = csDomainType::New(passedCellSet);
+    levelSets = lsDomainsType::New(passedCellSet->getGrid());
+    if(syncData) {
+      generateLevelSets();
+    }
   }
 
   void deepCopy(psSmartPointer<psDomain> passedDomain) {
-    levelSets.resize(passedDomain->levelSets.size());
-    for(unsigned i = 0; i < levelSets.size(); ++i) {
+    levelSets->resize(passedDomain->levelSets->size());
+    for(unsigned i = 0; i < levelSets->size(); ++i) {
       levelSets[i]->deepCopy(passedDomain->levelSets[i]);
     }
     cellSet->deepCopy(passedDomain->cellSet);
@@ -110,11 +115,11 @@ public:
     // Would make sense, unless there is a situation where this is not wanted.
     // Cannot think of one now though...
     // copy LS
-    auto tmpLS = psSmartPointer<lsDomainType>::New(passedLevelSet);
+    auto tmpLS = lsDomainType::New(passedLevelSet);
     // now bool with underlying LS if it exists
+    lsBooleanOperation<NumericType, D>(tmpLS, levelSets->back(), lsBooleanOperationEnum::UNION).apply();
 
-
-    levelSets.push_back(passedLevelSet);
+    levelSets->push_back(passedLevelSet);
     if(syncData) {
       generateCellSet();
     }
@@ -134,7 +139,7 @@ public:
 
   auto &getCellSet() { return cellSet; }
 
-  auto &getGrid() { return levelSets[0]->getGrid(); }
+  auto &getGrid() { return levelSets->at(0)->getGrid(); }
 
   void setSyncData(bool sync) {
     syncData = sync;
@@ -147,7 +152,7 @@ public:
   void print() {
     std::cout << "Process Simulation Domain:" << std::endl;
     std::cout << "**************************" << std::endl;
-    for (auto &ls : levelSets) {
+    for (auto &ls : *levelSets) {
       ls->print();
     }
     cellSet->print();
