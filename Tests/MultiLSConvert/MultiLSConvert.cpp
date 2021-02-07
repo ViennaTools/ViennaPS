@@ -25,7 +25,7 @@ int main() {
 
   // myCellType backGroundCell(1.0);
 
-  psDomainType myDomain(1.0);//, backGroundCell);
+  psDomainType myDomain;//(1.0);//, backGroundCell);
 
   // create a sphere in the level set
   NumericType origin[D] = {15., 0.};

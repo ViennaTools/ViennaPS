@@ -40,13 +40,13 @@ public:
   }
 
   /// Return the filling fractions of each material, which
-  /// is stored as a std::vector<std::pair<unsigned material, float filling fraction>>
+  /// is stored as an std::map<unsigned, float>
   const MaterialFractionType &getMaterialFractions() const {
     return materialFractions;
   }
 
   /// Return the filling fractions of each material, which
-  /// is stored as a std::vector<std::pair<unsigned material, float filling fraction>>
+  /// is stored as an std::unordered_map<unsigned, float>
   MaterialFractionType &getMaterialFractions() { return materialFractions; }
 
   /// Set a MaterialFractionType to describe the filling fractions of this cell

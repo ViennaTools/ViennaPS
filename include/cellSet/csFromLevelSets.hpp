@@ -12,7 +12,6 @@
 // #include <lsConvexHull.hpp>
 
 #include <csDomain.hpp>
-#include <csSimpleConversion.hpp>
 
 /// Enumeration for the different types of conversion
 enum struct csFromLevelSetsEnum : unsigned {
@@ -36,7 +35,7 @@ template <class LSType, class CSType> class csFromLevelSets {
   bool calculateFillingFraction = true;
   static constexpr int D = LSType::element_type::value_type::element_type::dimensions;
 
-  template <class ConversionType> void convert() {
+  void convertSimple() {
 
     auto &grid = levelSets->at(0)->getGrid();
     auto newCSDomain = CSType::New(grid, cellSet->getBackGroundValue(),
@@ -103,6 +102,9 @@ template <class LSType, class CSType> class csFromLevelSets {
 
               if(std::abs(lsValue) < 0.5) {
                 // convert LS value to filling Fraction
+                // TODO: if we want some more complex way of converting
+                // just pass the lsValue and the normal vector to
+                // some other class doing the calculations here
                 float fillingFraction = 0.5 - lsValue;
                 materialFractions.insert(std::make_pair(i, fillingFraction - lastFillingFraction));
                 materialSets[p].insert(i);
@@ -184,7 +186,7 @@ public:
       // convertLookup
       break;
     case csFromLevelSetsEnum::SIMPLE:
-      convert<csSimpleConversion<NumericType, D>>();
+      convertSimple();
       break;
     }
   } // apply()
