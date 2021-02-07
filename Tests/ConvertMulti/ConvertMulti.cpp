@@ -28,17 +28,17 @@ int main() {
   psDomainType myDomain(1.0, backGroundCell);
 
   // create a sphere in the level set
-  NumericType origin[D] = {0., 0.};
+  NumericType origin[D] = {15.0, 0.};
   if (D == 3)
     origin[2] = 0;
-  NumericType radius = 15.3;
+  NumericType radius = 8.7;
   lsMakeGeometry<NumericType, D>(
       myDomain.getLevelSets()->at(0),
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  origin[0] = 15.0;
-  radius = 8.7;
+  origin[0] = 0;
+  radius = 15.3;
   auto secondSphere =
       lsSmartPointer<lsDomain<NumericType, D>>::New(myDomain.getGrid());
   lsMakeGeometry<NumericType, D>(
@@ -46,9 +46,11 @@ int main() {
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()->at(0), secondSphere,
+
+  lsBooleanOperation<NumericType, D>(secondSphere, myDomain.getLevelSets()->at(0),
                                      lsBooleanOperationEnum::UNION)
       .apply();
+  myDomain.insertNextLevelSet(secondSphere);
 
   // lsExpand<NumericType, D>(myDomain.getLevelSet(), 5).apply();
   // std::cout << "width: " << myDomain.getLevelSet().getLevelSetWidth() <<
@@ -57,7 +59,9 @@ int main() {
   lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "points.vtk").apply();
   lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
-  lsVTKWriter(mesh, "surface.vtk").apply();
+  lsVTKWriter(mesh, "surface0.vtk").apply();
+  lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(1), mesh).apply();
+  lsVTKWriter(mesh, "surface1.vtk").apply();
 
   csFromLevelSets<typename psDomainType::lsDomainsType,
                   typename psDomainType::csDomainType>
