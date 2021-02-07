@@ -68,8 +68,8 @@ set(ViennaPS_DIR "/path/to/your/custom/install/")
 find_package(ViennaPS REQUIRED)
 add_executable(...)
 target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES}) -->
-```
+target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES})
+``` -->
 
 ### Building examples
 
