@@ -18,14 +18,22 @@ endif()
 
 set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
 set(ViennaLS_DIR $ENV{VIENNALS_DIR})
-#
-# SET(ViennaHRLE_DIR "${ViennaHRLE_DIR}")
-# SET(ViennaLS_DIR "${ViennaLS_DIR}")
+set(RTI_DIR $ENV{RTI_DIR})
 
 find_package(ViennaHRLE REQUIRED)
 find_package(ViennaLS REQUIRED)
+find_package (
+  rtidevice REQUIRED
+  PATHS ${RTI_DIR}
+  )
 
-set(VIENNAPS_INCLUDE_DIRS "${VIENNALS_INCLUDE_DIRS}" "${${PROJECT_NAME}_SOURCE_DIR}/include" "${${PROJECT_NAME}_SOURCE_DIR}/include/cellSet")
+set(
+    VIENNAPS_INCLUDE_DIRS 
+    "${VIENNALS_INCLUDE_DIRS}" 
+    "${${PROJECT_NAME}_SOURCE_DIR}/include" 
+    "${${PROJECT_NAME}_SOURCE_DIR}/include/cellSet" 
+    "${${PROJECT_NAME}_SOURCE_DIR}/include/rayTracer" 
+    )
 
 
 # VTK
