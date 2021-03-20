@@ -7,43 +7,47 @@
 #include <psSmartPointer.hpp>
 #include <rti/device.hpp>
 
-using NumericType = float;
+enum struct rtTraceBoundary : unsigned
+{
+  REFLECTIVE = 0,
+  PERIODIC = 1,
+};
 
 /**
     This class represent a ray tracer, simulating particle interactions
     with the domain surface.
 */
-template <class particle, class reflection, int D> class rtTrace {
+template <class particle, class reflection, int D>
+class rtTrace
+{
 public:
-  typedef psSmartPointer<rti::device<NumericType, particle, reflection>>
+  using numeric_type = float;
+  typedef psSmartPointer<rti::device<numeric_type, particle, reflection>>
       rtDeviceType;
-
-  enum struct rtBoundary : unsigned {
-    REFLECTIVE = 0,
-    PERIODIC = 1,
-  };
 
 private:
   rtDeviceType rtiDevice = nullptr;
-  lsSmartPointer<lsDomain<NumericType, D>> domain = nullptr;
+  lsSmartPointer<lsDomain<numeric_type, D>> domain = nullptr;
   size_t numberOfRaysMult = 1000;
 
 public:
   rtTrace() { rtiDevice = rtDeviceType::New(); };
 
-  rtTrace(lsSmartPointer<lsDomain<NumericType, D>> passedlsDomain,
-          const NumericType discRadius)
-      : domain(passedlsDomain) {
+  rtTrace(lsSmartPointer<lsDomain<numeric_type, D>> passedlsDomain,
+          const numeric_type discRadius)
+      : domain(passedlsDomain)
+  {
     rtiDevice = rtDeviceType::New();
     rtiDevice.get()->set_grid_spacing(discRadius);
   }
 
   /// Extract the mesh points and normals from the LS domain
   /// and then run the ray tracer
-  void apply() {
+  void apply()
+  {
     {
-      auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-      lsToDiskMesh<NumericType, D>(domain, mesh).apply();
+      auto mesh = lsSmartPointer<lsMesh<numeric_type>>::New();
+      lsToDiskMesh<numeric_type, D>(domain, mesh).apply();
       auto points = mesh.get()->getNodes();
       auto normals = *mesh.get()->getVectorData("Normals");
 
@@ -60,33 +64,39 @@ public:
 
   /// Returns the particle hit counts for each grid point
   /// normalized to the overall maximal hit count
-  std::vector<NumericType> getMcEstimates() {
+  std::vector<numeric_type> getMcEstimates()
+  {
     return rtiDevice.get()->get_mc_estimates();
   }
 
-  void setDiscRadius(const NumericType discRadius) {
+  void setDiscRadius(const numeric_type discRadius)
+  {
     rtiDevice.get()->set_grid_spacing(discRadius);
   }
 
-  void setPowerCosineDirection(const NumericType exp) {
-    auto direction = rti::ray::power_cosine_direction_z<NumericType>{exp};
+  void setPowerCosineDirection(const numeric_type exp)
+  {
+    auto direction = rti::ray::power_cosine_direction_z<numeric_type>{exp};
     rtiDevice.get()->set(direction);
   }
 
   void setNumberOfRays(size_t num) { numberOfRaysMult = num; }
 
-  void setDomain(lsSmartPointer<lsDomain<NumericType, D>> passedlsDomain,
-                 const NumericType discRadius) {
+  void setDomain(lsSmartPointer<lsDomain<numeric_type, D>> passedlsDomain,
+                 const numeric_type discRadius)
+  {
     domain = passedlsDomain;
     rtiDevice.get()->set_grid_spacing(discRadius);
   }
 
-  void setBoundaryX(rtBoundary bound) {
-    switch (bound) {
-    case rtBoundary::REFLECTIVE:
+  void setBoundaryX(rtTraceBoundary bound)
+  {
+    switch (bound)
+    {
+    case rtTraceBoundary::REFLECTIVE:
       rtiDevice.get()->set_x(rti::geo::bound_condition::REFLECTIVE);
       break;
-    case rtBoundary::PERIODIC:
+    case rtTraceBoundary::PERIODIC:
       rtiDevice.get()->set_x(rti::geo::bound_condition::PERIODIC);
       break;
     default:
@@ -95,12 +105,14 @@ public:
     }
   }
 
-  void setBoundaryY(rtBoundary bound) {
-    switch (bound) {
-    case rtBoundary::REFLECTIVE:
+  void setBoundaryY(rtTraceBoundary bound)
+  {
+    switch (bound)
+    {
+    case rtTraceBoundary::REFLECTIVE:
       rtiDevice.get()->set_y(rti::geo::bound_condition::REFLECTIVE);
       break;
-    case rtBoundary::PERIODIC:
+    case rtTraceBoundary::PERIODIC:
       rtiDevice.get()->set_y(rti::geo::bound_condition::PERIODIC);
       break;
     default:
