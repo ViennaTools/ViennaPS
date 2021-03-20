@@ -6,13 +6,14 @@
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 #include <numeric>
+#include <rtTrace.hpp>
 #include <rtParticle.hpp>
 #include <rtReflection.hpp>
-#include <rtTrace.hpp>
 
 using NumericType = float;
 
-int main() {
+int main()
+{
   constexpr int D = 3;
 
   NumericType extent = 10;
@@ -39,10 +40,8 @@ int main() {
   const NumericType eps = 1e-1;
   rtTrace<rtParticle1, rtDiffuseReflection, D> rayTracer(dom, gridDelta);
   rayTracer.setNumberOfRays(2000);
-  rayTracer.setBoundaryY(
-      rtTrace<rtParticle1, rtDiffuseReflection, D>::rtBoundary::REFLECTIVE);
-  rayTracer.setBoundaryX(
-      rtTrace<rtParticle1, rtDiffuseReflection, D>::rtBoundary::REFLECTIVE);
+  rayTracer.setBoundaryY(rtTraceBoundary::REFLECTIVE);
+  rayTracer.setBoundaryX(rtTraceBoundary::REFLECTIVE);
   rayTracer.apply();
 
   auto hitcounts = rayTracer.getHitCounts();
@@ -54,23 +53,29 @@ int main() {
     numRays = points.size() * 2000;
   }
 
-  double sum = std::accumulate(hitcounts.begin(), hitcounts.end(), 0.0);
-  double mean = sum / hitcounts.size();
 
-  std::vector<double> diff(hitcounts.size());
-  std::transform(hitcounts.begin(), hitcounts.end(), diff.begin(),
-                 [mean](double x) { return x - mean; });
-  double sq_sum =
-      std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
-  double stdev = std::sqrt(sq_sum / hitcounts.size());
+  // check standard deviation of hitcounts < sqrt(#Rays)
+  {
+    double sum = std::accumulate(hitcounts.begin(), hitcounts.end(), 0.0);
+    double mean = sum / hitcounts.size();
+    std::vector<double> diff(hitcounts.size());
+    std::transform(hitcounts.begin(), hitcounts.end(), diff.begin(),
+                   [mean](double x) { return x - mean; });
+    double sq_sum =
+        std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+    double stdev = std::sqrt(sq_sum / hitcounts.size());
 
-  if (stdev > std::sqrt(numRays)) {
-    std::cout << "Standard deviation too big!" << std::endl;
-    success = false;
+    if (stdev > std::sqrt(numRays))
+    {
+      std::cout << "Standard deviation too big!" << std::endl;
+      success = false;
+    }
   }
 
+  // check equal distribution of mc estimates
   if (!std::all_of(mcestimates.begin(), mcestimates.end(),
-                   [eps](NumericType i) { return (1 - i) < eps; })) {
+                   [eps](NumericType i) { return (1 - i) < eps; }))
+  {
     std::cout << "Mc estimates not equally distributed!" << std::endl;
     success = false;
   }
