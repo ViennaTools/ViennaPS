@@ -3,13 +3,13 @@
 
 #include <rti/particle/i_particle.hpp>
 
-using NumericType = float;
+using NumericTypePart = float;
 
-class rtParticle1 : public rti::particle::i_particle<NumericType> {
+class rtParticle1 : public rti::particle::i_particle<NumericTypePart> {
 public:
-  NumericType
+  NumericTypePart
   get_sticking_probability(RTCRay &rayin, RTCHit &hitin,
-                           rti::geo::meta_geometry<NumericType> &geometry,
+                           rti::geo::meta_geometry<NumericTypePart> &geometry,
                            rti::rng::i_rng &rng,
                            rti::rng::i_rng::i_state &rngstate) override final {
     // return the sticking probability for this hit
@@ -19,11 +19,11 @@ public:
   void init_new() override final {}
 };
 
-class rtParticle2 : public rti::particle::i_particle<NumericType> {
+class rtParticle2 : public rti::particle::i_particle<NumericTypePart> {
 public:
-  NumericType
+  NumericTypePart
   get_sticking_probability(RTCRay &rayin, RTCHit &hitin,
-                           rti::geo::meta_geometry<NumericType> &geometry,
+                           rti::geo::meta_geometry<NumericTypePart> &geometry,
                            rti::rng::i_rng &rng,
                            rti::rng::i_rng::i_state &rngstate) override final {
     // return the sticking probability for this hit
@@ -36,7 +36,7 @@ public:
 
 private:
   unsigned hitCounter = 0;
-  NumericType totalEnergy;
+  NumericTypePart totalEnergy;
 };
 
 #endif // RT_PARTICLE_HPP
