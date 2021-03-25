@@ -25,7 +25,7 @@ int main() {
 
   // myCellType backGroundCell(1.0);
 
-  psDomainType myDomain;//(1.0);//, backGroundCell);
+  psDomainType myDomain; //(1.0);//, backGroundCell);
 
   // create a sphere in the level set
   NumericType origin[D] = {15., 0.};
@@ -46,7 +46,8 @@ int main() {
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  lsBooleanOperation<NumericType, D>(secondSphere, myDomain.getLevelSets()->at(0), 
+  lsBooleanOperation<NumericType, D>(secondSphere,
+                                     myDomain.getLevelSets()->at(0),
                                      lsBooleanOperationEnum::UNION)
       .apply();
 
@@ -55,7 +56,7 @@ int main() {
   // lsExpand<NumericType, D>(myDomain.getLevelSet(), 5).apply();
   // std::cout << "width: " << myDomain.getLevelSet().getLevelSetWidth() <<
   // std::endl;
-  auto mesh = lsSmartPointer<lsMesh>::New();
+  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
   lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "points-0.vtk").apply();
   lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(1), mesh).apply();
@@ -74,7 +75,8 @@ int main() {
   // std::cout << myDomain.getCellSet()->getBackGroundValue() << std::endl;
 
   // myDomain.getCellSet()->print();
-  std::cout << "Number of materials: " << myDomain.getCellSet()->getNumberOfMaterials() << std::endl;
+  std::cout << "Number of materials: "
+            << myDomain.getCellSet()->getNumberOfMaterials() << std::endl;
   std::cout << "Converted to Cells" << std::endl;
 
   // myDomain.print();
@@ -84,7 +86,7 @@ int main() {
 
   // convert cells back into levelSets
   csToLevelSets<typename psDomainType::lsDomainsType,
-               typename psDomainType::csDomainType>
+                typename psDomainType::csDomainType>
       lsConverter(myDomain.getLevelSets(), myDomain.getCellSet());
   lsConverter.apply();
 
