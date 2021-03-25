@@ -10,10 +10,11 @@
 #include <rtParticle.hpp>
 #include <rtReflection.hpp>
 
-using NumericType = float;
 
-int main()
-{
+int main() {
+  
+  using NumericType = float;
+
   constexpr int D = 3;
 
   NumericType extent = 10;
@@ -53,7 +54,6 @@ int main()
     numRays = points.size() * 2000;
   }
 
-
   // check standard deviation of hitcounts < sqrt(#Rays)
   {
     double sum = std::accumulate(hitcounts.begin(), hitcounts.end(), 0.0);
@@ -65,8 +65,7 @@ int main()
         std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
     double stdev = std::sqrt(sq_sum / hitcounts.size());
 
-    if (stdev > std::sqrt(numRays))
-    {
+    if (stdev > std::sqrt(numRays)) {
       std::cout << "Standard deviation too big!" << std::endl;
       success = false;
     }
@@ -74,8 +73,7 @@ int main()
 
   // check equal distribution of mc estimates
   if (!std::all_of(mcestimates.begin(), mcestimates.end(),
-                   [eps](NumericType i) { return (1 - i) < eps; }))
-  {
+                   [eps](NumericType i) { return (1 - i) < eps; })) {
     std::cout << "Mc estimates not equally distributed!" << std::endl;
     success = false;
   }
