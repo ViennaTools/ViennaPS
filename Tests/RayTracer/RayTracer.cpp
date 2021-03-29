@@ -1,9 +1,9 @@
 #include <iostream>
+#include <chrono>
 #include <lsAdvect.hpp>
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
-#include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 #include <rtTrace.hpp>
@@ -37,16 +37,14 @@ int main() {
     lsMakeGeometry<NumericType, D>(dom, plane).apply();
   }
 
-  // create trench geometry
+  // Create trench geometry
   {
     auto trench = lsSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
-    // make -x and +x greater than domain for numerical stability
     NumericType minCorner[D] = {-extent - 1, -extent / 4.f, -30.};
     NumericType maxCorner[D] = {extent + 1, extent / 4.f, 1.};
     auto box = lsSmartPointer<lsBox<NumericType, D>>::New(minCorner, maxCorner);
     lsMakeGeometry<NumericType, D>(trench, box).apply();
-    // Create trench geometry
     lsBooleanOperation<NumericType, D>(
         dom, trench, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
@@ -54,19 +52,22 @@ int main() {
   auto newLayer = lsSmartPointer<lsDomain<NumericType, D>>::New(dom);
 
   rtTrace<rtParticle1, rtDiffuseReflection, D> rayTracer;
-  rayTracer.setPowerCosineDirection(2.);
   rayTracer.setDomain(newLayer, gridDelta * 0.5 * std::sqrt(3) * (1 + eps));
-  rayTracer.setNumberOfRays(100);
+  rayTracer.setPowerCosineDirection(2.);
+  rayTracer.setNumberOfRaysMult(100);
 
   lsAdvect<NumericType, D> advectionKernel;
   advectionKernel.insertNextLevelSet(dom);
   advectionKernel.insertNextLevelSet(newLayer);
   advectionKernel.setVelocityField(rayTracer.getVelocityField());
 
-  std::cout << "Advecting" << std::endl;
   for (NumericType time = 0; time < 7.;
        time += advectionKernel.getAdvectedTime()) {
+
+    std::cout << "Ray tracing ... " << std::endl;
     rayTracer.apply();
+
+    std::cout << "Advecting ... " << std::endl;
     advectionKernel.apply();
 
     std::cout << "Time " << time << std::endl;
