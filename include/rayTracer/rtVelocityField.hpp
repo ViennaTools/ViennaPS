@@ -24,7 +24,16 @@ public:
                       unsigned long pointID) {
 
     assert(translator->find(pointID) != translator->end() && "Invalid pointId");
-    return mcestimates->at(translator->at(pointID));
+
+    if (auto it = translator->find(pointID); it != translator->end())
+    {
+      return mcestimates->operator[](it->second);
+    }
+    else 
+    {
+      lsMessage::getInstance().addError("rtVelocityField: Invalid pointId");
+      return 0.;
+    }
   }
 
   void setTranslator(lsSmartPointer<TranslatorType> passedTranslator) {
