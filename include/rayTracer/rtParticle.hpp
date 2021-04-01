@@ -13,7 +13,7 @@ public:
                            rti::rng::i_rng &rng,
                            rti::rng::i_rng::i_state &rngstate) override final {
     // return the sticking probability for this hit
-    return 0.01;
+    return 0.5;
   }
 
   void init_new() override final {}
@@ -27,15 +27,15 @@ public:
                            rti::rng::i_rng &rng,
                            rti::rng::i_rng::i_state &rngstate) override final {
     // return the sticking probability for this hit
-    ++hitCounter;
+
     // do something with energy
-    return 0.1;
+    totalEnergy += 0.01;
+    return totalEnergy;
   }
 
-  void init_new() override final { totalEnergy = 1.; }
+  void init_new() override final { totalEnergy = 0.01; }
 
 private:
-  unsigned hitCounter = 0;
   NumericTypePart totalEnergy;
 };
 

@@ -1,9 +1,8 @@
 #ifndef RT_REFLECTION_HPP
 #define RT_REFLECTION_HPP
 
-#include <iostream>
-#include <psSmartPointer.hpp>
-#include <rti/device.hpp>
+#include <rti/reflection/diffuse.hpp>
+#include <rti/reflection/specular.hpp>
 
 using NumericTypeReflect = float;
 

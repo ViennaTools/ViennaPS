@@ -5,7 +5,7 @@
 #include <lsVelocityField.hpp>
 #include <unordered_map>
 
-template <class T> class rtVelocityField : public lsVelocityField<T> {
+template <class T, int D> class rtVelocityField : public lsVelocityField<T> {
 private:
   typedef std::unordered_map<unsigned long, unsigned long> TranslatorType;
 
@@ -19,18 +19,15 @@ public:
                   lsSmartPointer<TranslatorType> passedTranslator)
       : mcestimates(passedMcEstimates), translator(passedTranslator) {}
 
-  T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int /*material*/,
-                      const std::array<T, 3> & /*normalVector*/,
+  T getScalarVelocity(const std::array<T, D> & /*coordinate*/, int /*material*/,
+                      const std::array<T, D> & /*normalVector*/,
                       unsigned long pointID) {
 
     assert(translator->find(pointID) != translator->end() && "Invalid pointId");
 
-    if (auto it = translator->find(pointID); it != translator->end())
-    {
+    if (auto it = translator->find(pointID); it != translator->end()) {
       return mcestimates->operator[](it->second);
-    }
-    else 
-    {
+    } else {
       lsMessage::getInstance().addError("rtVelocityField: Invalid pointId");
       return 0.;
     }
