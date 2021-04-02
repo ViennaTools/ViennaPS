@@ -98,7 +98,8 @@ public:
   }
 
   void setCosinePower(const numeric_type exp) {
-    auto direction = rti::ray::power_cosine_direction_z<numeric_type>{exp};
+    auto direction =
+        std::make_unique<rti::ray::power_cosine_direction_z<numeric_type>>(exp);
     rtiDevice->set(direction);
   }
 
