@@ -1,14 +1,13 @@
 #include <iostream>
-#include <chrono>
 #include <lsAdvect.hpp>
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
-#include <rtTrace.hpp>
 #include <rtParticle.hpp>
 #include <rtReflection.hpp>
+#include <rtTrace.hpp>
 
 using NumericType = float;
 
@@ -17,7 +16,6 @@ int main() {
 
   omp_set_num_threads(4);
 
-  NumericType eps = 1e-4;
   NumericType extent = 30;
   NumericType gridDelta = 0.5;
   double bounds[2 * D] = {-extent, extent, -extent, extent, -extent, extent};
@@ -49,36 +47,32 @@ int main() {
         dom, trench, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
   }
-  auto newLayer = lsSmartPointer<lsDomain<NumericType, D>>::New(dom);
 
-  rtTrace<rtParticle1, rtDiffuseReflection, D> rayTracer;
-  rayTracer.setDomain(newLayer, gridDelta * 0.5 * std::sqrt(3) * (1 + eps));
-  rayTracer.setPowerCosineDirection(2.);
-  rayTracer.setNumberOfRaysMult(100);
+  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+  lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
+  lsVTKWriter<NumericType>(mesh, "trench-initial.vtk").apply();
+
+  rtTrace<rtParticle1, rtDiffuseReflection, D> rayTracer(dom);
+  rayTracer.setCosinePower(2.);
+  rayTracer.setNumberOfRaysPerPoint(100);
 
   lsAdvect<NumericType, D> advectionKernel;
   advectionKernel.insertNextLevelSet(dom);
-  advectionKernel.insertNextLevelSet(newLayer);
   advectionKernel.setVelocityField(rayTracer.getVelocityField());
 
   for (NumericType time = 0; time < 7.;
        time += advectionKernel.getAdvectedTime()) {
-
     std::cout << "Ray tracing ... " << std::endl;
     rayTracer.apply();
 
     std::cout << "Advecting ... " << std::endl;
     advectionKernel.apply();
 
-    std::cout << "Time " << time << std::endl;
+    std::cout << "Time: " << time << std::endl;
   }
 
-  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-  lsToSurfaceMesh<NumericType, D>(newLayer, mesh).apply();
-  lsVTKWriter<NumericType>(mesh, "trench-advected.vtk").apply();
-
   lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
-  lsVTKWriter<NumericType>(mesh, "trench-initial.vtk").apply();
+  lsVTKWriter<NumericType>(mesh, "trench-advected.vtk").apply();
 
   return 0;
 }
