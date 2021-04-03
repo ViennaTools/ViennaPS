@@ -32,27 +32,10 @@ public:
     velocityField = lsSmartPointer<rtVelocityField<numeric_type, D>>::New();
   };
 
-  rtTrace(lsSmartPointer<lsDomain<numeric_type, D>> passedlsDomain)
-      : domain(passedlsDomain) {
+  rtTrace(lsSmartPointer<lsDomain<numeric_type, D>> passedlsDomain) {
     rtiDevice = rtDeviceType::New();
     velocityField = lsSmartPointer<rtVelocityField<numeric_type, D>>::New();
-    rtiDevice->set_grid_spacing(domain->getGrid().getGridDelta() * discFactor);
-
-    auto boundaryConds = domain->getGrid().getBoundaryConditions();
-    for (int i = 0; i < D - 1; i++) {
-      switch (boundaryConds[i]) {
-      case lsDomain<numeric_type, D>::BoundaryType::REFLECTIVE_BOUNDARY:
-        setBoundary(i, rtTraceBoundary::REFLECTIVE);
-        break;
-      case lsDomain<numeric_type, D>::BoundaryType::PERIODIC_BOUNDARY:
-        setBoundary(i, rtTraceBoundary::PERIODIC);
-        break;
-      default:
-        lsMessage::getInstance().addWarning(
-            "rtTrace: Non-compatible boundary condition in domain");
-        break;
-      }
-    }
+    setDomain(passedlsDomain);
   }
 
   /// Extract the mesh points, normals and pointId translator from the LS domain
@@ -63,11 +46,10 @@ public:
           std::unordered_map<unsigned long, unsigned long>>::New();
       auto mesh = lsSmartPointer<lsMesh<numeric_type>>::New();
       lsToDiskMesh<numeric_type, D>(domain, mesh, translator).apply();
+      velocityField->setTranslator(translator);
 
       auto points = mesh->getNodes();
       auto normals = *mesh->getVectorData("Normals");
-      velocityField->setTranslator(translator);
-
       rtiDevice->set_points(points);
       rtiDevice->set_normals(normals);
       rtiDevice->set_number_of_rays(numberOfRaysPerPoint * points.size());
@@ -121,7 +103,7 @@ public:
         break;
       default:
         lsMessage::getInstance().addWarning(
-            "rtTrace: Non-compatible boundary condition in domain");
+            "rtTrace: Non-compatible boundary condition in lsDomain.");
         break;
       }
     }
@@ -137,7 +119,7 @@ public:
       break;
     default:
       lsMessage::getInstance().addWarning(
-          "rtTrace: Non-compatible boundary condition");
+          "rtTrace: Non-compatible boundary condition.");
       break;
     }
   }

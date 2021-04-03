@@ -9,9 +9,8 @@
 #include <rtReflection.hpp>
 #include <rtTrace.hpp>
 
-using NumericType = float;
-
 int main() {
+  using NumericType = float;
   constexpr int D = 3;
 
   omp_set_num_threads(4);
@@ -28,8 +27,8 @@ int main() {
                                                            gridDelta);
 
   {
-    NumericType origin[3] = {0., 0., 0.};
-    NumericType planeNormal[3] = {0., 0., 1.};
+    NumericType origin[D] = {0., 0., 0.};
+    NumericType planeNormal[D] = {0., 0., 1.};
     auto plane =
         lsSmartPointer<lsPlane<NumericType, D>>::New(origin, planeNormal);
     lsMakeGeometry<NumericType, D>(dom, plane).apply();
