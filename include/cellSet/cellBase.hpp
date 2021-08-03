@@ -54,11 +54,12 @@ public:
     materialFractions = passedMaterialFractions;
   }
 
-  /// Compare all fililng fractions of two cells. Only returns true if all of them
-  /// are the same.
+  /// Compare all fililng fractions of two cells. Only returns true if all of
+  /// them are the same.
   virtual bool operator==(cellBase passedCell) {
     // for (unsigned i = 0; i < materialFractions.size(); ++i) {
-    //   if (materialFractions[i].first != passedCell.materialFractions[i].first) {
+    //   if (materialFractions[i].first !=
+    //   passedCell.materialFractions[i].first) {
     //     return false;
     //   }
     //   if (std::abs(materialFractions[i].second -

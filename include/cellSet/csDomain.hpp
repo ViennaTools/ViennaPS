@@ -3,8 +3,8 @@
 
 #include <hrleDomain.hpp>
 
-#include <csSmartPointer.hpp>
 #include <cellBase.hpp>
+#include <csSmartPointer.hpp>
 
 template <class T, int D> class csDomain {
 public:
@@ -80,9 +80,7 @@ public:
   unsigned getNumberOfCells() const { return domain.getNumberOfPoints(); }
 
   /// set the number of materials currently saved in the cell set
-  void setNumberOfMaterials(unsigned number) {
-    numberOfMaterials = number;
-  }
+  void setNumberOfMaterials(unsigned number) { numberOfMaterials = number; }
 
   /// returns the number of different materials currently saved in the cell set
   unsigned getNumberOfMaterials() const { return numberOfMaterials; }

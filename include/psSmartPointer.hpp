@@ -3,7 +3,6 @@
 
 #include <lsSmartPointer.hpp>
 
-template<class T>
-using psSmartPointer = lsSmartPointer<T>;
+template <class T> using psSmartPointer = lsSmartPointer<T>;
 
 #endif // PS_SMART_POINTER_HPP
