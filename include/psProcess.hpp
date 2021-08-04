@@ -19,11 +19,11 @@ template <typename CellType, typename NumericType, int D>
 class psProcess
 {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
-  psSmartPointer<psDomain<CellType, NumericType, D>> domain;
-  psSmartPointer<psProcessModel<NumericType>> model;
+  psSmartPointer<psDomain<CellType, NumericType, D>> domain = nullptr;
+  psSmartPointer<psProcessModel<NumericType>> model = nullptr;
   double processDuration;
   rayTraceDirection sourceDirection;
-  int accuracy = 1000;
+  int raysPerPoint = 1000;
 
   rayTraceBoundary convertBoundaryCondition(
       lsBoundaryConditionEnum<D> originalBoundaryCondition)
@@ -45,6 +45,19 @@ class psProcess
     case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
       return rayTraceBoundary::IGNORE;
     }
+  }
+
+  rayTracingData<NumericType> convertPointData(psSmartPointer<psPointData<NumericType>> pointData)
+  {
+    rayTracingData<NumericType> rayData;
+    const auto numCoverages = pointData->getScalarDataSize();
+    rayData.setNumberOfVectorData(numCoverages);
+    for (size_t i = 0; i < numCoverages; ++i)
+    {
+      auto label = pointData->getScalarDataLabel(i);
+      rayData.getvectorData(i) = std::move(*pointData->getScalarData(label));
+    }
+    return std::move(rayData);
   }
 
 public:
@@ -75,7 +88,7 @@ public:
 
     rayTrace<NumericType, D> rayTrace;
     rayTrace.setSourceDirection(sourceDirection);
-    rayTrace.setNumberOfRaysPerPoint(accuracy);
+    rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
     rayTrace.setBoundaryConditions(rayBoundCond);
     rayTrace.setCalculateFlux(false);
 
@@ -83,17 +96,15 @@ public:
     {
       meshConverter.apply();
       auto numPoints = diskMesh->getNodes().size();
-      model->getSurfaceModel()->initializeCoverages(numPoints, 0.5);
+      model->getSurfaceModel()->initializeCoverages(numPoints);
       auto points = diskMesh->getNodes();
       auto normals = *diskMesh->getCellData("Normals");
       auto materialIds = *diskMesh->getCellData("MaterialIds");
       rayTrace.setGeometry(points, normals, gridDelta);
       rayTrace.setMaterialIDs(materialIds);
 
-      // TODO: convert coverages to rayTraceData
-      // rayTrace.setGlobalData(
-      //     model->getSurfaceModel()
-      //         ->getCoverages()); // just set as a reference (using shared ptr)
+      rayTracingData<NumericType> rayTraceCoverages = convertPointData(model->getSurfaceModel()->getCoverages());
+      rayTrace.setGlobalData(rayTraceCoverages);
 
       std::vector<std::vector<NumericType>> Rates;
 
@@ -146,6 +157,12 @@ public:
       advectionKernel->apply();
       remainingTime -= advectionKernel->getAdvectedTime();
     }
+  }
+
+  template <typename ProcessModelType>
+  void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel)
+  {
+    model = std::dynamic_pointer_cast<psProcessModel<NumericType>>(passedProcessModel);
   }
 };
 

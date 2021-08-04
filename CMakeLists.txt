@@ -43,10 +43,14 @@ endif(NOT VTK_DIR)
 find_package(VTK REQUIRED)
 if(VTK_FOUND)
   message(STATUS "Found VTK")
-  add_definitions(-DVIENNALS_USE_VTK)
-  include(${VTK_USE_FILE})
+  add_compile_definitions(VIENNAPS_USE_VTK)
+
+  if (VTK_VERSION VERSION_LESS "8.90")
+    message(STATUS "Using old VTK Version: ${VTK_VERSION}")
+    include(${VTK_USE_FILE})
+  endif()
   # only link needed vtk libraries
-  set(VTK_LIBRARIES vtksys;vtkIOCore;vtkexpat;vtklz4;vtkzlib;vtklzma;vtkdoubleconversion;vtkCommonMisc;vtkCommonSystem;vtkIOXML)
+  # set(VTK_LIBRARIES vtksys;vtkIOCore;vtkexpat;vtklz4;vtkzlib;vtklzma;vtkdoubleconversion;vtkCommonMisc;vtkCommonSystem;vtkIOXML)
   list(APPEND VIENNAPS_LIBRARIES ${VTK_LIBRARIES})
 else(VTK_FOUND)
   message(FATAL_ERROR "No VTK install found.")
@@ -59,3 +63,11 @@ option(VIENNAPS_BUILD_TESTS "Build tests." OFF)
 if(VIENNAPS_BUILD_TESTS)
   add_subdirectory(Tests)
 endif(VIENNAPS_BUILD_TESTS)
+
+#################################################
+# BUILD EXAMPLES 
+#################################################
+option(VIENNAPS_BUILD_EXAMPLES "Build examples." OFF)
+if(VIENNAPS_BUILD_EXAMPLES)
+  add_subdirectory(Examples)
+endif(VIENNAPS_BUILD_EXAMPLES)

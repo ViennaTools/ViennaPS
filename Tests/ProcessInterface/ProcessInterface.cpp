@@ -1,7 +1,11 @@
-#include <psProcess.hpp>
+// #include <psProcess.hpp>
 #include <psSmartPointer.hpp>
+#include <psSurfaceModel.hpp>
+#include <psProcessModel.hpp>
 #include <vector>
 #include <iostream>
+#include <cellBase.hpp>
+#include <psProcess.hpp>
 
 // needs to be derived for interacting particles, if only non-interacting can
 // use base implementation with predefined sticky/non-sticky particles if
@@ -19,8 +23,51 @@
 //   psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() override {}
 // };
 
+template <typename NumericType>
+class mySurfaceModel : public psSurfaceModel<NumericType>
+{
+    using typename psSurfaceModel<NumericType>::SurfaceDataType;
+    using psSurfaceModel<NumericType>::Coverages;
+
+public:
+    std::vector<NumericType>
+    calculateVelocities(SurfaceDataType &Rates, std::vector<NumericType> &materialIds) override
+    {
+        const auto numPoints = Rates.back().size();
+        std::vector<NumericType> velocities(numPoints);
+        return velocities;
+    }
+
+    void updateCoverages(SurfaceDataType &Rates) override
+    {
+        const auto numPoints = Rates.back().size();
+        for (auto &cov : *Coverages)
+        {
+            for (size_t i = 0; i < numPoints; ++i)
+            {
+                cov[i] = 0.5;
+            }
+        }
+    }
+};
+
+class myCellType : public cellBase
+{
+    using cellBase::cellBase;
+};
 
 int main()
 {
-return 0;
+    constexpr int D = 3;
+    using NumericType = double;
+    auto surfaceModel = psSmartPointer<mySurfaceModel<NumericType>>::New();
+    auto processModel = psSmartPointer<psProcessModel<NumericType>>::New();
+
+    processModel->setSurfaceModel(surfaceModel);
+    auto particle = std::make_unique<rayTestParticle<NumericType>>();
+    processModel->insertNextParticleType(particle);
+
+    psProcess<myCellType, NumericType, D> process;
+    process.setProcessModel(processModel);
+    return 0;
 }

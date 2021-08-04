@@ -2,50 +2,45 @@
 #define PS_SURFACE_MODEL
 
 #include <psSmartPointer.hpp>
+#include <psPointData.hpp>
 #include <vector>
 
 template <typename NumericType>
 class psSurfaceModel
 {
-private:
-  using SurfaceDataType = std::vector<std::vector<NumericType>>;
-  psSmartPointer<SurfaceDataType> Coverages = nullptr;
+protected:
+  psSmartPointer<psPointData<NumericType>> Coverages = nullptr;
 
 public:
   void initializeCoverages(unsigned numPoints, NumericType value)
   {
     if (Coverages == nullptr)
     {
-      Coverages = psSmartPointer<SurfaceDataType>::New();
+      Coverages = psSmartPointer<psPointData<NumericType>>::New();
     }
     else
     {
       Coverages->clear();
     }
-    Coverages->resize(getNumberOfCoverages());
-    for (auto &cov : *Coverages)
-      cov.resize(numPoints, value);
+    // Coverages->resize(getNumberOfCoverages());
+    // for (auto &cov : *Coverages)
+    //   cov.resize(numPoints, value);
   }
 
-  psSmartPointer<SurfaceDataType> getCoverages()
+  psSmartPointer<psPointData<NumericType>> getCoverages()
   {
     return Coverages;
   }
 
   virtual std::vector<NumericType>
-  calculateVelocities(SurfaceDataType &Rates,
+  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
                       std::vector<NumericType> &materialIDs)
   {
     return std::vector<NumericType>{};
   }
 
-  virtual void updateCoverages(SurfaceDataType &Rates)
+  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> &Rates)
   {
-  }
-
-  virtual int getNumberOfCoverages() const 
-  {
-    return 1;
   }
 };
 
