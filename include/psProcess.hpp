@@ -47,7 +47,7 @@ class psProcess
     }
   }
 
-  rayTracingData<NumericType> convertPointData(psSmartPointer<psPointData<NumericType>> pointData)
+  rayTracingData<NumericType> movePointDataToRayData(psSmartPointer<psPointData<NumericType>> pointData)
   {
     rayTracingData<NumericType> rayData;
     const auto numCoverages = pointData->getScalarDataSize();
@@ -55,7 +55,7 @@ class psProcess
     for (size_t i = 0; i < numCoverages; ++i)
     {
       auto label = pointData->getScalarDataLabel(i);
-      rayData.getvectorData(i) = std::move(*pointData->getScalarData(label));
+      rayData.setVectorData(i, std::move(*pointData->getScalarData(label)), label);
     }
     return std::move(rayData);
   }
@@ -103,10 +103,12 @@ public:
       rayTrace.setGeometry(points, normals, gridDelta);
       rayTrace.setMaterialIDs(materialIds);
 
-      rayTracingData<NumericType> rayTraceCoverages = convertPointData(model->getSurfaceModel()->getCoverages());
+      rayTracingData<NumericType> rayTraceCoverages = movePointDataToRayData(model->getSurfaceModel()->getCoverages());
       rayTrace.setGlobalData(rayTraceCoverages);
+      // all coverages are moved into rayTracingData and are thus invalidated in the surfaceModel
+      model->getSurfaceModel()->getCoverages()->clear();
 
-      std::vector<std::vector<NumericType>> Rates;
+      auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
       for (auto &particle : model->getParticleTypes())
       {
@@ -114,9 +116,11 @@ public:
         rayTrace.apply();
 
         // fill up rates vector with rates from this particle type
-        for (auto &rate : rayTrace.getLocalData().getVectorData())
+        auto numRates = particle.getRequiredLocalDataSize();
+        auto &localData = rayTrace.getLocalData();
+        for (int i = 0; i < numRates; ++i)
         {
-          Rates.push_back(std::move(rate));
+          Rates->insertNextScalarData(std::move(localData.getVectorData(i)), localData.getVectorDataLabel(i));
         }
       }
 

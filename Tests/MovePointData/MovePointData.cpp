@@ -12,7 +12,7 @@ int main()
 
     rayTracingData<NumericType> rayData;
     rayData.setNumberOfVectorData(pointData.getScalarDataSize());
-    rayData.getVectorData(0) = std::move(*pointData.getScalarData("data"));
+    rayData.setVectorData(0, std::move(*pointData.getScalarData("data")), pointData.getVectorDataLabel(0));
 
     assert(pointData.getScalarData("data")->data() == nullptr);
 

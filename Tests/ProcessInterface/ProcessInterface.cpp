@@ -26,28 +26,28 @@
 template <typename NumericType>
 class mySurfaceModel : public psSurfaceModel<NumericType>
 {
-    using typename psSurfaceModel<NumericType>::SurfaceDataType;
     using psSurfaceModel<NumericType>::Coverages;
 
 public:
-    std::vector<NumericType>
-    calculateVelocities(SurfaceDataType &Rates, std::vector<NumericType> &materialIds) override
+    void initializeCoverages(unsigned numGeometryPoints) override
     {
-        const auto numPoints = Rates.back().size();
+        Coverages = psSmartPointer<psPointData<NumericType>>::New();
+        std::vector<NumericType> cov(numGeometryPoints);
+        Coverages->insertNextScalarData(cov, "coverage");
+    }
+
+    std::vector<NumericType>
+    calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates, std::vector<NumericType> &materialIds) override
+    {
+        const auto numPoints = Rates->getScalarData(0)->size();
         std::vector<NumericType> velocities(numPoints);
         return velocities;
     }
 
-    void updateCoverages(SurfaceDataType &Rates) override
+    void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override
     {
-        const auto numPoints = Rates.back().size();
-        for (auto &cov : *Coverages)
-        {
-            for (size_t i = 0; i < numPoints; ++i)
-            {
-                cov[i] = 0.5;
-            }
-        }
+        const auto numPoints = Rates->getScalarData(0)->size();
+
     }
 };
 

@@ -12,19 +12,19 @@ protected:
   psSmartPointer<psPointData<NumericType>> Coverages = nullptr;
 
 public:
-  void initializeCoverages(unsigned numPoints, NumericType value)
+  virtual void initializeCoverages(unsigned numGeometryPoints)
   {
-    if (Coverages == nullptr)
-    {
-      Coverages = psSmartPointer<psPointData<NumericType>>::New();
-    }
-    else
-    {
-      Coverages->clear();
-    }
-    // Coverages->resize(getNumberOfCoverages());
-    // for (auto &cov : *Coverages)
-    //   cov.resize(numPoints, value);
+    // if (Coverages == nullptr)
+    // {
+    //   Coverages = psSmartPointer<psPointData<NumericType>>::New();
+    // }
+    // else
+    // {
+    //   Coverages->clear();
+    // }
+    // // Coverages->resize(getNumberOfCoverages());
+    // // for (auto &cov : *Coverages)
+    // //   cov.resize(numPoints, value);
   }
 
   psSmartPointer<psPointData<NumericType>> getCoverages()
@@ -39,7 +39,7 @@ public:
     return std::vector<NumericType>{};
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> &Rates)
+  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates)
   {
   }
 };

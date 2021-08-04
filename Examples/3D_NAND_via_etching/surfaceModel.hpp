@@ -6,82 +6,108 @@ template <typename NumericType>
 class viaEtchingSurfaceModel : public psSurfaceModel<NumericType>
 {
     using psSurfaceModel<NumericType>::Coverages;
+    long totalEtchantFlux = 1e7;
+    long totalPolyFlux = 1e7;
+    long totalIonFlux = 1e7;
+
+    int k_ie = 1;
+    int k_ev = 1;
 
 public:
-    std::vector<NumericType>
-    calculateVelocities(SurfaceDataType &Rates, std::vector<NumericType> &materialIds) override
+    void initializeCoverages(unsigned numGeometryPoints) override
     {
-        const auto numPoints = Rates.back().size();
+        if (Coverages == nullptr)
+        {
+            Coverages = psSmartPointer<psPointData<NumericType>>::New();
+        }
+        else
+        {
+            Coverages->clear();
+        }
+        std::vector<NumericType> cov(numGeometryPoints);
+        Coverages->insertNextScalarData(cov, "eCoverage");
+        Coverages->insertNextScalarData(cov, "pCoverage");
+        Coverages->insertNextScalarData(cov, "peCoverage");
+    }
+
+    std::vector<NumericType>
+    calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates, std::vector<NumericType> &materialIds) override
+    {
+        const auto numPoints = Rates->getScalarData(0)->size();
+        updateCoverages(Rates);
         std::vector<NumericType> velocities(numPoints);
         return velocities;
     }
 
-    void updateCoverages(SurfaceDataType &Rates) override
+    void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override
     {
         // update coverages based on fluxes
-        const auto numPoints = ionEnhancedRate.size();
+        const auto numPoints = Rates->getScalarData(0)->size();
+        initializeCoverages(numPoints);
 
-        eCoverage.clear();
-        pCoverage.clear();
-        peCoverage.clear();
-        eCoverage.resize(numPoints);
-        pCoverage.resize(numPoints);
-        peCoverage.resize(numPoints);
+        auto ionpeRate = Rates->getScalarData("ionpeRate");
+        auto etchantpeRate = Rates->getScalarData("etchantpeRate");
+        auto etchanteRate = Rates->getScalarData("etchanteRate");
+        auto polyRate = Rates->getScalarData("polyRate");
+        auto ionEnhancedRate = Rates->getScalarData("ionEnhancedRate");
 
         // pe coverage
+        auto peCoverage = Coverages->getScalarData("peCoverage");
         for (size_t i = 0; i < numPoints; ++i)
         {
-            if (etchantpeRate[i] == 0.)
+            if (etchantpeRate->at(i) == 0.)
             {
-                peCoverage[i] = 0.;
+                peCoverage->at(i) = 0.;
             }
             else
             {
-                peCoverage[i] = (etchantpeRate[i] * totalEtchantFlux) /
-                                (etchantpeRate[i] * totalEtchantFlux + ionpeRate[i] * totalIonFlux);
+                peCoverage->at(i) = (etchantpeRate->at(i) * totalEtchantFlux) /
+                                (etchantpeRate->at(i) * totalEtchantFlux + ionpeRate->at(i) * totalIonFlux);
             }
-            assert(!std::isnan(peCoverage[i]) && "peCoverage NaN");
+            assert(!std::isnan(peCoverage->at(i)) && "peCoverage NaN");
         }
 
         // polymer coverage
+        auto pCoverage = Coverages->getScalarData("pCoverage");
         for (size_t i = 0; i < numPoints; ++i)
         {
-            if (polyRate[i] == 0.)
+            if (polyRate->at(i) == 0.)
             {
-                pCoverage[i] = 0.;
+                pCoverage->at(i) = 0.;
             }
-            else if (peCoverage[i] == 0. || ionpeRate[i] < 1e-6)
+            else if (peCoverage->at(i) == 0. || ionpeRate->at(i) < 1e-6)
             {
-                pCoverage[i] = 1.;
+                pCoverage->at(i) = 1.;
             }
             else
             {
-                pCoverage[i] = (polyRate[i] * totalPolyFlux - delta_p) /
-                               (ionpeRate[i] * totalIonFlux * peCoverage[i]);
+                pCoverage->at(i) = (polyRate->at(i) * totalPolyFlux) /
+                               (ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
             }
-            assert(!std::isnan(pCoverage[i]) && "pCoverage NaN");
+            assert(!std::isnan(pCoverage->at(i)) && "pCoverage NaN");
         }
 
         // etchant coverage
+        auto eCoverage = Coverages->getScalarData("eCoverage");
         for (size_t i = 0; i < numPoints; ++i)
         {
-            if (pCoverage[i] < 1.)
+            if (pCoverage->at(i) < 1.)
             {
-                if (etchanteRate[i] < 1e-6)
+                if (etchanteRate->at(i) < 1e-6)
                 {
-                    eCoverage[i] = 0;
+                    eCoverage->at(i) = 0;
                 }
                 else
                 {
-                    eCoverage[i] = (etchanteRate[i] * totalEtchantFlux * (1 - pCoverage[i])) /
-                                   (k_ie * ionEnhancedRate[i] * totalIonFlux + k_ev * F_ev + etchanteRate[i] * totalEtchantFlux);
+                    eCoverage->at(i) = (etchanteRate->at(i) * totalEtchantFlux * (1 - pCoverage->at(i))) /
+                                   (k_ie * ionEnhancedRate->at(i) * totalIonFlux + k_ev * F_ev + etchanteRate->at(i) * totalEtchantFlux);
                 }
             }
             else
             {
-                eCoverage[i] = 0.;
+                eCoverage->at(i) = 0.;
             }
-            assert(!std::isnan(eCoverage[i]) && "eCoverage NaN");
+            assert(!std::isnan(eCoverage->at(i)) && "eCoverage NaN");
         }
     }
 };
