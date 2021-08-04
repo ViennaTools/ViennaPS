@@ -1,28 +1,51 @@
 #ifndef PS_SURFACE_MODEL
 #define PS_SURFACE_MODEL
 
+#include <psSmartPointer.hpp>
 #include <vector>
 
-template <typename NumericType> class psSurfaceModel {
+template <typename NumericType>
+class psSurfaceModel
+{
 private:
-  std::vector<std::vector<NumericType>> Coverages;
+  using SurfaceDataType = std::vector<std::vector<NumericType>>;
+  psSmartPointer<SurfaceDataType> Coverages = nullptr;
 
 public:
-  std::vector<NumericType>
-  calculateVelocities(std::vector<std::vector<NumericType>> &Rates,
-                      std::vector<NumericType> &materialIDs) {
+  void initializeCoverages(unsigned numPoints, NumericType value)
+  {
+    if (Coverages == nullptr)
+    {
+      Coverages = psSmartPointer<SurfaceDataType>::New();
+    }
+    else
+    {
+      Coverages->clear();
+    }
+    Coverages->resize(getNumberOfCoverages());
+    for (auto &cov : *Coverages)
+      cov.resize(numPoints, value);
+  }
+
+  psSmartPointer<SurfaceDataType> getCoverages()
+  {
+    return Coverages;
+  }
+
+  virtual std::vector<NumericType>
+  calculateVelocities(SurfaceDataType &Rates,
+                      std::vector<NumericType> &materialIDs)
+  {
     return std::vector<NumericType>{};
   }
-  std::shared_ptr<std::vector<NumericType>> getCoverages() {
-    return std::make_shared<std::vector<std::vector<NumericType>>>();
+
+  virtual void updateCoverages(SurfaceDataType &Rates)
+  {
   }
 
-  void setTotalFluxes() {} // Is it needed for setting the coverages
-
-  // TO DO: figure out how to initialize coverages
-  void setCoverages(unsigned numPoints, NumericType value) {
-    for (auto &i : Coverages) {
-    }
+  virtual int getNumberOfCoverages() const 
+  {
+    return 1;
   }
 };
 

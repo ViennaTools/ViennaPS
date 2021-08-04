@@ -1,4 +1,7 @@
 #include <psProcess.hpp>
+#include <psSmartPointer.hpp>
+#include <vector>
+#include <iostream>
 
 // needs to be derived for interacting particles, if only non-interacting can
 // use base implementation with predefined sticky/non-sticky particles if
@@ -16,4 +19,8 @@
 //   psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() override {}
 // };
 
-int main() { return 0; }
+
+int main()
+{
+return 0;
+}

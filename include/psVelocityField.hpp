@@ -8,9 +8,9 @@
 template <typename NumericType>
 class psVelocityField : lsVelocityField<NumericType> {
 private:
-  using translatorType = std::unordered_map<unsigned long, unsigned long>;
+  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
-  psSmartPointer<translatorType> translator = nullptr;
+  psSmartPointer<TranslatorType> translator = nullptr;
   std::vector<NumericType> velocities;
 
 public:
@@ -19,7 +19,7 @@ public:
   void setVelocities(std::vector<NumericType> &passedVelocities) {
     velocities = passedVelocities;
   }
-  void setTranslator(lsSmartPointer<translatorType> passedTranslator) {
+  void setTranslator(lsSmartPointer<TranslatorType> passedTranslator) {
     translator = passedTranslator;
   }
 };

@@ -15,7 +15,9 @@
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
-template <typename CellType, typename NumericType, int D> class psProcess {
+template <typename CellType, typename NumericType, int D>
+class psProcess
+{
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
   psSmartPointer<psDomain<CellType, NumericType, D>> domain;
   psSmartPointer<psProcessModel<NumericType>> model;
@@ -24,8 +26,10 @@ template <typename CellType, typename NumericType, int D> class psProcess {
   int accuracy = 1000;
 
   rayTraceBoundary convertBoundaryCondition(
-      lsBoundaryConditionEnum<D> originalBoundaryCondition) {
-    switch (originalBoundaryCondition) {
+      lsBoundaryConditionEnum<D> originalBoundaryCondition)
+  {
+    switch (originalBoundaryCondition)
+    {
     case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
       return rayTraceBoundary::REFLECTIVE;
 
@@ -40,18 +44,12 @@ template <typename CellType, typename NumericType, int D> class psProcess {
 
     case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
       return rayTraceBoundary::IGNORE;
-
-      // default:
-      // throw new
-      // InvalidEnumArgumentException(nameof(originalBoundaryCondition),
-      // (int)originalBoundaryCondition, typeof(lsBoundaryConditionEnum));
     }
   }
 
 public:
-  void apply() {
-    psVelocityField<NumericType> velField;
-
+  void apply()
+  {
     double remainingTime = processDuration;
     const NumericType gridDelta =
         domain->getLevelSets.back().getGrid().getGridDelta();
@@ -60,70 +58,62 @@ public:
     auto translator = lsSmartPointer<translatorType>::New();
     lsToDiskMesh<NumericType, D> meshConverter(domain->getLevelSets().back(),
                                                diskMesh, translator);
-    for (auto &dom : domain->getLevelSets()) {
-      meshConverter.inserNextLevelSet(dom);
-    }
-
-    /* --------- Setup for advection ----------- */
     lsAdvect<NumericType, D> advectionKernel;
-    for (auto &dom : domain->getLevelSets()) {
+    for (auto &dom : domain->getLevelSets())
+    {
+      meshConverter.inserNextLevelSet(dom);
       advectionKernel.inserNextLevelSet(dom);
     }
-    advectionKernel->setVelocityField(velField);
+    advectionKernel->setVelocityField(model->getVelocityField());
 
     /* --------- Setup for ray tracing ----------- */
     // Map the domain boundary to the ray tracing boundaries
-    rayTraceBoundary rtBC[D];
+    rayTraceBoundary rayBoundCond[D];
     for (unsigned i = 0; i < D; ++i)
-      rtBC[i] = convertBoundaryCondition(
+      rayBoundCond[i] = convertBoundaryCondition(
           domain.getLevelSets.back()->getGrid()->getBoundaryCondition(i));
 
     rayTrace<NumericType, D> rayTrace;
     rayTrace.setSourceDirection(sourceDirection);
     rayTrace.setNumberOfRaysPerPoint(accuracy);
-    rayTrace.setBoundaryConditions(rtBC);
+    rayTrace.setBoundaryConditions(rayBoundCond);
     rayTrace.setCalculateFlux(false);
 
-    // Iterate until coverages converge. How to know when to stop?
+    // Initialize coverages
     {
       meshConverter.apply();
       auto numPoints = diskMesh->getNodes().size();
-      model->getSurfaceModel()->setCoverages(numPoints, 0.5);
+      model->getSurfaceModel()->initializeCoverages(numPoints, 0.5);
       auto points = diskMesh->getNodes();
       auto normals = *diskMesh->getCellData("Normals");
       auto materialIds = *diskMesh->getCellData("MaterialIds");
       rayTrace.setGeometry(points, normals, gridDelta);
       rayTrace.setMaterialIDs(materialIds);
 
-      rayTrace.setGlobalData(
-          model->getSurfaceModel()
-              ->getCoverages()); // just set as a reference (using shared ptr)
+      // TODO: convert coverages to rayTraceData
+      // rayTrace.setGlobalData(
+      //     model->getSurfaceModel()
+      //         ->getCoverages()); // just set as a reference (using shared ptr)
 
       std::vector<std::vector<NumericType>> Rates;
 
-      for (auto &particle : model->getParticleTypes()) {
+      for (auto &particle : model->getParticleTypes())
+      {
         rayTrace.setParticleType(particle);
         rayTrace.apply();
 
         // fill up rates vector with rates from this particle type
-        for (auto &rate : rayTrace.getLocalData().getVectorData()) {
+        for (auto &rate : rayTrace.getLocalData().getVectorData())
+        {
           Rates.push_back(std::move(rate));
         }
       }
 
-      // TO DO - the ray tracing above is done to bring the process to the
-      // equilibrium. Now that the initial ray tracing is done, what needs to be
-      // done with coverages and fluxes to update the model properly?
-
-      // numRaysTraced = points.size() * accuracy;
-      // model.setTotalFluxes(totalIonFlux, totalEtchantFlux, totalPolyFlux,
-      // numRaysTraced); model.updateCoverages(ionEnhancedRate, ionpeRate,
-      // polyRate, 					etchanteRate, etchantpeRate); peCoverage =
-      // model.getPECoverage(); pCoverage = model.getPCoverage(); eCoverage =
-      // model.getECoverage();
+      model->getSurfaceModel()->updateCoverages(Rates);
     }
 
-    while (remainingTime > 0.) {
+    while (remainingTime > 0.)
+    {
       std::vector<std::vector<NumericType>> Rates;
 
       meshConverter.apply();
@@ -132,21 +122,23 @@ public:
       auto materialIds = *diskMesh->getCellData("MaterialIds");
       rayTrace.setGeometry(points, normals, gridDelta);
       rayTrace.setMaterialIDs(materialIds);
-      rayTrace.setGlobalData(
-          model->getSurfaceModel()
-              ->getCoverages()); // just set as a reference (using shared ptr)
+      // rayTrace.setGlobalData(
+      //     model->getSurfaceModel()
+      //         ->getCoverages()); // just set as a reference (using shared ptr)
 
-      for (auto &particle : model->getParticleTypes()) {
+      for (auto &particle : model->getParticleTypes())
+      {
         rayTrace.setParticleType(particle);
         rayTrace.apply();
 
         // fill up rates vector with rates from this particle type
-        for (auto &rate : rayTrace.getLocalData().getVectorData()) {
+        for (auto &rate : rayTrace.getLocalData().getVectorData())
+        {
           Rates.push_back(std::move(rate));
         }
       }
 
-      velField = model->getVelocityField();
+      auto velField = model->getVelocityField();
       velField->setVelocities(
           model->getSurfaceModel()->calculateVelocities(Rates, materialIds));
 
