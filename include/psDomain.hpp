@@ -3,6 +3,9 @@
 
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
+#include <lsToSurfaceMesh.hpp>
+#include <lsToDiskMesh.hpp>
+#include <lsVTKWriter.hpp>
 
 #include <csDomain.hpp>
 #include <csFromLevelSets.hpp>
@@ -138,6 +141,11 @@ public:
     lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
                                        lsBooleanOperationEnum::UNION)
         .apply();
+    // auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+    // lsToDiskMesh<NumericType, D> todisk(levelSets->front(), mesh);
+    // todisk.insertNextLevelSet(passedLevelSet);
+    // todisk.apply();
+    // lsVTKWriter<NumericType>(mesh, "testLS_disk_" + std::to_string(levelSets->size()) + ".vtp").apply();
 
     levelSets->push_back(passedLevelSet);
     if (syncData)

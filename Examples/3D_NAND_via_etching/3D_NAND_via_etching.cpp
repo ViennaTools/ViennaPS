@@ -36,7 +36,7 @@ int main()
     /* ------------- Geometry setup ------------ */
     // domain
     NumericType extent = 8;
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
     double bounds[2 * D] = {-extent, extent, -extent, extent, -extent, extent};
     lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
     boundaryCons[0] = lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
@@ -94,10 +94,10 @@ int main()
     process.setProcessDuration(100);
     process.apply();
 
-    auto coverages = model->getSurfaceModel()->getCoverages();
-    auto pCov = *coverages->getScalarData("pCoverage");
-    auto peCov = *coverages->getScalarData("peCoverage");
-    auto eCov = *coverages->getScalarData("eCoverage");
+    // auto coverages = model->getSurfaceModel()->getCoverages();
+    // auto pCov = *coverages->getScalarData("pCoverage");
+    // auto peCov = *coverages->getScalarData("peCoverage");
+    // auto eCov = *coverages->getScalarData("eCoverage");
 
     // auto topLayer = domain->getLevelSets()->back();
     // auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();

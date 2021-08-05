@@ -65,7 +65,6 @@ public:
         {
             // etchRate[i] = 0;//-inv_rho_SiO2 * (F_ev * eCoverage[i]);
             const int matId = static_cast<int>(materialIds[i]);
-            std::cout << matId << " " << std::endl;
             if (matId != 0) // && matId != numLayers)
             {
                 if (matId == numLayers + 1) // Etching depo layer

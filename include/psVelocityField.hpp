@@ -2,6 +2,7 @@
 #define PS_VELOCITY_FIELD
 
 #include <lsVelocityField.hpp>
+#include <lsMessage.hpp>
 #include <vector>
 #include <unordered_map>
 
@@ -25,7 +26,6 @@ public:
     }
     else
     {
-      std::cout << "Point translation invalid" << std::endl;
       return -1;
     }
   }
@@ -38,7 +38,7 @@ public:
     }
     else
     {
-      std::cout << "velId out of range" << std::endl;
+      lsMessage::getInstance().addError("Velocity ID out of range.").print();
       return 0;
     }
   }

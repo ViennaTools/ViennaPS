@@ -24,7 +24,7 @@ class psProcess
   psSmartPointer<psProcessModel<NumericType>> model = nullptr;
   double processDuration;
   rayTraceDirection sourceDirection;
-  long raysPerPoint = 1000;
+  long raysPerPoint = 2000;
 
   rayTraceBoundary convertBoundaryCondition(
       lsBoundaryConditionEnum<D> originalBoundaryCondition)
@@ -77,22 +77,24 @@ class psProcess
 public:
   void apply()
   {
-    std::cout << "start apply" << std::endl;
     double remainingTime = processDuration;
     const NumericType gridDelta =
         domain->getLevelSets()->back()->getGrid().getGridDelta();
 
     auto diskMesh = lsSmartPointer<lsMesh<NumericType>>::New();
     auto translator = lsSmartPointer<translatorType>::New();
-    lsToDiskMesh<NumericType, D> meshConverter(domain->getLevelSets()->back(),
-                                               diskMesh, translator);
+    lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
+    meshConverter.setTranslator(translator);
+    model->getVelocityField()->setTranslator(translator);
+
     lsAdvect<NumericType, D> advectionKernel;
-    for (auto &dom : *domain->getLevelSets())
+    advectionKernel.setVelocityField(model->getVelocityField());
+
+    for (auto dom : *domain->getLevelSets())
     {
       meshConverter.insertNextLevelSet(dom);
       advectionKernel.insertNextLevelSet(dom);
     }
-    advectionKernel.setVelocityField(model->getVelocityField());
 
     /* --------- Setup for ray tracing ----------- */
     // Map the domain boundary to the ray tracing boundaries
@@ -107,7 +109,6 @@ public:
     rayTrace.setBoundaryConditions(rayBoundCond);
     rayTrace.setCalculateFlux(false);
 
-    std::cout << "setup done" << std::endl;
     // Initialize coverages
     {
       meshConverter.apply();
@@ -143,6 +144,7 @@ public:
       model->getSurfaceModel()->updateCoverages(Rates, raysPerPoint);
     }
 
+    unsigned counter = 0;
     while (remainingTime > 0.)
     {
       std::cout << "Remaining time " << remainingTime << std::endl;
@@ -173,15 +175,13 @@ public:
 
       auto velocitites = model->getSurfaceModel()->calculateVelocities(Rates, materialIds, raysPerPoint);
       model->getVelocityField()->setVelocities(velocitites);
-      std::cout << "points size " << points.size() << std::endl;
-      std::cout << "vel size " << velocitites->size() << std::endl;
       diskMesh->getCellData().insertNextScalarData(*velocitites, "etchRate");
-      lsVTKWriter<NumericType>(diskMesh, "disk_test.vtp").apply();
+      lsVTKWriter<NumericType>(diskMesh, "VCEtch_disk_" + std::to_string(counter) + ".vtp").apply();
+
       // advectionKernel.setAdvectionTime(remainingTime);
-      std::cout << "advecting" << std::endl;
       advectionKernel.apply();
-      std::cout << "done " << std::endl;
       remainingTime -= advectionKernel.getAdvectedTime();
+      ++counter;
     }
   }
 
