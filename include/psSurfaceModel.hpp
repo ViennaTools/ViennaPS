@@ -14,17 +14,6 @@ protected:
 public:
   virtual void initializeCoverages(unsigned numGeometryPoints)
   {
-    // if (Coverages == nullptr)
-    // {
-    //   Coverages = psSmartPointer<psPointData<NumericType>>::New();
-    // }
-    // else
-    // {
-    //   Coverages->clear();
-    // }
-    // // Coverages->resize(getNumberOfCoverages());
-    // // for (auto &cov : *Coverages)
-    // //   cov.resize(numPoints, value);
   }
 
   psSmartPointer<psPointData<NumericType>> getCoverages()
@@ -32,14 +21,14 @@ public:
     return Coverages;
   }
 
-  virtual std::vector<NumericType>
+  virtual psSmartPointer<std::vector<NumericType>>
   calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      std::vector<NumericType> &materialIDs)
+                      const std::vector<NumericType> &materialIDs, const long numRaysPerPoint)
   {
-    return std::vector<NumericType>{};
+    return psSmartPointer<std::vector<NumericType>>::New();
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates)
+  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates, const long numRaysPerPoints)
   {
   }
 };

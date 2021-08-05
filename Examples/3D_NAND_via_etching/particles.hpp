@@ -37,13 +37,13 @@ public:
         const auto Y_ie = Ae_ie * std::max(sqrtE - sqrtE_th_ie, 0.) * cosTheta;
         const auto Y_p = Ap_ie * std::max(sqrtE - sqrtE_th_p, 0.) * cosTheta;
 
-        // sputtering yield Y_s
+        // sputtering yield Y_s ionSputteringRate
         localData.getVectorData(0)[primID] += rayWeight * Y_s;
 
-        // ion enhanced etching yield Y_ie
+        // ion enhanced etching yield Y_ie ionEnhancedRate
         localData.getVectorData(1)[primID] += rayWeight * Y_ie;
 
-        // polymer yield Y_p
+        // polymer yield Y_p ionpeRate
         localData.getVectorData(2)[primID] += rayWeight * Y_p;
     }
     std::pair<NumericType, rayTriple<NumericType>>
@@ -54,18 +54,6 @@ public:
                       rayRNG &Rng) override final
     {
         return std::pair<NumericType, rayTriple<NumericType>>{1., rayTriple<NumericType>{0., 0., 0.}};
-
-        // E -= sqrtE_th_sp * sqrtE_th_sp;
-        // if (E > 0)
-        // {
-        //   auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
-        //   return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
-        // }
-        // else
-        // {
-        //   auto direction = rayTriple<NumericType>{0., 0., 0.};
-        //   return std::pair<NumericType, rayTriple<NumericType>>{1., direction};
-        // }
     }
     void initNew(rayRNG &RNG) override final
     {
@@ -80,6 +68,10 @@ public:
 
     int getRequiredLocalDataSize() const override final { return 3; }
     NumericType getSourceDistributionPower() const override final { return 80.; }
+    std::vector<std::string> getLocalDataLabels() const override final
+    {
+        return std::vector<std::string>{"ionSputteringRate", "ionEnhancedRate", "ionpeRate"};
+    }
 
 private:
     static constexpr double sqrtE_th_sp = 4.2426406871;
@@ -140,6 +132,10 @@ public:
     void initNew(rayRNG &RNG) override final {}
     int getRequiredLocalDataSize() const override final { return 1; }
     NumericType getSourceDistributionPower() const override final { return 1.; }
+    std::vector<std::string> getLocalDataLabels() const override final
+    {
+        return std::vector<std::string>{"polyRate"};
+    }
 
 private:
     static constexpr NumericType gamma_p = 0.26;
@@ -191,6 +187,10 @@ public:
     void initNew(rayRNG &RNG) override final {}
     int getRequiredLocalDataSize() const override final { return 1; }
     NumericType getSourceDistributionPower() const override final { return 1.; }
+    std::vector<std::string> getLocalDataLabels() const override final
+    {
+        return std::vector<std::string>{"etchanteRate"};
+    }
 
 private:
     static constexpr NumericType gamma_e = 0.9;
@@ -235,6 +235,10 @@ public:
     void initNew(rayRNG &RNG) override final {}
     int getRequiredLocalDataSize() const override final { return 1; }
     NumericType getSourceDistributionPower() const override final { return 1.; }
+    std::vector<std::string> getLocalDataLabels() const override final
+    {
+        return std::vector<std::string>{"etchantpeRate"};
+    }
 
 private:
     static constexpr NumericType gamma_pe = 0.6;

@@ -14,6 +14,7 @@
 #include <rayBoundCondition.hpp>
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
+#include <lsDomain.hpp>
 
 template <typename CellType, typename NumericType, int D>
 class psProcess
@@ -23,7 +24,7 @@ class psProcess
   psSmartPointer<psProcessModel<NumericType>> model = nullptr;
   double processDuration;
   rayTraceDirection sourceDirection;
-  int raysPerPoint = 1000;
+  long raysPerPoint = 1000;
 
   rayTraceBoundary convertBoundaryCondition(
       lsBoundaryConditionEnum<D> originalBoundaryCondition)
@@ -60,31 +61,45 @@ class psProcess
     return std::move(rayData);
   }
 
+  rayTracingData<NumericType> copyPointDataToRayData(psSmartPointer<psPointData<NumericType>> pointData)
+  {
+    rayTracingData<NumericType> rayData;
+    const auto numCoverages = pointData->getScalarDataSize();
+    rayData.setNumberOfVectorData(numCoverages);
+    for (size_t i = 0; i < numCoverages; ++i)
+    {
+      auto label = pointData->getScalarDataLabel(i);
+      rayData.setVectorData(i, *pointData->getScalarData(label), label);
+    }
+    return std::move(rayData);
+  }
+
 public:
   void apply()
   {
+    std::cout << "start apply" << std::endl;
     double remainingTime = processDuration;
     const NumericType gridDelta =
-        domain->getLevelSets.back().getGrid().getGridDelta();
+        domain->getLevelSets()->back()->getGrid().getGridDelta();
 
     auto diskMesh = lsSmartPointer<lsMesh<NumericType>>::New();
     auto translator = lsSmartPointer<translatorType>::New();
-    lsToDiskMesh<NumericType, D> meshConverter(domain->getLevelSets().back(),
+    lsToDiskMesh<NumericType, D> meshConverter(domain->getLevelSets()->back(),
                                                diskMesh, translator);
     lsAdvect<NumericType, D> advectionKernel;
-    for (auto &dom : domain->getLevelSets())
+    for (auto &dom : *domain->getLevelSets())
     {
-      meshConverter.inserNextLevelSet(dom);
-      advectionKernel.inserNextLevelSet(dom);
+      meshConverter.insertNextLevelSet(dom);
+      advectionKernel.insertNextLevelSet(dom);
     }
-    advectionKernel->setVelocityField(model->getVelocityField());
+    advectionKernel.setVelocityField(model->getVelocityField());
 
     /* --------- Setup for ray tracing ----------- */
     // Map the domain boundary to the ray tracing boundaries
     rayTraceBoundary rayBoundCond[D];
     for (unsigned i = 0; i < D; ++i)
       rayBoundCond[i] = convertBoundaryCondition(
-          domain.getLevelSets.back()->getGrid()->getBoundaryCondition(i));
+          domain->getGrid().getBoundaryConditions(i));
 
     rayTrace<NumericType, D> rayTrace;
     rayTrace.setSourceDirection(sourceDirection);
@@ -92,16 +107,17 @@ public:
     rayTrace.setBoundaryConditions(rayBoundCond);
     rayTrace.setCalculateFlux(false);
 
+    std::cout << "setup done" << std::endl;
     // Initialize coverages
     {
       meshConverter.apply();
       auto numPoints = diskMesh->getNodes().size();
       model->getSurfaceModel()->initializeCoverages(numPoints);
       auto points = diskMesh->getNodes();
-      auto normals = *diskMesh->getCellData("Normals");
-      auto materialIds = *diskMesh->getCellData("MaterialIds");
+      auto normals = *diskMesh->getCellData().getVectorData("Normals");
+      auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       rayTrace.setGeometry(points, normals, gridDelta);
-      rayTrace.setMaterialIDs(materialIds);
+      rayTrace.setMaterialIds(materialIds);
 
       rayTracingData<NumericType> rayTraceCoverages = movePointDataToRayData(model->getSurfaceModel()->getCoverages());
       rayTrace.setGlobalData(rayTraceCoverages);
@@ -110,13 +126,13 @@ public:
 
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
-      for (auto &particle : model->getParticleTypes())
+      for (auto &particle : *model->getParticleTypes())
       {
         rayTrace.setParticleType(particle);
         rayTrace.apply();
 
         // fill up rates vector with rates from this particle type
-        auto numRates = particle.getRequiredLocalDataSize();
+        auto numRates = particle->getRequiredLocalDataSize();
         auto &localData = rayTrace.getLocalData();
         for (int i = 0; i < numRates; ++i)
         {
@@ -124,42 +140,48 @@ public:
         }
       }
 
-      model->getSurfaceModel()->updateCoverages(Rates);
+      model->getSurfaceModel()->updateCoverages(Rates, raysPerPoint);
     }
 
     while (remainingTime > 0.)
     {
-      std::vector<std::vector<NumericType>> Rates;
+      std::cout << "Remaining time " << remainingTime << std::endl;
+      auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
       meshConverter.apply();
       auto points = diskMesh->getNodes();
-      auto normals = *diskMesh->getCellData("Normals");
-      auto materialIds = *diskMesh->getCellData("MaterialIds");
+      auto normals = *diskMesh->getCellData().getVectorData("Normals");
+      auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       rayTrace.setGeometry(points, normals, gridDelta);
-      rayTrace.setMaterialIDs(materialIds);
-      // rayTrace.setGlobalData(
-      //     model->getSurfaceModel()
-      //         ->getCoverages()); // just set as a reference (using shared ptr)
+      rayTrace.setMaterialIds(materialIds);
+      rayTracingData<NumericType> rayTraceCoverages = copyPointDataToRayData(model->getSurfaceModel()->getCoverages());
+      rayTrace.setGlobalData(rayTraceCoverages);
 
-      for (auto &particle : model->getParticleTypes())
+      for (auto &particle : *model->getParticleTypes())
       {
         rayTrace.setParticleType(particle);
         rayTrace.apply();
 
         // fill up rates vector with rates from this particle type
-        for (auto &rate : rayTrace.getLocalData().getVectorData())
+        auto numRates = particle->getRequiredLocalDataSize();
+        auto &localData = rayTrace.getLocalData();
+        for (int i = 0; i < numRates; ++i)
         {
-          Rates.push_back(std::move(rate));
+          Rates->insertNextScalarData(std::move(localData.getVectorData(i)), localData.getVectorDataLabel(i));
         }
       }
 
-      auto velField = model->getVelocityField();
-      velField->setVelocities(
-          model->getSurfaceModel()->calculateVelocities(Rates, materialIds));
-
-      advectionKernel->setAdvectionTime(remainingTime);
-      advectionKernel->apply();
-      remainingTime -= advectionKernel->getAdvectedTime();
+      auto velocitites = model->getSurfaceModel()->calculateVelocities(Rates, materialIds, raysPerPoint);
+      model->getVelocityField()->setVelocities(velocitites);
+      std::cout << "points size " << points.size() << std::endl;
+      std::cout << "vel size " << velocitites->size() << std::endl;
+      diskMesh->getCellData().insertNextScalarData(*velocitites, "etchRate");
+      lsVTKWriter<NumericType>(diskMesh, "disk_test.vtp").apply();
+      // advectionKernel.setAdvectionTime(remainingTime);
+      std::cout << "advecting" << std::endl;
+      advectionKernel.apply();
+      std::cout << "done " << std::endl;
+      remainingTime -= advectionKernel.getAdvectedTime();
     }
   }
 
@@ -167,6 +189,22 @@ public:
   void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel)
   {
     model = std::dynamic_pointer_cast<psProcessModel<NumericType>>(passedProcessModel);
+  }
+
+  void setDomain(psSmartPointer<psDomain<CellType, NumericType, D>> passedDomain)
+  {
+    domain = passedDomain;
+  }
+
+  /// Set the source direction, where the rays should be traced from.
+  void setSourceDirection(const rayTraceDirection passedDirection)
+  {
+    sourceDirection = passedDirection;
+  }
+
+  void setProcessDuration(double passedDuration)
+  {
+    processDuration = passedDuration;
   }
 };
 

@@ -6,20 +6,49 @@
 #include <unordered_map>
 
 template <typename NumericType>
-class psVelocityField : lsVelocityField<NumericType> {
+class psVelocityField : public lsVelocityField<NumericType>
+{
 private:
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
   psSmartPointer<TranslatorType> translator = nullptr;
-  std::vector<NumericType> velocities;
+  psSmartPointer<std::vector<NumericType>> velocities = nullptr;
 
 public:
-  psVelocityField(){}
+  psVelocityField() {}
 
-  void setVelocities(std::vector<NumericType> &passedVelocities) {
+  long getVelocityId(unsigned long lsId)
+  {
+    if (auto it = translator->find(lsId); it != translator->end())
+    {
+      return it->second;
+    }
+    else
+    {
+      std::cout << "Point translation invalid" << std::endl;
+      return -1;
+    }
+  }
+
+  NumericType getVelocity(long velId)
+  {
+    if (velId < velocities->size())
+    {
+      return velocities->at(velId);
+    }
+    else
+    {
+      std::cout << "velId out of range" << std::endl;
+      return 0;
+    }
+  }
+
+  void setVelocities(psSmartPointer<std::vector<NumericType>> passedVelocities)
+  {
     velocities = passedVelocities;
   }
-  void setTranslator(lsSmartPointer<TranslatorType> passedTranslator) {
+  void setTranslator(lsSmartPointer<TranslatorType> passedTranslator)
+  {
     translator = passedTranslator;
   }
 };
