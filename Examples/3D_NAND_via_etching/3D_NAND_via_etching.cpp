@@ -3,6 +3,7 @@
 #include <psProcessModel.hpp>
 #include <psProcess.hpp>
 #include <lsToDiskMesh.hpp>
+#include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 #include "particles.hpp"
@@ -14,6 +15,14 @@ class myCellType : public cellBase
 {
     using cellBase::cellBase;
 };
+
+template <typename T, int D>
+void printLS(lsSmartPointer<lsDomain<T, D>> dom, std::string name)
+{
+    auto mesh = lsSmartPointer<lsMesh<T>>::New();
+    lsToSurfaceMesh<T, D>(dom, mesh).apply();
+    lsVTKWriter<T>(mesh, name).apply();
+}
 
 int main()
 {
@@ -37,16 +46,18 @@ int main()
     // domain
     NumericType extent = 8;
     NumericType gridDelta = 0.25;
-    double bounds[2 * D] = {-extent, extent, -extent, extent, -extent, extent};
+    double bounds[2 * D] = {0};
+    for (int i = 0; i < 2 * D; ++i)
+        bounds[i] = i % 2 == 0 ? -extent : extent;
     lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
-    boundaryCons[0] = lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[1] = lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[2] = lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+    for (int i = 0; i < D - 1; ++i)
+        boundaryCons[i] = lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[D - 1] = lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
     // Create via mask on top
-    auto mask = lsSmartPointer<lsDomain<NumericType, D>>::New(bounds, boundaryCons, gridDelta);
+    auto mask = psSmartPointer<lsDomain<NumericType, D>>::New(bounds, boundaryCons, gridDelta);
     {
-        std::array<NumericType, D> maskOrigin = {0., 0., 0.};
+        std::array<NumericType, 3> maskOrigin = {0.};
         MakeMask<NumericType, D> makeMask(mask);
         makeMask.setMaskOrigin(maskOrigin);
         makeMask.setMaskRadius(5);
@@ -55,44 +66,40 @@ int main()
     auto domain = psSmartPointer<psDomain<myCellType, NumericType, D>>::New(mask);
 
     // Create SiO2/SiNx layers
-    constexpr int numLayers = 20;
-    NumericType layerSize = 2;
     {
-        std::vector<lsSmartPointer<lsDomain<NumericType, D>>> layers;
-        for (int i = 0; i < numLayers; ++i)
-        {
-            layers.push_back(lsSmartPointer<lsDomain<NumericType, D>>::New(bounds, boundaryCons, gridDelta));
-            NumericType layerHeight = -(numLayers - i - 1) * layerSize + 1e-3;
-            NumericType origin[D] = {0};
-            origin[D - 1] = layerHeight;
-
-            NumericType normal[D] = {0};
-            normal[D - 1] = 1.;
-
-            auto plane = lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal);
-            lsMakeGeometry<NumericType, D>(layers[i], plane).apply();
-        }
+        MakeLayers<NumericType, D> makeLayers(mask);
+        makeLayers.setLayerHeight(2.);
+        makeLayers.setNumberOfLayers(20);
+        auto layers = makeLayers.apply();
         for (auto &l : layers)
             domain->insertNextLevelSet(l);
-        // polymer is equivalent to uppermost layer
-        auto polymerLayer = lsSmartPointer<lsDomain<NumericType, D>>::New(layers.back());
+        auto polymerLayer = psSmartPointer<lsDomain<NumericType, D>>::New(layers.back()); // polymer is equivalent to uppermost layer
         domain->insertNextLevelSet(polymerLayer);
     }
 
-    auto model = psSmartPointer<psProcessModel<NumericType>>::New();
-    model->insertNextParticleType(ionParticle);
-    model->insertNextParticleType(polyParticle);
-    model->insertNextParticleType(etchantParticle);
-    model->insertNextParticleType(etchantPolyParticle);
-    model->setSurfaceModel(surfModel);
-    model->setVelocityField(velField);
+    // print initial layers
+    {
+        int n = 0;
+        for (auto &layer : *domain->getLevelSets())
+        {
+            printLS(layer, "layer_" + std::to_string(n++) + ".vtp");
+        }
+    }
 
-    psProcess<myCellType, NumericType, D> process;
-    process.setDomain(domain);
-    process.setProcessModel(model);
-    process.setSourceDirection(rayTraceDirection::POS_Z);
-    process.setProcessDuration(100);
-    process.apply();
+    // auto model = psSmartPointer<psProcessModel<NumericType>>::New();
+    // model->insertNextParticleType(ionParticle);
+    // model->insertNextParticleType(polyParticle);
+    // model->insertNextParticleType(etchantParticle);
+    // model->insertNextParticleType(etchantPolyParticle);
+    // model->setSurfaceModel(surfModel);
+    // model->setVelocityField(velField);
+
+    // psProcess<myCellType, NumericType, D> process;
+    // process.setDomain(domain);
+    // process.setProcessModel(model);
+    // process.setSourceDirection(rayTraceDirection::POS_Z);
+    // process.setProcessDuration(100);
+    // process.apply();
 
     // auto coverages = model->getSurfaceModel()->getCoverages();
     // auto pCov = *coverages->getScalarData("pCoverage");

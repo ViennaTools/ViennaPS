@@ -15,9 +15,6 @@ class MakeMask
     T maskRadius = 0;
     T maskHeight = 5.;
 
-    unsigned numberOfHoles = 1;
-    double scallopSpacing = 1.5;
-
 public:
     MakeMask(LSPtrType passedMask)
         : mask(passedMask) {}
@@ -56,7 +53,7 @@ public:
             if constexpr (D == 3)
             {
                 maskOrigin[2] = origin[2] - gridDelta;
-                double axis[3] = {0.0, 0.0, 1.0};
+                T axis[3] = {0.0, 0.0, 1.0};
                 lsMakeGeometry<T, D>(maskHole,
                                      lsSmartPointer<lsCylinder<T, D>>::New(
                                          maskOrigin.data(), axis,
@@ -65,8 +62,8 @@ public:
             }
             else
             {
-                double min[3] = {-maskRadius, -gridDelta};
-                double max[3] = {maskRadius, maskHeight + 2 * gridDelta};
+                T min[3] = {-maskRadius, -gridDelta};
+                T max[3] = {maskRadius, maskHeight + 2 * gridDelta};
                 lsMakeGeometry<T, D>(maskHole,
                                      lsSmartPointer<lsBox<T, D>>::New(min, max))
                     .apply();
@@ -76,6 +73,41 @@ public:
                                      lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
                 .apply();
         }
+    }
+};
+
+template <typename T, int D>
+class MakeLayers
+{
+    using LSPtrType = lsSmartPointer<lsDomain<T, D>>;
+    LSPtrType mask;
+    int numLayers = 20;
+    T layerSize = 2.;
+
+public:
+    MakeLayers(lsSmartPointer<lsDomain<T, D>> passedMask) : mask(passedMask) {}
+
+    void setNumberOfLayers(int num) { numLayers = num; }
+    void setLayerHeight(T height) { layerSize = height; }
+    std::vector<LSPtrType> apply()
+    {
+        auto &grid = mask->getGrid();
+        std::vector<LSPtrType> layers;
+        for (int i = 0; i < numLayers; ++i)
+        {
+            layers.push_back(LSPtrType::New(grid));
+            T layerHeight = -(numLayers - i - 1) * layerSize + 1e-3;
+            T origin[D] = {0};
+            origin[D - 1] = layerHeight;
+
+            T normal[D] = {0};
+            normal[D - 1] = 1.;
+
+            auto plane = lsSmartPointer<lsPlane<T, D>>::New(origin, normal);
+            lsMakeGeometry<T, D>(layers[i], plane).apply();
+        }
+
+        return std::move(layers);
     }
 };
 
