@@ -15,13 +15,15 @@ template <typename T> using psPointData = lsPointData<T>;
 //     CellDataType data;
 
 // public:
-//     void insterNextCellData(std::vector<NumericType> &passedData, std::string dataLabel)
+//     void insterNextCellData(std::vector<NumericType> &passedData, std::string
+//     dataLabel)
 //     {
 //         data.push_back(passedData);
 //         labels.push_back(dataLabel);
 //     }
 
-//     void insterNextCellData(std::vector<NumericType> &&passedData, std::string dataLabel)
+//     void insterNextCellData(std::vector<NumericType> &&passedData,
+//     std::string dataLabel)
 //     {
 //         data.push_back(std::move(passedData));
 //         labels.push_back(dataLabel);
@@ -34,7 +36,8 @@ template <typename T> using psPointData = lsPointData<T>;
 
 //     std::vector<NumericType> *getCellData(std::string label)
 //     {
-//         if (auto it = std::find(labels.begin(), labels.end(), label); it != labels.end())
+//         if (auto it = std::find(labels.begin(), labels.end(), label); it !=
+//         labels.end())
 //         {
 //             auto idx = it - labels.begin();
 //             return &data[idx];

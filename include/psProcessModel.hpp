@@ -7,11 +7,10 @@
 #include <psVolumeModel.hpp>
 #include <rayParticle.hpp>
 
-template <typename NumericType>
-class psProcessModel
-{
+template <typename NumericType> class psProcessModel {
 private:
-  using ParticleTypeList = std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
+  using ParticleTypeList =
+      std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
@@ -19,51 +18,43 @@ private:
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
 
 public:
-  virtual psSmartPointer<ParticleTypeList> getParticleTypes()
-  {
+  virtual psSmartPointer<ParticleTypeList> getParticleTypes() {
     return particles;
   }
-  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel()
-  {
+  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psVolumeModel<NumericType>> getVolumeModel()
-  {
+  virtual psSmartPointer<psVolumeModel<NumericType>> getVolumeModel() {
     return volumeModel;
   }
-  virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField()
-  {
+  virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
     return velocityField;
   }
 
   template <typename ParticleType>
-  void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle)
-  {
-    if (particles == nullptr)
-    {
+  void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle) {
+    if (particles == nullptr) {
       particles = psSmartPointer<ParticleTypeList>::New();
     }
     particles->push_back(passedParticle->clone());
   }
 
   template <typename SurfaceModelType>
-  void setSurfaceModel(
-      psSmartPointer<SurfaceModelType> passedSurfaceModel)
-  {
-    surfaceModel = std::dynamic_pointer_cast<psSurfaceModel<NumericType>>(passedSurfaceModel);
+  void setSurfaceModel(psSmartPointer<SurfaceModelType> passedSurfaceModel) {
+    surfaceModel = std::dynamic_pointer_cast<psSurfaceModel<NumericType>>(
+        passedSurfaceModel);
   }
 
   template <typename VolumeModelType>
-  void setVolumeModel(
-      psSmartPointer<VolumeModelType> passedVolumeModel)
-  {
-    volumeModel = std::dynamic_pointer_cast<psVolumeModel<NumericType>>(passedVolumeModel);
+  void setVolumeModel(psSmartPointer<VolumeModelType> passedVolumeModel) {
+    volumeModel = std::dynamic_pointer_cast<psVolumeModel<NumericType>>(
+        passedVolumeModel);
   }
 
   template <typename VelocityFieldType>
-  void setVelocityField(psSmartPointer<VelocityFieldType> passedVelocityField)
-  {
-    velocityField = std::dynamic_pointer_cast<psVelocityField<NumericType>>(passedVelocityField);
+  void setVelocityField(psSmartPointer<VelocityFieldType> passedVelocityField) {
+    velocityField = std::dynamic_pointer_cast<psVelocityField<NumericType>>(
+        passedVelocityField);
   }
 };
 

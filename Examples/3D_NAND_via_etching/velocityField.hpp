@@ -1,38 +1,30 @@
 #ifndef VELOCITY_FIELD_HPP
 #define VELOCITY_FIELD_HPP
 
-#include <lsSmartPointer.hpp>
+#include <iostream>
+#include <psSmartPointer.hpp>
 #include <psVelocityField.hpp>
-#include <unordered_map>
 #include <vector>
-#include <cmath>
 
-template <class T>
-class velocityField : public psVelocityField<T>
-{
+template <class T> class velocityField : public psVelocityField<T> {
 public:
-    velocityField() {}
+  velocityField() {}
 
-    T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
-                        const std::array<T, 3> & /*normalVector*/,
-                        unsigned long pointID) override
-    {
-        if (material != 0)
-        {
-            if (auto velId = this->getVelocityId(pointID); velId != -1)
-            {
-                return this->getVelocity(velId);
-            }
-            else
-            {
-                return 0.;
-            }
-        }
-        else
-        {
-            return 0.;
-        }
-    }
+  T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
+                      const std::array<T, 3> & /*normalVector*/,
+                      unsigned long pointID) override {
+    if (material != 0)
+      return velocities->at(pointID);
+    else
+      return 0.;
+  }
+
+  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
+    velocities = passedVelocities;
+  }
+
+private:
+  psSmartPointer<std::vector<T>> velocities = nullptr;
 };
 
 #endif // RT_VELOCITY_FIELD_HPP

@@ -4,36 +4,35 @@
 #include <psSmartPointer.hpp>
 #include <vector>
 
-template <typename NumericType>
-class psVelocityField
-{
+template <typename NumericType> class psVelocityField {
 private:
   psSmartPointer<std::vector<NumericType>> velocities = nullptr;
 
 public:
   psVelocityField() {}
 
-  NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
-                                int material,
-                                const std::array<NumericType, 3> &normalVector,
-                                unsigned long pointId)
-  {
+  virtual NumericType
+  getScalarVelocity(const std::array<NumericType, 3> &coordinate, int material,
+                    const std::array<NumericType, 3> &normalVector,
+                    unsigned long pointId) {
     return 0;
   }
 
-  std::array<NumericType, 3>
+  virtual std::array<NumericType, 3>
   getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
                     const std::array<NumericType, 3> &normalVector,
-                    unsigned long pointId)
-  {
+                    unsigned long pointId) {
     return {0., 0., 0.};
   }
 
-  NumericType getDissipationAlpha(int direction, int material,
-                                  const std::array<NumericType, 3> &centralDifferences)
-  {
+  virtual NumericType
+  getDissipationAlpha(int direction, int material,
+                      const std::array<NumericType, 3> &centralDifferences) {
     return 0;
   }
+
+  virtual void
+  setVelocities(psSmartPointer<std::vector<NumericType>> passedVelocities) {}
 };
 
 #endif

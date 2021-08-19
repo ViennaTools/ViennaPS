@@ -1,37 +1,30 @@
 #ifndef PS_SURFACE_MODEL
 #define PS_SURFACE_MODEL
 
-#include <psSmartPointer.hpp>
 #include <psPointData.hpp>
+#include <psSmartPointer.hpp>
 #include <vector>
 
-template <typename NumericType>
-class psSurfaceModel
-{
+template <typename NumericType> class psSurfaceModel {
 protected:
   psSmartPointer<psPointData<NumericType>> Coverages = nullptr;
 
 public:
-  virtual void initializeCoverages(unsigned numGeometryPoints)
-  {
+  virtual void initializeCoverages(unsigned numGeometryPoints) {
+    // if no coverages get initialized here, they wont be initialized at all
   }
 
-  psSmartPointer<psPointData<NumericType>> getCoverages()
-  {
-    return Coverages;
-  }
+  psSmartPointer<psPointData<NumericType>> getCoverages() { return Coverages; }
 
   virtual psSmartPointer<std::vector<NumericType>>
   calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIDs, const long numRaysPerPoint)
-  {
+                      const std::vector<NumericType> &materialIDs,
+                      const long numRaysPerPoint) {
     return psSmartPointer<std::vector<NumericType>>::New();
   }
 
   virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
-                               const long numRaysPerPoints)
-  {
-  }
+                               const long numRaysPerPoints) {}
 };
 
 #endif
