@@ -1,55 +1,38 @@
 #ifndef PS_VELOCITY_FIELD
 #define PS_VELOCITY_FIELD
 
-#include <lsVelocityField.hpp>
-#include <lsMessage.hpp>
+#include <psSmartPointer.hpp>
 #include <vector>
-#include <unordered_map>
 
 template <typename NumericType>
-class psVelocityField : public lsVelocityField<NumericType>
+class psVelocityField
 {
 private:
-  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
-
-  psSmartPointer<TranslatorType> translator = nullptr;
   psSmartPointer<std::vector<NumericType>> velocities = nullptr;
 
 public:
   psVelocityField() {}
 
-  long getVelocityId(unsigned long lsId)
+  NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
+                                int material,
+                                const std::array<NumericType, 3> &normalVector,
+                                unsigned long pointId)
   {
-    if (auto it = translator->find(lsId); it != translator->end())
-    {
-      return it->second;
-    }
-    else
-    {
-      return -1;
-    }
+    return 0;
   }
 
-  NumericType getVelocity(long velId)
+  std::array<NumericType, 3>
+  getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
+                    const std::array<NumericType, 3> &normalVector,
+                    unsigned long pointId)
   {
-    if (velId < velocities->size())
-    {
-      return velocities->at(velId);
-    }
-    else
-    {
-      lsMessage::getInstance().addError("Velocity ID out of range.").print();
-      return 0;
-    }
+    return {0., 0., 0.};
   }
 
-  void setVelocities(psSmartPointer<std::vector<NumericType>> passedVelocities)
+  NumericType getDissipationAlpha(int direction, int material,
+                                  const std::array<NumericType, 3> &centralDifferences)
   {
-    velocities = passedVelocities;
-  }
-  void setTranslator(lsSmartPointer<TranslatorType> passedTranslator)
-  {
-    translator = passedTranslator;
+    return 0;
   }
 };
 

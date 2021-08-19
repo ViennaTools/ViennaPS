@@ -28,7 +28,8 @@ public:
     return psSmartPointer<std::vector<NumericType>>::New();
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates, const long numRaysPerPoints)
+  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+                               const long numRaysPerPoints)
   {
   }
 };

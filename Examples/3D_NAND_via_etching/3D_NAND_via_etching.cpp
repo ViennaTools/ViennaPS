@@ -26,7 +26,7 @@ void printLS(lsSmartPointer<lsDomain<T, D>> dom, std::string name)
 
 int main()
 {
-    omp_set_num_threads(12);
+    omp_set_num_threads(8);
     using NumericType = double;
     constexpr int D = 3;
 
@@ -45,7 +45,7 @@ int main()
     /* ------------- Geometry setup ------------ */
     // domain
     NumericType extent = 8;
-    NumericType gridDelta = 0.25;
+    NumericType gridDelta = 0.5;
     double bounds[2 * D] = {0};
     for (int i = 0; i < 2 * D; ++i)
         bounds[i] = i % 2 == 0 ? -extent : extent;

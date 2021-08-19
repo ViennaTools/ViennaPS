@@ -36,18 +36,20 @@ public:
         Coverages->insertNextScalarData(cov, "coverage");
     }
 
-    std::vector<NumericType>
-    calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates, std::vector<NumericType> &materialIds) override
+    psSmartPointer<std::vector<NumericType>>
+    calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
+                        const std::vector<NumericType> &materialIDs, const long numRaysPerPoint) override
     {
         const auto numPoints = Rates->getScalarData(0)->size();
         std::vector<NumericType> velocities(numPoints);
+        auto vel = psSmartPointer<std::vector<NumericType>>::New(velocities);
         return velocities;
     }
 
-    void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override
+    void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+                         const long numRaysPerPoint) override
     {
         const auto numPoints = Rates->getScalarData(0)->size();
-
     }
 };
 

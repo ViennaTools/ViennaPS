@@ -74,6 +74,78 @@ class psProcess
     return std::move(rayData);
   }
 
+  class translationField : public lsVelocityField<NumericType>
+  {
+  public:
+    translationField() = default;
+
+    NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
+                                  int material,
+                                  const std::array<NumericType, 3> &normalVector,
+                                  unsigned long pointId)
+    {
+      auto surfacePointId = translateLsId(pointId);
+      if (surfacePointId != -1)
+      {
+        return modelVelocityField->getScalarVelocity(coordinate, material, normalVector, surfacePointId);
+      }
+      else
+      {
+        // TODO: probably should throw a warning that something went wrong here
+        return 0;
+      }
+    }
+
+    std::array<NumericType, 3>
+    getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
+                      const std::array<NumericType, 3> &normalVector,
+                      unsigned long pointId)
+    {
+      auto surfacePointId = translateLsId(pointId);
+      if (surfacePointId != -1)
+      {
+        return modelVelocityField->getVectorVelocity(coordinate, material, normalVector, surfacePointId);
+      }
+      else
+      {
+        // TODO: probably should throw a warning that something went wrong here
+        return {0., 0., 0.};
+      }
+    }
+
+    NumericType getDissipationAlpha(int direction, int material,
+                                    const std::array<NumericType, 3> &centralDifferences)
+    {
+      return modelVelocityField->getDissipationAlpha(direction, material, centralDifferences);
+    }
+
+    void setTranslator(psSmartPointer<translatorType> passedTranslator)
+    {
+      translator = passedTranslator;
+    }
+
+    void setVelocityField(psSmartPointer<psVelocityField<NumericType>> passedVeloField)
+    {
+      modelVelocityField = passedVeloField;
+    }
+
+  private:
+    long translateLsId(unsigned long lsId)
+    {
+      if (auto it = translator->find(lsId); it != translator->end())
+      {
+        return it->second;
+      }
+      else
+      {
+        return -1;
+      }
+    }
+
+    psSmartPointer<translatorType> translator;
+    psSmartPointer<psVelocityField<NumericType>> modelVelocityField;
+  };
+
 public:
   void apply()
   {
@@ -85,10 +157,12 @@ public:
     auto translator = lsSmartPointer<translatorType>::New();
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
-    model->getVelocityField()->setTranslator(translator);
+
+    auto transField = psSmartPointer<translationField>::New();
+    transField->setVelocityField(model->getVelocityField());
 
     lsAdvect<NumericType, D> advectionKernel;
-    advectionKernel.setVelocityField(model->getVelocityField());
+    advectionKernel.setVelocityField(transField);
 
     for (auto dom : *domain->getLevelSets())
     {
@@ -109,39 +183,46 @@ public:
     rayTrace.setBoundaryConditions(rayBoundCond);
     rayTrace.setCalculateFlux(false);
 
+    bool useCoverages = false;
     // Initialize coverages
     {
       meshConverter.apply();
       auto numPoints = diskMesh->getNodes().size();
       model->getSurfaceModel()->initializeCoverages(numPoints);
-      auto points = diskMesh->getNodes();
-      auto normals = *diskMesh->getCellData().getVectorData("Normals");
-      auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
-      rayTrace.setGeometry(points, normals, gridDelta);
-      rayTrace.setMaterialIds(materialIds);
-
-      rayTracingData<NumericType> rayTraceCoverages = movePointDataToRayData(model->getSurfaceModel()->getCoverages());
-      rayTrace.setGlobalData(rayTraceCoverages);
-      // all coverages are moved into rayTracingData and are thus invalidated in the surfaceModel
-      model->getSurfaceModel()->getCoverages()->clear();
-
-      auto Rates = psSmartPointer<psPointData<NumericType>>::New();
-
-      for (auto &particle : *model->getParticleTypes())
+      if (model->getSurfaceModel()->getCoverages() != nullptr)
       {
-        rayTrace.setParticleType(particle);
-        rayTrace.apply();
+        useCoverages = true;
+        auto points = diskMesh->getNodes();
+        auto normals = *diskMesh->getCellData().getVectorData("Normals");
+        auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+        rayTrace.setGeometry(points, normals, gridDelta);
+        rayTrace.setMaterialIds(materialIds);
 
-        // fill up rates vector with rates from this particle type
-        auto numRates = particle->getRequiredLocalDataSize();
-        auto &localData = rayTrace.getLocalData();
-        for (int i = 0; i < numRates; ++i)
+        rayTracingData<NumericType> rayTraceCoverages = movePointDataToRayData(model->getSurfaceModel()->getCoverages());
+        rayTrace.setGlobalData(rayTraceCoverages);
+        // all coverages are moved into rayTracingData and are thus invalidated in the surfaceModel
+        model->getSurfaceModel()->getCoverages()->clear();
+
+        auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+
+        for (auto &particle : *model->getParticleTypes())
         {
-          Rates->insertNextScalarData(std::move(localData.getVectorData(i)), localData.getVectorDataLabel(i));
-        }
-      }
+          rayTrace.setParticleType(particle);
+          rayTrace.apply();
 
-      model->getSurfaceModel()->updateCoverages(Rates, raysPerPoint);
+          // fill up rates vector with rates from this particle type
+          auto numRates = particle->getRequiredLocalDataSize();
+          auto &localData = rayTrace.getLocalData();
+          for (int i = 0; i < numRates; ++i)
+          {
+            Rates->insertNextScalarData(std::move(localData.getVectorData(i)), localData.getVectorDataLabel(i));
+          }
+        }
+
+        // TODO move ray data back into model
+
+        model->getSurfaceModel()->updateCoverages(Rates, raysPerPoint);
+      }
     }
 
     unsigned counter = 0;
@@ -156,8 +237,12 @@ public:
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       rayTrace.setGeometry(points, normals, gridDelta);
       rayTrace.setMaterialIds(materialIds);
-      rayTracingData<NumericType> rayTraceCoverages = copyPointDataToRayData(model->getSurfaceModel()->getCoverages());
-      rayTrace.setGlobalData(rayTraceCoverages);
+      if (useCoverages)
+      {
+        // TODO: change this to move
+        rayTracingData<NumericType> rayTraceCoverages = copyPointDataToRayData(model->getSurfaceModel()->getCoverages());
+        rayTrace.setGlobalData(rayTraceCoverages);
+      }
 
       for (auto &particle : *model->getParticleTypes())
       {
@@ -172,6 +257,8 @@ public:
           Rates->insertNextScalarData(std::move(localData.getVectorData(i)), localData.getVectorDataLabel(i));
         }
       }
+
+      // move coverages back if necessary
 
       auto velocitites = model->getSurfaceModel()->calculateVelocities(Rates, materialIds, raysPerPoint);
       model->getVelocityField()->setVelocities(velocitites);

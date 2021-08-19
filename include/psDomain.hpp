@@ -137,17 +137,15 @@ public:
     // Cannot think of one now though...
     // copy LS
     // auto tmpLS = lsDomainType::New(passedLevelSet);
-    // now bool with underlying LS if it exists
-    lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
-                                       lsBooleanOperationEnum::UNION)
-        .apply();
-    // auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-    // lsToDiskMesh<NumericType, D> todisk(levelSets->front(), mesh);
-    // todisk.insertNextLevelSet(passedLevelSet);
-    // todisk.apply();
-    // lsVTKWriter<NumericType>(mesh, "testLS_disk_" + std::to_string(levelSets->size()) + ".vtp").apply();
-
     levelSets->push_back(passedLevelSet);
+    // now bool with underlying LS if it exists
+    if (!levelSets->empty())
+    {
+      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
+                                         lsBooleanOperationEnum::UNION)
+          .apply();
+    }
+
     if (syncData)
     {
       generateCellSet();

@@ -68,7 +68,6 @@ public:
                                      lsSmartPointer<lsBox<T, D>>::New(min, max))
                     .apply();
             }
-
             lsBooleanOperation<T, D>(mask, maskHole,
                                      lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
                 .apply();
