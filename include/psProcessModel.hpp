@@ -16,6 +16,7 @@ private:
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
   psSmartPointer<psVolumeModel<NumericType>> volumeModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
+  std::string processName = "default";
 
 public:
   virtual psSmartPointer<ParticleTypeList> getParticleTypes() {
@@ -29,6 +30,16 @@ public:
   }
   virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
     return velocityField;
+  }
+
+  void setProcessName(std::string name)
+  {
+    processName = name;
+  }
+
+  std::string getProcessName()
+  {
+    return processName;
   }
 
   template <typename ParticleType>
