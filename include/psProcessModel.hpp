@@ -32,15 +32,9 @@ public:
     return velocityField;
   }
 
-  void setProcessName(std::string name)
-  {
-    processName = name;
-  }
+  void setProcessName(std::string name) { processName = name; }
 
-  std::string getProcessName()
-  {
-    return processName;
-  }
+  std::string getProcessName() { return processName; }
 
   template <typename ParticleType>
   void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle) {
