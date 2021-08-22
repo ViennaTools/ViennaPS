@@ -156,12 +156,14 @@ public:
         moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                rayTraceCoverages);
 
-        model->getSurfaceModel()->updateCoverages(Rates, raysPerPoint);
+        model->getSurfaceModel()->updateCoverages(
+            Rates, raysPerPoint * materialIds.size());
       }
     }
 
     size_t counter = 0;
     while (remainingTime > 0.) {
+      // std::cout << name << " remaining time: " << remainingTime << std::endl;
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
       meshConverter.apply();
@@ -198,18 +200,45 @@ public:
       }
 
       auto velocitites = model->getSurfaceModel()->calculateVelocities(
-          Rates, materialIds, raysPerPoint);
+          Rates, materialIds, raysPerPoint * materialIds.size());
       model->getVelocityField()->setVelocities(velocitites);
       // if (name == "etch")
       // {
       //   auto cov =
-      //   model->getSurfaceModel()->getCoverages()->getScalarData("eCoverage");
-      //   diskMesh->getCellData().insertNextScalarData(*velocitites,
-      //   "etchRate"); diskMesh->getCellData().insertNextScalarData(*cov,
-      //   "eCoverage");
+      //       model->getSurfaceModel()->getCoverages()->getScalarData("eCoverage");
+      //   auto ionEn = Rates->getScalarData("ionEnhancedRate");
+      //   auto ionSp = Rates->getScalarData("ionSputteringRate");
 
-      //   lsVTKWriter<NumericType>(diskMesh, "diskMesh_" +
-      //   std::to_string(counter++) + ".vtp").apply();
+      //   diskMesh->getCellData().insertNextScalarData(*velocitites,
+      //                                                "etchRate");
+      //   diskMesh->getCellData().insertNextScalarData(*cov,
+      //                                                "eCoverage");
+      //   diskMesh->getCellData().insertNextScalarData(*ionEn,
+      //                                                "ionEnhancedRate");
+      //   diskMesh->getCellData().insertNextScalarData(*ionSp,
+      //                                                "ionSputteringRate");
+
+      //   lsVTKWriter<NumericType>(diskMesh, "etch_disk_" +
+      //                                          std::to_string(counter++) +
+      //                                          ".vtp")
+      //       .apply();
+      // }
+      // else if (name == "remove")
+      // {
+      //   auto ionEn = Rates->getScalarData("ionEnhancedRate");
+      //   auto ionSp = Rates->getScalarData("ionSputteringRate");
+
+      //   diskMesh->getCellData().insertNextScalarData(*velocitites,
+      //                                                "etchRate");
+      //   diskMesh->getCellData().insertNextScalarData(*ionEn,
+      //                                                "ionEnhancedRate");
+      //   diskMesh->getCellData().insertNextScalarData(*ionSp,
+      //                                                "ionSputteringRate");
+
+      //   lsVTKWriter<NumericType>(diskMesh, "remove_disk_" +
+      //                                          std::to_string(counter++) +
+      //                                          ".vtp")
+      //       .apply();
       // }
 
       advectionKernel.apply();
@@ -236,6 +265,8 @@ public:
   void setProcessDuration(double passedDuration) {
     processDuration = passedDuration;
   }
+
+  void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
 };
 
 #endif

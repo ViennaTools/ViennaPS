@@ -21,7 +21,7 @@ int main() {
   /* ------------- Geometry setup ------------ */
   // domain
   NumericType extent = 10;
-  NumericType gridDelta = 0.2;
+  NumericType gridDelta = 0.1;
   double bounds[2 * D] = {0};
   for (int i = 0; i < 2 * D; ++i)
     bounds[i] = i % 2 == 0 ? -extent : extent;
@@ -110,12 +110,13 @@ int main() {
   etchProcess.setDomain(domain);
   etchProcess.setSourceDirection(rayTraceDirection::POS_Y);
   etchProcess.setProcessModel(etchProcessModel);
+  etchProcess.setNumberOfRaysPerPoint(2000);
 
   size_t counter = 0;
   volumeMesh.setFileName("Mesh_" + std::to_string(counter++));
   volumeMesh.apply();
 
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 3; i++) {
     std::cout << "Cycle " << i << std::endl;
 
     // oxidize
@@ -125,13 +126,13 @@ int main() {
     volumeMesh.apply();
 
     // remove
-    removeProcess.setProcessDuration(1.5);
+    removeProcess.setProcessDuration(2);
     removeProcess.apply();
     volumeMesh.setFileName("Mesh_" + std::to_string(counter++));
     volumeMesh.apply();
 
     // etch
-    etchProcess.setProcessDuration(3. + NumericType(i) / 10.);
+    etchProcess.setProcessDuration(15. + NumericType(i));
     etchProcess.apply();
     volumeMesh.setFileName("Mesh_" + std::to_string(counter++));
     volumeMesh.apply();

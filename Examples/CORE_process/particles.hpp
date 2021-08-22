@@ -30,9 +30,14 @@ public:
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
 
     const auto sqrtE = std::sqrt(E);
-    const auto f_e_sp = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
-    const auto Y_s = Ae_sp * std::max(sqrtE - sqrtE_th_sp, 0.) * f_e_sp;
-    const auto Y_ie = Ae_ie * std::max(sqrtE - sqrtE_th_ie, 0.) * cosTheta;
+    double f_ie;
+    if (cosTheta > 0.5) {
+      f_ie = 1.;
+    } else {
+      f_ie = std::max(3. - 6. * std::acos(cosTheta) / rayInternal::PI, 0.);
+    }
+    const auto Y_s = Ae_sp * std::max(sqrtE - sqrtE_th_sp, 0.);
+    const auto Y_ie = Ae_ie * std::max(sqrtE - sqrtE_th_ie, 0.) * f_ie;
 
     // sputtering yield Y_s ionSputteringRate
     localData.getVectorData(0)[primID] += rayWeight * Y_s;
@@ -67,17 +72,16 @@ public:
   }
 
 private:
-  static constexpr double sqrtE_th_sp = 4.2426406871;
-  static constexpr double sqrtE_th_ie = 2.;
+  static constexpr double sqrtE_th_sp = 4.47213595499958;
+  static constexpr double sqrtE_th_ie = 3.872983346207417;
 
-  static constexpr double meanEnergy = 70;
-  static constexpr double deltaEnergy = 30;
+  static constexpr double meanEnergy = 100;
+  static constexpr double deltaEnergy = 40;
   static constexpr double twoPI = 6.283185307179586;
 
-  static constexpr double Ae_sp = 0.00339;
-  static constexpr double Ae_ie = 0.0361;
+  static constexpr double Ae_sp = 0.0337;
+  static constexpr double Ae_ie = 7.;
 
-  static constexpr double B_sp = 9.3;
   NumericType E;
 };
 
@@ -112,7 +116,7 @@ public:
   }
 
 private:
-  static constexpr NumericType gamma_e = 0.9;
+  static constexpr NumericType gamma_e = 0.7;
 };
 
 #endif
