@@ -14,7 +14,7 @@ class myCellType : public cellBase {
 };
 
 int main() {
-  omp_set_num_threads(12);
+  omp_set_num_threads(8);
   using NumericType = double;
   constexpr int D = 2;
 
@@ -88,7 +88,8 @@ int main() {
   auto etchProcessModel = psSmartPointer<psProcessModel<NumericType>>::New();
   etchProcessModel->setSurfaceModel(etchModel);
   etchProcessModel->setVelocityField(veloField);
-  etchProcessModel->insertNextParticleType(ionParticle);
+  // neglect ion enhanced etching and ion sputtering in first approximation
+  // etchProcessModel->insertNextParticleType(ionParticle);
   etchProcessModel->insertNextParticleType(etchantParticle);
   etchProcessModel->setProcessName("etch");
 

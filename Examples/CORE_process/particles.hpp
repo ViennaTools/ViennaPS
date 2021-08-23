@@ -11,7 +11,8 @@
 // Electrochemical Society 150(10) 2003 pp. 1896-1902
 
 template <typename NumericType>
-class Ion : public rayParticle<Ion<NumericType>, NumericType> {
+class Ion : public rayParticle<Ion<NumericType>, NumericType>
+{
 public:
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -19,7 +20,8 @@ public:
                         const unsigned int primID, const int materialId,
                         rayTracingData<NumericType> &localData,
                         const rayTracingData<NumericType> *globalData,
-                        rayRNG &Rng) override final {
+                        rayRNG &Rng) override final
+  {
     // collect data for this hit
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
     assert(E >= 0 && "Negative energy ion");
@@ -31,9 +33,12 @@ public:
 
     const auto sqrtE = std::sqrt(E);
     double f_ie;
-    if (cosTheta > 0.5) {
+    if (cosTheta > 0.5)
+    {
       f_ie = 1.;
-    } else {
+    }
+    else
+    {
       f_ie = std::max(3. - 6. * std::acos(cosTheta) / rayInternal::PI, 0.);
     }
     const auto Y_s = Ae_sp * std::max(sqrtE - sqrtE_th_sp, 0.);
@@ -50,13 +55,17 @@ public:
                     const rayTriple<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
+                    rayRNG &Rng) override final
+  {
+    // TODO
     return std::pair<NumericType, rayTriple<NumericType>>{
         1., rayTriple<NumericType>{0., 0., 0.}};
   }
-  void initNew(rayRNG &RNG) override final {
+  void initNew(rayRNG &RNG) override final
+  {
     std::uniform_real_distribution<NumericType> uniDist;
-    do {
+    do
+    {
       const auto rand1 = uniDist(RNG);
       const auto rand2 = uniDist(RNG);
       E = std::cos(twoPI * rand1) * std::sqrt(-2. * std::log(rand2)) *
@@ -67,7 +76,8 @@ public:
 
   int getRequiredLocalDataSize() const override final { return 2; }
   NumericType getSourceDistributionPower() const override final { return 80.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
+  std::vector<std::string> getLocalDataLabels() const override final
+  {
     return std::vector<std::string>{"ionSputteringRate", "ionEnhancedRate"};
   }
 
@@ -86,7 +96,8 @@ private:
 };
 
 template <typename NumericType, int D>
-class Etchant : public rayParticle<Etchant<NumericType, D>, NumericType> {
+class Etchant : public rayParticle<Etchant<NumericType, D>, NumericType>
+{
 public:
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -94,29 +105,42 @@ public:
                         const unsigned int primID, const int materialId,
                         rayTracingData<NumericType> &localData,
                         const rayTracingData<NumericType> *globalData,
-                        rayRNG &Rng) override final {
-    // collect data for this hit
-    // etchanteRate
-    localData.getVectorData(0)[primID] += rayWeight * gamma_e;
+                        rayRNG &Rng) override final
+  {
+    if (materialId == 2)
+      localData.getVectorData(0)[primID] += rayWeight * gamma_e_p;
+    else if (materialId == 1)
+      localData.getVectorData(0)[primID] += rayWeight * gamma_e_Si;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
                     const rayTriple<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
+                    rayRNG &Rng) override final
+  {
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, rayTriple<NumericType>>{gamma_e, direction};
+    NumericType sticking;
+    if (materialId == 0)
+      sticking = 0;
+    else if (materialId == 1)
+      sticking = gamma_e_Si;
+    else
+      sticking = gamma_e_p;
+
+    return std::pair<NumericType, rayTriple<NumericType>>{sticking, direction};
   }
   void initNew(rayRNG &RNG) override final {}
   int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
+  std::vector<std::string> getLocalDataLabels() const override final
+  {
     return std::vector<std::string>{"etchantRate"};
   }
 
 private:
-  static constexpr NumericType gamma_e = 0.7;
+  static constexpr NumericType gamma_e_Si = 0.7;
+  static constexpr NumericType gamma_e_p = 0.6;
 };
 
 #endif
