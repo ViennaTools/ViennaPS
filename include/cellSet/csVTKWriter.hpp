@@ -64,11 +64,10 @@ public:
         vtkSmartPointer<vtkCellArray>::New();
 
     std::vector<vtkSmartPointer<vtkFloatArray>> pointData;
-    for(unsigned i = 0; i < cellSet->getNumberOfMaterials(); ++i) {
+    for (unsigned i = 0; i < cellSet->getNumberOfMaterials(); ++i) {
       pointData.push_back(vtkSmartPointer<vtkFloatArray>::New());
       pointData.back()->SetNumberOfComponents(1);
-          pointData.back()->SetName(
-              ("Material " + std::to_string(i)).c_str());
+      pointData.back()->SetName(("Material " + std::to_string(i)).c_str());
     }
 
     unsigned counter = 0;
@@ -96,9 +95,9 @@ public:
       // insert material fraction to correct pointData value
       auto &materialFractions = it.getValue().getMaterialFractions();
       // auto materialFractionIt = materialFractions.begin();
-      for(unsigned i = 0; i < pointData.size(); ++i) {
+      for (unsigned i = 0; i < pointData.size(); ++i) {
         auto it = materialFractions.find(i);
-        if(it != materialFractions.end()) {
+        if (it != materialFractions.end()) {
           pointData[i]->InsertNextValue(it->second);
           // ++materialFractionIt;
         } else {
@@ -112,7 +111,7 @@ public:
     vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
     polyData->SetPoints(polyPoints);
     polyData->SetVerts(polyCells);
-    for (auto& it : pointData) {
+    for (auto &it : pointData) {
       polyData->GetCellData()->AddArray(it);
     }
 
@@ -190,11 +189,10 @@ public:
 
     // Make array to store filling fractions
     std::vector<vtkSmartPointer<vtkFloatArray>> pointData;
-    for(unsigned i = 0; i < cellSet->getNumberOfMaterials(); ++i) {
+    for (unsigned i = 0; i < cellSet->getNumberOfMaterials(); ++i) {
       pointData.push_back(vtkSmartPointer<vtkFloatArray>::New());
       pointData.back()->SetNumberOfComponents(1);
-          pointData.back()->SetName(
-              ("Material " + std::to_string(i)).c_str());
+      pointData.back()->SetName(("Material " + std::to_string(i)).c_str());
     }
     // vtkSmartPointer<vtkFloatArray> fillingFractions =
     //     vtkSmartPointer<vtkFloatArray>::New();
@@ -247,7 +245,8 @@ public:
 
       // auto materialFractionIt = materialFractions.begin();
       // for(unsigned i = 0; i < pointData.size(); ++i) {
-      //   if(materialFractionIt != materialFractions.end() && materialFractionIt->first == i) {
+      //   if(materialFractionIt != materialFractions.end() &&
+      //   materialFractionIt->first == i) {
       //     pointData[i]->InsertNextValue(materialFractionIt->second);
       //     ++materialFractionIt;
       //   } else {
@@ -258,9 +257,9 @@ public:
       // insert material fraction to correct pointData value
       auto &materialFractions = it.getValue().getMaterialFractions();
       // auto materialFractionIt = materialFractions.begin();
-      for(unsigned i = 0; i < pointData.size(); ++i) {
+      for (unsigned i = 0; i < pointData.size(); ++i) {
         auto it = materialFractions.find(i);
-        if(it != materialFractions.end()) {
+        if (it != materialFractions.end()) {
           pointData[i]->InsertNextValue(it->second);
           // ++materialFractionIt;
         } else {
@@ -268,14 +267,13 @@ public:
         }
       }
 
-
       ++pointId;
       if (pointId >= rgrid->GetNumberOfPoints())
         break;
     }
 
     // rgrid->GetPointData()->SetScalars(fillingFractions);
-    for (auto& it : pointData) {
+    for (auto &it : pointData) {
       rgrid->GetCellData()->AddArray(it);
     }
 

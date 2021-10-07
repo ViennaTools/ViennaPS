@@ -32,8 +32,7 @@ Releases are tagged on the maser branch and available in the [releases section](
 
 * [ViennaLS](https://github.com/ViennaTools/viennals)
 
-* [VTK](https://vtk.org/) (optional)
-
+* [ViennaRay](https://github.com/ViennaTools/viennaray)
 
 <!-- ## Using ViennaPS in your project
 
@@ -77,6 +76,16 @@ The examples can be built using CMake:
 
 ```
 mkdir build && cd build
+cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON
+make
+```
+
+### Building test
+
+The tests can be built using CMake:
+
+```
+mkdir build && cd build
 cmake .. -DVIENNAPS_BUILD_TESTS=ON
 make
 ```
@@ -87,9 +96,9 @@ If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guid
 
 ## Authors
 
-Current contributors: Lado Filipovic, Paul Manstetten, Xaver Klemenschits and Josef Weinbub
+Current contributors: Tobias Reiter, Josip Bobinac, Xaver Klemenschits
 
-Contact us via: viennats@iue.tuwien.ac.at
+Contact us via: viennatools@iue.tuwien.ac.at
 
 ViennaPS was developed under the aegis of the 'Institute for Microelectronics' at the 'TU Wien'.
 http://www.iue.tuwien.ac.at/

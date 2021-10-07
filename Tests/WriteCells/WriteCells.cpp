@@ -40,11 +40,12 @@ int main() {
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-  lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()->at(0), secondSphere,
+  lsBooleanOperation<NumericType, D>(myDomain.getLevelSets()->at(0),
+                                     secondSphere,
                                      lsBooleanOperationEnum::UNION)
       .apply();
 
-  auto mesh = lsSmartPointer<lsMesh>::New();
+  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
   lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "points.vtk").apply();
   lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();

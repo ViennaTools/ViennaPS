@@ -54,11 +54,12 @@ public:
     materialFractions = passedMaterialFractions;
   }
 
-  /// Compare all fililng fractions of two cells. Only returns true if all of them
-  /// are the same.
+  /// Compare all fililng fractions of two cells. Only returns true if all of
+  /// them are the same.
   virtual bool operator==(cellBase passedCell) {
     // for (unsigned i = 0; i < materialFractions.size(); ++i) {
-    //   if (materialFractions[i].first != passedCell.materialFractions[i].first) {
+    //   if (materialFractions[i].first !=
+    //   passedCell.materialFractions[i].first) {
     //     return false;
     //   }
     //   if (std::abs(materialFractions[i].second -
@@ -88,13 +89,13 @@ public:
 };
 
 /// Write this cell to a character stream (e.g. stdout)
-template <class S> S &operator<<(S &s, const cellBase &cell) {
-  s << "materialFractions: ";
-  const auto &fractions = cell.getMaterialFractions();
-  for (auto &f : fractions) {
-    s << "[" << f.first << ": " << f.second << "], ";
-  }
-  return s;
-}
+// template <class S> S &operator<<(S &s, const cellBase &cell) {
+//   s << "materialFractions: ";
+//   const auto &fractions = cell.getMaterialFractions();
+//   for (auto &f : fractions) {
+//     s << "[" << f.first << ": " << f.second << "], ";
+//   }
+//   return s;
+// }
 
 #endif // CELL_BASE_HPP

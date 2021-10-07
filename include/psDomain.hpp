@@ -3,6 +3,9 @@
 
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
+#include <lsToDiskMesh.hpp>
+#include <lsToSurfaceMesh.hpp>
+#include <lsVTKWriter.hpp>
 
 #include <csDomain.hpp>
 #include <csFromLevelSets.hpp>
@@ -37,7 +40,8 @@ public:
     *this = psDomain(gridDelta, backGroundCell, emptyCell);
   }
 
-  psDomain(double gridDelta, CellType backGroundCell, bool sync = true) : syncData(sync) {
+  psDomain(double gridDelta, CellType backGroundCell, bool sync = true)
+      : syncData(sync) {
     CellType emptyCell;
     emptyCell.setInitialFillingFraction(0.0);
     *this = psDomain(gridDelta, backGroundCell, emptyCell);
@@ -45,8 +49,9 @@ public:
 
   /// If no other geometry is passed to psDomain,
   /// a level set describing a plane substrate will be instantiatied.
-  psDomain(double gridDelta, CellType backGroundCell,
-           CellType emptyCell, bool sync = true) : syncData(sync) {
+  psDomain(double gridDelta, CellType backGroundCell, CellType emptyCell,
+           bool sync = true)
+      : syncData(sync) {
     double bounds[2 * D] = {-20, 20, -20, 20};
     if (D == 3) {
       bounds[4] = -20;
@@ -79,16 +84,17 @@ public:
         csDomainType::New(substrate->getGrid(), backGroundCell, emptyCell);
 
     // generate the cell set from the levelset
-    if(syncData) {
+    if (syncData) {
       generateCellSet();
     }
   }
 
   psDomain(lsDomainType passedLevelSet) {
-    levelSets = lsDomainsType::New(passedLevelSet);
+    levelSets = lsDomainsType::New();
+    levelSets->push_back(passedLevelSet);
     cellSet = csDomainType::New(passedLevelSet->getGrid());
     // generate CellSet
-    if(syncData) {
+    if (syncData) {
       generateCellSet();
     }
   }
@@ -96,14 +102,14 @@ public:
   psDomain(csDomainType passedCellSet) {
     cellSet = csDomainType::New(passedCellSet);
     levelSets = lsDomainsType::New(passedCellSet->getGrid());
-    if(syncData) {
+    if (syncData) {
       generateLevelSets();
     }
   }
 
   void deepCopy(psSmartPointer<psDomain> passedDomain) {
     levelSets->resize(passedDomain->levelSets->size());
-    for(unsigned i = 0; i < levelSets->size(); ++i) {
+    for (unsigned i = 0; i < levelSets->size(); ++i) {
       levelSets[i]->deepCopy(passedDomain->levelSets[i]);
     }
     cellSet->deepCopy(passedDomain->cellSet);
@@ -115,12 +121,16 @@ public:
     // Would make sense, unless there is a situation where this is not wanted.
     // Cannot think of one now though...
     // copy LS
-    auto tmpLS = lsDomainType::New(passedLevelSet);
-    // now bool with underlying LS if it exists
-    lsBooleanOperation<NumericType, D>(tmpLS, levelSets->back(), lsBooleanOperationEnum::UNION).apply();
-
+    // auto tmpLS = lsDomainType::New(passedLevelSet);
     levelSets->push_back(passedLevelSet);
-    if(syncData) {
+    // now bool with underlying LS if it exists
+    if (!levelSets->empty()) {
+      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
+                                         lsBooleanOperationEnum::UNION)
+          .apply();
+    }
+
+    if (syncData) {
       generateCellSet();
     }
   }
@@ -139,15 +149,11 @@ public:
 
   auto &getCellSet() { return cellSet; }
 
-  auto &getGrid() { return levelSets->at(0)->getGrid(); }
+  auto &getGrid() { return levelSets->back()->getGrid(); }
 
-  void setSyncData(bool sync) {
-    syncData = sync;
-  }
+  void setSyncData(bool sync) { syncData = sync; }
 
-  bool getSyncData() {
-    return syncData;
-  }
+  bool getSyncData() { return syncData; }
 
   void print() {
     std::cout << "Process Simulation Domain:" << std::endl;

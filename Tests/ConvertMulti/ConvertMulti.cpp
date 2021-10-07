@@ -46,8 +46,8 @@ int main() {
       lsSmartPointer<lsSphere<NumericType, D>>::New(origin, radius))
       .apply();
 
-
-  lsBooleanOperation<NumericType, D>(secondSphere, myDomain.getLevelSets()->at(0),
+  lsBooleanOperation<NumericType, D>(secondSphere,
+                                     myDomain.getLevelSets()->at(0),
                                      lsBooleanOperationEnum::UNION)
       .apply();
   myDomain.insertNextLevelSet(secondSphere);
@@ -55,7 +55,7 @@ int main() {
   // lsExpand<NumericType, D>(myDomain.getLevelSet(), 5).apply();
   // std::cout << "width: " << myDomain.getLevelSet().getLevelSetWidth() <<
   // std::endl;
-  auto mesh = lsSmartPointer<lsMesh>::New();
+  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
   lsToMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
   lsVTKWriter(mesh, "points.vtk").apply();
   lsToSurfaceMesh<NumericType, D>(myDomain.getLevelSets()->at(0), mesh).apply();
