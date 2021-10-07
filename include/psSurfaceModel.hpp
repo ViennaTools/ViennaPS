@@ -11,7 +11,7 @@ protected:
 
 public:
   virtual void initializeCoverages(unsigned numGeometryPoints) {
-    // if no coverages get initialized here, they wont be initialized at all
+    // if no coverages get initialized here, they wont be used at all
   }
 
   psSmartPointer<psPointData<NumericType>> getCoverages() { return Coverages; }

@@ -1,6 +1,7 @@
 #ifndef VELOCITY_FIELD_HPP
 #define VELOCITY_FIELD_HPP
 
+#include <iostream>
 #include <psSmartPointer.hpp>
 #include <psVelocityField.hpp>
 #include <vector>
@@ -9,7 +10,7 @@ template <class T> class velocityField : public psVelocityField<T> {
 public:
   velocityField() {}
 
-  T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int /*material*/,
+  T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
                       const std::array<T, 3> & /*normalVector*/,
                       unsigned long pointID) override {
     return velocities->at(pointID);
