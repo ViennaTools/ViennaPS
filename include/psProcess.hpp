@@ -144,23 +144,13 @@ public:
           rayTrace.apply();
 
           // fill up rates vector with rates from this particle type
-          auto discAreas = rayTrace.getDiscAreas();
           auto numRates = particle->getRequiredLocalDataSize();
           auto &localData = rayTrace.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
 
-            // TODO: normalize rates
-            // NumericType sum = 0;
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= discAreas[i];
-            //   sum += rate[i];
-            // }
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= sum;
-            // }
+            // normalize rates
+            rayTrace.normalizeFlux(rate);
 
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
@@ -200,23 +190,13 @@ public:
           rayTrace.apply();
 
           // fill up rates vector with rates from this particle type
-          auto discAreas = rayTrace.getDiscAreas();
           auto numRates = particle->getRequiredLocalDataSize();
           auto &localData = rayTrace.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
 
-            // TODO: normalize rates
-            // NumericType sum = 0;
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= discAreas[i];
-            //   sum += rate[i];
-            // }
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= sum;
-            // }
+            // normalize rates
+            rayTrace.normalizeFlux(rate);
 
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
