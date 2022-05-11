@@ -18,11 +18,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
-set(ViennaLS_DIR $ENV{VIENNALS_DIR})
-set(ViennaRay_DIR $ENV{VIENNARAY_DIR})
-
-find_package(ViennaHRLE REQUIRED)
 find_package(ViennaLS REQUIRED)
 find_package (ViennaRay REQUIRED)
 
@@ -38,10 +33,6 @@ set(
 
 
 # VTK
-if(NOT VTK_DIR)
-    set(VTK_DIR $ENV{VTK_DIR})
-endif(NOT VTK_DIR)
-
 find_package(VTK REQUIRED)
 if(VTK_FOUND)
   message(STATUS "Found VTK")
@@ -57,6 +48,11 @@ if(VTK_FOUND)
 else(VTK_FOUND)
   message(FATAL_ERROR "No VTK install found.")
 endif(VTK_FOUND)
+
+option(VIENNAPS_VERBOSE "Get verbose output and intermediate results." ON)
+if(VIENNAPS_VERBOSE)
+  add_compile_definitions(VIENNAPS_VERBOSE)
+endif(VIENNAPS_VERBOSE)
 
 #################################################
 # BUILD TESTS (Smaller examples for testing)
