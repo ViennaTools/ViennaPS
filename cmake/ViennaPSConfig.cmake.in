@@ -1,0 +1,68 @@
+@PACKAGE_INIT@
+
+# ViennaPS requires C++17
+SET(CMAKE_CXX_STANDARD "17")
+
+###############################################
+#  compiler dependent settings for ViennaPS
+###############################################
+find_package(OpenMP REQUIRED)
+list(APPEND VIENNAPS_LIBRARIES OpenMP::OpenMP_CXX)  
+
+# compiler dependent settings
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # disable-new-dtags sets RPATH which searches for libs recursively, instead
+  # of RUNPATH which does not
+  # needed for g++ to link correctly
+  SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags")
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp /wd\"4267\" /wd\"4244\"")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd\"4267\" /wd\"4244\"")
+endif()
+
+if(ViennaPS_COMMON_TARGET)
+  SET(VIENNAPS_INCLUDE_DIRS "@VIENNAPS_BUILD_INCLUDE_DIRS@")
+else(ViennaPS_COMMON_TARGET)
+  SET(VIENNAPS_INCLUDE_DIRS "@CMAKE_INSTALL_PREFIX@@CMAKE_INSTALL_INCLUDEDIR@")
+  #  include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+endif()
+
+# Capturing the variables from configuration time
+set(ViennaLS_DIR @ViennaLS_DIR@)
+set(ViennaRay_DIR @ViennaRay_DIR@)
+
+find_package (ViennaLS REQUIRED PATHS ${ViennaLS_DIR} NO_DEFAULT_PATH)
+find_package (ViennaRay REQUIRED PATHS ${ViennaRay_DIR} NO_DEFAULT_PATH)
+
+list(APPEND VIENNAPS_INCLUDE_DIRS ${VIENNALS_INCLUDE_DIRS} ${VIENNARAY_INCLUDE_DIRS})
+
+set(VTK_DIR @VTK_DIR@)
+find_package (VTK QUIET PATHS ${VTK_DIR} NO_DEFAULT_PATH)
+
+if(VTK_FOUND)
+  #message(STATUS "Found VTK")
+  add_compile_definitions(VIENNAPS_USE_VTK)
+
+  # use VTK_USE_FILE for older versions of VTK
+  if (VTK_VERSION VERSION_LESS "8.90")
+    message(STATUS "Using old VTK Version: ${VTK_VERSION}")
+    include(${VTK_USE_FILE})
+  endif()
+
+  # only link needed vtk libraries for static builds
+  # if(VIENNAPS_STATIC_BUILD)
+  #   set(VTK_LIBRARIES vtksys;vtkIOCore;vtkexpat;vtklz4;vtkzlib;vtklzma;vtkdoubleconversion;vtkCommonMisc;vtkCommonSystem;vtkIOXML;vtkFiltersCore;vtkFiltersGeneral;vtkFiltersGeometry;vtkCommonExecutionModel;vtkCommonDataModel;vtkCommonColor;vtkIOXMLParser;vtkIOCore;vtkCommonMisc;vtkCommonComputationalGeometry;vtkCommonTransforms;vtkCommonMath;)
+  # endif(VIENNAPS_STATIC_BUILD)
+  
+  list(APPEND VIENNAPS_LIBRARIES ${VTK_LIBRARIES})
+  list(APPEND VIENNAPS_PYTHON_LIBRARIES ${VTK_LIBRARIES})
+else(VTK_FOUND)
+  message(STATUS "No VTK install found: Building without VTK support.")
+endif(VTK_FOUND)
+
+set(embree_DIR @embree_DIR@)
+message("Found embree at: " ${embree_DIR})
+find_package(embree 3.0 REQUIRED PATHS ${embree_DIR} NO_DEFAULT_PATH)
+list(APPEND VIENNAPS_LIBRARIES embree)
+
+check_required_components("@PROJECT_NAME@")

@@ -19,14 +19,20 @@
 template <typename CellType, typename NumericType, int D> class psProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
   psSmartPointer<psDomain<CellType, NumericType, D>> domain = nullptr;
-  psSmartPointer<psProcessModel<NumericType>> model = nullptr;
+  äö psSmartPointer<psProcessModel<NumericType>> model = nullptr;
   double processDuration;
   rayTraceDirection sourceDirection;
-  long raysPerPoint = 2000;
+  long raysPerPoint = 1000;
+  bool useRandomSeeds = true;
 
-  void printLS(lsSmartPointer<lsDomain<NumericType, D>> dom, std::string name) {
+  void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
+                        std::string name) {
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
+    lsVTKWriter<NumericType>(mesh, name).apply();
+  }
+
+  void printDiskMesh(lsSmartPointer<lsMesh<>> mesh, std::string name) {
     lsVTKWriter<NumericType>(mesh, name).apply();
   }
 
@@ -79,6 +85,7 @@ public:
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
     double remainingTime = processDuration;
+    assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
         domain->getLevelSets()->back()->getGrid().getGridDelta();
 
@@ -116,6 +123,7 @@ public:
       rayTrace.setSourceDirection(sourceDirection);
       rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
       rayTrace.setBoundaryConditions(rayBoundCond);
+      rayTrace.setUseRandomSeeds(useRandomSeeds);
       rayTrace.setCalculateFlux(false);
     }
     bool useCoverages = false;
@@ -125,6 +133,9 @@ public:
       auto numPoints = diskMesh->getNodes().size();
       model->getSurfaceModel()->initializeCoverages(numPoints);
       if (model->getSurfaceModel()->getCoverages() != nullptr) {
+#ifdef VIENNAPS_VERBOSE
+        std::cout << "Initializing coverages ... " << std::endl;
+#endif
         useCoverages = true;
         auto points = diskMesh->getNodes();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
@@ -144,23 +155,13 @@ public:
           rayTrace.apply();
 
           // fill up rates vector with rates from this particle type
-          auto discAreas = rayTrace.getDiscAreas();
           auto numRates = particle->getRequiredLocalDataSize();
           auto &localData = rayTrace.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
 
-            // TODO: normalize rates
-            // NumericType sum = 0;
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= discAreas[i];
-            //   sum += rate[i];
-            // }
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= sum;
-            // }
+            // normalize rates
+            rayTrace.normalizeFlux(rate);
 
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
@@ -177,9 +178,11 @@ public:
 
     size_t counter = 0;
     while (remainingTime > 0.) {
-      std::cout << name << " remaining time: " << remainingTime << std::endl;
-      auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+#ifdef VIENNAPS_VERBOSE
+      std::cout << "Remaining time: " << remainingTime << std::endl;
+#endif
 
+      auto Rates = psSmartPointer<psPointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       if (useRayTracing) {
@@ -200,24 +203,13 @@ public:
           rayTrace.apply();
 
           // fill up rates vector with rates from this particle type
-          auto discAreas = rayTrace.getDiscAreas();
           auto numRates = particle->getRequiredLocalDataSize();
           auto &localData = rayTrace.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
 
-            // TODO: normalize rates
-            // NumericType sum = 0;
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= discAreas[i];
-            //   sum += rate[i];
-            // }
-            // for (size_t j = 0; j < rate.size(); j++)
-            // {
-            //   rate[i] /= sum;
-            // }
-
+            // normalize rates
+            rayTrace.normalizeFlux(rate);
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
@@ -233,6 +225,20 @@ public:
       model->getVelocityField()->setVelocities(velocitites);
       advectionKernel.apply();
       remainingTime -= advectionKernel.getAdvectedTime();
+
+#ifdef VIENNAPS_VERBOSE
+      diskMesh->getCellData().clear();
+      diskMesh->getCellData().insertNextScalarData(*velocitites, "velocities");
+      if (useCoverages) {
+        auto coverages = model->getSurfaceModel()->getCoverages();
+        for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+          auto label = coverages->getScalarDataLabel(idx);
+          diskMesh->getCellData().insertNextScalarData(
+              *coverages->getScalarData(idx), label);
+        }
+      }
+      printDiskMesh(diskMesh, name + "_" + std::to_string(counter++) + ".vtp");
+#endif
     }
   }
 
