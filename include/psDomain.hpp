@@ -120,15 +120,13 @@ public:
     // TODO: should we automatically wrap lower level set here??
     // Would make sense, unless there is a situation where this is not wanted.
     // Cannot think of one now though...
-    // copy LS
-    // auto tmpLS = lsDomainType::New(passedLevelSet);
-    levelSets->push_back(passedLevelSet);
-    // now bool with underlying LS if it exists
+
     if (!levelSets->empty()) {
       lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
                                          lsBooleanOperationEnum::UNION)
           .apply();
     }
+    levelSets->push_back(passedLevelSet);
 
     if (syncData) {
       generateCellSet();

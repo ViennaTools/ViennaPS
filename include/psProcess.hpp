@@ -165,6 +165,14 @@ public:
       rayTrace.setUseRandomSeeds(useRandomSeeds);
       rayTrace.setCalculateFlux(false);
     }
+    // Determine whether there are process parameters used in ray tracing
+    model->getSurfaceModel()->initializeProcessParameters();
+    bool useProcessParams =
+        model->getSurfaceModel()->getProcessParameters() != nullptr;
+#ifdef VIENNAPS_VERBOSE
+    if (useProcessParams)
+      std::cout << "Using process parameters." << std::endl;
+#endif
     bool useCoverages = false;
     // Initialize coverages
     {
@@ -172,10 +180,10 @@ public:
       auto numPoints = diskMesh->getNodes().size();
       model->getSurfaceModel()->initializeCoverages(numPoints);
       if (model->getSurfaceModel()->getCoverages() != nullptr) {
-#ifdef VIENNAPS_VERBOSE
-        std::cout << "Initializing coverages ... " << std::endl;
-#endif
         useCoverages = true;
+#ifdef VIENNAPS_VERBOSE
+        std::cout << "Using coverages." << std::endl;
+#endif
         auto points = diskMesh->getNodes();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         auto materialIds =
@@ -185,6 +193,17 @@ public:
 
         rayTracingData<NumericType> rayTraceCoverages =
             movePointDataToRayData(model->getSurfaceModel()->getCoverages());
+        if (useProcessParams) {
+          // rayTraceCoverages will now hold scalars in addition to coverages
+          auto processParams = model->getSurfaceModel()->getProcessParameters();
+          NumericType numParams = processParams->getScalarData().size();
+          rayTraceCoverages.setNumberOfScalarData(numParams);
+          for (size_t i = 0; i < numParams; ++i) {
+            rayTraceCoverages.setScalarData(
+                i, processParams->getScalarData(i),
+                processParams->getScalarDataLabel(i));
+          }
+        }
         rayTrace.setGlobalData(rayTraceCoverages);
 
         auto Rates = psSmartPointer<psPointData<NumericType>>::New();
@@ -233,6 +252,18 @@ public:
         if (useCoverages) {
           rayTraceCoverages =
               movePointDataToRayData(model->getSurfaceModel()->getCoverages());
+          if (useProcessParams) {
+            // rayTraceCoverages will now hold scalars in addition to coverages
+            auto processParams =
+                model->getSurfaceModel()->getProcessParameters();
+            NumericType numParams = processParams->getScalarData().size();
+            rayTraceCoverages.setNumberOfScalarData(numParams);
+            for (size_t i = 0; i < numParams; ++i) {
+              rayTraceCoverages.setScalarData(
+                  i, processParams->getScalarData(i),
+                  processParams->getScalarDataLabel(i));
+            }
+          }
           rayTrace.setGlobalData(rayTraceCoverages);
         }
 
