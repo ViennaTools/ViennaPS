@@ -180,6 +180,9 @@ public:
       auto numPoints = diskMesh->getNodes().size();
       model->getSurfaceModel()->initializeCoverages(numPoints);
       if (model->getSurfaceModel()->getCoverages() != nullptr) {
+#ifdef VIENNAPS_VERBOSE
+        std::cout << "Initializing coverages ... " << std::endl;
+#endif
         useCoverages = true;
 #ifdef VIENNAPS_VERBOSE
         std::cout << "Using coverages." << std::endl;
@@ -241,6 +244,7 @@ public:
 #endif
 
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+      meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       if (useRayTracing) {
         auto points = diskMesh->getNodes();
@@ -317,6 +321,20 @@ public:
             domain, translator, model->getSurfaceModel()->getCoverages());
 
       remainingTime -= advectionKernel.getAdvectedTime();
+
+#ifdef VIENNAPS_VERBOSE
+      diskMesh->getCellData().clear();
+      diskMesh->getCellData().insertNextScalarData(*velocitites, "velocities");
+      if (useCoverages) {
+        auto coverages = model->getSurfaceModel()->getCoverages();
+        for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+          auto label = coverages->getScalarDataLabel(idx);
+          diskMesh->getCellData().insertNextScalarData(
+              *coverages->getScalarData(idx), label);
+        }
+      }
+      printDiskMesh(diskMesh, name + "_" + std::to_string(counter++) + ".vtp");
+#endif
     }
   }
 
