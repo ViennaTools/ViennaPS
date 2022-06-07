@@ -20,107 +20,29 @@ template <typename CellType, typename NumericType, int D> class psProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
   using psDomainType = psSmartPointer<psDomain<CellType, NumericType, D>>;
 
-  psDomainType domain = nullptr;
-  psSmartPointer<psProcessModel<NumericType>> model = nullptr;
-  double processDuration;
-  rayTraceDirection sourceDirection;
-  long raysPerPoint = 1000;
-  bool useRandomSeeds = true;
-
-  void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
-                        std::string name) {
-    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-    lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
-    lsVTKWriter<NumericType>(mesh, name).apply();
-  }
-
-  void printDiskMesh(lsSmartPointer<lsMesh<>> mesh, std::string name) {
-    lsVTKWriter<NumericType>(mesh, name).apply();
-  }
-
-  rayTraceBoundary convertBoundaryCondition(
-      lsBoundaryConditionEnum<D> originalBoundaryCondition) {
-    switch (originalBoundaryCondition) {
-    case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-      return rayTraceBoundary::REFLECTIVE;
-
-    case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-      return rayTraceBoundary::PERIODIC;
-
-    case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
-    }
-    return rayTraceBoundary::IGNORE;
-  }
-
-  rayTracingData<NumericType>
-  movePointDataToRayData(psSmartPointer<psPointData<NumericType>> pointData) {
-    rayTracingData<NumericType> rayData;
-    const auto numData = pointData->getScalarDataSize();
-    rayData.setNumberOfVectorData(numData);
-    for (size_t i = 0; i < numData; ++i) {
-      auto label = pointData->getScalarDataLabel(i);
-      rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
-                            label);
-    }
-
-    return std::move(rayData);
-  }
-
-  void
-  moveRayDataToPointData(psSmartPointer<psPointData<NumericType>> pointData,
-                         rayTracingData<NumericType> &rayData) {
-    pointData->clear();
-    const auto numData = rayData.getVectorData().size();
-    for (size_t i = 0; i < numData; ++i)
-      pointData->insertNextScalarData(std::move(rayData.getVectorData(i)),
-                                      rayData.getVectorDataLabel(i));
-  }
-
-  void
-  moveCoveragesToTopLS(psDomainType domain,
-                       lsSmartPointer<translatorType> translator,
-                       psSmartPointer<psPointData<NumericType>> coverages) {
-    auto topLS = domain->getLevelSets()->back();
-    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
-      auto covName = coverages->getScalarDataLabel(i);
-      std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
-      auto cov = coverages->getScalarData(covName);
-      for (const auto iter : *translator.get()) {
-        levelSetData[iter.first] = cov->at(iter.second);
-      }
-      if (auto data = topLS->getPointData().getScalarData(covName);
-          data != nullptr) {
-        *data = std::move(levelSetData);
-      } else {
-        topLS->getPointData().insertNextScalarData(std::move(levelSetData),
-                                                   covName);
-      }
-    }
-  }
-
-  void updateCoveragesFromAdvectedSurface(
-      psDomainType domain, lsSmartPointer<translatorType> translator,
-      psSmartPointer<psPointData<NumericType>> coverages) {
-    auto topLS = domain->getLevelSets()->back();
-    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
-      auto covName = coverages->getScalarDataLabel(i);
-      auto levelSetData = topLS->getPointData().getScalarData(covName);
-      auto covData = coverages->getScalarData(covName);
-      covData->resize(translator->size());
-      for (const auto it : *translator.get()) {
-        covData->at(it.second) = levelSetData->at(it.first);
-      }
-    }
-  }
-
 public:
+  template <typename ProcessModelType>
+  void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
+    model = std::dynamic_pointer_cast<psProcessModel<NumericType>>(
+        passedProcessModel);
+  }
+
+  void
+  setDomain(psSmartPointer<psDomain<CellType, NumericType, D>> passedDomain) {
+    domain = passedDomain;
+  }
+
+  /// Set the source direction, where the rays should be traced from.
+  void setSourceDirection(const rayTraceDirection passedDirection) {
+    sourceDirection = passedDirection;
+  }
+
+  void setProcessDuration(double passedDuration) {
+    processDuration = passedDuration;
+  }
+
+  void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
+
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
@@ -340,27 +262,106 @@ public:
     }
   }
 
-  template <typename ProcessModelType>
-  void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
-    model = std::dynamic_pointer_cast<psProcessModel<NumericType>>(
-        passedProcessModel);
+private:
+  void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
+                        std::string name) {
+    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+    lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
+    lsVTKWriter<NumericType>(mesh, name).apply();
+  }
+
+  void printDiskMesh(lsSmartPointer<lsMesh<>> mesh, std::string name) {
+    lsVTKWriter<NumericType>(mesh, name).apply();
+  }
+
+  rayTraceBoundary convertBoundaryCondition(
+      lsBoundaryConditionEnum<D> originalBoundaryCondition) {
+    switch (originalBoundaryCondition) {
+    case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
+      return rayTraceBoundary::REFLECTIVE;
+
+    case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
+      return rayTraceBoundary::IGNORE;
+
+    case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
+      return rayTraceBoundary::PERIODIC;
+
+    case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
+      return rayTraceBoundary::IGNORE;
+
+    case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
+      return rayTraceBoundary::IGNORE;
+    }
+    return rayTraceBoundary::IGNORE;
+  }
+
+  rayTracingData<NumericType>
+  movePointDataToRayData(psSmartPointer<psPointData<NumericType>> pointData) {
+    rayTracingData<NumericType> rayData;
+    const auto numData = pointData->getScalarDataSize();
+    rayData.setNumberOfVectorData(numData);
+    for (size_t i = 0; i < numData; ++i) {
+      auto label = pointData->getScalarDataLabel(i);
+      rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
+                            label);
+    }
+
+    return std::move(rayData);
   }
 
   void
-  setDomain(psSmartPointer<psDomain<CellType, NumericType, D>> passedDomain) {
-    domain = passedDomain;
+  moveRayDataToPointData(psSmartPointer<psPointData<NumericType>> pointData,
+                         rayTracingData<NumericType> &rayData) {
+    pointData->clear();
+    const auto numData = rayData.getVectorData().size();
+    for (size_t i = 0; i < numData; ++i)
+      pointData->insertNextScalarData(std::move(rayData.getVectorData(i)),
+                                      rayData.getVectorDataLabel(i));
   }
 
-  /// Set the source direction, where the rays should be traced from.
-  void setSourceDirection(const rayTraceDirection passedDirection) {
-    sourceDirection = passedDirection;
+  void
+  moveCoveragesToTopLS(psDomainType domain,
+                       lsSmartPointer<translatorType> translator,
+                       psSmartPointer<psPointData<NumericType>> coverages) {
+    auto topLS = domain->getLevelSets()->back();
+    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
+      auto covName = coverages->getScalarDataLabel(i);
+      std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
+      auto cov = coverages->getScalarData(covName);
+      for (const auto iter : *translator.get()) {
+        levelSetData[iter.first] = cov->at(iter.second);
+      }
+      if (auto data = topLS->getPointData().getScalarData(covName);
+          data != nullptr) {
+        *data = std::move(levelSetData);
+      } else {
+        topLS->getPointData().insertNextScalarData(std::move(levelSetData),
+                                                   covName);
+      }
+    }
   }
 
-  void setProcessDuration(double passedDuration) {
-    processDuration = passedDuration;
+  void updateCoveragesFromAdvectedSurface(
+      psDomainType domain, lsSmartPointer<translatorType> translator,
+      psSmartPointer<psPointData<NumericType>> coverages) {
+    auto topLS = domain->getLevelSets()->back();
+    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
+      auto covName = coverages->getScalarDataLabel(i);
+      auto levelSetData = topLS->getPointData().getScalarData(covName);
+      auto covData = coverages->getScalarData(covName);
+      covData->resize(translator->size());
+      for (const auto it : *translator.get()) {
+        covData->at(it.second) = levelSetData->at(it.first);
+      }
+    }
   }
 
-  void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
+  psDomainType domain = nullptr;
+  psSmartPointer<psProcessModel<NumericType>> model = nullptr;
+  NumericType processDuration;
+  rayTraceDirection sourceDirection;
+  long raysPerPoint = 1000;
+  bool useRandomSeeds = true;
 };
 
 #endif
