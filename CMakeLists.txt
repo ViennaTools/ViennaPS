@@ -32,7 +32,6 @@ endif(ViennaLS_FOUND)
 
 # ViennaRay
 find_package (ViennaRay REQUIRED)
-find_package(ViennaLS REQUIRED)
 if(ViennaRay_FOUND)
   message(STATUS "Found ViennaRay")
 else(ViennaRay_FOUND)
