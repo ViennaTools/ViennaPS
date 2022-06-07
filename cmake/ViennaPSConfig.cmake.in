@@ -65,4 +65,8 @@ message("Found embree at: " ${embree_DIR})
 find_package(embree 3.0 REQUIRED PATHS ${embree_DIR} NO_DEFAULT_PATH)
 list(APPEND VIENNAPS_LIBRARIES embree)
 
+if(@VIENNAPS_VERBOSE@)
+  add_compile_definitions(VIENNAPS_VERBOSE)
+endif(@VIENNAPS_VERBOSE@)
+
 check_required_components("@PROJECT_NAME@")
