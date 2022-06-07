@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.4)
 
 project(ViennaPSTests)
 
-set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
-set(ViennaLS_DIR $ENV{VIENNALS_DIR})
+set(ViennaHRLE_DIR "${ViennaHRLE_BINARY_DIR}")
+set(ViennaLS_DIR "${ViennaLS_BINARY_DIR}")
+set(ViennaRay_DIR "${ViennaRay_BINARY_DIR}")
+set(ViennaPS_COMMON_TARGET ${PROJECT_NAME})
 
 ## Enable Clang sanitizer for debug builds
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -24,9 +26,11 @@ MACRO(SUBDIRLIST result curdir)
   SET(${result} ${dirlist})
 ENDMACRO()
 
-SUBDIRLIST(EXAMPLE_DIRS ${CMAKE_CURRENT_LIST_DIR})
+add_custom_target(buildTests)
 
-# add all examples
-foreach(subdir ${EXAMPLE_DIRS})
+SUBDIRLIST(TEST_DIRS ${CMAKE_CURRENT_LIST_DIR})
+
+# add all tests
+foreach(subdir ${TEST_DIRS})
   add_subdirectory(${subdir})
 endforeach()

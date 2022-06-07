@@ -39,6 +39,7 @@ int main() {
   rayTrace<NumericType, D> rayTracer;
   rayTracer.setGeometry(points, normals, gridDelta);
   rayTracer.setParticleType(particle);
+  rayTracer.setNumberOfRaysPerPoint(10);
   rayTracer.apply();
 
   return 0;
