@@ -17,9 +17,8 @@ public:
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
                       const std::vector<NumericType> &materialIds) override {
-    auto rate = Rates->getScalarData("particleRate");
-
-    return rate;
+    return psSmartPointer<std::vector<NumericType>>::New(
+        *Rates->getScalarData("particleRate"));
   }
 
   void

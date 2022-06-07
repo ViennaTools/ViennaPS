@@ -66,12 +66,13 @@ int main() {
   model->insertNextParticleType(particle);
   model->setSurfaceModel(surfModel);
   model->setVelocityField(velField);
+  model->setProcessName("Example_process");
 
   psProcess<myCellType, NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
   process.setSourceDirection(rayTraceDirection::POS_Z);
-  process.setProcessDuration(100);
+  process.setProcessDuration(50);
   process.apply();
 
   auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();

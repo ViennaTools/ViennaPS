@@ -39,7 +39,7 @@ public:
   }
 
 private:
-  static constexpr double stickingProbability = 0.2;
+  static constexpr double stickingProbability = 0.1;
 };
 
 #endif
