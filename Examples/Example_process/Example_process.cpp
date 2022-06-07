@@ -1,10 +1,10 @@
 #include <lsMakeGeometry.hpp>
 #include <lsToSurfaceMesh.hpp>
-#include <lsVTKWriter.hpp>
 #include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
+#include <psVTKWriter.hpp>
 #include <rayTracingData.hpp>
 
 #include "particles.hpp"
@@ -78,7 +78,7 @@ int main() {
   auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
   lsToSurfaceMesh<NumericType, D>(plane, mesh).apply();
 
-  lsVTKWriter<NumericType>(mesh, "example.vtp").apply();
+  psVTKWriter<NumericType>(mesh, "example.vtp").apply();
 
   return 0;
 }
