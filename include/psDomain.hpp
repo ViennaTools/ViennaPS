@@ -116,12 +116,9 @@ public:
     syncData = passedDomain->syncData;
   }
 
-  void insertNextLevelSet(lsDomainType passedLevelSet) {
-    // TODO: should we automatically wrap lower level set here??
-    // Would make sense, unless there is a situation where this is not wanted.
-    // Cannot think of one now though...
-
-    if (!levelSets->empty()) {
+  void insertNextLevelSet(lsDomainType passedLevelSet,
+                          bool wrapLowerLevelSet = true) {
+    if (!levelSets->empty() && wrapLowerLevelSet) {
       lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
                                          lsBooleanOperationEnum::UNION)
           .apply();

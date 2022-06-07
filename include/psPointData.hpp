@@ -2,6 +2,7 @@
 #define PS_POINT_DATA_HPP
 
 #include <lsPointData.hpp>
+#include <lsPreCompileMacros.hpp>
 
 template <typename T> using psPointData = lsPointData<T>;
 

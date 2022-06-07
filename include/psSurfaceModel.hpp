@@ -28,13 +28,12 @@ public:
 
   virtual psSmartPointer<std::vector<NumericType>>
   calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIDs,
-                      const long numRaysTraced) {
+                      const std::vector<NumericType> &materialIDs) {
     return psSmartPointer<std::vector<NumericType>>::New();
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
-                               const long numRaysTraced) {}
+  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) {
+  }
 };
 
 #endif

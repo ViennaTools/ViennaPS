@@ -1,9 +1,11 @@
 #include <lsMakeGeometry.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
+#include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
+#include <rayTracingData.hpp>
 
 #include "particles.hpp"
 #include "surfaceModel.hpp"

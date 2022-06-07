@@ -16,25 +16,12 @@ public:
 
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIds,
-                      const long numRaysPerPoint) override {
-    std::vector<NumericType> velocities(materialIds.size(), 0.);
-
+                      const std::vector<NumericType> &materialIds) override {
     auto rate = Rates->getScalarData("particleRate");
 
-    // normalize rate
-    double max = 0;
-    for (size_t i = 0; i < velocities.size(); ++i) {
-      if (rate->at(i) > max)
-        max = rate->at(i);
-    }
-    for (size_t i = 0; i < velocities.size(); ++i) {
-      velocities[i] = rate->at(i) / max;
-    }
-
-    return psSmartPointer<std::vector<NumericType>>::New(velocities);
+    return rate;
   }
 
-  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
-                       const long numRaysPerPoint) override {}
+  void
+  updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override {}
 };
