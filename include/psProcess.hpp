@@ -43,6 +43,8 @@ public:
 
   void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
 
+  void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
+
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
@@ -113,46 +115,69 @@ public:
         rayTrace.setGeometry(points, normals, gridDelta);
         rayTrace.setMaterialIds(materialIds);
 
-        // move coverages to the ray tracer
-        rayTracingData<NumericType> rayTraceCoverages =
-            movePointDataToRayData(model->getSurfaceModel()->getCoverages());
-        if (useProcessParams) {
-          // store scalars in addition to coverages
-          auto processParams = model->getSurfaceModel()->getProcessParameters();
-          NumericType numParams = processParams->getScalarData().size();
-          rayTraceCoverages.setNumberOfScalarData(numParams);
-          for (size_t i = 0; i < numParams; ++i) {
-            rayTraceCoverages.setScalarData(
-                i, processParams->getScalarData(i),
-                processParams->getScalarDataLabel(i));
+        for (size_t iterations = 0; iterations < maxIterations; iterations++) {
+          // move coverages to the ray tracer
+          rayTracingData<NumericType> rayTraceCoverages =
+              movePointDataToRayData(model->getSurfaceModel()->getCoverages());
+          if (useProcessParams) {
+            // store scalars in addition to coverages
+            auto processParams =
+                model->getSurfaceModel()->getProcessParameters();
+            NumericType numParams = processParams->getScalarData().size();
+            rayTraceCoverages.setNumberOfScalarData(numParams);
+            for (size_t i = 0; i < numParams; ++i) {
+              rayTraceCoverages.setScalarData(
+                  i, processParams->getScalarData(i),
+                  processParams->getScalarDataLabel(i));
+            }
           }
-        }
-        rayTrace.setGlobalData(rayTraceCoverages);
+          rayTrace.setGlobalData(rayTraceCoverages);
 
-        auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+          auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
-        for (auto &particle : *model->getParticleTypes()) {
-          rayTrace.setParticleType(particle);
-          rayTrace.apply();
+          for (auto &particle : *model->getParticleTypes()) {
+            rayTrace.setParticleType(particle);
+            rayTrace.apply();
 
-          // fill up rates vector with rates from this particle type
-          auto numRates = particle->getRequiredLocalDataSize();
-          auto &localData = rayTrace.getLocalData();
-          for (int i = 0; i < numRates; ++i) {
-            auto rate = std::move(localData.getVectorData(i));
+            // fill up rates vector with rates from this particle type
+            auto numRates = particle->getRequiredLocalDataSize();
+            auto &localData = rayTrace.getLocalData();
+            for (int i = 0; i < numRates; ++i) {
+              auto rate = std::move(localData.getVectorData(i));
 
-            // normalize rates
-            rayTrace.normalizeFlux(rate);
+              // normalize rates
+              rayTrace.normalizeFlux(rate);
 
-            Rates->insertNextScalarData(std::move(rate),
-                                        localData.getVectorDataLabel(i));
+              Rates->insertNextScalarData(std::move(rate),
+                                          localData.getVectorDataLabel(i));
+            }
           }
-        }
 
-        // move coverages back in the model
-        moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
-                               rayTraceCoverages);
-        model->getSurfaceModel()->updateCoverages(Rates);
+          // move coverages back in the model
+          moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
+                                 rayTraceCoverages);
+          model->getSurfaceModel()->updateCoverages(Rates);
+#ifdef VIENNAPS_VERBOSE
+          diskMesh->getCellData().clear();
+          auto coverages = model->getSurfaceModel()->getCoverages();
+          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+            auto label = coverages->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *coverages->getScalarData(idx), label);
+          }
+          for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+            auto label = Rates->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *Rates->getScalarData(idx), label);
+          }
+          printDiskMesh(diskMesh, name + "_covIinit_" +
+                                      std::to_string(iterations) + ".vtp");
+          std::cerr << "\r"
+                    << "Iteration: " << iterations << " / " << maxIterations;
+          if (iterations == maxIterations)
+            std::cerr << std::endl;
+#endif
+        }
       }
     }
 
@@ -230,6 +255,11 @@ public:
               *coverages->getScalarData(idx), label);
         }
       }
+      for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+        auto label = Rates->getScalarDataLabel(idx);
+        diskMesh->getCellData().insertNextScalarData(*Rates->getScalarData(idx),
+                                                     label);
+      }
       printDiskMesh(diskMesh, name + "_" + std::to_string(counter++) + ".vtp");
 #endif
       // move coverages to LS, so they get are moved with the advection step
@@ -245,20 +275,6 @@ public:
             domain, translator, model->getSurfaceModel()->getCoverages());
 
       remainingTime -= advectionKernel.getAdvectedTime();
-
-#ifdef VIENNAPS_VERBOSE
-      diskMesh->getCellData().clear();
-      diskMesh->getCellData().insertNextScalarData(*velocitites, "velocities");
-      if (useCoverages) {
-        auto coverages = model->getSurfaceModel()->getCoverages();
-        for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-          auto label = coverages->getScalarDataLabel(idx);
-          diskMesh->getCellData().insertNextScalarData(
-              *coverages->getScalarData(idx), label);
-        }
-      }
-      printDiskMesh(diskMesh, name + "_" + std::to_string(counter++) + ".vtp");
-#endif
     }
   }
 
@@ -362,6 +378,7 @@ private:
   rayTraceDirection sourceDirection;
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
+  size_t maxIterations = 20;
 };
 
 #endif
