@@ -36,16 +36,15 @@ public:
 
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIDs,
-                      const long numRaysPerPoint) override {
+                      const std::vector<NumericType> &materialIDs) override {
     const auto numPoints = Rates->getScalarData(0)->size();
     auto velocities = psSmartPointer<std::vector<NumericType>>::New();
     velocities->resize(numPoints);
     return velocities;
   }
 
-  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
-                       const long numRaysPerPoint) override {
+  void
+  updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override {
     const auto numPoints = Rates->getScalarData(0)->size();
   }
 };

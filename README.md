@@ -10,8 +10,8 @@ IMPORTANT NOTE: ViennaPS is under heavy development and improved daily. If you d
 
 Bug reports and suggestions should be filed on GitHub.
 
-<!-- ## Releases
-Releases are tagged on the maser branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases). -->
+## Releases
+Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
 
 ## Building
 
@@ -39,12 +39,12 @@ Releases are tagged on the maser branch and available in the [releases section](
 Have a look at the [example repo](https://github.com/ViennaTools/viennals-example) for creating a project with ViennaPS as a dependency. -->
 
 
-<!-- ## Installing (with dependencies already installed)
+## Installing (with dependencies already installed)
 
 Since this is a header only project, it does not require any installation.
 However, we recommend the following procedure.
 
-Make sure you have [ViennaHRLE](https://github.com/ViennaTools/viennahrle) and [ViennaLS](https://github.com/ViennaTools/viennals) installed on your system and run:
+Make sure you have [ViennaHRLE](https://github.com/ViennaTools/viennahrle), [ViennaLS](https://github.com/ViennaTools/viennals) and [ViennaRay](https://github.com/ViennaTools/ViennaRay) installed on your system and run:
 
 ```
 git clone github.com/ViennaTools/ViennaPS.git
@@ -54,10 +54,10 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/
 make install
 ```
 
-This will install the necessary headers and CMake files to the specified path. If DCMAKE_INSTALL_PREFIX is not specified, it will be installed to the standard path for your system, usually /usr/local/ . -->
+This will install the necessary headers and CMake files to the specified path. If DCMAKE_INSTALL_PREFIX is not specified, it will be installed to the standard path for your system, usually /usr/local/ . 
 
 
-<!-- ## Integration in CMake projects
+## Integration in CMake projects
 
 In order to use this library in your CMake project, add the following lines to the CMakeLists.txt of your project:\
 (also do not forget to include ViennaHRLE/ViennaLS)
@@ -68,7 +68,7 @@ find_package(ViennaPS REQUIRED)
 add_executable(...)
 target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES})
-``` -->
+``` 
 
 ### Building examples
 

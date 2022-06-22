@@ -2,10 +2,13 @@ cmake_minimum_required(VERSION 3.4)
 
 project(
   "ViennaPS"
-  VERSION 0.0.1
+  VERSION 1.0.0
   LANGUAGES CXX)
 
 include(GNUInstallDirs)
+
+# c++17 for inlince constexpr variables
+SET(CMAKE_CXX_STANDARD "17")
 
 # set default build type
 SET(DEFAULT_BUILD_TYPE "Release")
@@ -18,8 +21,23 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+# ViennaLS
 find_package(ViennaLS REQUIRED)
+if(ViennaLS_FOUND)
+  message(STATUS "Found ViennaLS")
+else(ViennaLS_FOUND)
+  message(FATAL_ERROR "No ViennaLS install found. 
+  Please provide the path to the ViennaLSConfig.cmake file in ViennaLS_DIR.")
+endif(ViennaLS_FOUND)
+
+# ViennaRay
 find_package (ViennaRay REQUIRED)
+if(ViennaRay_FOUND)
+  message(STATUS "Found ViennaRay")
+else(ViennaRay_FOUND)
+  message(FATAL_ERROR "No ViennaRay install found. 
+  Please provide the path to the ViennaRayConfig.cmake file in ViennaRay_DIR.")
+endif(ViennaRay_FOUND)
 
 list(APPEND VIENNAPS_LIBRARIES ${VIENNARAY_LIBRARIES})
 
@@ -59,6 +77,7 @@ endif(VIENNAPS_VERBOSE)
 #################################################
 option(VIENNAPS_BUILD_TESTS "Build tests." OFF)
 if(VIENNAPS_BUILD_TESTS)
+  enable_testing()
   add_subdirectory(Tests)
 endif(VIENNAPS_BUILD_TESTS)
 

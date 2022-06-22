@@ -89,13 +89,13 @@ public:
 };
 
 /// Write this cell to a character stream (e.g. stdout)
-// template <class S> S &operator<<(S &s, const cellBase &cell) {
-//   s << "materialFractions: ";
-//   const auto &fractions = cell.getMaterialFractions();
-//   for (auto &f : fractions) {
-//     s << "[" << f.first << ": " << f.second << "], ";
-//   }
-//   return s;
-// }
+std::ostream &operator<<(std::ostream &s, const cellBase &cell) {
+  s << "materialFractions: ";
+  const auto &fractions = cell.getMaterialFractions();
+  for (auto &f : fractions) {
+    s << "[" << f.first << ": " << f.second << "], ";
+  }
+  return s;
+}
 
 #endif // CELL_BASE_HPP

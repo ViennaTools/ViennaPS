@@ -2,7 +2,9 @@
 
 #include <psDomain.hpp>
 
-class myCellType : public cellBase {};
+class myCellType : public cellBase {
+  using cellBase::cellBase;
+};
 
 int main() {
 

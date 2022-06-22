@@ -1,9 +1,11 @@
 #include <lsMakeGeometry.hpp>
 #include <lsToSurfaceMesh.hpp>
-#include <lsVTKWriter.hpp>
+#include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
+#include <psVTKWriter.hpp>
+#include <rayTracingData.hpp>
 
 #include "particles.hpp"
 #include "surfaceModel.hpp"
@@ -64,18 +66,19 @@ int main() {
   model->insertNextParticleType(particle);
   model->setSurfaceModel(surfModel);
   model->setVelocityField(velField);
+  model->setProcessName("Example_process");
 
   psProcess<myCellType, NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
   process.setSourceDirection(rayTraceDirection::POS_Z);
-  process.setProcessDuration(100);
+  process.setProcessDuration(50);
   process.apply();
 
   auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
   lsToSurfaceMesh<NumericType, D>(plane, mesh).apply();
 
-  lsVTKWriter<NumericType>(mesh, "example.vtp").apply();
+  psVTKWriter<NumericType>(mesh, "example.vtp").apply();
 
   return 0;
 }
