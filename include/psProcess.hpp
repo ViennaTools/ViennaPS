@@ -101,82 +101,90 @@ public:
     {
       meshConverter.apply();
       auto numPoints = diskMesh->getNodes().size();
-      model->getSurfaceModel()->initializeCoverages(numPoints);
+      if (!coveragesInitialized)
+        model->getSurfaceModel()->initializeCoverages(numPoints);
       if (model->getSurfaceModel()->getCoverages() != nullptr) {
         useCoverages = true;
 #ifdef VIENNAPS_VERBOSE
-        std::cout << "Using coverages.\n"
-                  << "Initializing coverages ... " << std::endl;
+        std::cout << "Using coverages." << std::endl;
 #endif
-        auto points = diskMesh->getNodes();
-        auto normals = *diskMesh->getCellData().getVectorData("Normals");
-        auto materialIds =
-            *diskMesh->getCellData().getScalarData("MaterialIds");
-        rayTrace.setGeometry(points, normals, gridDelta);
-        rayTrace.setMaterialIds(materialIds);
-
-        for (size_t iterations = 0; iterations < maxIterations; iterations++) {
-          // move coverages to the ray tracer
-          rayTracingData<NumericType> rayTraceCoverages =
-              movePointDataToRayData(model->getSurfaceModel()->getCoverages());
-          if (useProcessParams) {
-            // store scalars in addition to coverages
-            auto processParams =
-                model->getSurfaceModel()->getProcessParameters();
-            NumericType numParams = processParams->getScalarData().size();
-            rayTraceCoverages.setNumberOfScalarData(numParams);
-            for (size_t i = 0; i < numParams; ++i) {
-              rayTraceCoverages.setScalarData(
-                  i, processParams->getScalarData(i),
-                  processParams->getScalarDataLabel(i));
-            }
-          }
-          rayTrace.setGlobalData(rayTraceCoverages);
-
-          auto Rates = psSmartPointer<psPointData<NumericType>>::New();
-
-          for (auto &particle : *model->getParticleTypes()) {
-            rayTrace.setParticleType(particle);
-            rayTrace.apply();
-
-            // fill up rates vector with rates from this particle type
-            auto numRates = particle->getRequiredLocalDataSize();
-            auto &localData = rayTrace.getLocalData();
-            for (int i = 0; i < numRates; ++i) {
-              auto rate = std::move(localData.getVectorData(i));
-
-              // normalize rates
-              rayTrace.normalizeFlux(rate);
-
-              Rates->insertNextScalarData(std::move(rate),
-                                          localData.getVectorDataLabel(i));
-            }
-          }
-
-          // move coverages back in the model
-          moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
-                                 rayTraceCoverages);
-          model->getSurfaceModel()->updateCoverages(Rates);
+        if (!coveragesInitialized) {
 #ifdef VIENNAPS_VERBOSE
-          diskMesh->getCellData().clear();
-          auto coverages = model->getSurfaceModel()->getCoverages();
-          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-            auto label = coverages->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *coverages->getScalarData(idx), label);
-          }
-          for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-            auto label = Rates->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *Rates->getScalarData(idx), label);
-          }
-          printDiskMesh(diskMesh, name + "_covIinit_" +
-                                      std::to_string(iterations) + ".vtp");
-          std::cerr << "\r"
-                    << "Iteration: " << iterations << " / " << maxIterations;
-          if (iterations == maxIterations)
-            std::cerr << std::endl;
+          std::cout << "Initializing coverages ... " << std::endl;
 #endif
+          auto points = diskMesh->getNodes();
+          auto normals = *diskMesh->getCellData().getVectorData("Normals");
+          auto materialIds =
+              *diskMesh->getCellData().getScalarData("MaterialIds");
+          rayTrace.setGeometry(points, normals, gridDelta);
+          rayTrace.setMaterialIds(materialIds);
+
+          for (size_t iterations = 0; iterations < maxIterations;
+               iterations++) {
+            // move coverages to the ray tracer
+            rayTracingData<NumericType> rayTraceCoverages =
+                movePointDataToRayData(
+                    model->getSurfaceModel()->getCoverages());
+            if (useProcessParams) {
+              // store scalars in addition to coverages
+              auto processParams =
+                  model->getSurfaceModel()->getProcessParameters();
+              NumericType numParams = processParams->getScalarData().size();
+              rayTraceCoverages.setNumberOfScalarData(numParams);
+              for (size_t i = 0; i < numParams; ++i) {
+                rayTraceCoverages.setScalarData(
+                    i, processParams->getScalarData(i),
+                    processParams->getScalarDataLabel(i));
+              }
+            }
+            rayTrace.setGlobalData(rayTraceCoverages);
+
+            auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+
+            for (auto &particle : *model->getParticleTypes()) {
+              rayTrace.setParticleType(particle);
+              rayTrace.apply();
+
+              // fill up rates vector with rates from this particle type
+              auto numRates = particle->getRequiredLocalDataSize();
+              auto &localData = rayTrace.getLocalData();
+              for (int i = 0; i < numRates; ++i) {
+                auto rate = std::move(localData.getVectorData(i));
+
+                // normalize rates
+                rayTrace.normalizeFlux(rate);
+
+                Rates->insertNextScalarData(std::move(rate),
+                                            localData.getVectorDataLabel(i));
+              }
+            }
+
+            // move coverages back in the model
+            moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
+                                   rayTraceCoverages);
+            model->getSurfaceModel()->updateCoverages(Rates);
+            coveragesInitialized = true;
+#ifdef VIENNAPS_VERBOSE
+            diskMesh->getCellData().clear();
+            auto coverages = model->getSurfaceModel()->getCoverages();
+            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+              auto label = coverages->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *coverages->getScalarData(idx), label);
+            }
+            for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+              auto label = Rates->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *Rates->getScalarData(idx), label);
+            }
+            printDiskMesh(diskMesh, name + "_covIinit_" +
+                                        std::to_string(iterations) + ".vtp");
+            std::cerr << "\r"
+                      << "Iteration: " << iterations << " / " << maxIterations;
+            if (iterations == maxIterations)
+              std::cerr << std::endl;
+#endif
+          }
         }
       }
     }
@@ -379,6 +387,7 @@ private:
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
   size_t maxIterations = 20;
+  bool coveragesInitialized = false;
 };
 
 #endif
