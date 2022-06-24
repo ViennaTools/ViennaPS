@@ -225,7 +225,7 @@ public:
   }
 
   bool setFillingFraction(T x, T y, T z, T fill) {
-    auto idx = findIndex(x, y, z);
+    auto idx = findIndex(csTriple<T>{x, y, z});
     return setFillingFraction(idx, fill);
   }
 
@@ -235,6 +235,11 @@ public:
 
   void writeVTU(std::string fileName) {
     lsVTKWriter<T>(cellGrid, fileName).apply();
+  }
+
+  void clear() {
+    auto ff = getFillingFractions();
+    std::fill(ff->begin(), ff->end(), 0.);
   }
 
   void traceOnArea(csTracePath<T> &path, const csTriple<T> &hitPoint,
@@ -307,14 +312,14 @@ public:
     T energy = fillStart;
 
     // find surface hitpoint
-    auto prevIdx = findIndex(hitPoint[0], hitPoint[1], hitPoint[2]);
+    auto prevIdx = findIndex(hitPoint);
     size_t sanityCounter = 0;
     while (prevIdx < 0) {
       add(hitPoint, direction);
       if (++sanityCounter > 100 || !checkBoundsPeriodic(hitPoint)) {
         return;
       }
-      prevIdx = findIndex(hitPoint[0], hitPoint[1], hitPoint[2]);
+      prevIdx = findIndex(hitPoint);
     }
 
     auto materialId =
@@ -326,8 +331,7 @@ public:
     distance += stepDistance;
 
     while (checkBoundsPeriodic(hitPoint)) {
-      auto newIdx =
-          findIndexNearPrevious(hitPoint[0], hitPoint[1], hitPoint[2], prevIdx);
+      auto newIdx = findIndexNearPrevious(hitPoint, prevIdx);
       if (newIdx != prevIdx && newIdx >= 0) {
         materialId =
             cellGrid->getCellData().getScalarData("Material")->at(newIdx);
@@ -353,7 +357,7 @@ public:
     }
 
     if (!path.getGridData().empty()) {
-      auto &data = path.getGridData();
+      const auto &data = path.getGridData();
       for (size_t idx = 0; idx < numberOfCells; idx++) {
         ff->at(idx) += data[idx];
       }
@@ -364,6 +368,14 @@ public:
 
   std::vector<T> *getFillingFractions() const {
     return cellGrid->getCellData().getScalarData("fillingFraction");
+  }
+
+  T getFillingFraction(const csTriple<T> &point) {
+    auto idx = findIndex(point);
+    if (idx < 0)
+      return -1.;
+
+    return getFillingFractions()->at(idx);
   }
 
   std::vector<T> *getMaterialIds() const {
@@ -385,7 +397,7 @@ private:
     // dist = distance(tmp, point);
   }
 
-  bool checkBounds(const std::array<T, 3> &hitPoint) const {
+  bool checkBounds(const csTriple<T> &hitPoint) const {
     const auto &min = cellGrid->minimumExtent;
     const auto &max = cellGrid->maximumExtent;
 
@@ -394,7 +406,7 @@ private:
            hitPoint[2] >= min[2] && hitPoint[2] <= max[2];
   }
 
-  bool checkBoundsPeriodic(std::array<T, 3> &hitPoint) const {
+  bool checkBoundsPeriodic(csTriple<T> &hitPoint) const {
     const auto &min = cellGrid->minimumExtent;
     const auto &max = cellGrid->maximumExtent;
 
@@ -429,7 +441,7 @@ private:
       vec[i] += vec2[i];
   }
 
-  int findIndexNearPrevious(T x, T y, T z, int prevIdx) {
+  int findIndexNearPrevious(const csTriple<T> &point, int prevIdx) {
     auto &hexas = cellGrid->getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
     auto ff = getFillingFractions();
@@ -438,7 +450,7 @@ private:
 
     // search in neighborhood of previous index
     for (const auto &i : neighborhood[prevIdx]) {
-      if (isInsideHexa(x, y, z, nodes[hexas[i][0]]) && ff->at(i) >= 0) {
+      if (isInsideHexa(point, nodes[hexas[i][0]]) && ff->at(i) >= 0) {
         idx = i;
         break;
       }
@@ -447,20 +459,19 @@ private:
     if (idx != -1)
       return idx;
 
-    return findIndex(x, y, z);
+    return findIndex(point);
   }
 
-  int findIndex(T x, T y, T z) {
+  int findIndex(const csTriple<T> &point) {
     auto &hexas = cellGrid->getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
     auto ff = getFillingFractions();
     int idx = -1;
 
-    auto cellIds = BVH->getCellIds(x, y, z);
+    auto cellIds = BVH->getCellIds(point);
 
     for (const auto cellId : *cellIds) {
-      if (ff->at(cellId) >= 0 &&
-          isInsideHexa(x, y, z, nodes[hexas[cellId][0]])) {
+      if (ff->at(cellId) >= 0 && isInsideHexa(point, nodes[hexas[cellId][0]])) {
         idx = cellId;
         break;
       }
@@ -468,11 +479,10 @@ private:
     return idx;
   }
 
-  bool isInsideHexa(const T x, const T y, const T z,
-                    const std::array<T, 3> &hexaMin) {
-    if (x >= hexaMin[0] && x <= (hexaMin[0] + gridDelta)) {
-      if (y >= hexaMin[1] && y <= (hexaMin[1] + gridDelta)) {
-        if (z >= hexaMin[2] && z <= (hexaMin[2] + gridDelta)) {
+  bool isInsideHexa(const csTriple<T> &point, const csTriple<T> &hexaMin) {
+    if (point[0] >= hexaMin[0] && point[0] <= (hexaMin[0] + gridDelta)) {
+      if (point[1] >= hexaMin[1] && point[1] <= (hexaMin[1] + gridDelta)) {
+        if (point[2] >= hexaMin[2] && point[2] <= (hexaMin[2] + gridDelta)) {
           return true;
         }
       }

@@ -142,8 +142,6 @@ private:
     mGeometry.initGeometry(mDevice, points, normals,
                            mGridDelta * rayInternal::DiskFactor<D>);
     mGeometry.setMaterialIds(materialIds);
-    lsVTKWriter<T>(diskMesh, "Surface_" + std::to_string(mRunNumber) + ".vtp")
-        .apply();
   }
 
   void initMemoryFlags() {
