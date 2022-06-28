@@ -103,6 +103,10 @@ public:
 
   lsSmartPointer<csBVH<T>> getBVH() const { return BVH; }
 
+  T getDepth() const { return depth; }
+
+  T getGridDelta() const { return gridDelta; }
+
   gridType getCellGrid() const { return cellGrid; }
 
   levelSetsType getLevelSets() const { return levelSets; }

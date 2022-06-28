@@ -95,14 +95,12 @@ csTriple<T> crossProd(const csTriple<T> &pVecA, const csTriple<T> &pVecB) {
   sumsReg = _mm_add_ps(v, shufReg);
   shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
   sumsReg = _mm_add_ss(sumsReg, shufReg);
-  return _mm_cvtss_f32(sumsReg); // Result in the lower part of the SSE
-  Register
+  return _mm_cvtss_f32(sumsReg); // Result in the lower part of the SSE Register
 }
 
 [[nodiscard]] inline static __m128 CrossProductSse(__m128 const &vec0,
                                                    __m128 const &vec1) {
-// from
-https: // geometrian.com/programming/tutorials/cross-product/index.php
+  // from geometrian.com/programming/tutorials/cross-product/index.php
   __m128 tmp0 = _mm_shuffle_ps(vec0, vec0, _MM_SHUFFLE(3, 0, 2, 1));
   __m128 tmp1 = _mm_shuffle_ps(vec1, vec1, _MM_SHUFFLE(3, 1, 0, 2));
   __m128 tmp2 = _mm_mul_ps(tmp0, vec1);
@@ -112,11 +110,8 @@ https: // geometrian.com/programming/tutorials/cross-product/index.php
 }
 
 // Norm of 3D Vector using SSE
-//
-http
-    : // fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
-      [[nodiscard]] static inline float
-      NormSse(__m128 const &v) {
+// fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
+[[nodiscard]] static inline float NormSse(__m128 const &v) {
   return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71)));
 }
 
@@ -130,7 +125,7 @@ http
   return _mm_div_ps(v, norm);
 }
 
-template <typename T> [[nodiscard]] rayTriple<T> ConvertSse(__m128 const &vec) {
+template <typename T>[[nodiscard]] rayTriple<T> ConvertSse(__m128 const &vec) {
   alignas(16) float result[4];
   _mm_store_ps(&result[0], vec);
   return csTriple<T>{result[0], result[1], result[2]};
