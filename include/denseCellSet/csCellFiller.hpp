@@ -5,6 +5,11 @@
 
 template <class T> class csCellFiller {
 public:
+  virtual T cascade(Particle<T> &particle, const T stepDistance, rayRNG &RNG,
+                    std::vector<Particle<T>> &particleStack) {
+    return 0.;
+  }
+
   virtual T fill(unsigned cellId, T distance, T &energy, int materialId,
                  csTriple<T> &position, csTriple<T> &direction,
                  const T stepDistance, rayRNG &RNG) {

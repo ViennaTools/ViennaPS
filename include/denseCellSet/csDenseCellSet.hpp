@@ -347,6 +347,59 @@ public:
     }
   }
 
+  void traceOnPathCascade(csTracePath<T> &path, csTriple<T> hitPoint,
+                          csTriple<T> direction, const T startEnergy,
+                          const T stepDistance, rayRNG &RNG) {
+    if (cellFiller == nullptr) {
+      std::cerr << "No cell filler set. Aborting." << std::endl;
+      return;
+    }
+
+    scaleToLength(direction, stepDistance);
+    T distance = 0.;
+    T fill = 0.;
+    T energy = startEnergy;
+
+    std::vector<Particle<T>> particleStack;
+
+    // find surface hitpoint
+    auto prevIdx = findIndex(hitPoint);
+    size_t sanityCounter = 0;
+    while (prevIdx < 0) {
+      add(hitPoint, direction);
+      if (++sanityCounter > 10 || !checkBoundsPeriodic(hitPoint)) {
+        return;
+      }
+      prevIdx = findIndex(hitPoint);
+    }
+
+    particleStack.emplace_back(
+        Particle<T>{hitPoint, direction, startEnergy, 0., prevIdx});
+
+    while (!particleStack.empty()) {
+      auto particle = particleStack.back();
+      particleStack.pop_back();
+
+      // trace particle
+      while (checkBoundsPeriodic(particle.position)) {
+        auto newIdx = findIndexNearPrevious(particle.position, particle.cellId);
+
+        if (newIdx != particle.cellId && newIdx >= 0) {
+          particle.cellId = newIdx;
+          auto materialId =
+              cellGrid->getCellData().getScalarData("Material")->at(newIdx);
+          fill =
+              cellFiller->cascade(particle, stepDistance, RNG, particleStack);
+          path.addPoint(newIdx, fill);
+          if (particle.energy < 0)
+            break;
+        }
+        add(particle.position, particle.direction);
+        particle.distance += stepDistance;
+      }
+    }
+  }
+
   void mergePath(csTracePath<T> &path) {
     auto ff = getFillingFractions();
     if (!path.getData().empty()) {

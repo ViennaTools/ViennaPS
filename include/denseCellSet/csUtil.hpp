@@ -15,6 +15,14 @@ template <typename T> using csTriple = std::array<T, 3>;
 
 template <typename T> using csQuadruple = std::array<T, 4>;
 
+template <typename T> struct Particle {
+  csTriple<T> position;
+  csTriple<T> direction;
+  T energy;
+  T distance;
+  int cellId;
+};
+
 template <typename T> void printTriple(const csTriple<T> &p) {
   std::cout << "[" << p[0] << ", " << p[1] << ", " << p[2] << "]\n";
 }
@@ -87,12 +95,14 @@ csTriple<T> crossProd(const csTriple<T> &pVecA, const csTriple<T> &pVecB) {
   sumsReg = _mm_add_ps(v, shufReg);
   shufReg = _mm_movehl_ps(shufReg, sumsReg); // High Half -> Low Half
   sumsReg = _mm_add_ss(sumsReg, shufReg);
-  return _mm_cvtss_f32(sumsReg); // Result in the lower part of the SSE Register
+  return _mm_cvtss_f32(sumsReg); // Result in the lower part of the SSE
+  Register
 }
 
 [[nodiscard]] inline static __m128 CrossProductSse(__m128 const &vec0,
                                                    __m128 const &vec1) {
-  // from https://geometrian.com/programming/tutorials/cross-product/index.php
+// from
+https: // geometrian.com/programming/tutorials/cross-product/index.php
   __m128 tmp0 = _mm_shuffle_ps(vec0, vec0, _MM_SHUFFLE(3, 0, 2, 1));
   __m128 tmp1 = _mm_shuffle_ps(vec1, vec1, _MM_SHUFFLE(3, 1, 0, 2));
   __m128 tmp2 = _mm_mul_ps(tmp0, vec1);
@@ -102,8 +112,11 @@ csTriple<T> crossProd(const csTriple<T> &pVecA, const csTriple<T> &pVecB) {
 }
 
 // Norm of 3D Vector using SSE
-// http://fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
-[[nodiscard]] static inline float NormSse(__m128 const &v) {
+//
+http
+    : // fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
+      [[nodiscard]] static inline float
+      NormSse(__m128 const &v) {
   return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71)));
 }
 
