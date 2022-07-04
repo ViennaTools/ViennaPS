@@ -79,6 +79,7 @@ csTriple<T> crossProd(const csTriple<T> &pVecA, const csTriple<T> &pVecB) {
   return rr;
 }
 
+#ifdef ARCH_X86
 [[nodiscard]] static inline float DotProductSse(__m128 const &x,
                                                 __m128 const &y) {
   // __m128 mulRes;
@@ -125,8 +126,9 @@ csTriple<T> crossProd(const csTriple<T> &pVecA, const csTriple<T> &pVecB) {
   return _mm_div_ps(v, norm);
 }
 
-template <typename T>[[nodiscard]] rayTriple<T> ConvertSse(__m128 const &vec) {
+template <typename T> [[nodiscard]] rayTriple<T> ConvertSse(__m128 const &vec) {
   alignas(16) float result[4];
   _mm_store_ps(&result[0], vec);
   return csTriple<T>{result[0], result[1], result[2]};
 }
+#endif

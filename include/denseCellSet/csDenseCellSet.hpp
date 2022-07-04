@@ -33,7 +33,6 @@ private:
   int BVHlayers = 1;
 
 public:
-  size_t sanityKickOut = 0;
   csDenseCellSet() {}
 
   csDenseCellSet(levelSetsType passedLevelSets, T passedDepth = 0.,
@@ -262,6 +261,7 @@ public:
     const auto gd2 = gridDelta / 2.;
 
     // normalize(direction);
+#ifdef ARCH_X86
     __m128 SSEdirection =
         _mm_set_ps(0.f, direction[2], direction[1], direction[0]);
     SSEdirection = NormalizeAccurateSse(SSEdirection);
@@ -300,6 +300,9 @@ public:
                                        materialIds->at(idx));
       path.addGridData(idx, fill);
     }
+#else
+    std::cerr << "Not implemented in ARM architecture." << std::endl;
+#endif
   }
 
   void traceOnPath(csTracePath<T> &path, csTriple<T> hitPoint,
@@ -320,7 +323,7 @@ public:
     size_t sanityCounter = 0;
     while (prevIdx < 0) {
       add(hitPoint, direction);
-      if (++sanityCounter > 100 || !checkBoundsPeriodic(hitPoint)) {
+      if (++sanityCounter > 10 || !checkBoundsPeriodic(hitPoint)) {
         return;
       }
       prevIdx = findIndex(hitPoint);
@@ -381,11 +384,11 @@ public:
         Particle<T>{hitPoint, direction, startEnergy, 0., prevIdx});
 
     while (!particleStack.empty()) {
-      auto particle = particleStack.back();
+      auto particle = std::move(particleStack.back());
       particleStack.pop_back();
 
       // trace particle
-      while (checkBoundsPeriodic(particle.position)) {
+      while (particle.energy >= 0 && checkBoundsPeriodic(particle.position)) {
         auto newIdx = findIndexNearPrevious(particle.position, particle.cellId);
 
         if (newIdx != particle.cellId && newIdx >= 0) {
@@ -395,8 +398,6 @@ public:
           fill =
               cellFiller->cascade(particle, stepDistance, RNG, particleStack);
           path.addPoint(newIdx, fill);
-          if (particle.energy < 0)
-            break;
         }
         add(particle.position, particle.direction);
         particle.distance += stepDistance;
@@ -507,7 +508,7 @@ private:
 
     // search in neighborhood of previous index
     for (const auto &i : neighborhood[prevIdx]) {
-      if (isInsideHexa(point, nodes[hexas[i][0]]) && ff->at(i) >= 0) {
+      if (isInsideHexa(point, nodes[hexas[i][0]])) {
         idx = i;
         break;
       }
@@ -522,13 +523,12 @@ private:
   int findIndex(const csTriple<T> &point) {
     auto &hexas = cellGrid->getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
-    auto ff = getFillingFractions();
     int idx = -1;
 
     auto cellIds = BVH->getCellIds(point);
 
     for (const auto cellId : *cellIds) {
-      if (ff->at(cellId) >= 0 && isInsideHexa(point, nodes[hexas[cellId][0]])) {
+      if (isInsideHexa(point, nodes[hexas[cellId][0]])) {
         idx = cellId;
         break;
       }
@@ -537,15 +537,18 @@ private:
   }
 
   bool isInsideHexa(const csTriple<T> &point, const csTriple<T> &hexaMin) {
-    if (point[0] >= hexaMin[0] && point[0] <= (hexaMin[0] + gridDelta)) {
-      if (point[1] >= hexaMin[1] && point[1] <= (hexaMin[1] + gridDelta)) {
-        if (point[2] >= hexaMin[2] && point[2] <= (hexaMin[2] + gridDelta)) {
-          return true;
-        }
-      }
-    }
+    return point[0] >= hexaMin[0] && point[0] <= (hexaMin[0] + gridDelta) &&
+           point[1] >= hexaMin[1] && point[1] <= (hexaMin[1] + gridDelta) &&
+           point[2] >= hexaMin[2] && point[2] <= (hexaMin[2] + gridDelta);
 
-    return false;
+    // if (point[0] >= hexaMin[0] && point[0] <= (hexaMin[0] + gridDelta)) {
+    //   if (point[1] >= hexaMin[1] && point[1] <= (hexaMin[1] + gridDelta)) {
+    //     if (point[2] >= hexaMin[2] && point[2] <= (hexaMin[2] + gridDelta)) {
+    //       return true;
+    //     }
+    //   }
+    // }
+    // return false;
   }
 
   void buildNeighborhoodAndBVH() {

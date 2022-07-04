@@ -200,6 +200,10 @@ public:
           rayHit.ray.time = 0.0f;
 #endif
         } while (reflect);
+#ifdef PRINT_PROGRESS
+        if (threadID == 0)
+          printProgress(idx);
+#endif
       } // end ray tracing for loop
 
 #pragma omp critical
@@ -223,4 +227,6 @@ private:
   const T step = 1.;
   const bool traceOnPath = true;
   const int excludeMaterial = -1;
+
+  void printProgress(size_t i) {}
 };

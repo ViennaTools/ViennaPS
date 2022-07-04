@@ -119,9 +119,10 @@ public:
       average[i] /= static_cast<T>(numNeighbors);
     }
 
+    const auto normFactor = mNumberOfRaysFixed == 0 ? 1 : mNumberOfRaysFixed;
 #pragma omp parallel for
     for (size_t i = 0; i < data->size(); i++) {
-      data->at(i) = average[i];
+      data->at(i) = average[i] / normFactor;
     }
   }
 
