@@ -12,6 +12,8 @@ public:
 
   std::vector<T> &getGridData() { return gridData; }
 
+  T getGridValue(int idx) const { return gridData[idx]; }
+
   void addPoint(int idx, T value) {
     auto search = data.find(idx);
     if (search != data.end()) {
@@ -30,4 +32,9 @@ public:
   void useGridData(size_t numCells) { gridData.resize(numCells, 0.); }
 
   void addGridData(int idx, T value) { gridData[idx] += value; }
+
+  void clear() {
+    data.clear();
+    gridData.clear();
+  }
 };

@@ -100,6 +100,11 @@ public:
                                cellGrid->maximumExtent};
   }
 
+  void addScalarData(std::string name, T initValue) {
+    std::vector<T> newData(numberOfCells, initValue);
+    cellGrid->getCellData().insertNextScalarData(newData, name);
+  }
+
   lsSmartPointer<csBVH<T>> getBVH() const { return BVH; }
 
   T getDepth() const { return depth; }
@@ -130,10 +135,7 @@ public:
     voxelConverter.apply();
 
     auto cutMatIds = cutCellGrid->getCellData().getScalarData("Material");
-    auto fillingFractions =
-        cellGrid->getCellData().getScalarData("fillingFraction");
     auto &hexas = cellGrid->getElements<(1 << D)>();
-    auto materialIds = cellGrid->getCellData().getScalarData("Material");
 
     const auto nCutCells = cutCellGrid->getElements<(1 << D)>().size();
 
@@ -141,11 +143,15 @@ public:
     if (numberOfCells > nCutCells)
       offset = numberOfCells - nCutCells;
 
+    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
+
     for (int elIdx = nCutCells - 1; elIdx >= 0; elIdx--) {
       if (cutMatIds->at(elIdx) == 2) {
-        fillingFractions->erase(fillingFractions->begin() + elIdx + offset);
+        for (int i = 0; i < numScalarData; i++) {
+          auto data = cellGrid->getCellData().getScalarData(i);
+          data->erase(data->begin() + elIdx + offset);
+        }
         hexas.erase(hexas.begin() + elIdx + offset);
-        materialIds->erase(materialIds->begin() + elIdx + offset);
       }
     }
     numberOfCells = hexas.size();
@@ -357,10 +363,6 @@ public:
   void traceOnPathCascade(csTracePath<T> &path, csTriple<T> hitPoint,
                           csTriple<T> direction, const T startEnergy,
                           const T stepDistance, rayRNG &RNG) {
-    if (cellFiller == nullptr) {
-      std::cerr << "No cell filler set. Aborting." << std::endl;
-      return;
-    }
 
     scaleToLength(direction, stepDistance);
     T distance = 0.;
@@ -397,7 +399,8 @@ public:
               cellGrid->getCellData().getScalarData("Material")->at(newIdx);
           fill =
               cellFiller->cascade(particle, stepDistance, RNG, particleStack);
-          path.addPoint(newIdx, fill);
+          path.addGridData(newIdx, fill);
+          particle.distance = 0.; // reset particle distance
         }
         add(particle.position, particle.direction);
         particle.distance += stepDistance;
@@ -405,19 +408,19 @@ public:
     }
   }
 
-  void mergePath(csTracePath<T> &path) {
+  void mergePath(csTracePath<T> &path, T factor = 1.) {
     auto ff = getFillingFractions();
     if (!path.getData().empty()) {
 
       for (const auto it : path.getData()) {
-        ff->at(it.first) += it.second;
+        ff->at(it.first) += it.second / factor;
       }
     }
 
     if (!path.getGridData().empty()) {
       const auto &data = path.getGridData();
       for (size_t idx = 0; idx < numberOfCells; idx++) {
-        ff->at(idx) += data[idx];
+        ff->at(idx) += data[idx] / factor;
       }
     }
   }
@@ -438,6 +441,10 @@ public:
 
   std::vector<T> *getMaterialIds() const {
     return cellGrid->getCellData().getScalarData("Material");
+  }
+
+  std::vector<T> *getScalarData(std::string name) {
+    return cellGrid->getCellData().getScalarData(name);
   }
 
   lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }

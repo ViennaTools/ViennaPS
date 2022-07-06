@@ -11,6 +11,8 @@
 #include "csTracePath.hpp"
 #include "csTracingParticle.hpp"
 
+// #define CS_PRINT_PROGRESS
+
 template <typename T, int D> class csTracingKernel {
 
 public:
@@ -84,8 +86,8 @@ public:
 
       // thread local path
       csTracePath<T> path;
-      if (!traceOnPath)
-        path.useGridData(cellSet->getNumberOfCells());
+      // if (!traceOnPath)
+      path.useGridData(cellSet->getNumberOfCells());
 
       auto rtcContext = RTCIntersectContext{};
       rtcInitIntersectContext(&rtcContext);
@@ -200,15 +202,19 @@ public:
           rayHit.ray.time = 0.0f;
 #endif
         } while (reflect);
-#ifdef PRINT_PROGRESS
+#ifdef CS_PRINT_PROGRESS
         if (threadID == 0)
           printProgress(idx);
 #endif
       } // end ray tracing for loop
 
 #pragma omp critical
-      cellSet->mergePath(path);
+      cellSet->mergePath(path, mNumRays);
     } // end parallel section
+
+#ifdef CS_PRINT_PROGRESS
+    std::cout << std::endl;
+#endif
 
     rtcReleaseGeometry(rtcGeometry);
     rtcReleaseGeometry(rtcBoundary);
@@ -228,5 +234,21 @@ private:
   const bool traceOnPath = true;
   const int excludeMaterial = -1;
 
-  void printProgress(size_t i) {}
+  void printProgress(size_t i) {
+    float progress = static_cast<float>(i) / static_cast<float>(mNumRays);
+    int barWidth = 70;
+
+    std::cout << "[";
+    int pos = barWidth * progress;
+    for (int i = 0; i < barWidth; ++i) {
+      if (i < pos)
+        std::cout << "=";
+      else if (i == pos)
+        std::cout << ">";
+      else
+        std::cout << " ";
+    }
+    std::cout << "] " << int(progress * 100.0) << " %\r";
+    std::cout.flush();
+  }
 };
