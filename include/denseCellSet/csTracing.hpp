@@ -95,7 +95,7 @@ public:
 
   void averageNeighborhood() {
     auto data = cellSet->getFillingFractions();
-    auto materialIds = cellSet->getMaterialIds();
+    auto materialIds = cellSet->getScalarData("Material");
     std::vector<T> average(data->size(), 0.);
 
 #pragma omp parallel for

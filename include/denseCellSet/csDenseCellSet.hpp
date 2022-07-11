@@ -253,11 +253,6 @@ public:
 
   void traceOnArea(csTracePath<T> &path, const csTriple<T> &hitPoint,
                    csTriple<T> direction, const T fillStart) {
-    if (cellFiller == nullptr) {
-      std::cerr << "No cell filler set. Aborting." << std::endl;
-      return;
-    }
-
     auto &cells = cellGrid->getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
     auto materialIds = cellGrid->getCellData().getScalarData("Material");
@@ -314,11 +309,6 @@ public:
   void traceOnPath(csTracePath<T> &path, csTriple<T> hitPoint,
                    csTriple<T> direction, const T fillStart,
                    const T stepDistance, rayRNG &RNG) {
-    if (cellFiller == nullptr) {
-      std::cerr << "No cell filler set. Aborting." << std::endl;
-      return;
-    }
-
     scaleToLength(direction, stepDistance);
     T distance = 0.;
     T fill = 0.;
@@ -365,10 +355,7 @@ public:
                           const T stepDistance, rayRNG &RNG) {
 
     scaleToLength(direction, stepDistance);
-    T distance = 0.;
     T fill = 0.;
-    T energy = startEnergy;
-
     std::vector<Particle<T>> particleStack;
 
     // find surface hitpoint
@@ -411,7 +398,6 @@ public:
   void mergePath(csTracePath<T> &path, T factor = 1.) {
     auto ff = getFillingFractions();
     if (!path.getData().empty()) {
-
       for (const auto it : path.getData()) {
         ff->at(it.first) += it.second / factor;
       }
@@ -437,10 +423,6 @@ public:
       return -1.;
 
     return getFillingFractions()->at(idx);
-  }
-
-  std::vector<T> *getMaterialIds() const {
-    return cellGrid->getCellData().getScalarData("Material");
   }
 
   std::vector<T> *getScalarData(std::string name) {

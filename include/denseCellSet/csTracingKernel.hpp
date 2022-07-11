@@ -11,7 +11,7 @@
 #include "csTracePath.hpp"
 #include "csTracingParticle.hpp"
 
-// #define CS_PRINT_PROGRESS
+#define CS_PRINT_PROGRESS
 
 template <typename T, int D> class csTracingKernel {
 
