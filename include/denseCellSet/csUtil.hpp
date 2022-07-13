@@ -38,6 +38,11 @@ template <typename T> inline void mult(csTriple<T> &v1, const T fac) {
   v1[2] *= fac;
 }
 
+template <typename T>
+inline csTriple<T> multNew(const csTriple<T> &v1, const T fac) {
+  return {v1[0] * fac, v1[1] * fac, v1[2] * fac};
+}
+
 template <typename T> inline void sub(csTriple<T> &v1, const csTriple<T> &v2) {
   v1[0] -= v2[0];
   v1[1] -= v2[1];

@@ -30,14 +30,15 @@ private:
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
-  int BVHlayers = 1;
+  int BVHlayers = 0;
+  T meanFreePath = 0.;
+  T meanFreePathStdDev = 0.;
 
 public:
   csDenseCellSet() {}
 
-  csDenseCellSet(levelSetsType passedLevelSets, T passedDepth = 0.,
-                 int passedBVHlayers = 1)
-      : BVHlayers(passedBVHlayers), levelSets(passedLevelSets) {
+  csDenseCellSet(levelSetsType passedLevelSets, T passedDepth = 0.)
+      : levelSets(passedLevelSets) {
     fromLevelSets(passedLevelSets, passedDepth);
   }
 
@@ -91,6 +92,17 @@ public:
     cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + gridDelta + eps;
     cellGrid->maximumExtent[2] = maxBounds[2] * gridDelta + gridDelta + eps;
 
+    auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
+    auto tmp = cellGrid->maximumExtent[1] - cellGrid->minimumExtent[1];
+    minExtent = std::min(minExtent, tmp);
+    tmp = cellGrid->maximumExtent[2] - cellGrid->minimumExtent[2];
+    minExtent = std::min(minExtent, tmp);
+
+    BVHlayers = 0;
+    while (minExtent / 2 > gridDelta) {
+      BVHlayers++;
+      minExtent /= 2;
+    }
     BVH = lsSmartPointer<csBVH<T>>::New(getBoundingBox(), BVHlayers);
     buildNeighborhoodAndBVH();
   }
@@ -242,6 +254,11 @@ public:
     return setFillingFraction(point[0], point[1], point[2], fill);
   }
 
+  void setMeanFreePath(const T passedMeanFreePath, const T stdDev) {
+    meanFreePath = passedMeanFreePath;
+    meanFreePathStdDev = stdDev;
+  }
+
   void writeVTU(std::string fileName) {
     lsVTKWriter<T>(cellGrid, fileName).apply();
   }
@@ -382,8 +399,6 @@ public:
 
         if (newIdx != particle.cellId && newIdx >= 0) {
           particle.cellId = newIdx;
-          auto materialId =
-              cellGrid->getCellData().getScalarData("Material")->at(newIdx);
           fill =
               cellFiller->cascade(particle, stepDistance, RNG, particleStack);
           path.addGridData(newIdx, fill);
@@ -391,6 +406,52 @@ public:
         }
         add(particle.position, particle.direction);
         particle.distance += stepDistance;
+      }
+    }
+  }
+
+  void traceCollisionPath(csTracePath<T> &path, csTriple<T> hitPoint,
+                          csTriple<T> direction, const T startEnergy,
+                          rayRNG &RNG) {
+    T fill = 0.;
+    T dist;
+    std::vector<Particle<T>> particleStack;
+
+    auto idx = findSurfaceHitPoint(hitPoint, direction);
+    if (idx < 0)
+      return;
+
+    std::normal_distribution<T> normalDist{meanFreePath, meanFreePathStdDev};
+
+    particleStack.emplace_back(
+        Particle<T>{hitPoint, direction, startEnergy, 0., idx});
+
+    while (!particleStack.empty()) {
+      auto particle = std::move(particleStack.back());
+      particleStack.pop_back();
+
+      // trace particle
+      while (particle.energy >= 0) {
+        dist = -1;
+        while (dist < 0)
+          dist = normalDist(RNG);
+        auto travelDist = multNew(particle.direction, dist);
+        add(particle.position, travelDist);
+        particle.distance = dist;
+
+        if (!checkBoundsPeriodic(particle.position))
+          break;
+
+        auto newIdx = findIndex(particle.position);
+
+        if (newIdx < 0)
+          break;
+
+        if (newIdx != particle.cellId) {
+          particle.cellId = newIdx;
+          fill = cellFiller->collision(particle, RNG, particleStack);
+          path.addGridData(newIdx, fill);
+        }
       }
     }
   }
@@ -432,6 +493,27 @@ public:
   lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
 private:
+  int findSurfaceHitPoint(csTriple<T> &hitPoint, csTriple<T> &direction) {
+    // find surface hitpoint
+    auto idx = findIndex(hitPoint);
+
+    if (idx > 0)
+      return idx;
+
+    scaleToLength(direction, gridDelta);
+    size_t sanityCounter = 0;
+    while (idx < 0) {
+      add(hitPoint, direction);
+      if (++sanityCounter > 10 || !checkBoundsPeriodic(hitPoint)) {
+        return -1;
+      }
+      idx = findIndex(hitPoint);
+    }
+    scaleToLength(direction, 1. / gridDelta);
+
+    return idx;
+  }
+
   void pointLineDistance(T &normalDist, T &dist, csTriple<T> &point,
                          const csTriple<T> &lineStart,
                          const csTriple<T> &lineDirection) {

@@ -5,6 +5,11 @@
 
 template <class T> class csCellFiller {
 public:
+  virtual T collision(Particle<T> &particle, rayRNG &RNG,
+                      std::vector<Particle<T>> &particleStack) {
+    return 0.;
+  }
+
   virtual T cascade(Particle<T> &particle, const T stepDistance, rayRNG &RNG,
                     std::vector<Particle<T>> &particleStack) {
     return 0.;

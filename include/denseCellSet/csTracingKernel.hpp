@@ -169,9 +169,8 @@ public:
             // trace in cell set
             auto hitPoint = std::array<T, 3>{xx, yy, zz};
             if (traceOnPath) {
-              cellSet->traceOnPathCascade(path, hitPoint, rayDir,
-                                          fillnDirection.first, step,
-                                          RngState7);
+              cellSet->traceCollisionPath(path, hitPoint, rayDir,
+                                          fillnDirection.first, RngState7);
             } else {
               cellSet->traceOnArea(path, hitPoint, rayDir,
                                    fillnDirection.first);
