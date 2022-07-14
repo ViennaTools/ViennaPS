@@ -21,6 +21,7 @@ template <typename T> struct Particle {
   T energy;
   T distance;
   int cellId;
+  int scattered;
 };
 
 template <typename T> void printTriple(const csTriple<T> &p) {

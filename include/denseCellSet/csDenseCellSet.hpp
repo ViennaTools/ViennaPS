@@ -387,7 +387,7 @@ public:
     }
 
     particleStack.emplace_back(
-        Particle<T>{hitPoint, direction, startEnergy, 0., prevIdx});
+        Particle<T>{hitPoint, direction, startEnergy, 0., prevIdx, 0});
 
     while (!particleStack.empty()) {
       auto particle = std::move(particleStack.back());
@@ -417,14 +417,10 @@ public:
     T dist;
     std::vector<Particle<T>> particleStack;
 
-    auto idx = findSurfaceHitPoint(hitPoint, direction);
-    if (idx < 0)
-      return;
-
     std::normal_distribution<T> normalDist{meanFreePath, meanFreePathStdDev};
 
     particleStack.emplace_back(
-        Particle<T>{hitPoint, direction, startEnergy, 0., idx});
+        Particle<T>{hitPoint, direction, startEnergy, 0., -1, 0});
 
     while (!particleStack.empty()) {
       auto particle = std::move(particleStack.back());
@@ -432,18 +428,16 @@ public:
 
       // trace particle
       while (particle.energy >= 0) {
-        dist = -1;
-        while (dist < 0)
-          dist = normalDist(RNG);
-        auto travelDist = multNew(particle.direction, dist);
+        particle.distance = -1;
+        while (particle.distance < 0)
+          particle.distance = normalDist(RNG);
+        auto travelDist = multNew(particle.direction, particle.distance);
         add(particle.position, travelDist);
-        particle.distance = dist;
 
         if (!checkBoundsPeriodic(particle.position))
           break;
 
         auto newIdx = findIndex(particle.position);
-
         if (newIdx < 0)
           break;
 
@@ -493,23 +487,22 @@ public:
   lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
 private:
-  int findSurfaceHitPoint(csTriple<T> &hitPoint, csTriple<T> &direction) {
+  int findSurfaceHitPoint(csTriple<T> &hitPoint, const csTriple<T> &direction) {
     // find surface hitpoint
     auto idx = findIndex(hitPoint);
 
     if (idx > 0)
       return idx;
 
-    scaleToLength(direction, gridDelta);
+    auto moveDirection = multNew(direction, gridDelta / 5.);
     size_t sanityCounter = 0;
     while (idx < 0) {
-      add(hitPoint, direction);
-      if (++sanityCounter > 10 || !checkBoundsPeriodic(hitPoint)) {
+      add(hitPoint, moveDirection);
+      if (++sanityCounter > 100 || !checkBoundsPeriodic(hitPoint)) {
         return -1;
       }
       idx = findIndex(hitPoint);
     }
-    scaleToLength(direction, 1. / gridDelta);
 
     return idx;
   }
