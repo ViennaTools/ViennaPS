@@ -53,7 +53,7 @@ public:
            bool sync = true)
       : syncData(sync) {
     double bounds[2 * D] = {-20, 20, -20, 20};
-    if (D == 3) {
+    if constexpr (D == 3) {
       bounds[4] = -20;
       bounds[5] = 20;
     }
@@ -119,7 +119,7 @@ public:
   void insertNextLevelSet(lsDomainType passedLevelSet,
                           bool wrapLowerLevelSet = true) {
     if (!levelSets->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
+      lsBooleanOperation<NumericType, D>(levelSets->front(), passedLevelSet,
                                          lsBooleanOperationEnum::UNION)
           .apply();
     }
