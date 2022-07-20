@@ -11,31 +11,32 @@ private:
   using BoundsType = csPair<std::array<T, D>>;
   using CellIdsPtr = std::set<unsigned> *;
 
-  std::array<std::set<unsigned>, (1 << D)> cellIds;
-  std::array<BoundsType, (1 << D)> bounds;
-  std::array<BVPtrType, (1 << D)> links;
-  BoundsType outBound;
+  static constexpr int numCells = 1 << D;
+  std::array<std::set<unsigned>, numCells> cellIds;
+  std::array<BoundsType, numCells> bounds;
+  std::array<BVPtrType, numCells> links;
   int layer = -1;
 
 public:
   csBoundingVolume() {}
   csBoundingVolume(const BoundsType &outerBound, int thisLayer)
       : layer(thisLayer) {
-    outBound = outerBound;
+
     if constexpr (D == 3)
       buildBounds3D(outerBound);
     else
       buildBounds2D(outerBound);
+
     if (layer > 0) {
-      for (size_t i = 0; i < (1 << D); i++) {
+      for (size_t i = 0; i < numCells; i++) {
         links[i] = BVPtrType::New(bounds[i], layer - 1);
       }
     }
   }
 
-  CellIdsPtr getCellIds(const std::array<T, D> point) {
+  CellIdsPtr getCellIds(const std::array<T, 3> &point) {
     auto vid = getVolumeIndex(point);
-    assert(vid < (1 << D) && "Point in invalid BV");
+    assert(vid < numCells && "Point in invalid BV");
 
     if (layer == 0) {
       return &cellIds[vid];
@@ -44,9 +45,9 @@ public:
     return links[vid]->getCellIds(point);
   }
 
-  void getBoundingVolumeBounds(const std::array<T, D> point) {
+  void getBoundingVolumeBounds(const std::array<T, D> &point) {
     auto vid = getVolumeIndex(point);
-    assert(vid < (1 << D) && "Point in invalid BV");
+    assert(vid < numCells && "Point in invalid BV");
 
     if (layer == 0) {
       printBound(vid);
@@ -59,12 +60,12 @@ public:
   size_t getTotalCellCounts() {
     size_t count = 0;
     if (layer == 0) {
-      for (size_t i = 0; i < (1 << D); i++) {
+      for (size_t i = 0; i < numCells; i++) {
         count += cellIds[i].size();
       }
       return count;
     } else {
-      for (size_t i = 0; i < (1 << D); i++) {
+      for (size_t i = 0; i < numCells; i++) {
         count += links[i]->getTotalCellCounts();
       }
     }
@@ -73,26 +74,26 @@ public:
 
   void clear() {
     if (layer == 0) {
-      for (size_t i = 0; i < (1 << D); i++) {
+      for (size_t i = 0; i < numCells; i++) {
         cellIds[i].clear();
       }
     } else {
-      for (size_t i = 0; i < (1 << D); i++) {
+      for (size_t i = 0; i < numCells; i++) {
         links[i]->clear();
       }
     }
   }
 
-  BVPtrType getLink(const csTriple<T> point) {
+  BVPtrType getLink(const std::array<T, 3> &point) {
     auto vid = getVolumeIndex(point);
     return getLink(vid);
   }
 
   BVPtrType getLink(size_t vid) { return links[vid]; }
 
-  size_t getVolumeIndex(const std::array<T, D> point) {
-    size_t vid = (1 << D);
-    for (size_t idx = 0; idx < (1 << D); idx++) {
+  size_t getVolumeIndex(const std::array<T, 3> &point) {
+    size_t vid = numCells;
+    for (size_t idx = 0; idx < numCells; idx++) {
       if (insideVolume(point, idx)) {
         vid = idx;
         break;
@@ -101,7 +102,7 @@ public:
     return vid;
   }
 
-  bool insideVolume(const std::array<T, D> p, const size_t idx) const {
+  bool insideVolume(const std::array<T, 3> &p, const size_t idx) const {
     if constexpr (D == 3) {
       return p[0] > bounds[idx][0][0] && p[0] <= bounds[idx][1][0] &&
              p[1] > bounds[idx][0][1] && p[1] <= bounds[idx][1][1] &&
@@ -132,7 +133,7 @@ private:
                           outerBound[0][0] + xExt, outerBound[0][1] + yExt};
     const auto BVH2 =
         csPair<csPair<T>>{outerBound[0][0] + xExt, outerBound[0][1],
-                          uterBound[0][0] + 2 * xExt, outerBound[0][1] + yExt};
+                          outerBound[0][0] + 2 * xExt, outerBound[0][1] + yExt};
     const auto BVH3 = csPair<csPair<T>>{
         outerBound[0][0] + xExt,
         outerBound[0][1] + yExt,
@@ -146,7 +147,8 @@ private:
         outerBound[0][1] + 2 * yExt,
     };
 
-    bounds = std::array<std::array<csPair<T>, 2>, 4>{BVH1, BVH2, BVH3, BVH4};
+    bounds =
+        std::array<csPair<std::array<T, D>>, numCells>{BVH1, BVH2, BVH3, BVH4};
   }
 
   void buildBounds3D(const BoundsType &outerBound) {
@@ -194,7 +196,7 @@ private:
                                           outerBound[0][0] + xExt,
                                           outerBound[0][1] + 2 * yExt,
                                           outerBound[0][2] + 2 * zExt};
-    bounds = std::array<std::array<csTriple<T>, 2>, 8>{BVH1, BVH2, BVH3, BVH4,
-                                                       BVH5, BVH6, BVH7, BVH8};
+    bounds = std::array<csPair<std::array<T, D>>, numCells>{
+        BVH1, BVH2, BVH3, BVH4, BVH5, BVH6, BVH7, BVH8};
   }
 };

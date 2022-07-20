@@ -5,8 +5,8 @@
 
 template <class T, int D> class csBVH {
 private:
-  using BVPtrType = lsSmartPointer<csBoundingVolume<T>>;
-  using BoundsType = csPair<csTriple<T>>;
+  using BVPtrType = lsSmartPointer<csBoundingVolume<T, D>>;
+  using BoundsType = csPair<std::array<T, D>>;
   using CellIdsPtr = std::set<unsigned> *;
 
   unsigned numLayers = 1;
@@ -20,16 +20,12 @@ public:
 
   BVPtrType getTopBV() { return BV; }
 
-  void getLowestBV(const csTriple<T> &point) {
+  void getLowestBVBounds(const std::array<T, 3> &point) {
     BV->getBoundingVolumeBounds(point);
   }
 
-  CellIdsPtr getCellIds(const csTriple<T> &point) {
+  CellIdsPtr getCellIds(const std::array<T, 3> &point) {
     return BV->getCellIds(point);
-  }
-
-  CellIdsPtr getCellIds(const T x, const T y, const T z) {
-    return BV->getCellIds(csTriple<T>{x, y, z});
   }
 
   void clearCellIds() { BV->clear(); }

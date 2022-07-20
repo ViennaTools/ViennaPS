@@ -15,14 +15,8 @@ public:
     return 0.;
   }
 
-  virtual T fill(unsigned cellId, T distance, T &energy, int materialId,
-                 csTriple<T> &position, csTriple<T> &direction,
-                 const T stepDistance, rayRNG &RNG) {
-    return 0.;
-  }
-
-  virtual T fillArea(unsigned cellId, T distanceCovered, T normalDistance,
-                     T fillStart, int materialId) {
+  virtual T area(unsigned cellId, T distanceCovered, T normalDistance,
+                 T fillStart, int materialId) {
     return 0.;
   }
 

@@ -13,8 +13,6 @@ template <typename T> using csPair = std::array<T, 2>;
 
 template <typename T> using csTriple = std::array<T, 3>;
 
-template <typename T> using csQuadruple = std::array<T, 4>;
-
 template <typename T> struct Particle {
   csTriple<T> position;
   csTriple<T> direction;
@@ -28,47 +26,57 @@ template <typename T> void printTriple(const csTriple<T> &p) {
   std::cout << "[" << p[0] << ", " << p[1] << ", " << p[2] << "]\n";
 }
 
-template <typename T>
-inline T dot(const csTriple<T> &v1, const csTriple<T> &v2) {
-  return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+template <typename T, int D>
+inline T dot(const std::array<T, D> &v1, const std::array<T, D> &v2) {
+  T res = 0;
+  for (int i = 0; i < D; i++)
+    res += v1[i] * v2[i];
+  return res;
 }
 
-template <typename T> inline void mult(csTriple<T> &v1, const T fac) {
-  v1[0] *= fac;
-  v1[1] *= fac;
-  v1[2] *= fac;
+template <typename T, int D>
+inline void mult(std::array<T, D> &v1, const T fac) {
+  for (int i = 0; i < D; i++)
+    v1[i] *= fac;
 }
 
-template <typename T>
-inline csTriple<T> multNew(const csTriple<T> &v1, const T fac) {
-  return {v1[0] * fac, v1[1] * fac, v1[2] * fac};
+template <typename T, int D>
+inline std::array<T, D> multNew(const std::array<T, D> &v1, const T fac) {
+  std::array<T, D> res;
+  for (int i = 0; i < D; i++)
+    res[i] = v1[i] * fac;
+  return res;
 }
 
-template <typename T> inline void sub(csTriple<T> &v1, const csTriple<T> &v2) {
-  v1[0] -= v2[0];
-  v1[1] -= v2[1];
-  v1[2] -= v2[2];
+template <typename T, int D>
+inline void sub(std::array<T, D> &v1, const std::array<T, D> &v2) {
+  for (int i = 0; i < D; i++)
+    v1[i] -= v2[i];
 }
 
-template <typename T>
-void multAdd(csTriple<T> &result, const csTriple<T> &mult,
-             const csTriple<T> &add, const T fac) {
-  result[0] = add[0] + mult[0] * fac;
-  result[1] = add[1] + mult[1] * fac;
-  result[2] = add[2] + mult[2] * fac;
+template <typename T, int D>
+inline void multAdd(std::array<T, D> &result, const std::array<T, D> &mult,
+                    const std::array<T, D> &add, const T fac) {
+  for (int i = 0; i < D; i++)
+    result[i] = add[i] + mult[i] * fac;
 }
 
-template <typename T>
-inline T distance(const csTriple<T> &p1, const csTriple<T> &p2) {
-  return std::sqrt(std::pow(p1[0] - p2[0], 2.) + std::pow(p1[1] - p2[1], 2.) +
-                   std::pow(p1[2] - p2[2], 2.));
+template <typename T, int D>
+inline T distance(const std::array<T, D> &p1, const std::array<T, D> &p2) {
+  T res = 0;
+  for (int i = 0; i < D; i++)
+    res += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+  return std::sqrt(res);
 }
 
-template <typename T> inline T norm(const csTriple<T> &vec) {
-  return std::sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
+template <typename T, int D> inline T norm(const std::array<T, D> &vec) {
+  T res = 0;
+  for (int i = 0; i < D; i++)
+    res += vec[i] * vec[i];
+  return std::sqrt(res);
 }
 
-template <typename T, size_t D> void normalize(std::array<T, D> &vec) {
+template <typename T, int D> void normalize(std::array<T, D> &vec) {
   T vecNorm = 1. / norm(vec);
   if (vecNorm == 1.)
     return;

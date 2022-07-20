@@ -22,9 +22,7 @@ private:
   size_t mNumberOfRaysPerPoint = 0;
   size_t mNumberOfRaysFixed = 1000;
   T mGridDelta = 0;
-  rayTraceBoundary mBoundaryConds[D] = {rayTraceBoundary::PERIODIC,
-                                        rayTraceBoundary::PERIODIC,
-                                        rayTraceBoundary::PERIODIC};
+  rayTraceBoundary mBoundaryConds[D] = {};
   rayTraceDirection mSourceDirection = rayTraceDirection::POS_Z;
   bool mUseRandomSeeds = true;
   size_t mRunNumber = 0;
@@ -32,7 +30,10 @@ private:
   bool traceOnPath = true;
 
 public:
-  csTracing() : mDevice(rtcNewDevice("hugepages=1")) {}
+  csTracing() : mDevice(rtcNewDevice("hugepages=1")) {
+    for (int i = 0; i < D; i++)
+      mBoundaryConds[i] = rayTraceBoundary::PERIODIC;
+  }
 
   ~csTracing() {
     mGeometry.releaseGeometry();
@@ -109,7 +110,33 @@ public:
 
       int numNeighbors = 0;
       for (const auto n : cellSet->getNeighbors(i)) {
-        if (data->at(n) >= 0 && materialIds->at(i) != excludeMaterialId) {
+        if (data->at(n) >= 0 && materialIds->at(n) != excludeMaterialId) {
+          average[i] += data->at(n);
+          numNeighbors++;
+        }
+      }
+      average[i] /= static_cast<T>(numNeighbors);
+    }
+
+#pragma omp parallel for
+    for (size_t i = 0; i < data->size(); i++) {
+      data->at(i) = average[i];
+    }
+  }
+
+  void averageNeighborhoodSingleMaterial(int materialId) {
+    auto data = cellSet->getFillingFractions();
+    auto materialIds = cellSet->getScalarData("Material");
+    std::vector<T> average(data->size(), 0.);
+
+#pragma omp parallel for
+    for (size_t i = 0; i < data->size(); i++) {
+      if (materialIds->at(i) != materialId)
+        continue;
+
+      int numNeighbors = 0;
+      for (const auto n : cellSet->getNeighbors(i)) {
+        if (data->at(n) >= 0 && materialIds->at(n) == materialId) {
           average[i] += data->at(n);
           numNeighbors++;
         }
