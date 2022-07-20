@@ -31,8 +31,6 @@ private:
   size_t numberOfCells;
   T depth = 0.;
   int BVHlayers = 0;
-  T meanFreePath = 0.;
-  T meanFreePathStdDev = 0.;
   bool cellSetAboveSurface = false;
 
 public:
@@ -215,11 +213,11 @@ public:
     }
   }
 
-  void cutSurface(lsSmartPointer<lsDomain<T, D>> advectedSurface) {
+  void updateSurface() {
     auto cutCellGrid = lsSmartPointer<lsMesh<>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(cutCellGrid);
-    if (depth > 0.) {
+    if (depth != 0.) {
       auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
       T origin[D] = {0., 0., depth};
       T normal[D] = {0., 0., 1.};
@@ -228,7 +226,7 @@ public:
           .apply();
       voxelConverter.insertNextLevelSet(plane);
     }
-    voxelConverter.insertNextLevelSet(advectedSurface);
+    voxelConverter.insertNextLevelSet(levelSets->back());
     voxelConverter.insertNextLevelSet(surface);
     voxelConverter.apply();
 
@@ -253,18 +251,8 @@ public:
       }
     }
     numberOfCells = hexas.size();
-    surface->deepCopy(advectedSurface);
+    surface->deepCopy(levelSets->back());
     buildNeighborhoodAndBVH();
-  }
-
-  void printNeighborhood() {
-    for (size_t i = 0; i < numberOfCells; i++) {
-      std::cout << i << ": ";
-      for (const auto n : neighborhood[i]) {
-        std::cout << n << ", ";
-      }
-      std::cout << std::endl;
-    }
   }
 
   bool setFillingFraction(int idx, T fill) {
@@ -291,11 +279,6 @@ public:
   bool addFillingFraction(const std::array<T, 3> &point, T fill) {
     auto idx = findIndex(point);
     return addFillingFraction(idx, fill);
-  }
-
-  void setMeanFreePath(const T passedMeanFreePath, const T stdDev) {
-    meanFreePath = passedMeanFreePath;
-    meanFreePathStdDev = stdDev;
   }
 
   void writeVTU(std::string fileName) {
@@ -407,6 +390,7 @@ public:
 
   void traceCascadeCollision(csTracePath<T> &path, csTriple<T> hitPoint,
                              csTriple<T> direction, const T startEnergy,
+                             const T meanFreePath, const T meanFreePathStdDev,
                              rayRNG &RNG) {
     T fill = 0.;
     T dist;
@@ -526,39 +510,37 @@ private:
     const auto &min = cellGrid->minimumExtent;
     const auto &max = cellGrid->maximumExtent;
 
-    if (hitPoint[2] < min[2] || hitPoint[2] > max[2])
-      return false;
+    if constexpr (D == 3) {
+      if (hitPoint[2] < min[2] || hitPoint[2] > max[2])
+        return false;
 
-    if (hitPoint[0] < min[0]) {
-      hitPoint[0] = max[0] - gridDelta / 2.;
-    } else if (hitPoint[0] > max[0]) {
-      hitPoint[0] = min[0] + gridDelta / 2.;
-    }
+      if (hitPoint[0] < min[0]) {
+        hitPoint[0] = max[0] - gridDelta / 2.;
+      } else if (hitPoint[0] > max[0]) {
+        hitPoint[0] = min[0] + gridDelta / 2.;
+      }
 
-    if (hitPoint[1] < min[1]) {
-      hitPoint[1] = max[1] - gridDelta / 2.;
-    } else if (hitPoint[1] > max[1]) {
-      hitPoint[1] = min[1] + gridDelta / 2.;
+      if (hitPoint[1] < min[1]) {
+        hitPoint[1] = max[1] - gridDelta / 2.;
+      } else if (hitPoint[1] > max[1]) {
+        hitPoint[1] = min[1] + gridDelta / 2.;
+      }
+    } else {
+      if (hitPoint[1] < min[1] || hitPoint[1] > max[1])
+        return false;
+
+      if (hitPoint[0] < min[0]) {
+        hitPoint[0] = max[0] - gridDelta / 2.;
+      } else if (hitPoint[0] > max[0]) {
+        hitPoint[0] = min[0] + gridDelta / 2.;
+      }
     }
 
     return true;
   }
 
-  void scaleToLength(csTriple<T> &vec, T length) {
-    const auto vecLength =
-        std::sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
-
-    for (size_t i = 0; i < D; i++)
-      vec[i] *= length / vecLength;
-  }
-
-  void add(std::array<T, D> &vec, const std::array<T, D> &vec2) {
-    for (size_t i = 0; i < D; i++)
-      vec[i] += vec2[i];
-  }
-
   int findIndexNearPrevious(const csTriple<T> &point, int prevIdx) {
-    auto &hexas = cellGrid->getElements<(1 << D)>();
+    auto &cells = cellGrid->getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
     auto ff = getFillingFractions();
 
@@ -566,7 +548,7 @@ private:
 
     // search in neighborhood of previous index
     for (const auto &i : neighborhood[prevIdx]) {
-      if (isInsideHexa(point, nodes[hexas[i][0]])) {
+      if (isInsideVoxel(point, nodes[cells[i][0]])) {
         idx = i;
         break;
       }
@@ -578,23 +560,6 @@ private:
     return findIndex(point);
   }
 
-  int findIndexTriangles(const std::array<T, 2> &point) {
-    auto &triangles = cellGrid->getElements<3>();
-    auto &nodes = cellGrid->getNodes();
-    int idx = -1;
-    const auto numPoints = triangles.size();
-
-    for (int cellId = 0; cellId < numPoints; cellId++) {
-      if (isInsideTriangle(point, nodes[triangles[cellId][0]],
-                           nodes[triangles[cellId][1]],
-                           nodes[triangles[cellId][2]])) {
-        idx = cellId;
-        break;
-      }
-    }
-    return idx;
-  }
-
   int findIndex(const csTriple<T> &point) {
     auto &elems = cellGrid->getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
@@ -602,7 +567,7 @@ private:
 
     auto cellIds = BVH->getCellIds(point);
     for (const auto cellId : *cellIds) {
-      if (isInsideHexa(point, nodes[elems[cellId][0]])) {
+      if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
         idx = cellId;
         break;
       }
@@ -610,26 +575,14 @@ private:
     return idx;
   }
 
-  bool isInsideTetra(const std::array<T, 2> &point,
-                     const csTriple<T> &tetraMin) {
-    return point[0] >= tetraMin[0] && point[0] <= (tetraMin[0] + gridDelta) &&
-           point[1] >= tetraMin[1] && point[1] <= (tetraMin[1] + gridDelta);
-  }
-
-  bool isInsideTriangle(const std::array<T, 2> &point,
-                        const std::array<T, 3> &p0, const std::array<T, 3> &p1,
-                        const std::array<T, 3> &p2) {
-    auto s = (p0[1] * p2[0] - p0[0] * p2[1] + (p2[1] - p0[1]) * point[0] +
-              (p0[0] - p2[0]) * point[1]);
-    auto t = (p0[0] * p1[1] - p0[1] * p1[0] + (p0[1] - p1[1]) * point[0] +
-              (p1[0] - p0[0]) * point[1]);
-    return s > 0 && t > 0 && (1 - s - t) > 0;
-  }
-
-  bool isInsideHexa(const csTriple<T> &point, const csTriple<T> &hexaMin) {
-    return point[0] >= hexaMin[0] && point[0] <= (hexaMin[0] + gridDelta) &&
-           point[1] >= hexaMin[1] && point[1] <= (hexaMin[1] + gridDelta) &&
-           point[2] >= hexaMin[2] && point[2] <= (hexaMin[2] + gridDelta);
+  bool isInsideVoxel(const csTriple<T> &point, const csTriple<T> &cellMin) {
+    if constexpr (D == 3)
+      return point[0] >= cellMin[0] && point[0] <= (cellMin[0] + gridDelta) &&
+             point[1] >= cellMin[1] && point[1] <= (cellMin[1] + gridDelta) &&
+             point[2] >= cellMin[2] && point[2] <= (cellMin[2] + gridDelta);
+    else
+      return point[0] >= cellMin[0] && point[0] <= (cellMin[0] + gridDelta) &&
+             point[1] >= cellMin[1] && point[1] <= (cellMin[1] + gridDelta);
   }
 
   void buildNeighborhoodAndBVH() {

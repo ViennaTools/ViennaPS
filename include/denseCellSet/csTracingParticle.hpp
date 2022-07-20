@@ -1,5 +1,6 @@
 #pragma once
 
+#include <csUtil.hpp>
 #include <rayRNG.hpp>
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
@@ -15,6 +16,7 @@ public:
                                                 const rayTriple<T> &geomNormal,
                                                 bool &reflect, rayRNG &Rng) = 0;
   virtual T getSourceDistributionPower() const = 0;
+  virtual csPair<T> getMeanFreePath() const = 0;
 };
 
 template <typename Derived, typename T>
@@ -32,6 +34,7 @@ public:
     return std::pair<T, rayTriple<T>>{1., rayTriple<T>{0., 0., 0.}};
   }
   virtual T getSourceDistributionPower() const override { return 1.; }
+  virtual csPair<T> getMeanFreePath() const override { return {1., 1.}; }
 
 protected:
   // We make clear csParticle class needs to be inherited

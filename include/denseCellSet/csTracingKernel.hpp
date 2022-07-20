@@ -11,10 +11,7 @@
 #include "csTracePath.hpp"
 #include "csTracingParticle.hpp"
 
-#define CS_PRINT_PROGRESS
-
 template <typename T, int D> class csTracingKernel {
-
 public:
   csTracingKernel(RTCDevice &pDevice, rayGeometry<T, D> &pRTCGeometry,
                   rayBoundary<T, D> &pRTCBoundary, raySource<T, D> &pSource,
@@ -48,6 +45,8 @@ public:
     auto geometryID = rtcAttachGeometry(rtcScene, rtcGeometry);
     assert(rtcGetDeviceError(mDevice) == RTC_ERROR_NONE &&
            "Embree device error");
+
+    const csPair<T> meanFreePath = mParticle->getMeanFreePath();
 
 #pragma omp parallel shared(cellSet)
     {
@@ -169,11 +168,12 @@ public:
             // trace in cell set
             auto hitPoint = std::array<T, 3>{xx, yy, zz};
             if (traceOnPath) {
-              cellSet->traceCollisionPath(path, hitPoint, rayDir,
-                                          fillnDirection.first, RngState7);
+              cellSet->traceCascadePath(path, hitPoint, rayDir,
+                                        fillnDirection.first, step, RngState7);
             } else {
-              cellSet->traceOnArea(path, hitPoint, rayDir,
-                                   fillnDirection.first);
+              cellSet->traceCascadeCollision(
+                  path, hitPoint, rayDir, fillnDirection.first, meanFreePath[0],
+                  meanFreePath[1], RngState7);
             }
           }
 
@@ -201,7 +201,7 @@ public:
           rayHit.ray.time = 0.0f;
 #endif
         } while (reflect);
-#ifdef CS_PRINT_PROGRESS
+#ifdef VIENNAPS_VERBOSE
         if (threadID == 0)
           printProgress(idx);
 #endif
@@ -211,7 +211,7 @@ public:
       cellSet->mergePath(path, mNumRays);
     } // end parallel section
 
-#ifdef CS_PRINT_PROGRESS
+#ifdef VIENNAPS_VERBOSE
     std::cout << std::endl;
 #endif
 
@@ -230,7 +230,7 @@ private:
   const size_t mRunNumber;
   lsSmartPointer<csDenseCellSet<T, D>> cellSet = nullptr;
   const T step = 1.;
-  const bool traceOnPath = true;
+  const bool traceOnPath = false;
   const int excludeMaterial = -1;
 
   void printProgress(size_t i) {

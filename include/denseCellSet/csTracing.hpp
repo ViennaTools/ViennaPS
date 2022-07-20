@@ -27,7 +27,7 @@ private:
   bool mUseRandomSeeds = true;
   size_t mRunNumber = 0;
   int excludeMaterialId = -1;
-  bool traceOnPath = true;
+  bool traceOnPath = false;
 
 public:
   csTracing() : mDevice(rtcNewDevice("hugepages=1")) {

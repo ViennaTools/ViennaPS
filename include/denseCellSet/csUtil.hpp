@@ -26,7 +26,7 @@ template <typename T> void printTriple(const csTriple<T> &p) {
   std::cout << "[" << p[0] << ", " << p[1] << ", " << p[2] << "]\n";
 }
 
-template <typename T, int D>
+template <typename T, size_t D>
 inline T dot(const std::array<T, D> &v1, const std::array<T, D> &v2) {
   T res = 0;
   for (int i = 0; i < D; i++)
@@ -34,13 +34,13 @@ inline T dot(const std::array<T, D> &v1, const std::array<T, D> &v2) {
   return res;
 }
 
-template <typename T, int D>
+template <typename T, size_t D>
 inline void mult(std::array<T, D> &v1, const T fac) {
   for (int i = 0; i < D; i++)
     v1[i] *= fac;
 }
 
-template <typename T, int D>
+template <typename T, size_t D>
 inline std::array<T, D> multNew(const std::array<T, D> &v1, const T fac) {
   std::array<T, D> res;
   for (int i = 0; i < D; i++)
@@ -48,20 +48,26 @@ inline std::array<T, D> multNew(const std::array<T, D> &v1, const T fac) {
   return res;
 }
 
-template <typename T, int D>
+template <typename T, size_t D>
+inline void add(std::array<T, D> &vec, const std::array<T, D> &vec2) {
+  for (size_t i = 0; i < D; i++)
+    vec[i] += vec2[i];
+}
+
+template <typename T, size_t D>
 inline void sub(std::array<T, D> &v1, const std::array<T, D> &v2) {
   for (int i = 0; i < D; i++)
     v1[i] -= v2[i];
 }
 
-template <typename T, int D>
+template <typename T, size_t D>
 inline void multAdd(std::array<T, D> &result, const std::array<T, D> &mult,
                     const std::array<T, D> &add, const T fac) {
   for (int i = 0; i < D; i++)
     result[i] = add[i] + mult[i] * fac;
 }
 
-template <typename T, int D>
+template <typename T, size_t D>
 inline T distance(const std::array<T, D> &p1, const std::array<T, D> &p2) {
   T res = 0;
   for (int i = 0; i < D; i++)
@@ -69,19 +75,26 @@ inline T distance(const std::array<T, D> &p1, const std::array<T, D> &p2) {
   return std::sqrt(res);
 }
 
-template <typename T, int D> inline T norm(const std::array<T, D> &vec) {
+template <typename T, size_t D> inline T norm(const std::array<T, D> &vec) {
   T res = 0;
   for (int i = 0; i < D; i++)
     res += vec[i] * vec[i];
   return std::sqrt(res);
 }
 
-template <typename T, int D> void normalize(std::array<T, D> &vec) {
+template <typename T, size_t D> void normalize(std::array<T, D> &vec) {
   T vecNorm = 1. / norm(vec);
   if (vecNorm == 1.)
     return;
   std::for_each(vec.begin(), vec.end(),
                 [&vecNorm](T &entry) { entry *= vecNorm; });
+}
+
+template <typename T, size_t D>
+void scaleToLength(std::array<T, D> &vec, const T length) {
+  const auto vecLength = norm(vec);
+  for (size_t i = 0; i < D; i++)
+    vec[i] *= length / vecLength;
 }
 
 template <typename T>
