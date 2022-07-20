@@ -3,7 +3,7 @@
 #include "csBoundingVolume.hpp"
 #include <lsSmartPointer.hpp>
 
-template <class T> class csBVH {
+template <class T, int D> class csBVH {
 private:
   using BVPtrType = lsSmartPointer<csBoundingVolume<T>>;
   using BoundsType = csPair<csTriple<T>>;

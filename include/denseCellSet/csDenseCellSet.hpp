@@ -93,10 +93,10 @@ public:
     cellGrid->maximumExtent[2] = maxBounds[2] * gridDelta + gridDelta + eps;
 
     auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
-    auto tmp = cellGrid->maximumExtent[1] - cellGrid->minimumExtent[1];
-    minExtent = std::min(minExtent, tmp);
-    tmp = cellGrid->maximumExtent[2] - cellGrid->minimumExtent[2];
-    minExtent = std::min(minExtent, tmp);
+    minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
+                                        cellGrid->minimumExtent[1]);
+    minExtent = std::min(minExtent, cellGrid->maximumExtent[2] -
+                                        cellGrid->minimumExtent[2]);
 
     BVHlayers = 0;
     while (minExtent / 2 > gridDelta) {
@@ -251,7 +251,8 @@ public:
   }
 
   bool setFillingFraction(const csTriple<T> point, T fill) {
-    return setFillingFraction(point[0], point[1], point[2], fill);
+    auto idx = findIndex(point);
+    return setFillingFraction(idx, fill);
   }
 
   void setMeanFreePath(const T passedMeanFreePath, const T stdDev) {
@@ -584,15 +585,16 @@ private:
     return findIndex(point);
   }
 
-  int findIndex(const csTriple<T> &point) {
-    auto &hexas = cellGrid->getElements<(1 << D)>();
+  int findIndexTriangles(const std::array<T, 2> &point) {
+    auto &triangles = cellGrid->getElements<3>();
     auto &nodes = cellGrid->getNodes();
     int idx = -1;
+    const auto numPoints = triangles.size();
 
-    auto cellIds = BVH->getCellIds(point);
-
-    for (const auto cellId : *cellIds) {
-      if (isInsideHexa(point, nodes[hexas[cellId][0]])) {
+    for (int cellId = 0; cellId < numPoints; cellId++) {
+      if (isInsideTriangle(point, nodes[triangles[cellId][0]],
+                           nodes[triangles[cellId][1]],
+                           nodes[triangles[cellId][2]])) {
         idx = cellId;
         break;
       }
@@ -600,19 +602,41 @@ private:
     return idx;
   }
 
+  int findIndex(const csTriple<T> &point) {
+    auto &elems = cellGrid->getElements<(1 << D)>();
+    auto &nodes = cellGrid->getNodes();
+    int idx = -1;
+
+    auto cellIds = BVH->getCellIds(point);
+    for (const auto cellId : *cellIds) {
+      if (isInsideHexa(point, nodes[elems[cellId][0]])) {
+        idx = cellId;
+        break;
+      }
+    }
+    return idx;
+  }
+
+  bool isInsideTetra(const std::array<T, 2> &point,
+                     const csTriple<T> &tetraMin) {
+    return point[0] >= tetraMin[0] && point[0] <= (tetraMin[0] + gridDelta) &&
+           point[1] >= tetraMin[1] && point[1] <= (tetraMin[1] + gridDelta) &&
+  }
+
+  bool isInsideTriangle(const std::array<T, 2> &point,
+                        const std::array<T, 3> &p0, const std::array<T, 3> &p1,
+                        const std::array<T, 3> &p2) {
+    auto s = (p0[1] * p2[0] - p0[0] * p2[1] + (p2[1] - p0[1]) * point[0] +
+              (p0[0] - p2[0]) * point[1]);
+    auto t = (p0[0] * p1[1] - p0[1] * p1[0] + (p0[1] - p1[1]) * point[0] +
+              (p1[0] - p0[0]) * point[1]);
+    return s > 0 && t > 0 && (1 - s - t) > 0;
+  }
+
   bool isInsideHexa(const csTriple<T> &point, const csTriple<T> &hexaMin) {
     return point[0] >= hexaMin[0] && point[0] <= (hexaMin[0] + gridDelta) &&
            point[1] >= hexaMin[1] && point[1] <= (hexaMin[1] + gridDelta) &&
            point[2] >= hexaMin[2] && point[2] <= (hexaMin[2] + gridDelta);
-
-    // if (point[0] >= hexaMin[0] && point[0] <= (hexaMin[0] + gridDelta)) {
-    //   if (point[1] >= hexaMin[1] && point[1] <= (hexaMin[1] + gridDelta)) {
-    //     if (point[2] >= hexaMin[2] && point[2] <= (hexaMin[2] + gridDelta)) {
-    //       return true;
-    //     }
-    //   }
-    // }
-    // return false;
   }
 
   void buildNeighborhoodAndBVH() {
