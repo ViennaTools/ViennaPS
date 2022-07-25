@@ -21,9 +21,9 @@ private:
   using levelSetsType =
       lsSmartPointer<std::vector<lsSmartPointer<lsDomain<T, D>>>>;
 
-  gridType cellGrid = nullptr;
   lsSmartPointer<csCellFiller<T>> cellFiller = nullptr;
   levelSetsType levelSets = nullptr;
+  gridType cellGrid = nullptr;
   lsSmartPointer<lsDomain<T, D>> surface = nullptr;
   lsSmartPointer<csBVH<T, D>> BVH = nullptr;
   std::vector<std::set<unsigned>> neighborhood;
@@ -163,6 +163,10 @@ public:
 
   gridType getCellGrid() const { return cellGrid; }
 
+  std::vector<std::array<unsigned, (1 << D)>> getElements() {
+    return cellGrid->getElements<(1 << D)>();
+  }
+
   levelSetsType getLevelSets() const { return levelSets; }
 
   size_t getNumberOfCells() const { return numberOfCells; }
@@ -279,6 +283,15 @@ public:
   bool addFillingFraction(const std::array<T, 3> &point, T fill) {
     auto idx = findIndex(point);
     return addFillingFraction(idx, fill);
+  }
+
+  bool addFillingFractioninMaterial(const std::array<T, 3> &point, T fill,
+                                    int materialId) {
+    auto idx = findIndex(point);
+    if (getScalarData("Material")->at(idx) == materialId)
+      return addFillingFraction(idx, fill);
+    else
+      return false;
   }
 
   void writeVTU(std::string fileName) {
@@ -457,6 +470,8 @@ public:
 
     return getFillingFractions()->at(idx);
   }
+
+  int getIndex(std::array<T, 3> &point) { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
     return cellGrid->getCellData().getScalarData(name);
