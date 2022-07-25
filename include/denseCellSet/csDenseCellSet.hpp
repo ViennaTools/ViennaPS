@@ -83,10 +83,10 @@ public:
     gridDelta = surface->getGrid().getGridDelta();
     numberOfCells = cellGrid->getElements<(1 << D)>().size();
 
-    std::vector<T> fillingFractions(numberOfCells, 0.);
-    cellGrid->getCellData().insertNextScalarData(fillingFractions,
+    std::vector<T> fillingFractionsTemp(numberOfCells, 0.);
+    cellGrid->getCellData().insertNextScalarData(fillingFractionsTemp,
                                                  "fillingFraction");
-    fillingFractions = cellGrid()->getCellData("fillingFraction");
+    fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
     auto minBounds = surface->getGrid().getMinBounds();
     auto maxBounds = surface->getGrid().getMaxBounds();
