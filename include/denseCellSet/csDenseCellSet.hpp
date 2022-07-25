@@ -84,8 +84,8 @@ public:
     numberOfCells = cellGrid->getElements<(1 << D)>().size();
 
     std::vector<T> fillingFractionsTemp(numberOfCells, 0.);
-    cellGrid->getCellData().insertNextScalarData(fillingFractionsTemp,
-                                                 "fillingFraction");
+    cellGrid->getCellData().insertNextScalarData(
+        std::move(fillingFractionsTemp), "fillingFraction");
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
     auto minBounds = surface->getGrid().getMinBounds();
@@ -283,6 +283,7 @@ public:
       cellGrid->getCellData().insertNextScalarData(scalarData[i],
                                                    scalarDataLabels[i]);
     }
+    fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
   }
 
   void updateSurface() {
