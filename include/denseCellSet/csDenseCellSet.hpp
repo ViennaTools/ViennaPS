@@ -32,6 +32,7 @@ private:
   T depth = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
+  std::vector<T> *fillingFractions;
 
 public:
   csDenseCellSet() {}
@@ -85,6 +86,7 @@ public:
     std::vector<T> fillingFractions(numberOfCells, 0.);
     cellGrid->getCellData().insertNextScalarData(fillingFractions,
                                                  "fillingFraction");
+    fillingFractions = cellGrid()->getCellData("fillingFraction");
 
     auto minBounds = surface->getGrid().getMinBounds();
     auto maxBounds = surface->getGrid().getMaxBounds();
@@ -161,7 +163,9 @@ public:
 
   T getGridDelta() const { return gridDelta; }
 
-  gridType getCellGrid() const { return cellGrid; }
+  std::vector<std::array<T, 3>> &getNodes() const {
+    return cellGrid->getNodes();
+  }
 
   std::vector<std::array<unsigned, (1 << D)>> getElements() {
     return cellGrid->getElements<(1 << D)>();
@@ -170,6 +174,70 @@ public:
   levelSetsType getLevelSets() const { return levelSets; }
 
   size_t getNumberOfCells() const { return numberOfCells; }
+
+  std::set<unsigned> &getNeighbors(size_t idx) { return neighborhood[idx]; }
+
+  std::vector<T> *getFillingFractions() const { return fillingFractions; }
+
+  T getFillingFraction(const std::array<T, D> &point) {
+    auto idx = findIndex(point);
+    if (idx < 0)
+      return -1.;
+
+    return getFillingFractions()->at(idx);
+  }
+
+  int getIndex(std::array<T, 3> &point) { return findIndex(point); }
+
+  std::vector<T> *getScalarData(std::string name) {
+    return cellGrid->getCellData().getScalarData(name);
+  }
+
+  lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
+
+  bool setFillingFraction(int idx, T fill) {
+    if (idx < 0)
+      return false;
+
+    getFillingFractions()->at(idx) = fill;
+    return true;
+  }
+
+  bool setFillingFraction(const std::array<T, 3> &point, T fill) {
+    auto idx = findIndex(point);
+    return setFillingFraction(idx, fill);
+  }
+
+  bool addFillingFraction(int idx, T fill) {
+    if (idx < 0)
+      return false;
+
+    getFillingFractions()->at(idx) += fill;
+    return true;
+  }
+
+  bool addFillingFraction(const std::array<T, 3> &point, T fill) {
+    auto idx = findIndex(point);
+    return addFillingFraction(idx, fill);
+  }
+
+  bool addFillingFractioninMaterial(const std::array<T, 3> &point, T fill,
+                                    int materialId) {
+    auto idx = findIndex(point);
+    if (getScalarData("Material")->at(idx) == materialId)
+      return addFillingFraction(idx, fill);
+    else
+      return false;
+  }
+
+  void writeVTU(std::string fileName) {
+    lsVTKWriter<T>(cellGrid, fileName).apply();
+  }
+
+  void clear() {
+    auto ff = getFillingFractions();
+    std::fill(ff->begin(), ff->end(), 0.);
+  }
 
   void updateMaterials() {
     auto numScalarData = cellGrid->getCellData().getScalarDataSize();
@@ -257,50 +325,6 @@ public:
     numberOfCells = hexas.size();
     surface->deepCopy(levelSets->back());
     buildNeighborhoodAndBVH();
-  }
-
-  bool setFillingFraction(int idx, T fill) {
-    if (idx < 0)
-      return false;
-
-    getFillingFractions()->at(idx) = fill;
-    return true;
-  }
-
-  bool setFillingFraction(const std::array<T, 3> &point, T fill) {
-    auto idx = findIndex(point);
-    return setFillingFraction(idx, fill);
-  }
-
-  bool addFillingFraction(int idx, T fill) {
-    if (idx < 0)
-      return false;
-
-    getFillingFractions()->at(idx) += fill;
-    return true;
-  }
-
-  bool addFillingFraction(const std::array<T, 3> &point, T fill) {
-    auto idx = findIndex(point);
-    return addFillingFraction(idx, fill);
-  }
-
-  bool addFillingFractioninMaterial(const std::array<T, 3> &point, T fill,
-                                    int materialId) {
-    auto idx = findIndex(point);
-    if (getScalarData("Material")->at(idx) == materialId)
-      return addFillingFraction(idx, fill);
-    else
-      return false;
-  }
-
-  void writeVTU(std::string fileName) {
-    lsVTKWriter<T>(cellGrid, fileName).apply();
-  }
-
-  void clear() {
-    auto ff = getFillingFractions();
-    std::fill(ff->begin(), ff->end(), 0.);
   }
 
   void traceArea(csTracePath<T> &path, const csTriple<T> &hitPoint,
@@ -456,28 +480,6 @@ public:
       }
     }
   }
-
-  std::set<unsigned> &getNeighbors(size_t idx) { return neighborhood[idx]; }
-
-  std::vector<T> *getFillingFractions() const {
-    return cellGrid->getCellData().getScalarData("fillingFraction");
-  }
-
-  T getFillingFraction(const std::array<T, D> &point) {
-    auto idx = findIndex(point);
-    if (idx < 0)
-      return -1.;
-
-    return getFillingFractions()->at(idx);
-  }
-
-  int getIndex(std::array<T, 3> &point) { return findIndex(point); }
-
-  std::vector<T> *getScalarData(std::string name) {
-    return cellGrid->getCellData().getScalarData(name);
-  }
-
-  lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
 private:
   int findSurfaceHitPoint(csTriple<T> &hitPoint, const csTriple<T> &direction) {
