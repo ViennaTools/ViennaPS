@@ -36,7 +36,10 @@ public:
 
   CellIdsPtr getCellIds(const std::array<T, 3> &point) {
     auto vid = getVolumeIndex(point);
-    assert(vid < numCells && "Point in invalid BV");
+    // assert(vid < numCells && "Point in invalid BV");
+
+    if (vid == numCells)
+      return nullptr;
 
     if (layer == 0) {
       return &cellIds[vid];

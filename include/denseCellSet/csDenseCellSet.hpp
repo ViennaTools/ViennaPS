@@ -8,6 +8,8 @@
 #include <lsVTKWriter.hpp>
 #include <set>
 
+#include <rayUtil.hpp>
+
 #include "csBVH.hpp"
 #include "csCellFiller.hpp"
 #include "csTracePath.hpp"
@@ -139,7 +141,11 @@ public:
       minExtent /= 2;
     }
     BVH = lsSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
+
+    auto time = rayInternal::timeStampNow<std::chrono::microseconds>();
     buildNeighborhoodAndBVH();
+    auto end = rayInternal::timeStampNow<std::chrono::microseconds>();
+    std::cout << "Time: " << (end - time) / 1e3 << " ms" << std::endl;
   }
 
   csPair<std::array<T, D>> getBoundingBox() const {
@@ -584,6 +590,8 @@ private:
     int idx = -1;
 
     auto cellIds = BVH->getCellIds(point);
+    if (!cellIds)
+      return idx;
     for (const auto cellId : *cellIds) {
       if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
         idx = cellId;
@@ -607,30 +615,47 @@ private:
     auto &elems = cellGrid->getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
 
-    std::vector<std::vector<unsigned>> nodeElemConnections(nodes.size());
+    // std::vector<std::vector<unsigned>> nodeElemConnections(nodes.size());
     neighborhood.clear();
     neighborhood.resize(elems.size());
     BVH->clearCellIds();
 
     for (size_t elemIdx = 0; elemIdx < elems.size(); elemIdx++) {
       for (size_t n = 0; n < (1 << D); n++) {
-        nodeElemConnections[elems[elemIdx][n]].push_back(elemIdx);
+        // nodeElemConnections[elems[elemIdx][n]].push_back(elemIdx);
         auto &node = nodes[elems[elemIdx][n]];
         BVH->getCellIds(node)->insert(elemIdx);
       }
     }
 
-    for (size_t nodeIdx = 0; nodeIdx < nodes.size(); nodeIdx++) {
-      for (size_t elemInsertIdx = 0;
-           elemInsertIdx < nodeElemConnections[nodeIdx].size();
-           elemInsertIdx++) {
-        for (size_t elemIdx = 0; elemIdx < nodeElemConnections[nodeIdx].size();
-             elemIdx++) {
-          neighborhood[nodeElemConnections[nodeIdx][elemInsertIdx]].insert(
-              nodeElemConnections[nodeIdx][elemIdx]);
-        }
+#pragma omp parallel for
+    for (size_t elemIdx = 0; elemIdx < elems.size(); elemIdx++) {
+      for (int i = 0; i < D; i++) {
+        auto mid = calcMidPoint(nodes[elems[elemIdx][0]]);
+        mid[i] -= gridDelta;
+        auto elemId = findIndex(mid);
+        if (elemId >= 0)
+          neighborhood[elemIdx].insert(elemId);
+
+        mid[i] += 2 * gridDelta;
+        elemId = findIndex(mid);
+        if (elemId >= 0)
+          neighborhood[elemIdx].insert(elemId);
       }
     }
+
+    // for (size_t nodeIdx = 0; nodeIdx < nodes.size(); nodeIdx++) {
+    //   for (size_t elemInsertIdx = 0;
+    //        elemInsertIdx < nodeElemConnections[nodeIdx].size();
+    //        elemInsertIdx++) {
+    //     for (size_t elemIdx = 0; elemIdx <
+    //     nodeElemConnections[nodeIdx].size();
+    //          elemIdx++) {
+    //       neighborhood[nodeElemConnections[nodeIdx][elemInsertIdx]].insert(
+    //           nodeElemConnections[nodeIdx][elemIdx]);
+    //     }
+    //   }
+    // }
   }
 
   inline csTriple<T> calcMidPoint(const csTriple<T> &minNode) {

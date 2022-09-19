@@ -108,7 +108,8 @@ public:
       if (materialIds->at(i) == excludeMaterialId)
         continue;
 
-      int numNeighbors = 0;
+      int numNeighbors = 1;
+      average[i] += data->at(i);
       for (const auto n : cellSet->getNeighbors(i)) {
         if (data->at(n) >= 0 && materialIds->at(n) != excludeMaterialId) {
           average[i] += data->at(n);
@@ -134,7 +135,8 @@ public:
       if (materialIds->at(i) != materialId)
         continue;
 
-      int numNeighbors = 0;
+      int numNeighbors = 1;
+      average[i] += data->at(i);
       for (const auto n : cellSet->getNeighbors(i)) {
         if (data->at(n) >= 0 && materialIds->at(n) == materialId) {
           average[i] += data->at(n);

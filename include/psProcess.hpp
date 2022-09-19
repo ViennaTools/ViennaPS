@@ -294,7 +294,8 @@ private:
     lsVTKWriter<NumericType>(mesh, name).apply();
   }
 
-  void printDiskMesh(lsSmartPointer<lsMesh<>> mesh, std::string name) {
+  void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
+                     std::string name) {
     lsVTKWriter<NumericType>(mesh, name).apply();
   }
 
