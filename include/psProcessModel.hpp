@@ -7,14 +7,14 @@
 #include <psVolumeModel.hpp>
 #include <rayParticle.hpp>
 
-template <typename NumericType> class psProcessModel {
+template <typename NumericType, int D> class psProcessModel {
 private:
   using ParticleTypeList =
       std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psVolumeModel<NumericType>> volumeModel = nullptr;
+  psSmartPointer<psVolumeModel<NumericType, D>> volumeModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
 
@@ -25,7 +25,7 @@ public:
   virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psVolumeModel<NumericType>> getVolumeModel() {
+  virtual psSmartPointer<psVolumeModel<NumericType, D>> getVolumeModel() {
     return volumeModel;
   }
   virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
@@ -52,7 +52,7 @@ public:
 
   template <typename VolumeModelType>
   void setVolumeModel(psSmartPointer<VolumeModelType> passedVolumeModel) {
-    volumeModel = std::dynamic_pointer_cast<psVolumeModel<NumericType>>(
+    volumeModel = std::dynamic_pointer_cast<psVolumeModel<NumericType, D>>(
         passedVolumeModel);
   }
 

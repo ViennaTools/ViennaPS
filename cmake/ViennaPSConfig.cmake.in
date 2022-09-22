@@ -61,7 +61,6 @@ else(VTK_FOUND)
 endif(VTK_FOUND)
 
 set(embree_DIR @embree_DIR@)
-message("Found embree at: " ${embree_DIR})
 find_package(embree 3.0 REQUIRED PATHS ${embree_DIR} NO_DEFAULT_PATH)
 list(APPEND VIENNAPS_LIBRARIES embree)
 
