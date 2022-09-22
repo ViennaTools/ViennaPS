@@ -5,6 +5,7 @@
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
+
 #include <psDomain.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
@@ -12,23 +13,23 @@
 #include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
 #include <psVolumeModel.hpp>
+
 #include <rayBoundCondition.hpp>
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
-template <typename CellType, typename NumericType, int D> class psProcess {
+template <typename NumericType, int D> class psProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
-  using psDomainType = psSmartPointer<psDomain<CellType, NumericType, D>>;
+  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
 public:
   template <typename ProcessModelType>
   void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
-    model = std::dynamic_pointer_cast<psProcessModel<NumericType>>(
+    model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);
   }
 
-  void
-  setDomain(psSmartPointer<psDomain<CellType, NumericType, D>> passedDomain) {
+  void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }
 
@@ -88,103 +89,111 @@ public:
       rayTrace.setUseRandomSeeds(useRandomSeeds);
       rayTrace.setCalculateFlux(false);
     }
+
+    // Determine whether volume model is used
+    const bool useVolumeModel = model->getVolumeModel() != nullptr;
+    if (useVolumeModel) {
+      assert(domain->getUseCellSet());
+      model->getVolumeModel()->setDomain(domain);
+    }
+
     // Determine whether there are process parameters used in ray tracing
     model->getSurfaceModel()->initializeProcessParameters();
     const bool useProcessParams =
         model->getSurfaceModel()->getProcessParameters() != nullptr;
+
 #ifdef VIENNAPS_VERBOSE
     if (useProcessParams)
       std::cout << "Using process parameters." << std::endl;
+    if (useVolumeModel)
+      std::cout << "Using volume model." << std::endl;
 #endif
+
     bool useCoverages = false;
     // Initialize coverages
-    {
-      meshConverter.apply();
-      auto numPoints = diskMesh->getNodes().size();
-      if (!coveragesInitialized)
-        model->getSurfaceModel()->initializeCoverages(numPoints);
-      if (model->getSurfaceModel()->getCoverages() != nullptr) {
-        useCoverages = true;
+    meshConverter.apply();
+    auto numPoints = diskMesh->getNodes().size();
+    if (!coveragesInitialized)
+      model->getSurfaceModel()->initializeCoverages(numPoints);
+    if (model->getSurfaceModel()->getCoverages() != nullptr) {
+      useCoverages = true;
 #ifdef VIENNAPS_VERBOSE
-        std::cout << "Using coverages." << std::endl;
+      std::cout << "Using coverages." << std::endl;
 #endif
-        if (!coveragesInitialized) {
+      if (!coveragesInitialized) {
 #ifdef VIENNAPS_VERBOSE
-          std::cout << "Initializing coverages ... " << std::endl;
+        std::cout << "Initializing coverages ... " << std::endl;
 #endif
-          auto points = diskMesh->getNodes();
-          auto normals = *diskMesh->getCellData().getVectorData("Normals");
-          auto materialIds =
-              *diskMesh->getCellData().getScalarData("MaterialIds");
-          rayTrace.setGeometry(points, normals, gridDelta);
-          rayTrace.setMaterialIds(materialIds);
+        auto points = diskMesh->getNodes();
+        auto normals = *diskMesh->getCellData().getVectorData("Normals");
+        auto materialIds =
+            *diskMesh->getCellData().getScalarData("MaterialIds");
+        rayTrace.setGeometry(points, normals, gridDelta);
+        rayTrace.setMaterialIds(materialIds);
 
-          for (size_t iterations = 0; iterations < maxIterations;
-               iterations++) {
-            // move coverages to the ray tracer
-            rayTracingData<NumericType> rayTraceCoverages =
-                movePointDataToRayData(
-                    model->getSurfaceModel()->getCoverages());
-            if (useProcessParams) {
-              // store scalars in addition to coverages
-              auto processParams =
-                  model->getSurfaceModel()->getProcessParameters();
-              NumericType numParams = processParams->getScalarData().size();
-              rayTraceCoverages.setNumberOfScalarData(numParams);
-              for (size_t i = 0; i < numParams; ++i) {
-                rayTraceCoverages.setScalarData(
-                    i, processParams->getScalarData(i),
-                    processParams->getScalarDataLabel(i));
-              }
+        for (size_t iterations = 0; iterations < maxIterations; iterations++) {
+          // move coverages to the ray tracer
+          rayTracingData<NumericType> rayTraceCoverages =
+              movePointDataToRayData(model->getSurfaceModel()->getCoverages());
+          if (useProcessParams) {
+            // store scalars in addition to coverages
+            auto processParams =
+                model->getSurfaceModel()->getProcessParameters();
+            NumericType numParams = processParams->getScalarData().size();
+            rayTraceCoverages.setNumberOfScalarData(numParams);
+            for (size_t i = 0; i < numParams; ++i) {
+              rayTraceCoverages.setScalarData(
+                  i, processParams->getScalarData(i),
+                  processParams->getScalarDataLabel(i));
             }
-            rayTrace.setGlobalData(rayTraceCoverages);
-
-            auto Rates = psSmartPointer<psPointData<NumericType>>::New();
-
-            for (auto &particle : *model->getParticleTypes()) {
-              rayTrace.setParticleType(particle);
-              rayTrace.apply();
-
-              // fill up rates vector with rates from this particle type
-              auto numRates = particle->getRequiredLocalDataSize();
-              auto &localData = rayTrace.getLocalData();
-              for (int i = 0; i < numRates; ++i) {
-                auto rate = std::move(localData.getVectorData(i));
-
-                // normalize rates
-                rayTrace.normalizeFlux(rate);
-
-                Rates->insertNextScalarData(std::move(rate),
-                                            localData.getVectorDataLabel(i));
-              }
-            }
-
-            // move coverages back in the model
-            moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
-                                   rayTraceCoverages);
-            model->getSurfaceModel()->updateCoverages(Rates);
-            coveragesInitialized = true;
-#ifdef VIENNAPS_VERBOSE
-            diskMesh->getCellData().clear();
-            auto coverages = model->getSurfaceModel()->getCoverages();
-            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-              auto label = coverages->getScalarDataLabel(idx);
-              diskMesh->getCellData().insertNextScalarData(
-                  *coverages->getScalarData(idx), label);
-            }
-            for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-              auto label = Rates->getScalarDataLabel(idx);
-              diskMesh->getCellData().insertNextScalarData(
-                  *Rates->getScalarData(idx), label);
-            }
-            printDiskMesh(diskMesh, name + "_covIinit_" +
-                                        std::to_string(iterations) + ".vtp");
-            std::cerr << "\r"
-                      << "Iteration: " << iterations << " / " << maxIterations;
-            if (iterations == maxIterations)
-              std::cerr << std::endl;
-#endif
           }
+          rayTrace.setGlobalData(rayTraceCoverages);
+
+          auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+
+          for (auto &particle : *model->getParticleTypes()) {
+            rayTrace.setParticleType(particle);
+            rayTrace.apply();
+
+            // fill up rates vector with rates from this particle type
+            auto numRates = particle->getRequiredLocalDataSize();
+            auto &localData = rayTrace.getLocalData();
+            for (int i = 0; i < numRates; ++i) {
+              auto rate = std::move(localData.getVectorData(i));
+
+              // normalize rates
+              rayTrace.normalizeFlux(rate);
+
+              Rates->insertNextScalarData(std::move(rate),
+                                          localData.getVectorDataLabel(i));
+            }
+          }
+
+          // move coverages back in the model
+          moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
+                                 rayTraceCoverages);
+          model->getSurfaceModel()->updateCoverages(Rates);
+          coveragesInitialized = true;
+#ifdef VIENNAPS_VERBOSE
+          diskMesh->getCellData().clear();
+          auto coverages = model->getSurfaceModel()->getCoverages();
+          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+            auto label = coverages->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *coverages->getScalarData(idx), label);
+          }
+          for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+            auto label = Rates->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *Rates->getScalarData(idx), label);
+          }
+          printDiskMesh(diskMesh, name + "_covIinit_" +
+                                      std::to_string(iterations) + ".vtp");
+          std::cerr << "\r"
+                    << "Iteration: " << iterations << " / " << maxIterations;
+          if (iterations == maxIterations)
+            std::cerr << std::endl;
+#endif
         }
       }
     }
@@ -270,6 +279,12 @@ public:
       }
       printDiskMesh(diskMesh, name + "_" + std::to_string(counter++) + ".vtp");
 #endif
+      // apply volume model
+      if (useVolumeModel) {
+        model->getVolumeModel()->applyPreAdvect(processDuration -
+                                                remainingTime);
+      }
+
       // move coverages to LS, so they get are moved with the advection step
       if (useCoverages)
         moveCoveragesToTopLS(domain, translator,
@@ -281,6 +296,13 @@ public:
       if (useCoverages)
         updateCoveragesFromAdvectedSurface(
             domain, translator, model->getSurfaceModel()->getCoverages());
+
+      // apply volume model
+      if (useVolumeModel) {
+        domain->getCellSet()->updateSurface();
+        model->getVolumeModel()->applyPostAdvect(
+            advectionKernel.getAdvectedTime());
+      }
 
       remainingTime -= advectionKernel.getAdvectedTime();
     }
@@ -382,7 +404,7 @@ private:
   }
 
   psDomainType domain = nullptr;
-  psSmartPointer<psProcessModel<NumericType>> model = nullptr;
+  psSmartPointer<psProcessModel<NumericType, D>> model = nullptr;
   NumericType processDuration;
   rayTraceDirection sourceDirection;
   long raysPerPoint = 1000;

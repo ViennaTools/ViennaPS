@@ -3,14 +3,15 @@
 #include <embree3/rtcore.h>
 #include <lsSmartPointer.hpp>
 #include <lsToDiskMesh.hpp>
+
 #include <rayGeometry.hpp>
 #include <rayParticle.hpp>
 #include <raySourceRandom.hpp>
 #include <rayUtil.hpp>
 
-#include "csDenseCellSet.hpp"
-#include "csTracingKernel.hpp"
-#include "csTracingParticle.hpp"
+#include <csDenseCellSet.hpp>
+#include <csTracingKernel.hpp>
+#include <csTracingParticle.hpp>
 
 template <class T, int D> class csTracing {
 private:
@@ -27,7 +28,6 @@ private:
   bool mUseRandomSeeds = true;
   size_t mRunNumber = 0;
   int excludeMaterialId = -1;
-  bool traceOnPath = false;
 
 public:
   csTracing() : mDevice(rtcNewDevice("hugepages=1")) {
@@ -58,7 +58,7 @@ public:
     auto tracer = csTracingKernel<T, D>(
         mDevice, mGeometry, boundary, raySource, mParticle,
         mNumberOfRaysPerPoint, mNumberOfRaysFixed, mUseRandomSeeds,
-        mRunNumber++, cellSet, mGridDelta, traceOnPath, excludeMaterialId - 1);
+        mRunNumber++, cellSet, excludeMaterialId - 1);
     tracer.apply();
 
     averageNeighborhood();
@@ -92,11 +92,11 @@ public:
 
   void setExcludeMaterialId(int passedId) { excludeMaterialId = passedId; }
 
-  void setTraceOnPath(bool passedTrace) { traceOnPath = passedTrace; }
-
   void averageNeighborhood() {
     auto data = cellSet->getFillingFractions();
     auto materialIds = cellSet->getScalarData("Material");
+    const auto &elems = cellSet->getElements();
+    const auto &nodes = cellSet->getNodes();
     std::vector<T> average(data->size(), 0.);
 
 #pragma omp parallel for
@@ -110,10 +110,27 @@ public:
 
       int numNeighbors = 1;
       average[i] += data->at(i);
-      for (const auto n : cellSet->getNeighbors(i)) {
-        if (data->at(n) >= 0 && materialIds->at(n) != excludeMaterialId) {
-          average[i] += data->at(n);
-          numNeighbors++;
+
+      for (int d = 0; d < D; d++) {
+        auto mid = calcMidPoint(nodes[elems[i][0]]);
+        mid[d] -= mGridDelta;
+        auto elemId = cellSet->findIndex(mid);
+        if (elemId >= 0) {
+          if (data->at(elemId) >= 0 &&
+              materialIds->at(elemId) != excludeMaterialId) {
+            average[i] += data->at(elemId);
+            numNeighbors++;
+          }
+        }
+
+        mid[d] += 2 * mGridDelta;
+        elemId = cellSet->findIndex(mid);
+        if (elemId >= 0) {
+          if (data->at(elemId) >= 0 &&
+              materialIds->at(elemId) != excludeMaterialId) {
+            average[i] += data->at(elemId);
+            numNeighbors++;
+          }
         }
       }
       average[i] /= static_cast<T>(numNeighbors);
@@ -128,6 +145,8 @@ public:
   void averageNeighborhoodSingleMaterial(int materialId) {
     auto data = cellSet->getFillingFractions();
     auto materialIds = cellSet->getScalarData("Material");
+    const auto &elems = cellSet->getElements();
+    const auto &nodes = cellSet->getNodes();
     std::vector<T> average(data->size(), 0.);
 
 #pragma omp parallel for
@@ -137,10 +156,24 @@ public:
 
       int numNeighbors = 1;
       average[i] += data->at(i);
-      for (const auto n : cellSet->getNeighbors(i)) {
-        if (data->at(n) >= 0 && materialIds->at(n) == materialId) {
-          average[i] += data->at(n);
-          numNeighbors++;
+      for (int d = 0; d < D; d++) {
+        auto mid = calcMidPoint(nodes[elems[i][0]]);
+        mid[d] -= mGridDelta;
+        auto elemId = cellSet->findIndex(mid);
+        if (elemId >= 0) {
+          if (data->at(elemId) >= 0 && materialIds->at(elemId) == materialId) {
+            average[i] += data->at(elemId);
+            numNeighbors++;
+          }
+        }
+
+        mid[d] += 2 * mGridDelta;
+        elemId = cellSet->findIndex(mid);
+        if (elemId >= 0) {
+          if (data->at(elemId) >= 0 && materialIds->at(elemId) == materialId) {
+            average[i] += data->at(elemId);
+            numNeighbors++;
+          }
         }
       }
       average[i] /= static_cast<T>(numNeighbors);
@@ -169,6 +202,12 @@ private:
     mGeometry.initGeometry(mDevice, points, normals,
                            mGridDelta * rayInternal::DiskFactor<D>);
     mGeometry.setMaterialIds(materialIds);
+  }
+
+  inline csTriple<T> calcMidPoint(const csTriple<T> &minNode) {
+    return csTriple<T>{minNode[0] + mGridDelta / 2.,
+                       minNode[1] + mGridDelta / 2.,
+                       minNode[2] + mGridDelta / 2.};
   }
 
   void initMemoryFlags() {

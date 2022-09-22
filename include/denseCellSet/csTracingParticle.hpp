@@ -17,6 +17,8 @@ public:
                                                 bool &reflect, rayRNG &Rng) = 0;
   virtual T getSourceDistributionPower() const = 0;
   virtual csPair<T> getMeanFreePath() const = 0;
+  virtual T collision(Particle<T> &particle, rayRNG &RNG,
+                      std::vector<Particle<T>> &particleStack) = 0;
 };
 
 template <typename Derived, typename T>
@@ -35,6 +37,10 @@ public:
   }
   virtual T getSourceDistributionPower() const override { return 1.; }
   virtual csPair<T> getMeanFreePath() const override { return {1., 1.}; }
+  virtual T collision(Particle<T> &particle, rayRNG &RNG,
+                      std::vector<Particle<T>> &particleStack) {
+    return 0.;
+  }
 
 protected:
   // We make clear csParticle class needs to be inherited

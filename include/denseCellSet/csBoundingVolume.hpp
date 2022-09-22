@@ -3,7 +3,7 @@
 #include <array>
 #include <set>
 
-#include "csUtil.hpp"
+#include <csUtil.hpp>
 
 template <class T, int D> class csBoundingVolume {
 private:

@@ -7,9 +7,9 @@
 #include <raySource.hpp>
 #include <rayUtil.hpp>
 
-#include "csDenseCellSet.hpp"
-#include "csTracePath.hpp"
-#include "csTracingParticle.hpp"
+#include <csDenseCellSet.hpp>
+#include <csTracePath.hpp>
+#include <csTracingParticle.hpp>
 
 template <typename T, int D> class csTracingKernel {
 public:
@@ -19,15 +19,15 @@ public:
                   const size_t pNumOfRayPerPoint, const size_t pNumOfRayFixed,
                   const bool pUseRandomSeed, const size_t pRunNumber,
                   lsSmartPointer<csDenseCellSet<T, D>> passedCellSet,
-                  T passedStep, bool passedTrace, int passedExclude)
+                  int passedExclude)
       : mDevice(pDevice), mGeometry(pRTCGeometry), mBoundary(pRTCBoundary),
         mSource(pSource), mParticle(pParticle->clone()),
         mNumRays(pNumOfRayFixed == 0
                      ? pSource.getNumPoints() * pNumOfRayPerPoint
                      : pNumOfRayFixed),
         mUseRandomSeeds(pUseRandomSeed), mRunNumber(pRunNumber),
-        cellSet(passedCellSet), step(passedStep), traceOnPath(passedTrace),
-        excludeMaterial(passedExclude) {
+        cellSet(passedCellSet), excludeMaterial(passedExclude),
+        mGridDelta(cellSet->getGridDelta()) {
     assert(rtcGetDeviceProperty(mDevice, RTC_DEVICE_PROPERTY_VERSION) >=
                30601 &&
            "Error: The minimum version of Embree is 3.6.1");
@@ -167,13 +167,40 @@ public:
           if (mGeometry.getMaterialId(rayHit.hit.primID) != excludeMaterial) {
             // trace in cell set
             auto hitPoint = std::array<T, 3>{xx, yy, zz};
-            if (traceOnPath) {
-              cellSet->traceCascadePath(path, hitPoint, rayDir,
-                                        fillnDirection.first, step, RngState7);
-            } else {
-              cellSet->traceCascadeCollision(
-                  path, hitPoint, rayDir, fillnDirection.first, meanFreePath[0],
-                  meanFreePath[1], RngState7);
+            std::vector<Particle<T>> particleStack;
+            std::normal_distribution<T> normalDist{meanFreePath[0],
+                                                   meanFreePath[1]};
+
+            particleStack.emplace_back(
+                Particle<T>{hitPoint, rayDir, fillnDirection.first, 0., -1, 0});
+
+            while (!particleStack.empty()) {
+              auto volumeParticle = std::move(particleStack.back());
+              particleStack.pop_back();
+
+              // trace particle
+              while (volumeParticle.energy >= 0) {
+                volumeParticle.distance = -1;
+                while (volumeParticle.distance < 0)
+                  volumeParticle.distance = normalDist(RngState7);
+                auto travelDist =
+                    multNew(volumeParticle.direction, volumeParticle.distance);
+                add(volumeParticle.position, travelDist);
+
+                if (!checkBoundsPeriodic(volumeParticle.position))
+                  break;
+
+                auto newIdx = cellSet->findIndex(volumeParticle.position);
+                if (newIdx < 0)
+                  break;
+
+                if (newIdx != volumeParticle.cellId) {
+                  volumeParticle.cellId = newIdx;
+                  auto fill = particle->collision(volumeParticle, RngState7,
+                                                  particleStack);
+                  path.addGridData(newIdx, fill);
+                }
+              }
             }
           }
 
@@ -220,6 +247,49 @@ public:
   }
 
 private:
+  bool checkBounds(const csTriple<T> &hitPoint) const {
+    const auto &min = cellSet->getCellGrid()->minimumExtent;
+    const auto &max = cellSet->getCellGrid()->maximumExtent;
+
+    return hitPoint[0] >= min[0] && hitPoint[0] <= max[0] &&
+           hitPoint[1] >= min[1] && hitPoint[1] <= max[1] &&
+           hitPoint[2] >= min[2] && hitPoint[2] <= max[2];
+  }
+
+  bool checkBoundsPeriodic(csTriple<T> &hitPoint) const {
+    const auto &min = cellSet->getCellGrid()->minimumExtent;
+    const auto &max = cellSet->getCellGrid()->maximumExtent;
+
+    if constexpr (D == 3) {
+      if (hitPoint[2] < min[2] || hitPoint[2] > max[2])
+        return false;
+
+      if (hitPoint[0] < min[0]) {
+        hitPoint[0] = max[0] - mGridDelta / 2.;
+      } else if (hitPoint[0] > max[0]) {
+        hitPoint[0] = min[0] + mGridDelta / 2.;
+      }
+
+      if (hitPoint[1] < min[1]) {
+        hitPoint[1] = max[1] - mGridDelta / 2.;
+      } else if (hitPoint[1] > max[1]) {
+        hitPoint[1] = min[1] + mGridDelta / 2.;
+      }
+    } else {
+      if (hitPoint[1] < min[1] || hitPoint[1] > max[1])
+        return false;
+
+      if (hitPoint[0] < min[0]) {
+        hitPoint[0] = max[0] - mGridDelta / 2.;
+      } else if (hitPoint[0] > max[0]) {
+        hitPoint[0] = min[0] + mGridDelta / 2.;
+      }
+    }
+
+    return true;
+  }
+
+private:
   RTCDevice &mDevice;
   rayGeometry<T, D> &mGeometry;
   rayBoundary<T, D> &mBoundary;
@@ -229,8 +299,7 @@ private:
   const bool mUseRandomSeeds;
   const size_t mRunNumber;
   lsSmartPointer<csDenseCellSet<T, D>> cellSet = nullptr;
-  const T step = 1.;
-  const bool traceOnPath = false;
+  const T mGridDelta = 0.;
   const int excludeMaterial = -1;
 
   void printProgress(size_t i) {

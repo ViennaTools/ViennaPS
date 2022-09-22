@@ -6,29 +6,25 @@
 #include <lsMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
-#include <set>
 
 #include <rayUtil.hpp>
 
-#include "csBVH.hpp"
-#include "csCellFiller.hpp"
-#include "csTracePath.hpp"
-#include "csUtil.hpp"
+#include <csBVH.hpp>
+#include <csTracePath.hpp>
+#include <csUtil.hpp>
 
 #define CS_PERIODIC_BOUNDARY true
 
 template <class T, int D> class csDenseCellSet {
 private:
-  using gridType = lsSmartPointer<lsMesh<>>;
+  using gridType = lsSmartPointer<lsMesh<T>>;
   using levelSetsType =
       lsSmartPointer<std::vector<lsSmartPointer<lsDomain<T, D>>>>;
 
-  lsSmartPointer<csCellFiller<T>> cellFiller = nullptr;
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
   lsSmartPointer<lsDomain<T, D>> surface = nullptr;
   lsSmartPointer<csBVH<T, D>> BVH = nullptr;
-  std::vector<std::set<unsigned>> neighborhood;
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
@@ -43,11 +39,6 @@ public:
                  bool passedCellSetPosition = false)
       : levelSets(passedLevelSets), cellSetAboveSurface(passedCellSetPosition) {
     fromLevelSets(passedLevelSets, passedDepth);
-  }
-
-  template <class CellFiller>
-  void setCellFiller(lsSmartPointer<CellFiller> passedCellFiller) {
-    cellFiller = std::dynamic_pointer_cast<csCellFiller<T>>(passedCellFiller);
   }
 
   void fromLevelSets(levelSetsType levelSets, T passedDepth = 0.) {
@@ -83,7 +74,7 @@ public:
     voxelConverter.apply();
 
     gridDelta = surface->getGrid().getGridDelta();
-    numberOfCells = cellGrid->getElements<(1 << D)>().size();
+    numberOfCells = cellGrid->template getElements<(1 << D)>().size();
 
     std::vector<T> fillingFractionsTemp(numberOfCells, 0.);
     cellGrid->getCellData().insertNextScalarData(
@@ -142,10 +133,7 @@ public:
     }
     BVH = lsSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
 
-    auto time = rayInternal::timeStampNow<std::chrono::microseconds>();
-    buildNeighborhoodAndBVH();
-    auto end = rayInternal::timeStampNow<std::chrono::microseconds>();
-    std::cout << "Time: " << (end - time) / 1e3 << " ms" << std::endl;
+    buildBVH();
   }
 
   csPair<std::array<T, D>> getBoundingBox() const {
@@ -163,6 +151,8 @@ public:
     cellGrid->getCellData().insertNextScalarData(newData, name);
   }
 
+  gridType getCellGrid() { return cellGrid; }
+
   lsSmartPointer<csBVH<T, D>> getBVH() const { return BVH; }
 
   T getDepth() const { return depth; }
@@ -174,14 +164,12 @@ public:
   }
 
   std::vector<std::array<unsigned, (1 << D)>> getElements() {
-    return cellGrid->getElements<(1 << D)>();
+    return cellGrid->template getElements<(1 << D)>();
   }
 
   levelSetsType getLevelSets() const { return levelSets; }
 
   size_t getNumberOfCells() const { return numberOfCells; }
-
-  std::set<unsigned> &getNeighbors(size_t idx) { return neighborhood[idx]; }
 
   std::vector<T> *getFillingFractions() const { return fillingFractions; }
 
@@ -281,7 +269,7 @@ public:
     }
     voxelConverter.apply();
 
-    if (numberOfCells != cellGrid->getElements<(1 << D)>().size()) {
+    if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
       std::cerr << "Removing cells when not allowed." << std::endl;
     }
 
@@ -310,7 +298,7 @@ public:
     voxelConverter.apply();
 
     auto cutMatIds = cutCellGrid->getCellData().getScalarData("Material");
-    auto &hexas = cellGrid->getElements<(1 << D)>();
+    auto &hexas = cellGrid->template getElements<(1 << D)>();
 
     const auto nCutCells = cutCellGrid->getElements<(1 << D)>().size();
 
@@ -331,145 +319,24 @@ public:
     }
     numberOfCells = hexas.size();
     surface->deepCopy(levelSets->back());
-    buildNeighborhoodAndBVH();
+    buildBVH();
   }
 
-  void traceArea(csTracePath<T> &path, const csTriple<T> &hitPoint,
-                 csTriple<T> direction, const T fillStart) {
-    auto &cells = cellGrid->getElements<(1 << D)>();
-    auto &nodes = cellGrid->getNodes();
-    auto materialIds = cellGrid->getCellData().getScalarData("Material");
+  int findIndex(const csTriple<T> &point) {
+    const auto &elems = cellGrid->template getElements<(1 << D)>();
+    const auto &nodes = cellGrid->getNodes();
+    int idx = -1;
 
-    const auto xExt = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
-    const auto yExt = cellGrid->maximumExtent[1] - cellGrid->minimumExtent[1];
-    const auto gd2 = gridDelta / 2.;
-
-    // normalize(direction);
-#ifdef ARCH_X86
-    __m128 SSEdirection =
-        _mm_set_ps(0.f, direction[2], direction[1], direction[0]);
-    SSEdirection = NormalizeAccurateSse(SSEdirection);
-    __m128 SSEhitpoint = _mm_set_ps(0.f, hitPoint[2], hitPoint[1], hitPoint[0]);
-
-    for (size_t idx = 0; idx < numberOfCells; idx++) {
-      T dist = std::numeric_limits<T>::max();
-      T normalDist = std::numeric_limits<T>::max();
-
-      if constexpr (CS_PERIODIC_BOUNDARY) {
-        for (int i = -1; i < 2; i++) {
-          for (int j = -1; j < 2; j++) {
-            float tmpDist, tmpNormalDist;
-
-            __m128 SSEpoint =
-                _mm_set_ps(0.f, nodes[cells[idx][0]][2] + gd2,
-                           nodes[cells[idx][0]][1] + j * yExt + gd2,
-                           nodes[cells[idx][0]][0] + i * xExt + gd2);
-
-            SSEpoint = _mm_sub_ps(SSEpoint, SSEhitpoint);
-            tmpNormalDist = DotProductSse(SSEpoint, SSEdirection);
-            tmpDist = NormSse(CrossProductSse(SSEpoint, SSEdirection));
-
-            if (tmpDist < dist) {
-              dist = tmpDist;
-              normalDist = tmpNormalDist;
-            }
-          }
-        }
-      } else {
-        const auto point = calcMidPoint(nodes[cells[idx][0]]);
-        pointLineDistance(normalDist, dist, point, hitPoint, direction);
-      }
-
-      auto fill = cellFiller->fillArea(idx, normalDist, dist, fillStart,
-                                       materialIds->at(idx));
-      path.addGridData(idx, fill);
-    }
-#else
-    std::cerr << "Only implemented in x86 architecture." << std::endl;
-#endif
-  }
-
-  void traceCascadePath(csTracePath<T> &path, csTriple<T> hitPoint,
-                        csTriple<T> direction, const T startEnergy,
-                        const T stepDistance, rayRNG &RNG) {
-
-    scaleToLength(direction, stepDistance);
-    T fill = 0.;
-    std::vector<Particle<T>> particleStack;
-
-    // find surface hitpoint
-    auto prevIdx = findIndex(hitPoint);
-    size_t sanityCounter = 0;
-    while (prevIdx < 0) {
-      add(hitPoint, direction);
-      if (++sanityCounter > 10 || !checkBoundsPeriodic(hitPoint)) {
-        return;
-      }
-      prevIdx = findIndex(hitPoint);
-    }
-
-    particleStack.emplace_back(
-        Particle<T>{hitPoint, direction, startEnergy, 0., prevIdx, 0});
-
-    while (!particleStack.empty()) {
-      auto particle = std::move(particleStack.back());
-      particleStack.pop_back();
-
-      // trace particle
-      while (particle.energy >= 0 && checkBoundsPeriodic(particle.position)) {
-        auto newIdx = findIndexNearPrevious(particle.position, particle.cellId);
-
-        if (newIdx != particle.cellId && newIdx >= 0) {
-          particle.cellId = newIdx;
-          fill =
-              cellFiller->cascade(particle, stepDistance, RNG, particleStack);
-          path.addGridData(newIdx, fill);
-          particle.distance = 0.; // reset particle distance
-        }
-        add(particle.position, particle.direction);
-        particle.distance += stepDistance;
+    auto cellIds = BVH->getCellIds(point);
+    if (!cellIds)
+      return idx;
+    for (const auto cellId : *cellIds) {
+      if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
+        idx = cellId;
+        break;
       }
     }
-  }
-
-  void traceCascadeCollision(csTracePath<T> &path, csTriple<T> hitPoint,
-                             csTriple<T> direction, const T startEnergy,
-                             const T meanFreePath, const T meanFreePathStdDev,
-                             rayRNG &RNG) {
-    T fill = 0.;
-    T dist;
-    std::vector<Particle<T>> particleStack;
-    std::normal_distribution<T> normalDist{meanFreePath, meanFreePathStdDev};
-
-    particleStack.emplace_back(
-        Particle<T>{hitPoint, direction, startEnergy, 0., -1, 0});
-
-    while (!particleStack.empty()) {
-      auto particle = std::move(particleStack.back());
-      particleStack.pop_back();
-
-      // trace particle
-      while (particle.energy >= 0) {
-        particle.distance = -1;
-        while (particle.distance < 0)
-          particle.distance = normalDist(RNG);
-        auto travelDist = multNew(particle.direction, particle.distance);
-        add(particle.position, travelDist);
-
-        if (!checkBoundsPeriodic(particle.position))
-          break;
-
-        auto newIdx = findIndex(particle.position);
-        if (newIdx < 0)
-          break;
-
-        if (newIdx != particle.cellId) {
-          particle.cellId = newIdx;
-          fill = cellFiller->collision(particle, RNG, particleStack);
-          path.addGridData(newIdx, fill);
-        }
-      }
-    }
+    return idx;
   }
 
   void mergePath(csTracePath<T> &path, T factor = 1.) {
@@ -509,98 +376,6 @@ private:
     return idx;
   }
 
-  void pointLineDistance(T &normalDist, T &dist, csTriple<T> &point,
-                         const csTriple<T> &lineStart,
-                         const csTriple<T> &lineDirection) {
-    sub(point, lineStart);
-    normalDist = dot(point, lineDirection);
-    dist = norm(crossProd(point, lineDirection));
-    // // projected distance on line
-    // multAdd(tmp, lineDirection, lineStart,
-    //         normalDist); // tmp = dir * normDist + hit
-    // dist = distance(tmp, point);
-  }
-
-  bool checkBounds(const csTriple<T> &hitPoint) const {
-    const auto &min = cellGrid->minimumExtent;
-    const auto &max = cellGrid->maximumExtent;
-
-    return hitPoint[0] >= min[0] && hitPoint[0] <= max[0] &&
-           hitPoint[1] >= min[1] && hitPoint[1] <= max[1] &&
-           hitPoint[2] >= min[2] && hitPoint[2] <= max[2];
-  }
-
-  bool checkBoundsPeriodic(csTriple<T> &hitPoint) const {
-    const auto &min = cellGrid->minimumExtent;
-    const auto &max = cellGrid->maximumExtent;
-
-    if constexpr (D == 3) {
-      if (hitPoint[2] < min[2] || hitPoint[2] > max[2])
-        return false;
-
-      if (hitPoint[0] < min[0]) {
-        hitPoint[0] = max[0] - gridDelta / 2.;
-      } else if (hitPoint[0] > max[0]) {
-        hitPoint[0] = min[0] + gridDelta / 2.;
-      }
-
-      if (hitPoint[1] < min[1]) {
-        hitPoint[1] = max[1] - gridDelta / 2.;
-      } else if (hitPoint[1] > max[1]) {
-        hitPoint[1] = min[1] + gridDelta / 2.;
-      }
-    } else {
-      if (hitPoint[1] < min[1] || hitPoint[1] > max[1])
-        return false;
-
-      if (hitPoint[0] < min[0]) {
-        hitPoint[0] = max[0] - gridDelta / 2.;
-      } else if (hitPoint[0] > max[0]) {
-        hitPoint[0] = min[0] + gridDelta / 2.;
-      }
-    }
-
-    return true;
-  }
-
-  int findIndexNearPrevious(const csTriple<T> &point, int prevIdx) {
-    auto &cells = cellGrid->getElements<(1 << D)>();
-    auto &nodes = cellGrid->getNodes();
-    auto ff = getFillingFractions();
-
-    int idx = -1;
-
-    // search in neighborhood of previous index
-    for (const auto &i : neighborhood[prevIdx]) {
-      if (isInsideVoxel(point, nodes[cells[i][0]])) {
-        idx = i;
-        break;
-      }
-    }
-
-    if (idx != -1)
-      return idx;
-
-    return findIndex(point);
-  }
-
-  int findIndex(const csTriple<T> &point) {
-    auto &elems = cellGrid->getElements<(1 << D)>();
-    auto &nodes = cellGrid->getNodes();
-    int idx = -1;
-
-    auto cellIds = BVH->getCellIds(point);
-    if (!cellIds)
-      return idx;
-    for (const auto cellId : *cellIds) {
-      if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
-        idx = cellId;
-        break;
-      }
-    }
-    return idx;
-  }
-
   bool isInsideVoxel(const csTriple<T> &point, const csTriple<T> &cellMin) {
     if constexpr (D == 3)
       return point[0] >= cellMin[0] && point[0] <= (cellMin[0] + gridDelta) &&
@@ -611,56 +386,17 @@ private:
              point[1] >= cellMin[1] && point[1] <= (cellMin[1] + gridDelta);
   }
 
-  void buildNeighborhoodAndBVH() {
-    auto &elems = cellGrid->getElements<(1 << D)>();
+  void buildBVH() {
+    auto &elems = cellGrid->template getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
-
-    // std::vector<std::vector<unsigned>> nodeElemConnections(nodes.size());
-    neighborhood.clear();
-    neighborhood.resize(elems.size());
     BVH->clearCellIds();
 
     for (size_t elemIdx = 0; elemIdx < elems.size(); elemIdx++) {
       for (size_t n = 0; n < (1 << D); n++) {
-        // nodeElemConnections[elems[elemIdx][n]].push_back(elemIdx);
         auto &node = nodes[elems[elemIdx][n]];
         BVH->getCellIds(node)->insert(elemIdx);
       }
     }
-
-#pragma omp parallel for
-    for (size_t elemIdx = 0; elemIdx < elems.size(); elemIdx++) {
-      for (int i = 0; i < D; i++) {
-        auto mid = calcMidPoint(nodes[elems[elemIdx][0]]);
-        mid[i] -= gridDelta;
-        auto elemId = findIndex(mid);
-        if (elemId >= 0)
-          neighborhood[elemIdx].insert(elemId);
-
-        mid[i] += 2 * gridDelta;
-        elemId = findIndex(mid);
-        if (elemId >= 0)
-          neighborhood[elemIdx].insert(elemId);
-      }
-    }
-
-    // for (size_t nodeIdx = 0; nodeIdx < nodes.size(); nodeIdx++) {
-    //   for (size_t elemInsertIdx = 0;
-    //        elemInsertIdx < nodeElemConnections[nodeIdx].size();
-    //        elemInsertIdx++) {
-    //     for (size_t elemIdx = 0; elemIdx <
-    //     nodeElemConnections[nodeIdx].size();
-    //          elemIdx++) {
-    //       neighborhood[nodeElemConnections[nodeIdx][elemInsertIdx]].insert(
-    //           nodeElemConnections[nodeIdx][elemIdx]);
-    //     }
-    //   }
-    // }
-  }
-
-  inline csTriple<T> calcMidPoint(const csTriple<T> &minNode) {
-    return csTriple<T>{minNode[0] + gridDelta / 2., minNode[1] + gridDelta / 2.,
-                       minNode[2] + gridDelta / 2.};
   }
 };
 
