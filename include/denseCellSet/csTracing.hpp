@@ -1,17 +1,17 @@
 #pragma once
 
 #include <embree3/rtcore.h>
-#include <lsSmartPointer.hpp>
+
+#include <csDenseCellSet.hpp>
+#include <csTracingKernel.hpp>
+#include <csTracingParticle.hpp>
+
 #include <lsToDiskMesh.hpp>
 
 #include <rayGeometry.hpp>
 #include <rayParticle.hpp>
 #include <raySourceRandom.hpp>
 #include <rayUtil.hpp>
-
-#include <csDenseCellSet.hpp>
-#include <csTracingKernel.hpp>
-#include <csTracingParticle.hpp>
 
 template <class T, int D> class csTracing {
 private:

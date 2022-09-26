@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lsSmartPointer.hpp>
+
 #include <rayBoundary.hpp>
 #include <rayGeometry.hpp>
 #include <rayRNG.hpp>

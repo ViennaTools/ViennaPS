@@ -1,6 +1,10 @@
 #ifndef DENSE_CELL_SET
 #define DENSE_CELL_SET
 
+#include <csBVH.hpp>
+#include <csTracePath.hpp>
+#include <csUtil.hpp>
+
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
@@ -9,12 +13,9 @@
 
 #include <rayUtil.hpp>
 
-#include <csBVH.hpp>
-#include <csTracePath.hpp>
-#include <csUtil.hpp>
-
-#define CS_PERIODIC_BOUNDARY true
-
+/**
+  This class represents a cell-based voxel implementation of a volume.
+*/
 template <class T, int D> class csDenseCellSet {
 private:
   using gridType = lsSmartPointer<lsMesh<T>>;
