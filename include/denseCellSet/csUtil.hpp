@@ -13,7 +13,7 @@ template <typename T> using csPair = std::array<T, 2>;
 
 template <typename T> using csTriple = std::array<T, 3>;
 
-template <typename T> struct Particle {
+template <typename T> struct csVolumeParticle {
   csTriple<T> position;
   csTriple<T> direction;
   T energy;

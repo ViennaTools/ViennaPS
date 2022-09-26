@@ -46,7 +46,9 @@ set(
     "${VIENNALS_INCLUDE_DIRS}" 
     "${VIENNARAY_INCLUDE_DIRS}"
     "${${PROJECT_NAME}_SOURCE_DIR}/include" 
-    "${${PROJECT_NAME}_SOURCE_DIR}/include/cellSet" 
+    "${${PROJECT_NAME}_SOURCE_DIR}/include/denseCellSet" 
+    "${${PROJECT_NAME}_SOURCE_DIR}/include/Models" 
+    "${${PROJECT_NAME}_SOURCE_DIR}/include/Geometries" 
     )
 
 

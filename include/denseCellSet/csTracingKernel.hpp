@@ -168,12 +168,12 @@ public:
           if (mGeometry.getMaterialId(rayHit.hit.primID) != excludeMaterial) {
             // trace in cell set
             auto hitPoint = std::array<T, 3>{xx, yy, zz};
-            std::vector<Particle<T>> particleStack;
+            std::vector<csVolumeParticle<T>> particleStack;
             std::normal_distribution<T> normalDist{meanFreePath[0],
                                                    meanFreePath[1]};
 
-            particleStack.emplace_back(
-                Particle<T>{hitPoint, rayDir, fillnDirection.first, 0., -1, 0});
+            particleStack.emplace_back(csVolumeParticle<T>{
+                hitPoint, rayDir, fillnDirection.first, 0., -1, 0});
 
             while (!particleStack.empty()) {
               auto volumeParticle = std::move(particleStack.back());

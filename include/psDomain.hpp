@@ -39,23 +39,23 @@ public:
     }
   }
 
-  psDomain(lsDomainType passedLevelSet, bool passedUseCellSet = false)
-      : useCellSet(passedUseCellSet) {
+  psDomain(lsDomainType passedLevelSet, bool passedUseCellSet = false,
+           const NumericType passedDepth = 0.)
+      : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
     levelSets = lsDomainsType::New();
     levelSets->push_back(passedLevelSet);
     // generate CellSet
     if (useCellSet) {
-      cellSet = csDomainType::New(levelSets);
+      cellSet = csDomainType::New(levelSets, cellSetDepth);
     }
   }
 
   psDomain(lsDomainsType passedLevelSets, bool passedUseCellSet = false,
            const NumericType passedDepth = 0.)
-      : useCellSet(passedUseCellSet) {
+      : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
     levelSets = passedLevelSets;
     // generate CellSet
     if (useCellSet) {
-      cellSetDepth = passedDepth;
       cellSet = csDomainType::New(levelSets, cellSetDepth);
     }
   }
@@ -115,6 +115,13 @@ public:
     lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
 
     lsVTKWriter<NumericType>(mesh, name).apply();
+  }
+
+  void clear() {
+    levelSets = lsDomainsType::New();
+    if (useCellSet) {
+      cellSet = csDomainType::New();
+    }
   }
 };
 

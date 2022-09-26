@@ -202,6 +202,73 @@ public:
     }
   }
 
+  T collision(csVolumeParticle<T> &particle, rayRNG &RNG,
+              std::vector<csVolumeParticle<T>> &particleStack) override final {
+    T fill = 0.;
+
+    // inelastic losses through electrons (stopping power)
+    particle.energy *=
+        std::pow(nonLocalLosses, particle.distance * scaleFactor);
+
+    if (particle.energy < displacementEnergyThreshold) {
+      particle.energy = -1;
+      return fill;
+    }
+
+    int numParticles = 0;
+    if (particle.scattered < maxScatter) {
+      std::uniform_int_distribution<> particleDist(1, maxScatter -
+                                                          particle.scattered);
+      numParticles = particleDist(RNG);
+    }
+
+    for (int i = 0; i < numParticles; i++) {
+      T cosTheta, tmp, sinThetaSqr;
+      csTriple<T> direction;
+      do {
+        // random direction
+        direction[0] = uniDist(RNG);
+        direction[1] = uniDist(RNG);
+        direction[2] = uniDist(RNG);
+
+        // normalize
+        tmp = norm(direction);
+        mult(direction, 1. / tmp);
+
+        // cos(angle)
+        cosTheta = dot(particle.direction, direction);
+        // sin(angle)^2
+        sinThetaSqr = 1 - cosTheta * cosTheta;
+      } while (sinThetaSqr < mu * mu);
+
+      // energy of scattered ion
+      tmp = particle.energy *
+            (cosTheta + std::sqrt(sinThetaSqr - mu * mu) * pre_fac) *
+            (cosTheta + std::sqrt(sinThetaSqr - mu * mu) * pre_fac);
+
+      // create new ion
+      if (tmp > displacementEnergyThreshold) {
+        particleStack.emplace_back(
+            csVolumeParticle<T>{particle.position, direction, tmp, 0.,
+                                particle.cellId, particle.scattered - 1});
+      }
+
+      // energy transferred to atom (damage)
+      tmp = particle.energy - tmp;
+      if (tmp >= displacementEnergyThreshold) {
+        // Kinchin-Pease damage model
+        if (tmp < 2 * displacementEnergyThreshold / 0.8)
+          fill += 1;
+        else
+          fill += 0.8 * tmp / (2 * displacementEnergyThreshold);
+      }
+    }
+
+    particle.energy = -1; // kill current particle
+
+    return fill;
+  }
+
   T getSourceDistributionPower() const override final { return 1000.; }
   csPair<T> getMeanFreePath() const override final {
     return {meanFreePath, meanFreePath / 2.};
@@ -239,6 +306,16 @@ private:
   // T f_O_theta;
   // T f_SiO2_theta;
   T E;
+
+  std::uniform_real_distribution<T> uniDist =
+      std::uniform_real_distribution<T>(-1., 1.);
+
+  const T nonLocalLosses = 0.9;
+  const int maxScatter = 10;
+  static constexpr T scaleFactor = 1.;
+  static constexpr T displacementEnergyThreshold = 15;
+  static constexpr T mu = 28.0855 / 39.948;
+  static constexpr T pre_fac = (1. / (1. + mu));
 };
 
 template <typename NumericType, int D>

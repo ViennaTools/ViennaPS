@@ -287,8 +287,11 @@ public:
     lsToVoxelMesh<T, D> voxelConverter(cutCellGrid);
     if (depth != 0.) {
       auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
-      T origin[D] = {0., 0., depth};
-      T normal[D] = {0., 0., 1.};
+      T origin[D] = {0.};
+      T normal[D] = {0.};
+      origin[D - 1] = depth;
+      normal[D - 1] = 1.;
+
       lsMakeGeometry<T, D>(plane,
                            lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
