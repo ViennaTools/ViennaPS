@@ -175,7 +175,6 @@ public:
           model->getSurfaceModel()->updateCoverages(Rates);
           coveragesInitialized = true;
 #ifdef VIENNAPS_VERBOSE
-          diskMesh->getCellData().clear();
           auto coverages = model->getSurfaceModel()->getCoverages();
           for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
             auto label = coverages->getScalarDataLabel(idx);
@@ -262,7 +261,6 @@ public:
       model->getVelocityField()->setVelocities(velocitites);
 
 #ifdef VIENNAPS_VERBOSE
-      diskMesh->getCellData().clear();
       diskMesh->getCellData().insertNextScalarData(*velocitites, "velocities");
       if (useCoverages) {
         auto coverages = model->getSurfaceModel()->getCoverages();

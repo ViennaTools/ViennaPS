@@ -3,11 +3,7 @@
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
-#include <lsToSurfaceMesh.hpp>
-#include <lsVTKWriter.hpp>
-#include <lsWriteVisualizationMesh.hpp>
 #include <psDomain.hpp>
-#include <string>
 
 template <class NumericType, int D> class psMakeFin {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
