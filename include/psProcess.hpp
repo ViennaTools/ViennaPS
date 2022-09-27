@@ -404,7 +404,8 @@ private:
   psDomainType domain = nullptr;
   psSmartPointer<psProcessModel<NumericType, D>> model = nullptr;
   NumericType processDuration;
-  rayTraceDirection sourceDirection;
+  rayTraceDirection sourceDirection =
+      D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
   size_t maxIterations = 20;
