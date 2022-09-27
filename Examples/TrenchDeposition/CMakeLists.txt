@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.4)
 
-project("Example_process")
+project("TrenchDeposition")
 
 add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})

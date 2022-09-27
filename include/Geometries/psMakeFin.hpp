@@ -38,8 +38,8 @@ public:
                               yExtent,  -gridDelta, finHeight + gridDelta};
 
       typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
-          lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY,
-          lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY,
+          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
+          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
 
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
@@ -68,7 +68,7 @@ public:
                               finHeight + gridDelta};
 
       typename lsDomain<NumericType, D>::BoundaryType boundaryCons[2] = {
-          lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY,
+          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
 
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);

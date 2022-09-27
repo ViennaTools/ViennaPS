@@ -56,7 +56,7 @@ public:
 
     for (int i = 0; i < D - 1; i++)
       boundaryCons[i] =
-          lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 

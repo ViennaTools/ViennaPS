@@ -24,8 +24,6 @@ public:
 template <class T>
 class SimpleDepositionVelocityField : public psVelocityField<T> {
 public:
-  SimpleDepositionVelocityField(const int maskId) : maskMaterial(maskId) {}
-
   T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int /*material*/,
                       const std::array<T, 3> & /*normalVector*/,
                       unsigned long pointID) override {
@@ -101,8 +99,7 @@ public:
 
     // velocity field
     auto velField =
-        psSmartPointer<SimpleDepositionVelocityField<NumericType>>::New(
-            maskMaterial);
+        psSmartPointer<SimpleDepositionVelocityField<NumericType>>::New();
 
     processModel->setSurfaceModel(surfModel);
     processModel->setVelocityField(velField);

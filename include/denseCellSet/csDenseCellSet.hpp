@@ -282,7 +282,7 @@ public:
   }
 
   void updateSurface() {
-    auto cutCellGrid = lsSmartPointer<lsMesh<>>::New();
+    auto cutCellGrid = lsSmartPointer<lsMesh<T>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(cutCellGrid);
     if (depth != 0.) {
@@ -304,7 +304,7 @@ public:
     auto cutMatIds = cutCellGrid->getCellData().getScalarData("Material");
     auto &hexas = cellGrid->template getElements<(1 << D)>();
 
-    const auto nCutCells = cutCellGrid->getElements<(1 << D)>().size();
+    const auto nCutCells = cutCellGrid->template getElements<(1 << D)>().size();
 
     size_t offset = 0;
     if (numberOfCells > nCutCells)
