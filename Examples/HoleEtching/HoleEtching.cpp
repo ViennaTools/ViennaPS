@@ -16,8 +16,7 @@ int main(int argc, char *argv[]) {
 
   SF6O2Etching<NumericType, D> model(
       2e16 /*ion flux*/, 4.5e18 /*etchant flux*/, 1.e18 /*oxygen flux*/,
-      100 /*mean ion energy (eV)*/, 0 /*mask material ID*/,
-      false /*apply plasma damage model*/);
+      100 /*mean ion energy (eV)*/, 0 /*mask material ID*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);

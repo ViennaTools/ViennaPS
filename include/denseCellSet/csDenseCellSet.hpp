@@ -42,7 +42,8 @@ public:
     fromLevelSets(passedLevelSets, passedDepth);
   }
 
-  void fromLevelSets(levelSetsType levelSets, T passedDepth = 0.) {
+  void fromLevelSets(levelSetsType passedLevelSets, T passedDepth = 0.) {
+    levelSets = passedLevelSets;
 
     if (cellGrid == nullptr)
       cellGrid = lsSmartPointer<lsMesh<>>::New();

@@ -4,6 +4,7 @@
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
+#include <lsMessage.hpp>
 #include <lsToDiskMesh.hpp>
 
 #include <psDomain.hpp>
@@ -49,6 +50,26 @@ public:
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
+    if (processDuration == 0.) {
+      // apply only volume model
+      if (model->getVolumeModel()) {
+        model->getVolumeModel()->setDomain(domain);
+        model->getVolumeModel()->applyPreAdvect(0);
+      } else {
+        lsMessage::getInstance()
+            .addWarning("No volume model passed to psProcess.")
+            .print();
+      }
+      return;
+    }
+
+    if (!model->getSurfaceModel()) {
+      lsMessage::getInstance()
+          .addWarning("No surface model passed to psProcess.")
+          .print();
+      return;
+    }
+
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
@@ -98,7 +119,8 @@ public:
     }
 
     // Determine whether there are process parameters used in ray tracing
-    model->getSurfaceModel()->initializeProcessParameters();
+    if (model->getSurfaceModel())
+      model->getSurfaceModel()->initializeProcessParameters();
     const bool useProcessParams =
         model->getSurfaceModel()->getProcessParameters() != nullptr;
 
@@ -110,6 +132,7 @@ public:
 #endif
 
     bool useCoverages = false;
+
     // Initialize coverages
     meshConverter.apply();
     auto numPoints = diskMesh->getNodes().size();

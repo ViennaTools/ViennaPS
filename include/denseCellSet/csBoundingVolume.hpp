@@ -4,6 +4,8 @@
 
 #include <csUtil.hpp>
 
+#include <lsSmartPointer.hpp>
+
 template <class T, int D> class csBoundingVolume {
 private:
   using BVPtrType = lsSmartPointer<csBoundingVolume<T, D>>;
