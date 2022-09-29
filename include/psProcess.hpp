@@ -4,6 +4,7 @@
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
+#include <lsMessage.hpp>
 #include <lsToDiskMesh.hpp>
 
 #include <psDomain.hpp>
@@ -49,6 +50,26 @@ public:
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
+    if (processDuration == 0.) {
+      // apply only volume model
+      if (model->getVolumeModel()) {
+        model->getVolumeModel()->setDomain(domain);
+        model->getVolumeModel()->applyPreAdvect(0);
+      } else {
+        lsMessage::getInstance()
+            .addWarning("No volume model passed to psProcess.")
+            .print();
+      }
+      return;
+    }
+
+    if (!model->getSurfaceModel()) {
+      lsMessage::getInstance()
+          .addWarning("No surface model passed to psProcess.")
+          .print();
+      return;
+    }
+
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
@@ -98,7 +119,8 @@ public:
     }
 
     // Determine whether there are process parameters used in ray tracing
-    model->getSurfaceModel()->initializeProcessParameters();
+    if (model->getSurfaceModel())
+      model->getSurfaceModel()->initializeProcessParameters();
     const bool useProcessParams =
         model->getSurfaceModel()->getProcessParameters() != nullptr;
 
@@ -110,6 +132,7 @@ public:
 #endif
 
     bool useCoverages = false;
+
     // Initialize coverages
     meshConverter.apply();
     auto numPoints = diskMesh->getNodes().size();
@@ -175,7 +198,6 @@ public:
           model->getSurfaceModel()->updateCoverages(Rates);
           coveragesInitialized = true;
 #ifdef VIENNAPS_VERBOSE
-          diskMesh->getCellData().clear();
           auto coverages = model->getSurfaceModel()->getCoverages();
           for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
             auto label = coverages->getScalarDataLabel(idx);
@@ -190,8 +212,9 @@ public:
           printDiskMesh(diskMesh, name + "_covIinit_" +
                                       std::to_string(iterations) + ".vtp");
           std::cerr << "\r"
-                    << "Iteration: " << iterations << " / " << maxIterations;
-          if (iterations == maxIterations)
+                    << "Iteration: " << iterations + 1 << " / "
+                    << maxIterations;
+          if (iterations == maxIterations - 1)
             std::cerr << std::endl;
 #endif
         }
@@ -262,7 +285,6 @@ public:
       model->getVelocityField()->setVelocities(velocitites);
 
 #ifdef VIENNAPS_VERBOSE
-      diskMesh->getCellData().clear();
       diskMesh->getCellData().insertNextScalarData(*velocitites, "velocities");
       if (useCoverages) {
         auto coverages = model->getSurfaceModel()->getCoverages();
@@ -406,7 +428,8 @@ private:
   psDomainType domain = nullptr;
   psSmartPointer<psProcessModel<NumericType, D>> model = nullptr;
   NumericType processDuration;
-  rayTraceDirection sourceDirection;
+  rayTraceDirection sourceDirection =
+      D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
   size_t maxIterations = 20;

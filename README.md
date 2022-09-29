@@ -6,7 +6,7 @@ IMPORTANT NOTE: ViennaPS is under heavy development and improved daily. If you d
 
 ## Support
 
-<!-- [Documentation](https://viennatools.github.io/ViennaPS/doxygen/html/index.html) and [Examples](https://viennatools.github.io/ViennaPS/doxygen/html/examples.html) can be found online. -->
+Basic [Examples](https://github.com/ViennaTools/ViennaPS/tree/master/Examples) can be found online. 
 
 Bug reports and suggestions should be filed on GitHub.
 
@@ -26,9 +26,9 @@ Releases are tagged on the master branch and available in the [releases section]
 
 ### System Requirements
 
-* C++ Compiler with OpenMP support
+* C++17 Compiler with OpenMP support
 
-* [ViennaHRLE](https://github.com/ViennaTools/viennahrle)
+### Dependencies (installed automatically)
 
 * [ViennaLS](https://github.com/ViennaTools/viennals)
 
@@ -44,7 +44,7 @@ Have a look at the [example repo](https://github.com/ViennaTools/viennals-exampl
 Since this is a header only project, it does not require any installation.
 However, we recommend the following procedure.
 
-Make sure you have [ViennaHRLE](https://github.com/ViennaTools/viennahrle), [ViennaLS](https://github.com/ViennaTools/viennals) and [ViennaRay](https://github.com/ViennaTools/ViennaRay) installed on your system and run:
+Make sure you have [ViennaLS](https://github.com/ViennaTools/viennals) and [ViennaRay](https://github.com/ViennaTools/ViennaRay) installed on your system and run:
 
 ```
 git clone github.com/ViennaTools/ViennaPS.git
@@ -80,7 +80,7 @@ cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON
 make
 ```
 
-### Building test
+<!-- ### Building test
 
 The tests can be built using CMake:
 
@@ -88,7 +88,7 @@ The tests can be built using CMake:
 mkdir build && cd build
 cmake .. -DVIENNAPS_BUILD_TESTS=ON
 make
-```
+``` -->
 
 ## Contributing
 
@@ -96,7 +96,7 @@ If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guid
 
 ## Authors
 
-Current contributors: Tobias Reiter, Josip Bobinac, Xaver Klemenschits
+Current contributors: Tobias Reiter, Josip Bobinac, Xaver Klemenschits, Julius Piso
 
 Contact us via: viennatools@iue.tuwien.ac.at
 

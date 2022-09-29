@@ -1,29 +1,18 @@
 #include <lsMakeGeometry.hpp>
-#include <lsToSurfaceMesh.hpp>
+
+#include <psMakeHole.hpp>
 #include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
+#include <psToSurfaceMesh.hpp>
 #include <psVTKWriter.hpp>
-#include <rayTracingData.hpp>
 
-#include "particles.hpp"
-#include "surfaceModel.hpp"
-#include "velocityField.hpp"
-
-class myCellType : public cellBase {
-  using cellBase::cellBase;
-};
-
-template <typename T, int D>
-void printLS(lsSmartPointer<lsDomain<T, D>> dom, std::string name) {
-  auto mesh = lsSmartPointer<lsMesh<T>>::New();
-  lsToSurfaceMesh<T, D>(dom, mesh).apply();
-  lsVTKWriter<T>(mesh, name).apply();
-}
+#include "Particles.hpp"
+#include "SurfaceModel.hpp"
+#include "VelocityField.hpp"
 
 int main() {
-  omp_set_num_threads(8);
   using NumericType = double;
   constexpr int D = 3;
 
@@ -31,13 +20,12 @@ int main() {
   auto particle = std::make_unique<Particle<NumericType, D>>();
 
   // surface model
-  auto surfModel = psSmartPointer<surfaceModel<NumericType>>::New();
+  auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = psSmartPointer<velocityField<NumericType>>::New();
+  auto velField = psSmartPointer<VelocityField<NumericType>>::New();
 
   /* ------------- Geometry setup ------------ */
-  // domain
   NumericType extent = 8;
   NumericType gridDelta = 0.5;
   double bounds[2 * D] = {0};
@@ -53,32 +41,34 @@ int main() {
   auto plane = psSmartPointer<lsDomain<NumericType, D>>::New(
       bounds, boundaryCons, gridDelta);
   {
-    NumericType normal[3] = {0., 0., 1.};
+    NumericType normal[3] = {0.};
     NumericType origin[3] = {0.};
+    normal[D - 1] = 1.;
     lsMakeGeometry<NumericType, D>(
         plane, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
   }
-  auto domain =
-      psSmartPointer<psDomain<myCellType, NumericType, D>>::New(plane);
+  auto domain = psSmartPointer<psDomain<NumericType, D>>::New(plane);
 
-  auto model = psSmartPointer<psProcessModel<NumericType>>::New();
+  auto model = psSmartPointer<psProcessModel<NumericType, D>>::New();
   model->insertNextParticleType(particle);
   model->setSurfaceModel(surfModel);
   model->setVelocityField(velField);
-  model->setProcessName("Example_process");
+  model->setProcessName("ExampleProcess");
 
-  psProcess<myCellType, NumericType, D> process;
+  psProcess<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
-  process.setSourceDirection(rayTraceDirection::POS_Z);
-  process.setProcessDuration(50);
+  process.setSourceDirection(D == 3 ? rayTraceDirection::POS_Z
+                                    : rayTraceDirection::POS_Y);
+  process.setProcessDuration(5);
+  process.setMaxCoverageInitIterations(10);
   process.apply();
 
   auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-  lsToSurfaceMesh<NumericType, D>(plane, mesh).apply();
+  psToSurfaceMesh<NumericType, D>(domain, mesh).apply();
 
-  psVTKWriter<NumericType>(mesh, "example.vtp").apply();
+  psVTKWriter<NumericType>(mesh, "ExampleProcess.vtp").apply();
 
   return 0;
 }

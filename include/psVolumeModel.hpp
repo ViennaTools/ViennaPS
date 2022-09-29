@@ -11,7 +11,7 @@ protected:
   csTracing<NumericType, D> tracer;
 
 public:
-  void setDomain(psSmartPointer<psDomain<NumericType, 3>> passedDomain) {
+  void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }
 

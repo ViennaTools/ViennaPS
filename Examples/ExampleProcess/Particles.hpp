@@ -16,8 +16,6 @@ public:
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
     // collect data for this hit
-    assert(primID < localData.getVectorData(0).size() && "id out of bounds");
-
     localData.getVectorData(0)[primID] += rayWeight * stickingProbability;
   }
   std::pair<NumericType, rayTriple<NumericType>>

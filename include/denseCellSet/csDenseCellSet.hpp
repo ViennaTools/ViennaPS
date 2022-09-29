@@ -1,6 +1,10 @@
 #ifndef DENSE_CELL_SET
 #define DENSE_CELL_SET
 
+#include <csBVH.hpp>
+#include <csTracePath.hpp>
+#include <csUtil.hpp>
+
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
@@ -9,12 +13,9 @@
 
 #include <rayUtil.hpp>
 
-#include <csBVH.hpp>
-#include <csTracePath.hpp>
-#include <csUtil.hpp>
-
-#define CS_PERIODIC_BOUNDARY true
-
+/**
+  This class represents a cell-based voxel implementation of a volume.
+*/
 template <class T, int D> class csDenseCellSet {
 private:
   using gridType = lsSmartPointer<lsMesh<T>>;
@@ -41,7 +42,8 @@ public:
     fromLevelSets(passedLevelSets, passedDepth);
   }
 
-  void fromLevelSets(levelSetsType levelSets, T passedDepth = 0.) {
+  void fromLevelSets(levelSetsType passedLevelSets, T passedDepth = 0.) {
+    levelSets = passedLevelSets;
 
     if (cellGrid == nullptr)
       cellGrid = lsSmartPointer<lsMesh<>>::New();
@@ -281,13 +283,16 @@ public:
   }
 
   void updateSurface() {
-    auto cutCellGrid = lsSmartPointer<lsMesh<>>::New();
+    auto cutCellGrid = lsSmartPointer<lsMesh<T>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(cutCellGrid);
     if (depth != 0.) {
       auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
-      T origin[D] = {0., 0., depth};
-      T normal[D] = {0., 0., 1.};
+      T origin[D] = {0.};
+      T normal[D] = {0.};
+      origin[D - 1] = depth;
+      normal[D - 1] = 1.;
+
       lsMakeGeometry<T, D>(plane,
                            lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
@@ -300,7 +305,7 @@ public:
     auto cutMatIds = cutCellGrid->getCellData().getScalarData("Material");
     auto &hexas = cellGrid->template getElements<(1 << D)>();
 
-    const auto nCutCells = cutCellGrid->getElements<(1 << D)>().size();
+    const auto nCutCells = cutCellGrid->template getElements<(1 << D)>().size();
 
     size_t offset = 0;
     if (numberOfCells > nCutCells)

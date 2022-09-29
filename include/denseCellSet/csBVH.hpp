@@ -1,6 +1,7 @@
 #pragma once
 
 #include <csBoundingVolume.hpp>
+
 #include <lsSmartPointer.hpp>
 
 template <class T, int D> class csBVH {

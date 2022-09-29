@@ -1,6 +1,7 @@
 #pragma once
 
 #include <csUtil.hpp>
+
 #include <rayRNG.hpp>
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
@@ -17,8 +18,8 @@ public:
                                                 bool &reflect, rayRNG &Rng) = 0;
   virtual T getSourceDistributionPower() const = 0;
   virtual csPair<T> getMeanFreePath() const = 0;
-  virtual T collision(Particle<T> &particle, rayRNG &RNG,
-                      std::vector<Particle<T>> &particleStack) = 0;
+  virtual T collision(csVolumeParticle<T> &particle, rayRNG &RNG,
+                      std::vector<csVolumeParticle<T>> &particleStack) = 0;
 };
 
 template <typename Derived, typename T>
@@ -37,8 +38,8 @@ public:
   }
   virtual T getSourceDistributionPower() const override { return 1.; }
   virtual csPair<T> getMeanFreePath() const override { return {1., 1.}; }
-  virtual T collision(Particle<T> &particle, rayRNG &RNG,
-                      std::vector<Particle<T>> &particleStack) {
+  virtual T collision(csVolumeParticle<T> &particle, rayRNG &RNG,
+                      std::vector<csVolumeParticle<T>> &particleStack) {
     return 0.;
   }
 
