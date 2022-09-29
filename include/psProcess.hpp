@@ -212,8 +212,9 @@ public:
           printDiskMesh(diskMesh, name + "_covIinit_" +
                                       std::to_string(iterations) + ".vtp");
           std::cerr << "\r"
-                    << "Iteration: " << iterations << " / " << maxIterations;
-          if (iterations == maxIterations)
+                    << "Iteration: " << iterations + 1 << " / "
+                    << maxIterations;
+          if (iterations == maxIterations - 1)
             std::cerr << std::endl;
 #endif
         }

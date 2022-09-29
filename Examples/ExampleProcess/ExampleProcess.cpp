@@ -8,31 +8,22 @@
 #include <psToSurfaceMesh.hpp>
 #include <psVTKWriter.hpp>
 
-#include <rayTracingData.hpp>
-
-#include "particles.hpp"
-#include "surfaceModel.hpp"
-#include "velocityField.hpp"
-
-template <typename T, int D>
-void printLS(lsSmartPointer<lsDomain<T, D>> dom, std::string name) {
-  auto mesh = lsSmartPointer<lsMesh<T>>::New();
-  lsToSurfaceMesh<T, D>(dom, mesh).apply();
-  lsVTKWriter<T>(mesh, name).apply();
-}
+#include "Particles.hpp"
+#include "SurfaceModel.hpp"
+#include "VelocityField.hpp"
 
 int main() {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   // particles
   auto particle = std::make_unique<Particle<NumericType, D>>();
 
   // surface model
-  auto surfModel = psSmartPointer<surfaceModel<NumericType>>::New();
+  auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = psSmartPointer<velocityField<NumericType>>::New();
+  auto velField = psSmartPointer<VelocityField<NumericType>>::New();
 
   /* ------------- Geometry setup ------------ */
   NumericType extent = 8;
@@ -71,12 +62,13 @@ int main() {
   process.setSourceDirection(D == 3 ? rayTraceDirection::POS_Z
                                     : rayTraceDirection::POS_Y);
   process.setProcessDuration(5);
+  process.setMaxCoverageInitIterations(10);
   process.apply();
 
   auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
   psToSurfaceMesh<NumericType, D>(domain, mesh).apply();
 
-  psVTKWriter<NumericType>(mesh, "example.vtp").apply();
+  psVTKWriter<NumericType>(mesh, "ExampleProcess.vtp").apply();
 
   return 0;
 }
