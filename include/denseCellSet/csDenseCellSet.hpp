@@ -8,13 +8,15 @@
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
+#include <lsToMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 #include <rayUtil.hpp>
 
 /**
-  This class represents a cell-based voxel implementation of a volume.
+  This class represents a cell-based voxel implementation of a volume. The
+  depth of the cell set in z-direction can be specified.
 */
 template <class T, int D> class csDenseCellSet {
 private:
@@ -46,14 +48,22 @@ public:
     levelSets = passedLevelSets;
 
     if (cellGrid == nullptr)
-      cellGrid = lsSmartPointer<lsMesh<>>::New();
+      cellGrid = lsSmartPointer<lsMesh<T>>::New();
 
     if (surface == nullptr)
       surface = lsSmartPointer<lsDomain<T, D>>::New(levelSets->back());
     else
       surface->deepCopy(levelSets->back());
 
-    depth = passedDepth;
+    gridDelta = surface->getGrid().getGridDelta();
+    auto minBounds = surface->getGrid().getMinBounds();
+    auto maxBounds = surface->getGrid().getMaxBounds();
+
+    if (cellSetAboveSurface) {
+      depth = maxBounds[D - 1] * gridDelta + passedDepth - gridDelta;
+    } else {
+      depth = minBounds[D - 1] * gridDelta - passedDepth + gridDelta;
+    }
 
     lsToVoxelMesh<T, D> voxelConverter(cellGrid);
     auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
@@ -75,50 +85,31 @@ public:
     }
     voxelConverter.apply();
 
-    gridDelta = surface->getGrid().getGridDelta();
-    numberOfCells = cellGrid->template getElements<(1 << D)>().size();
+    if (!cellSetAboveSurface)
+      adjustMaterialIds();
 
+    numberOfCells = cellGrid->template getElements<(1 << D)>().size();
     std::vector<T> fillingFractionsTemp(numberOfCells, 0.);
     cellGrid->getCellData().insertNextScalarData(
         std::move(fillingFractionsTemp), "fillingFraction");
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
-    auto minBounds = surface->getGrid().getMinBounds();
-    auto maxBounds = surface->getGrid().getMaxBounds();
-
-    constexpr T eps = 1e-6;
-
+    constexpr T eps = 1e-4;
+    cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - eps;
+    cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + eps;
     if constexpr (D == 3) {
-      cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - gridDelta - eps;
-      cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - gridDelta - eps;
-
-      cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + gridDelta + eps;
-      cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + gridDelta + eps;
-
-      if (!cellSetAboveSurface && depth < 0) {
-        cellGrid->minimumExtent[2] = depth - gridDelta - eps;
-        cellGrid->maximumExtent[2] = maxBounds[2] * gridDelta + gridDelta + eps;
-      } else if (cellSetAboveSurface && depth > 0) {
-        cellGrid->minimumExtent[2] = minBounds[2] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[2] = depth + gridDelta + eps;
-      } else {
-        cellGrid->minimumExtent[2] = minBounds[2] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[2] = maxBounds[2] * gridDelta + gridDelta + eps;
-      }
-    } else {
-      cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - gridDelta - eps;
-      cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + gridDelta + eps;
-
-      if (!cellSetAboveSurface && depth < 0) {
-        cellGrid->minimumExtent[1] = depth - gridDelta - eps;
-        cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + gridDelta + eps;
-      } else if (cellSetAboveSurface && depth > 0) {
-        cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[1] = depth + gridDelta + eps;
-      } else {
-        cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + gridDelta + eps;
-      }
+      cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - eps;
+      cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + eps;
+    }
+    if (depth == 0.) {
+      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
+      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
+    } else if (!cellSetAboveSurface) {
+      cellGrid->minimumExtent[D - 1] = depth - gridDelta - eps;
+      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
+    } else if (cellSetAboveSurface) {
+      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
+      cellGrid->maximumExtent[D - 1] = depth + eps;
     }
 
     auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
@@ -134,7 +125,6 @@ public:
       minExtent /= 2;
     }
     BVH = lsSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
-
     buildBVH();
   }
 
@@ -202,6 +192,12 @@ public:
   bool setFillingFraction(const std::array<T, 3> &point, T fill) {
     auto idx = findIndex(point);
     return setFillingFraction(idx, fill);
+  }
+
+  // Set whether the cell set should be created below (false) or above (true)
+  // the surface.
+  void setCellSetPosition(const bool passedCellSetPosition) {
+    cellSetAboveSurface = passedCellSetPosition;
   }
 
   bool addFillingFraction(int idx, T fill) {
@@ -307,19 +303,15 @@ public:
 
     const auto nCutCells = cutCellGrid->template getElements<(1 << D)>().size();
 
-    size_t offset = 0;
-    if (numberOfCells > nCutCells)
-      offset = numberOfCells - nCutCells;
-
     auto numScalarData = cellGrid->getCellData().getScalarDataSize();
 
     for (int elIdx = nCutCells - 1; elIdx >= 0; elIdx--) {
       if (cutMatIds->at(elIdx) == 2) {
         for (int i = 0; i < numScalarData; i++) {
           auto data = cellGrid->getCellData().getScalarData(i);
-          data->erase(data->begin() + elIdx + offset);
+          data->erase(data->begin() + elIdx);
         }
-        hexas.erase(hexas.begin() + elIdx + offset);
+        hexas.erase(hexas.begin() + elIdx);
       }
     }
     numberOfCells = hexas.size();
@@ -361,6 +353,17 @@ public:
   }
 
 private:
+  void adjustMaterialIds() {
+    auto matIds = getScalarData("Material");
+
+#pragma omp parallel for
+    for (size_t i = 0; i < matIds->size(); i++) {
+      if (matIds->at(i) > 0) {
+        matIds->at(i) -= 1;
+      }
+    }
+  }
+
   int findSurfaceHitPoint(csTriple<T> &hitPoint, const csTriple<T> &direction) {
     // find surface hitpoint
     auto idx = findIndex(hitPoint);

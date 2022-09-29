@@ -40,23 +40,27 @@ public:
   }
 
   psDomain(lsDomainType passedLevelSet, bool passedUseCellSet = false,
-           const NumericType passedDepth = 0.)
+           const NumericType passedDepth = 0.,
+           const bool passedCellSetPosition = false)
       : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
     levelSets = lsDomainsType::New();
     levelSets->push_back(passedLevelSet);
     // generate CellSet
     if (useCellSet) {
-      cellSet = csDomainType::New(levelSets, cellSetDepth);
+      cellSet =
+          csDomainType::New(levelSets, cellSetDepth, passedCellSetPosition);
     }
   }
 
   psDomain(lsDomainsType passedLevelSets, bool passedUseCellSet = false,
-           const NumericType passedDepth = 0.)
+           const NumericType passedDepth = 0.,
+           const bool passedCellSetPosition = false)
       : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
     levelSets = passedLevelSets;
     // generate CellSet
     if (useCellSet) {
-      cellSet = csDomainType::New(levelSets, cellSetDepth);
+      cellSet =
+          csDomainType::New(levelSets, cellSetDepth, passedCellSetPosition);
     }
   }
 
@@ -82,12 +86,14 @@ public:
     levelSets->push_back(passedLevelSet);
   }
 
-  void generateCellSet(const NumericType depth = 0.) {
+  void generateCellSet(const NumericType depth = 0.,
+                       const bool passedCellSetPosition = false) {
     useCellSet = true;
     cellSetDepth = depth;
     if (cellSet == nullptr) {
       cellSet = csDomainType::New();
     }
+    cellSet->setCellSetPosition(passedCellSetPosition);
     cellSet->fromLevelSets(levelSets, cellSetDepth);
   }
 

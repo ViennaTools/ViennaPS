@@ -189,7 +189,7 @@ private:
   void createGeometry() {
     auto surfaceLevelSet = cellSet->getSurface();
     auto levelSets = cellSet->getLevelSets();
-    auto diskMesh = lsSmartPointer<lsMesh<>>::New();
+    auto diskMesh = lsSmartPointer<lsMesh<T>>::New();
     lsToDiskMesh<T, D> converter(diskMesh);
     for (auto ls : *levelSets) {
       converter.insertNextLevelSet(ls);
@@ -205,9 +205,9 @@ private:
   }
 
   inline csTriple<T> calcMidPoint(const csTriple<T> &minNode) {
-    return csTriple<T>{minNode[0] + mGridDelta / 2.,
-                       minNode[1] + mGridDelta / 2.,
-                       minNode[2] + mGridDelta / 2.};
+    return csTriple<T>{minNode[0] + mGridDelta / T(2),
+                       minNode[1] + mGridDelta / T(2),
+                       minNode[2] + mGridDelta / T(2)};
   }
 
   void initMemoryFlags() {
