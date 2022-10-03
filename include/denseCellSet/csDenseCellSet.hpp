@@ -8,13 +8,16 @@
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
+#include <lsMessage.hpp>
+#include <lsToMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 #include <rayUtil.hpp>
 
 /**
-  This class represents a cell-based voxel implementation of a volume.
+  This class represents a cell-based voxel implementation of a volume. The
+  depth of the cell set in z-direction can be specified.
 */
 template <class T, int D> class csDenseCellSet {
 private:
@@ -29,6 +32,7 @@ private:
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
+  T depthPlanePos = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
   std::vector<T> *fillingFractions;
@@ -46,95 +50,56 @@ public:
     levelSets = passedLevelSets;
 
     if (cellGrid == nullptr)
-      cellGrid = lsSmartPointer<lsMesh<>>::New();
+      cellGrid = lsSmartPointer<lsMesh<T>>::New();
 
     if (surface == nullptr)
       surface = lsSmartPointer<lsDomain<T, D>>::New(levelSets->back());
     else
       surface->deepCopy(levelSets->back());
 
+    gridDelta = surface->getGrid().getGridDelta();
+    auto minBounds = surface->getGrid().getMinBounds();
+    auto maxBounds = surface->getGrid().getMaxBounds();
+
     depth = passedDepth;
+    if (cellSetAboveSurface) {
+      depthPlanePos = maxBounds[D - 1] * gridDelta + depth - gridDelta;
+    } else {
+      depthPlanePos = minBounds[D - 1] * gridDelta - depth + gridDelta;
+    }
 
     lsToVoxelMesh<T, D> voxelConverter(cellGrid);
     auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
-    if (depth != 0.) {
+    if (depth > 0.) {
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depth;
+      origin[D - 1] = depthPlanePos;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
                            lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
-    if (!cellSetAboveSurface && depth != 0)
+    if (!cellSetAboveSurface && depth > 0.)
       voxelConverter.insertNextLevelSet(plane);
     for (auto ls : *levelSets)
       voxelConverter.insertNextLevelSet(ls);
-    if (cellSetAboveSurface && depth != 0) {
+    if (cellSetAboveSurface && depth > 0.) {
       voxelConverter.insertNextLevelSet(plane);
     }
     voxelConverter.apply();
 
-    gridDelta = surface->getGrid().getGridDelta();
-    numberOfCells = cellGrid->template getElements<(1 << D)>().size();
+    if (!cellSetAboveSurface)
+      adjustMaterialIds();
 
+    // create filling fractions as default scalar cell data
+    numberOfCells = cellGrid->template getElements<(1 << D)>().size();
     std::vector<T> fillingFractionsTemp(numberOfCells, 0.);
     cellGrid->getCellData().insertNextScalarData(
         std::move(fillingFractionsTemp), "fillingFraction");
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
-    auto minBounds = surface->getGrid().getMinBounds();
-    auto maxBounds = surface->getGrid().getMaxBounds();
-
-    constexpr T eps = 1e-6;
-
-    if constexpr (D == 3) {
-      cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - gridDelta - eps;
-      cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - gridDelta - eps;
-
-      cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + gridDelta + eps;
-      cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + gridDelta + eps;
-
-      if (!cellSetAboveSurface && depth < 0) {
-        cellGrid->minimumExtent[2] = depth - gridDelta - eps;
-        cellGrid->maximumExtent[2] = maxBounds[2] * gridDelta + gridDelta + eps;
-      } else if (cellSetAboveSurface && depth > 0) {
-        cellGrid->minimumExtent[2] = minBounds[2] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[2] = depth + gridDelta + eps;
-      } else {
-        cellGrid->minimumExtent[2] = minBounds[2] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[2] = maxBounds[2] * gridDelta + gridDelta + eps;
-      }
-    } else {
-      cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - gridDelta - eps;
-      cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + gridDelta + eps;
-
-      if (!cellSetAboveSurface && depth < 0) {
-        cellGrid->minimumExtent[1] = depth - gridDelta - eps;
-        cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + gridDelta + eps;
-      } else if (cellSetAboveSurface && depth > 0) {
-        cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[1] = depth + gridDelta + eps;
-      } else {
-        cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - gridDelta - eps;
-        cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + gridDelta + eps;
-      }
-    }
-
-    auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
-    minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
-                                        cellGrid->minimumExtent[1]);
-    if constexpr (D == 3)
-      minExtent = std::min(minExtent, cellGrid->maximumExtent[2] -
-                                          cellGrid->minimumExtent[2]);
-
-    BVHlayers = 0;
-    while (minExtent / 2 > gridDelta) {
-      BVHlayers++;
-      minExtent /= 2;
-    }
+    calculateBounds(minBounds, maxBounds);
     BVH = lsSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
-
     buildBVH();
   }
 
@@ -150,7 +115,7 @@ public:
 
   void addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
-    cellGrid->getCellData().insertNextScalarData(newData, name);
+    cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
   }
 
   gridType getCellGrid() { return cellGrid; }
@@ -168,6 +133,8 @@ public:
   std::vector<std::array<unsigned, (1 << D)>> getElements() {
     return cellGrid->template getElements<(1 << D)>();
   }
+
+  lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
   levelSetsType getLevelSets() const { return levelSets; }
 
@@ -189,9 +156,14 @@ public:
     return cellGrid->getCellData().getScalarData(name);
   }
 
-  lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
+  // Set whether the cell set should be created below (false) or above (true)
+  // the surface.
+  void setCellSetPosition(const bool passedCellSetPosition) {
+    cellSetAboveSurface = passedCellSetPosition;
+  }
 
-  bool setFillingFraction(int idx, T fill) {
+  // Sets the filling fraction at given cell index.
+  bool setFillingFraction(const int idx, const T fill) {
     if (idx < 0)
       return false;
 
@@ -199,11 +171,13 @@ public:
     return true;
   }
 
-  bool setFillingFraction(const std::array<T, 3> &point, T fill) {
+  // Sets the filling fraction for cell which contains given point.
+  bool setFillingFraction(const std::array<T, 3> &point, const T fill) {
     auto idx = findIndex(point);
     return setFillingFraction(idx, fill);
   }
 
+  // Add to the filling fraction at given cell index.
   bool addFillingFraction(int idx, T fill) {
     if (idx < 0)
       return false;
@@ -212,11 +186,14 @@ public:
     return true;
   }
 
+  // Add to the filling fraction for cell which contains given point.
   bool addFillingFraction(const std::array<T, 3> &point, T fill) {
     auto idx = findIndex(point);
     return addFillingFraction(idx, fill);
   }
 
+  // Add to the filling fraction for cell which contains given point only if the
+  // cell has the specified material ID.
   bool addFillingFractioninMaterial(const std::array<T, 3> &point, T fill,
                                     int materialId) {
     auto idx = findIndex(point);
@@ -226,20 +203,27 @@ public:
       return false;
   }
 
+  // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
     lsVTKWriter<T>(cellGrid, fileName).apply();
   }
 
+  // Clear the filling fractions
   void clear() {
     auto ff = getFillingFractions();
     std::fill(ff->begin(), ff->end(), 0.);
   }
 
+  // Update the material IDs of the cell set. This function should be called if
+  // the level sets, the cell set is made out of, have changed. This does not
+  // work if the surface of the volume has changed. In this case, call the
+  // funciton update surface first.
   void updateMaterials() {
     auto numScalarData = cellGrid->getCellData().getScalarDataSize();
     std::vector<std::vector<T>> scalarData(numScalarData - 1);
     std::vector<std::string> scalarDataLabels(numScalarData - 1);
 
+    // carry over all scalar data (except the material IDs)
     int n = 0;
     for (int i = 0; i < numScalarData; i++) {
       auto label = cellGrid->getCellData().getScalarDataLabel(i);
@@ -253,44 +237,50 @@ public:
     lsToVoxelMesh<T, D> voxelConverter(cellGrid);
     auto plane =
         lsSmartPointer<lsDomain<T, D>>::New(levelSets->back()->getGrid());
-    if (depth != 0.) {
+    if (depth > 0.) {
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depth;
+      origin[D - 1] = depthPlanePos;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
                            lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
-    if (!cellSetAboveSurface && depth != 0)
+    if (!cellSetAboveSurface && depth > 0.)
       voxelConverter.insertNextLevelSet(plane);
     for (auto ls : *levelSets)
       voxelConverter.insertNextLevelSet(ls);
-    if (cellSetAboveSurface && depth != 0) {
+    if (cellSetAboveSurface && depth > 0.) {
       voxelConverter.insertNextLevelSet(plane);
     }
     voxelConverter.apply();
 
     if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
-      std::cerr << "Removing cells when not allowed." << std::endl;
+      lsMessage::getInstance()
+          .addWarning("Number of cells not equal in cell set material update. "
+                      "Surface may has changed.")
+          .print();
+      return;
     }
 
     for (int i = 0; i < numScalarData - 1; i++) {
-      cellGrid->getCellData().insertNextScalarData(scalarData[i],
+      cellGrid->getCellData().insertNextScalarData(std::move(scalarData[i]),
                                                    scalarDataLabels[i]);
     }
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
   }
 
+  // Updates the surface of the cell set. The new surface should be below the
+  // old surface as this function can only remove cells from the cell set.
   void updateSurface() {
-    auto cutCellGrid = lsSmartPointer<lsMesh<T>>::New();
+    auto updateCellGrid = lsSmartPointer<lsMesh<T>>::New();
 
-    lsToVoxelMesh<T, D> voxelConverter(cutCellGrid);
+    lsToVoxelMesh<T, D> voxelConverter(updateCellGrid);
     if (depth != 0.) {
       auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depth;
+      origin[D - 1] = depthPlanePos;
       normal[D - 1] = 1.;
 
       lsMakeGeometry<T, D>(plane,
@@ -302,14 +292,11 @@ public:
     voxelConverter.insertNextLevelSet(surface);
     voxelConverter.apply();
 
-    auto cutMatIds = cutCellGrid->getCellData().getScalarData("Material");
+    auto cutMatIds = updateCellGrid->getCellData().getScalarData("Material");
     auto &hexas = cellGrid->template getElements<(1 << D)>();
 
-    const auto nCutCells = cutCellGrid->template getElements<(1 << D)>().size();
-
-    size_t offset = 0;
-    if (numberOfCells > nCutCells)
-      offset = numberOfCells - nCutCells;
+    const auto nCutCells =
+        updateCellGrid->template getElements<(1 << D)>().size();
 
     auto numScalarData = cellGrid->getCellData().getScalarDataSize();
 
@@ -317,33 +304,18 @@ public:
       if (cutMatIds->at(elIdx) == 2) {
         for (int i = 0; i < numScalarData; i++) {
           auto data = cellGrid->getCellData().getScalarData(i);
-          data->erase(data->begin() + elIdx + offset);
+          data->erase(data->begin() + elIdx);
         }
-        hexas.erase(hexas.begin() + elIdx + offset);
+        hexas.erase(hexas.begin() + elIdx);
       }
     }
     numberOfCells = hexas.size();
     surface->deepCopy(levelSets->back());
+
     buildBVH();
   }
 
-  int findIndex(const csTriple<T> &point) {
-    const auto &elems = cellGrid->template getElements<(1 << D)>();
-    const auto &nodes = cellGrid->getNodes();
-    int idx = -1;
-
-    auto cellIds = BVH->getCellIds(point);
-    if (!cellIds)
-      return idx;
-    for (const auto cellId : *cellIds) {
-      if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
-        idx = cellId;
-        break;
-      }
-    }
-    return idx;
-  }
-
+  // Merge a trace path to the cell set.
   void mergePath(csTracePath<T> &path, T factor = 1.) {
     auto ff = getFillingFractions();
     if (!path.getData().empty()) {
@@ -361,6 +333,34 @@ public:
   }
 
 private:
+  int findIndex(const csTriple<T> &point) {
+    const auto &elems = cellGrid->template getElements<(1 << D)>();
+    const auto &nodes = cellGrid->getNodes();
+    int idx = -1;
+
+    auto cellIds = BVH->getCellIds(point);
+    if (!cellIds)
+      return idx;
+    for (const auto cellId : *cellIds) {
+      if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
+        idx = cellId;
+        break;
+      }
+    }
+    return idx;
+  }
+
+  void adjustMaterialIds() {
+    auto matIds = getScalarData("Material");
+
+#pragma omp parallel for
+    for (size_t i = 0; i < matIds->size(); i++) {
+      if (matIds->at(i) > 0) {
+        matIds->at(i) -= 1;
+      }
+    }
+  }
+
   int findSurfaceHitPoint(csTriple<T> &hitPoint, const csTriple<T> &direction) {
     // find surface hitpoint
     auto idx = findIndex(hitPoint);
@@ -368,7 +368,7 @@ private:
     if (idx > 0)
       return idx;
 
-    auto moveDirection = multNew(direction, gridDelta / 5.);
+    auto moveDirection = multNew(direction, gridDelta / 2.);
     size_t sanityCounter = 0;
     while (idx < 0) {
       add(hitPoint, moveDirection);
@@ -401,6 +401,40 @@ private:
         auto &node = nodes[elems[elemIdx][n]];
         BVH->getCellIds(node)->insert(elemIdx);
       }
+    }
+  }
+
+  void calculateBounds(const hrleVectorType<hrleIndexType, D> &minBounds,
+                       const hrleVectorType<hrleIndexType, D> &maxBounds) {
+    constexpr T eps = 1e-4;
+    cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - eps;
+    cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + eps;
+    if constexpr (D == 3) {
+      cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - eps;
+      cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + eps;
+    }
+    if (depth == 0.) {
+      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
+      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
+    } else if (!cellSetAboveSurface) {
+      cellGrid->minimumExtent[D - 1] = depthPlanePos - gridDelta - eps;
+      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
+    } else if (cellSetAboveSurface) {
+      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
+      cellGrid->maximumExtent[D - 1] = depthPlanePos + eps;
+    }
+
+    auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
+    minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
+                                        cellGrid->minimumExtent[1]);
+    if constexpr (D == 3)
+      minExtent = std::min(minExtent, cellGrid->maximumExtent[2] -
+                                          cellGrid->minimumExtent[2]);
+
+    BVHlayers = 0;
+    while (minExtent / 2 > gridDelta) {
+      BVHlayers++;
+      minExtent /= 2;
     }
   }
 };

@@ -26,7 +26,7 @@ public:
                                         bool &reflect,
                                         rayRNG &Rng) override final {
     auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
-    const T incAngle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
+    const T incAngle = std::acos(std::max(std::min(cosTheta, T(1)), T(0)));
     std::uniform_real_distribution<T> uniDist;
 
     T Eref_peak = 0;
@@ -100,7 +100,7 @@ public:
 
         // normalize
         tmp = norm(direction);
-        mult(direction, 1. / tmp);
+        mult(direction, T(1) / tmp);
 
         // cos(angle)
         cosTheta = dot(particle.direction, direction);
@@ -138,7 +138,7 @@ public:
 
   T getSourceDistributionPower() const override final { return 1000.; }
   csPair<T> getMeanFreePath() const override final {
-    return {meanFreePath, meanFreePath / 2.};
+    return {meanFreePath, meanFreePath / T(2)};
   }
 
 private:
@@ -189,7 +189,7 @@ public:
   DamageModel(const NumericType energy, const NumericType meanFreePath,
               const int maskID) {
     tracer.setNumberOfRaysPerPoint(1000);
-    tracer.setExcludeMaterialId(maskID + 1);
+    tracer.setExcludeMaterialId(maskID);
 
     auto damageIon =
         std::make_unique<DamageIon<NumericType>>(energy, meanFreePath);

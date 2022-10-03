@@ -156,9 +156,9 @@ private:
   }
 
   void buildBounds3D(const BoundsType &outerBound) {
-    auto xExt = (outerBound[1][0] - outerBound[0][0]) / 2.;
-    auto yExt = (outerBound[1][1] - outerBound[0][1]) / 2.;
-    auto zExt = (outerBound[1][2] - outerBound[0][2]) / 2.;
+    auto xExt = (outerBound[1][0] - outerBound[0][0]) / T(2);
+    auto yExt = (outerBound[1][1] - outerBound[0][1]) / T(2);
+    auto zExt = (outerBound[1][2] - outerBound[0][2]) / T(2);
 
     const auto BVH1 =
         csPair<csTriple<T>>{outerBound[0][0],        outerBound[0][1],
