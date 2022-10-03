@@ -31,6 +31,8 @@ private:
 
 public:
   csTracing() : mDevice(rtcNewDevice("hugepages=1")) {
+    // TODO: currently only periodic boundary conditions are implemented in
+    // csTracingKernel
     for (int i = 0; i < D; i++)
       mBoundaryConds[i] = rayTraceBoundary::PERIODIC;
   }
@@ -76,10 +78,6 @@ public:
     mParticle = p->clone();
   }
 
-  lsSmartPointer<csDenseCellSet<T, D>> getCellSet() const { return cellSet; }
-
-  void writeVTU(std::string fileName) { cellSet->writeVTU(fileName); }
-
   void setTotalNumberOfRays(const size_t passedNumber) {
     mNumberOfRaysFixed = passedNumber;
     mNumberOfRaysPerPoint = 0;
@@ -91,6 +89,8 @@ public:
   }
 
   void setExcludeMaterialId(int passedId) { excludeMaterialId = passedId; }
+
+  lsSmartPointer<csDenseCellSet<T, D>> getCellSet() const { return cellSet; }
 
   void averageNeighborhood() {
     auto data = cellSet->getFillingFractions();
@@ -187,7 +187,6 @@ public:
 
 private:
   void createGeometry() {
-    auto surfaceLevelSet = cellSet->getSurface();
     auto levelSets = cellSet->getLevelSets();
     auto diskMesh = lsSmartPointer<lsMesh<T>>::New();
     lsToDiskMesh<T, D> converter(diskMesh);
@@ -197,8 +196,8 @@ private:
     converter.apply();
     auto points = diskMesh->getNodes();
     auto normals = *diskMesh->getCellData().getVectorData("Normals");
-    mGridDelta = surfaceLevelSet->getGrid().getGridDelta();
     auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+    mGridDelta = levelSets->back()->getGrid().getGridDelta();
     mGeometry.initGeometry(mDevice, points, normals,
                            mGridDelta * rayInternal::DiskFactor<D>);
     mGeometry.setMaterialIds(materialIds);
