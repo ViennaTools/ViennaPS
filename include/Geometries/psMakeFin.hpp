@@ -34,6 +34,7 @@ public:
   void apply() {
     domain->clear();
     if constexpr (D == 3) {
+
       double bounds[2 * D] = {-xExtent / 2, xExtent / 2, -yExtent / 2,
                               yExtent / 2,  -gridDelta,  finHeight + gridDelta};
 
@@ -51,8 +52,10 @@ public:
           .apply();
 
       auto mask = LSPtrType::New(bounds, boundaryCons, gridDelta);
+
       NumericType minPoint[D] = {-finWidth / 2, -yExtent / 2, -gridDelta};
       NumericType maxPoint[D] = {finWidth / 2, yExtent / 2, finHeight};
+
       lsMakeGeometry<NumericType, D>(
           mask, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
           .apply();
@@ -64,6 +67,7 @@ public:
         domain->insertNextLevelSet(mask);
       domain->insertNextLevelSet(substrate, false);
     } else if constexpr (D == 2) {
+
       double bounds[2 * D] = {-xExtent / 2, xExtent / 2, -gridDelta,
                               finHeight + gridDelta};
 
