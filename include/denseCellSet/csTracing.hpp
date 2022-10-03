@@ -114,7 +114,7 @@ public:
       for (int d = 0; d < D; d++) {
         auto mid = calcMidPoint(nodes[elems[i][0]]);
         mid[d] -= mGridDelta;
-        auto elemId = cellSet->findIndex(mid);
+        auto elemId = cellSet->getIndex(mid);
         if (elemId >= 0) {
           if (data->at(elemId) >= 0 &&
               materialIds->at(elemId) != excludeMaterialId) {
@@ -124,7 +124,7 @@ public:
         }
 
         mid[d] += 2 * mGridDelta;
-        elemId = cellSet->findIndex(mid);
+        elemId = cellSet->getIndex(mid);
         if (elemId >= 0) {
           if (data->at(elemId) >= 0 &&
               materialIds->at(elemId) != excludeMaterialId) {
@@ -159,7 +159,7 @@ public:
       for (int d = 0; d < D; d++) {
         auto mid = calcMidPoint(nodes[elems[i][0]]);
         mid[d] -= mGridDelta;
-        auto elemId = cellSet->findIndex(mid);
+        auto elemId = cellSet->getIndex(mid);
         if (elemId >= 0) {
           if (data->at(elemId) >= 0 && materialIds->at(elemId) == materialId) {
             average[i] += data->at(elemId);
@@ -168,7 +168,7 @@ public:
         }
 
         mid[d] += 2 * mGridDelta;
-        elemId = cellSet->findIndex(mid);
+        elemId = cellSet->getIndex(mid);
         if (elemId >= 0) {
           if (data->at(elemId) >= 0 && materialIds->at(elemId) == materialId) {
             average[i] += data->at(elemId);

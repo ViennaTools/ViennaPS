@@ -191,7 +191,7 @@ public:
                 if (!checkBoundsPeriodic(volumeParticle.position))
                   break;
 
-                auto newIdx = cellSet->findIndex(volumeParticle.position);
+                auto newIdx = cellSet->getIndex(volumeParticle.position);
                 if (newIdx < 0)
                   break;
 
