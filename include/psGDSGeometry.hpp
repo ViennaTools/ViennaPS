@@ -54,9 +54,6 @@ public:
                             -1.,
                             1.};
 
-    for (int i = 0; i < 2 * D; i++)
-      std::cout << bounds[i] << std::endl;
-
     typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
         lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
         lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
@@ -74,43 +71,41 @@ public:
           auto tmpLS = psSmartPointer<lsDomain<NumericType, D>>::New(
               bounds, boundaryCons, gridDelta);
           lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
-          if (mask) {
-            auto topPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
-                bounds, boundaryCons, gridDelta);
-            NumericType normal[D] = {0., 0., 1.};
-            NumericType origin[D] = {0., 0., height};
-            lsMakeGeometry<NumericType, D>(
-                topPlane,
-                lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
-                .apply();
-
-            auto botPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
-                bounds, boundaryCons, gridDelta);
-            normal[D - 1] = -1.;
-            origin[D - 1] = 0.;
-            lsMakeGeometry<NumericType, D>(
-                botPlane,
-                lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
-                .apply();
-
-            lsBooleanOperation<NumericType, D>(
-                topPlane, botPlane, lsBooleanOperationEnum::INTERSECT)
-                .apply();
-
-            lsBooleanOperation<NumericType, D>(
-                topPlane, tmpLS, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-                .apply();
-
-            lsBooleanOperation<NumericType, D>(levelSet, topPlane,
-                                               lsBooleanOperationEnum::UNION)
-                .apply();
-          } else {
-            lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                               lsBooleanOperationEnum::UNION)
-                .apply();
-          }
+          lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
+                                             lsBooleanOperationEnum::UNION)
+              .apply();
         }
       }
+    }
+
+    if (mask) {
+      auto topPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
+          bounds, boundaryCons, gridDelta);
+      NumericType normal[D] = {0., 0., 1.};
+      NumericType origin[D] = {0., 0., height};
+      lsMakeGeometry<NumericType, D>(
+          topPlane,
+          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          .apply();
+
+      auto botPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
+          bounds, boundaryCons, gridDelta);
+      normal[D - 1] = -1.;
+      origin[D - 1] = 0.;
+      lsMakeGeometry<NumericType, D>(
+          botPlane,
+          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          .apply();
+
+      lsBooleanOperation<NumericType, D>(topPlane, botPlane,
+                                         lsBooleanOperationEnum::INTERSECT)
+          .apply();
+
+      lsBooleanOperation<NumericType, D>(
+          topPlane, levelSet, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+          .apply();
+
+      return topPlane;
     }
     return levelSet;
   }

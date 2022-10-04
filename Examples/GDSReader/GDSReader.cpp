@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 
   gds->print();
 
-  for (int i = 1; i < 4; i++) {
+  for (int i = 1; i < 5; i++) {
     auto layer = gds->layerToLevelSet(i, 0.5, 0.05, true);
 
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
