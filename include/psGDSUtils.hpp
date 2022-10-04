@@ -93,7 +93,7 @@ template <class T> struct psGDSElement {
   psGDSElementType elementType;
   int16_t layer;
   int32_t plexNumber = -1;
-  lsPointCloud<T, 3> pointCloud;
+  std::vector<std::array<T, 3>> pointCloud;
 };
 
 template <class T> struct psGDSSRef {
@@ -120,6 +120,13 @@ template <class T> struct psGDSStructure {
   std::string name;
   int boundaryElements = 0;
   int boxElements = 0;
+  std::array<std::array<T, 2>, 2> elementBoundingBox;
+  std::array<std::array<T, 2>, 2> boundingBox;
+
+  std::array<T, 2> getElementExtent() const {
+    return {elementBoundingBox[1][0] - elementBoundingBox[0][0],
+            elementBoundingBox[1][1] - elementBoundingBox[0][1]};
+  }
 
   void print() {
     std::cout << name << ":\n\nBoundary elements: " << boundaryElements

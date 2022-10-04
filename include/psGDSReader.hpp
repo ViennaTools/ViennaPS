@@ -34,6 +34,259 @@ public:
   void setFileName(std::string passedFileName) { fileName = passedFileName; }
 
   void apply() {
+    parseFile();
+    geometry->calculateBoundingBoxes();
+  }
+
+private:
+  psGDSStructure<NumericType> currentStructure;
+
+  int16_t currentRecordLen = 0;
+  int16_t currentLayer;
+  int16_t currentDataType;
+  int16_t currentPlexNumber;
+  int16_t currentSTrans;
+  double currentMag;
+  double currentAngle;
+  int16_t arrayCols, arrayRows;
+  bool ignore = false;
+  psGDSElementType currentElement;
+  double units; // units in micron
+  double userUnits;
+
+  // unsused
+  float currentWidth;
+  char *tempStr;
+
+  void resetCurrentStructure() {
+    currentStructure.name = "";
+    currentStructure.elements.clear();
+    currentStructure.sRefs.clear();
+    currentStructure.aRefs.clear();
+    currentStructure.boundaryElements = 0;
+    currentStructure.boxElements = 0;
+
+    currentStructure.elementBoundingBox[0][0] =
+        std::numeric_limits<NumericType>::max();
+    currentStructure.elementBoundingBox[0][1] =
+        std::numeric_limits<NumericType>::max();
+
+    currentStructure.elementBoundingBox[1][0] =
+        std::numeric_limits<NumericType>::min();
+    currentStructure.elementBoundingBox[1][1] =
+        std::numeric_limits<NumericType>::min();
+  }
+
+  char *readAsciiString() {
+    char *str = NULL;
+
+    if (currentRecordLen > 0) {
+      currentRecordLen += currentRecordLen % 2;
+      str = new char[currentRecordLen + 1];
+
+      fread(str, 1, currentRecordLen, filePtr);
+      str[currentRecordLen] = 0;
+      currentRecordLen = 0;
+    }
+
+    return str;
+  }
+
+  int16_t readTwoByteSignedInt() {
+    int16_t value;
+    fread(&value, 2, 1, filePtr);
+
+    currentRecordLen -= 2;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    return endian_swap_short(value);
+#else
+    return value;
+#endif
+  }
+
+  int32_t readFourByteSignedInt() {
+    int32_t value;
+    fread(&value, 4, 1, filePtr);
+
+    currentRecordLen -= 4;
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    return endian_swap_long(value);
+#else
+    return value;
+#endif
+  }
+
+  double readEightByteReal() {
+    unsigned char value;
+    unsigned char b8, b2, b3, b4, b5, b6, b7;
+    double sign = 1.0;
+    double exponent;
+    double mant;
+
+    fread(&value, 1, 1, filePtr);
+    if (value & 128) {
+      value -= 128;
+      sign = -1.0;
+    }
+    exponent = (double)value;
+    exponent -= 64.0;
+    mant = 0.0;
+
+    fread(&b2, 1, 1, filePtr);
+    fread(&b3, 1, 1, filePtr);
+    fread(&b4, 1, 1, filePtr);
+    fread(&b5, 1, 1, filePtr);
+    fread(&b6, 1, 1, filePtr);
+    fread(&b7, 1, 1, filePtr);
+    fread(&b8, 1, 1, filePtr);
+
+    mant += b8;
+    mant /= 256.0;
+    mant += b7;
+    mant /= 256.0;
+    mant += b6;
+    mant /= 256.0;
+    mant += b5;
+    mant /= 256.0;
+    mant += b4;
+    mant /= 256.0;
+    mant += b3;
+    mant /= 256.0;
+    mant += b2;
+    mant /= 256.0;
+
+    currentRecordLen -= 8;
+
+    return sign * (mant * std::pow(16.0, exponent));
+  }
+
+  void parseHeader() {
+    short version;
+    version = readTwoByteSignedInt();
+  }
+
+  void parseLibName() {
+    char *str;
+    str = readAsciiString();
+    geometry->setLibName(str);
+    delete[] str;
+  }
+
+  void parseUnits() {
+    userUnits = readEightByteReal();
+    units = readEightByteReal();
+    // std::cout << "DB units/user units = " << 1 / userUnits
+    //           << "\nSize of DB units in metres = " << units
+    //           << "\nSize of user units in m = " << units / userUnits << "\n";
+    units = units * 1.0e6; /*in micron*/
+  }
+
+  void parseStructureName() {
+    char *str = readAsciiString();
+
+    if (str) {
+      currentStructure.name = str;
+      delete[] str;
+    }
+  }
+
+  void parseSName() {
+    // parse the structure reference
+    char *str = readAsciiString();
+    if (str) {
+      if (currentElement == elSRef) {
+        currentStructure.sRefs.back().strName = str;
+      } else if (currentElement == elARef) {
+        currentStructure.aRefs.back().strName = str;
+      }
+      delete[] str;
+    }
+  }
+
+  void parseXYBoundary() {
+    float X, Y;
+    unsigned int numPoints = currentRecordLen / 8;
+    auto &currentElPointCloud = currentStructure.elements.back().pointCloud;
+
+    // do not include the last point since it
+    // is just a copy of the first
+    for (unsigned int i = 0; i < numPoints - 1; i++) {
+      X = units * (float)readFourByteSignedInt();
+      Y = units * (float)readFourByteSignedInt();
+
+      currentElPointCloud.push_back(std::array<NumericType, 3>{
+          static_cast<NumericType>(X), static_cast<NumericType>(Y),
+          NumericType(0)});
+
+      if (X < currentStructure.elementBoundingBox[0][0]) {
+        currentStructure.elementBoundingBox[0][0] = X;
+      }
+      if (X > currentStructure.elementBoundingBox[1][0]) {
+        currentStructure.elementBoundingBox[1][0] = X;
+      }
+      if (Y < currentStructure.elementBoundingBox[0][1]) {
+        currentStructure.elementBoundingBox[0][1] = Y;
+      }
+      if (Y > currentStructure.elementBoundingBox[1][1]) {
+        currentStructure.elementBoundingBox[1][1] = Y;
+      }
+    }
+    readFourByteSignedInt(); // parse remaining points
+    readFourByteSignedInt();
+  }
+
+  void parseXYIgnore() {
+    unsigned int numPoints = currentRecordLen / 8;
+    for (unsigned int i = 0; i < numPoints * 2; i++) {
+      readFourByteSignedInt();
+    }
+  }
+
+  void parseXYRef() {
+    bool flipped = ((u_int16_t)(currentSTrans & 0x8000) == (u_int16_t)0x8000);
+
+    if (currentElement == elSRef) {
+      float X = units * (float)readFourByteSignedInt();
+      float Y = units * (float)readFourByteSignedInt();
+      currentStructure.sRefs.back().refPoint[0] = static_cast<NumericType>(X);
+      currentStructure.sRefs.back().refPoint[1] = static_cast<NumericType>(Y);
+      currentStructure.sRefs.back().refPoint[2] = static_cast<NumericType>(0);
+
+      currentStructure.sRefs.back().magnification =
+          static_cast<NumericType>(currentMag);
+      currentStructure.sRefs.back().angle =
+          static_cast<NumericType>(currentAngle);
+      currentStructure.sRefs.back().flipped = flipped;
+    } else {
+      for (size_t i = 0; i < 3; i++) {
+        float X = units * (float)readFourByteSignedInt();
+        float Y = units * (float)readFourByteSignedInt();
+        currentStructure.aRefs.back().refPoints[i][0] =
+            static_cast<NumericType>(X);
+        currentStructure.aRefs.back().refPoints[i][1] =
+            static_cast<NumericType>(Y);
+        currentStructure.aRefs.back().refPoints[i][2] =
+            static_cast<NumericType>(0);
+      }
+
+      currentStructure.aRefs.back().magnification =
+          static_cast<NumericType>(currentMag);
+      currentStructure.aRefs.back().angle =
+          static_cast<NumericType>(currentAngle);
+      currentStructure.aRefs.back().flipped = flipped;
+
+      currentStructure.aRefs.back().arrayDims[0] = arrayRows;
+      currentStructure.aRefs.back().arrayDims[1] = arrayCols;
+    }
+
+    currentAngle = 0;
+    currentMag = 0;
+    currentSTrans = 0;
+  }
+
+  void parseFile() {
     filePtr = fopen(fileName.c_str(), "rb");
     if (!filePtr) {
       std::cerr << "Could not open GDS file." << std::endl;
@@ -41,6 +294,7 @@ public:
     }
 
     unsigned char recordType, dataType;
+    resetCurrentStructure();
 
     while (!feof(filePtr)) {
       currentRecordLen = readTwoByteSignedInt();
@@ -379,231 +633,5 @@ public:
         return;
       }
     }
-  }
-
-private:
-  psGDSStructure<NumericType> currentStructure;
-
-  int16_t currentRecordLen = 0;
-  int16_t currentLayer;
-  int16_t currentDataType;
-  int16_t currentPlexNumber;
-  int16_t currentSTrans;
-  double currentMag;
-  double currentAngle;
-  int16_t arrayCols, arrayRows;
-  bool ignore = false;
-  psGDSElementType currentElement;
-  double units; // units in micron
-  double userUnits;
-
-  // unsused
-  float currentWidth;
-  char *tempStr;
-
-  void resetCurrentStructure() {
-    currentStructure.name = "";
-    currentStructure.elements.clear();
-    currentStructure.sRefs.clear();
-    currentStructure.aRefs.clear();
-    currentStructure.boundaryElements = 0;
-    currentStructure.boxElements = 0;
-  }
-
-  char *readAsciiString() {
-    char *str = NULL;
-
-    if (currentRecordLen > 0) {
-      currentRecordLen += currentRecordLen % 2;
-      str = new char[currentRecordLen + 1];
-
-      fread(str, 1, currentRecordLen, filePtr);
-      str[currentRecordLen] = 0;
-      currentRecordLen = 0;
-    }
-
-    return str;
-  }
-
-  int16_t readTwoByteSignedInt() {
-    int16_t value;
-    fread(&value, 2, 1, filePtr);
-
-    currentRecordLen -= 2;
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    return endian_swap_short(value);
-#else
-    return value;
-#endif
-  }
-
-  int32_t readFourByteSignedInt() {
-    int32_t value;
-    fread(&value, 4, 1, filePtr);
-
-    currentRecordLen -= 4;
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-    return endian_swap_long(value);
-#else
-    return value;
-#endif
-  }
-
-  double readEightByteReal() {
-    unsigned char value;
-    unsigned char b8, b2, b3, b4, b5, b6, b7;
-    double sign = 1.0;
-    double exponent;
-    double mant;
-
-    fread(&value, 1, 1, filePtr);
-    if (value & 128) {
-      value -= 128;
-      sign = -1.0;
-    }
-    exponent = (double)value;
-    exponent -= 64.0;
-    mant = 0.0;
-
-    fread(&b2, 1, 1, filePtr);
-    fread(&b3, 1, 1, filePtr);
-    fread(&b4, 1, 1, filePtr);
-    fread(&b5, 1, 1, filePtr);
-    fread(&b6, 1, 1, filePtr);
-    fread(&b7, 1, 1, filePtr);
-    fread(&b8, 1, 1, filePtr);
-
-    mant += b8;
-    mant /= 256.0;
-    mant += b7;
-    mant /= 256.0;
-    mant += b6;
-    mant /= 256.0;
-    mant += b5;
-    mant /= 256.0;
-    mant += b4;
-    mant /= 256.0;
-    mant += b3;
-    mant /= 256.0;
-    mant += b2;
-    mant /= 256.0;
-
-    currentRecordLen -= 8;
-
-    return sign * (mant * std::pow(16.0, exponent));
-  }
-
-  void parseHeader() {
-    short version;
-    version = readTwoByteSignedInt();
-    std::cout << "Version " << version << std::endl;
-  }
-
-  void parseLibName() {
-    char *str;
-    str = readAsciiString();
-    geometry->setLibName(str);
-    delete[] str;
-  }
-
-  void parseUnits() {
-    userUnits = readEightByteReal();
-    units = readEightByteReal();
-    std::cout << "DB units/user units = " << 1 / userUnits
-              << "\nSize of DB units in metres = " << units
-              << "\nSize of user units in m = " << units / userUnits << "\n";
-    units = units * 1.0e6; /*in micron*/
-  }
-
-  void parseStructureName() {
-    char *str = readAsciiString();
-
-    if (str) {
-      currentStructure.name = str;
-      delete[] str;
-    }
-  }
-
-  void parseSName() {
-    // parse the structure reference
-    char *str = readAsciiString();
-    if (str) {
-      if (currentElement == elSRef) {
-        currentStructure.sRefs.back().strName = str;
-      } else if (currentElement == elARef) {
-        currentStructure.aRefs.back().strName = str;
-      }
-      delete[] str;
-    }
-  }
-
-  void parseXYBoundary() {
-    float X, Y;
-    unsigned int numPoints = currentRecordLen / 8;
-    auto &currentElPointCloud = currentStructure.elements.back().pointCloud;
-
-    // do not include the last point since it
-    // is just a copy of the first
-    for (unsigned int i = 0; i < numPoints - 1; i++) {
-      X = units * (float)readFourByteSignedInt();
-      Y = units * (float)readFourByteSignedInt();
-
-      currentElPointCloud.insertNextPoint(std::array<NumericType, 3>{
-          static_cast<NumericType>(X), static_cast<NumericType>(Y),
-          NumericType(0)});
-    }
-    readFourByteSignedInt(); // parse remaining points
-    readFourByteSignedInt();
-  }
-
-  void parseXYIgnore() {
-    unsigned int numPoints = currentRecordLen / 8;
-    for (unsigned int i = 0; i < numPoints * 2; i++) {
-      readFourByteSignedInt();
-    }
-  }
-
-  void parseXYRef() {
-    bool flipped = ((u_int16_t)(currentSTrans & 0x8000) == (u_int16_t)0x8000);
-
-    if (currentElement == elSRef) {
-      float X = units * (float)readFourByteSignedInt();
-      float Y = units * (float)readFourByteSignedInt();
-      currentStructure.sRefs.back().refPoint[0] = static_cast<NumericType>(X);
-      currentStructure.sRefs.back().refPoint[1] = static_cast<NumericType>(Y);
-      currentStructure.sRefs.back().refPoint[2] = static_cast<NumericType>(0);
-
-      currentStructure.sRefs.back().magnification =
-          static_cast<NumericType>(currentMag);
-      currentStructure.sRefs.back().angle =
-          static_cast<NumericType>(currentAngle);
-      currentStructure.sRefs.back().flipped = flipped;
-    } else {
-      for (size_t i = 0; i < 3; i++) {
-        float X = units * (float)readFourByteSignedInt();
-        float Y = units * (float)readFourByteSignedInt();
-        currentStructure.aRefs.back().refPoints[i][0] =
-            static_cast<NumericType>(X);
-        currentStructure.aRefs.back().refPoints[i][1] =
-            static_cast<NumericType>(Y);
-        currentStructure.aRefs.back().refPoints[i][2] =
-            static_cast<NumericType>(0);
-      }
-
-      currentStructure.aRefs.back().magnification =
-          static_cast<NumericType>(currentMag);
-      currentStructure.aRefs.back().angle =
-          static_cast<NumericType>(currentAngle);
-      currentStructure.aRefs.back().flipped = flipped;
-
-      currentStructure.aRefs.back().arrayDims[0] = arrayRows;
-      currentStructure.aRefs.back().arrayDims[1] = arrayCols;
-    }
-
-    currentAngle = 0;
-    currentMag = 0;
-    currentSTrans = 0;
   }
 };
