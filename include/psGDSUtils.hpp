@@ -122,10 +122,17 @@ template <class T> struct psGDSStructure {
   int boxElements = 0;
   std::array<std::array<T, 2>, 2> elementBoundingBox;
   std::array<std::array<T, 2>, 2> boundingBox;
+  bool isRef = false;
 
   std::array<T, 2> getElementExtent() const {
     return {elementBoundingBox[1][0] - elementBoundingBox[0][0],
             elementBoundingBox[1][1] - elementBoundingBox[0][1]};
+  }
+
+  void printBoundingBox() const {
+    std::cout << "Structure " << name << ": (" << boundingBox[0][0] << ", "
+              << boundingBox[0][1] << ") - (" << boundingBox[1][0] << ", "
+              << boundingBox[1][1] << ")" << std::endl;
   }
 
   void print() {

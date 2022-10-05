@@ -35,6 +35,7 @@ public:
 
   void apply() {
     parseFile();
+    geometry->checkReferences();
     geometry->calculateBoundingBoxes();
   }
 
@@ -72,9 +73,9 @@ private:
         std::numeric_limits<NumericType>::max();
 
     currentStructure.elementBoundingBox[1][0] =
-        std::numeric_limits<NumericType>::min();
+        std::numeric_limits<NumericType>::lowest();
     currentStructure.elementBoundingBox[1][1] =
-        std::numeric_limits<NumericType>::min();
+        std::numeric_limits<NumericType>::lowest();
   }
 
   char *readAsciiString() {

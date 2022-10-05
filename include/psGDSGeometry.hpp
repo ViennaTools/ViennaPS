@@ -8,9 +8,20 @@
 #include <lsVTKWriter.hpp>
 
 #include <psGDSUtils.hpp>
+#include <psSmartPointer.hpp>
+
+template <class NumericType, int D>
+void printLS(psSmartPointer<lsDomain<NumericType, D>> domain,
+             std::string name) {
+  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+  lsToSurfaceMesh<NumericType, D>(domain, mesh).apply();
+  lsVTKWriter<NumericType>(mesh, name).apply();
+}
 
 template <class NumericType, int D = 3> class psGDSGeometry {
   std::vector<psGDSStructure<NumericType>> structures;
+  std::unordered_map<int16_t, psSmartPointer<lsDomain<NumericType, 3>>>
+      assembledStructures;
   std::string libName = "";
   double units;
   double userUnits;
@@ -22,6 +33,12 @@ public:
   psGDSGeometry() {}
 
   void setLibName(const char *str) { libName = str; }
+
+  void setBoundaryPadding(const NumericType xPadding,
+                          const NumericType yPadding) {
+    boundaryPadding[0] = xPadding;
+    boundaryPadding[1] = yPadding;
+  }
 
   void insertNextStructure(psGDSStructure<NumericType> &structure) {
     structures.push_back(structure);
@@ -35,13 +52,13 @@ public:
     std::cout << "============================" << std::endl;
   }
 
-  psGDSStructure<NumericType> *getStructure(std::string strName) const {
+  psGDSStructure<NumericType> *getStructure(std::string strName) {
     for (size_t i = 0; i < structures.size(); i++) {
       if (strName == structures[i].name) {
         return &structures[i];
       }
-      return nullptr;
     }
+    return nullptr;
   }
 
   psSmartPointer<lsDomain<NumericType, D>>
@@ -63,17 +80,30 @@ public:
         bounds, boundaryCons, gridDelta);
 
     for (auto &str : structures) {
-      for (auto &el : str.elements) {
-        if (el.layer == layer) {
+      if (!str.isRef) {
+        for (auto &el : str.elements) {
+          if (el.layer == layer) {
+            if (el.elementType == elBox) {
+              addBox(levelSet, el, height, 0., 0.);
+            } else {
+              addPolygon(levelSet, el, height, 0, 0);
+            }
+          }
+        }
 
-          auto mesh = elementToSurfaceMesh(el, height);
-
-          auto tmpLS = psSmartPointer<lsDomain<NumericType, D>>::New(
-              bounds, boundaryCons, gridDelta);
-          lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
-          lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                             lsBooleanOperationEnum::UNION)
-              .apply();
+        for (auto &sref : str.sRefs) {
+          auto refStr = getStructure(sref.strName);
+          for (auto &el : refStr->elements) {
+            if (el.layer == layer) {
+              if (el.elementType == elBox) {
+                addBox(levelSet, el, height, sref.refPoint[0],
+                       sref.refPoint[1]);
+              } else {
+                addPolygon(levelSet, el, height, sref.refPoint[0],
+                           sref.refPoint[1]);
+              }
+            }
+          }
         }
       }
     }
@@ -110,46 +140,140 @@ public:
     return levelSet;
   }
 
-  void calculateBoundingBoxes() {
-    minBounds = structures[0].elementBoundingBox[0];
-    maxBounds = structures[0].elementBoundingBox[1];
-
+  void checkReferences() {
     for (auto &str : structures) {
-      str.boundingBox = str.elementBoundingBox;
-      // TODO
-      //   for (const auto sref : str.sRefs) {
-      //   }
-
-      if (str.boundingBox[0][0] < minBounds[0]) {
-        minBounds[0] = str.boundingBox[0][0];
-      }
-      if (str.boundingBox[0][1] < minBounds[1]) {
-        minBounds[1] = str.boundingBox[0][1];
-      }
-      if (str.boundingBox[1][0] < maxBounds[0]) {
-        maxBounds[0] = str.boundingBox[1][0];
-      }
-      if (str.boundingBox[1][1] < maxBounds[1]) {
-        maxBounds[1] = str.boundingBox[1][1];
+      for (auto &sref : str.sRefs) {
+        auto refStr = getStructure(sref.strName);
+        refStr->isRef = true;
       }
     }
   }
 
+  void calculateBoundingBoxes() {
+    minBounds[0] = std::numeric_limits<NumericType>::max();
+    minBounds[1] = std::numeric_limits<NumericType>::max();
+
+    maxBounds[0] = std::numeric_limits<NumericType>::lowest();
+    maxBounds[1] = std::numeric_limits<NumericType>::lowest();
+
+    size_t numStructures = structures.size();
+    std::unordered_map<std::string, bool> processed;
+    for (const auto &str : structures) {
+      processed.insert({str.name, false});
+    }
+
+    while (!std::all_of(processed.begin(), processed.end(),
+                        [](std::pair<const std::basic_string<char>, bool> &p) {
+                          return p.second;
+                        })) {
+      for (size_t i = 0; i < numStructures; i++) {
+        if (processed[structures[i].name])
+          continue;
+
+        structures[i].boundingBox = structures[i].elementBoundingBox;
+        bool finish = true;
+        for (const auto sref : structures[i].sRefs) {
+          auto refStr = getStructure(sref.strName);
+          assert(refStr);
+          if (!processed[refStr->name]) {
+            finish = false;
+            break;
+          }
+
+          auto minPoint_x = sref.refPoint[0] - refStr->boundingBox[0][0];
+          auto minPoint_y = sref.refPoint[1] - refStr->boundingBox[0][1];
+
+          auto maxPoint_x = sref.refPoint[0] + refStr->boundingBox[1][0];
+          auto maxPoint_y = sref.refPoint[1] + refStr->boundingBox[1][1];
+
+          if (minPoint_x < structures[i].boundingBox[0][0]) {
+            structures[i].boundingBox[0][0] = minPoint_x;
+          }
+          if (minPoint_y < structures[i].boundingBox[0][1]) {
+            structures[i].boundingBox[0][1] = minPoint_y;
+          }
+          if (maxPoint_x > structures[i].boundingBox[1][0]) {
+            structures[i].boundingBox[1][0] = maxPoint_x;
+          }
+          if (maxPoint_y > structures[i].boundingBox[1][1]) {
+            structures[i].boundingBox[1][1] = maxPoint_y;
+          }
+        }
+        if (!finish)
+          continue;
+
+        if (!structures[i].isRef) {
+          if (structures[i].boundingBox[0][0] < minBounds[0]) {
+            minBounds[0] = structures[i].boundingBox[0][0];
+          }
+          if (structures[i].boundingBox[0][1] < minBounds[1]) {
+            minBounds[1] = structures[i].boundingBox[0][1];
+          }
+          if (structures[i].boundingBox[1][0] > maxBounds[0]) {
+            maxBounds[0] = structures[i].boundingBox[1][0];
+          }
+          if (structures[i].boundingBox[1][1] > maxBounds[1]) {
+            maxBounds[1] = structures[i].boundingBox[1][1];
+          }
+        }
+
+        processed[structures[i].name] = true;
+      }
+    }
+  }
+
+  void printBound() const {
+    std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
+              << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
+              << std::endl;
+  }
+
+  void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
+              psGDSElement<NumericType> &element, const NumericType height,
+              const NumericType xOffset, const NumericType yOffset) {
+    auto tmpLS =
+        psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
+
+    auto minPoint = element.pointCloud[1];
+    minPoint[2] = 0.;
+    auto maxPoint = element.pointCloud[3];
+    maxPoint[2] = height;
+
+    lsMakeGeometry<NumericType, D>(
+        tmpLS, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint.data(),
+                                                          maxPoint.data()))
+        .apply();
+    lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
+                                       lsBooleanOperationEnum::UNION)
+        .apply();
+  }
+
+  void addPolygon(psSmartPointer<lsDomain<NumericType, D>> levelSet,
+                  psGDSElement<NumericType> &element, const NumericType height,
+                  const NumericType xOffset, const NumericType yOffset) {
+    auto mesh = elementToSurfaceMesh(element, height, xOffset, yOffset);
+    auto tmpLS =
+        psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
+    lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
+    lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
+                                       lsBooleanOperationEnum::UNION)
+        .apply();
+  }
+
   psSmartPointer<lsMesh<NumericType>>
   elementToSurfaceMesh(psGDSElement<NumericType> &element,
-                       const NumericType height) {
+                       const NumericType height, const NumericType xOffset,
+                       const NumericType yOffset) {
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
 
     unsigned numPointsFlat = element.pointCloud.size();
-    for (auto p : element.pointCloud) {
-      std::array<NumericType, D> point = p;
-      point[2] = height;
-      element.pointCloud.push_back(point);
-    }
 
     // sidewalls
     for (unsigned i = 0; i < numPointsFlat; i++) {
-      mesh->insertNextNode(element.pointCloud[i]);
+      std::array<NumericType, D> offsetPoint = element.pointCloud[i];
+      offsetPoint[0] += xOffset;
+      offsetPoint[1] += yOffset;
+      mesh->insertNextNode(offsetPoint);
 
       mesh->insertNextTriangle(std::array<unsigned, 3>{
           i, (i + 1) % numPointsFlat, i + numPointsFlat});
@@ -157,7 +281,11 @@ public:
 
     for (unsigned i = 0; i < numPointsFlat; i++) {
       unsigned upPoint = i + numPointsFlat;
-      mesh->insertNextNode(element.pointCloud[upPoint]);
+      std::array<NumericType, D> offsetPoint = element.pointCloud[i];
+      offsetPoint[0] += xOffset;
+      offsetPoint[1] += yOffset;
+      offsetPoint[2] = height;
+      mesh->insertNextNode(offsetPoint);
 
       mesh->insertNextTriangle(std::array<unsigned, 3>{
           upPoint, (upPoint + 1) % numPointsFlat,
@@ -208,6 +336,13 @@ public:
   bool isEar(int i, int j, int k, psSmartPointer<lsMesh<NumericType>> mesh,
              unsigned numPoints) {
     auto &points = mesh->getNodes();
+
+    // check if triangle is clockwise orientated
+    if ((points[i][0] * points[j][1] + points[i][1] * points[k][0] +
+         points[j][0] * points[k][1] - points[k][0] * points[j][1] -
+         points[k][1] * points[i][0] - points[j][0] * points[i][1]) < 0.)
+      return false;
+
     for (unsigned m = 0; m < numPoints; m++) {
       if ((m != i) && (m != j) && (m != k)) {
         // check if point in triangle

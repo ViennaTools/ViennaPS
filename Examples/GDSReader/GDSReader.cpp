@@ -11,14 +11,14 @@ int main(int argc, char **argv) {
 
   psGDSReader<NumericType, D>(gds, file).apply();
 
-  gds->print();
+  gds->setBoundaryPadding(0.5, 0.5);
 
-  for (int i = 1; i < 5; i++) {
+  for (int i = 0; i < 5; i++) {
     auto layer = gds->layerToLevelSet(i, 0.5, 0.05, true);
 
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToSurfaceMesh<NumericType, D>(layer, mesh).apply();
-    lsVTKWriter<NumericType>(mesh, "gds_test_" + std::to_string(i) + ".vtp")
+    lsVTKWriter<NumericType>(mesh, "gds_test_new_" + std::to_string(i) + ".vtp")
         .apply();
   }
   return 0;
