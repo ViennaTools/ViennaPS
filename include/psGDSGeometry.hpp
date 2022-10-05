@@ -29,8 +29,22 @@ template <class NumericType, int D = 3> class psGDSGeometry {
   std::array<NumericType, 2> minBounds;
   std::array<NumericType, 2> maxBounds;
 
+  double bounds[2 * D];
+  NumericType gridDelta;
+  typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
+      lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
+      lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
+      lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+
 public:
   psGDSGeometry() {}
+
+  psGDSGeometry(const NumericType passedGridDelta)
+      : gridDelta(passedGridDelta) {}
+
+  void setGridDelta(const NumericType passedGridDelta) {
+    gridDelta = passedGridDelta;
+  }
 
   void setLibName(const char *str) { libName = str; }
 
@@ -62,45 +76,43 @@ public:
   }
 
   psSmartPointer<lsDomain<NumericType, D>>
-  layerToLevelSet(const int16_t layer, const NumericType height,
-                  const NumericType gridDelta, bool mask = false) {
-    double bounds[2 * D] = {minBounds[0] - boundaryPadding[0],
-                            maxBounds[0] + boundaryPadding[0],
-                            minBounds[1] - boundaryPadding[1],
-                            maxBounds[1] + boundaryPadding[1],
-                            -1.,
-                            1.};
-
-    typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
-        lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-        lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+  layerToLevelSet(const int16_t layer, const NumericType baseHeight,
+                  const NumericType height, bool mask = false) {
 
     auto levelSet = psSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
+    auto total = structures.size();
+    int counter = 0;
+
     for (auto &str : structures) {
       if (!str.isRef) {
-        for (auto &el : str.elements) {
-          if (el.layer == layer) {
-            if (el.elementType == elBox) {
-              addBox(levelSet, el, height, 0., 0.);
-            } else {
-              addPolygon(levelSet, el, height, 0, 0);
+        if (auto contains = str.containsLayers.find(layer);
+            contains != str.containsLayers.end()) {
+          for (auto &el : str.elements) {
+            if (el.layer == layer) {
+              if (el.elementType == elBox) {
+                addBox(levelSet, el, baseHeight, height, 0., 0.);
+              } else {
+                addPolygon(levelSet, el, baseHeight, height, 0, 0);
+              }
             }
           }
         }
 
         for (auto &sref : str.sRefs) {
           auto refStr = getStructure(sref.strName);
-          for (auto &el : refStr->elements) {
-            if (el.layer == layer) {
-              if (el.elementType == elBox) {
-                addBox(levelSet, el, height, sref.refPoint[0],
-                       sref.refPoint[1]);
-              } else {
-                addPolygon(levelSet, el, height, sref.refPoint[0],
-                           sref.refPoint[1]);
+          if (auto contains = str.containsLayers.find(layer);
+              contains != str.containsLayers.end()) {
+            for (auto &el : refStr->elements) {
+              if (el.layer == layer) {
+                if (el.elementType == elBox) {
+                  addBox(levelSet, el, baseHeight, height, sref.refPoint[0],
+                         sref.refPoint[1]);
+                } else {
+                  addPolygon(levelSet, el, baseHeight, height, sref.refPoint[0],
+                             sref.refPoint[1]);
+                }
               }
             }
           }
@@ -112,7 +124,7 @@ public:
       auto topPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
           bounds, boundaryCons, gridDelta);
       NumericType normal[D] = {0., 0., 1.};
-      NumericType origin[D] = {0., 0., height};
+      NumericType origin[D] = {0., 0., baseHeight + height};
       lsMakeGeometry<NumericType, D>(
           topPlane,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
@@ -121,7 +133,7 @@ public:
       auto botPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
           bounds, boundaryCons, gridDelta);
       normal[D - 1] = -1.;
-      origin[D - 1] = 0.;
+      origin[D - 1] = baseHeight;
       lsMakeGeometry<NumericType, D>(
           botPlane,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
@@ -147,6 +159,29 @@ public:
         refStr->isRef = true;
       }
     }
+  }
+
+  void preBuildStructures() {
+    // for (auto &str : structures) {
+    //   if (str.isRef) {
+    //     if (!str.sRefs.empty()) {
+    //       std::cout << "referenced structure contains references" <<
+    //       std::endl; continue;
+    //     }
+    //     auto levelSet = psSmartPointer<lsDomain<NumericType, D>>::New(
+    //         bounds, boundaryCons, gridDelta);
+
+    //     for (auto &el : str.elements) {
+    //       if (el.layer == layer) {
+    //         if (el.elementType == elBox) {
+    //           addBox(levelSet, el, baseHeight, height, 0., 0.);
+    //         } else {
+    //           addPolygon(levelSet, el, baseHeight, height, 0, 0);
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
   }
 
   void calculateBoundingBoxes() {
@@ -220,6 +255,12 @@ public:
         processed[structures[i].name] = true;
       }
     }
+    bounds[0] = minBounds[0] - boundaryPadding[0];
+    bounds[1] = maxBounds[0] + boundaryPadding[0];
+    bounds[2] = minBounds[1] - boundaryPadding[1];
+    bounds[3] = maxBounds[1] + boundaryPadding[1];
+    bounds[4] = -1.;
+    bounds[5] = 1.;
   }
 
   void printBound() const {
@@ -229,15 +270,16 @@ public:
   }
 
   void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
-              psGDSElement<NumericType> &element, const NumericType height,
-              const NumericType xOffset, const NumericType yOffset) {
+              psGDSElement<NumericType> &element, const NumericType baseHeight,
+              const NumericType height, const NumericType xOffset,
+              const NumericType yOffset) {
     auto tmpLS =
         psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
 
     auto minPoint = element.pointCloud[1];
-    minPoint[2] = 0.;
+    minPoint[2] = baseHeight;
     auto maxPoint = element.pointCloud[3];
-    maxPoint[2] = height;
+    maxPoint[2] = baseHeight + height;
 
     lsMakeGeometry<NumericType, D>(
         tmpLS, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint.data(),
@@ -249,9 +291,11 @@ public:
   }
 
   void addPolygon(psSmartPointer<lsDomain<NumericType, D>> levelSet,
-                  psGDSElement<NumericType> &element, const NumericType height,
+                  psGDSElement<NumericType> &element,
+                  const NumericType baseHeight, const NumericType height,
                   const NumericType xOffset, const NumericType yOffset) {
-    auto mesh = elementToSurfaceMesh(element, height, xOffset, yOffset);
+    auto mesh =
+        polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset);
     auto tmpLS =
         psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
     lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
@@ -261,9 +305,9 @@ public:
   }
 
   psSmartPointer<lsMesh<NumericType>>
-  elementToSurfaceMesh(psGDSElement<NumericType> &element,
-                       const NumericType height, const NumericType xOffset,
-                       const NumericType yOffset) {
+  polygonToSurfaceMesh(psGDSElement<NumericType> &element,
+                       const NumericType baseHeight, const NumericType height,
+                       const NumericType xOffset, const NumericType yOffset) {
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
 
     unsigned numPointsFlat = element.pointCloud.size();
@@ -273,6 +317,7 @@ public:
       std::array<NumericType, D> offsetPoint = element.pointCloud[i];
       offsetPoint[0] += xOffset;
       offsetPoint[1] += yOffset;
+      offsetPoint[2] = baseHeight;
       mesh->insertNextNode(offsetPoint);
 
       mesh->insertNextTriangle(std::array<unsigned, 3>{
@@ -284,7 +329,7 @@ public:
       std::array<NumericType, D> offsetPoint = element.pointCloud[i];
       offsetPoint[0] += xOffset;
       offsetPoint[1] += yOffset;
-      offsetPoint[2] = height;
+      offsetPoint[2] = baseHeight + height;
       mesh->insertNextNode(offsetPoint);
 
       mesh->insertNextTriangle(std::array<unsigned, 3>{

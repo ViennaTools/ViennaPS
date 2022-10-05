@@ -37,6 +37,7 @@ public:
     parseFile();
     geometry->checkReferences();
     geometry->calculateBoundingBoxes();
+    geometry->preBuildStructures();
   }
 
 private:
@@ -370,6 +371,7 @@ private:
         if (!ignore) {
           assert(currentStructure.elements.size() > 0);
           currentStructure.elements.back().layer = currentLayer;
+          currentStructure.containsLayers.insert(currentLayer);
         }
         break;
 

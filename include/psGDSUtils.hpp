@@ -123,6 +123,7 @@ template <class T> struct psGDSStructure {
   std::array<std::array<T, 2>, 2> elementBoundingBox;
   std::array<std::array<T, 2>, 2> boundingBox;
   bool isRef = false;
+  std::set<int16_t> containsLayers;
 
   std::array<T, 2> getElementExtent() const {
     return {elementBoundingBox[1][0] - elementBoundingBox[0][0],
