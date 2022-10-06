@@ -7,14 +7,13 @@ int main(int argc, char **argv) {
   constexpr int D = 3;
 
   auto gds = psSmartPointer<psGDSGeometry<NumericType, D>>::New(0.05);
-  std::string file = "example.gds";
+  std::string file = "polygons.gds";
+  gds->setBoundaryPadding(1, 1);
 
   psGDSReader<NumericType, D>(gds, file).apply();
 
-  gds->setBoundaryPadding(0.5, 0.5);
-
-  for (int i = 0; i < 6; i++) {
-    auto layer = gds->layerToLevelSet(i, 10., 0.5, false);
+  for (int i = 2; i < 3; i++) {
+    auto layer = gds->layerToLevelSet(i, 10., 0.5, true);
 
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToSurfaceMesh<NumericType, D>(layer, mesh).apply();

@@ -19,9 +19,11 @@ void printLS(psSmartPointer<lsDomain<NumericType, D>> domain,
 }
 
 template <class NumericType, int D = 3> class psGDSGeometry {
+  using structureLayers =
+      std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
+
   std::vector<psGDSStructure<NumericType>> structures;
-  std::unordered_map<int16_t, psSmartPointer<lsDomain<NumericType, 3>>>
-      assembledStructures;
+  std::unordered_map<std::string, structureLayers> assembledStructures;
   std::string libName = "";
   double units;
   double userUnits;
@@ -162,26 +164,33 @@ public:
   }
 
   void preBuildStructures() {
-    // for (auto &str : structures) {
-    //   if (str.isRef) {
-    //     if (!str.sRefs.empty()) {
-    //       std::cout << "referenced structure contains references" <<
-    //       std::endl; continue;
-    //     }
-    //     auto levelSet = psSmartPointer<lsDomain<NumericType, D>>::New(
-    //         bounds, boundaryCons, gridDelta);
+    for (auto &str : structures) {
+      if (str.isRef) {
+        if (!str.sRefs.empty()) {
+          std::cout << "referenced structure contains references" << std::endl;
+          continue;
+        }
 
-    //     for (auto &el : str.elements) {
-    //       if (el.layer == layer) {
-    //         if (el.elementType == elBox) {
-    //           addBox(levelSet, el, baseHeight, height, 0., 0.);
-    //         } else {
-    //           addPolygon(levelSet, el, baseHeight, height, 0, 0);
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
+        structureLayers strLayerMapping;
+
+        for (auto layer : str.containsLayers) {
+          strLayerMapping.insert(
+              {layer, psSmartPointer<lsMesh<NumericType>>::New()});
+        }
+
+        for (auto &el : str.elements) {
+          psSmartPointer<lsMesh<NumericType>> mesh;
+          if (el.elementType == elBox) {
+            mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
+          } else {
+            mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0);
+          }
+          strLayerMapping[el.layer]->append(*mesh);
+        }
+
+        assembledStructures.insert({str.name, strLayerMapping});
+      }
+    }
   }
 
   void calculateBoundingBoxes() {
@@ -302,6 +311,39 @@ public:
     lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
                                        lsBooleanOperationEnum::UNION)
         .apply();
+  }
+
+  psSmartPointer<lsMesh<NumericType>>
+  boxToSurfaceMesh(psGDSElement<NumericType> &element,
+                   const NumericType baseHeight, const NumericType height,
+                   const NumericType xOffset, const NumericType yOffset) {
+    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+
+    for (auto &point : element.pointCloud) {
+      point[0] += xOffset;
+      point[1] += yOffset;
+      point[2] = baseHeight;
+      mesh->insertNextNode(point);
+    }
+
+    for (auto &point : element.pointCloud) {
+      point[0] += xOffset;
+      point[1] += yOffset;
+      point[2] = baseHeight + height;
+      mesh->insertNextNode(point);
+    }
+
+    for (unsigned i = 0; i < 4; i++) {
+      mesh->insertNextTriangle(std::array<unsigned, 3>{i, i + 4, (i + 1) % 4});
+      mesh->insertNextTriangle(
+          std::array<unsigned, 3>{i + 4, (i + 4 + 1) % 4 + 4, (i + 4 + 1) % 4});
+    }
+    mesh->insertNextTriangle(std::array<unsigned, 3>{0, 1, 3});
+    mesh->insertNextTriangle(std::array<unsigned, 3>{1, 2, 3});
+    mesh->insertNextTriangle(std::array<unsigned, 3>{4, 7, 5});
+    mesh->insertNextTriangle(std::array<unsigned, 3>{5, 7, 6});
+
+    return mesh;
   }
 
   psSmartPointer<lsMesh<NumericType>>
