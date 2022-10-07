@@ -98,17 +98,17 @@ template <class T> struct psGDSElement {
 
 template <class T> struct psGDSSRef {
   std::string strName;
-  T angle;
-  T magnification;
-  bool flipped;
+  T angle = 0;
+  T magnification = 0;
+  bool flipped = false;
   std::array<T, 3> refPoint;
 };
 
 template <class T> struct psGDSARef {
   std::string strName;
-  T angle;
-  T magnification;
-  bool flipped;
+  T angle = 0;
+  T magnification = 0;
+  bool flipped = false;
   std::array<std::array<T, 3>, 3> refPoints;
   std::array<int16_t, 2> arrayDims;
 };

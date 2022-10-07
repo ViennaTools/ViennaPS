@@ -5,6 +5,7 @@
 #include <lsDomain.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometries.hpp>
+#include <lsTransformMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 #include <psGDSUtils.hpp>
@@ -84,9 +85,6 @@ public:
     auto levelSet = psSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
-    auto total = structures.size();
-    int counter = 0;
-
     for (auto &str : structures) {
       if (!str.isRef) {
         if (auto contains = str.containsLayers.find(layer);
@@ -101,22 +99,52 @@ public:
             }
           }
         }
-
         for (auto &sref : str.sRefs) {
           auto refStr = getStructure(sref.strName);
-          if (auto contains = str.containsLayers.find(layer);
-              contains != str.containsLayers.end()) {
-            for (auto &el : refStr->elements) {
-              if (el.layer == layer) {
-                if (el.elementType == elBox) {
-                  addBox(levelSet, el, baseHeight, height, sref.refPoint[0],
-                         sref.refPoint[1]);
-                } else {
-                  addPolygon(levelSet, el, baseHeight, height, sref.refPoint[0],
-                             sref.refPoint[1]);
-                }
-              }
+          if (auto contains = refStr->containsLayers.find(layer);
+              contains != refStr->containsLayers.end()) {
+            assert(assembledStructures[refStr->name][layer]);
+
+            auto strMesh = assembledStructures[refStr->name][layer];
+            adjustPreBuiltMeshHeight(strMesh, baseHeight, height);
+
+            if (sref.angle > 0.) {
+              lsTransformMesh<NumericType>(
+                  strMesh, lsTransformEnum::ROTATION,
+                  hrleVectorType<NumericType, 3>{0., 0., 1.},
+                  deg2rad(sref.angle))
+                  .apply();
             }
+
+            if (sref.magnification > 0.) {
+              lsTransformMesh<NumericType>(
+                  strMesh, lsTransformEnum::SCALE,
+                  hrleVectorType<NumericType, 3>{sref.magnification,
+                                                 sref.magnification, 1.})
+                  .apply();
+            }
+
+            if (sref.flipped) {
+              std::cout << "Flipping x-axis currently not supported"
+                        << std::endl;
+            }
+
+            // lsTransformMesh<NumericType>(
+            //     strMesh, lsTransformEnum::TRANSLATION,
+            //     hrleVectorType<NumericType, 3>{sref.refPoint[0],
+            //                                    sref.refPoint[1], 0.})
+            //     .apply();
+
+            lsVTKWriter<NumericType>(strMesh, "strMesh.vtp").apply();
+
+            auto tmpLS = psSmartPointer<lsDomain<NumericType, D>>::New(
+                levelSet->getGrid());
+            lsFromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
+            lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
+                                               lsBooleanOperationEnum::UNION)
+                .apply();
+
+            resetPreBuiltMeshHeight(strMesh, baseHeight, height);
           }
         }
       }
@@ -459,5 +487,37 @@ public:
     unsigned t = a;
     a = b;
     b = t;
+  }
+
+  void adjustPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
+                                const NumericType baseHeight,
+                                const NumericType height) {
+    auto &nodes = mesh->getNodes();
+
+    for (auto &n : nodes) {
+      if (n[2] < 1.) {
+        n[2] = baseHeight;
+      } else {
+        n[2] = baseHeight + height;
+      }
+    }
+  }
+
+  void resetPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
+                               const NumericType baseHeight,
+                               const NumericType height) {
+    auto &nodes = mesh->getNodes();
+
+    for (auto &n : nodes) {
+      if (n[2] == baseHeight) {
+        n[2] = 0.;
+      } else {
+        n[2] = 1.;
+      }
+    }
+  }
+
+  static inline NumericType deg2rad(const NumericType angleDeg) {
+    return angleDeg * rayInternal::PI / 180.;
   }
 };
