@@ -6,6 +6,4 @@ add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNAPS_LIBRARIES})
 
-# TODO: Fix Volume Model Example
-
-# add_dependencies(buildExamples ${PROJECT_NAME})
+add_dependencies(buildExamples ${PROJECT_NAME})
