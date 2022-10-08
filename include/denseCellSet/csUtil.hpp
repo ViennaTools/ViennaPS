@@ -22,6 +22,7 @@ template <typename T> struct csVolumeParticle {
   int scattered;
 };
 
+namespace csUtil {
 template <typename T> void printTriple(const csTriple<T> &p) {
   std::cout << "[" << p[0] << ", " << p[1] << ", " << p[2] << "]\n";
 }
@@ -159,3 +160,4 @@ template <typename T> [[nodiscard]] rayTriple<T> ConvertSse(__m128 const &vec) {
   return csTriple<T>{result[0], result[1], result[2]};
 }
 #endif
+} // namespace csUtil

@@ -99,11 +99,11 @@ public:
         direction[2] = negUniDist(RNG);
 
         // normalize
-        tmp = norm(direction);
-        mult(direction, T(1) / tmp);
+        tmp = csUtil::norm(direction);
+        csUtil::mult(direction, T(1) / tmp);
 
         // cos(angle)
-        cosTheta = dot(particle.direction, direction);
+        cosTheta = csUtil::dot(particle.direction, direction);
         // sin(angle)^2
         sinThetaSqr = 1 - cosTheta * cosTheta;
       } while (sinThetaSqr < mu * mu);

@@ -184,14 +184,14 @@ public:
                 volumeParticle.distance = -1;
                 while (volumeParticle.distance < 0)
                   volumeParticle.distance = normalDist(RngState7);
-                auto travelDist =
-                    multNew(volumeParticle.direction, volumeParticle.distance);
-                add(volumeParticle.position, travelDist);
+                auto travelDist = csUtil::multNew(volumeParticle.direction,
+                                                  volumeParticle.distance);
+                csUtil::add(volumeParticle.position, travelDist);
 
                 if (!checkBoundsPeriodic(volumeParticle.position))
                   break;
 
-                auto newIdx = cellSet->findIndex(volumeParticle.position);
+                auto newIdx = cellSet->getIndex(volumeParticle.position);
                 if (newIdx < 0)
                   break;
 
