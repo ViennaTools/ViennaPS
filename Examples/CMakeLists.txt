@@ -1,31 +1,36 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 project(ViennaPSExamples)
 
-## Enable Clang sanitizer for debug builds
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fsanitize=memory" CACHE STRING "")
-  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUGS} -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fsanitize=memory" CACHE STRING "")
+include("${CMAKE_SOURCE_DIR}/cmake/prepare.cmake")
+
+find_package(ViennaPS CONFIG PATHS ${ViennaPS_BINARY_DIR})
+if(NOT ViennaPS_FOUND)
+  message(
+    FATAL_ERROR
+      "One of the dependencies hasn't been built yet and thus can't be used by the buildExamples target.\n\
+  Try the following steps to fix the problem:\n\
+  1. Turn off the buildExamples target by disabling the VIENNAPS_BUILD_EXAMPLES option when configuring the project\n\
+  (e.g. with the `-D VIENNAPS_BUILD_EXAMPLES=OFF` flag)\n\
+  2. Build the dependencies target: e.g. `make buildDependencies` when using Makefiles\n\
+  3. Turn on the buildExamples target again by re-enabling the VIENNAPS_BUILD_EXAMPLES option\n\
+  (e.g. with the `-D VIENNAPS_BUILD_EXAMPLES=ON` flag)\n\
+  4. Now the configure step should pick up the built dependencies and proceed as intended.")
 endif()
 
-MACRO(SUBDIRLIST result curdir)
-  FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
-  SET(dirlist "")
-  FOREACH(child ${children})
-    IF(IS_DIRECTORY ${curdir}/${child})
-      IF(NOT ${child} STREQUAL "build")
-        LIST(APPEND dirlist ${child})
-      ENDIF()
-    ENDIF()
-  ENDFOREACH()
-  SET(${result} ${dirlist})
-ENDMACRO()
+list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
 
+# Add subfolders to the include directories, since during installation the directory structure is
+# flattened, but in the source tree - which we are using here - it is not.
+list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/denseCellSet
+     ${VIENNAPS_BUILD_INCLUDE_DIRS}/Geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/Models)
 
-set(ViennaPS_DIR "${ViennaPS_BINARY_DIR}")
-set(ViennaPS_COMMON_TARGET ${PROJECT_NAME})
+# Exclude the buildExamples target from the `all` target
+set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 
-SUBDIRLIST(EXAMPLE_DIRS ${CMAKE_CURRENT_LIST_DIR})
+add_custom_target(buildExamples)
+
+subdirlist(EXAMPLE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 
 # add all examples
 foreach(subdir ${EXAMPLE_DIRS})
