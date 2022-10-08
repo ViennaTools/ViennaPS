@@ -1,6 +1,6 @@
 #include <lsMakeGeometry.hpp>
 
-#include <psMakeHole.hpp>
+#include <Geometries/psMakeHole.hpp>
 #include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
