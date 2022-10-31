@@ -11,14 +11,6 @@
 #include <psGDSUtils.hpp>
 #include <psSmartPointer.hpp>
 
-template <class NumericType, int D>
-void printLS(psSmartPointer<lsDomain<NumericType, D>> domain,
-             std::string name) {
-  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-  lsToSurfaceMesh<NumericType, D>(domain, mesh).apply();
-  lsVTKWriter<NumericType>(mesh, name).apply();
-}
-
 template <class NumericType, int D = 3> class psGDSGeometry {
   using structureLayers =
       std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
@@ -85,8 +77,9 @@ public:
     auto levelSet = psSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
-    for (auto &str : structures) {
+    for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
+        // add single elements
         if (auto contains = str.containsLayers.find(layer);
             contains != str.containsLayers.end()) {
           for (auto &el : str.elements) {
@@ -99,18 +92,25 @@ public:
             }
           }
         }
+
+        // add structure references
+        auto strMesh = psSmartPointer<lsMesh<NumericType>>::New();
         for (auto &sref : str.sRefs) {
           auto refStr = getStructure(sref.strName);
           if (auto contains = refStr->containsLayers.find(layer);
               contains != refStr->containsLayers.end()) {
             assert(assembledStructures[refStr->name][layer]);
 
-            auto strMesh = assembledStructures[refStr->name][layer];
-            adjustPreBuiltMeshHeight(strMesh, baseHeight, height);
+            // copy mesh here
+            auto copy = assembledStructures[refStr->name][layer];
+            auto preBuiltStrMesh = psSmartPointer<lsMesh<NumericType>>::New();
+            preBuiltStrMesh->nodes = copy->nodes;
+            preBuiltStrMesh->triangles = copy->triangles;
+            adjustPreBuiltMeshHeight(preBuiltStrMesh, baseHeight, height);
 
             if (sref.angle > 0.) {
               lsTransformMesh<NumericType>(
-                  strMesh, lsTransformEnum::ROTATION,
+                  preBuiltStrMesh, lsTransformEnum::ROTATION,
                   hrleVectorType<NumericType, 3>{0., 0., 1.},
                   deg2rad(sref.angle))
                   .apply();
@@ -118,7 +118,7 @@ public:
 
             if (sref.magnification > 0.) {
               lsTransformMesh<NumericType>(
-                  strMesh, lsTransformEnum::SCALE,
+                  preBuiltStrMesh, lsTransformEnum::SCALE,
                   hrleVectorType<NumericType, 3>{sref.magnification,
                                                  sref.magnification, 1.})
                   .apply();
@@ -127,25 +127,25 @@ public:
             if (sref.flipped) {
               std::cout << "Flipping x-axis currently not supported"
                         << std::endl;
+              continue;
             }
 
-            // lsTransformMesh<NumericType>(
-            //     strMesh, lsTransformEnum::TRANSLATION,
-            //     hrleVectorType<NumericType, 3>{sref.refPoint[0],
-            //                                    sref.refPoint[1], 0.})
-            //     .apply();
-
-            lsVTKWriter<NumericType>(strMesh, "strMesh.vtp").apply();
-
-            auto tmpLS = psSmartPointer<lsDomain<NumericType, D>>::New(
-                levelSet->getGrid());
-            lsFromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
-            lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                               lsBooleanOperationEnum::UNION)
+            lsTransformMesh<NumericType>(
+                preBuiltStrMesh, lsTransformEnum::TRANSLATION,
+                hrleVectorType<NumericType, 3>{sref.refPoint[0],
+                                               sref.refPoint[1], 0.})
                 .apply();
 
-            resetPreBuiltMeshHeight(strMesh, baseHeight, height);
+            strMesh->append(*preBuiltStrMesh);
           }
+        }
+        if (strMesh->nodes.size() > 0) {
+          auto tmpLS = psSmartPointer<lsDomain<NumericType, D>>::New(
+              levelSet->getGrid());
+          lsFromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
+          lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
+                                             lsBooleanOperationEnum::UNION)
+              .apply();
         }
       }
     }
@@ -192,6 +192,7 @@ public:
   }
 
   void preBuildStructures() {
+    int n = 0;
     for (auto &str : structures) {
       if (str.isRef) {
         if (!str.sRefs.empty()) {

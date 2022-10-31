@@ -48,8 +48,8 @@ private:
   int16_t currentDataType;
   int16_t currentPlexNumber;
   int16_t currentSTrans;
-  double currentMag;
-  double currentAngle;
+  double currentMag = 0;
+  double currentAngle = 0;
   int16_t arrayCols, arrayRows;
   bool ignore = false;
   psGDSElementType currentElement;
@@ -65,6 +65,7 @@ private:
     currentStructure.elements.clear();
     currentStructure.sRefs.clear();
     currentStructure.aRefs.clear();
+    currentStructure.containsLayers.clear();
     currentStructure.boundaryElements = 0;
     currentStructure.boxElements = 0;
 
