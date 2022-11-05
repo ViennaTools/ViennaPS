@@ -1,5 +1,5 @@
 # Build ViennaRay if cmake couldn't find an installation
-if(DEFINED ${ViennaRay_DIR})
+if(DEFINED ViennaRay_DIR)
   find_package(ViennaRay REQUIRED PATHS ${ViennaRay_DIR} NO_DEFAULT_PATH)
   message(STATUS "Found ViennaRay at ${ViennaRay_DIR}")
   add_library(viennaray_external INTERFACE) # dummy target
