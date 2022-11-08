@@ -1,5 +1,5 @@
+#include <Geometries/psMakeTrench.hpp>
 #include <SimpleDeposition.hpp>
-#include <psMakeTrench.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psVTKWriter.hpp>
