@@ -180,9 +180,6 @@ private:
   void parseUnits() {
     userUnits = readEightByteReal();
     units = readEightByteReal();
-    // std::cout << "DB units/user units = " << 1 / userUnits
-    //           << "\nSize of DB units in metres = " << units
-    //           << "\nSize of user units in m = " << units / userUnits << "\n";
     units = units * 1.0e6; /*in micron*/
   }
 

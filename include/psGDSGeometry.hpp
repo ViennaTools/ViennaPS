@@ -1,12 +1,10 @@
 #pragma once
 
 #include <lsBooleanOperation.hpp>
-#include <lsConvexHull.hpp>
 #include <lsDomain.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometries.hpp>
 #include <lsTransformMesh.hpp>
-#include <lsVTKWriter.hpp>
 
 #include <psGDSUtils.hpp>
 #include <psSmartPointer.hpp>
@@ -125,8 +123,9 @@ public:
             }
 
             if (sref.flipped) {
-              std::cout << "Flipping x-axis currently not supported"
-                        << std::endl;
+              lsMessage::getInstance()
+                  .addWarning("Flipping x-axis currently not supported.")
+                  .print();
               continue;
             }
 
@@ -196,7 +195,7 @@ public:
     for (auto &str : structures) {
       if (str.isRef) {
         if (!str.sRefs.empty()) {
-          std::cout << "referenced structure contains references" << std::endl;
+          std::cerr << "Referenced structure contains references" << std::endl;
           continue;
         }
 
