@@ -56,9 +56,8 @@ public:
           .addWarning("psMakeHole: Hole geometry can only be created in 3D! "
                       "Falling back to trench geometry.")
           .print();
-
       psMakeTrench<NumericType, D>(domain, gridDelta, xExtent, yExtent,
-                                   2 * holeRadius, holeDepth)
+                                   2 * holeRadius, taperAngle, holeDepth)
           .apply();
 
       return;

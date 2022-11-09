@@ -12,13 +12,13 @@ int main(int argc, char *argv[]) {
 
   // Parse the parameters
   int P, y;
-  NumericType maskHeight = 0.6;
-  NumericType taperAngle = 0.;
-  NumericType processTime = 100;
+  NumericType maskHeight = 0.2;
+  NumericType taperAngle = 5.;
+  NumericType processTime = 200;
   NumericType totalEtchantFlux = 4.5e16;
   NumericType totalOxygenFlux = 1.e18;
   NumericType totalIonFlux = 2e16;
-  NumericType A_O = 0.;
+  NumericType A_O = 3.;
 
   if (argc > 1) {
     auto config = parseConfig<NumericType>(argv[1]);
@@ -50,16 +50,16 @@ int main(int argc, char *argv[]) {
   }
 
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeHole<NumericType, D>(geometry, 0.02 /* grid delta */, 1 /*x extent*/,
-                             1 /*y extent*/, 0.2 /*hole radius*/,
-                             taperAngle /* tapering angle in degrees */,
-                             maskHeight /* mask height*/, true /*create mask*/)
+  psMakeTrench<NumericType, D>(
+      geometry, 0.02 /* grid delta */, 1 /*x extent*/, 1 /*y extent*/,
+      0.2 /*hole radius*/, taperAngle /* tapering angle in degrees */,
+      maskHeight /* mask height*/, true /*create mask*/)
       .apply();
 
   SF6O2Etching<NumericType, D> model(
       totalIonFlux /*ion flux*/, totalEtchantFlux /*etchant flux*/,
       totalOxygenFlux /*oxygen flux*/, 100 /*min ion energy (eV)*/,
-      3 /*oxy sputter yield*/, 0 /*mask material ID*/);
+      A_O /*oxy sputter yield*/, 0 /*mask material ID*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);

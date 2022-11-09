@@ -243,7 +243,7 @@ public:
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > minEnergy) {
       E = NewEnergy;
-      auto direction = rayReflectionConedCosine<NumericType>(
+      auto direction = rayReflectionConedCosine<NumericType, D>(
           rayInternal::PI / 2. - std::min(incAngle, minAngle), rayDir,
           geomNormal, Rng);
       return std::pair<NumericType, rayTriple<NumericType>>{NumericType(0),
