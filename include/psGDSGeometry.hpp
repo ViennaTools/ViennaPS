@@ -306,6 +306,10 @@ public:
               << std::endl;
   }
 
+  std::array<std::array<NumericType, 2>> getBounds() const {
+    return {minBounds, maxBounds};
+  }
+
   void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
               psGDSElement<NumericType> &element, const NumericType baseHeight,
               const NumericType height, const NumericType xOffset,
