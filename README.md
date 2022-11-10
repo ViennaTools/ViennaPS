@@ -56,7 +56,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES})
 ``` 
 
-## Examples
+## Basic Examples
 
 ### Building
 
@@ -76,10 +76,18 @@ The examples can then be executed in their respective folders with the config fi
 
 This example contains a single particle deposition process in a trench geometry. By default, a 2D representation of the trench is simulated. However, 3D simulations are also possible by changing the constant variable _D_ in __TrenchDeposition.cpp__. In the __config.txt__ file the process and geometry parameters can be varied. 
 The picture show an example of the trench deposition process for various value of the particle sticking probability _s_.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/hole_etching/data/images/deposition.svg" width=700>
+</div>
 
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
 This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardement. The process and geometry parameters can be varied in the __config.txt__ file.
+
+By changing the dimension of the hole etching example (_D = 2_), we can easily simulate the profile of a trench etching process with the same plasma chemistry. Here we can, for example, vary the mask tapering angle to observe increased microtrenching, as shown below.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/hole_etching/data/images/sidewall_tapering.svg" width=700>
+</div>
 
 ## Contributing
 
