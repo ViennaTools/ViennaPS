@@ -56,15 +56,31 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES})
 ``` 
 
-## Building examples
+## Examples
+
+### Building
 
 The examples can be built using CMake (make sure all dependencies are installed/ have been built previously):
 
 ```bash
 mkdir build && cd build
 cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON
-make buildExamples
 ```
+
+The examples can then be executed in their respective folders with the config files
+```bash
+./ExampleName config.txt
+```
+
+### Trench Deposition
+
+This example contains a single particle deposition process in a trench geometry. By default, a 2D representation of the trench is simulated. However, 3D simulations are also possible by changing the constant variable _D_ in __TrenchDeposition.cpp__. In the __config.txt__ file the process and geometry parameters can be varied. 
+The picture show an example of the trench deposition process for various value of the particle sticking probability _s_.
+
+### SF<sub>6</sub>O<sub>2</sub> Hole Etching
+
+This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardement. The process and geometry parameters can be varied in the __config.txt__ file.
+
 ## Contributing
 
 If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html). Before creating a pull request, make sure ALL files have been formatted by clang-format, which can be done using the format-project.sh script in the root directory.
