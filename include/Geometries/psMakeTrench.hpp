@@ -41,8 +41,8 @@ public:
   psMakeTrench(PSPtrType passedDomain, const NumericType passedGridDelta,
                const NumericType passedXExtent, const NumericType passedYExtent,
                const NumericType passedTrenchWidth,
-               const NumericType passedTaperingAngle,
                const NumericType passedTrenchHeight,
+               const NumericType passedTaperingAngle,
                const bool passedMakeMask = true)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
@@ -184,10 +184,10 @@ public:
       if constexpr (D == 3) {
         minPoint[1] = -yExtent / 2.;
         maxPoint[1] = yExtent / 2.;
-        minPoint[2] = -gridDelta;
+        minPoint[2] = 0.;
         maxPoint[2] = trenchDepth;
       } else {
-        minPoint[1] = -gridDelta;
+        minPoint[1] = 0.;
         maxPoint[1] = trenchDepth;
       }
       lsMakeGeometry<NumericType, D>(

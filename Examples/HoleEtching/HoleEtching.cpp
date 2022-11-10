@@ -1,72 +1,43 @@
 #include <Geometries/psMakeHole.hpp>
 #include <SF6O2Etching.hpp>
+#include <psConfigParser.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psVTKWriter.hpp>
-
-#include "ConfigParser.hpp"
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
   // Parse the parameters
-  int P, y;
-  NumericType maskHeight = 0.2;
-  NumericType taperAngle = 5.;
-  NumericType processTime = 200;
-  NumericType totalEtchantFlux = 4.5e16;
-  NumericType totalOxygenFlux = 1.e18;
-  NumericType totalIonFlux = 2e16;
-  NumericType A_O = 3.;
-
+  psProcessParameters<NumericType> params;
   if (argc > 1) {
-    auto config = parseConfig<NumericType>(argv[1]);
-    if (config.size() == 0) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
-    }
-    for (auto [key, value] : config) {
-      if (key == "P") {
-        P = value;
-      } else if (key == "y") {
-        y = value;
-      } else if (key == "maskHeight") {
-        maskHeight = value;
-      } else if (key == "taperAngle") {
-        taperAngle = value;
-      } else if (key == "processTime") {
-        processTime = value;
-      } else if (key == "totalEtchantFlux") {
-        totalEtchantFlux = value;
-      } else if (key == "totalOxygenFlux") {
-        totalOxygenFlux = value;
-      } else if (key == "totalIonFlux") {
-        totalIonFlux = value;
-      } else if (key == "A_O") {
-        A_O = value;
-      }
-    }
+    psConfigParser<NumericType> parser(argv[1]);
+    parser.apply();
+    params = parser.getParameters();
   }
 
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeTrench<NumericType, D>(
-      geometry, 0.02 /* grid delta */, 1 /*x extent*/, 1 /*y extent*/,
-      0.2 /*hole radius*/, taperAngle /* tapering angle in degrees */,
-      maskHeight /* mask height*/, true /*create mask*/)
+  psMakeHole<NumericType, D>(
+      geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
+      params.yExtent /*y extent*/, params.holeRadius /*hole radius*/,
+      params.maskHeight /* mask height*/,
+      params.taperAngle /* tapering angle in degrees */, true /*create mask*/)
       .apply();
 
-  SF6O2Etching<NumericType, D> model(
-      totalIonFlux /*ion flux*/, totalEtchantFlux /*etchant flux*/,
-      totalOxygenFlux /*oxygen flux*/, 100 /*min ion energy (eV)*/,
-      A_O /*oxy sputter yield*/, 0 /*mask material ID*/);
+  SF6O2Etching<NumericType, D> model(params.totalIonFlux /*ion flux*/,
+                                     params.totalEtchantFlux /*etchant flux*/,
+                                     params.totalOxygenFlux /*oxygen flux*/,
+                                     params.ionEnergy /*min ion energy (eV)*/,
+                                     params.A_O /*oxy sputter yield*/,
+                                     0 /*mask material ID*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model.getProcessModel());
   process.setMaxCoverageInitIterations(10);
   process.setNumberOfRaysPerPoint(1000);
-  process.setProcessDuration(processTime);
+  process.setProcessDuration(params.processTime);
 
   auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
   psToSurfaceMesh<NumericType, D>(geometry, mesh).apply();

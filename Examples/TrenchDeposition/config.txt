@@ -1,0 +1,10 @@
+# Config file for a trench depostion example process
+xExtent=1
+yExtent=1
+gridDelta=0.02
+trenchWidth=0.4
+trenchHeight=0.8
+taperAngle=0
+stickingProbability=0.1
+sourcePower=1
+processTime = 5;

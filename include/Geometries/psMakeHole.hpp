@@ -42,8 +42,8 @@ public:
   psMakeHole(PSPtrType passedDomain, const NumericType passedGridDelta,
              const NumericType passedXExtent, const NumericType passedYExtent,
              const NumericType passedHoleRadius,
-             const NumericType passedTaperAngle,
              const NumericType passedHoleDepth,
+             const NumericType passedTaperAngle,
              const bool passedMakeMask = true)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),

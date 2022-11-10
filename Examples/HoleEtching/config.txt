@@ -1,0 +1,9 @@
+# Config file for a hole etching example process
+xExtent=1
+yExtent=1
+gridDelta=0.02
+holeRadius=0.2
+maskHeight=0.2
+taperAngle=0
+processTime=150
+A_O=3
