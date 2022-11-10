@@ -1,0 +1,7 @@
+# Config params for plasma damage volume example
+xExtent=15
+yExtent=7
+gridDelta=0.25
+finWidth=5
+finHeight=15
+meanFreePath=0.75

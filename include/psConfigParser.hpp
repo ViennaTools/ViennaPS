@@ -19,6 +19,8 @@ template <typename NumericType> struct psProcessParameters {
   NumericType holeRadius = 0.2;
   NumericType trenchWidth = 0.2;
   NumericType trenchHeight = 0.4;
+  NumericType finWidth = 0.5;
+  NumericType finHeight = 0.7;
 
   // Common process parameters
   NumericType processTime = 200;
@@ -36,7 +38,7 @@ template <typename NumericType> struct psProcessParameters {
   NumericType A_O = 3.;
 
   // Plasma damage parameters
-  NumericType meanFreePath = 1.;
+  NumericType meanFreePath = .1;
 
   void print() const {
     std::cout << "Process paramters:"
@@ -136,6 +138,10 @@ private:
         params.trenchWidth = value;
       } else if (key == "trenchHeight") {
         params.trenchHeight = value;
+      } else if (key == "finWidth") {
+        params.finWidth = value;
+      } else if (key == "finHeight") {
+        params.finHeight = value;
       } else if (key == "processTime") {
         params.processTime = value;
       } else if (key == "ionEnergy") {
