@@ -79,7 +79,7 @@ public:
   void insertNextLevelSet(lsDomainType passedLevelSet,
                           bool wrapLowerLevelSet = true) {
     if (!levelSets->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
+      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->back(),
                                          lsBooleanOperationEnum::UNION)
           .apply();
     }

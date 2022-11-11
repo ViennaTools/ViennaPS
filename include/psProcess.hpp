@@ -285,7 +285,9 @@ public:
       model->getVelocityField()->setVelocities(velocitites);
 
 #ifdef VIENNAPS_VERBOSE
-      diskMesh->getCellData().insertNextScalarData(*velocitites, "velocities");
+      if (velocitites)
+        diskMesh->getCellData().insertNextScalarData(*velocitites,
+                                                     "velocities");
       if (useCoverages) {
         auto coverages = model->getSurfaceModel()->getCoverages();
         for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {

@@ -47,6 +47,12 @@ public:
     boundaryPadding[1] = yPadding;
   }
 
+  void setBoundaryConditions(
+      typename lsDomain<NumericType, D>::BoundaryType passedBoundaryCons[D]) {
+    for (int i = 0; i < D; i++)
+      boundaryCons[i] = passedBoundaryCons[i];
+  }
+
   void insertNextStructure(psGDSStructure<NumericType> &structure) {
     structures.push_back(structure);
   }
@@ -306,9 +312,11 @@ public:
               << std::endl;
   }
 
-  std::array<std::array<NumericType, 2>> getBounds() const {
+  std::array<std::array<NumericType, 2>, 2> getBoundingBox() const {
     return {minBounds, maxBounds};
   }
+
+  NumericType *getBounds() { return bounds; }
 
   void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
               psGDSElement<NumericType> &element, const NumericType baseHeight,
