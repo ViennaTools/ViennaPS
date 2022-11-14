@@ -309,7 +309,7 @@ public:
 
       // move coverages to LS, so they get are moved with the advection step
       if (useCoverages)
-        moveCoveragesToTopLS(domain, translator,
+        moveCoveragesToTopLS(translator,
                              model->getSurfaceModel()->getCoverages());
       advectionKernel.apply();
 
@@ -317,7 +317,7 @@ public:
       meshConverter.apply();
       if (useCoverages)
         updateCoveragesFromAdvectedSurface(
-            domain, translator, model->getSurfaceModel()->getCoverages());
+            translator, model->getSurfaceModel()->getCoverages());
 
       // apply volume model
       if (useVolumeModel) {
@@ -328,6 +328,9 @@ public:
 
       remainingTime -= advectionKernel.getAdvectedTime();
     }
+
+    addMaterialIdsToTopLS(translator,
+                          diskMesh->getCellData().getScalarData("MaterialIds"));
   }
 
 private:
@@ -389,8 +392,7 @@ private:
   }
 
   void
-  moveCoveragesToTopLS(psDomainType domain,
-                       lsSmartPointer<translatorType> translator,
+  moveCoveragesToTopLS(lsSmartPointer<translatorType> translator,
                        psSmartPointer<psPointData<NumericType>> coverages) {
     auto topLS = domain->getLevelSets()->back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
@@ -410,8 +412,19 @@ private:
     }
   }
 
+  void addMaterialIdsToTopLS(lsSmartPointer<translatorType> translator,
+                             std::vector<NumericType> *materialIds) {
+    auto topLS = domain->getLevelSets()->back();
+    std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
+    for (const auto iter : *translator.get()) {
+      levelSetData[iter.first] = materialIds->at(iter.second);
+    }
+    topLS->getPointData().insertNextScalarData(std::move(levelSetData),
+                                               "Material");
+  }
+
   void updateCoveragesFromAdvectedSurface(
-      psDomainType domain, lsSmartPointer<translatorType> translator,
+      lsSmartPointer<translatorType> translator,
       psSmartPointer<psPointData<NumericType>> coverages) {
     auto topLS = domain->getLevelSets()->back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
