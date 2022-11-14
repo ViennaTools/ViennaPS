@@ -82,7 +82,11 @@ The picture show an example of the trench deposition process for various value o
 
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
-This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardement. The process and geometry parameters can be varied in the __config.txt__ file.
+This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardement. The process and geometry parameters can be varied in the __config.txt__ file. 
+Below the results after 1, 2, and 3 seconds of etching are shown.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/hole_etching/data/images/hole_etching.svg" width=700 style="background-color:white;">
+</div>
 
 By changing the dimension of the hole etching example (_D = 2_), we can easily simulate the profile of a trench etching process with the same plasma chemistry. Here we can, for example, vary the mask tapering angle to observe increased microtrenching, as shown below.
 <div align="center">
