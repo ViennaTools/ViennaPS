@@ -82,7 +82,7 @@ public:
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
-        domain->getLevelSets()->back()->getGrid().getGridDelta();
+        domain->getSurfaceLevelSet()->getGrid().getGridDelta();
 
     auto diskMesh = lsSmartPointer<lsMesh<NumericType>>::New();
     auto translator = lsSmartPointer<translatorType>::New();
@@ -101,6 +101,8 @@ public:
       meshConverter.insertNextLevelSet(dom);
       advectionKernel.insertNextLevelSet(dom);
     }
+    meshConverter.insertNextLevelSet(domain->getSurfaceLevelSet());
+    advectionKernel.insertNextLevelSet(domain->getSurfaceLevelSet());
 
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
@@ -409,7 +411,7 @@ private:
   void
   moveCoveragesToTopLS(lsSmartPointer<translatorType> translator,
                        psSmartPointer<psPointData<NumericType>> coverages) {
-    auto topLS = domain->getLevelSets()->back();
+    auto topLS = domain->getSurfaceLevelSet();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
@@ -429,7 +431,7 @@ private:
 
   void addMaterialIdsToTopLS(lsSmartPointer<translatorType> translator,
                              std::vector<NumericType> *materialIds) {
-    auto topLS = domain->getLevelSets()->back();
+    auto topLS = domain->getSurfaceLevelSet();
     std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
     for (const auto iter : *translator.get()) {
       levelSetData[iter.first] = materialIds->at(iter.second);
@@ -441,7 +443,7 @@ private:
   void updateCoveragesFromAdvectedSurface(
       lsSmartPointer<translatorType> translator,
       psSmartPointer<psPointData<NumericType>> coverages) {
-    auto topLS = domain->getLevelSets()->back();
+    auto topLS = domain->getSurfaceLevelSet();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       auto levelSetData = topLS->getPointData().getScalarData(covName);

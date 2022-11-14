@@ -27,6 +27,7 @@ public:
 
 private:
   lsDomainsType levelSets = nullptr;
+  lsDomainType surfaceLevelSet = nullptr;
   csDomainType cellSet = nullptr;
   bool useCellSet = false;
   NumericType cellSetDepth = 0.;
@@ -45,6 +46,7 @@ public:
       : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
     levelSets = lsDomainsType::New();
     levelSets->push_back(passedLevelSet);
+    surfaceLevelSet = lsDomainType::New(passedLevelSet);
     // generate CellSet
     if (useCellSet) {
       cellSet =
@@ -57,6 +59,12 @@ public:
            const bool passedCellSetPosition = false)
       : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
     levelSets = passedLevelSets;
+    surfaceLevelSet = lsDomainType::New(levelSets->front());
+    for (size_t i = 1; i < levelSets->size(); i++) {
+      lsBooleanOperation<NumericType, D>(surfaceLevelSet, levelSets->at(i),
+                                         lsBooleanOperationEnum::UNION)
+          .apply();
+    }
     // generate CellSet
     if (useCellSet) {
       cellSet =
@@ -69,6 +77,7 @@ public:
     for (unsigned i = 0; i < levelSets->size(); ++i) {
       levelSets[i]->deepCopy(passedDomain->levelSets[i]);
     }
+    surfaceLevelSet = lsDomainType::New(passedDomain->getSurfaceLevelSet());
     useCellSet = passedDomain->useCellSet;
     if (useCellSet) {
       cellSetDepth = passedDomain->cellSetDepth;
@@ -76,14 +85,25 @@ public:
     }
   }
 
-  void insertNextLevelSet(lsDomainType passedLevelSet,
-                          bool wrapLowerLevelSet = true) {
-    if (!levelSets->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->back(),
+  void insertNextLevelSet(lsDomainType passedLevelSet) {
+    if (!surfaceLevelSet) {
+      surfaceLevelSet = lsDomainType::New(passedLevelSet);
+    } else {
+      lsBooleanOperation<NumericType, D>(surfaceLevelSet, passedLevelSet,
                                          lsBooleanOperationEnum::UNION)
           .apply();
     }
     levelSets->push_back(passedLevelSet);
+  }
+
+  void removeLevelSet(const size_t idx) {
+    levelSets->erase(levelSets->begin() + idx);
+    surfaceLevelSet = lsDomainType::New(levelSets->front());
+    for (size_t i = 1; i < levelSets->size(); i++) {
+      lsBooleanOperation<NumericType, D>(surfaceLevelSet, levelSets->at(i),
+                                         lsBooleanOperationEnum::UNION)
+          .apply();
+    }
   }
 
   void generateCellSet(const NumericType depth = 0.,
@@ -97,11 +117,13 @@ public:
     cellSet->fromLevelSets(levelSets, cellSetDepth);
   }
 
+  auto &getSurfaceLevelSet() { return surfaceLevelSet; }
+
   auto &getLevelSets() { return levelSets; }
 
   auto &getCellSet() { return cellSet; }
 
-  auto &getGrid() { return levelSets->back()->getGrid(); }
+  auto &getGrid() { return surfaceLevelSet->getGrid(); }
 
   void setUseCellSet(bool useCS) { useCellSet = useCS; }
 
@@ -118,12 +140,13 @@ public:
 
   void printSurface(std::string name) {
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-    lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
+    lsToSurfaceMesh<NumericType, D>(surfaceLevelSet, mesh).apply();
 
     lsVTKWriter<NumericType>(mesh, name).apply();
   }
 
   void clear() {
+    surfaceLevelSet = nullptr;
     levelSets = lsDomainsType::New();
     if (useCellSet) {
       cellSet = csDomainType::New();

@@ -10,12 +10,12 @@ private:
 public:
   psToSurfaceMesh(const psSmartPointer<psDomain<T, D>> passedDomain,
                   lsSmartPointer<lsMesh<T>> passedMesh, double eps = 1e-12)
-      : meshConverter(passedDomain->getLevelSets()->back(), passedMesh, eps) {}
+      : meshConverter(passedDomain->getSurfaceLevelSet(), passedMesh, eps) {}
 
   void apply() { meshConverter.apply(); }
 
   void setDomain(const psSmartPointer<psDomain<T, D>> passedDomain) {
-    meshConverter.setLevelSet(passedDomain->getLevelSets()->back());
+    meshConverter.setLevelSet(passedDomain->getSurfaceLevelSet());
   }
 
   void setMesh(psSmartPointer<lsMesh<T>> passedMesh) {
