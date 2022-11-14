@@ -246,7 +246,8 @@ public:
       auto direction = rayReflectionConedCosine<NumericType, D>(
           rayInternal::PI / 2. - std::min(incAngle, minAngle), rayDir,
           geomNormal, Rng);
-      return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
+      return std::pair<NumericType, rayTriple<NumericType>>{NumericType(0),
+                                                            direction};
     } else {
       return std::pair<NumericType, rayTriple<NumericType>>{
           1., rayTriple<NumericType>{0., 0., 0.}};

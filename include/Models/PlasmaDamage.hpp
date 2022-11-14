@@ -5,7 +5,8 @@
 
 #include <rayUtil.hpp>
 
-template <class T> class DamageIon : public csParticle<DamageIon<T>, T> {
+template <class T, int D>
+class DamageIon : public csParticle<DamageIon<T, D>, T> {
 public:
   DamageIon(const T passedMeanEnergy = 100., const T passedMeanFreePath = 1.)
       : meanIonEnergy(passedMeanEnergy), meanFreePath(passedMeanFreePath) {}
@@ -58,7 +59,7 @@ public:
 
     if (NewEnergy > minEnergy) {
       reflect = true;
-      auto direction = rayReflectionConedCosine<T>(
+      auto direction = rayReflectionConedCosine<T, D>(
           rayInternal::PI / 2. - std::min(incAngle, minAngle), rayDir,
           geomNormal, Rng);
       E = NewEnergy;
@@ -192,7 +193,7 @@ public:
     tracer.setExcludeMaterialId(maskID);
 
     auto damageIon =
-        std::make_unique<DamageIon<NumericType>>(energy, meanFreePath);
+        std::make_unique<DamageIon<NumericType, D>>(energy, meanFreePath);
     tracer.setParticle(damageIon);
   }
 

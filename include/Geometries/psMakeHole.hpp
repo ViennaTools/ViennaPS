@@ -23,6 +23,7 @@ public:
   NumericType yExtent = 10;
 
   NumericType holeRadius = 3;
+  NumericType taperAngle = 0; // tapering angle in degrees
   NumericType holeDepth = 6;
   bool makeMask = true;
 
@@ -38,15 +39,25 @@ public:
         holeRadius(passedHoleRadius), holeDepth(passedHoleDepth),
         makeMask(passedMakeMask) {}
 
+  psMakeHole(PSPtrType passedDomain, const NumericType passedGridDelta,
+             const NumericType passedXExtent, const NumericType passedYExtent,
+             const NumericType passedHoleRadius,
+             const NumericType passedHoleDepth,
+             const NumericType passedTaperAngle,
+             const bool passedMakeMask = true)
+      : domain(passedDomain), gridDelta(passedGridDelta),
+        xExtent(passedXExtent), yExtent(passedYExtent),
+        holeRadius(passedHoleRadius), taperAngle(passedTaperAngle),
+        holeDepth(passedHoleDepth), makeMask(passedMakeMask) {}
+
   void apply() {
     if (D != 3) {
       lsMessage::getInstance()
           .addWarning("psMakeHole: Hole geometry can only be created in 3D! "
                       "Falling back to trench geometry.")
           .print();
-
       psMakeTrench<NumericType, D>(domain, gridDelta, xExtent, yExtent,
-                                   2 * holeRadius, holeDepth)
+                                   2 * holeRadius, taperAngle, holeDepth)
           .apply();
 
       return;
@@ -74,6 +85,7 @@ public:
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
+    // substrate
     auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
@@ -82,6 +94,7 @@ public:
         substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
 
+    // mask layer
     auto mask = LSPtrType::New(bounds, boundaryCons, gridDelta);
     origin[D - 1] = holeDepth;
     lsMakeGeometry<NumericType, D>(
@@ -99,12 +112,19 @@ public:
                                        lsBooleanOperationEnum::INTERSECT)
         .apply();
 
+    // cylinder cutout
     normal[D - 1] = 1.;
-    origin[D - 1] = -gridDelta;
+    origin[D - 1] = 0.;
+
+    NumericType topRadius = holeRadius;
+    if (taperAngle) {
+      topRadius += std::tan(taperAngle * rayInternal::PI / 180.) * holeDepth;
+    }
 
     lsMakeGeometry<NumericType, D>(
-        maskAdd, lsSmartPointer<lsCylinder<NumericType, D>>::New(
-                     origin, normal, holeDepth + 2 * gridDelta, holeRadius))
+        maskAdd,
+        lsSmartPointer<lsCylinder<NumericType, D>>::New(
+            origin, normal, holeDepth + 2 * gridDelta, holeRadius, topRadius))
         .apply();
 
     lsBooleanOperation<NumericType, D>(
