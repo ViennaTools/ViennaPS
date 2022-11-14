@@ -8,17 +8,23 @@
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
-template <class T>
-class DirectionalEtchVelocityField : public psVelocityField<T> {
+template <class T, int D = 3>
+class EpitaxyVelocityField : public psVelocityField<T> {
 public:
-  DirectionalEtchVelocityField(const int matId) : etchMat(matId) {}
+  EpitaxyVelocityField(const int matId, const int ptopMatId)
+      : depoMatId(matId), topMatId(ptopMatId) {}
 
   T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
                       const std::array<T, 3> &normalVector,
                       unsigned long pointID) override {
-    // etch directionally
-    if (material == etchMat) {
-      return (normalVector[2] > 0.4) ? -normalVector[2] * rate : 0;
+
+    if (material == depoMatId || material == topMatId) {
+      double vel = std::max(std::abs(normalVector[0] * 0.5),
+                            std::abs(normalVector[1]) * 0.5);
+      // std::abs(normalVector[2])); // no vel in y direction
+      constexpr double factor = (R100 - R111) / (high - low);
+      vel = (vel - low) * factor + R111;
+      return vel;
     } else {
       return 0;
     }
@@ -31,12 +37,19 @@ public:
 
 private:
   psSmartPointer<std::vector<T>> velocities = nullptr;
-  const T rate = 0.1;
-  const int etchMat = 0;
+  const T rate = 0.01;
+  const int depoMatId = 0;
+  const int topMatId = 0;
+
+  static constexpr double R111 = 0.5;
+  static constexpr double R100 = 1.;
+  static constexpr double low =
+      (D > 2) ? 0.5773502691896257 : 0.7071067811865476;
+  static constexpr double high = 1.0;
 };
 
 template <typename NumericType>
-class DirectionalEtchSurfaceModel : public psSurfaceModel<NumericType> {
+class EpitaxySurfaceModel : public psSurfaceModel<NumericType> {
 
 public:
   psSmartPointer<std::vector<NumericType>>
