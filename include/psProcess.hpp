@@ -47,6 +47,15 @@ public:
 
   void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
 
+  void
+  setIntegrationScheme(const lsIntegrationSchemeEnum passedIntegrationScheme) {
+    integrationScheme = passedIntegrationScheme;
+  }
+
+  void setPrintIntermediateSteps(const bool printSteps) {
+    printIntermediateSteps = printSteps;
+  }
+
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
@@ -86,6 +95,7 @@ public:
 
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
+    advectionKernel.setIntegrationScheme(integrationScheme);
 
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -285,23 +295,26 @@ public:
       model->getVelocityField()->setVelocities(velocitites);
 
 #ifdef VIENNAPS_VERBOSE
-      if (velocitites)
-        diskMesh->getCellData().insertNextScalarData(*velocitites,
-                                                     "velocities");
-      if (useCoverages) {
-        auto coverages = model->getSurfaceModel()->getCoverages();
-        for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-          auto label = coverages->getScalarDataLabel(idx);
-          diskMesh->getCellData().insertNextScalarData(
-              *coverages->getScalarData(idx), label);
+      if (printIntermediateSteps) {
+        if (velocitites)
+          diskMesh->getCellData().insertNextScalarData(*velocitites,
+                                                       "velocities");
+        if (useCoverages) {
+          auto coverages = model->getSurfaceModel()->getCoverages();
+          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+            auto label = coverages->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *coverages->getScalarData(idx), label);
+          }
         }
+        for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+          auto label = Rates->getScalarDataLabel(idx);
+          diskMesh->getCellData().insertNextScalarData(
+              *Rates->getScalarData(idx), label);
+        }
+        printDiskMesh(diskMesh,
+                      name + "_" + std::to_string(counter++) + ".vtp");
       }
-      for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-        auto label = Rates->getScalarDataLabel(idx);
-        diskMesh->getCellData().insertNextScalarData(*Rates->getScalarData(idx),
-                                                     label);
-      }
-      printDiskMesh(diskMesh, name + "_" + std::to_string(counter++) + ".vtp");
 #endif
       // apply volume model
       if (useVolumeModel) {
@@ -449,6 +462,9 @@ private:
   bool useRandomSeeds = true;
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
+  bool printIntermediateSteps = false;
+  lsIntegrationSchemeEnum integrationScheme =
+      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
 };
 
 #endif
