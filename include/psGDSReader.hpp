@@ -87,7 +87,7 @@ private:
       currentRecordLen += currentRecordLen % 2;
       str = new char[currentRecordLen + 1];
 
-      (void)!fread(str, 1, currentRecordLen, filePtr);
+      fread(str, 1, currentRecordLen, filePtr);
       str[currentRecordLen] = 0;
       currentRecordLen = 0;
     }
@@ -97,7 +97,7 @@ private:
 
   int16_t readTwoByteSignedInt() {
     int16_t value;
-    (void)!fread(&value, 2, 1, filePtr);
+    fread(&value, 2, 1, filePtr);
 
     currentRecordLen -= 2;
 
@@ -110,7 +110,7 @@ private:
 
   int32_t readFourByteSignedInt() {
     int32_t value;
-    (void)!fread(&value, 4, 1, filePtr);
+    fread(&value, 4, 1, filePtr);
 
     currentRecordLen -= 4;
 
@@ -128,7 +128,7 @@ private:
     double exponent;
     double mant;
 
-    (void)!fread(&value, 1, 1, filePtr);
+    fread(&value, 1, 1, filePtr);
     if (value & 128) {
       value -= 128;
       sign = -1.0;
@@ -137,13 +137,13 @@ private:
     exponent -= 64.0;
     mant = 0.0;
 
-    (void)!fread(&b2, 1, 1, filePtr);
-    (void)!fread(&b3, 1, 1, filePtr);
-    (void)!fread(&b4, 1, 1, filePtr);
-    (void)!fread(&b5, 1, 1, filePtr);
-    (void)!fread(&b6, 1, 1, filePtr);
-    (void)!fread(&b7, 1, 1, filePtr);
-    (void)!fread(&b8, 1, 1, filePtr);
+    fread(&b2, 1, 1, filePtr);
+    fread(&b3, 1, 1, filePtr);
+    fread(&b4, 1, 1, filePtr);
+    fread(&b5, 1, 1, filePtr);
+    fread(&b6, 1, 1, filePtr);
+    fread(&b7, 1, 1, filePtr);
+    fread(&b8, 1, 1, filePtr);
 
     mant += b8;
     mant /= 256.0;
@@ -298,8 +298,8 @@ private:
 
     while (!feof(filePtr)) {
       currentRecordLen = readTwoByteSignedInt();
-      (void)!fread(&recordType, 1, 1, filePtr);
-      (void)!fread(&dataType, 1, 1, filePtr);
+      fread(&recordType, 1, 1, filePtr);
+      fread(&dataType, 1, 1, filePtr);
       currentRecordLen -= 4;
 
       switch (recordType) {

@@ -316,9 +316,7 @@ public:
     return {minBounds, maxBounds};
   }
 
-  std::vector<double> getBounds() {
-    return std::vector<double>(std::begin(bounds), std::end(bounds));
-  }
+  NumericType *getBounds() { return bounds; }
 
   void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
               psGDSElement<NumericType> &element, const NumericType baseHeight,
