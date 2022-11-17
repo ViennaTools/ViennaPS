@@ -11,13 +11,13 @@
 template <class T>
 class DirectionalEtchVelocityField : public psVelocityField<T> {
 public:
-  DirectionalEtchVelocityField(const int matId) : etchMat(matId) {}
+  DirectionalEtchVelocityField() {}
 
   T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
                       const std::array<T, 3> &normalVector,
                       unsigned long pointID) override {
     // etch directionally
-    if (material == etchMat) {
+    if (material > 0) {
       return (normalVector[2] > 0.4) ? -normalVector[2] * rate : 0;
     } else {
       return 0;
@@ -32,7 +32,6 @@ public:
 private:
   psSmartPointer<std::vector<T>> velocities = nullptr;
   const T rate = 0.1;
-  const int etchMat = 0;
 };
 
 template <typename NumericType>

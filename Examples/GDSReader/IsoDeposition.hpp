@@ -16,6 +16,7 @@ public:
   T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
                       const std::array<T, 3> &normalVector,
                       unsigned long pointID) override {
+    // etch directionally
     return rate;
   }
 
