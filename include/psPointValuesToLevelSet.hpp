@@ -38,7 +38,7 @@ public:
   void apply() {
     auto data = levelSet->getPointData().getScalarData(dataName);
     if (data != nullptr) {
-      data->resize(levelSet->getNumberOfPoints());
+      data->resize(translator->size());
     } else {
       levelSet->getPointData().insertNextScalarData(
           std::vector<NumericType>(levelSet->getNumberOfPoints()), dataName);
