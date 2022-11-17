@@ -5,20 +5,6 @@
 #include <psToDiskMesh.hpp>
 #include <psVTKWriter.hpp>
 
-template <class NumericType, int D>
-void printSurfaceWithMaterialIds(
-    psSmartPointer<psDomain<NumericType, D>> domain, std::string name) {
-  auto translator =
-      psSmartPointer<std::unordered_map<unsigned long, unsigned long>>::New();
-  auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-  psToDiskMesh<NumericType, D>(domain, mesh, translator).apply();
-  auto matIds = mesh->getCellData().getScalarData("MaterialIds");
-  psPointValuesToLevelSet<NumericType, D>(domain->getLevelSets()->back(),
-                                          translator, matIds, "Material")
-      .apply();
-  domain->printSurface(name);
-}
-
 int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
@@ -58,7 +44,7 @@ int main(int argc, char **argv) {
                                       0.45 /*height*/);
   geometry->insertNextLevelSet(layer1);
 
-  printSurfaceWithMaterialIds(geometry, "Geometry.vtp");
+  geometry->printSurface("Geometry.vtp", true /* add material IDs */);
 
   return 0;
 }
