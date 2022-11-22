@@ -7,6 +7,7 @@
 #include <lsToDiskMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
+#include <lsWriter.hpp>
 
 #include <csDenseCellSet.hpp>
 
@@ -139,6 +140,14 @@ public:
 
     lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
     lsVTKWriter<NumericType>(mesh, name).apply();
+  }
+
+  void writeLevelSets(std::string fileName) {
+    for (int i = 0; i < levelSets->size(); i++) {
+      lsWriter<NumericType, D>(
+          levelSets->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
+          .apply();
+    }
   }
 
   void clear() {
