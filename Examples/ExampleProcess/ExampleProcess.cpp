@@ -65,10 +65,7 @@ int main() {
   process.setMaxCoverageInitIterations(10);
   process.apply();
 
-  auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-  psToSurfaceMesh<NumericType, D>(domain, mesh).apply();
-
-  psVTKWriter<NumericType>(mesh, "ExampleProcess.vtp").apply();
+  domain->printSurface("ExampleProcess.vtp");
 
   return 0;
 }
