@@ -49,7 +49,9 @@ public:
 
     const csPair<T> meanFreePath = mParticle->getMeanFreePath();
 
-#pragma omp parallel shared(cellSet)
+    auto myCellSet = cellSet;
+
+#pragma omp parallel shared(myCellSet)
     {
       rtcJoinCommitScene(rtcScene);
 
@@ -87,7 +89,7 @@ public:
       // thread local path
       csTracePath<T> path;
       // if (!traceOnPath)
-      path.useGridData(cellSet->getNumberOfCells());
+      path.useGridData(myCellSet->getNumberOfCells());
 
       auto rtcContext = RTCIntersectContext{};
       rtcInitIntersectContext(&rtcContext);
@@ -191,7 +193,7 @@ public:
                 if (!checkBoundsPeriodic(volumeParticle.position))
                   break;
 
-                auto newIdx = cellSet->getIndex(volumeParticle.position);
+                auto newIdx = myCellSet->getIndex(volumeParticle.position);
                 if (newIdx < 0)
                   break;
 
@@ -236,7 +238,7 @@ public:
       } // end ray tracing for loop
 
 #pragma omp critical
-      cellSet->mergePath(path, mNumRays);
+      myCellSet->mergePath(path, mNumRays);
     } // end parallel section
 
 #ifdef VIENNAPS_VERBOSE

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 project("ViennaPS" VERSION 1.0.0)
 
@@ -24,6 +24,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
       TRUE
       CACHE BOOL "Export all symbols")
+  add_compile_definitions(_USE_MATH_DEFINES)
 endif()
 
 set(ViennaPS_BINARY_DIR

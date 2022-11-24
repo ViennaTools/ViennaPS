@@ -38,8 +38,9 @@ public:
   }
   virtual T getSourceDistributionPower() const override { return 1.; }
   virtual csPair<T> getMeanFreePath() const override { return {1., 1.}; }
-  virtual T collision(csVolumeParticle<T> &particle, rayRNG &RNG,
-                      std::vector<csVolumeParticle<T>> &particleStack) {
+  virtual T
+  collision(csVolumeParticle<T> &particle, rayRNG &RNG,
+            std::vector<csVolumeParticle<T>> &particleStack) override {
     return 0.;
   }
 

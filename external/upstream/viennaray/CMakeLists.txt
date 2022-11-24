@@ -1,5 +1,16 @@
-# Build ViennaRay if cmake couldn't find an installation
-if(DEFINED ViennaRay_DIR)
+# Check if the variable is a cache variable
+get_property(
+  is_cached
+  CACHE ViennaRay_DIR
+  PROPERTY TYPE)
+# If it is not from cache and defined at this point, the variable was passed as a -D command line
+# argument
+if("${is_cached}" STREQUAL "" AND DEFINED ViennaRay_DIR)
+  # Required for windows to convert backslashes to forward slashes
+  file(TO_CMAKE_PATH "${ViennaRay_DIR}" ViennaRay_DIR)
+  set(ViennaRay_DIR
+      "${ViennaRay_DIR}"
+      CACHE PATH "Path to ViennaRay installation" FORCE)
   find_package(ViennaRay REQUIRED PATHS ${ViennaRay_DIR} NO_DEFAULT_PATH)
   message(STATUS "Found ViennaRay at ${ViennaRay_DIR}")
   add_library(viennaray_external INTERFACE) # dummy target
