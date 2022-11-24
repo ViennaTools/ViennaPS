@@ -1,7 +1,12 @@
 # Config params for plasma damage volume example
+# Domain
+gridDelta=0.25
 xExtent=15
 yExtent=7
-gridDelta=0.25
+
+# Geometry
 finWidth=5
 finHeight=15
+
+# Process
 meanFreePath=0.75

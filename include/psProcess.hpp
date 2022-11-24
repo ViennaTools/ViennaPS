@@ -50,6 +50,23 @@ public:
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
+
+    if (!domain) {
+      lsMessage::getInstance()
+          .addWarning("No domain passed to psProcess.")
+          .print();
+      return;
+    }
+
+    if (model->getGeometricModel()) {
+      model->getGeometricModel()->setDomain(domain);
+#ifdef VIENNAPS_VERBOSE
+      std::cout << "Applying geometric model..." << std::endl;
+#endif
+      model->getGeometricModel()->apply();
+      return;
+    }
+
     if (processDuration == 0.) {
       // apply only volume model
       if (model->getVolumeModel()) {

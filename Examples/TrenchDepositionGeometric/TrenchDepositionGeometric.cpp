@@ -1,5 +1,5 @@
+#include <GeometricUniformDeposition.hpp>
 #include <Geometries/psMakeTrench.hpp>
-#include <SimpleDeposition.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
@@ -10,7 +10,7 @@
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  static constexpr int D = 2;
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -24,11 +24,9 @@ int main(int argc, char *argv[]) {
   }
 
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeTrench<NumericType, D>(
-      geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
-      params.yExtent /*y extent*/, params.trenchWidth /*trench width*/,
-      params.trenchHeight /*trench height*/,
-      params.taperAngle /* tapering angle */, false /*create mask*/)
+  psMakeTrench<NumericType, D>(geometry, params.gridDelta, params.xExtent,
+                               params.yExtent, params.trenchWidth,
+                               params.trenchHeight, false /*create mask*/)
       .apply();
 
   // copy top layer to capture deposition
@@ -36,15 +34,11 @@ int main(int argc, char *argv[]) {
       geometry->getLevelSets()->back());
   geometry->insertNextLevelSet(depoLayer);
 
-  SimpleDeposition<NumericType, D> model(
-      params.stickingProbability /*particle sticking probability*/,
-      params.sourcePower /*particel source power*/);
+  GeometricUniformDeposition<NumericType, D> model(params.layerThickness);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model.getProcessModel());
-  process.setNumberOfRaysPerPoint(1000);
-  process.setProcessDuration(params.processTime);
 
   auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
   psToSurfaceMesh<NumericType, D>(geometry, mesh).apply();

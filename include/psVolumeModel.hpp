@@ -7,7 +7,7 @@
 
 template <typename NumericType, int D> class psVolumeModel {
 protected:
-  psSmartPointer<psDomain<NumericType, D>> domain;
+  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
   csTracing<NumericType, D> tracer;
 
 public:
