@@ -1,4 +1,4 @@
-#include <GeometricUniformDeposition.hpp>
+#include <GeometricDistributionModels.hpp>
 #include <Geometries/psMakeTrench.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
@@ -34,7 +34,8 @@ int main(int argc, char *argv[]) {
       geometry->getLevelSets()->back());
   geometry->insertNextLevelSet(depoLayer);
 
-  GeometricUniformDeposition<NumericType, D> model(params.layerThickness);
+  SphereDistribution<NumericType, D> model(params.layerThickness,
+                                           params.gridDelta);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);

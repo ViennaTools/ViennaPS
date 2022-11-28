@@ -27,6 +27,8 @@ public:
   typedef psSmartPointer<std::vector<lsDomainType>> lsDomainsType;
   typedef psSmartPointer<csDenseCellSet<NumericType, D>> csDomainType;
 
+  static constexpr char materialIdsLabel[] = "MaterialIds";
+
 private:
   lsDomainsType levelSets = nullptr;
   csDomainType cellSet = nullptr;
@@ -132,10 +134,13 @@ public:
         meshConverter.insertNextLevelSet(ls);
       }
       meshConverter.apply();
-      auto matIds = mesh->getCellData().getScalarData("MaterialIds");
-      psPointValuesToLevelSet<NumericType, D>(levelSets->back(), translator,
-                                              matIds, "Material")
-          .apply();
+      auto matIds = mesh->getCellData().getScalarData(materialIdsLabel);
+      if (matIds && matIds->size() == levelSets->back()->getNumberOfPoints())
+        psPointValuesToLevelSet<NumericType, D>(levelSets->back(), translator,
+                                                matIds, "Material")
+            .apply();
+      else
+        std::cout << "Scalar data '" << materialIdsLabel << "' not found in mesh cellData.\n";
     }
 
     lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();

@@ -58,9 +58,13 @@ jobs:
           token: ${{ secrets.PAT_CACHE }}
           repository: ${{env.ORG}}/ViennaPS
 
+      - name: Store cache refresh key in ENV
+        shell: bash
+        run: echo "VIENNALS_CACHE_REFRESH=${{ github.event_name == 'schedule' || steps.cache-check.outputs.exists != 'true' }}" >> $GITHUB_ENV
+
       - name: Setup Cache for Build Dependencies
         uses: actions/cache@v3
-        if: ${{steps.cache-check.outputs.exists != 'true'}}
+        if: ${{ env.VIENNALS_CACHE_REFRESH == 'true' }}
         id: viennals-dependency-cache
         with:
           key: ${{env.VIENNALS_CACHE_KEY}}
@@ -70,15 +74,11 @@ jobs:
             ${{github.workspace}}/viennals/dependencies/Install
 
       - name: Configure ViennaLS
-        if: ${{steps.cache-check.outputs.exists != 'true'}}
+        if: ${{ env.VIENNALS_CACHE_REFRESH == 'true' }}
         run: cmake -B ${{github.workspace}}/viennals/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/viennals/install
 
-      - name: Add VTK to PATH
-        if: ${{steps.cache-check.outputs.exists != 'true'}}
-        run: echo "${{github.workspace}}\viennals\dependencies\Build\vtk_external\bin\${{env.BUILD_TYPE}}" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
       - name: Build ViennaLS
-        if: ${{steps.cache-check.outputs.exists != 'true'}}
+        if: ${{ env.VIENNALS_CACHE_REFRESH == 'true' }}
         run: cmake --build ${{github.workspace}}/viennals/build
 
   setup-viennaray:
@@ -116,8 +116,12 @@ jobs:
           token: ${{ secrets.PAT_CACHE }}
           repository: ${{env.ORG}}/ViennaPS
 
+      - name: Store cache refresh key in ENV
+        shell: bash
+        run: echo "VIENNARAY_CACHE_REFRESH=${{ github.event_name == 'schedule' || steps.cache-check.outputs.exists != 'true' }}" >> $GITHUB_ENV
+
       - name: Setup Cache for Build Dependencies
-        if: ${{steps.cache-check.outputs.exists != 'true'}}
+        if: ${{ env.VIENNARAY_CACHE_REFRESH == 'true' }}
         uses: actions/cache@v3
         id: viennaray-dependency-cache
         with:
@@ -125,9 +129,9 @@ jobs:
           path: ${{github.workspace}}/viennaray/dependencies/Install
 
       - name: Configure ViennaRay
-        if: ${{steps.cache-check.outputs.exists != 'true'}}
+        if: ${{ env.VIENNARAY_CACHE_REFRESH == 'true' }}
         run: cmake -B ${{github.workspace}}/viennaray/build -DCMAKE_BUILD_TYPE=${{env.build_type}}
 
       - name: Build ViennaRay
-        if: ${{steps.cache-check.outputs.exists != 'true'}}
+        if: ${{ env.VIENNARAY_CACHE_REFRESH == 'true' }}
         run: cmake --build ${{github.workspace}}/viennaray/build --config ${{env.BUILD_TYPE}}
