@@ -1,5 +1,17 @@
-# Build ViennaLS if cmake couldn't find an installation
-if(DEFINED ViennaLS_DIR)
+# Check if the variable is a cache variable
+get_property(
+  is_cached
+  CACHE ViennaLS_DIR
+  PROPERTY TYPE)
+# If it is not from cache and defined at this point, the variable was passed as a -D command line
+# argument
+if("${is_cached}" STREQUAL "" AND DEFINED ViennaLS_DIR)
+  # Required for windows to convert backslashes to forward slashes
+  file(TO_CMAKE_PATH "${ViennaLS_DIR}" ViennaLS_DIR)
+  set(ViennaLS_DIR
+      "${ViennaLS_DIR}"
+      CACHE PATH "Path to ViennaLS installation" FORCE)
+  # Now look for the package at the provided location
   find_package(ViennaLS REQUIRED PATHS ${ViennaLS_DIR} NO_DEFAULT_PATH)
   if(ViennaLS_FOUND AND NOT ${VIENNALS_USE_VTK})
     message(FATAL_ERROR "ViennaLS was built without VTK support!")

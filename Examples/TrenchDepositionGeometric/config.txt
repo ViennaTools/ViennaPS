@@ -1,4 +1,4 @@
-# Config file for a trench depostion example process
+# Config file for a geometric trench depostion example process
 # Domain
 gridDelta=0.02
 xExtent=1
@@ -10,6 +10,4 @@ trenchHeight=0.8
 taperAngle=0
 
 # Process
-stickingProbability=0.1
-sourcePower=1
-processTime=5;
+layerThickness=.15;

@@ -245,7 +245,7 @@ private:
   }
 
   void parseXYRef() {
-    bool flipped = ((u_int16_t)(currentSTrans & 0x8000) == (u_int16_t)0x8000);
+    bool flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
 
     if (currentElement == elSRef) {
       float X = units * (float)readFourByteSignedInt();
