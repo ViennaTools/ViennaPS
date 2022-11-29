@@ -57,7 +57,8 @@ public:
                       "Falling back to trench geometry.")
           .print();
       psMakeTrench<NumericType, D>(domain, gridDelta, xExtent, yExtent,
-                                   2 * holeRadius, taperAngle, holeDepth)
+                                   2 * holeRadius, holeDepth, taperAngle,
+                                   makeMask)
           .apply();
 
       return;

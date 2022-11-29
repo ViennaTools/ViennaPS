@@ -3,7 +3,6 @@
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
-#include <psVTKWriter.hpp>
 
 #include "Parameters.hpp"
 
@@ -46,14 +45,11 @@ int main(int argc, char *argv[]) {
   process.setNumberOfRaysPerPoint(1000);
   process.setProcessDuration(params.processTime);
 
-  auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-  psToSurfaceMesh<NumericType, D>(geometry, mesh).apply();
-  psVTKWriter<NumericType>(mesh, "initial.vtp").apply();
+  geometry->printSurface("initial.vtp");
 
   process.apply();
 
-  psToSurfaceMesh<NumericType, D>(geometry, mesh).apply();
-  psVTKWriter<NumericType>(mesh, "final.vtp").apply();
+  geometry->printSurface("final.vtp");
 
   return EXIT_SUCCESS;
 }

@@ -47,6 +47,11 @@ public:
 
   void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
 
+  void
+  setIntegrationScheme(const lsIntegrationSchemeEnum passedIntegrationScheme) {
+    integrationScheme = passedIntegrationScheme;
+  }
+
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
@@ -103,6 +108,7 @@ public:
 
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
+    advectionKernel.setIntegrationScheme(integrationScheme);
 
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -462,6 +468,8 @@ private:
   NumericType processDuration;
   rayTraceDirection sourceDirection =
       D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
+  lsIntegrationSchemeEnum integrationScheme =
+      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
   size_t maxIterations = 20;
