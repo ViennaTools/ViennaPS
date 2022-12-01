@@ -16,7 +16,6 @@ on:
 
 env:
   BUILD_TYPE: Debug
-  ORG: ViennaTools
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,7 +34,7 @@ jobs:
       - name: Checkout ViennaLS
         uses: actions/checkout@v3
         with:
-          repository: ${{env.ORG}}/ViennaLS
+          repository: ${{github.repository_owner}}/ViennaLS
           path: ./viennals
 
       - name: Store cache key in ENV
@@ -48,7 +47,7 @@ jobs:
         with:
           cache-key: ${{env.VIENNALS_CACHE_KEY}}
           token: ${{ secrets.PAT_CACHE }}
-          repository: ${{env.ORG}}/ViennaPS
+          repository: ${{github.repository_owner}}/ViennaPS
 
       - name: Clear Cache
         if: ${{ github.event_name == 'schedule' && steps.cache-check.outputs.exists == 'true'}}
@@ -56,7 +55,7 @@ jobs:
         with:
           cache-key: ${{env.VIENNALS_CACHE_KEY}}
           token: ${{ secrets.PAT_CACHE }}
-          repository: ${{env.ORG}}/ViennaPS
+          repository: ${{github.repository_owner}}/ViennaPS
 
       - name: Store cache refresh key in ENV
         shell: bash
@@ -105,7 +104,7 @@ jobs:
         with:
           cache-key: ${{env.VIENNARAY_CACHE_KEY}}
           token: ${{ secrets.PAT_CACHE }}
-          repository: ${{env.ORG}}/ViennaPS
+          repository: ${{github.repository_owner}}/ViennaPS
 
       - name: Clear Cache
         if: ${{ github.event_name == 'schedule' && steps.cache-check.outputs.exists == 'true'}}
@@ -113,7 +112,7 @@ jobs:
         with:
           cache-key: ${{env.VIENNARAY_CACHE_KEY}}
           token: ${{ secrets.PAT_CACHE }}
-          repository: ${{env.ORG}}/ViennaPS
+          repository: ${{github.repository_owner}}/ViennaPS
 
       - name: Store cache refresh key in ENV
         shell: bash
