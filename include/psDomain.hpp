@@ -140,7 +140,8 @@ public:
                                                 matIds, "Material")
             .apply();
       else
-        std::cout << "Scalar data '" << materialIdsLabel << "' not found in mesh cellData.\n";
+        std::cout << "Scalar data '" << materialIdsLabel
+                  << "' not found in mesh cellData.\n";
     }
 
     lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
