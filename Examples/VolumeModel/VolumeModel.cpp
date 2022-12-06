@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeFin<NumericType, D>(geometry, params.gridDelta, params.xExtent,
                             params.yExtent, params.finWidth, params.finHeight,
+                            0. /* base height*/, false /*periodic boundary*/,
                             false /*create mask*/)
       .apply();
 

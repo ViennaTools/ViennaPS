@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeTrench<NumericType, D>(geometry, params.gridDelta, params.xExtent,
                                params.yExtent, params.trenchWidth,
-                               params.trenchHeight, false /*create mask*/)
+                               params.trenchHeight)
       .apply();
 
   // copy top layer to capture deposition
