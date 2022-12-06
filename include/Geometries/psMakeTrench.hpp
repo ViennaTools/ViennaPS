@@ -127,31 +127,31 @@ public:
           mesh->insertNextNode(node);
         }
         mesh->nodes[0][0] = -trenchWidth / 2.;
-        mesh->nodes[0][1] = -yExtent / 2.;
+        mesh->nodes[0][1] = -yExtent / 2. - gridDelta;
 
         mesh->nodes[1][0] = trenchWidth / 2.;
-        mesh->nodes[1][1] = -yExtent / 2.;
+        mesh->nodes[1][1] = -yExtent / 2. - gridDelta;
 
         mesh->nodes[2][0] = trenchWidth / 2.;
-        mesh->nodes[2][1] = yExtent / 2.;
+        mesh->nodes[2][1] = yExtent / 2. + gridDelta;
 
         mesh->nodes[3][0] = -trenchWidth / 2.;
-        mesh->nodes[3][1] = yExtent / 2.;
+        mesh->nodes[3][1] = yExtent / 2. + gridDelta;
 
         mesh->nodes[4][0] = -trenchWidth / 2. - offset;
-        mesh->nodes[4][1] = -yExtent / 2.;
+        mesh->nodes[4][1] = -yExtent / 2. - gridDelta;
         mesh->nodes[4][2] = trenchDepth;
 
         mesh->nodes[5][0] = trenchWidth / 2. + offset;
-        mesh->nodes[5][1] = -yExtent / 2.;
+        mesh->nodes[5][1] = -yExtent / 2. - gridDelta;
         mesh->nodes[5][2] = trenchDepth;
 
         mesh->nodes[6][0] = trenchWidth / 2. + offset;
-        mesh->nodes[6][1] = yExtent / 2.;
+        mesh->nodes[6][1] = yExtent / 2. + gridDelta;
         mesh->nodes[6][2] = trenchDepth;
 
         mesh->nodes[7][0] = -trenchWidth / 2. - offset;
-        mesh->nodes[7][1] = yExtent / 2.;
+        mesh->nodes[7][1] = yExtent / 2. + gridDelta;
         mesh->nodes[7][2] = trenchDepth;
 
         mesh->insertNextTriangle(std::array<unsigned, 3>{0, 3, 1});

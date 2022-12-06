@@ -115,16 +115,15 @@ public:
             if (sref.angle > 0.) {
               lsTransformMesh<NumericType>(
                   preBuiltStrMesh, lsTransformEnum::ROTATION,
-                  hrleVectorType<NumericType, 3>{0., 0., 1.},
-                  deg2rad(sref.angle))
+                  hrleVectorType<double, 3>{0., 0., 1.}, deg2rad(sref.angle))
                   .apply();
             }
 
             if (sref.magnification > 0.) {
               lsTransformMesh<NumericType>(
                   preBuiltStrMesh, lsTransformEnum::SCALE,
-                  hrleVectorType<NumericType, 3>{sref.magnification,
-                                                 sref.magnification, 1.})
+                  hrleVectorType<double, 3>{sref.magnification,
+                                            sref.magnification, 1.})
                   .apply();
             }
 
@@ -137,8 +136,8 @@ public:
 
             lsTransformMesh<NumericType>(
                 preBuiltStrMesh, lsTransformEnum::TRANSLATION,
-                hrleVectorType<NumericType, 3>{sref.refPoint[0],
-                                               sref.refPoint[1], 0.})
+                hrleVectorType<double, 3>{sref.refPoint[0], sref.refPoint[1],
+                                          0.})
                 .apply();
 
             strMesh->append(*preBuiltStrMesh);
@@ -316,7 +315,7 @@ public:
     return {minBounds, maxBounds};
   }
 
-  NumericType *getBounds() { return bounds; }
+  double *getBounds() { return bounds; }
 
   void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
               psGDSElement<NumericType> &element, const NumericType baseHeight,

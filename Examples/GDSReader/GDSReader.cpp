@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   psGDSReader<NumericType, D>(mask, "mask.gds").apply();
 
   // geometry setup
-  NumericType *bounds = mask->getBounds();
+  double *bounds = mask->getBounds();
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
 
   // substrate plane
