@@ -25,9 +25,11 @@ public:
     if (material != maskId) {
       std::array<NumericType, 3> dir(direction);
       for (unsigned i = 0; i < D; ++i) {
-        dir[i] *= dirVel;
-        if (i < D - 1)
-          dir[i] += isoVel * (normalVector[i] < 0 ? -1 : 1);
+        if (dir[i] == 0.) {
+          dir[i] -= isoVel * (normalVector[i] < 0 ? -1 : 1);
+        } else {
+          dir[i] *= dirVel;
+        }
       }
       return dir;
     } else {

@@ -327,7 +327,7 @@ private:
   }
 
   std::array<NumericType, 3> getDirection(const std::string &directionString) {
-    std::array<NumericType, 3> direction;
+    std::array<NumericType, 3> direction = {0};
 
     if (directionString == "negZ") {
       int i = 2;
