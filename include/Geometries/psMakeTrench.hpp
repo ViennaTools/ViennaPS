@@ -131,7 +131,7 @@ public:
         }
         mesh->nodes[0][0] = -trenchWidth / 2.;
         mesh->nodes[0][1] = -yExtent / 2. - gridDelta;
-        mesh->nodes[0][3] = baseHeight;
+        mesh->nodes[0][2] = baseHeight;
 
         mesh->nodes[1][0] = trenchWidth / 2.;
         mesh->nodes[1][1] = -yExtent / 2. - gridDelta;

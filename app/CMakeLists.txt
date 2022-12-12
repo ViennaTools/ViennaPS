@@ -50,4 +50,4 @@ target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS}
 target_link_libraries(ViennaPS3D ${VIENNAPS_LIBRARIES})
 add_dependencies(buildApplication ViennaPS3D)
 
-configure_file(SampleConfig.txt ${CMAKE_CURRENT_BINARY_DIR}/SampleConfig.txt COPYONLY)
+configure_file(SampleConfig.txt ${CMAKE_BINARY_DIR}/SampleConfig.txt COPYONLY)
