@@ -54,7 +54,6 @@ private:
         config, psUtils::Item{"xExtent", params->xExtent},
         psUtils::Item{"yExtent", params->yExtent},
         psUtils::Item{"resolution", params->gridDelta},
-        psUtils::Item{"zPos", params->zPos},
         psUtils::Item{"printIntermediate", params->printIntermediate},
         psUtils::Item{"periodic", params->periodicBoundary});
   }

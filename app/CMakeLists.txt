@@ -1,4 +1,6 @@
-project(ViennaPS-Application)
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+
+project(ViennaPSApplication)
 
 find_package(ViennaPS CONFIG PATHS ${ViennaPS_BINARY_DIR})
 if(NOT ViennaPS_FOUND)
@@ -27,19 +29,25 @@ list(
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-option(VIENNAPS_USE_DOUBLE "Use double precision floating point number in application." OFF)
+option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application." OFF)
 if(VIENNAPS_USE_DOUBLE)
   add_compile_definitions(VIENNAPS_USE_DOUBLE)
 endif(VIENNAPS_USE_DOUBLE)
+
+set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
+
+add_custom_target(buildApplication)
 
 add_executable(ViennaPS2D ${PROJECT_SOURCE_DIR}/Application2D.cpp)
 target_include_directories(ViennaPS2D PUBLIC ${VIENNAPS_INCLUDE_DIRS}
                                              ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS2D ${VIENNAPS_LIBRARIES})
+add_dependencies(buildApplication ViennaPS2D)
 
 add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/Application3D.cpp)
 target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS}
                                              ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS3D ${VIENNAPS_LIBRARIES})
+add_dependencies(buildApplication ViennaPS3D)
 
 configure_file(SampleConfig.txt ${CMAKE_CURRENT_BINARY_DIR}/SampleConfig.txt COPYONLY)

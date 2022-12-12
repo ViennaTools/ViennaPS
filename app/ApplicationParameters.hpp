@@ -32,7 +32,6 @@ struct ApplicationParameters {
   NumericType gridDelta = 0.02;
   NumericType xExtent = 1.0;
   NumericType yExtent = 1.0;
-  NumericType zPos = 0.;
   int periodicBoundary = 0;
 
   // Geometry

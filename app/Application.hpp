@@ -151,7 +151,6 @@ private:
   void runInit() {
     std::cout << "\tx-Extent: " << params->xExtent
               << "\n\ty-Extent: " << params->yExtent
-              << "\n\tzPos: " << params->zPos
               << "\n\tResolution: " << params->gridDelta
               << "\n\tPrint intermediate: "
               << boolString(params->printIntermediate)
@@ -323,8 +322,8 @@ private:
       std::cout << "Cannot write empty geometry." << std::endl;
       return;
     }
-    std::cout << "\tOut file name: " << params->fileName << "\n\n";
-    geometry->printSurface(params->fileName);
+    std::cout << "\tOut file name: " << params->fileName << ".vtp\n\n";
+    geometry->printSurface(params->fileName + ".vtp");
   }
 
   std::array<NumericType, 3> getDirection(const std::string &directionString) {
