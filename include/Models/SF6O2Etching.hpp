@@ -162,7 +162,9 @@ public:
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
 
-    const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
+    const double angle =
+        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
+                           static_cast<NumericType>(0.)));
 
     if (cosTheta > 0.5) {
       f_Si_theta = 1.;
@@ -209,7 +211,8 @@ public:
     assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
 
     const NumericType incAngle =
-        std::acos(std::max(std::min(cosTheta, 1.), 0.));
+        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
+                           static_cast<NumericType>(0.)));
 
     NumericType Eref_peak = 0;
 

@@ -78,6 +78,14 @@ if(VIENNAPS_BUILD_EXAMPLES)
 endif(VIENNAPS_BUILD_EXAMPLES)
 
 # ##################################################################################################
+# BUILD VIENNAPS APPLICATION
+# ##################################################################################################
+option(VIENNAPS_BUILD_APPLICATION "Build ViennaPS application." OFF)
+if(VIENNAPS_BUILD_APPLICATION)
+  add_subdirectory(app)
+endif(VIENNAPS_BUILD_APPLICATION)
+
+# ##################################################################################################
 # INSTALL
 # ##################################################################################################
 

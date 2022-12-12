@@ -22,7 +22,6 @@ public:
   void apply() {
     auto dist = psSmartPointer<lsSphereDistribution<NumericType, D>>::New(
         layerThickness, domain->getGrid().getGridDelta());
-    // TODO: is back or front of vector of levelsets the top levelset?
     lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist)
         .apply();
   }
