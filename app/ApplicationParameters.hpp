@@ -13,7 +13,8 @@ enum class ProcessType {
   NONE,
   SF6O2ETCHING,
   DEPOSITION,
-  GEOMETRICUNIFORMDEPOSITION
+  GEOMETRICUNIFORMDEPOSITION,
+  DIRECTIONALETCHING
 };
 
 #ifdef VIENNAPS_USE_DOUBLE
@@ -36,6 +37,7 @@ struct ApplicationParameters {
 
   // Geometry
   int mask = 0;
+  int maskId = 0;
   NumericType taperAngle = 0.;
   NumericType maskZPos = 0.;
   // MAKE Trench
@@ -62,6 +64,10 @@ struct ApplicationParameters {
   NumericType rate = 1.;
   NumericType sticking = 1.;
   NumericType cosinePower = 1.;
+  // Directional etching
+  NumericType directionalRate = 1.;
+  NumericType isotropicRate = 0.;
+  std::string direction = "negZ";
 
   ApplicationParameters() {}
 };

@@ -122,10 +122,16 @@ private:
       params->processType = ProcessType::GEOMETRICUNIFORMDEPOSITION;
       psUtils::AssignItems(config, psUtils::Item{"rate", params->rate},
                            psUtils::Item{"time", params->processTime});
+    } else if (model == "DirectionalEtching") {
+      params->processType = ProcessType::DIRECTIONALETCHING;
+      psUtils::AssignItems(
+          config, psUtils::Item{"direction", params->direction},
+          psUtils::Item{"directionalRate", params->directionalRate},
+          psUtils::Item{"isotropicRate", params->isotropicRate},
+          psUtils::Item{"time", params->processTime});
     } else {
       params->processType = ProcessType::NONE;
       std::cout << "Invalid process model: " << model << std::endl;
-      exit(1);
     }
   }
 

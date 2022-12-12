@@ -41,3 +41,5 @@ add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/Application3D.cpp)
 target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS}
                                              ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS3D ${VIENNAPS_LIBRARIES})
+
+configure_file(SampleConfig.txt ${CMAKE_CURRENT_BINARY_DIR}/SampleConfig.txt COPYONLY)

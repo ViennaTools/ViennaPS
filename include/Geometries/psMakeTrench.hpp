@@ -26,7 +26,7 @@ public:
   NumericType taperingAngle = 0;
   NumericType trenchDepth = 17.5;
   bool periodicBoundary = false;
-  bool makeMask = true;
+  bool makeMask = false;
 
   psMakeTrench(PSPtrType passedDomain, const NumericType passedGridDelta,
                const NumericType passedXExtent, const NumericType passedYExtent,

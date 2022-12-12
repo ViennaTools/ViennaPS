@@ -16,6 +16,7 @@
 #include <ApplicationParameters.hpp>
 #include <ApplicationParser.hpp>
 
+#include <DirectionalEtching.hpp>
 #include <GeometricUniformDeposition.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
@@ -95,6 +96,7 @@ protected:
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime *
                                processParams->rate / processParams->sticking);
+    process.setPrintIntdermediate(params->printIntermediate);
     process.apply();
   }
 
@@ -104,7 +106,7 @@ protected:
     SF6O2Etching<NumericType, D> model(
         processParams->totalIonFlux, processParams->totalEtchantFlux,
         processParams->totalOxygenFlux, processParams->ionEnergy,
-        processParams->A_O, 0);
+        processParams->A_O, processParams->maskId);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
@@ -112,6 +114,7 @@ protected:
     process.setMaxCoverageInitIterations(10);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
+    process.setPrintIntdermediate(params->printIntermediate);
     process.apply();
   }
 
@@ -124,6 +127,23 @@ protected:
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model.getProcessModel());
+    process.setPrintIntdermediate(params->printIntermediate);
+    process.apply();
+  }
+
+  virtual void runDirectionalEtching(
+      psSmartPointer<psDomain<NumericType, D>> processGeometry,
+      psSmartPointer<ApplicationParameters> processParams) {
+
+    DirectionalEtching<NumericType, D> model(
+        getDirection(processParams->direction), processParams->directionalRate,
+        processParams->isotropicRate);
+
+    psProcess<NumericType, D> process;
+    process.setDomain(processGeometry);
+    process.setProcessModel(model.getProcessModel());
+    process.setProcessDuration(params->processTime);
+    process.setPrintIntdermediate(params->printIntermediate);
     process.apply();
   }
 
@@ -148,12 +168,12 @@ private:
       std::cout << "Trench\n\tWidth: " << params->trenchWidth
                 << "\n\tHeight: " << params->trenchHeight
                 << "\n\tzPos: " << params->maskZPos
-                << "\n\tTapering angle: " << params->taperAngle << "\n\n";
-      psMakeTrench<NumericType, D>(geometry, params->gridDelta, params->xExtent,
-                                   params->yExtent, params->trenchWidth,
-                                   params->trenchHeight, params->taperAngle,
-                                   static_cast<bool>(params->periodicBoundary),
-                                   static_cast<bool>(params->mask))
+                << "\n\tTapering angle: " << params->taperAngle
+                << "\n\tMask: " << boolString(params->mask) << "\n\n";
+      psMakeTrench<NumericType, D>(
+          geometry, params->gridDelta, params->xExtent, params->yExtent,
+          params->trenchWidth, params->trenchHeight, params->taperAngle,
+          params->maskZPos, params->periodicBoundary, params->mask)
           .apply();
       break;
 
@@ -161,12 +181,12 @@ private:
       std::cout << "Hole\n\tRadius: " << params->holeRadius
                 << "\n\tDepth: " << params->holeDepth
                 << "\n\tzPos: " << params->maskZPos
-                << "\n\tTapering angle: " << params->taperAngle << "\n\n";
-      psMakeHole<NumericType, D>(geometry, params->gridDelta, params->xExtent,
-                                 params->yExtent, params->holeRadius,
-                                 params->holeDepth, params->taperAngle,
-                                 static_cast<bool>(params->periodicBoundary),
-                                 static_cast<bool>(params->mask))
+                << "\n\tTapering angle: " << params->taperAngle
+                << "\n\tMask: " << boolString(params->mask) << "\n\n";
+      psMakeHole<NumericType, D>(
+          geometry, params->gridDelta, params->xExtent, params->yExtent,
+          params->holeRadius, params->holeDepth, params->taperAngle,
+          params->maskZPos, params->periodicBoundary, params->mask)
           .apply();
       break;
 
@@ -279,6 +299,14 @@ private:
       break;
     }
 
+    case ProcessType::DIRECTIONALETCHING: {
+      std::cout << "Directional etching\n\tTime: " << params->processTime
+                << "\n\tDirectional rate: " << params->directionalRate
+                << "\n\tIsotropic rate: " << params->isotropicRate << "\n\n";
+      runDirectionalEtching(geometry, params);
+      break;
+    }
+
     case ProcessType::NONE:
       std::cout << "Process model could not be parsed. Skipping line."
                 << std::endl;
@@ -297,6 +325,34 @@ private:
     }
     std::cout << "\tOut file name: " << params->fileName << "\n\n";
     geometry->printSurface(params->fileName);
+  }
+
+  std::array<NumericType, 3> getDirection(const std::string &directionString) {
+    std::array<NumericType, 3> direction;
+
+    if (directionString == "negZ") {
+      int i = 2;
+      if constexpr (D == 2)
+        i--;
+      direction[i] = -1.;
+    } else if (directionString == "posZ") {
+      int i = 2;
+      if constexpr (D == 2)
+        i--;
+      direction[i] = 1.;
+    } else if (directionString == "negY") {
+      direction[1] = -1.;
+    } else if (directionString == "posY") {
+      direction[1] = 1.;
+    } else if (directionString == "negX") {
+      direction[0] = -1.;
+    } else if (directionString == "posX") {
+      direction[0] = 1.;
+    } else {
+      std::cout << "Invalid direction: " << directionString << std::endl;
+    }
+
+    return direction;
   }
 
   std::string boolString(const int in) { return in == 0 ? "false" : "true"; }

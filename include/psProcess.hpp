@@ -52,6 +52,10 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
+  void setPrintIntdermediate(const bool passedPrint) {
+    printIntermediate = passedPrint;
+  }
+
   void apply() {
     /* ---------- Process Setup --------- */
     auto name = model->getProcessName();
@@ -142,8 +146,7 @@ public:
     }
 
     // Determine whether there are process parameters used in ray tracing
-    if (model->getSurfaceModel())
-      model->getSurfaceModel()->initializeProcessParameters();
+    model->getSurfaceModel()->initializeProcessParameters();
     const bool useProcessParams =
         model->getSurfaceModel()->getProcessParameters() != nullptr;
 
@@ -232,8 +235,9 @@ public:
             diskMesh->getCellData().insertNextScalarData(
                 *Rates->getScalarData(idx), label);
           }
-          printDiskMesh(diskMesh, name + "_covIinit_" +
-                                      std::to_string(iterations) + ".vtp");
+          if (printIntermediate)
+            printDiskMesh(diskMesh, name + "_covIinit_" +
+                                        std::to_string(iterations) + ".vtp");
           std::cerr << "\r"
                     << "Iteration: " << iterations + 1 << " / "
                     << maxIterations;
@@ -324,7 +328,9 @@ public:
         diskMesh->getCellData().insertNextScalarData(*Rates->getScalarData(idx),
                                                      label);
       }
-      printDiskMesh(diskMesh, name + "_" + std::to_string(counter++) + ".vtp");
+      if (printIntermediate)
+        printDiskMesh(diskMesh,
+                      name + "_" + std::to_string(counter++) + ".vtp");
 #endif
       // apply volume model
       if (useVolumeModel) {
@@ -474,6 +480,7 @@ private:
   bool useRandomSeeds = true;
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
+  bool printIntermediate = true;
 };
 
 #endif
