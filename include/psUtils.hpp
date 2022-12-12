@@ -11,8 +11,27 @@
 
 namespace psUtils {
 
+// Small function to print a progress bar ()
+void printProgress(size_t i, size_t finalCount = 100) {
+  float progress = static_cast<float>(i) / static_cast<float>(finalCount);
+  int barWidth = 70;
+
+  std::cout << "[";
+  int pos = barWidth * progress;
+  for (int i = 0; i < barWidth; ++i) {
+    if (i < pos)
+      std::cout << "=";
+    else if (i == pos)
+      std::cout << ">";
+    else
+      std::cout << " ";
+  }
+  std::cout << "] " << static_cast<int>(progress * 100.0) << " %\r";
+  std::cout.flush();
+}
+
 // Checks if a string starts with a - or not
-bool is_signed(const std::string &s) {
+bool isSigned(const std::string &s) {
   auto pos = s.find_first_not_of(' ');
   if (pos == s.npos)
     return false;
@@ -26,7 +45,7 @@ template <typename T> T convert(const std::string &s) {
   if constexpr (std::is_same_v<T, int>) {
     return std::stoi(s);
   } else if constexpr (std::is_same_v<T, unsigned int>) {
-    if (is_signed(s))
+    if (isSigned(s))
       throw std::invalid_argument("The value must be unsigned");
     unsigned long int val = std::stoul(s);
     unsigned int num = static_cast<unsigned int>(val);
@@ -37,13 +56,13 @@ template <typename T> T convert(const std::string &s) {
   } else if constexpr (std::is_same_v<T, long int>) {
     return std::stol(s);
   } else if constexpr (std::is_same_v<T, unsigned long int>) {
-    if (is_signed(s))
+    if (isSigned(s))
       throw std::invalid_argument("The value must be unsigned");
     return std::stoul(s);
   } else if constexpr (std::is_same_v<T, long long int>) {
     return std::stoll(s);
   } else if constexpr (std::is_same_v<T, unsigned long long int>) {
-    if (is_signed(s))
+    if (isSigned(s))
       throw std::invalid_argument("The value must be unsigned");
     return std::stoull(s);
   } else if constexpr (std::is_same_v<T, float>) {
