@@ -20,7 +20,7 @@ public:
       : layerThickness(passedLayerThickness) {}
 
   void apply() {
-    auto dist = psSmartPointer<lsSphereDistribution<NumericType, D>>::New(
+    auto dist = psSmartPointer<lsSphereDistribution<double, D>>::New(
         layerThickness, domain->getGrid().getGridDelta());
     lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist)
         .apply();
