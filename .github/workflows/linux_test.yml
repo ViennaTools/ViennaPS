@@ -85,10 +85,14 @@ jobs:
           cmake -B ./build \
             -D ViennaLS_DIR=${{github.workspace}}/viennals/install/lib/cmake/ViennaLS/ \
             -D ViennaRay_DIR=${{github.workspace}}/viennaray/install/lib/cmake/ViennaRay/ \
-            -D VIENNAPS_BUILD_EXAMPLES=ON
+            -D VIENNAPS_BUILD_EXAMPLES=ON \
+            -D VIENNAPS_BUILD_APPLICATION=ON
 
       - name: Build Examples
         run: cmake --build ./build --target buildExamples
+
+      - name: Build application
+        run: cmake --build ./build --target buildApplication
 
       - name: Run
         working-directory: ${{github.workspace}}/build/Examples/InterpolationDemo
