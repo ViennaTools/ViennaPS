@@ -109,6 +109,15 @@ This creates 2 executables `ViennaPS2D` and `ViennaPS3D` which run processes in 
 
 The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each succesfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
 
+### GPU Support
+
+The application can also be built with GPU support for ray tracing processes. In order to utilize the GPU support a NVIDIA GPU with Ampere compute capabilities or higher is needed. The package also requires a CUDA toolkit version 11.0 or higher and the NVIDIA OptiX 7 ray tracing library. To build the GPU application use:
+```bash
+mkdir build && cd build
+cmake .. -DVIENNAPS_BUILD_GPU_APPLICATION=ON
+make buildGPUApplication
+```
+This creates the executable `ViennaPS_GPU` (Note: The GPU application only support 3D mode). The GPU application can run and parse all configuration files as the CPU application. 
 
 ## Contributing
 
