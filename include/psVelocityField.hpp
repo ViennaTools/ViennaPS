@@ -5,9 +5,6 @@
 #include <vector>
 
 template <typename NumericType> class psVelocityField {
-private:
-  psSmartPointer<std::vector<NumericType>> velocities = nullptr;
-
 public:
   psVelocityField() {}
 

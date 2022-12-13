@@ -22,7 +22,7 @@ template <class NumericType, int D = 3> class psGDSGeometry {
   std::array<NumericType, 2> minBounds;
   std::array<NumericType, 2> maxBounds;
 
-  double bounds[2 * D];
+  double bounds[6];
   NumericType gridDelta;
   typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
       lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
@@ -30,10 +30,24 @@ template <class NumericType, int D = 3> class psGDSGeometry {
       lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
 
 public:
-  psGDSGeometry() {}
+  psGDSGeometry() {
+    if constexpr (D == 2) {
+      lsMessage::getInstance()
+          .addWarning("Cannot import 2D geometry from GDS file.")
+          .print();
+      return;
+    }
+  }
 
   psGDSGeometry(const NumericType passedGridDelta)
-      : gridDelta(passedGridDelta) {}
+      : gridDelta(passedGridDelta) {
+    if constexpr (D == 2) {
+      lsMessage::getInstance()
+          .addWarning("Cannot import 2D geometry from GDS file.")
+          .print();
+      return;
+    }
+  }
 
   void setGridDelta(const NumericType passedGridDelta) {
     gridDelta = passedGridDelta;
@@ -48,8 +62,8 @@ public:
   }
 
   void setBoundaryConditions(
-      typename lsDomain<NumericType, D>::BoundaryType passedBoundaryCons[D]) {
-    for (int i = 0; i < D; i++)
+      typename lsDomain<NumericType, D>::BoundaryType passedBoundaryCons[3]) {
+    for (int i = 0; i < 3; i++)
       boundaryCons[i] = passedBoundaryCons[i];
   }
 
@@ -115,16 +129,15 @@ public:
             if (sref.angle > 0.) {
               lsTransformMesh<NumericType>(
                   preBuiltStrMesh, lsTransformEnum::ROTATION,
-                  hrleVectorType<NumericType, 3>{0., 0., 1.},
-                  deg2rad(sref.angle))
+                  hrleVectorType<double, 3>{0., 0., 1.}, deg2rad(sref.angle))
                   .apply();
             }
 
             if (sref.magnification > 0.) {
               lsTransformMesh<NumericType>(
                   preBuiltStrMesh, lsTransformEnum::SCALE,
-                  hrleVectorType<NumericType, 3>{sref.magnification,
-                                                 sref.magnification, 1.})
+                  hrleVectorType<double, 3>{sref.magnification,
+                                            sref.magnification, 1.})
                   .apply();
             }
 
@@ -137,8 +150,8 @@ public:
 
             lsTransformMesh<NumericType>(
                 preBuiltStrMesh, lsTransformEnum::TRANSLATION,
-                hrleVectorType<NumericType, 3>{sref.refPoint[0],
-                                               sref.refPoint[1], 0.})
+                hrleVectorType<double, 3>{sref.refPoint[0], sref.refPoint[1],
+                                          0.})
                 .apply();
 
             strMesh->append(*preBuiltStrMesh);
@@ -158,8 +171,8 @@ public:
     if (mask) {
       auto topPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
           bounds, boundaryCons, gridDelta);
-      NumericType normal[D] = {0., 0., 1.};
-      NumericType origin[D] = {0., 0., baseHeight + height};
+      NumericType normal[3] = {0., 0., 1.};
+      NumericType origin[3] = {0., 0., baseHeight + height};
       lsMakeGeometry<NumericType, D>(
           topPlane,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
@@ -316,7 +329,7 @@ public:
     return {minBounds, maxBounds};
   }
 
-  NumericType *getBounds() { return bounds; }
+  double *getBounds() { return bounds; }
 
   void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
               psGDSElement<NumericType> &element, const NumericType baseHeight,
@@ -396,7 +409,7 @@ public:
 
     // sidewalls
     for (unsigned i = 0; i < numPointsFlat; i++) {
-      std::array<NumericType, D> offsetPoint = element.pointCloud[i];
+      std::array<NumericType, 3> offsetPoint = element.pointCloud[i];
       offsetPoint[0] += xOffset;
       offsetPoint[1] += yOffset;
       offsetPoint[2] = baseHeight;
@@ -408,7 +421,7 @@ public:
 
     for (unsigned i = 0; i < numPointsFlat; i++) {
       unsigned upPoint = i + numPointsFlat;
-      std::array<NumericType, D> offsetPoint = element.pointCloud[i];
+      std::array<NumericType, 3> offsetPoint = element.pointCloud[i];
       offsetPoint[0] += xOffset;
       offsetPoint[1] += yOffset;
       offsetPoint[2] = baseHeight + height;

@@ -68,6 +68,7 @@ The examples can be built using CMake (make sure all dependencies are installed/
 ```bash
 mkdir build && cd build
 cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON
+make buildExamples
 ```
 
 The examples can then be executed in their respective folders with the config files
@@ -96,13 +97,26 @@ By changing the dimension of the hole etching example (_D = 2_), we can easily s
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/sidewall_tapering.svg" width=700 style="background-color:white;">
 </div>
 
+## Application
+
+It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake (make sure all dependencies are installed/ have been built previously):
+```bash
+mkdir build && cd build
+cmake .. -DVIENNAPS_BUILD_APPLICATION=ON
+make buildApplication
+```
+This creates 2 executables `ViennaPS2D` and `ViennaPS3D` which run processes in 2 or 3 dimensions respectively. Every configuration file can be run in 2D or 3D mode.
+
+The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each succesfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
+
+
 ## Contributing
 
 If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html). Before creating a pull request, make sure ALL files have been formatted by clang-format, which can be done using the format-project.sh script in the root directory.
 
 ## Authors
 
-Current contributors: Tobias Reiter, Josip Bobinac, Xaver Klemenschits, Julius Piso
+Current contributors: Tobias Reiter, Julius Piso, Josip Bobinac, Xaver Klemenschits
 
 Contact us via: viennatools@iue.tuwien.ac.at
 

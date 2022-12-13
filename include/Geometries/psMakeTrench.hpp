@@ -20,34 +20,27 @@ public:
   NumericType gridDelta = .25;
   NumericType xExtent = 20;
   NumericType yExtent = 14;
+  NumericType baseHeight = 0.;
 
   NumericType trenchWidth = 7;
   NumericType taperingAngle = 0;
   NumericType trenchDepth = 17.5;
-  bool makeMask = true;
-
-  psMakeTrench(PSPtrType passedDomain) : domain(passedDomain) {}
+  bool periodicBoundary = false;
+  bool makeMask = false;
 
   psMakeTrench(PSPtrType passedDomain, const NumericType passedGridDelta,
                const NumericType passedXExtent, const NumericType passedYExtent,
                const NumericType passedTrenchWidth,
                const NumericType passedTrenchHeight,
-               const bool passedMakeMask = true)
+               const NumericType passedTaperingAngle = 0.,
+               const NumericType passedBaseHeight = 0.,
+               const bool passedPeriodicBoundary = false,
+               const bool passedMakeMask = false)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         trenchWidth(passedTrenchWidth), trenchDepth(passedTrenchHeight),
-        makeMask(passedMakeMask) {}
-
-  psMakeTrench(PSPtrType passedDomain, const NumericType passedGridDelta,
-               const NumericType passedXExtent, const NumericType passedYExtent,
-               const NumericType passedTrenchWidth,
-               const NumericType passedTrenchHeight,
-               const NumericType passedTaperingAngle,
-               const bool passedMakeMask = true)
-      : domain(passedDomain), gridDelta(passedGridDelta),
-        xExtent(passedXExtent), yExtent(passedYExtent),
-        trenchWidth(passedTrenchWidth), taperingAngle(passedTaperingAngle),
-        trenchDepth(passedTrenchHeight), makeMask(passedMakeMask) {}
+        taperingAngle(passedTaperingAngle), baseHeight(passedBaseHeight),
+        periodicBoundary(passedPeriodicBoundary), makeMask(passedMakeMask) {}
 
   void apply() {
     domain->clear();
@@ -67,9 +60,15 @@ public:
 
     typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
 
-    for (int i = 0; i < D - 1; i++)
-      boundaryCons[i] =
-          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+    for (int i = 0; i < D - 1; i++) {
+      if (periodicBoundary) {
+        boundaryCons[i] =
+            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+      } else {
+        boundaryCons[i] =
+            lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+      }
+    }
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
@@ -77,18 +76,19 @@ public:
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
+    origin[D - 1] = baseHeight;
     lsMakeGeometry<NumericType, D>(
         substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
 
     auto mask = LSPtrType::New(bounds, boundaryCons, gridDelta);
-    origin[D - 1] = trenchDepth;
+    origin[D - 1] = trenchDepth + baseHeight;
     lsMakeGeometry<NumericType, D>(
         mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
 
     auto maskAdd = LSPtrType::New(bounds, boundaryCons, gridDelta);
-    origin[D - 1] = 0.;
+    origin[D - 1] = baseHeight;
     normal[D - 1] = -1.;
     lsMakeGeometry<NumericType, D>(
         maskAdd, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
@@ -112,9 +112,12 @@ public:
         mesh->nodes[0][0] = -trenchWidth / 2.;
         mesh->nodes[1][0] = trenchWidth / 2.;
         mesh->nodes[2][0] = trenchWidth / 2. + offset;
-        mesh->nodes[2][1] = trenchDepth;
         mesh->nodes[3][0] = -trenchWidth / 2. - offset;
-        mesh->nodes[3][1] = trenchDepth;
+
+        mesh->nodes[0][1] = baseHeight;
+        mesh->nodes[1][1] = baseHeight;
+        mesh->nodes[2][1] = trenchDepth + baseHeight;
+        mesh->nodes[3][1] = trenchDepth + baseHeight;
 
         mesh->insertNextLine(std::array<unsigned, 2>{0, 3});
         mesh->insertNextLine(std::array<unsigned, 2>{3, 2});
@@ -127,32 +130,36 @@ public:
           mesh->insertNextNode(node);
         }
         mesh->nodes[0][0] = -trenchWidth / 2.;
-        mesh->nodes[0][1] = -yExtent / 2.;
+        mesh->nodes[0][1] = -yExtent / 2. - gridDelta;
+        mesh->nodes[0][2] = baseHeight;
 
         mesh->nodes[1][0] = trenchWidth / 2.;
-        mesh->nodes[1][1] = -yExtent / 2.;
+        mesh->nodes[1][1] = -yExtent / 2. - gridDelta;
+        mesh->nodes[1][2] = baseHeight;
 
         mesh->nodes[2][0] = trenchWidth / 2.;
-        mesh->nodes[2][1] = yExtent / 2.;
+        mesh->nodes[2][1] = yExtent / 2. + gridDelta;
+        mesh->nodes[2][2] = baseHeight;
 
         mesh->nodes[3][0] = -trenchWidth / 2.;
-        mesh->nodes[3][1] = yExtent / 2.;
+        mesh->nodes[3][1] = yExtent / 2. + gridDelta;
+        mesh->nodes[3][2] = baseHeight;
 
         mesh->nodes[4][0] = -trenchWidth / 2. - offset;
-        mesh->nodes[4][1] = -yExtent / 2.;
-        mesh->nodes[4][2] = trenchDepth;
+        mesh->nodes[4][1] = -yExtent / 2. - gridDelta;
+        mesh->nodes[4][2] = trenchDepth + baseHeight;
 
         mesh->nodes[5][0] = trenchWidth / 2. + offset;
-        mesh->nodes[5][1] = -yExtent / 2.;
-        mesh->nodes[5][2] = trenchDepth;
+        mesh->nodes[5][1] = -yExtent / 2. - gridDelta;
+        mesh->nodes[5][2] = trenchDepth + baseHeight;
 
         mesh->nodes[6][0] = trenchWidth / 2. + offset;
-        mesh->nodes[6][1] = yExtent / 2.;
-        mesh->nodes[6][2] = trenchDepth;
+        mesh->nodes[6][1] = yExtent / 2. + gridDelta;
+        mesh->nodes[6][2] = trenchDepth + baseHeight;
 
         mesh->nodes[7][0] = -trenchWidth / 2. - offset;
-        mesh->nodes[7][1] = yExtent / 2.;
-        mesh->nodes[7][2] = trenchDepth;
+        mesh->nodes[7][1] = yExtent / 2. + gridDelta;
+        mesh->nodes[7][2] = trenchDepth + baseHeight;
 
         mesh->insertNextTriangle(std::array<unsigned, 3>{0, 3, 1});
         mesh->insertNextTriangle(std::array<unsigned, 3>{1, 3, 2});
@@ -184,11 +191,11 @@ public:
       if constexpr (D == 3) {
         minPoint[1] = -yExtent / 2.;
         maxPoint[1] = yExtent / 2.;
-        minPoint[2] = 0.;
-        maxPoint[2] = trenchDepth;
+        minPoint[2] = baseHeight;
+        maxPoint[2] = trenchDepth + baseHeight;
       } else {
-        minPoint[1] = 0.;
-        maxPoint[1] = trenchDepth;
+        minPoint[1] = baseHeight;
+        maxPoint[1] = trenchDepth + baseHeight;
       }
       lsMakeGeometry<NumericType, D>(
           cutout,
