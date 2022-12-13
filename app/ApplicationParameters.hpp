@@ -5,7 +5,7 @@
 
 #include <psUtils.hpp>
 
-enum class CommandType { NONE, INIT, GEOMETRY, PROCESS, OUTPUT };
+enum class CommandType { NONE, INIT, GEOMETRY, PROCESS, OUTPUT, PLANARIZE };
 
 enum class GeometryType { NONE, TRENCH, HOLE, PLANE, GDS, IMPORT };
 
@@ -69,4 +69,41 @@ struct ApplicationParameters {
   std::string direction = "negZ";
 
   ApplicationParameters() {}
+
+  void defaultParameters(bool all = false) {
+    mask = 0;
+    maskId = 0;
+    taperAngle = 0.;
+    maskZPos = 0.;
+    trenchWidth = 0.2;
+    trenchHeight = 0.5;
+    holeDepth = 0.2;
+    holeRadius = 0.2;
+    layers = 0;
+    fileName = "";
+    maskHeight = 0.1;
+    processTime = 1;
+    raysPerPoint = 3000;
+    totalEtchantFlux = 4.5e16;
+    totalOxygenFlux = 1e18;
+    totalIonFlux = 2e16;
+    ionEnergy = 100;
+    A_O = 3.;
+    rate = 1.;
+    sticking = 1.;
+    cosinePower = 1.;
+    directionalRate = 1.;
+    isotropicRate = 0.;
+    direction = "negZ";
+
+    if (all) {
+      printIntermediate = 0;
+      geometryType = GeometryType::NONE;
+      processType = ProcessType::NONE;
+      gridDelta = 0.02;
+      xExtent = 1.0;
+      yExtent = 1.0;
+      periodicBoundary = 0;
+    }
+  }
 };

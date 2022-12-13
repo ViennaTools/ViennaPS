@@ -8,6 +8,7 @@ Every line has to start with a command statement, followed by a list of paramete
 - **INIT**: Initialize the simulation domain.
 - **GEOMETRY** _\<GeometryType>_: Create or import a geometry. Possible options for creating geometries are: _Trench_, _Hole_ and _Plane_. It is also possible to import geometries from _.lvst_ files by specifying _Import_ or to import layers from GDSII file format by secifying _GDS_ (only possible in 3D mode). Parameters for the geometries are described below.
 - **PROCESS** _\<ProcessType>_: Run a process. Possible process types are: _Deposition_, _GeometricUniformDeposition_, _SF6O2Etching_ and _DirectionalEtching_. Parameters for the processes are described below.
+- **PLANARIZE**: Planarize the geometry at a given height.
 - **OUTPUT** _\<fileName>_: Print the surface of the geometry in _fileName.vtp_ file format.
 
 ## Parameters
@@ -143,6 +144,13 @@ All parameters which are parsed additional to a command are described below. For
   <dd>etching rate in primal direction (numeric value, default: 1)</dd>
   <dt>isotropicRate</dt>
   <dd>isotropic etching rate (numeric value, default: 0)</dd>
+</dl>
+
+---
+**PLANARIZE**
+<dl>
+  <dt>height</dt>
+  <dd>height of planarization on the z-axis (y-axis in 2D, numeric value, default: 0)</dd>
 </dl>
 
 ---

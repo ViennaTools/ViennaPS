@@ -10,6 +10,7 @@
 #include <psMakeHole.hpp>
 #include <psMakePlane.hpp>
 #include <psMakeTrench.hpp>
+#include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
@@ -46,6 +47,7 @@ public:
     }
 
     params = psSmartPointer<ApplicationParameters>::New();
+    params->defaultParameters(true);
     parser.setParameters(params);
 
     int lineNumber = 0;
@@ -54,9 +56,7 @@ public:
       if (line.empty() || line[0] == '#') // skipping empty line and comments
         continue;
       std::istringstream lineStream(line);
-      std::string command;
-      lineStream >> command;
-      switch (parser.parseCommand(command, lineStream, lineNumber)) {
+      switch (parser.parseCommand(lineStream, lineNumber)) {
       case CommandType::INIT:
         runInit();
         break;
@@ -69,8 +69,13 @@ public:
         runProcess();
         break;
 
+      case CommandType::PLANARIZE:
+        planarizeGeometry();
+        break;
+
       case CommandType::OUTPUT:
         writeVTP();
+        break;
 
       case CommandType::NONE:
         break;
@@ -80,6 +85,7 @@ public:
       }
 
       lineNumber++;
+      params->defaultParameters();
     }
   }
 
@@ -315,6 +321,10 @@ private:
       assert(false);
       break;
     }
+  }
+
+  void planarizeGeometry() {
+    psPlanarize<NumericType, D>(geometry, params->maskZPos).apply();
   }
 
   void writeVTP() {

@@ -22,8 +22,9 @@ public:
     params = passedParameters;
   }
 
-  CommandType parseCommand(const std::string &command,
-                           std::istringstream &stream, const int lineNumber) {
+  CommandType parseCommand(std::istringstream &stream, const int lineNumber) {
+    std::string command;
+    stream >> command;
     if (command == "INIT") {
       std::cout << "Initializing ...\n";
       parseInit(stream);
@@ -40,6 +41,10 @@ public:
       std::cout << "Writing geometry to file ..." << std::endl;
       parseOutput(stream);
       return CommandType::OUTPUT;
+    } else if (command == "PLANARIZE") {
+      std::cout << "Planarizing ..." << std::endl;
+      parsePlanarize(stream);
+      return CommandType::PLANARIZE;
     } else {
       std::cout << "Unknown command in config file. Skipping line "
                 << lineNumber << std::endl;
@@ -132,6 +137,11 @@ private:
       params->processType = ProcessType::NONE;
       std::cout << "Invalid process model: " << model << std::endl;
     }
+  }
+
+  void parsePlanarize(std::istringstream &stream) {
+    auto config = parseLineStream(stream);
+    psUtils::AssignItems(config, psUtils::Item{"height", params->maskZPos});
   }
 
   void parseOutput(std::istringstream &stream) { stream >> params->fileName; }
