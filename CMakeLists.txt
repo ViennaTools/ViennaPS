@@ -86,6 +86,14 @@ if(VIENNAPS_BUILD_APPLICATION)
 endif(VIENNAPS_BUILD_APPLICATION)
 
 # ##################################################################################################
+# BUILD VIENNAPS GPU APPLICATION
+# ##################################################################################################
+option(VIENNAPS_BUILD_GPU_APPLICATION "Build ViennaPS GPU application." OFF)
+if(VIENNAPS_BUILD_GPU_APPLICATION)
+  add_subdirectory(GPU)
+endif(VIENNAPS_BUILD_GPU_APPLICATION)
+
+# ##################################################################################################
 # INSTALL
 # ##################################################################################################
 
