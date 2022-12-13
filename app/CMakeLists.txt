@@ -13,19 +13,16 @@ if(NOT ViennaPS_FOUND)
   2. Build the dependencies target: e.g. `make buildDependencies` when using Makefiles\n\
   3. Turn on the buildExamples target again by re-enabling the VIENNAPS_BUILD_EXAMPLES option\n\
   (e.g. with the `-D VIENNAPS_BUILD_EXAMPLES=ON` flag)\n\
-  4. Now the configure step should pick up the built dependencies and proceed as intended."
-  )
+  4. Now the configure step should pick up the built dependencies and proceed as intended.")
 endif()
 
 list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
 
-# Add subfolders to the include directories, since during installation the
-# directory structure is flattened, but in the source tree - which we are using
-# here - it is not.
-list(
-  PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/CellSet
-  ${VIENNAPS_BUILD_INCLUDE_DIRS}/Geometries
-  ${VIENNAPS_BUILD_INCLUDE_DIRS}/Models ${VIENNAPS_BUILD_INCLUDE_DIRS}/Compact)
+# Add subfolders to the include directories, since during installation the directory structure is
+# flattened, but in the source tree - which we are using here - it is not.
+list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/CellSet
+     ${VIENNAPS_BUILD_INCLUDE_DIRS}/Geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/Models
+     ${VIENNAPS_BUILD_INCLUDE_DIRS}/Compact)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -39,14 +36,12 @@ set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 add_custom_target(buildApplication)
 
 add_executable(ViennaPS2D ${PROJECT_SOURCE_DIR}/Application2D.cpp)
-target_include_directories(ViennaPS2D PUBLIC ${VIENNAPS_INCLUDE_DIRS}
-                                             ${PROJECT_SOURCE_DIR})
+target_include_directories(ViennaPS2D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS2D ${VIENNAPS_LIBRARIES})
 add_dependencies(buildApplication ViennaPS2D)
 
 add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/Application3D.cpp)
-target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS}
-                                             ${PROJECT_SOURCE_DIR})
+target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS3D ${VIENNAPS_LIBRARIES})
 add_dependencies(buildApplication ViennaPS3D)
 
