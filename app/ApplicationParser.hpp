@@ -118,6 +118,7 @@ private:
           config, psUtils::Item{"time", params->processTime},
           psUtils::Item{"ionFlux", params->totalIonFlux},
           psUtils::Item{"ionEnergy", params->ionEnergy},
+          psUtils::Item{"plasmaFrequency", params->plasmaFrequency},
           psUtils::Item{"etchantFlux", params->totalEtchantFlux},
           psUtils::Item{"oxygenFlux", params->totalOxygenFlux},
           psUtils::Item{"A_O", params->A_O},

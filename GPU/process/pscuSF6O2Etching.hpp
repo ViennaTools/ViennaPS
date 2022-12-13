@@ -14,11 +14,15 @@
 extern "C" char embedded_SF6O2_pipeline[];
 
 template <typename NumericType>
-class SurfaceModel : public pscuSurfaceModel<NumericType> {
+class pscuSF6O2SurfaceModel : public pscuSurfaceModel<NumericType> {
   const std::string processModuleName = "SF6O2ProcessKernels.ptx";
   const std::string calcEtchRateKernel = "calculateEtchRate";
   const std::string updateCoverageKernel = "updateCoverages";
   pscuContext context;
+  NumericType totalIonFlux;
+  NumericType totalEtchantFlux;
+  NumericType totalOxygenFlux;
+  int maskId = 0;
 
 public:
   using pscuSurfaceModel<NumericType>::d_processParams;
@@ -26,7 +30,12 @@ public:
   using pscuSurfaceModel<NumericType>::ratesIndexMap;
   using pscuSurfaceModel<NumericType>::coveragesIndexMap;
 
-  SurfaceModel(pscuContext passedContext) : context(passedContext) {}
+  pscuSF6O2SurfaceModel(pscuContext passedContext, const NumericType ionFlux,
+                        const NumericType etchantFlux,
+                        const NumericType oxygenFlux, const int passedMask)
+      : context(passedContext), totalIonFlux(ionFlux),
+        totalEtchantFlux(etchantFlux), totalOxygenFlux(oxygenFlux),
+        maskId(passedMask) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     const int numCoverages = 2;
@@ -56,7 +65,9 @@ public:
     CUdeviceptr matIds = materialIdsBuffer.d_pointer();
 
     // launch kernel
-    void *kernel_args[] = {&rates, &coverages, &matIds, &erate, &numPoints};
+    void *kernel_args[] = {
+        &rates,        &coverages,        &matIds,          &erate, &numPoints,
+        &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux, &maskId};
 
     utLaunchKernel::launch(processModuleName, calcEtchRateKernel, kernel_args,
                            context);
@@ -78,60 +89,11 @@ public:
     CUdeviceptr coverages = d_coverages.d_pointer();
 
     // launch kernel
-    void *kernel_args[] = {&rates, &coverages, &numPoints};
+    void *kernel_args[] = {&rates,        &coverages,        &numPoints,
+                           &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux,
+                           &maskId};
 
     utLaunchKernel::launch(processModuleName, updateCoverageKernel, kernel_args,
                            context);
-  }
-};
-
-class pscuSF6O2Etching {
-  psSmartPointer<psDomain<NumericType, D>> geometry;
-  NumericType processTime;
-  pscuContext context;
-  int printIntermediate;
-  int periodicBoundary;
-  int raysPerPoint;
-
-public:
-  pscuSF6O2Etching(psSmartPointer<psDomain<NumericType, D>> passedGeometry,
-                   const NumericType passedTime, pscuContext passedContext,
-                   const int passedPrint = 0, const int passedPeriodic = 0,
-                   const int passedRays = 5000)
-      : geometry(passedGeometry), processTime(passedTime),
-        context(passedContext), printIntermediate(passedPrint),
-        periodicBoundary(passedPeriodic), raysPerPoint(passedRays) {}
-
-  void apply() {
-    curtParticle<NumericType> ion{"ion", 3};
-    ion.dataLabels.push_back("ionSputteringRate");
-    ion.dataLabels.push_back("ionEnhancedRate");
-    ion.dataLabels.push_back("oxygenSputteringRate");
-
-    curtParticle<NumericType> etchant{"etchant", 1};
-    etchant.dataLabels.push_back("etchantRate");
-
-    curtParticle<NumericType> oxygen{"oxygen", 1};
-    oxygen.dataLabels.push_back("oxygenRate");
-
-    auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New(context);
-    auto velField = psSmartPointer<SF6O2VelocityField<NumericType>>::New(0);
-    auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
-
-    model->insertNextParticleType(ion);
-    model->insertNextParticleType(etchant);
-    model->insertNextParticleType(oxygen);
-    model->setSurfaceModel(surfModel);
-    model->setVelocityField(velField);
-    model->setProcessName("SF6O2Etching");
-    model->setPtxCode(embedded_SF6O2_pipeline);
-
-    pscuProcess<NumericType, D> process(context);
-    process.setDomain(geometry);
-    process.setProcessModel(model);
-    process.setNumberOfRaysPerPoint(3000);
-    process.setMaxCoverageInitIterations(10);
-    process.setProcessDuration(processTime);
-    process.apply();
   }
 };

@@ -13,6 +13,9 @@ template <typename T> struct curtLaunchParams {
   float sticking = 1.f;
   float cosineExponent = 1.f;
   bool periodicBoundary = true;
+  float meanIonEnergy = 100.f; // eV
+  float ionRF = 0.1f;          // MHz
+  float A_O = 3.f;
 
   // source plane params
   struct {

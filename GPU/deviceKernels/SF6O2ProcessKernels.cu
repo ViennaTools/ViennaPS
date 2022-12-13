@@ -3,10 +3,6 @@
 
 #include <context.hpp>
 
-#define totalIonFlux 2.e16
-#define totalEtchantFlux 4.5e18
-#define totalOxygenFlux 1.e18 // 5.0e16;
-
 #define inv_rho_Si 2.0e-23 // in (atoms/cm³)⁻¹ (rho Si)
 // #define inv_rho_SiO2 1. / (2.6e22)
 #define k_sigma_Si 3.0e17
@@ -16,7 +12,11 @@ extern "C" __global__ void calculateEtchRate(const NumericType *rates,
                                              const NumericType *coverages,
                                              const NumericType *materialIds,
                                              NumericType *etchRate,
-                                             const unsigned long numPoints)
+                                             const unsigned long numPoints,
+                                             const NumericType totalIonFlux,
+                                             const NumericType totalEtchantFlux,
+                                             const NumericType totalOxygenFlux,
+                                             const int maskId)
 {
   unsigned int tidx = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int stride = blockDim.x * gridDim.x;
@@ -27,7 +27,7 @@ extern "C" __global__ void calculateEtchRate(const NumericType *rates,
 
   for (; tidx < numPoints; tidx += stride)
   {
-    if (materialIds[tidx] == 1)
+    if ((int)materialIds[tidx] != maskId)
     {
       // 1e4 converts the rates to micrometers/s
       etchRate[tidx] = -inv_rho_Si * 1e4 *
@@ -44,7 +44,10 @@ extern "C" __global__ void calculateEtchRate(const NumericType *rates,
 
 extern "C" __global__ void updateCoverages(const NumericType *rates,
                                            NumericType *coverages,
-                                           const unsigned long numPoints)
+                                           const unsigned long numPoints,
+                                           const NumericType totalIonFlux,
+                                           const NumericType totalEtchantFlux,
+                                           const NumericType totalOxygenFlux)
 {
   unsigned int tidx = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int stride = blockDim.x * gridDim.x;

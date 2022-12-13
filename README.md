@@ -117,7 +117,7 @@ mkdir build && cd build
 cmake .. -DVIENNAPS_BUILD_GPU_APPLICATION=ON
 make buildGPUApplication
 ```
-This creates the executable `ViennaPS_GPU` (Note: The GPU application only support 3D mode). The GPU application can run and parse all configuration files as the CPU application. 
+This creates the executable `ViennaPS_GPU` (Note: The GPU application only supports 3D mode). The GPU application can run and parse all the same configuration files as the CPU application. 
 
 ## Contributing
 

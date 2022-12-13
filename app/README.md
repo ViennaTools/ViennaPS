@@ -122,7 +122,9 @@ All parameters which are parsed additional to a command are described below. For
   <dt>ionFlux</dt>
   <dd>total flux of ions in plasma (numeric value, default: 2e16)</dd>
   <dt>ionEnergy</dt>
-  <dd>mean ion energy (numeric value, default: 100)</dd>
+  <dd>mean ion energy in eV (numeric value, default: 100)</dd>
+  <dt>plasmaFrequency</dt>
+  <dd>RF plasma frequency in MHz (numeric value, default: 0.1)</dd>
   <dt>etchantFlux</dt>
   <dd>total flux of etchant species in plasma (numeric value, default: 4.5e16)</dd>
   <dt>oxygenFlux</dt>

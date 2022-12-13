@@ -57,7 +57,8 @@ struct ApplicationParameters {
   NumericType totalEtchantFlux = 4.5e16;
   NumericType totalOxygenFlux = 1e18;
   NumericType totalIonFlux = 2e16;
-  NumericType ionEnergy = 100;
+  NumericType ionEnergy = 100;       // eV
+  NumericType plasmaFrequency = 0.1; // MHz
   NumericType A_O = 3.;
   // Deposition
   NumericType rate = 1.;

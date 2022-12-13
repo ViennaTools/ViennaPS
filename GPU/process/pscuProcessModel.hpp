@@ -3,10 +3,10 @@
 #include <curtParticle.hpp>
 
 #include <pscuSurfaceModel.hpp>
-#include <pscuVolumeModel.hpp>
 
 #include <psSmartPointer.hpp>
 #include <psVelocityField.hpp>
+#include <psVolumeModel.hpp>
 
 template <typename NumericType> class pscuProcessModel {
 private:
@@ -14,7 +14,7 @@ private:
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
   psSmartPointer<pscuSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<pscuVolumeModel<NumericType>> volumeModel = nullptr;
+  psSmartPointer<psVolumeModel<NumericType, 3>> volumeModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
   char *embbededPtxCode = nullptr;
@@ -26,7 +26,7 @@ public:
   virtual psSmartPointer<pscuSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<pscuVolumeModel<NumericType>> getVolumeModel() {
+  virtual psSmartPointer<psVolumeModel<NumericType, 3>> getVolumeModel() {
     return volumeModel;
   }
   virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
@@ -45,6 +45,7 @@ public:
     if (particles == nullptr) {
       particles = psSmartPointer<ParticleTypeList>::New();
     }
+
     particles->push_back(passedParticle);
   }
 
@@ -56,7 +57,7 @@ public:
 
   template <typename VolumeModelType>
   void setVolumeModel(psSmartPointer<VolumeModelType> passedVolumeModel) {
-    volumeModel = std::dynamic_pointer_cast<pscuVolumeModel<NumericType>>(
+    volumeModel = std::dynamic_pointer_cast<psVolumeModel<NumericType, 3>>(
         passedVolumeModel);
   }
 

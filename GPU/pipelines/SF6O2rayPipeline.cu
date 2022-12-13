@@ -20,15 +20,12 @@ enum
 
 __constant__ NumericType A_p = 0.0337;
 __constant__ NumericType A_Si = 7.;
-__constant__ NumericType A_O = 3;
 
 __constant__ NumericType sqrt_Eth_p = 0.;
 __constant__ NumericType sqrt_Eth_Si = 3.8729833462;
 __constant__ NumericType sqrt_Eth_O = 3.8729833462;
 __constant__ NumericType Eref_max = 1.;
 
-__constant__ NumericType meanIonEnergy = 100.; // eV
-__constant__ NumericType deltaIonEnergy = 40.;
 __constant__ NumericType minEnergy = 1.; // Discard particles with energy < 1eV
 
 __constant__ NumericType inflectAngle = 1.55334;
@@ -58,11 +55,11 @@ extern "C" __global__ void __closesthit__ion()
   }
   else
   {
-    const gdt::vec3f geomNormal =
+    gdt::vec3f geomNormal =
         computeNormal(sbtData, optixGetPrimitiveIndex());
     auto cosTheta = -gdt::dot(prd->dir, geomNormal);
 
-    const NumericType angle = acos(max(min(cosTheta, 1.), 0.));
+    NumericType angle = acosf(max(min(cosTheta, 1.f), 0.f));
 
     NumericType f_Si_theta, f_O_theta;
     if (cosTheta > 0.5f)
@@ -76,10 +73,10 @@ extern "C" __global__ void __closesthit__ion()
       f_O_theta = max(3.f - 6.f * angle / PI_F, 0.f);
     }
 
-    const NumericType sqrtE = sqrt(prd->energy);
-    const NumericType Y_p = A_p * max(sqrtE - sqrt_Eth_p, 0.f);
-    const NumericType Y_Si = A_Si * max(sqrtE - sqrt_Eth_Si, 0.f) * f_Si_theta;
-    const NumericType Y_O = A_O * max(sqrtE - sqrt_Eth_O, 0.f) * f_O_theta;
+    NumericType sqrtE = sqrt(prd->energy);
+    NumericType Y_p = A_p * max(sqrtE - sqrt_Eth_p, 0.f);
+    NumericType Y_Si = A_Si * max(sqrtE - sqrt_Eth_Si, 0.f) * f_Si_theta;
+    NumericType Y_O = params.A_O * max(sqrtE - sqrt_Eth_O, 0.f) * f_O_theta;
 
     // sputtering yield Y_p ionSputteringRate
     atomicAdd(&params.resultBuffer[getIdx(0, 0, &params)], Y_p);
@@ -91,9 +88,8 @@ extern "C" __global__ void __closesthit__ion()
     atomicAdd(&params.resultBuffer[getIdx(0, 2, &params)], Y_O);
 
     // ---------- REFLECTION ------------ //
-
-    const NumericType incAngle = acos(max(min(cosTheta, 1.f), 0.f));
-    NumericType Eref_peak = 0;
+    NumericType incAngle = acos(max(min(cosTheta, 1.f), 0.f));
+    NumericType Eref_peak = 0.f;
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
@@ -134,7 +130,7 @@ extern "C" __global__ void __closesthit__ion()
     }
     else
     {
-      prd->energy = -1.;
+      prd->energy = -1.f;
     }
   }
 }
@@ -158,16 +154,13 @@ extern "C" __global__ void __raygen__ion()
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
 
   // generate ray direction
-  const NumericType sourcePower = 1000.;
+  const NumericType sourcePower = params.cosineExponent;
   initializeRayRandom(&prd, &params, sourcePower, idx);
 
   do
   {
-    const auto rand1 = getNextRand(&prd.RNGstate);
-    const auto rand2 = getNextRand(&prd.RNGstate);
-    prd.energy =
-        cos(PI_F * 2.f * rand1) * sqrt(-2.f * log(rand2)) * deltaIonEnergy +
-        meanIonEnergy;
+    const auto r = getNextRand(&prd.RNGstate);
+    prd.energy = params.meanIonEnergy + (1.f / params.ionRF) * sinf(2.f * PI_F * r);
   } while (prd.energy < minEnergy);
 
   // the values we store the PRD pointer in:
