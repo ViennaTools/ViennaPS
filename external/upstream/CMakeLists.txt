@@ -4,3 +4,5 @@ set_property(DIRECTORY PROPERTY EP_BASE ${DEPENDENCIES_DIR})
 add_subdirectory(viennals)
 
 add_subdirectory(viennaray)
+
+add_subdirectory(pybind11)

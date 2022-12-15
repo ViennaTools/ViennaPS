@@ -52,7 +52,7 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
-  void setPrintIntdermediate(const bool passedPrint) {
+  void setPrintIntermediate(const bool passedPrint) {
     printIntermediate = passedPrint;
   }
 
