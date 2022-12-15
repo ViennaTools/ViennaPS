@@ -68,39 +68,57 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
       // methods
       .def("insertNextLevelSet", &psDomain<T, D>::insertNextLevelSet,
-           "Inserst level set domain.")
+           "Insest a level set to domain.")
       .def("printSurface", &psDomain<T, D>::printSurface,
-           "Print the surface of the domain in.");
+           "Print the surface of the domain.");
 
   pybind11::class_<psMakeTrench<T, D>, psSmartPointer<psMakeTrench<T, D>>>(
       module, "psMakeTrench")
       .def(pybind11::init(
-          &psSmartPointer<psMakeTrench<T, D>>::New<
-              psSmartPointer<psDomain<T, D>> &, const T /*GridDelta*/,
-              const T /*XExtent*/, const T /*YExtent*/, const T /*TrenchWidth*/,
-              const T /*TrenchHeight*/, const T /*TaperingAngle*/,
-              const T /*BaseHeight*/, const bool /*PeriodicBoundary*/,
-              const bool /*MakeMask*/>))
+               &psSmartPointer<psMakeTrench<T, D>>::New<
+                   psSmartPointer<psDomain<T, D>> &, const T /*GridDelta*/,
+                   const T /*XExtent*/, const T /*YExtent*/,
+                   const T /*TrenchWidth*/, const T /*TrenchHeight*/,
+                   const T /*TaperingAngle*/, const T /*BaseHeight*/,
+                   const bool /*PeriodicBoundary*/, const bool /*MakeMask*/>),
+           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("xExtent"), pybind11::arg("yExtent"),
+           pybind11::arg("trenchWidth"), pybind11::arg("trenchHeight"),
+           pybind11::arg("taperingAngle") = 0.,
+           pybind11::arg("baseHeight") = 0.,
+           pybind11::arg("periodicBoundary") = false,
+           pybind11::arg("makeMask") = false)
       .def("apply", &psMakeTrench<T, D>::apply, "Make trench.");
 
   pybind11::class_<psMakeHole<T, D>, psSmartPointer<psMakeHole<T, D>>>(
       module, "psMakeHole")
       .def(pybind11::init(
-          &psSmartPointer<psMakeHole<T, D>>::New<
-              psSmartPointer<psDomain<T, D>> &, const T /*GridDelta*/,
-              const T /*XExtent*/, const T /*YExtent*/, const T /*HoleRadius*/,
-              const T /*HoleDepth*/, const T /*TaperingAngle*/,
-              const T /*BaseHeight*/, const bool /*PeriodicBoundary*/,
-              const bool /*MakeMask*/>))
+               &psSmartPointer<psMakeHole<T, D>>::New<
+                   psSmartPointer<psDomain<T, D>> &, const T /*GridDelta*/,
+                   const T /*XExtent*/, const T /*YExtent*/,
+                   const T /*HoleRadius*/, const T /*HoleDepth*/,
+                   const T /*TaperingAngle*/, const T /*BaseHeight*/,
+                   const bool /*PeriodicBoundary*/, const bool /*MakeMask*/>),
+           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("xExtent"), pybind11::arg("yExtent"),
+           pybind11::arg("holeRadius"), pybind11::arg("holeDepth"),
+           pybind11::arg("taperingAngle") = 0.,
+           pybind11::arg("baseHeight") = 0.,
+           pybind11::arg("periodicBoundary") = false,
+           pybind11::arg("makeMask") = false)
       .def("apply", &psMakeHole<T, D>::apply, "Make hole.");
 
   pybind11::class_<psMakePlane<T, D>, psSmartPointer<psMakePlane<T, D>>>(
       module, "psMakePlane")
       .def(pybind11::init(
-          &psSmartPointer<psMakePlane<T, D>>::New<
-              psSmartPointer<psDomain<T, D>> &, const T /*GridDelta*/,
-              const T /*XExtent*/, const T /*YExtent*/, const T /*Height*/,
-              const bool /*Periodic*/>))
+               &psSmartPointer<psMakePlane<T, D>>::New<
+                   psSmartPointer<psDomain<T, D>> &, const T /*GridDelta*/,
+                   const T /*XExtent*/, const T /*YExtent*/, const T /*Height*/,
+                   const bool /*Periodic*/>),
+           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("xExtent"), pybind11::arg("yExtent"),
+           pybind11::arg("height") = 0.,
+           pybind11::arg("periodicBoundary") = false)
       .def("apply", &psMakePlane<T, D>::apply, "Make plane.");
 
   // enums
@@ -148,16 +166,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    psSmartPointer<SimpleDeposition<T, D>>>(module,
                                                            "SimpleDeposition")
       .def(pybind11::init(
-          &psSmartPointer<SimpleDeposition<T, D>>::New<const T, const T>))
+               &psSmartPointer<SimpleDeposition<T, D>>::New<const T, const T>),
+           pybind11::arg("stickingProbability") = 0.1,
+           pybind11::arg("sourceExponent") = 1.)
       .def("getProcessModel", &SimpleDeposition<T, D>::getProcessModel,
            "Return the deposition process model.");
 
   pybind11::class_<SF6O2Etching<T, D>, psSmartPointer<SF6O2Etching<T, D>>>(
       module, "SF6O2Etching")
-      .def(pybind11::init(
-          &psSmartPointer<SF6O2Etching<T, D>>::New<const double, const double,
-                                                   const double, const T,
-                                                   const T, const int>))
+      .def(pybind11::init(&psSmartPointer<SF6O2Etching<T, D>>::New<
+                          const double, const double, const double, const T,
+                          const T, const int>),
+           pybind11::arg("totalIonFlux"), pybind11::arg("totalEtchantFlux"),
+           pybind11::arg("totalOxygenFlux"), pybind11::arg("ionEnergy") = 100.,
+           pybind11::arg("oxySputterYield") = 3.,
+           pybind11::arg("maskMaterial") = 0)
       .def("getProcessModel", &SF6O2Etching<T, D>::getProcessModel,
            "Returns the etching process model");
 
@@ -165,7 +188,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    psSmartPointer<GeometricUniformDeposition<T, D>>>(
       module, "GeometricUniformDeposition")
       .def(pybind11::init(
-          &psSmartPointer<GeometricUniformDeposition<T, D>>::New<const T>))
+               &psSmartPointer<GeometricUniformDeposition<T, D>>::New<const T>),
+           pybind11::arg("layerThickness") = 1.)
       .def("getProcessModel",
            &GeometricUniformDeposition<T, D>::getProcessModel,
            "Return the deposition process model.");
@@ -176,7 +200,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       module, "psGDSGeometry")
       // constructors
       .def(pybind11::init(&psSmartPointer<psGDSGeometry<T, D>>::New<>))
-      .def(pybind11::init(&psSmartPointer<psGDSGeometry<T, D>>::New<const T>))
+      .def(pybind11::init(&psSmartPointer<psGDSGeometry<T, D>>::New<const T>),
+           pybind11::arg("gridDelta"))
       // methods
       .def("setGridDelta", &psGDSGeometry<T, D>::setGridDelta,
            "Set the gird spacing.")

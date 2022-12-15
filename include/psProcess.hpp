@@ -223,21 +223,22 @@ public:
                                  rayTraceCoverages);
           model->getSurfaceModel()->updateCoverages(Rates);
           coveragesInitialized = true;
-#ifdef VIENNAPS_VERBOSE
-          auto coverages = model->getSurfaceModel()->getCoverages();
-          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-            auto label = coverages->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *coverages->getScalarData(idx), label);
-          }
-          for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-            auto label = Rates->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *Rates->getScalarData(idx), label);
-          }
-          if (printIntermediate)
+          if (printIntermediate) {
+            auto coverages = model->getSurfaceModel()->getCoverages();
+            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+              auto label = coverages->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *coverages->getScalarData(idx), label);
+            }
+            for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+              auto label = Rates->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *Rates->getScalarData(idx), label);
+            }
             printDiskMesh(diskMesh, name + "_covIinit_" +
                                         std::to_string(iterations) + ".vtp");
+          }
+#ifdef VIENNAPS_VERBOSE
           std::cerr << "\r"
                     << "Iteration: " << iterations + 1 << " / "
                     << maxIterations;
@@ -311,27 +312,27 @@ public:
           model->getSurfaceModel()->calculateVelocities(Rates, materialIds);
       model->getVelocityField()->setVelocities(velocitites);
 
-#ifdef VIENNAPS_VERBOSE
-      if (velocitites)
-        diskMesh->getCellData().insertNextScalarData(*velocitites,
-                                                     "velocities");
-      if (useCoverages) {
-        auto coverages = model->getSurfaceModel()->getCoverages();
-        for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-          auto label = coverages->getScalarDataLabel(idx);
-          diskMesh->getCellData().insertNextScalarData(
-              *coverages->getScalarData(idx), label);
+      if (printIntermediate) {
+        if (velocitites)
+          diskMesh->getCellData().insertNextScalarData(*velocitites,
+                                                       "velocities");
+        if (useCoverages) {
+          auto coverages = model->getSurfaceModel()->getCoverages();
+          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+            auto label = coverages->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *coverages->getScalarData(idx), label);
+          }
         }
-      }
-      for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-        auto label = Rates->getScalarDataLabel(idx);
-        diskMesh->getCellData().insertNextScalarData(*Rates->getScalarData(idx),
-                                                     label);
-      }
-      if (printIntermediate)
+        for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+          auto label = Rates->getScalarDataLabel(idx);
+          diskMesh->getCellData().insertNextScalarData(
+              *Rates->getScalarData(idx), label);
+        }
         printDiskMesh(diskMesh,
                       name + "_" + std::to_string(counter++) + ".vtp");
-#endif
+      }
+
       // apply volume model
       if (useVolumeModel) {
         model->getVolumeModel()->applyPreAdvect(processDuration -
