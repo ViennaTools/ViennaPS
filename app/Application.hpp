@@ -18,7 +18,7 @@
 #include <ApplicationParser.hpp>
 
 #include <DirectionalEtching.hpp>
-#include <GeometricUniformDeposition.hpp>
+#include <GeometricDistributionModels.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
 
@@ -124,11 +124,24 @@ protected:
     process.apply();
   }
 
-  virtual void runGeometriyUniformDeposition(
+  virtual void runSphereDistribution(
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
-    GeometricUniformDeposition<NumericType, D> model(
-        processParams->processTime * processParams->rate);
+    SphereDistribution<NumericType, D> model(processParams->radius,
+                                             processParams->gridDelta);
+
+    psProcess<NumericType, D> process;
+    process.setDomain(processGeometry);
+    process.setProcessModel(model.getProcessModel());
+    process.setPrintIntdermediate(params->printIntermediate);
+    process.apply();
+  }
+
+  virtual void
+  runBoxDistribution(psSmartPointer<psDomain<NumericType, D>> processGeometry,
+                     psSmartPointer<ApplicationParameters> processParams) {
+    BoxDistribution<NumericType, D> model(processParams->halfAxes,
+                                          processParams->gridDelta);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
@@ -296,11 +309,18 @@ private:
       break;
     }
 
-    case ProcessType::GEOMETRICUNIFORMDEPOSITION: {
-      std::cout << "Geometric uniform deposition\n\tTime: "
-                << params->processTime << "\n\tRate: " << params->rate
+    case ProcessType::SPHEREDISTRIBUTION: {
+      std::cout << "Sphere Distribution\n\tRadius: " << params->radius
                 << "\n\n";
-      runGeometriyUniformDeposition(geometry, params);
+      runSphereDistribution(geometry, params);
+      break;
+    }
+
+    case ProcessType::BOXDISTRIBUTION: {
+      std::cout << "Box Distribution\n\thalfAxes: (" << params->halfAxes[0]
+                << ',' << params->halfAxes[1] << ',' << params->halfAxes[2]
+                << ")\n\n";
+      runBoxDistribution(geometry, params);
       break;
     }
 
