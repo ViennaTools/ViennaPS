@@ -1,0 +1,5 @@
+INIT xExtent=1 yExtent=1 resolution=0.01 printIntermediate=0 periodic=0
+GEOMETRY Trench width=0.4 depth=0.5 zPos=0.5 tapering=10
+OUTPUT initial
+PROCESS GeometricUniformDeposition rate=0.1 time=1
+OUTPUT result

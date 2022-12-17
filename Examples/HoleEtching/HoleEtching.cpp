@@ -28,7 +28,8 @@ int main(int argc, char *argv[]) {
       geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
       params.yExtent /*y extent*/, params.holeRadius /*hole radius*/,
       params.maskHeight /* mask height*/,
-      params.taperAngle /* tapering angle in degrees */, true /*create mask*/)
+      params.taperAngle /* tapering angle in degrees */, 0 /* base height */,
+      false /* periodic boundary */, true /*create mask*/)
       .apply();
 
   SF6O2Etching<NumericType, D> model(params.totalIonFlux /*ion flux*/,

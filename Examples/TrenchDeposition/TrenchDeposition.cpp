@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
       geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
       params.yExtent /*y extent*/, params.trenchWidth /*trench width*/,
       params.trenchHeight /*trench height*/,
-      params.taperAngle /* tapering angle */, false /*create mask*/)
+      params.taperAngle /* tapering angle */)
       .apply();
 
   // copy top layer to capture deposition
