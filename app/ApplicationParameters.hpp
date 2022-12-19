@@ -13,7 +13,8 @@ enum class ProcessType {
   NONE,
   SF6O2ETCHING,
   DEPOSITION,
-  GEOMETRICUNIFORMDEPOSITION,
+  SPHEREDISTRIBUTION,
+  BOXDISTRIBUTION,
   DIRECTIONALETCHING
 };
 
@@ -67,6 +68,11 @@ struct ApplicationParameters {
   NumericType directionalRate = 1.;
   NumericType isotropicRate = 0.;
   std::string direction = "negZ";
+  // Geometric Distributions
+  // sphere
+  NumericType radius = 1.;
+  // box
+  std::array<hrleCoordType, 3> halfAxes = {1., 1., 1.};
 
   ApplicationParameters() {}
 
@@ -95,6 +101,10 @@ struct ApplicationParameters {
     directionalRate = 1.;
     isotropicRate = 0.;
     direction = "negZ";
+    radius = 1.;
+    halfAxes[0] = 1.;
+    halfAxes[1] = 1.;
+    halfAxes[2] = 1.;
 
     if (all) {
       printIntermediate = 0;
