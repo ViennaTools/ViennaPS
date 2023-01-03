@@ -106,12 +106,21 @@ All parameters which are parsed additional to a command are described below. For
 </dl>
 
 ---
-**PROCESS GeometricUniformDeposition**
+**PROCESS SphereDistribution**
 <dl>
-  <dt>time</dt>
-  <dd>process time (numeric value, default: 1)</dd>
-  <dt>rate</dt>
-  <dd>deposition rate (numeric value, default: 1)</dd>
+  <dt>radius</dt>
+  <dd>radius used for sphere distribution (numeric value, default: 1, can be negative for etching)</dd>
+</dl>
+
+---
+**PROCESS BoxDistribution**
+<dl>
+  <dt>halfAxisX</dt>
+  <dd>half the width of the box in x-direction (numeric value, default: 1, can be negative for etching)</dd>
+  <dt>halfAxisY</dt>
+  <dd>half the width of the box in y-direction (numeric value, default: 1, can be negative for etching)</dd>
+  <dt>halfAxisZ</dt>
+  <dd>half the width of the box in z-direction (numeric value, default: 1, can be negative for etching)</dd>
 </dl>
 
 ---
