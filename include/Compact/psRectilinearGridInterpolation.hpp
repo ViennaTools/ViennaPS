@@ -15,19 +15,15 @@ class psRectilinearGridInterpolation
 
   using Parent = psValueEstimator<NumericType, InputDim, OutputDim, bool>;
 
+  using typename Parent::DataVector;
   using typename Parent::InputType;
   using typename Parent::OutputType;
 
+  using Parent::data;
+  using Parent::dataChanged;
   using Parent::DataDim;
-  using Parent::dataSource;
-
-  using DataVector = std::vector<std::array<NumericType, DataDim>>;
-  using DataPtr = psSmartPointer<DataVector>;
-
-  DataPtr data = nullptr;
 
   std::array<std::set<NumericType>, InputDim> uniqueValues;
-  bool initialized = false;
 
   // For rectilinear grid interpolation to work, we first have to ensure that
   // our input coordinates are arranged in a certain way
@@ -89,12 +85,10 @@ public:
   psRectilinearGridInterpolation() {}
 
   bool initialize() override {
-    if (!dataSource)
+    if (!data) {
+      std::cout << "No data provided to psRectilinearGridInterpolation!\n";
       return false;
-
-    // Get a copy of the data from the dataSource
-    // This is required since we are modifying the data in-place.
-    data = psSmartPointer<DataVector>::New(dataSource->get());
+    }
 
     if (data->size() == 0)
       return false;
@@ -122,12 +116,12 @@ public:
         return false;
       }
 
-    initialized = true;
+    dataChanged = false;
     return true;
   }
 
   std::tuple<OutputType, bool> estimate(const InputType &input) override {
-    if (!initialized)
+    if (dataChanged)
       if (!initialize())
         return {{}, {}};
 

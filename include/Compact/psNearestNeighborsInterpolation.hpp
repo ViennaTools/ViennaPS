@@ -36,25 +36,20 @@ class psNearestNeighborsInterpolation
   using typename Parent::InputType;
   using typename Parent::OutputType;
 
+  using Parent::data;
+  using Parent::dataChanged;
   using Parent::DataDim;
-  using Parent::dataSource;
-
-  using DataVector = std::vector<std::array<NumericType, DataDim>>;
-  using DataPtr = psSmartPointer<DataVector>;
 
   int numberOfNeighbors;
   PointLocator locator;
   NumericType distanceExponent;
-
-  DataPtr data = nullptr;
-  bool initialized = false;
 
 public:
   psNearestNeighborsInterpolation()
       : numberOfNeighbors(3), distanceExponent(2.) {}
 
   psNearestNeighborsInterpolation(int passedNumberOfNeighbors,
-                                  NumericType passedDistanceExponent = 2.)
+                                  NumericType passedDistanceExponent)
       : numberOfNeighbors(passedNumberOfNeighbors),
         distanceExponent(passedDistanceExponent) {}
 
@@ -67,13 +62,10 @@ public:
   }
 
   bool initialize() override {
-    if (!dataSource)
+    if (!data) {
+      std::cout << "No data provided to psNearestNeighborsInterpolation!\n";
       return false;
-
-    // Get a copy of the data from the dataSource
-    // This is required since we are modifying the data in-place (the locator
-    // sorts the points).
-    data = psSmartPointer<DataVector>::New(dataSource->get());
+    }
 
     if (data->size() == 0)
       return false;
@@ -87,13 +79,14 @@ public:
     locator.setScalingFactors(scalingFactors);
     locator.build();
 
-    initialized = true;
+    dataChanged = false;
+
     return true;
   }
 
   std::tuple<OutputType, NumericType>
   estimate(const InputType &input) override {
-    if (!initialized)
+    if (dataChanged)
       if (!initialize())
         return {{}, {}};
 
