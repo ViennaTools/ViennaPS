@@ -21,8 +21,8 @@ class psRectilinearGridInterpolation
   using Parent::DataDim;
   using Parent::dataSource;
 
-  using DataPtr = typename decltype(dataSource)::element_type::DataPtr;
   using DataVector = std::vector<std::array<NumericType, DataDim>>;
+  using DataPtr = psSmartPointer<DataVector>;
 
   DataPtr data = nullptr;
 
@@ -92,8 +92,11 @@ public:
     if (!dataSource)
       return false;
 
-    data = dataSource->getAll();
-    if (!data)
+    // Get a copy of the data from the dataSource
+    // This is required since we are modifying the data in-place.
+    data = psSmartPointer<DataVector>::New(dataSource->get());
+
+    if (data->size() == 0)
       return false;
 
     auto equalSize = rearrange(data->begin(), data->end(), 0, true);

@@ -39,8 +39,8 @@ class psNearestNeighborsInterpolation
   using Parent::DataDim;
   using Parent::dataSource;
 
-  using DataPtr = typename decltype(dataSource)::element_type::DataPtr;
   using DataVector = std::vector<std::array<NumericType, DataDim>>;
+  using DataPtr = psSmartPointer<DataVector>;
 
   int numberOfNeighbors;
   PointLocator locator;
@@ -70,9 +70,10 @@ public:
     if (!dataSource)
       return false;
 
-    data = dataSource->getAll();
-    if (!data)
-      return false;
+    // Get a copy of the data from the dataSource
+    // This is required since we are modifying the data in-place (the locator
+    // sorts the points).
+    data = psSmartPointer<DataVector>::New(dataSource->get());
 
     if (data->size() == 0)
       return false;
