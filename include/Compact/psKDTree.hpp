@@ -43,16 +43,16 @@
 #include <psQueues.hpp>
 #include <psSmartPointer.hpp>
 
-template <class NumericType, int D, int Dim = D>
-class psKDTree : psPointLocator<NumericType, D, Dim> {
-  using typename psPointLocator<NumericType, D, Dim>::VectorType;
-  using typename psPointLocator<NumericType, D, Dim>::PointType;
-  using typename psPointLocator<NumericType, D, Dim>::SizeType;
+template <class NumericType, int D, unsigned int axisMask = -1U>
+class psKDTree : psPointLocator<NumericType, D, axisMask> {
+  using typename psPointLocator<NumericType, D, axisMask>::VectorType;
+  using typename psPointLocator<NumericType, D, axisMask>::PointType;
+  using typename psPointLocator<NumericType, D, axisMask>::SizeType;
 
   SizeType N;
   SizeType treeSize = 0;
 
-  std::array<NumericType, D> scalingFactors{1.};
+  PointType scalingFactors{1.};
 
   NumericType gridDelta;
 
@@ -102,13 +102,21 @@ class psKDTree : psPointLocator<NumericType, D, Dim> {
     return &(*it);
   }
 
+  inline constexpr bool isActive(SizeType axis) const {
+    return ((axisMask >> axis) & SizeType{1});
+  }
+
   template <size_t N>
   std::array<NumericType, N>
   Diff(const std::array<NumericType, N> &pVecA,
        const std::array<NumericType, N> &pVecB) const {
     std::array<NumericType, N> diff{0};
+
+    // Calculate the vector difference, but set the component value for masked
+    // out axes to zero.
     for (int i = 0; i < N; ++i)
-      diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
+      diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]) * isActive(i);
+
     return diff;
   }
 
@@ -129,7 +137,7 @@ class psKDTree : psPointLocator<NumericType, D, Dim> {
 
     std::vector<NumericType> diff(S, 0);
     for (int i = 0; i < S; ++i)
-      diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
+      diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]) * isActive(i);
 
     NumericType norm = 0;
     std::for_each(diff.begin(), diff.end(),
@@ -138,11 +146,17 @@ class psKDTree : psPointLocator<NumericType, D, Dim> {
   }
 
   void build(Node *parent, typename std::vector<Node>::iterator start,
-             typename std::vector<Node>::iterator end, int depth, bool isLeft,
-             int surplusWorkers, int maxParallelDepth) const {
+             typename std::vector<Node>::iterator end, int parentAxis,
+             int depth, bool isLeft, int surplusWorkers,
+             int maxParallelDepth) const {
     SizeType size = end - start;
 
-    int axis = depth % D;
+    int axis = (parentAxis + 1) % D;
+
+    // Check if the axis is active or not (based on the axis mask), skip it if
+    // it's inactive.
+    if (!isActive(axis))
+      axis = (axis + 1) % D;
 
     if (size > 1) {
       SizeType medianIndex = (size + 1) / 2 - 1;
@@ -169,6 +183,7 @@ class psKDTree : psPointLocator<NumericType, D, Dim> {
         build(current,             // Use current node as parent
               start,               // Data start
               start + medianIndex, // Data end
+              axis,                // Axis
               depth + 1,           // Depth
               true,                // Left
               surplusWorkers, maxParallelDepth);
@@ -178,6 +193,7 @@ class psKDTree : psPointLocator<NumericType, D, Dim> {
       build(current,                 // Use current node as parent
             start + medianIndex + 1, // Data start
             end,                     // Data end
+            axis,                    // Axis
             depth + 1,               // Depth
             false,                   // Right
             surplusWorkers, maxParallelDepth);
@@ -323,8 +339,7 @@ public:
     }
   }
 
-  void setScalingFactors(
-      const std::array<NumericType, D> &passedScalingFactors) override {
+  void setScalingFactors(const PointType &passedScalingFactors) override {
     scalingFactors = passedScalingFactors;
   }
 
@@ -355,12 +370,18 @@ public:
         SizeType size = myNodes.end() - myNodes.begin();
         SizeType medianIndex = (size + 1) / 2 - 1;
 
+        int axis = 0;
+        // Check if the axis is active or not (based on the axis mask), skip
+        // it if it's inactive.
+        if (!isActive(axis))
+          axis = (axis + 1) % D;
+
         std::nth_element(
             myNodes.begin(), myNodes.begin() + medianIndex, myNodes.end(),
-            [](Node &a, Node &b) { return a.value[0] < b.value[0]; });
+            [&](Node &a, Node &b) { return a.value[axis] < b.value[axis]; });
 
         myRootNode = &myNodes[medianIndex];
-        myRootNode->axis = 0;
+        myRootNode->axis = axis;
 
 #ifdef _OPENMP
         bool dontSpawnMoreThreads = 0 > maxParallelDepth + 1 ||
@@ -373,6 +394,7 @@ public:
           build(myRootNode,                    // Use rootNode as parent
                 myNodes.begin(),               // Data start
                 myNodes.begin() + medianIndex, // Data end
+                axis,                          // Axis
                 1,                             // Depth
                 true,                          // Left
                 surplusWorkers, maxParallelDepth);
@@ -382,6 +404,7 @@ public:
         build(myRootNode,                        // Use rootNode as parent
               myNodes.begin() + medianIndex + 1, // Data start
               myNodes.end(),                     // Data end
+              axis,                              // Axis
               1,                                 // Depth
               false,                             // Right
               surplusWorkers, maxParallelDepth);
