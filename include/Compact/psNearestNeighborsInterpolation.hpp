@@ -17,16 +17,15 @@
 template <typename NumericType, int InputDim, int OutputDim,
           typename DataScaler =
               psStandardScaler<NumericType, InputDim, InputDim + OutputDim>,
-          typename PointLocator =
-              psKDTree<NumericType, InputDim + OutputDim,
-                       maskNLower<InputDim + OutputDim, InputDim>()>>
+          typename PointLocator = psKDTree<NumericType, InputDim + OutputDim,
+                                           maskNLower<InputDim>()>>
 class psNearestNeighborsInterpolation
     : public psValueEstimator<NumericType, InputDim, OutputDim, NumericType> {
 
-  static_assert(std::is_base_of_v<
-                psPointLocator<NumericType, InputDim + OutputDim,
-                               maskNLower<InputDim + OutputDim, InputDim>()>,
-                PointLocator>);
+  static_assert(
+      std::is_base_of_v<psPointLocator<NumericType, InputDim + OutputDim,
+                                       maskNLower<InputDim>()>,
+                        PointLocator>);
 
   static_assert(std::is_base_of_v<
                 psDataScaler<NumericType, InputDim, InputDim + OutputDim>,
