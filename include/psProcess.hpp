@@ -351,7 +351,8 @@ public:
 
       // apply advection callback
       if (useAdvectionCallback) {
-        domain->getCellSet()->updateSurface();
+        if (domain->getUseCellSet())
+          domain->getCellSet()->updateSurface();
         model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
       }
