@@ -198,7 +198,7 @@ public:
   }
 
   virtual void applyPreAdvect(const NumericType processTime) {
-    assert(domain->useCellSet());
+    assert(domain->getUseCellSet());
 
     tracer.setCellSet(domain->getCellSet());
     tracer.apply();
