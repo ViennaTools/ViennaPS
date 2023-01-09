@@ -67,7 +67,7 @@ inline constexpr unsigned int bitArrayToMask() {
   }
 }
 
-/*
+/**
  * Generates a mask of the lower `N` bits of an `int`.
  * The optional parameter `Index` specifies the index of the current bit being
  * considered, with `Index` equal to 0 giving the full mask. The function can be
@@ -93,33 +93,50 @@ template <int N, int Index = 0> inline constexpr unsigned int maskNLower() {
 }
 
 template <class NumericType, int D, unsigned int axisMask = -1U>
-struct psPointLocator {
-
+class psPointLocator {
+public:
   // Calculate the number of dimensions used based on the provided axis mask
-  static constexpr unsigned int usedDimensions = recursiveBitSum<axisMask, D>();
+  static constexpr unsigned int numActiveDimensions =
+      recursiveBitSum<axisMask, D>();
 
   // Ensure that at least one dimension is used
   static_assert(
-      usedDimensions >= 1,
+      numActiveDimensions >= 1,
       "The provided axes exclude mask would mask out all axes, but at "
       "least one axis must remain unmask for the tree to work "
       "properly.");
 
   // Types used in the class
   using VectorType = std::array<NumericType, D>;
-  using PointType = std::array<NumericType, usedDimensions>;
+  using PointType = std::array<NumericType, numActiveDimensions>;
   using SizeType = std::size_t;
 
   // Pure virtual functions to be implemented by derived classes
   virtual void build() = 0;
   virtual void setPoints(std::vector<VectorType> &passedPoints) = 0;
   virtual void setScalingFactors(const PointType &passedScalingFactors) = 0;
-  virtual std::pair<SizeType, NumericType>
-  findNearest(const PointType &x) const = 0;
+  virtual std::pair<SizeType, NumericType> findNearest(const PointType &x) = 0;
   virtual psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>
-  findKNearest(const PointType &x, const int k) const = 0;
+  findKNearest(const PointType &x, const int k) = 0;
   virtual psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>
-  findNearestWithinRadius(const PointType &x,
-                          const NumericType radius) const = 0;
+  findNearestWithinRadius(const PointType &x, const NumericType radius) = 0;
+
+  // Helper function for checking whether a given axis is enabled by the
+  // axisMask
+  inline constexpr bool isActive(SizeType axis) const {
+    return ((axisMask >> axis) & SizeType{1});
+  }
+
+  // Helper function for converting from VectorType to PointType
+  inline constexpr PointType applyMask(const VectorType &vec) const {
+    SizeType j = 0;
+    PointType converted{};
+    for (SizeType i = 0; i < D; ++i)
+      if (isActive(i)) {
+        converted[j] = vec[i];
+        ++j;
+      }
+    return converted;
+  }
 };
 #endif
