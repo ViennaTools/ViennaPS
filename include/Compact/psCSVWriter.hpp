@@ -18,17 +18,6 @@ template <class NumericType, int NumCols> class psCSVWriter {
   std::string header;
   bool initialized = false;
 
-  template <class Iterator>
-  static std::string join(Iterator begin, Iterator end,
-                          const std::string &separator = ",") {
-    std::ostringstream ostr;
-    if (begin != end)
-      ostr << *begin++;
-    while (begin != end)
-      ostr << separator << *begin++;
-    return ostr.str();
-  }
-
 public:
   psCSVWriter() {}
   psCSVWriter(std::string passedFilename, std::string passedHeader = "")
@@ -47,7 +36,13 @@ public:
         std::string line;
         std::istringstream iss(header);
         while (std::getline(iss, line)) {
-          file << "# " << line << '\n';
+          // If a line starts with an exclamation point, it's a parameter line,
+          // thus we don't want to have an extra space after the hashtag.
+          if (line.rfind('!', 1) == 0) {
+            file << "#" << line << '\n';
+          } else {
+            file << "# " << line << '\n';
+          }
         }
       }
     } else {
@@ -93,7 +88,8 @@ public:
         return false;
 
     if (data.size() != NumCols) {
-      std::cout << "Unexpected number of items in the provided row!\n";
+      std::cout << "Unexpected number of items in the provided row! ("
+                << data.size() << " instead of " << NumCols << ")\n";
       return false;
     }
     if (!file.is_open()) {
@@ -102,6 +98,17 @@ public:
     }
     file << join(data.begin(), data.end()) << '\n';
     return true;
+  }
+
+  template <class Iterator>
+  static std::string join(Iterator begin, Iterator end,
+                          const std::string &separator = ",") {
+    std::ostringstream ostr;
+    if (begin != end)
+      ostr << *begin++;
+    while (begin != end)
+      ostr << separator << *begin++;
+    return ostr.str();
   }
 
   void flush() {
