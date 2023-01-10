@@ -95,7 +95,7 @@ public:
     OutputType result{0};
 
     NumericType weightSum{0};
-    NumericType minDistance{0};
+    NumericType minDistance = std::numeric_limits<NumericType>::max();
 
     for (int j = 0; j < numberOfNeighbors; ++j) {
       auto [nearestIndex, distance] = neighbors->at(j);

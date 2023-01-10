@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   Parameters<NumericType> params;
   params.taperAngle = 0.;
   params.stickingProbability = 0.5;
-  params.processTime = 2.;
+  params.processTime = 5.;
 
   // Interpolation based on previous simulation results
   {
@@ -91,9 +91,7 @@ int main(int argc, char *argv[]) {
     std::array<NumericType, InputDim> x = {
         params.taperAngle, params.stickingProbability, params.processTime};
     auto [result, distance] = estimator.estimate(x);
-    for (auto &r : result)
-      std::cout << r << ',';
-    std::cout << '\n';
+
     std::cout << distance << std::endl;
 
     auto dimensions = psSmartPointer<std::vector<NumericType>>::New();
