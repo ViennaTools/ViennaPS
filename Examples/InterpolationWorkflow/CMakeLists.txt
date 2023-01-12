@@ -17,6 +17,6 @@ target_include_directories(${GEOM_RECONSTRUCTION} PUBLIC ${VIENNAPS_INCLUDE_DIRS
 target_link_libraries(${GEOM_RECONSTRUCTION} PRIVATE ${VIENNAPS_LIBRARIES})
 
 configure_file(data.csv ${CMAKE_CURRENT_BINARY_DIR}/data.csv COPYONLY)
-
+configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 
 add_dependencies(buildExamples ${PROJECT_NAME} ${CREATE_DATA} ${GEOM_RECONSTRUCTION})

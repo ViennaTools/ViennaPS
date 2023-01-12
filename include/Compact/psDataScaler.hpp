@@ -10,11 +10,9 @@
 #include <psSmartPointer.hpp>
 
 // Base class for data scalers
-template <typename NumericType, int D, int Dim> class psDataScaler {
-  static_assert(D <= Dim);
-
+template <typename NumericType, int D> class psDataScaler {
 protected:
-  using VectorType = std::array<NumericType, Dim>;
+  using VectorType = std::array<NumericType, D>;
 
   psSmartPointer<std::vector<VectorType>> data = nullptr;
   std::array<NumericType, D> scalingFactors;
@@ -32,9 +30,9 @@ public:
 };
 
 // Class that calculates scaling factors based on standard deviation
-template <typename NumericType, int D, int Dim>
-class psStandardScaler : public psDataScaler<NumericType, D, Dim> {
-  using Parent = psDataScaler<NumericType, D, Dim>;
+template <typename NumericType, int D>
+class psStandardScaler : public psDataScaler<NumericType, D> {
+  using Parent = psDataScaler<NumericType, D>;
 
   using Parent::data;
   using Parent::scalingFactors;
@@ -78,9 +76,9 @@ public:
 };
 
 // Class that calculates scaling factors based on median distances
-template <typename NumericType, int D, int Dim>
-class psMedianDistanceScaler : public psDataScaler<NumericType, D, Dim> {
-  using Parent = psDataScaler<NumericType, D, Dim>;
+template <typename NumericType, int D>
+class psMedianDistanceScaler : public psDataScaler<NumericType, D> {
+  using Parent = psDataScaler<NumericType, D>;
 
   using Parent::data;
   using Parent::scalingFactors;

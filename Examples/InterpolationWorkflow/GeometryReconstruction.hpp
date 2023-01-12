@@ -13,6 +13,7 @@ template <typename NumericType, int D> class GeometryReconstruction {
   const NumericType (&origin)[D];
   const std::vector<NumericType> &sampleLocations;
   const std::vector<NumericType> &dimensions;
+  NumericType eps;
 
 public:
   GeometryReconstruction(
@@ -21,7 +22,8 @@ public:
       const std::vector<NumericType> &passedSampleLocations,
       const std::vector<NumericType> &passedDimensions)
       : levelset(passedLevelset), origin(passedOrigin),
-        sampleLocations(passedSampleLocations), dimensions(passedDimensions) {}
+        sampleLocations(passedSampleLocations), dimensions(passedDimensions),
+        eps(1e-4) {}
 
   void apply() {
     // First generate an initial plane from which we will remove the trench
@@ -50,7 +52,7 @@ public:
         if constexpr (D == 3)
           point[2] = origin[2];
 
-        point[0] -= dimensions.at(i) / 2;
+        point[0] -= std::max(dimensions.at(i) / 2, eps);
         point[D - 1] -= depth * sampleLocations.at(i - 1);
 
         mesh->insertNextNode(point);
@@ -63,7 +65,7 @@ public:
         if constexpr (D == 3)
           point[2] = origin[2];
 
-        point[0] += dimensions.at(i) / 2;
+        point[0] += std::max(dimensions.at(i) / 2, eps);
         point[D - 1] -= depth * sampleLocations.at(i - 1);
 
         mesh->insertNextNode(point);

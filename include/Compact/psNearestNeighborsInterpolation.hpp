@@ -13,23 +13,36 @@
 #include <psSmartPointer.hpp>
 #include <psValueEstimator.hpp>
 
+template <typename NumericType, int InputDim, int OutputDim>
+auto extractInputData(
+    const std::vector<std::array<NumericType, InputDim + OutputDim>> &data) {
+  std::vector<std::array<NumericType, InputDim>> inputData;
+  inputData.reserve(data.size());
+  std::transform(data.begin(), data.end(), std::back_inserter(inputData),
+                 [=](const auto &d) {
+                   std::array<NumericType, InputDim> element;
+                   std::copy_n(d.begin(), InputDim, element.begin());
+                   return element;
+                 });
+  return inputData;
+}
+
 // Class providing nearest neighbors interpolation
 template <typename NumericType, int InputDim, int OutputDim,
-          typename DataScaler =
-              psStandardScaler<NumericType, InputDim, InputDim + OutputDim>,
-          typename PointLocator = psKDTree<NumericType, InputDim + OutputDim,
-                                           maskNLower<InputDim>()>>
+          typename DataScaler = psStandardScaler<NumericType, InputDim>,
+          typename PointLocator = psKDTree<NumericType, InputDim>>
 class psNearestNeighborsInterpolation
     : public psValueEstimator<NumericType, InputDim, OutputDim, NumericType> {
 
   static_assert(
-      std::is_base_of_v<psPointLocator<NumericType, InputDim + OutputDim,
-                                       maskNLower<InputDim>()>,
-                        PointLocator>);
+      std::is_base_of_v<psPointLocator<NumericType, InputDim>, PointLocator>,
+      "psNearestNeighborsInterpolation: the provided PointLocator"
+      "does not inherit from psPointLocator.");
 
-  static_assert(std::is_base_of_v<
-                psDataScaler<NumericType, InputDim, InputDim + OutputDim>,
-                DataScaler>);
+  static_assert(
+      std::is_base_of_v<psDataScaler<NumericType, InputDim>, DataScaler>,
+      "psNearestNeighborsInterpolation: the provided DataScaler "
+      "does not inherit from psDataScaler.");
 
   using Parent =
       psValueEstimator<NumericType, InputDim, OutputDim, NumericType>;
@@ -71,12 +84,14 @@ public:
     if (data->size() == 0)
       return false;
 
+    auto inputData = extractInputData<NumericType, InputDim, OutputDim>(*data);
+
     DataScaler scaler;
-    scaler.setData(data);
+    scaler.setData(psSmartPointer<decltype(inputData)>::New(inputData));
     scaler.apply();
     auto scalingFactors = scaler.getScalingFactors();
 
-    locator.setPoints(*data);
+    locator.setPoints(inputData);
     locator.setScalingFactors(scalingFactors);
     locator.build();
 
@@ -95,7 +110,7 @@ public:
     OutputType result{0};
 
     NumericType weightSum{0};
-    NumericType minDistance = std::numeric_limits<NumericType>::max();
+    NumericType minDistance = std::numeric_limits<NumericType>::infinity();
 
     for (int j = 0; j < numberOfNeighbors; ++j) {
       auto [nearestIndex, distance] = neighbors->at(j);

@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 
     psNearestNeighborsInterpolation<
         NumericType, InputDim, TargetDim,
-        psMedianDistanceScaler<NumericType, InputDim, DataDim>>
+        psMedianDistanceScaler<NumericType, InputDim>>
         interpolation(numberOfNeighbors, distanceExponent);
 
     auto data = dataSource->get();

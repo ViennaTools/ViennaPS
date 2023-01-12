@@ -60,19 +60,24 @@ public:
     dimensions->at(0) = depth;
 
     // Only use the vertical trench axis for the kDtree
-    static constexpr unsigned int axisMask = 0b10; //(1 << (D - 1));
-    psKDTree<NumericType, 3, axisMask> tree;
-    tree.setPoints(nodes);
+    std::vector<std::array<NumericType, 1>> ys;
+    ys.reserve(nodes.size());
+    std::transform(
+        nodes.begin(), nodes.end(), std::back_inserter(ys),
+        [=](auto &node) { return std::array<NumericType, 1>{node[D - 1]}; });
+
+    psKDTree<NumericType, 1> tree;
+    tree.setPoints(ys);
     tree.build();
 
     // The extract the diameters along its depth at the relative coordinates
     // given by depths
     int i = 1;
+    const NumericType gridDelta = domain->getGrid().getGridDelta();
     for (auto sl : verticalSampleLocations) {
       std::array<NumericType, 1> loc{max - depth * sl};
 
-      auto neighbors =
-          tree.findNearestWithinRadius(loc, domain->getGrid().getGridDelta());
+      auto neighbors = tree.findNearestWithinRadius(loc, gridDelta);
 
       // Here we assume that the trench is centered at zero and symmetric with
       // its vertical axis being the axis of symmetry

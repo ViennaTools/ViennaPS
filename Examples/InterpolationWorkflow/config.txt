@@ -1,0 +1,4 @@
+# Parameters used as input for interpolation
+stickingProbability=0.5
+taperAngle=-1
+processTime=4.3

@@ -43,21 +43,17 @@
 #include <psQueues.hpp>
 #include <psSmartPointer.hpp>
 
-template <class NumericType, int D, unsigned int axisMask = -1U>
-class psKDTree : psPointLocator<NumericType, D, axisMask> {
-  using Parent = psPointLocator<NumericType, D, axisMask>;
+template <class NumericType, int D>
+class psKDTree : psPointLocator<NumericType, D> {
+  using Parent = psPointLocator<NumericType, D>;
 
   using typename Parent::PointType;
   using typename Parent::SizeType;
-  using typename Parent::VectorType;
 
-  using Parent::applyMask;
-  using Parent::isActive;
-  using Parent::numActiveDimensions;
-
+  SizeType N;
   SizeType treeSize = 0;
 
-  PointType scalingFactors{1.};
+  std::array<NumericType, D> scalingFactors{1.};
 
   NumericType gridDelta;
 
@@ -107,25 +103,29 @@ class psKDTree : psPointLocator<NumericType, D, axisMask> {
     return &(*it);
   }
 
-  PointType Diff(const PointType &pVecA, const PointType &pVecB) const {
-    PointType diff{0};
-
-    for (size_t i = 0; i < diff.size(); ++i)
+  template <size_t N>
+  std::array<NumericType, N>
+  Diff(const std::array<NumericType, N> &pVecA,
+       const std::array<NumericType, N> &pVecB) const {
+    std::array<NumericType, N> diff{0};
+    for (int i = 0; i < N; ++i)
       diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
-
     return diff;
   }
 
-  NumericType SquaredDistance(const PointType &pVecA,
-                              const PointType &pVecB) const {
+  template <size_t N>
+  NumericType SquaredDistance(const std::array<NumericType, N> &pVecA,
+                              const std::array<NumericType, N> &pVecB) const {
     auto diff = Diff(pVecA, pVecB);
-    NumericType dist = 0;
+    NumericType norm = 0;
     std::for_each(diff.begin(), diff.end(),
-                  [&dist](NumericType entry) { dist += entry * entry; });
-    return dist;
+                  [&norm](NumericType entry) { norm += entry * entry; });
+    return norm;
   }
 
-  NumericType Distance(const PointType &pVecA, const PointType &pVecB) const {
+  template <size_t N>
+  NumericType Distance(const std::array<NumericType, N> &pVecA,
+                       const std::array<NumericType, N> &pVecB) const {
     return std::sqrt(SquaredDistance(pVecA, pVecB));
   }
 
@@ -134,7 +134,7 @@ class psKDTree : psPointLocator<NumericType, D, axisMask> {
              int surplusWorkers, int maxParallelDepth) const {
     SizeType size = end - start;
 
-    int axis = depth % numActiveDimensions;
+    int axis = depth % D;
 
     if (size > 1) {
       SizeType medianIndex = (size + 1) / 2 - 1;
@@ -187,7 +187,7 @@ class psKDTree : psPointLocator<NumericType, D, axisMask> {
 
 private:
   /****************************************************************************
-   * Recursive Tree Traversal *
+   * Recursive Tree Traversal                                                 *
    ****************************************************************************/
   void traverseDown(Node *currentNode, std::pair<NumericType, Node *> &best,
                     const PointType &x) const {
@@ -196,9 +196,9 @@ private:
 
     int axis = currentNode->axis;
 
-    // For distance comparison operations we only use the squared distance,
-    // since we only need to preserve the ordering, and not using the square
-    // root in the calculations provides a performance benefit.
+    // For distance comparison operations we only use the "reduced" aka less
+    // compute intensive, but order preserving version of the distance
+    // function.
     NumericType distance = SquaredDistance(x, currentNode->value);
     if (distance < best.first)
       best = std::pair{distance, currentNode};
@@ -214,8 +214,8 @@ private:
 
     // If the hypersphere with origin at x and a radius of our current best
     // distance intersects the hyperplane defined by the partitioning of the
-    // current node, we also have to search the other subtree, since there
-    // could be points closer to x than our current best.
+    // current node, we also have to search the other subtree, since there could
+    // be points closer to x than our current best.
     NumericType distanceToHyperplane =
         scalingFactors[axis] * std::abs(x[axis] - currentNode->value[axis]);
     distanceToHyperplane *= distanceToHyperplane;
@@ -238,9 +238,9 @@ private:
 
     int axis = currentNode->axis;
 
-    // For distance comparison operations we only use the squared distance,
-    // since we only need to preserve the ordering, and not using the square
-    // root in the calculations provides a performance benefit.
+    // For distance comparison operations we only use the "reduced" aka less
+    // compute intensive, but order preserving version of the distance
+    // function.
     queue.enqueue(
         std::pair{SquaredDistance(x, currentNode->value), currentNode});
 
@@ -255,8 +255,8 @@ private:
 
     // If the hypersphere with origin at x and a radius of our current best
     // distance intersects the hyperplane defined by the partitioning of the
-    // current node, we also have to search the other subtree, since there
-    // could be points closer to x than our current best.
+    // current node, we also have to search the other subtree, since there could
+    // be points closer to x than our current best.
     NumericType distanceToHyperplane =
         scalingFactors[axis] * std::abs(x[axis] - currentNode->value[axis]);
     distanceToHyperplane *= distanceToHyperplane;
@@ -293,7 +293,7 @@ public:
       sf = 1.0;
   }
 
-  psKDTree(std::vector<VectorType> &passedPoints) {
+  psKDTree(const std::vector<PointType> &passedPoints) {
     // Initialize the scaling factors to one
     for (auto &sf : scalingFactors)
       sf = 1.0;
@@ -302,23 +302,22 @@ public:
     nodes.reserve(passedPoints.size());
     {
       for (SizeType i = 0; i < passedPoints.size(); ++i) {
-        nodes.emplace_back(Node{applyMask(passedPoints[i]), i});
+        nodes.emplace_back(Node{passedPoints[i], i});
       }
     }
   }
 
-  void setPoints(std::vector<VectorType> &passedPoints) override {
-    rootNode = nullptr;
-    nodes.clear();
+  void setPoints(const std::vector<PointType> &passedPoints) override {
     nodes.reserve(passedPoints.size());
     {
       for (SizeType i = 0; i < passedPoints.size(); ++i) {
-        nodes.emplace_back(Node{applyMask(passedPoints[i]), i});
+        nodes.emplace_back(Node{passedPoints[i], i});
       }
     }
   }
 
-  void setScalingFactors(const PointType &passedScalingFactors) override {
+  void setScalingFactors(
+      const std::array<NumericType, D> &passedScalingFactors) override {
     scalingFactors = passedScalingFactors;
   }
 
@@ -351,7 +350,7 @@ public:
 
         std::nth_element(
             myNodes.begin(), myNodes.begin() + medianIndex, myNodes.end(),
-            [&](Node &a, Node &b) { return a.value[0] < b.value[0]; });
+            [](Node &a, Node &b) { return a.value[0] < b.value[0]; });
 
         myRootNode = &myNodes[medianIndex];
         myRootNode->axis = 0;
@@ -386,10 +385,8 @@ public:
     rootNode = myRootNode;
   }
 
-  std::pair<SizeType, NumericType> findNearest(const PointType &x) override {
-    if (rootNode == nullptr)
-      build();
-
+  std::pair<SizeType, NumericType>
+  findNearest(const PointType &x) const override {
     auto best =
         std::pair{std::numeric_limits<NumericType>::infinity(), rootNode};
     traverseDown(rootNode, best, x);
@@ -397,10 +394,7 @@ public:
   }
 
   psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>
-  findKNearest(const PointType &x, const int k) override {
-    if (rootNode == nullptr)
-      build();
-
+  findKNearest(const PointType &x, const int k) const override {
     auto queue = cmBoundedPQueue<NumericType, Node *>(k);
     traverseDown(rootNode, queue, x);
 
@@ -418,10 +412,7 @@ public:
 
   psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>
   findNearestWithinRadius(const PointType &x,
-                          const NumericType radius) override {
-    if (rootNode == nullptr)
-      build();
-
+                          const NumericType radius) const override {
     auto queue = cmClampedPQueue<NumericType, Node *>(radius);
     traverseDown(rootNode, queue, x);
 

@@ -19,4 +19,19 @@ template <typename T> struct Parameters {
   T stickingProbability = 1.;
 
   Parameters() {}
+
+  void fromMap(std::unordered_map<std::string, std::string> &m) {
+    psUtils::AssignItems( //
+        m,                //
+        // psUtils::Item{"gridDelta", gridDelta},                     //
+        // psUtils::Item{"xExtent", xExtent},                         //
+        // psUtils::Item{"yExtent", yExtent},                         //
+        // psUtils::Item{"trenchWidth", trenchWidth},                 //
+        // psUtils::Item{"trenchHeight", trenchHeight},               //
+        psUtils::Item{"taperAngle", taperAngle},   //
+        psUtils::Item{"processTime", processTime}, //
+        // psUtils::Item{"sourcePower", sourcePower},                  //
+        psUtils::Item{"stickingProbability", stickingProbability} //
+    );
+  }
 };

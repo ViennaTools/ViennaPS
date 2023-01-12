@@ -7,10 +7,10 @@ int main(int argc, char *argv[]) {
   constexpr int D = 2;
 
   // The parameters we are interested in
-  std::vector<NumericType> stickingProbabilities = {1., 0.8, 0.3};
+  std::vector<NumericType> stickingProbabilities = {1., 0.8, 0.3, 0.1};
   std::vector<NumericType> taperAngles = {-2., 0., 2.};
 
-  static constexpr int NumberOfSamples = 20;
+  static constexpr int NumberOfSamples = 30;
 
   auto extractor = psSmartPointer<DimensionExtraction<NumericType, D>>::New();
   extractor->setNumberOfSamples(NumberOfSamples);

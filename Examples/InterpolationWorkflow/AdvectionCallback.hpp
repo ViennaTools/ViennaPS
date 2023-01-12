@@ -56,7 +56,7 @@ public:
       std::copy(prefixData->begin(), prefixData->end(),
                 std::back_inserter(row));
 
-    row.push_back(counter);
+    row.push_back(processTime / deltaT);
 
     if (dimensions)
       std::copy(dimensions->begin(), dimensions->end(),
@@ -64,8 +64,6 @@ public:
 
     if (writer)
       writer->writeRow(row);
-
-    ++counter;
   }
 
   void applyPreAdvect(const NumericType passedProcessTime) override {
@@ -85,7 +83,6 @@ private:
 
   NumericType processTime = 0.0;
   NumericType lastUpdateTime = -deltaT;
-  size_t counter = 0L;
 
   psSmartPointer<DimensionExtraction<NumericType, D>> extractor = nullptr;
   psSmartPointer<psCSVWriter<NumericType, DataDimension>> writer = nullptr;

@@ -38,7 +38,7 @@ int main() {
 
   auto dimensions = extractor.getDimensions();
 
-  assert(sampleLocations.size() == dimension.size() - 1);
+  assert(sampleLocations.size() == dimensions.size() - 1);
 
   /**
    * Now reconstruct the geometry based on the extracted diameters
