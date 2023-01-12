@@ -14,9 +14,9 @@ template <typename T> struct Parameters {
   T taperAngle = 0.;
 
   // Process
-  T processTime = 5.;
+  T processTime = 4.3;
   T sourcePower = 1.;
-  T stickingProbability = 1.;
+  T stickingProbability = 0.2;
 
   Parameters() {}
 
