@@ -9,7 +9,6 @@
 #include <psDataScaler.hpp>
 #include <psMakeTrench.hpp>
 #include <psNearestNeighborsInterpolation.hpp>
-#include <psRectilinearGridInterpolation.hpp>
 
 #include "GeometryReconstruction.hpp"
 #include "Parameters.hpp"
@@ -55,11 +54,24 @@ int main(int argc, char *argv[]) {
   using Clock = std::chrono::high_resolution_clock;
   using Duration = std::chrono::duration<double>;
 
-  // Input dimensions: taperAngle, stickingProbability and time
-  static constexpr int InputDim = 3;
+  // Input dimensions: taperAngle, stickingProbability
+  static constexpr int InputDim = 2;
 
-  // Target Dimensions: depth, diameters
-  static constexpr int TargetDim = 30;
+  // How long to run the process and at which intervals to do the extraction
+  static constexpr NumericType processDuration = 5.0;
+  static constexpr NumericType extractionInterval = 1.0;
+
+  // The number of heights at which we are going to measure the diameter of the
+  // trench
+  static constexpr int numberOfSamples = 30;
+
+  // Total number of timesteps during the advection process at which the
+  // geometry parameters are extracted.
+  static constexpr int numberOfTimesteps =
+      processDuration / extractionInterval + 1;
+
+  // Target Dimensions: (time, depth, diameters) x numberOfTimesteps
+  static constexpr int TargetDim = (numberOfSamples + 1) * numberOfTimesteps;
 
   static constexpr int DataDim = InputDim + TargetDim;
 
@@ -85,33 +97,70 @@ int main(int argc, char *argv[]) {
 
     auto sampleLocations = dataSource.getPositionalParameters();
 
-    // psRectilinearGridInterpolation<NumericType, InputDim, TargetDim>
-    // estimator;
-
-    int numberOfNeighbors = 5;
+    int numberOfNeighbors = 3;
     NumericType distanceExponent = 2.;
 
-    psNearestNeighborsInterpolation<NumericType, InputDim, TargetDim,
-                                    psStandardScaler<NumericType, InputDim>>
-        estimator; //(numberOfNeighbors, distanceExponent);
+    psNearestNeighborsInterpolation<
+        NumericType, InputDim, TargetDim,
+        psMedianDistanceScaler<NumericType, InputDim>>
+        estimator(numberOfNeighbors, distanceExponent);
 
+    // Copy the data from the data source
     auto data = dataSource.get();
+
     estimator.setData(psSmartPointer<decltype(data)>::New(data));
 
     if (!estimator.initialize())
       return EXIT_FAILURE;
 
-    std::array<NumericType, InputDim> x = {
-        params.taperAngle, params.stickingProbability,
-        params.processTime / params.stickingProbability};
+    std::array<NumericType, InputDim> x = {params.taperAngle,
+                                           params.stickingProbability};
     auto [result, distance] = estimator.estimate(x);
 
     std::cout << std::setw(40) << "Distance to nearest data point: ";
     std::cout << distance << std::endl;
 
+    // Now determine which two timesteps we should consider for interpolating
+    // along the time axis
+    NumericType extractionStep = params.processTime / extractionInterval;
+
+    int stepSize = (numberOfSamples + 1);
+    int lowerIdx = std::clamp(static_cast<int>(std::floor(extractionStep)) *
+                                  (numberOfSamples + 1),
+                              0, TargetDim - stepSize - 1);
+
+    int upperIdx = std::clamp(static_cast<int>(std::ceil(extractionStep)) *
+                                  (numberOfSamples + 1),
+                              0, TargetDim - stepSize - 1);
+    NumericType distanceToLower = 1.0 * lowerIdx - extractionStep;
+    NumericType distanceToUpper = 1.0 * extractionStep - upperIdx;
+    NumericType totalDistance = distanceToUpper + distanceToLower;
+
     auto dimensions = psSmartPointer<std::vector<NumericType>>::New();
-    dimensions->reserve(TargetDim);
-    std::copy(result.begin(), result.end(), std::back_inserter(*dimensions));
+
+    // Copy the data corresponding to the dimensions of the lower timestep
+    auto lowerDimensions =
+        psSmartPointer<std::vector<NumericType>>::New(numberOfSamples);
+    for (unsigned i = 0; i < numberOfSamples; ++i)
+      lowerDimensions->at(i) = result.at(lowerIdx + 1 + i);
+
+    if (totalDistance > 0) {
+      // Copy the data corresponding to the dimensions of the upper timestep
+      auto upperDimensions =
+          psSmartPointer<std::vector<NumericType>>::New(numberOfSamples);
+      for (unsigned i = 0; i < numberOfSamples; ++i)
+        upperDimensions->at(i) = result.at(upperIdx + 1 + i);
+
+      // Now for each individual dimension do linear interpolation between upper
+      // and lower value based on the relative distance
+      for (unsigned i = 0; i < lowerDimensions->size(); ++i)
+        dimensions->emplace_back((distanceToUpper * lowerDimensions->at(i) +
+                                  distanceToLower * upperDimensions->at(i)) /
+                                 totalDistance);
+    } else {
+      std::copy(lowerDimensions->begin(), lowerDimensions->end(),
+                std::back_inserter(*dimensions));
+    }
 
     NumericType origin[D] = {0.};
     origin[D - 1] = params.processTime + params.trenchHeight;
@@ -120,6 +169,8 @@ int main(int argc, char *argv[]) {
     auto substrate = createEmptyLevelset<NumericType, D>(params);
     interpolated->insertNextLevelSet(substrate);
     auto geometry = psSmartPointer<lsDomain<NumericType, D>>::New(substrate);
+
+    // Now retrieve the dimension data of the two neighboring timesteps
 
     GeometryReconstruction<NumericType, D>(geometry, origin, sampleLocations,
                                            *dimensions)
@@ -146,6 +197,8 @@ int main(int argc, char *argv[]) {
         .apply();
 
     geometry->printSurface("initial.vtp");
+
+    params.processTime = params.processTime / params.stickingProbability;
 
     executeProcess<NumericType, D>(geometry, params);
     geometry->printSurface("reference.vtp");

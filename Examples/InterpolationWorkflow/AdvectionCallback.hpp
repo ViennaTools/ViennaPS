@@ -24,46 +24,25 @@ public:
     extractor = passedExtractor;
   }
 
-  void setWriter(
-      psSmartPointer<psCSVWriter<NumericType, DataDimension>> passedWriter) {
-    writer = passedWriter;
-  }
-
-  void
-  setPrefixData(psSmartPointer<std::vector<NumericType>> passedPrefixData) {
-    prefixData = passedPrefixData;
+  void setDataPtr(psSmartPointer<std::vector<NumericType>> passedDataPtr) {
+    dataPtr = passedDataPtr;
   }
 
   void apply() {
     if (!extractor)
       return;
 
-    // std::cout << std::setw(6) << std::setprecision(3) << processTime << ": ";
+    if (dataPtr) {
+      extractor->setDomain(domain);
+      extractor->apply();
 
-    extractor->setDomain(domain);
-    extractor->apply();
-    auto dimensions = extractor->getDimensions();
-
-    // for (auto d : (dimensions ? *dimensions : std::vector<NumericType>{})) {
-    //   std::cout << d << ' ';
-    // }
-    // std::cout << '\n';
-
-    std::vector<NumericType> row;
-    row.reserve(DataDimension);
-
-    if (prefixData)
-      std::copy(prefixData->begin(), prefixData->end(),
-                std::back_inserter(row));
-
-    row.push_back(processTime / deltaT);
-
-    if (dimensions)
-      std::copy(dimensions->begin(), dimensions->end(),
-                std::back_inserter(row));
-
-    if (writer)
-      writer->writeRow(row);
+      auto dimensions = extractor->getDimensions();
+      if (dimensions) {
+        dataPtr->push_back(processTime / deltaT);
+        std::copy(dimensions->begin(), dimensions->end(),
+                  std::back_inserter(*dataPtr));
+      }
+    }
   }
 
   void applyPreAdvect(const NumericType passedProcessTime) override {
@@ -74,7 +53,8 @@ public:
     processTime += advectionTime;
     if (processTime - lastUpdateTime >= deltaT) {
       apply();
-      lastUpdateTime = processTime;
+      lastUpdateTime = counter * deltaT;
+      ++counter;
     }
   }
 
@@ -83,8 +63,8 @@ private:
 
   NumericType processTime = 0.0;
   NumericType lastUpdateTime = -deltaT;
+  size_t counter = 0;
 
   psSmartPointer<DimensionExtraction<NumericType, D>> extractor = nullptr;
-  psSmartPointer<psCSVWriter<NumericType, DataDimension>> writer = nullptr;
-  psSmartPointer<std::vector<NumericType>> prefixData = nullptr;
+  psSmartPointer<std::vector<NumericType>> dataPtr = nullptr;
 };

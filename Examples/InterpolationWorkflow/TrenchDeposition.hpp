@@ -34,7 +34,7 @@ void executeProcess(
   process.setDomain(geometry);
   process.setProcessModel(processModel);
   process.setNumberOfRaysPerPoint(1000);
-  process.setProcessDuration(params.processTime / params.stickingProbability);
+  process.setProcessDuration(params.processTime);
 
   process.apply();
 }

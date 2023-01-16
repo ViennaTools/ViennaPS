@@ -10,6 +10,17 @@
 
 #include <psSmartPointer.hpp>
 
+template <class Iterator>
+std::string join(Iterator begin, Iterator end,
+                 const std::string &separator = ",") {
+  std::ostringstream ostr;
+  if (begin != end)
+    ostr << *begin++;
+  while (begin != end)
+    ostr << separator << *begin++;
+  return ostr.str();
+}
+
 // A simple CSV writer class
 template <class NumericType, int NumCols> class psCSVWriter {
 
@@ -98,17 +109,6 @@ public:
     }
     file << join(data.begin(), data.end()) << '\n';
     return true;
-  }
-
-  template <class Iterator>
-  static std::string join(Iterator begin, Iterator end,
-                          const std::string &separator = ",") {
-    std::ostringstream ostr;
-    if (begin != end)
-      ostr << *begin++;
-    while (begin != end)
-      ostr << separator << *begin++;
-    return ostr.str();
   }
 
   void flush() {
