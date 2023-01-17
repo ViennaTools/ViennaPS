@@ -35,8 +35,9 @@ list(APPEND VIENNAPS_LIBRARIES ${VIENNALS_LIBRARIES} ${VIENNARAY_LIBRARIES})
 message(STATUS "ViennaLS found at: ${ViennaLS_DIR}")
 message(STATUS "ViennaRay found at: ${ViennaRay_DIR}")
 
-if(@VIENNAPS_VERBOSE@)
+option(VIENNAPS_VERBOSE "Get verbose output and intermediate results." ON)
+if(VIENNAPS_VERBOSE)
   add_compile_definitions(VIENNAPS_VERBOSE)
-endif(@VIENNAPS_VERBOSE@)
+endif(VIENNAPS_VERBOSE)
 
 check_required_components("@PROJECT_NAME@")
