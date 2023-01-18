@@ -57,11 +57,12 @@ class psKDTree : psPointLocator<NumericType, D> {
 
   NumericType gridDelta;
 
-  struct Node {
+  class Node {
     PointType value{};
     SizeType index{};
-    int axis{};
 
+  public:
+    int axis{};
     Node *left = nullptr;
     Node *right = nullptr;
 
@@ -93,6 +94,9 @@ class psKDTree : psPointLocator<NumericType, D> {
 
       return *this;
     }
+
+    const PointType &getValue() const { return value; }
+    SizeType getIndex() const { return index; }
   };
 
   std::vector<Node> nodes;
@@ -132,9 +136,10 @@ class psKDTree : psPointLocator<NumericType, D> {
 
     if (size > 1) {
       SizeType medianIndex = (size + 1) / 2 - 1;
-      std::nth_element(
-          start, start + medianIndex, end,
-          [axis](Node &a, Node &b) { return a.value[axis] < b.value[axis]; });
+      std::nth_element(start, start + medianIndex, end,
+                       [axis](Node &a, Node &b) {
+                         return a.getValue()[axis] < b.getValue()[axis];
+                       });
 
       Node *current = toRawPointer(start + medianIndex);
       current->axis = axis;
@@ -193,12 +198,12 @@ private:
     // For distance comparison operations we only use the "reduced" aka less
     // compute intensive, but order preserving version of the distance
     // function.
-    NumericType distance = SquaredDistance(x, currentNode->value);
+    NumericType distance = SquaredDistance(x, currentNode->getValue());
     if (distance < best.first)
       best = std::pair{distance, currentNode};
 
     bool isLeft;
-    if (x[axis] < currentNode->value[axis]) {
+    if (x[axis] < currentNode->getValue()[axis]) {
       traverseDown(currentNode->left, best, x);
       isLeft = true;
     } else {
@@ -211,7 +216,8 @@ private:
     // current node, we also have to search the other subtree, since there could
     // be points closer to x than our current best.
     NumericType distanceToHyperplane =
-        scalingFactors[axis] * std::abs(x[axis] - currentNode->value[axis]);
+        scalingFactors[axis] *
+        std::abs(x[axis] - currentNode->getValue()[axis]);
     distanceToHyperplane *= distanceToHyperplane;
     if (distanceToHyperplane < best.first) {
       if (isLeft)
@@ -236,10 +242,10 @@ private:
     // compute intensive, but order preserving version of the distance
     // function.
     queue.enqueue(
-        std::pair{SquaredDistance(x, currentNode->value), currentNode});
+        std::pair{SquaredDistance(x, currentNode->getValue()), currentNode});
 
     bool isLeft;
-    if (x[axis] < currentNode->value[axis]) {
+    if (x[axis] < currentNode->getValue()[axis]) {
       traverseDown(currentNode->left, queue, x);
       isLeft = true;
     } else {
@@ -252,7 +258,8 @@ private:
     // current node, we also have to search the other subtree, since there could
     // be points closer to x than our current best.
     NumericType distanceToHyperplane =
-        scalingFactors[axis] * std::abs(x[axis] - currentNode->value[axis]);
+        scalingFactors[axis] *
+        std::abs(x[axis] - currentNode->getValue()[axis]);
     distanceToHyperplane *= distanceToHyperplane;
 
     bool intersects = false;
@@ -342,7 +349,7 @@ public:
 
         std::nth_element(
             myNodes.begin(), myNodes.begin() + medianIndex, myNodes.end(),
-            [](Node &a, Node &b) { return a.value[0] < b.value[0]; });
+            [](Node &a, Node &b) { return a.getValue()[0] < b.getValue()[0]; });
 
         myRootNode = &myNodes[medianIndex];
         myRootNode->axis = 0;
@@ -382,7 +389,7 @@ public:
     auto best =
         std::pair{std::numeric_limits<NumericType>::infinity(), rootNode};
     traverseDown(rootNode, best, x);
-    return {best.second->index, Distance(x, best.second->value)};
+    return {best.second->getIndex(), Distance(x, best.second->getValue())};
   }
 
   psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>
@@ -395,7 +402,8 @@ public:
 
     while (!queue.empty()) {
       auto best = queue.dequeueBest();
-      result->emplace_back(std::pair{best->index, Distance(x, best->value)});
+      result->emplace_back(
+          std::pair{best->getIndex(), Distance(x, best->getValue())});
     }
     return result;
   }
@@ -411,7 +419,8 @@ public:
 
     while (!queue.empty()) {
       auto best = queue.dequeueBest();
-      result->emplace_back(std::pair{best->index, Distance(x, best->value)});
+      result->emplace_back(
+          std::pair{best->getIndex(), Distance(x, best->getValue())});
     }
     return result;
   }
