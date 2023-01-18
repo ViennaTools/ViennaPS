@@ -106,14 +106,18 @@ public:
       if (!initialize())
         return {{}, {}};
 
-    auto neighbors = locator.findKNearest(input, numberOfNeighbors);
+    auto neighborsOpt = locator.findKNearest(input, numberOfNeighbors);
+    if (!neighborsOpt.has_value())
+      return {{}, {}};
+    auto neighbors = neighborsOpt.value();
+
     OutputType result{0};
 
     NumericType weightSum{0};
     NumericType minDistance = std::numeric_limits<NumericType>::infinity();
 
     for (int j = 0; j < numberOfNeighbors; ++j) {
-      auto [nearestIndex, distance] = neighbors->at(j);
+      auto [nearestIndex, distance] = neighbors.at(j);
 
       minDistance = std::min({distance, minDistance});
 

@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <lsMessage.hpp>
@@ -384,45 +385,55 @@ public:
     rootNode = myRootNode;
   }
 
-  std::pair<SizeType, NumericType>
+  std::optional<std::pair<SizeType, NumericType>>
   findNearest(const PointType &x) const override {
+    if (!rootNode)
+      return std::nullopt;
+
     auto best =
         std::pair{std::numeric_limits<NumericType>::infinity(), rootNode};
     traverseDown(rootNode, best, x);
-    return {best.second->getIndex(), Distance(x, best.second->getValue())};
+    return {std::pair{best.second->getIndex(),
+                      Distance(x, best.second->getValue())}};
   }
 
-  psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>
+  std::optional<std::vector<std::pair<SizeType, NumericType>>>
   findKNearest(const PointType &x, const int k) const override {
+    if (!rootNode)
+      return std::nullopt;
+
     auto queue = cmBoundedPQueue<NumericType, Node *>(k);
     traverseDown(rootNode, queue, x);
 
-    auto result =
-        psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>::New();
+    auto result = std::vector<std::pair<SizeType, NumericType>>();
+    result.reserve(k);
 
     while (!queue.empty()) {
       auto best = queue.dequeueBest();
-      result->emplace_back(
+      result.emplace_back(
           std::pair{best->getIndex(), Distance(x, best->getValue())});
     }
-    return result;
+    return {result};
   }
 
-  psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>
+  std::optional<std::vector<std::pair<SizeType, NumericType>>>
   findNearestWithinRadius(const PointType &x,
                           const NumericType radius) const override {
+    if (!rootNode)
+      return std::nullopt;
+
     auto queue = cmClampedPQueue<NumericType, Node *>(radius);
     traverseDown(rootNode, queue, x);
 
-    auto result =
-        psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>::New();
+    auto result = std::vector<std::pair<SizeType, NumericType>>();
+    result.reserve(queue.size());
 
     while (!queue.empty()) {
       auto best = queue.dequeueBest();
-      result->emplace_back(
+      result.emplace_back(
           std::pair{best->getIndex(), Distance(x, best->getValue())});
     }
-    return result;
+    return {result};
   }
 };
 
