@@ -58,9 +58,9 @@ class psKDTree : psPointLocator<NumericType, D> {
   NumericType gridDelta;
 
   struct Node {
-    PointType value;
-    SizeType index;
-    int axis;
+    PointType value{};
+    SizeType index{};
+    int axis{};
 
     Node *left = nullptr;
     Node *right = nullptr;
@@ -103,17 +103,17 @@ class psKDTree : psPointLocator<NumericType, D> {
     return &(*it);
   }
 
-  template <size_t N>
+  template <SizeType N>
   std::array<NumericType, N>
   Diff(const std::array<NumericType, N> &pVecA,
        const std::array<NumericType, N> &pVecB) const {
     std::array<NumericType, N> diff{0};
-    for (int i = 0; i < N; ++i)
+    for (SizeType i = 0; i < N; ++i)
       diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
     return diff;
   }
 
-  template <size_t N>
+  template <SizeType N>
   NumericType SquaredDistance(const std::array<NumericType, N> &pVecA,
                               const std::array<NumericType, N> &pVecB) const {
     auto diff = Diff(pVecA, pVecB);
@@ -123,7 +123,7 @@ class psKDTree : psPointLocator<NumericType, D> {
     return norm;
   }
 
-  template <size_t N>
+  template <SizeType N>
   NumericType Distance(const std::array<NumericType, N> &pVecA,
                        const std::array<NumericType, N> &pVecB) const {
     return std::sqrt(SquaredDistance(pVecA, pVecB));
@@ -334,12 +334,10 @@ public:
 
 #pragma omp parallel default(none) shared(myNodes, myRootNode)
     {
-      int threadID = 0;
       int numThreads = 1;
 #pragma omp single
       {
 #ifdef _OPENMP
-        threadID = omp_get_thread_num();
         numThreads = omp_get_num_threads();
 #endif
         int maxParallelDepth = intLog2(numThreads);
@@ -398,8 +396,6 @@ public:
     auto queue = cmBoundedPQueue<NumericType, Node *>(k);
     traverseDown(rootNode, queue, x);
 
-    auto initial = std::pair<SizeType, NumericType>{
-        rootNode->index, std::numeric_limits<NumericType>::infinity()};
     auto result =
         psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>::New();
 
@@ -416,8 +412,6 @@ public:
     auto queue = cmClampedPQueue<NumericType, Node *>(radius);
     traverseDown(rootNode, queue, x);
 
-    auto initial = std::pair<SizeType, NumericType>{
-        rootNode->index, std::numeric_limits<NumericType>::infinity()};
     auto result =
         psSmartPointer<std::vector<std::pair<SizeType, NumericType>>>::New();
 

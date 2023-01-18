@@ -26,11 +26,6 @@ template <class T, int D> std::vector<std::array<T, D>> generatePoints(int N) {
 
 #pragma omp parallel default(none) shared(N, data, rd)
   {
-    int numThreads = 1;
-#ifdef _OPENMP
-    numThreads = omp_get_num_threads();
-#endif
-
     auto engine = std::default_random_engine(rd());
     std::uniform_real_distribution<> d{-10., 10.};
 #pragma omp for
@@ -85,10 +80,9 @@ int main(int argc, char *argv[]) {
   {
     // Custom Tree
     std::cout << "Growing Tree...\n";
-    double totalTime{0.};
     psSmartPointer<psKDTree<NumericType, D>> tree = nullptr;
     auto startTime = getTime();
-    for (unsigned i = 0; i < repetitions; ++i) {
+    for (int i = 0; i < repetitions; ++i) {
       tree = psSmartPointer<psKDTree<NumericType, D>>::New(points);
       tree->build();
     }
@@ -96,12 +90,11 @@ int main(int argc, char *argv[]) {
     std::cout << "Tree grew in " << (endTime - startTime) / repetitions
               << "s\n";
 
-    totalTime = 0.;
     // Nearest Neighbors
     std::cout << "Finding Nearest Neighbors...\n";
     startTime = getTime();
-    for (unsigned i = 0; i < repetitions; ++i) {
-      for (const auto pt : testPoints)
+    for (int i = 0; i < repetitions; ++i) {
+      for (const auto pt : testPoints) [[maybe_unused]]
         auto result = tree->findNearest(pt);
     }
     endTime = getTime();
