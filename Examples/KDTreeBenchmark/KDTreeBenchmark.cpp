@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
   auto testPoints = generatePoints<NumericType, D>(M);
 
   {
-    // Custom Tree
     std::cout << "Growing Tree...\n";
     psSmartPointer<psKDTree<NumericType, D>> tree = nullptr;
     auto startTime = getTime();

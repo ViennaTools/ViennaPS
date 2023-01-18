@@ -53,7 +53,7 @@ class psKDTree : psPointLocator<NumericType, D> {
   SizeType N;
   SizeType treeSize = 0;
 
-  std::array<NumericType, D> scalingFactors{1.};
+  PointType scalingFactors{1.};
 
   NumericType gridDelta;
 
@@ -103,19 +103,15 @@ class psKDTree : psPointLocator<NumericType, D> {
     return &(*it);
   }
 
-  template <SizeType N>
-  std::array<NumericType, N>
-  Diff(const std::array<NumericType, N> &pVecA,
-       const std::array<NumericType, N> &pVecB) const {
-    std::array<NumericType, N> diff{0};
-    for (SizeType i = 0; i < N; ++i)
+  PointType Diff(const PointType &pVecA, const PointType &pVecB) const {
+    PointType diff{0};
+    for (SizeType i = 0; i < D; ++i)
       diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
     return diff;
   }
 
-  template <SizeType N>
-  NumericType SquaredDistance(const std::array<NumericType, N> &pVecA,
-                              const std::array<NumericType, N> &pVecB) const {
+  NumericType SquaredDistance(const PointType &pVecA,
+                              const PointType &pVecB) const {
     auto diff = Diff(pVecA, pVecB);
     NumericType norm = 0;
     std::for_each(diff.begin(), diff.end(),
@@ -123,9 +119,7 @@ class psKDTree : psPointLocator<NumericType, D> {
     return norm;
   }
 
-  template <SizeType N>
-  NumericType Distance(const std::array<NumericType, N> &pVecA,
-                       const std::array<NumericType, N> &pVecB) const {
+  NumericType Distance(const PointType &pVecA, const PointType &pVecB) const {
     return std::sqrt(SquaredDistance(pVecA, pVecB));
   }
 
