@@ -120,10 +120,11 @@ public:
     return true;
   }
 
-  std::tuple<OutputType, bool> estimate(const InputType &input) override {
+  std::optional<std::tuple<OutputType, bool>>
+  estimate(const InputType &input) override {
     if (dataChanged)
       if (!initialize())
-        return {{}, {}};
+        return std::nullopt;
 
     bool isInside = true;
     for (int i = 0; i < InputDim; ++i)
@@ -134,7 +135,7 @@ public:
           isInside = false;
         }
       } else {
-        return {{}, {}};
+        return std::nullopt;
       }
 
     std::array<size_t, InputDim> gridIndices;
@@ -216,7 +217,7 @@ public:
       result[dim] = cornerValues[0][dim];
     }
 
-    return {result, isInside};
+    return {{result, isInside}};
   }
 };
 

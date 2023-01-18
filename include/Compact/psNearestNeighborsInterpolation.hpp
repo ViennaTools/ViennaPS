@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <numeric>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -100,15 +101,15 @@ public:
     return true;
   }
 
-  std::tuple<OutputType, NumericType>
+  std::optional<std::tuple<OutputType, NumericType>>
   estimate(const InputType &input) override {
     if (dataChanged)
       if (!initialize())
-        return {{}, {}};
+        return std::nullopt;
 
     auto neighborsOpt = locator.findKNearest(input, numberOfNeighbors);
     if (!neighborsOpt.has_value())
-      return {{}, {}};
+      return std::nullopt;
     auto neighbors = neighborsOpt.value();
 
     OutputType result{0};
@@ -139,7 +140,7 @@ public:
     for (int i = 0; i < OutputDim; ++i)
       result[i] /= weightSum;
 
-    return {result, minDistance};
+    return {{result, minDistance}};
   }
 };
 

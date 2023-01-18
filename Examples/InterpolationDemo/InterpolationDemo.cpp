@@ -79,8 +79,12 @@ int main(int argc, char *argv[]) {
             x[1] = -6. + j * (8. + 6.) / (numSamples - 1);
             x[2] = -6. + k * (1. + 6.) / (numSamples - 1);
 
+            auto estimateOpt = interpolation.estimate(x);
+            if (!estimateOpt.has_value())
+              continue;
+
             // We use structural bindings to directly unpack the tuple
-            auto [value, isInside] = interpolation.estimate(x);
+            auto [value, isInside] = estimateOpt.value();
 
             writer.writeRow({x[0], x[1], x[2], value[0]});
           }
@@ -115,8 +119,12 @@ int main(int argc, char *argv[]) {
             x[1] = -6. + j * (8. + 6.) / (numSamples - 1);
             x[2] = -6. + k * (1. + 6.) / (numSamples - 1);
 
+            auto estimateOpt = interpolation.estimate(x);
+            if (!estimateOpt.has_value())
+              continue;
+
             // We use structural bindings to directly unpack the tuple
-            auto [value, minDistance] = interpolation.estimate(x);
+            auto [value, minDistance] = estimateOpt.value();
 
             writer.writeRow({x[0], x[1], x[2], value[0]});
           }
@@ -153,8 +161,12 @@ int main(int argc, char *argv[]) {
             x[1] = -6. + j * (8. + 6.) / (numSamples - 1);
             x[2] = -6. + k * (1. + 6.) / (numSamples - 1);
 
+            auto estimateOpt = interpolation.estimate(x);
+            if (!estimateOpt.has_value())
+              continue;
+
             // We use structural bindings to directly unpack the tuple
-            auto [value, minDistance] = interpolation.estimate(x);
+            auto [value, minDistance] = estimateOpt.value();
 
             writer.writeRow({x[0], x[1], x[2], value[0]});
           }

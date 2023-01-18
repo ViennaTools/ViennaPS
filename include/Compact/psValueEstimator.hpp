@@ -2,6 +2,7 @@
 #define PS_VALUE_ESTIMATOR_HPP
 
 #include <array>
+#include <optional>
 #include <tuple>
 
 #include <psDataSource.hpp>
@@ -31,7 +32,7 @@ public:
 
   virtual bool initialize() { return true; }
 
-  virtual std::tuple<OutputType, FeedbackType...>
+  virtual std::optional<std::tuple<OutputType, FeedbackType...>>
   estimate(const InputType &input) = 0;
 };
 
