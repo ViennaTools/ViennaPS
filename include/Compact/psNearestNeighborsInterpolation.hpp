@@ -14,59 +14,55 @@
 #include <psSmartPointer.hpp>
 #include <psValueEstimator.hpp>
 
-template <typename NumericType, int InputDim, int OutputDim>
-auto extractInputData(
-    const std::vector<std::array<NumericType, InputDim + OutputDim>> &data) {
-  std::vector<std::array<NumericType, InputDim>> inputData;
-  inputData.reserve(data.size());
-  std::transform(data.begin(), data.end(), std::back_inserter(inputData),
+template <typename VectorType, typename SizeType>
+auto extractInputData(psSmartPointer<const VectorType> data, SizeType InputDim,
+                      SizeType OutputDim) {
+  VectorType inputData;
+  using ElementType = typename VectorType::value_type;
+
+  inputData.reserve(data->size());
+  std::transform(data->begin(), data->end(), std::back_inserter(inputData),
                  [=](const auto &d) {
-                   std::array<NumericType, InputDim> element;
-                   std::copy_n(d.begin(), InputDim, element.begin());
+                   ElementType element;
+                   std::copy_n(d.begin(), InputDim,
+                               std::back_inserter(element));
                    return element;
                  });
   return inputData;
 }
 
 // Class providing nearest neighbors interpolation
-template <typename NumericType, int InputDim, int OutputDim,
-          typename DataScaler = psStandardScaler<NumericType, InputDim>,
-          typename PointLocator = psKDTree<NumericType, InputDim>>
+template <typename NumericType,
+          typename DataScaler = psStandardScaler<NumericType>,
+          typename PointLocator = psKDTree<NumericType>>
 class psNearestNeighborsInterpolation
-    : public psValueEstimator<NumericType, InputDim, OutputDim, NumericType> {
+    : public psValueEstimator<NumericType, NumericType> {
 
-  static_assert(
-      std::is_base_of_v<psPointLocator<NumericType, InputDim>, PointLocator>,
-      "psNearestNeighborsInterpolation: the provided PointLocator"
-      "does not inherit from psPointLocator.");
+  static_assert(std::is_base_of_v<psPointLocator<NumericType>, PointLocator>,
+                "psNearestNeighborsInterpolation: the provided PointLocator"
+                "does not inherit from psPointLocator.");
 
-  static_assert(
-      std::is_base_of_v<psDataScaler<NumericType, InputDim>, DataScaler>,
-      "psNearestNeighborsInterpolation: the provided DataScaler "
-      "does not inherit from psDataScaler.");
+  static_assert(std::is_base_of_v<psDataScaler<NumericType>, DataScaler>,
+                "psNearestNeighborsInterpolation: the provided DataScaler "
+                "does not inherit from psDataScaler.");
 
-  using Parent =
-      psValueEstimator<NumericType, InputDim, OutputDim, NumericType>;
+  using Parent = psValueEstimator<NumericType, NumericType>;
 
-  using typename Parent::InputType;
-  using typename Parent::OutputType;
+  using typename Parent::ItemType;
+  using typename Parent::SizeType;
 
   using Parent::data;
   using Parent::dataChanged;
-  using Parent::DataDim;
+  using Parent::inputDim;
+  using Parent::outputDim;
 
-  int numberOfNeighbors;
   PointLocator locator;
-  NumericType distanceExponent;
+
+  int numberOfNeighbors = 3.;
+  NumericType distanceExponent = 2.;
 
 public:
-  psNearestNeighborsInterpolation()
-      : numberOfNeighbors(3), distanceExponent(2.) {}
-
-  psNearestNeighborsInterpolation(int passedNumberOfNeighbors,
-                                  NumericType passedDistanceExponent)
-      : numberOfNeighbors(passedNumberOfNeighbors),
-        distanceExponent(passedDistanceExponent) {}
+  psNearestNeighborsInterpolation() {}
 
   void setNumberOfNeighbors(int passedNumberOfNeighbors) {
     numberOfNeighbors = passedNumberOfNeighbors;
@@ -77,18 +73,23 @@ public:
   }
 
   bool initialize() override {
-    if (!data) {
-      std::cout << "No data provided to psNearestNeighborsInterpolation!\n";
+    if (!data || (data && data->empty())) {
+      std::cout
+          << "psNearestNeighborsInterpolation: the provided data is empty.\n";
       return false;
     }
 
-    if (data->size() == 0)
+    if (data->at(0).size() != inputDim + outputDim) {
+      std::cout << "psNearestNeighborsInterpolation: the sum of the provided "
+                   "InputDimension and OutputDimension does not match the "
+                   "dimension of the provided data.\n";
       return false;
+    }
 
-    auto inputData = extractInputData<NumericType, InputDim, OutputDim>(*data);
+    // Copy the first inputDim columns into a new vector
+    auto inputData = extractInputData(data, inputDim, outputDim);
 
-    DataScaler scaler;
-    scaler.setData(psSmartPointer<decltype(inputData)>::New(inputData));
+    DataScaler scaler(inputData);
     scaler.apply();
     auto scalingFactors = scaler.getScalingFactors();
 
@@ -101,18 +102,23 @@ public:
     return true;
   }
 
-  std::optional<std::tuple<OutputType, NumericType>>
-  estimate(const InputType &input) override {
+  std::optional<std::tuple<ItemType, NumericType>>
+  estimate(const ItemType &input) override {
+    if (input.size() != inputDim) {
+      std::cout << "psNearestNeighborsInterpolation: No input data provided.\n";
+      return {};
+    }
+
     if (dataChanged)
       if (!initialize())
-        return std::nullopt;
+        return {};
 
     auto neighborsOpt = locator.findKNearest(input, numberOfNeighbors);
-    if (!neighborsOpt.has_value())
+    if (!neighborsOpt)
       return std::nullopt;
     auto neighbors = neighborsOpt.value();
 
-    OutputType result{0};
+    ItemType result(outputDim, 0.);
 
     NumericType weightSum{0};
     NumericType minDistance = std::numeric_limits<NumericType>::infinity();
@@ -124,20 +130,20 @@ public:
 
       NumericType weight;
       if (distance == 0) {
-        for (int i = 0; i < OutputDim; ++i)
-          result[i] = data->at(nearestIndex)[InputDim + i];
+        for (int i = 0; i < outputDim; ++i)
+          result[i] = data->at(nearestIndex).at(inputDim + i);
         weightSum = 1.;
         break;
       } else {
         weight = std::pow(1. / distance, distanceExponent);
       }
-      for (int i = 0; i < OutputDim; ++i)
-        result[i] += weight * data->at(nearestIndex)[InputDim + i];
+      for (int i = 0; i < outputDim; ++i)
+        result[i] += weight * data->at(nearestIndex).at(inputDim + i);
 
       weightSum += weight;
     }
 
-    for (int i = 0; i < OutputDim; ++i)
+    for (int i = 0; i < outputDim; ++i)
       result[i] /= weightSum;
 
     return {{result, minDistance}};

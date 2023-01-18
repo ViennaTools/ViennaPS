@@ -1,39 +1,45 @@
 #ifndef PS_VALUE_ESTIMATOR_HPP
 #define PS_VALUE_ESTIMATOR_HPP
 
-#include <array>
 #include <optional>
 #include <tuple>
+#include <vector>
 
 #include <psDataSource.hpp>
 #include <psSmartPointer.hpp>
 
-template <typename NumericType, int InputDim, int OutputDim,
-          typename... FeedbackType>
+template <typename NumericType, typename... FeedbackType>
 class psValueEstimator {
 public:
-  using InputType = std::array<NumericType, InputDim>;
-  using OutputType = std::array<NumericType, OutputDim>;
-
-  static constexpr int DataDim = InputDim + OutputDim;
-
-  using DataVector = std::vector<std::array<NumericType, DataDim>>;
-  using DataPtr = psSmartPointer<DataVector>;
+  using SizeType = size_t;
+  using ItemType = std::vector<NumericType>;
+  using VectorType = std::vector<ItemType>;
+  using VectorPtr = psSmartPointer<std::vector<ItemType>>;
+  using ConstPtr = psSmartPointer<const std::vector<ItemType>>;
 
 protected:
-  DataPtr data = nullptr;
+  SizeType inputDim{0};
+  SizeType outputDim{0};
+
+  ConstPtr data = nullptr;
+
   bool dataChanged = true;
 
 public:
-  void setData(DataPtr passedData) {
+  void setDataDimensions(SizeType passedInputDim, SizeType passedOutputDim) {
+    inputDim = passedInputDim;
+    outputDim = passedOutputDim;
+  }
+
+  void setData(ConstPtr passedData) {
     data = passedData;
     dataChanged = true;
   }
 
   virtual bool initialize() { return true; }
 
-  virtual std::optional<std::tuple<OutputType, FeedbackType...>>
-  estimate(const InputType &input) = 0;
+  virtual std::optional<std::tuple<ItemType, FeedbackType...>>
+  estimate(const ItemType &input) = 0;
 };
 
 #endif

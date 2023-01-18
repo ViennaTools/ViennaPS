@@ -44,19 +44,11 @@
 #include <psQueues.hpp>
 #include <psSmartPointer.hpp>
 
-template <class NumericType, int D>
-class psKDTree : psPointLocator<NumericType, D> {
-  using Parent = psPointLocator<NumericType, D>;
+template <class NumericType> class psKDTree : psPointLocator<NumericType> {
+  using Parent = psPointLocator<NumericType>;
 
   using typename Parent::PointType;
   using typename Parent::SizeType;
-
-  SizeType N;
-  SizeType treeSize = 0;
-
-  PointType scalingFactors{1.};
-
-  NumericType gridDelta;
 
   class Node {
     PointType value{};
@@ -100,16 +92,13 @@ class psKDTree : psPointLocator<NumericType, D> {
     SizeType getIndex() const { return index; }
   };
 
-  std::vector<Node> nodes;
-  Node *rootNode = nullptr;
-
   template <class Iterator>
   static typename Iterator::pointer toRawPointer(const Iterator it) {
     return &(*it);
   }
 
   PointType Diff(const PointType &pVecA, const PointType &pVecB) const {
-    PointType diff{0};
+    PointType diff(pVecA.size(), 0.);
     for (SizeType i = 0; i < D; ++i)
       diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
     return diff;
@@ -289,16 +278,14 @@ private:
   }
 
 public:
-  psKDTree() {
-    // Initialize the scaling factors to one
-    for (auto &sf : scalingFactors)
-      sf = 1.0;
-  }
+  psKDTree() {}
 
   psKDTree(const std::vector<PointType> &passedPoints) {
+    // The first row determins the data dimension
+    D = passedPoints.at(0).size();
+
     // Initialize the scaling factors to one
-    for (auto &sf : scalingFactors)
-      sf = 1.0;
+    scalingFactors = PointType(D, 1.);
 
     // Create a vector of nodes
     nodes.reserve(passedPoints.size());
@@ -310,6 +297,12 @@ public:
   }
 
   void setPoints(const std::vector<PointType> &passedPoints) override {
+    // The first row determins the data dimension
+    D = passedPoints.at(0).size();
+
+    // Initialize the scaling factors to one
+    scalingFactors = PointType(D, 1.);
+
     nodes.reserve(passedPoints.size());
     {
       for (SizeType i = 0; i < passedPoints.size(); ++i) {
@@ -318,9 +311,10 @@ public:
     }
   }
 
-  void setScalingFactors(
-      const std::array<NumericType, D> &passedScalingFactors) override {
-    scalingFactors = passedScalingFactors;
+  void setScalingFactors(const PointType &passedScalingFactors) override {
+    scalingFactors.clear();
+    std::copy(passedScalingFactors.begin(), passedScalingFactors.end(),
+              std::back_inserter(scalingFactors));
   }
 
   void build() override {
@@ -388,19 +382,19 @@ public:
   std::optional<std::pair<SizeType, NumericType>>
   findNearest(const PointType &x) const override {
     if (!rootNode)
-      return std::nullopt;
+      return {};
 
     auto best =
         std::pair{std::numeric_limits<NumericType>::infinity(), rootNode};
     traverseDown(rootNode, best, x);
-    return {std::pair{best.second->getIndex(),
-                      Distance(x, best.second->getValue())}};
+    return std::pair{best.second->getIndex(),
+                     Distance(x, best.second->getValue())};
   }
 
   std::optional<std::vector<std::pair<SizeType, NumericType>>>
   findKNearest(const PointType &x, const int k) const override {
     if (!rootNode)
-      return std::nullopt;
+      return {};
 
     auto queue = cmBoundedPQueue<NumericType, Node *>(k);
     traverseDown(rootNode, queue, x);
@@ -413,14 +407,14 @@ public:
       result.emplace_back(
           std::pair{best->getIndex(), Distance(x, best->getValue())});
     }
-    return {result};
+    return result;
   }
 
   std::optional<std::vector<std::pair<SizeType, NumericType>>>
   findNearestWithinRadius(const PointType &x,
                           const NumericType radius) const override {
     if (!rootNode)
-      return std::nullopt;
+      return {};
 
     auto queue = cmClampedPQueue<NumericType, Node *>(radius);
     traverseDown(rootNode, queue, x);
@@ -433,8 +427,14 @@ public:
       result.emplace_back(
           std::pair{best->getIndex(), Distance(x, best->getValue())});
     }
-    return {result};
+    return result;
   }
+
+private:
+  SizeType D = 0;
+  PointType scalingFactors;
+  std::vector<Node> nodes;
+  Node *rootNode = nullptr;
 };
 
 #endif

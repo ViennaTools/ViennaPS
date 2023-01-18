@@ -8,9 +8,9 @@
 
 #include <psSmartPointer.hpp>
 
-template <class NumericType, int D> struct psPointLocator {
+template <class NumericType> struct psPointLocator {
   using SizeType = std::size_t;
-  using PointType = std::array<NumericType, D>;
+  using PointType = std::vector<NumericType>;
 
   virtual void build() = 0;
 

@@ -14,10 +14,12 @@
 #include <psSmartPointer.hpp>
 #include <psUtils.hpp>
 
-template <typename NumericType, int D>
-class psCSVDataSource : public psDataSource<NumericType, D> {
-  psCSVReader<NumericType, D> reader;
-  psCSVWriter<NumericType, D> writer;
+template <typename NumericType>
+class psCSVDataSource : public psDataSource<NumericType> {
+  using Parent = psDataSource<NumericType>;
+
+  psCSVReader<NumericType> reader;
+  psCSVWriter<NumericType> writer;
 
   std::string header;
   std::unordered_map<std::string, NumericType> namedParameters;
@@ -97,8 +99,8 @@ class psCSVDataSource : public psDataSource<NumericType, D> {
   }
 
 public:
-  using typename psDataSource<NumericType, D>::DataItemType;
-  using typename psDataSource<NumericType, D>::DataVectorType;
+  using typename Parent::ItemType;
+  using typename Parent::VectorType;
 
   psCSVDataSource() {}
 
@@ -112,20 +114,22 @@ public:
     writer.setFilename(passedFilename);
   }
 
-  psSmartPointer<DataVectorType> read() override {
+  VectorType read() override {
     auto opt = reader.readHeader();
     header = opt.value_or("");
-    return reader.readContent();
+    auto contentOpt = reader.readContent();
+    if (contentOpt)
+      return contentOpt.value();
+    return {};
   }
 
-  bool write(psSmartPointer<DataVectorType> data) override {
-    if (data) {
-      writer.setHeader(header);
-      writer.initialize();
-      for (auto &row : *data)
-        if (!writer.writeRow(row))
-          return false;
-    }
+  bool write(const VectorType &data) override {
+    writer.setHeader(header);
+    writer.initialize();
+    for (auto &row : data)
+      if (!writer.writeRow(row))
+        return false;
+
     return true;
   }
 
