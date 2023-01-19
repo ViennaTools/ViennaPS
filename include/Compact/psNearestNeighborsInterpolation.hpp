@@ -115,7 +115,8 @@ public:
 
     auto neighborsOpt = locator.findKNearest(input, numberOfNeighbors);
     if (!neighborsOpt)
-      return std::nullopt;
+      return {};
+
     auto neighbors = neighborsOpt.value();
 
     ItemType result(outputDim, 0.);

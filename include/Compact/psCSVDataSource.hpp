@@ -18,12 +18,14 @@ template <typename NumericType>
 class psCSVDataSource : public psDataSource<NumericType> {
   using Parent = psDataSource<NumericType>;
 
+  using Parent::namedParameters;
+  using Parent::positionalParameters;
+
   psCSVReader<NumericType> reader;
   psCSVWriter<NumericType> writer;
 
   std::string header;
-  std::unordered_map<std::string, NumericType> namedParameters;
-  std::vector<NumericType> positionalParameters;
+
   bool parametersInitialized = false;
 
   static void
@@ -114,6 +116,8 @@ public:
     writer.setFilename(passedFilename);
   }
 
+  void setHeader(const std::string &passedHeader) { header = passedHeader; }
+
   VectorType read() override {
     auto opt = reader.readHeader();
     header = opt.value_or("");
@@ -124,7 +128,21 @@ public:
   }
 
   bool write(const VectorType &data) override {
-    writer.setHeader(header);
+    std::string extendedHeader = header;
+    if (!positionalParameters.empty())
+      extendedHeader +=
+          "!" + join(positionalParameters.begin(), positionalParameters.end()) +
+          "\n";
+
+    if (!namedParameters.empty()) {
+      std::vector<std::string> np;
+      for (const auto &[key, value] : namedParameters)
+        np.push_back(key + "=" + std::to_string(value));
+
+      extendedHeader += "!" + join(np.begin(), np.end()) + "\n";
+    }
+
+    writer.setHeader(extendedHeader);
     writer.initialize();
     for (auto &row : data)
       if (!writer.writeRow(row))
