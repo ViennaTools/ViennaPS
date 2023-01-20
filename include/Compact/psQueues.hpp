@@ -2,7 +2,7 @@
 #define PS_QUEUES_HPP
 
 /**
- * File: cmQueues.hpp
+ * File: psQueues.hpp
  * Original Author: Keith Schwarz (htiek@cs.stanford.edu)
  * URL: https://www.keithschwarz.com/interesting/
  */
@@ -13,7 +13,7 @@
 #include <utility>
 
 template <class K, class V, typename Comparator = std::less<K>>
-struct cmBoundedPQueue {
+struct psBoundedPQueue {
   using MapType = std::multimap<K, V, Comparator>;
   using SizeType = std::size_t;
 
@@ -22,7 +22,7 @@ private:
   const SizeType maximumSize;
 
 public:
-  cmBoundedPQueue(SizeType passedMaximumSize)
+  psBoundedPQueue(SizeType passedMaximumSize)
       : maximumSize(passedMaximumSize) {}
 
   void enqueue(std::pair<K, V> &&item) {
@@ -69,7 +69,7 @@ public:
 };
 
 template <class K, class V, typename Comparator = std::less<K>>
-struct cmClampedPQueue {
+struct psClampedPQueue {
   using MapType = std::multimap<K, V, Comparator>;
   using SizeType = std::size_t;
 
@@ -78,7 +78,7 @@ private:
   const K thresValue;
 
 public:
-  cmClampedPQueue(K passedThresValue) : thresValue(passedThresValue) {}
+  psClampedPQueue(K passedThresValue) : thresValue(passedThresValue) {}
 
   void enqueue(std::pair<K, V> &&item) {
     /* Optimization: If this isn't going to be added, don't add it. */

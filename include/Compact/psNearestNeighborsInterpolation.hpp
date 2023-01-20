@@ -33,14 +33,9 @@ auto extractInputData(psSmartPointer<const VectorType> data, SizeType InputDim,
 
 // Class providing nearest neighbors interpolation
 template <typename NumericType,
-          typename DataScaler = psStandardScaler<NumericType>,
-          typename PointLocator = psKDTree<NumericType>>
+          typename DataScaler = psStandardScaler<NumericType>>
 class psNearestNeighborsInterpolation
     : public psValueEstimator<NumericType, NumericType> {
-
-  static_assert(std::is_base_of_v<psPointLocator<NumericType>, PointLocator>,
-                "psNearestNeighborsInterpolation: the provided PointLocator"
-                "does not inherit from psPointLocator.");
 
   static_assert(std::is_base_of_v<psDataScaler<NumericType>, DataScaler>,
                 "psNearestNeighborsInterpolation: the provided DataScaler "
@@ -56,7 +51,7 @@ class psNearestNeighborsInterpolation
   using Parent::inputDim;
   using Parent::outputDim;
 
-  PointLocator locator;
+  psKDTree<NumericType> kdtree;
 
   int numberOfNeighbors = 3.;
   NumericType distanceExponent = 2.;
@@ -93,9 +88,9 @@ public:
     scaler.apply();
     auto scalingFactors = scaler.getScalingFactors();
 
-    locator.setPoints(inputData);
-    locator.setScalingFactors(scalingFactors);
-    locator.build();
+    kdtree.setPoints(inputData);
+    kdtree.setScalingFactors(scalingFactors);
+    kdtree.build();
 
     dataChanged = false;
 
@@ -113,7 +108,7 @@ public:
       if (!initialize())
         return {};
 
-    auto neighborsOpt = locator.findKNearest(input, numberOfNeighbors);
+    auto neighborsOpt = kdtree.findKNearest(input, numberOfNeighbors);
     if (!neighborsOpt)
       return {};
 

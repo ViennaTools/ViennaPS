@@ -76,6 +76,7 @@ int main(int argc, char *argv[]) {
     }
     std::cout << std::endl;
 
+    // Use the input dimension provided as parameter in the CSV file
     int InputDim;
     if (namedParameters.find("InputDimension") != namedParameters.end()) {
       InputDim = namedParameters["InputDimension"];
