@@ -26,22 +26,20 @@ void doEstimation(DataSource &dataSource, Estimator &estimator,
   if (estimator.initialize()) {
     std::vector<std::vector<NumericType>> data;
     for (int i = 0; i < numSamples; ++i)
-      for (int j = 0; j < numSamples; ++j)
-        for (int k = 0; k < numSamples; ++k) {
-          std::vector<NumericType> x(InputDim);
-          // Extrapolate
-          x[0] = .1 + i * (.8 - .1) / (numSamples - 1);
-          x[1] = -6. + j * (8. + 6.) / (numSamples - 1);
-          x[2] = -6. + k * (1. + 6.) / (numSamples - 1);
+      for (int j = 0; j < numSamples; ++j) {
+        std::vector<NumericType> x(InputDim);
+        // Extrapolate
+        x[0] = .1 + i * (.8 - .1) / (numSamples - 1);
+        x[1] = -6. + j * (8. + 6.) / (numSamples - 1);
 
-          auto estimateOpt = estimator.estimate(x);
-          if (!estimateOpt)
-            continue;
+        auto estimateOpt = estimator.estimate(x);
+        if (!estimateOpt)
+          continue;
 
-          // We use structural bindings to directly unpack the tuple
-          auto [value, _] = estimateOpt.value();
-          data.emplace_back(std::vector{x[0], x[1], x[2], value[0]});
-        }
+        // We use structural bindings to directly unpack the tuple
+        auto [value, _] = estimateOpt.value();
+        data.emplace_back(std::vector{x[0], x[1], value[0]});
+      }
     dataSource.setData(data);
     dataSource.sync();
   }
@@ -111,7 +109,7 @@ int main(int argc, char *argv[]) {
     doEstimation(writer, estimator, numSamples, InputDim);
   }
 
-  int InputDim = 3;
+  int InputDim = 2;
   int OutputDim = 1;
 
   {
