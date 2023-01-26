@@ -21,6 +21,7 @@
 #include <psDomain.hpp>
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
+#include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 
@@ -193,6 +194,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getProcessModel",
            &GeometricUniformDeposition<T, D>::getProcessModel,
            "Return the deposition process model.");
+
+  pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
+      module, "psPlanarize")
+      .def(pybind11::init(&psSmartPointer<psPlanarize<T, D>>::New<
+                          psSmartPointer<psDomain<T, D>> &, const T>),
+           pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
+      .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
   // GDS file parsing
