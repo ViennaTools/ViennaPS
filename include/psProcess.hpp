@@ -119,6 +119,8 @@ public:
       advectionKernel.insertNextLevelSet(dom);
     }
 
+    advectionKernel.prepareLS();
+
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
 
