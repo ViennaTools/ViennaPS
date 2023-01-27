@@ -23,6 +23,7 @@
 #include <psGDSReader.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
+#include <psSurfaceModel.hpp>
 
 // geometries
 #include <psMakeHole.hpp>
@@ -35,6 +36,7 @@
 #include <SimpleDeposition.hpp>
 
 // other
+#include <lsDomain.hpp>
 #include <rayTraceDirection.hpp>
 
 // always use double for python export
@@ -44,13 +46,44 @@ constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 
 PYBIND11_DECLARE_HOLDER_TYPE(TemplateType, psSmartPointer<TemplateType>);
 
+// define trampoline classes for interface functions
+// ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
+// WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
+
+// BASE CLASS WRAPPERS
+class PypsSurfaceModel : public psSurfaceModel<T> {
+  using psSurfaceModel<T>::Coverages;
+  using psSurfaceModel<T>::processParams;
+
+public:
+  void initializeCoverages(unsigned numGeometryPoints) override {
+    PYBIND11_OVERLOAD(T, psSurfaceModel<T>, initializeCoverages,
+                      numGeometryPoints);
+  }
+
+  void initializeProcessParameters() override {
+    PYBIND11_OVERLOAD(T, psSurfaceModel<T>, initializeProcessParameters);
+  }
+
+  psSmartPointer<std::vector<T>>
+  calculateVelocities(psSmartPointer<psPointData<T>> Rates,
+                      const std::vector<T> &materialIDs) override {
+    PYBIND11_OVERLOAD(T, psSurfaceModel<T>, calculateVelocities, Rates,
+                      materialIDs);
+  }
+
+  void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
+    PYBIND11_OVERLOAD(T, psSurfaceModel<T>, updateCoverages, Rates);
+  }
+};
+
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
-      "ViennaPS is a header-only C++ level set library developed for high "
-      "performance topography simulations. The main design goals are "
-      "simplicity and efficiency, tailored towards scientific simulations. "
-      "ViennaPS can also be used for visualisation applications, although this "
-      "is not the main design target.";
+      "ViennaPS is a header-only C++ process simulation library, which "
+      "includes surface and volume representations, a ray tracer, and physical "
+      "models for the simulation of microelectronic fabrication processes. The "
+      "main design goals are simplicity and efficiency, tailored towards "
+      "scientific simulations.";
 
   // set version string of python module
   module.attr("__version__") = VIENNAPS_MODULE_VERSION;
@@ -68,7 +101,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
       // methods
       .def("insertNextLevelSet", &psDomain<T, D>::insertNextLevelSet,
-           "Insest a level set to domain.")
+           "Insert a level set to domain.")
       .def("printSurface", &psDomain<T, D>::printSurface,
            "Print the surface of the domain.");
 
@@ -225,4 +258,69 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set name of the GDS file.")
       .def("apply", &psGDSReader<T, D>::apply, "Parse the GDS file.");
 #endif
+
+  // ViennaLS domain setup
+  // lsDomain
+  pybind11::class_<lsDomain<T, D>, psSmartPointer<lsDomain<T, D>>>(module,
+                                                                   "lsDomain")
+      // constructors
+      .def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<>))
+      .def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<hrleCoordType>))
+      .def(pybind11::init(
+          &psSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
+                                               lsDomain<T, D>::BoundaryType *>))
+      .def(pybind11::init(
+          &psSmartPointer<lsDomain<T, D>>::New<
+              hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+      .def(pybind11::init(
+          &psSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>,
+                                               std::vector<unsigned>,
+                                               hrleCoordType>))
+      .def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<
+                          lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
+                          lsDomain<T, D>::BoundaryType *>))
+      .def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<
+                          lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
+                          lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+      .def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<
+                          psSmartPointer<lsDomain<T, D>> &>))
+      // methods
+      .def("deepCopy", &lsDomain<T, D>::deepCopy,
+           "Copy lsDomain in this lsDomain.")
+      .def("getNumberOfSegments", &lsDomain<T, D>::getNumberOfSegments,
+           "Get the number of segments, the level set structure is divided "
+           "into.")
+      .def("getNumberOfPoints", &lsDomain<T, D>::getNumberOfPoints,
+           "Get the number of defined level set values.")
+      .def("getLevelSetWidth", &lsDomain<T, D>::getLevelSetWidth,
+           "Get the number of layers of level set points around the explicit "
+           "surface.")
+      .def("setLevelSetWidth", &lsDomain<T, D>::setLevelSetWidth,
+           "Set the number of layers of level set points which should be "
+           "stored around the explicit surface.")
+      .def("clearMetaData", &lsDomain<T, D>::clearMetaData,
+           "Clear all metadata stored in the level set.")
+      // allow filehandle to be passed and default to python standard output
+      .def("print", [](lsDomain<T, D>& d, pybind11::object fileHandle) {
+          if (!(pybind11::hasattr(fileHandle,"write") &&
+          pybind11::hasattr(fileHandle,"flush") )){
+               throw pybind11::type_error("MyClass::read_from_file_like_object(file): incompatible function argument:  `file` must be a file-like object, but `"
+                                        +(std::string)(pybind11::repr(fileHandle))+"` provided"
+               );
+          }
+          pybind11::detail::pythonbuf buf(fileHandle);
+          std::ostream stream(&buf);
+          d.print(stream);
+          }, pybind11::arg("stream") = pybind11::module::import("sys").attr("stdout"));
+
+  // enums
+  pybind11::enum_<lsBoundaryConditionEnum<D>>(module, "lsBoundaryConditionEnum")
+      .value("REFLECTIVE_BOUNDARY",
+             lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY)
+      .value("INFINITE_BOUNDARY", lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY)
+      .value("PERIODIC_BOUNDARY", lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY)
+      .value("POS_INFINITE_BOUNDARY",
+             lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY)
+      .value("NEG_INFINITE_BOUNDARY",
+             lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY);
 }
