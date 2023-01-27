@@ -161,6 +161,7 @@ public:
     bool useCoverages = false;
 
     // Initialize coverages
+    advectionKernel.prepareLS();
     meshConverter.apply();
     auto numPoints = diskMesh->getNodes().size();
     if (!coveragesInitialized)
@@ -256,6 +257,7 @@ public:
 #endif
 
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+      advectionKernel.prepareLS();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
 
@@ -346,6 +348,7 @@ public:
       advectionKernel.apply();
 
       // update the translator to retrieve the correct coverages from the LS
+      advectionKernel.prepareLS();
       meshConverter.apply();
       if (useCoverages)
         updateCoveragesFromAdvectedSurface(
