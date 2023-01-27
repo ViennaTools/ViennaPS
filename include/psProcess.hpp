@@ -106,7 +106,8 @@ public:
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
 
-    auto transField = psSmartPointer<psTranslationField<NumericType>>::New();
+    auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
+        model->getVelocityField()->useTranslationField());
     transField->setTranslator(translator);
     transField->setVelocityField(model->getVelocityField());
 
