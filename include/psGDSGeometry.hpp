@@ -9,6 +9,8 @@
 #include <psGDSUtils.hpp>
 #include <psSmartPointer.hpp>
 
+enum class psPointOrder { CLOCKWISE, COUNTER_CLOCKWISE };
+
 template <class NumericType, int D = 3> class psGDSGeometry {
   using structureLayers =
       std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
@@ -21,7 +23,8 @@ template <class NumericType, int D = 3> class psGDSGeometry {
   std::array<NumericType, 2> boundaryPadding = {0., 0.};
   std::array<NumericType, 2> minBounds;
   std::array<NumericType, 2> maxBounds;
-  bool pointsClockwise = true;
+  psPointOrder pointOrder = psPointOrder::COUNTER_CLOCKWISE;
+  bool pointOrderFlag = true;
   unsigned triangulationTimeOut = 100000000;
 
   double bounds[6];
@@ -51,8 +54,13 @@ public:
     }
   }
 
-  void setPointOrder(const bool passedClockwise) {
-    pointsClockwise = passedClockwise;
+  void setPointOrder(const psPointOrder passedPointOrder) {
+    pointOrder = passedPointOrder;
+    if (pointOrder == psPointOrder::CLOCKWISE) {
+      pointOrderFlag = false;
+    } else {
+      pointOrderFlag = true;
+    }
   }
 
   void setGridDelta(const NumericType passedGridDelta) {
@@ -421,7 +429,7 @@ public:
       offsetPoint[2] = baseHeight;
       mesh->insertNextNode(offsetPoint);
 
-      if (pointsClockwise) {
+      if (pointOrderFlag) {
         mesh->insertNextTriangle(std::array<unsigned, 3>{
             i, (i + 1) % numPointsFlat, i + numPointsFlat});
       } else {
@@ -438,7 +446,7 @@ public:
       offsetPoint[2] = baseHeight + height;
       mesh->insertNextNode(offsetPoint);
 
-      if (pointsClockwise) {
+      if (pointOrderFlag) {
         mesh->insertNextTriangle(std::array<unsigned, 3>{
             upPoint, (upPoint + 1) % numPointsFlat,
             (upPoint + 1) % numPointsFlat + numPointsFlat});
@@ -465,7 +473,7 @@ public:
     while (numTriangles < (numPointsFlat - 2)) {
       i = rightNeighbors[i];
       if (isEar(leftNeighbors[i], i, rightNeighbors[i], mesh, numPointsFlat)) {
-        if (pointsClockwise) {
+        if (pointOrderFlag) {
 
           mesh->insertNextTriangle(
               std::array<unsigned, 3>{rightNeighbors[i], i, leftNeighbors[i]});
@@ -482,10 +490,14 @@ public:
       }
 
       if (counter++ > triangulationTimeOut) {
+        std::string changePointOrder = pointOrderFlag
+                                           ? "psPointOrder::CLOCKWISE"
+                                           : "psPointOrder::COUNTER_CLOCKWISE";
         lsMessage::getInstance()
             .addError("Timeout in surface triangulation. Point order in "
                       "GDS file might be different. Try changing the "
-                      "order by setting setPointOder(...).")
+                      "order by setting setPointOder(" +
+                      changePointOrder + ").")
             .print();
       }
     }
@@ -513,7 +525,7 @@ public:
     if (((points[i][0] * points[j][1] + points[i][1] * points[k][0] +
           points[j][0] * points[k][1] - points[k][0] * points[j][1] -
           points[k][1] * points[i][0] - points[j][0] * points[i][1]) < 0.) !=
-        !pointsClockwise)
+        !pointOrderFlag)
       return false;
 
     for (unsigned m = 0; m < numPoints; m++) {
