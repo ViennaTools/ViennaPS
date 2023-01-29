@@ -502,9 +502,6 @@ public:
       mesh->insertNextTriangle(triangle);
     }
 
-    std::string cc = pointsClockwise ? "_true" : "_false";
-    lsVTKWriter<NumericType>(mesh, "polygon" + cc + ".vtp").apply();
-
     return mesh;
   }
 
