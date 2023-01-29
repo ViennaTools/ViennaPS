@@ -495,9 +495,9 @@ public:
                                            : "psPointOrder::COUNTER_CLOCKWISE";
         lsMessage::getInstance()
             .addError("Timeout in surface triangulation. Point order in "
-                      "GDS file might be different. Try changing the "
+                      "GDS file might be incompatible. Try changing the "
                       "order by setting setPointOder(" +
-                      changePointOrder + ").")
+                      changePointOrder + ") in current geometry.")
             .print();
       }
     }
