@@ -10,9 +10,7 @@
 /**
   Creates a plane in z(3D)/y(2D) direction.
 */
-template <class NumericType, int D>
-class psMakePlane
-{
+template <class NumericType, int D> class psMakePlane {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
 
@@ -34,37 +32,29 @@ public:
         xExtent(passedXExtent), yExtent(passedYExtent), height(passedHeight),
         periodicBoundary(passedPeriodic) {}
 
-  void apply()
-  {
+  void apply() {
     domain->clear();
     double bounds[2 * D];
     bounds[0] = -xExtent / 2.;
     bounds[1] = xExtent / 2.;
 
-    if constexpr (D == 3)
-    {
+    if constexpr (D == 3) {
       bounds[2] = -yExtent / 2.;
       bounds[3] = yExtent / 2.;
       bounds[4] = -gridDelta;
       bounds[5] = gridDelta;
-    }
-    else
-    {
+    } else {
       bounds[2] = -gridDelta;
       bounds[3] = gridDelta;
     }
 
     typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
 
-    for (int i = 0; i < D - 1; i++)
-    {
-      if (periodicBoundary)
-      {
+    for (int i = 0; i < D - 1; i++) {
+      if (periodicBoundary) {
         boundaryCons[i] =
             lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
-      }
-      else
-      {
+      } else {
         boundaryCons[i] =
             lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
       }
