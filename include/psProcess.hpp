@@ -58,6 +58,12 @@ public:
 
   void apply() {
     /* ---------- Process Setup --------- */
+    if (!model) {
+      lsMessage::getInstance()
+          .addWarning("No process model passed to psProcess.")
+          .print();
+      return;
+    }
     auto name = model->getProcessName();
 
     if (!domain) {

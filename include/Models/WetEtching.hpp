@@ -8,7 +8,7 @@
 
 // Wet etch for one material
 template <class NumericType, int D>
-class WetEtchVelocityField : public psVelocityField<NumericType> {
+class WetEtchingVelocityField : public psVelocityField<NumericType> {
   const std::array<NumericType, 3> direction100 = {0.707106781187,
                                                    0.707106781187, 0.};
   const std::array<NumericType, 3> direction010 = {-0.707106781187,
@@ -21,7 +21,7 @@ class WetEtchVelocityField : public psVelocityField<NumericType> {
   const int maskId = 0;
 
 public:
-  WetEtchVelocityField(const int mask = 0) : maskId(mask) {
+  WetEtchingVelocityField(const int mask = 0) : maskId(mask) {
     directions[0] = direction100;
     directions[1] = rayInternal::Diff(
         direction010,
@@ -30,12 +30,13 @@ public:
     directions[2] = rayInternal::CrossProduct(direction100, directions[1]);
   }
 
-  WetEtchVelocityField(const std::array<NumericType, 3> passedDir100,
-                       const std::array<NumericType, 3> passedDir010,
-                       const NumericType passedR100,
-                       const NumericType passedR110,
-                       const NumericType passedR111,
-                       const NumericType passedR311, const int passedMaskId = 0)
+  WetEtchingVelocityField(const std::array<NumericType, 3> passedDir100,
+                          const std::array<NumericType, 3> passedDir010,
+                          const NumericType passedR100,
+                          const NumericType passedR110,
+                          const NumericType passedR111,
+                          const NumericType passedR311,
+                          const int passedMaskId = 0)
       : direction100(passedDir100), direction010(passedDir010),
         r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
         maskId(passedMaskId) {
@@ -88,7 +89,7 @@ public:
 };
 
 template <typename NumericType, int D>
-class WetEtchSurfaceModel : public psSurfaceModel<NumericType> {
+class WetEtchingSurfaceModel : public psSurfaceModel<NumericType> {
 public:
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
@@ -99,32 +100,24 @@ public:
 
 // The wet etching model should be used in combination with the
 // STENCIL_LOCAL_LAX_FRIEDRIECH integration scheme.
-template <typename NumericType, int D> class WetEtch {
+template <typename NumericType, int D> class WetEtching {
   psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
 
 public:
-  WetEtch(const std::array<NumericType, 3> passedDir100,
-          const std::array<NumericType, 3> passedDir010,
-          const NumericType passedR100, const NumericType passedR110,
-          const NumericType passedR111, const NumericType passedR311,
-          const int passedMaskId = 0)
+  WetEtching(const int passedMaskId = 0) : maskId(passedMaskId) {
+    static_assert(D == 3 && "Wet etch model is only implemented in 3D.");
+    initialize();
+  }
+  WetEtching(const std::array<NumericType, 3> passedDir100,
+             const std::array<NumericType, 3> passedDir010,
+             const NumericType passedR100, const NumericType passedR110,
+             const NumericType passedR111, const NumericType passedR311,
+             const int passedMaskId = 0)
       : direction100(passedDir100), direction010(passedDir010),
         r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
         maskId(passedMaskId) {
     static_assert(D == 3 && "Wet etch model is only implemented in 3D.");
-
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
-    // surface model
-    auto surfModel = psSmartPointer<WetEtchSurfaceModel<NumericType, D>>::New();
-
-    // velocity field
-    auto velField = psSmartPointer<WetEtchVelocityField<NumericType, D>>::New(
-        direction100, direction010, r100, r110, r111, r311, maskId);
-
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("WetEtching");
+    initialize();
   }
 
   psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
@@ -132,6 +125,23 @@ public:
   }
 
 private:
+  void initialize() {
+    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
+
+    // surface model
+    auto surfModel =
+        psSmartPointer<WetEtchingSurfaceModel<NumericType, D>>::New();
+
+    // velocity field
+    auto velField =
+        psSmartPointer<WetEtchingVelocityField<NumericType, D>>::New(
+            direction100, direction010, r100, r110, r111, r311, maskId);
+
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("WetEtching");
+  }
+
   // crystal surface direction
   const std::array<NumericType, 3> direction100 = {0.707106781187,
                                                    0.707106781187, 0.};
@@ -145,6 +155,7 @@ private:
   const NumericType r111 = 0.005 / 60.;
   const NumericType r311 = 1.436 / 60.;
 
+  const int maskId = 0;
   // from the ViennaTS web version example
   // const NumericType r100 = 0.0166666666667;
   // const NumericType r110 = 0.0309166666667;
