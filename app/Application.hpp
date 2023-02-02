@@ -234,7 +234,7 @@ private:
       std::cout << "Plane"
                 << "\n\tzPos: " << params->maskZPos << "\n\n";
       if (geometry->getLevelSets()->back()) {
-        std::cout << "\tAdding plane to current geometry.\n";
+        std::cout << "\tAdding plane to current geometry...\n\n";
         psMakePlane<NumericType, D>(geometry, params->maskZPos, true).apply();
       } else {
         psMakePlane<NumericType, D>(geometry, params->gridDelta,
