@@ -21,6 +21,7 @@
 #include <GeometricDistributionModels.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
+#include <WetEtching.hpp>
 
 template <int D> class Application {
   psSmartPointer<psDomain<NumericType, D>> geometry = nullptr;
@@ -156,7 +157,7 @@ protected:
 
     DirectionalEtching<NumericType, D> model(
         getDirection(processParams->direction), processParams->directionalRate,
-        processParams->isotropicRate);
+        processParams->isotropicRate, processParams->maskId);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
@@ -164,6 +165,27 @@ protected:
     process.setProcessDuration(params->processTime);
     process.setPrintIntdermediate(params->printIntermediate);
     process.apply();
+  }
+
+  virtual void
+  runWetEtching(psSmartPointer<psDomain<NumericType, D>> processGeometry,
+                psSmartPointer<ApplicationParameters> processParams) {
+
+    if constexpr (D == 3) {
+
+      WetEtching<NumericType, D> model(processParams->maskId);
+      psProcess<NumericType, D> process;
+      process.setDomain(processGeometry);
+      process.setProcessModel(model.getProcessModel());
+      process.setProcessDuration(params->processTime);
+      process.setIntegrationScheme(
+          lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+      process.setPrintIntdermediate(params->printIntermediate);
+      process.apply();
+    } else {
+      std::cout << "Warning: Wet etch model only implemented in 2D."
+                << std::endl;
+    }
   }
 
 private:
@@ -220,27 +242,38 @@ private:
       std::cout << "GDS file import\n\tFile name: " << params->fileName
                 << "\n\tLayer: " << params->layers
                 << "\n\tMask height: " << params->maskHeight
-                << "\n\tzPos: " << params->maskZPos << "\n\n";
+                << "\n\tzPos: " << params->maskZPos << "\n\tPoint order: "
+                << ((params->pointOrder == 0) ? "counter-clockwise"
+                                              : "clockwise")
+                << "\n\n";
 
-      typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
-      for (int i = 0; i < D - 1; i++) {
-        if (params->periodicBoundary) {
-          boundaryCons[i] =
-              lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
-        } else {
-          boundaryCons[i] =
-              lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+      if constexpr (D == 3) {
+        typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+        for (int i = 0; i < D - 1; i++) {
+          if (params->periodicBoundary) {
+            boundaryCons[i] =
+                lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+          } else {
+            boundaryCons[i] =
+                lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+          }
         }
+        boundaryCons[D - 1] =
+            lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+        auto mask = psSmartPointer<psGDSGeometry<NumericType, D>>::New(
+            params->gridDelta);
+        mask->setBoundaryConditions(boundaryCons);
+        if (params->pointOrder == 1) {
+          mask->setPointOrder(psPointOrder::CLOCKWISE);
+        }
+        psGDSReader<NumericType, D>(mask, params->fileName).apply();
+        auto layer = mask->layerToLevelSet(params->layers, params->maskZPos,
+                                           params->maskHeight);
+        geometry->insertNextLevelSet(layer);
+      } else {
+        std::cout << "Warning: Can only parse GDS geometries in 3D application."
+                  << std::endl;
       }
-      boundaryCons[D - 1] =
-          lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
-      auto mask =
-          psSmartPointer<psGDSGeometry<NumericType, D>>::New(params->gridDelta);
-      mask->setBoundaryConditions(boundaryCons);
-      psGDSReader<NumericType, D>(mask, params->fileName).apply();
-      auto layer = mask->layerToLevelSet(params->layers, params->maskZPos,
-                                         params->maskHeight);
-      geometry->insertNextLevelSet(layer);
       break;
     }
 
@@ -329,6 +362,12 @@ private:
                 << "\n\tDirectional rate: " << params->directionalRate
                 << "\n\tIsotropic rate: " << params->isotropicRate << "\n\n";
       runDirectionalEtching(geometry, params);
+      break;
+    }
+
+    case ProcessType::WETETCHING: {
+      std::cout << "Wet etching\n\tTime: " << params->processTime << "\n\n";
+      runWetEtching(geometry, params);
       break;
     }
 

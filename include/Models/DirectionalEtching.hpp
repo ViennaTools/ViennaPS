@@ -60,7 +60,8 @@ template <typename NumericType, int D> class DirectionalEtching {
 public:
   DirectionalEtching(const std::array<NumericType, 3> direction,
                      const NumericType directionalVelocity = 1.,
-                     const NumericType isotropicVelocity = 0.) {
+                     const NumericType isotropicVelocity = 0.,
+                     const int maskId = 0) {
     processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
 
     // surface model
@@ -70,7 +71,7 @@ public:
     // velocity field
     auto velField =
         psSmartPointer<DirectionalEtchVelocityField<NumericType, D>>::New(
-            direction, directionalVelocity, isotropicVelocity, 0);
+            direction, directionalVelocity, isotropicVelocity, maskId);
 
     processModel->setSurfaceModel(surfModel);
     processModel->setVelocityField(velField);
