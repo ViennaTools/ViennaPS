@@ -233,10 +233,15 @@ private:
     case GeometryType::PLANE:
       std::cout << "Plane"
                 << "\n\tzPos: " << params->maskZPos << "\n\n";
-      psMakePlane<NumericType, D>(geometry, params->gridDelta, params->xExtent,
-                                  params->yExtent, params->maskZPos,
-                                  params->periodicBoundary)
-          .apply();
+      if (geometry->getLevelSets()->back()) {
+        std::cout << "\tAdding plane to current geometry.\n";
+        psMakePlane<NumericType, D>(geometry, params->maskZPos, true).apply();
+      } else {
+        psMakePlane<NumericType, D>(geometry, params->gridDelta,
+                                    params->xExtent, params->yExtent,
+                                    params->maskZPos, params->periodicBoundary)
+            .apply();
+      }
       break;
     case GeometryType::GDS: {
       std::cout << "GDS file import\n\tFile name: " << params->fileName
