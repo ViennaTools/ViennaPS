@@ -50,7 +50,7 @@ All parameters which are parsed additional to a command are described below. For
 **GEOMETRY Hole**
 <dl>
   <dt>radius</dt>
-  <dd> radius of the hole (numeric value, default: 0.2)</dd>
+  <dd>radius of the hole (numeric value, default: 0.2)</dd>
   <dt>depth</dt>
   <dd>depth of the hole (numeric value, default: 0.2)</dd>
   <dt>zPos</dt>
@@ -88,6 +88,14 @@ All parameters which are parsed additional to a command are described below. For
   <dd>height of the layer in z-direction (numeric value, default: 0.1)</dd>
   <dt>zPos</dt>
   <dd>offset of the layer in z-direction (numeric value, default: 0)</dd>
+  <dt>invert</dt>
+  <dd>invert the mask (boolean, default: 0)</dd> 
+  <dt>xPadding</dt>
+  <dd>padding on the boundary of the mask in x-direction (numeric value, default: 0)</dd> 
+  <dt>yPadding</dt>
+  <dd>padding on the boundary of the mask in y-direction (numeric value, default: 0)</dd> 
+  <dt>pointOrder</dt>
+  <dd>store points order in GDS file. Can vary depending on what GDS editor is used to create to file. If geometry can not be read (timeout error), try changing the value to 1 (boolean, default: 0)</dd>
 </dl>
 
 ---
@@ -140,6 +148,8 @@ All parameters which are parsed additional to a command are described below. For
   <dd>factor for ion etching yield on oxygen (numeric value, default: 3)</dd>
   <dt>raysPerPoint</dt>
   <dd>number of rays traced per grid point in the surface geometry (integer value, default: 3000)</dd>
+  <dt>maskId</dt>
+  <dd>ID of mask material (integer value, default: 0)</dd> 
 </dl>
 
 ---
@@ -153,6 +163,18 @@ All parameters which are parsed additional to a command are described below. For
   <dd>etching rate in primal direction (numeric value, default: 1)</dd>
   <dt>isotropicRate</dt>
   <dd>isotropic etching rate (numeric value, default: 0)</dd>
+  <dt>maskId</dt>
+  <dd>ID of mask material (integer value, default: 0)</dd> 
+</dl>
+
+---
+**PROCESS WetEtching**
+Wet etching process in 30% KOH solution at 70°C.
+<dl>
+  <dt>time</dt>
+  <dd>process time (numeric value, default: 1)</dd>
+  <dt>maskId</dt>
+  <dd>ID of mask material (integer value, default: 0)</dd> 
 </dl>
 
 ---
