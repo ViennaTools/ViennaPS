@@ -90,7 +90,10 @@ private:
                            psUtils::Item{"layer", params->layers},
                            psUtils::Item{"zPos", params->maskZPos},
                            psUtils::Item{"maskHeight", params->maskHeight},
-                           psUtils::Item{"pointOrder", params->pointOrder});
+                           psUtils::Item{"pointOrder", params->pointOrder},
+                           psUtils::Item{"invert", params->maskInvert},
+                           psUtils::Item{"xPadding", params->xPadding},
+                           psUtils::Item{"yPadding", params->yPadding});
     } else if (type == "Import") {
       params->geometryType = GeometryType::IMPORT;
       psUtils::AssignItems(config, psUtils::Item{"file", params->fileName},

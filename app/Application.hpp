@@ -242,7 +242,10 @@ private:
       std::cout << "GDS file import\n\tFile name: " << params->fileName
                 << "\n\tLayer: " << params->layers
                 << "\n\tMask height: " << params->maskHeight
-                << "\n\tzPos: " << params->maskZPos << "\n\tPoint order: "
+                << "\n\tzPos: " << params->maskZPos
+                << "\n\tinvert: " << boolString(params->maskInvert)
+                << "\n\txPadding: " << params->xPadding
+                << "\n\tyPadding: " << params->yPadding << "\n\tPoint order: "
                 << ((params->pointOrder == 0) ? "counter-clockwise"
                                               : "clockwise")
                 << "\n\n";
@@ -263,12 +266,15 @@ private:
         auto mask = psSmartPointer<psGDSGeometry<NumericType, D>>::New(
             params->gridDelta);
         mask->setBoundaryConditions(boundaryCons);
+        mask->setBoundaryPadding(params->xPadding, params->yPadding);
         if (params->pointOrder == 1) {
           mask->setPointOrder(psPointOrder::CLOCKWISE);
         }
         psGDSReader<NumericType, D>(mask, params->fileName).apply();
-        auto layer = mask->layerToLevelSet(params->layers, params->maskZPos,
-                                           params->maskHeight);
+
+        auto layer =
+            mask->layerToLevelSet(params->layers, params->maskZPos,
+                                  params->maskHeight, params->maskInvert);
         geometry->insertNextLevelSet(layer);
       } else {
         std::cout << "Warning: Can only parse GDS geometries in 3D application."
