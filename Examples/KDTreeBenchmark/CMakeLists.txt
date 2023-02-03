@@ -7,7 +7,7 @@ if(MSVC)
   add_compile_options(/W4)
 else()
   # lots of warnings
-  add_compile_options(-Wall -Wextra -pedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion)
 endif()
 
 add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)

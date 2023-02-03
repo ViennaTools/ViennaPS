@@ -29,7 +29,9 @@
 // ---------------------- END ORIGINAL COPYRIGHT NOTICE ----------------------//
 
 #include <algorithm>
+#include <cassert>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -41,58 +43,73 @@
 #include <psQueues.hpp>
 
 template <class NumericType> class psKDTree {
-  using SizeType = std::size_t;
-  using PointType = std::vector<NumericType>;
+  typedef typename std::vector<NumericType>::size_type SizeType;
 
   struct Node;
 
   SizeType D = 0;
-  PointType scalingFactors;
+  std::vector<NumericType> scalingFactors;
   std::vector<Node> nodes;
+
   Node *rootNode = nullptr;
 
 public:
   psKDTree() {}
 
-  psKDTree(const std::vector<PointType> &passedPoints) {
-    // The first row determins the data dimension
-    D = passedPoints.at(0).size();
+  psKDTree(const std::vector<std::vector<NumericType>> &passedPoints) {
+    if (!passedPoints.empty()) {
+      // The first row determins the data dimension
+      D = passedPoints[0].size();
 
-    // Initialize the scaling factors to one
-    scalingFactors = PointType(D, 1.);
+      // Initialize the scaling factors to one
+      scalingFactors = std::vector<NumericType>(D, 1.);
 
-    // Create a vector of nodes
-    nodes.reserve(passedPoints.size());
-    {
-      for (SizeType i = 0; i < passedPoints.size(); ++i) {
-        nodes.emplace_back(Node{passedPoints[i], i});
+      // Create a vector of nodes
+      nodes.reserve(passedPoints.size());
+      {
+        for (SizeType i = 0; i < passedPoints.size(); ++i) {
+          nodes.emplace_back(passedPoints[i], i);
+        }
       }
+    } else {
+      std::cout << "psKDTree: the provided points vector is empty.\n";
+      return;
     }
   }
 
-  void setPoints(const std::vector<PointType> &passedPoints) {
-    // The first row determins the data dimension
-    D = passedPoints.at(0).size();
-
-    // Initialize the scaling factors to one
-    scalingFactors = PointType(D, 1.);
-
-    nodes.reserve(passedPoints.size());
-    {
-      for (SizeType i = 0; i < passedPoints.size(); ++i) {
-        nodes.emplace_back(Node{passedPoints[i], i});
-      }
+  void setPoints(const std::vector<std::vector<NumericType>> &passedPoints,
+                 const std::vector<NumericType> &passedScalingFactors = {}) {
+    if (passedPoints.empty()) {
+      std::cout << "psKDTree: the provided points vector is empty.\n";
+      return;
     }
-  }
 
-  void setScalingFactors(const PointType &passedScalingFactors) {
+    // The first row determins the data dimension
+    D = passedPoints[0].size();
+
     scalingFactors.clear();
-    std::copy(passedScalingFactors.begin(), passedScalingFactors.end(),
-              std::back_inserter(scalingFactors));
+    if (passedScalingFactors.empty()) {
+      // Initialize the scaling factors to one
+      scalingFactors = std::vector<NumericType>(D, 1.);
+    } else {
+      assert(
+          passedScalingFactors.size() == D &&
+          "The provided scaling factors have a different dimensionality than "
+          "the data.");
+
+      std::copy(passedScalingFactors.begin(), passedScalingFactors.end(),
+                std::back_inserter(scalingFactors));
+    }
+
+    nodes.clear();
+    nodes.reserve(passedPoints.size());
+    for (SizeType i = 0; i < passedPoints.size(); ++i) {
+      nodes.emplace_back(passedPoints[i], i);
+    }
   }
 
   std::optional<std::pair<SizeType, NumericType>>
-  findNearest(const PointType &x) const {
+  findNearest(const std::vector<NumericType> &x) const {
     if (!rootNode)
       return {};
 
@@ -103,7 +120,7 @@ public:
   }
 
   std::optional<std::vector<std::pair<SizeType, NumericType>>>
-  findKNearest(const PointType &x, const int k) const {
+  findKNearest(const std::vector<NumericType> &x, const int k) const {
     if (!rootNode)
       return {};
 
@@ -115,13 +132,14 @@ public:
 
     while (!queue.empty()) {
       auto best = queue.dequeueBest();
-      result.emplace_back(std::pair{best->index, Distance(x, best->value)});
+      result.emplace_back(best->index, Distance(x, best->value));
     }
     return result;
   }
 
   std::optional<std::vector<std::pair<SizeType, NumericType>>>
-  findNearestWithinRadius(const PointType &x, const NumericType radius) const {
+  findNearestWithinRadius(const std::vector<NumericType> &x,
+                          const NumericType radius) const {
     if (!rootNode)
       return {};
 
@@ -133,7 +151,7 @@ public:
 
     while (!queue.empty()) {
       auto best = queue.dequeueBest();
-      result.emplace_back(std::pair{best->index, Distance(x, best->value)});
+      result.emplace_back(best->index, Distance(x, best->value));
     }
     return result;
   }
@@ -145,7 +163,7 @@ public:
     }
 
     // Local variable definitions of class member variables. These are needed
-    // for the omp sharing costruct to work under MSVC
+    // for the omp sharing construct to work under MSVC
     Node *myRootNode = nullptr;
     std::vector<Node> &myNodes = nodes;
 
@@ -160,14 +178,15 @@ public:
         int maxParallelDepth = intLog2(numThreads);
         int surplusWorkers = numThreads - (1 << maxParallelDepth);
 
-        SizeType size = myNodes.end() - myNodes.begin();
-        SizeType medianIndex = (size + 1) / 2 - 1;
+        auto size = static_cast<int>(myNodes.size());
+        auto medianIndex = (size + 1) / 2 - 1;
 
         std::nth_element(
-            myNodes.begin(), myNodes.begin() + medianIndex, myNodes.end(),
+            myNodes.begin(), std::next(myNodes.begin(), medianIndex),
+            myNodes.end(),
             [](Node &a, Node &b) { return a.value[0] < b.value[0]; });
 
-        myRootNode = &myNodes[medianIndex];
+        myRootNode = &myNodes[static_cast<SizeType>(medianIndex)];
         myRootNode->axis = 0;
 
 #ifdef _OPENMP
@@ -178,20 +197,20 @@ public:
 #pragma omp task final(dontSpawnMoreThreads)
         {
           // Left Subtree
-          build(myRootNode,                    // Use rootNode as parent
-                myNodes.begin(),               // Data start
-                myNodes.begin() + medianIndex, // Data end
-                1,                             // Depth
-                true,                          // Left
+          build(myRootNode,      // Use rootNode as parent
+                myNodes.begin(), // Data start
+                std::next(myNodes.begin(), medianIndex), // Data end
+                1,                                       // Depth
+                true,                                    // Left
                 surplusWorkers, maxParallelDepth);
         }
 
         // Right Subtree
-        build(myRootNode,                        // Use rootNode as parent
-              myNodes.begin() + medianIndex + 1, // Data start
-              myNodes.end(),                     // Data end
-              1,                                 // Depth
-              false,                             // Right
+        build(myRootNode, // Use rootNode as parent
+              std::next(myNodes.begin(), medianIndex + 1), // Data start
+              myNodes.end(),                               // Data end
+              1,                                           // Depth
+              false,                                       // Right
               surplusWorkers, maxParallelDepth);
 #pragma omp taskwait
       }
@@ -202,19 +221,18 @@ public:
 
 private:
   void build(Node *parent, typename std::vector<Node>::iterator start,
-             typename std::vector<Node>::iterator end, int depth, bool isLeft,
-             int surplusWorkers, int maxParallelDepth) const {
-    SizeType size = end - start;
-
-    int axis = depth % D;
+             typename std::vector<Node>::iterator end, SizeType depth,
+             bool isLeft, int surplusWorkers, int maxParallelDepth) const {
+    auto size = std::distance(start, end);
+    auto axis = depth % D;
 
     if (size > 1) {
-      SizeType medianIndex = (size + 1) / 2 - 1;
+      auto medianIndex = (size + 1) / 2 - 1;
       std::nth_element(
-          start, start + medianIndex, end,
+          start, std::next(start, medianIndex), end,
           [axis](Node &a, Node &b) { return a.value[axis] < b.value[axis]; });
 
-      Node *current = toRawPointer(start + medianIndex);
+      Node *current = toRawPointer(std::next(start, medianIndex));
       current->axis = axis;
 
       if (isLeft)
@@ -223,27 +241,28 @@ private:
         parent->right = current;
 
 #ifdef _OPENMP
-      bool dontSpawnMoreThreads = depth > maxParallelDepth + 1 ||
-                                  (depth == maxParallelDepth + 1 &&
-                                   omp_get_thread_num() >= surplusWorkers);
+      bool dontSpawnMoreThreads =
+          static_cast<int>(depth) > maxParallelDepth + 1 ||
+          (static_cast<int>(depth) == maxParallelDepth + 1 &&
+           omp_get_thread_num() >= surplusWorkers);
 #endif
 #pragma omp task final(dontSpawnMoreThreads)
       {
         // Left Subtree
-        build(current,             // Use current node as parent
-              start,               // Data start
-              start + medianIndex, // Data end
-              depth + 1,           // Depth
-              true,                // Left
+        build(current,                       // Use current node as parent
+              start,                         // Data start
+              std::next(start, medianIndex), // Data end
+              depth + 1,                     // Depth
+              true,                          // Left
               surplusWorkers, maxParallelDepth);
       }
 
       //  Right Subtree
-      build(current,                 // Use current node as parent
-            start + medianIndex + 1, // Data start
-            end,                     // Data end
-            depth + 1,               // Depth
-            false,                   // Right
+      build(current,                           // Use current node as parent
+            std::next(start, medianIndex + 1), // Data start
+            end,                               // Data end
+            depth + 1,                         // Depth
+            false,                             // Right
             surplusWorkers, maxParallelDepth);
 #pragma omp taskwait
     } else if (size == 1) {
@@ -261,16 +280,16 @@ private:
    * Recursive Tree Traversal                                                 *
    ****************************************************************************/
   void traverseDown(Node *currentNode, std::pair<NumericType, Node *> &best,
-                    const PointType &x) const {
+                    const std::vector<NumericType> &x) const {
     if (currentNode == nullptr)
       return;
 
-    int axis = currentNode->axis;
+    auto axis = currentNode->axis;
 
     // For distance comparison operations we only use the "reduced" aka less
     // compute intensive, but order preserving version of the distance
     // function.
-    NumericType distance = SquaredDistance(x, currentNode->value);
+    auto distance = SquaredDistance(x, currentNode->value);
     if (distance < best.first)
       best = std::pair{distance, currentNode};
 
@@ -287,7 +306,7 @@ private:
     // distance intersects the hyperplane defined by the partitioning of the
     // current node, we also have to search the other subtree, since there could
     // be points closer to x than our current best.
-    NumericType distanceToHyperplane =
+    auto distanceToHyperplane =
         scalingFactors[axis] * std::abs(x[axis] - currentNode->value[axis]);
     distanceToHyperplane *= distanceToHyperplane;
     if (distanceToHyperplane < best.first) {
@@ -303,14 +322,15 @@ private:
             typename = std::enable_if_t<
                 std::is_same_v<Q, psBoundedPQueue<NumericType, Node *>> ||
                 std::is_same_v<Q, psClampedPQueue<NumericType, Node *>>>>
-  void traverseDown(Node *currentNode, Q &queue, const PointType &x) const {
+  void traverseDown(Node *currentNode, Q &queue,
+                    const std::vector<NumericType> &x) const {
     if (currentNode == nullptr)
       return;
 
     int axis = currentNode->axis;
 
-    // For distance comparison operations we only use the "reduced" aka less
-    // compute intensive, but order preserving version of the distance
+    // For distance comparison operations we only use the squared distance which
+    // is less compute intensive, but order preserving version of the distance
     // function.
     queue.enqueue(
         std::pair{SquaredDistance(x, currentNode->value), currentNode});
@@ -328,7 +348,7 @@ private:
     // distance intersects the hyperplane defined by the partitioning of the
     // current node, we also have to search the other subtree, since there could
     // be points closer to x than our current best.
-    NumericType distanceToHyperplane =
+    auto distanceToHyperplane =
         scalingFactors[axis] * std::abs(x[axis] - currentNode->value[axis]);
     distanceToHyperplane *= distanceToHyperplane;
 
@@ -360,23 +380,27 @@ private:
     return &(*it);
   }
 
-  // Quickly calculate the log2 of integers
-  static constexpr int intLog2(int x) {
-    int val = 0;
+  // Quickly calculate the log2 of signed ints
+  template <typename SignedInt,
+            typename = std::enable_if_t<std::is_integral_v<SignedInt> &&
+                                        std::is_signed_v<SignedInt>>>
+  static constexpr SignedInt intLog2(SignedInt x) {
+    SignedInt val = 0;
     while (x >>= 1)
       ++val;
     return val;
   }
 
-  PointType Diff(const PointType &pVecA, const PointType &pVecB) const {
-    PointType diff(pVecA.size(), 0.);
+  std::vector<NumericType> Diff(const std::vector<NumericType> &pVecA,
+                                const std::vector<NumericType> &pVecB) const {
+    std::vector<NumericType> diff(pVecA.size(), 0.);
     for (SizeType i = 0; i < D; ++i)
       diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
     return diff;
   }
 
-  NumericType SquaredDistance(const PointType &pVecA,
-                              const PointType &pVecB) const {
+  NumericType SquaredDistance(const std::vector<NumericType> &pVecA,
+                              const std::vector<NumericType> &pVecB) const {
     auto diff = Diff(pVecA, pVecB);
     NumericType norm = 0;
     std::for_each(diff.begin(), diff.end(),
@@ -384,7 +408,8 @@ private:
     return norm;
   }
 
-  NumericType Distance(const PointType &pVecA, const PointType &pVecB) const {
+  NumericType Distance(const std::vector<NumericType> &pVecA,
+                       const std::vector<NumericType> &pVecB) const {
     return std::sqrt(SquaredDistance(pVecA, pVecB));
   }
 
@@ -392,14 +417,14 @@ private:
    * The Node struct implementation                                           *
    ****************************************************************************/
   struct Node {
-    PointType value{};
+    std::vector<NumericType> value{};
     SizeType index{};
+    SizeType axis{};
 
-    int axis{};
     Node *left = nullptr;
     Node *right = nullptr;
 
-    Node(const PointType &passedValue, SizeType passedIndex)
+    Node(const std::vector<NumericType> &passedValue, SizeType passedIndex)
         : value(passedValue), index(passedIndex) {}
 
     Node(Node &&other) {

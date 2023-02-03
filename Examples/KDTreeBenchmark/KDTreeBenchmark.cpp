@@ -20,7 +20,8 @@ inline double getTime() {
 #endif
 }
 
-template <class T> std::vector<std::vector<T>> generatePoints(int N, int D) {
+template <class T>
+std::vector<std::vector<T>> generatePoints(unsigned N, unsigned D) {
   std::random_device rd;
   std::vector<std::vector<T>> data(N);
   for (auto &d : data)
@@ -31,7 +32,7 @@ template <class T> std::vector<std::vector<T>> generatePoints(int N, int D) {
     auto engine = std::default_random_engine(rd());
     std::uniform_real_distribution<> d{-10., 10.};
 #pragma omp for
-    for (int i = 0; i < N; ++i) {
+    for (unsigned i = 0; i < N; ++i) {
       std::vector<T> point;
       point.reserve(D);
       std::generate_n(std::back_inserter(point), D,
@@ -47,27 +48,27 @@ int main(int argc, char *argv[]) {
   static constexpr int D = 3;
 
   // The number of points in the tree
-  int N = 1'000'000;
+  unsigned N = 1'000'000;
   if (argc > 1) {
     int tmp = std::atoi(argv[1]);
     if (tmp > 0)
-      N = tmp;
+      N = static_cast<unsigned>(tmp);
   }
 
   // The number of points to query the tree with
-  int M = 100'000;
+  unsigned M = 100'000;
   if (argc > 2) {
     int tmp = std::atoi(argv[2]);
     if (tmp > 0)
-      M = tmp;
+      M = static_cast<unsigned>(tmp);
   }
 
   // The number repetitions
-  int repetitions = 1;
+  unsigned repetitions = 1;
   if (argc > 3) {
     int tmp = std::atoi(argv[3]);
     if (tmp > 0)
-      repetitions = tmp;
+      repetitions = static_cast<unsigned>(tmp);
   }
 
   // Training Point generation
@@ -82,7 +83,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Growing Tree...\n";
     psSmartPointer<psKDTree<NumericType>> tree = nullptr;
     auto startTime = getTime();
-    for (int i = 0; i < repetitions; ++i) {
+    for (unsigned i = 0; i < repetitions; ++i) {
       tree = psSmartPointer<psKDTree<NumericType>>::New(points);
       tree->build();
     }
@@ -93,9 +94,9 @@ int main(int argc, char *argv[]) {
     // Nearest Neighbors
     std::cout << "Finding Nearest Neighbors...\n";
     startTime = getTime();
-    for (int i = 0; i < repetitions; ++i) {
-      for (const auto &pt : testPoints)
-        [[maybe_unused]] auto result = tree->findNearest(pt);
+    for (unsigned i = 0; i < repetitions; ++i) {
+      for (const auto &pt : testPoints) [[maybe_unused]]
+        auto result = tree->findNearest(pt);
     }
     endTime = getTime();
 

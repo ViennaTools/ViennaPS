@@ -88,8 +88,7 @@ public:
     scaler.apply();
     auto scalingFactors = scaler.getScalingFactors();
 
-    kdtree.setPoints(inputData);
-    kdtree.setScalingFactors(scalingFactors);
+    kdtree.setPoints(inputData, scalingFactors);
     kdtree.build();
 
     dataChanged = false;
