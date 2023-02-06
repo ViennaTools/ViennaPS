@@ -122,10 +122,15 @@ private:
           psUtils::Item{"oxygenFlux", params->totalOxygenFlux},
           psUtils::Item{"A_O", params->A_O},
           psUtils::Item{"raysPerPoint", params->raysPerPoint});
-    } else if (model == "GeometricUniformDeposition") {
-      params->processType = ProcessType::GEOMETRICUNIFORMDEPOSITION;
-      psUtils::AssignItems(config, psUtils::Item{"rate", params->rate},
-                           psUtils::Item{"time", params->processTime});
+    } else if (model == "SphereDistribution") {
+      params->processType = ProcessType::SPHEREDISTRIBUTION;
+      psUtils::AssignItems(config, psUtils::Item{"radius", params->radius});
+    } else if (model == "BoxDistribution") {
+      params->processType = ProcessType::BOXDISTRIBUTION;
+      psUtils::AssignItems(config,
+                           psUtils::Item{"halfAxisX", params->halfAxes[0]},
+                           psUtils::Item{"halfAxisY", params->halfAxes[1]},
+                           psUtils::Item{"halfAxisZ", params->halfAxes[2]});
     } else if (model == "DirectionalEtching") {
       params->processType = ProcessType::DIRECTIONALETCHING;
       psUtils::AssignItems(

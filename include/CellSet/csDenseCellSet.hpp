@@ -9,7 +9,6 @@
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
 #include <lsMessage.hpp>
-#include <lsToMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
 
@@ -58,8 +57,23 @@ public:
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
-    auto minBounds = surface->getGrid().getMinBounds();
-    auto maxBounds = surface->getGrid().getMaxBounds();
+    hrleVectorType<hrleIndexType, D> minBounds;
+    hrleVectorType<hrleIndexType, D> maxBounds;
+    for (unsigned i = 0; i < D; ++i) {
+      minBounds[i] = std::numeric_limits<hrleIndexType>::max();
+      maxBounds[i] = std::numeric_limits<hrleIndexType>::lowest();
+    }
+    for (unsigned i = 0; i < D; ++i) {
+      minBounds[i] =
+          std::min(minBounds[i], (surface->getGrid().isNegBoundaryInfinite(i))
+                                     ? surface->getDomain().getMinRunBreak(i)
+                                     : surface->getGrid().getMinBounds(i));
+
+      maxBounds[i] =
+          std::max(maxBounds[i], (surface->getGrid().isPosBoundaryInfinite(i))
+                                     ? surface->getDomain().getMaxRunBreak(i)
+                                     : surface->getGrid().getMaxBounds(i));
+    }
 
     depth = passedDepth;
     if (cellSetAboveSurface) {

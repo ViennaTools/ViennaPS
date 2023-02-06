@@ -1,11 +1,11 @@
 #ifndef PS_PROCESS_MODEL
 #define PS_PROCESS_MODEL
 
+#include <psAdvectionCallback.hpp>
 #include <psGeometricModel.hpp>
 #include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
-#include <psVolumeModel.hpp>
 
 #include <rayParticle.hpp>
 
@@ -16,7 +16,8 @@ private:
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psVolumeModel<NumericType, D>> volumeModel = nullptr;
+  psSmartPointer<psAdvectionCalback<NumericType, D>> advectionCallback =
+      nullptr;
   psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
@@ -28,8 +29,9 @@ public:
   virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psVolumeModel<NumericType, D>> getVolumeModel() {
-    return volumeModel;
+  virtual psSmartPointer<psAdvectionCalback<NumericType, D>>
+  getAdvectionCallback() {
+    return advectionCallback;
   }
   virtual psSmartPointer<psGeometricModel<NumericType, D>> getGeometricModel() {
     return geometricModel;
@@ -56,10 +58,12 @@ public:
         passedSurfaceModel);
   }
 
-  template <typename VolumeModelType>
-  void setVolumeModel(psSmartPointer<VolumeModelType> passedVolumeModel) {
-    volumeModel = std::dynamic_pointer_cast<psVolumeModel<NumericType, D>>(
-        passedVolumeModel);
+  template <typename AdvectionCallbackType>
+  void setAdvectionCallback(
+      psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
+    advectionCallback =
+        std::dynamic_pointer_cast<psAdvectionCalback<NumericType, D>>(
+            passedAdvectionCallback);
   }
 
   template <typename GeometricModelType>

@@ -9,6 +9,8 @@
 #include <psGDSUtils.hpp>
 #include <psSmartPointer.hpp>
 
+enum class psPointOrder { CLOCKWISE, COUNTER_CLOCKWISE };
+
 template <class NumericType, int D = 3> class psGDSGeometry {
   using structureLayers =
       std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
@@ -21,6 +23,9 @@ template <class NumericType, int D = 3> class psGDSGeometry {
   std::array<NumericType, 2> boundaryPadding = {0., 0.};
   std::array<NumericType, 2> minBounds;
   std::array<NumericType, 2> maxBounds;
+  psPointOrder pointOrder = psPointOrder::COUNTER_CLOCKWISE;
+  bool pointOrderFlag = true;
+  unsigned triangulationTimeOut = 100000000;
 
   double bounds[6];
   NumericType gridDelta;
@@ -46,6 +51,15 @@ public:
           .addWarning("Cannot import 2D geometry from GDS file.")
           .print();
       return;
+    }
+  }
+
+  void setPointOrder(const psPointOrder passedPointOrder) {
+    pointOrder = passedPointOrder;
+    if (pointOrder == psPointOrder::CLOCKWISE) {
+      pointOrderFlag = false;
+    } else {
+      pointOrderFlag = true;
     }
   }
 
@@ -415,8 +429,13 @@ public:
       offsetPoint[2] = baseHeight;
       mesh->insertNextNode(offsetPoint);
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{
-          i, (i + 1) % numPointsFlat, i + numPointsFlat});
+      if (pointOrderFlag) {
+        mesh->insertNextTriangle(std::array<unsigned, 3>{
+            i, (i + 1) % numPointsFlat, i + numPointsFlat});
+      } else {
+        mesh->insertNextTriangle(std::array<unsigned, 3>{
+            i + numPointsFlat, (i + 1) % numPointsFlat, i});
+      }
     }
 
     for (unsigned i = 0; i < numPointsFlat; i++) {
@@ -427,9 +446,15 @@ public:
       offsetPoint[2] = baseHeight + height;
       mesh->insertNextNode(offsetPoint);
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{
-          upPoint, (upPoint + 1) % numPointsFlat,
-          (upPoint + 1) % numPointsFlat + numPointsFlat});
+      if (pointOrderFlag) {
+        mesh->insertNextTriangle(std::array<unsigned, 3>{
+            upPoint, (upPoint + 1) % numPointsFlat,
+            (upPoint + 1) % numPointsFlat + numPointsFlat});
+      } else {
+        mesh->insertNextTriangle(std::array<unsigned, 3>{
+            (upPoint + 1) % numPointsFlat + numPointsFlat,
+            (upPoint + 1) % numPointsFlat, upPoint});
+      }
     }
 
     // polygon triangulation (ear clipping algorithm)
@@ -444,17 +469,36 @@ public:
 
     unsigned numTriangles = 0;
     unsigned i = numPointsFlat - 1;
+    unsigned counter = 0;
     while (numTriangles < (numPointsFlat - 2)) {
       i = rightNeighbors[i];
       if (isEar(leftNeighbors[i], i, rightNeighbors[i], mesh, numPointsFlat)) {
-        mesh->insertNextTriangle(
-            std::array<unsigned, 3>{rightNeighbors[i], i, leftNeighbors[i]});
+        if (pointOrderFlag) {
+
+          mesh->insertNextTriangle(
+              std::array<unsigned, 3>{rightNeighbors[i], i, leftNeighbors[i]});
+        } else {
+          mesh->insertNextTriangle(
+              std::array<unsigned, 3>{leftNeighbors[i], i, rightNeighbors[i]});
+        }
 
         // remove point
         leftNeighbors[rightNeighbors[i]] = leftNeighbors[i];
         rightNeighbors[leftNeighbors[i]] = rightNeighbors[i];
 
         numTriangles++;
+      }
+
+      if (counter++ > triangulationTimeOut) {
+        std::string changePointOrder = pointOrderFlag
+                                           ? "psPointOrder::CLOCKWISE"
+                                           : "psPointOrder::COUNTER_CLOCKWISE";
+        lsMessage::getInstance()
+            .addError("Timeout in surface triangulation. Point order in "
+                      "GDS file might be incompatible. Try changing the "
+                      "order by setting setPointOder(" +
+                      changePointOrder + ") in current geometry.")
+            .print();
       }
     }
 
@@ -478,9 +522,10 @@ public:
     auto &points = mesh->getNodes();
 
     // check if triangle is clockwise orientated
-    if ((points[i][0] * points[j][1] + points[i][1] * points[k][0] +
-         points[j][0] * points[k][1] - points[k][0] * points[j][1] -
-         points[k][1] * points[i][0] - points[j][0] * points[i][1]) < 0.)
+    if (((points[i][0] * points[j][1] + points[i][1] * points[k][0] +
+          points[j][0] * points[k][1] - points[k][0] * points[j][1] -
+          points[k][1] * points[i][0] - points[j][0] * points[i][1]) < 0.) !=
+        !pointOrderFlag)
       return false;
 
     for (unsigned m = 0; m < numPoints; m++) {

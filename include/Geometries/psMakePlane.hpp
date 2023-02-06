@@ -70,5 +70,7 @@ public:
     lsMakeGeometry<NumericType, D>(
         substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
+
+    domain->insertNextLevelSet(substrate);
   }
 };

@@ -67,7 +67,7 @@ public:
     return {header};
   }
 
-  psSmartPointer<std::vector<std::array<NumericType, NumCols>>> apply() {
+  psSmartPointer<std::vector<std::array<NumericType, NumCols>>> readContent() {
     std::ifstream file(filename);
     if (file.is_open()) {
       auto data =
