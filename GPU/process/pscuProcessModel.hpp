@@ -4,9 +4,10 @@
 
 #include <pscuSurfaceModel.hpp>
 
+#include <psAdvectionCallback.hpp>
+#include <psGeometricModel.hpp>
 #include <psSmartPointer.hpp>
 #include <psVelocityField.hpp>
-#include <psVolumeModel.hpp>
 
 template <typename NumericType> class pscuProcessModel {
 private:
@@ -14,7 +15,9 @@ private:
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
   psSmartPointer<pscuSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psVolumeModel<NumericType, 3>> volumeModel = nullptr;
+  psSmartPointer<psAdvectionCallback<NumericType, 3>> advectionCallback =
+      nullptr;
+  psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
   char *embbededPtxCode = nullptr;
@@ -26,8 +29,12 @@ public:
   virtual psSmartPointer<pscuSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psVolumeModel<NumericType, 3>> getVolumeModel() {
-    return volumeModel;
+  virtual psSmartPointer<psAdvectionCallback<NumericType, 3>>
+  getAdvectionCallback() {
+    return advectionCallback;
+  }
+  virtual psSmartPointer<psGeometricModel<NumericType, D>> getGeometricModel() {
+    return geometricModel;
   }
   virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
     return velocityField;
@@ -38,7 +45,6 @@ public:
   std::string getProcessName() { return processName; }
 
   void setPtxCode(char *ptxCode) { embbededPtxCode = ptxCode; }
-
   char *getPtxCode() { return embbededPtxCode; }
 
   void insertNextParticleType(const curtParticle<NumericType> &passedParticle) {
@@ -55,10 +61,20 @@ public:
         passedSurfaceModel);
   }
 
-  template <typename VolumeModelType>
-  void setVolumeModel(psSmartPointer<VolumeModelType> passedVolumeModel) {
-    volumeModel = std::dynamic_pointer_cast<psVolumeModel<NumericType, 3>>(
-        passedVolumeModel);
+  template <typename AdvectionCallbackType>
+  void setAdvectionCallback(
+      psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
+    advectionCallback =
+        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, 3>>(
+            passedAdvectionCallback);
+  }
+
+  template <typename GeometricModelType>
+  void
+  setGeometricModel(psSmartPointer<GeometricModelType> passedGeometricModel) {
+    geometricModel =
+        std::dynamic_pointer_cast<psGeometricModel<NumericType, D>>(
+            passedGeometricModel);
   }
 
   template <typename VelocityFieldType>

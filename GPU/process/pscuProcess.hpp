@@ -12,8 +12,8 @@
 
 #include <pscuProcessModel.hpp>
 #include <pscuSurfaceModel.hpp>
-#include <pscuVolumeModel.hpp>
 
+#include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
 #include <psSmartPointer.hpp>
 #include <psTranslationField.hpp>
@@ -61,6 +61,51 @@ public:
 
   void apply() {
     /* ---------- Process Setup --------- */
+
+    /* ---------- Process Setup --------- */
+    if (!model) {
+      lsMessage::getInstance()
+          .addWarning("No process model passed to psProcess.")
+          .print();
+      return;
+    }
+
+    if (!domain) {
+      lsMessage::getInstance()
+          .addWarning("No domain passed to psProcess.")
+          .print();
+      return;
+    }
+
+    if (model->getGeometricModel()) {
+      model->getGeometricModel()->setDomain(domain);
+#ifdef VIENNAPS_VERBOSE
+      std::cout << "Applying geometric model..." << std::endl;
+#endif
+      model->getGeometricModel()->apply();
+      return;
+    }
+
+    if (processDuration == 0.) {
+      // apply only advection callback
+      if (model->getAdvectionCallback()) {
+        model->getAdvectionCallback()->setDomain(domain);
+        model->getAdvectionCallback()->applyPreAdvect(0);
+      } else {
+        lsMessage::getInstance()
+            .addWarning("No advection callback passed to psProcess.")
+            .print();
+      }
+      return;
+    }
+
+    if (!model->getSurfaceModel()) {
+      lsMessage::getInstance()
+          .addWarning("No surface model passed to psProcess.")
+          .print();
+      return;
+    }
+
     auto name = model->getProcessName();
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
@@ -74,12 +119,14 @@ public:
     meshConverter.setTranslator(translator);
 
     assert(model->getVelocityField() != nullptr);
-    auto transField = psSmartPointer<psTranslationField<NumericType>>::New();
+    auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
+        model->getVelocityField()->useTranslationField());
     transField->setTranslator(translator);
     transField->setVelocityField(model->getVelocityField());
 
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
+    advectionKernel.setIntegrationScheme(integrationScheme);
 
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -108,11 +155,10 @@ public:
               rayTrace.getParticles()));
     }
 
-    // Determine whether volume model is used
-    const bool useVolumeModel = model->getVolumeModel() != nullptr;
-    if (useVolumeModel) {
-      assert(domain->getUseCellSet());
-      model->getVolumeModel()->setDomain(domain);
+    // Determine whether advection callback is used
+    const bool useAdvectionCallback = model->getAdvectionCallback() != nullptr;
+    if (useAdvectionCallback) {
+      model->getAdvectionCallback()->setDomain(domain);
     }
 
     // Determine whether there are process parameters used in ray tracing
@@ -123,8 +169,8 @@ public:
 #ifdef VIENNAPS_VERBOSE
     if (useProcessParams)
       std::cout << "Using process parameters." << std::endl;
-    if (useVolumeModel)
-      std::cout << "Using volume model." << std::endl;
+    if (useAdvectionCallback)
+      std::cout << "Using advection callback." << std::endl;
 #endif
 
     bool useCoverages = false;
@@ -161,13 +207,15 @@ public:
                                                     diskMesh->nodes.size());
 
 #ifdef VIENNAPS_VERBOSE
-          rayTrace.downloadResultsToPointData(diskMesh->getCellData(), d_rates,
-                                              diskMesh->nodes.size());
-          downloadCoverages(diskMesh->getCellData(),
-                            model->getSurfaceModel()->getCoverages(),
-                            diskMesh->nodes.size());
-          printDiskMesh(diskMesh, name + "_covIinit_" +
-                                      std::to_string(iterations) + ".vtp");
+          if (printIntermediate) {
+            rayTrace.downloadResultsToPointData(
+                diskMesh->getCellData(), d_rates, diskMesh->nodes.size());
+            downloadCoverages(diskMesh->getCellData(),
+                              model->getSurfaceModel()->getCoverages(),
+                              diskMesh->nodes.size());
+            printDiskMesh(diskMesh, name + "_covIinit_" +
+                                        std::to_string(iterations) + ".vtp");
+          }
           std::cerr << "\r"
                     << "Iteration: " << iterations << " / " << maxIterations;
           if (iterations == maxIterations)
@@ -220,9 +268,9 @@ public:
 #endif
 
       // apply volume model
-      if (useVolumeModel) {
-        model->getVolumeModel()->applyPreAdvect(processDuration -
-                                                remainingTime);
+      if (useAdvectionCallback) {
+        model->getAdvectionCallback()->applyPreAdvect(processDuration -
+                                                      remainingTime);
       }
 
       // move coverages to LS, so they get are moved with the advection step
@@ -250,7 +298,7 @@ public:
 
         // domain->printSurface(name + "_step_" + std::to_string(printCounter) +
         //                      ".vtp");
-        if (useVolumeModel)
+        if (useAdvectionCallback)
           domain->getCellSet()->writeVTU(name + "_step_" +
                                          std::to_string(printCounter) + ".vtu");
         printCounter++;
@@ -267,9 +315,10 @@ public:
       }
 
       // apply volume model
-      if (useVolumeModel) {
-        domain->getCellSet()->updateSurface();
-        model->getVolumeModel()->applyPostAdvect(
+      if (useAdvectionCallback) {
+        if (domain->getUseCellSet())
+          domain->getCellSet()->updateSurface();
+        model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
       }
 
@@ -364,6 +413,8 @@ private:
 
   psDomainType domain = nullptr;
   psSmartPointer<pscuProcessModel<NumericType>> model = nullptr;
+  lsIntegrationSchemeEnum integrationScheme =
+      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   NumericType processDuration;
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;

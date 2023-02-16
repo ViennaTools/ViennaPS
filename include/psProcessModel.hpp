@@ -16,7 +16,7 @@ private:
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psAdvectionCalback<NumericType, D>> advectionCallback =
+  psSmartPointer<psAdvectionCallback<NumericType, D>> advectionCallback =
       nullptr;
   psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
@@ -29,7 +29,7 @@ public:
   virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psAdvectionCalback<NumericType, D>>
+  virtual psSmartPointer<psAdvectionCallback<NumericType, D>>
   getAdvectionCallback() {
     return advectionCallback;
   }
@@ -62,7 +62,7 @@ public:
   void setAdvectionCallback(
       psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
     advectionCallback =
-        std::dynamic_pointer_cast<psAdvectionCalback<NumericType, D>>(
+        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, D>>(
             passedAdvectionCallback);
   }
 

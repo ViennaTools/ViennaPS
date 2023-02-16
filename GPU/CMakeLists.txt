@@ -75,10 +75,13 @@ foreach(kernel ${kernels})
 endforeach()
 
 cuda_compile_and_embed(embedded_SF6O2_pipeline ${PROJECT_SOURCE_DIR}/pipelines/SF6O2rayPipeline.cu)
+cuda_compile_and_embed(embedded_Fluorocarbon_pipeline ${PROJECT_SOURCE_DIR}/pipelines/FluorocarbonPipeline.cu)
+
 cuda_compile_and_embed(embedded_deposition_pipeline
                        ${PROJECT_SOURCE_DIR}/pipelines/DepositionPipeline.cu)
+add_compile_definitions(GPU_SUPPORT)
 
-add_executable(ViennaPS_GPU ${embedded_SF6O2_pipeline} ${embedded_deposition_pipeline}
+add_executable(ViennaPS_GPU ${embedded_SF6O2_pipeline} ${embedded_deposition_pipeline} ${embedded_Fluorocarbon_pipeline}
                             ${PROJECT_SOURCE_DIR}/app/pscuApplication.cpp)
 
 target_include_directories(ViennaPS_GPU PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}

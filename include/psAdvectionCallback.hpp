@@ -4,7 +4,7 @@
 #include <psDomain.hpp>
 #include <psSmartPointer.hpp>
 
-template <typename NumericType, int D> class psAdvectionCalback {
+template <typename NumericType, int D> class psAdvectionCallback {
 protected:
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
 

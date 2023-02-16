@@ -60,6 +60,7 @@ void pscuCreateContext(pscuContext &context) {
   CUmodule normModule;
   CUmodule transModule;
   CUmodule SF6O2ProcessModule;
+  CUmodule FluorocarbonProcessModule;
 
   CUresult err;
 
@@ -90,6 +91,14 @@ void pscuCreateContext(pscuContext &context) {
 
   context->moduleNames.push_back(SF6O2ProcessKernelsName);
   context->modules.push_back(SF6O2ProcessModule);
+
+  std::string FluorocarbonProcessKernelsName = "FluorocarbonProcessKernels.ptx";
+  err = cuModuleLoad(&FluorocarbonProcessModule, FluorocarbonProcessKernelsName.c_str());
+  if (err != CUDA_SUCCESS)
+    utLog::getInstance().addModuleError(FluorocarbonProcessKernelsName, err).print();
+
+  context->moduleNames.push_back(FluorocarbonProcessKernelsName);
+  context->modules.push_back(FluorocarbonProcessModule);
 }
 
 void pscuReleaseContext(pscuContext context) { delete context; }

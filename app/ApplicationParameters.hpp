@@ -12,6 +12,7 @@ enum class GeometryType { NONE, TRENCH, HOLE, PLANE, GDS, IMPORT };
 enum class ProcessType {
   NONE,
   SF6O2ETCHING,
+  FLUOROCARBONETCHING,
   DEPOSITION,
   SPHEREDISTRIBUTION,
   BOXDISTRIBUTION,
@@ -66,6 +67,8 @@ struct ApplicationParameters {
   NumericType ionEnergy = 100;       // eV
   NumericType plasmaFrequency = 0.1; // MHz
   NumericType A_O = 3.;
+  // Fluorocarbon etching
+  NumericType temperature = 300; // K
   // Deposition
   NumericType rate = 1.;
   NumericType sticking = 1.;

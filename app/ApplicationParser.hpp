@@ -128,6 +128,18 @@ private:
           psUtils::Item{"A_O", params->A_O},
           psUtils::Item{"raysPerPoint", params->raysPerPoint},
           psUtils::Item{"maskId", params->maskId});
+    } else if (model == "FluorocarbonEtching") {
+      params->processType = ProcessType::FLUOROCARBONETCHING;
+      psUtils::AssignItems(
+          config, psUtils::Item{"time", params->processTime},
+          psUtils::Item{"ionFlux", params->totalIonFlux},
+          psUtils::Item{"ionEnergy", params->ionEnergy},
+          psUtils::Item{"plasmaFrequency", params->plasmaFrequency},
+          psUtils::Item{"etchantFlux", params->totalEtchantFlux},
+          psUtils::Item{"oxygenFlux", params->totalOxygenFlux},
+          psUtils::Item{"temperature", params->temperature},
+          psUtils::Item{"raysPerPoint", params->raysPerPoint},
+          psUtils::Item{"maskId", params->maskId});
     } else if (model == "SphereDistribution") {
       params->processType = ProcessType::SPHEREDISTRIBUTION;
       psUtils::AssignItems(config, psUtils::Item{"radius", params->radius});

@@ -155,6 +155,29 @@ All parameters which are parsed additional to a command are described below. For
 </dl>
 
 ---
+**PROCESS FluorocarbonEtching**
+<dl>
+  <dt>time</dt>
+  <dd>process time (numeric value, default: 1)</dd>
+  <dt>ionFlux</dt>
+  <dd>total flux of ions in plasma (numeric value, default: 2e16)</dd>
+  <dt>ionEnergy</dt>
+  <dd>mean ion energy in eV (numeric value, default: 100)</dd>
+  <dt>plasmaFrequency</dt>
+  <dd>RF plasma frequency in MHz (numeric value, default: 0.1)</dd>
+  <dt>etchantFlux</dt>
+  <dd>total flux of etchant species in plasma (numeric value, default: 4.5e16)</dd>
+  <dt>oxygenFlux</dt>
+  <dd>total flux of oxygen in plasma (numeric value, default: 1e18)</dd>
+  <dt>temperature</dt>
+  <dd>reactor temperature in K (numeric value, default: 300)</dd>
+  <dt>raysPerPoint</dt>
+  <dd>number of rays traced per grid point in the surface geometry (integer value, default: 3000)</dd>
+  <dt>maskId</dt>
+  <dd>ID of mask material (integer value, default: 0)</dd> 
+</dl>
+
+---
 **PROCESS DirectionalEtching**
 <dl>
   <dt>time</dt>

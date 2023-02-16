@@ -16,6 +16,7 @@
 
 #include <ApplicationParameters.hpp>
 #include <ApplicationParser.hpp>
+#include <Interrupt.hpp>
 
 #include <DirectionalEtching.hpp>
 #include <GeometricDistributionModels.hpp>
@@ -90,6 +91,11 @@ public:
     }
   }
 
+  void printGeometry(std::string fileName) {
+    params->fileName = fileName;
+    writeVTP();
+  }
+
 protected:
   virtual void
   runSimpleDeposition(psSmartPointer<psDomain<NumericType, D>> processGeometry,
@@ -123,6 +129,12 @@ protected:
     process.setProcessDuration(processParams->processTime);
     process.setPrintIntdermediate(params->printIntermediate);
     process.apply();
+  }
+
+  virtual void runFluorocarbonEtching(
+      psSmartPointer<psDomain<NumericType, D>> processGeometry,
+      psSmartPointer<ApplicationParameters> processParams) {
+    std::cout << "NOT IMPLEMENTED" << std::endl;
   }
 
   virtual void runSphereDistribution(
@@ -350,6 +362,18 @@ private:
                 << "\n\tA_O: " << params->A_O << "\n\tUsing "
                 << params->raysPerPoint << " rays per source grid point\n\n";
       runSF6O2Etching(geometry, params);
+      break;
+    }
+
+    case ProcessType::FLUOROCARBONETCHING: {
+      std::cout << "Fluorocarbon etching\n\tTime: " << params->processTime
+                << "\n\tEtchant flux: " << params->totalEtchantFlux
+                << "\n\tOxygen flux: " << params->totalOxygenFlux
+                << "\n\tIon flux: " << params->totalIonFlux
+                << "\n\tIon energy: " << params->ionEnergy
+                << "\n\tTemperature: " << params->temperature << "\n\tUsing "
+                << params->raysPerPoint << " rays per source grid point\n\n";
+      runFluorocarbonEtching(geometry, params);
       break;
     }
 
