@@ -16,13 +16,17 @@ public:
 
   static constexpr int DataDim = InputDim + OutputDim;
 
+  using DataVector = std::vector<std::array<NumericType, DataDim>>;
+  using DataPtr = psSmartPointer<DataVector>;
+
 protected:
-  psSmartPointer<psDataSource<NumericType, DataDim>> dataSource = nullptr;
+  DataPtr data = nullptr;
+  bool dataChanged = true;
 
 public:
-  void setDataSource(
-      psSmartPointer<psDataSource<NumericType, DataDim>> passedDataSource) {
-    dataSource = passedDataSource;
+  void setData(DataPtr passedData) {
+    data = passedData;
+    dataChanged = true;
   }
 
   virtual bool initialize() { return true; }

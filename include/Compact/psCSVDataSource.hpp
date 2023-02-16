@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <psCSVReader.hpp>
+#include <psCSVWriter.hpp>
 #include <psDataSource.hpp>
 #include <psSmartPointer.hpp>
 #include <psUtils.hpp>
@@ -16,6 +17,9 @@
 template <typename NumericType, int D>
 class psCSVDataSource : public psDataSource<NumericType, D> {
   psCSVReader<NumericType, D> reader;
+  psCSVWriter<NumericType, D> writer;
+
+  std::string header;
   std::unordered_map<std::string, NumericType> namedParameters;
   std::vector<NumericType> positionalParameters;
   bool parametersInitialized = false;
@@ -75,13 +79,14 @@ class psCSVDataSource : public psDataSource<NumericType, D> {
   }
 
   void processHeader() {
-    auto header = reader.readHeader();
-    if (header.has_value()) {
-      std::istringstream cmt(header.value());
+    auto opt = reader.readHeader();
+    if (opt.has_value()) {
+      header = opt.value();
+      std::istringstream hdr(header);
       std::string line;
 
       // Go over each comment line
-      while (std::getline(cmt, line)) {
+      while (std::getline(hdr, line)) {
         // Check if the line is marked as a parameter line
         if (line.rfind("#!") == 0) {
           processParamLine(line, positionalParameters, namedParameters);
@@ -92,22 +97,37 @@ class psCSVDataSource : public psDataSource<NumericType, D> {
   }
 
 public:
-  using typename psDataSource<NumericType, D>::DataPtr;
+  using typename psDataSource<NumericType, D>::DataItemType;
+  using typename psDataSource<NumericType, D>::DataVectorType;
 
   psCSVDataSource() {}
 
-  psCSVDataSource(std::string passedFilename, int passedOffset = 0) {
+  psCSVDataSource(std::string passedFilename) {
     reader.setFilename(passedFilename);
-    reader.setOffset(passedOffset);
+    writer.setFilename(passedFilename);
   }
 
   void setFilename(std::string passedFilename) {
     reader.setFilename(passedFilename);
+    writer.setFilename(passedFilename);
   }
 
-  void setOffset(int passedOffset) { reader.setOffset(passedOffset); }
+  psSmartPointer<DataVectorType> read() override {
+    auto opt = reader.readHeader();
+    header = opt.value_or("");
+    return reader.readContent();
+  }
 
-  DataPtr getAll() override { return reader.apply(); }
+  bool write(psSmartPointer<DataVectorType> data) override {
+    if (data) {
+      writer.setHeader(header);
+      writer.initialize();
+      for (auto &row : *data)
+        if (!writer.writeRow(row))
+          return false;
+    }
+    return true;
+  }
 
   std::vector<NumericType> getPositionalParameters() override {
     if (!parametersInitialized)

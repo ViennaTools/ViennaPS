@@ -30,6 +30,8 @@ public:
 
   virtual void
   setVelocities(psSmartPointer<std::vector<NumericType>> passedVelocities) {}
+
+  virtual bool useTranslationField() const { return true; }
 };
 
 #endif

@@ -7,13 +7,13 @@
 #include <lsMessage.hpp>
 #include <lsToDiskMesh.hpp>
 
+#include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
 #include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
-#include <psVolumeModel.hpp>
 
 #include <rayBoundCondition.hpp>
 #include <rayParticle.hpp>
@@ -58,6 +58,12 @@ public:
 
   void apply() {
     /* ---------- Process Setup --------- */
+    if (!model) {
+      lsMessage::getInstance()
+          .addWarning("No process model passed to psProcess.")
+          .print();
+      return;
+    }
     auto name = model->getProcessName();
 
     if (!domain) {
@@ -77,13 +83,13 @@ public:
     }
 
     if (processDuration == 0.) {
-      // apply only volume model
-      if (model->getVolumeModel()) {
-        model->getVolumeModel()->setDomain(domain);
-        model->getVolumeModel()->applyPreAdvect(0);
+      // apply only advection callback
+      if (model->getAdvectionCallback()) {
+        model->getAdvectionCallback()->setDomain(domain);
+        model->getAdvectionCallback()->applyPreAdvect(0);
       } else {
         lsMessage::getInstance()
-            .addWarning("No volume model passed to psProcess.")
+            .addWarning("No advection callback passed to psProcess.")
             .print();
       }
       return;
@@ -106,7 +112,8 @@ public:
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
 
-    auto transField = psSmartPointer<psTranslationField<NumericType>>::New();
+    auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
+        model->getVelocityField()->useTranslationField());
     transField->setTranslator(translator);
     transField->setVelocityField(model->getVelocityField());
 
@@ -138,11 +145,10 @@ public:
       rayTrace.setCalculateFlux(false);
     }
 
-    // Determine whether volume model is used
-    const bool useVolumeModel = model->getVolumeModel() != nullptr;
-    if (useVolumeModel) {
-      assert(domain->getUseCellSet());
-      model->getVolumeModel()->setDomain(domain);
+    // Determine whether advection callback is used
+    const bool useAdvectionCallback = model->getAdvectionCallback() != nullptr;
+    if (useAdvectionCallback) {
+      model->getAdvectionCallback()->setDomain(domain);
     }
 
     // Determine whether there are process parameters used in ray tracing
@@ -153,8 +159,8 @@ public:
 #ifdef VIENNAPS_VERBOSE
     if (useProcessParams)
       std::cout << "Using process parameters." << std::endl;
-    if (useVolumeModel)
-      std::cout << "Using volume model." << std::endl;
+    if (useAdvectionCallback)
+      std::cout << "Using advection callback." << std::endl;
 #endif
 
     bool useCoverages = false;
@@ -332,10 +338,10 @@ public:
         printDiskMesh(diskMesh,
                       name + "_" + std::to_string(counter++) + ".vtp");
 #endif
-      // apply volume model
-      if (useVolumeModel) {
-        model->getVolumeModel()->applyPreAdvect(processDuration -
-                                                remainingTime);
+      // apply advection callback
+      if (useAdvectionCallback) {
+        model->getAdvectionCallback()->applyPreAdvect(processDuration -
+                                                      remainingTime);
       }
 
       // move coverages to LS, so they get are moved with the advection step
@@ -350,10 +356,11 @@ public:
         updateCoveragesFromAdvectedSurface(
             translator, model->getSurfaceModel()->getCoverages());
 
-      // apply volume model
-      if (useVolumeModel) {
-        domain->getCellSet()->updateSurface();
-        model->getVolumeModel()->applyPostAdvect(
+      // apply advection callback
+      if (useAdvectionCallback) {
+        if (domain->getUseCellSet())
+          domain->getCellSet()->updateSurface();
+        model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
       }
 

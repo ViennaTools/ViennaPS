@@ -61,45 +61,47 @@ public:
 
   void setHeader(std::string passedHeader) { header = passedHeader; }
 
-  void writeRow(const std::array<NumericType, NumCols> &data) {
+  bool writeRow(const std::array<NumericType, NumCols> &data) {
     if (!initialized)
       if (!initialize())
-        return;
+        return false;
 
-    if (file.is_open())
-      file << join(data.cbegin(), data.cend()) << '\n';
+    file << join(data.cbegin(), data.cend()) << '\n';
+    return true;
   }
 
-  void writeRow(const std::vector<NumericType> &data) {
+  bool writeRow(const std::vector<NumericType> &data) {
     if (!initialized)
       if (!initialize())
-        return;
+        return false;
 
     if (data.size() != NumCols) {
       std::cout << "Unexpected number of items in the provided row!\n";
-      return;
+      return false;
     }
     if (!file.is_open()) {
       std::cout << "Couldn't open file `" << filename << "`\n";
-      return;
+      return false;
     }
     file << join(data.cbegin(), data.cend()) << '\n';
+    return true;
   }
 
-  void writeRow(std::initializer_list<NumericType> data) {
+  bool writeRow(std::initializer_list<NumericType> data) {
     if (!initialized)
       if (!initialize())
-        return;
+        return false;
 
     if (data.size() != NumCols) {
       std::cout << "Unexpected number of items in the provided row!\n";
-      return;
+      return false;
     }
     if (!file.is_open()) {
       std::cout << "Couldn't open file `" << filename << "`\n";
-      return;
+      return false;
     }
     file << join(data.begin(), data.end()) << '\n';
+    return true;
   }
 
   void flush() {

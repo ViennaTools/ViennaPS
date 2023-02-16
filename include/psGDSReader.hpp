@@ -29,7 +29,7 @@ public:
   psGDSReader(PSPtrType passedGeometry, std::string passedFileName)
       : geometry(passedGeometry), fileName(passedFileName) {}
 
-  void setgeometry(PSPtrType passedGeometry) { geometry = passedGeometry; }
+  void setGeometry(PSPtrType passedGeometry) { geometry = passedGeometry; }
 
   void setFileName(std::string passedFileName) { fileName = passedFileName; }
 
