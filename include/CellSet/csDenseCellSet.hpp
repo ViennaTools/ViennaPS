@@ -14,20 +14,23 @@
 
 #include <rayUtil.hpp>
 
+#include <psSmartPointer.hpp>
+
 /**
   This class represents a cell-based voxel implementation of a volume. The
   depth of the cell set in z-direction can be specified.
 */
 template <class T, int D> class csDenseCellSet {
 private:
-  using gridType = lsSmartPointer<lsMesh<T>>;
+  using gridType = psSmartPointer<lsMesh<T>>;
   using levelSetsType =
-      lsSmartPointer<std::vector<lsSmartPointer<lsDomain<T, D>>>>;
+      psSmartPointer<std::vector<psSmartPointer<lsDomain<T, D>>>>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
-  lsSmartPointer<lsDomain<T, D>> surface = nullptr;
-  lsSmartPointer<csBVH<T, D>> BVH = nullptr;
+  psSmartPointer<lsDomain<T, D>> surface = nullptr;
+  psSmartPointer<csBVH<T, D>> BVH = nullptr;
+  std::vector<std::set<size_t>> neighborhood;
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
@@ -49,31 +52,16 @@ public:
     levelSets = passedLevelSets;
 
     if (cellGrid == nullptr)
-      cellGrid = lsSmartPointer<lsMesh<T>>::New();
+      cellGrid = psSmartPointer<lsMesh<T>>::New();
 
     if (surface == nullptr)
-      surface = lsSmartPointer<lsDomain<T, D>>::New(levelSets->back());
+      surface = psSmartPointer<lsDomain<T, D>>::New(levelSets->back());
     else
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
-    hrleVectorType<hrleIndexType, D> minBounds;
-    hrleVectorType<hrleIndexType, D> maxBounds;
-    for (unsigned i = 0; i < D; ++i) {
-      minBounds[i] = std::numeric_limits<hrleIndexType>::max();
-      maxBounds[i] = std::numeric_limits<hrleIndexType>::lowest();
-    }
-    for (unsigned i = 0; i < D; ++i) {
-      minBounds[i] =
-          std::min(minBounds[i], (surface->getGrid().isNegBoundaryInfinite(i))
-                                     ? surface->getDomain().getMinRunBreak(i)
-                                     : surface->getGrid().getMinBounds(i));
-
-      maxBounds[i] =
-          std::max(maxBounds[i], (surface->getGrid().isPosBoundaryInfinite(i))
-                                     ? surface->getDomain().getMaxRunBreak(i)
-                                     : surface->getGrid().getMaxBounds(i));
-    }
+    auto minBounds = surface->getGrid().getMinBounds();
+    auto maxBounds = surface->getGrid().getMaxBounds();
 
     depth = passedDepth;
     if (cellSetAboveSurface) {
@@ -83,14 +71,14 @@ public:
     }
 
     lsToVoxelMesh<T, D> voxelConverter(cellGrid);
-    auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
     if (depth > 0.) {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depthPlanePos;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
-                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface && depth > 0.)
@@ -113,7 +101,7 @@ public:
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
     calculateBounds(minBounds, maxBounds);
-    BVH = lsSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
+    BVH = psSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
     buildBVH();
   }
 
@@ -134,7 +122,7 @@ public:
 
   gridType getCellGrid() { return cellGrid; }
 
-  lsSmartPointer<csBVH<T, D>> getBVH() const { return BVH; }
+  psSmartPointer<csBVH<T, D>> getBVH() const { return BVH; }
 
   T getDepth() const { return depth; }
 
@@ -144,11 +132,11 @@ public:
     return cellGrid->getNodes();
   }
 
-  std::vector<std::array<unsigned, (1 << D)>> getElements() {
+  std::vector<std::array<unsigned, (1 << D)>> &getElements() {
     return cellGrid->template getElements<(1 << D)>();
   }
 
-  lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
+  psSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
   levelSetsType getLevelSets() const { return levelSets; }
 
@@ -250,14 +238,14 @@ public:
 
     lsToVoxelMesh<T, D> voxelConverter(cellGrid);
     auto plane =
-        lsSmartPointer<lsDomain<T, D>>::New(levelSets->back()->getGrid());
+        psSmartPointer<lsDomain<T, D>>::New(levelSets->back()->getGrid());
     if (depth > 0.) {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depthPlanePos;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
-                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface && depth > 0.)
@@ -287,18 +275,18 @@ public:
   // Updates the surface of the cell set. The new surface should be below the
   // old surface as this function can only remove cells from the cell set.
   void updateSurface() {
-    auto updateCellGrid = lsSmartPointer<lsMesh<T>>::New();
+    auto updateCellGrid = psSmartPointer<lsMesh<T>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(updateCellGrid);
     if (depth != 0.) {
-      auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+      auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depthPlanePos;
       normal[D - 1] = 1.;
 
       lsMakeGeometry<T, D>(plane,
-                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
       voxelConverter.insertNextLevelSet(plane);
     }
@@ -344,6 +332,42 @@ public:
         ff->at(idx) += data[idx] / factor;
       }
     }
+  }
+
+  void buildNeighborhood() {
+    const auto &cells = cellGrid->template getElements<(1 << D)>();
+    unsigned const numNodes = cellGrid->getNodes().size();
+    unsigned const numCells = cells.size();
+
+    neighborhood.clear();
+    neighborhood.resize(numCells);
+
+    std::vector<std::vector<unsigned>> nodeCellConnections(numNodes);
+
+    // for each node, store which cells are connected with the node
+    for (unsigned cellIdx = 0; cellIdx < numCells; cellIdx++) {
+      for (unsigned cellNodeIdx = 0; cellNodeIdx < (1 << D); cellNodeIdx++) {
+        nodeCellConnections[cells[cellIdx][cellNodeIdx]].push_back(cellIdx);
+      }
+    }
+
+    for (unsigned cellIdx = 0; cellIdx < numCells; cellIdx++) {
+      for (unsigned cellNodeIdx = 0; cellNodeIdx < (1 << D); cellNodeIdx++) {
+        auto &cellsAtNode = nodeCellConnections[cells[cellIdx][cellNodeIdx]];
+        for (const auto &neighborCell : cellsAtNode) {
+          if (neighborCell != cellIdx) {
+            neighborhood[cellIdx].insert(neighborCell);
+          }
+        }
+      }
+    }
+  }
+
+  std::set<size_t> &getNeighbors(size_t cellIdx) {
+    assert(!neighborhood.empty() &&
+           "Querying neighbors without creating neighborhood structure");
+    assert(cellIdx < numberOfCells && "Cell idx out of bounds");
+    return neighborhood[cellIdx];
   }
 
 private:
