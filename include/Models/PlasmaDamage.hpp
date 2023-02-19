@@ -5,7 +5,8 @@
 
 #include <rayUtil.hpp>
 
-template <class T> class DamageIon : public csParticle<DamageIon<T>, T> {
+template <class T, int D>
+class DamageIon : public csParticle<DamageIon<T, D>, T> {
 public:
   DamageIon(const T passedMeanEnergy = 100., const T passedMeanFreePath = 1.)
       : meanIonEnergy(passedMeanEnergy), meanFreePath(passedMeanFreePath) {}
@@ -58,7 +59,7 @@ public:
 
     if (NewEnergy > minEnergy) {
       reflect = true;
-      auto direction = rayReflectionConedCosine<T>(
+      auto direction = rayReflectionConedCosine<T, D>(
           rayInternal::PI / 2. - std::min(incAngle, minAngle), rayDir,
           geomNormal, Rng);
       E = NewEnergy;
@@ -99,11 +100,11 @@ public:
         direction[2] = negUniDist(RNG);
 
         // normalize
-        tmp = norm(direction);
-        mult(direction, T(1) / tmp);
+        tmp = csUtil::norm(direction);
+        csUtil::mult(direction, T(1) / tmp);
 
         // cos(angle)
-        cosTheta = dot(particle.direction, direction);
+        cosTheta = csUtil::dot(particle.direction, direction);
         // sin(angle)^2
         sinThetaSqr = 1 - cosTheta * cosTheta;
       } while (sinThetaSqr < mu * mu);
@@ -180,10 +181,10 @@ private:
 };
 
 template <typename NumericType, int D>
-class DamageModel : public psVolumeModel<NumericType, D> {
+class DamageModel : public psAdvectionCalback<NumericType, D> {
 protected:
-  using psVolumeModel<NumericType, D>::domain;
-  using psVolumeModel<NumericType, D>::tracer;
+  using psAdvectionCalback<NumericType, D>::domain;
+  csTracing<NumericType, D> tracer;
 
 public:
   DamageModel(const NumericType energy, const NumericType meanFreePath,
@@ -192,14 +193,17 @@ public:
     tracer.setExcludeMaterialId(maskID);
 
     auto damageIon =
-        std::make_unique<DamageIon<NumericType>>(energy, meanFreePath);
+        std::make_unique<DamageIon<NumericType, D>>(energy, meanFreePath);
     tracer.setParticle(damageIon);
   }
 
   virtual void applyPreAdvect(const NumericType processTime) {
+    assert(domain->getUseCellSet());
+
     tracer.setCellSet(domain->getCellSet());
     tracer.apply();
   }
+
   virtual void applyPostAdvect(const NumericType advectionTime) {}
 };
 
@@ -216,7 +220,7 @@ public:
         ionEnergy, meanFreePath, maskMaterial);
 
     processModel->setProcessName("PlasmaDamage");
-    processModel->setVolumeModel(volumeModel);
+    processModel->setAdvectionCallback(volumeModel);
   }
 
   psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {

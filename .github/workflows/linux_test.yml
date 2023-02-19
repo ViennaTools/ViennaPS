@@ -1,0 +1,99 @@
+name: Linux
+
+on:
+  workflow_run:
+    workflows: [Build Dependencies on Linux]
+    types:
+      - completed
+
+env:
+  BUILD_TYPE: Debug
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-examples:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout ViennaPS
+        uses: actions/checkout@v3
+
+      # ViennaLS
+      - name: Checkout ViennaLS
+        uses: actions/checkout@v3
+        with:
+          repository: ${{github.repository_owner}}/ViennaLS
+          path: ./viennals
+
+      - name: Restore ViennaLS build cache
+        uses: actions/cache@v3
+        id: viennals-dependency-cache
+        with:
+          key: viennals-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './viennals/external/upstream/**CMakeLists.txt' ) }}
+          path: |
+            ${{github.workspace}}/viennals/dependencies/Source
+            ${{github.workspace}}/viennals/dependencies/Build
+            ${{github.workspace}}/viennals/dependencies/Install
+
+      - name: Configure ViennaLS
+        working-directory: ${{github.workspace}}/viennals
+        run: |
+          cmake -B ./build \
+            -D CMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -D CMAKE_INSTALL_PREFIX=${{github.workspace}}/viennals/install
+
+      - name: Build ViennaLS
+        run: cmake --build ${{github.workspace}}/viennals/build
+
+      - name: Install ViennaLS
+        run: cmake --install ${{github.workspace}}/viennals/build
+
+      # ViennaRay
+      - name: Checkout ViennaRay
+        uses: actions/checkout@v3
+        with:
+          repository: ${{github.repository_owner}}/ViennaRay
+          path: ./viennaray
+
+      - name: Restore ViennaRay build cache
+        uses: actions/cache@v3
+        id: viennaray-dependency-cache
+        with:
+          key: viennaray-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './viennaray/external/upstream/**CMakeLists.txt' ) }}
+          path: |
+            ${{github.workspace}}/viennaray/dependencies/Install
+
+      - name: Configure ViennaRay
+        working-directory: ${{github.workspace}}/viennaray
+        run: |
+          cmake -B ./build \
+            -D CMAKE_BUILD_TYPE=${{env.build_type}} \
+            -D CMAKE_INSTALL_PREFIX=${{github.workspace}}/viennaray/install
+
+      - name: Build ViennaRay
+        run: cmake --build ${{github.workspace}}/viennaray/build
+
+      - name: Install ViennaRay
+        run: cmake --install ${{github.workspace}}/viennaray/build
+
+      # ViennaPS
+      - name: Configure CMake
+        run: |
+          cmake -B ./build \
+            -D ViennaLS_DIR=${{github.workspace}}/viennals/install/lib/cmake/ViennaLS/ \
+            -D ViennaRay_DIR=${{github.workspace}}/viennaray/install/lib/cmake/ViennaRay/ \
+            -D VIENNAPS_BUILD_EXAMPLES=ON \
+            -D VIENNAPS_BUILD_APPLICATION=ON
+
+      - name: Build Examples
+        run: cmake --build ./build --target buildExamples
+
+      - name: Build application
+        run: cmake --build ./build --target buildApplication
+
+      - name: Run
+        working-directory: ${{github.workspace}}/build/Examples/InterpolationDemo
+        run: ./InterpolationDemo

@@ -7,9 +7,11 @@
 #include <lsToDiskMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
+#include <lsWriter.hpp>
 
 #include <csDenseCellSet.hpp>
 
+#include <psPointValuesToLevelSet.hpp>
 #include <psSmartPointer.hpp>
 
 /**
@@ -24,6 +26,8 @@ public:
   typedef psSmartPointer<lsDomain<NumericType, D>> lsDomainType;
   typedef psSmartPointer<std::vector<lsDomainType>> lsDomainsType;
   typedef psSmartPointer<csDenseCellSet<NumericType, D>> csDomainType;
+
+  static constexpr char materialIdsLabel[] = "MaterialIds";
 
 private:
   lsDomainsType levelSets = nullptr;
@@ -79,7 +83,7 @@ public:
   void insertNextLevelSet(lsDomainType passedLevelSet,
                           bool wrapLowerLevelSet = true) {
     if (!levelSets->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->front(),
+      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->back(),
                                          lsBooleanOperationEnum::UNION)
           .apply();
     }
@@ -116,11 +120,40 @@ public:
     std::cout << "**************************" << std::endl;
   }
 
-  void printSurface(std::string name) {
-    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-    lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
+  void printSurface(std::string name, bool addMaterialIds = false) {
 
+    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+
+    if (addMaterialIds) {
+      auto translator = psSmartPointer<
+          std::unordered_map<unsigned long, unsigned long>>::New();
+      lsToDiskMesh<NumericType, D> meshConverter;
+      meshConverter.setMesh(mesh);
+      meshConverter.setTranslator(translator);
+      for (const auto ls : *levelSets) {
+        meshConverter.insertNextLevelSet(ls);
+      }
+      meshConverter.apply();
+      auto matIds = mesh->getCellData().getScalarData(materialIdsLabel);
+      if (matIds && matIds->size() == levelSets->back()->getNumberOfPoints())
+        psPointValuesToLevelSet<NumericType, D>(levelSets->back(), translator,
+                                                matIds, "Material")
+            .apply();
+      else
+        std::cout << "Scalar data '" << materialIdsLabel
+                  << "' not found in mesh cellData.\n";
+    }
+
+    lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
     lsVTKWriter<NumericType>(mesh, name).apply();
+  }
+
+  void writeLevelSets(std::string fileName) {
+    for (int i = 0; i < levelSets->size(); i++) {
+      lsWriter<NumericType, D>(
+          levelSets->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
+          .apply();
+    }
   }
 
   void clear() {

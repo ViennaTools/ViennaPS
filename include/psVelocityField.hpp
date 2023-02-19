@@ -5,9 +5,6 @@
 #include <vector>
 
 template <typename NumericType> class psVelocityField {
-private:
-  psSmartPointer<std::vector<NumericType>> velocities = nullptr;
-
 public:
   psVelocityField() {}
 
@@ -33,6 +30,8 @@ public:
 
   virtual void
   setVelocities(psSmartPointer<std::vector<NumericType>> passedVelocities) {}
+
+  virtual bool useTranslationField() const { return true; }
 };
 
 #endif

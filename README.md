@@ -1,4 +1,7 @@
 # ViennaPS
+[![Linux](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml)
+[![macOS](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml)
+[![Windows](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml)
 
 ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. 
 
@@ -17,88 +20,95 @@ Releases are tagged on the master branch and available in the [releases section]
 
 * macOS (XCode)
 
-
 ### System Requirements
 
 * C++17 Compiler with OpenMP support
 
-### Dependencies
+### Dependencies (installed automatically)
 
 * [ViennaLS](https://github.com/ViennaTools/viennals)
 
 * [ViennaRay](https://github.com/ViennaTools/viennaray)
 
-The dependencies will be installed automatically, if no system wide installation is found and no paths are given during configuration of the project. 
-<!-- ## Using ViennaPS in your project
-
-Have a look at the [example repo](https://github.com/ViennaTools/viennals-example) for creating a project with ViennaPS as a dependency. -->
-
-
 ## Installing
 
-Since this is a header only project, it does not require any installation.
-However, we recommend the following procedure.
+The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target.
 
-<!-- Make sure you have [ViennaLS](https://github.com/ViennaTools/viennals) and [ViennaRay](https://github.com/ViennaTools/ViennaRay) installed on your system and run: -->
-
-```
-git clone github.com/ViennaTools/ViennaPS.git
+```bash
+git clone https://github.com/ViennaTools/ViennaPS.git
 cd ViennaPS
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/
-make buildDependencies # this will install the required dependencies the first time it is called and might take a while
+make buildDependencies # this will install all dependencies and might take a while
 make install
 ```
 
 This will install the necessary headers and CMake files to the specified path. If `CMAKE_INSTALL_PREFIX` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
 
-If you want to use your own install of [ViennaLS](https://github.com/ViennaTools/viennals) and [ViennaRay](https://github.com/ViennaTools/viennaray), just specify the directory in CMake: 
-
-```
-git clone github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-mkdir build && cd build
-cmake .. -DViennaLS_DIR=path/to/ViennaLS/install/ -DViennaRay_DIR=path/to/ViennaRay/install/
-make install
-```
+If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding _*_DIR_ variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install)
 
 ## Integration in CMake projects
 
 In order to use this library in your CMake project, add the following lines to the CMakeLists.txt of your project:
 
-```
+```CMake
 set(ViennaPS_DIR "/path/to/your/custom/install/")
 find_package(ViennaPS REQUIRED)
-add_executable(...)
+add_executable(${PROJECT_NAME} ...)
 target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES})
 ``` 
 
-### Building examples
+## Basic Examples
 
-The examples can be built using CMake. Make sure you have the dependencies installed and run:
+### Building
 
-```
+The examples can be built using CMake (make sure all dependencies are installed/ have been built previously):
+
+```bash
 mkdir build && cd build
 cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON
 make buildExamples
 ```
 
-<!-- ### Building test
-
-The tests can be built using CMake:
-
+The examples can then be executed in their respective folders with the config files
+```bash
+./ExampleName config.txt
 ```
+
+### Trench Deposition
+
+This example contains a single particle deposition process in a trench geometry. By default, a 2D representation of the trench is simulated. However, 3D simulations are also possible by setting the value of the constant _D_ in __TrenchDeposition.cpp__ to 3. In the __config.txt__ file the process and geometry parameters can be varied. 
+The picture show an example of the trench deposition process for various value of the particle sticking probability _s_.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/deposition.svg" width=700 style="background-color:white;">
+</div>
+
+### SF<sub>6</sub>O<sub>2</sub> Hole Etching
+
+This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardement. The process and geometry parameters can be varied in the __config.txt__ file. 
+Below the results after 1, 2, and 3 seconds of etching are shown.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/hole_etching.svg" width=700 style="background-color:white;">
+</div>
+
+By changing the dimension of the hole etching example (_D = 2_), we can easily simulate the profile of a trench etching process with the same plasma chemistry. Here we can, for example, vary the mask tapering angle to observe increased microtrenching, as shown below.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/sidewall_tapering.svg" width=700 style="background-color:white;">
+</div>
+
+## Application
+
+It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake (make sure all dependencies are installed/ have been built previously):
+```bash
 mkdir build && cd build
-cmake .. -DVIENNAPS_BUILD_TESTS=ON
-make
-``` -->
+cmake .. -DVIENNAPS_BUILD_APPLICATION=ON
+make buildApplication
+```
+This creates 2 executables `ViennaPS2D` and `ViennaPS3D` which run processes in 2 or 3 dimensions respectively. Every configuration file can be run in 2D or 3D mode.
 
-## Support
+The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each succesfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
 
-Basic [Examples](https://github.com/ViennaTools/ViennaPS/tree/master/Examples) can be found online. 
-
-Bug reports and suggestions should be filed on GitHub.
 
 ## Contributing
 
@@ -106,7 +116,7 @@ If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guid
 
 ## Authors
 
-Current contributors: Tobias Reiter, Josip Bobinac, Xaver Klemenschits, Julius Piso
+Current contributors: Tobias Reiter, Julius Piso, Josip Bobinac, Xaver Klemenschits
 
 Contact us via: viennatools@iue.tuwien.ac.at
 

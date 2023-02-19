@@ -15,9 +15,11 @@ public:
   NumericType gridDelta = .25;
   NumericType xExtent = 10;
   NumericType yExtent = 7;
+  NumericType baseHeight = 0.;
 
   NumericType finWidth = 7;
   NumericType finHeight = 17.5;
+  bool periodicBoundary = false;
   bool makeMask = true;
 
   psMakeFin(PSPtrType passedDomain) : domain(passedDomain) {}
@@ -25,10 +27,12 @@ public:
   psMakeFin(PSPtrType passedDomain, const NumericType passedGridDelta,
             const NumericType passedXExtent, const NumericType passedYExtent,
             const NumericType passedFinWidth, const NumericType passedFinHeight,
-            const bool passedMakeMask = true)
+            const NumericType passedBaseHeight = 0.,
+            const bool passedPeriodic = false, const bool passedMakeMask = true)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         finWidth(passedFinWidth), finHeight(passedFinHeight),
+        baseHeight(passedBaseHeight), periodicBoundary(passedPeriodic),
         makeMask(passedMakeMask) {}
 
   void apply() {

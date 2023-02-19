@@ -1,0 +1,135 @@
+name: Build Dependencies on Linux
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  repository_dispatch:
+    types:
+      - viennals-update-linux
+      - viennaray-update-linux
+  # Run this workflow every Sunday at 18:30 to refresh caches
+  schedule:
+    - cron: "30 18 * * 0"
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Debug
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup-viennals:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./viennals
+    steps:
+      - name: Checkout ViennaPS
+        uses: actions/checkout@v3
+
+      - name: Checkout ViennaLS
+        uses: actions/checkout@v3
+        with:
+          repository: ${{github.repository_owner}}/ViennaLS
+          path: ./viennals
+
+      - name: Store cache key in ENV
+        shell: bash
+        run: echo "VIENNALS_CACHE_KEY=viennals-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './viennals/external/upstream/**CMakeLists.txt' ) }}" >> $GITHUB_ENV
+
+      - name: Check if cache key exists
+        uses: ./.github/actions/cache-check
+        id: cache-check
+        with:
+          cache-key: ${{env.VIENNALS_CACHE_KEY}}
+          token: ${{ secrets.PAT_CACHE }}
+          repository: ${{github.repository_owner}}/ViennaPS
+
+      - name: Clear Cache
+        if: ${{ github.event_name == 'schedule' && steps.cache-check.outputs.exists == 'true'}}
+        uses: ./.github/actions/cache-delete
+        with:
+          cache-key: ${{env.VIENNALS_CACHE_KEY}}
+          token: ${{ secrets.PAT_CACHE }}
+          repository: ${{github.repository_owner}}/ViennaPS
+
+      - name: Store cache refresh key in ENV
+        shell: bash
+        run: echo "VIENNALS_CACHE_REFRESH=${{ github.event_name == 'schedule' || steps.cache-check.outputs.exists != 'true' }}" >> $GITHUB_ENV
+
+      - name: Setup Cache for Build Dependencies
+        uses: actions/cache@v3
+        if: ${{ env.VIENNALS_CACHE_REFRESH == 'true' }}
+        id: viennals-dependency-cache
+        with:
+          key: ${{env.VIENNALS_CACHE_KEY}}
+          path: |
+            ${{github.workspace}}/viennals/dependencies/Source
+            ${{github.workspace}}/viennals/dependencies/Build
+            ${{github.workspace}}/viennals/dependencies/Install
+
+      - name: Configure ViennaLS
+        if: ${{ env.VIENNALS_CACHE_REFRESH == 'true' }}
+        run: cmake -B ${{github.workspace}}/viennals/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build ViennaLS
+        if: ${{ env.VIENNALS_CACHE_REFRESH == 'true' }}
+        run: cmake --build ${{github.workspace}}/viennals/build
+
+  setup-viennaray:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./viennaray
+    steps:
+      - name: Checkout ViennaPS
+        uses: actions/checkout@v3
+
+      - name: Checkout ViennaRay
+        uses: actions/checkout@v3
+        with:
+          repository: ViennaTools/ViennaRay
+          path: ./viennaray
+
+      - name: Store cache key in ENV
+        run: echo "VIENNARAY_CACHE_KEY=viennaray-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './viennaray/external/upstream/**CMakeLists.txt' ) }}" >> $GITHUB_ENV
+
+      - name: Check if cache key exists
+        uses: ./.github/actions/cache-check
+        id: cache-check
+        with:
+          cache-key: ${{env.VIENNARAY_CACHE_KEY}}
+          token: ${{ secrets.PAT_CACHE }}
+          repository: ${{github.repository_owner}}/ViennaPS
+
+      - name: Clear Cache
+        if: ${{ github.event_name == 'schedule' && steps.cache-check.outputs.exists == 'true'}}
+        uses: ./.github/actions/cache-delete
+        with:
+          cache-key: ${{env.VIENNARAY_CACHE_KEY}}
+          token: ${{ secrets.PAT_CACHE }}
+          repository: ${{github.repository_owner}}/ViennaPS
+
+      - name: Store cache refresh key in ENV
+        shell: bash
+        run: echo "VIENNARAY_CACHE_REFRESH=${{ github.event_name == 'schedule' || steps.cache-check.outputs.exists != 'true' }}" >> $GITHUB_ENV
+
+      - name: Setup Cache for Build Dependencies
+        if: ${{ env.VIENNARAY_CACHE_REFRESH == 'true' }}
+        uses: actions/cache@v3
+        id: viennaray-dependency-cache
+        with:
+          key: ${{env.VIENNARAY_CACHE_KEY}}
+          path: ${{github.workspace}}/viennaray/dependencies/Install
+
+      - name: Configure ViennaRay
+        if: ${{ env.VIENNARAY_CACHE_REFRESH == 'true' }}
+        run: cmake -B ./build -D CMAKE_BUILD_TYPE=${{env.build_type}}
+
+      - name: Build ViennaRay
+        if: ${{ env.VIENNARAY_CACHE_REFRESH == 'true' }}
+        run: cmake --build ${{github.workspace}}/viennaray/build

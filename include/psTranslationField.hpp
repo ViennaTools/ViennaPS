@@ -8,16 +8,18 @@
 template <typename NumericType>
 class psTranslationField : public lsVelocityField<NumericType> {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
+  const bool useTranslation = true;
 
 public:
-  psTranslationField() = default;
+  psTranslationField(const bool passedUseTranslationField)
+      : useTranslation(passedUseTranslationField) {}
 
   NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
                                 int material,
                                 const std::array<NumericType, 3> &normalVector,
                                 unsigned long pointId) {
     auto surfacePointId = translateLsId(pointId);
-    if (surfacePointId != -1) {
+    if (surfacePointId != -1 || !useTranslation) {
       return modelVelocityField->getScalarVelocity(
           coordinate, material, normalVector, surfacePointId);
     } else {
@@ -30,7 +32,7 @@ public:
                     const std::array<NumericType, 3> &normalVector,
                     unsigned long pointId) {
     auto surfacePointId = translateLsId(pointId);
-    if (surfacePointId != -1) {
+    if (surfacePointId != -1 || !useTranslation) {
       return modelVelocityField->getVectorVelocity(
           coordinate, material, normalVector, surfacePointId);
     } else {

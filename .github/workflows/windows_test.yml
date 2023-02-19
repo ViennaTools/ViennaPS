@@ -1,0 +1,97 @@
+name: Windows
+
+on:
+  workflow_run:
+    workflows: [Build Dependencies on Windows]
+    types:
+      - completed
+
+env:
+  BUILD_TYPE: Debug
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-examples:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout ViennaPS
+        uses: actions/checkout@v3
+
+      # ViennaLS
+      - name: Checkout ViennaLS
+        uses: actions/checkout@v3
+        with:
+          repository: ${{github.repository_owner}}/ViennaLS
+          path: ./viennals
+
+      - name: Restore ViennaLS build cache
+        uses: actions/cache@v3
+        id: viennals-dependency-cache
+        with:
+          key: viennals-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './viennals/external/upstream/**CMakeLists.txt' ) }}
+          path: |
+            ${{github.workspace}}/viennals/dependencies/Source
+            ${{github.workspace}}/viennals/dependencies/Build
+            ${{github.workspace}}/viennals/dependencies/Install
+
+      - name: Configure ViennaLS
+        working-directory: ${{github.workspace}}/viennals
+        run: cmake -B ${{github.workspace}}/viennals/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/viennals/install
+
+      - name: Add VTK to PATH
+        run: echo "${{github.workspace}}\viennals\dependencies\Build\vtk_external\bin\${{env.BUILD_TYPE}}" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build ViennaLS
+        run: cmake --build ${{github.workspace}}/viennals/build
+
+      - name: Install ViennaLS
+        run: cmake --install ${{github.workspace}}/viennals/build --config ${{env.BUILD_TYPE}}
+
+      # ViennaRay
+      - name: Checkout ViennaRay
+        uses: actions/checkout@v3
+        with:
+          repository: ${{github.repository_owner}}/ViennaRay
+          path: ./viennaray
+
+      - name: Restore ViennaRay build cache
+        uses: actions/cache@v3
+        id: viennaray-dependency-cache
+        with:
+          key: viennaray-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './viennaray/external/upstream/**CMakeLists.txt' ) }}
+          path: |
+            ${{github.workspace}}/viennaray/dependencies/Install
+
+      - name: Configure ViennaRay
+        working-directory: ${{github.workspace}}/viennaray
+        run: |
+          cmake -B ${{github.workspace}}/viennaray/build -DCMAKE_BUILD_TYPE=${{env.build_type}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/viennaray/install
+
+      - name: Add embree to PATH
+        run: echo "${{github.workspace}}\embree\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build ViennaRay
+        run: cmake --build ${{github.workspace}}/viennaray/build --config ${{env.BUILD_TYPE}}
+
+      - name: Install ViennaRay
+        run: cmake --install ${{github.workspace}}/viennaray/build --config ${{env.BUILD_TYPE}}
+
+      # ViennaPS
+      - name: Configure ViennaPS
+        run: |
+          cmake -B ${{github.workspace}}/build -DViennaLS_DIR=${{github.workspace}}/viennals/install/lib/cmake/ViennaLS/ -DViennaRay_DIR=${{github.workspace}}/viennaray/install/lib/cmake/ViennaRay/ -D CMAKE_CXX_FLAGS="-openmp:llvm" -D VIENNAPS_BUILD_EXAMPLES=ON -D VIENNAPS_BUILD_APPLICATION=ON
+
+      - name: Build ViennaPS Examples
+        run: cmake --build ${{github.workspace}}/build/Examples --config ${{env.BUILD_TYPE}}
+
+      - name: Build ViennaPS Application
+        run: cmake --build ${{github.workspace}}/build/app --config ${{env.BUILD_TYPE}}
+
+      - name: Run ViennaPS Example
+        working-directory: ${{github.workspace}}/build/Examples/InterpolationDemo/${{env.BUILD_TYPE}}
+        shell: bash
+        run: ./InterpolationDemo.exe $(echo "/${{github.workspace}}" | sed -e 's/\\/\//g' -e 's/://')/build/Examples/InterpolationDemo/
