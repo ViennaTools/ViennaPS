@@ -55,18 +55,18 @@ public:
     return result;
   }
 
-  SizeType maxSize() const { return maximumSize; }
+  [[nodiscard]] SizeType maxSize() const { return maximumSize; }
 
-  SizeType size() const { return mmap.size(); }
+  [[nodiscard]] SizeType size() const { return mmap.size(); }
 
-  bool empty() const { return mmap.empty(); }
+  [[nodiscard]] bool empty() const { return mmap.empty(); }
 
-  K best() const {
+  [[nodiscard]] K best() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.begin()->first;
   }
 
-  K worst() const {
+  [[nodiscard]] K worst() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.rbegin()->first;
   }
@@ -106,18 +106,18 @@ public:
     return result;
   }
 
-  K thresholdValue() const { return thresValue; }
+  [[nodiscard]] K thresholdValue() const { return thresValue; }
 
-  SizeType size() const { return mmap.size(); }
+  [[nodiscard]] SizeType size() const { return mmap.size(); }
 
-  bool empty() const { return mmap.empty(); }
+  [[nodiscard]] bool empty() const { return mmap.empty(); }
 
-  K best() const {
+  [[nodiscard]] K best() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.begin()->first;
   }
 
-  K worst() const {
+  [[nodiscard]] K worst() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.rbegin()->first;
   }

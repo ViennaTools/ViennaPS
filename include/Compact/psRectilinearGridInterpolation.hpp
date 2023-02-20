@@ -38,7 +38,7 @@ class psRectilinearGridInterpolation
     if (axis >= inputDim)
       return equalSize;
 
-    size_t size = end - start;
+    auto size = std::distance(start, end);
     if (size > 1) {
       // Now sort the data along the given axis
       std::sort(start, end, [&](const auto &a, const auto &b) {

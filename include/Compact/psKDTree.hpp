@@ -108,7 +108,7 @@ public:
     }
   }
 
-  std::optional<std::pair<SizeType, NumericType>>
+  [[nodiscard]] std::optional<std::pair<SizeType, NumericType>>
   findNearest(const std::vector<NumericType> &x) const {
     if (!rootNode)
       return {};
@@ -119,7 +119,7 @@ public:
     return std::pair{best.second->index, Distance(x, best.second->value)};
   }
 
-  std::optional<std::vector<std::pair<SizeType, NumericType>>>
+  [[nodiscard]] std::optional<std::vector<std::pair<SizeType, NumericType>>>
   findKNearest(const std::vector<NumericType> &x, const int k) const {
     if (!rootNode)
       return {};
@@ -137,7 +137,7 @@ public:
     return result;
   }
 
-  std::optional<std::vector<std::pair<SizeType, NumericType>>>
+  [[nodiscard]] std::optional<std::vector<std::pair<SizeType, NumericType>>>
   findNearestWithinRadius(const std::vector<NumericType> &x,
                           const NumericType radius) const {
     if (!rootNode)
@@ -376,7 +376,8 @@ private:
 
   // Converts Iterator to a raw pointer
   template <class Iterator>
-  static typename Iterator::pointer toRawPointer(const Iterator it) {
+  [[nodiscard]] static typename Iterator::pointer
+  toRawPointer(const Iterator it) {
     return &(*it);
   }
 
@@ -384,23 +385,25 @@ private:
   template <typename SignedInt,
             typename = std::enable_if_t<std::is_integral_v<SignedInt> &&
                                         std::is_signed_v<SignedInt>>>
-  static constexpr SignedInt intLog2(SignedInt x) {
+  [[nodiscard]] static constexpr SignedInt intLog2(SignedInt x) {
     SignedInt val = 0;
     while (x >>= 1)
       ++val;
     return val;
   }
 
-  std::vector<NumericType> Diff(const std::vector<NumericType> &pVecA,
-                                const std::vector<NumericType> &pVecB) const {
+  [[nodiscard]] std::vector<NumericType>
+  Diff(const std::vector<NumericType> &pVecA,
+       const std::vector<NumericType> &pVecB) const {
     std::vector<NumericType> diff(pVecA.size(), 0.);
     for (SizeType i = 0; i < D; ++i)
       diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
     return diff;
   }
 
-  NumericType SquaredDistance(const std::vector<NumericType> &pVecA,
-                              const std::vector<NumericType> &pVecB) const {
+  [[nodiscard]] NumericType
+  SquaredDistance(const std::vector<NumericType> &pVecA,
+                  const std::vector<NumericType> &pVecB) const {
     auto diff = Diff(pVecA, pVecB);
     NumericType norm = 0;
     std::for_each(diff.begin(), diff.end(),
@@ -408,8 +411,9 @@ private:
     return norm;
   }
 
-  NumericType Distance(const std::vector<NumericType> &pVecA,
-                       const std::vector<NumericType> &pVecB) const {
+  [[nodiscard]] NumericType
+  Distance(const std::vector<NumericType> &pVecA,
+           const std::vector<NumericType> &pVecB) const {
     return std::sqrt(SquaredDistance(pVecA, pVecB));
   }
 
@@ -424,10 +428,11 @@ private:
     Node *left = nullptr;
     Node *right = nullptr;
 
-    Node(const std::vector<NumericType> &passedValue, SizeType passedIndex)
+    Node(const std::vector<NumericType> &passedValue,
+         SizeType passedIndex) noexcept
         : value(passedValue), index(passedIndex) {}
 
-    Node(Node &&other) {
+    Node(Node &&other) noexcept {
       value.swap(other.value);
       index = other.index;
       axis = other.axis;
@@ -439,7 +444,7 @@ private:
       other.right = nullptr;
     }
 
-    Node &operator=(Node &&other) {
+    Node &operator=(Node &&other) noexcept {
       value.swap(other.value);
       index = other.index;
       axis = other.axis;
