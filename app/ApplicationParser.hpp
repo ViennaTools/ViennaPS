@@ -89,7 +89,11 @@ private:
       psUtils::AssignItems(config, psUtils::Item{"file", params->fileName},
                            psUtils::Item{"layer", params->layers},
                            psUtils::Item{"zPos", params->maskZPos},
-                           psUtils::Item{"maskHeight", params->maskHeight});
+                           psUtils::Item{"maskHeight", params->maskHeight},
+                           psUtils::Item{"pointOrder", params->pointOrder},
+                           psUtils::Item{"invert", params->maskInvert},
+                           psUtils::Item{"xPadding", params->xPadding},
+                           psUtils::Item{"yPadding", params->yPadding});
     } else if (type == "Import") {
       params->geometryType = GeometryType::IMPORT;
       psUtils::AssignItems(config, psUtils::Item{"file", params->fileName},
@@ -121,7 +125,8 @@ private:
           psUtils::Item{"etchantFlux", params->totalEtchantFlux},
           psUtils::Item{"oxygenFlux", params->totalOxygenFlux},
           psUtils::Item{"A_O", params->A_O},
-          psUtils::Item{"raysPerPoint", params->raysPerPoint});
+          psUtils::Item{"raysPerPoint", params->raysPerPoint},
+          psUtils::Item{"maskId", params->maskId});
     } else if (model == "SphereDistribution") {
       params->processType = ProcessType::SPHEREDISTRIBUTION;
       psUtils::AssignItems(config, psUtils::Item{"radius", params->radius});
@@ -137,7 +142,12 @@ private:
           config, psUtils::Item{"direction", params->direction},
           psUtils::Item{"directionalRate", params->directionalRate},
           psUtils::Item{"isotropicRate", params->isotropicRate},
-          psUtils::Item{"time", params->processTime});
+          psUtils::Item{"time", params->processTime},
+          psUtils::Item{"maskId", params->maskId});
+    } else if (model == "WetEtching") {
+      params->processType = ProcessType::WETETCHING;
+      psUtils::AssignItems(config, psUtils::Item{"time", params->processTime},
+                           psUtils::Item{"maskId", params->maskId});
     } else {
       params->processType = ProcessType::NONE;
       std::cout << "Invalid process model: " << model << std::endl;

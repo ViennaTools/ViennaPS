@@ -58,6 +58,12 @@ public:
 
   void apply() {
     /* ---------- Process Setup --------- */
+    if (!model) {
+      lsMessage::getInstance()
+          .addWarning("No process model passed to psProcess.")
+          .print();
+      return;
+    }
     auto name = model->getProcessName();
 
     if (!domain) {
@@ -106,7 +112,8 @@ public:
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
 
-    auto transField = psSmartPointer<psTranslationField<NumericType>>::New();
+    auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
+        model->getVelocityField()->useTranslationField());
     transField->setTranslator(translator);
     transField->setVelocityField(model->getVelocityField());
 

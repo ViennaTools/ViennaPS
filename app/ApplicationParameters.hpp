@@ -15,7 +15,8 @@ enum class ProcessType {
   DEPOSITION,
   SPHEREDISTRIBUTION,
   BOXDISTRIBUTION,
-  DIRECTIONALETCHING
+  DIRECTIONALETCHING,
+  WETETCHING
 };
 
 #ifdef VIENNAPS_USE_DOUBLE
@@ -50,6 +51,10 @@ struct ApplicationParameters {
   int layers = 0;
   std::string fileName = "";
   NumericType maskHeight = 0.1;
+  int pointOrder = 0;
+  int maskInvert = 0;
+  NumericType xPadding = 0.;
+  NumericType yPadding = 0.;
 
   // Process
   NumericType processTime = 1;
