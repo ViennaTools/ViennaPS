@@ -10,4 +10,4 @@ trenchHeight=0.8
 taperAngle=0
 
 # Process
-layerThickness=.15;
+layerThickness=.15
