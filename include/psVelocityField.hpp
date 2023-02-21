@@ -34,4 +34,23 @@ public:
   virtual bool useTranslationField() const { return true; }
 };
 
+template <typename NumericType>
+class psDefaultVelocityField : public psVelocityField<NumericType> {
+public:
+  virtual NumericType
+  getScalarVelocity(const std::array<NumericType, 3> &coordinate, int material,
+                    const std::array<NumericType, 3> &normalVector,
+                    unsigned long pointId) override {
+    return velocities->at(pointId);
+  }
+
+  void setVelocities(
+      psSmartPointer<std::vector<NumericType>> passedVelocities) override {
+    velocities = passedVelocities;
+  }
+
+private:
+  psSmartPointer<std::vector<NumericType>> velocities;
+};
+
 #endif

@@ -21,7 +21,7 @@ public:
       visMesh.insertNextLevelSet(ls);
       auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
       lsToSurfaceMesh<NumericType, D>(ls, mesh).apply();
-      psVTKWriter<NumericType>(mesh, "visMesh_" + std::to_string(i++) + ".vtp")
+      lsVTKWriter<NumericType>(mesh, "visMesh_" + std::to_string(i++) + ".vtp")
           .apply();
     }
     visMesh.apply();

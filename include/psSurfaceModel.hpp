@@ -26,9 +26,10 @@ public:
     return processParams;
   }
 
-  virtual psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIDs) {
+  virtual psSmartPointer<std::vector<NumericType>> calculateVelocities(
+      psSmartPointer<psPointData<NumericType>> Rates,
+      const std::vector<std::array<NumericType, 3>> &coordinates,
+      const std::vector<NumericType> &materialIDs) {
     return psSmartPointer<std::vector<NumericType>>::New();
   }
 
