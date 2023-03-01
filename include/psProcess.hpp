@@ -344,8 +344,15 @@ public:
 #endif
       // apply advection callback
       if (useAdvectionCallback) {
-        model->getAdvectionCallback()->applyPreAdvect(processDuration -
-                                                      remainingTime);
+        bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
+            processDuration - remainingTime);
+        if (!continueProcess) {
+#ifdef VIENNAPS_VERBOSE
+          std::cout << "Process stopped early by AdvectionCallback during "
+                       "`preAdvect`.\n";
+#endif
+          break;
+        }
       }
 
       // move coverages to LS, so they get are moved with the advection step
@@ -362,8 +369,17 @@ public:
 
       // apply advection callback
       if (useAdvectionCallback) {
-        model->getAdvectionCallback()->applyPostAdvect(
+        if (domain->getUseCellSet())
+          domain->getCellSet()->updateSurface();
+        bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
+        if (!continueProcess) {
+#ifdef VIENNAPS_VERBOSE
+          std::cout << "Process stopped early by AdvectionCallback during "
+                       "`postAdvect`.\n";
+#endif
+          break;
+        }
       }
 
       remainingTime -= advectionKernel.getAdvectedTime();
