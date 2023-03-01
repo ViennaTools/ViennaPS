@@ -1,0 +1,133 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 107,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 112,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 119,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/ViennaPS",
+			"exportName" : "ViennaPS_Targets",
+			"exportTargets" : 
+			[
+				{
+					"id" : "ViennaPS::@6890427a1f51a3e7e1df",
+					"index" : 0
+				}
+			],
+			"paths" : 
+			[
+				"CMakeFiles/Export/eaef28e71c4dc227582c1eb0ea49461c/ViennaPSTargets.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/ViennaPS",
+			"paths" : 
+			[
+				"cmake-build-debug/ViennaPSConfig.cmake",
+				"cmake-build-debug/ViennaPSConfigVersion.cmake"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "include",
+			"paths" : 
+			[
+				"include/CellSet/csBVH.hpp",
+				"include/CellSet/csBoundingVolume.hpp",
+				"include/CellSet/csDenseCellSet.hpp",
+				"include/CellSet/csTracePath.hpp",
+				"include/CellSet/csTracing.hpp",
+				"include/CellSet/csTracingKernel.hpp",
+				"include/CellSet/csTracingParticle.hpp",
+				"include/CellSet/csUtil.hpp",
+				"include/Compact/psCSVDataSource.hpp",
+				"include/Compact/psCSVReader.hpp",
+				"include/Compact/psCSVWriter.hpp",
+				"include/Compact/psDataScaler.hpp",
+				"include/Compact/psDataSource.hpp",
+				"include/Compact/psKDTree.hpp",
+				"include/Compact/psNearestNeighborsInterpolation.hpp",
+				"include/Compact/psPointLocator.hpp",
+				"include/Compact/psQueues.hpp",
+				"include/Compact/psRectilinearGridInterpolation.hpp",
+				"include/Compact/psValueEstimator.hpp",
+				"include/Geometries/psMakeFin.hpp",
+				"include/Geometries/psMakeHole.hpp",
+				"include/Geometries/psMakePlane.hpp",
+				"include/Geometries/psMakeTrench.hpp",
+				"include/Models/DirectionalEtching.hpp",
+				"include/Models/GeometricDistributionModels.hpp",
+				"include/Models/PlasmaDamage.hpp",
+				"include/Models/SF6O2Etching.hpp",
+				"include/Models/SimpleDeposition.hpp",
+				"include/Models/WetEtching.hpp",
+				"include/psAdvectionCallback.hpp",
+				"include/psDomain.hpp",
+				"include/psGDSGeometry.hpp",
+				"include/psGDSReader.hpp",
+				"include/psGDSUtils.hpp",
+				"include/psGeometricModel.hpp",
+				"include/psPlanarize.hpp",
+				"include/psPointData.hpp",
+				"include/psPointValuesToLevelSet.hpp",
+				"include/psProcess.hpp",
+				"include/psProcessModel.hpp",
+				"include/psProcessParams.hpp",
+				"include/psSmartPointer.hpp",
+				"include/psSurfaceModel.hpp",
+				"include/psToDiskMesh.hpp",
+				"include/psToSurfaceMesh.hpp",
+				"include/psTranslationField.hpp",
+				"include/psUtils.hpp",
+				"include/psVTKWriter.hpp",
+				"include/psVelocityField.hpp",
+				"include/psWriteVisualizationMesh.hpp"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	}
+}
