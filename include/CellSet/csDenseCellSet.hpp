@@ -30,7 +30,7 @@ private:
   gridType cellGrid = nullptr;
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
-  std::vector<std::set<size_t>> neighborhood;
+  std::vector<std::set<unsigned long>> neighborhood;
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
@@ -60,8 +60,23 @@ public:
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
-    auto minBounds = surface->getGrid().getMinBounds();
-    auto maxBounds = surface->getGrid().getMaxBounds();
+    hrleVectorType<hrleIndexType, D> minBounds;
+    hrleVectorType<hrleIndexType, D> maxBounds;
+    for (unsigned i = 0; i < D; ++i) {
+      minBounds[i] = std::numeric_limits<hrleIndexType>::max();
+      maxBounds[i] = std::numeric_limits<hrleIndexType>::lowest();
+    }
+    for (unsigned i = 0; i < D; ++i) {
+      minBounds[i] =
+          std::min(minBounds[i], (surface->getGrid().isNegBoundaryInfinite(i))
+                                     ? surface->getDomain().getMinRunBreak(i)
+                                     : surface->getGrid().getMinBounds(i));
+
+      maxBounds[i] =
+          std::max(maxBounds[i], (surface->getGrid().isPosBoundaryInfinite(i))
+                                     ? surface->getDomain().getMaxRunBreak(i)
+                                     : surface->getGrid().getMaxBounds(i));
+    }
 
     depth = passedDepth;
     if (cellSetAboveSurface) {
@@ -132,7 +147,7 @@ public:
     return cellGrid->getNodes();
   }
 
-  std::vector<std::array<unsigned, (1 << D)>> &getElements() {
+  std::vector<std::array<unsigned, (1 << D)>> getElements() {
     return cellGrid->template getElements<(1 << D)>();
   }
 
@@ -260,7 +275,7 @@ public:
     if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
       lsMessage::getInstance()
           .addWarning("Number of cells not equal in cell set material update. "
-                      "Surface may has changed.")
+                      "The surface top might has changed.")
           .print();
       return;
     }
