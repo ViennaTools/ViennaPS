@@ -8,8 +8,8 @@
 #include <psDomain.hpp>
 
 /**
-  Creates a trench geometry in z(3D)/y(2D) direction.
-*/
+ * Creates a trench geometry in z(3D)/y(2D) direction.
+ */
 template <class NumericType, int D> class psMakeTrench {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;

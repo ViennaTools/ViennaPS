@@ -263,9 +263,9 @@ public:
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+      auto points = diskMesh->getNodes();
 
       if (useRayTracing) {
-        auto points = diskMesh->getNodes();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         rayTrace.setGeometry(points, normals, gridDelta);
         rayTrace.setMaterialIds(materialIds);
@@ -313,8 +313,8 @@ public:
                                  rayTraceCoverages);
       }
 
-      auto velocitites =
-          model->getSurfaceModel()->calculateVelocities(Rates, materialIds);
+      auto velocitites = model->getSurfaceModel()->calculateVelocities(
+          Rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocitites);
 
 #ifdef VIENNAPS_VERBOSE
@@ -334,9 +334,13 @@ public:
         diskMesh->getCellData().insertNextScalarData(*Rates->getScalarData(idx),
                                                      label);
       }
-      if (printIntermediate)
-        printDiskMesh(diskMesh,
-                      name + "_" + std::to_string(counter++) + ".vtp");
+      if (printIntermediate) {
+        printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
+        if (domain->getUseCellSet()) {
+          domain->getCellSet()->writeVTU(name + "_cellSet_" +
+                                         std::to_string(counter++) + ".vtu");
+        }
+      }
 #endif
       // apply advection callback
       if (useAdvectionCallback) {
