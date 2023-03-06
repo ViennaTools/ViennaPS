@@ -91,9 +91,10 @@ public:
 template <typename NumericType, int D>
 class WetEtchingSurfaceModel : public psSurfaceModel<NumericType> {
 public:
-  psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIds) override {
+  psSmartPointer<std::vector<NumericType>> calculateVelocities(
+      psSmartPointer<psPointData<NumericType>> Rates,
+      const std::vector<std::array<NumericType, 3>> &coordinates,
+      const std::vector<NumericType> &materialIds) override {
     return nullptr;
   }
 };
