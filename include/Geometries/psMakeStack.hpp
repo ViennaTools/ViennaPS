@@ -10,35 +10,53 @@
 
 #include <psDomain.hpp>
 
-template <class T, int D> class MakeStack {
+template <class T, int D> class psMakeStack {
   using PSPtrType = psSmartPointer<psDomain<T, D>>;
   using LSPtrType = psSmartPointer<lsDomain<T, D>>;
 
-  T gridDelta = 0.1;
-  T xExtent = 10;
-  T yExtent = 10;
+  const T gridDelta = 0.1;
+  const T xExtent = 10;
+  const T yExtent = 10;
   T bounds[2 * D];
   T normal[D];
   T origin[D] = {0.};
 
-  int numLayers = 11;
-  T layerHeight = 2;
-  T substrateHeight = 4;
-  T holeRadius = 2;
+  const int numLayers = 11;
+  const T layerHeight = 2;
+  const T substrateHeight = 4;
+  const T holeRadius = 2;
+  const bool periodicBoundary = false;
 
   typename lsDomain<T, D>::BoundaryType boundaryConds[D];
 
+  PSPtrType geometry;
+
 public:
-  MakeStack(const int passedLayer, const T passedGridDelta)
-      : numLayers(passedLayer), gridDelta(passedGridDelta) {
+  psMakeStack(PSPtrType passedDomain, const int passedNumLayers,
+              const T passedGridDelta)
+      : numLayers(passedNumLayers), gridDelta(passedGridDelta),
+        geometry(passedDomain) {
     init();
   }
 
-  PSPtrType makeStack() {
+  psMakeStack(PSPtrType passedDomain, const T passedGridDelta,
+              const T passedXExtent, const T passedYExtent,
+              const int passedNumLayers, const T passedLayerHeight,
+              const T passedSubstrateHeight, const T passedHoleRadius,
+              const bool periodic = false)
+      : geometry(passedDomain), gridDelta(passedGridDelta),
+        xExtent(passedXExtent), yExtent(passedYExtent),
+        numLayers(passedNumLayers), layerHeight(passedLayerHeight),
+        substrateHeight(passedSubstrateHeight), holeRadius(passedHoleRadius),
+        periodicBoundary(periodic) {
+    init();
+  }
+
+  void apply() {
     if constexpr (D == 2) {
-      return create2DGeometry();
+      create2DGeometry();
     } else {
-      return create3DGeometry();
+      create3DGeometry();
     }
   }
 
@@ -48,34 +66,15 @@ public:
 
   T getHoleRadius() const { return holeRadius; }
 
-  void printGeometry(PSPtrType geometry, std::string fileName) {
-    lsWriteVisualizationMesh<T, D> visMesh;
-    for (auto ls : *geometry->getLevelSets()) {
-      visMesh.insertNextLevelSet(ls);
-    }
-    visMesh.setFileName(fileName);
-    visMesh.apply();
-  }
-
-  void printVoxelMesh(PSPtrType geometry, std::string fileName) {
-    auto mesh = lsSmartPointer<lsMesh<T>>::New();
-    lsToVoxelMesh<T, D> visMesh(mesh);
-    for (auto ls : *geometry->getLevelSets()) {
-      visMesh.insertNextLevelSet(ls);
-    }
-    visMesh.apply();
-    lsVTKWriter<T>(mesh, fileName).apply();
-  }
-
 private:
-  PSPtrType create2DGeometry() {
+  void create2DGeometry() {
+    geometry->clear();
 
     // Silicon substrate
     auto substrate = LSPtrType::New(bounds, boundaryConds, gridDelta);
     origin[D - 1] = substrateHeight;
     auto plane = lsSmartPointer<lsPlane<T, D>>::New(origin, normal);
     lsMakeGeometry<T, D>(substrate, plane).apply();
-    auto geometry = PSPtrType::New(substrate);
 
     // Si3N4/SiO2 layers
     T current = substrateHeight + layerHeight;
@@ -101,15 +100,10 @@ private:
                                lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
     }
-
-    // copy top layer for deposition
-    auto depoLayer = LSPtrType::New(geometry->getLevelSets()->back());
-    geometry->insertNextLevelSet(depoLayer);
-
-    return geometry;
   }
 
-  PSPtrType create3DGeometry() {
+  void create3DGeometry() {
+    geometry->clear();
 
     // cut out middle
     auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
@@ -127,7 +121,6 @@ private:
     lsBooleanOperation<T, D>(substrate, cutOut,
                              lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
-    auto geometry = PSPtrType::New(substrate);
 
     // Si3N4/SiO2 layers
     for (int i = 0; i < numLayers; ++i) {
@@ -140,19 +133,16 @@ private:
           .apply();
       geometry->insertNextLevelSet(ls);
     }
-
-    // copy top layer for deposition
-    auto depoLayer = LSPtrType::New(geometry->getLevelSets()->back());
-    geometry->insertNextLevelSet(depoLayer);
-
-    return geometry;
   }
 
   void init() {
     bounds[0] = -xExtent;
     bounds[1] = xExtent;
     normal[0] = 0.;
-    boundaryConds[0] = lsDomain<T, D>::BoundaryType::PERIODIC_BOUNDARY;
+    if (periodicBoundary)
+      boundaryConds[0] = lsDomain<T, D>::BoundaryType::PERIODIC_BOUNDARY;
+    else
+      boundaryConds[0] = lsDomain<T, D>::BoundaryType::REFLECTIVE_BOUNDARY;
 
     if constexpr (D == 2) {
       normal[1] = 1.;
@@ -166,7 +156,10 @@ private:
       bounds[3] = yExtent;
       bounds[4] = 0;
       bounds[5] = layerHeight * numLayers + gridDelta;
-      boundaryConds[1] = lsDomain<T, D>::BoundaryType::PERIODIC_BOUNDARY;
+      if (periodicBoundary)
+        boundaryConds[0] = lsDomain<T, D>::BoundaryType::PERIODIC_BOUNDARY;
+      else
+        boundaryConds[0] = lsDomain<T, D>::BoundaryType::REFLECTIVE_BOUNDARY;
       boundaryConds[2] = lsDomain<T, D>::BoundaryType::INFINITE_BOUNDARY;
     }
   }

@@ -7,6 +7,8 @@
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
 
+// The selective etching model works in accordance with the geometry generated
+// by psMakeStack
 template <typename NumericType>
 class SelectiveEtchingSurfaceModel : public psSurfaceModel<NumericType> {
 public:
@@ -70,12 +72,16 @@ public:
     cellSet->addScalarData("byproductSum", 0.);
   }
 
-  void applyPreAdvect(const T processTime) override final { prepare(); }
+  bool applyPreAdvect(const T processTime) override final {
+    prepare();
+    return true;
+  }
 
-  void applyPostAdvect(const T advectionTime) override final {
+  bool applyPostAdvect(const T advectionTime) override final {
     cellSet->updateMaterials();
     addByproducts(advectionTime);
     diffuseByproducts(advectionTime);
+    return true;
   }
 
 private:
@@ -85,6 +91,7 @@ private:
     auto elems = cellSet->getElements();
     auto nodes = cellSet->getNodes();
     const auto gridDelta = cellSet->getGridDelta();
+    // calculate time discretization
     const T dt =
         std::min(gridDelta * gridDelta / diffusionCoefficient * 0.245, 1.);
     const int numSteps = static_cast<int>(timeStep / dt);
@@ -92,6 +99,10 @@ private:
 
     for (int iter = 0; iter < numSteps; iter++) {
       std::vector<T> solution(data->size(), 0.);
+
+      // std::cout << (*std::max_element(materialIds->begin(),
+      // materialIds->end()))
+      //           << std::endl;
 
 #pragma omp parallel for
       for (size_t e = 0; e < data->size(); e++) {
@@ -165,7 +176,6 @@ private:
           }
         }
       }
-
       *data = std::move(solution);
     }
     auto sum = cellSet->getScalarData("byproductSum");
@@ -207,9 +217,10 @@ class RedepositionSurfaceModel : public psSurfaceModel<NumericType> {
 public:
   RedepositionSurfaceModel(
       psSmartPointer<csDenseCellSet<NumericType, D>> passedCellSet,
-      const NumericType passedTop, const int passedPlasmaMat)
+      const NumericType passedFactor, const NumericType passedTop,
+      const int passedPlasmaMat)
       : cellSet(passedCellSet), top(passedTop), plasmaMaterial(passedPlasmaMat),
-        depoMaterial(passedPlasmaMat - 1) {}
+        depoMaterial(passedPlasmaMat - 1), depositionFactor(passedFactor) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> Rates,
@@ -244,9 +255,7 @@ public:
         }
         if (n > 1)
           depoRate[i] /= static_cast<NumericType>(n);
-        // if (depoRate[i] < 0.1)
-        //   depoRate[i] = 0;
-        // depoRate[i] /= 2.;
+        depoRate[i] *= depositionFactor;
       }
     }
 
@@ -258,4 +267,5 @@ private:
   const NumericType top = 0.;
   const int plasmaMaterial = 0;
   const int depoMaterial = 0;
+  const NumericType depositionFactor = 1.;
 };
