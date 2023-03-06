@@ -105,7 +105,7 @@ private:
       //           << std::endl;
 
 #pragma omp parallel for
-      for (size_t e = 0; e < data->size(); e++) {
+      for (int e = 0; e < data->size(); e++) {
         if (materialIds->at(e) != plasmaMaterial) {
           continue;
         }
@@ -181,7 +181,7 @@ private:
     auto sum = cellSet->getScalarData("byproductSum");
 
 #pragma omp parallel for
-    for (size_t e = 0; e < data->size(); e++) {
+    for (int e = 0; e < data->size(); e++) {
       if (materialIds->at(e) != plasmaMaterial) {
         continue;
       }

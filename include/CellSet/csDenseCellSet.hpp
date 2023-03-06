@@ -378,7 +378,7 @@ public:
     }
   }
 
-  std::set<size_t> &getNeighbors(size_t cellIdx) {
+  std::set<unsigned long> &getNeighbors(unsigned long cellIdx) {
     assert(!neighborhood.empty() &&
            "Querying neighbors without creating neighborhood structure");
     assert(cellIdx < numberOfCells && "Cell idx out of bounds");
