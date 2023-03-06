@@ -10,6 +10,10 @@
 
 #include <psDomain.hpp>
 
+/**
+ * Creates a stack of alternating material layers with an etched
+ * hole(3D)/trench(2D) in the middle.
+ */
 template <class T, int D> class psMakeStack {
   using PSPtrType = psSmartPointer<psDomain<T, D>>;
   using LSPtrType = psSmartPointer<lsDomain<T, D>>;

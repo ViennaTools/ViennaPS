@@ -97,6 +97,13 @@ By changing the dimension of the hole etching example (_D = 2_), we can easily s
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/sidewall_tapering.svg" width=700 style="background-color:white;">
 </div>
 
+### Redeposition during selective etching
+
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/redeposition.gif" width=700 style="background-color:white;">
+</div>
+
 ## Application
 
 It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake (make sure all dependencies are installed/ have been built previously):

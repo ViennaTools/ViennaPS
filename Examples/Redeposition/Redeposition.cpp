@@ -8,6 +8,8 @@
 
 #include <StackRedeposition.hpp>
 
+#include "Parameters.hpp"
+
 int main(int argc, char **argv) {
   using NumericType = double;
 
@@ -15,19 +17,21 @@ int main(int argc, char **argv) {
   // Attention:
   // This model/example currently only works in 2D mode
   constexpr int D = 2;
-  const NumericType gridDelta = 0.2;
 
-  const NumericType diffusionCoefficient = 10.; // diffusion cofficient
-  const NumericType sink = 0.001;               // sink strength
-  // convection velocity in the scallops towards the center
-  const NumericType scallopStreamVelocity = 10.;
-  // convection velocity in the center towards the sink on the top
-  const NumericType holeStreamVelocity = 10.;
-  // number of stacked layers
-  int numLayers = 26;
+  Parameters<NumericType> params;
+  if (argc > 1) {
+    auto config = psUtils::readConfigFile(argv[1]);
+    if (config.empty()) {
+      std::cerr << "Empty config provided" << std::endl;
+      return -1;
+    }
+    params.fromMap(config);
+  }
 
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeStack<NumericType, D> builder(domain, numLayers, gridDelta);
+  psMakeStack<NumericType, D> builder(
+      domain, params.gridDelta, params.xExtent, 0., params.numLayers,
+      params.layerHeight, params.substrateHeight, params.holeRadius, false);
   builder.apply();
   // copy top layer for deposition
   auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
@@ -44,17 +48,15 @@ int main(int argc, char **argv) {
   // process in the cell set. The byproducts are then distributed by solving a
   // convection-diffusion equation on the cell set.
   auto redepoModel = psSmartPointer<RedepositionDynamics<NumericType, D>>::New(
-      domain, diffusionCoefficient, sink, scallopStreamVelocity,
-      holeStreamVelocity, builder.getTopLayer(), builder.getHeight(),
-      builder.getHoleRadius());
+      domain, params.diffusionCoefficient, params.sink,
+      params.scallopStreamVelocity, params.holeStreamVelocity,
+      builder.getTopLayer(), builder.getHeight(), builder.getHoleRadius());
   auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
   auto etchSurfModel =
       psSmartPointer<SelectiveEtchingSurfaceModel<NumericType>>::New();
   auto depoSurfModel =
       psSmartPointer<RedepositionSurfaceModel<NumericType, D>>::New(
           cellSet, 1., builder.getHeight(), builder.getTopLayer());
-
-  std::cout << builder.getTopLayer() << std::endl;
 
   // run the selective etching process
   {
