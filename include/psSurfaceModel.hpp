@@ -26,11 +26,24 @@ public:
     return processParams;
   }
 
-  virtual psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIDs) {
-    return psSmartPointer<std::vector<NumericType>>::New();
-  }
+    virtual psSmartPointer<std::vector<NumericType>>
+    calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
+                        const std::vector<NumericType> &materialIDs) {
+        return psSmartPointer<std::vector<NumericType>>::New();
+    }
+
+    virtual std::vector<NumericType>
+    calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
+                        const std::vector<NumericType> &materialIDs) {
+      std::vector<NumericType> returnedVector(12,0);
+        return returnedVector;
+    }
+
+//    virtual std::shared_ptr<int>
+//    TestFuntionSharedType() {
+//        return numeroNostro;
+//    }
+
 
   virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) {
   }

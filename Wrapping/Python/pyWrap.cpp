@@ -1,6 +1,7 @@
 /*
-  This file is used to generate the python module of viennaps.
+  This file is used to generate the python module of viennals.
   It uses pybind11 to create the modules.
+
   All necessary headers are included here and the interface
   of the classes which should be exposed defined
 */
@@ -24,7 +25,6 @@
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psSurfaceModel.hpp>
-#include <psVelocityField.hpp>
 
 // geometries
 #include <psMakeHole.hpp>
@@ -32,7 +32,7 @@
 #include <psMakeTrench.hpp>
 
 // models
-#include <GeometricUniformDeposition.hpp>
+//#include <GeometricDistributionModels.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
 
@@ -51,143 +51,109 @@ PYBIND11_DECLARE_HOLDER_TYPE(TemplateType, psSmartPointer<TemplateType>);
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
 
-// BASE CLASS WRAPPERS
 class PypsSurfaceModel : public psSurfaceModel<T> {
     using psSurfaceModel<T>::Coverages;
     using psSurfaceModel<T>::processParams;
+    using psSurfaceModel<T>::getCoverages;
+    using psSurfaceModel<T>::getProcessParameters;
+//    using psSurfaceModel<T>::TestShared;
+    typedef std::vector<T> vect_type;
 
 public:
     void initializeCoverages(unsigned numGeometryPoints) override {
-        PYBIND11_OVERLOAD(T, psSurfaceModel<T>, initializeCoverages,
+        PYBIND11_OVERLOAD(void, psSurfaceModel<T>, initializeCoverages,
                           numGeometryPoints);
     }
 
     void initializeProcessParameters() override {
-        PYBIND11_OVERLOAD(T, psSurfaceModel<T>, initializeProcessParameters);
+        PYBIND11_OVERLOAD(void, psSurfaceModel<T>, initializeProcessParameters);
     }
 
-    psSmartPointer<std::vector<T>>
-    calculateVelocities(psSmartPointer<psPointData<T>> Rates,
-                        const std::vector<T> &materialIDs) override {
-        PYBIND11_OVERLOAD(T, psSurfaceModel<T>, calculateVelocities, Rates,
-                          materialIDs);
-    }
+
+//    std::vector<T>
+//    calculateVelocities(psPointData<T>  Rates,
+//                        const std::vector<T> &materialIDs) override {
+//        PYBIND11_OVERLOAD(std::vector<T>, psSurfaceModel<T>, calculateVelocities, Rates,
+//                          materialIDs);
+//    }
+
+//function for testing wether we could have a function of shared_ptr type, that is virtual
+//    std::shared_ptr<int>
+//    TestFuntionSharedType() override{
+//        PYBIND11_OVERLOAD(std::shared_ptr<int>,psSurfaceModel<T>, TestFuntionSharedType,);
+//    }
 
     void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
-        PYBIND11_OVERLOAD(T, psSurfaceModel<T>, updateCoverages, Rates);
-    }
-};
-//psProcessModel
-template<typename NumericType, int D> class PYProcessModel : public psProcessModel<NumericType,D> {
-public:
-    using psProcessModel<NumericType, D>::psProcessModel;
-    using psProcessModel<NumericType,D>::setProcessName;
-    using psProcessModel<NumericType,D>::getProcessName;
-    using psProcessModel<NumericType,D>::insertNextParticleType;
-    using psProcessModel<NumericType,D>::setSurfaceModel;
-    using psProcessModel<NumericType,D>::setAdvectionCallback;
-    using psProcessModel<NumericType,D>::setGeometricModel;
-    using psProcessModel<NumericType,D>::setVelocityField;
-    psSmartPointer<ParticleTypeList> getParticleTypes() override{
-        PYBIND11_OVERRIDE(
-                psSmartPointer<ParticleTypeList>,
-                psProcessModel<NumericType,D>,
-                getParticleTypes,
-        );
-    }
-    psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() override{
-        PYBIND11_OVERRIDE(
-                psSmartPointer<psSurfaceModel<NumericType>>,
-        psProcessModel<NumericType,D>,
-                getSurfaceModel,
-        );
-    }
-    psSmartPointer<psAdvectionCalback<NumericType, D>>
-    getAdvectionCallback() override{
-        PYBIND11_OVERRIDE(
-                psSmartPointer<psAdvectionCalback<NumericType, D>>,
-        psProcessModel<NumericType,D>,
-                getAdvectionCallback,
-        );
-    }
-    psSmartPointer<psGeometricModel<NumericType, D>> getGeometricModel() override{
-        PYBIND11_OVERRIDE(
-                psSmartPointer<psGeometricModel<NumericType, D>>,
-        psProcessModel<NumericType,D>,
-                getGeometricModel,
-        );
-    }
-    psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
-        PYBIND11_OVERRIDE(
-                psSmartPointer<psVelocityField<NumericType>>,
-        psProcessModel<NumericType,D>,
-                getVelocityField,
-        );
+        PYBIND11_OVERLOAD(void, psSurfaceModel<T>, updateCoverages, Rates);
     }
 };
 
-//psVelocityField
-template<typename NumericType>
-class PYVelocityField: public psVelocityField<NumericType>{
-    using psVelocityField<NumericType>::psVelocityField;
-public:
-    NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate, int material,
-                                  const std::array<NumericType, 3> &normalVector,
-                                  unsigned long pointId) override{
-        PYBIND11_OVERRIDE(
-                NumericType,
-                psVelocityField<NumericType>,
-                getScalarVelocity,
-                coordinate,
-                material,
-                normalVector,
-                pointId
-        );
-    }
-    pybind11::array_t<NumericType> getVectorVelocity(const pybind11::array_t<NumericType> &coordinate, int material,
-                                                     const pybind11::array_t<NumericType> &normalVector,
-                                                     unsigned long pointId) override{
-        PYBIND11_OVERRIDE(
-                pybind11::array_t<NumericType>, // add template argument here
-                psVelocityField<NumericType>,
-                getVectorVelocity,
-                coordinate,
-                material,
-                normalVector,
-                pointId
-        );
-    }
 
-    NumericType getDissipationAlpha(int direction, int material,
-                                    const std::array<NumericType, 3> &centralDifferences) override{
-        PYBIND11_OVERRIDE(
-                NumericType,
-                psVelocityField<NumericType>,
-                getDissipationAlpha,
-                direction,
-                material,
-                centralDifferences
-        );
-    }
-
-    void setVelocities(psSmartPointer<std::vector<NumericType>> passedVelocities) override{
-        PYBIND11_OVERRIDE(
-                void,
-                psVelocityField<NumericType>,
-                setVelocities,
-                passedVelocities
-        );
-    }
-
-    [[nodiscard]] bool useTranslationField() const override{
-        PYBIND11_OVERRIDE(
-                bool,
-                psVelocityField<NumericType>,
-                useTranslationField,
-        );
-    }
-
-};
+////psProcessModel
+//class PYProcessModel : public psProcessModel<T,D> {
+//public:
+//    using psProcessModel<T, D>::psProcessModel;
+//    using psProcessModel<T,D>::setProcessName;
+//    using psProcessModel<T,D>::getProcessName;
+//    using psProcessModel<T,D>::insertNextParticleType;
+//    using psProcessModel<T,D>::setSurfaceModel;
+//    using psProcessModel<T,D>::setAdvectionCallback;
+//    using psProcessModel<T,D>::setGeometricModel;
+//    using psProcessModel<T,D>::setVelocityField;
+//    using ParticleTypeList =
+//            std::vector<std::unique_ptr<rayAbstractParticle<T>>>;
+//    psSmartPointer<ParticleTypeList> particles = nullptr;
+//    psSmartPointer<psSurfaceModel<T>> surfaceModel = nullptr;
+//    psSmartPointer<psAdvectionCalback<T, D>> advectionCallback =
+//            nullptr;
+//    psSmartPointer<psGeometricModel<T, D>> geometricModel = nullptr;
+//    psSmartPointer<psVelocityField<T>> velocityField = nullptr;
+//    std::string processName = "default";
+//    using ClassName = psProcessModel<T, D>;
+//    using point_to_vec = psSmartPointer<psSurfaceModel<T>>;
+//    psSmartPointer<psSurfaceModel<T>> getSurfaceModel() override{
+//
+//        PYBIND11_OVERLOAD(
+//                point_to_vec,
+//                ClassName,
+//                getSurfaceModel
+//        );
+//    }
+//    using alt_sm_ptr = psSmartPointer<ParticleTypeList>;
+//    psSmartPointer<ParticleTypeList> getParticleTypes() override{
+//        PYBIND11_OVERLOAD(
+//                alt_sm_ptr,
+//                ClassName,
+//                getParticleTypes,
+//        );
+//    }
+//
+//    psSmartPointer<psAdvectionCalback<T, D>>
+//    getAdvectionCallback() override{
+//        using aa = psSmartPointer<psAdvectionCalback<T, D>>;
+//        PYBIND11_OVERLOAD(
+//                aa,
+//                ClassName,
+//                getAdvectionCallback,
+//        );
+//    }
+//    psSmartPointer<psGeometricModel<T, D>> getGeometricModel() override{
+//        using aa = psSmartPointer<psGeometricModel<T, D>>;
+//        PYBIND11_OVERLOAD(
+//                aa,
+//                ClassName,
+//                getGeometricModel,
+//        );
+//    }
+//    psSmartPointer<psVelocityField<T>> getVelocityField() {
+//        using aa = psSmartPointer<psVelocityField<T>>;
+//        PYBIND11_OVERLOAD(
+//                aa,
+//                ClassName,
+//                getVelocityField,
+//        );
+//    }
+//};
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 module.doc() =
@@ -203,7 +169,17 @@ module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 // wrap omp_set_num_threads to control number of threads
 module.def("setNumThreads", &omp_set_num_threads);
 
-// psDomain
+pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfaceModel>(module, "psSurfaceModel")
+        .def(pybind11::init<>())
+        .def("initializeCoverages",&psSurfaceModel<T>::initializeCoverages)
+        .def("initializeProcessParameters",&psSurfaceModel<T>::initializeProcessParameters)
+        .def("getCoverages",&psSurfaceModel<T>::getCoverages)
+        .def("getProcessParameters",&psSurfaceModel<T>::getProcessParameters)
+        .def("updateCoverages",&psSurfaceModel<T>::updateCoverages);
+//        .def("calculateVelocities",&psSurfaceModel<T>::calculateVelocities);
+
+
+
 pybind11::class_<psDomain<T, D>, psSmartPointer<psDomain<T, D>>>(module,
 "psDomain")
 // constructors
@@ -278,56 +254,44 @@ pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
 // psProcessModel
 //modified here as it seemes the functions were not defined, and the virtual functions
 //were not overwritten
-pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>>(
-module, "psProcessModel")
-// constructors
-.def(pybind11::init(&psSmartPointer<psProcessModel<T, D>>::New<>))
+//pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>>(
+//module, "psProcessModel")
+//// constructors
+//.def(pybind11::init<>());
 
 //functions
-.def("getParticleTypes",&psProcessModel<NumericType, D>::getParticleTypes)
-.def("getSurfaceModel",&psProcessModel<NumericType, D>::getSurfaceModel)
-.def("getAdvectionCallback",&psProcessModel<NumericType, D>::getAdvectionCallback)
-.def("getGeometricModel",&psProcessModel<NumericType, D>::getGeometricModel)
-.def("getVelocityField",&psProcessModel<NumericType, D>::getVelocityField)
-.def("setProcessName", &psProcessModel<NumericType, D>::setProcessName)
-.def("getProcessName", &psProcessModel<NumericType, D>::getProcessName)
-.def("insertNextParticleType",
-[](psProcessModel<NumericType, D> &pm,
-        std::unique_ptr<rayAbstractParticle<NumericType>> &particle) {
-pm.insertNextParticleType(particle);
-})
-.def("setSurfaceModel",
-[](psProcessModel<NumericType, D> &pm,
-        psSmartPointer<psSurfaceModel<NumericType>> &sm) {
-pm.setSurfaceModel(sm);
-})
-.def("setAdvectionCallback",
-[](psProcessModel<NumericType, D> &pm,
-        psSmartPointer<psAdvectionCalback<NumericType, D>> &ac) {
-pm.setAdvectionCallback(ac);
-})
-.def("setGeometricModel",
-[](psProcessModel<NumericType, D> &pm,
-        psSmartPointer<psGeometricModel<NumericType, D>> &gm) {
-pm.setGeometricModel(gm);
-})
-.def("setVelocityField",
-[](psProcessModel<NumericType, D> &pm,
-        psSmartPointer<psVelocityField<NumericType>> &vf) {
-pm.setVelocityField(vf);
-});
-
-
-//psVelocityField
-pybind11::class_<psVelocityField<T>,PYVelocityField<T>>(module, ("psVelocityField"))
-//constructors
-.def(py::init<>())
-//methods
-.def("getScalarVelocity", &psVelocityField<NumericType>::getScalarVelocity)
-.def("getVectorVelocity", &psVelocityField<NumericType>::getVectorVelocity)
-.def("getDissipationAlpha", &psVelocityField<NumericType>::getDissipationAlpha)
-.def("setVelocities", &psVelocityField<NumericType>::setVelocities)
-.def("useTranslationField", &psVelocityField<NumericType>::useTranslationField);
+//.def("getParticleTypes",&psProcessModel<T, D>::getParticleTypes);
+//.def("getSurfaceModel",&psProcessModel<T, D>::getSurfaceModel)
+//.def("getAdvectionCallback",&psProcessModel<T, D>::getAdvectionCallback)
+//.def("getGeometricModel",&psProcessModel<T, D>::getGeometricModel)
+//.def("getVelocityField",&psProcessModel<T, D>::getVelocityField)
+//.def("setProcessName", &psProcessModel<T, D>::setProcessName)
+//.def("getProcessName", &psProcessModel<T, D>::getProcessName)
+//.def("insertNextParticleType",
+//[](psProcessModel<T, D> &pm,
+//        std::unique_ptr<rayAbstractParticle<T>> &particle) {
+//pm.insertNextParticleType(particle);
+//})
+//.def("setSurfaceModel",
+//[](psProcessModel<T, D> &pm,
+//        psSmartPointer<psSurfaceModel<T>> &sm) {
+//pm.setSurfaceModel(sm);
+//})
+//.def("setAdvectionCallback",
+//[](psProcessModel<T, D> &pm,
+//        psSmartPointer<psAdvectionCalback<T, D>> &ac) {
+//pm.setAdvectionCallback(ac);
+//})
+//.def("setGeometricModel",
+//[](psProcessModel<T, D> &pm,
+//        psSmartPointer<psGeometricModel<T, D>> &gm) {
+//pm.setGeometricModel(gm);
+//})
+//.def("setVelocityField",
+//[](psProcessModel<T, D> &pm,
+//        psSmartPointer<psVelocityField<T>> &vf) {
+//pm.setVelocityField(vf);
+//});
 
 // psProcess
 pybind11::class_<psProcess<T, D>, psSmartPointer<psProcess<T, D>>>(
@@ -377,15 +341,15 @@ pybind11::arg("maskMaterial") = 0)
 .def("getProcessModel", &SF6O2Etching<T, D>::getProcessModel,
 "Returns the etching process model");
 
-pybind11::class_<GeometricUniformDeposition<T, D>,
-psSmartPointer<GeometricUniformDeposition<T, D>>>(
-module, "GeometricUniformDeposition")
-.def(pybind11::init(
-        &psSmartPointer<GeometricUniformDeposition<T, D>>::New<const T>),
-        pybind11::arg("layerThickness") = 1.)
-.def("getProcessModel",
-&GeometricUniformDeposition<T, D>::getProcessModel,
-"Return the deposition process model.");
+//pybind11::class_<GeometricDistributionModels<T, D>,
+//psSmartPointer<GeometricDistributionModels<T, D>>>(
+//module, "GeometricDistributionModels")
+//.def(pybind11::init(
+//        &psSmartPointer<GeometricDistributionModels<T, D>>::New<const T>),
+//        pybind11::arg("layerThickness") = 1.)
+//.def("getProcessModel",
+//&GeometricDistributionModels<T, D>::getProcessModel,
+//"Return the deposition process model.");
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
 // GDS file parsing
