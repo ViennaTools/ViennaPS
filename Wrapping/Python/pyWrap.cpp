@@ -105,16 +105,16 @@ public:
     psSmartPointer <psVelocityField<T>> velocityField = nullptr;
     std::string processName = "default";
     using ClassName = psProcessModel<T, D>;
-    using point_to_vec = psSmartPointer <psSurfaceModel<T>>;
+//    using point_to_vec = psSmartPointer <psSurfaceModel<T>>;
 
-//    psSmartPointer<psSurfaceModel<T>> getSurfaceModel() override{
-//
-//        PYBIND11_OVERLOAD(
-//                point_to_vec,
-//                ClassName,
-//                getSurfaceModel
-//        );
-//    }
+    psSmartPointer<psSurfaceModel<T>> getSurfaceModel() override{
+
+        PYBIND11_OVERLOAD(
+                psSmartPointer <psSurfaceModel<T>>,
+                ClassName,
+                getSurfaceModel
+        );
+    }
 //    using alt_sm_ptr = psSmartPointer<ParticleTypeList>;
 //    psSmartPointer<ParticleTypeList> getParticleTypes() override{
 //        PYBIND11_OVERLOAD(
@@ -123,33 +123,30 @@ public:
 //                getParticleTypes,
 //        );
 //    }
-//
-//    psSmartPointer<psAdvectionCalback<T, D>>
-//    getAdvectionCallback() override{
-//        using aa = psSmartPointer<psAdvectionCalback<T, D>>;
-//        PYBIND11_OVERLOAD(
-//                aa,
-//                ClassName,
-//                getAdvectionCallback,
-//        );
-//    }
-//    psSmartPointer<psGeometricModel<T, D>> getGeometricModel() override{
-//        using aa = psSmartPointer<psGeometricModel<T, D>>;
-//        PYBIND11_OVERLOAD(
-//                aa,
-//                ClassName,
-//                getGeometricModel,
-//        );
-//    }
-//    psSmartPointer<psVelocityField<T>> getVelocityField() {
-//        using aa = psSmartPointer<psVelocityField<T>>;
-//        PYBIND11_OVERLOAD(
-//                aa,
-//                ClassName,
-//                getVelocityField,
-//        );
-//    }
-//};
+    psSmartPointer<psAdvectionCalback<T, D>>
+    getAdvectionCallback() override{
+        using SmartPointerAdvectionCalBack_TD = psSmartPointer<psAdvectionCalback<T, D>>;
+        PYBIND11_OVERLOAD(
+                SmartPointerAdvectionCalBack_TD,
+                ClassName,
+                getAdvectionCallback,
+        );
+    }
+    psSmartPointer<psGeometricModel<T, D>> getGeometricModel() override{
+        using SmartPointerGeometricModel_TD = psSmartPointer<psGeometricModel<T, D>>;
+        PYBIND11_OVERLOAD(
+                SmartPointerGeometricModel_TD,
+                ClassName,
+                getGeometricModel,
+        );
+    }
+    psSmartPointer<psVelocityField<T>> getVelocityField() {
+        PYBIND11_OVERLOAD(
+                psSmartPointer<psVelocityField<T>>,
+                ClassName,
+                getVelocityField,
+        );
+    }
 };
 
 //created this struct as a wrapper for std::vector
@@ -329,13 +326,17 @@ pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
 //modified here as it seemes the functions were not defined, and the virtual functions
 //were not overwritten
 //didn't implement the insertNextParticleType, as I do not know what that type is
-//and didn't implement the virtual functions that are of type SmartPointer (didn't find a way)
+//and didn't implement the virtual functions that are of type SmartPointer<std::vector>
 pybind11::class_<psProcessModel<T, D>,psSmartPointer<psProcessModel<T,D>>,PYProcessModel>(module, "psProcessModel")
 // constructors
 .def(pybind11::init<>())
 //functions
 .def("setProcessName", &psProcessModel<T, D>::setProcessName)
 .def("getProcessName", &psProcessModel<T, D>::getProcessName)
+.def("getSurfaceModel", &psProcessModel<T, D>::getSurfaceModel)
+.def("getAdvectionCallback", &psProcessModel<T, D>::getAdvectionCallback)
+.def("getGeometricModel", &psProcessModel<T, D>::getGeometricModel)
+.def("getVelocityField", &psProcessModel<T, D>::getVelocityField)
 
 //I don't know what particle type could be
 //.def("insertNextParticleType",
