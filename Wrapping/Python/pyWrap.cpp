@@ -89,28 +89,28 @@ public:
 };
 
 
-////psProcessModel
-//class PYProcessModel : public psProcessModel<T,D> {
-//public:
-//    using psProcessModel<T, D>::psProcessModel;
-//    using psProcessModel<T,D>::setProcessName;
-//    using psProcessModel<T,D>::getProcessName;
-//    using psProcessModel<T,D>::insertNextParticleType;
-//    using psProcessModel<T,D>::setSurfaceModel;
-//    using psProcessModel<T,D>::setAdvectionCallback;
-//    using psProcessModel<T,D>::setGeometricModel;
-//    using psProcessModel<T,D>::setVelocityField;
-//    using ParticleTypeList =
-//            std::vector<std::unique_ptr<rayAbstractParticle<T>>>;
-//    psSmartPointer<ParticleTypeList> particles = nullptr;
-//    psSmartPointer<psSurfaceModel<T>> surfaceModel = nullptr;
-//    psSmartPointer<psAdvectionCalback<T, D>> advectionCallback =
-//            nullptr;
-//    psSmartPointer<psGeometricModel<T, D>> geometricModel = nullptr;
-//    psSmartPointer<psVelocityField<T>> velocityField = nullptr;
-//    std::string processName = "default";
-//    using ClassName = psProcessModel<T, D>;
-//    using point_to_vec = psSmartPointer<psSurfaceModel<T>>;
+//psProcessModel
+class PYProcessModel : public psProcessModel<T,D> {
+public:
+    using psProcessModel<T, D>::setProcessName;
+    using psProcessModel<T, D>::getProcessName;
+    using psProcessModel<T, D>::insertNextParticleType;
+    using psProcessModel<T, D>::setSurfaceModel;
+    using psProcessModel<T, D>::setAdvectionCallback;
+    using psProcessModel<T, D>::setGeometricModel;
+    using psProcessModel<T, D>::setVelocityField;
+    using ParticleTypeList =
+            std::vector <std::unique_ptr<rayAbstractParticle < T>>>;
+    psSmartPointer <ParticleTypeList> particles = nullptr;
+    psSmartPointer <psSurfaceModel<T>> surfaceModel = nullptr;
+    psSmartPointer <psAdvectionCalback<T, D>> advectionCallback =
+            nullptr;
+    psSmartPointer <psGeometricModel<T, D>> geometricModel = nullptr;
+    psSmartPointer <psVelocityField<T>> velocityField = nullptr;
+    std::string processName = "default";
+    using ClassName = psProcessModel<T, D>;
+    using point_to_vec = psSmartPointer <psSurfaceModel<T>>;
+
 //    psSmartPointer<psSurfaceModel<T>> getSurfaceModel() override{
 //
 //        PYBIND11_OVERLOAD(
@@ -154,7 +154,7 @@ public:
 //        );
 //    }
 //};
-
+};
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 module.doc() =
 "ViennaPS is a header-only C++ process simulation library, which "
@@ -170,14 +170,12 @@ module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 module.def("setNumThreads", &omp_set_num_threads);
 
 pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfaceModel>(module, "psSurfaceModel")
-        .def(pybind11::init<>())
-        .def("initializeCoverages",&psSurfaceModel<T>::initializeCoverages)
-        .def("initializeProcessParameters",&psSurfaceModel<T>::initializeProcessParameters)
-        .def("getCoverages",&psSurfaceModel<T>::getCoverages)
-        .def("getProcessParameters",&psSurfaceModel<T>::getProcessParameters)
-        .def("updateCoverages",&psSurfaceModel<T>::updateCoverages);
-//        .def("calculateVelocities",&psSurfaceModel<T>::calculateVelocities);
-
+.def(pybind11::init<>())
+.def("initializeCoverages",&psSurfaceModel<T>::initializeCoverages)
+.def("initializeProcessParameters",&psSurfaceModel<T>::initializeProcessParameters)
+.def("getCoverages",&psSurfaceModel<T>::getCoverages)
+.def("getProcessParameters",&psSurfaceModel<T>::getProcessParameters)
+.def("updateCoverages",&psSurfaceModel<T>::updateCoverages);
 
 
 pybind11::class_<psDomain<T, D>, psSmartPointer<psDomain<T, D>>>(module,
@@ -254,44 +252,40 @@ pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
 // psProcessModel
 //modified here as it seemes the functions were not defined, and the virtual functions
 //were not overwritten
-//pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>>(
-//module, "psProcessModel")
-//// constructors
-//.def(pybind11::init<>());
-
+//didn't implement the insertNextParticleType, as I do not know what that type is
+//and didn't implement the virtual functions that are of type SmartPointer (didn't find a way)
+pybind11::class_<psProcessModel<T, D>,psSmartPointer<psProcessModel<T,D>>,PYProcessModel>(module, "psProcessModel")
+// constructors
+.def(pybind11::init<>())
 //functions
-//.def("getParticleTypes",&psProcessModel<T, D>::getParticleTypes);
-//.def("getSurfaceModel",&psProcessModel<T, D>::getSurfaceModel)
-//.def("getAdvectionCallback",&psProcessModel<T, D>::getAdvectionCallback)
-//.def("getGeometricModel",&psProcessModel<T, D>::getGeometricModel)
-//.def("getVelocityField",&psProcessModel<T, D>::getVelocityField)
-//.def("setProcessName", &psProcessModel<T, D>::setProcessName)
-//.def("getProcessName", &psProcessModel<T, D>::getProcessName)
+.def("setProcessName", &psProcessModel<T, D>::setProcessName)
+.def("getProcessName", &psProcessModel<T, D>::getProcessName)
+//I don't know what particle type could be
 //.def("insertNextParticleType",
 //[](psProcessModel<T, D> &pm,
-//        std::unique_ptr<rayAbstractParticle<T>> &particle) {
-//pm.insertNextParticleType(particle);
+//        std::unique_ptr<ParticleType> &passedParticle) {
+//pm.insertNextParticleType(passedParticle);
 //})
-//.def("setSurfaceModel",
-//[](psProcessModel<T, D> &pm,
-//        psSmartPointer<psSurfaceModel<T>> &sm) {
-//pm.setSurfaceModel(sm);
-//})
-//.def("setAdvectionCallback",
-//[](psProcessModel<T, D> &pm,
-//        psSmartPointer<psAdvectionCalback<T, D>> &ac) {
-//pm.setAdvectionCallback(ac);
-//})
-//.def("setGeometricModel",
-//[](psProcessModel<T, D> &pm,
-//        psSmartPointer<psGeometricModel<T, D>> &gm) {
-//pm.setGeometricModel(gm);
-//})
-//.def("setVelocityField",
-//[](psProcessModel<T, D> &pm,
-//        psSmartPointer<psVelocityField<T>> &vf) {
-//pm.setVelocityField(vf);
-//});
+.def("setSurfaceModel",
+[](psProcessModel<T, D> &pm,
+        psSmartPointer<psSurfaceModel<T>> &sm) {
+pm.setSurfaceModel(sm);
+})
+.def("setAdvectionCallback",
+[](psProcessModel<T, D> &pm,
+        psSmartPointer<psAdvectionCalback<T, D>> &ac) {
+pm.setAdvectionCallback(ac);
+})
+.def("setGeometricModel",
+[](psProcessModel<T, D> &pm,
+        psSmartPointer<psGeometricModel<T, D>> &gm) {
+pm.setGeometricModel(gm);
+})
+.def("setVelocityField",
+[](psProcessModel<T, D> &pm,
+        psSmartPointer<psVelocityField<T>> &vf) {
+pm.setVelocityField(vf);
+});
 
 // psProcess
 pybind11::class_<psProcess<T, D>, psSmartPointer<psProcess<T, D>>>(
