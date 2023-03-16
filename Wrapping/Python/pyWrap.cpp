@@ -25,6 +25,7 @@
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psSurfaceModel.hpp>
+#include <vector>
 
 // geometries
 #include <psMakeHole.hpp>
@@ -51,12 +52,12 @@ PYBIND11_DECLARE_HOLDER_TYPE(TemplateType, psSmartPointer<TemplateType>);
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
 
+//could not implement CalculateVelocities, as it is of type SmartPointer
 class PypsSurfaceModel : public psSurfaceModel<T> {
     using psSurfaceModel<T>::Coverages;
     using psSurfaceModel<T>::processParams;
     using psSurfaceModel<T>::getCoverages;
     using psSurfaceModel<T>::getProcessParameters;
-//    using psSurfaceModel<T>::TestShared;
     typedef std::vector<T> vect_type;
 
 public:
@@ -77,12 +78,6 @@ public:
 //                          materialIDs);
 //    }
 
-//function for testing wether we could have a function of shared_ptr type, that is virtual
-//    std::shared_ptr<int>
-//    TestFuntionSharedType() override{
-//        PYBIND11_OVERLOAD(std::shared_ptr<int>,psSurfaceModel<T>, TestFuntionSharedType,);
-//    }
-
     void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
         PYBIND11_OVERLOAD(void, psSurfaceModel<T>, updateCoverages, Rates);
     }
@@ -90,6 +85,7 @@ public:
 
 
 //psProcessModel
+//could implement only the functions that were not of type smartPointer
 class PYProcessModel : public psProcessModel<T,D> {
 public:
     using psProcessModel<T, D>::setProcessName;
@@ -155,6 +151,75 @@ public:
 //    }
 //};
 };
+
+//created this struct as a wrapper for std::vector
+//struct HolderForVector{
+//    std::vector<T> VectorForSharedPointer;
+//};
+
+class PYVelocityField: public psVelocityField<T>{
+    using psVelocityField<T>::psVelocityField;
+public:
+    T getScalarVelocity(const std::array<T, 3> &coordinate, int material,
+                                  const std::array<T, 3> &normalVector,
+                                  unsigned long pointId) override{
+        PYBIND11_OVERRIDE(
+                T,
+                psVelocityField<T>,
+                getScalarVelocity,
+                coordinate,
+                material,
+                normalVector,
+                pointId
+        );
+    }
+    //if we declare a typedef for std::array<T,3>, we will no longer get this error: the compiler doesn't understand why std::array gets 2 template arguments
+    typedef std::array<T,3> arrayType;
+    std::array<T,3> getVectorVelocity(const std::array<T,3> &coordinate, int material,
+                                                     const std::array<T,3> &normalVector,
+                                                     unsigned long pointId) override{
+        PYBIND11_OVERRIDE(
+                arrayType, // add template argument here
+                psVelocityField<T>,
+                getVectorVelocity,
+                coordinate,
+                material,
+                normalVector,
+                pointId
+        );
+    }
+
+    T getDissipationAlpha(int direction, int material,
+                                    const std::array<T, 3> &centralDifferences) override{
+        PYBIND11_OVERRIDE(
+                T,
+                psVelocityField<T>,
+                getDissipationAlpha,
+                direction,
+                material,
+                centralDifferences
+        );
+    }
+//a wrapper around vector is needed in our case
+//    void setVelocities(psSmartPointer<HolderForVector> passedVelocities) override{
+//        PYBIND11_OVERRIDE(
+//                void,
+//                psVelocityField<T>,
+//                setVelocities,
+//                passedVelocities
+//        );
+//    }
+
+    bool useTranslationField() const override{
+        PYBIND11_OVERRIDE(
+                bool,
+                psVelocityField<T>,
+                useTranslationField,
+        );
+    }
+
+};
+
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 module.doc() =
 "ViennaPS is a header-only C++ process simulation library, which "
@@ -176,6 +241,17 @@ pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfac
 .def("getCoverages",&psSurfaceModel<T>::getCoverages)
 .def("getProcessParameters",&psSurfaceModel<T>::getProcessParameters)
 .def("updateCoverages",&psSurfaceModel<T>::updateCoverages);
+
+//psVelocityField
+pybind11::class_<psVelocityField<T>,psSmartPointer<psVelocityField<T>>,PYVelocityField>(module, ("psVelocityField"))
+//constructors
+.def(pybind11::init<>())
+//methods
+.def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
+.def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
+.def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
+//.def("psVelocityField", &psVelocityField<T>::psVelocityField)
+.def("useTranslationField", &psVelocityField<T>::useTranslationField);
 
 
 pybind11::class_<psDomain<T, D>, psSmartPointer<psDomain<T, D>>>(module,
@@ -260,12 +336,14 @@ pybind11::class_<psProcessModel<T, D>,psSmartPointer<psProcessModel<T,D>>,PYProc
 //functions
 .def("setProcessName", &psProcessModel<T, D>::setProcessName)
 .def("getProcessName", &psProcessModel<T, D>::getProcessName)
+
 //I don't know what particle type could be
 //.def("insertNextParticleType",
 //[](psProcessModel<T, D> &pm,
 //        std::unique_ptr<ParticleType> &passedParticle) {
 //pm.insertNextParticleType(passedParticle);
 //})
+
 .def("setSurfaceModel",
 [](psProcessModel<T, D> &pm,
         psSmartPointer<psSurfaceModel<T>> &sm) {
@@ -310,7 +388,8 @@ module, "psProcess")
 .def("setProcessModel",
 &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
 "Set the process model.")
-.def("apply", &psProcess<T, D>::apply, "Run the process.");
+.def("apply", &psProcess<T, D>::apply, "Run the process.")
+.def("setIntegrationScheme",&psProcess<T,D>::setIntegrationScheme);
 
 // models
 pybind11::class_<SimpleDeposition<T, D>,
