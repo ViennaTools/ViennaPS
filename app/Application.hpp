@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <lsReader.hpp>
+#include <lsRemoveStrayPoints.hpp>
 
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
@@ -19,6 +20,7 @@
 
 #include <DirectionalEtching.hpp>
 #include <GeometricDistributionModels.hpp>
+#include <IsotropicProcess.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
 #include <WetEtching.hpp>
@@ -94,6 +96,11 @@ protected:
   virtual void
   runSimpleDeposition(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                       psSmartPointer<ApplicationParameters> processParams) {
+    // copy top layer for deposition
+    auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
+        processGeometry->getLevelSets()->back());
+    processGeometry->insertNextLevelSet(depoLayer);
+
     SimpleDeposition<NumericType, D> model(processParams->sticking,
                                            processParams->cosinePower);
 
@@ -104,6 +111,7 @@ protected:
     process.setProcessDuration(processParams->processTime *
                                processParams->rate / processParams->sticking);
     process.setPrintIntdermediate(params->printIntermediate);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -122,6 +130,7 @@ protected:
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
     process.setPrintIntdermediate(params->printIntermediate);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -135,6 +144,7 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model.getProcessModel());
     process.setPrintIntdermediate(params->printIntermediate);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -148,6 +158,7 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model.getProcessModel());
     process.setPrintIntdermediate(params->printIntermediate);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -164,6 +175,30 @@ protected:
     process.setProcessModel(model.getProcessModel());
     process.setProcessDuration(params->processTime);
     process.setPrintIntdermediate(params->printIntermediate);
+    process.setIntegrationScheme(params->integrationScheme);
+    process.apply();
+  }
+
+  virtual void
+  runIsotropicProcess(psSmartPointer<psDomain<NumericType, D>> processGeometry,
+                      psSmartPointer<ApplicationParameters> processParams) {
+
+    if (params->rate > 0.) {
+      // copy top layer for deposition
+      auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
+          processGeometry->getLevelSets()->back());
+      processGeometry->insertNextLevelSet(depoLayer);
+    }
+
+    IsotropicProcess<NumericType, D> model(processParams->rate,
+                                           processParams->maskId);
+
+    psProcess<NumericType, D> process;
+    process.setDomain(processGeometry);
+    process.setProcessModel(model.getProcessModel());
+    process.setProcessDuration(params->processTime);
+    process.setPrintIntdermediate(params->printIntermediate);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -183,7 +218,7 @@ protected:
       process.setPrintIntdermediate(params->printIntermediate);
       process.apply();
     } else {
-      std::cout << "Warning: Wet etch model only implemented in 2D."
+      std::cout << "Warning: Wet etch model only implemented in 3D."
                 << std::endl;
     }
   }
@@ -196,7 +231,9 @@ private:
               << "\n\tPrint intermediate: "
               << boolString(params->printIntermediate)
               << "\n\tPeriodic boundary: "
-              << boolString(params->periodicBoundary) << "\n\n";
+              << boolString(params->periodicBoundary)
+              << "\n\tUsing integration scheme: "
+              << intSchemeString(params->integrationScheme) << "\n\n";
 
     geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   }
@@ -376,8 +413,19 @@ private:
       break;
     }
 
+    case ProcessType::ISOTROPIC: {
+      std::cout << "Isotropic process\n\tTime: " << params->processTime
+                << "\n\tIsotropic rate: " << params->rate << "\n\n";
+      runIsotropicProcess(geometry, params);
+      break;
+    }
+
     case ProcessType::WETETCHING: {
-      std::cout << "Wet etching\n\tTime: " << params->processTime << "\n\n";
+      std::cout << "Wet etching\n\tTime: " << params->processTime
+                << "\n\tUsing integration scheme: "
+                << intSchemeString(lsIntegrationSchemeEnum::
+                                       STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER)
+                << "\n\n";
       runWetEtching(geometry, params);
       break;
     }
@@ -435,4 +483,31 @@ private:
   }
 
   std::string boolString(const int in) { return in == 0 ? "false" : "true"; }
+
+  std::string intSchemeString(lsIntegrationSchemeEnum scheme) {
+    switch (scheme) {
+    case lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER:
+      return "Enquist-Osher 1st Order";
+    case lsIntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER:
+      return "Enquist-Osher 2nd Order";
+    case lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+      return "Local Lax-Friedrichs 1st Order";
+    case lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+      return "Local Lax-Friedrichs 2nd Order";
+    case lsIntegrationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER:
+      return "Lax-Friedrichs 1st Order";
+    case lsIntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER:
+      return "Lax-Friedrichs 2nd Order";
+    case lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER:
+      return "Local Lax-Friedrichs Analytical 1st Order";
+    case lsIntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+      return "Local Local Lax-Friedrichs 1st Order";
+    case lsIntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+      return "Local Local Lax-Friedrichs 2nd Order";
+    case lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+      return "Stencil Lax-Friedrichs 1st Order";
+    }
+
+    return "Invalid integration scheme";
+  }
 };

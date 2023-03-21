@@ -37,11 +37,9 @@ public:
     }
   }
 
-  NumericType getDissipationAlpha(
-      int /*direction*/, int /*material*/,
-      const std::array<NumericType, 3> & /*centralDifferences*/) {
-    return -1;
-  }
+  // this option should be disabled (return false) when using a surface model
+  // which only depends on an analytic velocity field
+  bool useTranslationField() const override { return false; }
 };
 
 template <typename NumericType, int D>
