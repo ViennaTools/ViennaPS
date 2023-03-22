@@ -168,6 +168,17 @@ All parameters which are parsed additional to a command are described below. For
 </dl>
 
 ---
+**PROCESS Isotropic**
+<dl>
+  <dt>time</dt>
+  <dd>process time (numeric value, default: 1)</dd>
+  <dt>rate</dt>
+  <dd>process rate, can be negative for etching (numeric value, default: 0) 
+  <dt>maskId</dt>
+  <dd>ID of mask material (integer value, default: 0)</dd> 
+</dl>
+
+---
 **PROCESS WetEtching**
 Wet etching process in 30% KOH solution at 70°C.
 <dl>
