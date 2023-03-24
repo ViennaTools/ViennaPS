@@ -43,10 +43,14 @@
 
 // always use double for python export
 typedef double T;
+typedef std::vector<hrleCoordType> VectorHRLEcoord;
 // get dimension from cmake define
 constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 
 PYBIND11_DECLARE_HOLDER_TYPE(TemplateType, psSmartPointer<TemplateType>);
+PYBIND11_MAKE_OPAQUE(std::vector<T>)
+PYBIND11_MAKE_OPAQUE(std::vector<unsigned>)
+PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 
 // define trampoline classes for interface functions
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
@@ -71,18 +75,17 @@ public:
     }
 
 
-//    std::vector<T>
-//    calculateVelocities(psPointData<T>  Rates,
-//                        const std::vector<T> &materialIDs) override {
-//        PYBIND11_OVERLOAD(std::vector<T>, psSurfaceModel<T>, calculateVelocities, Rates,
-//                          materialIDs);
-//    }
+    psSmartPointer<std::vector<T>>
+    calculateVelocities(psSmartPointer<psPointData<T>> Rates,
+                        const std::vector<T> &materialIDs) override {
+        PYBIND11_OVERLOAD(psSmartPointer<std::vector<T>>, psSurfaceModel<T>, calculateVelocities, Rates,
+                          materialIDs);
+    }
 
     void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
         PYBIND11_OVERLOAD(void, psSurfaceModel<T>, updateCoverages, Rates);
     }
 };
-
 
 //psProcessModel
 //could implement only the functions that were not of type smartPointer
@@ -149,11 +152,7 @@ public:
     }
 };
 
-//created this struct as a wrapper for std::vector
-//struct HolderForVector{
-//    std::vector<T> VectorForSharedPointer;
-//};
-
+//psVelocityField override functions
 class PYVelocityField: public psVelocityField<T>{
     using psVelocityField<T>::psVelocityField;
 public:
@@ -231,13 +230,19 @@ module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 // wrap omp_set_num_threads to control number of threads
 module.def("setNumThreads", &omp_set_num_threads);
 
+
+//psSurfaceModel
 pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfaceModel>(module, "psSurfaceModel")
 .def(pybind11::init<>())
 .def("initializeCoverages",&psSurfaceModel<T>::initializeCoverages)
 .def("initializeProcessParameters",&psSurfaceModel<T>::initializeProcessParameters)
 .def("getCoverages",&psSurfaceModel<T>::getCoverages)
 .def("getProcessParameters",&psSurfaceModel<T>::getProcessParameters)
+.def("calculateVelocities",[](psSurfaceModel<double>&a,const lsSmartPointer<lsPointData<T>>& Rates,
+const std::vector<T> &materialIDs){
+return a.calculateVelocities(Rates,materialIDs);})
 .def("updateCoverages",&psSurfaceModel<T>::updateCoverages);
+
 
 //psVelocityField
 pybind11::class_<psVelocityField<T>,psSmartPointer<psVelocityField<T>>,PYVelocityField>(module, ("psVelocityField"))
@@ -250,7 +255,7 @@ pybind11::class_<psVelocityField<T>,psSmartPointer<psVelocityField<T>>,PYVelocit
 //.def("psVelocityField", &psVelocityField<T>::psVelocityField)
 .def("useTranslationField", &psVelocityField<T>::useTranslationField);
 
-
+//psDomain
 pybind11::class_<psDomain<T, D>, psSmartPointer<psDomain<T, D>>>(module,
 "psDomain")
 // constructors
@@ -264,6 +269,7 @@ pybind11::class_<psDomain<T, D>, psSmartPointer<psDomain<T, D>>>(module,
 .def("printSurface", &psDomain<T, D>::printSurface,
 "Print the surface of the domain.");
 
+//psMakeTrench
 pybind11::class_<psMakeTrench<T, D>, psSmartPointer<psMakeTrench<T, D>>>(
 module, "psMakeTrench")
 .def(pybind11::init(
@@ -282,6 +288,7 @@ pybind11::arg("periodicBoundary") = false,
 pybind11::arg("makeMask") = false)
 .def("apply", &psMakeTrench<T, D>::apply, "Make trench.");
 
+//psMakeHole
 pybind11::class_<psMakeHole<T, D>, psSmartPointer<psMakeHole<T, D>>>(
 module, "psMakeHole")
 .def(pybind11::init(
@@ -300,6 +307,7 @@ pybind11::arg("periodicBoundary") = false,
 pybind11::arg("makeMask") = false)
 .def("apply", &psMakeHole<T, D>::apply, "Make hole.");
 
+//psMakePlane
 pybind11::class_<psMakePlane<T, D>, psSmartPointer<psMakePlane<T, D>>>(
 module, "psMakePlane")
 .def(pybind11::init(
@@ -467,13 +475,8 @@ pybind11::class_<lsDomain<T, D>, psSmartPointer<lsDomain<T, D>>>(module,
 .def(pybind11::init(
         &psSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
         lsDomain<T, D>::BoundaryType *>))
-.def(pybind11::init(
-        &psSmartPointer<lsDomain<T, D>>::New<
-                                    hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
-.def(pybind11::init(
-        &psSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>,
-        std::vector<unsigned>,
-        hrleCoordType>))
+.def(pybind11::init( &psSmartPointer<lsDomain<T, D>>::New<hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+.def(pybind11::init( &psSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>>, std::vector<unsigned>, hrleCoordType>))
 .def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<
                                                 lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
                     lsDomain<T, D>::BoundaryType *>))
