@@ -369,8 +369,13 @@ public:
 
       // apply advection callback
       if (useAdvectionCallback) {
-        if (domain->getUseCellSet())
-          domain->getCellSet()->updateSurface();
+        if (domain->getUseCellSet()) {
+          if (domain->getCellSet()->getCellSetPosition()) {
+            domain->getCellSet()->updateMaterials();
+          } else {
+            domain->getCellSet()->updateSurface();
+          }
+        }
         bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
         if (!continueProcess) {

@@ -78,7 +78,6 @@ public:
   }
 
   bool applyPostAdvect(const T advectionTime) override final {
-    cellSet->updateMaterials();
     addByproducts(advectionTime);
     diffuseByproducts(advectionTime);
     return true;
