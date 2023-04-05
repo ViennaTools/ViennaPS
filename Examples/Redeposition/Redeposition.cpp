@@ -37,7 +37,8 @@ int main(int argc, char **argv) {
   auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
       domain->getLevelSets()->back());
   domain->insertNextLevelSet(depoLayer);
-  domain->generateCellSet(2., true /* true means cell set above surface */);
+  domain->generateCellSet(builder.getHeight() + 2.,
+                          true /* true means cell set above surface */);
   auto &cellSet = domain->getCellSet();
   cellSet->writeVTU("initial.vtu");
   // we need neighborhood information for solving the
