@@ -16,7 +16,8 @@ enum class ProcessType {
   SPHEREDISTRIBUTION,
   BOXDISTRIBUTION,
   DIRECTIONALETCHING,
-  WETETCHING
+  WETETCHING,
+  ISOTROPIC
 };
 
 #ifdef VIENNAPS_USE_DOUBLE
@@ -35,6 +36,8 @@ struct ApplicationParameters {
   NumericType xExtent = 1.0;
   NumericType yExtent = 1.0;
   int periodicBoundary = 0;
+  lsIntegrationSchemeEnum integrationScheme =
+      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
 
   // Geometry
   int mask = 0;
@@ -119,6 +122,7 @@ struct ApplicationParameters {
       xExtent = 1.0;
       yExtent = 1.0;
       periodicBoundary = 0;
+      integrationScheme = lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
     }
   }
 };

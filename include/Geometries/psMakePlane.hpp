@@ -8,8 +8,8 @@
 #include <psDomain.hpp>
 
 /**
-  Creates a plane in z(3D)/y(2D) direction.
-*/
+ * Creates a plane in z(3D)/y(2D) direction.
+ */
 template <class NumericType, int D> class psMakePlane {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
