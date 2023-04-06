@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
                             false /*create mask*/)
       .apply();
 
-  // generate cell set with depth 5 below the lowest point of the surface
-  geometry->generateCellSet(5. /*depth*/, false /*cell set below surface*/);
+  // generate cell set with depth 5
+  geometry->generateCellSet(-5. /*depth*/, false /*cell set below surface*/);
 
   PlasmaDamage<NumericType, D> model(
       params.ionEnergy /* mean ion energy (eV) */,

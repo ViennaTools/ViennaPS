@@ -197,14 +197,17 @@ public:
     tracer.setParticle(damageIon);
   }
 
-  virtual void applyPreAdvect(const NumericType processTime) {
+  bool applyPreAdvect(const NumericType processTime) override {
     assert(domain->getUseCellSet());
 
     tracer.setCellSet(domain->getCellSet());
     tracer.apply();
+    return true;
   }
 
-  virtual void applyPostAdvect(const NumericType advectionTime) {}
+  bool applyPostAdvect(const NumericType advectionTime) override {
+    return true;
+  }
 };
 
 template <typename NumericType, int D> class PlasmaDamage {

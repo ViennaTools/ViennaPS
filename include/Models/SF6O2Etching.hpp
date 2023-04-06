@@ -41,9 +41,10 @@ public:
     Coverages->insertNextScalarData(cov, "oCoverage");
   }
 
-  psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIds) override {
+  psSmartPointer<std::vector<NumericType>> calculateVelocities(
+      psSmartPointer<psPointData<NumericType>> Rates,
+      const std::vector<std::array<NumericType, 3>> &coordinates,
+      const std::vector<NumericType> &materialIds) override {
     updateCoverages(Rates);
     const auto numPoints = Rates->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);

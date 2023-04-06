@@ -9,6 +9,7 @@
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
 #include <lsMessage.hpp>
+#include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
 
@@ -34,7 +35,6 @@ private:
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
-  T depthPlanePos = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
   std::vector<T> *fillingFractions;
@@ -71,7 +71,6 @@ public:
           std::min(minBounds[i], (surface->getGrid().isNegBoundaryInfinite(i))
                                      ? surface->getDomain().getMinRunBreak(i)
                                      : surface->getGrid().getMinBounds(i));
-
       maxBounds[i] =
           std::max(maxBounds[i], (surface->getGrid().isPosBoundaryInfinite(i))
                                      ? surface->getDomain().getMaxRunBreak(i)
@@ -79,31 +78,36 @@ public:
     }
 
     depth = passedDepth;
-    if (cellSetAboveSurface) {
-      depthPlanePos = maxBounds[D - 1] * gridDelta + depth - gridDelta;
-    } else {
-      depthPlanePos = minBounds[D - 1] * gridDelta - depth + gridDelta;
-    }
-
-    lsToVoxelMesh<T, D> voxelConverter(cellGrid);
+    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
     auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
-    if (depth > 0.) {
+    {
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depthPlanePos;
+      origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
                            psSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
-    if (!cellSetAboveSurface && depth > 0.)
-      voxelConverter.insertNextLevelSet(plane);
+    if (!cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
     for (auto ls : *levelSets)
-      voxelConverter.insertNextLevelSet(ls);
-    if (cellSetAboveSurface && depth > 0.) {
-      voxelConverter.insertNextLevelSet(plane);
+      levelSetsInOrder.push_back(ls);
+    if (cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
+
+    lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
+
+#ifndef NDEBUG
+    int db_ls = 0;
+    for (auto &ls : levelSetsInOrder) {
+      auto mesh = psSmartPointer<lsMesh<T>>::New();
+      lsToSurfaceMesh<T, D>(ls, mesh).apply();
+      lsVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
+          .apply();
     }
-    voxelConverter.apply();
+    lsVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
+#endif
 
     if (!cellSetAboveSurface)
       adjustMaterialIds();
@@ -111,11 +115,13 @@ public:
     // create filling fractions as default scalar cell data
     numberOfCells = cellGrid->template getElements<(1 << D)>().size();
     std::vector<T> fillingFractionsTemp(numberOfCells, 0.);
+
     cellGrid->getCellData().insertNextScalarData(
         std::move(fillingFractionsTemp), "fillingFraction");
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
     calculateBounds(minBounds, maxBounds);
+    auto boundingbox = getBoundingBox();
     BVH = psSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
     buildBVH();
   }
@@ -178,6 +184,8 @@ public:
   void setCellSetPosition(const bool passedCellSetPosition) {
     cellSetAboveSurface = passedCellSetPosition;
   }
+
+  bool getCellSetPosition() const { return cellSetAboveSurface; }
 
   // Sets the filling fraction at given cell index.
   bool setFillingFraction(const int idx, const T fill) {
@@ -251,32 +259,47 @@ public:
       scalarDataLabels[n++] = label;
     }
 
-    lsToVoxelMesh<T, D> voxelConverter(cellGrid);
-    auto plane =
-        psSmartPointer<lsDomain<T, D>>::New(levelSets->back()->getGrid());
-    if (depth > 0.) {
+    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
+    auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    {
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depthPlanePos;
+      origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
                            psSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
-    if (!cellSetAboveSurface && depth > 0.)
-      voxelConverter.insertNextLevelSet(plane);
+    if (!cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
     for (auto ls : *levelSets)
-      voxelConverter.insertNextLevelSet(ls);
-    if (cellSetAboveSurface && depth > 0.) {
-      voxelConverter.insertNextLevelSet(plane);
-    }
-    voxelConverter.apply();
+      levelSetsInOrder.push_back(ls);
+    if (cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
+
+    // lsVTKWriter<T>(cellGrid, "cellSet_pre_update.vtu").apply();
+
+    lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
+
+    // int db_ls = 0;
+    // for (auto &ls : levelSetsInOrder) {
+    //   auto mesh = psSmartPointer<lsMesh<T>>::New();
+    //   lsToSurfaceMesh<T, D>(ls, mesh).apply();
+    //   lsVTKWriter<T>(mesh,
+    //                  "cellSet_debug_update_" + std::to_string(db_ls++) +
+    //                  ".vtp")
+    //       .apply();
+    // }
+    // lsVTKWriter<T>(cellGrid, "cellSet_post_update.vtu").apply();
 
     if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
       lsMessage::getInstance()
           .addWarning("Number of cells not equal in cell set material update. "
                       "The surface top might has changed.")
           .print();
+      // std::cout << numberOfCells << " -- "
+      //           << cellGrid->template getElements<(1 << D)>().size()
+      //           << std::endl;
       return;
     }
 
@@ -293,11 +316,11 @@ public:
     auto updateCellGrid = psSmartPointer<lsMesh<T>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(updateCellGrid);
-    if (depth != 0.) {
+    {
       auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depthPlanePos;
+      origin[D - 1] = depth;
       normal[D - 1] = 1.;
 
       lsMakeGeometry<T, D>(plane,
@@ -378,7 +401,7 @@ public:
     }
   }
 
-  std::set<size_t> &getNeighbors(size_t cellIdx) {
+  std::set<unsigned long> &getNeighbors(unsigned long cellIdx) {
     assert(!neighborhood.empty() &&
            "Querying neighbors without creating neighborhood structure");
     assert(cellIdx < numberOfCells && "Cell idx out of bounds");
@@ -457,25 +480,34 @@ private:
     }
   }
 
-  void calculateBounds(const hrleVectorType<hrleIndexType, D> &minBounds,
-                       const hrleVectorType<hrleIndexType, D> &maxBounds) {
+  void
+  calculateBounds(const hrleVectorType<hrleIndexType, D> &surfaceMinBounds,
+                  const hrleVectorType<hrleIndexType, D> &surfaceMaxBounds) {
     constexpr T eps = 1e-4;
-    cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - eps;
-    cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + eps;
+    cellGrid->minimumExtent[0] = surfaceMinBounds[0] * gridDelta - eps;
+    cellGrid->maximumExtent[0] = surfaceMaxBounds[0] * gridDelta + eps;
     if constexpr (D == 3) {
-      cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - eps;
-      cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + eps;
+      cellGrid->minimumExtent[1] = surfaceMinBounds[1] * gridDelta - eps;
+      cellGrid->maximumExtent[1] = surfaceMaxBounds[1] * gridDelta + eps;
     }
-    if (depth == 0.) {
-      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
-      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
-    } else if (!cellSetAboveSurface) {
-      cellGrid->minimumExtent[D - 1] = depthPlanePos - gridDelta - eps;
-      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
-    } else if (cellSetAboveSurface) {
-      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
-      cellGrid->maximumExtent[D - 1] = depthPlanePos + eps;
+    auto surfaceMin = surfaceMinBounds[D - 1] * gridDelta - eps;
+    auto surfaceMax = surfaceMaxBounds[D - 1] * gridDelta + eps;
+    assert(surfaceMax >= surfaceMin && "Correctness assertion");
+
+    if (depth <= surfaceMin) {
+      surfaceMin = depth - eps;
+    } else if (depth >= surfaceMax) {
+      surfaceMax = depth + eps;
+    } else {
+      lsMessage::getInstance()
+          .addWarning("Invalid cell set base position.")
+          .print();
+      std::cout << "Surface max: " << surfaceMax << std::endl;
+      std::cout << "Surface min: " << surfaceMax << std::endl;
+      std::cout << "Cell set base: " << depth << std::endl;
     }
+    cellGrid->minimumExtent[D - 1] = surfaceMin;
+    cellGrid->maximumExtent[D - 1] = surfaceMax;
 
     auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
     minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -

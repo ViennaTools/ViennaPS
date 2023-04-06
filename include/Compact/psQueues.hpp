@@ -2,7 +2,7 @@
 #define PS_QUEUES_HPP
 
 /**
- * File: cmQueues.hpp
+ * File: psQueues.hpp
  * Original Author: Keith Schwarz (htiek@cs.stanford.edu)
  * URL: https://www.keithschwarz.com/interesting/
  */
@@ -12,8 +12,12 @@
 #include <map>
 #include <utility>
 
+// A bounded priority queue implementation.
+// If a certain predifined number of elements are already stored in the queue,
+// then a new item with a worse value than the worst already in the queue won't
+// be added when enqueue is called with the new item.
 template <class K, class V, typename Comparator = std::less<K>>
-struct cmBoundedPQueue {
+struct psBoundedPQueue {
   using MapType = std::multimap<K, V, Comparator>;
   using SizeType = std::size_t;
 
@@ -22,18 +26,18 @@ private:
   const SizeType maximumSize;
 
 public:
-  cmBoundedPQueue(SizeType passedMaximumSize)
+  psBoundedPQueue(SizeType passedMaximumSize)
       : maximumSize(passedMaximumSize) {}
 
   void enqueue(std::pair<K, V> &&item) {
-    /* Optimization: If this isn't going to be added, don't add it. */
+    // Optimization: If this isn't going to be added, don't add it.
     if (size() == maxSize() && mmap.key_comp()(worst(), item.first))
       return;
 
-    /* Add the element to the collection. */
+    // Add the element to the collection.
     mmap.emplace(std::forward<std::pair<K, V>>(item));
 
-    /* If there are too many elements in the queue, drop off the last one. */
+    // If there are too many elements in the queue, drop off the last one.
     if (size() > maxSize()) {
       auto last = mmap.end();
       --last; // Now points to highest-priority element
@@ -42,34 +46,37 @@ public:
   }
 
   V dequeueBest() {
-    /* Copy the best value. */
+    // Copy the best value.
     V result = mmap.begin()->second;
 
-    /* Remove it from the map. */
+    // Remove it from the map.
     mmap.erase(mmap.begin());
 
     return result;
   }
 
-  SizeType maxSize() const { return maximumSize; }
+  [[nodiscard]] SizeType maxSize() const { return maximumSize; }
 
-  SizeType size() const { return mmap.size(); }
+  [[nodiscard]] SizeType size() const { return mmap.size(); }
 
-  bool empty() const { return mmap.empty(); }
+  [[nodiscard]] bool empty() const { return mmap.empty(); }
 
-  K best() const {
+  [[nodiscard]] K best() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.begin()->first;
   }
 
-  K worst() const {
+  [[nodiscard]] K worst() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.rbegin()->first;
   }
 };
 
+// A clamped priority queue implementation.
+// Only items whose value is better than that of a predefined threshold can be
+// added to the queue.
 template <class K, class V, typename Comparator = std::less<K>>
-struct cmClampedPQueue {
+struct psClampedPQueue {
   using MapType = std::multimap<K, V, Comparator>;
   using SizeType = std::size_t;
 
@@ -78,39 +85,39 @@ private:
   const K thresValue;
 
 public:
-  cmClampedPQueue(K passedThresValue) : thresValue(passedThresValue) {}
+  psClampedPQueue(K passedThresValue) : thresValue(passedThresValue) {}
 
   void enqueue(std::pair<K, V> &&item) {
-    /* Optimization: If this isn't going to be added, don't add it. */
+    // Optimization: If this isn't going to be added, don't add it.
     if (mmap.key_comp()(thresValue, item.first))
       return;
 
-    /* Add the element to the collection. */
+    // Add the element to the collection.
     mmap.emplace(std::forward<std::pair<K, V>>(item));
   }
 
   V dequeueBest() {
-    /* Copy the best value. */
+    // Copy the best value.
     V result = mmap.begin()->second;
 
-    /* Remove it from the map. */
+    // Remove it from the map.
     mmap.erase(mmap.begin());
 
     return result;
   }
 
-  K thresholdValue() const { return thresValue; }
+  [[nodiscard]] K thresholdValue() const { return thresValue; }
 
-  SizeType size() const { return mmap.size(); }
+  [[nodiscard]] SizeType size() const { return mmap.size(); }
 
-  bool empty() const { return mmap.empty(); }
+  [[nodiscard]] bool empty() const { return mmap.empty(); }
 
-  K best() const {
+  [[nodiscard]] K best() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.begin()->first;
   }
 
-  K worst() const {
+  [[nodiscard]] K worst() const {
     return mmap.empty() ? std::numeric_limits<K>::infinity()
                         : mmap.rbegin()->first;
   }
