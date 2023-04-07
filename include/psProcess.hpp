@@ -52,8 +52,11 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
-  void setPrintIntdermediate(const bool passedPrint) {
-    printIntermediate = passedPrint;
+  // Sets the minimum time between printing intermediate results during the
+  // process. If this is set to a non-positive value, no intermediate results
+  // are printed.
+  void setPrintTimeInterval(const NumericType passedTime) {
+    printTime = passedTime;
   }
 
   void apply() {
@@ -241,7 +244,7 @@ public:
             diskMesh->getCellData().insertNextScalarData(
                 *Rates->getScalarData(idx), label);
           }
-          if (printIntermediate)
+          if (printTime >= 0.)
             printDiskMesh(diskMesh, name + "_covIinit_" +
                                         std::to_string(iterations) + ".vtp");
           std::cerr << "\r"
@@ -334,7 +337,8 @@ public:
         diskMesh->getCellData().insertNextScalarData(*Rates->getScalarData(idx),
                                                      label);
       }
-      if (printIntermediate) {
+      if (printTime >= 0. &&
+          ((processDuration - remainingTime) - printTime * counter) > -1.) {
         printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
         if (domain->getUseCellSet()) {
           domain->getCellSet()->writeVTU(name + "_cellSet_" +
@@ -510,7 +514,7 @@ private:
   bool useRandomSeeds = true;
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
-  bool printIntermediate = true;
+  NumericType printTime = 0.;
 };
 
 #endif
