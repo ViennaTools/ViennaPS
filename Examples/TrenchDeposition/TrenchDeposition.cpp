@@ -10,7 +10,7 @@
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -22,6 +22,8 @@ int main(int argc, char *argv[]) {
     }
     params.fromMap(config);
   }
+
+  psLogger::setVerbosity(psVerbosityEnum::PS_VERB_TIMING);
 
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeTrench<NumericType, D>(

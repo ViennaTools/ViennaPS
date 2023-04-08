@@ -4,11 +4,11 @@
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
-#include <lsMessage.hpp>
 #include <lsToDiskMesh.hpp>
 
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
+#include <psLogger.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
@@ -62,7 +62,7 @@ public:
   void apply() {
     /* ---------- Process Setup --------- */
     if (!model) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("No process model passed to psProcess.")
           .print();
       return;
@@ -70,7 +70,7 @@ public:
     auto name = model->getProcessName();
 
     if (!domain) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("No domain passed to psProcess.")
           .print();
       return;
@@ -78,9 +78,7 @@ public:
 
     if (model->getGeometricModel()) {
       model->getGeometricModel()->setDomain(domain);
-#ifdef VIENNAPS_VERBOSE
-      std::cout << "Applying geometric model..." << std::endl;
-#endif
+      psLogger::getInstance().addInfo("Applying geometric model...").print();
       model->getGeometricModel()->apply();
       return;
     }
@@ -91,7 +89,7 @@ public:
         model->getAdvectionCallback()->setDomain(domain);
         model->getAdvectionCallback()->applyPreAdvect(0);
       } else {
-        lsMessage::getInstance()
+        psLogger::getInstance()
             .addWarning("No advection callback passed to psProcess.")
             .print();
       }
@@ -99,7 +97,7 @@ public:
     }
 
     if (!model->getSurfaceModel()) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("No surface model passed to psProcess.")
           .print();
       return;
@@ -159,12 +157,10 @@ public:
     const bool useProcessParams =
         model->getSurfaceModel()->getProcessParameters() != nullptr;
 
-#ifdef VIENNAPS_VERBOSE
     if (useProcessParams)
-      std::cout << "Using process parameters." << std::endl;
+      psLogger::getInstance().addInfo("Using process parameters.").print();
     if (useAdvectionCallback)
-      std::cout << "Using advection callback." << std::endl;
-#endif
+      psLogger::getInstance().addInfo("Using advection callback.").print();
 
     bool useCoverages = false;
 
@@ -175,13 +171,9 @@ public:
       model->getSurfaceModel()->initializeCoverages(numPoints);
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
       useCoverages = true;
-#ifdef VIENNAPS_VERBOSE
-      std::cout << "Using coverages." << std::endl;
-#endif
+      psLogger::getInstance().addInfo("Using coverages.").print();
       if (!coveragesInitialized) {
-#ifdef VIENNAPS_VERBOSE
-        std::cout << "Initializing coverages ... " << std::endl;
-#endif
+        psLogger::getInstance().addInfo("Initializing coverages ... ").print();
         auto points = diskMesh->getNodes();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         auto materialIds =
@@ -232,42 +224,42 @@ public:
                                  rayTraceCoverages);
           model->getSurfaceModel()->updateCoverages(Rates);
           coveragesInitialized = true;
-#ifdef VIENNAPS_VERBOSE
-          auto coverages = model->getSurfaceModel()->getCoverages();
-          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-            auto label = coverages->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *coverages->getScalarData(idx), label);
-          }
-          for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-            auto label = Rates->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *Rates->getScalarData(idx), label);
-          }
-          if (printTime >= 0.)
+
+          if (psLogger::getVerbosity() >= 3) {
+            auto coverages = model->getSurfaceModel()->getCoverages();
+            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+              auto label = coverages->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *coverages->getScalarData(idx), label);
+            }
+            for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+              auto label = Rates->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *Rates->getScalarData(idx), label);
+            }
             printDiskMesh(diskMesh, name + "_covIinit_" +
                                         std::to_string(iterations) + ".vtp");
-          std::cerr << "\r"
-                    << "Iteration: " << iterations + 1 << " / "
-                    << maxIterations;
-          if (iterations == maxIterations - 1)
-            std::cerr << std::endl;
-#endif
+            psLogger::getInstance()
+                .addInfo("Iteration: " + std::to_string(iterations))
+                .print();
+          }
         }
       }
     }
 
     size_t counter = 0;
     while (remainingTime > 0.) {
-#ifdef VIENNAPS_VERBOSE
-      std::cout << "Remaining time: " << remainingTime << std::endl;
-#endif
+      psLogger::getInstance()
+          .addInfo("Remaining time: " + std::to_string(remainingTime))
+          .print();
 
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
 
+      psUtils::Timer rtTimer;
+      rtTimer.start();
       if (useRayTracing) {
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         rayTrace.setGeometry(points, normals, gridDelta);
@@ -315,46 +307,52 @@ public:
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
       }
+      rtTimer.finish();
+      psLogger::getInstance()
+          .addTiming("Top-Down Flux Calculation", rtTimer)
+          .print();
 
       auto velocitites = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocitites);
 
-#ifdef VIENNAPS_VERBOSE
-      if (velocitites)
-        diskMesh->getCellData().insertNextScalarData(*velocitites,
-                                                     "velocities");
-      if (useCoverages) {
-        auto coverages = model->getSurfaceModel()->getCoverages();
-        for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-          auto label = coverages->getScalarDataLabel(idx);
+      if (psLogger::getVerbosity() >= 3) {
+        if (velocitites)
+          diskMesh->getCellData().insertNextScalarData(*velocitites,
+                                                       "velocities");
+        if (useCoverages) {
+          auto coverages = model->getSurfaceModel()->getCoverages();
+          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+            auto label = coverages->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *coverages->getScalarData(idx), label);
+          }
+        }
+        for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
+          auto label = Rates->getScalarDataLabel(idx);
           diskMesh->getCellData().insertNextScalarData(
-              *coverages->getScalarData(idx), label);
+              *Rates->getScalarData(idx), label);
+        }
+        if (printTime >= 0. &&
+            ((processDuration - remainingTime) - printTime * counter) > -1.) {
+          printDiskMesh(diskMesh,
+                        name + "_" + std::to_string(counter) + ".vtp");
+          if (domain->getUseCellSet()) {
+            domain->getCellSet()->writeVTU(name + "_cellSet_" +
+                                           std::to_string(counter++) + ".vtu");
+          }
         }
       }
-      for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-        auto label = Rates->getScalarDataLabel(idx);
-        diskMesh->getCellData().insertNextScalarData(*Rates->getScalarData(idx),
-                                                     label);
-      }
-      if (printTime >= 0. &&
-          ((processDuration - remainingTime) - printTime * counter) > -1.) {
-        printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
-        if (domain->getUseCellSet()) {
-          domain->getCellSet()->writeVTU(name + "_cellSet_" +
-                                         std::to_string(counter++) + ".vtu");
-        }
-      }
-#endif
+
       // apply advection callback
       if (useAdvectionCallback) {
         bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
             processDuration - remainingTime);
         if (!continueProcess) {
-#ifdef VIENNAPS_VERBOSE
-          std::cout << "Process stopped early by AdvectionCallback during "
-                       "`preAdvect`.\n";
-#endif
+          psLogger::getInstance()
+              .addInfo("Process stopped early by AdvectionCallback during "
+                       "`preAdvect`.")
+              .print();
           break;
         }
       }
@@ -383,10 +381,10 @@ public:
         bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
         if (!continueProcess) {
-#ifdef VIENNAPS_VERBOSE
-          std::cout << "Process stopped early by AdvectionCallback during "
-                       "`postAdvect`.\n";
-#endif
+          psLogger::getInstance()
+              .addInfo("Process stopped early by AdvectionCallback during "
+                       "`postAdvect`.")
+              .print();
           break;
         }
       }
