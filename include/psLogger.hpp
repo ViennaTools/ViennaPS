@@ -20,7 +20,7 @@ enum class psVerbosityEnum : unsigned {
   PS_VERB_DEBUG = 5
 };
 
-static psVerbosityEnum psVerbosity = psVerbosityEnum::PS_VERB_INFO;
+psVerbosityEnum psVerbosity = psVerbosityEnum::PS_VERB_INFO;
 
 /// Singleton class for thread-safe logging.
 class psLogger {
