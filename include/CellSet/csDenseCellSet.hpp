@@ -8,13 +8,13 @@
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
-#include <lsMessage.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 #include <rayUtil.hpp>
 
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
 /**
@@ -262,7 +262,7 @@ public:
 
     std::getline(file, line);
     if (std::stoi(line) != numberOfCells) {
-      std::cout << "Incompatible cell set data" << std::endl;
+      psLogger::getInstance().addWarning("Incompatible cell set data.").print();
       return;
     }
 
@@ -345,29 +345,13 @@ public:
     if (cellSetAboveSurface)
       levelSetsInOrder.push_back(plane);
 
-    // lsVTKWriter<T>(cellGrid, "cellSet_pre_update.vtu").apply();
-
     lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
 
-    // int db_ls = 0;
-    // for (auto &ls : levelSetsInOrder) {
-    //   auto mesh = psSmartPointer<lsMesh<T>>::New();
-    //   lsToSurfaceMesh<T, D>(ls, mesh).apply();
-    //   lsVTKWriter<T>(mesh,
-    //                  "cellSet_debug_update_" + std::to_string(db_ls++) +
-    //                  ".vtp")
-    //       .apply();
-    // }
-    // lsVTKWriter<T>(cellGrid, "cellSet_post_update.vtu").apply();
-
     if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Number of cells not equal in cell set material update. "
                       "Surface may has changed.")
           .print();
-      // std::cout << numberOfCells << " -- "
-      //           << cellGrid->template getElements<(1 << D)>().size()
-      //           << std::endl;
       return;
     }
 
@@ -567,12 +551,9 @@ private:
     } else if (depth >= surfaceMax) {
       surfaceMax = depth + eps;
     } else {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Invalid cell set base position.")
           .print();
-      std::cout << "Surface max: " << surfaceMax << std::endl;
-      std::cout << "Surface min: " << surfaceMax << std::endl;
-      std::cout << "Cell set base: " << depth << std::endl;
     }
     cellGrid->minimumExtent[D - 1] = surfaceMin;
     cellGrid->maximumExtent[D - 1] = surfaceMax;

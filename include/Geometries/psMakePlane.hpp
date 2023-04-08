@@ -6,6 +6,7 @@
 #include <lsMakeGeometry.hpp>
 
 #include <psDomain.hpp>
+#include <psLogger.hpp>
 
 /**
  * Creates a plane in z(3D)/y(2D) direction.
@@ -38,7 +39,7 @@ public:
   void apply() {
     if (add) {
       if (!domain->getLevelSets()->back()) {
-        lsMessage::getInstance()
+        psLogger::getInstance()
             .addWarning("psMakePlane: Plane can only be added to already "
                         "existing geometry.")
             .print();

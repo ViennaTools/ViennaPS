@@ -40,6 +40,7 @@
 #include <omp.h>
 #endif
 
+#include <psLogger.hpp>
 #include <psQueues.hpp>
 
 template <class NumericType> class psKDTree {
@@ -72,7 +73,9 @@ public:
         }
       }
     } else {
-      std::cout << "psKDTree: the provided points vector is empty.\n";
+      psLogger::getInstance()
+          .addWarning("psKDTree: the provided points vector is empty.")
+          .print();
       return;
     }
   }
@@ -80,7 +83,9 @@ public:
   void setPoints(const std::vector<std::vector<NumericType>> &passedPoints,
                  const std::vector<NumericType> &passedScalingFactors = {}) {
     if (passedPoints.empty()) {
-      std::cout << "psKDTree: the provided points vector is empty.\n";
+      psLogger::getInstance()
+          .addWarning("psKDTree: the provided points vector is empty.")
+          .print();
       return;
     }
 
@@ -158,7 +163,7 @@ public:
 
   void build() {
     if (nodes.size() == 0) {
-      std::cout << "KDTree: No points provided!\n";
+      psLogger::getInstance().addWarning("KDTree: No points provided!").print();
       return;
     }
 

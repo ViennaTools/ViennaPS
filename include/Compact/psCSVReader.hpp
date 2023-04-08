@@ -10,6 +10,7 @@
 #include <tuple>
 #include <vector>
 
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 #include <psUtils.hpp>
 
@@ -56,7 +57,9 @@ public:
         }
       }
     } else {
-      std::cout << "Couldn't open file '" << filename << "'\n";
+      psLogger::getInstance()
+          .addWarning("Couldn't open file '" + filename + "'")
+          .print();
       return {};
     }
     return {header};
@@ -89,8 +92,11 @@ public:
           if (valueOpt)
             a.push_back(valueOpt.value());
           else {
-            std::cout << "Error while reading line " << lineCount - 1 << " in '"
-                      << filename << "'\n";
+            psLogger::getInstance()
+                .addWarning("Error while reading line " +
+                            std::to_string(lineCount - 1) + " in '" + filename +
+                            "'")
+                .print();
             return {};
           }
           ++i;
@@ -101,8 +107,11 @@ public:
           numCols = i;
 
         if (i != numCols) {
-          std::cout << "Invalid number of columns in line " << lineCount - 1
-                    << " in '" << filename << "'\n";
+          psLogger::getInstance()
+              .addWarning("Invalid number of columns in line " +
+                          std::to_string(lineCount - 1) + " in '" + filename +
+                          "'")
+              .print();
           return {};
         }
         data.push_back(a);
@@ -110,7 +119,9 @@ public:
       file.close();
       return data;
     } else {
-      std::cout << "Couldn't open file '" << filename << "'\n";
+      psLogger::getInstance()
+          .addWarning("Couldn't open file '" + filename + "'")
+          .print();
       return {};
     }
   }

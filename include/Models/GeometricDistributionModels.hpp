@@ -32,13 +32,14 @@ public:
 
   void apply() {
     if (dist)
-      if (mask)
+      if (mask) {
         lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist,
                                           mask)
             .apply();
-      else
+      } else {
         lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist)
             .apply();
+      }
   }
 };
 

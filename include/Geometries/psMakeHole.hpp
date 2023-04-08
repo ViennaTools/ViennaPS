@@ -47,7 +47,7 @@ public:
 
   void apply() {
     if (D != 3) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("psMakeHole: Hole geometry can only be created in 3D! "
                       "Falling back to trench geometry.")
           .print();

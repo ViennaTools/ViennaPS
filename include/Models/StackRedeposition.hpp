@@ -99,10 +99,6 @@ private:
     for (int iter = 0; iter < numSteps; iter++) {
       std::vector<T> solution(data->size(), 0.);
 
-      // std::cout << (*std::max_element(materialIds->begin(),
-      // materialIds->end()))
-      //           << std::endl;
-
 #pragma omp parallel for
       for (int e = 0; e < data->size(); e++) {
         if (materialIds->at(e) != plasmaMaterial) {

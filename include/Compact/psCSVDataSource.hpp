@@ -36,8 +36,10 @@ class psCSVDataSource : public psDataSource<NumericType> {
     if (v.has_value())
       positionalParameters.push_back(v.value());
     else {
-      std::cout << "Error while converting parameter '" << input
-                << "' to numeric type.\n";
+      psLogger::getInstance()
+          .addWarning("Error while converting parameter '" + input +
+                      "' to numeric type.")
+          .print();
     }
   }
 
@@ -54,11 +56,15 @@ class psCSVDataSource : public psDataSource<NumericType> {
       if (v.has_value())
         namedParameters.insert({smatch[1], v.value()});
       else {
-        std::cout << "Error while converting value of parameter '" << smatch[1]
-                  << "'\n";
+        psLogger::getInstance()
+            .addWarning("Error while converting value of parameter '" +
+                        std::string(smatch[1]) + "'")
+            .print();
       }
     } else {
-      std::cout << "Error while parsing parameter line '" << input << "'\n";
+      psLogger::getInstance()
+          .addWarning("Error while parsing parameter line '" + input + "'")
+          .print();
     }
   }
 
