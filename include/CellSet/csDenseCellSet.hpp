@@ -137,9 +137,10 @@ public:
           cellGrid->maximumExtent[0], cellGrid->maximumExtent[1]};
   }
 
-  void addScalarData(std::string name, T initValue) {
+  std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
+    return getScalarData(name);
   }
 
   gridType getCellGrid() { return cellGrid; }
@@ -232,6 +233,72 @@ public:
   // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
     lsVTKWriter<T>(cellGrid, fileName).apply();
+  }
+
+  void writeCellSetData(std::string fileName) const {
+    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
+
+    std::ofstream file(fileName);
+    file << numberOfCells << "\n";
+    for (int i = 0; i < numScalarData; i++) {
+      auto label = cellGrid->getCellData().getScalarDataLabel(i);
+      file << label << ",";
+    }
+    file << "\n";
+
+    for (size_t j = 0; j < numberOfCells; j++) {
+      for (int i = 0; i < numScalarData; i++) {
+        file << cellGrid->getCellData().getScalarData(i)->at(j) << ",";
+      }
+      file << "\n";
+    }
+
+    file.close();
+  }
+
+  void readCellSetData(std::string fileName) {
+    std::ifstream file(fileName);
+    std::string line;
+
+    std::getline(file, line);
+    if (std::stoi(line) != numberOfCells) {
+      std::cout << "Incompatible cell set data" << std::endl;
+      return;
+    }
+
+    std::vector<std::string> labels;
+    std::getline(file, line);
+    {
+      std::stringstream ss(line);
+      std::string label;
+      while (std::getline(ss, label, ',')) {
+        labels.push_back(label);
+      }
+    }
+
+    std::vector<std::vector<T> *> cellDataP;
+    for (int i = 0; i < labels.size(); i++) {
+      auto dataP = getScalarData(labels[i]);
+      if (dataP != nullptr) {
+        cellDataP.push_back(dataP);
+      } else {
+        cellDataP.push_back(addScalarData(labels[i], 0.));
+      }
+    }
+
+    std::size_t j = 0;
+    while (std::getline(file, line)) {
+      std::stringstream ss(line);
+      std::size_t i = 0;
+      std::string value;
+      while (std::getline(ss, value, ','))
+        cellDataP[i++]->at(j) = std::stod(value);
+
+      j++;
+    }
+    assert(j == numberOfCells && "Data incompatible");
+
+    file.close();
   }
 
   // Clear the filling fractions
