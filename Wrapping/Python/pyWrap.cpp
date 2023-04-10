@@ -48,9 +48,14 @@ typedef std::vector<hrleCoordType> VectorHRLEcoord;
 constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 
 PYBIND11_DECLARE_HOLDER_TYPE(TemplateType, psSmartPointer<TemplateType>);
+//this make opaque makes lsDomain not work anymore, but it is needed for psSurfaceModel
 PYBIND11_MAKE_OPAQUE(std::vector<T>)
-PYBIND11_MAKE_OPAQUE(std::vector<unsigned>)
-PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
+//we had to make this type opaque, as we will use it with smart pointers (psSmartPointer<ParticleTypeList> in psProcessModel)
+using ParticleTypeList = std::vector<std::unique_ptr<rayAbstractParticle<T>>>;
+PYBIND11_MAKE_OPAQUE(ParticleTypeList)
+//these 2 might not be needed
+//PYBIND11_MAKE_OPAQUE(std::vector<unsigned>)
+//PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 
 // define trampoline classes for interface functions
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
@@ -119,13 +124,13 @@ public:
         );
     }
 //    using alt_sm_ptr = psSmartPointer<ParticleTypeList>;
-//    psSmartPointer<ParticleTypeList> getParticleTypes() override{
-//        PYBIND11_OVERLOAD(
-//                alt_sm_ptr,
-//                ClassName,
-//                getParticleTypes,
-//        );
-//    }
+    psSmartPointer<ParticleTypeList> getParticleTypes() override{
+        PYBIND11_OVERLOAD(
+                psSmartPointer<ParticleTypeList>,
+                ClassName,
+                getParticleTypes,
+        );
+    }
     psSmartPointer<psAdvectionCalback<T, D>>
     getAdvectionCallback() override{
         using SmartPointerAdvectionCalBack_TD = psSmartPointer<psAdvectionCalback<T, D>>;
@@ -197,14 +202,14 @@ public:
         );
     }
 //a wrapper around vector is needed in our case
-//    void setVelocities(psSmartPointer<HolderForVector> passedVelocities) override{
-//        PYBIND11_OVERRIDE(
-//                void,
-//                psVelocityField<T>,
-//                setVelocities,
-//                passedVelocities
-//        );
-//    }
+    void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override{
+        PYBIND11_OVERRIDE(
+                void,
+                psVelocityField<T>,
+                setVelocities,
+                passedVelocities
+        );
+    }
 
     bool useTranslationField() const override{
         PYBIND11_OVERRIDE(
@@ -238,9 +243,9 @@ pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfac
 .def("initializeProcessParameters",&psSurfaceModel<T>::initializeProcessParameters)
 .def("getCoverages",&psSurfaceModel<T>::getCoverages)
 .def("getProcessParameters",&psSurfaceModel<T>::getProcessParameters)
-.def("calculateVelocities",[](psSurfaceModel<double>&a,const lsSmartPointer<lsPointData<T>>& Rates,
-const std::vector<T> &materialIDs){
-return a.calculateVelocities(Rates,materialIDs);})
+//.def("calculateVelocities",[](psSurfaceModel<double>&a,const lsSmartPointer<lsPointData<T>>& Rates,
+//const std::vector<T> &materialIDs){
+//return a.calculateVelocities(Rates,materialIDs);})
 .def("updateCoverages",&psSurfaceModel<T>::updateCoverages);
 
 
@@ -467,57 +472,57 @@ pybind11::arg("maskMaterial") = 0)
 
 // ViennaLS domain setup
 // lsDomain
-pybind11::class_<lsDomain<T, D>, lsSmartPointer<lsDomain<T, D>>>(module,
-"lsDomain")
-// constructors
-.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<>))
-.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType>))
-.def(pybind11::init(
-        &lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
-        lsDomain<T, D>::BoundaryType *>))
-.def(pybind11::init(
-        &lsSmartPointer<lsDomain<T, D>>::New<
-                                    hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
-.def(pybind11::init(
-        &lsSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>,
-        std::vector<unsigned>,
-        hrleCoordType>))
-.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
-                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
-                    lsDomain<T, D>::BoundaryType *>))
-.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
-                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
-                    lsDomain<T, D>::BoundaryType *, hrleCoordType>))
-.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
-                                                lsSmartPointer<lsDomain<T, D>> &>))
-// methods
-.def("deepCopy", &lsDomain<T, D>::deepCopy,
-"Copy lsDomain in this lsDomain.")
-.def("getNumberOfSegments", &lsDomain<T, D>::getNumberOfSegments,
-"Get the number of segments, the level set structure is divided "
-"into.")
-.def("getNumberOfPoints", &lsDomain<T, D>::getNumberOfPoints,
-"Get the number of defined level set values.")
-.def("getLevelSetWidth", &lsDomain<T, D>::getLevelSetWidth,
-"Get the number of layers of level set points around the explicit "
-"surface.")
-.def("setLevelSetWidth", &lsDomain<T, D>::setLevelSetWidth,
-"Set the number of layers of level set points which should be "
-"stored around the explicit surface.")
-.def("clearMetaData", &lsDomain<T, D>::clearMetaData,
-"Clear all metadata stored in the level set.")
-// allow filehandle to be passed and default to python standard output
-.def("print", [](lsDomain<T, D>& d, pybind11::object fileHandle) {
-if (!(pybind11::hasattr(fileHandle,"write") &&
-pybind11::hasattr(fileHandle,"flush") )){
-throw pybind11::type_error("MyClass::read_from_file_like_object(file): incompatible function argument:  `file` must be a file-like object, but `"
-+(std::string)(pybind11::repr(fileHandle))+"` provided"
-);
-}
-pybind11::detail::pythonbuf buf(fileHandle);
-std::ostream stream(&buf);
-d.print(stream);
-}, pybind11::arg("stream") = pybind11::module::import("sys").attr("stdout"));
+//pybind11::class_<lsDomain<T, D>, lsSmartPointer<lsDomain<T, D>>>(module,
+//"lsDomain")
+//// constructors
+//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<>))
+//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType>))
+//.def(pybind11::init(
+//        &lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
+//        lsDomain<T, D>::BoundaryType *>))
+//.def(pybind11::init(
+//        &lsSmartPointer<lsDomain<T, D>>::New<
+//                                    hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+//.def(pybind11::init(
+//        &lsSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>,
+//        std::vector<unsigned>,
+//        hrleCoordType>))
+//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
+//                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
+//                    lsDomain<T, D>::BoundaryType *>))
+//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
+//                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
+//                    lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
+//                                                lsSmartPointer<lsDomain<T, D>> &>))
+//// methods
+//.def("deepCopy", &lsDomain<T, D>::deepCopy,
+//"Copy lsDomain in this lsDomain.")
+//.def("getNumberOfSegments", &lsDomain<T, D>::getNumberOfSegments,
+//"Get the number of segments, the level set structure is divided "
+//"into.")
+//.def("getNumberOfPoints", &lsDomain<T, D>::getNumberOfPoints,
+//"Get the number of defined level set values.")
+//.def("getLevelSetWidth", &lsDomain<T, D>::getLevelSetWidth,
+//"Get the number of layers of level set points around the explicit "
+//"surface.")
+//.def("setLevelSetWidth", &lsDomain<T, D>::setLevelSetWidth,
+//"Set the number of layers of level set points which should be "
+//"stored around the explicit surface.")
+//.def("clearMetaData", &lsDomain<T, D>::clearMetaData,
+//"Clear all metadata stored in the level set.")
+//// allow filehandle to be passed and default to python standard output
+//.def("print", [](lsDomain<T, D>& d, pybind11::object fileHandle) {
+//if (!(pybind11::hasattr(fileHandle,"write") &&
+//pybind11::hasattr(fileHandle,"flush") )){
+//throw pybind11::type_error("MyClass::read_from_file_like_object(file): incompatible function argument:  `file` must be a file-like object, but `"
+//+(std::string)(pybind11::repr(fileHandle))+"` provided"
+//);
+//}
+//pybind11::detail::pythonbuf buf(fileHandle);
+//std::ostream stream(&buf);
+//d.print(stream);
+//}, pybind11::arg("stream") = pybind11::module::import("sys").attr("stdout"));
 
 // enums
 pybind11::enum_<lsBoundaryConditionEnum<D>>(module, "lsBoundaryConditionEnum")
