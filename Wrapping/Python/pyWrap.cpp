@@ -467,24 +467,29 @@ pybind11::arg("maskMaterial") = 0)
 
 // ViennaLS domain setup
 // lsDomain
-pybind11::class_<lsDomain<T, D>, psSmartPointer<lsDomain<T, D>>>(module,
+pybind11::class_<lsDomain<T, D>, lsSmartPointer<lsDomain<T, D>>>(module,
 "lsDomain")
 // constructors
-.def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<>))
-.def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<hrleCoordType>))
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<>))
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType>))
 .def(pybind11::init(
-        &psSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
+        &lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
         lsDomain<T, D>::BoundaryType *>))
-.def(pybind11::init( &psSmartPointer<lsDomain<T, D>>::New<hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
-.def(pybind11::init( &psSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>>, std::vector<unsigned>, hrleCoordType>))
-.def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<
+.def(pybind11::init(
+        &lsSmartPointer<lsDomain<T, D>>::New<
+                                    hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+.def(pybind11::init(
+        &lsSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>,
+        std::vector<unsigned>,
+        hrleCoordType>))
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
                                                 lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
                     lsDomain<T, D>::BoundaryType *>))
-.def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
                                                 lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
                     lsDomain<T, D>::BoundaryType *, hrleCoordType>))
-.def(pybind11::init(&psSmartPointer<lsDomain<T, D>>::New<
-                                                psSmartPointer<lsDomain<T, D>> &>))
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
+                                                lsSmartPointer<lsDomain<T, D>> &>))
 // methods
 .def("deepCopy", &lsDomain<T, D>::deepCopy,
 "Copy lsDomain in this lsDomain.")
