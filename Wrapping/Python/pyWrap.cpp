@@ -33,14 +33,14 @@
 #include <psMakeTrench.hpp>
 
 // models
-//#include <GeometricDistributionModels.hpp>
+#include <GeometricDistributionModels.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
 
 // other
 #include <lsDomain.hpp>
 #include <rayTraceDirection.hpp>
-
+#include <rayUtil.hpp>
 // always use double for python export
 typedef double T;
 typedef std::vector<hrleCoordType> VectorHRLEcoord;
@@ -53,15 +53,59 @@ PYBIND11_MAKE_OPAQUE(std::vector<T>)
 //we had to make this type opaque, as we will use it with smart pointers (psSmartPointer<ParticleTypeList> in psProcessModel)
 using ParticleTypeList = std::vector<std::unique_ptr<rayAbstractParticle<T>>>;
 PYBIND11_MAKE_OPAQUE(ParticleTypeList)
-//these 2 might not be needed
-//PYBIND11_MAKE_OPAQUE(std::vector<unsigned>)
-//PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 
 // define trampoline classes for interface functions
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
 
-//could not implement CalculateVelocities, as it is of type SmartPointer
+//for rayUtil
+
+//for rayPair<2>; we have to declare it in main as well
+
+template <typename NumericType>
+void define_rayPair(pybind11::module &m, const std::string &name) {
+    pybind11::class_<rayPair<NumericType>>(m, name.c_str())
+            .def(pybind11::init<>())
+            .def(pybind11::init<NumericType, NumericType>())
+            .def_readwrite("x", &rayPair<NumericType>::operator[], "x component")
+            .def_readwrite("y", &rayPair<NumericType>::operator[], "y component")
+            .def("__repr__", [](const rayPair<NumericType> &self) {
+                return "(" + std::to_string(self[0]) + ", " + std::to_string(self[1]) + ")";
+            });
+}
+//for rayPair<3>
+template <typename NumericType>
+void define_rayTriple(pybind11::module &m, const std::string &name) {
+    pybind11::class_<rayTriple<NumericType>>(m, name.c_str())
+            .def(pybind11::init<>())
+            .def(pybind11::init<NumericType, NumericType, NumericType>())
+            .def_readwrite("x", &rayTriple<NumericType>::operator[], "x component")
+            .def_readwrite("y", &rayTriple<NumericType>::operator[], "y component")
+            .def_readwrite("z", &rayTriple<NumericType>::operator[], "z component")
+            .def("__repr__", [](const rayTriple<NumericType> &self) {
+                return "(" + std::to_string(self[0]) + ", " + std::to_string(self[1]) + ", " +
+                       std::to_string(self[2]) + ")";
+            });
+}
+
+//for rayPair<4>
+template <typename NumericType>
+void define_rayQuadruple(pybind11::module &m, const std::string &name) {
+    pybind11::class_<rayQuadruple<NumericType>>(m, name.c_str())
+            .def(pybind11::init<>())
+            .def(pybind11::init<NumericType, NumericType, NumericType, NumericType>())
+            .def_readwrite("x", &rayQuadruple<NumericType>::operator[], "x component")
+            .def_readwrite("y", &rayQuadruple<NumericType>::operator[], "y component")
+            .def_readwrite("z", &rayQuadruple<NumericType>::operator[], "z component")
+            .def_readwrite("w", &rayQuadruple<NumericType>::operator[], "w component")
+            .def("__repr__", [](const rayQuadruple<NumericType> &self) {
+                return "(" + std::to_string(self[0]) + ", " + std::to_string(self[1]) + ", " +
+                       std::to_string(self[2]) + ", " + std::to_string(self[3]) + ")";
+            });
+}
+
+
+
 class PypsSurfaceModel : public psSurfaceModel<T> {
     using psSurfaceModel<T>::Coverages;
     using psSurfaceModel<T>::processParams;
@@ -90,10 +134,10 @@ public:
     void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
         PYBIND11_OVERLOAD(void, psSurfaceModel<T>, updateCoverages, Rates);
     }
+
 };
 
 //psProcessModel
-//could implement only the functions that were not of type smartPointer
 class PYProcessModel : public psProcessModel<T,D> {
 public:
     using psProcessModel<T, D>::setProcessName;
@@ -113,7 +157,6 @@ public:
     psSmartPointer <psVelocityField<T>> velocityField = nullptr;
     std::string processName = "default";
     using ClassName = psProcessModel<T, D>;
-//    using point_to_vec = psSmartPointer <psSurfaceModel<T>>;
 
     psSmartPointer<psSurfaceModel<T>> getSurfaceModel() override{
 
@@ -123,7 +166,6 @@ public:
                 getSurfaceModel
         );
     }
-//    using alt_sm_ptr = psSmartPointer<ParticleTypeList>;
     psSmartPointer<ParticleTypeList> getParticleTypes() override{
         PYBIND11_OVERLOAD(
                 psSmartPointer<ParticleTypeList>,
@@ -174,7 +216,8 @@ public:
                 pointId
         );
     }
-    //if we declare a typedef for std::array<T,3>, we will no longer get this error: the compiler doesn't understand why std::array gets 2 template arguments
+    //if we declare a typedef for std::array<T,3>, we will no longer get this error: the compiler doesn't
+    // understand why std::array gets 2 template arguments
     typedef std::array<T,3> arrayType;
     std::array<T,3> getVectorVelocity(const std::array<T,3> &coordinate, int material,
                                                      const std::array<T,3> &normalVector,
@@ -243,9 +286,7 @@ pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfac
 .def("initializeProcessParameters",&psSurfaceModel<T>::initializeProcessParameters)
 .def("getCoverages",&psSurfaceModel<T>::getCoverages)
 .def("getProcessParameters",&psSurfaceModel<T>::getProcessParameters)
-//.def("calculateVelocities",[](psSurfaceModel<double>&a,const lsSmartPointer<lsPointData<T>>& Rates,
-//const std::vector<T> &materialIDs){
-//return a.calculateVelocities(Rates,materialIDs);})
+.def("calculateVelocities",&psSurfaceModel<T>::calculateVelocities)
 .def("updateCoverages",&psSurfaceModel<T>::updateCoverages);
 
 
@@ -257,7 +298,7 @@ pybind11::class_<psVelocityField<T>,psSmartPointer<psVelocityField<T>>,PYVelocit
 .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
 .def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
 .def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
-//.def("psVelocityField", &psVelocityField<T>::psVelocityField)
+.def("setVelocities",&psVelocityField<T>::setVelocities)
 .def("useTranslationField", &psVelocityField<T>::useTranslationField);
 
 //psDomain
@@ -336,10 +377,8 @@ pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
 .value("NEG_Z", rayTraceDirection::NEG_Z);
 
 // psProcessModel
-//modified here as it seemes the functions were not defined, and the virtual functions
-//were not overwritten
+//modified here as it seems the functions were not defined, and the virtual functions
 //didn't implement the insertNextParticleType, as I do not know what that type is
-//and didn't implement the virtual functions that are of type SmartPointer<std::vector>
 pybind11::class_<psProcessModel<T, D>,psSmartPointer<psProcessModel<T,D>>,PYProcessModel>(module, "psProcessModel")
 // constructors
 .def(pybind11::init<>())
@@ -350,7 +389,11 @@ pybind11::class_<psProcessModel<T, D>,psSmartPointer<psProcessModel<T,D>>,PYProc
 .def("getAdvectionCallback", &psProcessModel<T, D>::getAdvectionCallback)
 .def("getGeometricModel", &psProcessModel<T, D>::getGeometricModel)
 .def("getVelocityField", &psProcessModel<T, D>::getVelocityField)
-
+.def("getParticleTypes",&psProcessModel<T, D>::getParticleTypes)
+.def("getSurfaceModel",&psProcessModel<T, D>::getSurfaceModel)
+.def("getAdvectionCallback",&psProcessModel<T, D>::getAdvectionCallback)
+.def("getGeometricModel",&psProcessModel<T, D>::getGeometricModel)
+.def("getVelocityField",&psProcessModel<T, D>::getVelocityField)
 //I don't know what particle type could be
 //.def("insertNextParticleType",
 //[](psProcessModel<T, D> &pm,
@@ -428,14 +471,16 @@ pybind11::arg("maskMaterial") = 0)
 .def("getProcessModel", &SF6O2Etching<T, D>::getProcessModel,
 "Returns the etching process model");
 
-//pybind11::class_<GeometricDistributionModels<T, D>,
-//psSmartPointer<GeometricDistributionModels<T, D>>>(
-//module, "GeometricDistributionModels")
+
+//interesat ce ar putea sa fie al 3lea template argument!
+//pybind11::class_<GeometricDistributionModel<T, D>, psSmartPointer<GeometricDistributionModel<T, D>>>(
+//module, "GeometricDistributionModel")
+////constructors
 //.def(pybind11::init(
-//        &psSmartPointer<GeometricDistributionModels<T, D>>::New<const T>),
+//        &psSmartPointer<GeometricDistributionModel<T, D>>::New<const T>),
 //        pybind11::arg("layerThickness") = 1.)
 //.def("getProcessModel",
-//&GeometricDistributionModels<T, D>::getProcessModel,
+//&GeometricDistributionModel<T, D>::getProcessModel,
 //"Return the deposition process model.");
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
@@ -472,57 +517,59 @@ pybind11::arg("maskMaterial") = 0)
 
 // ViennaLS domain setup
 // lsDomain
-//pybind11::class_<lsDomain<T, D>, lsSmartPointer<lsDomain<T, D>>>(module,
-//"lsDomain")
-//// constructors
-//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<>))
-//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType>))
-//.def(pybind11::init(
-//        &lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
-//        lsDomain<T, D>::BoundaryType *>))
-//.def(pybind11::init(
-//        &lsSmartPointer<lsDomain<T, D>>::New<
-//                                    hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+pybind11::class_<lsDomain<T, D>, lsSmartPointer<lsDomain<T, D>>>(module,
+"lsDomain")
+// constructors
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<>))
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType>))
+.def(pybind11::init(
+        &lsSmartPointer<lsDomain<T, D>>::New<hrleCoordType *,
+        lsDomain<T, D>::BoundaryType *>))
+.def(pybind11::init(
+        &lsSmartPointer<lsDomain<T, D>>::New<
+                                    hrleCoordType *, lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+//don't know yet how to solve the issue with this constructor
+//a class implementing vector or a wrapper might be needed
 //.def(pybind11::init(
 //        &lsSmartPointer<lsDomain<T, D>>::New<std::vector<hrleCoordType>,
 //        std::vector<unsigned>,
 //        hrleCoordType>))
-//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
-//                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
-//                    lsDomain<T, D>::BoundaryType *>))
-//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
-//                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
-//                    lsDomain<T, D>::BoundaryType *, hrleCoordType>))
-//.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
-//                                                lsSmartPointer<lsDomain<T, D>> &>))
-//// methods
-//.def("deepCopy", &lsDomain<T, D>::deepCopy,
-//"Copy lsDomain in this lsDomain.")
-//.def("getNumberOfSegments", &lsDomain<T, D>::getNumberOfSegments,
-//"Get the number of segments, the level set structure is divided "
-//"into.")
-//.def("getNumberOfPoints", &lsDomain<T, D>::getNumberOfPoints,
-//"Get the number of defined level set values.")
-//.def("getLevelSetWidth", &lsDomain<T, D>::getLevelSetWidth,
-//"Get the number of layers of level set points around the explicit "
-//"surface.")
-//.def("setLevelSetWidth", &lsDomain<T, D>::setLevelSetWidth,
-//"Set the number of layers of level set points which should be "
-//"stored around the explicit surface.")
-//.def("clearMetaData", &lsDomain<T, D>::clearMetaData,
-//"Clear all metadata stored in the level set.")
-//// allow filehandle to be passed and default to python standard output
-//.def("print", [](lsDomain<T, D>& d, pybind11::object fileHandle) {
-//if (!(pybind11::hasattr(fileHandle,"write") &&
-//pybind11::hasattr(fileHandle,"flush") )){
-//throw pybind11::type_error("MyClass::read_from_file_like_object(file): incompatible function argument:  `file` must be a file-like object, but `"
-//+(std::string)(pybind11::repr(fileHandle))+"` provided"
-//);
-//}
-//pybind11::detail::pythonbuf buf(fileHandle);
-//std::ostream stream(&buf);
-//d.print(stream);
-//}, pybind11::arg("stream") = pybind11::module::import("sys").attr("stdout"));
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
+                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
+                    lsDomain<T, D>::BoundaryType *>))
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
+                                                lsDomain<T, D>::PointValueVectorType, hrleCoordType *,
+                    lsDomain<T, D>::BoundaryType *, hrleCoordType>))
+.def(pybind11::init(&lsSmartPointer<lsDomain<T, D>>::New<
+                                                lsSmartPointer<lsDomain<T, D>> &>))
+// methods
+.def("deepCopy", &lsDomain<T, D>::deepCopy,
+"Copy lsDomain in this lsDomain.")
+.def("getNumberOfSegments", &lsDomain<T, D>::getNumberOfSegments,
+"Get the number of segments, the level set structure is divided "
+"into.")
+.def("getNumberOfPoints", &lsDomain<T, D>::getNumberOfPoints,
+"Get the number of defined level set values.")
+.def("getLevelSetWidth", &lsDomain<T, D>::getLevelSetWidth,
+"Get the number of layers of level set points around the explicit "
+"surface.")
+.def("setLevelSetWidth", &lsDomain<T, D>::setLevelSetWidth,
+"Set the number of layers of level set points which should be "
+"stored around the explicit surface.")
+.def("clearMetaData", &lsDomain<T, D>::clearMetaData,
+"Clear all metadata stored in the level set.")
+// allow filehandle to be passed and default to python standard output
+.def("print", [](lsDomain<T, D>& d, pybind11::object fileHandle) {
+if (!(pybind11::hasattr(fileHandle,"write") &&
+pybind11::hasattr(fileHandle,"flush") )){
+throw pybind11::type_error("MyClass::read_from_file_like_object(file): incompatible function argument:  `file` must be a file-like object, but `"
++(std::string)(pybind11::repr(fileHandle))+"` provided"
+);
+}
+pybind11::detail::pythonbuf buf(fileHandle);
+std::ostream stream(&buf);
+d.print(stream);
+}, pybind11::arg("stream") = pybind11::module::import("sys").attr("stdout"));
 
 // enums
 pybind11::enum_<lsBoundaryConditionEnum<D>>(module, "lsBoundaryConditionEnum")
@@ -534,4 +581,34 @@ lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY)
 lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY)
 .value("NEG_INFINITE_BOUNDARY",
 lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY);
+
+
+
+//define_rayQuadruple<T>(module, "rayQuadruplef");
+//define_rayQuadruple<T>(module, "rayTriplef");
+//define_rayQuadruple<T>(module, "rayPairf");
+
+
+pybind11::class_<rayTraceInfo>(module, "rayTraceInfo")
+.def(pybind11::init<>())
+.def_readwrite("numRays", &rayTraceInfo::numRays)
+.def_readwrite("totalRaysTraced", &rayTraceInfo::totalRaysTraced)
+.def_readwrite("totalDiskHits", &rayTraceInfo::totalDiskHits)
+.def_readwrite("nonGeometryHits", &rayTraceInfo::nonGeometryHits)
+.def_readwrite("geometryHits", &rayTraceInfo::geometryHits)
+.def_readwrite("time", &rayTraceInfo::time)
+.def_readwrite("warning", &rayTraceInfo::warning)
+.def_readwrite("error", &rayTraceInfo::error);
+
+//enum for rayUtil
+pybind11::enum_<rayNormalizationType>(module, "rayNormalizationType")
+.value("SOURCE",
+rayNormalizationType::SOURCE)
+.value("MAX", rayNormalizationType::MAX);
+pybind11::module PYrayUtil = module.def_submodule("rayUtil", "namespace for rayUtil");
+PYrayUtil.def("Sum",[](const rayTriple<T> &pVecA,
+              const rayTriple<T> &pVecB){return rayInternal::Sum(pVecA,pVecB);})
+         .def("Sum",[](const rayTriple<T> &pVecA,
+const rayTriple<T> &pVecB,const rayTriple<T> &pT){return rayInternal::Sum(pVecA,pVecB,pT);});
+
 }
