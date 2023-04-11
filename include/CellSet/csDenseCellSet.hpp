@@ -121,7 +121,6 @@ public:
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
     calculateBounds(minBounds, maxBounds);
-    auto boundingbox = getBoundingBox();
     BVH = psSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
     buildBVH();
   }
@@ -139,7 +138,7 @@ public:
   std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
-    return getScalarData(name);
+    return cellGrid->getCellData().getScalarData(name);
   }
 
   gridType getCellGrid() { return cellGrid; }
@@ -259,6 +258,13 @@ public:
     std::ifstream file(fileName);
     std::string line;
 
+    if (!file.is_open()) {
+      psLogger::getInstance()
+          .addWarning("Could not open file " + fileName)
+          .print();
+      return;
+    }
+
     std::getline(file, line);
     if (std::stoi(line) != numberOfCells) {
       psLogger::getInstance().addWarning("Incompatible cell set data.").print();
@@ -278,11 +284,13 @@ public:
     std::vector<std::vector<T> *> cellDataP;
     for (int i = 0; i < labels.size(); i++) {
       auto dataP = getScalarData(labels[i]);
-      if (dataP != nullptr) {
-        cellDataP.push_back(dataP);
-      } else {
-        cellDataP.push_back(addScalarData(labels[i], 0.));
+      if (dataP == nullptr) {
+        dataP = addScalarData(labels[i], 0.);
       }
+    }
+
+    for (int i = 0; i < labels.size(); i++) {
+      cellDataP.push_back(getScalarData(labels[i]));
     }
 
     std::size_t j = 0;
@@ -526,7 +534,11 @@ private:
     for (size_t elemIdx = 0; elemIdx < elems.size(); elemIdx++) {
       for (size_t n = 0; n < (1 << D); n++) {
         auto &node = nodes[elems[elemIdx][n]];
-        BVH->getCellIds(node)->insert(elemIdx);
+        auto cell = BVH->getCellIds(node);
+        if (cell == nullptr) {
+          psLogger::getInstance().addError("BVH building error.").print();
+        }
+        cell->insert(elemIdx);
       }
     }
   }
@@ -535,27 +547,31 @@ private:
   calculateBounds(const hrleVectorType<hrleIndexType, D> &surfaceMinBounds,
                   const hrleVectorType<hrleIndexType, D> &surfaceMaxBounds) {
     constexpr T eps = 1e-4;
-    cellGrid->minimumExtent[0] = surfaceMinBounds[0] * gridDelta - eps;
-    cellGrid->maximumExtent[0] = surfaceMaxBounds[0] * gridDelta + eps;
+    cellGrid->minimumExtent[0] =
+        surfaceMinBounds[0] * gridDelta - gridDelta - eps;
+    cellGrid->maximumExtent[0] =
+        surfaceMaxBounds[0] * gridDelta + gridDelta + eps;
     if constexpr (D == 3) {
-      cellGrid->minimumExtent[1] = surfaceMinBounds[1] * gridDelta - eps;
-      cellGrid->maximumExtent[1] = surfaceMaxBounds[1] * gridDelta + eps;
+      cellGrid->minimumExtent[1] =
+          surfaceMinBounds[1] * gridDelta - gridDelta - eps;
+      cellGrid->maximumExtent[1] =
+          surfaceMaxBounds[1] * gridDelta + gridDelta + eps;
     }
-    auto surfaceMin = surfaceMinBounds[D - 1] * gridDelta - eps;
-    auto surfaceMax = surfaceMaxBounds[D - 1] * gridDelta + eps;
+    auto surfaceMin = surfaceMinBounds[D - 1] * gridDelta;
+    auto surfaceMax = surfaceMaxBounds[D - 1] * gridDelta;
     assert(surfaceMax >= surfaceMin && "Correctness assertion");
 
     if (depth <= surfaceMin) {
-      surfaceMin = depth - eps;
+      surfaceMin = depth;
     } else if (depth >= surfaceMax) {
-      surfaceMax = depth + eps;
+      surfaceMax = depth;
     } else {
       psLogger::getInstance()
           .addWarning("Invalid cell set base position.")
           .print();
     }
-    cellGrid->minimumExtent[D - 1] = surfaceMin;
-    cellGrid->maximumExtent[D - 1] = surfaceMax;
+    cellGrid->minimumExtent[D - 1] = surfaceMin - gridDelta - eps;
+    cellGrid->maximumExtent[D - 1] = surfaceMax + gridDelta + eps;
 
     auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
     minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
