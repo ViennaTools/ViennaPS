@@ -8,13 +8,13 @@
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
-#include <lsMessage.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 #include <rayUtil.hpp>
 
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
 /**
@@ -136,9 +136,10 @@ public:
           cellGrid->maximumExtent[0], cellGrid->maximumExtent[1]};
   }
 
-  void addScalarData(std::string name, T initValue) {
+  std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
+    return getScalarData(name);
   }
 
   gridType getCellGrid() { return cellGrid; }
@@ -233,6 +234,72 @@ public:
     lsVTKWriter<T>(cellGrid, fileName).apply();
   }
 
+  void writeCellSetData(std::string fileName) const {
+    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
+
+    std::ofstream file(fileName);
+    file << numberOfCells << "\n";
+    for (int i = 0; i < numScalarData; i++) {
+      auto label = cellGrid->getCellData().getScalarDataLabel(i);
+      file << label << ",";
+    }
+    file << "\n";
+
+    for (size_t j = 0; j < numberOfCells; j++) {
+      for (int i = 0; i < numScalarData; i++) {
+        file << cellGrid->getCellData().getScalarData(i)->at(j) << ",";
+      }
+      file << "\n";
+    }
+
+    file.close();
+  }
+
+  void readCellSetData(std::string fileName) {
+    std::ifstream file(fileName);
+    std::string line;
+
+    std::getline(file, line);
+    if (std::stoi(line) != numberOfCells) {
+      psLogger::getInstance().addWarning("Incompatible cell set data.").print();
+      return;
+    }
+
+    std::vector<std::string> labels;
+    std::getline(file, line);
+    {
+      std::stringstream ss(line);
+      std::string label;
+      while (std::getline(ss, label, ',')) {
+        labels.push_back(label);
+      }
+    }
+
+    std::vector<std::vector<T> *> cellDataP;
+    for (int i = 0; i < labels.size(); i++) {
+      auto dataP = getScalarData(labels[i]);
+      if (dataP != nullptr) {
+        cellDataP.push_back(dataP);
+      } else {
+        cellDataP.push_back(addScalarData(labels[i], 0.));
+      }
+    }
+
+    std::size_t j = 0;
+    while (std::getline(file, line)) {
+      std::stringstream ss(line);
+      std::size_t i = 0;
+      std::string value;
+      while (std::getline(ss, value, ','))
+        cellDataP[i++]->at(j) = std::stod(value);
+
+      j++;
+    }
+    assert(j == numberOfCells && "Data incompatible");
+
+    file.close();
+  }
+
   // Clear the filling fractions
   void clear() {
     auto ff = getFillingFractions();
@@ -277,29 +344,13 @@ public:
     if (cellSetAboveSurface)
       levelSetsInOrder.push_back(plane);
 
-    // lsVTKWriter<T>(cellGrid, "cellSet_pre_update.vtu").apply();
-
     lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
 
-    // int db_ls = 0;
-    // for (auto &ls : levelSetsInOrder) {
-    //   auto mesh = psSmartPointer<lsMesh<T>>::New();
-    //   lsToSurfaceMesh<T, D>(ls, mesh).apply();
-    //   lsVTKWriter<T>(mesh,
-    //                  "cellSet_debug_update_" + std::to_string(db_ls++) +
-    //                  ".vtp")
-    //       .apply();
-    // }
-    // lsVTKWriter<T>(cellGrid, "cellSet_post_update.vtu").apply();
-
     if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Number of cells not equal in cell set material update. "
                       "The surface top might has changed.")
           .print();
-      // std::cout << numberOfCells << " -- "
-      //           << cellGrid->template getElements<(1 << D)>().size()
-      //           << std::endl;
       return;
     }
 
@@ -499,12 +550,9 @@ private:
     } else if (depth >= surfaceMax) {
       surfaceMax = depth + eps;
     } else {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Invalid cell set base position.")
           .print();
-      std::cout << "Surface max: " << surfaceMax << std::endl;
-      std::cout << "Surface min: " << surfaceMax << std::endl;
-      std::cout << "Cell set base: " << depth << std::endl;
     }
     cellGrid->minimumExtent[D - 1] = surfaceMin;
     cellGrid->maximumExtent[D - 1] = surfaceMax;

@@ -11,6 +11,26 @@
 
 namespace psUtils {
 
+template <class Clock = std::chrono::high_resolution_clock> struct Timer {
+  using TimePoint = typename Clock::time_point;
+
+  TimePoint mStart;
+  typename Clock::duration::rep totalDuration = 0.; // in ns
+  typename Clock::duration::rep currentDuration;    // in ns
+
+  void start() { mStart = Clock::now(); }
+  void finish() {
+    TimePoint end = Clock::now();
+    typename Clock::duration dur(end - mStart);
+    currentDuration = dur.count();
+    totalDuration += currentDuration;
+  }
+  void reset() {
+    currentDuration = 0.;
+    totalDuration = 0.;
+  }
+};
+
 // Small function to print a progress bar ()
 void printProgress(size_t i, size_t finalCount = 100) {
   float progress = static_cast<float>(i) / static_cast<float>(finalCount);

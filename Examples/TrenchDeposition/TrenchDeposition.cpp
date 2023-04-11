@@ -23,6 +23,9 @@ int main(int argc, char *argv[]) {
     params.fromMap(config);
   }
 
+  psLogger::setVerbosity(psVerbosityEnum::PS_VERB_TIMING);
+  psVerbosity = psVerbosityEnum::PS_VERB_ERROR;
+
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeTrench<NumericType, D>(
       geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,

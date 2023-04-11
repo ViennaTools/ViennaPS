@@ -110,7 +110,7 @@ protected:
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime *
                                processParams->rate / processParams->sticking);
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -129,7 +129,7 @@ protected:
     process.setMaxCoverageInitIterations(10);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -143,7 +143,7 @@ protected:
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model.getProcessModel());
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -157,7 +157,7 @@ protected:
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model.getProcessModel());
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -174,7 +174,7 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model.getProcessModel());
     process.setProcessDuration(params->processTime);
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -197,7 +197,7 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model.getProcessModel());
     process.setProcessDuration(params->processTime);
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -215,7 +215,7 @@ protected:
       process.setProcessDuration(params->processTime);
       process.setIntegrationScheme(
           lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
-      process.setPrintIntdermediate(params->printIntermediate);
+      process.setPrintTimeInterval(params->printTimeInterval);
       process.apply();
     } else {
       std::cout << "Warning: Wet etch model only implemented in 3D."
@@ -229,7 +229,7 @@ private:
               << "\n\ty-Extent: " << params->yExtent
               << "\n\tResolution: " << params->gridDelta
               << "\n\tPrint intermediate: "
-              << boolString(params->printIntermediate)
+              << boolString(params->printTimeInterval)
               << "\n\tPeriodic boundary: "
               << boolString(params->periodicBoundary)
               << "\n\tUsing integration scheme: "
