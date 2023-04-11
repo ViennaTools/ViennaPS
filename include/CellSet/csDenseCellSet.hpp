@@ -31,13 +31,14 @@ private:
   gridType cellGrid = nullptr;
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
-  std::vector<std::set<unsigned long>> neighborhood;
+  std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
   std::vector<T> *fillingFractions;
+  const T eps = 1e-4;
 
 public:
   csDenseCellSet() {}
@@ -60,22 +61,6 @@ public:
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
-    hrleVectorType<hrleIndexType, D> minBounds;
-    hrleVectorType<hrleIndexType, D> maxBounds;
-    for (unsigned i = 0; i < D; ++i) {
-      minBounds[i] = std::numeric_limits<hrleIndexType>::max();
-      maxBounds[i] = std::numeric_limits<hrleIndexType>::lowest();
-    }
-    for (unsigned i = 0; i < D; ++i) {
-      minBounds[i] =
-          std::min(minBounds[i], (surface->getGrid().isNegBoundaryInfinite(i))
-                                     ? surface->getDomain().getMinRunBreak(i)
-                                     : surface->getGrid().getMinBounds(i));
-      maxBounds[i] =
-          std::max(maxBounds[i], (surface->getGrid().isPosBoundaryInfinite(i))
-                                     ? surface->getDomain().getMaxRunBreak(i)
-                                     : surface->getGrid().getMaxBounds(i));
-    }
 
     depth = passedDepth;
     std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
@@ -97,6 +82,7 @@ public:
       levelSetsInOrder.push_back(plane);
 
     lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
+    // lsToVoxelMesh also saves the extent in the cell grid
 
 #ifndef NDEBUG
     int db_ls = 0;
@@ -120,7 +106,24 @@ public:
         std::move(fillingFractionsTemp), "fillingFraction");
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
-    calculateBounds(minBounds, maxBounds);
+    // calculate number of BVH layers
+    for (unsigned i = 0; i < D; ++i) {
+      cellGrid->minimumExtent[i] -= eps;
+      cellGrid->maximumExtent[i] += eps;
+    }
+    auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
+    minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
+                                        cellGrid->minimumExtent[1]);
+    if constexpr (D == 3)
+      minExtent = std::min(minExtent, cellGrid->maximumExtent[2] -
+                                          cellGrid->minimumExtent[2]);
+
+    BVHlayers = 0;
+    while (minExtent / 2 > gridDelta) {
+      BVHlayers++;
+      minExtent /= 2;
+    }
+
     BVH = psSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
     buildBVH();
   }
@@ -433,11 +436,10 @@ public:
 
   void buildNeighborhood() {
     const auto &cells = cellGrid->template getElements<(1 << D)>();
-    unsigned const numNodes = cellGrid->getNodes().size();
+    const auto &nodes = cellGrid->getNodes();
+    unsigned const numNodes = nodes.size();
     unsigned const numCells = cells.size();
-
-    neighborhood.clear();
-    neighborhood.resize(numCells);
+    cellNeighbors.resize(numCells);
 
     std::vector<std::vector<unsigned>> nodeCellConnections(numNodes);
 
@@ -449,22 +451,42 @@ public:
     }
 
     for (unsigned cellIdx = 0; cellIdx < numCells; cellIdx++) {
+      auto coord = nodes[cells[cellIdx][0]];
+      for (int i = 0; i < D; i++) {
+        coord[i] += gridDelta / 2.;
+        cellNeighbors[cellIdx][i] = -1;
+        cellNeighbors[cellIdx][i + D] = -1;
+      }
+
       for (unsigned cellNodeIdx = 0; cellNodeIdx < (1 << D); cellNodeIdx++) {
         auto &cellsAtNode = nodeCellConnections[cells[cellIdx][cellNodeIdx]];
+
         for (const auto &neighborCell : cellsAtNode) {
           if (neighborCell != cellIdx) {
-            neighborhood[cellIdx].insert(neighborCell);
+
+            auto neighborCoord = nodes[cells[neighborCell][0]];
+            for (int i = 0; i < D; i++)
+              neighborCoord[i] += gridDelta / 2.;
+
+            if (csUtil::distance(coord, neighborCoord) < gridDelta + eps) {
+
+              for (int i = 0; i < D; i++) {
+                if (coord[i] - neighborCoord[i] > gridDelta / 2.) {
+                  cellNeighbors[cellIdx][i * 2] = neighborCell;
+                } else if (coord[i] - neighborCoord[i] < -gridDelta / 2.) {
+                  cellNeighbors[cellIdx][i * 2 + 1] = neighborCell;
+                }
+              }
+            }
           }
         }
       }
     }
   }
 
-  std::set<unsigned long> &getNeighbors(unsigned long cellIdx) {
-    assert(!neighborhood.empty() &&
-           "Querying neighbors without creating neighborhood structure");
+  const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) {
     assert(cellIdx < numberOfCells && "Cell idx out of bounds");
-    return neighborhood[cellIdx];
+    return cellNeighbors[cellIdx];
   }
 
 private:
@@ -540,50 +562,6 @@ private:
         }
         cell->insert(elemIdx);
       }
-    }
-  }
-
-  void
-  calculateBounds(const hrleVectorType<hrleIndexType, D> &surfaceMinBounds,
-                  const hrleVectorType<hrleIndexType, D> &surfaceMaxBounds) {
-    constexpr T eps = 1e-4;
-    cellGrid->minimumExtent[0] =
-        surfaceMinBounds[0] * gridDelta - gridDelta - eps;
-    cellGrid->maximumExtent[0] =
-        surfaceMaxBounds[0] * gridDelta + gridDelta + eps;
-    if constexpr (D == 3) {
-      cellGrid->minimumExtent[1] =
-          surfaceMinBounds[1] * gridDelta - gridDelta - eps;
-      cellGrid->maximumExtent[1] =
-          surfaceMaxBounds[1] * gridDelta + gridDelta + eps;
-    }
-    auto surfaceMin = surfaceMinBounds[D - 1] * gridDelta;
-    auto surfaceMax = surfaceMaxBounds[D - 1] * gridDelta;
-    assert(surfaceMax >= surfaceMin && "Correctness assertion");
-
-    if (depth <= surfaceMin) {
-      surfaceMin = depth;
-    } else if (depth >= surfaceMax) {
-      surfaceMax = depth;
-    } else {
-      psLogger::getInstance()
-          .addWarning("Invalid cell set base position.")
-          .print();
-    }
-    cellGrid->minimumExtent[D - 1] = surfaceMin - gridDelta - eps;
-    cellGrid->maximumExtent[D - 1] = surfaceMax + gridDelta + eps;
-
-    auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
-    minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
-                                        cellGrid->minimumExtent[1]);
-    if constexpr (D == 3)
-      minExtent = std::min(minExtent, cellGrid->maximumExtent[2] -
-                                          cellGrid->minimumExtent[2]);
-
-    BVHlayers = 0;
-    while (minExtent / 2 > gridDelta) {
-      BVHlayers++;
-      minExtent /= 2;
     }
   }
 };
