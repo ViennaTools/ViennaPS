@@ -58,53 +58,6 @@ PYBIND11_MAKE_OPAQUE(ParticleTypeList)
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
 
-//for rayUtil
-
-//for rayPair<2>; we have to declare it in main as well
-
-template <typename NumericType>
-void define_rayPair(pybind11::module &m, const std::string &name) {
-    pybind11::class_<rayPair<NumericType>>(m, name.c_str())
-            .def(pybind11::init<>())
-            .def(pybind11::init<NumericType, NumericType>())
-            .def_readwrite("x", &rayPair<NumericType>::operator[], "x component")
-            .def_readwrite("y", &rayPair<NumericType>::operator[], "y component")
-            .def("__repr__", [](const rayPair<NumericType> &self) {
-                return "(" + std::to_string(self[0]) + ", " + std::to_string(self[1]) + ")";
-            });
-}
-//for rayPair<3>
-template <typename NumericType>
-void define_rayTriple(pybind11::module &m, const std::string &name) {
-    pybind11::class_<rayTriple<NumericType>>(m, name.c_str())
-            .def(pybind11::init<>())
-            .def(pybind11::init<NumericType, NumericType, NumericType>())
-            .def_readwrite("x", &rayTriple<NumericType>::operator[], "x component")
-            .def_readwrite("y", &rayTriple<NumericType>::operator[], "y component")
-            .def_readwrite("z", &rayTriple<NumericType>::operator[], "z component")
-            .def("__repr__", [](const rayTriple<NumericType> &self) {
-                return "(" + std::to_string(self[0]) + ", " + std::to_string(self[1]) + ", " +
-                       std::to_string(self[2]) + ")";
-            });
-}
-
-//for rayPair<4>
-template <typename NumericType>
-void define_rayQuadruple(pybind11::module &m, const std::string &name) {
-    pybind11::class_<rayQuadruple<NumericType>>(m, name.c_str())
-            .def(pybind11::init<>())
-            .def(pybind11::init<NumericType, NumericType, NumericType, NumericType>())
-            .def_readwrite("x", &rayQuadruple<NumericType>::operator[], "x component")
-            .def_readwrite("y", &rayQuadruple<NumericType>::operator[], "y component")
-            .def_readwrite("z", &rayQuadruple<NumericType>::operator[], "z component")
-            .def_readwrite("w", &rayQuadruple<NumericType>::operator[], "w component")
-            .def("__repr__", [](const rayQuadruple<NumericType> &self) {
-                return "(" + std::to_string(self[0]) + ", " + std::to_string(self[1]) + ", " +
-                       std::to_string(self[2]) + ", " + std::to_string(self[3]) + ")";
-            });
-}
-
-
 
 class PypsSurfaceModel : public psSurfaceModel<T> {
     using psSurfaceModel<T>::Coverages;
@@ -585,8 +538,8 @@ lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY);
 
 
 //define_rayQuadruple<T>(module, "rayQuadruplef");
-//define_rayQuadruple<T>(module, "rayTriplef");
-//define_rayQuadruple<T>(module, "rayPairf");
+//define_rayTriple<T>(module, "rayTriplef");
+//define_rayPair<T>(module, "rayPairf");
 
 
 pybind11::class_<rayTraceInfo>(module, "rayTraceInfo")
@@ -606,9 +559,59 @@ pybind11::enum_<rayNormalizationType>(module, "rayNormalizationType")
 rayNormalizationType::SOURCE)
 .value("MAX", rayNormalizationType::MAX);
 pybind11::module PYrayUtil = module.def_submodule("rayUtil", "namespace for rayUtil");
-PYrayUtil.def("Sum",[](const rayTriple<T> &pVecA,
-              const rayTriple<T> &pVecB){return rayInternal::Sum(pVecA,pVecB);})
-         .def("Sum",[](const rayTriple<T> &pVecA,
-const rayTriple<T> &pVecB,const rayTriple<T> &pT){return rayInternal::Sum(pVecA,pVecB,pT);});
+PYrayUtil.def("Sum",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
+        {return rayInternal::Sum(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
+         .def("Sum",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB,const rayTriple<T> &pT)
+         {return rayInternal::Sum(pVecA,pVecB,pT);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::arg("pt"),pybind11::return_value_policy::take_ownership)
+         .def("Diff",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
+         {return rayInternal::Diff(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
+         .def("Diff",[](const rayPair<T> &pVecA,const rayPair<T> &pVecB)
+         {return rayInternal::Diff(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
+        .def("DotProduct",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
+        {return rayInternal::DotProduct(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
+        .def("CrossProduct",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
+        {return rayInternal::CrossProduct(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
+        .def("Norm",[](const std::array<T,D> &vec)
+        {return rayInternal::Norm<T,D>(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
+        //to verify later what D in rayUtils is going to be. We may need to declare everything in a function
+        .def("Normalize",[](std::array<T,D> &vec)
+        {return rayInternal::Normalize(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
+        .def("Normalize",[](const std::array<T,D> &vec)
+        {return rayInternal::Normalize(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
+        .def("Inv",[](const rayTriple<T> &vec)
+        {return rayInternal::Inv(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
+        .def("Scale",[](const T pF, rayTriple<T> &pT)
+        {return rayInternal::Scale(pF,pT);},pybind11::arg("pF"),pybind11::arg("pT"),pybind11::return_value_policy::take_ownership)
+        .def("Scale",[](const T pF,const rayTriple<T> &pT)
+        {return rayInternal::Scale(pF,pT);},pybind11::arg("pF"),pybind11::arg("pT"),pybind11::return_value_policy::take_ownership)
+        .def("Distance",[](const std::array<T, D> &pVecA,const std::array<T, D> &pVecB)
+        {return rayInternal::Distance(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
+        .def("ComputeNormal",[](const rayTriple<rayTriple<T>> &planeCoords)
+        {return rayInternal::ComputeNormal(planeCoords);},pybind11::arg("planeCoords"),pybind11::return_value_policy::take_ownership)
+        .def("IsNormalized",[](const rayTriple<T> &vec)
+        {return rayInternal::IsNormalized(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
+        .def("adjustBoundingBox",[](rayPair<rayTriple<T>> &bdBox,rayTraceDirection direction, T discRadius)
+        {rayInternal::adjustBoundingBox<T,D>(bdBox,direction,discRadius);},pybind11::arg("bdBox"),pybind11::arg("direction"),pybind11::arg("discRadius"))
+        .def("getTraceSettings",[](rayTraceDirection sourceDir)
+        {return rayInternal::getTraceSettings(sourceDir);},pybind11::arg("sourceDir"),pybind11::return_value_policy::take_ownership)
+        .def("PickRandomPointOnUnitSphere",[](rayRNG &RNG)
+        {return rayInternal::PickRandomPointOnUnitSphere<T>(RNG);},pybind11::arg("RNG"),pybind11::return_value_policy::take_ownership)
+        .def("getOrthonormalBasis",[](const rayTriple<T> &pVector)
+        {return rayInternal::getOrthonormalBasis(pVector);},pybind11::arg("pVector"),pybind11::return_value_policy::take_ownership)
+        .def("createPlaneGrid",[](const T gridDelta, const T extent,const std::array<int, 3> direction,std::vector<std::array<T, 3>> &points,std::vector<std::array<T, 3>> &normals)
+        {return rayInternal::createPlaneGrid(gridDelta, extent, direction, points, normals);},pybind11::arg("gridDelta"), pybind11::arg("extent"), pybind11::arg("direction"),pybind11::arg("points"), pybind11::arg("normals"),pybind11::return_value_policy::take_ownership)
+        .def("readGridFromFile",[](const std::string& fileName, T& gridDelta,std::vector<rayTriple<T>>& points,std::vector<rayTriple<T>>& normals)
+        {return rayInternal::readGridFromFile(fileName, gridDelta, points,normals);},pybind11::arg("fileName"), pybind11::arg("gridDelta"), pybind11::arg("points"),pybind11::arg("normals"), pybind11::return_value_policy::take_ownership)
+        .def("writeVTK",[](const std::string& filename,const std::vector<rayTriple<T>>& points,const std::vector<T>& mcestimates)
+        {return rayInternal::writeVTK(filename, points, mcestimates);},pybind11::arg("filename"), pybind11::arg("points"), pybind11::arg("mcestimates"),pybind11::return_value_policy::take_ownership)
+        .def("createSourceGrid",[](const rayPair<rayTriple<T>>& pBdBox,const size_t pNumPoints, const T pGridDelta,const std::array<int, 5>& pTraceSettings)
+        {return rayInternal::createSourceGrid<T,D>(pBdBox, pNumPoints, pGridDelta,pTraceSettings);},pybind11::arg("pBdBox"), pybind11::arg("pNumPoints"), pybind11::arg("pGridDelta"),pybind11::arg("pTraceSettings"), pybind11::return_value_policy::take_ownership)
+        .def("printBoundingBox",[](const rayPair<rayTriple<T>> &bdBox)
+        {return rayInternal::printBoundingBox<T>(bdBox);},pybind11::arg("bdBox"))
+        .def("printTriple",[](const rayTriple<T> &vec, bool endl = true)
+        {return rayInternal::printTriple<T>(vec,endl);},pybind11::arg("vec"),pybind11::arg("endl"))
+        .def("printPair",[](const rayPair<T> &vec)
+        {return rayInternal::printPair<T>(vec);},pybind11::arg("vec"))
+        .def("timeStampNow",[]() {rayInternal::timeStampNow<std::chrono::milliseconds>();},pybind11::return_value_policy::take_ownership);
 
 }
