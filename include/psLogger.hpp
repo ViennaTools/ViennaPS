@@ -11,16 +11,16 @@
 // 3 + intermediate output
 // 4 + timings
 // 5 + debug
-enum class psVerbosityEnum : unsigned {
-  PS_VERB_ERROR = 0,
-  PS_VERB_WARNING = 1,
-  PS_VERB_INFO = 2,
-  PS_VERB_TIMING = 3,
-  PS_VERB_INTERMEDIATE = 4,
-  PS_VERB_DEBUG = 5
+enum class psLogLevel : unsigned {
+  PS_LOG_ERROR = 0,
+  PS_LOG_WARNING = 1,
+  PS_LOG_INFO = 2,
+  PS_LOG_TIMING = 3,
+  PS_LOG_INTERMEDIATE = 4,
+  PS_LOG_DEBUG = 5
 };
 
-psVerbosityEnum psVerbosity = psVerbosityEnum::PS_VERB_INFO;
+psLogLevel __logLevel = psLogLevel::PS_LOG_INFO;
 
 /// Singleton class for thread-safe logging.
 class psLogger {
@@ -36,10 +36,8 @@ public:
   psLogger(const psLogger &) = delete;
   void operator=(const psLogger &) = delete;
 
-  static void setVerbosity(const psVerbosityEnum verbLevel) {
-    psVerbosity = verbLevel;
-  }
-  static unsigned getVerbosity() { return static_cast<unsigned>(psVerbosity); }
+  static void setLogLevel(const psLogLevel logLevel) { __logLevel = logLevel; }
+  static unsigned getLogLevel() { return static_cast<unsigned>(__logLevel); }
 
   static psLogger &getInstance() {
     static psLogger instance;
@@ -47,7 +45,7 @@ public:
   }
 
   psLogger &addDebug(std::string s) {
-    if (static_cast<unsigned>(psVerbosity) < 5)
+    if (getLogLevel() < 5)
       return *this;
 #pragma omp critical
     { message += "\n" + std::string(tabWidth, ' ') + "DEBUG: " + s + "\n"; }
@@ -56,7 +54,7 @@ public:
 
   template <class Clock>
   psLogger &addTiming(std::string s, psUtils::Timer<Clock> &timer) {
-    if (static_cast<unsigned>(psVerbosity) < 4)
+    if (getLogLevel() < 4)
       return *this;
 #pragma omp critical
     {
@@ -68,7 +66,7 @@ public:
   }
 
   psLogger &addInfo(std::string s) {
-    if (static_cast<unsigned>(psVerbosity) < 2)
+    if (getLogLevel() < 2)
       return *this;
 #pragma omp critical
     { message += std::string(tabWidth, ' ') + s + "\n"; }
@@ -76,7 +74,7 @@ public:
   }
 
   psLogger &addWarning(std::string s) {
-    if (static_cast<unsigned>(psVerbosity) < 1)
+    if (getLogLevel() < 1)
       return *this;
 #pragma omp critical
     { message += "\n" + std::string(tabWidth, ' ') + "WARNING: " + s + "\n"; }

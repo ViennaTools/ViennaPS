@@ -232,7 +232,7 @@ public:
 #endif
         } while (reflect);
 
-        if (psLogger::getVerbosity() >= 3)
+        if (psLogger::getLogLevel() >= 3)
           psUtils::printProgress(idx, mNumRays);
       } // end ray tracing for loop
 
@@ -240,7 +240,7 @@ public:
       myCellSet->mergePath(path, mNumRays);
     } // end parallel section
 
-    if (psLogger::getVerbosity() >= 3)
+    if (psLogger::getLogLevel() >= 3)
       std::cout << std::endl;
 
     rtcReleaseGeometry(rtcGeometry);

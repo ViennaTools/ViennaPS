@@ -225,7 +225,7 @@ public:
           model->getSurfaceModel()->updateCoverages(Rates);
           coveragesInitialized = true;
 
-          if (psLogger::getVerbosity() >= 3) {
+          if (psLogger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
             for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
               auto label = coverages->getScalarDataLabel(idx);
@@ -316,7 +316,7 @@ public:
           Rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocitites);
 
-      if (psLogger::getVerbosity() >= 3) {
+      if (psLogger::getLogLevel() >= 3) {
         if (velocitites)
           diskMesh->getCellData().insertNextScalarData(*velocitites,
                                                        "velocities");
