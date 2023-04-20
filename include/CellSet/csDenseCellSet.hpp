@@ -39,6 +39,7 @@ private:
   bool cellSetAboveSurface = false;
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
+  hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
 
 public:
   csDenseCellSet() {}
@@ -81,6 +82,7 @@ public:
     if (cellSetAboveSurface)
       levelSetsInOrder.push_back(plane);
 
+    calculateMinMaxIndex(levelSetsInOrder);
     lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
     // lsToVoxelMesh also saves the extent in the cell grid
 
@@ -141,6 +143,7 @@ public:
   std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
+    fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
     return cellGrid->getCellData().getScalarData(name);
   }
 
@@ -210,7 +213,7 @@ public:
     if (idx < 0)
       return false;
 
-    getFillingFractions()->at(idx) += fill;
+    fillingFractions->at(idx) += fill;
     return true;
   }
 
@@ -222,7 +225,7 @@ public:
 
   // Add to the filling fraction for cell which contains given point only if the
   // cell has the specified material ID.
-  bool addFillingFractioninMaterial(const std::array<T, 3> &point, T fill,
+  bool addFillingFractionInMaterial(const std::array<T, 3> &point, T fill,
                                     int materialId) {
     auto idx = findIndex(point);
     if (getScalarData("Material")->at(idx) == materialId)
@@ -322,21 +325,9 @@ public:
   // work if the surface of the volume has changed. In this case, call the
   // funciton update surface first.
   void updateMaterials() {
-    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
-    std::vector<std::vector<T>> scalarData(numScalarData - 1);
-    std::vector<std::string> scalarDataLabels(numScalarData - 1);
+    auto materialIds = getScalarData("Material");
 
-    // carry over all scalar data (except the material IDs)
-    int n = 0;
-    for (int i = 0; i < numScalarData; i++) {
-      auto label = cellGrid->getCellData().getScalarDataLabel(i);
-      if (label == "Material")
-        continue;
-      auto data = cellGrid->getCellData().getScalarData(i);
-      scalarData[n] = std::move(*data);
-      scalarDataLabels[n++] = label;
-    }
-
+    // create overlay material
     std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
     auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
     {
@@ -355,21 +346,61 @@ public:
     if (cellSetAboveSurface)
       levelSetsInOrder.push_back(plane);
 
-    lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
-
-    if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
-      psLogger::getInstance()
-          .addWarning("Number of cells not equal in cell set material update. "
-                      "The surface top might has changed.")
-          .print();
-      return;
+    // set up iterators for all materials
+    std::vector<hrleConstDenseCellIterator<typename lsDomain<T, D>::DomainType>>
+        iterators;
+    for (auto it = levelSetsInOrder.begin(); it != levelSetsInOrder.end();
+         ++it) {
+      iterators.push_back(
+          hrleConstDenseCellIterator<typename lsDomain<T, D>::DomainType>(
+              (*it)->getDomain(), minIndex));
     }
 
-    for (int i = 0; i < numScalarData - 1; i++) {
-      cellGrid->getCellData().insertNextScalarData(std::move(scalarData[i]),
-                                                   scalarDataLabels[i]);
+    // move iterator for lowest material id and then adjust others if they are
+    // needed
+    unsigned cellIdx = 0;
+    for (; iterators.front().getIndices() < maxIndex;
+         iterators.front().next()) {
+      // go over all materials
+      for (unsigned materialId = 0; materialId < levelSetsInOrder.size();
+           ++materialId) {
+
+        auto &cellIt = iterators[materialId];
+        cellIt.goToIndicesSequential(iterators.front().getIndices());
+
+        // find out whether the centre of the box is inside
+        T centerValue = 0.;
+        for (int i = 0; i < (1 << D); ++i) {
+          centerValue += cellIt.getCorner(i).getValue();
+        }
+
+        if (centerValue <= 0.) {
+          bool isVoxel;
+          // check if voxel is in bounds
+          for (unsigned i = 0; i < (1 << D); ++i) {
+            hrleVectorType<hrleIndexType, D> index;
+            isVoxel = true;
+            for (unsigned j = 0; j < D; ++j) {
+              index[j] =
+                  cellIt.getIndices(j) + cellIt.getCorner(i).getOffset()[j];
+              if (index[j] > maxIndex[j]) {
+                isVoxel = false;
+                break;
+              }
+            }
+          }
+
+          if (isVoxel) {
+            materialIds->at(cellIdx++) = materialId;
+          }
+
+          // jump out of material for loop
+          break;
+        }
+      }
     }
-    fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
+    assert(cellIdx == numberOfCells &&
+           "Cell set changed in `updateMaterials()'");
   }
 
   // Updates the surface of the cell set. The new surface should be below the
@@ -561,6 +592,28 @@ private:
           psLogger::getInstance().addError("BVH building error.").print();
         }
         cell->insert(elemIdx);
+      }
+    }
+  }
+
+  void calculateMinMaxIndex(
+      const std::vector<psSmartPointer<lsDomain<T, D>>> &levelSetsInOrder) {
+    // set to zero
+    for (unsigned i = 0; i < D; ++i) {
+      minIndex[i] = std::numeric_limits<hrleIndexType>::max();
+      maxIndex[i] = std::numeric_limits<hrleIndexType>::lowest();
+    }
+    for (unsigned l = 0; l < levelSetsInOrder.size(); ++l) {
+      auto &grid = levelSetsInOrder[l]->getGrid();
+      auto &domain = levelSetsInOrder[l]->getDomain();
+      for (unsigned i = 0; i < D; ++i) {
+        minIndex[i] = std::min(minIndex[i], (grid.isNegBoundaryInfinite(i))
+                                                ? domain.getMinRunBreak(i)
+                                                : grid.getMinBounds(i));
+
+        maxIndex[i] = std::max(maxIndex[i], (grid.isPosBoundaryInfinite(i))
+                                                ? domain.getMaxRunBreak(i)
+                                                : grid.getMaxBounds(i));
       }
     }
   }
