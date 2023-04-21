@@ -38,15 +38,16 @@ int main(int argc, char **argv) {
   }
 
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeStack<NumericType, D> builder(
-      domain, params.gridDelta, params.xExtent, 0., params.numLayers,
-      params.layerHeight, params.substrateHeight, params.holeRadius, false);
-  builder.apply();
+  psMakeStack<NumericType, D>(domain, params.gridDelta, params.xExtent, 0.,
+                              params.numLayers, params.layerHeight,
+                              params.substrateHeight, params.holeRadius, false)
+      .apply();
   // copy top layer for deposition
   auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
       domain->getLevelSets()->back());
   domain->insertNextLevelSet(depoLayer);
-  domain->generateCellSet(builder.getHeight() + 2.,
+  domain->generateCellSet(params.substrateHeight +
+                              params.numLayers * params.layerHeight + 10.,
                           true /* true means cell set above surface */);
   auto &cellSet = domain->getCellSet();
   cellSet->writeVTU("initial.vtu");
@@ -82,23 +83,6 @@ int main(int argc, char **argv) {
     processEtch.setProcessDuration(50.);
 
     processEtch.apply();
-  }
-
-  // run the redeposition based on the captured byproducts
-  {
-    auto depoModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-    depoModel->setSurfaceModel(depoSurfModel);
-    depoModel->setVelocityField(velField);
-    depoModel->setProcessName("Redeposition");
-
-    psProcess<NumericType, D> processRedepo;
-    processRedepo.setDomain(domain);
-    processRedepo.setProcessModel(depoModel);
-    processRedepo.setProcessDuration(0.2);
-
-    processRedepo.apply();
-    cellSet->updateMaterials();
-    cellSet->writeVTU("RedepositionCellSet.vtu");
   }
 
   psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack").apply();
