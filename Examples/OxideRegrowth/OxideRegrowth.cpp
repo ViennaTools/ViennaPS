@@ -28,6 +28,15 @@ int main(int argc, char **argv) {
     params.fromMap(config);
   }
 
+  const NumericType stability =
+      2 * params.diffusionCoefficient /
+      std::max(params.holeStreamVelocity, params.scallopStreamVelocity);
+  std::cout << "Stability: " << stability << std::endl;
+  if (0.5 * stability <= params.gridDelta) {
+    std::cout << "Unstable parameters. Reduce grid spacing!" << std::endl;
+    return -1;
+  }
+
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeStack<NumericType, D> builder(
       domain, params.gridDelta, params.xExtent, 0., params.numLayers,
