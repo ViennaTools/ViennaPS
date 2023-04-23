@@ -41,6 +41,10 @@
 #include <lsDomain.hpp>
 #include <rayTraceDirection.hpp>
 #include <rayUtil.hpp>
+#include <rayParticle.hpp>
+#include <rayRNG.hpp>
+#include <rayReflection.hpp>
+#include <rayTracingData.hpp>
 // always use double for python export
 typedef double T;
 typedef std::vector<hrleCoordType> VectorHRLEcoord;
@@ -68,24 +72,24 @@ class PypsSurfaceModel : public psSurfaceModel<T> {
 
 public:
     void initializeCoverages(unsigned numGeometryPoints) override {
-        PYBIND11_OVERLOAD(void, psSurfaceModel<T>, initializeCoverages,
+        PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeCoverages,
                           numGeometryPoints);
     }
 
     void initializeProcessParameters() override {
-        PYBIND11_OVERLOAD(void, psSurfaceModel<T>, initializeProcessParameters);
+        PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters);
     }
 
 
     psSmartPointer<std::vector<T>>
     calculateVelocities(psSmartPointer<psPointData<T>> Rates,
                         const std::vector<T> &materialIDs) override {
-        PYBIND11_OVERLOAD(psSmartPointer<std::vector<T>>, psSurfaceModel<T>, calculateVelocities, Rates,
+        PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>, calculateVelocities, Rates,
                           materialIDs);
     }
 
     void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
-        PYBIND11_OVERLOAD(void, psSurfaceModel<T>, updateCoverages, Rates);
+        PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, Rates);
     }
 
 };
@@ -113,14 +117,14 @@ public:
 
     psSmartPointer<psSurfaceModel<T>> getSurfaceModel() override{
 
-        PYBIND11_OVERLOAD(
+        PYBIND11_OVERRIDE(
                 psSmartPointer <psSurfaceModel<T>>,
                 ClassName,
                 getSurfaceModel
         );
     }
     psSmartPointer<ParticleTypeList> getParticleTypes() override{
-        PYBIND11_OVERLOAD(
+        PYBIND11_OVERRIDE(
                 psSmartPointer<ParticleTypeList>,
                 ClassName,
                 getParticleTypes,
@@ -129,7 +133,7 @@ public:
     psSmartPointer<psAdvectionCalback<T, D>>
     getAdvectionCallback() override{
         using SmartPointerAdvectionCalBack_TD = psSmartPointer<psAdvectionCalback<T, D>>;
-        PYBIND11_OVERLOAD(
+        PYBIND11_OVERRIDE(
                 SmartPointerAdvectionCalBack_TD,
                 ClassName,
                 getAdvectionCallback,
@@ -137,14 +141,14 @@ public:
     }
     psSmartPointer<psGeometricModel<T, D>> getGeometricModel() override{
         using SmartPointerGeometricModel_TD = psSmartPointer<psGeometricModel<T, D>>;
-        PYBIND11_OVERLOAD(
+        PYBIND11_OVERRIDE(
                 SmartPointerGeometricModel_TD,
                 ClassName,
                 getGeometricModel,
         );
     }
     psSmartPointer<psVelocityField<T>> getVelocityField() {
-        PYBIND11_OVERLOAD(
+        PYBIND11_OVERRIDE(
                 psSmartPointer<psVelocityField<T>>,
                 ClassName,
                 getVelocityField,
@@ -217,6 +221,125 @@ public:
 
 };
 
+
+class PYrayAbstractParticle: public rayAbstractParticle<T>{
+ using rayAbstractParticle<T>::rayAbstractParticle;
+ using rayAbstractParticle<T>::clone;
+    void initNew(rayRNG &Rng) override {
+        PYBIND11_OVERRIDE_PURE(
+                void,
+                rayAbstractParticle,
+                initNew,
+                Rng
+        );
+    }
+    std::pair<T, rayTriple<T> >
+    surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
+                      const rayTriple<T> &geomNormal,
+                      const unsigned int primId, const int materialId,
+                      const rayTracingData<T> *globalData,
+                      rayRNG &Rng) override {
+        using pair_resolve_override = std::pair<T,rayTriple<T>>;
+        PYBIND11_OVERRIDE(
+                pair_resolve_override,
+                rayAbstractParticle,
+                surfaceReflection,
+                rayWeight,
+                rayDir,
+                geomNormal,
+                primId,
+                materialId,
+                globalData,
+                Rng
+                );
+    }
+    void surfaceCollision(T rayWeight,
+                                  const rayTriple<T> &rayDir,
+                                  const rayTriple<T> &geomNormal,
+                                  const unsigned int primID, const int materialId,
+                                  rayTracingData<T> &localData,
+                                  const rayTracingData<T> *globalData,
+                                  rayRNG &Rng) override{
+        PYBIND11_OVERRIDE_PURE(
+                void,
+                rayAbstractParticle,
+                surfaceCollision,
+                rayWeight,
+                rayDir,
+                geomNormal,
+                primID,
+                materialId,
+                localData,
+                globalData,
+                Rng
+                );
+    }
+    int getRequiredLocalDataSize() const override{
+        PYBIND11_OVERRIDE_PURE(
+                int,
+                rayAbstractParticle,
+                getRequiredLocalDataSize,
+        );
+    }
+    T getSourceDistributionPower() const override{
+        PYBIND11_OVERRIDE_PURE(
+                T,
+                rayAbstractParticle,
+                getSourceDistributionPower,
+        );
+    }
+
+    std::vector<std::string> getLocalDataLabels() const override{
+        PYBIND11_OVERRIDE_PURE(
+                std::vector<std::string>,
+                rayAbstractParticle,
+                getLocalDataLabels,
+        );
+    }
+};
+
+//now we shall wrap this class but first have to test how 2 virtual classes behave in this context
+//template <typename Derived, typename NumericType>
+//class rayParticle : public rayAbstractParticle<NumericType> {
+//public:
+//    std::unique_ptr<rayAbstractParticle<NumericType>>
+//    clone() const override final {
+//        return std::make_unique<Derived>(static_cast<Derived const &>(*this));
+//    }
+//    virtual void initNew(rayRNG &Rng) override {}
+//    virtual std::pair<NumericType, rayTriple<NumericType>>
+//    surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
+//                      const rayTriple<NumericType> &geomNormal,
+//                      const unsigned int primId, const int materialId,
+//                      const rayTracingData<NumericType> *globalData,
+//                      rayRNG &Rng) override {
+//        // return the sticking probability and direction after reflection for this
+//        // hit
+//        return std::pair<NumericType, rayTriple<NumericType>>{
+//                1., rayTriple<NumericType>{0., 0., 0.}};
+//    }
+//    virtual void
+//    surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
+//                     const rayTriple<NumericType> &geomNormal,
+//                     const unsigned int primID, const int materialId,
+//                     rayTracingData<NumericType> &localData,
+//                     const rayTracingData<NumericType> *globalData,
+//                     rayRNG &Rng) override { // collect data for this hit
+//    }
+//    virtual int getRequiredLocalDataSize() const override { return 0; }
+//    virtual NumericType getSourceDistributionPower() const override { return 1.; }
+//    virtual std::vector<std::string> getLocalDataLabels() const override {
+//        return std::vector<std::string>(getRequiredLocalDataSize(), "localData");
+//    }
+//
+//protected:
+//    // We make clear rayParticle class needs to be inherited
+//    rayParticle() = default;
+//    rayParticle(const rayParticle &) = default;
+//    rayParticle(rayParticle &&) = default;
+//};
+
+
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 module.doc() =
 "ViennaPS is a header-only C++ process simulation library, which "
@@ -231,6 +354,16 @@ module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 // wrap omp_set_num_threads to control number of threads
 module.def("setNumThreads", &omp_set_num_threads);
 
+//ViennaRay, the rayParticle.hpp
+pybind11::class_<rayAbstractParticle<T>, psSmartPointer<rayAbstractParticle<T>>,PYrayAbstractParticle>(module, "rayAbstractParticle")
+        .def("initNew",&rayAbstractParticle<T>::initNew)
+        .def("clone",&rayAbstractParticle<T>::clone)
+        .def("surfaceReflection",&rayAbstractParticle<T>::surfaceReflection)
+        .def("getRequiredLocalDataSize",&rayAbstractParticle<T>::getRequiredLocalDataSize)
+        .def("getSourceDistributionPower",&rayAbstractParticle<T>::getSourceDistributionPower)
+        .def("getLocalDataLabels",&rayAbstractParticle<T>::getLocalDataLabels)
+        .def("surfaceCollision",&rayAbstractParticle<T>::surfaceCollision);
+//.def(pybind11::init<>());
 
 //psSurfaceModel
 pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfaceModel>(module, "psSurfaceModel")
