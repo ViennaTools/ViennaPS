@@ -53,16 +53,13 @@ public:
   }
 };
 
-template <typename NumericType, int D> class DirectionalEtching {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
+template <typename NumericType, int D>
+class DirectionalEtching : public psProcessModel<NumericType, D> {
 public:
   DirectionalEtching(const std::array<NumericType, 3> direction,
                      const NumericType directionalVelocity = 1.,
                      const NumericType isotropicVelocity = 0.,
                      const int maskId = 0) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     // surface model
     auto surfModel =
         psSmartPointer<DirectionalEtchingSurfaceModel<NumericType, D>>::New();
@@ -72,12 +69,8 @@ public:
         psSmartPointer<DirectionalEtchVelocityField<NumericType, D>>::New(
             direction, directionalVelocity, isotropicVelocity, maskId);
 
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("DirectionalEtching");
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("DirectionalEtching");
   }
 };

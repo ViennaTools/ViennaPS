@@ -42,13 +42,10 @@ public:
   }
 };
 
-template <typename NumericType, int D> class IsotropicProcess {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
+template <typename NumericType, int D>
+class IsotropicProcess : public psProcessModel<NumericType, D> {
 public:
   IsotropicProcess(const NumericType isotropicRate = 0., const int maskId = 0) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     // surface model
     auto surfModel =
         psSmartPointer<IsotropicSurfaceModel<NumericType, D>>::New();
@@ -57,12 +54,8 @@ public:
     auto velField = psSmartPointer<IsotropicVelocityField<NumericType, D>>::New(
         isotropicRate, maskId);
 
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("IsotropicProcess");
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("IsotropicProcess");
   }
 };

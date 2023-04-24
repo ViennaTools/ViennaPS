@@ -211,23 +211,18 @@ public:
   }
 };
 
-template <typename NumericType, int D> class PlasmaDamage {
+template <typename NumericType, int D>
+class PlasmaDamage : public psProcessModel<NumericType, D> {
   psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
 
 public:
   PlasmaDamage(const NumericType ionEnergy = 100.,
                const NumericType meanFreePath = 1.,
                const int maskMaterial = 0) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     auto volumeModel = psSmartPointer<DamageModel<NumericType, D>>::New(
         ionEnergy, meanFreePath, maskMaterial);
 
-    processModel->setProcessName("PlasmaDamage");
-    processModel->setAdvectionCallback(volumeModel);
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setProcessName("PlasmaDamage");
+    this->setAdvectionCallback(volumeModel);
   }
 };

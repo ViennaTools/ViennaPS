@@ -32,16 +32,16 @@ int main(int argc, char *argv[]) {
       false /* periodic boundary */, true /*create mask*/)
       .apply();
 
-  SF6O2Etching<NumericType, D> model(params.totalIonFlux /*ion flux*/,
-                                     params.totalEtchantFlux /*etchant flux*/,
-                                     params.totalOxygenFlux /*oxygen flux*/,
-                                     params.ionEnergy /*min ion energy (eV)*/,
-                                     params.A_O /*oxy sputter yield*/,
-                                     0 /*mask material ID*/);
+  auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
+      params.totalIonFlux /*ion flux*/,
+      params.totalEtchantFlux /*etchant flux*/,
+      params.totalOxygenFlux /*oxygen flux*/,
+      params.ionEnergy /*min ion energy (eV)*/,
+      params.A_O /*oxy sputter yield*/, 0 /*mask material ID*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
-  process.setProcessModel(model.getProcessModel());
+  process.setProcessModel(model);
   process.setMaxCoverageInitIterations(10);
   process.setNumberOfRaysPerPoint(1000);
   process.setProcessDuration(params.processTime);

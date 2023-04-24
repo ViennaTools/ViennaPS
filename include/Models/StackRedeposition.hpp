@@ -50,11 +50,11 @@ public:
     auto veloField =
         psSmartPointer<SelectiveEtchingVelocityField<NumericType>>::New(
             nitrideEtchRate, oxideEtchRate, depoMaterialId);
-    this->setVelocityField(veloField);
 
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
-    this->setSurfaceModel(surfModel);
 
+    this->setVelocityField(veloField);
+    this->setSurfaceModel(surfModel);
     this->setProcessName("OxideRegrowth");
   }
 };

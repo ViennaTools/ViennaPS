@@ -81,14 +81,11 @@ private:
   const NumericType sourcePower = 1.;
 };
 
-template <typename NumericType, int D> class SimpleDeposition {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
+template <typename NumericType, int D>
+class SimpleDeposition : public psProcessModel<NumericType, D> {
 public:
   SimpleDeposition(const NumericType stickingProbability = 0.1,
                    const NumericType sourceDistributionPower = 1.) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     // particles
     auto depoParticle =
         std::make_unique<SimpleDepositionParticle<NumericType, D>>(
@@ -102,13 +99,9 @@ public:
     auto velField =
         psSmartPointer<SimpleDepositionVelocityField<NumericType>>::New();
 
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("SimpleDeposition");
-    processModel->insertNextParticleType(depoParticle);
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("SimpleDeposition");
+    this->insertNextParticleType(depoParticle);
   }
 };

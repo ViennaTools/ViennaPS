@@ -411,16 +411,13 @@ private:
   static constexpr NumericType gamma_O = 1.;
 };
 
-template <typename NumericType, int D> class SF6O2Etching {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
+template <typename NumericType, int D>
+class SF6O2Etching : public psProcessModel<NumericType, D> {
 public:
   SF6O2Etching(const double ionFlux, const double etchantFlux,
                const double oxygenFlux, const NumericType ionEnergy = 100.,
                const NumericType oxySputterYield = 3,
                const int maskMaterial = 0) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     // particles
     auto ion =
         std::make_unique<SF6O2Ion<NumericType, D>>(ionEnergy, oxySputterYield);
@@ -435,15 +432,11 @@ public:
     auto velField =
         psSmartPointer<SF6O2VelocityField<NumericType>>::New(maskMaterial);
 
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("SF6O2Etching");
-    processModel->insertNextParticleType(ion);
-    processModel->insertNextParticleType(etchant);
-    processModel->insertNextParticleType(oxygen);
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("SF6O2Etching");
+    this->insertNextParticleType(ion);
+    this->insertNextParticleType(etchant);
+    this->insertNextParticleType(oxygen);
   }
 };

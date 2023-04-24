@@ -101,9 +101,8 @@ public:
 
 // The wet etching model should be used in combination with the
 // STENCIL_LOCAL_LAX_FRIEDRIECH integration scheme.
-template <typename NumericType, int D> class WetEtching {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
+template <typename NumericType, int D>
+class WetEtching : public psProcessModel<NumericType, D> {
 public:
   WetEtching(const int passedMaskId = 0) : maskId(passedMaskId) {
     static_assert(D == 3 && "Wet etch model is only implemented in 3D.");
@@ -121,14 +120,8 @@ public:
     initialize();
   }
 
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
-  }
-
 private:
   void initialize() {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     // surface model
     auto surfModel =
         psSmartPointer<WetEtchingSurfaceModel<NumericType, D>>::New();
@@ -138,9 +131,9 @@ private:
         psSmartPointer<WetEtchingVelocityField<NumericType, D>>::New(
             direction100, direction010, r100, r110, r111, r311, maskId);
 
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("WetEtching");
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("WetEtching");
   }
 
   // crystal surface direction
