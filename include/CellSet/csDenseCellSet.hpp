@@ -149,8 +149,6 @@ public:
 
   gridType getCellGrid() { return cellGrid; }
 
-  psSmartPointer<csBVH<T, D>> getBVH() const { return BVH; }
-
   T getDepth() const { return depth; }
 
   T getGridDelta() const { return gridDelta; }
@@ -239,6 +237,7 @@ public:
     lsVTKWriter<T>(cellGrid, fileName).apply();
   }
 
+  // Save cell set data in simple text format
   void writeCellSetData(std::string fileName) const {
     auto numScalarData = cellGrid->getCellData().getScalarDataSize();
 
@@ -260,6 +259,7 @@ public:
     file.close();
   }
 
+  // Read cell set data from text
   void readCellSetData(std::string fileName) {
     std::ifstream file(fileName);
     std::string line;
@@ -481,6 +481,7 @@ public:
       }
     }
 
+#pragma omp parallel for
     for (unsigned cellIdx = 0; cellIdx < numCells; cellIdx++) {
       auto coord = nodes[cells[cellIdx][0]];
       for (int i = 0; i < D; i++) {

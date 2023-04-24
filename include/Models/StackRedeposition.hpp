@@ -6,6 +6,7 @@
 
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
+#include <psProcessModel.hpp>
 
 // The selective etching model works in accordance with the geometry generated
 // by psMakeStack
@@ -38,4 +39,22 @@ private:
   const NumericType rate;
   const NumericType oxide_rate;
   const int depoMat;
+};
+
+template <class NumericType, int D>
+class OxideRegrowthModel : public psProcessModel<NumericType, D> {
+public:
+  OxideRegrowthModel(const int depoMaterialId,
+                     const NumericType nitrideEtchRate,
+                     const NumericType oxideEtchRate) {
+    auto veloField =
+        psSmartPointer<SelectiveEtchingVelocityField<NumericType>>::New(
+            nitrideEtchRate, oxideEtchRate, depoMaterialId);
+    this->setVelocityField(veloField);
+
+    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    this->setSurfaceModel(surfModel);
+
+    this->setProcessName("OxideRegrowth");
+  }
 };

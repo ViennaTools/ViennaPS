@@ -39,9 +39,11 @@ public:
     sourceDirection = passedDirection;
   }
 
-  void setProcessDuration(double passedDuration) {
+  void setProcessDuration(NumericType passedDuration) {
     processDuration = passedDuration;
   }
+
+  NumericType getProcessDuration() const { return processTime; }
 
   void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
 
@@ -258,9 +260,10 @@ public:
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
 
+      // rate calculation by top-down ray tracing
       psUtils::Timer rtTimer;
-      rtTimer.start();
       if (useRayTracing) {
+        rtTimer.start();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         rayTrace.setGeometry(points, normals, gridDelta);
         rayTrace.setMaterialIds(materialIds);
@@ -306,16 +309,18 @@ public:
         if (useCoverages)
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
+        rtTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Top-Down Flux Calculation", rtTimer)
+            .print();
       }
-      rtTimer.finish();
-      psLogger::getInstance()
-          .addTiming("Top-Down Flux Calculation", rtTimer)
-          .print();
 
+      // get velocities from rates
       auto velocitites = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocitites);
 
+      // print debug output
       if (psLogger::getLogLevel() >= 3) {
         if (velocitites)
           diskMesh->getCellData().insertNextScalarData(*velocitites,
@@ -394,6 +399,7 @@ public:
 
     addMaterialIdsToTopLS(translator,
                           diskMesh->getCellData().getScalarData("MaterialIds"));
+    processTime = processDuration - remainingTime;
   }
 
 private:
@@ -513,6 +519,7 @@ private:
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
   NumericType printTime = 0.;
+  NumericType processTime = 0.;
 };
 
 #endif

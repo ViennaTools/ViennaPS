@@ -30,7 +30,7 @@ public:
       psSmartPointer<psPointData<NumericType>> Rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) {
-    return psSmartPointer<std::vector<NumericType>>::New();
+    return nullptr;
   }
 
   virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) {
