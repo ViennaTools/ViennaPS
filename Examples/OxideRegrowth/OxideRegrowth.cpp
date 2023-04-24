@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
   psProcess<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
-  process.setProcessDuration(20 * 60.);
+  process.setProcessDuration(20 * 60.); // 20 minutes
 
   process.apply();
 

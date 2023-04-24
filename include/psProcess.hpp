@@ -119,7 +119,7 @@ public:
     meshConverter.setTranslator(translator);
 
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
-        model->getVelocityField()->useTranslationField());
+        model->getVelocityField());
     transField->setTranslator(translator);
     transField->setVelocityField(model->getVelocityField());
 
