@@ -46,12 +46,12 @@ public:
   psMakeStack(PSPtrType passedDomain, const T passedGridDelta,
               const T passedXExtent, const T passedYExtent,
               const int passedNumLayers, const T passedLayerHeight,
-              const T passedSubstrateHeight, const T passedHoleRadius,
+              const T passedSubstrateHeight, const T passedTrenchWidth,
               const bool periodic = false)
       : geometry(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         numLayers(passedNumLayers), layerHeight(passedLayerHeight),
-        substrateHeight(passedSubstrateHeight), holeRadius(passedHoleRadius),
+        substrateHeight(passedSubstrateHeight), trenchWidth(passedTrenchWidth),
         periodicBoundary(periodic) {
     init();
   }

@@ -43,7 +43,7 @@ template <typename T> struct Parameters {
         psUtils::Item{"numLayers", numLayers},                         //
         psUtils::Item{"layerHeight", layerHeight},                     //
         psUtils::Item{"substrateHeight", substrateHeight},             //
-        psUtils::Item{"holeRadius", holeRadius},                       //
+        psUtils::Item{"trenchWidth", trenchWidth},                     //
         psUtils::Item{"diffusionCoefficient", diffusionCoefficient},   //
         psUtils::Item{"sink", sink},                                   //
         psUtils::Item{"scallopStreamVelocity", scallopStreamVelocity}, //

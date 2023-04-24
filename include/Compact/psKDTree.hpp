@@ -43,7 +43,8 @@
 #include <psLogger.hpp>
 #include <psQueues.hpp>
 
-template <class NumericType> class psKDTree {
+template <class NumericType, class ValueType = std::vector<NumericType>>
+class psKDTree {
   typedef typename std::vector<NumericType>::size_type SizeType;
 
   struct Node;
@@ -57,7 +58,7 @@ template <class NumericType> class psKDTree {
 public:
   psKDTree() {}
 
-  psKDTree(const std::vector<std::array<NumericType, 3>> &passedPoints) {
+  psKDTree(const std::vector<ValueType> &passedPoints) {
     if (!passedPoints.empty()) {
       // The first row determins the data dimension
       D = 3;
@@ -80,7 +81,7 @@ public:
     }
   }
 
-  void setPoints(const std::vector<std::array<NumericType, 3>> &passedPoints,
+  void setPoints(const std::vector<ValueType> &passedPoints,
                  const std::vector<NumericType> &passedScalingFactors = {}) {
     if (passedPoints.empty()) {
       psLogger::getInstance()
@@ -113,7 +114,7 @@ public:
   }
 
   [[nodiscard]] std::optional<std::pair<SizeType, NumericType>>
-  findNearest(const std::array<NumericType, 3> &x) const {
+  findNearest(const ValueType &x) const {
     if (!rootNode)
       return {};
 
@@ -124,7 +125,7 @@ public:
   }
 
   [[nodiscard]] std::optional<std::vector<std::pair<SizeType, NumericType>>>
-  findKNearest(const std::array<NumericType, 3> &x, const int k) const {
+  findKNearest(const ValueType &x, const int k) const {
     if (!rootNode)
       return {};
 
@@ -142,8 +143,7 @@ public:
   }
 
   [[nodiscard]] std::optional<std::vector<std::pair<SizeType, NumericType>>>
-  findNearestWithinRadius(const std::array<NumericType, 3> &x,
-                          const NumericType radius) const {
+  findNearestWithinRadius(const ValueType &x, const NumericType radius) const {
     if (!rootNode)
       return {};
 
@@ -284,7 +284,7 @@ private:
    * Recursive Tree Traversal                                                 *
    ****************************************************************************/
   void traverseDown(Node *currentNode, std::pair<NumericType, Node *> &best,
-                    const std::array<NumericType, 3> &x) const {
+                    const ValueType &x) const {
     if (currentNode == nullptr)
       return;
 
@@ -396,18 +396,16 @@ private:
     return val;
   }
 
-  [[nodiscard]] std::array<NumericType, 3>
-  Diff(const std::array<NumericType, 3> &pVecA,
-       const std::array<NumericType, 3> &pVecB) const {
-    std::array<NumericType, 3> diff;
+  [[nodiscard]] ValueType Diff(const ValueType &pVecA,
+                               const ValueType &pVecB) const {
+    ValueType diff;
     for (SizeType i = 0; i < D; ++i)
       diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
     return diff;
   }
 
-  [[nodiscard]] NumericType
-  SquaredDistance(const std::array<NumericType, 3> &pVecA,
-                  const std::array<NumericType, 3> &pVecB) const {
+  [[nodiscard]] NumericType SquaredDistance(const ValueType &pVecA,
+                                            const ValueType &pVecB) const {
     auto diff = Diff(pVecA, pVecB);
     NumericType norm = 0;
     std::for_each(diff.begin(), diff.end(),
@@ -415,9 +413,8 @@ private:
     return norm;
   }
 
-  [[nodiscard]] NumericType
-  Distance(const std::array<NumericType, 3> &pVecA,
-           const std::array<NumericType, 3> &pVecB) const {
+  [[nodiscard]] NumericType Distance(const ValueType &pVecA,
+                                     const ValueType &pVecB) const {
     return std::sqrt(SquaredDistance(pVecA, pVecB));
   }
 
@@ -425,15 +422,14 @@ private:
    * The Node struct implementation                                           *
    ****************************************************************************/
   struct Node {
-    std::array<NumericType, 3> value{};
+    ValueType value{};
     SizeType index{};
     SizeType axis{};
 
     Node *left = nullptr;
     Node *right = nullptr;
 
-    Node(const std::array<NumericType, 3> &passedValue,
-         SizeType passedIndex) noexcept
+    Node(const ValueType &passedValue, SizeType passedIndex) noexcept
         : value(passedValue), index(passedIndex) {}
 
     Node(Node &&other) noexcept {
