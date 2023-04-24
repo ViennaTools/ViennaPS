@@ -61,7 +61,7 @@ public:
   psKDTree(const std::vector<ValueType> &passedPoints) {
     if (!passedPoints.empty()) {
       // The first row determins the data dimension
-      D = 3;
+      D = passedPoints[0].size();
 
       // Initialize the scaling factors to one
       scalingFactors = std::vector<NumericType>(D, 1.);
@@ -90,7 +90,8 @@ public:
       return;
     }
 
-    D = 3;
+    // The first row determins the data dimension
+    D = passedPoints[0].size();
 
     scalingFactors.clear();
     if (passedScalingFactors.empty()) {
@@ -396,20 +397,12 @@ private:
     return val;
   }
 
-  [[nodiscard]] ValueType Diff(const ValueType &pVecA,
-                               const ValueType &pVecB) const {
-    ValueType diff;
-    for (SizeType i = 0; i < D; ++i)
-      diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
-    return diff;
-  }
-
   [[nodiscard]] NumericType SquaredDistance(const ValueType &pVecA,
                                             const ValueType &pVecB) const {
-    auto diff = Diff(pVecA, pVecB);
     NumericType norm = 0;
-    std::for_each(diff.begin(), diff.end(),
-                  [&norm](NumericType entry) { norm += entry * entry; });
+    for (SizeType i = 0; i < D; ++i)
+      norm += scalingFactors[i] * scalingFactors[i] * (pVecA[i] - pVecB[i]) *
+              (pVecA[i] - pVecB[i]);
     return norm;
   }
 

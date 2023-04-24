@@ -38,7 +38,7 @@ void printProgress(size_t i, size_t finalCount = 100) {
   int barWidth = 70;
 
   std::cout << "[";
-  int pos = barWidth * progress;
+  int pos = static_cast<int>(static_cast<float>(barWidth) * progress);
   for (int i = 0; i < barWidth; ++i) {
     if (i < pos)
       std::cout << "=";

@@ -105,6 +105,9 @@ public:
       return;
     }
 
+    psUtils::Timer processTimer;
+    processTimer.start();
+
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
@@ -172,9 +175,11 @@ public:
     if (!coveragesInitialized)
       model->getSurfaceModel()->initializeCoverages(numPoints);
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
+      psUtils::Timer timer;
       useCoverages = true;
       psLogger::getInstance().addInfo("Using coverages.").print();
       if (!coveragesInitialized) {
+        timer.start();
         psLogger::getInstance().addInfo("Initializing coverages ... ").print();
         auto points = diskMesh->getNodes();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
@@ -208,9 +213,8 @@ public:
             rayTrace.apply();
 
             // fill up rates vector with rates from this particle type
-            auto numRates = particle->getRequiredLocalDataSize();
             auto &localData = rayTrace.getLocalData();
-            for (int i = 0; i < numRates; ++i) {
+            for (int i = 0; i < particle->getRequiredLocalDataSize(); ++i) {
               auto rate = std::move(localData.getVectorData(i));
 
               // normalize rates
@@ -246,10 +250,17 @@ public:
                 .print();
           }
         }
+        timer.finish();
+        psLogger::getInstance()
+            .addTiming("Coverage initialization", timer)
+            .print();
       }
     }
 
     size_t counter = 0;
+    psUtils::Timer rtTimer;
+    psUtils::Timer callbackTimer;
+    psUtils::Timer advTimer;
     while (remainingTime > 0.) {
       psLogger::getInstance()
           .addInfo("Remaining time: " + std::to_string(remainingTime))
@@ -261,7 +272,6 @@ public:
       auto points = diskMesh->getNodes();
 
       // rate calculation by top-down ray tracing
-      psUtils::Timer rtTimer;
       if (useRayTracing) {
         rtTimer.start();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
@@ -311,7 +321,7 @@ public:
                                  rayTraceCoverages);
         rtTimer.finish();
         psLogger::getInstance()
-            .addTiming("Top-Down Flux Calculation", rtTimer)
+            .addTiming("Top-down flux calculation", rtTimer)
             .print();
       }
 
@@ -321,7 +331,7 @@ public:
       model->getVelocityField()->setVelocities(velocitites);
 
       // print debug output
-      if (psLogger::getLogLevel() >= 3) {
+      if (psLogger::getLogLevel() >= 4) {
         if (velocitites)
           diskMesh->getCellData().insertNextScalarData(*velocitites,
                                                        "velocities");
@@ -351,8 +361,14 @@ public:
 
       // apply advection callback
       if (useAdvectionCallback) {
+        callbackTimer.start();
         bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
             processDuration - remainingTime);
+        callbackTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Advection callback pre-advect", callbackTimer)
+            .print();
+
         if (!continueProcess) {
           psLogger::getInstance()
               .addInfo("Process stopped early by AdvectionCallback during "
@@ -366,7 +382,10 @@ public:
       if (useCoverages)
         moveCoveragesToTopLS(translator,
                              model->getSurfaceModel()->getCoverages());
+      advTimer.start();
       advectionKernel.apply();
+      advTimer.finish();
+      psLogger::getInstance().addTiming("Surface advection", advTimer).print();
 
       // update the translator to retrieve the correct coverages from the LS
       meshConverter.apply();
@@ -376,15 +395,13 @@ public:
 
       // apply advection callback
       if (useAdvectionCallback) {
-        if (domain->getUseCellSet()) {
-          if (domain->getCellSet()->getCellSetPosition()) {
-            domain->getCellSet()->updateMaterials();
-          } else {
-            domain->getCellSet()->updateSurface();
-          }
-        }
+        callbackTimer.start();
         bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
+        callbackTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Advection callback post-advect", callbackTimer)
+            .print();
         if (!continueProcess) {
           psLogger::getInstance()
               .addInfo("Process stopped early by AdvectionCallback during "
@@ -400,6 +417,15 @@ public:
     addMaterialIdsToTopLS(translator,
                           diskMesh->getCellData().getScalarData("MaterialIds"));
     processTime = processDuration - remainingTime;
+    processTimer.finish();
+
+    psLogger::getInstance().addTiming("Process " + name, processTimer).print();
+    if (useRayTracing) {
+      psLogger::getInstance()
+          .addTiming("Top-down flux calculation total time",
+                     rtTimer.totalDuration * 1e-9)
+          .print();
+    }
   }
 
 private:

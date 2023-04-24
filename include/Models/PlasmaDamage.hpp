@@ -206,6 +206,7 @@ public:
   }
 
   bool applyPostAdvect(const NumericType advectionTime) override {
+    domain->getCellSet()->updateSurface();
     return true;
   }
 };

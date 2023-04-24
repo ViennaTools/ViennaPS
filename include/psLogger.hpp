@@ -8,7 +8,7 @@
 // 0 errors
 // 1 + warnings
 // 2 + info
-// 3 + intermediate output
+// 3 + intermediate output (meshes)
 // 4 + timings
 // 5 + debug
 enum class psLogLevel : unsigned {
@@ -38,6 +38,7 @@ public:
   static void setLogLevel(const psLogLevel passedLogLevel) {
     logLevel = passedLogLevel;
   }
+
   static unsigned getLogLevel() { return static_cast<unsigned>(logLevel); }
 
   static psLogger &getInstance() {
@@ -49,19 +50,30 @@ public:
     if (getLogLevel() < 5)
       return *this;
 #pragma omp critical
-    { message += "\n" + std::string(tabWidth, ' ') + "DEBUG: " + s + "\n"; }
+    { message += std::string(tabWidth, ' ') + "DEBUG: " + s + "\n"; }
     return *this;
   }
 
   template <class Clock>
   psLogger &addTiming(std::string s, psUtils::Timer<Clock> &timer) {
-    if (getLogLevel() < 4)
+    if (getLogLevel() < 3)
       return *this;
 #pragma omp critical
     {
-      message += "\n" + std::string(tabWidth, ' ') + s +
+      message += std::string(tabWidth, ' ') + s +
                  " took: " + std::to_string(timer.currentDuration * 1e-9) +
                  " s \n";
+    }
+    return *this;
+  }
+
+  psLogger &addTiming(std::string s, double timeInSeconds) {
+    if (getLogLevel() < 3)
+      return *this;
+#pragma omp critical
+    {
+      message += std::string(tabWidth, ' ') + s + ": " +
+                 std::to_string(timeInSeconds) + " s \n";
     }
     return *this;
   }

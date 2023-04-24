@@ -1,16 +1,24 @@
-# Config file for a redeposition example process
 # Domain
-gridDelta=0.1
-xExtent=10.0
+gridDelta=2.
+xExtent=300.0
 
 # Geometry
-int numLayers=26
-layerHeight=2
-substrateHeight=4
-holeRadius=2
+numLayers=15
+layerHeight=30.0
+substrateHeight=50.
+trenchWidth=150.0
 
-# Process
-diffusionCoefficient=10. 
-sink=0.001               
-scallopStreamVelocity=2.
-holeStreamVelocity=2.
+# Etching
+etchRate=6.5
+oxideEtchRate=0.
+targetEtchDepth=200.
+byprodFactor=1.
+diffusionCoefficient=40. 
+sink=0.01          
+scallopStreamVelocity=5.
+holeStreamVelocity=1.
+
+# Redeposition
+redepoFactor=0.7
+redepoTimeInt=60.
+redepoThreshold=0.2
