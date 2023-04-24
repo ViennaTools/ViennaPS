@@ -101,12 +101,12 @@ protected:
         processGeometry->getLevelSets()->back());
     processGeometry->insertNextLevelSet(depoLayer);
 
-    SimpleDeposition<NumericType, D> model(processParams->sticking,
-                                           processParams->cosinePower);
+    auto model = psSmartPointer<SimpleDeposition<NumericType, D>>::New(
+        processParams->sticking, processParams->cosinePower);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime *
                                processParams->rate / processParams->sticking);
@@ -118,14 +118,14 @@ protected:
   virtual void
   runSF6O2Etching(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                   psSmartPointer<ApplicationParameters> processParams) {
-    SF6O2Etching<NumericType, D> model(
+    auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
         processParams->totalIonFlux, processParams->totalEtchantFlux,
         processParams->totalOxygenFlux, processParams->ionEnergy,
         processParams->A_O, processParams->maskId);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setMaxCoverageInitIterations(10);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
@@ -137,12 +137,12 @@ protected:
   virtual void runSphereDistribution(
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
-    SphereDistribution<NumericType, D> model(processParams->radius,
-                                             processParams->gridDelta);
+    auto model = psSmartPointer<SphereDistribution<NumericType, D>>::New(
+        processParams->radius, processParams->gridDelta);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
@@ -151,12 +151,12 @@ protected:
   virtual void
   runBoxDistribution(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                      psSmartPointer<ApplicationParameters> processParams) {
-    BoxDistribution<NumericType, D> model(processParams->halfAxes,
-                                          processParams->gridDelta);
+    auto model = psSmartPointer<BoxDistribution<NumericType, D>>::New(
+        processParams->halfAxes, processParams->gridDelta);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
@@ -166,13 +166,13 @@ protected:
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
 
-    DirectionalEtching<NumericType, D> model(
+    auto model = psSmartPointer<DirectionalEtching<NumericType, D>>::New(
         getDirection(processParams->direction), processParams->directionalRate,
         processParams->isotropicRate, processParams->maskId);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setProcessDuration(params->processTime);
     process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
@@ -190,12 +190,12 @@ protected:
       processGeometry->insertNextLevelSet(depoLayer);
     }
 
-    IsotropicProcess<NumericType, D> model(processParams->rate,
-                                           processParams->maskId);
+    auto model = psSmartPointer<IsotropicProcess<NumericType, D>>::New(
+        processParams->rate, processParams->maskId);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setProcessDuration(params->processTime);
     process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
@@ -208,10 +208,11 @@ protected:
 
     if constexpr (D == 3) {
 
-      WetEtching<NumericType, D> model(processParams->maskId);
+      auto model = psSmartPointer<WetEtching<NumericType, D>>::New(
+          processParams->maskId);
       psProcess<NumericType, D> process;
       process.setDomain(processGeometry);
-      process.setProcessModel(model.getProcessModel());
+      process.setProcessModel(model);
       process.setProcessDuration(params->processTime);
       process.setIntegrationScheme(
           lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
