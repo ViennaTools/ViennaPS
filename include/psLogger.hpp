@@ -12,15 +12,13 @@
 // 4 + timings
 // 5 + debug
 enum class psLogLevel : unsigned {
-  PS_LOG_ERROR = 0,
-  PS_LOG_WARNING = 1,
-  PS_LOG_INFO = 2,
-  PS_LOG_TIMING = 3,
-  PS_LOG_INTERMEDIATE = 4,
-  PS_LOG_DEBUG = 5
+  ERROR = 0,
+  WARNING = 1,
+  INFO = 2,
+  TIMING = 3,
+  INTERMEDIATE = 4,
+  DEBUG = 5
 };
-
-psLogLevel __logLevel = psLogLevel::PS_LOG_INFO;
 
 /// Singleton class for thread-safe logging.
 class psLogger {
@@ -28,6 +26,7 @@ class psLogger {
 
   bool error = false;
   const unsigned tabWidth = 4;
+  static psLogLevel logLevel;
 
   psLogger() {}
 
@@ -36,8 +35,10 @@ public:
   psLogger(const psLogger &) = delete;
   void operator=(const psLogger &) = delete;
 
-  static void setLogLevel(const psLogLevel logLevel) { __logLevel = logLevel; }
-  static unsigned getLogLevel() { return static_cast<unsigned>(__logLevel); }
+  static void setLogLevel(const psLogLevel passedLogLevel) {
+    logLevel = passedLogLevel;
+  }
+  static unsigned getLogLevel() { return static_cast<unsigned>(logLevel); }
 
   static psLogger &getInstance() {
     static psLogger instance;
@@ -104,3 +105,6 @@ public:
     }
   }
 };
+
+// initialize static member of logger
+psLogLevel psLogger::logLevel = psLogLevel::INFO;
