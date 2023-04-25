@@ -262,7 +262,7 @@ public:
     psUtils::Timer advTimer;
     while (remainingTime > 0.) {
       psLogger::getInstance()
-          .addInfo("\nRemaining time: " + std::to_string(remainingTime))
+          .addInfo("Remaining time: " + std::to_string(remainingTime))
           .print();
 
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();

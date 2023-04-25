@@ -3,13 +3,13 @@ gridDelta=2.
 xExtent=300.0
 
 # Geometry
-numLayers=21
+numLayers=7
 layerHeight=30.0
 substrateHeight=50.
 trenchWidth=150.0
 
 # Etching
-etchRate=6.5
+nitrideEtchRate=6.5
 oxideEtchRate=0.
 targetEtchDepth=200.
 diffusionCoefficient=40. 
