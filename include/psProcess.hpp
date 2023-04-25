@@ -121,7 +121,6 @@ public:
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
         model->getVelocityField());
     transField->setTranslator(translator);
-    transField->setVelocityField(model->getVelocityField());
 
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
@@ -263,7 +262,7 @@ public:
     psUtils::Timer advTimer;
     while (remainingTime > 0.) {
       psLogger::getInstance()
-          .addInfo("Remaining time: " + std::to_string(remainingTime))
+          .addInfo("\nRemaining time: " + std::to_string(remainingTime))
           .print();
 
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
@@ -419,11 +418,24 @@ public:
     processTime = processDuration - remainingTime;
     processTimer.finish();
 
-    psLogger::getInstance().addTiming("Process " + name, processTimer).print();
+    psLogger::getInstance()
+        .addTiming("\nProcess " + name, processTimer)
+        .addTiming("Surface advection total time",
+                   advTimer.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .print();
     if (useRayTracing) {
       psLogger::getInstance()
           .addTiming("Top-down flux calculation total time",
-                     rtTimer.totalDuration * 1e-9)
+                     rtTimer.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
+    }
+    if (useAdvectionCallback) {
+      psLogger::getInstance()
+          .addTiming("Advection callback total time",
+                     callbackTimer.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
           .print();
     }
   }

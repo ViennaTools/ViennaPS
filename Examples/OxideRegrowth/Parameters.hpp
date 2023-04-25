@@ -23,7 +23,6 @@ template <typename T> struct Parameters {
   // Process
   T targetEtchDepth = 200.;     // nm
   T diffusionCoefficient = 50.; // diffusion cofficient nm²/s
-  T byprodFactor = 1.;          // factor when adding byproduct
   T sink = 0.01;                // sink strength
   // convection velocity in the scallops towards the center nm/s
   T scallopStreamVelocity = 5.;
@@ -51,7 +50,6 @@ template <typename T> struct Parameters {
         psUtils::Item{"targetEtchDepth", targetEtchDepth},             //
         psUtils::Item{"redepoFactor", redepoFactor},                   //
         psUtils::Item{"redepoThreshold", redepoThreshold},             //
-        psUtils::Item{"byprodFactor", byprodFactor},                   //
         psUtils::Item{"redepoTimeInt", redepoTimeInt},                 //
         psUtils::Item{"oxideEtchRate", oxideEtchRate}                  //
     );

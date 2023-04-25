@@ -3,7 +3,7 @@ gridDelta=2.
 xExtent=300.0
 
 # Geometry
-numLayers=15
+numLayers=65
 layerHeight=30.0
 substrateHeight=50.
 trenchWidth=150.0
@@ -19,6 +19,6 @@ scallopStreamVelocity=5.
 holeStreamVelocity=1.
 
 # Redeposition
-redepoFactor=0.7
+redepoFactor=0.01
 redepoTimeInt=60.
 redepoThreshold=0.2

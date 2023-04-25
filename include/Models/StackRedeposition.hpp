@@ -2,6 +2,7 @@
 
 #include <csDenseCellSet.hpp>
 
+#include <lsAdvect.hpp>
 #include <lsToDiskMesh.hpp>
 
 #include <psAdvectionCallback.hpp>
@@ -41,11 +42,35 @@ private:
   const int depoMat;
 };
 
+template <class NumericType>
+class RedepositionVelocityField : public lsVelocityField<NumericType> {
+public:
+  RedepositionVelocityField(
+      const std::vector<NumericType> &passedVelocities,
+      const std::vector<std::array<NumericType, 3>> &points)
+      : velocities(passedVelocities), kdTree(points) {
+    assert(points.size() == passedVelocities.size());
+    kdTree.build();
+  }
+
+  NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
+                                int matId,
+                                const std::array<NumericType, 3> &normalVector,
+                                unsigned long pointId) override {
+    auto nearest = kdTree.findNearest(coordinate);
+    assert(nearest->first < velocities.size());
+    return velocities[nearest->first];
+  }
+
+private:
+  const std::vector<NumericType> &velocities;
+  psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
+};
+
 template <class T, int D>
 class ByproductDynamics : public psAdvectionCallback<T, D> {
-  using psAdvectionCalback<NumericType, D>::domain;
+  using psAdvectionCallback<T, D>::domain;
 
-  psSmartPointer<csDenseCellSet<T, D>> cellSet = nullptr;
   const int plasmaMaterial = 0;
   const T diffusionCoefficient = 1.;
   const T sink = 1;
@@ -53,39 +78,136 @@ class ByproductDynamics : public psAdvectionCallback<T, D> {
   const T holeStreamVel = 1.;
   const T top;
   const T holeRadius;
-  lsSmartPointer<std::vector<T>> velocities;
+  const T etchRate;
+  const T redepositionFactor;
+  const T redepositionThreshold = 0.1;
+  const T redepoTimeInt = 60;
   std::vector<std::array<T, 3>> nodes;
-  static constexpr T eps = 1e-4;
+  T prevProcTime = 0.;
+  unsigned counter = 0;
 
 public:
   ByproductDynamics(const T passedDiffCoeff, const T passedSink,
                     const T passedScallopVel, const T passedHoleVel,
                     const int passedPlasmaMat, const T passedTop,
-                    const T passedRadius)
+                    const T passedRadius, const T passedEtchRate,
+                    const T passedRedepoFactor)
       : diffusionCoefficient(passedDiffCoeff), sink(passedSink),
         scallopStreamVel(passedScallopVel), holeStreamVel(passedHoleVel),
         plasmaMaterial(passedPlasmaMat), top(passedTop),
-        holeRadius(passedRadius) {}
+        holeRadius(passedRadius), etchRate(passedEtchRate),
+        redepositionFactor(passedRedepoFactor) {}
 
-  void bool applyPreAdvect(const NumericType processTime) override {
+  bool applyPreAdvect(const T processTime) override {
     assert(domain->getUseCellSet());
-    cellSet = domain->getCellSet();
+    auto &cellSet = domain->getCellSet();
 
-    // TODO redeposition
+    // redeposition
+    auto mesh = psSmartPointer<lsMesh<T>>::New();
+    lsToDiskMesh<T, D> meshConverter(mesh);
+    for (auto ls : *domain->getLevelSets()) {
+      meshConverter.insertNextLevelSet(ls);
+    }
+    meshConverter.apply();
 
-    // TODO: save points
+    const auto &points = mesh->nodes;
+    auto materialIds = mesh->getCellData().getScalarData("MaterialIds");
+
+    // save points before advection
+    nodes.clear();
+    nodes.reserve(points.size() / 2);
+    for (size_t i = 0; i < points.size(); i++) {
+      int matId = static_cast<int>(materialIds->at(i));
+      if (matId == 0 || matId == plasmaMaterial - 1)
+        continue;
+
+      if (matId % 2 == 0)
+        nodes.push_back(points[i]);
+    }
+    nodes.shrink_to_fit();
+
+    // redeposit oxide
+    if (processTime - redepoTimeInt * (counter + 1) > -1) {
+      const auto numPoints = points.size();
+      std::vector<T> depoRate(numPoints, 0.);
+      auto ff = cellSet->getScalarData("byproductSum");
+      auto cellMatIds = cellSet->getScalarData("Material");
+
+      for (size_t i = 0; i < numPoints; ++i) {
+        int matId = static_cast<int>(materialIds->at(i));
+        if (matId == 0 || matId == plasmaMaterial)
+          continue;
+
+        auto node = points[i];
+
+        if (node[D - 1] >= top)
+          continue;
+
+        if (matId % 2 == 1 || matId == plasmaMaterial - 1) {
+
+          auto cellIdx = cellSet->getIndex(node);
+          int n = 0;
+          if (cellIdx == -1)
+            continue;
+          if (cellMatIds->at(cellIdx) == plasmaMaterial) {
+            depoRate[i] = ff->at(cellIdx);
+            n++;
+          }
+          for (const auto ni : cellSet->getNeighbors(cellIdx)) {
+            if (ni != -1 && cellMatIds->at(ni) == plasmaMaterial) {
+              depoRate[i] += ff->at(ni);
+              n++;
+            }
+          }
+
+          if (n > 1)
+            depoRate[i] /= static_cast<T>(n);
+
+          depoRate[i] /= processTime;
+
+          if (depoRate[i] < redepositionThreshold)
+            depoRate[i] = 0.;
+
+          depoRate[i] *= redepositionFactor;
+        }
+      }
+
+      // advect surface
+      auto redepVelField =
+          psSmartPointer<RedepositionVelocityField<T>>::New(depoRate, points);
+
+      lsAdvect<T, D> advectionKernel;
+      advectionKernel.insertNextLevelSet(domain->getLevelSets()->back());
+      advectionKernel.setVelocityField(redepVelField);
+      advectionKernel.setAdvectionTime(processTime - prevProcTime);
+      advectionKernel.apply();
+
+      prevProcTime = processTime;
+      counter++;
+    }
+
+    return true;
   }
 
-  void bool applyPostAdvect(const NumericType advectionTime) override {
+  bool applyPostAdvect(const T advectedTime) override {
+    auto &cellSet = domain->getCellSet();
     cellSet->updateMaterials();
+    const auto gridDelta = cellSet->getGridDelta();
 
-    // TODO add byproducts
+    // add byproducs
+    for (size_t j = 0; j < nodes.size(); j++) {
+      cellSet->addFillingFraction(nodes[j],
+                                  etchRate * advectedTime / gridDelta);
+    }
 
-    diffuseByproducts(advectionTime);
+    diffuseByproducts(cellSet, advectedTime);
+
+    return true;
   }
 
 private:
-  void diffuseByproducts(const T timeStep) {
+  void diffuseByproducts(psSmartPointer<csDenseCellSet<T, D>> cellSet,
+                         const T timeStep) {
     auto data = cellSet->getFillingFractions();
     auto materialIds = cellSet->getScalarData("Material");
     auto elems = cellSet->getElements();
@@ -184,9 +306,9 @@ class OxideRegrowthModel : public psProcessModel<NumericType, D> {
 public:
   OxideRegrowthModel(
       const int depoMaterialId, const NumericType nitrideEtchRate,
-      const NumericType oxideEtchRate, const NumericType diffusionCoefficient,
-      const NumericType sinkStrength, const NumericType scallopVelocitiy,
-      const NumericType centerVelocity, const int plasmaMaterial,
+      const NumericType oxideEtchRate, const NumericType redepositionRate,
+      const NumericType diffusionCoefficient, const NumericType sinkStrength,
+      const NumericType scallopVelocitiy, const NumericType centerVelocity,
       const NumericType topHeight, const NumericType centerWidth) {
 
     auto veloField =
@@ -197,10 +319,12 @@ public:
 
     auto dynamics = psSmartPointer<ByproductDynamics<NumericType, D>>::New(
         diffusionCoefficient, sinkStrength, scallopVelocitiy, centerVelocity,
-        plasmaMaterial, topHeight, centerWidth / 2.);
+        depoMaterialId + 1, topHeight, centerWidth / 2., nitrideEtchRate,
+        redepositionRate);
 
     this->setVelocityField(veloField);
     this->setSurfaceModel(surfModel);
+    this->setAdvectionCallback(dynamics);
     this->setProcessName("OxideRegrowth");
   }
 };

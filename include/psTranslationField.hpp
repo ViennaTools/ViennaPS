@@ -22,20 +22,20 @@ public:
                                 int material,
                                 const std::array<NumericType, 3> &normalVector,
                                 unsigned long pointId) {
-    if (useTranslation)  
+    if (useTranslation)
       translateLsId(pointId);
-    return modelVelocityField->getScalarVelocity(
-        coordinate, material, normalVector, surfacePointId);
+    return modelVelocityField->getScalarVelocity(coordinate, material,
+                                                 normalVector, pointId);
   }
 
   std::array<NumericType, 3>
   getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
                     const std::array<NumericType, 3> &normalVector,
                     unsigned long pointId) {
-    if (useTranslation)  
+    if (useTranslation)
       translateLsId(pointId);
-    return modelVelocityField->getVectorVelocity(
-        coordinate, material, normalVector, pointId);
+    return modelVelocityField->getVectorVelocity(coordinate, material,
+                                                 normalVector, pointId);
   }
 
   NumericType
@@ -57,17 +57,21 @@ public:
 private:
   void translateLsId(unsigned long &lsId) {
     if (useKdTree) {
-      if (auto nearest = kdTree.findNearest(coordinate);
-          nearest->first < velocities->size()) {
-        lsId = nearest->first;
-      } else {
-        psLogger::getInstance().addWarning("Could not extent velocity from surface to LS point").print();
-      }
+      // if (auto nearest = kdTree.findNearest(coordinate);
+      //     nearest->first < velocities->size()) {
+      //   lsId = nearest->first;
+      // } else {
+      //   psLogger::getInstance()
+      //       .addWarning("Could not extent velocity from surface to LS point")
+      //       .print();
+      // }
     } else {
       if (auto it = translator->find(lsId); it != translator->end()) {
         lsId = it->second;
       } else {
-        psLogger::getInstance().addWarning("Could not extent velocity from surface to LS point").print();
+        psLogger::getInstance()
+            .addWarning("Could not extend velocity from surface to LS point")
+            .print();
       }
     }
   }

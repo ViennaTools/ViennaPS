@@ -181,9 +181,9 @@ private:
 };
 
 template <typename NumericType, int D>
-class DamageModel : public psAdvectionCalback<NumericType, D> {
+class DamageModel : public psAdvectionCallback<NumericType, D> {
 protected:
-  using psAdvectionCalback<NumericType, D>::domain;
+  using psAdvectionCallback<NumericType, D>::domain;
   csTracing<NumericType, D> tracer;
 
 public:

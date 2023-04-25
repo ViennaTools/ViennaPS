@@ -18,6 +18,8 @@ int main(int argc, char **argv) {
   // This model/example currently only works in 2D mode
   constexpr int D = 2;
 
+  psLogger::setLogLevel(psLogLevel::TIMING);
+
   Parameters<NumericType> params;
   if (argc > 1) {
     auto config = psUtils::readConfigFile(argv[1]);
@@ -50,6 +52,7 @@ int main(int argc, char **argv) {
                               params.numLayers * params.layerHeight + 10.,
                           true /* true means cell set above surface */);
   auto &cellSet = domain->getCellSet();
+  cellSet->addScalarData("byproductSum", 0.);
   cellSet->writeVTU("initial.vtu");
   // we need neighborhood information for solving the
   // convection-diffusion equation on the cell set
@@ -59,12 +62,17 @@ int main(int argc, char **argv) {
   // process in the cell set. The byproducts are then distributed by solving a
   // convection-diffusion equation on the cell set.
   auto model = psSmartPointer<OxideRegrowthModel<NumericType, D>>::New(
-      params.numLayers + 1, params.etchRate / 60, params.oxideEtchRate / 60);
+      params.numLayers + 1, params.etchRate / 60, params.oxideEtchRate / 60,
+      params.redepoFactor, params.diffusionCoefficient, params.sink,
+      params.scallopStreamVelocity, params.holeStreamVelocity,
+      params.substrateHeight + params.numLayers * params.layerHeight,
+      params.trenchWidth);
 
   psProcess<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
   process.setProcessDuration(20 * 60.); // 20 minutes
+  process.setPrintTimeInterval(60);
 
   process.apply();
 
