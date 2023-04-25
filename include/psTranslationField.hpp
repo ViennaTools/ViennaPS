@@ -56,24 +56,24 @@ public:
 
 private:
   void translateLsId(unsigned long &lsId) {
-    if (useKdTree) {
-      // if (auto nearest = kdTree.findNearest(coordinate);
-      //     nearest->first < velocities->size()) {
-      //   lsId = nearest->first;
-      // } else {
-      //   psLogger::getInstance()
-      //       .addWarning("Could not extent velocity from surface to LS point")
-      //       .print();
-      // }
+    // if (useKdTree) {
+    // if (auto nearest = kdTree.findNearest(coordinate);
+    //     nearest->first < velocities->size()) {
+    //   lsId = nearest->first;
+    // } else {
+    //   psLogger::getInstance()
+    //       .addWarning("Could not extent velocity from surface to LS point")
+    //       .print();
+    // }
+    // } else {
+    if (auto it = translator->find(lsId); it != translator->end()) {
+      lsId = it->second;
     } else {
-      if (auto it = translator->find(lsId); it != translator->end()) {
-        lsId = it->second;
-      } else {
-        psLogger::getInstance()
-            .addWarning("Could not extend velocity from surface to LS point")
-            .print();
-      }
+      psLogger::getInstance()
+          .addWarning("Could not extend velocity from surface to LS point")
+          .print();
     }
+    // }
   }
 
   psSmartPointer<translatorType> translator;

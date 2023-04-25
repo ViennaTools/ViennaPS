@@ -10,6 +10,21 @@
 
 #include "Parameters.hpp"
 
+psSmartPointer<lsMaterialMap> createMaterialMap(const int numLayers) {
+  auto matMap = psSmartPointer<lsMaterialMap>::New();
+  matMap->insertNextMaterial(0);
+  for (int i = 0; i < numLayers; i++) {
+    if (i % 2 == 0) {
+      matMap->insertNextMaterial(1);
+    } else {
+      matMap->insertNextMaterial(2);
+    }
+  }
+  matMap->insertNextMaterial(3);
+
+  return matMap;
+}
+
 int main(int argc, char **argv) {
   using NumericType = double;
 
@@ -18,7 +33,7 @@ int main(int argc, char **argv) {
   // This model/example currently only works in 2D mode
   constexpr int D = 2;
 
-  psLogger::setLogLevel(psLogLevel::TIMING);
+  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
   Parameters<NumericType> params;
   if (argc > 1) {
@@ -32,7 +47,7 @@ int main(int argc, char **argv) {
 
   const NumericType stability =
       2 * params.diffusionCoefficient /
-      std::max(params.holeStreamVelocity, params.scallopStreamVelocity);
+      std::max(params.centerVelocity, params.scallopVelocity);
   std::cout << "Stability: " << stability << std::endl;
   if (0.5 * stability <= params.gridDelta) {
     std::cout << "Unstable parameters. Reduce grid spacing!" << std::endl;
@@ -62,21 +77,26 @@ int main(int argc, char **argv) {
   // process in the cell set. The byproducts are then distributed by solving a
   // convection-diffusion equation on the cell set.
   auto model = psSmartPointer<OxideRegrowthModel<NumericType, D>>::New(
-      params.numLayers + 1, params.etchRate / 60, params.oxideEtchRate / 60,
-      params.redepoFactor, params.diffusionCoefficient, params.sink,
-      params.scallopStreamVelocity, params.holeStreamVelocity,
+      params.numLayers + 1, params.nitrideEtchRate / 60,
+      params.oxideEtchRate / 60, params.redepositionRate,
+      params.redepositionThreshold, params.redepositionTimeInt,
+      params.diffusionCoefficient, params.sink, params.scallopVelocity,
+      params.centerVelocity,
       params.substrateHeight + params.numLayers * params.layerHeight,
       params.trenchWidth);
 
   psProcess<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
-  process.setProcessDuration(20 * 60.); // 20 minutes
-  process.setPrintTimeInterval(60);
+  process.setProcessDuration(params.targetEtchDepth / params.nitrideEtchRate *
+                             60.);
+  process.setPrintTimeInterval(30);
 
   process.apply();
 
-  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack").apply();
+  auto materials = createMaterialMap(params.numLayers);
+  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack", materials)
+      .apply();
 
   return 0;
 }

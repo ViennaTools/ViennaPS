@@ -91,12 +91,15 @@ public:
                     const T passedScallopVel, const T passedHoleVel,
                     const int passedPlasmaMat, const T passedTop,
                     const T passedRadius, const T passedEtchRate,
-                    const T passedRedepoFactor)
+                    const T passedRedepoFactor, const T passedRedepThreshold,
+                    const T passedRedepTimeInt)
       : diffusionCoefficient(passedDiffCoeff), sink(passedSink),
         scallopStreamVel(passedScallopVel), holeStreamVel(passedHoleVel),
         plasmaMaterial(passedPlasmaMat), top(passedTop),
         holeRadius(passedRadius), etchRate(passedEtchRate),
-        redepositionFactor(passedRedepoFactor) {}
+        redepositionFactor(passedRedepoFactor),
+        redepositionThreshold(passedRedepThreshold),
+        redepoTimeInt(passedRedepTimeInt) {}
 
   bool applyPreAdvect(const T processTime) override {
     assert(domain->getUseCellSet());
@@ -307,6 +310,8 @@ public:
   OxideRegrowthModel(
       const int depoMaterialId, const NumericType nitrideEtchRate,
       const NumericType oxideEtchRate, const NumericType redepositionRate,
+      const NumericType redepositionThreshold,
+      const NumericType redepositionTimeInt,
       const NumericType diffusionCoefficient, const NumericType sinkStrength,
       const NumericType scallopVelocitiy, const NumericType centerVelocity,
       const NumericType topHeight, const NumericType centerWidth) {
@@ -320,7 +325,7 @@ public:
     auto dynamics = psSmartPointer<ByproductDynamics<NumericType, D>>::New(
         diffusionCoefficient, sinkStrength, scallopVelocitiy, centerVelocity,
         depoMaterialId + 1, topHeight, centerWidth / 2., nitrideEtchRate,
-        redepositionRate);
+        redepositionRate, redepositionThreshold, redepositionTimeInt);
 
     this->setVelocityField(veloField);
     this->setSurfaceModel(surfModel);
