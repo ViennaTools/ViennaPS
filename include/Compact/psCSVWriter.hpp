@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
 template <class Iterator>
@@ -40,7 +41,9 @@ public:
 
   bool initialize() {
     if (filename.empty()) {
-      std::cout << "psCSVWriter: No filename provided!" << std::endl;
+      psLogger::getInstance()
+          .addWarning("psCSVWriter: No filename provided!")
+          .print();
       return false;
     }
     if (file.is_open())
@@ -61,7 +64,9 @@ public:
         }
       }
     } else {
-      std::cout << "psCSVWriter: Error opening file '" << filename << "'\n";
+      psLogger::getInstance()
+          .addWarning("psCSVWriter: Error opening file '" + filename + "'")
+          .print();
       return false;
     }
     initialized = true;
@@ -78,12 +83,16 @@ public:
       numCols = data.size();
 
     if (data.size() != numCols) {
-      std::cout << "Unexpected number of items in the provided row!\n";
+      psLogger::getInstance()
+          .addWarning("Unexpected number of items in the provided row!")
+          .print();
       return false;
     }
 
     if (!file.is_open()) {
-      std::cout << "Couldn't open file `" << filename << "`\n";
+      psLogger::getInstance()
+          .addWarning("Couldn't open file `" + filename + "`")
+          .print();
       return false;
     }
 
@@ -101,12 +110,17 @@ public:
       numCols = data.size();
 
     if (data.size() != numCols) {
-      std::cout << "Unexpected number of items in the provided row! ("
-                << data.size() << " instead of " << numCols << ")\n";
+      psLogger::getInstance()
+          .addWarning("Unexpected number of items in the provided row! (" +
+                      std::to_string(data.size()) + " instead of " +
+                      std::to_string(numCols) + ")")
+          .print();
       return false;
     }
     if (!file.is_open()) {
-      std::cout << "Couldn't open file `" << filename << "`\n";
+      psLogger::getInstance()
+          .addWarning("Couldn't open file `" + filename + "`")
+          .print();
       return false;
     }
     file << join(data.begin(), data.end()) << '\n';

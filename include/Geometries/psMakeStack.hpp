@@ -28,7 +28,7 @@ template <class T, int D> class psMakeStack {
   const int numLayers = 11;
   const T layerHeight = 2;
   const T substrateHeight = 4;
-  const T holeRadius = 2;
+  const T trenchWidth = 4;
   const bool periodicBoundary = false;
 
   typename lsDomain<T, D>::BoundaryType boundaryConds[D];
@@ -46,12 +46,12 @@ public:
   psMakeStack(PSPtrType passedDomain, const T passedGridDelta,
               const T passedXExtent, const T passedYExtent,
               const int passedNumLayers, const T passedLayerHeight,
-              const T passedSubstrateHeight, const T passedHoleRadius,
+              const T passedSubstrateHeight, const T passedTrenchWidth,
               const bool periodic = false)
       : geometry(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         numLayers(passedNumLayers), layerHeight(passedLayerHeight),
-        substrateHeight(passedSubstrateHeight), holeRadius(passedHoleRadius),
+        substrateHeight(passedSubstrateHeight), trenchWidth(passedTrenchWidth),
         periodicBoundary(periodic) {
     init();
   }
@@ -64,11 +64,9 @@ public:
     }
   }
 
-  int getTopLayer() const { return numLayers + 1; }
+  int getTopLayer() const { return numLayers; }
 
   T getHeight() const { return substrateHeight + numLayers * layerHeight; }
-
-  T getHoleRadius() const { return holeRadius; }
 
 private:
   void create2DGeometry() {
@@ -79,6 +77,7 @@ private:
     origin[D - 1] = substrateHeight;
     auto plane = lsSmartPointer<lsPlane<T, D>>::New(origin, normal);
     lsMakeGeometry<T, D>(substrate, plane).apply();
+    geometry->insertNextLevelSet(substrate);
 
     // Si3N4/SiO2 layers
     T current = substrateHeight + layerHeight;
@@ -92,8 +91,8 @@ private:
 
     // cut out middle
     auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
-    T minPoint[D] = {-holeRadius, substrateHeight * 0.8};
-    T maxPoint[D] = {holeRadius,
+    T minPoint[D] = {-trenchWidth / 2., 0.};
+    T maxPoint[D] = {trenchWidth / 2.,
                      substrateHeight + layerHeight * numLayers + gridDelta};
     lsMakeGeometry<T, D>(cutOut,
                          lsSmartPointer<lsBox<T, D>>::New(minPoint, maxPoint))
@@ -111,11 +110,15 @@ private:
 
     // cut out middle
     auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
-    origin[D - 1] = substrateHeight * 0.8;
-    lsMakeGeometry<T, D>(
-        cutOut, lsSmartPointer<lsCylinder<T, D>>::New(
-                    origin, normal, (numLayers + 1) * layerHeight, holeRadius))
-        .apply();
+    origin[D - 1] = 0.;
+    {
+      T minPoint[D] = {-trenchWidth / 2., -yExtent, 0.};
+      T maxPoint[D] = {trenchWidth / 2., yExtent,
+                       substrateHeight + layerHeight * numLayers + gridDelta};
+      lsMakeGeometry<T, D>(cutOut,
+                           lsSmartPointer<lsBox<T, D>>::New(minPoint, maxPoint))
+          .apply();
+    }
 
     // Silicon substrate
     auto substrate = LSPtrType::New(bounds, boundaryConds, gridDelta);
@@ -125,6 +128,7 @@ private:
     lsBooleanOperation<T, D>(substrate, cutOut,
                              lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
+    geometry->insertNextLevelSet(substrate);
 
     // Si3N4/SiO2 layers
     for (int i = 0; i < numLayers; ++i) {

@@ -35,7 +35,7 @@ public:
 
   void apply() {
     if constexpr (D == 2) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Cannot import 2D geometry from GDS file.")
           .print();
       return;
@@ -466,7 +466,9 @@ private:
       case psGDSRecordNumbers::DataType: // unimportant and should be zero
         currentDataType = readTwoByteSignedInt();
         if (currentDataType != 0)
-          std::cout << "WARNING: unsupported argument in DATATYPE" << std::endl;
+          psLogger::getInstance()
+              .addWarning("Unsupported argument in DATATYPE")
+              .print();
         break;
 
       case psGDSRecordNumbers::Node: // ignore

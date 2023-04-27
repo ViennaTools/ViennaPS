@@ -8,12 +8,13 @@
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
-#include <lsMessage.hpp>
+#include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 #include <rayUtil.hpp>
 
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
 /**
@@ -30,14 +31,15 @@ private:
   gridType cellGrid = nullptr;
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
-  std::vector<std::set<unsigned long>> neighborhood;
+  std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
-  T depthPlanePos = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
   std::vector<T> *fillingFractions;
+  const T eps = 1e-4;
+  hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
 
 public:
   csDenseCellSet() {}
@@ -60,50 +62,40 @@ public:
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
-    hrleVectorType<hrleIndexType, D> minBounds;
-    hrleVectorType<hrleIndexType, D> maxBounds;
-    for (unsigned i = 0; i < D; ++i) {
-      minBounds[i] = std::numeric_limits<hrleIndexType>::max();
-      maxBounds[i] = std::numeric_limits<hrleIndexType>::lowest();
-    }
-    for (unsigned i = 0; i < D; ++i) {
-      minBounds[i] =
-          std::min(minBounds[i], (surface->getGrid().isNegBoundaryInfinite(i))
-                                     ? surface->getDomain().getMinRunBreak(i)
-                                     : surface->getGrid().getMinBounds(i));
-
-      maxBounds[i] =
-          std::max(maxBounds[i], (surface->getGrid().isPosBoundaryInfinite(i))
-                                     ? surface->getDomain().getMaxRunBreak(i)
-                                     : surface->getGrid().getMaxBounds(i));
-    }
 
     depth = passedDepth;
-    if (cellSetAboveSurface) {
-      depthPlanePos = maxBounds[D - 1] * gridDelta + depth - gridDelta;
-    } else {
-      depthPlanePos = minBounds[D - 1] * gridDelta - depth + gridDelta;
-    }
-
-    lsToVoxelMesh<T, D> voxelConverter(cellGrid);
+    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
     auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
-    if (depth > 0.) {
+    {
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depthPlanePos;
+      origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
                            psSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
-    if (!cellSetAboveSurface && depth > 0.)
-      voxelConverter.insertNextLevelSet(plane);
+    if (!cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
     for (auto ls : *levelSets)
-      voxelConverter.insertNextLevelSet(ls);
-    if (cellSetAboveSurface && depth > 0.) {
-      voxelConverter.insertNextLevelSet(plane);
+      levelSetsInOrder.push_back(ls);
+    if (cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
+
+    calculateMinMaxIndex(levelSetsInOrder);
+    lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
+    // lsToVoxelMesh also saves the extent in the cell grid
+
+#ifndef NDEBUG
+    int db_ls = 0;
+    for (auto &ls : levelSetsInOrder) {
+      auto mesh = psSmartPointer<lsMesh<T>>::New();
+      lsToSurfaceMesh<T, D>(ls, mesh).apply();
+      lsVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
+          .apply();
     }
-    voxelConverter.apply();
+    lsVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
+#endif
 
     if (!cellSetAboveSurface)
       adjustMaterialIds();
@@ -111,11 +103,29 @@ public:
     // create filling fractions as default scalar cell data
     numberOfCells = cellGrid->template getElements<(1 << D)>().size();
     std::vector<T> fillingFractionsTemp(numberOfCells, 0.);
+
     cellGrid->getCellData().insertNextScalarData(
         std::move(fillingFractionsTemp), "fillingFraction");
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
 
-    calculateBounds(minBounds, maxBounds);
+    // calculate number of BVH layers
+    for (unsigned i = 0; i < D; ++i) {
+      cellGrid->minimumExtent[i] -= eps;
+      cellGrid->maximumExtent[i] += eps;
+    }
+    auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
+    minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
+                                        cellGrid->minimumExtent[1]);
+    if constexpr (D == 3)
+      minExtent = std::min(minExtent, cellGrid->maximumExtent[2] -
+                                          cellGrid->minimumExtent[2]);
+
+    BVHlayers = 0;
+    while (minExtent / 2 > gridDelta) {
+      BVHlayers++;
+      minExtent /= 2;
+    }
+
     BVH = psSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
     buildBVH();
   }
@@ -130,14 +140,14 @@ public:
           cellGrid->maximumExtent[0], cellGrid->maximumExtent[1]};
   }
 
-  void addScalarData(std::string name, T initValue) {
+  std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
+    fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
+    return cellGrid->getCellData().getScalarData(name);
   }
 
   gridType getCellGrid() { return cellGrid; }
-
-  psSmartPointer<csBVH<T, D>> getBVH() const { return BVH; }
 
   T getDepth() const { return depth; }
 
@@ -147,7 +157,7 @@ public:
     return cellGrid->getNodes();
   }
 
-  std::vector<std::array<unsigned, (1 << D)>> &getElements() {
+  std::vector<std::array<unsigned, (1 << D)>> getElements() {
     return cellGrid->template getElements<(1 << D)>();
   }
 
@@ -179,6 +189,8 @@ public:
     cellSetAboveSurface = passedCellSetPosition;
   }
 
+  bool getCellSetPosition() const { return cellSetAboveSurface; }
+
   // Sets the filling fraction at given cell index.
   bool setFillingFraction(const int idx, const T fill) {
     if (idx < 0)
@@ -199,7 +211,7 @@ public:
     if (idx < 0)
       return false;
 
-    getFillingFractions()->at(idx) += fill;
+    fillingFractions->at(idx) += fill;
     return true;
   }
 
@@ -211,7 +223,7 @@ public:
 
   // Add to the filling fraction for cell which contains given point only if the
   // cell has the specified material ID.
-  bool addFillingFractioninMaterial(const std::array<T, 3> &point, T fill,
+  bool addFillingFractionInMaterial(const std::array<T, 3> &point, T fill,
                                     int materialId) {
     auto idx = findIndex(point);
     if (getScalarData("Material")->at(idx) == materialId)
@@ -225,6 +237,83 @@ public:
     lsVTKWriter<T>(cellGrid, fileName).apply();
   }
 
+  // Save cell set data in simple text format
+  void writeCellSetData(std::string fileName) const {
+    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
+
+    std::ofstream file(fileName);
+    file << numberOfCells << "\n";
+    for (int i = 0; i < numScalarData; i++) {
+      auto label = cellGrid->getCellData().getScalarDataLabel(i);
+      file << label << ",";
+    }
+    file << "\n";
+
+    for (size_t j = 0; j < numberOfCells; j++) {
+      for (int i = 0; i < numScalarData; i++) {
+        file << cellGrid->getCellData().getScalarData(i)->at(j) << ",";
+      }
+      file << "\n";
+    }
+
+    file.close();
+  }
+
+  // Read cell set data from text
+  void readCellSetData(std::string fileName) {
+    std::ifstream file(fileName);
+    std::string line;
+
+    if (!file.is_open()) {
+      psLogger::getInstance()
+          .addWarning("Could not open file " + fileName)
+          .print();
+      return;
+    }
+
+    std::getline(file, line);
+    if (std::stoi(line) != numberOfCells) {
+      psLogger::getInstance().addWarning("Incompatible cell set data.").print();
+      return;
+    }
+
+    std::vector<std::string> labels;
+    std::getline(file, line);
+    {
+      std::stringstream ss(line);
+      std::string label;
+      while (std::getline(ss, label, ',')) {
+        labels.push_back(label);
+      }
+    }
+
+    std::vector<std::vector<T> *> cellDataP;
+    for (int i = 0; i < labels.size(); i++) {
+      auto dataP = getScalarData(labels[i]);
+      if (dataP == nullptr) {
+        dataP = addScalarData(labels[i], 0.);
+      }
+    }
+
+    for (int i = 0; i < labels.size(); i++) {
+      cellDataP.push_back(getScalarData(labels[i]));
+    }
+
+    std::size_t j = 0;
+    while (std::getline(file, line)) {
+      std::stringstream ss(line);
+      std::size_t i = 0;
+      std::string value;
+      while (std::getline(ss, value, ','))
+        cellDataP[i++]->at(j) = std::stod(value);
+
+      j++;
+    }
+    assert(j == numberOfCells && "Data incompatible");
+
+    file.close();
+  }
+
   // Clear the filling fractions
   void clear() {
     auto ff = getFillingFractions();
@@ -236,55 +325,82 @@ public:
   // work if the surface of the volume has changed. In this case, call the
   // funciton update surface first.
   void updateMaterials() {
-    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
-    std::vector<std::vector<T>> scalarData(numScalarData - 1);
-    std::vector<std::string> scalarDataLabels(numScalarData - 1);
+    auto materialIds = getScalarData("Material");
 
-    // carry over all scalar data (except the material IDs)
-    int n = 0;
-    for (int i = 0; i < numScalarData; i++) {
-      auto label = cellGrid->getCellData().getScalarDataLabel(i);
-      if (label == "Material")
-        continue;
-      auto data = cellGrid->getCellData().getScalarData(i);
-      scalarData[n] = std::move(*data);
-      scalarDataLabels[n++] = label;
-    }
-
-    lsToVoxelMesh<T, D> voxelConverter(cellGrid);
-    auto plane =
-        psSmartPointer<lsDomain<T, D>>::New(levelSets->back()->getGrid());
-    if (depth > 0.) {
+    // create overlay material
+    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
+    auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    {
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depthPlanePos;
+      origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
                            psSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
-    if (!cellSetAboveSurface && depth > 0.)
-      voxelConverter.insertNextLevelSet(plane);
+    if (!cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
     for (auto ls : *levelSets)
-      voxelConverter.insertNextLevelSet(ls);
-    if (cellSetAboveSurface && depth > 0.) {
-      voxelConverter.insertNextLevelSet(plane);
-    }
-    voxelConverter.apply();
+      levelSetsInOrder.push_back(ls);
+    if (cellSetAboveSurface)
+      levelSetsInOrder.push_back(plane);
 
-    if (numberOfCells != cellGrid->template getElements<(1 << D)>().size()) {
-      lsMessage::getInstance()
-          .addWarning("Number of cells not equal in cell set material update. "
-                      "Surface may has changed.")
-          .print();
-      return;
+    // set up iterators for all materials
+    std::vector<hrleConstDenseCellIterator<typename lsDomain<T, D>::DomainType>>
+        iterators;
+    for (auto it = levelSetsInOrder.begin(); it != levelSetsInOrder.end();
+         ++it) {
+      iterators.push_back(
+          hrleConstDenseCellIterator<typename lsDomain<T, D>::DomainType>(
+              (*it)->getDomain(), minIndex));
     }
 
-    for (int i = 0; i < numScalarData - 1; i++) {
-      cellGrid->getCellData().insertNextScalarData(std::move(scalarData[i]),
-                                                   scalarDataLabels[i]);
+    // move iterator for lowest material id and then adjust others if they are
+    // needed
+    unsigned cellIdx = 0;
+    for (; iterators.front().getIndices() < maxIndex;
+         iterators.front().next()) {
+      // go over all materials
+      for (unsigned materialId = 0; materialId < levelSetsInOrder.size();
+           ++materialId) {
+
+        auto &cellIt = iterators[materialId];
+        cellIt.goToIndicesSequential(iterators.front().getIndices());
+
+        // find out whether the centre of the box is inside
+        T centerValue = 0.;
+        for (int i = 0; i < (1 << D); ++i) {
+          centerValue += cellIt.getCorner(i).getValue();
+        }
+
+        if (centerValue <= 0.) {
+          bool isVoxel;
+          // check if voxel is in bounds
+          for (unsigned i = 0; i < (1 << D); ++i) {
+            hrleVectorType<hrleIndexType, D> index;
+            isVoxel = true;
+            for (unsigned j = 0; j < D; ++j) {
+              index[j] =
+                  cellIt.getIndices(j) + cellIt.getCorner(i).getOffset()[j];
+              if (index[j] > maxIndex[j]) {
+                isVoxel = false;
+                break;
+              }
+            }
+          }
+
+          if (isVoxel) {
+            materialIds->at(cellIdx++) = materialId;
+          }
+
+          // jump out of material for loop
+          break;
+        }
+      }
     }
-    fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
+    assert(cellIdx == numberOfCells &&
+           "Cell set changed in `updateMaterials()'");
   }
 
   // Updates the surface of the cell set. The new surface should be below the
@@ -293,11 +409,11 @@ public:
     auto updateCellGrid = psSmartPointer<lsMesh<T>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(updateCellGrid);
-    if (depth != 0.) {
+    {
       auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
       T origin[D] = {0.};
       T normal[D] = {0.};
-      origin[D - 1] = depthPlanePos;
+      origin[D - 1] = depth;
       normal[D - 1] = 1.;
 
       lsMakeGeometry<T, D>(plane,
@@ -351,11 +467,10 @@ public:
 
   void buildNeighborhood() {
     const auto &cells = cellGrid->template getElements<(1 << D)>();
-    unsigned const numNodes = cellGrid->getNodes().size();
+    const auto &nodes = cellGrid->getNodes();
+    unsigned const numNodes = nodes.size();
     unsigned const numCells = cells.size();
-
-    neighborhood.clear();
-    neighborhood.resize(numCells);
+    cellNeighbors.resize(numCells);
 
     std::vector<std::vector<unsigned>> nodeCellConnections(numNodes);
 
@@ -366,23 +481,44 @@ public:
       }
     }
 
+#pragma omp parallel for
     for (unsigned cellIdx = 0; cellIdx < numCells; cellIdx++) {
+      auto coord = nodes[cells[cellIdx][0]];
+      for (int i = 0; i < D; i++) {
+        coord[i] += gridDelta / 2.;
+        cellNeighbors[cellIdx][i] = -1;
+        cellNeighbors[cellIdx][i + D] = -1;
+      }
+
       for (unsigned cellNodeIdx = 0; cellNodeIdx < (1 << D); cellNodeIdx++) {
         auto &cellsAtNode = nodeCellConnections[cells[cellIdx][cellNodeIdx]];
+
         for (const auto &neighborCell : cellsAtNode) {
           if (neighborCell != cellIdx) {
-            neighborhood[cellIdx].insert(neighborCell);
+
+            auto neighborCoord = nodes[cells[neighborCell][0]];
+            for (int i = 0; i < D; i++)
+              neighborCoord[i] += gridDelta / 2.;
+
+            if (csUtil::distance(coord, neighborCoord) < gridDelta + eps) {
+
+              for (int i = 0; i < D; i++) {
+                if (coord[i] - neighborCoord[i] > gridDelta / 2.) {
+                  cellNeighbors[cellIdx][i * 2] = neighborCell;
+                } else if (coord[i] - neighborCoord[i] < -gridDelta / 2.) {
+                  cellNeighbors[cellIdx][i * 2 + 1] = neighborCell;
+                }
+              }
+            }
           }
         }
       }
     }
   }
 
-  std::set<unsigned long> &getNeighbors(unsigned long cellIdx) {
-    assert(!neighborhood.empty() &&
-           "Querying neighbors without creating neighborhood structure");
+  const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) {
     assert(cellIdx < numberOfCells && "Cell idx out of bounds");
-    return neighborhood[cellIdx];
+    return cellNeighbors[cellIdx];
   }
 
 private:
@@ -452,42 +588,34 @@ private:
     for (size_t elemIdx = 0; elemIdx < elems.size(); elemIdx++) {
       for (size_t n = 0; n < (1 << D); n++) {
         auto &node = nodes[elems[elemIdx][n]];
-        BVH->getCellIds(node)->insert(elemIdx);
+        auto cell = BVH->getCellIds(node);
+        if (cell == nullptr) {
+          psLogger::getInstance().addError("BVH building error.").print();
+        }
+        cell->insert(elemIdx);
       }
     }
   }
 
-  void calculateBounds(const hrleVectorType<hrleIndexType, D> &minBounds,
-                       const hrleVectorType<hrleIndexType, D> &maxBounds) {
-    constexpr T eps = 1e-4;
-    cellGrid->minimumExtent[0] = minBounds[0] * gridDelta - eps;
-    cellGrid->maximumExtent[0] = maxBounds[0] * gridDelta + eps;
-    if constexpr (D == 3) {
-      cellGrid->minimumExtent[1] = minBounds[1] * gridDelta - eps;
-      cellGrid->maximumExtent[1] = maxBounds[1] * gridDelta + eps;
+  void calculateMinMaxIndex(
+      const std::vector<psSmartPointer<lsDomain<T, D>>> &levelSetsInOrder) {
+    // set to zero
+    for (unsigned i = 0; i < D; ++i) {
+      minIndex[i] = std::numeric_limits<hrleIndexType>::max();
+      maxIndex[i] = std::numeric_limits<hrleIndexType>::lowest();
     }
-    if (depth == 0.) {
-      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
-      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
-    } else if (!cellSetAboveSurface) {
-      cellGrid->minimumExtent[D - 1] = depthPlanePos - gridDelta - eps;
-      cellGrid->maximumExtent[D - 1] = maxBounds[D - 1] * gridDelta + eps;
-    } else if (cellSetAboveSurface) {
-      cellGrid->minimumExtent[D - 1] = minBounds[D - 1] * gridDelta - eps;
-      cellGrid->maximumExtent[D - 1] = depthPlanePos + eps;
-    }
+    for (unsigned l = 0; l < levelSetsInOrder.size(); ++l) {
+      auto &grid = levelSetsInOrder[l]->getGrid();
+      auto &domain = levelSetsInOrder[l]->getDomain();
+      for (unsigned i = 0; i < D; ++i) {
+        minIndex[i] = std::min(minIndex[i], (grid.isNegBoundaryInfinite(i))
+                                                ? domain.getMinRunBreak(i)
+                                                : grid.getMinBounds(i));
 
-    auto minExtent = cellGrid->maximumExtent[0] - cellGrid->minimumExtent[0];
-    minExtent = std::min(minExtent, cellGrid->maximumExtent[1] -
-                                        cellGrid->minimumExtent[1]);
-    if constexpr (D == 3)
-      minExtent = std::min(minExtent, cellGrid->maximumExtent[2] -
-                                          cellGrid->minimumExtent[2]);
-
-    BVHlayers = 0;
-    while (minExtent / 2 > gridDelta) {
-      BVHlayers++;
-      minExtent /= 2;
+        maxIndex[i] = std::max(maxIndex[i], (grid.isPosBoundaryInfinite(i))
+                                                ? domain.getMaxRunBreak(i)
+                                                : grid.getMaxBounds(i));
+      }
     }
   }
 };

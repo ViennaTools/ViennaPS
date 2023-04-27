@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
 template <typename NumericType> class psDataSource {
@@ -55,7 +56,9 @@ public:
   // stored alongside the actual data (e.g. depth at which trench diameters were
   // captured)
   virtual std::vector<NumericType> getPositionalParameters() {
-    std::cout << "This data source does not support positional parameters.\n";
+    psLogger::getInstance()
+        .addWarning("This data source does not support positional parameters.")
+        .print();
     return {};
   }
   void setPositionalParameters(
@@ -65,7 +68,9 @@ public:
 
   // These optional parameters can also be named
   virtual std::unordered_map<std::string, NumericType> getNamedParameters() {
-    std::cout << "This data source does not support named parameters.\n";
+    psLogger::getInstance()
+        .addWarning("This data source does not support named parameters.")
+        .print();
     return {};
   }
 

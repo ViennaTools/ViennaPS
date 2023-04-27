@@ -27,7 +27,7 @@ using NumericType = float;
 #endif
 
 struct ApplicationParameters {
-  int printIntermediate = 0;
+  NumericType printTimeInterval = 0;
   GeometryType geometryType = GeometryType::NONE;
   ProcessType processType = ProcessType::NONE;
 
@@ -115,7 +115,7 @@ struct ApplicationParameters {
     halfAxes[2] = 1.;
 
     if (all) {
-      printIntermediate = 0;
+      printTimeInterval = 0;
       geometryType = GeometryType::NONE;
       processType = ProcessType::NONE;
       gridDelta = 0.02;

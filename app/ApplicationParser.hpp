@@ -60,7 +60,7 @@ private:
         config, psUtils::Item{"xExtent", params->xExtent},
         psUtils::Item{"yExtent", params->yExtent},
         psUtils::Item{"resolution", params->gridDelta},
-        psUtils::Item{"printIntermediate", params->printIntermediate},
+        psUtils::Item{"printTimeInterval", params->printTimeInterval},
         psUtils::Item{"periodic", params->periodicBoundary},
         psUtils::Item{"integrationScheme", integrationSchemeNum});
     if (integrationSchemeNum > 9) {

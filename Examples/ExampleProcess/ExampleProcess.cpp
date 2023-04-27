@@ -16,6 +16,9 @@ int main() {
   using NumericType = double;
   constexpr int D = 3;
 
+  psLogger::setLogLevel(psLogLevel::TIMING);
+  std::cout << "Log level " << psLogger::getLogLevel() << std::endl;
+
   // particles
   auto particle = std::make_unique<Particle<NumericType, D>>();
 

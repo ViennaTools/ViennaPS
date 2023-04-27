@@ -181,9 +181,9 @@ private:
 };
 
 template <typename NumericType, int D>
-class DamageModel : public psAdvectionCalback<NumericType, D> {
+class DamageModel : public psAdvectionCallback<NumericType, D> {
 protected:
-  using psAdvectionCalback<NumericType, D>::domain;
+  using psAdvectionCallback<NumericType, D>::domain;
   csTracing<NumericType, D> tracer;
 
 public:
@@ -206,27 +206,23 @@ public:
   }
 
   bool applyPostAdvect(const NumericType advectionTime) override {
+    domain->getCellSet()->updateSurface();
     return true;
   }
 };
 
-template <typename NumericType, int D> class PlasmaDamage {
+template <typename NumericType, int D>
+class PlasmaDamage : public psProcessModel<NumericType, D> {
   psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
 
 public:
   PlasmaDamage(const NumericType ionEnergy = 100.,
                const NumericType meanFreePath = 1.,
                const int maskMaterial = 0) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     auto volumeModel = psSmartPointer<DamageModel<NumericType, D>>::New(
         ionEnergy, meanFreePath, maskMaterial);
 
-    processModel->setProcessName("PlasmaDamage");
-    processModel->setAdvectionCallback(volumeModel);
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setProcessName("PlasmaDamage");
+    this->setAdvectionCallback(volumeModel);
   }
 };

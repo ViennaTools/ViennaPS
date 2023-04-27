@@ -40,9 +40,11 @@
 #include <omp.h>
 #endif
 
+#include <psLogger.hpp>
 #include <psQueues.hpp>
 
-template <class NumericType> class psKDTree {
+template <class NumericType, class ValueType = std::vector<NumericType>>
+class psKDTree {
   typedef typename std::vector<NumericType>::size_type SizeType;
 
   struct Node;
@@ -56,7 +58,7 @@ template <class NumericType> class psKDTree {
 public:
   psKDTree() {}
 
-  psKDTree(const std::vector<std::vector<NumericType>> &passedPoints) {
+  psKDTree(const std::vector<ValueType> &passedPoints) {
     if (!passedPoints.empty()) {
       // The first row determins the data dimension
       D = passedPoints[0].size();
@@ -72,15 +74,19 @@ public:
         }
       }
     } else {
-      std::cout << "psKDTree: the provided points vector is empty.\n";
+      psLogger::getInstance()
+          .addWarning("psKDTree: the provided points vector is empty.")
+          .print();
       return;
     }
   }
 
-  void setPoints(const std::vector<std::vector<NumericType>> &passedPoints,
+  void setPoints(const std::vector<ValueType> &passedPoints,
                  const std::vector<NumericType> &passedScalingFactors = {}) {
     if (passedPoints.empty()) {
-      std::cout << "psKDTree: the provided points vector is empty.\n";
+      psLogger::getInstance()
+          .addWarning("psKDTree: the provided points vector is empty.")
+          .print();
       return;
     }
 
@@ -109,7 +115,7 @@ public:
   }
 
   [[nodiscard]] std::optional<std::pair<SizeType, NumericType>>
-  findNearest(const std::vector<NumericType> &x) const {
+  findNearest(const ValueType &x) const {
     if (!rootNode)
       return {};
 
@@ -120,7 +126,7 @@ public:
   }
 
   [[nodiscard]] std::optional<std::vector<std::pair<SizeType, NumericType>>>
-  findKNearest(const std::vector<NumericType> &x, const int k) const {
+  findKNearest(const ValueType &x, const int k) const {
     if (!rootNode)
       return {};
 
@@ -138,8 +144,7 @@ public:
   }
 
   [[nodiscard]] std::optional<std::vector<std::pair<SizeType, NumericType>>>
-  findNearestWithinRadius(const std::vector<NumericType> &x,
-                          const NumericType radius) const {
+  findNearestWithinRadius(const ValueType &x, const NumericType radius) const {
     if (!rootNode)
       return {};
 
@@ -158,7 +163,7 @@ public:
 
   void build() {
     if (nodes.size() == 0) {
-      std::cout << "KDTree: No points provided!\n";
+      psLogger::getInstance().addWarning("KDTree: No points provided!").print();
       return;
     }
 
@@ -280,7 +285,7 @@ private:
    * Recursive Tree Traversal                                                 *
    ****************************************************************************/
   void traverseDown(Node *currentNode, std::pair<NumericType, Node *> &best,
-                    const std::vector<NumericType> &x) const {
+                    const ValueType &x) const {
     if (currentNode == nullptr)
       return;
 
@@ -392,28 +397,17 @@ private:
     return val;
   }
 
-  [[nodiscard]] std::vector<NumericType>
-  Diff(const std::vector<NumericType> &pVecA,
-       const std::vector<NumericType> &pVecB) const {
-    std::vector<NumericType> diff(pVecA.size(), 0.);
-    for (SizeType i = 0; i < D; ++i)
-      diff[i] = scalingFactors[i] * (pVecA[i] - pVecB[i]);
-    return diff;
-  }
-
-  [[nodiscard]] NumericType
-  SquaredDistance(const std::vector<NumericType> &pVecA,
-                  const std::vector<NumericType> &pVecB) const {
-    auto diff = Diff(pVecA, pVecB);
+  [[nodiscard]] NumericType SquaredDistance(const ValueType &pVecA,
+                                            const ValueType &pVecB) const {
     NumericType norm = 0;
-    std::for_each(diff.begin(), diff.end(),
-                  [&norm](NumericType entry) { norm += entry * entry; });
+    for (SizeType i = 0; i < D; ++i)
+      norm += scalingFactors[i] * scalingFactors[i] * (pVecA[i] - pVecB[i]) *
+              (pVecA[i] - pVecB[i]);
     return norm;
   }
 
-  [[nodiscard]] NumericType
-  Distance(const std::vector<NumericType> &pVecA,
-           const std::vector<NumericType> &pVecB) const {
+  [[nodiscard]] NumericType Distance(const ValueType &pVecA,
+                                     const ValueType &pVecB) const {
     return std::sqrt(SquaredDistance(pVecA, pVecB));
   }
 
@@ -421,15 +415,14 @@ private:
    * The Node struct implementation                                           *
    ****************************************************************************/
   struct Node {
-    std::vector<NumericType> value{};
+    ValueType value{};
     SizeType index{};
     SizeType axis{};
 
     Node *left = nullptr;
     Node *right = nullptr;
 
-    Node(const std::vector<NumericType> &passedValue,
-         SizeType passedIndex) noexcept
+    Node(const ValueType &passedValue, SizeType passedIndex) noexcept
         : value(passedValue), index(passedIndex) {}
 
     Node(Node &&other) noexcept {

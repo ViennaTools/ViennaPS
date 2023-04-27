@@ -52,13 +52,13 @@ int main(int argc, char **argv) {
   geometry->printSurface("InitialGeometry.vtp");
 
   /* -------- wet etch process --------- */
-  WetEtching<NumericType, D> wetEtchModel;
+  auto model = psSmartPointer<WetEtching<NumericType, D>>::New();
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
-  process.setProcessModel(wetEtchModel.getProcessModel());
+  process.setProcessModel(model);
   process.setProcessDuration(5. * 60.); // 5 minutes of etching
-  process.setPrintIntdermediate(false);
+  process.setPrintTimeInterval(-1.);
   process.setIntegrationScheme(
       lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
