@@ -1,5 +1,5 @@
-#include <Geometries/psMakeHole.hpp>
 #include <SF6O2Etching.hpp>
+#include <psMakeHole.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
@@ -11,8 +11,6 @@ int main(int argc, char *argv[]) {
   constexpr int D = 3;
 
   // Parse the parameters
-  int P, y;
-
   Parameters<NumericType> params;
   if (argc > 1) {
     auto config = psUtils::readConfigFile(argv[1]);
