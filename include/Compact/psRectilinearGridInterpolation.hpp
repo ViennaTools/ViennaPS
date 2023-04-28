@@ -6,6 +6,7 @@
 #include <set>
 #include <vector>
 
+#include <psLogger.hpp>
 #include <psValueEstimator.hpp>
 
 // Class providing linear interpolation on rectilinear data grids
@@ -63,7 +64,9 @@ class psRectilinearGridInterpolation
           uniqueValues[axis].insert((start + i)->at(axis));
 
           if (rangeSize != i - tmp) {
-            std::cout << "Data is not arranged in a rectilinear grid!\n";
+            psLogger::getInstance()
+                .addWarning("Data is not arranged in a rectilinear grid!")
+                .print();
             equalSize = false;
             return false;
           }
@@ -88,15 +91,20 @@ public:
 
   bool initialize() override {
     if (!data || (data && data->empty())) {
-      std::cout
-          << "psRectilinearGridInterpolation: the provided data is empty.\n";
+      psLogger::getInstance()
+          .addWarning(
+              "psRectilinearGridInterpolation: the provided data is empty.")
+          .print();
       return false;
     }
 
     if (data->at(0).size() != inputDim + outputDim) {
-      std::cout << "psNearestNeighborsInterpolation: the sum of the provided "
-                   "InputDimension and OutputDimension does not match the "
-                   "dimension of the provided data.\n";
+      psLogger::getInstance()
+          .addWarning(
+              "psNearestNeighborsInterpolation: the sum of the provided "
+              "InputDimension and OutputDimension does not match the "
+              "dimension of the provided data.")
+          .print();
       return false;
     }
 
@@ -109,14 +117,18 @@ public:
     auto equalSize = rearrange(localData.begin(), localData.end(), 0, true);
 
     if (!equalSize) {
-      std::cout << "Data is not arranged in a rectilinear grid!\n";
+      psLogger::getInstance()
+          .addWarning("Data is not arranged in a rectilinear grid!")
+          .print();
       return false;
     }
 
     for (int i = 0; i < inputDim; ++i)
       if (uniqueValues[i].empty()) {
-        std::cout << "The grid has no values along dimension " << i
-                  << std::endl;
+        psLogger::getInstance()
+            .addWarning("The grid has no values along dimension " +
+                        std::to_string(i))
+            .print();
         return false;
       }
 

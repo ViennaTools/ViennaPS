@@ -58,9 +58,9 @@ public:
     }
   }
 
-  T getHeight() const {
-    return substrateHeight + numLayers * layerHeight + maskHeight;
-  }
+  int getTopLayer() const { return numLayers; }
+
+  T getHeight() const { return substrateHeight + numLayers * layerHeight; }
 
 private:
   void create2DGeometry() {

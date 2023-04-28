@@ -7,6 +7,7 @@
 #include <lsTransformMesh.hpp>
 
 #include <psGDSUtils.hpp>
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
 enum class psPointOrder { CLOCKWISE, COUNTER_CLOCKWISE };
@@ -26,6 +27,7 @@ template <class NumericType, int D = 3> class psGDSGeometry {
   psPointOrder pointOrder = psPointOrder::COUNTER_CLOCKWISE;
   bool pointOrderFlag = true;
   unsigned triangulationTimeOut = 100000000;
+  static constexpr double eps = 1e-6;
 
   double bounds[6];
   NumericType gridDelta;
@@ -37,7 +39,7 @@ template <class NumericType, int D = 3> class psGDSGeometry {
 public:
   psGDSGeometry() {
     if constexpr (D == 2) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Cannot import 2D geometry from GDS file.")
           .print();
       return;
@@ -47,7 +49,7 @@ public:
   psGDSGeometry(const NumericType passedGridDelta)
       : gridDelta(passedGridDelta) {
     if constexpr (D == 2) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Cannot import 2D geometry from GDS file.")
           .print();
       return;
@@ -156,7 +158,7 @@ public:
             }
 
             if (sref.flipped) {
-              lsMessage::getInstance()
+              psLogger::getInstance()
                   .addWarning("Flipping x-axis currently not supported.")
                   .print();
               continue;
@@ -493,7 +495,7 @@ public:
         std::string changePointOrder = pointOrderFlag
                                            ? "psPointOrder::CLOCKWISE"
                                            : "psPointOrder::COUNTER_CLOCKWISE";
-        lsMessage::getInstance()
+        psLogger::getInstance()
             .addError("Timeout in surface triangulation. Point order in "
                       "GDS file might be incompatible. Try changing the "
                       "order by setting setPointOder(" +
@@ -544,8 +546,8 @@ public:
             (points[k][0] - points[i][0]) * (points[m][1] - points[i][1]);
 
         // All the signs must be positive or all negative
-        if (((side_1 < 0.0) && (side_2 < 0.0) && (side_3 < 0.0)) ||
-            ((side_1 > 0.0) && (side_2 > 0.0) && (side_3 > 0.0)))
+        if (((side_1 < eps) && (side_2 < eps) && (side_3 < eps)) ||
+            ((side_1 > -eps) && (side_2 > -eps) && (side_3 > -eps)))
           return false;
       }
     }

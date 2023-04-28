@@ -69,15 +69,20 @@ public:
 
   bool initialize() override {
     if (!data || (data && data->empty())) {
-      std::cout
-          << "psNearestNeighborsInterpolation: the provided data is empty.\n";
+      psLogger::getInstance()
+          .addWarning(
+              "psNearestNeighborsInterpolation: the provided data is empty.")
+          .print();
       return false;
     }
 
     if (data->at(0).size() != inputDim + outputDim) {
-      std::cout << "psNearestNeighborsInterpolation: the sum of the provided "
-                   "InputDimension and OutputDimension does not match the "
-                   "dimension of the provided data.\n";
+      psLogger::getInstance()
+          .addWarning(
+              "psNearestNeighborsInterpolation: the sum of the provided "
+              "InputDimension and OutputDimension does not match the "
+              "dimension of the provided data.")
+          .print();
       return false;
     }
 
@@ -99,7 +104,10 @@ public:
   std::optional<std::tuple<ItemType, NumericType>>
   estimate(const ItemType &input) override {
     if (input.size() != inputDim) {
-      std::cout << "psNearestNeighborsInterpolation: No input data provided.\n";
+      psLogger::getInstance()
+          .addWarning(
+              "psNearestNeighborsInterpolation: No input data provided.")
+          .print();
       return {};
     }
 

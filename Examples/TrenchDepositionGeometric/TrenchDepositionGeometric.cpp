@@ -34,12 +34,12 @@ int main(int argc, char *argv[]) {
       geometry->getLevelSets()->back());
   geometry->insertNextLevelSet(depoLayer);
 
-  SphereDistribution<NumericType, D> model(params.layerThickness,
-                                           params.gridDelta);
+  auto model = psSmartPointer<SphereDistribution<NumericType, D>>::New(
+      params.layerThickness, params.gridDelta);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
-  process.setProcessModel(model.getProcessModel());
+  process.setProcessModel(model);
 
   auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
   psToSurfaceMesh<NumericType, D>(geometry, mesh).apply();

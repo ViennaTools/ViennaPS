@@ -25,8 +25,8 @@ All parameters which are parsed additional to a command are described below. For
   <dd>width of domain in y-direction (this is ignored in 2D mode, numeric value, default: 1)</dd>
   <dt>resolution</dt>
   <dd>distance between grid points in the domain (numeric value, default: 0.02)</dd>
-  <dt>printIntermediate</dt>
-  <dd>output intermediate disk meshes for each process step (boolean, default: 0)</dd>
+  <dt>printTimeInterval</dt>
+  <dd>minimum time between outputing intermediate disk meshes for each process step. If this value is negative, no intermediate meshes will be printed (numeric value, default: 0)</dd>
   <dt>periodic</dt>
   <dd>use periodic boundary conditions (boolean, default: 0)</dd>
 </dl>
