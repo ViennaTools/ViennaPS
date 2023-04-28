@@ -26,6 +26,8 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
+  psLogger::setLogLevel(psLogLevel::DEBUG);
+
   // Parse the parameters
   Parameters<NumericType> params;
   if (argc > 1) {
@@ -50,4 +52,14 @@ int main(int argc, char *argv[]) {
   domain->insertNextLevelSetAsMaterial(depoLayer, psMaterial::Polymer);
 
   psWriteVisualizationMesh<NumericType, D>(domain, "initial").apply();
+
+  auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
+      params.totalIonFlux, params.totalEtchantFlux, params.totalOxygenFlux,
+      params.rfBiasPower);
+
+  psProcess<NumericType, D> process;
+  process.setDomain(domain);
+  process.setProcessModel(model);
+  process.setProcessDuration(params.processTime);
+  process.apply();
 }

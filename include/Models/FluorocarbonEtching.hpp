@@ -12,8 +12,6 @@
 template <typename NumericType, int D>
 class FluorocarbonSurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::Coverages;
-  const int maskId;
-  const int numLayers;
 
 public:
   FluorocarbonSurfaceModel(const NumericType ionFlux,
@@ -40,13 +38,13 @@ public:
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
     updateCoverages(Rates);
-    const auto numPoints = Rates->getScalarData(0)->size();
+    const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
     const auto ionEnhancedRate = Rates->getScalarData("ionEnhancedRate");
     const auto ionSputteringRate = Rates->getScalarData("ionSputteringRate");
     const auto ionpeRate = Rates->getScalarData("ionpeRate");
-    const auto polyRate = Coverages->getScalarData("polyRate");
+    const auto polyRate = Rates->getScalarData("polyRate");
 
     const auto eCoverage = Coverages->getScalarData("eCoverage");
     const auto pCoverage = Coverages->getScalarData("pCoverage");
@@ -62,7 +60,7 @@ public:
                                      5 * ionpeRate->at(i) * totalIonFlux *
                                          peCoverage->at(i));
           assert(etchRate[i] <= 0 && "Positive etching");
-        } else if (pCoverage[i] >= 1.) // Deposition
+        } else if (pCoverage->at(i) >= 1.) // Deposition
         {
           etchRate[i] =
               inv_rho_p * (polyRate->at(i) * totalPolyFlux -
@@ -105,7 +103,7 @@ public:
 
     const auto ionEnhancedRate = Rates->getScalarData("ionEnhancedRate");
     const auto ionpeRate = Rates->getScalarData("ionpeRate");
-    const auto polyRate = Coverages->getScalarData("polyRate");
+    const auto polyRate = Rates->getScalarData("polyRate");
     const auto etchantRate = Rates->getScalarData("etchantRate");
     const auto etchantOnPolyRate = Rates->getScalarData("etchantOnPolyRate");
 
@@ -153,7 +151,7 @@ public:
         } else {
           eCoverage->at(i) =
               (etchantRate->at(i) * totalEtchantFlux * (1 - pCoverage->at(i))) /
-              (k_ie * ionEnhancedRate[i] * totalIonFlux + k_ev * F_ev +
+              (k_ie * ionEnhancedRate->at(i) * totalIonFlux + k_ev * F_ev +
                etchantRate->at(i) * totalEtchantFlux);
         }
       } else {
@@ -406,12 +404,10 @@ private:
 };
 
 template <typename NumericType, int D>
-class FuorocarbonEtching : public psProcessModel<NumericType, D> {
+class FluorocarbonEtching : public psProcessModel<NumericType, D> {
 public:
-  FuorocarbonEtching(const double ionFlux, const double etchantFlux,
-                     const double polyFlux,
-                     const NumericType rfBiasPower = 200.,
-                     const int maskMaterial = 0, const int numLayers = 0) {
+  FluorocarbonEtching(const double ionFlux, const double etchantFlux,
+                      const double polyFlux, const NumericType rfBiasPower) {
     // particles
     auto ion = std::make_unique<FluorocarbonIon<NumericType>>(rfBiasPower);
     auto etchant = std::make_unique<FluorocarbonEtchant<NumericType, D>>();
@@ -422,14 +418,14 @@ public:
     // surface model
     auto surfModel =
         psSmartPointer<FluorocarbonSurfaceModel<NumericType, D>>::New(
-            ionFlux, etchantFlux, polyFlux, maskMaterial, numLayers);
+            ionFlux, etchantFlux, polyFlux);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->setProcessName("FuorocarbonEtching");
+    this->setProcessName("FluorocarbonEtching");
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
