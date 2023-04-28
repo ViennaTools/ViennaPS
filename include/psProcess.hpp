@@ -117,6 +117,10 @@ public:
     auto translator = lsSmartPointer<translatorType>::New();
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
+    if (domain->getMaterialMap() &&
+        domain->getMaterialMap()->size() == domain->getLevelSets()->size()) {
+      meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
+    }
 
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
         model->getVelocityField());
@@ -547,6 +551,7 @@ private:
 
   psDomainType domain = nullptr;
   psSmartPointer<psProcessModel<NumericType, D>> model = nullptr;
+  psSmartPointer<psMaterialMap> materialMap = nullptr;
   NumericType processDuration;
   rayTraceDirection sourceDirection =
       D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;

@@ -57,7 +57,8 @@ int main(int argc, char **argv) {
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeStack<NumericType, D>(domain, params.gridDelta, params.xExtent, 0.,
                               params.numLayers, params.layerHeight,
-                              params.substrateHeight, params.trenchWidth, false)
+                              params.substrateHeight, params.trenchWidth / 2.,
+                              0., false)
       .apply();
   // copy top layer for deposition
   auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(

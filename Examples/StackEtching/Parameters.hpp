@@ -7,23 +7,23 @@
 
 template <typename T> struct Parameters {
   // Domain
-  T gridDelta = 0.02;
-  T xExtent = 1.0;
-  T yExtent = 1.0;
+  T gridDelta = 5.;  // nm
+  T xExtent = 100.0; // nm
+  T yExtent = 100.0; // nm
 
   // Geometry
-  T holeRadius = 0.2;
-  T topRadius = 0.2;
-  T maskHeight = 0.2;
-  T taperAngle = 0.;
+  int numLayers = 7;
+  T layerHeight = 30.;     // nm
+  T substrateHeight = 50.; // nm
+  T holeRadius = 75;       // nm
+  T maskHeight = 50;       // nm
 
   // Process
   T processTime = 150;
   T totalEtchantFlux = 4.5e16;
   T totalOxygenFlux = 1e18;
   T totalIonFlux = 2e16;
-  T ionEnergy = 100;
-  T A_O = 3.;
+  T rfBiasPower = 215; // W;
 
   Parameters() {}
 
@@ -34,14 +34,14 @@ template <typename T> struct Parameters {
         psUtils::Item{"xExtent", xExtent},                   //
         psUtils::Item{"yExtent", yExtent},                   //
         psUtils::Item{"holeRadius", holeRadius},             //
-        psUtils::Item{"topRadius", topRadius},               //
+        psUtils::Item{"numLayers", numLayers},               //
+        psUtils::Item{"layerHeight", layerHeight},           //
+        psUtils::Item{"substrateHeight", substrateHeight},   //
         psUtils::Item{"maskHeight", maskHeight},             //
-        psUtils::Item{"taperAngle", taperAngle},             //
         psUtils::Item{"totalEtchantFlux", totalEtchantFlux}, //
         psUtils::Item{"totalOxygenFlux", totalOxygenFlux},   //
         psUtils::Item{"totalIonFlux", totalIonFlux},         //
-        psUtils::Item{"ionEnergy", ionEnergy},               //
-        psUtils::Item{"A_O", A_O}                            //
+        psUtils::Item{"rfBiasPower", rfBiasPower}            //
     );
   }
 };

@@ -97,7 +97,7 @@ private:
                                lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
 
-      geometry->insertNextLevelSet(mask);
+      geometry->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
     }
 
     // Silicon substrate
@@ -106,6 +106,7 @@ private:
     lsMakeGeometry<T, D>(substrate,
                          lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
         .apply();
+    geometry->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
 
     // Si3N4/SiO2 layers
     T current = substrateHeight + layerHeight;
@@ -115,7 +116,11 @@ private:
       lsMakeGeometry<T, D>(ls,
                            lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
-      geometry->insertNextLevelSet(ls);
+      if (i % 2 == 0) {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+      } else {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+      }
     }
 
     if (holeRadius > 0. && maskHeight == 0.) {
@@ -166,7 +171,7 @@ private:
                                lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
 
-      geometry->insertNextLevelSet(mask);
+      geometry->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
     }
 
     // Silicon substrate
@@ -175,7 +180,7 @@ private:
     lsMakeGeometry<T, D>(substrate,
                          lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
         .apply();
-    geometry->insertNextLevelSet(substrate);
+    geometry->insertNextLevelSet(substrate, psMaterial::Si);
 
     // Si3N4/SiO2 layers
     for (int i = 0; i < numLayers; ++i) {
@@ -184,7 +189,11 @@ private:
       lsMakeGeometry<T, D>(ls,
                            lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
-      geometry->insertNextLevelSet(ls);
+      if (i % 2 == 0) {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+      } else {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+      }
     }
 
     if (holeRadius > 0. && maskHeight == 0.) {

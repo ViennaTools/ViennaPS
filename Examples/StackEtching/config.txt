@@ -1,0 +1,18 @@
+# Domain
+gridDelta = 2.  
+xExtent = 120.0 
+yExtent = 120.0 
+
+# Geometry
+numLayers = 7
+layerHeight = 30.     
+substrateHeight = 50. 
+holeRadius = 75       
+maskHeight = 50       
+
+# Process
+processTime = 150
+totalEtchantFlux = 4.5e16
+totalOxygenFlux = 1e18
+totalIonFlux = 2e16
+rfBiasPower = 200
