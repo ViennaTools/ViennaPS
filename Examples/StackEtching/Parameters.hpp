@@ -20,9 +20,9 @@ template <typename T> struct Parameters {
 
   // Process
   T processTime = 150;
-  T totalEtchantFlux = 4.5e16;
-  T totalOxygenFlux = 1e18;
-  T totalIonFlux = 2e16;
+  T totalEtchantFlux = 1e17;
+  T totalPolymerFlux = 1e17;
+  T totalIonFlux = 1e16;
   T rfBiasPower = 215; // W;
 
   Parameters() {}
@@ -39,9 +39,10 @@ template <typename T> struct Parameters {
         psUtils::Item{"substrateHeight", substrateHeight},   //
         psUtils::Item{"maskHeight", maskHeight},             //
         psUtils::Item{"totalEtchantFlux", totalEtchantFlux}, //
-        psUtils::Item{"totalOxygenFlux", totalOxygenFlux},   //
+        psUtils::Item{"totalPolymerFlux", totalPolymerFlux}, //
         psUtils::Item{"totalIonFlux", totalIonFlux},         //
-        psUtils::Item{"rfBiasPower", rfBiasPower}            //
+        psUtils::Item{"rfBiasPower", rfBiasPower},           //
+        psUtils::Item{"processTime", processTime}            //
     );
   }
 };

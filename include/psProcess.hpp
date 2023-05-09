@@ -49,6 +49,8 @@ public:
 
   void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
 
+  void setSmoothFlux(bool pSmoothFlux) { smoothFlux = pSmoothFlux; }
+
   void
   setIntegrationScheme(const lsIntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme = passedIntegrationScheme;
@@ -222,7 +224,8 @@ public:
 
               // normalize rates
               rayTrace.normalizeFlux(rate);
-
+              if (smoothFlux)
+                rayTrace.smoothFlux(rate);
               Rates->insertNextScalarData(std::move(rate),
                                           localData.getVectorDataLabel(i));
             }
@@ -313,6 +316,8 @@ public:
 
             // normalize rates
             rayTrace.normalizeFlux(rate);
+            if (smoothFlux)
+              rayTrace.smoothFlux(rate);
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
@@ -357,8 +362,9 @@ public:
                         name + "_" + std::to_string(counter) + ".vtp");
           if (domain->getUseCellSet()) {
             domain->getCellSet()->writeVTU(name + "_cellSet_" +
-                                           std::to_string(counter++) + ".vtu");
+                                           std::to_string(counter) + ".vtu");
           }
+          counter++;
         }
       }
 
@@ -559,6 +565,7 @@ private:
       lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
+  bool smoothFlux = false;
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
   NumericType printTime = 0.;

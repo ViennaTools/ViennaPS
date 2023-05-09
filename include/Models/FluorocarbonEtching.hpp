@@ -12,6 +12,7 @@
 template <typename NumericType, int D>
 class FluorocarbonSurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::Coverages;
+  static constexpr double eps = 1e-6;
 
 public:
   FluorocarbonSurfaceModel(const NumericType ionFlux,
@@ -52,46 +53,36 @@ public:
 
     // calculate etch rates
     for (size_t i = 0; i < etchRate.size(); ++i) {
-      auto matId = mapToMaterial(static_cast<int>(materialIds[i]));
-      if (matId != psMaterial::Mask) {
+      auto matId =
+          psMaterialMap::mapToMaterial(static_cast<int>(materialIds[i]));
+      if (matId == psMaterial::Mask)
+        continue;
+      if (pCoverage->at(i) >= 1.) // Deposition
+      {
+        etchRate[i] =
+            inv_rho_p * (polyRate->at(i) * totalPolyFlux -
+                         ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
+        assert(etchRate[i] >= 0 && "Negative deposition");
+      } else {
+        NumericType inv_mat_density = 0;
         if (matId == psMaterial::Polymer) // Etching depo layer
         {
-          etchRate[i] = inv_rho_p * (polyRate->at(i) * totalPolyFlux -
-                                     5 * ionpeRate->at(i) * totalIonFlux *
-                                         peCoverage->at(i));
-          assert(etchRate[i] <= 0 && "Positive etching");
-        } else if (pCoverage->at(i) >= 1.) // Deposition
-        {
-          etchRate[i] =
-              inv_rho_p * (polyRate->at(i) * totalPolyFlux -
-                           ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
-          assert(etchRate[i] >= 0 && "Negative deposition");
+          inv_mat_density = -inv_rho_p;
         } else if (matId == psMaterial::Si) // crystalline Si at the bottom
         {
-          etchRate[i] = -inv_rho_Si * (F_ev * eCoverage->at(i) +
-                                       ionEnhancedRate->at(i) * totalIonFlux *
-                                           eCoverage->at(i) +
-                                       ionSputteringRate->at(i) * totalIonFlux *
-                                           (1 - eCoverage->at(i)));
-          assert(etchRate[i] <= 0 && "Positive etching");
+          inv_mat_density = -inv_rho_Si;
         } else if (matId == psMaterial::SiO2) // Etching SiO2
         {
-          etchRate[i] =
-              -inv_rho_SiO2 *
-              (F_ev * eCoverage->at(i) +
-               ionEnhancedRate->at(i) * totalIonFlux * eCoverage->at(i) +
-               ionSputteringRate->at(i) * totalIonFlux *
-                   (1 - eCoverage->at(i)));
+          inv_mat_density = -inv_rho_SiO2;
         } else if (matId == psMaterial::Si3N4) // Etching SiNx
         {
-          etchRate[i] =
-              -inv_rho_SiNx *
-              (F_ev * eCoverage->at(i) +
-               ionEnhancedRate->at(i) * totalIonFlux * eCoverage->at(i) +
-               ionSputteringRate->at(i) * totalIonFlux *
-                   (1 - eCoverage->at(i)));
-          assert(etchRate[i] <= 0 && "Positive etching");
+          inv_mat_density = -inv_rho_SiNx;
         }
+        etchRate[i] =
+            inv_mat_density *
+            (F_ev * eCoverage->at(i) +
+             ionEnhancedRate->at(i) * totalIonFlux * eCoverage->at(i) +
+             ionSputteringRate->at(i) * totalIonFlux * (1 - eCoverage->at(i)));
       }
     }
 
@@ -133,7 +124,7 @@ public:
     for (size_t i = 0; i < numPoints; ++i) {
       if (polyRate->at(i) == 0.) {
         pCoverage->at(i) = 0.;
-      } else if (peCoverage->at(i) == 0. || ionpeRate->at(i) < 1e-6) {
+      } else if (peCoverage->at(i) < eps || ionpeRate->at(i) < eps) {
         pCoverage->at(i) = 1.;
       } else {
         pCoverage->at(i) =
@@ -146,7 +137,7 @@ public:
     // etchant coverage
     for (size_t i = 0; i < numPoints; ++i) {
       if (pCoverage->at(i) < 1.) {
-        if (etchantRate->at(i) < 1e-6) {
+        if (etchantRate->at(i) == 0.) {
           eCoverage->at(i) = 0;
         } else {
           eCoverage->at(i) =
@@ -162,11 +153,13 @@ public:
   }
 
 private:
-  static constexpr double inv_rho_SiO2 = 2.2e-15; // in (atoms/cm³)⁻¹ (rho SiO2)
+  static constexpr double inv_rho_SiO2 =
+      4.347826e-23 * 1e4; // in (atoms/cm³)⁻¹ (rho SiO2)
   static constexpr double inv_rho_SiNx =
-      10.3e-15; // in (atoms/cm³)⁻¹ (rho polySi)
-  static constexpr double inv_rho_Si = 1e-23; // in (atoms/cm³)⁻¹ (rho Si)
-  static constexpr double inv_rho_p = 2e-15;
+      1.3e-23 * 1e4; // in (atoms/cm³)⁻¹ (rho polySi)
+  static constexpr double inv_rho_Si = 2e-23 * 1e4; // in (atoms/cm³)⁻¹ (rho Si)
+  static constexpr double inv_rho_p = 1e-23 * 1e4;
+  // 1e4 to convert to um / s
 
   static constexpr double k_ie = 1.;
   static constexpr double k_ev = 1.;
@@ -206,7 +199,7 @@ public:
     const auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
-    assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
+    assert(cosTheta <= 1 + 4 && "Error in calculating cos theta");
 
     const auto sqrtE = std::sqrt(E);
     const auto f_e_sp = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;

@@ -1,4 +1,5 @@
 #include <FluorocarbonEtching.hpp>
+#include <SimpleDeposition.hpp>
 #include <psMakeStack.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
@@ -6,21 +7,6 @@
 #include <psWriteVisualizationMesh.hpp>
 
 #include "Parameters.hpp"
-
-psSmartPointer<psMaterialMap> createMaterialMap(const int numLayers) {
-  auto matMap = psSmartPointer<psMaterialMap>::New();
-  matMap->insertNextMaterial(psMaterial::Mask); // mask
-  matMap->insertNextMaterial(psMaterial::Si);   // substrate
-  for (int i = 0; i < numLayers; i++) {
-    if (i % 2 == 0) {
-      matMap->insertNextMaterial(psMaterial::SiO2);
-    } else {
-      matMap->insertNextMaterial(psMaterial::Si3N4);
-    }
-  }
-  //   matMap->insertNextMaterial(4); // depolayer
-  return matMap;
-}
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
@@ -54,12 +40,16 @@ int main(int argc, char *argv[]) {
   psWriteVisualizationMesh<NumericType, D>(domain, "initial").apply();
 
   auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
-      params.totalIonFlux, params.totalEtchantFlux, params.totalOxygenFlux,
+      params.totalIonFlux, params.totalEtchantFlux, params.totalPolymerFlux,
       params.rfBiasPower);
 
   psProcess<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
   process.setProcessDuration(params.processTime);
+  process.setMaxCoverageInitIterations(1);
+  process.setSmoothFlux(true);
   process.apply();
+
+  psWriteVisualizationMesh<NumericType, D>(domain, "final").apply();
 }
