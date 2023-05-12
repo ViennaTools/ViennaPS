@@ -140,7 +140,9 @@ private:
   const int maskMaterial = 0;
 };
 
-template <typename NumericType, int D>
+//template <typename NumericType, int D>
+typedef int NumericType;
+using D = 3;
 class SF6O2Ion : public rayParticle<SF6O2Ion<NumericType, D>, NumericType> {
 public:
   SF6O2Ion(NumericType passedEnergy = 100., NumericType oxySputterYield = 3)

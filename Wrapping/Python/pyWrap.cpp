@@ -25,7 +25,6 @@
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psSurfaceModel.hpp>
-#include <vector>
 
 // geometries
 #include <psMakeHole.hpp>
@@ -40,12 +39,7 @@
 // other
 #include <lsDomain.hpp>
 #include <rayTraceDirection.hpp>
-#include <rayUtil.hpp>
-#include <rayParticle.hpp>
-#include <rayRNG.hpp>
-#include <rayReflection.hpp>
-#include <rayTracingData.hpp>
-// always use double for python export
+
 typedef double T;
 typedef std::vector<hrleCoordType> VectorHRLEcoord;
 // get dimension from cmake define
@@ -54,7 +48,9 @@ constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 PYBIND11_DECLARE_HOLDER_TYPE(TemplateType, psSmartPointer<TemplateType>);
 //this make opaque makes lsDomain not work anymore, but it is needed for psSurfaceModel
 PYBIND11_MAKE_OPAQUE(std::vector<T>)
+
 //we had to make this type opaque, as we will use it with smart pointers (psSmartPointer<ParticleTypeList> in psProcessModel)
+//this is making the std::vector<std::unique_ptr<rayAbstractParticle<T>>> opaque
 using ParticleTypeList = std::vector<std::unique_ptr<rayAbstractParticle<T>>>;
 PYBIND11_MAKE_OPAQUE(ParticleTypeList)
 
@@ -175,12 +171,12 @@ public:
     }
     //if we declare a typedef for std::array<T,3>, we will no longer get this error: the compiler doesn't
     // understand why std::array gets 2 template arguments
-    typedef std::array<T,3> arrayType;
+    typedef std::array<T,3> arrayType_T_3;
     std::array<T,3> getVectorVelocity(const std::array<T,3> &coordinate, int material,
                                                      const std::array<T,3> &normalVector,
                                                      unsigned long pointId) override{
         PYBIND11_OVERRIDE(
-                arrayType, // add template argument here
+                arrayType_T_3, // add template argument here
                 psVelocityField<T>,
                 getVectorVelocity,
                 coordinate,
@@ -201,7 +197,7 @@ public:
                 centralDifferences
         );
     }
-//a wrapper around vector is needed in our case
+
     void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override{
         PYBIND11_OVERRIDE(
                 void,
@@ -221,125 +217,6 @@ public:
 
 };
 
-
-class PYrayAbstractParticle: public rayAbstractParticle<T>{
- using rayAbstractParticle<T>::rayAbstractParticle;
- using rayAbstractParticle<T>::clone;
-    void initNew(rayRNG &Rng) override {
-        PYBIND11_OVERRIDE_PURE(
-                void,
-                rayAbstractParticle,
-                initNew,
-                Rng
-        );
-    }
-    std::pair<T, rayTriple<T> >
-    surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-                      const rayTriple<T> &geomNormal,
-                      const unsigned int primId, const int materialId,
-                      const rayTracingData<T> *globalData,
-                      rayRNG &Rng) override {
-        using pair_resolve_override = std::pair<T,rayTriple<T>>;
-        PYBIND11_OVERRIDE(
-                pair_resolve_override,
-                rayAbstractParticle,
-                surfaceReflection,
-                rayWeight,
-                rayDir,
-                geomNormal,
-                primId,
-                materialId,
-                globalData,
-                Rng
-                );
-    }
-    void surfaceCollision(T rayWeight,
-                                  const rayTriple<T> &rayDir,
-                                  const rayTriple<T> &geomNormal,
-                                  const unsigned int primID, const int materialId,
-                                  rayTracingData<T> &localData,
-                                  const rayTracingData<T> *globalData,
-                                  rayRNG &Rng) override{
-        PYBIND11_OVERRIDE_PURE(
-                void,
-                rayAbstractParticle,
-                surfaceCollision,
-                rayWeight,
-                rayDir,
-                geomNormal,
-                primID,
-                materialId,
-                localData,
-                globalData,
-                Rng
-                );
-    }
-    int getRequiredLocalDataSize() const override{
-        PYBIND11_OVERRIDE_PURE(
-                int,
-                rayAbstractParticle,
-                getRequiredLocalDataSize,
-        );
-    }
-    T getSourceDistributionPower() const override{
-        PYBIND11_OVERRIDE_PURE(
-                T,
-                rayAbstractParticle,
-                getSourceDistributionPower,
-        );
-    }
-
-    std::vector<std::string> getLocalDataLabels() const override{
-        PYBIND11_OVERRIDE_PURE(
-                std::vector<std::string>,
-                rayAbstractParticle,
-                getLocalDataLabels,
-        );
-    }
-};
-
-//now we shall wrap this class but first have to test how 2 virtual classes behave in this context
-//template <typename Derived, typename NumericType>
-//class rayParticle : public rayAbstractParticle<NumericType> {
-//public:
-//    std::unique_ptr<rayAbstractParticle<NumericType>>
-//    clone() const override final {
-//        return std::make_unique<Derived>(static_cast<Derived const &>(*this));
-//    }
-//    virtual void initNew(rayRNG &Rng) override {}
-//    virtual std::pair<NumericType, rayTriple<NumericType>>
-//    surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-//                      const rayTriple<NumericType> &geomNormal,
-//                      const unsigned int primId, const int materialId,
-//                      const rayTracingData<NumericType> *globalData,
-//                      rayRNG &Rng) override {
-//        // return the sticking probability and direction after reflection for this
-//        // hit
-//        return std::pair<NumericType, rayTriple<NumericType>>{
-//                1., rayTriple<NumericType>{0., 0., 0.}};
-//    }
-//    virtual void
-//    surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-//                     const rayTriple<NumericType> &geomNormal,
-//                     const unsigned int primID, const int materialId,
-//                     rayTracingData<NumericType> &localData,
-//                     const rayTracingData<NumericType> *globalData,
-//                     rayRNG &Rng) override { // collect data for this hit
-//    }
-//    virtual int getRequiredLocalDataSize() const override { return 0; }
-//    virtual NumericType getSourceDistributionPower() const override { return 1.; }
-//    virtual std::vector<std::string> getLocalDataLabels() const override {
-//        return std::vector<std::string>(getRequiredLocalDataSize(), "localData");
-//    }
-//
-//protected:
-//    // We make clear rayParticle class needs to be inherited
-//    rayParticle() = default;
-//    rayParticle(const rayParticle &) = default;
-//    rayParticle(rayParticle &&) = default;
-//};
-
-
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 module.doc() =
 "ViennaPS is a header-only C++ process simulation library, which "
@@ -353,17 +230,6 @@ module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 
 // wrap omp_set_num_threads to control number of threads
 module.def("setNumThreads", &omp_set_num_threads);
-
-//ViennaRay, the rayParticle.hpp
-pybind11::class_<rayAbstractParticle<T>, psSmartPointer<rayAbstractParticle<T>>,PYrayAbstractParticle>(module, "rayAbstractParticle")
-        .def("initNew",&rayAbstractParticle<T>::initNew)
-        .def("clone",&rayAbstractParticle<T>::clone)
-        .def("surfaceReflection",&rayAbstractParticle<T>::surfaceReflection)
-        .def("getRequiredLocalDataSize",&rayAbstractParticle<T>::getRequiredLocalDataSize)
-        .def("getSourceDistributionPower",&rayAbstractParticle<T>::getSourceDistributionPower)
-        .def("getLocalDataLabels",&rayAbstractParticle<T>::getLocalDataLabels)
-        .def("surfaceCollision",&rayAbstractParticle<T>::surfaceCollision);
-//.def(pybind11::init<>());
 
 //psSurfaceModel
 pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfaceModel>(module, "psSurfaceModel")
@@ -463,8 +329,6 @@ pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
 .value("NEG_Z", rayTraceDirection::NEG_Z);
 
 // psProcessModel
-//modified here as it seems the functions were not defined, and the virtual functions
-//didn't implement the insertNextParticleType, as I do not know what that type is
 pybind11::class_<psProcessModel<T, D>,psSmartPointer<psProcessModel<T,D>>,PYProcessModel>(module, "psProcessModel")
 // constructors
 .def(pybind11::init<>())
@@ -480,18 +344,17 @@ pybind11::class_<psProcessModel<T, D>,psSmartPointer<psProcessModel<T,D>>,PYProc
 .def("getAdvectionCallback",&psProcessModel<T, D>::getAdvectionCallback)
 .def("getGeometricModel",&psProcessModel<T, D>::getGeometricModel)
 .def("getVelocityField",&psProcessModel<T, D>::getVelocityField)
-//I don't know what particle type could be
+/*
+ * https://pybind11.readthedocs.io/en/stable/advanced/smart_ptrs.html?highlight=unique#std-unique-ptr
+ * While returning unique pointers in this way is allowed, it is illegal to use them as function arguments.
+ */
 //.def("insertNextParticleType",
 //[](psProcessModel<T, D> &pm,
-//        std::unique_ptr<ParticleType> &passedParticle) {
+//        std::unique_ptr<SF6O2Ion<T, D>> &passedParticle) {
 //pm.insertNextParticleType(passedParticle);
 //})
 
-.def("setSurfaceModel",
-[](psProcessModel<T, D> &pm,
-        psSmartPointer<psSurfaceModel<T>> &sm) {
-pm.setSurfaceModel(sm);
-})
+.def("setSurfaceModel",&psProcessModel<T, D>::setSurfaceModel<psSurfaceModel<T>>)
 .def("setAdvectionCallback",
 [](psProcessModel<T, D> &pm,
         psSmartPointer<psAdvectionCalback<T, D>> &ac) {
@@ -503,71 +366,71 @@ pm.setAdvectionCallback(ac);
 pm.setGeometricModel(gm);
 })
 .def("setVelocityField",
-[](psProcessModel<T, D> &pm,
-        psSmartPointer<psVelocityField<T>> &vf) {
-pm.setVelocityField(vf);
-});
+    [](psProcessModel<T, D> &pm,
+    psSmartPointer<psVelocityField<T>> &vf) {
+    pm.setVelocityField(vf);
+    });
 
 // psProcess
 pybind11::class_<psProcess<T, D>, psSmartPointer<psProcess<T, D>>>(
-module, "psProcess")
+                 module, "psProcess")
 // constructors
 .def(pybind11::init(&psSmartPointer<psProcess<T, D>>::New<>))
 
 // methods
 .def("setDomain", &psProcess<T, D>::setDomain, "Set the process domain.")
 .def("setProcessDuration", &psProcess<T, D>::setProcessDuration,
-"Set the process duraction.")
+     "Set the process duraction.")
 .def("setSourceDirection", &psProcess<T, D>::setSourceDirection,
-"Set source direction of the process.")
+     "Set source direction of the process.")
 .def("setNumberOfRaysPerPoint", &psProcess<T, D>::setNumberOfRaysPerPoint,
-"Set the number of rays to traced for each particle in the process. "
-"The number is per point in the process geometry")
+     "Set the number of rays to traced for each particle in the process. "
+     "The number is per point in the process geometry")
 .def("setMaxCoverageInitIerations",
-&psProcess<T, D>::setMaxCoverageInitIterations,
-"Set the number of iterations to initialize the coverages.")
+     &psProcess<T, D>::setMaxCoverageInitIterations,
+     "Set the number of iterations to initialize the coverages.")
 .def("setPrintIntermediate", &psProcess<T, D>::setPrintIntermediate,
-"Set whether to print disk meshes in the intermediate steps.")
+     "Set whether to print disk meshes in the intermediate steps.")
 .def("setProcessModel",
-&psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
-"Set the process model.")
+     &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
+     "Set the process model.")
 .def("apply", &psProcess<T, D>::apply, "Run the process.")
 .def("setIntegrationScheme",&psProcess<T,D>::setIntegrationScheme);
 
 // models
 pybind11::class_<SimpleDeposition<T, D>,
-psSmartPointer<SimpleDeposition<T, D>>>(module,
-"SimpleDeposition")
+                 psSmartPointer<SimpleDeposition<T, D>>>(module,
+                 "SimpleDeposition")
 .def(pybind11::init(
         &psSmartPointer<SimpleDeposition<T, D>>::New<const T, const T>),
         pybind11::arg("stickingProbability") = 0.1,
-pybind11::arg("sourceExponent") = 1.)
+        pybind11::arg("sourceExponent") = 1.)
 .def("getProcessModel", &SimpleDeposition<T, D>::getProcessModel,
-"Return the deposition process model.");
+     "Return the deposition process model.");
 
 pybind11::class_<SF6O2Etching<T, D>, psSmartPointer<SF6O2Etching<T, D>>>(
-module, "SF6O2Etching")
+                 module, "SF6O2Etching")
 .def(pybind11::init(&psSmartPointer<SF6O2Etching<T, D>>::New<
         const double, const double, const double, const T,
         const T, const int>),
         pybind11::arg("totalIonFlux"), pybind11::arg("totalEtchantFlux"),
         pybind11::arg("totalOxygenFlux"), pybind11::arg("ionEnergy") = 100.,
-pybind11::arg("oxySputterYield") = 3.,
-pybind11::arg("maskMaterial") = 0)
+        pybind11::arg("oxySputterYield") = 3.,
+        pybind11::arg("maskMaterial") = 0)
 .def("getProcessModel", &SF6O2Etching<T, D>::getProcessModel,
-"Returns the etching process model");
+     "Returns the etching process model");
 
 
-//interesat ce ar putea sa fie al 3lea template argument!
-//pybind11::class_<GeometricDistributionModel<T, D>, psSmartPointer<GeometricDistributionModel<T, D>>>(
-//module, "GeometricDistributionModel")
-////constructors
-//.def(pybind11::init(
-//        &psSmartPointer<GeometricDistributionModel<T, D>>::New<const T>),
-//        pybind11::arg("layerThickness") = 1.)
-//.def("getProcessModel",
-//&GeometricDistributionModel<T, D>::getProcessModel,
-//"Return the deposition process model.");
+//have to implement it now that I know what the 3rd parameters is.
+pybind11::class_<GeometricDistributionModel<T, D>, psSmartPointer<GeometricDistributionModel<T, D>>>(
+module, "GeometricDistributionModel")
+//constructors
+.def(pybind11::init(
+        &psSmartPointer<GeometricDistributionModel<T, D>>::New<const T>),
+        pybind11::arg("layerThickness") = 1.)
+.def("getProcessModel",
+&GeometricDistributionModel<T, D>::getProcessModel,
+"Return the deposition process model.");
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
 // GDS file parsing
@@ -668,83 +531,5 @@ lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY)
 .value("NEG_INFINITE_BOUNDARY",
 lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY);
 
-
-
-//define_rayQuadruple<T>(module, "rayQuadruplef");
-//define_rayTriple<T>(module, "rayTriplef");
-//define_rayPair<T>(module, "rayPairf");
-
-
-pybind11::class_<rayTraceInfo>(module, "rayTraceInfo")
-.def(pybind11::init<>())
-.def_readwrite("numRays", &rayTraceInfo::numRays)
-.def_readwrite("totalRaysTraced", &rayTraceInfo::totalRaysTraced)
-.def_readwrite("totalDiskHits", &rayTraceInfo::totalDiskHits)
-.def_readwrite("nonGeometryHits", &rayTraceInfo::nonGeometryHits)
-.def_readwrite("geometryHits", &rayTraceInfo::geometryHits)
-.def_readwrite("time", &rayTraceInfo::time)
-.def_readwrite("warning", &rayTraceInfo::warning)
-.def_readwrite("error", &rayTraceInfo::error);
-
-//enum for rayUtil
-pybind11::enum_<rayNormalizationType>(module, "rayNormalizationType")
-.value("SOURCE",
-rayNormalizationType::SOURCE)
-.value("MAX", rayNormalizationType::MAX);
-pybind11::module PYrayUtil = module.def_submodule("rayUtil", "namespace for rayUtil");
-PYrayUtil.def("Sum",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
-        {return rayInternal::Sum(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
-         .def("Sum",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB,const rayTriple<T> &pT)
-         {return rayInternal::Sum(pVecA,pVecB,pT);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::arg("pt"),pybind11::return_value_policy::take_ownership)
-         .def("Diff",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
-         {return rayInternal::Diff(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
-         .def("Diff",[](const rayPair<T> &pVecA,const rayPair<T> &pVecB)
-         {return rayInternal::Diff(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
-        .def("DotProduct",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
-        {return rayInternal::DotProduct(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
-        .def("CrossProduct",[](const rayTriple<T> &pVecA,const rayTriple<T> &pVecB)
-        {return rayInternal::CrossProduct(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
-        .def("Norm",[](const std::array<T,D> &vec)
-        {return rayInternal::Norm<T,D>(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
-        //to verify later what D in rayUtils is going to be. We may need to declare everything in a function
-        .def("Normalize",[](std::array<T,D> &vec)
-        {return rayInternal::Normalize(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
-        .def("Normalize",[](const std::array<T,D> &vec)
-        {return rayInternal::Normalize(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
-        .def("Inv",[](const rayTriple<T> &vec)
-        {return rayInternal::Inv(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
-        .def("Scale",[](const T pF, rayTriple<T> &pT)
-        {return rayInternal::Scale(pF,pT);},pybind11::arg("pF"),pybind11::arg("pT"),pybind11::return_value_policy::take_ownership)
-        .def("Scale",[](const T pF,const rayTriple<T> &pT)
-        {return rayInternal::Scale(pF,pT);},pybind11::arg("pF"),pybind11::arg("pT"),pybind11::return_value_policy::take_ownership)
-        .def("Distance",[](const std::array<T, D> &pVecA,const std::array<T, D> &pVecB)
-        {return rayInternal::Distance(pVecA,pVecB);},pybind11::arg("pVecA"),pybind11::arg("pVecB"),pybind11::return_value_policy::take_ownership)
-        .def("ComputeNormal",[](const rayTriple<rayTriple<T>> &planeCoords)
-        {return rayInternal::ComputeNormal(planeCoords);},pybind11::arg("planeCoords"),pybind11::return_value_policy::take_ownership)
-        .def("IsNormalized",[](const rayTriple<T> &vec)
-        {return rayInternal::IsNormalized(vec);},pybind11::arg("vec"),pybind11::return_value_policy::take_ownership)
-        .def("adjustBoundingBox",[](rayPair<rayTriple<T>> &bdBox,rayTraceDirection direction, T discRadius)
-        {rayInternal::adjustBoundingBox<T,D>(bdBox,direction,discRadius);},pybind11::arg("bdBox"),pybind11::arg("direction"),pybind11::arg("discRadius"))
-        .def("getTraceSettings",[](rayTraceDirection sourceDir)
-        {return rayInternal::getTraceSettings(sourceDir);},pybind11::arg("sourceDir"),pybind11::return_value_policy::take_ownership)
-        .def("PickRandomPointOnUnitSphere",[](rayRNG &RNG)
-        {return rayInternal::PickRandomPointOnUnitSphere<T>(RNG);},pybind11::arg("RNG"),pybind11::return_value_policy::take_ownership)
-        .def("getOrthonormalBasis",[](const rayTriple<T> &pVector)
-        {return rayInternal::getOrthonormalBasis(pVector);},pybind11::arg("pVector"),pybind11::return_value_policy::take_ownership)
-        .def("createPlaneGrid",[](const T gridDelta, const T extent,const std::array<int, 3> direction,std::vector<std::array<T, 3>> &points,std::vector<std::array<T, 3>> &normals)
-        {return rayInternal::createPlaneGrid(gridDelta, extent, direction, points, normals);},pybind11::arg("gridDelta"), pybind11::arg("extent"), pybind11::arg("direction"),pybind11::arg("points"), pybind11::arg("normals"),pybind11::return_value_policy::take_ownership)
-        .def("readGridFromFile",[](const std::string& fileName, T& gridDelta,std::vector<rayTriple<T>>& points,std::vector<rayTriple<T>>& normals)
-        {return rayInternal::readGridFromFile(fileName, gridDelta, points,normals);},pybind11::arg("fileName"), pybind11::arg("gridDelta"), pybind11::arg("points"),pybind11::arg("normals"), pybind11::return_value_policy::take_ownership)
-        .def("writeVTK",[](const std::string& filename,const std::vector<rayTriple<T>>& points,const std::vector<T>& mcestimates)
-        {return rayInternal::writeVTK(filename, points, mcestimates);},pybind11::arg("filename"), pybind11::arg("points"), pybind11::arg("mcestimates"),pybind11::return_value_policy::take_ownership)
-        .def("createSourceGrid",[](const rayPair<rayTriple<T>>& pBdBox,const size_t pNumPoints, const T pGridDelta,const std::array<int, 5>& pTraceSettings)
-        {return rayInternal::createSourceGrid<T,D>(pBdBox, pNumPoints, pGridDelta,pTraceSettings);},pybind11::arg("pBdBox"), pybind11::arg("pNumPoints"), pybind11::arg("pGridDelta"),pybind11::arg("pTraceSettings"), pybind11::return_value_policy::take_ownership)
-        .def("printBoundingBox",[](const rayPair<rayTriple<T>> &bdBox)
-        {return rayInternal::printBoundingBox<T>(bdBox);},pybind11::arg("bdBox"))
-        .def("printTriple",[](const rayTriple<T> &vec, bool endl = true)
-        {return rayInternal::printTriple<T>(vec,endl);},pybind11::arg("vec"),pybind11::arg("endl"))
-        .def("printPair",[](const rayPair<T> &vec)
-        {return rayInternal::printPair<T>(vec);},pybind11::arg("vec"))
-        .def("timeStampNow",[]() {rayInternal::timeStampNow<std::chrono::milliseconds>();},pybind11::return_value_policy::take_ownership);
 
 }
