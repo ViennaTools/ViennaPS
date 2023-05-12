@@ -7,9 +7,9 @@
 
 template <typename T> struct Parameters {
   // Domain
-  T gridDelta = 5.;  // nm
-  T xExtent = 100.0; // nm
-  T yExtent = 100.0; // nm
+  T gridDelta = 2.;  // nm
+  T xExtent = 120.0; // nm
+  T yExtent = 120.0; // nm
 
   // Geometry
   int numLayers = 7;
@@ -19,11 +19,11 @@ template <typename T> struct Parameters {
   T maskHeight = 50;       // nm
 
   // Process
-  T processTime = 150;
-  T totalEtchantFlux = 1e17;
-  T totalPolymerFlux = 1e17;
-  T totalIonFlux = 1e16;
-  T rfBiasPower = 215; // W;
+  T processTime = 10;
+  T totalEtchantFlux = 150;
+  T totalPolymerFlux = 10;
+  T totalIonFlux = 56;
+  T rfBiasPower = 200; // W;
 
   Parameters() {}
 

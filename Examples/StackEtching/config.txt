@@ -4,15 +4,16 @@ xExtent = 120.0
 yExtent = 120.0 
 
 # Geometry
-numLayers = 7
+numLayers = 11
 layerHeight = 30.     
 substrateHeight = 50. 
 holeRadius = 75       
 maskHeight = 50       
 
 # Process
-processTime = 60000
-totalEtchantFlux = 5e17
-totalPolymerFlux = 0.1e17
-totalIonFlux = 5.6e16
-rfBiasPower = 200
+processTime = 600
+# fluxes in 1e15 atoms/cm3
+totalEtchantFlux = 150
+totalPolymerFlux = 10
+totalIonFlux = 56
+rfBiasPower = 215

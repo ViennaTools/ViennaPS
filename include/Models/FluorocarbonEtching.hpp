@@ -51,39 +51,76 @@ public:
     const auto pCoverage = Coverages->getScalarData("pCoverage");
     const auto peCoverage = Coverages->getScalarData("peCoverage");
 
+    bool etchStop = false;
+
     // calculate etch rates
     for (size_t i = 0; i < etchRate.size(); ++i) {
+      if (coordinates[i][D - 1] <= 0.) {
+        etchStop = true;
+        break;
+      }
+
       auto matId =
           psMaterialMap::mapToMaterial(static_cast<int>(materialIds[i]));
+      assert(matId == psMaterial::Mask || matId == psMaterial::Polymer ||
+             matId == psMaterial::Si || matId == psMaterial::SiO2 ||
+             matId == psMaterial::Si3N4 && "Unexptected material");
       if (matId == psMaterial::Mask)
         continue;
-      if (pCoverage->at(i) >= 1.) // Deposition
-      {
+      if (pCoverage->at(i) >= 1.) {
+        assert(pCoverage->at(i) == 1. && "Correctness assumption");
+        // Deposition
         etchRate[i] =
-            inv_rho_p * (polyRate->at(i) * totalPolyFlux -
-                         ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
+            (1 / rho_p) * (polyRate->at(i) * totalPolyFlux -
+                           ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
         assert(etchRate[i] >= 0 && "Negative deposition");
+      } else if (matId == psMaterial::Polymer) {
+        // Etching depo layer
+        etchRate[i] = std::min(
+            (1 / rho_p) * (polyRate->at(i) * totalPolyFlux -
+                           ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)),
+            0.);
       } else {
-        NumericType inv_mat_density = 0;
-        if (matId == psMaterial::Polymer) // Etching depo layer
+        NumericType mat_density = 0;
+        if (matId == psMaterial::Si) // crystalline Si at the bottom
         {
-          inv_mat_density = -inv_rho_p;
-        } else if (matId == psMaterial::Si) // crystalline Si at the bottom
-        {
-          inv_mat_density = -inv_rho_Si;
+          mat_density = -rho_Si;
         } else if (matId == psMaterial::SiO2) // Etching SiO2
         {
-          inv_mat_density = -inv_rho_SiO2;
+          mat_density = -rho_SiO2;
         } else if (matId == psMaterial::Si3N4) // Etching SiNx
         {
-          inv_mat_density = -inv_rho_SiNx;
+          mat_density = -rho_SiNx;
         }
         etchRate[i] =
-            inv_mat_density *
+            (1 / mat_density) *
             (F_ev * eCoverage->at(i) +
              ionEnhancedRate->at(i) * totalIonFlux * eCoverage->at(i) +
              ionSputteringRate->at(i) * totalIonFlux * (1 - eCoverage->at(i)));
       }
+
+      if (std::isnan(etchRate[i])) {
+        std::cout << "Error in calculating etch rate at point x = "
+                  << coordinates[i][0] << ", y = " << coordinates[i][1]
+                  << ", z = " << coordinates[i][2] << std::endl;
+        std::cout << "Material: " << static_cast<int>(matId) << std::endl;
+        std::cout << "Rates and coverages at this point:\neCoverage: "
+                  << eCoverage->at(i) << "\npCoverage: " << pCoverage->at(i)
+                  << "\npeCoverage: " << peCoverage->at(i)
+                  << "\nionEnhancedRate: " << ionEnhancedRate->at(i)
+                  << "\nionSputteringRate: " << ionSputteringRate->at(i)
+                  << "\nionpeRate: " << ionpeRate->at(i)
+                  << "\npolyRate: " << polyRate->at(i) << std::endl;
+      }
+
+      // etch rate is in cm / s
+      etchRate[i] *= 1e7; // to convert to nm / s
+
+      assert(!std::isnan(etchRate[i]) && "etchRate NaN");
+    }
+
+    if (etchStop) {
+      std::fill(etchRate.begin(), etchRate.end(), 0.);
     }
 
     return psSmartPointer<std::vector<NumericType>>::New(etchRate);
@@ -128,8 +165,9 @@ public:
         pCoverage->at(i) = 1.;
       } else {
         pCoverage->at(i) =
-            (polyRate->at(i) * totalPolyFlux - delta_p) /
-            (ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
+            std::min((polyRate->at(i) * totalPolyFlux - delta_p) /
+                         (ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)),
+                     1.);
       }
       assert(!std::isnan(pCoverage->at(i)) && "pCoverage NaN");
     }
@@ -153,13 +191,10 @@ public:
   }
 
 private:
-  static constexpr double inv_rho_SiO2 =
-      4.347826e-23 * 1e4; // in (atoms/cm³)⁻¹ (rho SiO2)
-  static constexpr double inv_rho_SiNx =
-      1.3e-23 * 1e4; // in (atoms/cm³)⁻¹ (rho polySi)
-  static constexpr double inv_rho_Si = 2e-23 * 1e4; // in (atoms/cm³)⁻¹ (rho Si)
-  static constexpr double inv_rho_p = 1e-23 * 1e4;
-  // 1e4 to convert to um / s
+  static constexpr double rho_SiO2 = 2.3 * 1e7; // in (1e15 atoms/cm³)
+  static constexpr double rho_SiNx = 2.3 * 1e7; // in (1e15 atoms/cm³)
+  static constexpr double rho_Si = 5.02 * 1e7;  // in (1e15 atoms/cm³)
+  static constexpr double rho_p = 2 * 1e7;      // in (1e15 atoms/cm³)
 
   static constexpr double k_ie = 1.;
   static constexpr double k_ev = 1.;
@@ -169,6 +204,7 @@ private:
   static constexpr double kB = 0.000086173324; // m² kg s⁻² K⁻¹
   static constexpr double temperature = 300.;  // K
 
+  // fluxes in (1e15 /cm²)
   const NumericType totalIonFlux;
   const NumericType totalEtchantFlux;
   const NumericType totalPolyFlux;
@@ -177,7 +213,7 @@ private:
 
 // Parameters from:
 // A. LaMagna and G. Garozzo "Factors affecting profile evolution in plasma
-// etching of SiO2 modelling and experimental verification" Journal of the
+// etching of SiO2: Modeling and experimental verification" Journal of the
 // Electrochemical Society 150(10) 2003 pp. 1896-1902
 
 template <typename NumericType>

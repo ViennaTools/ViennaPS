@@ -27,7 +27,7 @@ public:
   std::size_t size() const { return map->getNumberOfLayers(); }
 
   static inline psMaterial mapToMaterial(const int matId) {
-    if (matId > 3)
+    if (matId > 4)
       return psMaterial::Undefined;
     return static_cast<psMaterial>(matId);
   }

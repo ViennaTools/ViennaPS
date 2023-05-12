@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  psLogger::setLogLevel(psLogLevel::DEBUG);
+  psLogger::setLogLevel(psLogLevel::INFO);
 
   // Parse the parameters
   Parameters<NumericType> params;
