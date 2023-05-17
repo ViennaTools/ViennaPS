@@ -17,10 +17,12 @@ class FluorocarbonSurfaceModel : public psSurfaceModel<NumericType> {
 public:
   FluorocarbonSurfaceModel(const NumericType ionFlux,
                            const NumericType etchantFlux,
-                           const NumericType polyFlux)
+                           const NumericType polyFlux,
+                           const NumericType passedEtchStopDepth)
       : totalIonFlux(ionFlux), totalEtchantFlux(etchantFlux),
         totalPolyFlux(polyFlux),
-        F_ev(2.7 * etchantFlux * std::exp(-0.168 / (kB * temperature))) {}
+        F_ev(2.7 * etchantFlux * std::exp(-0.168 / (kB * temperature))),
+        etchStopDepth(passedEtchStopDepth) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (Coverages == nullptr) {
@@ -55,7 +57,7 @@ public:
 
     // calculate etch rates
     for (size_t i = 0; i < etchRate.size(); ++i) {
-      if (coordinates[i][D - 1] <= 0.) {
+      if (coordinates[i][D - 1] <= etchStopDepth) {
         etchStop = true;
         break;
       }
@@ -209,6 +211,8 @@ private:
   const NumericType totalEtchantFlux;
   const NumericType totalPolyFlux;
   const NumericType F_ev;
+
+  const NumericType etchStopDepth = 0.;
 };
 
 // Parameters from:
@@ -436,7 +440,8 @@ template <typename NumericType, int D>
 class FluorocarbonEtching : public psProcessModel<NumericType, D> {
 public:
   FluorocarbonEtching(const double ionFlux, const double etchantFlux,
-                      const double polyFlux, const NumericType rfBiasPower) {
+                      const double polyFlux, const NumericType rfBiasPower,
+                      const NumericType etchStopDepth = 0.) {
     // particles
     auto ion = std::make_unique<FluorocarbonIon<NumericType>>(rfBiasPower);
     auto etchant = std::make_unique<FluorocarbonEtchant<NumericType, D>>();
@@ -447,7 +452,7 @@ public:
     // surface model
     auto surfModel =
         psSmartPointer<FluorocarbonSurfaceModel<NumericType, D>>::New(
-            ionFlux, etchantFlux, polyFlux);
+            ionFlux, etchantFlux, polyFlux, etchStopDepth);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();

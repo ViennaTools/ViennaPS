@@ -22,12 +22,17 @@ public:
     map->insertNextMaterial(static_cast<int>(material));
   }
 
+  psMaterial getMaterialAtIdx(std::size_t idx) const {
+    int matId = map->getMaterialId(idx);
+    return mapToMaterial(matId);
+  }
+
   psSmartPointer<lsMaterialMap> getMaterialMap() const { return map; }
 
   std::size_t size() const { return map->getNumberOfLayers(); }
 
   static inline psMaterial mapToMaterial(const int matId) {
-    if (matId > 4)
+    if (matId > 4 || matId < -1)
       return psMaterial::Undefined;
     return static_cast<psMaterial>(matId);
   }

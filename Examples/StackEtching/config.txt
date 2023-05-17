@@ -4,7 +4,7 @@ xExtent = 120.0
 yExtent = 120.0 
 
 # Geometry
-numLayers = 11
+numLayers = 3
 layerHeight = 30.     
 substrateHeight = 50. 
 holeRadius = 75       

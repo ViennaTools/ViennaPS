@@ -1,7 +1,9 @@
 #include <FluorocarbonEtching.hpp>
 #include <SimpleDeposition.hpp>
+#include <psExtrude.hpp>
 #include <psMakeStack.hpp>
 #include <psProcess.hpp>
+#include <psToDiskMesh.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>
@@ -12,7 +14,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  psLogger::setLogLevel(psLogLevel::INFO);
+  psLogger::setLogLevel(psLogLevel::DEBUG);
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -52,4 +54,18 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   psWriteVisualizationMesh<NumericType, D>(domain, "final").apply();
+
+  std::cout << "Extruding to 3D ..." << std::endl;
+  auto extruded = psSmartPointer<psDomain<NumericType, 3>>::New();
+  std::array<NumericType, 2> extrudeExtent = {-20., 20.};
+  psExtrude<NumericType>(domain, extruded, extrudeExtent, 2).apply();
+
+  std::cout << "Writing to surface" << std::endl;
+  {
+    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+    psToDiskMesh<NumericType, 3>(extruded, mesh).apply();
+    lsVTKWriter<NumericType>(mesh, "Extruded_surface.vtp").apply();
+  }
+
+  psWriteVisualizationMesh<NumericType, 3>(extruded, "final_extruded").apply();
 }
