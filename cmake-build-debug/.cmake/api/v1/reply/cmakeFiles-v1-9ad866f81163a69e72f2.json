@@ -1,0 +1,511 @@
+{
+	"inputs" : 
+	[
+		{
+			"path" : "CMakeLists.txt"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "cmake-build-debug/CMakeFiles/3.24.2/CMakeSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeSystemSpecificInitialize.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "cmake-build-debug/CMakeFiles/3.24.2/CMakeCCompiler.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "cmake-build-debug/CMakeFiles/3.24.2/CMakeCXXCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeSystemSpecificInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeGenericSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeInitializeConfigs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Platform/Linux.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Platform/UnixPaths.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Compiler/GNU-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Compiler/GNU.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Platform/Linux-GNU-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Platform/Linux-GNU.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeCXXInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Compiler/GNU-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Compiler/GNU.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Platform/Linux-GNU-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Platform/Linux-GNU.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/GNUInstallDirs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/ExternalProject.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakePackageConfigHelpers.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/WriteBasicConfigVersionFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in"
+		},
+		{
+			"path" : "cmake/ViennaPSConfig.cmake.in"
+		},
+		{
+			"path" : "cmake/cmake_uninstall.cmake.in"
+		},
+		{
+			"path" : "external/upstream/CMakeLists.txt"
+		},
+		{
+			"path" : "external/upstream/viennals/CMakeLists.txt"
+		},
+		{
+			"path" : "dependencies/Install/viennals_external/lib/cmake/ViennaLS/ViennaLSConfigVersion.cmake"
+		},
+		{
+			"path" : "dependencies/Install/viennals_external/lib/cmake/ViennaLS/ViennaLSConfig.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeFindDependencyMacro.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindOpenMP.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeParseImplicitLinkInfo.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Install/viennahrle_external/lib/cmake/ViennaHRLE/ViennaHRLEConfigVersion.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Install/viennahrle_external/lib/cmake/ViennaHRLE/ViennaHRLEConfig.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/vtk-config-version.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/vtk-config.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtk-config.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtk-prefix.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkCMakeBackports.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/VTK-targets.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/VTK-vtk-module-properties.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtk-find-package-helpers.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/VTK-vtk-module-find-packages.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindThreads.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindThreads.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindThreads.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkModule.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkTopologicalSort.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkModuleTesting.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/ExternalData.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/GenerateExportHeader.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Internal/CheckCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Internal/CheckFlagCommonConfig.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/Internal/CheckCompilerFlag.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkEncodeString.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkHashSource.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkObjectFactory.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennals_external/dependencies/Build/vtk_external/lib/cmake/vtk-9.1/vtkModuleJson.cmake"
+		},
+		{
+			"path" : "external/upstream/viennaray/CMakeLists.txt"
+		},
+		{
+			"path" : "dependencies/Install/viennaray_external/lib/cmake/ViennaRay/ViennaRayConfigVersion.cmake"
+		},
+		{
+			"path" : "dependencies/Install/viennaray_external/lib/cmake/ViennaRay/ViennaRayConfig.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeFindDependencyMacro.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindOpenMP.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeParseImplicitLinkInfo.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennaray_external/dependencies/Install/embree_external/lib/cmake/embree-3.13.0/embree-config-version.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennaray_external/dependencies/Install/embree_external/lib/cmake/embree-3.13.0/embree-config.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennaray_external/dependencies/Install/embree_external/lib/cmake/embree-3.13.0/embree-targets.cmake"
+		},
+		{
+			"path" : "dependencies/Source/viennaray_external/dependencies/Install/embree_external/lib/cmake/embree-3.13.0/embree-targets-release.cmake"
+		},
+		{
+			"path" : "external/upstream/pybind11/CMakeLists.txt"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/home/serb/.local/share/cmake/pybind11/pybind11ConfigVersion.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/home/serb/.local/share/cmake/pybind11/pybind11Config.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/home/serb/.local/share/cmake/pybind11/pybind11Targets.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/home/serb/.local/share/cmake/pybind11/pybind11Common.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/home/serb/.local/share/cmake/pybind11/pybind11Tools.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CMakeParseArguments.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "/home/serb/.local/share/cmake/pybind11/FindPythonLibsNew.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPythonInterp.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/snap/clion/222/bin/cmake/linux/x64/share/cmake-3.24/Modules/CheckCXXCompilerFlag.cmake"
+		}
+	],
+	"kind" : "cmakeFiles",
+	"paths" : 
+	{
+		"build" : "/home/serb/Desktop/ViennaPS/cmake-build-debug",
+		"source" : "/home/serb/Desktop/ViennaPS"
+	},
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 0
+	}
+}

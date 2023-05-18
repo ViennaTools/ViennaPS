@@ -1,0 +1,7 @@
+/snap/clion/222/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/snap/clion/222/bin/ninja/linux/x64/ninja -G Ninja -S /home/serb/Desktop/ViennaPS -B /home/serb/Desktop/ViennaPS/cmake-build-debug
+-- Found ViennaLS at /home/serb/Desktop/ViennaPS/dependencies/Install/viennals_external/lib/cmake/ViennaLS.
+-- Found ViennaRay at /home/serb/Desktop/ViennaPS/dependencies/Install/viennaray_external/lib/cmake/ViennaRay.
+-- Found pybind11 at /home/serb/.local/share/cmake/pybind11.
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/serb/Desktop/ViennaPS/cmake-build-debug

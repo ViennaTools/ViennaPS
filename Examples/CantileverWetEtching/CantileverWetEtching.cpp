@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   process.setDomain(geometry);
   process.setProcessModel(wetEtchModel.getProcessModel());
   process.setProcessDuration(5. * 60.); // 5 minutes of etching
-  process.setPrintIntdermediate(false);
+  process.setPrintIntermediate(false);
   process.setIntegrationScheme(
       lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
