@@ -1,5 +1,5 @@
 /*
-  This file is used to generate the python module of viennals.
+  This file is used to generate the python module of viennaps.
   It uses pybind11 to create the modules.
 
   All necessary headers are included here and the interface
@@ -17,6 +17,7 @@
 #include <pybind11/iostream.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 
 // all header files which define API functions
 #include <psDomain.hpp>
@@ -43,16 +44,17 @@
 typedef double T;
 typedef std::vector<hrleCoordType> VectorHRLEcoord;
 // get dimension from cmake define
-constexpr int D = VIENNAPS_PYTHON_DIMENSION;
+// Here I would have had ViennaPS_PYTHON_DIMENSION instead of 2 (vscode couldn't find it)
+constexpr int D = 2;
 
 PYBIND11_DECLARE_HOLDER_TYPE(TemplateType, psSmartPointer<TemplateType>);
 //this make opaque makes lsDomain not work anymore, but it is needed for psSurfaceModel
 PYBIND11_MAKE_OPAQUE(std::vector<T>)
 
 //we had to make this type opaque, as we will use it with smart pointers (psSmartPointer<ParticleTypeList> in psProcessModel)
-//this is making the std::vector<std::unique_ptr<rayAbstractParticle<T>>> opaque
-using ParticleTypeList = std::vector<std::unique_ptr<rayAbstractParticle<T>>>;
-PYBIND11_MAKE_OPAQUE(ParticleTypeList)
+//we need to declare a class_<std::vector<std::unique_ptr<rayAbstractParticle<T>>, std::allocator<std::unique_ptr<rayAbstractParticle<T>>>>
+///TODO:test if it works without aditional code
+PYBIND11_MAKE_OPAQUE(std::vector<std::unique_ptr<rayAbstractParticle<T>>, std::allocator<std::unique_ptr<rayAbstractParticle<T>>>>);
 
 // define trampoline classes for interface functions
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
@@ -76,18 +78,16 @@ public:
         PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters);
     }
 
-
-    psSmartPointer<std::vector<T>>
+    psSmartPointer<vect_type>
     calculateVelocities(psSmartPointer<psPointData<T>> Rates,
                         const std::vector<T> &materialIDs) override {
-        PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>, calculateVelocities, Rates,
-                          materialIDs);
+        PYBIND11_OVERRIDE(psSmartPointer<vect_type>, psSurfaceModel<T>, calculateVelocities, Rates,
+                materialIDs);
     }
 
     void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
         PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, Rates);
     }
-
 };
 
 //psProcessModel
@@ -120,11 +120,7 @@ public:
         );
     }
     psSmartPointer<ParticleTypeList> getParticleTypes() override{
-        PYBIND11_OVERRIDE(
-                psSmartPointer<ParticleTypeList>,
-                ClassName,
-                getParticleTypes,
-        );
+        return particles;
     }
     psSmartPointer<psAdvectionCalback<T, D>>
     getAdvectionCallback() override{
@@ -217,6 +213,43 @@ public:
 
 };
 
+template <typename NumericType, int D, typename DistType>
+void declare_GeometricDistributionModel(pybind11::module &m, const std::string &typestr) {
+    using Class = GeometricDistributionModel<NumericType, D, DistType>;
+
+    pybind11::class_< Class, psSmartPointer<Class> >(m, typestr.c_str())
+            .def(pybind11::init<psSmartPointer<DistType>>(),pybind11::arg("dist"))
+            .def(pybind11::init<psSmartPointer<DistType>, psSmartPointer<lsDomain<NumericType, D>>>(),
+                 pybind11::arg("dist"), pybind11::arg("mask"))
+            .def("apply", &Class::apply);
+}
+
+
+//this is for wrapping the vector<unique_ptr>
+// namespace py = pybind11;
+// template<typename T>
+// void bind_rayAbstractParticleVector(py::module& m, const std::string& name) {
+//     using RayAbstractParticleVector = std::vector<std::unique_ptr<rayAbstractParticle<T>>, std::allocator<std::unique_ptr<rayAbstractParticle<T>>>>;
+
+//     py::class_<RayAbstractParticleVector>(m, name.c_str())
+//             .def(py::init<>())
+//             .def("pop_back", &RayAbstractParticleVector::pop_back)
+//             .def("push_back", [](RayAbstractParticleVector& v, rayAbstractParticle<T>* value) {
+//                 v.push_back(std::unique_ptr<rayAbstractParticle<T>>(value));
+//             });
+//            .def("back", [](RayAbstractParticleVector& v) -> rayAbstractParticle<T>& {
+//                return *v.back();
+//            }, py::return_value_policy::reference_internal)
+//            .def("__len__", [](const RayAbstractParticleVector& v) { return v.size(); })
+//            .def("__getitem__", [](const RayAbstractParticleVector& v, size_t i) -> rayAbstractParticle<T>& {
+//                if (i >= v.size()) throw py::index_error();
+//                return *v[i];
+//            }, py::return_value_policy::reference_internal)
+//            .def("__iter__", [](RayAbstractParticleVector& v) {
+//                return py::make_iterator(v.begin(), v.end(), py::return_value_policy::reference_internal);
+//            }, py::keep_alive<0, 1>());
+// }
+
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 module.doc() =
 "ViennaPS is a header-only C++ process simulation library, which "
@@ -230,6 +263,15 @@ module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 
 // wrap omp_set_num_threads to control number of threads
 module.def("setNumThreads", &omp_set_num_threads);
+
+
+pybind11::bind_vector< std::vector<T> >(module, "VectorTypeDouble");
+
+//this would be the code for std::vector<std::unique_ptr>, but passing a unique_ptr to functions is not allowed
+//using VectorUniquePtrAbstractParticle = std::vector<std::unique_ptr<rayAbstractParticle<T>>, std::allocator<std::unique_ptr<rayAbstractParticle<T>>>>;
+//bind_rayAbstractParticleVector<float>(module, "RayAbstractParticleVectorFloat");
+//bind_rayAbstractParticleVector<double>(module, "RayAbstractParticleVectorDouble");
+
 
 //psSurfaceModel
 pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,PypsSurfaceModel>(module, "psSurfaceModel")
@@ -421,16 +463,9 @@ pybind11::class_<SF6O2Etching<T, D>, psSmartPointer<SF6O2Etching<T, D>>>(
      "Returns the etching process model");
 
 
-//have to implement it now that I know what the 3rd parameters is.
-pybind11::class_<GeometricDistributionModel<T, D>, psSmartPointer<GeometricDistributionModel<T, D>>>(
-module, "GeometricDistributionModel")
-//constructors
-.def(pybind11::init(
-        &psSmartPointer<GeometricDistributionModel<T, D>>::New<const T>),
-        pybind11::arg("layerThickness") = 1.)
-.def("getProcessModel",
-&GeometricDistributionModel<T, D>::getProcessModel,
-"Return the deposition process model.");
+// GeometricDistributionModel
+declare_GeometricDistributionModel< T, D, lsGeometricAdvectDistribution<T, D> >(module, "GeometricDistributionModel_2D");
+
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
 // GDS file parsing
