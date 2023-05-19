@@ -10,21 +10,6 @@
 
 #include "Parameters.hpp"
 
-psSmartPointer<lsMaterialMap> createMaterialMap(const int numLayers) {
-  auto matMap = psSmartPointer<lsMaterialMap>::New();
-  matMap->insertNextMaterial(0);
-  for (int i = 0; i < numLayers; i++) {
-    if (i % 2 == 0) {
-      matMap->insertNextMaterial(1);
-    } else {
-      matMap->insertNextMaterial(2);
-    }
-  }
-  matMap->insertNextMaterial(3);
-
-  return matMap;
-}
-
 int main(int argc, char **argv) {
   using NumericType = double;
 
@@ -95,9 +80,7 @@ int main(int argc, char **argv) {
 
   process.apply();
 
-  auto materials = createMaterialMap(params.numLayers);
-  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack", materials)
-      .apply();
+  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack").apply();
 
   return 0;
 }

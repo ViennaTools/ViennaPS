@@ -143,14 +143,14 @@ public:
                                        lsBooleanOperationEnum::UNION)
         .apply();
 
-    if (material != psMaterial::Undefined) {
-      if (makeMask)
-        domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
-      domain->insertNextLevelSetAsMaterial(substrate, psMaterial::Si, false);
-    } else {
+    if (material == psMaterial::Undefined) {
       if (makeMask)
         domain->insertNextLevelSet(mask);
       domain->insertNextLevelSet(substrate, false);
+    } else {
+      if (makeMask)
+        domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+      domain->insertNextLevelSetAsMaterial(substrate, material, false);
     }
   }
 };
