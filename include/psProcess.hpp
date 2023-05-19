@@ -154,6 +154,16 @@ public:
       rayTrace.setBoundaryConditions(rayBoundaryCondition);
       rayTrace.setUseRandomSeeds(useRandomSeeds);
       rayTrace.setCalculateFlux(false);
+
+      // initialize particle data logs
+      particleDataLogs.resize(model->getParticleTypes()->size());
+      for (std::size_t i = 0; i < model->getParticleTypes()->size(); i++) {
+        int logSize = model->getParticleLogSize(i);
+        if (logSize > 0) {
+          particleDataLogs[i].data.resize(1);
+          particleDataLogs[i].data[0].resize(logSize);
+        }
+      }
     }
 
     // Determine whether advection callback is used
@@ -213,7 +223,13 @@ public:
 
           auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
+          std::size_t particleIdx = 0;
           for (auto &particle : *model->getParticleTypes()) {
+            int dataLogSize = model->getParticleLogSize(particleIdx);
+            if (dataLogSize > 0) {
+              rayTrace.getDataLog().data.resize(1);
+              rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+            }
             rayTrace.setParticleType(particle);
             rayTrace.apply();
 
@@ -229,6 +245,11 @@ public:
               Rates->insertNextScalarData(std::move(rate),
                                           localData.getVectorDataLabel(i));
             }
+
+            if (dataLogSize > 0) {
+              particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+            }
+            ++particleIdx;
           }
 
           // move coverages back in the model
@@ -304,7 +325,13 @@ public:
           rayTrace.setGlobalData(rayTraceCoverages);
         }
 
+        std::size_t particleIdx = 0;
         for (auto &particle : *model->getParticleTypes()) {
+          int dataLogSize = model->getParticleLogSize(particleIdx);
+          if (dataLogSize > 0) {
+            rayTrace.getDataLog().data.resize(1);
+            rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+          }
           rayTrace.setParticleType(particle);
           rayTrace.apply();
 
@@ -321,6 +348,11 @@ public:
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
+
+          if (dataLogSize > 0) {
+            particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+          }
+          ++particleIdx;
         }
 
         // move coverages back to model
@@ -450,6 +482,22 @@ public:
     }
   }
 
+  void writeParticleDataLogs(std::string fileName) {
+    std::ofstream file(fileName.c_str());
+
+    for (std::size_t i = 0; i < particleDataLogs.size(); i++) {
+      if (!particleDataLogs[i].data.empty()) {
+        file << "particle" << i << "_data ";
+        for (std::size_t j = 0; j < particleDataLogs[i].data[0].size(); j++) {
+          file << particleDataLogs[i].data[0][j] << " ";
+        }
+        file << "\n";
+      }
+    }
+
+    file.close();
+  }
+
 private:
   void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
                         std::string name) {
@@ -564,6 +612,7 @@ private:
   lsIntegrationSchemeEnum integrationScheme =
       lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   long raysPerPoint = 1000;
+  std::vector<rayDataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds = true;
   bool smoothFlux = false;
   size_t maxIterations = 20;
