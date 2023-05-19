@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
     params.fromMap(config);
   }
 
+  // geometry setup
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeHole<NumericType, D>(
       geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
@@ -30,12 +31,14 @@ int main(int argc, char *argv[]) {
       false /* periodic boundary */, true /*create mask*/, psMaterial::Si)
       .apply();
 
+  // use pre-defined model SF6O2 etching
   auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
       params.totalIonFlux /*ion flux*/,
       params.totalEtchantFlux /*etchant flux*/,
       params.totalOxygenFlux /*oxygen flux*/, params.rfBias /*rf bias*/,
       params.A_O /*oxy sputter yield*/);
 
+  // process setup
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
@@ -43,11 +46,15 @@ int main(int argc, char *argv[]) {
   process.setNumberOfRaysPerPoint(params.raysPerPoint);
   process.setProcessDuration(params.processTime);
 
+  // print initial surface
   geometry->printSurface("initial.vtp");
 
+  // run the process
   process.apply();
 
+  // write collected particle meta data (ion energy distribution) to a file
   process.writeParticleDataLogs("ionEnergyDistribution.txt");
 
+  // print final surface
   geometry->printSurface("final.vtp");
 }
