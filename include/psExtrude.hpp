@@ -3,6 +3,7 @@
 #include <psDomain.hpp>
 
 #include <lsExtrude.hpp>
+#include <lsToMesh.hpp>
 
 template <class NumericType> class psExtrude {
   psSmartPointer<psDomain<NumericType, 2>> inputDomain;
@@ -62,10 +63,11 @@ public:
                              extrudeDim)
           .apply();
 
-      {
+      if (psLogger::getLogLevel() >= 5) {
         auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-        lsToSurfaceMesh<NumericType, 3>(tmpLS, mesh).apply();
-        lsVTKWriter<NumericType>(mesh, "ext_" + std::to_string(i) + ".vtp")
+        lsToMesh<NumericType, 3>(tmpLS, mesh).apply();
+        lsVTKWriter<NumericType>(mesh,
+                                 "extrude_layer_" + std::to_string(i) + ".vtp")
             .apply();
       }
 

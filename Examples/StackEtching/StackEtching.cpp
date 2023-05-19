@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
   auto extruded = psSmartPointer<psDomain<NumericType, 3>>::New();
   std::array<NumericType, 2> extrudeExtent = {-20., 20.};
   psExtrude<NumericType>(domain, extruded, extrudeExtent, 2).apply();
+  extruded->printSurface("surface.vtp");
 
   std::cout << "Writing to surface" << std::endl;
   {
