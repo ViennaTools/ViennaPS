@@ -17,7 +17,7 @@ template <typename T> struct Parameters {
   T taperAngle = 0.;  // degree
 
   // Process
-  T processTime = 150; // s
+  T processTime = 100; // s
   T totalIonFlux = 12.;
   T totalEtchantFlux = 1.8e3;
   T totalOxygenFlux = 1.0e2;
@@ -37,6 +37,7 @@ template <typename T> struct Parameters {
         psUtils::Item{"holeRadius", holeRadius},             //
         psUtils::Item{"maskHeight", maskHeight},             //
         psUtils::Item{"taperAngle", taperAngle},             //
+        psUtils::Item{"processTime", processTime},           //
         psUtils::Item{"totalEtchantFlux", totalEtchantFlux}, //
         psUtils::Item{"totalOxygenFlux", totalOxygenFlux},   //
         psUtils::Item{"totalIonFlux", totalIonFlux},         //

@@ -250,26 +250,26 @@ public:
 private:
   std::uniform_real_distribution<NumericType> uniDist;
 
-  static constexpr double A_sp = 0.00339;
-  static constexpr double A_Si = 7.;
+  static constexpr NumericType A_sp = 0.00339;
+  static constexpr NumericType A_Si = 7.;
   const NumericType A_O = 2.;
 
-  static constexpr double Eth_sp = 18.;
-  static constexpr double Eth_Si = 15.;
-  static constexpr double Eth_O = 10.;
-  static constexpr double B_sp = 9.3;
+  static constexpr NumericType Eth_sp = 18.;
+  static constexpr NumericType Eth_Si = 15.;
+  static constexpr NumericType Eth_O = 10.;
+  static constexpr NumericType B_sp = 9.3;
 
-  static constexpr double Eref_max = 1.;
+  static constexpr NumericType Eref_max = 1.;
 
-  static constexpr double inflectAngle = 1.55334;
-  static constexpr double minAngle = 1.3962634;
-  static constexpr double n_l = 10.;
-  static constexpr double n_r = 1.;
+  static constexpr NumericType inflectAngle = 1.55334;
+  static constexpr NumericType minAngle = 1.3962634;
+  static constexpr NumericType n_l = 10.;
+  static constexpr NumericType n_r = 1.;
 
-  static constexpr double twoPI = 6.283185307179586;
-  static constexpr double halfPI = 6.283185307179586 / 4;
+  static constexpr NumericType twoPI = 6.283185307179586;
+  static constexpr NumericType halfPI = 6.283185307179586 / 4;
 
-  static constexpr double A =
+  static constexpr NumericType A =
       1. / (1. + (n_l / n_r) * (halfPI / inflectAngle - 1.));
 
   NumericType f_p_theta;
@@ -278,9 +278,10 @@ private:
   NumericType f_SiO2_theta;
 
   // ion energy
-  static constexpr double minEnergy = 4.; // Discard particles with energy < 1eV
+  static constexpr NumericType minEnergy =
+      4.; // Discard particles with energy < 1eV
   const NumericType power;
-  static constexpr double peak = 0.2;
+  static constexpr NumericType peak = 0.2;
   NumericType E;
 };
 

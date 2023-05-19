@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
       params.yExtent /*y extent*/, params.holeRadius /*hole radius*/,
       params.maskHeight /* mask height*/,
       params.taperAngle /* tapering angle in degrees */, 0 /* base height */,
-      false /* periodic boundary */, true /*create mask*/)
+      false /* periodic boundary */, true /*create mask*/, psMaterial::Si)
       .apply();
 
   auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(

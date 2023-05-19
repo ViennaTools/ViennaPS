@@ -1,4 +1,6 @@
 # Config file for a hole etching example process
+# all size values are given in micrometers
+
 # Domain
 gridDelta=0.05
 xExtent=1
@@ -9,12 +11,15 @@ holeRadius=0.2
 maskHeight=0.2
 taperAngle=0
 
-# Process
-processTime=150
-rfBias=50
+# Process paramters
+processTime=100 # seconds
+
+# all flux values are units 1e15 / cm²
 totalIonFlux=12.
 totalEtchantFlux=1800.
-totalOxygenFlux=100.
-A_O=3
+totalOxygenFlux=200.
+
+rfBias=100 # rf plasma bias (W) controls the ion energy distribution
+A_O=3 # passivation layer sputtering coefficient
 
 raysPerPoint=1000
