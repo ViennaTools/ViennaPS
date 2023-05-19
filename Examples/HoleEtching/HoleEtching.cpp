@@ -33,22 +33,21 @@ int main(int argc, char *argv[]) {
   auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
       params.totalIonFlux /*ion flux*/,
       params.totalEtchantFlux /*etchant flux*/,
-      params.totalOxygenFlux /*oxygen flux*/,
-      params.ionEnergy /*min ion energy (eV)*/,
-      params.A_O /*oxy sputter yield*/, 0 /*mask material ID*/);
+      params.totalOxygenFlux /*oxygen flux*/, params.rfBias /*rf bias*/,
+      params.A_O /*oxy sputter yield*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setMaxCoverageInitIterations(10);
-  process.setNumberOfRaysPerPoint(1000);
+  process.setNumberOfRaysPerPoint(params.raysPerPoint);
   process.setProcessDuration(params.processTime);
 
   geometry->printSurface("initial.vtp");
 
   process.apply();
 
-  geometry->printSurface("final.vtp");
+  process.writeParticleDataLogs("ionEnergyDistribution.txt");
 
-  return EXIT_SUCCESS;
+  geometry->printSurface("final.vtp");
 }

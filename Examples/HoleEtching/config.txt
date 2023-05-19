@@ -1,6 +1,6 @@
 # Config file for a hole etching example process
 # Domain
-gridDelta=0.02
+gridDelta=0.05
 xExtent=1
 yExtent=1
 
@@ -11,5 +11,10 @@ taperAngle=0
 
 # Process
 processTime=150
-ionEnergy = 100
+rfBias=50
+totalIonFlux=12.
+totalEtchantFlux=1800.
+totalOxygenFlux=100.
 A_O=3
+
+raysPerPoint=1000
