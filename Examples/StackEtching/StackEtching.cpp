@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  psLogger::setLogLevel(psLogLevel::DEBUG);
+  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -37,14 +37,12 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // copy top layer for deposition
-  auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
-      domain->getLevelSets()->back());
-  domain->insertNextLevelSetAsMaterial(depoLayer, psMaterial::Polymer);
+  domain->duplicateTopLevelSet(psMaterial::Polymer);
 
   psWriteVisualizationMesh<NumericType, D>(domain, "initial").apply();
 
   auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
-      params.totalIonFlux, params.totalEtchantFlux, params.totalPolymerFlux,
+      params.ionFlux, params.etchantFlux, params.polymerFlux,
       params.rfBiasPower);
 
   psProcess<NumericType, D> process;

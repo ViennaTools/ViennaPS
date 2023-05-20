@@ -13,7 +13,7 @@ maskHeight = 50
 # Process
 processTime = 600
 # fluxes in 1e15 atoms/cm3
-totalEtchantFlux = 150
-totalPolymerFlux = 10
-totalIonFlux = 56
+etchantFlux = 150
+polymerFlux = 10
+ionFlux = 56
 rfBiasPower = 215

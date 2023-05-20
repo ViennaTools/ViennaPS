@@ -108,6 +108,21 @@ public:
     levelSets->push_back(passedLevelSet);
   }
 
+  // copy the top LS and insert it in the domain (used to capture depositing
+  // material)
+  void duplicateTopLevelSet(const psMaterial material = psMaterial::Undefined) {
+    if (levelSets->empty()) {
+      return;
+    }
+
+    auto copy = lsDomainType::New(levelSets->back());
+    if (material == psMaterial::Undefined) {
+      insertNextLevelSet(copy, false);
+    } else {
+      insertNextLevelSetAsMaterial(copy, material, false);
+    }
+  }
+
   void setMaterialMap(materialMapType passedMaterialMap) {
     materialMap = passedMaterialMap;
   }

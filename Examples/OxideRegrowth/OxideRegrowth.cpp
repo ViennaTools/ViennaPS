@@ -46,9 +46,8 @@ int main(int argc, char **argv) {
                               0., false)
       .apply();
   // copy top layer for deposition
-  auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
-      domain->getLevelSets()->back());
-  domain->insertNextLevelSet(depoLayer);
+  domain->duplicateTopLevelSet(psMaterial::Polymer);
+
   domain->generateCellSet(params.substrateHeight +
                               params.numLayers * params.layerHeight + 10.,
                           true /* true means cell set above surface */);

@@ -20,29 +20,29 @@ template <typename T> struct Parameters {
 
   // Process
   T processTime = 10;
-  T totalEtchantFlux = 150;
-  T totalPolymerFlux = 10;
-  T totalIonFlux = 56;
-  T rfBiasPower = 200; // W;
+  T etchantFlux = 150;
+  T polymerFlux = 10;
+  T ionFlux = 56;
+  T rfBiasPower = 105; // W;
 
   Parameters() {}
 
   void fromMap(std::unordered_map<std::string, std::string> &m) {
-    psUtils::AssignItems(                                    //
-        m,                                                   //
-        psUtils::Item{"gridDelta", gridDelta},               //
-        psUtils::Item{"xExtent", xExtent},                   //
-        psUtils::Item{"yExtent", yExtent},                   //
-        psUtils::Item{"holeRadius", holeRadius},             //
-        psUtils::Item{"numLayers", numLayers},               //
-        psUtils::Item{"layerHeight", layerHeight},           //
-        psUtils::Item{"substrateHeight", substrateHeight},   //
-        psUtils::Item{"maskHeight", maskHeight},             //
-        psUtils::Item{"totalEtchantFlux", totalEtchantFlux}, //
-        psUtils::Item{"totalPolymerFlux", totalPolymerFlux}, //
-        psUtils::Item{"totalIonFlux", totalIonFlux},         //
-        psUtils::Item{"rfBiasPower", rfBiasPower},           //
-        psUtils::Item{"processTime", processTime}            //
+    psUtils::AssignItems(                                  //
+        m,                                                 //
+        psUtils::Item{"gridDelta", gridDelta},             //
+        psUtils::Item{"xExtent", xExtent},                 //
+        psUtils::Item{"yExtent", yExtent},                 //
+        psUtils::Item{"holeRadius", holeRadius},           //
+        psUtils::Item{"numLayers", numLayers},             //
+        psUtils::Item{"layerHeight", layerHeight},         //
+        psUtils::Item{"substrateHeight", substrateHeight}, //
+        psUtils::Item{"maskHeight", maskHeight},           //
+        psUtils::Item{"etchantFlux", etchantFlux},         //
+        psUtils::Item{"polymerFlux", polymerFlux},         //
+        psUtils::Item{"ionFlux", ionFlux},                 //
+        psUtils::Item{"rfBiasPower", rfBiasPower},         //
+        psUtils::Item{"processTime", processTime}          //
     );
   }
 };
