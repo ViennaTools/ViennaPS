@@ -18,9 +18,9 @@ template <typename T> struct Parameters {
 
   // Process
   T processTime = 100; // s
-  T totalIonFlux = 12.;
-  T totalEtchantFlux = 1.8e3;
-  T totalOxygenFlux = 1.0e2;
+  T ionFlux = 12.;
+  T etchantFlux = 1.8e3;
+  T oxygenFlux = 1.0e2;
   T rfBias = 50; // W
   T A_O = 2.;
 
@@ -29,21 +29,21 @@ template <typename T> struct Parameters {
   Parameters() {}
 
   void fromMap(std::unordered_map<std::string, std::string> &m) {
-    psUtils::AssignItems(                                    //
-        m,                                                   //
-        psUtils::Item{"gridDelta", gridDelta},               //
-        psUtils::Item{"xExtent", xExtent},                   //
-        psUtils::Item{"yExtent", yExtent},                   //
-        psUtils::Item{"holeRadius", holeRadius},             //
-        psUtils::Item{"maskHeight", maskHeight},             //
-        psUtils::Item{"taperAngle", taperAngle},             //
-        psUtils::Item{"processTime", processTime},           //
-        psUtils::Item{"totalEtchantFlux", totalEtchantFlux}, //
-        psUtils::Item{"totalOxygenFlux", totalOxygenFlux},   //
-        psUtils::Item{"totalIonFlux", totalIonFlux},         //
-        psUtils::Item{"rfBias", rfBias},                     //
-        psUtils::Item{"A_O", A_O},                           //
-        psUtils::Item{"raysPerPoint", raysPerPoint}          //
+    psUtils::AssignItems(                           //
+        m,                                          //
+        psUtils::Item{"gridDelta", gridDelta},      //
+        psUtils::Item{"xExtent", xExtent},          //
+        psUtils::Item{"yExtent", yExtent},          //
+        psUtils::Item{"holeRadius", holeRadius},    //
+        psUtils::Item{"maskHeight", maskHeight},    //
+        psUtils::Item{"taperAngle", taperAngle},    //
+        psUtils::Item{"processTime", processTime},  //
+        psUtils::Item{"etchantFlux", etchantFlux},  //
+        psUtils::Item{"oxygenFlux", oxygenFlux},    //
+        psUtils::Item{"ionFlux", ionFlux},          //
+        psUtils::Item{"rfBias", rfBias},            //
+        psUtils::Item{"A_O", A_O},                  //
+        psUtils::Item{"raysPerPoint", raysPerPoint} //
     );
   }
 };

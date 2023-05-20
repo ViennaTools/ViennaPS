@@ -8,6 +8,8 @@
 #include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>
 
+#include <IsotropicProcess.hpp>
+
 #include "Parameters.hpp"
 
 int main(int argc, char *argv[]) {
@@ -58,15 +60,12 @@ int main(int argc, char *argv[]) {
   std::cout << "Extruding to 3D ..." << std::endl;
   auto extruded = psSmartPointer<psDomain<NumericType, 3>>::New();
   std::array<NumericType, 2> extrudeExtent = {-20., 20.};
-  psExtrude<NumericType>(domain, extruded, extrudeExtent, 2).apply();
+  psExtrude<NumericType>(domain, extruded, extrudeExtent, 0,
+                         {lsBoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
+                          lsBoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
+                          lsBoundaryConditionEnum<3>::INFINITE_BOUNDARY})
+      .apply();
+
   extruded->printSurface("surface.vtp");
-
-  std::cout << "Writing to surface" << std::endl;
-  {
-    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-    psToDiskMesh<NumericType, 3>(extruded, mesh).apply();
-    lsVTKWriter<NumericType>(mesh, "Extruded_surface.vtp").apply();
-  }
-
   psWriteVisualizationMesh<NumericType, 3>(extruded, "final_extruded").apply();
 }

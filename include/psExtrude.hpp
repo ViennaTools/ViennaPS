@@ -10,15 +10,17 @@ template <class NumericType> class psExtrude {
   psSmartPointer<psDomain<NumericType, 3>> outputDomain;
   std::array<NumericType, 2> extent = {0., 0.};
   int extrudeDim = 0;
+  std::array<lsBoundaryConditionEnum<3>, 3> boundaryConds;
 
 public:
   psExtrude() {}
   psExtrude(lsSmartPointer<psDomain<NumericType, 2>> passedInputDomain,
             lsSmartPointer<psDomain<NumericType, 3>> passedOutputDomain,
-            std::array<NumericType, 2> passedExtent,
-            const int passedExtrudeDim = 0)
+            std::array<NumericType, 2> passedExtent, const int passedExtrudeDim,
+            std::array<lsBoundaryConditionEnum<3>, 3> passedBoundaryConds)
       : inputDomain(passedInputDomain), outputDomain(passedOutputDomain),
-        extent(passedExtent), extrudeDim(passedExtrudeDim) {}
+        extent(passedExtent), extrudeDim(passedExtrudeDim),
+        boundaryConds(passedBoundaryConds) {}
 
   void
   setInputDomain(lsSmartPointer<psDomain<NumericType, 2>> passedInputDomain) {
@@ -41,6 +43,17 @@ public:
     extrudeDim = passedExtrudeDim;
   }
 
+  void setBoundaryConditions(
+      std::array<lsBoundaryConditionEnum<3>, 3> passedBoundaryConds) {
+    boundaryConds = passedBoundaryConds;
+  }
+
+  void
+  setBoundaryConditions(lsBoundaryConditionEnum<3> passedBoundaryConds[3]) {
+    for (int i = 0; i < 3; i++)
+      boundaryConds[i] = passedBoundaryConds[i];
+  }
+
   void apply() {
     if (inputDomain == nullptr) {
       lsMessage::getInstance()
@@ -60,7 +73,7 @@ public:
     for (std::size_t i = 0; i < inputDomain->getLevelSets()->size(); i++) {
       auto tmpLS = psSmartPointer<lsDomain<NumericType, 3>>::New();
       lsExtrude<NumericType>(inputDomain->getLevelSets()->at(i), tmpLS, extent,
-                             extrudeDim)
+                             extrudeDim, boundaryConds)
           .apply();
 
       if (psLogger::getLogLevel() >= 5) {

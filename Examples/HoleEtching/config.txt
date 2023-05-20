@@ -15,11 +15,11 @@ taperAngle=0
 processTime=100 # seconds
 
 # all flux values are units 1e15 / cm²
-totalIonFlux=12.
-totalEtchantFlux=1800.
-totalOxygenFlux=200.
+ionFlux=10.
+etchantFlux=2000.
+oxygenFlux=1000.
 
 rfBias=100 # rf plasma bias (W) controls the ion energy distribution
 A_O=3 # passivation layer sputtering coefficient
 
-raysPerPoint=1000
+raysPerPoint=100

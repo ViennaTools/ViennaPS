@@ -33,9 +33,8 @@ int main(int argc, char *argv[]) {
 
   // use pre-defined model SF6O2 etching
   auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
-      params.totalIonFlux /*ion flux*/,
-      params.totalEtchantFlux /*etchant flux*/,
-      params.totalOxygenFlux /*oxygen flux*/, params.rfBias /*rf bias*/,
+      params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
+      params.oxygenFlux /*oxygen flux*/, params.rfBias /*rf bias*/,
       params.A_O /*oxy sputter yield*/);
 
   // process setup
