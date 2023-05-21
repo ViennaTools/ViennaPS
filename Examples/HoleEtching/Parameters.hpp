@@ -24,26 +24,29 @@ template <typename T> struct Parameters {
   T rfBias = 50; // W
   T A_O = 2.;
 
+  T etchStopDepth = -100;
+
   int raysPerPoint = 1000;
 
   Parameters() {}
 
   void fromMap(std::unordered_map<std::string, std::string> &m) {
-    psUtils::AssignItems(                           //
-        m,                                          //
-        psUtils::Item{"gridDelta", gridDelta},      //
-        psUtils::Item{"xExtent", xExtent},          //
-        psUtils::Item{"yExtent", yExtent},          //
-        psUtils::Item{"holeRadius", holeRadius},    //
-        psUtils::Item{"maskHeight", maskHeight},    //
-        psUtils::Item{"taperAngle", taperAngle},    //
-        psUtils::Item{"processTime", processTime},  //
-        psUtils::Item{"etchantFlux", etchantFlux},  //
-        psUtils::Item{"oxygenFlux", oxygenFlux},    //
-        psUtils::Item{"ionFlux", ionFlux},          //
-        psUtils::Item{"rfBias", rfBias},            //
-        psUtils::Item{"A_O", A_O},                  //
-        psUtils::Item{"raysPerPoint", raysPerPoint} //
+    psUtils::AssignItems(                              //
+        m,                                             //
+        psUtils::Item{"gridDelta", gridDelta},         //
+        psUtils::Item{"xExtent", xExtent},             //
+        psUtils::Item{"yExtent", yExtent},             //
+        psUtils::Item{"holeRadius", holeRadius},       //
+        psUtils::Item{"maskHeight", maskHeight},       //
+        psUtils::Item{"taperAngle", taperAngle},       //
+        psUtils::Item{"processTime", processTime},     //
+        psUtils::Item{"etchantFlux", etchantFlux},     //
+        psUtils::Item{"oxygenFlux", oxygenFlux},       //
+        psUtils::Item{"ionFlux", ionFlux},             //
+        psUtils::Item{"rfBias", rfBias},               //
+        psUtils::Item{"A_O", A_O},                     //
+        psUtils::Item{"etchStopDepth", etchStopDepth}, //
+        psUtils::Item{"raysPerPoint", raysPerPoint}    //
     );
   }
 };

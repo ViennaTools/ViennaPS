@@ -8,7 +8,7 @@ yExtent=1
 
 # Geometry
 holeRadius=0.2
-maskHeight=0.2
+maskHeight=0.4
 taperAngle=0
 
 # Process paramters
@@ -16,10 +16,12 @@ processTime=100 # seconds
 
 # all flux values are units 1e15 / cm²
 ionFlux=10.
-etchantFlux=2000.
-oxygenFlux=1000.
+etchantFlux=1800.
+oxygenFlux=100.
 
-rfBias=100 # rf plasma bias (W) controls the ion energy distribution
+rfBias=105 # rf plasma bias (W) controls the ion energy distribution
 A_O=3 # passivation layer sputtering coefficient
 
-raysPerPoint=100
+etchStopDepth=-10 # maximum etching depth
+
+raysPerPoint=1000

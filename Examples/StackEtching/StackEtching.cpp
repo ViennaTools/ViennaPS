@@ -1,14 +1,8 @@
 #include <FluorocarbonEtching.hpp>
-#include <SimpleDeposition.hpp>
 #include <psExtrude.hpp>
 #include <psMakeStack.hpp>
 #include <psProcess.hpp>
-#include <psToDiskMesh.hpp>
-#include <psToSurfaceMesh.hpp>
-#include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>
-
-#include <IsotropicProcess.hpp>
 
 #include "Parameters.hpp"
 
@@ -16,6 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
+  // set process verbosity
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
   // Parse the parameters
@@ -29,36 +24,45 @@ int main(int argc, char *argv[]) {
     params.fromMap(config);
   }
 
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeStack<NumericType, D>(domain, params.gridDelta, params.xExtent,
+  // geometry setup
+  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
+  psMakeStack<NumericType, D>(geometry, params.gridDelta, params.xExtent,
                               params.yExtent, params.numLayers,
                               params.layerHeight, params.substrateHeight,
                               params.holeRadius, params.maskHeight, false)
       .apply();
 
   // copy top layer for deposition
-  domain->duplicateTopLevelSet(psMaterial::Polymer);
+  geometry->duplicateTopLevelSet(psMaterial::Polymer);
 
-  psWriteVisualizationMesh<NumericType, D>(domain, "initial").apply();
-
+  // use pre-defined model Fluorocarbon etching model
   auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
       params.ionFlux, params.etchantFlux, params.polymerFlux,
       params.rfBiasPower);
 
+  // process setup
   psProcess<NumericType, D> process;
-  process.setDomain(domain);
+  process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.processTime);
   process.setMaxCoverageInitIterations(1);
   process.setSmoothFlux(true);
+
+  // print initial surface
+  psWriteVisualizationMesh<NumericType, D>(geometry, "initial").apply();
+
   process.apply();
 
-  psWriteVisualizationMesh<NumericType, D>(domain, "final").apply();
+  // write collected particle meta data (ion energy distribution) to a file
+  process.writeParticleDataLogs("ionEnergyDistribution.txt");
+
+  // print final surface
+  psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
 
   std::cout << "Extruding to 3D ..." << std::endl;
   auto extruded = psSmartPointer<psDomain<NumericType, 3>>::New();
   std::array<NumericType, 2> extrudeExtent = {-20., 20.};
-  psExtrude<NumericType>(domain, extruded, extrudeExtent, 0,
+  psExtrude<NumericType>(geometry, extruded, extrudeExtent, 0,
                          {lsBoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
                           lsBoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
                           lsBoundaryConditionEnum<3>::INFINITE_BOUNDARY})

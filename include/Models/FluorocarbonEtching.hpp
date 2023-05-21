@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include <psLogger.hpp>
 #include <psMaterials.hpp>
 #include <psProcessModel.hpp>
 
@@ -56,7 +57,7 @@ public:
     bool etchStop = false;
 
     // calculate etch rates
-    for (size_t i = 0; i < etchRate.size(); ++i) {
+    for (size_t i = 0; i < numPoints; ++i) {
       if (coordinates[i][D - 1] <= etchStopDepth) {
         etchStop = true;
         break;
@@ -123,6 +124,7 @@ public:
 
     if (etchStop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
+      psLogger::getInstance().addInfo("Etch stop depth reached.").print();
     }
 
     return psSmartPointer<std::vector<NumericType>>::New(etchRate);
@@ -306,6 +308,13 @@ public:
                                     "ionpeRate"};
   }
 
+  void logData(rayDataLog<NumericType> &dataLog) override final {
+    NumericType max = 0.75 * power + 20 + 1e-6;
+    int idx = static_cast<int>(50 * E / max);
+    assert(idx < 50 && idx >= 0);
+    dataLog.data[0][idx] += 1.;
+  }
+
 private:
   static constexpr double sqrtE_th_sp = 4.2426406871;
   static constexpr double sqrtE_th_ie = 2.;
@@ -460,7 +469,7 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FluorocarbonEtching");
-    this->insertNextParticleType(ion);
+    this->insertNextParticleType(ion, 50);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
     this->insertNextParticleType(etchantOnPoly);

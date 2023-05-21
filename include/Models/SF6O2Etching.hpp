@@ -6,6 +6,7 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
+#include <psLogger.hpp>
 #include <psProcessModel.hpp>
 #include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
@@ -16,18 +17,20 @@ class SF6O2SurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::Coverages;
 
   // fluxes in (1e15 /cm²)
-  NumericType totalIonFlux = 12.;
-  NumericType totalEtchantFlux = 1.8e3;
-  NumericType totalOxygenFlux = 1.0e2;
+  const NumericType totalIonFlux = 12.;
+  const NumericType totalEtchantFlux = 1.8e3;
+  const NumericType totalOxygenFlux = 1.0e2;
   static constexpr double rho_Si = 5.02 * 1e7;     // in (1e15 atoms/cm³)
   static constexpr NumericType k_sigma_Si = 3.0e2; // in (1e15 cm⁻²s⁻¹)
   static constexpr NumericType beta_sigma_Si = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
 
+  const NumericType etchStop = 0.;
+
 public:
   SF6O2SurfaceModel(const double ionFlux, const double etchantFlux,
-                    const double oxygenFlux)
+                    const double oxygenFlux, const NumericType etchStopDepth)
       : totalIonFlux(ionFlux), totalEtchantFlux(etchantFlux),
-        totalOxygenFlux(oxygenFlux) {}
+        totalOxygenFlux(oxygenFlux), etchStop(etchStopDepth) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (Coverages == nullptr) {
@@ -54,7 +57,14 @@ public:
     const auto eCoverage = Coverages->getScalarData("eCoverage");
     const auto oCoverage = Coverages->getScalarData("oCoverage");
 
+    bool stop = false;
+
     for (size_t i = 0; i < numPoints; ++i) {
+      if (coordinates[i][D - 1] < etchStop) {
+        stop = true;
+        break;
+      }
+
       if (psMaterialMap::mapToMaterial(static_cast<int>(materialIds[i])) ==
           psMaterial::Si) {
 
@@ -66,6 +76,11 @@ public:
 
         etchRate[i] *= 1e4; // to convert to micrometers / s
       }
+    }
+
+    if (stop) {
+      std::fill(etchRate.begin(), etchRate.end(), 0.);
+      psLogger::getInstance().addInfo("Etch stop depth reached.").print();
     }
 
     return psSmartPointer<std::vector<NumericType>>::New(etchRate);
@@ -240,7 +255,7 @@ public:
                                     "oxygenSputteringRate"};
   }
 
-  void logData(rayDataLog<NumericType> &dataLog) {
+  void logData(rayDataLog<NumericType> &dataLog) override final {
     NumericType max = 0.75 * power + 20 + 1e-6;
     int idx = static_cast<int>(50 * E / max);
     assert(idx < 50 && idx >= 0);
@@ -389,8 +404,9 @@ template <typename NumericType, int D>
 class SF6O2Etching : public psProcessModel<NumericType, D> {
 public:
   SF6O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType rfBias = 100.,
-               const NumericType oxySputterYield = 2.) {
+               const double oxygenFlux, const NumericType rfBias,
+               const NumericType oxySputterYield = 2.,
+               const NumericType etchStopDepth = 0.) {
     // particles
     auto ion =
         std::make_unique<SF6O2Ion<NumericType, D>>(rfBias, oxySputterYield);
@@ -399,7 +415,7 @@ public:
 
     // surface model
     auto surfModel = psSmartPointer<SF6O2SurfaceModel<NumericType, D>>::New(
-        ionFlux, etchantFlux, oxygenFlux);
+        ionFlux, etchantFlux, oxygenFlux, etchStopDepth);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
