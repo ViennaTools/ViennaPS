@@ -284,6 +284,7 @@ public:
       }
     }
 
+    double previousTimeStep = 0.;
     size_t counter = 0;
     psUtils::Timer rtTimer;
     psUtils::Timer callbackTimer;
@@ -419,6 +420,11 @@ public:
         }
       }
 
+      // adjust time step near end
+      if (remainingTime - previousTimeStep < 0.) {
+        advectionKernel.setAdvectionTime(remainingTime);
+      }
+
       // move coverages to LS, so they get are moved with the advection step
       if (useCoverages)
         moveCoveragesToTopLS(translator,
@@ -452,11 +458,10 @@ public:
         }
       }
 
-      remainingTime -= advectionKernel.getAdvectedTime();
+      previousTimeStep = advectionKernel.getAdvectedTime();
+      remainingTime -= previousTimeStep;
     }
 
-    addMaterialIdsToTopLS(translator,
-                          diskMesh->getCellData().getScalarData("MaterialIds"));
     processTime = processDuration - remainingTime;
     processTimer.finish();
 
