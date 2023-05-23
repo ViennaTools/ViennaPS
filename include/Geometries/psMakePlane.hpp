@@ -7,6 +7,7 @@
 
 #include <psDomain.hpp>
 #include <psLogger.hpp>
+#include <psMaterials.hpp>
 
 /**
  * Creates a plane in z(3D)/y(2D) direction.
@@ -24,17 +25,21 @@ public:
   NumericType height = 0.;
   bool periodicBoundary = false;
   bool add = false;
+  psMaterial material = psMaterial::Undefined;
 
   psMakePlane(PSPtrType passedDomain, NumericType passedHeight = 0.,
-              bool passedAdd = false)
-      : domain(passedDomain), height(passedHeight), add(passedAdd) {}
+              bool passedAdd = false,
+              const psMaterial passedMaterial = psMaterial::Undefined)
+      : domain(passedDomain), height(passedHeight), add(passedAdd),
+        material(passedMaterial) {}
 
   psMakePlane(PSPtrType passedDomain, const NumericType passedGridDelta,
               const NumericType passedXExtent, const NumericType passedYExtent,
-              const NumericType passedHeight, const bool passedPeriodic = false)
+              const NumericType passedHeight, const bool passedPeriodic = false,
+              const psMaterial passedMaterial = psMaterial::Undefined)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent), height(passedHeight),
-        periodicBoundary(passedPeriodic) {}
+        periodicBoundary(passedPeriodic), material(passedMaterial) {}
 
   void apply() {
     if (add) {
@@ -89,14 +94,22 @@ public:
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
-      domain->insertNextLevelSet(substrate);
+      if (material == psMaterial::Undefined) {
+        domain->insertNextLevelSet(substrate);
+      } else {
+        domain->insertNextLevelSetAsMaterial(substrate, material);
+      }
     } else {
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
       lsMakeGeometry<NumericType, D>(
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
-      domain->insertNextLevelSet(substrate);
+      if (material == psMaterial::Undefined) {
+        domain->insertNextLevelSet(substrate);
+      } else {
+        domain->insertNextLevelSetAsMaterial(substrate, material);
+      }
     }
   }
 };

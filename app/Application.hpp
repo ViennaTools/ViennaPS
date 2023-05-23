@@ -121,7 +121,7 @@ protected:
     auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
         processParams->totalIonFlux, processParams->totalEtchantFlux,
         processParams->totalOxygenFlux, processParams->ionEnergy,
-        processParams->A_O, processParams->maskId);
+        processParams->A_O);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
@@ -248,10 +248,11 @@ private:
                 << "\n\tzPos: " << params->maskZPos
                 << "\n\tTapering angle: " << params->taperAngle
                 << "\n\tMask: " << boolString(params->mask) << "\n\n";
-      psMakeTrench<NumericType, D>(
-          geometry, params->gridDelta, params->xExtent, params->yExtent,
-          params->trenchWidth, params->trenchHeight, params->taperAngle,
-          params->maskZPos, params->periodicBoundary, params->mask)
+      psMakeTrench<NumericType, D>(geometry, params->gridDelta, params->xExtent,
+                                   params->yExtent, params->trenchWidth,
+                                   params->trenchHeight, params->taperAngle,
+                                   params->maskZPos, params->periodicBoundary,
+                                   params->mask, params->material)
           .apply();
       break;
 
@@ -261,10 +262,11 @@ private:
                 << "\n\tzPos: " << params->maskZPos
                 << "\n\tTapering angle: " << params->taperAngle
                 << "\n\tMask: " << boolString(params->mask) << "\n\n";
-      psMakeHole<NumericType, D>(
-          geometry, params->gridDelta, params->xExtent, params->yExtent,
-          params->holeRadius, params->holeDepth, params->taperAngle,
-          params->maskZPos, params->periodicBoundary, params->mask)
+      psMakeHole<NumericType, D>(geometry, params->gridDelta, params->xExtent,
+                                 params->yExtent, params->holeRadius,
+                                 params->holeDepth, params->taperAngle,
+                                 params->maskZPos, params->periodicBoundary,
+                                 params->mask, params->material)
           .apply();
       break;
 
@@ -273,11 +275,13 @@ private:
                 << "\n\tzPos: " << params->maskZPos << "\n\n";
       if (geometry->getLevelSets()->back()) {
         std::cout << "\tAdding plane to current geometry...\n\n";
-        psMakePlane<NumericType, D>(geometry, params->maskZPos, true).apply();
+        psMakePlane<NumericType, D>(geometry, params->maskZPos, true,
+                                    params->material)
+            .apply();
       } else {
-        psMakePlane<NumericType, D>(geometry, params->gridDelta,
-                                    params->xExtent, params->yExtent,
-                                    params->maskZPos, params->periodicBoundary)
+        psMakePlane<NumericType, D>(
+            geometry, params->gridDelta, params->xExtent, params->yExtent,
+            params->maskZPos, params->periodicBoundary, params->material)
             .apply();
       }
       break;
@@ -318,7 +322,7 @@ private:
         auto layer =
             mask->layerToLevelSet(params->layers, params->maskZPos,
                                   params->maskHeight, params->maskInvert);
-        geometry->insertNextLevelSet(layer);
+        geometry->insertNextLevelSetAsMaterial(layer, params->material);
       } else {
         std::cout << "Warning: Can only parse GDS geometries in 3D application."
                   << std::endl;

@@ -11,6 +11,7 @@
 
 #include <csDenseCellSet.hpp>
 
+#include <psMaterials.hpp>
 #include <psPointValuesToLevelSet.hpp>
 #include <psSmartPointer.hpp>
 
@@ -26,12 +27,14 @@ public:
   typedef psSmartPointer<lsDomain<NumericType, D>> lsDomainType;
   typedef psSmartPointer<std::vector<lsDomainType>> lsDomainsType;
   typedef psSmartPointer<csDenseCellSet<NumericType, D>> csDomainType;
+  typedef psSmartPointer<psMaterialMap> materialMapType;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
 
 private:
   lsDomainsType levelSets = nullptr;
   csDomainType cellSet = nullptr;
+  materialMapType materialMap = nullptr;
   bool useCellSet = false;
   NumericType cellSetDepth = 0.;
 
@@ -89,6 +92,42 @@ public:
     }
     levelSets->push_back(passedLevelSet);
   }
+
+  void insertNextLevelSetAsMaterial(lsDomainType passedLevelSet,
+                                    const psMaterial material,
+                                    bool wrapLowerLevelSet = true) {
+    if (!levelSets->empty() && wrapLowerLevelSet) {
+      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->back(),
+                                         lsBooleanOperationEnum::UNION)
+          .apply();
+    }
+    if (!materialMap) {
+      materialMap = materialMapType::New();
+    }
+    materialMap->insertNextMaterial(material);
+    levelSets->push_back(passedLevelSet);
+  }
+
+  // copy the top LS and insert it in the domain (used to capture depositing
+  // material)
+  void duplicateTopLevelSet(const psMaterial material = psMaterial::Undefined) {
+    if (levelSets->empty()) {
+      return;
+    }
+
+    auto copy = lsDomainType::New(levelSets->back());
+    if (material == psMaterial::Undefined) {
+      insertNextLevelSet(copy, false);
+    } else {
+      insertNextLevelSetAsMaterial(copy, material, false);
+    }
+  }
+
+  void setMaterialMap(materialMapType passedMaterialMap) {
+    materialMap = passedMaterialMap;
+  }
+
+  materialMapType getMaterialMap() const { return materialMap; }
 
   void generateCellSet(const NumericType depth = 0.,
                        const bool passedCellSetPosition = false) {

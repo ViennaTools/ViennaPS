@@ -1,7 +1,7 @@
-#ifndef VELOCITY_FIELD_HPP
-#define VELOCITY_FIELD_HPP
+#pragma once
 
 #include <iostream>
+#include <psMaterials.hpp>
 #include <psSmartPointer.hpp>
 #include <psVelocityField.hpp>
 #include <vector>
@@ -14,7 +14,11 @@ public:
                       const std::array<T, 3> & /*normalVector*/,
                       unsigned long pointID) override {
     // implement material specific etching/deposition here
-    return velocities->at(pointID);
+    T velocity = 0.;
+    if (psMaterialMap::mapToMaterial(material) != psMaterial::Mask) {
+      velocity = -velocities->at(pointID);
+    }
+    return velocity;
   }
 
   void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
@@ -25,5 +29,3 @@ public:
 private:
   psSmartPointer<std::vector<T>> velocities = nullptr;
 };
-
-#endif // RT_VELOCITY_FIELD_HPP

@@ -10,21 +10,6 @@
 
 #include "Parameters.hpp"
 
-psSmartPointer<lsMaterialMap> createMaterialMap(const int numLayers) {
-  auto matMap = psSmartPointer<lsMaterialMap>::New();
-  matMap->insertNextMaterial(0);
-  for (int i = 0; i < numLayers; i++) {
-    if (i % 2 == 0) {
-      matMap->insertNextMaterial(1);
-    } else {
-      matMap->insertNextMaterial(2);
-    }
-  }
-  matMap->insertNextMaterial(3);
-
-  return matMap;
-}
-
 int main(int argc, char **argv) {
   using NumericType = double;
 
@@ -57,12 +42,12 @@ int main(int argc, char **argv) {
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeStack<NumericType, D>(domain, params.gridDelta, params.xExtent, 0.,
                               params.numLayers, params.layerHeight,
-                              params.substrateHeight, params.trenchWidth, false)
+                              params.substrateHeight, params.trenchWidth / 2.,
+                              0., false)
       .apply();
   // copy top layer for deposition
-  auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
-      domain->getLevelSets()->back());
-  domain->insertNextLevelSet(depoLayer);
+  domain->duplicateTopLevelSet(psMaterial::Polymer);
+
   domain->generateCellSet(params.substrateHeight +
                               params.numLayers * params.layerHeight + 10.,
                           true /* true means cell set above surface */);
@@ -94,9 +79,7 @@ int main(int argc, char **argv) {
 
   process.apply();
 
-  auto materials = createMaterialMap(params.numLayers);
-  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack", materials)
-      .apply();
+  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack").apply();
 
   return 0;
 }

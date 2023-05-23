@@ -49,6 +49,8 @@ public:
 
   void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
 
+  void setSmoothFlux(bool pSmoothFlux) { smoothFlux = pSmoothFlux; }
+
   void
   setIntegrationScheme(const lsIntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme = passedIntegrationScheme;
@@ -117,6 +119,10 @@ public:
     auto translator = lsSmartPointer<translatorType>::New();
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
+    if (domain->getMaterialMap() &&
+        domain->getMaterialMap()->size() == domain->getLevelSets()->size()) {
+      meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
+    }
 
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
         model->getVelocityField());
@@ -148,6 +154,16 @@ public:
       rayTrace.setBoundaryConditions(rayBoundaryCondition);
       rayTrace.setUseRandomSeeds(useRandomSeeds);
       rayTrace.setCalculateFlux(false);
+
+      // initialize particle data logs
+      particleDataLogs.resize(model->getParticleTypes()->size());
+      for (std::size_t i = 0; i < model->getParticleTypes()->size(); i++) {
+        int logSize = model->getParticleLogSize(i);
+        if (logSize > 0) {
+          particleDataLogs[i].data.resize(1);
+          particleDataLogs[i].data[0].resize(logSize);
+        }
+      }
     }
 
     // Determine whether advection callback is used
@@ -207,7 +223,13 @@ public:
 
           auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
+          std::size_t particleIdx = 0;
           for (auto &particle : *model->getParticleTypes()) {
+            int dataLogSize = model->getParticleLogSize(particleIdx);
+            if (dataLogSize > 0) {
+              rayTrace.getDataLog().data.resize(1);
+              rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+            }
             rayTrace.setParticleType(particle);
             rayTrace.apply();
 
@@ -218,10 +240,16 @@ public:
 
               // normalize rates
               rayTrace.normalizeFlux(rate);
-
+              if (smoothFlux)
+                rayTrace.smoothFlux(rate);
               Rates->insertNextScalarData(std::move(rate),
                                           localData.getVectorDataLabel(i));
             }
+
+            if (dataLogSize > 0) {
+              particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+            }
+            ++particleIdx;
           }
 
           // move coverages back in the model
@@ -256,6 +284,7 @@ public:
       }
     }
 
+    double previousTimeStep = 0.;
     size_t counter = 0;
     psUtils::Timer rtTimer;
     psUtils::Timer callbackTimer;
@@ -297,7 +326,13 @@ public:
           rayTrace.setGlobalData(rayTraceCoverages);
         }
 
+        std::size_t particleIdx = 0;
         for (auto &particle : *model->getParticleTypes()) {
+          int dataLogSize = model->getParticleLogSize(particleIdx);
+          if (dataLogSize > 0) {
+            rayTrace.getDataLog().data.resize(1);
+            rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+          }
           rayTrace.setParticleType(particle);
           rayTrace.apply();
 
@@ -309,9 +344,16 @@ public:
 
             // normalize rates
             rayTrace.normalizeFlux(rate);
+            if (smoothFlux)
+              rayTrace.smoothFlux(rate);
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
+
+          if (dataLogSize > 0) {
+            particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+          }
+          ++particleIdx;
         }
 
         // move coverages back to model
@@ -353,8 +395,9 @@ public:
                         name + "_" + std::to_string(counter) + ".vtp");
           if (domain->getUseCellSet()) {
             domain->getCellSet()->writeVTU(name + "_cellSet_" +
-                                           std::to_string(counter++) + ".vtu");
+                                           std::to_string(counter) + ".vtu");
           }
+          counter++;
         }
       }
 
@@ -375,6 +418,11 @@ public:
               .print();
           break;
         }
+      }
+
+      // adjust time step near end
+      if (remainingTime - previousTimeStep < 0.) {
+        advectionKernel.setAdvectionTime(remainingTime);
       }
 
       // move coverages to LS, so they get are moved with the advection step
@@ -410,11 +458,10 @@ public:
         }
       }
 
-      remainingTime -= advectionKernel.getAdvectedTime();
+      previousTimeStep = advectionKernel.getAdvectedTime();
+      remainingTime -= previousTimeStep;
     }
 
-    addMaterialIdsToTopLS(translator,
-                          diskMesh->getCellData().getScalarData("MaterialIds"));
     processTime = processDuration - remainingTime;
     processTimer.finish();
 
@@ -438,6 +485,22 @@ public:
                      processTimer.totalDuration * 1e-9)
           .print();
     }
+  }
+
+  void writeParticleDataLogs(std::string fileName) {
+    std::ofstream file(fileName.c_str());
+
+    for (std::size_t i = 0; i < particleDataLogs.size(); i++) {
+      if (!particleDataLogs[i].data.empty()) {
+        file << "particle" << i << "_data ";
+        for (std::size_t j = 0; j < particleDataLogs[i].data[0].size(); j++) {
+          file << particleDataLogs[i].data[0][j] << " ";
+        }
+        file << "\n";
+      }
+    }
+
+    file.close();
   }
 
 private:
@@ -547,13 +610,16 @@ private:
 
   psDomainType domain = nullptr;
   psSmartPointer<psProcessModel<NumericType, D>> model = nullptr;
+  psSmartPointer<psMaterialMap> materialMap = nullptr;
   NumericType processDuration;
   rayTraceDirection sourceDirection =
       D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
   lsIntegrationSchemeEnum integrationScheme =
       lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   long raysPerPoint = 1000;
+  std::vector<rayDataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds = true;
+  bool smoothFlux = false;
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
   NumericType printTime = 0.;

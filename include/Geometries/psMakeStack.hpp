@@ -28,7 +28,8 @@ template <class T, int D> class psMakeStack {
   const int numLayers = 11;
   const T layerHeight = 2;
   const T substrateHeight = 4;
-  const T trenchWidth = 4;
+  const T holeRadius = 0.;
+  const T maskHeight = 0.;
   const bool periodicBoundary = false;
 
   typename lsDomain<T, D>::BoundaryType boundaryConds[D];
@@ -36,23 +37,16 @@ template <class T, int D> class psMakeStack {
   PSPtrType geometry;
 
 public:
-  psMakeStack(PSPtrType passedDomain, const int passedNumLayers,
-              const T passedGridDelta)
-      : numLayers(passedNumLayers), gridDelta(passedGridDelta),
-        geometry(passedDomain) {
-    init();
-  }
-
   psMakeStack(PSPtrType passedDomain, const T passedGridDelta,
               const T passedXExtent, const T passedYExtent,
               const int passedNumLayers, const T passedLayerHeight,
-              const T passedSubstrateHeight, const T passedTrenchWidth,
-              const bool periodic = false)
+              const T passedSubstrateHeight, const T passedHoleRadius,
+              const T passedMaskHeight, const bool periodic = false)
       : geometry(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         numLayers(passedNumLayers), layerHeight(passedLayerHeight),
-        substrateHeight(passedSubstrateHeight), trenchWidth(passedTrenchWidth),
-        periodicBoundary(periodic) {
+        substrateHeight(passedSubstrateHeight), holeRadius(passedHoleRadius),
+        maskHeight(passedMaskHeight), periodicBoundary(periodic) {
     init();
   }
 
@@ -72,74 +66,151 @@ private:
   void create2DGeometry() {
     geometry->clear();
 
+    if (maskHeight > 0.) {
+      // mask on top
+      auto mask = LSPtrType::New(bounds, boundaryConds, gridDelta);
+      origin[D - 1] = substrateHeight + layerHeight * numLayers + maskHeight;
+      lsMakeGeometry<T, D>(mask,
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+          .apply();
+
+      auto maskAdd = LSPtrType::New(bounds, boundaryConds, gridDelta);
+      origin[D - 1] = substrateHeight + layerHeight * numLayers;
+      normal[D - 1] = -1;
+      lsMakeGeometry<T, D>(maskAdd,
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+          .apply();
+      normal[D - 1] = 1.;
+
+      lsBooleanOperation<T, D>(mask, maskAdd, lsBooleanOperationEnum::INTERSECT)
+          .apply();
+
+      T minPoint[D] = {-holeRadius,
+                       substrateHeight + layerHeight * numLayers - gridDelta};
+      T maxPoint[D] = {holeRadius, substrateHeight + layerHeight * numLayers +
+                                       maskHeight + gridDelta};
+      lsMakeGeometry<T, D>(maskAdd,
+                           lsSmartPointer<lsBox<T, D>>::New(minPoint, maxPoint))
+          .apply();
+
+      lsBooleanOperation<T, D>(mask, maskAdd,
+                               lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+          .apply();
+
+      geometry->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+    }
+
     // Silicon substrate
     auto substrate = LSPtrType::New(bounds, boundaryConds, gridDelta);
     origin[D - 1] = substrateHeight;
-    auto plane = lsSmartPointer<lsPlane<T, D>>::New(origin, normal);
-    lsMakeGeometry<T, D>(substrate, plane).apply();
-    geometry->insertNextLevelSet(substrate);
+    lsMakeGeometry<T, D>(substrate,
+                         lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+        .apply();
+    geometry->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
 
     // Si3N4/SiO2 layers
     T current = substrateHeight + layerHeight;
     for (int i = 0; i < numLayers; ++i) {
       auto ls = LSPtrType::New(bounds, boundaryConds, gridDelta);
       origin[D - 1] = substrateHeight + layerHeight * (i + 1);
-      auto plane = lsSmartPointer<lsPlane<T, D>>::New(origin, normal);
-      lsMakeGeometry<T, D>(ls, plane).apply();
-      geometry->insertNextLevelSet(ls);
+      lsMakeGeometry<T, D>(ls,
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+          .apply();
+      if (i % 2 == 0) {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+      } else {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+      }
     }
 
-    // cut out middle
-    auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
-    T minPoint[D] = {-trenchWidth / 2., 0.};
-    T maxPoint[D] = {trenchWidth / 2.,
-                     substrateHeight + layerHeight * numLayers + gridDelta};
-    lsMakeGeometry<T, D>(cutOut,
-                         lsSmartPointer<lsBox<T, D>>::New(minPoint, maxPoint))
-        .apply();
-
-    for (auto layer : *geometry->getLevelSets()) {
-      lsBooleanOperation<T, D>(layer, cutOut,
-                               lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    if (holeRadius > 0. && maskHeight == 0.) {
+      // cut out middle
+      auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
+      T minPoint[D] = {-holeRadius, 0.};
+      T maxPoint[D] = {holeRadius, substrateHeight + layerHeight * numLayers +
+                                       maskHeight + gridDelta};
+      lsMakeGeometry<T, D>(cutOut,
+                           lsSmartPointer<lsBox<T, D>>::New(minPoint, maxPoint))
           .apply();
+
+      for (auto layer : *geometry->getLevelSets()) {
+        lsBooleanOperation<T, D>(layer, cutOut,
+                                 lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+      }
     }
   }
 
   void create3DGeometry() {
     geometry->clear();
 
-    // cut out middle
-    auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
-    origin[D - 1] = 0.;
-    {
-      T minPoint[D] = {-trenchWidth / 2., -yExtent, 0.};
-      T maxPoint[D] = {trenchWidth / 2., yExtent,
-                       substrateHeight + layerHeight * numLayers + gridDelta};
-      lsMakeGeometry<T, D>(cutOut,
-                           lsSmartPointer<lsBox<T, D>>::New(minPoint, maxPoint))
+    if (maskHeight > 0.) {
+      auto mask = LSPtrType::New(bounds, boundaryConds, gridDelta);
+      origin[D - 1] = substrateHeight + layerHeight * numLayers + maskHeight;
+      lsMakeGeometry<T, D>(mask,
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
+
+      auto maskAdd = LSPtrType::New(bounds, boundaryConds, gridDelta);
+      origin[D - 1] = substrateHeight + layerHeight * numLayers;
+      normal[D - 1] = -1;
+      lsMakeGeometry<T, D>(maskAdd,
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+          .apply();
+
+      lsBooleanOperation<T, D>(mask, maskAdd, lsBooleanOperationEnum::INTERSECT)
+          .apply();
+
+      normal[D - 1] = 1.;
+      lsMakeGeometry<T, D>(
+          maskAdd, lsSmartPointer<lsCylinder<T, D>>::New(
+                       origin, normal, maskHeight + gridDelta, holeRadius))
+          .apply();
+
+      lsBooleanOperation<T, D>(mask, maskAdd,
+                               lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+          .apply();
+
+      geometry->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
     }
 
     // Silicon substrate
     auto substrate = LSPtrType::New(bounds, boundaryConds, gridDelta);
     origin[D - 1] = substrateHeight;
-    auto plane = lsSmartPointer<lsPlane<T, D>>::New(origin, normal);
-    lsMakeGeometry<T, D>(substrate, plane).apply();
-    lsBooleanOperation<T, D>(substrate, cutOut,
-                             lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    lsMakeGeometry<T, D>(substrate,
+                         lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
         .apply();
-    geometry->insertNextLevelSet(substrate);
+    geometry->insertNextLevelSet(substrate, psMaterial::Si);
 
     // Si3N4/SiO2 layers
     for (int i = 0; i < numLayers; ++i) {
       auto ls = LSPtrType::New(bounds, boundaryConds, gridDelta);
       origin[D - 1] = substrateHeight + layerHeight * (i + 1);
-      auto plane = lsSmartPointer<lsPlane<T, D>>::New(origin, normal);
-      lsMakeGeometry<T, D>(ls, plane).apply();
-      lsBooleanOperation<T, D>(ls, cutOut,
-                               lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+      lsMakeGeometry<T, D>(ls,
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
-      geometry->insertNextLevelSet(ls);
+      if (i % 2 == 0) {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+      } else {
+        geometry->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+      }
+    }
+
+    if (holeRadius > 0. && maskHeight == 0.) {
+      // cut out middle
+      auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
+      origin[D - 1] = 0.;
+      lsMakeGeometry<T, D>(
+          cutOut,
+          lsSmartPointer<lsCylinder<T, D>>::New(
+              origin, normal, (numLayers + 1) * layerHeight, holeRadius))
+          .apply();
+
+      for (auto layer : *geometry->getLevelSets()) {
+        lsBooleanOperation<T, D>(layer, cutOut,
+                                 lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+      }
     }
   }
 

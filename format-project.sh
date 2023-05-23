@@ -3,10 +3,10 @@
 # note: if you aliased clang-format, invoke this script using
 # bash -i format-project.sh
 
-find `pwd` -iname "*.hpp" -o -iname "*.cpp" -not -path "./build*" -not -path "./dependencies/*" | while read -r i; do clang-format -i "$i"; done
+find . -type d \( -path ./dependencies -o -path ./build* \) -prune -false -o -name "*.hpp" -o -name "*.cpp" | while read -r i; do echo $i; clang-format -i "$i"; done
 
-# cmake-format can be installed with `pip install --upgrade cmakelang`
+# cmake-format can be installed with `pip install --upgrade cmake-format`
 if command -v cmake-format &> /dev/null
 then
-    find `pwd` -iname "CMakeLists.txt" -o -iname "*.cmake.in" -not -path "./build*" -not -path "./dependencies/*"  | while read -r i; do cmake-format --line-width 100 -i "$i"; done
+    find . -type d \( -path ./dependencies -o -path ./build* \) -prune -false -o -name *.cmake -o -name CMakeLists.txt -o -name *.cmake.in  | while read -r i; do echo $i; cmake-format --line-width 100 -i "$i"; done
 fi

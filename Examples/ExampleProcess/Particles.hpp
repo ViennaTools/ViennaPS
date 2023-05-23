@@ -1,5 +1,4 @@
-#ifndef PARTICLES_HPP
-#define PARTICLES_HPP
+#pragma once
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -8,6 +7,8 @@
 template <typename NumericType, int D>
 class Particle : public rayParticle<Particle<NumericType, D>, NumericType> {
 public:
+  Particle(const NumericType pSticking, const NumericType pPower)
+      : stickingProbability(pSticking), sourcePower(pPower) {}
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
                         const rayTriple<NumericType> &geomNormal,
@@ -16,7 +17,7 @@ public:
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
     // collect data for this hit
-    localData.getVectorData(0)[primID] += rayWeight * stickingProbability;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -31,13 +32,14 @@ public:
   void initNew(rayRNG &RNG) override final {}
 
   int getRequiredLocalDataSize() const override final { return 1; }
-  NumericType getSourceDistributionPower() const override final { return 1.; }
+  NumericType getSourceDistributionPower() const override final {
+    return sourcePower;
+  }
   std::vector<std::string> getLocalDataLabels() const override final {
     return std::vector<std::string>{"particleRate"};
   }
 
 private:
-  static constexpr double stickingProbability = 0.1;
+  const NumericType stickingProbability = 0.2;
+  const NumericType sourcePower = 1.;
 };
-
-#endif
