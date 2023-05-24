@@ -6,37 +6,40 @@
 #include <set>
 #include <vector>
 
+#include <psLogger.hpp>
 #include <psValueEstimator.hpp>
 
 // Class providing linear interpolation on rectilinear data grids
-template <typename NumericType, int InputDim, int OutputDim>
+template <typename NumericType>
 class psRectilinearGridInterpolation
-    : public psValueEstimator<NumericType, InputDim, OutputDim, bool> {
+    : public psValueEstimator<NumericType, bool> {
 
-  using Parent = psValueEstimator<NumericType, InputDim, OutputDim, bool>;
+  using Parent = psValueEstimator<NumericType, bool>;
 
-  using typename Parent::DataVector;
-  using typename Parent::InputType;
-  using typename Parent::OutputType;
+  using typename Parent::ItemType;
+  using typename Parent::SizeType;
+  using typename Parent::VectorType;
 
   using Parent::data;
   using Parent::dataChanged;
-  using Parent::DataDim;
+  using Parent::inputDim;
+  using Parent::outputDim;
 
-  std::array<std::set<NumericType>, InputDim> uniqueValues;
+  std::vector<std::set<NumericType>> uniqueValues;
+  VectorType localData;
 
   // For rectilinear grid interpolation to work, we first have to ensure that
   // our input coordinates are arranged in a certain way
   // Future improvement: parallelize the recursive sorting using OpenMP taks
-  bool rearrange(typename DataVector::iterator start,
-                 typename DataVector::iterator end, int axis, bool capture) {
+  bool rearrange(typename VectorType::iterator start,
+                 typename VectorType::iterator end, int axis, bool capture) {
     bool equalSize = true;
 
     // We only reorder based on the input dimension, not the output dimension
-    if (axis >= InputDim)
+    if (axis >= inputDim)
       return equalSize;
 
-    size_t size = end - start;
+    auto size = std::distance(start, end);
     if (size > 1) {
       // Now sort the data along the given axis
       std::sort(start, end, [&](const auto &a, const auto &b) {
@@ -61,7 +64,9 @@ class psRectilinearGridInterpolation
           uniqueValues[axis].insert((start + i)->at(axis));
 
           if (rangeSize != i - tmp) {
-            std::cout << "Data is not arranged in a rectilinear grid!\n";
+            psLogger::getInstance()
+                .addWarning("Data is not arranged in a rectilinear grid!")
+                .print();
             equalSize = false;
             return false;
           }
@@ -85,34 +90,45 @@ public:
   psRectilinearGridInterpolation() {}
 
   bool initialize() override {
-    if (!data) {
-      std::cout << "No data provided to psRectilinearGridInterpolation!\n";
+    if (!data || (data && data->empty())) {
+      psLogger::getInstance()
+          .addWarning(
+              "psRectilinearGridInterpolation: the provided data is empty.")
+          .print();
       return false;
     }
 
-    if (data->size() == 0)
+    if (data->at(0).size() != inputDim + outputDim) {
+      psLogger::getInstance()
+          .addWarning(
+              "psNearestNeighborsInterpolation: the sum of the provided "
+              "InputDimension and OutputDimension does not match the "
+              "dimension of the provided data.")
+          .print();
       return false;
+    }
 
-    auto equalSize = rearrange(data->begin(), data->end(), 0, true);
+    localData.clear();
+    localData.reserve(data->size());
+    std::copy(data->begin(), data->end(), std::back_inserter(localData));
 
-    // #ifdef VIENNAPS_VERBOSE
-    //     for (auto &ticks : uniqueValues) {
-    //       std::cout << "Unique grid values: ";
-    //       for (auto tick : ticks)
-    //         std::cout << tick << ", ";
-    //       std::cout << std::endl;
-    //     }
-    // #endif
+    uniqueValues.resize(inputDim);
+
+    auto equalSize = rearrange(localData.begin(), localData.end(), 0, true);
 
     if (!equalSize) {
-      std::cout << "Data is not arranged in a rectilinear grid!\n";
+      psLogger::getInstance()
+          .addWarning("Data is not arranged in a rectilinear grid!")
+          .print();
       return false;
     }
 
-    for (int i = 0; i < InputDim; ++i)
+    for (int i = 0; i < inputDim; ++i)
       if (uniqueValues[i].empty()) {
-        std::cout << "The grid has no values along dimension " << i
-                  << std::endl;
+        psLogger::getInstance()
+            .addWarning("The grid has no values along dimension " +
+                        std::to_string(i))
+            .print();
         return false;
       }
 
@@ -120,13 +136,14 @@ public:
     return true;
   }
 
-  std::tuple<OutputType, bool> estimate(const InputType &input) override {
+  std::optional<std::tuple<ItemType, bool>>
+  estimate(const ItemType &input) override {
     if (dataChanged)
       if (!initialize())
-        return {{}, {}};
+        return {};
 
     bool isInside = true;
-    for (int i = 0; i < InputDim; ++i)
+    for (int i = 0; i < inputDim; ++i)
       if (!uniqueValues[i].empty()) {
         // Check if the input lies within the bounds of our data grid
         if (input[i] < *(uniqueValues[i].begin()) ||
@@ -134,14 +151,14 @@ public:
           isInside = false;
         }
       } else {
-        return {{}, {}};
+        return {};
       }
 
-    std::array<size_t, InputDim> gridIndices;
-    std::array<NumericType, InputDim> normalizedCoordinates;
+    std::vector<SizeType> gridIndices(inputDim, 0);
+    std::vector<NumericType> normalizedCoordinates(inputDim, 0.);
 
     // Check in which hyperrectangle the provided input coordinates are located
-    for (int i = 0; i < InputDim; ++i) {
+    for (int i = 0; i < inputDim; ++i) {
       if (input[i] <= *uniqueValues[i].begin()) {
         // The coordinate is lower than or equal to the lowest grid point along
         // the axis i.
@@ -171,13 +188,14 @@ public:
     }
 
     // Now retrieve the values at the corners of the selected hyperrectangle
-    std::array<std::array<NumericType, OutputDim>, (1 << InputDim)>
-        cornerValues;
+    std::vector<std::vector<NumericType>> cornerValues(
+        1 << inputDim, std::vector<NumericType>(outputDim, 0.));
+
     for (int i = 0; i < cornerValues.size(); ++i) {
       size_t index = 0;
       size_t stepsize = 1;
 
-      for (int j = InputDim - 1; j >= 0; --j) {
+      for (int j = inputDim - 1; j >= 0; --j) {
         // To get all combinations of corners of the hyperrectangle, we say
         // that each bit in the i variable corresponds to an axis. A zero
         // bit at a certain location represents a lower bound of the
@@ -197,15 +215,15 @@ public:
         index += (gridIndices[j] + (1 - lower)) * stepsize;
         stepsize *= uniqueValues[j].size();
       }
-      const auto &corner = data->at(index);
-      std::copy(corner.cbegin() + InputDim, corner.cend(),
+      const auto &corner = localData.at(index);
+      std::copy(corner.cbegin() + inputDim, corner.cend(),
                 cornerValues[i].begin());
     }
 
     // Now do the actual linear interpolation
-    std::array<NumericType, OutputDim> result{0};
-    for (int dim = 0; dim < OutputDim; ++dim) {
-      for (int i = InputDim - 1; i >= 0; --i) {
+    std::vector<NumericType> result(outputDim, 0.);
+    for (int dim = 0; dim < outputDim; ++dim) {
+      for (int i = inputDim - 1; i >= 0; --i) {
         int stride = 1 << i;
         for (int j = 0; j < stride; ++j) {
           cornerValues[j][dim] =
@@ -216,7 +234,7 @@ public:
       result[dim] = cornerValues[0][dim];
     }
 
-    return {result, isInside};
+    return {{result, isInside}};
   }
 };
 

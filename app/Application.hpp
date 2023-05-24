@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <lsReader.hpp>
+#include <lsRemoveStrayPoints.hpp>
 
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
@@ -20,6 +21,7 @@
 
 #include <DirectionalEtching.hpp>
 #include <GeometricDistributionModels.hpp>
+#include <IsotropicProcess.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
 #include <WetEtching.hpp>
@@ -100,34 +102,41 @@ protected:
   virtual void
   runSimpleDeposition(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                       psSmartPointer<ApplicationParameters> processParams) {
-    SimpleDeposition<NumericType, D> model(processParams->sticking,
-                                           processParams->cosinePower);
+    // copy top layer for deposition
+    auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
+        processGeometry->getLevelSets()->back());
+    processGeometry->insertNextLevelSet(depoLayer);
+
+    auto model = psSmartPointer<SimpleDeposition<NumericType, D>>::New(
+        processParams->sticking, processParams->cosinePower);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime *
                                processParams->rate / processParams->sticking);
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
   virtual void
   runSF6O2Etching(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                   psSmartPointer<ApplicationParameters> processParams) {
-    SF6O2Etching<NumericType, D> model(
+    auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
         processParams->totalIonFlux, processParams->totalEtchantFlux,
         processParams->totalOxygenFlux, processParams->ionEnergy,
-        processParams->A_O, processParams->maskId);
+        processParams->A_O);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setMaxCoverageInitIterations(10);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -140,26 +149,28 @@ protected:
   virtual void runSphereDistribution(
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
-    SphereDistribution<NumericType, D> model(processParams->radius,
-                                             processParams->gridDelta);
+    auto model = psSmartPointer<SphereDistribution<NumericType, D>>::New(
+        processParams->radius, processParams->gridDelta);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setProcessModel(model);
+    process.setPrintTimeInterval(params->printTimeInterval);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
   virtual void
   runBoxDistribution(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                      psSmartPointer<ApplicationParameters> processParams) {
-    BoxDistribution<NumericType, D> model(processParams->halfAxes,
-                                          processParams->gridDelta);
+    auto model = psSmartPointer<BoxDistribution<NumericType, D>>::New(
+        processParams->halfAxes, processParams->gridDelta);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setProcessModel(model);
+    process.setPrintTimeInterval(params->printTimeInterval);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -167,15 +178,39 @@ protected:
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
 
-    DirectionalEtching<NumericType, D> model(
+    auto model = psSmartPointer<DirectionalEtching<NumericType, D>>::New(
         getDirection(processParams->direction), processParams->directionalRate,
         processParams->isotropicRate, processParams->maskId);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
-    process.setProcessModel(model.getProcessModel());
+    process.setProcessModel(model);
     process.setProcessDuration(params->processTime);
-    process.setPrintIntdermediate(params->printIntermediate);
+    process.setPrintTimeInterval(params->printTimeInterval);
+    process.setIntegrationScheme(params->integrationScheme);
+    process.apply();
+  }
+
+  virtual void
+  runIsotropicProcess(psSmartPointer<psDomain<NumericType, D>> processGeometry,
+                      psSmartPointer<ApplicationParameters> processParams) {
+
+    if (params->rate > 0.) {
+      // copy top layer for deposition
+      auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
+          processGeometry->getLevelSets()->back());
+      processGeometry->insertNextLevelSet(depoLayer);
+    }
+
+    auto model = psSmartPointer<IsotropicProcess<NumericType, D>>::New(
+        processParams->rate, processParams->maskId);
+
+    psProcess<NumericType, D> process;
+    process.setDomain(processGeometry);
+    process.setProcessModel(model);
+    process.setProcessDuration(params->processTime);
+    process.setPrintTimeInterval(params->printTimeInterval);
+    process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
 
@@ -185,17 +220,18 @@ protected:
 
     if constexpr (D == 3) {
 
-      WetEtching<NumericType, D> model(processParams->maskId);
+      auto model = psSmartPointer<WetEtching<NumericType, D>>::New(
+          processParams->maskId);
       psProcess<NumericType, D> process;
       process.setDomain(processGeometry);
-      process.setProcessModel(model.getProcessModel());
+      process.setProcessModel(model);
       process.setProcessDuration(params->processTime);
       process.setIntegrationScheme(
           lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
-      process.setPrintIntdermediate(params->printIntermediate);
+      process.setPrintTimeInterval(params->printTimeInterval);
       process.apply();
     } else {
-      std::cout << "Warning: Wet etch model only implemented in 2D."
+      std::cout << "Warning: Wet etch model only implemented in 3D."
                 << std::endl;
     }
   }
@@ -206,9 +242,11 @@ private:
               << "\n\ty-Extent: " << params->yExtent
               << "\n\tResolution: " << params->gridDelta
               << "\n\tPrint intermediate: "
-              << boolString(params->printIntermediate)
+              << boolString(params->printTimeInterval)
               << "\n\tPeriodic boundary: "
-              << boolString(params->periodicBoundary) << "\n\n";
+              << boolString(params->periodicBoundary)
+              << "\n\tUsing integration scheme: "
+              << intSchemeString(params->integrationScheme) << "\n\n";
 
     geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   }
@@ -222,10 +260,11 @@ private:
                 << "\n\tzPos: " << params->maskZPos
                 << "\n\tTapering angle: " << params->taperAngle
                 << "\n\tMask: " << boolString(params->mask) << "\n\n";
-      psMakeTrench<NumericType, D>(
-          geometry, params->gridDelta, params->xExtent, params->yExtent,
-          params->trenchWidth, params->trenchHeight, params->taperAngle,
-          params->maskZPos, params->periodicBoundary, params->mask)
+      psMakeTrench<NumericType, D>(geometry, params->gridDelta, params->xExtent,
+                                   params->yExtent, params->trenchWidth,
+                                   params->trenchHeight, params->taperAngle,
+                                   params->maskZPos, params->periodicBoundary,
+                                   params->mask, params->material)
           .apply();
       break;
 
@@ -235,10 +274,11 @@ private:
                 << "\n\tzPos: " << params->maskZPos
                 << "\n\tTapering angle: " << params->taperAngle
                 << "\n\tMask: " << boolString(params->mask) << "\n\n";
-      psMakeHole<NumericType, D>(
-          geometry, params->gridDelta, params->xExtent, params->yExtent,
-          params->holeRadius, params->holeDepth, params->taperAngle,
-          params->maskZPos, params->periodicBoundary, params->mask)
+      psMakeHole<NumericType, D>(geometry, params->gridDelta, params->xExtent,
+                                 params->yExtent, params->holeRadius,
+                                 params->holeDepth, params->taperAngle,
+                                 params->maskZPos, params->periodicBoundary,
+                                 params->mask, params->material)
           .apply();
       break;
 
@@ -247,11 +287,13 @@ private:
                 << "\n\tzPos: " << params->maskZPos << "\n\n";
       if (geometry->getLevelSets()->back()) {
         std::cout << "\tAdding plane to current geometry...\n\n";
-        psMakePlane<NumericType, D>(geometry, params->maskZPos, true).apply();
+        psMakePlane<NumericType, D>(geometry, params->maskZPos, true,
+                                    params->material)
+            .apply();
       } else {
-        psMakePlane<NumericType, D>(geometry, params->gridDelta,
-                                    params->xExtent, params->yExtent,
-                                    params->maskZPos, params->periodicBoundary)
+        psMakePlane<NumericType, D>(
+            geometry, params->gridDelta, params->xExtent, params->yExtent,
+            params->maskZPos, params->periodicBoundary, params->material)
             .apply();
       }
       break;
@@ -292,7 +334,7 @@ private:
         auto layer =
             mask->layerToLevelSet(params->layers, params->maskZPos,
                                   params->maskHeight, params->maskInvert);
-        geometry->insertNextLevelSet(layer);
+        geometry->insertNextLevelSetAsMaterial(layer, params->material);
       } else {
         std::cout << "Warning: Can only parse GDS geometries in 3D application."
                   << std::endl;
@@ -400,8 +442,19 @@ private:
       break;
     }
 
+    case ProcessType::ISOTROPIC: {
+      std::cout << "Isotropic process\n\tTime: " << params->processTime
+                << "\n\tIsotropic rate: " << params->rate << "\n\n";
+      runIsotropicProcess(geometry, params);
+      break;
+    }
+
     case ProcessType::WETETCHING: {
-      std::cout << "Wet etching\n\tTime: " << params->processTime << "\n\n";
+      std::cout << "Wet etching\n\tTime: " << params->processTime
+                << "\n\tUsing integration scheme: "
+                << intSchemeString(lsIntegrationSchemeEnum::
+                                       STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER)
+                << "\n\n";
       runWetEtching(geometry, params);
       break;
     }
@@ -459,4 +512,31 @@ private:
   }
 
   std::string boolString(const int in) { return in == 0 ? "false" : "true"; }
+
+  std::string intSchemeString(lsIntegrationSchemeEnum scheme) {
+    switch (scheme) {
+    case lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER:
+      return "Enquist-Osher 1st Order";
+    case lsIntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER:
+      return "Enquist-Osher 2nd Order";
+    case lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+      return "Local Lax-Friedrichs 1st Order";
+    case lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+      return "Local Lax-Friedrichs 2nd Order";
+    case lsIntegrationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER:
+      return "Lax-Friedrichs 1st Order";
+    case lsIntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER:
+      return "Lax-Friedrichs 2nd Order";
+    case lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER:
+      return "Local Lax-Friedrichs Analytical 1st Order";
+    case lsIntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+      return "Local Local Lax-Friedrichs 1st Order";
+    case lsIntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+      return "Local Local Lax-Friedrichs 2nd Order";
+    case lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+      return "Stencil Lax-Friedrichs 1st Order";
+    }
+
+    return "Invalid integration scheme";
+  }
 };

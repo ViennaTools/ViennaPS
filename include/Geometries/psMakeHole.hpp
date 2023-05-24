@@ -6,11 +6,12 @@
 
 #include <psDomain.hpp>
 #include <psMakeTrench.hpp>
+#include <psMaterials.hpp>
 
 /**
-  Creates a hole geometry in z direction. For 2D geometries a regular trench is
-  created.
-*/
+ * Creates a hole geometry in z direction. For 2D geometries a regular trench is
+ * created.
+ */
 template <class NumericType, int D> class psMakeHole {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
@@ -29,6 +30,8 @@ public:
   bool makeMask = true;
   bool periodicBoundary = false;
 
+  psMaterial material = psMaterial::Undefined;
+
   psMakeHole(PSPtrType passedDomain) : domain(passedDomain) {}
 
   psMakeHole(PSPtrType passedDomain, const NumericType passedGridDelta,
@@ -38,22 +41,24 @@ public:
              const NumericType passedTaperAngle = 0.,
              const NumericType passedBaseHeight = 0.,
              const bool passedPeriodicBoundary = false,
-             const bool passedMakeMask = true)
+             const bool passedMakeMask = false,
+             const psMaterial passedMaterial = psMaterial::Undefined)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         holeRadius(passedHoleRadius), holeDepth(passedHoleDepth),
         taperAngle(passedTaperAngle), baseHeight(passedBaseHeight),
-        periodicBoundary(passedPeriodicBoundary), makeMask(passedMakeMask) {}
+        periodicBoundary(passedPeriodicBoundary), makeMask(passedMakeMask),
+        material(passedMaterial) {}
 
   void apply() {
     if (D != 3) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("psMakeHole: Hole geometry can only be created in 3D! "
                       "Falling back to trench geometry.")
           .print();
-      psMakeTrench<NumericType, D>(domain, gridDelta, xExtent, yExtent,
-                                   2 * holeRadius, holeDepth, taperAngle,
-                                   makeMask)
+      psMakeTrench<NumericType, D>(
+          domain, gridDelta, xExtent, yExtent, 2 * holeRadius, holeDepth,
+          taperAngle, baseHeight, periodicBoundary, makeMask, material)
           .apply();
 
       return;
@@ -138,8 +143,14 @@ public:
                                        lsBooleanOperationEnum::UNION)
         .apply();
 
-    if (makeMask)
-      domain->insertNextLevelSet(mask);
-    domain->insertNextLevelSet(substrate, false);
+    if (material == psMaterial::Undefined) {
+      if (makeMask)
+        domain->insertNextLevelSet(mask);
+      domain->insertNextLevelSet(substrate, false);
+    } else {
+      if (makeMask)
+        domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+      domain->insertNextLevelSetAsMaterial(substrate, material, false);
+    }
   }
 };

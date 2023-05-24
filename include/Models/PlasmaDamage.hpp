@@ -197,33 +197,32 @@ public:
     tracer.setParticle(damageIon);
   }
 
-  virtual void applyPreAdvect(const NumericType processTime) {
+  bool applyPreAdvect(const NumericType processTime) override {
     assert(domain->getUseCellSet());
 
     tracer.setCellSet(domain->getCellSet());
     tracer.apply();
+    return true;
   }
 
-  virtual void applyPostAdvect(const NumericType advectionTime) {}
+  bool applyPostAdvect(const NumericType advectionTime) override {
+    domain->getCellSet()->updateSurface();
+    return true;
+  }
 };
 
-template <typename NumericType, int D> class PlasmaDamage {
+template <typename NumericType, int D>
+class PlasmaDamage : public psProcessModel<NumericType, D> {
   psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
 
 public:
   PlasmaDamage(const NumericType ionEnergy = 100.,
                const NumericType meanFreePath = 1.,
                const int maskMaterial = 0) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     auto volumeModel = psSmartPointer<DamageModel<NumericType, D>>::New(
         ionEnergy, meanFreePath, maskMaterial);
 
-    processModel->setProcessName("PlasmaDamage");
-    processModel->setAdvectionCallback(volumeModel);
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setProcessName("PlasmaDamage");
+    this->setAdvectionCallback(volumeModel);
   }
 };

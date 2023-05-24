@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <psMaterials.hpp>
 #include <psUtils.hpp>
 
 enum class CommandType { NONE, INIT, GEOMETRY, PROCESS, OUTPUT, PLANARIZE };
@@ -17,7 +18,8 @@ enum class ProcessType {
   SPHEREDISTRIBUTION,
   BOXDISTRIBUTION,
   DIRECTIONALETCHING,
-  WETETCHING
+  WETETCHING,
+  ISOTROPIC
 };
 
 #ifdef VIENNAPS_USE_DOUBLE
@@ -27,7 +29,7 @@ using NumericType = float;
 #endif
 
 struct ApplicationParameters {
-  int printIntermediate = 0;
+  NumericType printTimeInterval = 0;
   GeometryType geometryType = GeometryType::NONE;
   ProcessType processType = ProcessType::NONE;
 
@@ -36,6 +38,8 @@ struct ApplicationParameters {
   NumericType xExtent = 1.0;
   NumericType yExtent = 1.0;
   int periodicBoundary = 0;
+  lsIntegrationSchemeEnum integrationScheme =
+      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
 
   // Geometry
   int mask = 0;
@@ -56,6 +60,7 @@ struct ApplicationParameters {
   int maskInvert = 0;
   NumericType xPadding = 0.;
   NumericType yPadding = 0.;
+  psMaterial material = psMaterial::Si;
 
   // Process
   NumericType processTime = 1;
@@ -116,13 +121,14 @@ struct ApplicationParameters {
     halfAxes[2] = 1.;
 
     if (all) {
-      printIntermediate = 0;
+      printTimeInterval = 0;
       geometryType = GeometryType::NONE;
       processType = ProcessType::NONE;
       gridDelta = 0.02;
       xExtent = 1.0;
       yExtent = 1.0;
       periodicBoundary = 0;
+      integrationScheme = lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
     }
   }
 };

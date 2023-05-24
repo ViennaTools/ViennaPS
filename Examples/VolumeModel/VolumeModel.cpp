@@ -28,17 +28,17 @@ int main(int argc, char *argv[]) {
                             false /*create mask*/)
       .apply();
 
-  // generate cell set with depth 5 below the lowest point of the surface
-  geometry->generateCellSet(5. /*depth*/, false /*cell set below surface*/);
+  // generate cell set with depth 5
+  geometry->generateCellSet(-5. /*depth*/, false /*cell set below surface*/);
 
-  PlasmaDamage<NumericType, D> model(
+  auto model = psSmartPointer<PlasmaDamage<NumericType, D>>::New(
       params.ionEnergy /* mean ion energy (eV) */,
       params.meanFreePath /* damage ion mean free path */,
       -1 /*mask material ID (no mask)*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
-  process.setProcessModel(model.getProcessModel());
+  process.setProcessModel(model);
   process.setProcessDuration(0); // apply only damage model
 
   process.apply();

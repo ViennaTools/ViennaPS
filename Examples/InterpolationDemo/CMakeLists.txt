@@ -8,5 +8,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNAPS_LIBRARIES})
 
 configure_file(griddata.csv ${CMAKE_CURRENT_BINARY_DIR}/griddata.csv COPYONLY)
 configure_file(scatterdata.csv ${CMAKE_CURRENT_BINARY_DIR}/scatterdata.csv COPYONLY)
+configure_file(plot.py ${CMAKE_CURRENT_BINARY_DIR}/plot.py COPYONLY)
 
 add_dependencies(buildExamples ${PROJECT_NAME})

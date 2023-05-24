@@ -12,4 +12,4 @@ taperAngle=0
 # Process
 stickingProbability=0.1
 sourcePower=1
-processTime=5;
+processTime=5

@@ -14,14 +14,18 @@
 #include <psSmartPointer.hpp>
 #include <psUtils.hpp>
 
-template <typename NumericType, int D>
-class psCSVDataSource : public psDataSource<NumericType, D> {
-  psCSVReader<NumericType, D> reader;
-  psCSVWriter<NumericType, D> writer;
+template <typename NumericType>
+class psCSVDataSource : public psDataSource<NumericType> {
+  using Parent = psDataSource<NumericType>;
+
+  using Parent::namedParameters;
+  using Parent::positionalParameters;
+
+  psCSVReader<NumericType> reader;
+  psCSVWriter<NumericType> writer;
 
   std::string header;
-  std::unordered_map<std::string, NumericType> namedParameters;
-  std::vector<NumericType> positionalParameters;
+
   bool parametersInitialized = false;
 
   static void
@@ -32,8 +36,10 @@ class psCSVDataSource : public psDataSource<NumericType, D> {
     if (v.has_value())
       positionalParameters.push_back(v.value());
     else {
-      std::cout << "Error while converting parameter '" << input
-                << "' to numeric type.\n";
+      psLogger::getInstance()
+          .addWarning("Error while converting parameter '" + input +
+                      "' to numeric type.")
+          .print();
     }
   }
 
@@ -50,11 +56,15 @@ class psCSVDataSource : public psDataSource<NumericType, D> {
       if (v.has_value())
         namedParameters.insert({smatch[1], v.value()});
       else {
-        std::cout << "Error while converting value of parameter '" << smatch[1]
-                  << "'\n";
+        psLogger::getInstance()
+            .addWarning("Error while converting value of parameter '" +
+                        std::string(smatch[1]) + "'")
+            .print();
       }
     } else {
-      std::cout << "Error while parsing parameter line '" << input << "'\n";
+      psLogger::getInstance()
+          .addWarning("Error while parsing parameter line '" + input + "'")
+          .print();
     }
   }
 
@@ -97,8 +107,8 @@ class psCSVDataSource : public psDataSource<NumericType, D> {
   }
 
 public:
-  using typename psDataSource<NumericType, D>::DataItemType;
-  using typename psDataSource<NumericType, D>::DataVectorType;
+  using typename Parent::ItemType;
+  using typename Parent::VectorType;
 
   psCSVDataSource() {}
 
@@ -112,20 +122,38 @@ public:
     writer.setFilename(passedFilename);
   }
 
-  psSmartPointer<DataVectorType> read() override {
+  void setHeader(const std::string &passedHeader) { header = passedHeader; }
+
+  VectorType read() override {
     auto opt = reader.readHeader();
     header = opt.value_or("");
-    return reader.readContent();
+    auto contentOpt = reader.readContent();
+    if (contentOpt)
+      return contentOpt.value();
+    return {};
   }
 
-  bool write(psSmartPointer<DataVectorType> data) override {
-    if (data) {
-      writer.setHeader(header);
-      writer.initialize();
-      for (auto &row : *data)
-        if (!writer.writeRow(row))
-          return false;
+  bool write(const VectorType &data) override {
+    std::string extendedHeader = header;
+    if (!positionalParameters.empty())
+      extendedHeader +=
+          "!" + join(positionalParameters.begin(), positionalParameters.end()) +
+          "\n";
+
+    if (!namedParameters.empty()) {
+      std::vector<std::string> np;
+      for (const auto &[key, value] : namedParameters)
+        np.push_back(key + "=" + std::to_string(value));
+
+      extendedHeader += "!" + join(np.begin(), np.end()) + "\n";
     }
+
+    writer.setHeader(extendedHeader);
+    writer.initialize();
+    for (auto &row : data)
+      if (!writer.writeRow(row))
+        return false;
+
     return true;
   }
 

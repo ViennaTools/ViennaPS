@@ -1,5 +1,4 @@
-#ifndef GEOMETRIC_DISTRIBUTION_MODEL_HPP
-#define GEOMETRIC_DISTRIBUTION_MODEL_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -32,26 +31,24 @@ public:
 
   void apply() {
     if (dist)
-      if (mask)
+      if (mask) {
         lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist,
                                           mask)
             .apply();
-      else
+      } else {
         lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist)
             .apply();
+      }
   }
 };
 
-template <typename NumericType, int D> class SphereDistribution {
+template <typename NumericType, int D>
+class SphereDistribution : public psProcessModel<NumericType, D> {
   using LSPtr = psSmartPointer<lsDomain<NumericType, D>>;
-
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
 
 public:
   SphereDistribution(const NumericType radius, const NumericType gridDelta,
                      LSPtr mask = nullptr) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     auto dist = psSmartPointer<lsSphereDistribution<hrleCoordType, D>>::New(
         radius, gridDelta);
 
@@ -59,37 +56,25 @@ public:
         NumericType, D, lsSphereDistribution<hrleCoordType, D>>>::New(dist,
                                                                       mask);
 
-    processModel->setGeometricModel(geomModel);
-    processModel->setProcessName("SphereDistribution");
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setGeometricModel(geomModel);
+    this->setProcessName("SphereDistribution");
   }
 };
 
-template <typename NumericType, int D> class BoxDistribution {
+template <typename NumericType, int D>
+class BoxDistribution : public psProcessModel<NumericType, D> {
   using LSPtr = psSmartPointer<lsDomain<NumericType, D>>;
-
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
 
 public:
   BoxDistribution(const std::array<hrleCoordType, 3> &halfAxes,
                   const NumericType gridDelta, LSPtr mask = nullptr) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     auto dist = psSmartPointer<lsBoxDistribution<hrleCoordType, D>>::New(
         halfAxes, gridDelta);
 
     auto geomModel = psSmartPointer<GeometricDistributionModel<
         NumericType, D, lsBoxDistribution<hrleCoordType, D>>>::New(dist, mask);
 
-    processModel->setGeometricModel(geomModel);
-    processModel->setProcessName("BoxDistribution");
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setGeometricModel(geomModel);
+    this->setProcessName("BoxDistribution");
   }
 };
-#endif
