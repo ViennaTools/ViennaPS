@@ -22,20 +22,17 @@ class pscuSF6O2SurfaceModel : public pscuSurfaceModel<NumericType> {
   NumericType totalIonFlux;
   NumericType totalEtchantFlux;
   NumericType totalOxygenFlux;
-  int maskId = 0;
 
 public:
-  using pscuSurfaceModel<NumericType>::d_processParams;
   using pscuSurfaceModel<NumericType>::d_coverages;
   using pscuSurfaceModel<NumericType>::ratesIndexMap;
   using pscuSurfaceModel<NumericType>::coveragesIndexMap;
 
   pscuSF6O2SurfaceModel(pscuContext passedContext, const NumericType ionFlux,
                         const NumericType etchantFlux,
-                        const NumericType oxygenFlux, const int passedMask)
+                        const NumericType oxygenFlux)
       : context(passedContext), totalIonFlux(ionFlux),
-        totalEtchantFlux(etchantFlux), totalOxygenFlux(oxygenFlux),
-        maskId(passedMask) {}
+        totalEtchantFlux(etchantFlux), totalOxygenFlux(oxygenFlux) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     const int numCoverages = 2;
@@ -65,11 +62,11 @@ public:
     CUdeviceptr matIds = materialIdsBuffer.d_pointer();
 
     // launch kernel
-    void *kernel_args[] = {
-        &rates,        &coverages,        &matIds,          &erate, &numPoints,
-        &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux, &maskId};
+    void *kernelArgs[] = {
+        &rates,     &coverages,    &matIds,           &erate,
+        &numPoints, &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux};
 
-    utLaunchKernel::launch(processModuleName, calcEtchRateKernel, kernel_args,
+    utLaunchKernel::launch(processModuleName, calcEtchRateKernel, kernelArgs,
                            context);
 
     etchRateBuffer.download(etchRate.data(), numPoints);
@@ -89,11 +86,10 @@ public:
     CUdeviceptr coverages = d_coverages.d_pointer();
 
     // launch kernel
-    void *kernel_args[] = {&rates,        &coverages,        &numPoints,
-                           &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux,
-                           &maskId};
+    void *kernelArgs[] = {&rates,        &coverages,        &numPoints,
+                          &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux};
 
-    utLaunchKernel::launch(processModuleName, updateCoverageKernel, kernel_args,
+    utLaunchKernel::launch(processModuleName, updateCoverageKernel, kernelArgs,
                            context);
   }
 };

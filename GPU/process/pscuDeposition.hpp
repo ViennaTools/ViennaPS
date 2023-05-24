@@ -31,7 +31,7 @@ public:
 };
 
 class pscuDeposition {
-  psSmartPointer<psDomain<NumericType, D>> geometry;
+  psSmartPointer<psDomain<NumericType, DIM>> geometry;
   NumericType rate;
   NumericType processTime;
   NumericType sticking;
@@ -42,7 +42,7 @@ class pscuDeposition {
   int raysPerPoint;
 
 public:
-  pscuDeposition(psSmartPointer<psDomain<NumericType, D>> passedGeometry,
+  pscuDeposition(psSmartPointer<psDomain<NumericType, DIM>> passedGeometry,
                  const NumericType passedRate, const NumericType passedTime,
                  const NumericType passedSticking,
                  const NumericType passedExponent, pscuContext passedContext,
@@ -71,12 +71,11 @@ public:
     model->setProcessName("Deposition");
     model->setPtxCode(embedded_deposition_pipeline);
 
-    pscuProcess<NumericType, D> process(context);
+    pscuProcess<NumericType, DIM> process(context);
     process.setDomain(geometry);
     process.setProcessModel(model);
     process.setNumberOfRaysPerPoint(raysPerPoint);
     process.setProcessDuration(processTime * rate / sticking);
-    process.setPrintIntermediate(printIntermediate);
     process.apply();
   }
 };

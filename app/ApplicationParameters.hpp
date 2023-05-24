@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <psLogger.hpp>
 #include <psMaterials.hpp>
 #include <psUtils.hpp>
 
@@ -29,7 +30,7 @@ using NumericType = float;
 #endif
 
 struct ApplicationParameters {
-  NumericType printTimeInterval = 0;
+  int logLevel = 2;
   GeometryType geometryType = GeometryType::NONE;
   ProcessType processType = ProcessType::NONE;
 
@@ -65,12 +66,13 @@ struct ApplicationParameters {
   // Process
   NumericType processTime = 1;
   int raysPerPoint = 3000;
-  // SF6O2Etching
-  NumericType totalEtchantFlux = 4.5e16;
-  NumericType totalOxygenFlux = 1e18;
-  NumericType totalIonFlux = 2e16;
-  NumericType ionEnergy = 100;       // eV
-  NumericType plasmaFrequency = 0.1; // MHz
+  // Plasma etching
+  // fluxes in in (1e15 atoms/cm³)
+  NumericType etchantFlux = 1.8e3;
+  NumericType oxygenFlux = 1.0e2;
+  NumericType ionFlux = 12.;
+  NumericType ionEnergy = 100; // eV
+  NumericType rfBias = 105;    // W
   NumericType A_O = 3.;
   // Fluorocarbon etching
   NumericType temperature = 300; // K
@@ -104,9 +106,9 @@ struct ApplicationParameters {
     maskHeight = 0.1;
     processTime = 1;
     raysPerPoint = 3000;
-    totalEtchantFlux = 4.5e16;
-    totalOxygenFlux = 1e18;
-    totalIonFlux = 2e16;
+    etchantFlux = 4.5e16;
+    oxygenFlux = 1e18;
+    ionFlux = 2e16;
     ionEnergy = 100;
     A_O = 3.;
     rate = 1.;
@@ -121,7 +123,7 @@ struct ApplicationParameters {
     halfAxes[2] = 1.;
 
     if (all) {
-      printTimeInterval = 0;
+      logLevel = 2;
       geometryType = GeometryType::NONE;
       processType = ProcessType::NONE;
       gridDelta = 0.02;

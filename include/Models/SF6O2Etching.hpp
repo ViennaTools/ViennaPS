@@ -157,6 +157,10 @@ public:
         std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
                            static_cast<NumericType>(0.)));
 
+    NumericType f_sp_theta;
+    NumericType f_Si_theta;
+    NumericType f_O_theta;
+
     if (cosTheta > 0.5) {
       f_Si_theta = 1.;
       f_O_theta = 1.;
@@ -165,11 +169,11 @@ public:
       f_O_theta = std::max(3. - 6. * angle / rayInternal::PI, 0.);
     }
 
-    f_p_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     const double sqrtE = std::sqrt(E);
     const double Y_sp =
-        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_p_theta;
+        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
     const double Y_Si =
         A_Si * std::max(sqrtE - std::sqrt(Eth_Si), 0.) * f_Si_theta;
     const double Y_O = A_O * std::max(sqrtE - std::sqrt(Eth_O), 0.) * f_O_theta;
@@ -287,14 +291,9 @@ private:
   static constexpr NumericType A =
       1. / (1. + (n_l / n_r) * (halfPI / inflectAngle - 1.));
 
-  NumericType f_p_theta;
-  NumericType f_Si_theta;
-  NumericType f_O_theta;
-  NumericType f_SiO2_theta;
-
   // ion energy
   static constexpr NumericType minEnergy =
-      4.; // Discard particles with energy < 1eV
+      4.; // Discard particles with energy < 4eV
   const NumericType power;
   static constexpr NumericType peak = 0.2;
   NumericType E;

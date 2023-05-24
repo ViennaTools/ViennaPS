@@ -116,7 +116,6 @@ protected:
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime *
                                processParams->rate / processParams->sticking);
-    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -125,8 +124,8 @@ protected:
   runSF6O2Etching(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                   psSmartPointer<ApplicationParameters> processParams) {
     auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
-        processParams->totalIonFlux, processParams->totalEtchantFlux,
-        processParams->totalOxygenFlux, processParams->ionEnergy,
+        processParams->ionFlux, processParams->etchantFlux,
+        processParams->oxygenFlux, processParams->ionEnergy,
         processParams->A_O);
 
     psProcess<NumericType, D> process;
@@ -135,7 +134,6 @@ protected:
     process.setMaxCoverageInitIterations(10);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
-    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -155,7 +153,6 @@ protected:
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model);
-    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -169,7 +166,6 @@ protected:
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model);
-    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -186,7 +182,6 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setProcessDuration(params->processTime);
-    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -209,7 +204,6 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setProcessDuration(params->processTime);
-    process.setPrintTimeInterval(params->printTimeInterval);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -228,7 +222,6 @@ protected:
       process.setProcessDuration(params->processTime);
       process.setIntegrationScheme(
           lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
-      process.setPrintTimeInterval(params->printTimeInterval);
       process.apply();
     } else {
       std::cout << "Warning: Wet etch model only implemented in 3D."
@@ -241,8 +234,7 @@ private:
     std::cout << "\tx-Extent: " << params->xExtent
               << "\n\ty-Extent: " << params->yExtent
               << "\n\tResolution: " << params->gridDelta
-              << "\n\tPrint intermediate: "
-              << boolString(params->printTimeInterval)
+              << "\n\tLog level: " << params->logLevel
               << "\n\tPeriodic boundary: "
               << boolString(params->periodicBoundary)
               << "\n\tUsing integration scheme: "
@@ -397,9 +389,9 @@ private:
 
     case ProcessType::SF6O2ETCHING: {
       std::cout << "SF6O2 etching\n\tTime: " << params->processTime
-                << "\n\tEtchant flux: " << params->totalEtchantFlux
-                << "\n\tOxygen flux: " << params->totalOxygenFlux
-                << "\n\tIon flux: " << params->totalIonFlux
+                << "\n\tEtchant flux: " << params->etchantFlux
+                << "\n\tOxygen flux: " << params->oxygenFlux
+                << "\n\tIon flux: " << params->ionFlux
                 << "\n\tIon energy: " << params->ionEnergy
                 << "\n\tA_O: " << params->A_O << "\n\tUsing "
                 << params->raysPerPoint << " rays per source grid point\n\n";
@@ -409,9 +401,9 @@ private:
 
     case ProcessType::FLUOROCARBONETCHING: {
       std::cout << "Fluorocarbon etching\n\tTime: " << params->processTime
-                << "\n\tEtchant flux: " << params->totalEtchantFlux
-                << "\n\tOxygen flux: " << params->totalOxygenFlux
-                << "\n\tIon flux: " << params->totalIonFlux
+                << "\n\tEtchant flux: " << params->etchantFlux
+                << "\n\tOxygen flux: " << params->oxygenFlux
+                << "\n\tIon flux: " << params->ionFlux
                 << "\n\tIon energy: " << params->ionEnergy
                 << "\n\tTemperature: " << params->temperature << "\n\tUsing "
                 << params->raysPerPoint << " rays per source grid point\n\n";

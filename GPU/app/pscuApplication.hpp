@@ -8,7 +8,7 @@
 #include "pscuFluorocarbonEtching.hpp"
 #include "pscuSF6O2Etching.hpp"
 
-class pscuApplication : public Application<3> {
+class pscuApplication : public Application<DIM> {
   pscuContext context;
 
 public:
@@ -20,7 +20,7 @@ public:
 
 protected:
   void runSimpleDeposition(
-      psSmartPointer<psDomain<NumericType, D>> processGeometry,
+      psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) override {
     curtParticle<NumericType> depoParticle{.name = "depoParticle",
                                            .sticking = processParams->sticking,
@@ -40,24 +40,23 @@ protected:
     model->setProcessName("Deposition");
     model->setPtxCode(embedded_deposition_pipeline);
 
-    pscuProcess<NumericType, D> process(context);
+    pscuProcess<NumericType, DIM> process(context);
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime *
                                processParams->rate / processParams->sticking);
-    process.setPrintIntermediate(processParams->printIntermediate);
     process.apply();
   }
 
   void runSF6O2Etching(
-      psSmartPointer<psDomain<NumericType, D>> processGeometry,
+      psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) override {
     curtParticle<NumericType> ion{.name = "ion",
                                   .numberOfData = 3,
                                   .cosineExponent = 100.f,
                                   .meanIonEnergy = processParams->ionEnergy,
-                                  .ionRF = processParams->plasmaFrequency,
+                                  .ionRF = processParams->rfBias,
                                   .A_O = processParams->A_O};
     ion.dataLabels.push_back("ionSputteringRate");
     ion.dataLabels.push_back("ionEnhancedRate");
@@ -70,10 +69,9 @@ protected:
     oxygen.dataLabels.push_back("oxygenRate");
 
     auto surfModel = psSmartPointer<pscuSF6O2SurfaceModel<NumericType>>::New(
-        context, processParams->totalIonFlux, processParams->totalEtchantFlux,
-        processParams->totalOxygenFlux, processParams->maskId);
-    auto velField = psSmartPointer<SF6O2VelocityField<NumericType>>::New(
-        processParams->maskId);
+        context, processParams->ionFlux, processParams->etchantFlux,
+        processParams->oxygenFlux);
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
     auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
 
     model->insertNextParticleType(ion);
@@ -84,22 +82,21 @@ protected:
     model->setProcessName("SF6O2Etching");
     model->setPtxCode(embedded_SF6O2_pipeline);
 
-    pscuProcess<NumericType, D> process(context);
+    pscuProcess<NumericType, DIM> process(context);
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setMaxCoverageInitIterations(10);
     process.setProcessDuration(processParams->processTime);
-    process.setPrintIntermediate(processParams->printIntermediate);
     process.apply();
   }
 
   void runFluorocarbonEtching(
-      psSmartPointer<psDomain<NumericType, D>> processGeometry,
+      psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) override {
 
     // insert additional top layer to capture deposition
-    auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto depoLayer = psSmartPointer<lsDomain<NumericType, DIM>>::New(
         processGeometry->getLevelSets()->back());
     int depoId = processGeometry->getLevelSets()->size();
     processGeometry->insertNextLevelSet(depoLayer);
@@ -108,7 +105,7 @@ protected:
                                   .numberOfData = 3,
                                   .cosineExponent = 100.f,
                                   .meanIonEnergy = processParams->ionEnergy,
-                                  .ionRF = processParams->plasmaFrequency,
+                                  .ionRF = processParams->rfBias,
                                   .A_O = processParams->A_O};
     ion.dataLabels.push_back("ionSputteringFlux");
     ion.dataLabels.push_back("ionEnhancedFlux");
@@ -126,11 +123,9 @@ protected:
 
     auto surfModel =
         psSmartPointer<pscuFluorocarbonSurfaceModel<NumericType>>::New(
-            context, processParams->totalIonFlux,
-            processParams->totalEtchantFlux, processParams->totalOxygenFlux,
-            processParams->maskId, depoId);
-    auto velField = psSmartPointer<SF6O2VelocityField<NumericType>>::New(
-        processParams->maskId);
+            context, processParams->ionFlux, processParams->etchantFlux,
+            processParams->oxygenFlux, processParams->maskId, depoId);
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
     auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
 
     model->insertNextParticleType(ion);
@@ -142,13 +137,12 @@ protected:
     model->setProcessName("FluorocarbonEtching");
     model->setPtxCode(embedded_Fluorocarbon_pipeline);
 
-    pscuProcess<NumericType, D> process(context);
+    pscuProcess<NumericType, DIM> process(context);
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setMaxCoverageInitIterations(10);
     process.setProcessDuration(processParams->processTime);
-    process.setPrintIntermediate(processParams->printIntermediate);
     process.apply();
   }
 };

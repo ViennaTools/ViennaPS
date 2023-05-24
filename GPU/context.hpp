@@ -14,7 +14,7 @@
 
 // global definitions
 using NumericType = float;
-constexpr int D = 3;
+constexpr int DIM = 3;
 
 struct pscuContext_t {
   CUmodule getModule(const std::string &moduleName);
@@ -93,9 +93,12 @@ void pscuCreateContext(pscuContext &context) {
   context->modules.push_back(SF6O2ProcessModule);
 
   std::string FluorocarbonProcessKernelsName = "FluorocarbonProcessKernels.ptx";
-  err = cuModuleLoad(&FluorocarbonProcessModule, FluorocarbonProcessKernelsName.c_str());
+  err = cuModuleLoad(&FluorocarbonProcessModule,
+                     FluorocarbonProcessKernelsName.c_str());
   if (err != CUDA_SUCCESS)
-    utLog::getInstance().addModuleError(FluorocarbonProcessKernelsName, err).print();
+    utLog::getInstance()
+        .addModuleError(FluorocarbonProcessKernelsName, err)
+        .print();
 
   context->moduleNames.push_back(FluorocarbonProcessKernelsName);
   context->modules.push_back(FluorocarbonProcessModule);

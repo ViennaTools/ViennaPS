@@ -10,6 +10,8 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
+  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+
   // Parse the parameters
   Parameters<NumericType> params;
   if (argc > 1) {

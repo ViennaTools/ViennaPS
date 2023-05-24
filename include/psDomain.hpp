@@ -5,6 +5,7 @@
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsToDiskMesh.hpp>
+#include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 #include <lsWriter.hpp>
@@ -12,8 +13,8 @@
 #include <csDenseCellSet.hpp>
 
 #include <psMaterials.hpp>
-#include <psPointValuesToLevelSet.hpp>
 #include <psSmartPointer.hpp>
+#include <psSurfacePointValuesToLevelSet.hpp>
 
 /**
   This class represents all materials in the simulation domain.
@@ -164,23 +165,18 @@ public:
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
 
     if (addMaterialIds) {
-      auto translator = psSmartPointer<
-          std::unordered_map<unsigned long, unsigned long>>::New();
       lsToDiskMesh<NumericType, D> meshConverter;
       meshConverter.setMesh(mesh);
-      meshConverter.setTranslator(translator);
+      if (materialMap)
+        meshConverter.setMaterialMap(materialMap->getMaterialMap());
       for (const auto ls : *levelSets) {
         meshConverter.insertNextLevelSet(ls);
       }
       meshConverter.apply();
-      auto matIds = mesh->getCellData().getScalarData(materialIdsLabel);
-      if (matIds && matIds->size() == levelSets->back()->getNumberOfPoints())
-        psPointValuesToLevelSet<NumericType, D>(levelSets->back(), translator,
-                                                matIds, "Material")
-            .apply();
-      else
-        std::cout << "Scalar data '" << materialIdsLabel
-                  << "' not found in mesh cellData.\n";
+
+      psSurfacePointValuesToLevelSet<NumericType, D>(levelSets->back(), mesh,
+                                                     {"MaterialIds"})
+          .apply();
     }
 
     lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();

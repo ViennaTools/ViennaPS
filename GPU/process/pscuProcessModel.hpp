@@ -1,5 +1,7 @@
 #pragma once
 
+#include <context.hpp>
+
 #include <curtParticle.hpp>
 
 #include <pscuSurfaceModel.hpp>
@@ -15,9 +17,9 @@ private:
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
   psSmartPointer<pscuSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psAdvectionCallback<NumericType, 3>> advectionCallback =
+  psSmartPointer<psAdvectionCallback<NumericType, DIM>> advectionCallback =
       nullptr;
-  psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
+  psSmartPointer<psGeometricModel<NumericType, DIM>> geometricModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
   char *embbededPtxCode = nullptr;
@@ -29,11 +31,12 @@ public:
   virtual psSmartPointer<pscuSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psAdvectionCallback<NumericType, 3>>
+  virtual psSmartPointer<psAdvectionCallback<NumericType, DIM>>
   getAdvectionCallback() {
     return advectionCallback;
   }
-  virtual psSmartPointer<psGeometricModel<NumericType, D>> getGeometricModel() {
+  virtual psSmartPointer<psGeometricModel<NumericType, DIM>>
+  getGeometricModel() {
     return geometricModel;
   }
   virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
@@ -65,7 +68,7 @@ public:
   void setAdvectionCallback(
       psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
     advectionCallback =
-        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, 3>>(
+        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, DIM>>(
             passedAdvectionCallback);
   }
 
@@ -73,7 +76,7 @@ public:
   void
   setGeometricModel(psSmartPointer<GeometricModelType> passedGeometricModel) {
     geometricModel =
-        std::dynamic_pointer_cast<psGeometricModel<NumericType, D>>(
+        std::dynamic_pointer_cast<psGeometricModel<NumericType, DIM>>(
             passedGeometricModel);
   }
 

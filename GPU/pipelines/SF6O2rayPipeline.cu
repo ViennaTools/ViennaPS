@@ -18,23 +18,26 @@ enum
   RAY_TYPE_COUNT
 };
 
-__constant__ NumericType A_p = 0.0337;
+__constant__ NumericType A_sp = 0.00339;
 __constant__ NumericType A_Si = 7.;
+__constant__ NumericType B_sp = 9.3;
 
-__constant__ NumericType sqrt_Eth_p = 0.;
+__constant__ NumericType sqrt_Eth_p = 4.242640687;
 __constant__ NumericType sqrt_Eth_Si = 3.8729833462;
-__constant__ NumericType sqrt_Eth_O = 3.8729833462;
+__constant__ NumericType sqrt_Eth_O = 3.16227766;
+
 __constant__ NumericType Eref_max = 1.;
 
-__constant__ NumericType minEnergy = 1.; // Discard particles with energy < 1eV
+__constant__ NumericType minEnergy = 1.; // Discard particles with energy < 4eV
 
 __constant__ NumericType inflectAngle = 1.55334;
 __constant__ NumericType minAngle = 1.3962634;
 __constant__ NumericType n_l = 10.;
 __constant__ NumericType n_r = 1.;
+__constant__ NumericType peak = 0.2;
 
 __constant__ NumericType gamma_O = 1.;
-__constant__ NumericType gamma_F = 0.7;
+__constant__ NumericType gamma_F = 0.1;
 
 extern "C" __global__ void __closesthit__ion()
 {
@@ -61,7 +64,10 @@ extern "C" __global__ void __closesthit__ion()
 
     NumericType angle = acosf(max(min(cosTheta, 1.f), 0.f));
 
-    NumericType f_Si_theta, f_O_theta;
+    NumericType f_sp_theta;
+    NumericType f_Si_theta;
+    NumericType f_O_theta;
+
     if (cosTheta > 0.5f)
     {
       f_Si_theta = 1.f;
@@ -72,14 +78,15 @@ extern "C" __global__ void __closesthit__ion()
       f_Si_theta = max(3.f - 6.f * angle / PI_F, 0.f);
       f_O_theta = max(3.f - 6.f * angle / PI_F, 0.f);
     }
+    f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     NumericType sqrtE = sqrt(prd->energy);
-    NumericType Y_p = A_p * max(sqrtE - sqrt_Eth_p, 0.f);
+    NumericType Y_sp = A_sp * max(sqrtE - sqrt_Eth_p, 0.f) * f_sp_theta;
     NumericType Y_Si = A_Si * max(sqrtE - sqrt_Eth_Si, 0.f) * f_Si_theta;
     NumericType Y_O = params.A_O * max(sqrtE - sqrt_Eth_O, 0.f) * f_O_theta;
 
-    // sputtering yield Y_p ionSputteringRate
-    atomicAdd(&params.resultBuffer[getIdx(0, 0, &params)], Y_p);
+    // sputtering yield Y_sp ionSputteringRate
+    atomicAdd(&params.resultBuffer[getIdx(0, 0, &params)], Y_sp);
 
     // ion enhanced etching yield Y_Si ionEnhancedRate
     atomicAdd(&params.resultBuffer[getIdx(0, 1, &params)], Y_Si);
@@ -113,8 +120,9 @@ extern "C" __global__ void __closesthit__ion()
     {
       const auto rand1 = getNextRand(&prd->RNGstate);
       const auto rand2 = getNextRand(&prd->RNGstate);
-      NewEnergy = tempEnergy + (min((prd->energy - tempEnergy), tempEnergy) + prd->energy * 0.05f) 
-                             * cosf(2 * PI_F * rand1) * sqrtf(-2.f * logf(rand2));
+      NewEnergy = tempEnergy + (min((prd->energy - tempEnergy), tempEnergy) +
+                                prd->energy * 0.05f) *
+                                   cosf(2 * PI_F * rand1) * sqrtf(-2.f * logf(rand2));
     } while (NewEnergy > prd->energy || NewEnergy <= 0.f);
 
     // Set the flag to stop tracing if the energy is below the threshold
@@ -157,7 +165,8 @@ extern "C" __global__ void __raygen__ion()
   do
   {
     const auto r = getNextRand(&prd.RNGstate);
-    prd.energy = params.meanIonEnergy + (1.f / params.ionRF) * sinf(2.f * PI_F * r);
+    NumericType rand1 = r * (2.f * PI_F - 2 * peak) + peak;
+    prd.energy = (1 + cosf(rand1)) * (params.ionRF / 2 * 0.75 + 10);
   } while (prd.energy < minEnergy);
 
   // the values we store the PRD pointer in:
@@ -205,7 +214,7 @@ extern "C" __global__ void __closesthit__etchant()
     const auto &phi_F = data[primID];
     const auto &phi_O = data[primID + params.numElements];
 
-    const NumericType Seff = gamma_F * max(1.f - phi_F - phi_O, 0.f);
+    const NumericType Seff = gamma_F; //  * max(1.f - phi_F - phi_O, 0.f);
     atomicAdd(&params.resultBuffer[getIdx(1, 0, &params)], prd->rayWeight);
     prd->rayWeight -= prd->rayWeight * Seff;
     diffuseReflection(prd);
@@ -279,7 +288,8 @@ extern "C" __global__ void __closesthit__oxygen()
     const auto &phi_F = data[primID];
     const auto &phi_O = data[primID + params.numElements];
 
-    const NumericType Seff = gamma_O * max(1. - phi_F - phi_O, 0.);
+    const NumericType Seff = gamma_O;
+    // *max(1. - phi_F - phi_O, 0.);
     atomicAdd(&params.resultBuffer[getIdx(2, 0, &params)], prd->rayWeight);
     prd->rayWeight -= prd->rayWeight * Seff;
     diffuseReflection(prd);

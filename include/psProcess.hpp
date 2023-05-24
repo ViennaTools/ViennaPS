@@ -71,7 +71,7 @@ public:
           .print();
       return;
     }
-    auto name = model->getProcessName();
+    const auto name = model->getProcessName();
 
     if (!domain) {
       psLogger::getInstance()
@@ -256,7 +256,6 @@ public:
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
           model->getSurfaceModel()->updateCoverages(Rates);
-          coveragesInitialized = true;
 
           if (psLogger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
@@ -277,6 +276,8 @@ public:
                 .print();
           }
         }
+        coveragesInitialized = true;
+
         timer.finish();
         psLogger::getInstance()
             .addTiming("Coverage initialization", timer)
@@ -367,14 +368,14 @@ public:
       }
 
       // get velocities from rates
-      auto velocitites = model->getSurfaceModel()->calculateVelocities(
+      auto velocities = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
-      model->getVelocityField()->setVelocities(velocitites);
+      model->getVelocityField()->setVelocities(velocities);
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
-        if (velocitites)
-          diskMesh->getCellData().insertNextScalarData(*velocitites,
+        if (velocities)
+          diskMesh->getCellData().insertNextScalarData(*velocities,
                                                        "velocities");
         if (useCoverages) {
           auto coverages = model->getSurfaceModel()->getCoverages();
@@ -504,13 +505,6 @@ public:
   }
 
 private:
-  void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
-                        std::string name) {
-    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-    lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
-    lsVTKWriter<NumericType>(mesh, name).apply();
-  }
-
   void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
                      std::string name) {
     lsVTKWriter<NumericType>(mesh, name).apply();

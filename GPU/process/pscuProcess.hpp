@@ -15,6 +15,7 @@
 
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 #include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
@@ -51,27 +52,22 @@ public:
 
   void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
 
-  void setPrintIntermediate(const int passedPrint) {
-    printIntermediate = static_cast<bool>(passedPrint);
-  }
-
   void setPeriodicBoundary(const int passedPeriodic) {
     periodicBoundary = static_cast<bool>(passedPeriodic);
   }
 
   void apply() {
     /* ---------- Process Setup --------- */
-
-    /* ---------- Process Setup --------- */
     if (!model) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("No process model passed to psProcess.")
           .print();
       return;
     }
+    const auto name = model->getProcessName();
 
     if (!domain) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("No domain passed to psProcess.")
           .print();
       return;
@@ -79,9 +75,7 @@ public:
 
     if (model->getGeometricModel()) {
       model->getGeometricModel()->setDomain(domain);
-#ifdef VIENNAPS_VERBOSE
-      std::cout << "Applying geometric model..." << std::endl;
-#endif
+      psLogger::getInstance().addInfo("Applying geometric model...").print();
       model->getGeometricModel()->apply();
       return;
     }
@@ -92,7 +86,7 @@ public:
         model->getAdvectionCallback()->setDomain(domain);
         model->getAdvectionCallback()->applyPreAdvect(0);
       } else {
-        lsMessage::getInstance()
+        psLogger::getInstance()
             .addWarning("No advection callback passed to psProcess.")
             .print();
       }
@@ -100,13 +94,15 @@ public:
     }
 
     if (!model->getSurfaceModel()) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("No surface model passed to psProcess.")
           .print();
       return;
     }
 
-    auto name = model->getProcessName();
+    psUtils::Timer processTimer;
+    processTimer.start();
+
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
@@ -117,12 +113,14 @@ public:
     auto translator = psSmartPointer<translatorType>::New();
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
+    if (domain->getMaterialMap() &&
+        domain->getMaterialMap()->size() == domain->getLevelSets()->size()) {
+      meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
+    }
 
-    assert(model->getVelocityField() != nullptr);
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
-        model->getVelocityField()->useTranslationField());
+        model->getVelocityField());
     transField->setTranslator(translator);
-    transField->setVelocityField(model->getVelocityField());
 
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
@@ -138,7 +136,9 @@ public:
 
     if (useRayTracing && !rayTracerInitialized) {
       if (!model->getPtxCode()) {
-        std::cout << "No pipeline in process model. Aborting." << std::endl;
+        psLogger::getInstance()
+            .addWarning("No pipeline in process model. Aborting.")
+            .print();
         return;
       }
       rayTrace.setPipeline(model->getPtxCode());
@@ -166,12 +166,10 @@ public:
     const bool useProcessParams =
         model->getSurfaceModel()->getProcessParameters().d_ptr != nullptr;
 
-#ifdef VIENNAPS_VERBOSE
     if (useProcessParams)
-      std::cout << "Using process parameters." << std::endl;
+      psLogger::getInstance().addInfo("Using process parameters.").print();
     if (useAdvectionCallback)
-      std::cout << "Using advection callback." << std::endl;
-#endif
+      psLogger::getInstance().addInfo("Using advection callback.").print();
 
     bool useCoverages = false;
     size_t numCov = 0;
@@ -185,15 +183,13 @@ public:
       numCov = model->getSurfaceModel()->getCoverageIndexMap().size();
       rayTrace.setUseCellData(numCov);
 
-#ifdef VIENNAPS_VERBOSE
-      std::cout << "Using coverages." << std::endl;
-#endif
+      psLogger::getInstance().addInfo("Using coverages.").print();
 
       if (!coveragesInitialized) {
+        psUtils::Timer timer;
+        psLogger::getInstance().addInfo("Initializing coverages ... ").print();
 
-#ifdef VIENNAPS_VERBOSE
-        std::cout << "Initializing coverages ... " << std::endl;
-#endif
+        timer.start();
         for (size_t iterations = 1; iterations <= maxIterations; iterations++) {
           // get coverages in ray tracer
           rayTrace.translateFromPointData(
@@ -206,8 +202,7 @@ public:
           model->getSurfaceModel()->updateCoverages(d_rates,
                                                     diskMesh->nodes.size());
 
-#ifdef VIENNAPS_VERBOSE
-          if (printIntermediate) {
+          if (psLogger::getLogLevel() >= 3) {
             rayTrace.downloadResultsToPointData(
                 diskMesh->getCellData(), d_rates, diskMesh->nodes.size());
             downloadCoverages(diskMesh->getCellData(),
@@ -215,28 +210,37 @@ public:
                               diskMesh->nodes.size());
             printDiskMesh(diskMesh, name + "_covIinit_" +
                                         std::to_string(iterations) + ".vtp");
+            psLogger::getInstance()
+                .addInfo("Iteration: " + std::to_string(iterations))
+                .print();
           }
-          std::cerr << "\r"
-                    << "Iteration: " << iterations << " / " << maxIterations;
-          if (iterations == maxIterations)
-            std::cerr << std::endl;
-#endif
         }
         coveragesInitialized = true;
+
+        timer.finish();
+        psLogger::getInstance()
+            .addTiming("Coverage initialization", timer)
+            .print();
       }
     }
 
+    double previousTimeStep = 0.;
     size_t counter = 0;
     size_t printCounter = 0;
+    psUtils::Timer rtTimer;
+    psUtils::Timer callbackTimer;
+    psUtils::Timer advTimer;
     while (remainingTime > 0.) {
-#ifdef VIENNAPS_VERBOSE
-      std::cout << "Remaining time: " << remainingTime << std::endl;
-#endif
+      psLogger::getInstance()
+          .addInfo("Remaining time: " + std::to_string(remainingTime))
+          .print();
 
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
 
       if (useRayTracing) {
+        rtTimer.start();
+
         // get coverages in ray tracer
         if (useCoverages)
           rayTrace.translateFromPointData(
@@ -245,32 +249,79 @@ public:
 
         // get results as point data
         rayTrace.translateToPointData(diskMesh, d_rates);
+
+        rtTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Top-down flux calculation", rtTimer)
+            .print();
       }
 
-      auto velocitites =
+      auto velocities =
           model->getSurfaceModel()->calculateVelocities(d_rates, materialIds);
-      curtSmoothing<NumericType, D>(diskMesh, velocitites, gridDelta).apply();
-      model->getVelocityField()->setVelocities(velocitites);
+      curtSmoothing<NumericType, D>(diskMesh, velocities, gridDelta).apply();
+      model->getVelocityField()->setVelocities(velocities);
 
-#ifdef VIENNAPS_VERBOSE
-      if (printIntermediate) {
-        rayTrace.downloadResultsToPointData(diskMesh->getCellData(), d_rates,
-                                            diskMesh->nodes.size());
-        if (useCoverages) {
-          downloadCoverages(diskMesh->getCellData(),
-                            model->getSurfaceModel()->getCoverages(),
-                            diskMesh->nodes.size());
+      if (psLogger::getLogLevel() >= 4) {
+        if (printTime >= 0. &&
+            ((processDuration - remainingTime) - printTime * counter) > -1.) {
+
+          rayTrace.downloadResultsToPointData(diskMesh->getCellData(), d_rates,
+                                              diskMesh->nodes.size());
+          if (useCoverages) {
+            downloadCoverages(diskMesh->getCellData(),
+                              model->getSurfaceModel()->getCoverages(),
+                              diskMesh->nodes.size());
+          }
+
+          if (velocities)
+            diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                         "velocities");
+
+          printDiskMesh(diskMesh,
+                        name + "_" + std::to_string(counter) + ".vtp");
+          if (domain->getUseCellSet()) {
+            domain->getCellSet()->writeVTU(name + "_cellSet_" +
+                                           std::to_string(counter) + ".vtu");
+          }
+
+          auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+          culsToSurfaceMesh<NumericType>(domain->getLevelSets()->back(), mesh)
+              .apply();
+
+          std::vector<NumericType> cellflux(mesh->triangles.size());
+          rayTrace.getFlux(cellflux.data(), 0, 0);
+
+          mesh->cellData.insertNextScalarData(cellflux, "flux");
+          lsVTKWriter<NumericType>(mesh, name + "_step_" +
+                                             std::to_string(counter) + ".vtp")
+              .apply();
+
+          counter++;
         }
-        diskMesh->getCellData().insertNextScalarData(*velocitites, "etchRate");
-        printDiskMesh(diskMesh,
-                      name + "_point_" + std::to_string(counter++) + ".vtp");
       }
-#endif
 
-      // apply volume model
+      // apply advection callback
       if (useAdvectionCallback) {
-        model->getAdvectionCallback()->applyPreAdvect(processDuration -
-                                                      remainingTime);
+        callbackTimer.start();
+        bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
+            processDuration - remainingTime);
+        callbackTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Advection callback pre-advect", callbackTimer)
+            .print();
+
+        if (!continueProcess) {
+          psLogger::getInstance()
+              .addInfo("Process stopped early by AdvectionCallback during "
+                       "`preAdvect`.")
+              .print();
+          break;
+        }
+      }
+
+      // adjust time step near end
+      if (remainingTime - previousTimeStep < 0.) {
+        advectionKernel.setAdvectionTime(remainingTime);
       }
 
       // move coverages to LS, so they get are moved with the advection step
@@ -281,31 +332,12 @@ public:
         moveCoveragesToTopLS(domain, translator, coverages);
       }
 
-      // print intermediary time step
-      if (printIntermediate) {
-
-        auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-        culsToSurfaceMesh<NumericType>(domain->getLevelSets()->back(), mesh)
-            .apply();
-
-        std::vector<NumericType> cellflux(mesh->triangles.size());
-        rayTrace.getFlux(cellflux.data(), 0, 0);
-
-        mesh->cellData.insertNextScalarData(cellflux, "flux");
-        lsVTKWriter<NumericType>(
-            mesh, name + "_step_" + std::to_string(printCounter) + ".vtp")
-            .apply();
-
-        // domain->printSurface(name + "_step_" + std::to_string(printCounter) +
-        //                      ".vtp");
-        if (useAdvectionCallback)
-          domain->getCellSet()->writeVTU(name + "_step_" +
-                                         std::to_string(printCounter) + ".vtu");
-        printCounter++;
-      }
-
+      advTimer.start();
       advectionKernel.apply();
+      advTimer.finish();
       rayTrace.updateSurface();
+
+      psLogger::getInstance().addTiming("Surface advection", advTimer).print();
 
       // update the translator to retrieve the correct coverages from the LS
       meshConverter.apply();
@@ -314,17 +346,52 @@ public:
         uploadCoverages(coverages);
       }
 
-      // apply volume model
+      // apply advection callback
       if (useAdvectionCallback) {
-        if (domain->getUseCellSet())
-          domain->getCellSet()->updateSurface();
-        model->getAdvectionCallback()->applyPostAdvect(
+        callbackTimer.start();
+        bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
+        callbackTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Advection callback post-advect", callbackTimer)
+            .print();
+        if (!continueProcess) {
+          psLogger::getInstance()
+              .addInfo("Process stopped early by AdvectionCallback during "
+                       "`postAdvect`.")
+              .print();
+          break;
+        }
       }
 
-      remainingTime -= advectionKernel.getAdvectedTime();
+      previousTimeStep = advectionKernel.getAdvectedTime();
+      remainingTime -= previousTimeStep;
     } // main process loop
     rayTrace.invalidateGeometry();
+
+    processTime = processDuration - remainingTime;
+    processTimer.finish();
+
+    psLogger::getInstance()
+        .addTiming("\nProcess " + name, processTimer)
+        .addTiming("Surface advection total time",
+                   advTimer.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .print();
+    if (useRayTracing) {
+      psLogger::getInstance()
+          .addTiming("Top-down flux calculation total time",
+                     rtTimer.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
+    }
+    if (useAdvectionCallback) {
+      psLogger::getInstance()
+          .addTiming("Advection callback total time",
+                     callbackTimer.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
+    }
   }
 
 private:
@@ -419,8 +486,9 @@ private:
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
   size_t maxIterations = 20;
-  bool printIntermediate = false;
   bool periodicBoundary = false;
   bool coveragesInitialized = false;
   bool rayTracerInitialized = false;
+  NumericType printTime = 0.;
+  NumericType processTime = 0;
 };
