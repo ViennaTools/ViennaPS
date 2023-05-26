@@ -37,9 +37,9 @@ public:
     }
   }
 
-  // this option should be disabled (return false) when using a surface model
+  // the translation field should be disabled when using a surface model
   // which only depends on an analytic velocity field
-  bool useTranslationField() const override { return false; }
+  int getTranslationFieldOptions() const override { return 0; }
 };
 
 template <typename NumericType, int D>

@@ -16,9 +16,9 @@ template <class NumericType, int D> class psMakePlane {
 
   PSPtrType domain = nullptr;
 
-  const NumericType gridDelta;
-  const NumericType xExtent;
-  const NumericType yExtent;
+  const NumericType gridDelta = 0.;
+  const NumericType xExtent = 0.;
+  const NumericType yExtent = 0.;
   const NumericType height = 0.;
 
   const bool periodicBoundary = false;
