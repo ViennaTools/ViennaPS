@@ -1,0 +1,18 @@
+# Domain
+gridDelta=1. # um
+xExtent=110. # um
+yExtent=110. # um (3D mode only)
+
+# Geometry
+trenchWidth=70  # um
+trenchHeight=70 # um
+taperAngle=0.   # degrees
+
+# Process
+processTime=350 # min
+numRaysPerPoint=2000
+
+# particle
+depositionRateP1=0.1 # um / min
+stickingProbabilityP1=0.1
+reactionOrderP1=1.0

@@ -79,7 +79,7 @@ public:
       if (psLogger::getLogLevel() >= 5) {
         auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
         lsToMesh<NumericType, 3>(tmpLS, mesh).apply();
-        lsVTKWriter<NumericType>(mesh,
+        psVTKWriter<NumericType>(mesh,
                                  "extrude_layer_" + std::to_string(i) + ".vtp")
             .apply();
       }

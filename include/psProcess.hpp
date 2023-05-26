@@ -238,7 +238,7 @@ public:
             for (int i = 0; i < particle->getRequiredLocalDataSize(); ++i) {
               auto rate = std::move(localData.getVectorData(i));
 
-              // normalize rates
+              // normalize fluxes
               rayTrace.normalizeFlux(rate);
               if (smoothFlux)
                 rayTrace.smoothFlux(rate);
@@ -370,6 +370,8 @@ public:
       auto velocitites = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocitites);
+      if (model->getVelocityField()->getTranslationFieldOptions() == 2)
+        transField->buildKdTree(points);
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
@@ -508,12 +510,12 @@ private:
                         std::string name) {
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
-    lsVTKWriter<NumericType>(mesh, name).apply();
+    psVTKWriter<NumericType>(mesh, name).apply();
   }
 
   void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
                      std::string name) {
-    lsVTKWriter<NumericType>(mesh, name).apply();
+    psVTKWriter<NumericType>(mesh, name).apply();
   }
 
   rayTraceBoundary convertBoundaryCondition(

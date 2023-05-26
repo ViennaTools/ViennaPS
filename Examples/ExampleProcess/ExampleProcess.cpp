@@ -1,12 +1,9 @@
 #include <lsMakeGeometry.hpp>
 
-#include <Geometries/psMakeHole.hpp>
+#include <psMakeHole.hpp>
 #include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
-#include <psSmartPointer.hpp>
-#include <psToSurfaceMesh.hpp>
-#include <psVTKWriter.hpp>
 
 #include "Particles.hpp"
 #include "SurfaceModel.hpp"

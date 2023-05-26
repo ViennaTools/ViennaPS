@@ -16,24 +16,22 @@ template <class NumericType, int D> class psMakeHole {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
 
-public:
   PSPtrType domain = nullptr;
 
-  NumericType gridDelta = .25;
-  NumericType xExtent = 10;
-  NumericType yExtent = 10;
-  NumericType baseHeight = 0.;
+  const NumericType gridDelta;
+  const NumericType xExtent;
+  const NumericType yExtent;
+  const NumericType baseHeight = 0.;
 
-  NumericType holeRadius = 3;
-  NumericType taperAngle = 0; // tapering angle in degrees
-  NumericType holeDepth = 6;
-  bool makeMask = true;
-  bool periodicBoundary = false;
+  const NumericType holeRadius;
+  const NumericType holeDepth;
+  const NumericType taperAngle = 0; // tapering angle in degrees
+  const bool makeMask = true;
+  const bool periodicBoundary = false;
 
-  psMaterial material = psMaterial::Undefined;
+  const psMaterial material = psMaterial::Undefined;
 
-  psMakeHole(PSPtrType passedDomain) : domain(passedDomain) {}
-
+public:
   psMakeHole(PSPtrType passedDomain, const NumericType passedGridDelta,
              const NumericType passedXExtent, const NumericType passedYExtent,
              const NumericType passedHoleRadius,
