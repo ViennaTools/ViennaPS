@@ -275,7 +275,7 @@ private:
                 << "\n\tzPos: " << params->maskZPos << "\n\n";
       if (geometry->getLevelSets()->back()) {
         std::cout << "\tAdding plane to current geometry...\n\n";
-        psMakePlane<NumericType, D>(geometry, params->maskZPos, true,
+        psMakePlane<NumericType, D>(geometry, params->maskZPos,
                                     params->material)
             .apply();
       } else {
