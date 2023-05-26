@@ -6,7 +6,6 @@
 #include <lsMakeGeometry.hpp>
 #include <lsToDiskMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
-#include <lsVTKWriter.hpp>
 #include <lsWriter.hpp>
 
 #include <csDenseCellSet.hpp>
@@ -14,6 +13,7 @@
 #include <psMaterials.hpp>
 #include <psSmartPointer.hpp>
 #include <psSurfacePointValuesToLevelSet.hpp>
+#include <psVTKWriter.hpp>
 
 /**
   This class represents all materials in the simulation domain.
@@ -179,7 +179,7 @@ public:
     }
 
     lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
-    lsVTKWriter<NumericType>(mesh, name).apply();
+    psVTKWriter<NumericType>(mesh, name).apply();
   }
 
   void writeLevelSets(std::string fileName) {

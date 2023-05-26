@@ -3,10 +3,6 @@
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
-#include <lsToSurfaceMesh.hpp>
-#include <lsToVoxelMesh.hpp>
-#include <lsVTKWriter.hpp>
-#include <lsWriteVisualizationMesh.hpp>
 
 #include <psDomain.hpp>
 

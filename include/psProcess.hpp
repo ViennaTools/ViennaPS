@@ -510,12 +510,12 @@ private:
                         std::string name) {
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
-    lsVTKWriter<NumericType>(mesh, name).apply();
+    psVTKWriter<NumericType>(mesh, name).apply();
   }
 
   void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
                      std::string name) {
-    lsVTKWriter<NumericType>(mesh, name).apply();
+    psVTKWriter<NumericType>(mesh, name).apply();
   }
 
   rayTraceBoundary convertBoundaryCondition(

@@ -10,12 +10,12 @@
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
-#include <lsVTKWriter.hpp>
 
 #include <rayUtil.hpp>
 
 #include <psLogger.hpp>
 #include <psSmartPointer.hpp>
+#include <psVTKWriter.hpp>
 
 /**
   This class represents a cell-based voxel implementation of a volume. The
@@ -91,10 +91,10 @@ public:
     for (auto &ls : levelSetsInOrder) {
       auto mesh = psSmartPointer<lsMesh<T>>::New();
       lsToSurfaceMesh<T, D>(ls, mesh).apply();
-      lsVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
+      psVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
           .apply();
     }
-    lsVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
+    psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
     if (!cellSetAboveSurface)
@@ -234,7 +234,7 @@ public:
 
   // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
-    lsVTKWriter<T>(cellGrid, fileName).apply();
+    psVTKWriter<T>(cellGrid, fileName).apply();
   }
 
   // Save cell set data in simple text format
