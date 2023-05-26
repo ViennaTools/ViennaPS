@@ -34,7 +34,7 @@ public:
     }
   }
 
-  bool useTranslationField() const override { return false; }
+  int getTranslationFieldOptions() const override { return 0; }
 
 private:
   const NumericType rate;

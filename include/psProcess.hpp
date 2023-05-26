@@ -238,7 +238,7 @@ public:
             for (int i = 0; i < particle->getRequiredLocalDataSize(); ++i) {
               auto rate = std::move(localData.getVectorData(i));
 
-              // normalize rates
+              // normalize fluxes
               rayTrace.normalizeFlux(rate);
               if (smoothFlux)
                 rayTrace.smoothFlux(rate);
@@ -370,6 +370,8 @@ public:
       auto velocitites = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocitites);
+      if (model->getVelocityField()->getTranslationFieldOptions() == 2)
+        transField->buildKdTree(points);
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
