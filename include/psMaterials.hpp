@@ -14,7 +14,8 @@ enum class psMaterial : int {
   Al2O3 = 6,
   Polymer = 7,
   Dielectric = 8,
-  Metal = 9
+  Metal = 9,
+  GAS = 10
 };
 
 class psMaterialMap {
@@ -37,7 +38,7 @@ public:
   std::size_t size() const { return map->getNumberOfLayers(); }
 
   static inline psMaterial mapToMaterial(const int matId) {
-    if (matId > 9 || matId < -1)
+    if (matId > 10 || matId < -1)
       return psMaterial::Undefined;
     return static_cast<psMaterial>(matId);
   }

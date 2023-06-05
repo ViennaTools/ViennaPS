@@ -14,6 +14,7 @@
 #include <rayUtil.hpp>
 
 #include <psLogger.hpp>
+#include <psMaterials.hpp>
 #include <psSmartPointer.hpp>
 #include <psVTKWriter.hpp>
 
@@ -26,11 +27,13 @@ private:
   using gridType = psSmartPointer<lsMesh<T>>;
   using levelSetsType =
       psSmartPointer<std::vector<psSmartPointer<lsDomain<T, D>>>>;
+  using materialMapType = psSmartPointer<psMaterialMap>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
+  materialMapType materialMap = nullptr;
   std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
   T gridDelta;
   size_t numberOfCells;
@@ -50,8 +53,11 @@ public:
     fromLevelSets(passedLevelSets, passedDepth);
   }
 
-  void fromLevelSets(levelSetsType passedLevelSets, T passedDepth = 0.) {
+  void fromLevelSets(levelSetsType passedLevelSets,
+                     materialMapType passedMaterialMap = nullptr,
+                     T passedDepth = 0.) {
     levelSets = passedLevelSets;
+    materialMap = passedMaterialMap;
 
     if (cellGrid == nullptr)
       cellGrid = psSmartPointer<lsMesh<T>>::New();
@@ -79,8 +85,9 @@ public:
       levelSetsInOrder.push_back(plane);
     for (auto ls : *levelSets)
       levelSetsInOrder.push_back(ls);
-    if (cellSetAboveSurface)
+    if (cellSetAboveSurface) {
       levelSetsInOrder.push_back(plane);
+    }
 
     calculateMinMaxIndex(levelSetsInOrder);
     lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
@@ -97,7 +104,7 @@ public:
     psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
-    if (!cellSetAboveSurface)
+    if (!cellSetAboveSurface || materialMap)
       adjustMaterialIds();
 
     // create filling fractions as default scalar cell data
@@ -544,8 +551,21 @@ private:
 
 #pragma omp parallel for
     for (size_t i = 0; i < matIds->size(); i++) {
-      if (matIds->at(i) > 0) {
-        matIds->at(i) -= 1;
+      int materialId = static_cast<int>(matIds->at(i));
+
+      if (!cellSetAboveSurface && materialId > 0) {
+        materialId -= 1;
+      }
+
+      assert(materialId >= 0);
+      if (materialMap) {
+        psMaterial material;
+        if (materialId >= materialMap->size()) {
+          material = psMaterial::GAS;
+        } else {
+          material = materialMap->getMaterialAtIdx(materialId);
+        }
+        matIds->at(i) = static_cast<int>(material);
       }
     }
   }
