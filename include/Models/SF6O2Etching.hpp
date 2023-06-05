@@ -65,7 +65,7 @@ public:
         break;
       }
 
-      if (psMaterialMap::mapToMaterial(materialIds[i]) == psMaterial::Si) {
+      if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Si)) {
 
         etchRate[i] =
             -(1 / rho_Si) *

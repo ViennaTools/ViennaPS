@@ -214,8 +214,7 @@ private:
 
 #pragma omp parallel for
       for (int e = 0; e < data->size(); e++) {
-        if (psMaterialMap::mapToMaterial(materialIds->at(e)) !=
-            psMaterial::GAS) {
+        if (psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
           continue;
         }
 
@@ -227,8 +226,8 @@ private:
 
         auto cellNeighbors = cellSet->getNeighbors(e);
         for (const auto &n : cellNeighbors) {
-          if (n == -1 || psMaterialMap::mapToMaterial(materialIds->at(n)) !=
-                             psMaterial::GAS)
+          if (n == -1 ||
+              !psMaterialMap::isMaterial(materialIds->at(n), psMaterial::GAS))
             continue;
 
           solution[e] += data->at(n);
@@ -250,8 +249,8 @@ private:
         if (std::abs(coord[0]) < holeRadius) {
           // in hole
           assert(cellNeighbors[2] != -1 && "holeStream up neighbor wrong");
-          if (psMaterialMap::mapToMaterial(materialIds->at(cellNeighbors[2])) ==
-              psMaterial::GAS) {
+          if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[2]),
+                                        psMaterial::GAS)) {
             solution[e] -= holeC * (((coord[1] - gridDelta) / top) *
                                         data->at(cellNeighbors[2]) -
                                     (coord[1] / top) * data->at(e));
@@ -261,8 +260,8 @@ private:
             // left side scallop - use forward difference
             assert(cellNeighbors[1] != -1 &&
                    "scallopStream right neighbor wrong");
-            if (psMaterialMap::mapToMaterial(
-                    materialIds->at(cellNeighbors[1])) == psMaterial::GAS) {
+            if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[1]),
+                                          psMaterial::GAS)) {
               solution[e] -=
                   scallopC * (data->at(cellNeighbors[1]) - data->at(e));
             }
@@ -270,8 +269,8 @@ private:
             // right side scallop - use backward difference
             assert(cellNeighbors[0] != -1 &&
                    "scallopStream left neighbor wrong");
-            if (psMaterialMap::mapToMaterial(
-                    materialIds->at(cellNeighbors[0])) == psMaterial::GAS) {
+            if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[0]),
+                                          psMaterial::GAS)) {
               solution[e] +=
                   scallopC * (data->at(e) - data->at(cellNeighbors[0]));
             }
@@ -284,7 +283,7 @@ private:
 
 #pragma omp parallel for shared(sum)
     for (int e = 0; e < data->size(); e++) {
-      if (psMaterialMap::mapToMaterial(materialIds->at(e)) != psMaterial::GAS) {
+      if (!psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
         continue;
       }
 

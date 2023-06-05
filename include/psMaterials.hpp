@@ -48,4 +48,9 @@ public:
   template <class T> static inline psMaterial mapToMaterial(const T matId) {
     return mapToMaterial(static_cast<int>(matId));
   }
+
+  template <class T>
+  static inline bool isMaterial(const T matId, const psMaterial material) {
+    return mapToMaterial(matId) == material;
+  }
 };
