@@ -29,6 +29,8 @@ public:
   }
 
   psMaterial getMaterialAtIdx(std::size_t idx) const {
+    if (idx >= map->getNumberOfLayers())
+      return psMaterial::GAS;
     int matId = map->getMaterialId(idx);
     return mapToMaterial(matId);
   }
@@ -41,5 +43,9 @@ public:
     if (matId > 10 || matId < -1)
       return psMaterial::Undefined;
     return static_cast<psMaterial>(matId);
+  }
+
+  template <class T> static inline psMaterial mapToMaterial(const T matId) {
+    return mapToMaterial(static_cast<int>(matId));
   }
 };

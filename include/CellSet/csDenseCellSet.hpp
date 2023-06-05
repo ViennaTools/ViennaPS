@@ -184,7 +184,7 @@ public:
     return getFillingFractions()->at(idx);
   }
 
-  int getIndex(std::array<T, 3> &point) { return findIndex(point); }
+  int getIndex(const std::array<T, 3> &point) { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
     return cellGrid->getCellData().getScalarData(name);
@@ -365,6 +365,7 @@ public:
 
     // move iterator for lowest material id and then adjust others if they are
     // needed
+    const materialMapType matMapPtr = materialMap;
     unsigned cellIdx = 0;
     for (; iterators.front().getIndices() < maxIndex;
          iterators.front().next()) {
@@ -398,7 +399,12 @@ public:
           }
 
           if (isVoxel) {
-            materialIds->at(cellIdx++) = materialId;
+            if (matMapPtr) {
+              auto material = matMapPtr->getMaterialAtIdx(materialId);
+              materialIds->at(cellIdx++) = static_cast<int>(material);
+            } else {
+              materialIds->at(cellIdx++) = materialId;
+            }
           }
 
           // jump out of material for loop
@@ -559,13 +565,8 @@ private:
 
       assert(materialId >= 0);
       if (materialMap) {
-        psMaterial material;
-        if (materialId >= materialMap->size()) {
-          material = psMaterial::GAS;
-        } else {
-          material = materialMap->getMaterialAtIdx(materialId);
-        }
-        matIds->at(i) = static_cast<int>(material);
+        matIds->at(i) =
+            static_cast<int>(materialMap->getMaterialAtIdx(materialId));
       }
     }
   }

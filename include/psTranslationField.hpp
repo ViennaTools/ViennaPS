@@ -13,9 +13,10 @@ class psTranslationField : public lsVelocityField<NumericType> {
 
 public:
   psTranslationField(
-      psSmartPointer<psVelocityField<NumericType>> passedVeloField)
+      psSmartPointer<psVelocityField<NumericType>> passedVeloField,
+      psSmartPointer<psMaterialMap> passedMaterialMap)
       : translationMethod(passedVeloField->getTranslationFieldOptions()),
-        modelVelocityField(passedVeloField) {}
+        modelVelocityField(passedVeloField), materialMap(passedMaterialMap) {}
 
   NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
                                 int material,
@@ -23,6 +24,8 @@ public:
                                 unsigned long pointId) {
     if (translationMethod > 0)
       translateLsId(pointId, coordinate);
+    if (materialMap)
+      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
     return modelVelocityField->getScalarVelocity(coordinate, material,
                                                  normalVector, pointId);
   }
@@ -33,6 +36,8 @@ public:
                     unsigned long pointId) {
     if (translationMethod > 0)
       translateLsId(pointId, coordinate);
+    if (materialMap)
+      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
     return modelVelocityField->getVectorVelocity(coordinate, material,
                                                  normalVector, pointId);
   }
@@ -40,6 +45,8 @@ public:
   NumericType
   getDissipationAlpha(int direction, int material,
                       const std::array<NumericType, 3> &centralDifferences) {
+    if (materialMap)
+      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
     return modelVelocityField->getDissipationAlpha(direction, material,
                                                    centralDifferences);
   }
@@ -73,6 +80,7 @@ private:
   psSmartPointer<translatorType> translator;
   psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
   const psSmartPointer<psVelocityField<NumericType>> modelVelocityField;
+  const psSmartPointer<psMaterialMap> materialMap;
 };
 
 #endif
