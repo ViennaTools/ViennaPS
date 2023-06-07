@@ -366,12 +366,12 @@ public:
                   const NumericType baseHeight, const NumericType height,
                   const NumericType xOffset, const NumericType yOffset) {
     bool retry = false;
-    auto mesh =
-        polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset);
+    auto mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset,
+                                     yOffset, retry);
     if (retry) {
       pointOrderFlag = !pointOrderFlag;
-      mesh =
-          polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset);
+      mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset,
+                                  retry);
     }
     auto tmpLS =
         psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
