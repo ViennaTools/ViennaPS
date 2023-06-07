@@ -10,8 +10,6 @@
 #include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
-enum class psPointOrder { CLOCKWISE, COUNTER_CLOCKWISE };
-
 template <class NumericType, int D = 3> class psGDSGeometry {
   using structureLayers =
       std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
@@ -24,9 +22,8 @@ template <class NumericType, int D = 3> class psGDSGeometry {
   std::array<NumericType, 2> boundaryPadding = {0., 0.};
   std::array<NumericType, 2> minBounds;
   std::array<NumericType, 2> maxBounds;
-  psPointOrder pointOrder = psPointOrder::COUNTER_CLOCKWISE;
   bool pointOrderFlag = true;
-  unsigned triangulationTimeOut = 100000000;
+  unsigned triangulationTimeOut = 1000000;
   static constexpr double eps = 1e-6;
 
   double bounds[6];
@@ -53,15 +50,6 @@ public:
           .addWarning("Cannot import 2D geometry from GDS file.")
           .print();
       return;
-    }
-  }
-
-  void setPointOrder(const psPointOrder passedPointOrder) {
-    pointOrder = passedPointOrder;
-    if (pointOrder == psPointOrder::CLOCKWISE) {
-      pointOrderFlag = false;
-    } else {
-      pointOrderFlag = true;
     }
   }
 
@@ -246,7 +234,12 @@ public:
           if (el.elementType == elBox) {
             mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
           } else {
-            mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0);
+            bool retry = false;
+            mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
+            if (retry) {
+              pointOrderFlag = !pointOrderFlag;
+              mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
+            }
           }
           strLayerMapping[el.layer]->append(*mesh);
         }
@@ -372,8 +365,14 @@ public:
                   psGDSElement<NumericType> &element,
                   const NumericType baseHeight, const NumericType height,
                   const NumericType xOffset, const NumericType yOffset) {
+    bool retry = false;
     auto mesh =
         polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset);
+    if (retry) {
+      pointOrderFlag = !pointOrderFlag;
+      mesh =
+          polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset);
+    }
     auto tmpLS =
         psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
     lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
@@ -418,7 +417,8 @@ public:
   psSmartPointer<lsMesh<NumericType>>
   polygonToSurfaceMesh(psGDSElement<NumericType> &element,
                        const NumericType baseHeight, const NumericType height,
-                       const NumericType xOffset, const NumericType yOffset) {
+                       const NumericType xOffset, const NumericType yOffset,
+                       bool &retry) {
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
 
     unsigned numPointsFlat = element.pointCloud.size();
@@ -492,15 +492,14 @@ public:
       }
 
       if (counter++ > triangulationTimeOut) {
-        std::string changePointOrder = pointOrderFlag
-                                           ? "psPointOrder::CLOCKWISE"
-                                           : "psPointOrder::COUNTER_CLOCKWISE";
-        psLogger::getInstance()
-            .addError("Timeout in surface triangulation. Point order in "
-                      "GDS file might be incompatible. Try changing the "
-                      "order by setting setPointOder(" +
-                      changePointOrder + ") in current geometry.")
-            .print();
+        if (!retry) {
+          retry = true;
+          return mesh;
+        } else {
+          psLogger::getInstance()
+              .addError("Timeout in surface triangulation.")
+              .print();
+        }
       }
     }
 
