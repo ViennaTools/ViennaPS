@@ -3,8 +3,8 @@
 
 #include <context.hpp>
 
-#define rho_Si 5.02e7 // in (1e15 atoms/cm³) (rho Si)
-#define k_sigma_Si 300. // in (1e15 cm⁻²s⁻¹)
+#define rho_Si 5.02e7        // in (1e15 atoms/cm³) (rho Si)
+#define k_sigma_Si 300.      // in (1e15 cm⁻²s⁻¹)
 #define beta_sigma_Si 5.0e-2 // in (1e15 cm⁻²s⁻¹)
 #define MASK_MAT 0
 

@@ -19,9 +19,9 @@ class pscuSF6O2SurfaceModel : public pscuSurfaceModel<NumericType> {
   const std::string calcEtchRateKernel = "calculateEtchRate";
   const std::string updateCoverageKernel = "updateCoverages";
   pscuContext context;
-  NumericType totalIonFlux;
-  NumericType totalEtchantFlux;
-  NumericType totalOxygenFlux;
+  NumericType totalIonFlux = 12.;
+  NumericType totalEtchantFlux = 1.8e3;
+  NumericType totalOxygenFlux = 1.0e2;
 
 public:
   using pscuSurfaceModel<NumericType>::d_coverages;
@@ -47,7 +47,7 @@ public:
     unsigned long numPoints = materialIds.size();
     updateCoverages(d_rates, numPoints);
 
-    std::vector<NumericType> etchRate(numPoints, 1.);
+    std::vector<NumericType> etchRate(numPoints, 0.);
     utCudaBuffer etchRateBuffer;
     utCudaBuffer materialIdsBuffer;
 
@@ -75,7 +75,7 @@ public:
     etchRateBuffer.free();
     materialIdsBuffer.free();
 
-    return psSmartPointer<std::vector<NumericType>>::New(etchRate);
+    return psSmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
   void updateCoverages(utCudaBuffer &d_rates,

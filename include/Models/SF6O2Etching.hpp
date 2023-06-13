@@ -83,7 +83,7 @@ public:
       psLogger::getInstance().addInfo("Etch stop depth reached.").print();
     }
 
-    return psSmartPointer<std::vector<NumericType>>::New(etchRate);
+    return psSmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
   void
@@ -157,7 +157,6 @@ public:
         std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
                            static_cast<NumericType>(0.)));
 
-    NumericType f_sp_theta;
     NumericType f_Si_theta;
     NumericType f_O_theta;
 
@@ -169,7 +168,7 @@ public:
       f_O_theta = std::max(3. - 6. * angle / rayInternal::PI, 0.);
     }
 
-    f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    NumericType f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     const double sqrtE = std::sqrt(E);
     const double Y_sp =
@@ -232,8 +231,9 @@ public:
     if (NewEnergy > minEnergy) {
       E = NewEnergy;
 
-      auto direction = rayReflectionConedCosine<NumericType, D>(
-          halfPI - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
+      // auto direction = rayReflectionConedCosine<NumericType, D>(
+      //     halfPI - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
+      auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
 
       return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
     } else {
@@ -271,12 +271,12 @@ private:
 
   static constexpr NumericType A_sp = 0.00339;
   static constexpr NumericType A_Si = 7.;
+  static constexpr NumericType B_sp = 9.3;
   const NumericType A_O = 2.;
 
   static constexpr NumericType Eth_sp = 18.;
   static constexpr NumericType Eth_Si = 15.;
   static constexpr NumericType Eth_O = 10.;
-  static constexpr NumericType B_sp = 9.3;
 
   static constexpr NumericType Eref_max = 1.;
 

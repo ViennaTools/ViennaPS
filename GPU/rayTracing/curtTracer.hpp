@@ -104,7 +104,7 @@ public:
       utLog::getInstance().addError("Too many rays for single launch.").print();
     }
 
-    numRays = 0;
+    numRays = numPoints_x * numPoints_y * numberOfRaysPerPoint;
     for (size_t i = 0; i < particles.size(); i++) {
 
       launchParams.cosineExponent = particles[i].cosineExponent;
@@ -123,8 +123,6 @@ public:
                               launchParamsBuffer.sizeInBytes, &sbts[i],
                               /*! dimensions of the launch: */
                               numPoints_x, numPoints_y, numberOfRaysPerPoint));
-
-      numRays += numPoints_x * numPoints_y * numberOfRaysPerPoint;
     }
 
     // T *temp = new T[launchParams.numElements];
@@ -133,7 +131,7 @@ public:
     //   std::cout << temp[i] << std::endl;
     // }
     // delete temp;
-    // std::cout << gdt::prettyDouble(numRays) << std::endl;
+    // std::cout << gdt::prettyDouble(numRays * particles.size()) << std::endl;
 
     // sync - maybe remove in future
     cudaDeviceSynchronize();
@@ -217,19 +215,18 @@ public:
     geometryValid = true;
   }
 
-  void setNumberOfRaysPerPoint(const size_t numRays) {
-    numberOfRaysPerPoint = numRays;
+  void setNumberOfRaysPerPoint(const size_t pNumRays) {
+    numberOfRaysPerPoint = pNumRays;
   }
 
-  void setFixedNumberOfRays(const size_t numRays) {
-    numberOfRaysFixed = numRays;
+  void setFixedNumberOfRays(const size_t pNumRays) {
+    numberOfRaysFixed = pNumRays;
   }
 
   void setUseRandomSeed(const bool set) { useRandomSeed = set; }
 
   void getFlux(T *flux, int particleIdx, int dataIdx) {
     unsigned int offset = 0;
-    std::vector<unsigned int> dataPerParticle;
     for (size_t i = 0; i < particles.size(); i++) {
       if (particleIdx > i)
         offset += particles[i].numberOfData;
