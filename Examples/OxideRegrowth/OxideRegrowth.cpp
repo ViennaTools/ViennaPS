@@ -62,11 +62,10 @@ int main(int argc, char **argv) {
   // process in the cell set. The byproducts are then distributed by solving a
   // convection-diffusion equation on the cell set.
   auto model = psSmartPointer<OxideRegrowthModel<NumericType, D>>::New(
-      params.numLayers + 1, params.nitrideEtchRate / 60,
-      params.oxideEtchRate / 60, params.redepositionRate,
-      params.redepositionThreshold, params.redepositionTimeInt,
-      params.diffusionCoefficient, params.sink, params.scallopVelocity,
-      params.centerVelocity,
+      params.nitrideEtchRate / 60, params.oxideEtchRate / 60,
+      params.redepositionRate, params.redepositionThreshold,
+      params.redepositionTimeInt, params.diffusionCoefficient, params.sink,
+      params.scallopVelocity, params.centerVelocity,
       params.substrateHeight + params.numLayers * params.layerHeight,
       params.trenchWidth);
 

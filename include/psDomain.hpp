@@ -74,12 +74,20 @@ public:
   void deepCopy(psSmartPointer<psDomain> passedDomain) {
     levelSets->resize(passedDomain->levelSets->size());
     for (unsigned i = 0; i < levelSets->size(); ++i) {
-      levelSets[i]->deepCopy(passedDomain->levelSets[i]);
+      levelSets->at(i)->deepCopy(passedDomain->levelSets->at(i));
     }
     useCellSet = passedDomain->useCellSet;
     if (useCellSet) {
       cellSetDepth = passedDomain->cellSetDepth;
-      cellSet->fromLevelSets(passedDomain->levelSets, cellSetDepth);
+      cellSet->fromLevelSets(passedDomain->levelSets, passedDomain->materialMap,
+                             cellSetDepth);
+    }
+    if (passedDomain->materialMap) {
+      materialMap = materialMapType::New();
+      for (std::size_t i = 0; i < passedDomain->materialMap->size(); i++) {
+        materialMap->insertNextMaterial(
+            passedDomain->materialMap->getMaterialAtIdx(i));
+      }
     }
   }
 
@@ -127,6 +135,22 @@ public:
     materialMap = passedMaterialMap;
   }
 
+  // remove the top LS
+  void removeTopLevelSet() {
+    if (levelSets->empty()) {
+      return;
+    }
+
+    levelSets->pop_back();
+    if (materialMap) {
+      auto newMatMap = materialMapType::New();
+      for (std::size_t i = 0; i < levelSets->size(); i++) {
+        newMatMap->insertNextMaterial(materialMap->getMaterialAtIdx(i));
+      }
+      materialMap = newMatMap;
+    }
+  }
+
   materialMapType getMaterialMap() const { return materialMap; }
 
   void generateCellSet(const NumericType depth = 0.,
@@ -137,7 +161,7 @@ public:
       cellSet = csDomainType::New();
     }
     cellSet->setCellSetPosition(passedCellSetPosition);
-    cellSet->fromLevelSets(levelSets, cellSetDepth);
+    cellSet->fromLevelSets(levelSets, materialMap, cellSetDepth);
   }
 
   auto &getLevelSets() { return levelSets; }

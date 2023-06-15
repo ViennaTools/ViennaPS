@@ -125,7 +125,7 @@ public:
     }
 
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
-        model->getVelocityField());
+        model->getVelocityField(), domain->getMaterialMap());
     transField->setTranslator(translator);
 
     lsAdvect<NumericType, D> advectionKernel;

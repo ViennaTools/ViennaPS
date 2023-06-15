@@ -14,6 +14,7 @@
 #include <rayUtil.hpp>
 
 #include <psLogger.hpp>
+#include <psMaterials.hpp>
 #include <psSmartPointer.hpp>
 #include <psVTKWriter.hpp>
 
@@ -26,11 +27,13 @@ private:
   using gridType = psSmartPointer<lsMesh<T>>;
   using levelSetsType =
       psSmartPointer<std::vector<psSmartPointer<lsDomain<T, D>>>>;
+  using materialMapType = psSmartPointer<psMaterialMap>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
+  materialMapType materialMap = nullptr;
   std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
   T gridDelta;
   size_t numberOfCells;
@@ -50,8 +53,11 @@ public:
     fromLevelSets(passedLevelSets, passedDepth);
   }
 
-  void fromLevelSets(levelSetsType passedLevelSets, T passedDepth = 0.) {
+  void fromLevelSets(levelSetsType passedLevelSets,
+                     materialMapType passedMaterialMap = nullptr,
+                     T passedDepth = 0.) {
     levelSets = passedLevelSets;
+    materialMap = passedMaterialMap;
 
     if (cellGrid == nullptr)
       cellGrid = psSmartPointer<lsMesh<T>>::New();
@@ -79,8 +85,9 @@ public:
       levelSetsInOrder.push_back(plane);
     for (auto ls : *levelSets)
       levelSetsInOrder.push_back(ls);
-    if (cellSetAboveSurface)
+    if (cellSetAboveSurface) {
       levelSetsInOrder.push_back(plane);
+    }
 
     calculateMinMaxIndex(levelSetsInOrder);
     lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
@@ -97,7 +104,7 @@ public:
     psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
-    if (!cellSetAboveSurface)
+    if (!cellSetAboveSurface || materialMap)
       adjustMaterialIds();
 
     // create filling fractions as default scalar cell data
@@ -177,7 +184,7 @@ public:
     return getFillingFractions()->at(idx);
   }
 
-  int getIndex(std::array<T, 3> &point) { return findIndex(point); }
+  int getIndex(const std::array<T, 3> &point) { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
     return cellGrid->getCellData().getScalarData(name);
@@ -358,6 +365,7 @@ public:
 
     // move iterator for lowest material id and then adjust others if they are
     // needed
+    const materialMapType matMapPtr = materialMap;
     unsigned cellIdx = 0;
     for (; iterators.front().getIndices() < maxIndex;
          iterators.front().next()) {
@@ -391,7 +399,12 @@ public:
           }
 
           if (isVoxel) {
-            materialIds->at(cellIdx++) = materialId;
+            if (matMapPtr) {
+              auto material = matMapPtr->getMaterialAtIdx(materialId);
+              materialIds->at(cellIdx++) = static_cast<int>(material);
+            } else {
+              materialIds->at(cellIdx++) = materialId;
+            }
           }
 
           // jump out of material for loop
@@ -544,8 +557,16 @@ private:
 
 #pragma omp parallel for
     for (size_t i = 0; i < matIds->size(); i++) {
-      if (matIds->at(i) > 0) {
-        matIds->at(i) -= 1;
+      int materialId = static_cast<int>(matIds->at(i));
+
+      if (!cellSetAboveSurface && materialId > 0) {
+        materialId -= 1;
+      }
+
+      assert(materialId >= 0);
+      if (materialMap) {
+        matIds->at(i) =
+            static_cast<int>(materialMap->getMaterialAtIdx(materialId));
       }
     }
   }
