@@ -135,6 +135,22 @@ public:
     materialMap = passedMaterialMap;
   }
 
+  // remove the top LS
+  void removeTopLevelSet() {
+    if (levelSets->empty()) {
+      return;
+    }
+
+    levelSets->pop_back();
+    if (materialMap) {
+      auto newMatMap = materialMapType::New();
+      for (std::size_t i = 0; i < levelSets->size(); i++) {
+        newMatMap->insertNextMaterial(materialMap->getMaterialAtIdx(i));
+      }
+      materialMap = newMatMap;
+    }
+  }
+
   materialMapType getMaterialMap() const { return materialMap; }
 
   void generateCellSet(const NumericType depth = 0.,
