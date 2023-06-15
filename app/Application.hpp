@@ -293,8 +293,6 @@ private:
                 << "\n\tinvert: " << boolString(params->maskInvert)
                 << "\n\txPadding: " << params->xPadding
                 << "\n\tyPadding: " << params->yPadding << "\n\tPoint order: "
-                << ((params->pointOrder == 0) ? "counter-clockwise"
-                                              : "clockwise")
                 << "\n\n";
 
       if constexpr (D == 3) {
@@ -314,9 +312,6 @@ private:
             params->gridDelta);
         mask->setBoundaryConditions(boundaryCons);
         mask->setBoundaryPadding(params->xPadding, params->yPadding);
-        if (params->pointOrder == 1) {
-          mask->setPointOrder(psPointOrder::CLOCKWISE);
-        }
         psGDSReader<NumericType, D>(mask, params->fileName).apply();
 
         auto layer =
