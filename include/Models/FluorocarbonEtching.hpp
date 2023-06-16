@@ -63,8 +63,7 @@ public:
         break;
       }
 
-      auto matId =
-          psMaterialMap::mapToMaterial(static_cast<int>(materialIds[i]));
+      auto matId = psMaterialMap::mapToMaterial(materialIds[i]);
       assert(matId == psMaterial::Mask || matId == psMaterial::Polymer ||
              matId == psMaterial::Si || matId == psMaterial::SiO2 ||
              matId == psMaterial::Si3N4 && "Unexptected material");

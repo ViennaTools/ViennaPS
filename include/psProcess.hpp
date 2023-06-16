@@ -125,7 +125,7 @@ public:
     }
 
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
-        model->getVelocityField());
+        model->getVelocityField(), domain->getMaterialMap());
     transField->setTranslator(translator);
 
     lsAdvect<NumericType, D> advectionKernel;
@@ -238,7 +238,7 @@ public:
             for (int i = 0; i < particle->getRequiredLocalDataSize(); ++i) {
               auto rate = std::move(localData.getVectorData(i));
 
-              // normalize rates
+              // normalize fluxes
               rayTrace.normalizeFlux(rate);
               if (smoothFlux)
                 rayTrace.smoothFlux(rate);
@@ -370,7 +370,9 @@ public:
       // get velocities from rates
       auto velocities = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
-      model->getVelocityField()->setVelocities(velocities);
+      model->getVelocityField()->setVelocities(velocitites);
+      if (model->getVelocityField()->getTranslationFieldOptions() == 2)
+        transField->buildKdTree(points);
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
@@ -505,9 +507,16 @@ public:
   }
 
 private:
+  void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
+                        std::string name) {
+    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+    lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
+    psVTKWriter<NumericType>(mesh, name).apply();
+  }
+
   void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
                      std::string name) {
-    lsVTKWriter<NumericType>(mesh, name).apply();
+    psVTKWriter<NumericType>(mesh, name).apply();
   }
 
   rayTraceBoundary convertBoundaryCondition(

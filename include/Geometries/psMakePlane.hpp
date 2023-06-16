@@ -1,8 +1,6 @@
 #pragma once
 
-#include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
-#include <lsFromSurfaceMesh.hpp>
 #include <lsMakeGeometry.hpp>
 
 #include <psDomain.hpp>
@@ -16,21 +14,22 @@ template <class NumericType, int D> class psMakePlane {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
 
-public:
   PSPtrType domain = nullptr;
 
-  NumericType gridDelta = .25;
-  NumericType xExtent = 10;
-  NumericType yExtent = 10;
-  NumericType height = 0.;
-  bool periodicBoundary = false;
-  bool add = false;
-  psMaterial material = psMaterial::Undefined;
+  const NumericType gridDelta = 0.;
+  const NumericType xExtent = 0.;
+  const NumericType yExtent = 0.;
+  const NumericType height = 0.;
 
+  const bool periodicBoundary = false;
+  const bool add = false;
+
+  const psMaterial material = psMaterial::Undefined;
+
+public:
   psMakePlane(PSPtrType passedDomain, NumericType passedHeight = 0.,
-              bool passedAdd = false,
               const psMaterial passedMaterial = psMaterial::Undefined)
-      : domain(passedDomain), height(passedHeight), add(passedAdd),
+      : domain(passedDomain), height(passedHeight), add(true),
         material(passedMaterial) {}
 
   psMakePlane(PSPtrType passedDomain, const NumericType passedGridDelta,
@@ -48,7 +47,7 @@ public:
             .addWarning("psMakePlane: Plane can only be added to already "
                         "existing geometry.")
             .print();
-        add = false;
+        return;
       }
     } else {
       domain->clear();
