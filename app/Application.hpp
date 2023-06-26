@@ -4,16 +4,19 @@
 #include <sstream>
 
 #include <lsReader.hpp>
-#include <lsRemoveStrayPoints.hpp>
+
+// #include <culsRefineMesh.hpp>
 
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
 #include <psMakeHole.hpp>
 #include <psMakePlane.hpp>
+#include <psMakeStack.hpp>
 #include <psMakeTrench.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
+#include <psWriteVisualizationMesh.hpp>
 
 #include <ApplicationParameters.hpp>
 #include <ApplicationParser.hpp>
@@ -78,7 +81,7 @@ public:
         break;
 
       case CommandType::OUTPUT:
-        writeVTP();
+        writeOutput();
         break;
 
       case CommandType::NONE:
@@ -95,7 +98,7 @@ public:
 
   void printGeometry(std::string fileName) {
     params->fileName = fileName;
-    writeVTP();
+    writeOutput();
   }
 
 protected:
@@ -289,6 +292,21 @@ private:
             .apply();
       }
       break;
+
+    case GeometryType::STACK:
+      std::cout << "Stack\n\tNumber of layers: " << params->numLayers
+                << "\n\tLayer height: " << params->layerHeight
+                << "\n\tSubstrate height: " << params->substrateHeight
+                << "\n\tHole radius: " << params->holeRadius
+                << "\n\tMask height: " << params->maskHeight << "\n\n";
+      psMakeStack<NumericType, D>(
+          geometry, params->gridDelta, params->xExtent, params->yExtent,
+          params->numLayers, params->layerHeight, params->substrateHeight,
+          params->holeRadius, params->maskHeight, params->periodicBoundary)
+          .apply();
+
+      break;
+
     case GeometryType::GDS: {
       std::cout << "GDS file import\n\tFile name: " << params->fileName
                 << "\n\tLayer: " << params->layers
@@ -461,13 +479,26 @@ private:
     psPlanarize<NumericType, D>(geometry, params->maskZPos).apply();
   }
 
-  void writeVTP() {
+  void writeOutput() {
     if (geometry->getLevelSets()->empty()) {
       std::cout << "Cannot write empty geometry." << std::endl;
       return;
     }
     std::cout << "\tOut file name: " << params->fileName << ".vtp\n\n";
-    geometry->printSurface(params->fileName + ".vtp");
+    if (params->out == OutputType::SURFACE) {
+      std::cout << "\tWriting surface ...\n";
+      // auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+      // lsToSurfaceMesh<NumericType, D>(geometry->getLevelSets()->back(), mesh)
+      //     .apply();
+      // culsRefineMesh<NumericType>(mesh, geometry->getGrid().getGridDelta())
+      //     .apply();
+      // psVTKWriter<NumericType>(mesh, params->fileName + ".vtp").apply();
+      geometry->printSurface(params->fileName + ".vtp");
+    } else {
+      std::cout << "Writing volume ...\n";
+      psWriteVisualizationMesh<NumericType, D>(geometry, params->fileName)
+          .apply();
+    }
   }
 
   std::array<NumericType, 3> getDirection(const std::string &directionString) {

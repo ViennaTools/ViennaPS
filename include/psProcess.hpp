@@ -150,7 +150,8 @@ public:
             domain->getGrid().getBoundaryConditions(i));
 
       rayTrace.setSourceDirection(sourceDirection);
-      rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
+      // rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
+      rayTrace.setNumberOfRaysFixed(288000000);
       rayTrace.setBoundaryConditions(rayBoundaryCondition);
       rayTrace.setUseRandomSeeds(useRandomSeeds);
       rayTrace.setCalculateFlux(false);
@@ -337,6 +338,8 @@ public:
           rayTrace.setParticleType(particle);
           rayTrace.apply();
 
+          // std::cout << rayTrace.getRayTraceInfo().numRays << std::endl;
+
           // fill up rates vector with rates from this particle type
           auto numRates = particle->getRequiredLocalDataSize();
           auto &localData = rayTrace.getLocalData();
@@ -370,7 +373,7 @@ public:
       // get velocities from rates
       auto velocities = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
-      model->getVelocityField()->setVelocities(velocitites);
+      model->getVelocityField()->setVelocities(velocities);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 

@@ -3,14 +3,21 @@
 
 #include <context.hpp>
 
-// Si density 4.99e22 (atoms/cm³)
-#define inv_rho_Si 2.004e-23 // in (atoms/cm³)⁻¹ (rho Si)
-#define inv_rho_p 2e-15
+#define rho_SiO2 2.3 // in (1e22 atoms/cm³)
+#define rho_SiNx 2.3 // in (1e22 atoms/cm³)
+#define rho_Si 5.02  // in (1e22 atoms/cm³)
+#define rho_p 2      // in (1e22 atoms/cm³)
 
-// #define inv_rho_SiO2 1. / (2.6e22)
 #define k_ie 1
 #define k_ev 1
+
 #define k_B 0.000086173324 // m² kg s⁻² K⁻¹
+
+#define Mask 0
+#define Si 1
+#define SiO2 2
+#define Si3N4 3
+#define Polymer 13
 
 extern "C" __global__ void calculateEtchRate(const NumericType *rates,
                                              const NumericType *coverages,
@@ -20,40 +27,72 @@ extern "C" __global__ void calculateEtchRate(const NumericType *rates,
                                              const NumericType totalIonFlux,
                                              const NumericType totalEtchantFlux,
                                              const NumericType totalPolyFlux,
-                                             const NumericType temperature,
-                                             const int maskId,
-                                             const int depoId)
+                                             const NumericType FJ_ev)
 {
-  unsigned int tidx = blockIdx.x * blockDim.x + threadIdx.x;
-  unsigned int stride = blockDim.x * gridDim.x;
+    unsigned int tidx = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int stride = blockDim.x * gridDim.x;
 
-  const NumericType *ionSputteringRate = rates;
-  const NumericType *ionEnhancedRate = rates + numPoints;
-  const NumericType *ionpeRate = rates + 2 * numPoints;
-  const NumericType *polyRate = rates + 4 * numPoints;
+    const NumericType *ionSputteringRate = rates;
+    const NumericType *ionEnhancedRate = rates + numPoints;
+    const NumericType *ionpeRate = rates + 2 * numPoints;
+    const NumericType *polyRate = rates + 4 * numPoints;
 
-  const NumericType *eCoverage = coverages;
-  const NumericType *pCoverage = coverages + numPoints;
-  const NumericType *peCoverage = coverages + 2 * numPoints;
+    const NumericType *eCoverage = coverages;
+    const NumericType *pCoverage = coverages + numPoints;
+    const NumericType *peCoverage = coverages + 2 * numPoints;
 
-  const NumericType F_ev = 2.7 * totalEtchantFlux * std::exp(-0.168 / (k_B * temperature));
+    const NumericType gamma_p = 0.26;
 
-  for (; tidx < numPoints; tidx += stride)
-  {
-    if (pCoverage[tidx] >= 1.) // Deposition
+    // calculate etch rates
+    for (; tidx < numPoints; tidx += stride)
     {
-        etchRate[tidx] = inv_rho_p * (polyRate[tidx] * totalPolyFlux - ionpeRate[tidx] * totalIonFlux * peCoverage[tidx]);
+        int matId = materialIds[tidx];
+        if (matId == Mask)
+        {
+            etchRate[tidx] = 0.;
+            continue;
+        }
+        if (pCoverage[tidx] >= 1.)
+        {
+            // Deposition
+            etchRate[tidx] = std::max(
+                (1 / rho_p) * (polyRate[tidx] * totalPolyFlux * gamma_p -
+                               ionpeRate[tidx] * totalIonFlux * peCoverage[tidx]),
+                (NumericType)0.);
+        }
+        else if (matId == Polymer)
+        {
+            // Etching depo layer
+            etchRate[tidx] = std::min(
+                (1 / rho_p) * (polyRate[tidx] * totalPolyFlux * gamma_p -
+                               ionpeRate[tidx] * totalIonFlux * peCoverage[tidx]),
+                (NumericType)0.);
+        }
+        else
+        {
+            NumericType mat_density = 0;
+            if (matId == Si) // crystalline Si at the bottom
+            {
+                mat_density = rho_Si;
+            }
+            else if (matId == SiO2) // Etching SiO2
+            {
+                mat_density = rho_SiO2;
+            }
+            else if (matId == Si3N4) // Etching SiNx
+            {
+                mat_density = rho_SiNx;
+            }
+            etchRate[tidx] =
+                (-1. / mat_density) *
+                (FJ_ev * eCoverage[tidx] +
+                 ionEnhancedRate[tidx] * totalIonFlux * eCoverage[tidx] +
+                 ionSputteringRate[tidx] * totalIonFlux * (1 - eCoverage[tidx]));
+        }
+
+        // etch rate is in nm / s
+        // etchRate[tidx] *= 1; // to convert to nm / s
     }
-    else if ((int)materialIds[tidx] == depoId) // etching depolayer
-    {
-        etchRate[tidx] = inv_rho_p * (polyRate[tidx] * totalPolyFlux - 5 * ionpeRate[tidx] * totalIonFlux * peCoverage[tidx]);
-    }
-    else
-    {
-        etchRate[tidx] = -inv_rho_Si * 1e8 * (F_ev * eCoverage[tidx] + ionEnhancedRate[tidx] * totalIonFlux * eCoverage[tidx]
-                                        + ionSputteringRate[tidx] * totalIonFlux * (1 - eCoverage[tidx]));
-    }
-  }
 }
 
 extern "C" __global__ void updateCoverages(const NumericType *rates,
@@ -62,23 +101,24 @@ extern "C" __global__ void updateCoverages(const NumericType *rates,
                                            const NumericType totalIonFlux,
                                            const NumericType totalEtchantFlux,
                                            const NumericType totalPolyFlux,
-                                           const NumericType temperature)
+                                           const NumericType FJ_ev)
 {
-  unsigned int tidx = blockIdx.x * blockDim.x + threadIdx.x;
-  unsigned int stride = blockDim.x * gridDim.x;
+    unsigned int tidx = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int stride = blockDim.x * gridDim.x;
 
-  const NumericType *ionEnhancedRate = rates + numPoints;
-  const NumericType *ionpeRate = rates + 2 * numPoints;
-  const NumericType *etchantRate = rates + 3 * numPoints;
-  const NumericType *polyRate = rates + 4 * numPoints;
-  const NumericType *etchantpeRate = rates + 5 * numPoints;
+    const NumericType *ionEnhancedRate = rates + numPoints;
+    const NumericType *ionpeRate = rates + 2 * numPoints;
+    const NumericType *etchantRate = rates + 3 * numPoints;
+    const NumericType *polyRate = rates + 4 * numPoints;
+    const NumericType *etchantpeRate = rates + 5 * numPoints;
 
-  NumericType *eCoverage = coverages;
-  NumericType *pCoverage = coverages + numPoints;
-  NumericType *peCoverage = coverages + 2 * numPoints;
+    NumericType *eCoverage = coverages;
+    NumericType *pCoverage = coverages + numPoints;
+    NumericType *peCoverage = coverages + 2 * numPoints;
 
-  const NumericType delta_p = 0.;
-  const NumericType F_ev = 2.7 * totalEtchantFlux * std::exp(-0.168 / (k_B * temperature));
+    const NumericType gamma_p = 0.26;
+    const NumericType gamma_e = 0.9;
+    const NumericType gamma_pe = 0.6;
 
     // pe coverage
     for (; tidx < numPoints; tidx += stride)
@@ -89,12 +129,12 @@ extern "C" __global__ void updateCoverages(const NumericType *rates,
         }
         else
         {
-            peCoverage[tidx] = (etchantpeRate[tidx] * totalEtchantFlux) /
-                                (etchantpeRate[tidx] * totalEtchantFlux + ionpeRate[tidx] * totalIonFlux);
+            peCoverage[tidx] = (etchantpeRate[tidx] * totalEtchantFlux * gamma_pe) /
+                               (etchantpeRate[tidx] * totalEtchantFlux * gamma_pe + ionpeRate[tidx] * totalIonFlux);
         }
     }
-    tidx = blockIdx.x * blockDim.x + threadIdx.x;
 
+    tidx = blockIdx.x * blockDim.x + threadIdx.x;
     // polymer coverage
     for (; tidx < numPoints; tidx += stride)
     {
@@ -102,18 +142,18 @@ extern "C" __global__ void updateCoverages(const NumericType *rates,
         {
             pCoverage[tidx] = 0.;
         }
-        else if (peCoverage[tidx] == 0. || ionpeRate[tidx] < 1e-6)
+        else if (peCoverage[tidx] < 1e-6 || ionpeRate[tidx] < 1e-6)
         {
             pCoverage[tidx] = 1.;
         }
         else
         {
-            pCoverage[tidx] = (polyRate[tidx] * totalPolyFlux - delta_p) /
+            pCoverage[tidx] = (polyRate[tidx] * totalPolyFlux * gamma_p) /
                               (ionpeRate[tidx] * totalIonFlux * peCoverage[tidx]);
         }
     }
-    tidx = blockIdx.x * blockDim.x + threadIdx.x;
 
+    tidx = blockIdx.x * blockDim.x + threadIdx.x;
     // etchant coverage
     for (; tidx < numPoints; tidx += stride)
     {
@@ -125,8 +165,10 @@ extern "C" __global__ void updateCoverages(const NumericType *rates,
             }
             else
             {
-                eCoverage[tidx] = (etchantRate[tidx] * totalEtchantFlux * (1 - pCoverage[tidx])) /
-                                  (k_ie * ionEnhancedRate[tidx] * totalIonFlux + k_ev * F_ev + etchantRate[tidx] * totalEtchantFlux);
+                eCoverage[tidx] = (etchantRate[tidx] * totalEtchantFlux * (1 - pCoverage[tidx]) * gamma_e) /
+                                  (k_ie * ionEnhancedRate[tidx] * totalIonFlux +
+                                   k_ev * FJ_ev +
+                                   etchantRate[tidx] * totalEtchantFlux * gamma_e);
             }
         }
         else

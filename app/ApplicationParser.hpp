@@ -72,8 +72,8 @@ private:
       params->material = psMaterial::SiC;
     } else if (materialString == "Metal") {
       params->material = psMaterial::Metal;
-    } else if (materialString == "Tungsten") {
-      params->material = psMaterial::Tungsten;
+    } else if (materialString == "W") {
+      params->material = psMaterial::W;
     } else if (materialString == "Dielectric") {
       params->material = psMaterial::Dielectric;
     } else {
@@ -128,6 +128,14 @@ private:
       params->geometryType = GeometryType::PLANE;
       psUtils::AssignItems(config, psUtils::Item{"zPos", params->maskZPos});
       parseMaterial(material);
+    } else if (type == "Stack") {
+      params->geometryType = GeometryType::STACK;
+      psUtils::AssignItems(
+          config, psUtils::Item{"numLayers", params->numLayers},
+          psUtils::Item{"layerHeight", params->layerHeight},
+          psUtils::Item{"maskHeight", params->maskHeight},
+          psUtils::Item{"substrateHeight", params->substrateHeight},
+          psUtils::Item{"holeRadius", params->holeRadius});
     } else if (type == "GDS") {
       params->geometryType = GeometryType::GDS;
       psUtils::AssignItems(config, psUtils::Item{"file", params->fileName},
@@ -165,13 +173,11 @@ private:
       params->processType = ProcessType::SF6O2ETCHING;
       psUtils::AssignItems(config, psUtils::Item{"time", params->processTime},
                            psUtils::Item{"ionFlux", params->ionFlux},
-                           psUtils::Item{"ionEnergy", params->ionEnergy},
                            psUtils::Item{"rfBias", params->rfBias},
                            psUtils::Item{"etchantFlux", params->etchantFlux},
                            psUtils::Item{"oxygenFlux", params->oxygenFlux},
                            psUtils::Item{"A_O", params->A_O},
-                           psUtils::Item{"raysPerPoint", params->raysPerPoint},
-                           psUtils::Item{"maskId", params->maskId});
+                           psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "FluorocarbonEtching") {
       params->processType = ProcessType::FLUOROCARBONETCHING;
       psUtils::AssignItems(config, psUtils::Item{"time", params->processTime},
@@ -181,8 +187,7 @@ private:
                            psUtils::Item{"etchantFlux", params->etchantFlux},
                            psUtils::Item{"oxygenFlux", params->oxygenFlux},
                            psUtils::Item{"temperature", params->temperature},
-                           psUtils::Item{"raysPerPoint", params->raysPerPoint},
-                           psUtils::Item{"maskId", params->maskId});
+                           psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "SphereDistribution") {
       params->processType = ProcessType::SPHEREDISTRIBUTION;
       psUtils::AssignItems(config, psUtils::Item{"radius", params->radius});
@@ -220,7 +225,19 @@ private:
     psUtils::AssignItems(config, psUtils::Item{"height", params->maskZPos});
   }
 
-  void parseOutput(std::istringstream &stream) { stream >> params->fileName; }
+  void parseOutput(std::istringstream &stream) {
+    std::string outType;
+    stream >> outType;
+    if (outType == "Surface") {
+      params->out = OutputType::SURFACE;
+    } else if (outType == "Volume") {
+      params->out = OutputType::VOLUME;
+    } else {
+      std::cout << "Unknown output type. Using default.";
+    }
+
+    stream >> params->fileName;
+  }
 
   std::unordered_map<std::string, std::string>
   parseLineStream(std::istringstream &input) {

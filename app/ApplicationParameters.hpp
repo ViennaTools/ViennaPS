@@ -9,7 +9,7 @@
 
 enum class CommandType { NONE, INIT, GEOMETRY, PROCESS, OUTPUT, PLANARIZE };
 
-enum class GeometryType { NONE, TRENCH, HOLE, PLANE, GDS, IMPORT };
+enum class GeometryType { NONE, TRENCH, HOLE, PLANE, STACK, GDS, IMPORT };
 
 enum class ProcessType {
   NONE,
@@ -22,6 +22,8 @@ enum class ProcessType {
   WETETCHING,
   ISOTROPIC
 };
+
+enum class OutputType { SURFACE, VOLUME };
 
 #ifdef VIENNAPS_USE_DOUBLE
 using NumericType = double;
@@ -53,6 +55,10 @@ struct ApplicationParameters {
   // MAKE hole
   NumericType holeDepth = 0.2;
   NumericType holeRadius = 0.2;
+  // MAKE stack
+  int numLayers = 11;
+  NumericType layerHeight = 1.;
+  NumericType substrateHeight = 1.;
   // GDS / IMPORT
   int layers = 0;
   std::string fileName = "";
@@ -89,6 +95,9 @@ struct ApplicationParameters {
   // box
   std::array<hrleCoordType, 3> halfAxes = {1., 1., 1.};
 
+  // output
+  OutputType out = OutputType::SURFACE;
+
   ApplicationParameters() {}
 
   void defaultParameters(bool all = false) {
@@ -120,6 +129,9 @@ struct ApplicationParameters {
     halfAxes[0] = 1.;
     halfAxes[1] = 1.;
     halfAxes[2] = 1.;
+    numLayers = 11;
+    layerHeight = 1.;
+    substrateHeight = 1.;
 
     if (all) {
       logLevel = 2;

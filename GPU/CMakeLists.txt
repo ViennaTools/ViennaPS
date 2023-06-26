@@ -16,6 +16,8 @@ if(NOT ViennaPS_FOUND)
   4. Now the configure step should pick up the built dependencies and proceed as intended.")
 endif()
 
+find_package(CGAL REQUIRED)
+
 list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
 
 # Add subfolders to the include directories, since during installation the directory structure is
@@ -47,7 +49,7 @@ set(VIENNAPS_GPU_INCLUDE_DIRS #
 
 add_custom_target(buildGPUApplication)
 
-include_directories(${VIENNAPS_GPU_INCLUDE_DIRS})
+include_directories(${VIENNAPS_GPU_INCLUDE_DIRS} )
 file(GLOB kernels "${PROJECT_SOURCE_DIR}/deviceKernels/*.cu")
 foreach(kernel ${kernels})
   cuda_compile_ptx(
@@ -89,6 +91,6 @@ add_executable(
 target_include_directories(ViennaPS_GPU PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}
                                                ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
 
-target_link_libraries(ViennaPS_GPU ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
+target_link_libraries(ViennaPS_GPU CGAL::CGAL ${Boost_LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
 
 add_dependencies(buildGPUApplication ViennaPS_GPU)

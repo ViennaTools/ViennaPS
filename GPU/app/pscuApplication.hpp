@@ -30,8 +30,7 @@ protected:
 
     auto surfModel =
         psSmartPointer<DepoSurfaceModel<NumericType>>::New(context);
-    auto velField =
-        psSmartPointer<SimpleDepositionVelocityField<NumericType>>::New();
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
     auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
 
     model->insertNextParticleType(depoParticle);
@@ -71,7 +70,7 @@ protected:
     auto surfModel = psSmartPointer<pscuSF6O2SurfaceModel<NumericType>>::New(
         context, processParams->ionFlux, processParams->etchantFlux,
         processParams->oxygenFlux);
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
     auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
 
     model->insertNextParticleType(ion);
@@ -96,10 +95,7 @@ protected:
       psSmartPointer<ApplicationParameters> processParams) override {
 
     // insert additional top layer to capture deposition
-    auto depoLayer = psSmartPointer<lsDomain<NumericType, DIM>>::New(
-        processGeometry->getLevelSets()->back());
-    int depoId = processGeometry->getLevelSets()->size();
-    processGeometry->insertNextLevelSet(depoLayer);
+    processGeometry->duplicateTopLevelSet(psMaterial::Polymer);
 
     curtParticle<NumericType> ion{.name = "ion",
                                   .numberOfData = 3,
@@ -124,8 +120,8 @@ protected:
     auto surfModel =
         psSmartPointer<pscuFluorocarbonSurfaceModel<NumericType>>::New(
             context, processParams->ionFlux, processParams->etchantFlux,
-            processParams->oxygenFlux, processParams->maskId, depoId);
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
+            processParams->oxygenFlux, processParams->temperature);
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
     auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
 
     model->insertNextParticleType(ion);

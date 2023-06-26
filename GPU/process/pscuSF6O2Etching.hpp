@@ -43,6 +43,7 @@ public:
 
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(utCudaBuffer &d_rates,
+                      const std::vector<std::array<NumericType, 3>> &points,
                       const std::vector<NumericType> &materialIds) override {
     unsigned long numPoints = materialIds.size();
     updateCoverages(d_rates, numPoints);
@@ -50,9 +51,11 @@ public:
     std::vector<NumericType> etchRate(numPoints, 0.);
     utCudaBuffer etchRateBuffer;
     utCudaBuffer materialIdsBuffer;
+    utCudaBuffer pointCoordsBuffer;
 
     etchRateBuffer.alloc(numPoints * sizeof(NumericType));
     materialIdsBuffer.alloc_and_upload(materialIds);
+    pointCoordsBuffer.alloc_and_upload(points);
 
     assert(d_rates.sizeInBytes / sizeof(NumericType) == numPoints * 5);
     CUdeviceptr rates = d_rates.d_pointer();
@@ -60,10 +63,11 @@ public:
     CUdeviceptr coverages = d_coverages.d_pointer();
     CUdeviceptr erate = etchRateBuffer.d_pointer();
     CUdeviceptr matIds = materialIdsBuffer.d_pointer();
+    CUdeviceptr coords = pointCoordsBuffer.d_pointer();
 
     // launch kernel
     void *kernelArgs[] = {
-        &rates,     &coverages,    &matIds,           &erate,
+        &rates,     &coverages,    &coords,           &matIds,         &erate,
         &numPoints, &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux};
 
     utLaunchKernel::launch(processModuleName, calcEtchRateKernel, kernelArgs,

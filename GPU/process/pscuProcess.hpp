@@ -119,7 +119,7 @@ public:
     }
 
     auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
-        model->getVelocityField());
+        model->getVelocityField(), domain->getMaterialMap());
     transField->setTranslator(translator);
 
     lsAdvect<NumericType, D> advectionKernel;
@@ -256,10 +256,12 @@ public:
             .print();
       }
 
-      auto velocities =
-          model->getSurfaceModel()->calculateVelocities(d_rates, materialIds);
+      auto velocities = model->getSurfaceModel()->calculateVelocities(
+          d_rates, diskMesh->nodes, materialIds);
       curtSmoothing<NumericType, D>(diskMesh, velocities, gridDelta).apply();
       model->getVelocityField()->setVelocities(velocities);
+      if (model->getVelocityField()->getTranslationFieldOptions() == 2)
+        transField->buildKdTree(diskMesh->nodes);
 
       if (psLogger::getLogLevel() >= 4) {
         if (printTime >= 0. &&

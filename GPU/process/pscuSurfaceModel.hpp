@@ -29,6 +29,7 @@ public:
 
   virtual psSmartPointer<std::vector<NumericType>>
   calculateVelocities(utCudaBuffer &d_rates,
+                      const std::vector<std::array<NumericType, 3>> &points,
                       const std::vector<NumericType> &materialIDs) {
     return psSmartPointer<std::vector<NumericType>>::New();
   }

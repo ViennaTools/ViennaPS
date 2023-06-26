@@ -105,6 +105,7 @@ public:
     }
 
     numRays = numPoints_x * numPoints_y * numberOfRaysPerPoint;
+    auto start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < particles.size(); i++) {
 
       launchParams.cosineExponent = particles[i].cosineExponent;
@@ -125,13 +126,18 @@ public:
                               numPoints_x, numPoints_y, numberOfRaysPerPoint));
     }
 
+    // record end time
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
     // T *temp = new T[launchParams.numElements];
     // resultBuffer.download(temp, launchParams.numElements);
     // for (int i = 0; i < launchParams.numElements; i++) {
     //   std::cout << temp[i] << std::endl;
     // }
     // delete temp;
-    // std::cout << gdt::prettyDouble(numRays * particles.size()) << std::endl;
+    // std::cout << "Time: " << diff.count() * 100 << " ms\n";
+    std::cout << gdt::prettyDouble(numRays * particles.size()) << std::endl;
+    std::cout << numRays << std::endl;
 
     // sync - maybe remove in future
     cudaDeviceSynchronize();
