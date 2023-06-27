@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
   // Parse the parameters
   Parameters<NumericType> params;

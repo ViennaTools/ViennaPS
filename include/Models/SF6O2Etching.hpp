@@ -23,6 +23,8 @@ class SF6O2SurfaceModel : public psSurfaceModel<NumericType> {
   static constexpr double rho_Si = 5.02 * 1e7;     // in (1e15 atoms/cm³)
   static constexpr NumericType k_sigma_Si = 3.0e2; // in (1e15 cm⁻²s⁻¹)
   static constexpr NumericType beta_sigma_Si = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
+  static constexpr NumericType gamma_F = 0.7;
+  static constexpr NumericType gamma_O = 1.;
 
   const NumericType etchStop = 0.;
 
@@ -107,10 +109,10 @@ public:
         eCoverage->at(i) = 0;
       } else {
         eCoverage->at(i) =
-            etchantRate->at(i) * totalEtchantFlux /
-            (etchantRate->at(i) * totalEtchantFlux +
+            etchantRate->at(i) * totalEtchantFlux * gamma_F /
+            (etchantRate->at(i) * totalEtchantFlux * gamma_F +
              (k_sigma_Si + 2 * ionEnhancedRate->at(i) * totalIonFlux) *
-                 (1 + (oxygenRate->at(i) * totalOxygenFlux) /
+                 (1 + (oxygenRate->at(i) * totalOxygenFlux * gamma_O) /
                           (beta_sigma_Si +
                            oxygenSputteringRate->at(i) * totalIonFlux)));
       }
@@ -119,10 +121,10 @@ public:
         oCoverage->at(i) = 0;
       } else {
         oCoverage->at(i) =
-            oxygenRate->at(i) * totalOxygenFlux /
-            (oxygenRate->at(i) * totalOxygenFlux +
+            oxygenRate->at(i) * totalOxygenFlux * gamma_O /
+            (oxygenRate->at(i) * totalOxygenFlux * gamma_O +
              (beta_sigma_Si + oxygenSputteringRate->at(i) * totalIonFlux) *
-                 (1 + (etchantRate->at(i) * totalEtchantFlux) /
+                 (1 + (etchantRate->at(i) * totalEtchantFlux * gamma_F) /
                           (k_sigma_Si +
                            2 * ionEnhancedRate->at(i) * totalIonFlux)));
       }
@@ -147,24 +149,21 @@ public:
     // collect data for this hit
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
 
-    auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
+    const double cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
 
-    const double angle =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
+    double f_Si_theta;
     if (cosTheta > 0.5) {
       f_Si_theta = 1.;
-      f_O_theta = 1.;
     } else {
-      f_Si_theta = std::max(3. - 6. * angle / rayInternal::PI, 0.);
-      f_O_theta = std::max(3. - 6. * angle / rayInternal::PI, 0.);
+      f_Si_theta = 3. - 6. * angle / rayInternal::PI;
     }
-
-    f_p_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    double f_O_theta = f_Si_theta;
+    double f_p_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     const double sqrtE = std::sqrt(E);
     const double Y_sp =
@@ -286,11 +285,6 @@ private:
   static constexpr NumericType A =
       1. / (1. + (n_l / n_r) * (halfPI / inflectAngle - 1.));
 
-  NumericType f_p_theta;
-  NumericType f_Si_theta;
-  NumericType f_O_theta;
-  NumericType f_SiO2_theta;
-
   // ion energy
   static constexpr NumericType minEnergy =
       4.; // Discard particles with energy < 1eV
@@ -362,15 +356,8 @@ public:
                         rayTracingData<NumericType> &localData,
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
-    // NumericType Seff;
-    // // F surface coverage
-    // const auto &phi_F = globalData->getVectorData(0)[primID];
-    // // O surface coverage
-    // const auto &phi_O = globalData->getVectorData(1)[primID];
-    // Seff = gamma_O * std::max(1. - phi_O - phi_F, 0.);
-
     // Rate is normalized by dividing with the local sticking coefficient
-    localData.getVectorData(0)[primID] += rayWeight; // * Seff;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -382,7 +369,6 @@ public:
 
     NumericType Seff;
     const auto &phi_F = globalData->getVectorData(0)[primID];
-    // O surface coverage
     const auto &phi_O = globalData->getVectorData(1)[primID];
     Seff = gamma_O * std::max(1. - phi_O - phi_F, 0.);
 
