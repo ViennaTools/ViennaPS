@@ -1,14 +1,18 @@
+#include <FluorocarbonEtching.hpp>
 #include <SF6O2Etching.hpp>
 #include <psMakeHole.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
+#include <psWriteVisualizationMesh.hpp>
 
 #include "Parameters.hpp"
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
+
+  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -32,11 +36,18 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
+  // auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
+  //     params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
+  //     params.oxygenFlux /*oxygen flux*/, params.meanEnergy /*mean energy*/,
+  //     params.sigmaEnergy /*energy sigma*/, params.A_O /*oxy sputter yield*/,
+  //     params.etchStopDepth /*max etch depth*/);
+
+  auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
       params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
-      params.oxygenFlux /*oxygen flux*/, params.rfBias /*rf bias*/,
-      params.A_O /*oxy sputter yield*/,
+      params.oxygenFlux /*oxygen flux*/, params.meanEnergy /*mean energy*/,
+      params.sigmaEnergy /*energy sigma*/,
       params.etchStopDepth /*max etch depth*/);
+  geometry->duplicateTopLevelSet(psMaterial::Polymer);
 
   // process setup
   psProcess<NumericType, D> process;
@@ -52,9 +63,8 @@ int main(int argc, char *argv[]) {
   // run the process
   process.apply();
 
-  // write collected particle meta data (ion energy distribution) to a file
-  process.writeParticleDataLogs("ionEnergyDistribution.txt");
-
   // print final surface
   geometry->printSurface("final.vtp");
+
+  psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
 }

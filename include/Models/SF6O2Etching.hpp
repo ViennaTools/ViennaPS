@@ -135,8 +135,11 @@ public:
 template <typename NumericType, int D>
 class SF6O2Ion : public rayParticle<SF6O2Ion<NumericType, D>, NumericType> {
 public:
-  SF6O2Ion(NumericType passedPower = 100., NumericType oxySputterYield = 3)
-      : power(passedPower), A_O(oxySputterYield) {}
+  SF6O2Ion(const NumericType passedMeanEnergy = 100.,
+           const NumericType passedSigmaEnergy = 10.,
+           const NumericType oxySputterYield = 3)
+      : meanEnergy(passedMeanEnergy), sigmaEnergy(passedSigmaEnergy),
+        A_O(oxySputterYield) {}
 
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -236,9 +239,9 @@ public:
     }
   }
   void initNew(rayRNG &RNG) override final {
+    std::normal_distribution<NumericType> normalDist{meanEnergy, sigmaEnergy};
     do {
-      auto rand1 = uniDist(RNG) * (twoPI - 2 * peak) + peak;
-      E = (1 + std::cos(rand1)) * (power / 2 * 0.75 + 10);
+      E = normalDist(RNG);
     } while (E < minEnergy);
   }
 
@@ -253,19 +256,12 @@ public:
                                     "oxygenSputteringRate"};
   }
 
-  void logData(rayDataLog<NumericType> &dataLog) override final {
-    NumericType max = 0.75 * power + 20 + 1e-6;
-    int idx = static_cast<int>(50 * E / max);
-    assert(idx < 50 && idx >= 0);
-    dataLog.data[0][idx] += 1.;
-  }
-
 private:
   std::uniform_real_distribution<NumericType> uniDist;
 
   static constexpr NumericType A_sp = 0.00339;
   static constexpr NumericType A_Si = 7.;
-  const NumericType A_O = 2.;
+  const NumericType A_O;
 
   static constexpr NumericType Eth_sp = 18.;
   static constexpr NumericType Eth_Si = 15.;
@@ -288,8 +284,8 @@ private:
   // ion energy
   static constexpr NumericType minEnergy =
       4.; // Discard particles with energy < 1eV
-  const NumericType power;
-  static constexpr NumericType peak = 0.2;
+  const NumericType meanEnergy;
+  const NumericType sigmaEnergy;
   NumericType E;
 };
 
@@ -389,12 +385,13 @@ template <typename NumericType, int D>
 class SF6O2Etching : public psProcessModel<NumericType, D> {
 public:
   SF6O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType rfBias,
+               const double oxygenFlux, const NumericType meanEnergy,
+               const NumericType sigmaEnergy,
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth = 0.) {
     // particles
-    auto ion =
-        std::make_unique<SF6O2Ion<NumericType, D>>(rfBias, oxySputterYield);
+    auto ion = std::make_unique<SF6O2Ion<NumericType, D>>(
+        meanEnergy, sigmaEnergy, oxySputterYield);
     auto etchant = std::make_unique<SF6O2Etchant<NumericType, D>>();
     auto oxygen = std::make_unique<SF6O2Oxygen<NumericType, D>>();
 
@@ -408,7 +405,7 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SF6O2Etching");
-    this->insertNextParticleType(ion, 50 /* log particle energies */);
+    this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);
   }
