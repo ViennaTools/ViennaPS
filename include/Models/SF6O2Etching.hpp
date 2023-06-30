@@ -23,6 +23,8 @@ class SF6O2SurfaceModel : public psSurfaceModel<NumericType> {
   static constexpr double rho_Si = 5.02 * 1e7;     // in (1e15 atoms/cm³)
   static constexpr NumericType k_sigma_Si = 3.0e2; // in (1e15 cm⁻²s⁻¹)
   static constexpr NumericType beta_sigma_Si = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
+  static constexpr NumericType gamma_F = 0.7;
+  static constexpr NumericType gamma_O = 1.;
 
   const NumericType etchStop = 0.;
 
@@ -107,10 +109,10 @@ public:
         eCoverage->at(i) = 0;
       } else {
         eCoverage->at(i) =
-            etchantRate->at(i) * totalEtchantFlux /
-            (etchantRate->at(i) * totalEtchantFlux +
+            etchantRate->at(i) * totalEtchantFlux * gamma_F /
+            (etchantRate->at(i) * totalEtchantFlux * gamma_F +
              (k_sigma_Si + 2 * ionEnhancedRate->at(i) * totalIonFlux) *
-                 (1 + (oxygenRate->at(i) * totalOxygenFlux) /
+                 (1 + (oxygenRate->at(i) * totalOxygenFlux * gamma_O) /
                           (beta_sigma_Si +
                            oxygenSputteringRate->at(i) * totalIonFlux)));
       }
@@ -119,10 +121,10 @@ public:
         oCoverage->at(i) = 0;
       } else {
         oCoverage->at(i) =
-            oxygenRate->at(i) * totalOxygenFlux /
-            (oxygenRate->at(i) * totalOxygenFlux +
+            oxygenRate->at(i) * totalOxygenFlux * gamma_O /
+            (oxygenRate->at(i) * totalOxygenFlux * gamma_O +
              (beta_sigma_Si + oxygenSputteringRate->at(i) * totalIonFlux) *
-                 (1 + (etchantRate->at(i) * totalEtchantFlux) /
+                 (1 + (etchantRate->at(i) * totalEtchantFlux * gamma_F) /
                           (k_sigma_Si +
                            2 * ionEnhancedRate->at(i) * totalIonFlux)));
       }
@@ -133,8 +135,11 @@ public:
 template <typename NumericType, int D>
 class SF6O2Ion : public rayParticle<SF6O2Ion<NumericType, D>, NumericType> {
 public:
-  SF6O2Ion(NumericType passedPower = 100., NumericType oxySputterYield = 3)
-      : power(passedPower), A_O(oxySputterYield) {}
+  SF6O2Ion(const NumericType passedMeanEnergy = 100.,
+           const NumericType passedSigmaEnergy = 10.,
+           const NumericType oxySputterYield = 3)
+      : meanEnergy(passedMeanEnergy), sigmaEnergy(passedSigmaEnergy),
+        A_O(oxySputterYield) {}
 
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -147,27 +152,21 @@ public:
     // collect data for this hit
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
 
-    auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
+    const double cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
 
-    const double angle =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
-    NumericType f_Si_theta;
-    NumericType f_O_theta;
-
+    double f_Si_theta;
     if (cosTheta > 0.5) {
       f_Si_theta = 1.;
-      f_O_theta = 1.;
     } else {
-      f_Si_theta = std::max(3. - 6. * angle / rayInternal::PI, 0.);
-      f_O_theta = std::max(3. - 6. * angle / rayInternal::PI, 0.);
+      f_Si_theta = 3. - 6. * angle / rayInternal::PI;
     }
-
-    NumericType f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    double f_O_theta = f_Si_theta;
+    double f_p_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     const double sqrtE = std::sqrt(E);
     const double Y_sp =
@@ -241,9 +240,9 @@ public:
     }
   }
   void initNew(rayRNG &RNG) override final {
+    std::normal_distribution<NumericType> normalDist{meanEnergy, sigmaEnergy};
     do {
-      auto rand1 = uniDist(RNG) * (twoPI - 2 * peak) + peak;
-      E = (1 + std::cos(rand1)) * (power / 2 * 0.75 + 10);
+      E = normalDist(RNG);
     } while (E < minEnergy);
   }
 
@@ -258,20 +257,13 @@ public:
                                     "oxygenSputteringRate"};
   }
 
-  void logData(rayDataLog<NumericType> &dataLog) override final {
-    NumericType max = 0.75 * power + 20 + 1e-6;
-    int idx = static_cast<int>(50 * E / max);
-    assert(idx < 50 && idx >= 0);
-    dataLog.data[0][idx] += 1.;
-  }
-
 private:
   std::uniform_real_distribution<NumericType> uniDist;
 
   static constexpr NumericType A_sp = 0.00339;
   static constexpr NumericType A_Si = 7.;
   static constexpr NumericType B_sp = 9.3;
-  const NumericType A_O = 2.;
+  const NumericType A_O;
 
   static constexpr NumericType Eth_sp = 18.;
   static constexpr NumericType Eth_Si = 15.;
@@ -292,9 +284,9 @@ private:
 
   // ion energy
   static constexpr NumericType minEnergy =
-      4.; // Discard particles with energy < 4eV
-  const NumericType power;
-  static constexpr NumericType peak = 0.2;
+      4.; // Discard particles with energy < 1eV
+  const NumericType meanEnergy;
+  const NumericType sigmaEnergy;
   NumericType E;
 };
 
@@ -361,15 +353,8 @@ public:
                         rayTracingData<NumericType> &localData,
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
-    // NumericType Seff;
-    // // F surface coverage
-    // const auto &phi_F = globalData->getVectorData(0)[primID];
-    // // O surface coverage
-    // const auto &phi_O = globalData->getVectorData(1)[primID];
-    // Seff = gamma_O * std::max(1. - phi_O - phi_F, 0.);
-
     // Rate is normalized by dividing with the local sticking coefficient
-    localData.getVectorData(0)[primID] += rayWeight; // * Seff;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -381,7 +366,6 @@ public:
 
     NumericType Seff;
     const auto &phi_F = globalData->getVectorData(0)[primID];
-    // O surface coverage
     const auto &phi_O = globalData->getVectorData(1)[primID];
     Seff = gamma_O * std::max(1. - phi_O - phi_F, 0.);
 
@@ -402,12 +386,13 @@ template <typename NumericType, int D>
 class SF6O2Etching : public psProcessModel<NumericType, D> {
 public:
   SF6O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType rfBias,
+               const double oxygenFlux, const NumericType meanEnergy,
+               const NumericType sigmaEnergy,
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth = 0.) {
     // particles
-    auto ion =
-        std::make_unique<SF6O2Ion<NumericType, D>>(rfBias, oxySputterYield);
+    auto ion = std::make_unique<SF6O2Ion<NumericType, D>>(
+        meanEnergy, sigmaEnergy, oxySputterYield);
     auto etchant = std::make_unique<SF6O2Etchant<NumericType, D>>();
     auto oxygen = std::make_unique<SF6O2Oxygen<NumericType, D>>();
 
@@ -421,7 +406,7 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SF6O2Etching");
-    this->insertNextParticleType(ion, 50 /* log particle energies */);
+    this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);
   }

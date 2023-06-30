@@ -116,7 +116,7 @@ public:
       }
 
       // etch rate is in cm / s
-      etchRate[i] *= 1e7; // to convert to nm / s
+      etchRate[i] *= 1e4; // to convert to um / s
 
       assert(!std::isnan(etchRate[i]) && "etchRate NaN");
     }
@@ -202,6 +202,10 @@ private:
   static constexpr double k_ie = 1.;
   static constexpr double k_ev = 1.;
 
+  static constexpr NumericType gamma_e = 0.9;
+  static constexpr NumericType gamma_p = 0.26;
+  static constexpr NumericType gamma_pe = 0.6;
+
   static constexpr double delta_p = 0.;
 
   static constexpr double kB = 0.000086173324; // m² kg s⁻² K⁻¹
@@ -225,7 +229,9 @@ template <typename NumericType>
 class FluorocarbonIon
     : public rayParticle<FluorocarbonIon<NumericType>, NumericType> {
 public:
-  FluorocarbonIon(const NumericType passedPower) : power(passedPower) {}
+  FluorocarbonIon(const NumericType passedMeanEnergy,
+                  const NumericType passedSigmaEnergy)
+      : meanEnergy(passedMeanEnergy), sigmaEnergy(passedSigmaEnergy) {}
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
                         const rayTriple<NumericType> &geomNormal,
@@ -294,10 +300,10 @@ public:
     }
   }
   void initNew(rayRNG &RNG) override final {
+    std::normal_distribution<NumericType> normalDist{meanEnergy, sigmaEnergy};
     do {
-      auto rand1 = uniDist(RNG) * (twoPI - 2 * peak) + peak;
-      E = (1 + std::cos(rand1)) * (power / 2 * 0.75 + 10);
-    } while (E < 4.);
+      E = normalDist(RNG);
+    } while (E < minEnergy);
   }
 
   int getRequiredLocalDataSize() const override final { return 3; }
@@ -305,13 +311,6 @@ public:
   std::vector<std::string> getLocalDataLabels() const override final {
     return std::vector<std::string>{"ionSputteringRate", "ionEnhancedRate",
                                     "ionpeRate"};
-  }
-
-  void logData(rayDataLog<NumericType> &dataLog) override final {
-    NumericType max = 0.75 * power + 20 + 1e-6;
-    int idx = static_cast<int>(50 * E / max);
-    assert(idx < 50 && idx >= 0);
-    dataLog.data[0][idx] += 1.;
   }
 
 private:
@@ -335,8 +334,9 @@ private:
   const double A = 1. / (1. + (n_l / n_r) * (halfPI / Phi_inflect - 1.));
   std::uniform_real_distribution<NumericType> uniDist;
 
-  const NumericType power;
-  static constexpr double peak = 0.2;
+  static constexpr NumericType minEnergy = 4.;
+  const NumericType meanEnergy;
+  const NumericType sigmaEnergy;
   NumericType E;
 };
 
@@ -352,7 +352,7 @@ public:
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
     // collect data for this hit
-    localData.getVectorData(0)[primID] += rayWeight * gamma_p;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -385,18 +385,19 @@ public:
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
     // collect data for this hit
-    localData.getVectorData(0)[primID] += rayWeight * gamma_e;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
                     const rayTriple<NumericType> &geomNormal,
-                    const unsigned int primId, const int materialId,
+                    const unsigned int primID, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    // const auto &phi_e = globalData.getVectorData(1)[id];
-    NumericType sticking = gamma_e; // * phi_e;
-    return std::pair<NumericType, rayTriple<NumericType>>{sticking, direction};
+    const auto &phi_e = globalData->getVectorData(0)[primID];
+    const auto &phi_p = globalData->getVectorData(1)[primID];
+    NumericType Seff = gamma_e * std::max(1 - phi_e - phi_p, 0.);
+    return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
   int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
@@ -421,18 +422,18 @@ public:
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
     // collect data for this hit
-    localData.getVectorData(0)[primID] += rayWeight * gamma_pe;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
                     const rayTriple<NumericType> &geomNormal,
-                    const unsigned int primId, const int materialId,
+                    const unsigned int primID, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    // const auto &phi_pe = globalData.getVectorData(0)[id];
-    NumericType sticking = gamma_pe; // * phi_pe;
-    return std::pair<NumericType, rayTriple<NumericType>>{sticking, direction};
+    const auto &phi_pe = globalData->getVectorData(2)[primID];
+    NumericType Seff = gamma_pe * std::max(1. - phi_pe, 0.);
+    return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
   int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
@@ -448,10 +449,13 @@ template <typename NumericType, int D>
 class FluorocarbonEtching : public psProcessModel<NumericType, D> {
 public:
   FluorocarbonEtching(const double ionFlux, const double etchantFlux,
-                      const double polyFlux, const NumericType rfBiasPower,
-                      const NumericType etchStopDepth = 0.) {
+                      const double polyFlux, const NumericType meanEnergy,
+                      const NumericType sigmaEnergy,
+                      const NumericType etchStopDepth =
+                          std::numeric_limits<NumericType>::lowest()) {
     // particles
-    auto ion = std::make_unique<FluorocarbonIon<NumericType>>(rfBiasPower);
+    auto ion =
+        std::make_unique<FluorocarbonIon<NumericType>>(meanEnergy, sigmaEnergy);
     auto etchant = std::make_unique<FluorocarbonEtchant<NumericType, D>>();
     auto poly = std::make_unique<FluorocarbonPolymer<NumericType, D>>();
     auto etchantOnPoly =
@@ -463,12 +467,12 @@ public:
             ionFlux, etchantFlux, polyFlux, etchStopDepth);
 
     // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FluorocarbonEtching");
-    this->insertNextParticleType(ion, 50);
+    this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
     this->insertNextParticleType(etchantOnPoly);

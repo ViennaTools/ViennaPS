@@ -19,7 +19,8 @@ ionFlux=10.
 etchantFlux=1800.
 oxygenFlux=100.
 
-rfBias=105 # rf plasma bias (W) controls the ion energy distribution
+meanEnergy=100 # eV
+sigmaEnergy=10
 A_O=3 # passivation layer sputtering coefficient
 
 etchStopDepth=-10 # maximum etching depth
