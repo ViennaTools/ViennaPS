@@ -12,6 +12,8 @@
 #include <lsMesh.hpp>
 #include <utLog.hpp>
 
+#include <psKDTree.hpp>
+
 /// Extract an explicit lsMesh<> instance from an lsDomain.
 /// The interface is then described by explciit surface elements:
 /// Lines in 2D, Triangles in 3D.
@@ -21,9 +23,11 @@ template <class T, int D = 3> class culsToSurfaceMesh {
   psSmartPointer<lsDomain<double, D>> dlevelSet = nullptr;
   psSmartPointer<lsDomain<float, D>> flevelSet = nullptr;
   psSmartPointer<lsMesh<T>> mesh = nullptr;
+  psSmartPointer<psKDTree<T, std::array<T, 3>>> kdTree = nullptr;
   // std::vector<hrleIndexType> meshNodeToPointIdMapping;
   const T epsilon;
   bool updatePointData = true;
+  const bool buildKdTree = false;
   bool useFloat;
   T minNodeDistance = 1e-4;
 
@@ -34,6 +38,25 @@ public:
   culsToSurfaceMesh(const psSmartPointer<lsDomain<TDom, D>> passedLevelSet,
                     psSmartPointer<lsMesh<T>> passedMesh, double eps = 1e-12)
       : mesh(passedMesh), epsilon(eps) {
+    if constexpr (std::is_same_v<TDom, float>) {
+      flevelSet = passedLevelSet;
+      useFloat = true;
+    } else if constexpr (std::is_same_v<TDom, double>) {
+      dlevelSet = passedLevelSet;
+      useFloat = false;
+    } else {
+      utLog::getInstance()
+          .addWarning("Level set numeric type not compatiable.")
+          .print();
+    }
+  }
+
+  template <class TDom>
+  culsToSurfaceMesh(const psSmartPointer<lsDomain<TDom, D>> passedLevelSet,
+                    psSmartPointer<lsMesh<T>> passedMesh,
+                    psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree,
+                    double eps = 1e-12)
+      : mesh(passedMesh), epsilon(eps), buildKdTree(true) {
     if constexpr (std::is_same_v<TDom, float>) {
       flevelSet = passedLevelSet;
       useFloat = true;
@@ -132,6 +155,8 @@ private:
     // there is no multithreading here, so just use 1
     // if (updateData)
     //   newDataSourceIds.resize(1);
+
+    std::vector<std::array<T, 3>> triangleCenters;
 
     // iterate over all active points
     for (hrleConstSparseCellIterator<hrleDomainType> cellIt(
@@ -257,9 +282,29 @@ private:
           triangleMisformed = nod_numbers[0] == nod_numbers[1];
         }
 
-        if (!triangleMisformed)
+        if (!triangleMisformed) {
           mesh->insertNextElement(nod_numbers); // insert new surface element
+          if (buildKdTree) {
+            triangleCenters.push_back({(mesh->nodes[nod_numbers[0]][0] +
+                                        mesh->nodes[nod_numbers[1]][0] +
+                                        mesh->nodes[nod_numbers[2]][0]) /
+                                           3.f,
+                                       (mesh->nodes[nod_numbers[0]][1] +
+                                        mesh->nodes[nod_numbers[1]][1] +
+                                        mesh->nodes[nod_numbers[2]][1]) /
+                                           3.f,
+                                       (mesh->nodes[nod_numbers[0]][2] +
+                                        mesh->nodes[nod_numbers[1]][2] +
+                                        mesh->nodes[nod_numbers[2]][2]) /
+                                           3.f});
+          }
+        }
       }
+    }
+
+    if (buildKdTree) {
+      kdTree->setPoints(triangleCenters);
+      kdTree->build();
     }
 
     // now copy old data into new level set

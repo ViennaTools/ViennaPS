@@ -3,6 +3,7 @@
 #include <curtLaunchParams.hpp>
 #include <curtMesh.hpp>
 
+#include <psKDTree.hpp>
 #include <psSmartPointer.hpp>
 
 #include <utCudaBuffer.hpp>
@@ -23,6 +24,7 @@ template <typename T, int D> struct curtGeometry {
 
   // buffer that keeps the (final, compacted) accel structure
   utCudaBuffer asBuffer;
+  psSmartPointer<psKDTree<T, std::array<T, 3>>> kdTree = nullptr;
 
   OptixDeviceContext optixContext;
 
@@ -37,6 +39,8 @@ template <typename T, int D> struct curtGeometry {
     }
 
     auto mesh = psSmartPointer<lsMesh<float>>::New();
+    // assert(kdTree);
+    // culsToSurfaceMesh<float>(domain, mesh, kdTree).apply();
     culsToSurfaceMesh<float>(domain, mesh).apply();
 
     const auto gridDelta = domain->getGrid().getGridDelta();

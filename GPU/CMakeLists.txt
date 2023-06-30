@@ -94,3 +94,14 @@ target_include_directories(ViennaPS_GPU PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_
 target_link_libraries(ViennaPS_GPU CGAL::CGAL ${Boost_LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
 
 add_dependencies(buildGPUApplication ViennaPS_GPU)
+
+add_executable(
+  ViennaPS_GPU_Benchmark  ${embedded_deposition_pipeline}
+                ${PROJECT_SOURCE_DIR}/benchmark/GPU_Benchmark.cpp)
+
+target_include_directories(ViennaPS_GPU_Benchmark PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}
+                                               ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
+
+target_link_libraries(ViennaPS_GPU_Benchmark ${Boost_LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
+
+# add_dependencies(buildGPUBenchmark ViennaPS_GPU_Benchmark)

@@ -9,7 +9,6 @@
 #include <string>
 #ifdef __GNUC__
 #include <stdint.h>
-#include <sys/time.h>
 #endif
 #include <stdexcept>
 

@@ -133,6 +133,8 @@ public:
 
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
+    auto kdTree = psSmartPointer<
+        psKDTree<NumericType, std::array<NumericType, 3>>>::New();
 
     if (useRayTracing && !rayTracerInitialized) {
       if (!model->getPtxCode()) {
@@ -141,6 +143,7 @@ public:
             .print();
         return;
       }
+      rayTrace.setKdTree(kdTree);
       rayTrace.setPipeline(model->getPtxCode());
       rayTrace.setLevelSet(domain->getLevelSets()->back());
       rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
@@ -246,6 +249,9 @@ public:
           rayTrace.translateFromPointData(
               diskMesh, model->getSurfaceModel()->getCoverages(), numCov);
         rayTrace.apply();
+
+        // TODO "smooth" results on elements
+        // TODO: keep results on elements and generate kd tree instead
 
         // get results as point data
         rayTrace.translateToPointData(diskMesh, d_rates);

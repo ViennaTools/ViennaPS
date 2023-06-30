@@ -9,6 +9,8 @@
 #include <lsDomain.hpp>
 #include <lsPointData.hpp>
 
+#include <psKDTree.hpp>
+
 #include <curtBoundary.hpp>
 #include <curtChecks.hpp>
 #include <curtGeometry.hpp>
@@ -35,13 +37,17 @@ public:
     initRayTracer();
   }
 
+  void setKdTree(psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree) {
+    geometry.kdTree = passedKdTree;
+  }
+
   void setPipeline(char embeddedPtxCode[]) { ptxCode = embeddedPtxCode; }
 
   void setLevelSet(psSmartPointer<lsDomain<T, D>> passedDomain) {
     domain = passedDomain;
-    double start = gdt::getCurrentTime();
+    // double start = gdt::getCurrentTime();
     geometry.buildAccelFromDomain(domain, launchParams);
-    geoBuildTime += gdt::getCurrentTime() - start;
+    // geoBuildTime += gdt::getCurrentTime() - start;
     geometryValid = true;
   }
 
@@ -53,9 +59,9 @@ public:
 
   void apply() {
     if (!geometryValid) {
-      double start = gdt::getCurrentTime();
+      // double start = gdt::getCurrentTime();
       geometry.buildAccelFromDomain(domain, launchParams);
-      geoBuildTime += gdt::getCurrentTime() - start;
+      // geoBuildTime += gdt::getCurrentTime() - start;
       geometryValid = true;
     }
 
@@ -215,9 +221,9 @@ public:
   }
 
   void updateSurface() {
-    double start = gdt::getCurrentTime();
+    // double start = gdt::getCurrentTime();
     geometry.buildAccelFromDomain(domain, launchParams);
-    geoBuildTime += gdt::getCurrentTime() - start;
+    // geoBuildTime += gdt::getCurrentTime() - start;
     geometryValid = true;
   }
 

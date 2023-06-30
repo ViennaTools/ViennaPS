@@ -20,7 +20,6 @@
 #include <algorithm>
 #ifdef __GNUC__
 #include <stdint.h>
-#include <sys/time.h>
 #endif
 #include <stdexcept>
 
@@ -150,17 +149,17 @@ inline std::string prettyNumber(const size_t s) {
   return buf;
 }
 
-inline double getCurrentTime() {
-#ifdef _WIN32
-  SYSTEMTIME tp;
-  GetSystemTime(&tp);
-  return double(tp.wSecond) + double(tp.wMilliseconds) / 1E3;
-#else
-  struct timeval tp;
-  gettimeofday(&tp, nullptr);
-  return double(tp.tv_sec) + double(tp.tv_usec) / 1E6;
-#endif
-}
+// inline double getCurrentTime() {
+// #ifdef _WIN32
+//   SYSTEMTIME tp;
+//   GetSystemTime(&tp);
+//   return double(tp.wSecond) + double(tp.wMilliseconds) / 1E3;
+// #else
+//   struct timeval tp;
+//   gettimeofday(&tp, nullptr);
+//   return double(tp.tv_sec) + double(tp.tv_usec) / 1E6;
+// #endif
+// }
 
 template <typename TimeUnit> static uint64_t timeStampNow() {
   return std::chrono::duration_cast<TimeUnit>(

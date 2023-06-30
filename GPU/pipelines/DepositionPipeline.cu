@@ -42,9 +42,8 @@ extern "C" __global__ void __closesthit__depoParticle()
     else
     {
         const unsigned int primID = optixGetPrimitiveIndex();
-        const float sticking = params.sticking;
-        atomicAdd(&params.resultBuffer[primID], prd->rayWeight * sticking);
-        prd->rayWeight -= prd->rayWeight * sticking;
+        atomicAdd(&params.resultBuffer[primID], prd->rayWeight);
+        prd->rayWeight -= prd->rayWeight * params.sticking;
         diffuseReflection(prd);
     }
 }
