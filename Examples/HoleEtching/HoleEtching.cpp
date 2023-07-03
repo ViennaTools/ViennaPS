@@ -10,7 +10,7 @@
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
@@ -36,18 +36,11 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  // auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
-  //     params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
-  //     params.oxygenFlux /*oxygen flux*/, params.meanEnergy /*mean energy*/,
-  //     params.sigmaEnergy /*energy sigma*/, params.A_O /*oxy sputter yield*/,
-  //     params.etchStopDepth /*max etch depth*/);
-
-  auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
+  auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
       params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
       params.oxygenFlux /*oxygen flux*/, params.meanEnergy /*mean energy*/,
-      params.sigmaEnergy /*energy sigma*/,
+      params.sigmaEnergy /*energy sigma*/, params.A_O /*oxy sputter yield*/,
       params.etchStopDepth /*max etch depth*/);
-  geometry->duplicateTopLevelSet(psMaterial::Polymer);
 
   // process setup
   psProcess<NumericType, D> process;

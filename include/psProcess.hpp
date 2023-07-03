@@ -56,6 +56,12 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
+  /// Set the CFL condition to use during advection.
+  /// The CFL condition sets the maximum distance a surface can
+  /// be moved during one advection step. It MUST be below 0.5
+  /// to guarantee numerical stability. Defaults to 0.4999.
+  void setTimeStepRatio(const double &cfl) { timeStepRatio = cfl; }
+
   // Sets the minimum time between printing intermediate results during the
   // process. If this is set to a non-positive value, no intermediate results
   // are printed.
@@ -71,7 +77,7 @@ public:
           .print();
       return;
     }
-    auto name = model->getProcessName();
+    const auto name = model->getProcessName();
 
     if (!domain) {
       psLogger::getInstance()
@@ -131,6 +137,7 @@ public:
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
+    advectionKernel.setTimeStepRatio(timeStepRatio);
 
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -256,7 +263,6 @@ public:
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
           model->getSurfaceModel()->updateCoverages(Rates);
-          coveragesInitialized = true;
 
           if (psLogger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
@@ -277,6 +283,8 @@ public:
                 .print();
           }
         }
+        coveragesInitialized = true;
+
         timer.finish();
         psLogger::getInstance()
             .addTiming("Coverage initialization", timer)
@@ -367,16 +375,16 @@ public:
       }
 
       // get velocities from rates
-      auto velocitites = model->getSurfaceModel()->calculateVelocities(
+      auto velocities = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
-      model->getVelocityField()->setVelocities(velocitites);
+      model->getVelocityField()->setVelocities(velocities);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
-        if (velocitites)
-          diskMesh->getCellData().insertNextScalarData(*velocitites,
+        if (velocities)
+          diskMesh->getCellData().insertNextScalarData(*velocities,
                                                        "velocities");
         if (useCoverages) {
           auto coverages = model->getSurfaceModel()->getCoverages();
@@ -626,6 +634,7 @@ private:
   bool coveragesInitialized = false;
   NumericType printTime = 0.;
   NumericType processTime = 0.;
+  NumericType timeStepRatio = 0.4999;
 };
 
 #endif

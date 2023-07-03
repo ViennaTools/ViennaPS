@@ -11,16 +11,18 @@ enum class psMaterial : int {
   Si3N4 = 3,
   SiN = 4,
   SiON = 5,
-  PolySi = 6,
-  W = 7,
-  Al2O3 = 8,
-  TiN = 9,
-  Cu = 10,
-  Polymer = 11,
-  Dielectric = 12,
-  Metal = 13,
-  Air = 14,
-  GAS = 15
+  SiC = 6,
+  PolySi = 7,
+  GaN = 8,
+  W = 9,
+  Al2O3 = 10,
+  TiN = 11,
+  Cu = 12,
+  Polymer = 13,
+  Dielectric = 14,
+  Metal = 15,
+  Air = 16,
+  GAS = 17
 };
 
 class psMaterialMap {
@@ -45,7 +47,7 @@ public:
   std::size_t size() const { return map->getNumberOfLayers(); }
 
   static inline psMaterial mapToMaterial(const int matId) {
-    if (matId > 15 || matId < -1)
+    if (matId > 17 || matId < -1)
       return psMaterial::Undefined;
     return static_cast<psMaterial>(matId);
   }

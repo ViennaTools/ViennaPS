@@ -12,8 +12,9 @@
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
+namespace SF6O2Implementation {
 template <typename NumericType, int D>
-class SF6O2SurfaceModel : public psSurfaceModel<NumericType> {
+class SurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::Coverages;
 
   // fluxes in (1e15 /cm²)
@@ -29,8 +30,8 @@ class SF6O2SurfaceModel : public psSurfaceModel<NumericType> {
   const NumericType etchStop = 0.;
 
 public:
-  SF6O2SurfaceModel(const double ionFlux, const double etchantFlux,
-                    const double oxygenFlux, const NumericType etchStopDepth)
+  SurfaceModel(const double ionFlux, const double etchantFlux,
+               const double oxygenFlux, const NumericType etchStopDepth)
       : totalIonFlux(ionFlux), totalEtchantFlux(etchantFlux),
         totalOxygenFlux(oxygenFlux), etchStop(etchStopDepth) {}
 
@@ -67,7 +68,7 @@ public:
         break;
       }
 
-      if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Si)) {
+      if (!psMaterialMap::isMaterial(materialIds[i], psMaterial::Mask)) {
 
         etchRate[i] =
             -(1 / rho_Si) *
@@ -84,7 +85,7 @@ public:
       psLogger::getInstance().addInfo("Etch stop depth reached.").print();
     }
 
-    return psSmartPointer<std::vector<NumericType>>::New(etchRate);
+    return psSmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
   void
@@ -133,11 +134,11 @@ public:
 };
 
 template <typename NumericType, int D>
-class SF6O2Ion : public rayParticle<SF6O2Ion<NumericType, D>, NumericType> {
+class Ion : public rayParticle<Ion<NumericType, D>, NumericType> {
 public:
-  SF6O2Ion(const NumericType passedMeanEnergy = 100.,
-           const NumericType passedSigmaEnergy = 10.,
-           const NumericType oxySputterYield = 3)
+  Ion(const NumericType passedMeanEnergy = 100.,
+      const NumericType passedSigmaEnergy = 10.,
+      const NumericType oxySputterYield = 3)
       : meanEnergy(passedMeanEnergy), sigmaEnergy(passedSigmaEnergy),
         A_O(oxySputterYield) {}
 
@@ -166,11 +167,11 @@ public:
       f_Si_theta = 3. - 6. * angle / rayInternal::PI;
     }
     double f_O_theta = f_Si_theta;
-    double f_p_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    double f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     const double sqrtE = std::sqrt(E);
     const double Y_sp =
-        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_p_theta;
+        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
     const double Y_Si =
         A_Si * std::max(sqrtE - std::sqrt(Eth_Si), 0.) * f_Si_theta;
     const double Y_O = A_O * std::max(sqrtE - std::sqrt(Eth_O), 0.) * f_O_theta;
@@ -229,8 +230,9 @@ public:
     if (NewEnergy > minEnergy) {
       E = NewEnergy;
 
-      auto direction = rayReflectionConedCosine<NumericType, D>(
-          halfPI - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
+      // auto direction = rayReflectionConedCosine<NumericType, D>(
+      //     halfPI - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
+      auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
 
       return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
     } else {
@@ -261,12 +263,12 @@ private:
 
   static constexpr NumericType A_sp = 0.00339;
   static constexpr NumericType A_Si = 7.;
+  static constexpr NumericType B_sp = 9.3;
   const NumericType A_O;
 
   static constexpr NumericType Eth_sp = 18.;
   static constexpr NumericType Eth_Si = 15.;
   static constexpr NumericType Eth_O = 10.;
-  static constexpr NumericType B_sp = 9.3;
 
   static constexpr NumericType Eref_max = 1.;
 
@@ -290,8 +292,7 @@ private:
 };
 
 template <typename NumericType, int D>
-class SF6O2Etchant
-    : public rayParticle<SF6O2Etchant<NumericType, D>, NumericType> {
+class Etchant : public rayParticle<Etchant<NumericType, D>, NumericType> {
 public:
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -342,8 +343,7 @@ private:
 };
 
 template <typename NumericType, int D>
-class SF6O2Oxygen
-    : public rayParticle<SF6O2Oxygen<NumericType, D>, NumericType> {
+class Oxygen : public rayParticle<Oxygen<NumericType, D>, NumericType> {
 public:
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -380,6 +380,7 @@ public:
 private:
   static constexpr NumericType gamma_O = 1.;
 };
+} // namespace SF6O2Implementation
 
 template <typename NumericType, int D>
 class SF6O2Etching : public psProcessModel<NumericType, D> {
@@ -388,16 +389,20 @@ public:
                const double oxygenFlux, const NumericType meanEnergy,
                const NumericType sigmaEnergy,
                const NumericType oxySputterYield = 2.,
-               const NumericType etchStopDepth = 0.) {
+               const NumericType etchStopDepth =
+                   std::numeric_limits<NumericType>::lowest()) {
     // particles
-    auto ion = std::make_unique<SF6O2Ion<NumericType, D>>(
+    auto ion = std::make_unique<SF6O2Implementation::Ion<NumericType, D>>(
         meanEnergy, sigmaEnergy, oxySputterYield);
-    auto etchant = std::make_unique<SF6O2Etchant<NumericType, D>>();
-    auto oxygen = std::make_unique<SF6O2Oxygen<NumericType, D>>();
+    auto etchant =
+        std::make_unique<SF6O2Implementation::Etchant<NumericType, D>>();
+    auto oxygen =
+        std::make_unique<SF6O2Implementation::Oxygen<NumericType, D>>();
 
     // surface model
-    auto surfModel = psSmartPointer<SF6O2SurfaceModel<NumericType, D>>::New(
-        ionFlux, etchantFlux, oxygenFlux, etchStopDepth);
+    auto surfModel =
+        psSmartPointer<SF6O2Implementation::SurfaceModel<NumericType, D>>::New(
+            ionFlux, etchantFlux, oxygenFlux, etchStopDepth);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
