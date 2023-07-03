@@ -56,6 +56,12 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
+  /// Set the CFL condition to use during advection.
+  /// The CFL condition sets the maximum distance a surface can
+  /// be moved during one advection step. It MUST be below 0.5
+  /// to guarantee numerical stability. Defaults to 0.4999.
+  void setTimeStepRatio(const double &cfl) { timeStepRatio = cfl; }
+
   // Sets the minimum time between printing intermediate results during the
   // process. If this is set to a non-positive value, no intermediate results
   // are printed.
@@ -131,6 +137,7 @@ public:
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
+    advectionKernel.setTimeStepRatio(timeStepRatio);
 
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -150,8 +157,7 @@ public:
             domain->getGrid().getBoundaryConditions(i));
 
       rayTrace.setSourceDirection(sourceDirection);
-      // rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
-      rayTrace.setNumberOfRaysFixed(288000000);
+      rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
       rayTrace.setBoundaryConditions(rayBoundaryCondition);
       rayTrace.setUseRandomSeeds(useRandomSeeds);
       rayTrace.setCalculateFlux(false);
@@ -630,6 +636,7 @@ private:
   bool coveragesInitialized = false;
   NumericType printTime = 0.;
   NumericType processTime = 0.;
+  NumericType timeStepRatio = 0.4999;
 };
 
 #endif
