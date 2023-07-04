@@ -484,6 +484,8 @@ public:
   }
 
   void buildNeighborhood() {
+    psUtils::Timer timer;
+    timer.start();
     const auto &cells = cellGrid->template getElements<(1 << D)>();
     const auto &nodes = cellGrid->getNodes();
     unsigned const numNodes = nodes.size();
@@ -559,6 +561,11 @@ public:
         }
       }
     }
+    timer.finish();
+    psLogger::getInstance()
+        .addTiming("Building cell set neighborhood structure took",
+                   timer.currentDuration * 1e-9)
+        .print();
   }
 
   const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) {
@@ -634,6 +641,8 @@ private:
   }
 
   void buildBVH() {
+    psUtils::Timer timer;
+    timer.start();
     auto &elems = cellGrid->template getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
     BVH->clearCellIds();
@@ -648,6 +657,10 @@ private:
         cell->insert(elemIdx);
       }
     }
+    timer.finish();
+    psLogger::getInstance()
+        .addTiming("Building cell set BVH took", timer.currentDuration * 1e-9)
+        .print();
   }
 
   void calculateMinMaxIndex(
