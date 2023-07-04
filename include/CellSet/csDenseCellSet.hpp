@@ -40,6 +40,7 @@ private:
   T depth = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
+  std::bitset<D> periodicBoundary;
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
   hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
@@ -147,14 +148,18 @@ public:
           cellGrid->maximumExtent[0], cellGrid->maximumExtent[1]};
   }
 
+  void setPeriodicBoundary(std::array<bool, D> isPeriodic) {
+    for (int i = 0; i < D; i++) {
+      periodicBoundary[i] = isPeriodic[i];
+    }
+  }
+
   std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
     return cellGrid->getCellData().getScalarData(name);
   }
-
-  gridType getCellGrid() { return cellGrid; }
 
   T getDepth() const { return depth; }
 
@@ -242,83 +247,6 @@ public:
   // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
     psVTKWriter<T>(cellGrid, fileName).apply();
-  }
-
-  // Save cell set data in simple text format
-  void writeCellSetData(std::string fileName) const {
-    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
-
-    std::ofstream file(fileName);
-    file << numberOfCells << "\n";
-    for (int i = 0; i < numScalarData; i++) {
-      auto label = cellGrid->getCellData().getScalarDataLabel(i);
-      file << label << ",";
-    }
-    file << "\n";
-
-    for (size_t j = 0; j < numberOfCells; j++) {
-      for (int i = 0; i < numScalarData; i++) {
-        file << cellGrid->getCellData().getScalarData(i)->at(j) << ",";
-      }
-      file << "\n";
-    }
-
-    file.close();
-  }
-
-  // Read cell set data from text
-  void readCellSetData(std::string fileName) {
-    std::ifstream file(fileName);
-    std::string line;
-
-    if (!file.is_open()) {
-      psLogger::getInstance()
-          .addWarning("Could not open file " + fileName)
-          .print();
-      return;
-    }
-
-    std::getline(file, line);
-    if (std::stoi(line) != numberOfCells) {
-      psLogger::getInstance().addWarning("Incompatible cell set data.").print();
-      return;
-    }
-
-    std::vector<std::string> labels;
-    std::getline(file, line);
-    {
-      std::stringstream ss(line);
-      std::string label;
-      while (std::getline(ss, label, ',')) {
-        labels.push_back(label);
-      }
-    }
-
-    std::vector<std::vector<T> *> cellDataP;
-    for (int i = 0; i < labels.size(); i++) {
-      auto dataP = getScalarData(labels[i]);
-      if (dataP == nullptr) {
-        dataP = addScalarData(labels[i], 0.);
-      }
-    }
-
-    for (int i = 0; i < labels.size(); i++) {
-      cellDataP.push_back(getScalarData(labels[i]));
-    }
-
-    std::size_t j = 0;
-    while (std::getline(file, line)) {
-      std::stringstream ss(line);
-      std::size_t i = 0;
-      std::string value;
-      while (std::getline(ss, value, ','))
-        cellDataP[i++]->at(j) = std::stod(value);
-
-      j++;
-    }
-    assert(j == numberOfCells && "Data incompatible");
-
-    file.close();
   }
 
   // Save cell set data in simple text format
@@ -561,6 +489,7 @@ public:
     unsigned const numNodes = nodes.size();
     unsigned const numCells = cells.size();
     cellNeighbors.resize(numCells);
+    const bool usePeriodicBoundary = periodicBoundary.any();
 
     std::vector<std::vector<unsigned>> nodeCellConnections(numNodes);
 
@@ -578,6 +507,32 @@ public:
         coord[i] += gridDelta / 2.;
         cellNeighbors[cellIdx][i] = -1;
         cellNeighbors[cellIdx][i + D] = -1;
+      }
+
+      if (usePeriodicBoundary) {
+        auto onBoundary = isBoundaryCell(coord);
+        if (onBoundary.any()) {
+          /*look for neighbor cells using BVH*/
+          for (std::size_t i = 0; i < 2 * D; i++) {
+            auto neighborCoord = coord;
+            bool minBoundary = i % 2 == 0;
+
+            if (onBoundary.test(i)) {
+              // wrap around boundary
+              if (!minBoundary) {
+                neighborCoord[i / 2] =
+                    cellGrid->minimumExtent[i / 2] + gridDelta / 2.;
+              } else {
+                neighborCoord[i / 2] =
+                    cellGrid->maximumExtent[i / 2] - gridDelta / 2.;
+              }
+            } else {
+              neighborCoord[i / 2] += minBoundary ? -gridDelta : gridDelta;
+            }
+            cellNeighbors[cellIdx][i] = findIndex(neighborCoord);
+          }
+          continue;
+        }
       }
 
       for (unsigned cellNodeIdx = 0; cellNodeIdx < (1 << D); cellNodeIdx++) {
@@ -715,6 +670,23 @@ private:
                                                 : grid.getMaxBounds(i));
       }
     }
+  }
+
+  std::bitset<2 * D> isBoundaryCell(const std::array<T, 3> &cellCoord) {
+    std::bitset<2 * D> onBoundary;
+    for (int i = 0; i < 2 * D; i += 2) {
+      if (!periodicBoundary[i / 2])
+        continue;
+      if (cellCoord[i / 2] - cellGrid->minimumExtent[i / 2] < gridDelta) {
+        /* cell is at min boundary */
+        onBoundary.set(i);
+      }
+      if (cellGrid->maximumExtent[i / 2] - cellCoord[i / 2] < gridDelta) {
+        /* cell is at max boundary */
+        onBoundary.set(i + 1);
+      }
+    }
+    return onBoundary;
   }
 };
 
