@@ -1,12 +1,14 @@
 #pragma once
 
-#include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
-#include <lsFromSurfaceMesh.hpp>
 #include <lsMakeGeometry.hpp>
 
 #include <psDomain.hpp>
 #include <psLogger.hpp>
+<<<<<<< HEAD
+=======
+#include <psMaterials.hpp>
+>>>>>>> master
 
 /**
  * Creates a plane in z(3D)/y(2D) direction.
@@ -15,26 +17,31 @@ template <class NumericType, int D> class psMakePlane {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
 
-public:
   PSPtrType domain = nullptr;
 
-  NumericType gridDelta = .25;
-  NumericType xExtent = 10;
-  NumericType yExtent = 10;
-  NumericType height = 0.;
-  bool periodicBoundary = false;
-  bool add = false;
+  const NumericType gridDelta = 0.;
+  const NumericType xExtent = 0.;
+  const NumericType yExtent = 0.;
+  const NumericType height = 0.;
 
+  const bool periodicBoundary = false;
+  const bool add = false;
+
+  const psMaterial material = psMaterial::Undefined;
+
+public:
   psMakePlane(PSPtrType passedDomain, NumericType passedHeight = 0.,
-              bool passedAdd = false)
-      : domain(passedDomain), height(passedHeight), add(passedAdd) {}
+              const psMaterial passedMaterial = psMaterial::Undefined)
+      : domain(passedDomain), height(passedHeight), add(true),
+        material(passedMaterial) {}
 
   psMakePlane(PSPtrType passedDomain, const NumericType passedGridDelta,
               const NumericType passedXExtent, const NumericType passedYExtent,
-              const NumericType passedHeight, const bool passedPeriodic = false)
+              const NumericType passedHeight, const bool passedPeriodic = false,
+              const psMaterial passedMaterial = psMaterial::Undefined)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent), height(passedHeight),
-        periodicBoundary(passedPeriodic) {}
+        periodicBoundary(passedPeriodic), material(passedMaterial) {}
 
   void apply() {
     if (add) {
@@ -43,7 +50,7 @@ public:
             .addWarning("psMakePlane: Plane can only be added to already "
                         "existing geometry.")
             .print();
-        add = false;
+        return;
       }
     } else {
       domain->clear();
@@ -89,14 +96,22 @@ public:
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
-      domain->insertNextLevelSet(substrate);
+      if (material == psMaterial::Undefined) {
+        domain->insertNextLevelSet(substrate);
+      } else {
+        domain->insertNextLevelSetAsMaterial(substrate, material);
+      }
     } else {
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
       lsMakeGeometry<NumericType, D>(
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
-      domain->insertNextLevelSet(substrate);
+      if (material == psMaterial::Undefined) {
+        domain->insertNextLevelSet(substrate);
+      } else {
+        domain->insertNextLevelSetAsMaterial(substrate, material);
+      }
     }
   }
 };

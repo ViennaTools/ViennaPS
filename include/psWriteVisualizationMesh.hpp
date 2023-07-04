@@ -20,6 +20,8 @@ public:
     for (auto ls : *domain->getLevelSets()) {
       visMesh.insertNextLevelSet(ls);
     }
+    if (domain->getMaterialMap())
+      visMesh.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     visMesh.apply();
   }
 
@@ -31,5 +33,6 @@ public:
 
 private:
   psSmartPointer<psDomain<NumericType, D>> domain;
+  psSmartPointer<lsMaterialMap> materialMap;
   std::string fileName;
 };

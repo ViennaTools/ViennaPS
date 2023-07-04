@@ -3,22 +3,21 @@ gridDelta=2.
 xExtent=300.0
 
 # Geometry
-numLayers=15
+numLayers=7
 layerHeight=30.0
 substrateHeight=50.
 trenchWidth=150.0
 
 # Etching
-etchRate=6.5
+nitrideEtchRate=6.5
 oxideEtchRate=0.
 targetEtchDepth=200.
-byprodFactor=1.
 diffusionCoefficient=40. 
 sink=0.01          
-scallopStreamVelocity=5.
-holeStreamVelocity=1.
+scallopVelocity=5.
+centerVelocity=1.
 
 # Redeposition
-redepoFactor=0.7
-redepoTimeInt=60.
-redepoThreshold=0.2
+redepositionRate=0.01
+redepositionTimeInt=60.
+redepositionThreshold=0.2

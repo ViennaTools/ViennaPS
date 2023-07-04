@@ -14,33 +14,37 @@ template <class NumericType, int D> class psMakeTrench {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
 
-public:
   PSPtrType domain = nullptr;
 
-  NumericType gridDelta = .25;
-  NumericType xExtent = 20;
-  NumericType yExtent = 14;
-  NumericType baseHeight = 0.;
+  const NumericType gridDelta;
+  const NumericType xExtent;
+  const NumericType yExtent;
+  const NumericType baseHeight = 0.;
 
-  NumericType trenchWidth = 7;
-  NumericType taperingAngle = 0;
-  NumericType trenchDepth = 17.5;
-  bool periodicBoundary = false;
-  bool makeMask = false;
+  const NumericType trenchWidth;
+  const NumericType trenchDepth;
+  const NumericType taperingAngle = 0;
+  const bool periodicBoundary = false;
+  const bool makeMask = false;
 
+  psMaterial material = psMaterial::Undefined;
+
+public:
   psMakeTrench(PSPtrType passedDomain, const NumericType passedGridDelta,
                const NumericType passedXExtent, const NumericType passedYExtent,
                const NumericType passedTrenchWidth,
-               const NumericType passedTrenchHeight,
+               const NumericType passedTrenchDepth,
                const NumericType passedTaperingAngle = 0.,
                const NumericType passedBaseHeight = 0.,
                const bool passedPeriodicBoundary = false,
-               const bool passedMakeMask = false)
+               const bool passedMakeMask = false,
+               const psMaterial passedMaterial = psMaterial::Undefined)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
-        trenchWidth(passedTrenchWidth), trenchDepth(passedTrenchHeight),
+        trenchWidth(passedTrenchWidth), trenchDepth(passedTrenchDepth),
         taperingAngle(passedTaperingAngle), baseHeight(passedBaseHeight),
-        periodicBoundary(passedPeriodicBoundary), makeMask(passedMakeMask) {}
+        periodicBoundary(passedPeriodicBoundary), makeMask(passedMakeMask),
+        material(passedMaterial) {}
 
   void apply() {
     domain->clear();
@@ -211,8 +215,14 @@ public:
                                        lsBooleanOperationEnum::UNION)
         .apply();
 
-    if (makeMask)
-      domain->insertNextLevelSet(mask);
-    domain->insertNextLevelSet(substrate, false);
+    if (material == psMaterial::Undefined) {
+      if (makeMask)
+        domain->insertNextLevelSet(mask);
+      domain->insertNextLevelSet(substrate, false);
+    } else {
+      if (makeMask)
+        domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+      domain->insertNextLevelSetAsMaterial(substrate, material, false);
+    }
   }
 };

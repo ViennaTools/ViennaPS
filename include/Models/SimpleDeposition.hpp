@@ -22,23 +22,6 @@ public:
   }
 };
 
-template <class T>
-class SimpleDepositionVelocityField : public psVelocityField<T> {
-public:
-  T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int /*material*/,
-                      const std::array<T, 3> & /*normalVector*/,
-                      unsigned long pointID) override {
-    return velocities->at(pointID);
-  }
-
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
-    velocities = passedVelocities;
-  }
-
-private:
-  psSmartPointer<std::vector<T>> velocities = nullptr;
-};
-
 template <typename NumericType, int D>
 class SimpleDepositionParticle
     : public rayParticle<SimpleDepositionParticle<NumericType, D>,
@@ -55,7 +38,7 @@ public:
                         rayTracingData<NumericType> &localData,
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight * stickingProbability;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -96,8 +79,7 @@ public:
         psSmartPointer<SimpleDepositionSurfaceModel<NumericType, D>>::New();
 
     // velocity field
-    auto velField =
-        psSmartPointer<SimpleDepositionVelocityField<NumericType>>::New();
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

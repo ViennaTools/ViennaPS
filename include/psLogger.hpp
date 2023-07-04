@@ -78,6 +78,21 @@ public:
     return *this;
   }
 
+  psLogger &addTiming(std::string s, double timeInSeconds,
+                      double totalTimeInSeconds) {
+    if (getLogLevel() < 3)
+      return *this;
+#pragma omp critical
+    {
+      message += std::string(tabWidth, ' ') + s + ": " +
+                 std::to_string(timeInSeconds) + " s\n" +
+                 std::string(tabWidth, ' ') + "Percent of total time: " +
+                 std::to_string(timeInSeconds / totalTimeInSeconds * 100) +
+                 "\n";
+    }
+    return *this;
+  }
+
   psLogger &addInfo(std::string s) {
     if (getLogLevel() < 2)
       return *this;

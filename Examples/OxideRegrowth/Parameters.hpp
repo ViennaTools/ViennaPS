@@ -8,7 +8,7 @@
 template <typename T> struct Parameters {
   // Domain
   // all length units in nm
-  T etchRate = 6.5; // nm/min
+  T nitrideEtchRate = 6.5; // nm/min
   T oxideEtchRate = 0.;
 
   T gridDelta = 2.;  // nm
@@ -23,15 +23,14 @@ template <typename T> struct Parameters {
   // Process
   T targetEtchDepth = 200.;     // nm
   T diffusionCoefficient = 50.; // diffusion cofficient nm²/s
-  T byprodFactor = 1.;          // factor when adding byproduct
   T sink = 0.01;                // sink strength
   // convection velocity in the scallops towards the center nm/s
-  T scallopStreamVelocity = 5.;
+  T scallopVelocity = 5.;
   // convection velocity in the center towards the sink on the top nm/s
-  T holeStreamVelocity = 5.;
-  T redepoFactor = 0.7;
-  T redepoThreshold = 0.2;
-  T redepoTimeInt = 60.;
+  T centerVelocity = 5.;
+  T redepositionRate = 0.01;
+  T redepositionThreshold = 0.2;
+  T redepositionTimeInt = 60.;
 
   Parameters() {}
 
@@ -46,14 +45,14 @@ template <typename T> struct Parameters {
         psUtils::Item{"trenchWidth", trenchWidth},                     //
         psUtils::Item{"diffusionCoefficient", diffusionCoefficient},   //
         psUtils::Item{"sink", sink},                                   //
-        psUtils::Item{"scallopStreamVelocity", scallopStreamVelocity}, //
-        psUtils::Item{"holeStreamVelocity", holeStreamVelocity},       //
+        psUtils::Item{"scallopVelocity", scallopVelocity},             //
+        psUtils::Item{"centerVelocity", centerVelocity},               //
         psUtils::Item{"targetEtchDepth", targetEtchDepth},             //
-        psUtils::Item{"redepoFactor", redepoFactor},                   //
-        psUtils::Item{"redepoThreshold", redepoThreshold},             //
-        psUtils::Item{"byprodFactor", byprodFactor},                   //
-        psUtils::Item{"redepoTimeInt", redepoTimeInt},                 //
-        psUtils::Item{"oxideEtchRate", oxideEtchRate}                  //
+        psUtils::Item{"redepositionRate", redepositionRate},           //
+        psUtils::Item{"redepositionThreshold", redepositionThreshold}, //
+        psUtils::Item{"redepositionTimeInt", redepositionTimeInt},     //
+        psUtils::Item{"oxideEtchRate", oxideEtchRate},                 //
+        psUtils::Item{"nitrideEtchRate", nitrideEtchRate}              //
     );
   }
 };

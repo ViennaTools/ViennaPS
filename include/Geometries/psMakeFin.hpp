@@ -12,31 +12,32 @@ template <class NumericType, int D> class psMakeFin {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
 
-public:
   PSPtrType domain = nullptr;
 
-  NumericType gridDelta = .25;
-  NumericType xExtent = 10;
-  NumericType yExtent = 7;
-  NumericType baseHeight = 0.;
+  const NumericType gridDelta;
+  const NumericType xExtent;
+  const NumericType yExtent;
+  const NumericType baseHeight = 0.;
 
-  NumericType finWidth = 7;
-  NumericType finHeight = 17.5;
-  bool periodicBoundary = false;
-  bool makeMask = true;
+  const NumericType finWidth;
+  const NumericType finHeight;
+  const bool periodicBoundary = false;
+  const bool makeMask = false;
+  const psMaterial material = psMaterial::Undefined;
 
-  psMakeFin(PSPtrType passedDomain) : domain(passedDomain) {}
-
+public:
   psMakeFin(PSPtrType passedDomain, const NumericType passedGridDelta,
             const NumericType passedXExtent, const NumericType passedYExtent,
             const NumericType passedFinWidth, const NumericType passedFinHeight,
             const NumericType passedBaseHeight = 0.,
-            const bool passedPeriodic = false, const bool passedMakeMask = true)
+            const bool passedPeriodic = false,
+            const bool passedMakeMask = false,
+            const psMaterial passedMaterial = psMaterial::Undefined)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         finWidth(passedFinWidth), finHeight(passedFinHeight),
         baseHeight(passedBaseHeight), periodicBoundary(passedPeriodic),
-        makeMask(passedMakeMask) {}
+        makeMask(passedMakeMask), material(passedMaterial) {}
 
   void apply() {
     domain->clear();
@@ -45,10 +46,16 @@ public:
       double bounds[2 * D] = {-xExtent / 2, xExtent / 2, -yExtent / 2,
                               yExtent / 2,  -gridDelta,  finHeight + gridDelta};
 
-      typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
+      typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D] = {
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+      if (periodicBoundary) {
+        boundaryCons[0] =
+            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+        boundaryCons[1] =
+            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+      }
 
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
       NumericType normal[D] = {0., 0., 1.};
@@ -70,17 +77,28 @@ public:
       lsBooleanOperation<NumericType, D>(substrate, mask,
                                          lsBooleanOperationEnum::UNION)
           .apply();
-      if (makeMask)
-        domain->insertNextLevelSet(mask);
-      domain->insertNextLevelSet(substrate, false);
+
+      if (material == psMaterial::Undefined) {
+        if (makeMask)
+          domain->insertNextLevelSet(mask);
+        domain->insertNextLevelSet(substrate, false);
+      } else {
+        if (makeMask)
+          domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+        domain->insertNextLevelSetAsMaterial(substrate, material, false);
+      }
     } else if constexpr (D == 2) {
 
       double bounds[2 * D] = {-xExtent / 2, xExtent / 2, -gridDelta,
                               finHeight + gridDelta};
 
-      typename lsDomain<NumericType, D>::BoundaryType boundaryCons[2] = {
+      typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D] = {
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+      if (periodicBoundary) {
+        boundaryCons[0] =
+            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+      }
 
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
       NumericType normal[D] = {0., 1.};
@@ -100,9 +118,16 @@ public:
       lsBooleanOperation<NumericType, D>(substrate, mask,
                                          lsBooleanOperationEnum::UNION)
           .apply();
-      if (makeMask)
-        domain->insertNextLevelSet(mask);
-      domain->insertNextLevelSet(substrate, false);
+
+      if (material == psMaterial::Undefined) {
+        if (makeMask)
+          domain->insertNextLevelSet(mask);
+        domain->insertNextLevelSet(substrate, false);
+      } else {
+        if (makeMask)
+          domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+        domain->insertNextLevelSetAsMaterial(substrate, material, false);
+      }
     }
   }
 };
