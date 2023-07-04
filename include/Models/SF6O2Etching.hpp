@@ -406,34 +406,35 @@ public:
 <<<<<<< HEAD
                const double oxygenFlux, const NumericType ionEnergy = 100.,
                const NumericType oxySputterYield = 3,
-               const int maskMaterial = 0) {
+               const int maskMaterial = 0){
 =======
                const double oxygenFlux, const NumericType rfBias,
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth = 0.) {
 >>>>>>> master
-    // particles
-    auto ion =
-        std::make_unique<SF6O2Ion<NumericType, D>>(rfBias, oxySputterYield);
-    auto etchant = std::make_unique<SF6O2Etchant<NumericType, D>>();
-    auto oxygen = std::make_unique<SF6O2Oxygen<NumericType, D>>();
+      // particles
+      auto ion = std::make_unique<SF6O2Ion<NumericType, D>>(rfBias,
+                                                            oxySputterYield);
+  auto etchant = std::make_unique<SF6O2Etchant<NumericType, D>>();
+  auto oxygen = std::make_unique<SF6O2Oxygen<NumericType, D>>();
 
-    // surface model
-    auto surfModel = psSmartPointer<SF6O2SurfaceModel<NumericType, D>>::New(
-        ionFlux, etchantFlux, oxygenFlux, etchStopDepth);
+  // surface model
+  auto surfModel = psSmartPointer<SF6O2SurfaceModel<NumericType, D>>::New(
+      ionFlux, etchantFlux, oxygenFlux, etchStopDepth);
 
-    // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
+  // velocity field
+  auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("SF6O2Etching");
+  this->setSurfaceModel(surfModel);
+  this->setVelocityField(velField);
+  this->setProcessName("SF6O2Etching");
 <<<<<<< HEAD
-    this->insertNextParticleType(ion);
+  this->insertNextParticleType(ion);
 =======
     this->insertNextParticleType(ion, 50 /* log particle energies */);
 >>>>>>> master
-    this->insertNextParticleType(etchant);
-    this->insertNextParticleType(oxygen);
-  }
-};
+  this->insertNextParticleType(etchant);
+  this->insertNextParticleType(oxygen);
+}
+}
+;

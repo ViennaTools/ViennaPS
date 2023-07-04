@@ -5,10 +5,7 @@
 
 #include <psDomain.hpp>
 #include <psLogger.hpp>
-<<<<<<< HEAD
-=======
 #include <psMaterials.hpp>
->>>>>>> master
 
 /**
  * Creates a plane in z(3D)/y(2D) direction.

@@ -45,12 +45,8 @@ public:
 template <typename NumericType, int D>
 class IsotropicProcess : public psProcessModel<NumericType, D> {
 public:
-<<<<<<< HEAD
-  IsotropicProcess(const NumericType isotropicRate = 0., const int maskId = 0) {
-=======
   IsotropicProcess(const NumericType isotropicRate = 0.,
                    const int maskId = -1) {
->>>>>>> master
     // surface model
     auto surfModel =
         psSmartPointer<IsotropicSurfaceModel<NumericType, D>>::New();
