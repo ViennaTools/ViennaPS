@@ -1,0 +1,19 @@
+# Domain
+gridDelta = 2.  
+xExtent = 120.0 
+yExtent = 120.0 
+
+# Geometry
+numLayers = 3
+layerHeight = 30.     
+substrateHeight = 50. 
+holeRadius = 75       
+maskHeight = 50       
+
+# Process
+processTime = 600
+# fluxes in 1e15 atoms/cm3
+etchantFlux = 150
+polymerFlux = 10
+ionFlux = 56
+rfBiasPower = 215

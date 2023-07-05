@@ -63,7 +63,8 @@ target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES})
 
 ### Building
 
-The examples can be built using CMake (make sure all dependencies are installed/ have been built previously):
+The examples can be built using CMake:
+> __Important__: Make sure all dependencies are installed and have been built previously
 
 ```bash
 mkdir build && cd build
@@ -71,10 +72,13 @@ cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON
 make buildExamples
 ```
 
-The examples can then be executed in their respective folders with the config files
+The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
+cd Examples/ExampleName
 ./ExampleName config.txt
 ```
+
+Individual examples can also be build by calling `make` in their respective build folder.
 
 ### Trench Deposition
 
@@ -106,7 +110,8 @@ This example demonstrates capturing etching byproducts and the subsequent redepo
 
 ## Application
 
-It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake (make sure all dependencies are installed/ have been built previously):
+It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake:
+> __Important__: Make sure all dependencies are installed and have been built previously
 ```bash
 mkdir build && cd build
 cmake .. -DVIENNAPS_BUILD_APPLICATION=ON

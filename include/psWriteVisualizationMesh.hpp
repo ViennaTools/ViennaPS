@@ -26,8 +26,8 @@ public:
     for (auto ls : *domain->getLevelSets()) {
       visMesh.insertNextLevelSet(ls);
     }
-    if (materialMap)
-      visMesh.setMaterialMap(materialMap);
+    if (domain->getMaterialMap())
+      visMesh.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     visMesh.apply();
   }
 

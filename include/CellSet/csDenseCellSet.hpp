@@ -10,12 +10,13 @@
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
-#include <lsVTKWriter.hpp>
 
 #include <rayUtil.hpp>
 
 #include <psLogger.hpp>
+#include <psMaterials.hpp>
 #include <psSmartPointer.hpp>
+#include <psVTKWriter.hpp>
 
 /**
   This class represents a cell-based voxel implementation of a volume. The
@@ -26,17 +27,20 @@ private:
   using gridType = psSmartPointer<lsMesh<T>>;
   using levelSetsType =
       psSmartPointer<std::vector<psSmartPointer<lsDomain<T, D>>>>;
+  using materialMapType = psSmartPointer<psMaterialMap>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
+  materialMapType materialMap = nullptr;
   std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
   T gridDelta;
   size_t numberOfCells;
   T depth = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
+  std::bitset<D> periodicBoundary;
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
   hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
@@ -50,8 +54,11 @@ public:
     fromLevelSets(passedLevelSets, passedDepth);
   }
 
-  void fromLevelSets(levelSetsType passedLevelSets, T passedDepth = 0.) {
+  void fromLevelSets(levelSetsType passedLevelSets,
+                     materialMapType passedMaterialMap = nullptr,
+                     T passedDepth = 0.) {
     levelSets = passedLevelSets;
+    materialMap = passedMaterialMap;
 
     if (cellGrid == nullptr)
       cellGrid = psSmartPointer<lsMesh<T>>::New();
@@ -79,8 +86,9 @@ public:
       levelSetsInOrder.push_back(plane);
     for (auto ls : *levelSets)
       levelSetsInOrder.push_back(ls);
-    if (cellSetAboveSurface)
+    if (cellSetAboveSurface) {
       levelSetsInOrder.push_back(plane);
+    }
 
     calculateMinMaxIndex(levelSetsInOrder);
     lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
@@ -91,13 +99,13 @@ public:
     for (auto &ls : levelSetsInOrder) {
       auto mesh = psSmartPointer<lsMesh<T>>::New();
       lsToSurfaceMesh<T, D>(ls, mesh).apply();
-      lsVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
+      psVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
           .apply();
     }
-    lsVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
+    psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
-    if (!cellSetAboveSurface)
+    if (!cellSetAboveSurface || materialMap)
       adjustMaterialIds();
 
     // create filling fractions as default scalar cell data
@@ -140,14 +148,18 @@ public:
           cellGrid->maximumExtent[0], cellGrid->maximumExtent[1]};
   }
 
+  void setPeriodicBoundary(std::array<bool, D> isPeriodic) {
+    for (int i = 0; i < D; i++) {
+      periodicBoundary[i] = isPeriodic[i];
+    }
+  }
+
   std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
     return cellGrid->getCellData().getScalarData(name);
   }
-
-  gridType getCellGrid() { return cellGrid; }
 
   T getDepth() const { return depth; }
 
@@ -177,7 +189,7 @@ public:
     return getFillingFractions()->at(idx);
   }
 
-  int getIndex(std::array<T, 3> &point) { return findIndex(point); }
+  int getIndex(const std::array<T, 3> &point) { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
     return cellGrid->getCellData().getScalarData(name);
@@ -234,7 +246,7 @@ public:
 
   // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
-    lsVTKWriter<T>(cellGrid, fileName).apply();
+    psVTKWriter<T>(cellGrid, fileName).apply();
   }
 
   // Save cell set data in simple text format
@@ -358,6 +370,7 @@ public:
 
     // move iterator for lowest material id and then adjust others if they are
     // needed
+    const materialMapType matMapPtr = materialMap;
     unsigned cellIdx = 0;
     for (; iterators.front().getIndices() < maxIndex;
          iterators.front().next()) {
@@ -391,7 +404,12 @@ public:
           }
 
           if (isVoxel) {
-            materialIds->at(cellIdx++) = materialId;
+            if (matMapPtr) {
+              auto material = matMapPtr->getMaterialAtIdx(materialId);
+              materialIds->at(cellIdx++) = static_cast<int>(material);
+            } else {
+              materialIds->at(cellIdx++) = materialId;
+            }
           }
 
           // jump out of material for loop
@@ -466,11 +484,14 @@ public:
   }
 
   void buildNeighborhood() {
+    psUtils::Timer timer;
+    timer.start();
     const auto &cells = cellGrid->template getElements<(1 << D)>();
     const auto &nodes = cellGrid->getNodes();
     unsigned const numNodes = nodes.size();
     unsigned const numCells = cells.size();
     cellNeighbors.resize(numCells);
+    const bool usePeriodicBoundary = periodicBoundary.any();
 
     std::vector<std::vector<unsigned>> nodeCellConnections(numNodes);
 
@@ -488,6 +509,32 @@ public:
         coord[i] += gridDelta / 2.;
         cellNeighbors[cellIdx][i] = -1;
         cellNeighbors[cellIdx][i + D] = -1;
+      }
+
+      if (usePeriodicBoundary) {
+        auto onBoundary = isBoundaryCell(coord);
+        if (onBoundary.any()) {
+          /*look for neighbor cells using BVH*/
+          for (std::size_t i = 0; i < 2 * D; i++) {
+            auto neighborCoord = coord;
+            bool minBoundary = i % 2 == 0;
+
+            if (onBoundary.test(i)) {
+              // wrap around boundary
+              if (!minBoundary) {
+                neighborCoord[i / 2] =
+                    cellGrid->minimumExtent[i / 2] + gridDelta / 2.;
+              } else {
+                neighborCoord[i / 2] =
+                    cellGrid->maximumExtent[i / 2] - gridDelta / 2.;
+              }
+            } else {
+              neighborCoord[i / 2] += minBoundary ? -gridDelta : gridDelta;
+            }
+            cellNeighbors[cellIdx][i] = findIndex(neighborCoord);
+          }
+          continue;
+        }
       }
 
       for (unsigned cellNodeIdx = 0; cellNodeIdx < (1 << D); cellNodeIdx++) {
@@ -514,6 +561,11 @@ public:
         }
       }
     }
+    timer.finish();
+    psLogger::getInstance()
+        .addTiming("Building cell set neighborhood structure took",
+                   timer.currentDuration * 1e-9)
+        .print();
   }
 
   const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) {
@@ -544,8 +596,16 @@ private:
 
 #pragma omp parallel for
     for (size_t i = 0; i < matIds->size(); i++) {
-      if (matIds->at(i) > 0) {
-        matIds->at(i) -= 1;
+      int materialId = static_cast<int>(matIds->at(i));
+
+      if (!cellSetAboveSurface && materialId > 0) {
+        materialId -= 1;
+      }
+
+      assert(materialId >= 0);
+      if (materialMap) {
+        matIds->at(i) =
+            static_cast<int>(materialMap->getMaterialAtIdx(materialId));
       }
     }
   }
@@ -581,6 +641,8 @@ private:
   }
 
   void buildBVH() {
+    psUtils::Timer timer;
+    timer.start();
     auto &elems = cellGrid->template getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
     BVH->clearCellIds();
@@ -595,6 +657,10 @@ private:
         cell->insert(elemIdx);
       }
     }
+    timer.finish();
+    psLogger::getInstance()
+        .addTiming("Building cell set BVH took", timer.currentDuration * 1e-9)
+        .print();
   }
 
   void calculateMinMaxIndex(
@@ -617,6 +683,23 @@ private:
                                                 : grid.getMaxBounds(i));
       }
     }
+  }
+
+  std::bitset<2 * D> isBoundaryCell(const std::array<T, 3> &cellCoord) {
+    std::bitset<2 * D> onBoundary;
+    for (int i = 0; i < 2 * D; i += 2) {
+      if (!periodicBoundary[i / 2])
+        continue;
+      if (cellCoord[i / 2] - cellGrid->minimumExtent[i / 2] < gridDelta) {
+        /* cell is at min boundary */
+        onBoundary.set(i);
+      }
+      if (cellGrid->maximumExtent[i / 2] - cellCoord[i / 2] < gridDelta) {
+        /* cell is at max boundary */
+        onBoundary.set(i + 1);
+      }
+    }
+    return onBoundary;
   }
 };
 

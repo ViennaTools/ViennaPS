@@ -57,12 +57,12 @@ int main(int argc, char **argv) {
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeStack<NumericType, D>(domain, params.gridDelta, params.xExtent, 0.,
                               params.numLayers, params.layerHeight,
-                              params.substrateHeight, params.trenchWidth, false)
+                              params.substrateHeight, params.trenchWidth / 2.,
+                              0., false)
       .apply();
   // copy top layer for deposition
-  auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
-      domain->getLevelSets()->back());
-  domain->insertNextLevelSet(depoLayer);
+  domain->duplicateTopLevelSet(psMaterial::Polymer);
+
   domain->generateCellSet(params.substrateHeight +
                               params.numLayers * params.layerHeight + 10.,
                           true /* true means cell set above surface */);
@@ -77,11 +77,10 @@ int main(int argc, char **argv) {
   // process in the cell set. The byproducts are then distributed by solving a
   // convection-diffusion equation on the cell set.
   auto model = psSmartPointer<OxideRegrowthModel<NumericType, D>>::New(
-      params.numLayers + 1, params.nitrideEtchRate / 60,
-      params.oxideEtchRate / 60, params.redepositionRate,
-      params.redepositionThreshold, params.redepositionTimeInt,
-      params.diffusionCoefficient, params.sink, params.scallopVelocity,
-      params.centerVelocity,
+      params.nitrideEtchRate / 60, params.oxideEtchRate / 60,
+      params.redepositionRate, params.redepositionThreshold,
+      params.redepositionTimeInt, params.diffusionCoefficient, params.sink,
+      params.scallopVelocity, params.centerVelocity,
       params.substrateHeight + params.numLayers * params.layerHeight,
       params.trenchWidth);
 

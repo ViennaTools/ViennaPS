@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <psMaterials.hpp>
 #include <psUtils.hpp>
 
 enum class CommandType { NONE, INIT, GEOMETRY, PROCESS, OUTPUT, PLANARIZE };
@@ -54,10 +55,10 @@ struct ApplicationParameters {
   int layers = 0;
   std::string fileName = "";
   NumericType maskHeight = 0.1;
-  int pointOrder = 0;
   int maskInvert = 0;
   NumericType xPadding = 0.;
   NumericType yPadding = 0.;
+  psMaterial material = psMaterial::Si;
 
   // Process
   NumericType processTime = 1;

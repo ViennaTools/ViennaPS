@@ -37,6 +37,7 @@ public:
   void apply() {
     lsToDiskMesh<NumericType, D> meshConverter;
     meshConverter.setMesh(mesh);
+    meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     if (translator.get())
       meshConverter.setTranslator(translator);
     for (const auto ls : *domain->getLevelSets()) {

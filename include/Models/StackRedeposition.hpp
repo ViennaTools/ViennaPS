@@ -3,11 +3,11 @@
 #include <csDenseCellSet.hpp>
 
 #include <lsAdvect.hpp>
-#include <lsToDiskMesh.hpp>
 
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
 #include <psProcessModel.hpp>
+#include <psToDiskMesh.hpp>
 
 // The selective etching model works in accordance with the geometry generated
 // by psMakeStack
@@ -15,31 +15,28 @@ template <class NumericType>
 class SelectiveEtchingVelocityField : public psVelocityField<NumericType> {
 public:
   SelectiveEtchingVelocityField(const NumericType pRate,
-                                const NumericType pOxideRate,
-                                const int pDepoMat)
-      : rate(pRate), oxide_rate(pOxideRate), depoMat(pDepoMat) {}
+                                const NumericType pOxideRate)
+      : rate(pRate), oxide_rate(pOxideRate) {}
 
   NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
                                 int matId,
                                 const std::array<NumericType, 3> &normalVector,
                                 unsigned long pointId) override {
-    if (matId == 0 || matId == depoMat) {
-      return 0.;
-    }
-
-    if (matId % 2 == 0) {
+    auto material = psMaterialMap::mapToMaterial(matId);
+    if (material == psMaterial::Si3N4) {
       return -rate;
-    } else {
+    } else if (material == psMaterial::SiO2) {
       return -oxide_rate;
+    } else {
+      return 0.;
     }
   }
 
-  bool useTranslationField() const override { return false; }
+  int getTranslationFieldOptions() const override { return 0; }
 
 private:
   const NumericType rate;
   const NumericType oxide_rate;
-  const int depoMat;
 };
 
 template <class NumericType>
@@ -71,7 +68,6 @@ template <class T, int D>
 class ByproductDynamics : public psAdvectionCallback<T, D> {
   using psAdvectionCallback<T, D>::domain;
 
-  const int plasmaMaterial = 0;
   const T diffusionCoefficient = 1.;
   const T sink = 1;
   const T scallopStreamVel = 1.;
@@ -89,14 +85,12 @@ class ByproductDynamics : public psAdvectionCallback<T, D> {
 public:
   ByproductDynamics(const T passedDiffCoeff, const T passedSink,
                     const T passedScallopVel, const T passedHoleVel,
-                    const int passedPlasmaMat, const T passedTop,
-                    const T passedRadius, const T passedEtchRate,
-                    const T passedRedepoFactor, const T passedRedepThreshold,
-                    const T passedRedepTimeInt)
+                    const T passedTop, const T passedRadius,
+                    const T passedEtchRate, const T passedRedepoFactor,
+                    const T passedRedepThreshold, const T passedRedepTimeInt)
       : diffusionCoefficient(passedDiffCoeff), sink(passedSink),
         scallopStreamVel(passedScallopVel), holeStreamVel(passedHoleVel),
-        plasmaMaterial(passedPlasmaMat), top(passedTop),
-        holeRadius(passedRadius), etchRate(passedEtchRate),
+        top(passedTop), holeRadius(passedRadius), etchRate(passedEtchRate),
         redepositionFactor(passedRedepoFactor),
         redepositionThreshold(passedRedepThreshold),
         redepoTimeInt(passedRedepTimeInt) {}
@@ -107,24 +101,17 @@ public:
 
     // redeposition
     auto mesh = psSmartPointer<lsMesh<T>>::New();
-    lsToDiskMesh<T, D> meshConverter(mesh);
-    for (auto ls : *domain->getLevelSets()) {
-      meshConverter.insertNextLevelSet(ls);
-    }
-    meshConverter.apply();
+    psToDiskMesh<T, D>(domain, mesh).apply();
 
     const auto &points = mesh->nodes;
     auto materialIds = mesh->getCellData().getScalarData("MaterialIds");
 
-    // save points before advection
+    // save points where the surface is etched before advection
     nodes.clear();
-    nodes.reserve(points.size() / 2);
+    nodes.reserve(points.size());
     for (size_t i = 0; i < points.size(); i++) {
-      int matId = static_cast<int>(materialIds->at(i));
-      if (matId == 0 || matId == plasmaMaterial - 1)
-        continue;
-
-      if (matId % 2 == 0)
+      auto material = psMaterialMap::mapToMaterial(materialIds->at(i));
+      if (material == psMaterial::Si3N4)
         nodes.push_back(points[i]);
     }
     nodes.shrink_to_fit();
@@ -137,27 +124,25 @@ public:
       auto cellMatIds = cellSet->getScalarData("Material");
 
       for (size_t i = 0; i < numPoints; ++i) {
-        int matId = static_cast<int>(materialIds->at(i));
-        if (matId == 0 || matId == plasmaMaterial)
-          continue;
+        auto surfaceMaterial = psMaterialMap::mapToMaterial(materialIds->at(i));
+        const auto &node = points[i];
 
-        auto node = points[i];
-
-        if (node[D - 1] >= top)
-          continue;
-
-        if (matId % 2 == 1 || matId == plasmaMaterial - 1) {
-
+        // redeposit only on oxide
+        if ((surfaceMaterial == psMaterial::SiO2 ||
+             surfaceMaterial == psMaterial::Polymer) &&
+            node[D - 1] < top) {
           auto cellIdx = cellSet->getIndex(node);
           int n = 0;
           if (cellIdx == -1)
             continue;
-          if (cellMatIds->at(cellIdx) == plasmaMaterial) {
+          if (psMaterialMap::mapToMaterial(cellMatIds->at(cellIdx)) ==
+              psMaterial::GAS) {
             depoRate[i] = ff->at(cellIdx);
             n++;
           }
           for (const auto ni : cellSet->getNeighbors(cellIdx)) {
-            if (ni != -1 && cellMatIds->at(ni) == plasmaMaterial) {
+            if (ni != -1 && psMaterialMap::mapToMaterial(cellMatIds->at(ni)) ==
+                                psMaterial::GAS) {
               depoRate[i] += ff->at(ni);
               n++;
             }
@@ -229,7 +214,7 @@ private:
 
 #pragma omp parallel for
       for (int e = 0; e < data->size(); e++) {
-        if (materialIds->at(e) != plasmaMaterial) {
+        if (psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
           continue;
         }
 
@@ -241,7 +226,8 @@ private:
 
         auto cellNeighbors = cellSet->getNeighbors(e);
         for (const auto &n : cellNeighbors) {
-          if (n == -1 || materialIds->at(n) != plasmaMaterial)
+          if (n == -1 ||
+              !psMaterialMap::isMaterial(materialIds->at(n), psMaterial::GAS))
             continue;
 
           solution[e] += data->at(n);
@@ -263,7 +249,8 @@ private:
         if (std::abs(coord[0]) < holeRadius) {
           // in hole
           assert(cellNeighbors[2] != -1 && "holeStream up neighbor wrong");
-          if (materialIds->at(cellNeighbors[2]) == plasmaMaterial) {
+          if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[2]),
+                                        psMaterial::GAS)) {
             solution[e] -= holeC * (((coord[1] - gridDelta) / top) *
                                         data->at(cellNeighbors[2]) -
                                     (coord[1] / top) * data->at(e));
@@ -273,7 +260,8 @@ private:
             // left side scallop - use forward difference
             assert(cellNeighbors[1] != -1 &&
                    "scallopStream right neighbor wrong");
-            if (materialIds->at(cellNeighbors[1]) == plasmaMaterial) {
+            if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[1]),
+                                          psMaterial::GAS)) {
               solution[e] -=
                   scallopC * (data->at(cellNeighbors[1]) - data->at(e));
             }
@@ -281,7 +269,8 @@ private:
             // right side scallop - use backward difference
             assert(cellNeighbors[0] != -1 &&
                    "scallopStream left neighbor wrong");
-            if (materialIds->at(cellNeighbors[0]) == plasmaMaterial) {
+            if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[0]),
+                                          psMaterial::GAS)) {
               solution[e] +=
                   scallopC * (data->at(e) - data->at(cellNeighbors[0]));
             }
@@ -294,7 +283,7 @@ private:
 
 #pragma omp parallel for shared(sum)
     for (int e = 0; e < data->size(); e++) {
-      if (materialIds->at(e) != plasmaMaterial) {
+      if (!psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
         continue;
       }
 
@@ -308,8 +297,8 @@ template <class NumericType, int D>
 class OxideRegrowthModel : public psProcessModel<NumericType, D> {
 public:
   OxideRegrowthModel(
-      const int depoMaterialId, const NumericType nitrideEtchRate,
-      const NumericType oxideEtchRate, const NumericType redepositionRate,
+      const NumericType nitrideEtchRate, const NumericType oxideEtchRate,
+      const NumericType redepositionRate,
       const NumericType redepositionThreshold,
       const NumericType redepositionTimeInt,
       const NumericType diffusionCoefficient, const NumericType sinkStrength,
@@ -318,14 +307,14 @@ public:
 
     auto veloField =
         psSmartPointer<SelectiveEtchingVelocityField<NumericType>>::New(
-            nitrideEtchRate, oxideEtchRate, depoMaterialId);
+            nitrideEtchRate, oxideEtchRate);
 
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
     auto dynamics = psSmartPointer<ByproductDynamics<NumericType, D>>::New(
         diffusionCoefficient, sinkStrength, scallopVelocitiy, centerVelocity,
-        depoMaterialId + 1, topHeight, centerWidth / 2., nitrideEtchRate,
-        redepositionRate, redepositionThreshold, redepositionTimeInt);
+        topHeight, centerWidth / 2., nitrideEtchRate, redepositionRate,
+        redepositionThreshold, redepositionTimeInt);
 
     this->setVelocityField(veloField);
     this->setSurfaceModel(surfModel);
