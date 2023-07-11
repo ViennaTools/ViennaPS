@@ -10,6 +10,7 @@
 #include <lsPointData.hpp>
 
 #include <psKDTree.hpp>
+#include <psLogger.hpp>
 
 #include <curtBoundary.hpp>
 #include <curtChecks.hpp>
@@ -45,9 +46,7 @@ public:
 
   void setLevelSet(psSmartPointer<lsDomain<T, D>> passedDomain) {
     domain = passedDomain;
-    // double start = gdt::getCurrentTime();
     geometry.buildAccelFromDomain(domain, launchParams);
-    // geoBuildTime += gdt::getCurrentTime() - start;
     geometryValid = true;
   }
 
@@ -59,9 +58,7 @@ public:
 
   void apply() {
     if (!geometryValid) {
-      // double start = gdt::getCurrentTime();
       geometry.buildAccelFromDomain(domain, launchParams);
-      // geoBuildTime += gdt::getCurrentTime() - start;
       geometryValid = true;
     }
 
@@ -82,36 +79,20 @@ public:
       launchParams.seed = gen(rd);
     }
 
-    if (numberOfRaysPerPoint == 1) {
-      launchParams.voxelDim = numberOfRaysPerPoint;
-    } else {
-      int i = 1, result = 1;
-      while (result <= numberOfRaysPerPoint) {
-        i++;
-        result = i * i;
-      }
-      launchParams.voxelDim = i - 1;
-    }
-
-    int numPoints_x = static_cast<int>(0.5 + (launchParams.source.maxPoint.x -
-                                              launchParams.source.minPoint.x) /
-                                                 launchParams.source.gridDelta);
-    int numPoints_y = static_cast<int>(0.5 + (launchParams.source.maxPoint.y -
-                                              launchParams.source.minPoint.y) /
-                                                 launchParams.source.gridDelta);
+    int numPointsPerDim = static_cast<int>(
+        std::sqrt(static_cast<T>(launchParams.numElements)) + 1);
 
     if (numberOfRaysFixed > 0) {
-      numPoints_x = 1;
-      numPoints_y = 1;
+      numPointsPerDim = 1;
       numberOfRaysPerPoint = numberOfRaysFixed;
     }
 
-    if (numPoints_x * numPoints_y * numberOfRaysPerPoint > (1 << 29)) {
+    if (numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint > (1 << 29)) {
       utLog::getInstance().addError("Too many rays for single launch.").print();
     }
 
-    numRays = numPoints_x * numPoints_y * numberOfRaysPerPoint;
-    auto start = std::chrono::high_resolution_clock::now();
+    numRays = numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint;
+    // auto start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < particles.size(); i++) {
 
       launchParams.cosineExponent = particles[i].cosineExponent;
@@ -129,12 +110,13 @@ public:
                               launchParamsBuffer.d_pointer(),
                               launchParamsBuffer.sizeInBytes, &sbts[i],
                               /*! dimensions of the launch: */
-                              numPoints_x, numPoints_y, numberOfRaysPerPoint));
+                              numPointsPerDim, numPointsPerDim,
+                              numberOfRaysPerPoint));
     }
 
     // record end time
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = end - start;
+    // auto end = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double> diff = end - start;
     // T *temp = new T[launchParams.numElements];
     // resultBuffer.download(temp, launchParams.numElements);
     // for (int i = 0; i < launchParams.numElements; i++) {
@@ -142,8 +124,8 @@ public:
     // }
     // delete temp;
     // std::cout << "Time: " << diff.count() * 100 << " ms\n";
-    std::cout << gdt::prettyDouble(numRays * particles.size()) << std::endl;
-    std::cout << numRays << std::endl;
+    // std::cout << gdt::prettyDouble(numRays * particles.size()) << std::endl;
+    // std::cout << numRays << std::endl;
 
     // sync - maybe remove in future
     cudaDeviceSynchronize();
@@ -221,9 +203,7 @@ public:
   }
 
   void updateSurface() {
-    // double start = gdt::getCurrentTime();
     geometry.buildAccelFromDomain(domain, launchParams);
-    // geoBuildTime += gdt::getCurrentTime() - start;
     geometryValid = true;
   }
 
@@ -327,8 +307,6 @@ public:
 
   unsigned int getNumberOfRates() const { return numRates; }
 
-  double geoBuildTime = 0;
-
 protected:
   void normalize() {
     T sourceArea =
@@ -373,11 +351,9 @@ protected:
 
     cudaGetDeviceProperties(&deviceProps, deviceID);
 
-#ifndef NDEBUG
     utLog::getInstance()
         .addDebug("Running on device: " + std::string(deviceProps.name))
         .print();
-#endif
 
     CUresult cuRes = cuCtxGetCurrent(&cudaContext);
     if (cuRes != CUDA_SUCCESS) {

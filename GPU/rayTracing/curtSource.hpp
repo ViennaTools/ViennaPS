@@ -19,26 +19,26 @@ __device__ void initializeDirection(PerRayData<T> *prd, const T power) {
   gdt::normalize(prd->dir);
 }
 
-template <typename T>
-__device__ void initializeRayOnGrid(PerRayData<T> *prd,
-                                    curtLaunchParams<T> *launchParams,
-                                    const T power, uint3 launchIdx) {
-  // initial position on source plane
-  gdt::vec_t<T, 2> sourceVoxel(launchIdx.x * launchParams->source.gridDelta +
-                                   launchParams->source.minPoint.x,
-                               launchIdx.y * launchParams->source.gridDelta +
-                                   launchParams->source.minPoint.y);
+// ** DEPRECATED ** //
+// template <typename T>
+// __device__ void initializeRayOnGrid(PerRayData<T> *prd,
+//                                     curtLaunchParams<T> *launchParams,
+//                                     const T power, uint3 launchIdx) {
+//   // initial position on source plane
+//   gdt::vec_t<T, 2> sourceVoxel(launchIdx.x * launchParams->source.gridDelta +
+//                                    launchParams->source.minPoint.x,
+//                                launchIdx.y * launchParams->source.gridDelta +
+//                                    launchParams->source.minPoint.y);
 
-  const T subGridDelta =
-      launchParams->source.gridDelta / (T)(launchParams->voxelDim + 1);
-  const T xOffset = (launchIdx.z % launchParams->voxelDim + 1) * subGridDelta;
-  const T yOffset = (launchIdx.z / launchParams->voxelDim + 1) * subGridDelta;
-  prd->pos.x = sourceVoxel.x + xOffset;
-  prd->pos.y = sourceVoxel.y + yOffset;
-  prd->pos.z = launchParams->source.planeHeight;
+//   const T subGridDelta =
+//       launchParams->source.gridDelta / (T)(launchParams->voxelDim + 1);
+//   const T xOffset = (launchIdx.z % launchParams->voxelDim + 1) *
+//   subGridDelta; const T yOffset = (launchIdx.z / launchParams->voxelDim + 1)
+//   * subGridDelta; prd->pos.x = sourceVoxel.x + xOffset; prd->pos.y =
+//   sourceVoxel.y + yOffset; prd->pos.z = launchParams->source.planeHeight;
 
-  initializeDirection<T>(prd, power);
-}
+//   initializeDirection<T>(prd, power);
+// }
 
 template <typename T, typename LaunchParams>
 __device__ void initializeRayRandom(PerRayData<T> *prd,

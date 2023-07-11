@@ -5,7 +5,6 @@
 
 template <typename T> struct curtLaunchParams {
   T *resultBuffer;
-  int voxelDim = 1;
   T rayWeightThreshold = 0.01f;
   unsigned int seed = 0;
   unsigned int numElements;

@@ -56,6 +56,8 @@ public:
     periodicBoundary = static_cast<bool>(passedPeriodic);
   }
 
+  void setSmoothFlux(bool pSmoothFlux) { smoothFlux = pSmoothFlux; }
+
   void apply() {
     /* ---------- Process Setup --------- */
     if (!model) {
@@ -125,6 +127,7 @@ public:
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
+    advectionKernel.setIgnoreVoids(true);
 
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -133,8 +136,6 @@ public:
 
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
-    auto kdTree = psSmartPointer<
-        psKDTree<NumericType, std::array<NumericType, 3>>>::New();
 
     if (useRayTracing && !rayTracerInitialized) {
       if (!model->getPtxCode()) {
@@ -143,7 +144,6 @@ public:
             .print();
         return;
       }
-      rayTrace.setKdTree(kdTree);
       rayTrace.setPipeline(model->getPtxCode());
       rayTrace.setLevelSet(domain->getLevelSets()->back());
       rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
@@ -229,7 +229,6 @@ public:
 
     double previousTimeStep = 0.;
     size_t counter = 0;
-    size_t printCounter = 0;
     psUtils::Timer rtTimer;
     psUtils::Timer callbackTimer;
     psUtils::Timer advTimer;
@@ -250,9 +249,6 @@ public:
               diskMesh, model->getSurfaceModel()->getCoverages(), numCov);
         rayTrace.apply();
 
-        // TODO "smooth" results on elements
-        // TODO: keep results on elements and generate kd tree instead
-
         // get results as point data
         rayTrace.translateToPointData(diskMesh, d_rates);
 
@@ -264,48 +260,66 @@ public:
 
       auto velocities = model->getSurfaceModel()->calculateVelocities(
           d_rates, diskMesh->nodes, materialIds);
-      curtSmoothing<NumericType, D>(diskMesh, velocities, gridDelta).apply();
+      if (smoothFlux)
+        curtSmoothing<NumericType, D>(diskMesh, velocities, gridDelta).apply();
       model->getVelocityField()->setVelocities(velocities);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(diskMesh->nodes);
 
       if (psLogger::getLogLevel() >= 4) {
-        if (printTime >= 0. &&
-            ((processDuration - remainingTime) - printTime * counter) > -1.) {
 
+        if (useRayTracing)
           rayTrace.downloadResultsToPointData(diskMesh->getCellData(), d_rates,
                                               diskMesh->nodes.size());
-          if (useCoverages) {
-            downloadCoverages(diskMesh->getCellData(),
-                              model->getSurfaceModel()->getCoverages(),
-                              diskMesh->nodes.size());
-          }
-
-          if (velocities)
-            diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                         "velocities");
-
-          printDiskMesh(diskMesh,
-                        name + "_" + std::to_string(counter) + ".vtp");
-          if (domain->getUseCellSet()) {
-            domain->getCellSet()->writeVTU(name + "_cellSet_" +
-                                           std::to_string(counter) + ".vtu");
-          }
-
-          auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-          culsToSurfaceMesh<NumericType>(domain->getLevelSets()->back(), mesh)
-              .apply();
-
-          std::vector<NumericType> cellflux(mesh->triangles.size());
-          rayTrace.getFlux(cellflux.data(), 0, 0);
-
-          mesh->cellData.insertNextScalarData(cellflux, "flux");
-          lsVTKWriter<NumericType>(mesh, name + "_step_" +
-                                             std::to_string(counter) + ".vtp")
-              .apply();
-
-          counter++;
+        if (useCoverages) {
+          downloadCoverages(diskMesh->getCellData(),
+                            model->getSurfaceModel()->getCoverages(),
+                            diskMesh->nodes.size());
         }
+
+        if (velocities)
+          diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                       "velocities");
+
+        printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
+        if (domain->getUseCellSet()) {
+          domain->getCellSet()->writeVTU(name + "_cellSet_" +
+                                         std::to_string(counter) + ".vtu");
+        }
+
+        auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+        culsToSurfaceMesh<NumericType>(domain->getLevelSets()->back(), mesh)
+            .apply();
+
+        if (useCoverages) {
+          auto &d_cellData = rayTrace.getData();
+          auto covSize = mesh->triangles.size();
+          std::vector<NumericType> cellData(covSize * numCov);
+          d_cellData.download(cellData.data(), covSize * numCov);
+
+          auto covIndexMap = model->getSurfaceModel()->getCoverageIndexMap();
+          for (auto &i : covIndexMap) {
+            auto cov = coverages.getScalarData(i.first);
+            if (cov == nullptr) {
+              std::vector<NumericType> covInit(covSize);
+              coverages.insertNextScalarData(std::move(covInit), i.first);
+              cov = coverages.getScalarData(i.first);
+            }
+            if (cov->size() != covSize)
+              cov->resize(covSize);
+            std::memcpy(cov->data(), cellData.data() + i.second * covSize,
+                        covSize * sizeof(NumericType));
+          }
+        }
+
+        std::vector<NumericType> cellflux(mesh->triangles.size());
+        rayTrace.getFlux(cellflux.data(), 0, 0);
+        mesh->cellData.insertNextScalarData(std::move(cellflux), "flux");
+        lsVTKWriter<NumericType>(mesh, name + "_step_" +
+                                           std::to_string(counter) + ".vtp")
+            .apply();
+
+        counter++;
       }
 
       // apply advection callback
@@ -497,6 +511,7 @@ private:
   bool periodicBoundary = false;
   bool coveragesInitialized = false;
   bool rayTracerInitialized = false;
+  bool smoothFlux = false;
   NumericType printTime = 0.;
   NumericType processTime = 0;
 };
