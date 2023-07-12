@@ -13,6 +13,11 @@
 #include <psVelocityField.hpp>
 
 namespace SF6O2Implementation {
+
+// sticking probabilities
+constexpr double beta_F = 0.7;
+constexpr double beta_O = 1.;
+
 template <typename NumericType, int D>
 class SurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::Coverages;
@@ -24,8 +29,6 @@ class SurfaceModel : public psSurfaceModel<NumericType> {
   static constexpr double rho_Si = 5.02 * 1e7;     // in (1e15 atoms/cm³)
   static constexpr NumericType k_sigma_Si = 3.0e2; // in (1e15 cm⁻²s⁻¹)
   static constexpr NumericType beta_sigma_Si = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
-  static constexpr NumericType gamma_F = 0.7;
-  static constexpr NumericType gamma_O = 1.;
 
   const NumericType etchStop = 0.;
 
@@ -110,10 +113,10 @@ public:
         eCoverage->at(i) = 0;
       } else {
         eCoverage->at(i) =
-            etchantRate->at(i) * totalEtchantFlux * gamma_F /
-            (etchantRate->at(i) * totalEtchantFlux * gamma_F +
+            etchantRate->at(i) * totalEtchantFlux * beta_F /
+            (etchantRate->at(i) * totalEtchantFlux * beta_F +
              (k_sigma_Si + 2 * ionEnhancedRate->at(i) * totalIonFlux) *
-                 (1 + (oxygenRate->at(i) * totalOxygenFlux * gamma_O) /
+                 (1 + (oxygenRate->at(i) * totalOxygenFlux * beta_O) /
                           (beta_sigma_Si +
                            oxygenSputteringRate->at(i) * totalIonFlux)));
       }
@@ -122,10 +125,10 @@ public:
         oCoverage->at(i) = 0;
       } else {
         oCoverage->at(i) =
-            oxygenRate->at(i) * totalOxygenFlux * gamma_O /
-            (oxygenRate->at(i) * totalOxygenFlux * gamma_O +
+            oxygenRate->at(i) * totalOxygenFlux * beta_O /
+            (oxygenRate->at(i) * totalOxygenFlux * beta_O +
              (beta_sigma_Si + oxygenSputteringRate->at(i) * totalIonFlux) *
-                 (1 + (etchantRate->at(i) * totalEtchantFlux * gamma_F) /
+                 (1 + (etchantRate->at(i) * totalEtchantFlux * beta_F) /
                           (k_sigma_Si +
                            2 * ionEnhancedRate->at(i) * totalIonFlux)));
       }
@@ -160,30 +163,30 @@ public:
 
     const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
-    double f_Si_theta;
+    NumericType f_Si_theta;
     if (cosTheta > 0.5) {
       f_Si_theta = 1.;
     } else {
       f_Si_theta = 3. - 6. * angle / rayInternal::PI;
     }
-    double f_O_theta = f_Si_theta;
-    double f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    NumericType f_O_theta = f_Si_theta;
+    NumericType f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
-    const double sqrtE = std::sqrt(E);
-    const double Y_sp =
+    NumericType sqrtE = std::sqrt(E);
+    NumericType Y_sp =
         A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
-    const double Y_Si =
+    NumericType Y_Si =
         A_Si * std::max(sqrtE - std::sqrt(Eth_Si), 0.) * f_Si_theta;
-    const double Y_O = A_O * std::max(sqrtE - std::sqrt(Eth_O), 0.) * f_O_theta;
+    NumericType Y_O = A_O * std::max(sqrtE - std::sqrt(Eth_O), 0.) * f_O_theta;
 
     // sputtering yield Y_sp ionSputteringRate
-    localData.getVectorData(0)[primID] += Y_sp;
+    localData.getVectorData(0)[primID] += rayWeight * Y_sp;
 
     // ion enhanced etching yield Y_Si ionEnhancedRate
-    localData.getVectorData(1)[primID] += Y_Si;
+    localData.getVectorData(1)[primID] += rayWeight * Y_Si;
 
     // ion enhanced O sputtering yield Y_O oxygenSputteringRate
-    localData.getVectorData(2)[primID] += Y_O;
+    localData.getVectorData(2)[primID] += rayWeight * Y_O;
   }
 
   std::pair<NumericType, rayTriple<NumericType>>
@@ -192,49 +195,39 @@ public:
                     const unsigned int primId, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
-
     auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
 
-    const NumericType incAngle =
+    NumericType incAngle =
         std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
                            static_cast<NumericType>(0.)));
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
-    NumericType Eref_peak;
+    double Eref_peak;
     if (incAngle >= inflectAngle) {
-      Eref_peak =
-          Eref_max *
-          (1 - (1 - A) * std::pow((halfPI - incAngle) / (halfPI - inflectAngle),
-                                  n_r));
+      Eref_peak = (1 - (1 - A) * (M_PI_2 - incAngle) / (M_PI_2 - inflectAngle));
     } else {
-      Eref_peak = Eref_max * A * std::pow(incAngle / inflectAngle, n_l);
+      Eref_peak = A * std::pow(incAngle / inflectAngle, n_l);
     }
     // Gaussian distribution around the Eref_peak scaled by the particle energy
-    NumericType tempEnergy = Eref_peak * E;
-
     NumericType NewEnergy;
+    std::normal_distribution<NumericType> normalDist{E * Eref_peak, 0.1 * E};
     do {
-      const auto rand1 = uniDist(Rng);
-      const auto rand2 = uniDist(Rng);
-      NewEnergy = tempEnergy +
-                  (std::min((E - tempEnergy), tempEnergy) + E * 0.05) *
-                      (1 - 2. * rand1) * std::sqrt(std::fabs(std::log(rand2)));
-
+      NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);
 
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > minEnergy) {
       E = NewEnergy;
-
       // auto direction = rayReflectionConedCosine<NumericType, D>(
-      //     halfPI - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
+      //     M_PI_2 - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
       auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
 
-      return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
+      return std::pair<NumericType, rayTriple<NumericType>>{1. - Eref_peak,
+                                                            direction};
     } else {
       return std::pair<NumericType, rayTriple<NumericType>>{
           1., rayTriple<NumericType>{0., 0., 0.}};
@@ -246,21 +239,13 @@ public:
       E = normalDist(RNG);
     } while (E < minEnergy);
   }
-
   int getRequiredLocalDataSize() const override final { return 3; }
-
-  NumericType getSourceDistributionPower() const override final {
-    return 1000.;
-  }
-
+  NumericType getSourceDistributionPower() const override final { return 500.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"ionSputteringRate", "ionEnhancedRate",
-                                    "oxygenSputteringRate"};
+    return {"ionSputteringRate", "ionEnhancedRate", "oxygenSputteringRate"};
   }
 
 private:
-  std::uniform_real_distribution<NumericType> uniDist;
-
   static constexpr NumericType A_sp = 0.00339;
   static constexpr NumericType A_Si = 7.;
   static constexpr NumericType B_sp = 9.3;
@@ -270,18 +255,10 @@ private:
   static constexpr NumericType Eth_Si = 15.;
   static constexpr NumericType Eth_O = 10.;
 
-  static constexpr NumericType Eref_max = 1.;
-
-  static constexpr NumericType inflectAngle = 1.55334;
-  static constexpr NumericType minAngle = 1.3962634;
-  static constexpr NumericType n_l = 10.;
-  static constexpr NumericType n_r = 1.;
-
-  static constexpr NumericType twoPI = 6.283185307179586;
-  static constexpr NumericType halfPI = 6.283185307179586 / 4;
-
-  static constexpr NumericType A =
-      1. / (1. + (n_l / n_r) * (halfPI / inflectAngle - 1.));
+  // static constexpr NumericType minAngle = 1.3962634;
+  static constexpr double inflectAngle = 1.55334303;
+  static constexpr double n_l = 10.;
+  static constexpr double A = 1. / (1. + n_l * (M_PI_2 / inflectAngle - 1.));
 
   // ion energy
   static constexpr NumericType minEnergy =
@@ -301,17 +278,7 @@ public:
                         rayTracingData<NumericType> &localData,
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
-
-    // NumericType Seff;
-    // // F surface coverage
-    // const auto &phi_F = globalData->getVectorData(0)[primID];
-    // // O surface coverage
-    // const auto &phi_O = globalData->getVectorData(1)[primID];
-
-    // Seff = gamma_F * std::max(1. - phi_F - phi_O, 0.);
-
-    // Rate is normalized by dividing with the local sticking coefficient
-    localData.getVectorData(0)[primID] += rayWeight; // * Seff;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -319,27 +286,23 @@ public:
                     const unsigned int primID, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
-    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
 
-    NumericType Seff;
     // F surface coverage
     const auto &phi_F = globalData->getVectorData(0)[primID];
     // O surface coverage
     const auto &phi_O = globalData->getVectorData(1)[primID];
     // Obtain the sticking probability
-    Seff = gamma_F * std::max(1. - phi_F - phi_O, 0.);
+    NumericType Seff = beta_F * std::max(1. - phi_F - phi_O, 0.);
 
+    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
   void initNew(rayRNG &RNG) override final {}
   int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"etchantRate"};
+    return {"etchantRate"};
   }
-
-private:
-  static constexpr NumericType gamma_F = 0.7;
 };
 
 template <typename NumericType, int D>
@@ -361,24 +324,21 @@ public:
                     const unsigned int primID, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
-    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
 
     NumericType Seff;
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
-    Seff = gamma_O * std::max(1. - phi_O - phi_F, 0.);
+    Seff = beta_O * std::max(1. - phi_O - phi_F, 0.);
 
+    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
   void initNew(rayRNG &RNG) override final {}
   int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"oxygenRate"};
+    return {"oxygenRate"};
   }
-
-private:
-  static constexpr NumericType gamma_O = 1.;
 };
 } // namespace SF6O2Implementation
 
