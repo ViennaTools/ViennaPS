@@ -5,13 +5,16 @@
 #include <atomic>
 #include <iostream>
 #include <map>
+#include <utility>
 
+#include <hrleDenseCellIterator.hpp>
 #include <hrleSparseCellIterator.hpp>
 #include <lsDomain.hpp>
 #include <lsMarchingCubes.hpp>
 #include <lsMesh.hpp>
 #include <utLog.hpp>
 
+#include <psDomain.hpp>
 #include <psKDTree.hpp>
 
 /// Extract an explicit lsMesh<> instance from an lsDomain.
@@ -20,74 +23,115 @@
 template <class T, int D = 3> class culsToSurfaceMesh {
   typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
-  psSmartPointer<lsDomain<double, D>> dlevelSet = nullptr;
-  psSmartPointer<lsDomain<float, D>> flevelSet = nullptr;
-  psSmartPointer<lsMesh<T>> mesh = nullptr;
-  psSmartPointer<psKDTree<T, std::array<T, 3>>> kdTree = nullptr;
-  // std::vector<hrleIndexType> meshNodeToPointIdMapping;
+  std::vector<psSmartPointer<lsDomain<double, D>>> dlevelSet;
+  std::vector<psSmartPointer<lsDomain<float, D>>> flevelSet;
+  psSmartPointer<lsMesh<T>> mesh{nullptr};
+  psSmartPointer<psKDTree<T, std::array<T, 3>>> kdTree{nullptr};
+  psSmartPointer<psMaterialMap> matMap{nullptr};
+
   const T epsilon;
   bool updatePointData = true;
-  const bool buildKdTree = false;
+  bool buildKdTree = false;
   bool useFloat;
   T minNodeDistance = 1e-4;
+  static constexpr double wrappingLayerEpsilon = 1e-4;
 
 public:
   culsToSurfaceMesh(double eps = 1e-12) : epsilon(eps) {}
 
   template <class TDom>
-  culsToSurfaceMesh(const psSmartPointer<lsDomain<TDom, D>> passedLevelSet,
+  culsToSurfaceMesh(psSmartPointer<lsDomain<TDom, D>> passedLevelSet,
                     psSmartPointer<lsMesh<T>> passedMesh, double eps = 1e-12)
       : mesh(passedMesh), epsilon(eps) {
     if constexpr (std::is_same_v<TDom, float>) {
-      flevelSet = passedLevelSet;
+      flevelSet.push_back(passedLevelSet);
       useFloat = true;
     } else if constexpr (std::is_same_v<TDom, double>) {
-      dlevelSet = passedLevelSet;
+      dlevelSet.push_back(passedLevelSet);
       useFloat = false;
-    } else {
-      utLog::getInstance()
-          .addWarning("Level set numeric type not compatiable.")
-          .print();
     }
   }
 
   template <class TDom>
-  culsToSurfaceMesh(const psSmartPointer<lsDomain<TDom, D>> passedLevelSet,
+  culsToSurfaceMesh(psSmartPointer<lsDomain<TDom, D>> passedLevelSet,
                     psSmartPointer<lsMesh<T>> passedMesh,
                     psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree,
                     double eps = 1e-12)
-      : mesh(passedMesh), epsilon(eps), buildKdTree(true) {
+      : mesh(passedMesh), epsilon(eps), buildKdTree(true),
+        kdTree(passedKdTree) {
     if constexpr (std::is_same_v<TDom, float>) {
-      flevelSet = passedLevelSet;
+      flevelSet.push_back(passedLevelSet);
       useFloat = true;
     } else if constexpr (std::is_same_v<TDom, double>) {
-      dlevelSet = passedLevelSet;
+      dlevelSet.push_back(passedLevelSet);
       useFloat = false;
-    } else {
-      utLog::getInstance()
-          .addWarning("Level set numeric type not compatiable.")
-          .print();
     }
   }
 
   template <class TDom>
-  void setLevelSet(psSmartPointer<lsDomain<TDom, D>> passedlsDomain) {
+  culsToSurfaceMesh(psSmartPointer<psDomain<TDom, D>> passedDomain,
+                    psSmartPointer<lsMesh<T>> passedMesh,
+                    psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree,
+                    double eps = 1e-12)
+      : mesh(passedMesh), epsilon(eps), buildKdTree(true), kdTree(passedKdTree),
+        matMap(passedDomain->getMaterialMap()) {
     if constexpr (std::is_same_v<TDom, float>) {
-      flevelSet = passedlsDomain;
+      for (auto &ls : *passedDomain->getLevelSets()) {
+        flevelSet.push_back(ls);
+      }
       useFloat = true;
     } else if constexpr (std::is_same_v<TDom, double>) {
-      dlevelSet = passedlsDomain;
+      for (auto &ls : *passedDomain->getLevelSets()) {
+        dlevelSet.push_back(ls);
+      }
       useFloat = false;
-    } else {
-      utLog::getInstance()
-          .addWarning("Level set numeric type not compatiable.")
-          .print();
+    }
+  }
+
+  template <class TDom>
+  culsToSurfaceMesh(psSmartPointer<psDomain<TDom, D>> passedDomain,
+                    psSmartPointer<lsMesh<T>> passedMesh, double eps = 1e-12)
+      : mesh(passedMesh), epsilon(eps), buildKdTree(false),
+        matMap(passedDomain->getMaterialMap()) {
+    if constexpr (std::is_same_v<TDom, float>) {
+      for (auto &ls : *passedDomain->getLevelSets()) {
+        flevelSet.push_back(ls);
+      }
+      useFloat = true;
+    } else if constexpr (std::is_same_v<TDom, double>) {
+      for (auto &ls : *passedDomain->getLevelSets()) {
+        dlevelSet.push_back(ls);
+      }
+      useFloat = false;
+    }
+  }
+
+  culsToSurfaceMesh(psSmartPointer<lsMesh<T>> passedMesh, double eps = 1e-12)
+      : mesh(passedMesh), epsilon(eps) {}
+
+  culsToSurfaceMesh(psSmartPointer<lsMesh<T>> passedMesh,
+                    psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree,
+                    double eps = 1e-12)
+      : mesh(passedMesh), epsilon(eps), buildKdTree(true),
+        kdTree(passedKdTree) {}
+
+  template <class TDom>
+  void insertNextLevelSet(psSmartPointer<lsDomain<TDom, D>> passedLevelSet) {
+    if constexpr (std::is_same_v<TDom, float>) {
+      flevelSet.push_back(passedLevelSet);
+      useFloat = true;
+    } else if constexpr (std::is_same_v<TDom, double>) {
+      dlevelSet.push_back(passedLevelSet);
+      useFloat = false;
     }
   }
 
   void setMesh(psSmartPointer<lsMesh<T>> passedMesh) { mesh = passedMesh; }
 
-  void setUpdatePointData(bool update) { updatePointData = update; }
+  void setKdTree(psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree) {
+    kdTree = passedKdTree;
+    buildKdTree = true;
+  }
 
   void apply() {
     if (useFloat)
@@ -98,10 +142,10 @@ public:
 
 private:
   template <class TDom>
-  void t_apply(psSmartPointer<lsDomain<TDom, D>> levelSet) {
-    if (levelSet == nullptr) {
+  void t_apply(std::vector<psSmartPointer<lsDomain<TDom, D>>> &levelSets) {
+    if (levelSets.empty()) {
       utLog::getInstance()
-          .addWarning("No level set was passed to culsToSurfaceMesh.")
+          .addWarning("No level sets were passed to culsToSurfaceMesh.")
           .print();
       return;
     }
@@ -113,7 +157,7 @@ private:
     }
 
     mesh->clear();
-    const auto gridDelta = levelSet->getGrid().getGridDelta();
+    const auto gridDelta = levelSets.back()->getGrid().getGridDelta();
     minNodeDistance = gridDelta / 5.;
     mesh->minimumExtent = std::array<T, 3>{std::numeric_limits<T>::max(),
                                            std::numeric_limits<T>::max(),
@@ -128,7 +172,7 @@ private:
 
     // test if level set function consists of at least 2 layers of
     // defined grid points
-    if (levelSet->getLevelSetWidth() < 2) {
+    if (levelSets.back()->getLevelSetWidth() < 2) {
       utLog::getInstance()
           .addWarning("Levelset is less than 2 layers wide. Export might fail!")
           .print();
@@ -136,11 +180,11 @@ private:
 
     typedef typename std::map<hrleVectorType<hrleIndexType, D>, unsigned>
         nodeContainerType;
-    typedef typename lsDomain<TDom, D>::DomainType hrleDomainType;
 
     nodeContainerType nodes[D];
 
     typename nodeContainerType::iterator nodeIt;
+    typedef typename lsDomain<TDom, D>::DomainType hrleDomainType;
 
     lsInternal::lsMarchingCubes marchingCubes;
 
@@ -148,19 +192,36 @@ private:
     using ScalarDataType = typename DomainType::PointDataType::ScalarDataType;
     using VectorDataType = typename DomainType::PointDataType::VectorDataType;
 
-    // const bool updateData = updatePointData;
-    // save how data should be transferred to new level set
-    // list of indices into the old pointData vector
-    // std::vector<std::vector<unsigned>> newDataSourceIds;
-    // there is no multithreading here, so just use 1
-    // if (updateData)
-    //   newDataSourceIds.resize(1);
+    hrleVectorType<hrleIndexType, D> minIndex;
+    // set to zero
+    for (unsigned i = 0; i < D; ++i) {
+      minIndex[i] = std::numeric_limits<hrleIndexType>::max();
+    }
+    for (unsigned l = 0; l < levelSets.size(); ++l) {
+      auto &grid = levelSets[l]->getGrid();
+      auto &domain = levelSets[l]->getDomain();
+      for (unsigned i = 0; i < D; ++i) {
+        minIndex[i] = std::min(minIndex[i], (grid.isNegBoundaryInfinite(i))
+                                                ? domain.getMinRunBreak(i)
+                                                : grid.getMinBounds(i));
+      }
+    }
+
+    // set up iterators for all materials
+    std::vector<hrleConstDenseCellIterator<hrleDomainType>> denseIterators;
+    for (const auto levelSet : levelSets) {
+      denseIterators.push_back(hrleConstDenseCellIterator<hrleDomainType>(
+          levelSet->getDomain(), minIndex));
+    }
 
     std::vector<std::array<T, 3>> triangleCenters;
+    const bool buildKdTreeFlag = buildKdTree;
 
-    // iterate over all active points
+    std::vector<T> materialIds;
+
+    // iterate over all active surface points
     for (hrleConstSparseCellIterator<hrleDomainType> cellIt(
-             levelSet->getDomain());
+             levelSets.back()->getDomain());
          !cellIt.isFinished(); cellIt.next()) {
 
       for (int u = 0; u < D; u++) {
@@ -171,8 +232,18 @@ private:
       }
 
       unsigned signs = 0;
+      T value = 0;
+      unsigned undefined = 0;
       for (int i = 0; i < (1 << D); i++) {
-        if (cellIt.getCorner(i).getValue() >= T(0))
+        auto cVal = cellIt.getCorner(i).getValue();
+
+        if (!cellIt.getCorner(i).isDefined()) {
+          undefined++;
+        } else {
+          value += cVal;
+        }
+
+        if (cVal >= T(0))
           signs |= (1 << i);
       }
 
@@ -181,6 +252,37 @@ private:
         continue;
       if (signs == (1 << (1 << D)) - 1)
         continue;
+
+      // go over all materials
+      unsigned currentMatId = levelSets.size() - 1;
+      for (unsigned materialId = 0; materialId < levelSets.size();
+           ++materialId) {
+        auto &matCellIt = denseIterators[materialId];
+        matCellIt.goToIndicesSequential(cellIt.getIndices());
+        if (!matCellIt.isDefined()) {
+          continue;
+        }
+
+        T valueSum = 0;
+        unsigned undefinedValues = 0;
+        for (int i = 0; i < (1 << D); i++) {
+          if (!matCellIt.getCorner(i).isDefined()) {
+            undefinedValues++;
+            continue;
+          }
+          valueSum += matCellIt.getCorner(i).getValue();
+        }
+
+        // std::cout << undefinedValues << " " << undefined << std::endl;
+        // std::cout << valueSum << " " << value + wrappingLayerEpsilon
+        // << std::endl;
+        if (undefinedValues <= undefined &&
+            valueSum <= value + wrappingLayerEpsilon) {
+          currentMatId = materialId;
+          std::cout << "Mask" << std::endl;
+          break;
+        }
+      }
 
       // for each element
       const int *Triangles = (D == 2) ? marchingCubes.polygonize2d(signs)
@@ -207,14 +309,12 @@ private:
           if (nodeIt != nodes[dir].end()) {
             nod_numbers[n] = nodeIt->second;
           } else { // if node does not exist yet
-
             // calculate coordinate of new node
             std::array<T, 3> cc{}; // initialise with zeros
-            std::size_t currentPointId = 0;
             for (int z = 0; z < D; z++) {
               if (z != dir) {
-                // TODO might not need BitMaskToVector here, just check if z bit
-                // is set
+                // TODO might not need BitMaskToVector here, just check if z
+                // bit is set
                 cc[z] =
                     static_cast<T>(cellIt.getIndices(z) +
                                    BitMaskToVector<D, hrleIndexType>(p0)[z]);
@@ -226,15 +326,12 @@ private:
 
                 // calculate the surface-grid intersection point
                 if (d0 == -d1) { // includes case where d0=d1=0
-                  currentPointId = cellIt.getCorner(p0).getPointId();
                   cc[z] = static_cast<T>(cellIt.getIndices(z)) + 0.5;
                 } else {
                   if (std::abs(d0) <= std::abs(d1)) {
-                    currentPointId = cellIt.getCorner(p0).getPointId();
                     cc[z] =
                         static_cast<T>(cellIt.getIndices(z)) + (d0 / (d0 - d1));
                   } else {
-                    currentPointId = cellIt.getCorner(p1).getPointId();
                     cc[z] = static_cast<T>(cellIt.getIndices(z) + 1) -
                             (d1 / (d1 - d0));
                   }
@@ -253,23 +350,13 @@ private:
               // insert new node
               nod_numbers[n] =
                   mesh->insertNextNode(cc); // insert new surface node
-              if (cc[0] < mesh->minimumExtent[0])
-                mesh->minimumExtent[0] = cc[0];
-              if (cc[0] > mesh->maximumExtent[0])
-                mesh->maximumExtent[0] = cc[0];
-              if (cc[1] < mesh->minimumExtent[1])
-                mesh->minimumExtent[1] = cc[1];
-              if (cc[1] > mesh->maximumExtent[1])
-                mesh->maximumExtent[1] = cc[1];
-              if (cc[2] < mesh->minimumExtent[2])
-                mesh->minimumExtent[2] = cc[2];
-              if (cc[2] > mesh->maximumExtent[2])
-                mesh->maximumExtent[2] = cc[2];
+              for (int a = 0; a < D; a++) {
+                if (cc[a] < mesh->minimumExtent[a])
+                  mesh->minimumExtent[a] = cc[a];
+                if (cc[a] > mesh->maximumExtent[a])
+                  mesh->maximumExtent[a] = cc[a];
+              }
             }
-            nodes[dir][d] = nod_numbers[n];
-
-            // if (updateData)
-            //   newDataSourceIds[0].push_back(currentPointId);
           }
         }
 
@@ -284,7 +371,13 @@ private:
 
         if (!triangleMisformed) {
           mesh->insertNextElement(nod_numbers); // insert new surface element
-          if (buildKdTree) {
+          if (matMap) {
+            materialIds.push_back(
+                matMap->getMaterialMap()->getMaterialId(currentMatId));
+          } else {
+            materialIds.push_back(currentMatId);
+          }
+          if (buildKdTreeFlag) {
             triangleCenters.push_back({(mesh->nodes[nod_numbers[0]][0] +
                                         mesh->nodes[nod_numbers[1]][0] +
                                         mesh->nodes[nod_numbers[2]][0]) /
@@ -302,23 +395,20 @@ private:
       }
     }
 
-    if (buildKdTree) {
+    if (buildKdTreeFlag) {
+      std::cout << triangleCenters.size() << std::endl;
       kdTree->setPoints(triangleCenters);
       kdTree->build();
     }
 
-    // now copy old data into new level set
-    // if (updateData) {
-    //   mesh->getPointData().translateFromMultiData(levelSet->getPointData(),
-    //                                               newDataSourceIds);
-    // }
+    mesh->getCellData().insertNextScalarData(materialIds, "Material");
   }
 
-  int checkIfNodeExists(const std::array<T, D> &node) {
+  int checkIfNodeExists(const std::array<T, 3> &node) {
     const auto &nodes = mesh->getNodes();
     const uint N = nodes.size();
     const int maxThreads = omp_get_max_threads();
-    const int numThreads = maxThreads > N ? 1 : maxThreads;
+    const int numThreads = maxThreads > N / (10 * maxThreads) ? 1 : maxThreads;
     std::vector<int> threadLocal(numThreads, -1);
     std::atomic<bool> go(true);
     const uint share = N / numThreads;
@@ -350,7 +440,7 @@ private:
     return idx;
   }
 
-  bool nodeClose(const std::array<T, D> &nodeA, const std::array<T, D> &nodeB) {
+  bool nodeClose(const std::array<T, 3> &nodeA, const std::array<T, 3> &nodeB) {
     const auto nodeDist = std::abs(nodeA[0] - nodeB[0]) +
                           std::abs(nodeA[1] - nodeB[1]) +
                           std::abs(nodeA[2] - nodeB[2]);

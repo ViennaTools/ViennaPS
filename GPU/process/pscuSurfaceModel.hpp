@@ -29,13 +29,12 @@ public:
 
   virtual psSmartPointer<std::vector<NumericType>>
   calculateVelocities(utCudaBuffer &d_rates,
-                      const std::vector<std::array<NumericType, 3>> &points,
                       const std::vector<NumericType> &materialIDs) {
     return psSmartPointer<std::vector<NumericType>>::New();
   }
 
-  virtual void updateCoverages(utCudaBuffer &d_rates, unsigned long numPoints) {
-  }
+  virtual void updateCoverages(utCudaBuffer &d_rates,
+                               const std::vector<NumericType> &materialIDs) {}
 
   utCudaBuffer &getCoverages() { return d_coverages; }
 

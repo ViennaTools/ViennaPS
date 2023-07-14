@@ -36,26 +36,24 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     const int numCoverages = 2;
-    d_coverages.alloc(numCoverages * numGeometryPoints * sizeof(NumericType));
+    d_coverages.alloc_and_init(numCoverages * numGeometryPoints,
+                               NumericType(0));
     coveragesIndexMap.insert(std::make_pair("eCoverage", 0));
     coveragesIndexMap.insert(std::make_pair("oCoverage", 1));
   }
 
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(utCudaBuffer &d_rates,
-                      const std::vector<std::array<NumericType, 3>> &points,
                       const std::vector<NumericType> &materialIds) override {
     unsigned long numPoints = materialIds.size();
-    updateCoverages(d_rates, numPoints);
+    updateCoverages(d_rates, materialIds);
 
     std::vector<NumericType> etchRate(numPoints, 0.);
     utCudaBuffer etchRateBuffer;
     utCudaBuffer materialIdsBuffer;
-    utCudaBuffer pointCoordsBuffer;
 
     etchRateBuffer.alloc(numPoints * sizeof(NumericType));
     materialIdsBuffer.alloc_and_upload(materialIds);
-    pointCoordsBuffer.alloc_and_upload(points);
 
     assert(d_rates.sizeInBytes / sizeof(NumericType) == numPoints * 5);
     CUdeviceptr rates = d_rates.d_pointer();
@@ -63,11 +61,10 @@ public:
     CUdeviceptr coverages = d_coverages.d_pointer();
     CUdeviceptr erate = etchRateBuffer.d_pointer();
     CUdeviceptr matIds = materialIdsBuffer.d_pointer();
-    CUdeviceptr coords = pointCoordsBuffer.d_pointer();
 
     // launch kernel
     void *kernelArgs[] = {
-        &rates,     &coverages,    &coords,           &matIds,         &erate,
+        &rates,     &coverages,    &matIds,           &erate,
         &numPoints, &totalIonFlux, &totalEtchantFlux, &totalOxygenFlux};
 
     utLaunchKernel::launch(processModuleName, calcEtchRateKernel, kernelArgs,
@@ -83,7 +80,8 @@ public:
   }
 
   void updateCoverages(utCudaBuffer &d_rates,
-                       unsigned long numPoints) override {
+                       const std::vector<NumericType> &materialIds) override {
+    unsigned long numPoints = materialIds.size();
     assert(d_rates.sizeInBytes / sizeof(NumericType) == numPoints * 5);
     CUdeviceptr rates = d_rates.d_pointer();
     assert(d_coverages.sizeInBytes / sizeof(NumericType) == numPoints * 2);

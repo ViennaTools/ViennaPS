@@ -193,8 +193,8 @@ public:
       maxPoint[0] = trenchWidth / 2;
 
       if constexpr (D == 3) {
-        minPoint[1] = -yExtent / 2.;
-        maxPoint[1] = yExtent / 2.;
+        minPoint[1] = -yExtent / 2. - gridDelta;
+        maxPoint[1] = yExtent / 2. + gridDelta;
         minPoint[2] = baseHeight;
         maxPoint[2] = trenchDepth + baseHeight;
       } else {

@@ -12,7 +12,6 @@
 
 extern "C" __global__ void calculateEtchRate(const NumericType *rates,
                                              const NumericType *coverages,
-                                             const std::array<NumericType, 3> *coords,
                                              const NumericType *materialIds,
                                              NumericType *etchRate,
                                              const unsigned long numPoints,

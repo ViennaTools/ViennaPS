@@ -52,10 +52,9 @@ public:
 
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(utCudaBuffer &d_rates,
-                      const std::vector<std::array<NumericType, 3>> &points,
                       const std::vector<NumericType> &materialIds) override {
     unsigned long numPoints = materialIds.size();
-    updateCoverages(d_rates, numPoints);
+    updateCoverages(d_rates, materialIds);
 
     std::vector<NumericType> etchRate(numPoints, 0.);
     utCudaBuffer etchRateBuffer;
@@ -90,7 +89,8 @@ public:
   }
 
   void updateCoverages(utCudaBuffer &d_rates,
-                       unsigned long numPoints) override {
+                       const std::vector<NumericType> &materialIds) override {
+    unsigned long numPoints = materialIds.size();
     assert(d_rates.sizeInBytes / sizeof(NumericType) == numPoints * numRates);
     CUdeviceptr rates = d_rates.d_pointer();
     assert(d_coverages.sizeInBytes / sizeof(NumericType) ==

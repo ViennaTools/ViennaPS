@@ -114,6 +114,10 @@ public:
     }
   }
 
+  const ValueType &getPoint(std::size_t idx) const { return nodes[idx].value; }
+
+  SizeType getNumberOfPoints() const { return nodes.size(); }
+
   [[nodiscard]] std::optional<std::pair<SizeType, NumericType>>
   findNearest(const ValueType &x) const {
     if (!rootNode)
@@ -327,8 +331,7 @@ private:
             typename = std::enable_if_t<
                 std::is_same_v<Q, psBoundedPQueue<NumericType, Node *>> ||
                 std::is_same_v<Q, psClampedPQueue<NumericType, Node *>>>>
-  void traverseDown(Node *currentNode, Q &queue,
-                    const std::vector<NumericType> &x) const {
+  void traverseDown(Node *currentNode, Q &queue, const ValueType &x) const {
     if (currentNode == nullptr)
       return;
 

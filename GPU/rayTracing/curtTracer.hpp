@@ -6,9 +6,9 @@
 
 #include <cstring>
 
-#include <lsDomain.hpp>
 #include <lsPointData.hpp>
 
+#include <psDomain.hpp>
 #include <psKDTree.hpp>
 #include <psLogger.hpp>
 
@@ -29,25 +29,25 @@ public:
   /// constructor - performs all setup, including initializing
   /// optix, creates module, pipeline, programs, SBT, etc.
   curtTracer(pscuContext passedContext,
-             psSmartPointer<lsDomain<T, D>> passedDomain)
+             psSmartPointer<psDomain<T, D>> passedDomain)
       : context(passedContext), domain(passedDomain) {
     initRayTracer();
+    mesh = psSmartPointer<lsMesh<float>>::New();
   }
 
   curtTracer(pscuContext passedContext) : context(passedContext) {
     initRayTracer();
+    mesh = psSmartPointer<lsMesh<float>>::New();
   }
 
   void setKdTree(psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree) {
-    geometry.kdTree = passedKdTree;
+    kdTree = passedKdTree;
   }
 
   void setPipeline(char embeddedPtxCode[]) { ptxCode = embeddedPtxCode; }
 
-  void setLevelSet(psSmartPointer<lsDomain<T, D>> passedDomain) {
+  void setLevelSet(psSmartPointer<psDomain<T, D>> passedDomain) {
     domain = passedDomain;
-    geometry.buildAccelFromDomain(domain, launchParams);
-    geometryValid = true;
   }
 
   void invalidateGeometry() { geometryValid = false; }
@@ -58,7 +58,7 @@ public:
 
   void apply() {
     if (!geometryValid) {
-      geometry.buildAccelFromDomain(domain, launchParams);
+      geometry.buildAccelFromDomain(domain, launchParams, mesh, kdTree);
       geometryValid = true;
     }
 
@@ -167,6 +167,12 @@ public:
     pointBuffer.free();
   }
 
+  void setCellData(utCudaBuffer &passedCellDataBuffer, unsigned numData) {
+    assert(passedCellDataBuffer.sizeInBytes / sizeof(T) / numData ==
+           launchParams.numElements);
+    cellDataBuffer = passedCellDataBuffer;
+  }
+
   void translateFromPointData(psSmartPointer<lsMesh<T>> mesh,
                               utCudaBuffer &pointDataBuffer, unsigned numData) {
     // upload oriented pointcloud data to device
@@ -203,7 +209,7 @@ public:
   }
 
   void updateSurface() {
-    geometry.buildAccelFromDomain(domain, launchParams);
+    geometry.buildAccelFromDomain(domain, launchParams, mesh, kdTree);
     geometryValid = true;
   }
 
@@ -236,12 +242,6 @@ public:
     launchParams.periodicBoundary = periodic;
   }
 
-  utCudaBuffer &getData() { return cellDataBuffer; }
-
-  utCudaBuffer &getResults() { return resultBuffer; }
-
-  size_t getNumberOfRays() const { return numRays; }
-
   void freeBuffers() {
     resultBuffer.free();
     hitgroupRecordBuffer.free();
@@ -251,7 +251,7 @@ public:
     geometry.freeBuffers();
   }
 
-  void prepareParticlePrograms() {
+  unsigned int prepareParticlePrograms() {
     createModule();
     createRaygenPrograms();
     createMissPrograms();
@@ -272,10 +272,12 @@ public:
     dataPerParticleBuffer.alloc_and_upload(dataPerParticle);
     launchParams.dataPerParticle =
         (unsigned int *)dataPerParticleBuffer.d_pointer();
+    return numRates;
   }
 
   void downloadResultsToPointData(lsPointData<T> &pointData,
-                                  utCudaBuffer &valueBuffer, size_t numPoints) {
+                                  utCudaBuffer &valueBuffer,
+                                  unsigned int numPoints) {
     T *temp = new T[numPoints * numRates];
     valueBuffer.download(temp, numPoints * numRates);
 
@@ -303,9 +305,52 @@ public:
     delete temp;
   }
 
+  void downloadResultsToPointData(lsPointData<T> &pointData) {
+    unsigned int numPoints = launchParams.numElements;
+    T *temp = new T[numPoints * numRates];
+    resultBuffer.download(temp, numPoints * numRates);
+
+    int offset = 0;
+    for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
+      for (int dIdx = 0; dIdx < particles[pIdx].numberOfData; dIdx++) {
+        int tmpOffset = offset + dIdx;
+        auto name = particles[pIdx].dataLabels[dIdx];
+
+        std::vector<T> *values = pointData.getScalarData(name);
+        if (values == nullptr) {
+          std::vector<T> val(numPoints);
+          pointData.insertNextScalarData(std::move(val), name);
+          values = pointData.getScalarData(name);
+        }
+        if (values->size() != numPoints)
+          values->resize(numPoints);
+
+        std::memcpy(values->data(), &temp[tmpOffset * numPoints],
+                    numPoints * sizeof(T));
+      }
+      offset += particles[pIdx].numberOfData;
+    }
+
+    delete temp;
+  }
+
+  utCudaBuffer &getData() { return cellDataBuffer; }
+
+  utCudaBuffer &getResults() { return resultBuffer; }
+
+  std::size_t getNumberOfRays() const { return numRays; }
+
   std::vector<curtParticle<T>> &getParticles() { return particles; }
 
   unsigned int getNumberOfRates() const { return numRates; }
+
+  unsigned int getNumberOfElements() const { return launchParams.numElements; }
+
+  psSmartPointer<lsMesh<float>> getSurfaceMesh() const { return mesh; }
+
+  psSmartPointer<psKDTree<T, std::array<float, 3>>> getKDTree() const {
+    return kdTree;
+  }
 
 protected:
   void normalize() {
@@ -544,7 +589,10 @@ protected:
   std::string ptxCode;
 
   // geometry
-  psSmartPointer<lsDomain<T, D>> domain;
+  psSmartPointer<psDomain<T, D>> domain{nullptr};
+  psSmartPointer<psKDTree<T, std::array<float, 3>>> kdTree{nullptr};
+  psSmartPointer<lsMesh<float>> mesh{nullptr};
+
   curtGeometry<T, D> geometry;
 
   // particles
@@ -586,7 +634,7 @@ protected:
   bool geometryValid = false;
   bool useRandomSeed = false;
   unsigned numCellData = 0;
-  int numberOfRaysPerPoint = 50 * 50;
+  int numberOfRaysPerPoint = 3000;
   int numberOfRaysFixed = 0;
 
   size_t numRays = 0;

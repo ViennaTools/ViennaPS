@@ -12,12 +12,12 @@
 
 #include <pscuProcessModel.hpp>
 #include <pscuSurfaceModel.hpp>
+#include <pscuTranslationField.hpp>
 
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
 #include <psLogger.hpp>
 #include <psSmartPointer.hpp>
-#include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
 
 #include <curtIndexMap.hpp>
@@ -28,7 +28,6 @@
 #include <culsToSurfaceMesh.hpp>
 
 template <typename NumericType, int D> class pscuProcess {
-  using translatorType = std::unordered_map<unsigned long, unsigned long>;
   using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
 public:
@@ -40,17 +39,13 @@ public:
         passedProcessModel);
   }
 
-  void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
-    domain = passedDomain;
-  }
+  void setDomain(psDomainType passedDomain) { domain = passedDomain; }
 
-  void setProcessDuration(double passedDuration) {
-    processDuration = passedDuration;
-  }
+  void setProcessDuration(double duration) { processDuration = duration; }
 
   void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
 
-  void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
+  void setMaxCoverageInitIterations(long maxIt) { maxIterations = maxIt; }
 
   void setPeriodicBoundary(const int passedPeriodic) {
     periodicBoundary = static_cast<bool>(passedPeriodic);
@@ -109,34 +104,36 @@ public:
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
         domain->getLevelSets()->back()->getGrid().getGridDelta();
-    utCudaBuffer d_rates;
 
-    auto diskMesh = psSmartPointer<lsMesh<NumericType>>::New();
-    auto translator = psSmartPointer<translatorType>::New();
-    lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
-    meshConverter.setTranslator(translator);
-    if (domain->getMaterialMap() &&
-        domain->getMaterialMap()->size() == domain->getLevelSets()->size()) {
-      meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
-    }
+    auto mesh = rayTrace.getSurfaceMesh();
+    auto kdTree = psSmartPointer<
+        psKDTree<NumericType, std::array<NumericType, 3>>>::New();
 
-    auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
-        model->getVelocityField(), domain->getMaterialMap());
-    transField->setTranslator(translator);
-
+    /* --------- Setup advection kernel ----------- */
     lsAdvect<NumericType, D> advectionKernel;
-    advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
     advectionKernel.setIgnoreVoids(true);
 
+    if (model->getVelocityField()->getTranslationFieldOptions() > 0) {
+      auto transField =
+          psSmartPointer<pscuTranslationField<NumericType, true>>::New(
+              model->getVelocityField(), kdTree, domain->getMaterialMap());
+      advectionKernel.setVelocityField(transField);
+    } else {
+      auto transField =
+          psSmartPointer<pscuTranslationField<NumericType, false>>::New(
+              model->getVelocityField(), kdTree, domain->getMaterialMap());
+      advectionKernel.setVelocityField(transField);
+    }
+
     for (auto dom : *domain->getLevelSets()) {
-      meshConverter.insertNextLevelSet(dom);
       advectionKernel.insertNextLevelSet(dom);
     }
 
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
-
+    unsigned int numRates = 0;
+    unsigned int numCov = 0;
     if (useRayTracing && !rayTracerInitialized) {
       if (!model->getPtxCode()) {
         psLogger::getInstance()
@@ -145,14 +142,14 @@ public:
         return;
       }
       rayTrace.setPipeline(model->getPtxCode());
-      rayTrace.setLevelSet(domain->getLevelSets()->back());
+      rayTrace.setLevelSet(domain);
       rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
       rayTrace.setUseRandomSeed(useRandomSeeds);
       rayTrace.setPeriodicBoundary(periodicBoundary);
       for (auto &particle : *model->getParticleTypes()) {
         rayTrace.insertNextParticle(particle);
       }
-      rayTrace.prepareParticlePrograms();
+      numRates = rayTrace.prepareParticlePrograms();
       model->getSurfaceModel()->setIndexMap(
           curtIndexMap<NumericType>::getPointDataIndexMap(
               rayTrace.getParticles()));
@@ -174,13 +171,16 @@ public:
     if (useAdvectionCallback)
       psLogger::getInstance().addInfo("Using advection callback.").print();
 
+    unsigned int numElements = 0;
+    if (useRayTracing) {
+      rayTrace.updateSurface(); // also creates mesh
+      numElements = rayTrace.getNumberOfElements();
+    }
     bool useCoverages = false;
-    size_t numCov = 0;
+
     // Initialize coverages
-    meshConverter.apply();
-    auto numPoints = diskMesh->getNodes().size();
     if (!coveragesInitialized)
-      model->getSurfaceModel()->initializeCoverages(numPoints);
+      model->getSurfaceModel()->initializeCoverages(numElements);
     if (model->getSurfaceModel()->getCoverages().d_ptr != nullptr) {
       useCoverages = true;
       numCov = model->getSurfaceModel()->getCoverageIndexMap().size();
@@ -195,28 +195,30 @@ public:
         timer.start();
         for (size_t iterations = 1; iterations <= maxIterations; iterations++) {
           // get coverages in ray tracer
-          rayTrace.translateFromPointData(
-              diskMesh, model->getSurfaceModel()->getCoverages(), numCov);
+          rayTrace.setCellData(model->getSurfaceModel()->getCoverages(),
+                               numCov);
 
           rayTrace.apply();
-          // get rates
-          rayTrace.translateToPointData(diskMesh, d_rates);
+
           // calculate coverages
-          model->getSurfaceModel()->updateCoverages(d_rates,
-                                                    diskMesh->nodes.size());
+          const auto &materialIds =
+              *mesh->getCellData().getScalarData("Material");
+          model->getSurfaceModel()->updateCoverages(rayTrace.getResults(),
+                                                    materialIds);
 
           if (psLogger::getLogLevel() >= 3) {
-            rayTrace.downloadResultsToPointData(
-                diskMesh->getCellData(), d_rates, diskMesh->nodes.size());
-            downloadCoverages(diskMesh->getCellData(),
-                              model->getSurfaceModel()->getCoverages(),
-                              diskMesh->nodes.size());
-            printDiskMesh(diskMesh, name + "_covIinit_" +
-                                        std::to_string(iterations) + ".vtp");
-            psLogger::getInstance()
-                .addInfo("Iteration: " + std::to_string(iterations))
-                .print();
+            assert(numElements == mesh->triangles.size());
+
+            downloadCoverages(mesh->getCellData(), numElements);
+
+            rayTrace.downloadResultsToPointData(mesh->getCellData());
+            lsVTKWriter<NumericType>(
+                mesh, name + "_covIinit_" + std::to_string(iterations) + ".vtp")
+                .apply();
           }
+          psLogger::getInstance()
+              .addInfo("Iteration: " + std::to_string(iterations))
+              .print();
         }
         coveragesInitialized = true;
 
@@ -226,6 +228,10 @@ public:
             .print();
       }
     }
+
+    // now build kd tree with mesh
+    rayTrace.setKdTree(kdTree);
+    rayTrace.updateSurface();
 
     double previousTimeStep = 0.;
     size_t counter = 0;
@@ -237,20 +243,12 @@ public:
           .addInfo("Remaining time: " + std::to_string(remainingTime))
           .print();
 
-      meshConverter.apply();
-      auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+      auto &materialIds = *mesh->getCellData().getScalarData("Material");
 
       if (useRayTracing) {
         rtTimer.start();
 
-        // get coverages in ray tracer
-        if (useCoverages)
-          rayTrace.translateFromPointData(
-              diskMesh, model->getSurfaceModel()->getCoverages(), numCov);
         rayTrace.apply();
-
-        // get results as point data
-        rayTrace.translateToPointData(diskMesh, d_rates);
 
         rtTimer.finish();
         psLogger::getInstance()
@@ -259,65 +257,32 @@ public:
       }
 
       auto velocities = model->getSurfaceModel()->calculateVelocities(
-          d_rates, diskMesh->nodes, materialIds);
-      if (smoothFlux)
-        curtSmoothing<NumericType, D>(diskMesh, velocities, gridDelta).apply();
+          rayTrace.getResults(), materialIds);
+      if (smoothFlux) {
+        smoothVelocities(velocities, kdTree, gridDelta);
+      }
       model->getVelocityField()->setVelocities(velocities);
-      if (model->getVelocityField()->getTranslationFieldOptions() == 2)
-        transField->buildKdTree(diskMesh->nodes);
 
       if (psLogger::getLogLevel() >= 4) {
 
+        if (useCoverages)
+          downloadCoverages(mesh->getCellData(), numElements);
+
         if (useRayTracing)
-          rayTrace.downloadResultsToPointData(diskMesh->getCellData(), d_rates,
-                                              diskMesh->nodes.size());
-        if (useCoverages) {
-          downloadCoverages(diskMesh->getCellData(),
-                            model->getSurfaceModel()->getCoverages(),
-                            diskMesh->nodes.size());
-        }
+          rayTrace.downloadResultsToPointData(
+              mesh->getCellData(), rayTrace.getResults(), numElements);
 
         if (velocities)
-          diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                       "velocities");
+          mesh->getCellData().insertNextScalarData(*velocities, "velocities");
 
-        printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
+        lsVTKWriter<NumericType>(mesh, name + "_step_" +
+                                           std::to_string(counter) + ".vtp")
+            .apply();
+
         if (domain->getUseCellSet()) {
           domain->getCellSet()->writeVTU(name + "_cellSet_" +
                                          std::to_string(counter) + ".vtu");
         }
-
-        auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-        culsToSurfaceMesh<NumericType>(domain->getLevelSets()->back(), mesh)
-            .apply();
-
-        if (useCoverages) {
-          auto &d_cellData = rayTrace.getData();
-          auto covSize = mesh->triangles.size();
-          std::vector<NumericType> cellData(covSize * numCov);
-          d_cellData.download(cellData.data(), covSize * numCov);
-
-          auto covIndexMap = model->getSurfaceModel()->getCoverageIndexMap();
-          for (auto &i : covIndexMap) {
-            auto cov = coverages.getScalarData(i.first);
-            if (cov == nullptr) {
-              std::vector<NumericType> covInit(covSize);
-              coverages.insertNextScalarData(std::move(covInit), i.first);
-              cov = coverages.getScalarData(i.first);
-            }
-            if (cov->size() != covSize)
-              cov->resize(covSize);
-            std::memcpy(cov->data(), cellData.data() + i.second * covSize,
-                        covSize * sizeof(NumericType));
-          }
-        }
-
-        std::vector<NumericType> cellflux(mesh->triangles.size());
-        rayTrace.getFlux(cellflux.data(), 0, 0);
-        mesh->cellData.insertNextScalarData(std::move(cellflux), "flux");
-        lsVTKWriter<NumericType>(mesh, name + "_step_" +
-                                           std::to_string(counter) + ".vtp")
-            .apply();
 
         counter++;
       }
@@ -334,7 +299,7 @@ public:
 
         if (!continueProcess) {
           psLogger::getInstance()
-              .addInfo("Process stopped early by AdvectionCallback during "
+              .addInfo("Process stopped early by AdvectionCallback during"
                        "`preAdvect`.")
               .print();
           break;
@@ -346,27 +311,20 @@ public:
         advectionKernel.setAdvectionTime(remainingTime);
       }
 
-      // move coverages to LS, so they get are moved with the advection step
-      psPointData<NumericType> coverages;
-      if (useCoverages) {
-        downloadCoverages(coverages, model->getSurfaceModel()->getCoverages(),
-                          diskMesh->nodes.size());
-        moveCoveragesToTopLS(domain, translator, coverages);
-      }
-
       advTimer.start();
       advectionKernel.apply();
       advTimer.finish();
-      rayTrace.updateSurface();
 
       psLogger::getInstance().addTiming("Surface advection", advTimer).print();
 
-      // update the translator to retrieve the correct coverages from the LS
-      meshConverter.apply();
-      if (useCoverages) {
-        updateCoveragesFromAdvectedSurface(domain, translator, coverages);
-        uploadCoverages(coverages);
-      }
+      // update surface and move coverages to new surface
+      auto newKdTree =
+          psSmartPointer<psKDTree<NumericType, std::array<float, 3>>>::New();
+      rayTrace.setKdTree(newKdTree);
+      rayTrace.updateSurface();
+      if (useCoverages)
+        moveCoverages(kdTree, newKdTree, numCov);
+      kdTree = newKdTree;
 
       // apply advection callback
       if (useAdvectionCallback) {
@@ -388,8 +346,7 @@ public:
 
       previousTimeStep = advectionKernel.getAdvectedTime();
       remainingTime -= previousTimeStep;
-    } // main process loop
-    rayTrace.invalidateGeometry();
+    }
 
     processTime = processDuration - remainingTime;
     processTimer.finish();
@@ -417,30 +374,92 @@ public:
   }
 
 private:
-  void printDiskMesh(psSmartPointer<lsMesh<NumericType>> mesh,
-                     std::string name) {
-    lsVTKWriter<NumericType>(mesh, name).apply();
+  void moveCoverages(
+      psSmartPointer<psKDTree<NumericType, std::array<float, 3>>> kdTree,
+      psSmartPointer<psKDTree<NumericType, std::array<float, 3>>> newkdTree,
+      const unsigned numCov) {
+    psPointData<NumericType> oldCoverages, newCoverages;
+    downloadCoverages(oldCoverages, kdTree->getNumberOfPoints());
+
+    // prepare new coverages
+    std::vector<std::vector<NumericType>> newCovData(
+        oldCoverages.getScalarDataSize());
+    for (unsigned i = 0; i < oldCoverages.getScalarDataSize(); i++) {
+      newCovData[i].resize(newkdTree->getNumberOfPoints());
+    }
+
+    // move coverages
+#pragma omp parallel for
+    for (std::size_t i = 0; i < newkdTree->getNumberOfPoints(); i++) {
+      auto point = newkdTree->getPoint(i);
+      auto nearest = kdTree->findNearest(point);
+
+      for (unsigned j = 0; j < oldCoverages.getScalarDataSize(); j++) {
+        newCovData[j][i] = oldCoverages.getScalarData(j)->at(nearest->first);
+      }
+    }
+
+    for (unsigned i = 0; i < oldCoverages.getScalarDataSize(); i++) {
+      auto label = oldCoverages.getScalarDataLabel(i);
+      newCoverages.insertNextScalarData(std::move(newCovData[i]), label);
+    }
+
+    uploadCoverages(newCoverages);
+  }
+
+  void smoothVelocities(
+      psSmartPointer<std::vector<NumericType>> velocities,
+      psSmartPointer<psKDTree<NumericType, std::array<float, 3>>> kdTree,
+      const NumericType gridDelta) {
+    const auto numPoints = velocities->size();
+    std::cout << numPoints << " " << kdTree->getNumberOfPoints() << std::endl;
+    assert(numPoints == kdTree->getNumberOfPoints());
+
+    std::vector<NumericType> smoothed(numPoints, 0.);
+
+#pragma omp parallel for
+    for (std::size_t i = 0; i < numPoints; ++i) {
+      auto point = kdTree->getPoint(i);
+
+      auto closePoints =
+          kdTree->findNearestWithinRadius(point, smoothFlux * gridDelta);
+
+      unsigned n = 0;
+      for (auto p : closePoints.value()) {
+        smoothed[i] += velocities->at(p.first);
+        n++;
+      }
+
+      if (n > 1) {
+        smoothed[i] /= static_cast<NumericType>(n);
+      }
+    }
+
+    *velocities = std::move(smoothed);
   }
 
   void downloadCoverages(psPointData<NumericType> &coverages,
-                         utCudaBuffer &d_coverages, size_t covSize) {
+                         unsigned int numPoints) {
     auto covIndexMap = model->getSurfaceModel()->getCoverageIndexMap();
-    const auto numCov = covIndexMap.size();
-    NumericType *temp = new NumericType[covSize * numCov];
-    d_coverages.download(temp, covSize * numCov);
+    auto numCov = covIndexMap.size();
+    NumericType *temp = new NumericType[numPoints * numCov];
+    auto d_coverages = model->getSurfaceModel()->getCoverages();
+    d_coverages.download(temp, numPoints * numCov);
 
     for (auto &i : covIndexMap) {
       auto cov = coverages.getScalarData(i.first);
       if (cov == nullptr) {
-        std::vector<NumericType> covInit(covSize);
+        std::vector<NumericType> covInit(numPoints);
         coverages.insertNextScalarData(std::move(covInit), i.first);
         cov = coverages.getScalarData(i.first);
       }
-      if (cov->size() != covSize)
-        cov->resize(covSize);
-      std::memcpy(cov->data(), temp + i.second * covSize,
-                  covSize * sizeof(NumericType));
+      if (cov->size() != numPoints)
+        cov->resize(numPoints);
+      std::memcpy(cov->data(), temp + i.second * numPoints,
+                  numPoints * sizeof(NumericType));
     }
+
+    delete temp;
   }
 
   void uploadCoverages(psPointData<NumericType> &coverages) {
@@ -460,43 +479,6 @@ private:
         flattenedCoverages);
   }
 
-  void moveCoveragesToTopLS(psDomainType domain,
-                            psSmartPointer<translatorType> translator,
-                            psPointData<NumericType> &coverages) {
-    auto topLS = domain->getLevelSets()->back();
-    for (size_t i = 0; i < coverages.getScalarDataSize(); i++) {
-      auto covName = coverages.getScalarDataLabel(i);
-      std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
-      auto cov = coverages.getScalarData(covName);
-      for (const auto iter : *translator.get()) {
-        levelSetData[iter.first] = cov->at(iter.second);
-      }
-      if (auto data = topLS->getPointData().getScalarData(covName);
-          data != nullptr) {
-        *data = std::move(levelSetData);
-      } else {
-        topLS->getPointData().insertNextScalarData(std::move(levelSetData),
-                                                   covName);
-      }
-    }
-  }
-
-  void
-  updateCoveragesFromAdvectedSurface(psDomainType domain,
-                                     psSmartPointer<translatorType> translator,
-                                     psPointData<NumericType> &coverages) {
-    auto topLS = domain->getLevelSets()->back();
-    for (size_t i = 0; i < coverages.getScalarDataSize(); i++) {
-      auto covName = coverages.getScalarDataLabel(i);
-      auto levelSetData = topLS->getPointData().getScalarData(covName);
-      auto covData = coverages.getScalarData(covName);
-      covData->resize(translator->size());
-      for (const auto it : *translator.get()) {
-        covData->at(it.second) = levelSetData->at(it.first);
-      }
-    }
-  }
-
   pscuContext_t *context;
   curtTracer<NumericType, D> rayTrace = curtTracer<NumericType, D>(context);
 
@@ -511,7 +493,7 @@ private:
   bool periodicBoundary = false;
   bool coveragesInitialized = false;
   bool rayTracerInitialized = false;
-  bool smoothFlux = false;
+  NumericType smoothFlux = 1.;
   NumericType printTime = 0.;
   NumericType processTime = 0;
 };

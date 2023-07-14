@@ -11,7 +11,7 @@
 
 #include <culsToSurfaceMesh.hpp>
 
-#include <lsDomain.hpp>
+#include <psDomain.hpp>
 
 template <typename T, int D> struct curtGeometry {
   // geometry
@@ -24,24 +24,25 @@ template <typename T, int D> struct curtGeometry {
 
   // buffer that keeps the (final, compacted) accel structure
   utCudaBuffer asBuffer;
-  psSmartPointer<psKDTree<T, std::array<T, 3>>> kdTree = nullptr;
-
   OptixDeviceContext optixContext;
 
   /// build acceleration structure from level set domain
   template <class LaunchParams>
-  void buildAccelFromDomain(psSmartPointer<lsDomain<T, D>> domain,
-                            LaunchParams &launchParams) {
+  void buildAccelFromDomain(
+      psSmartPointer<psDomain<T, D>> domain, LaunchParams &launchParams,
+      psSmartPointer<lsMesh<float>> mesh,
+      psSmartPointer<psKDTree<T, std::array<float, 3>>> kdTree = nullptr) {
     if (domain == nullptr) {
       utLog::getInstance()
           .addError("No level sets passed to curtGeometry.")
           .print();
     }
 
-    auto mesh = psSmartPointer<lsMesh<float>>::New();
-    // assert(kdTree);
-    // culsToSurfaceMesh<float>(domain, mesh, kdTree).apply();
-    culsToSurfaceMesh<float>(domain, mesh).apply();
+    if (kdTree) {
+      culsToSurfaceMesh<float>(domain, mesh, kdTree).apply();
+    } else {
+      culsToSurfaceMesh<float>(domain, mesh).apply();
+    }
 
     const auto gridDelta = domain->getGrid().getGridDelta();
     launchParams.source.gridDelta = gridDelta;
@@ -50,8 +51,8 @@ template <typename T, int D> struct curtGeometry {
     launchParams.source.planeHeight = mesh->maximumExtent[2] + gridDelta;
     launchParams.numElements = mesh->triangles.size();
 
-    std::vector<OptixBuildInput> triangleInput(2);
-    std::vector<uint32_t> triangleInputFlags(2);
+    std::array<OptixBuildInput, 2> triangleInput;
+    std::array<uint32_t, 2> triangleInputFlags;
 
     // ------------------- geometry input -------------------
     // upload the model to the device: the builder

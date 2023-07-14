@@ -113,6 +113,7 @@ private:
                            psUtils::Item{"depth", params->trenchHeight},
                            psUtils::Item{"zPos", params->maskZPos},
                            psUtils::Item{"tapering", params->taperAngle},
+                           psUtils::Item{"mask", params->mask},
                            psUtils::Item{"material", material});
       parseMaterial(material);
     } else if (type == "Hole") {

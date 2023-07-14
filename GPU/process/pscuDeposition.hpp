@@ -22,7 +22,6 @@ public:
 
   psSmartPointer<std::vector<NumericType>>
   calculateVelocities(utCudaBuffer &d_rates,
-                      const std::vector<std::array<NumericType, 3>> &points,
                       const std::vector<NumericType> &materialIds) override {
     unsigned long numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 1.);
