@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ModelParameters.hpp>
+
 #include <csTracingParticle.hpp>
 
 #include <rayParticle.hpp>
@@ -26,11 +28,10 @@ class SurfaceModel : public psSurfaceModel<NumericType> {
   const NumericType totalIonFlux = 12.;
   const NumericType totalEtchantFlux = 1.8e3;
   const NumericType totalOxygenFlux = 1.0e2;
-  static constexpr double rho_Si = 5.02 * 1e7;     // in (1e15 atoms/cm³)
   static constexpr NumericType k_sigma_Si = 3.0e2; // in (1e15 cm⁻²s⁻¹)
   static constexpr NumericType beta_sigma_Si = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
 
-  const NumericType etchStop = 0.;
+  const NumericType etchStop;
 
 public:
   SurfaceModel(const double ionFlux, const double etchantFlux,
@@ -53,7 +54,7 @@ public:
       psSmartPointer<psPointData<NumericType>> Rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
-    updateCoverages(Rates);
+    updateCoverages(Rates, materialIds);
     const auto numPoints = Rates->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
@@ -73,13 +74,11 @@ public:
 
       if (!psMaterialMap::isMaterial(materialIds[i], psMaterial::Mask)) {
 
-        etchRate[i] =
-            -(1 / rho_Si) *
-            (k_sigma_Si * eCoverage->at(i) / 4. +
-             ionSputteringRate->at(i) * totalIonFlux +
-             eCoverage->at(i) * ionEnhancedRate->at(i) * totalIonFlux);
-
-        etchRate[i] *= 1e4; // to convert to micrometers / s
+        etchRate[i] = -(1 / psParameters::Si::rho) *
+                      (k_sigma_Si * eCoverage->at(i) / 4. +
+                       ionSputteringRate->at(i) * totalIonFlux +
+                       eCoverage->at(i) * ionEnhancedRate->at(i) *
+                           totalIonFlux); // in nm / s
       }
     }
 
@@ -91,8 +90,8 @@ public:
     return psSmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void
-  updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override {
+  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+                       const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
     const auto numPoints = Rates->getScalarData(0)->size();
 
@@ -139,11 +138,10 @@ public:
 template <typename NumericType, int D>
 class Ion : public rayParticle<Ion<NumericType, D>, NumericType> {
 public:
-  Ion(const NumericType passedMeanEnergy = 100.,
-      const NumericType passedSigmaEnergy = 10.,
-      const NumericType oxySputterYield = 3)
+  Ion(const NumericType passedMeanEnergy, const NumericType passedSigmaEnergy,
+      const NumericType passedPower, const NumericType oxySputterYield)
       : meanEnergy(passedMeanEnergy), sigmaEnergy(passedSigmaEnergy),
-        A_O(oxySputterYield) {}
+        power(passedPower), A_O(oxySputterYield) {}
 
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -170,11 +168,13 @@ public:
       f_Si_theta = 3. - 6. * angle / rayInternal::PI;
     }
     NumericType f_O_theta = f_Si_theta;
-    NumericType f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    NumericType f_sp_theta =
+        (1 + psParameters::Si::B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     NumericType sqrtE = std::sqrt(E);
-    NumericType Y_sp =
-        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
+    NumericType Y_sp = psParameters::Si::A_sp *
+                       std::max(sqrtE - psParameters::Si::Eth_sp_Ar_sqrt, 0.) *
+                       f_sp_theta;
     NumericType Y_Si =
         A_Si * std::max(sqrtE - std::sqrt(Eth_Si), 0.) * f_Si_theta;
     NumericType Y_O = A_O * std::max(sqrtE - std::sqrt(Eth_O), 0.) * f_O_theta;
@@ -207,10 +207,13 @@ public:
     // Small incident angles are reflected with the energy fraction centered at
     // 0
     double Eref_peak;
-    if (incAngle >= inflectAngle) {
-      Eref_peak = (1 - (1 - A) * (M_PI_2 - incAngle) / (M_PI_2 - inflectAngle));
+    if (incAngle >= psParameters::Ion::inflectAngle) {
+      Eref_peak = (1 - (1 - psParameters::Ion::A) * (M_PI_2 - incAngle) /
+                           (M_PI_2 - psParameters::Ion::inflectAngle));
     } else {
-      Eref_peak = A * std::pow(incAngle / inflectAngle, n_l);
+      Eref_peak = psParameters::Ion::A *
+                  std::pow(incAngle / psParameters::Ion::inflectAngle,
+                           psParameters::Ion::n_l);
     }
     // Gaussian distribution around the Eref_peak scaled by the particle energy
     NumericType NewEnergy;
@@ -240,31 +243,26 @@ public:
     } while (E < minEnergy);
   }
   int getRequiredLocalDataSize() const override final { return 3; }
-  NumericType getSourceDistributionPower() const override final { return 500.; }
+  NumericType getSourceDistributionPower() const override final {
+    return power;
+  }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"ionSputteringRate", "ionEnhancedRate", "oxygenSputteringRate"};
   }
 
 private:
-  static constexpr NumericType A_sp = 0.00339;
   static constexpr NumericType A_Si = 7.;
-  static constexpr NumericType B_sp = 9.3;
   const NumericType A_O;
 
-  static constexpr NumericType Eth_sp = 18.;
   static constexpr NumericType Eth_Si = 15.;
   static constexpr NumericType Eth_O = 10.;
-
-  // static constexpr NumericType minAngle = 1.3962634;
-  static constexpr double inflectAngle = 1.55334303;
-  static constexpr double n_l = 10.;
-  static constexpr double A = 1. / (1. + n_l * (M_PI_2 / inflectAngle - 1.));
 
   // ion energy
   static constexpr NumericType minEnergy =
       4.; // Discard particles with energy < 1eV
   const NumericType meanEnergy;
   const NumericType sigmaEnergy;
+  const NumericType power;
   NumericType E;
 };
 
@@ -348,12 +346,13 @@ public:
   SF6O2Etching(const double ionFlux, const double etchantFlux,
                const double oxygenFlux, const NumericType meanEnergy,
                const NumericType sigmaEnergy,
+               const NumericType ionExponent = 100.,
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth =
                    std::numeric_limits<NumericType>::lowest()) {
     // particles
     auto ion = std::make_unique<SF6O2Implementation::Ion<NumericType, D>>(
-        meanEnergy, sigmaEnergy, oxySputterYield);
+        meanEnergy, sigmaEnergy, ionExponent, oxySputterYield);
     auto etchant =
         std::make_unique<SF6O2Implementation::Etchant<NumericType, D>>();
     auto oxygen =
@@ -365,7 +364,7 @@ public:
             ionFlux, etchantFlux, oxygenFlux, etchStopDepth);
 
     // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
