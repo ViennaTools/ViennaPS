@@ -262,7 +262,7 @@ public:
           // move coverages back in the model
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
-          model->getSurfaceModel()->updateCoverages(Rates);
+          model->getSurfaceModel()->updateCoverages(Rates, materialIds);
 
           if (psLogger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();

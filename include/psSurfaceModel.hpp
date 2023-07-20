@@ -34,7 +34,7 @@ public:
   }
 
   virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
-                               const std::vector<NumericType> &materialIDs) {}
+                               const std::vector<NumericType> &materialIds) {}
 };
 
 #endif

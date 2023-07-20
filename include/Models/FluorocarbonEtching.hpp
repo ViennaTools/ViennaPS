@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include <ModelParameters.hpp>
+
 #include <psLogger.hpp>
 #include <psMaterials.hpp>
 #include <psProcessModel.hpp>
@@ -11,6 +13,14 @@
 #include <rayUtil.hpp>
 
 namespace FluorocarbonImplementation {
+
+// sticking probabilities
+static constexpr double beta_e = 0.9;
+static constexpr double beta_e_mask = 0.1;
+static constexpr double beta_p = 0.26;
+static constexpr double beta_p_mask = 0.01;
+static constexpr double beta_pe = 0.6;
+
 template <typename NumericType, int D>
 class SurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::Coverages;
@@ -21,9 +31,8 @@ public:
                const NumericType polyFlux, const NumericType passedDeltaP,
                const NumericType passedEtchStopDepth)
       : totalIonFlux(ionFlux), totalEtchantFlux(etchantFlux),
-        totalPolyFlux(polyFlux),
-        F_ev(2.7 * etchantFlux * std::exp(-0.168 / (kB * temperature))),
-        delta_p(passedDeltaP), etchStopDepth(passedEtchStopDepth) {}
+        totalPolyFlux(polyFlux), delta_p(passedDeltaP),
+        etchStopDepth(passedEtchStopDepth) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (Coverages == nullptr) {
@@ -41,7 +50,7 @@ public:
       psSmartPointer<psPointData<NumericType>> Rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
-    updateCoverages(Rates);
+    updateCoverages(Rates, materialIds);
     const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
@@ -68,32 +77,42 @@ public:
              matId == psMaterial::Si || matId == psMaterial::SiO2 ||
              matId == psMaterial::Si3N4 && "Unexptected material");
       if (matId == psMaterial::Mask) {
-        etchRate[i] =
-            (-1. / rho_mask) * ionSputteringRate->at(i) * totalIonFlux;
+        etchRate[i] = (-1. / psParameters::Mask::rho) *
+                      ionSputteringRate->at(i) * totalIonFlux;
       } else if (pCoverage->at(i) >= 1.) {
-        assert(pCoverage->at(i) == 1. && "Correctness assumption");
         // Deposition
-        etchRate[i] =
-            (1 / rho_p) * (polyRate->at(i) * totalPolyFlux -
-                           ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
+        etchRate[i] = (1 / psParameters::Polymer::rho) *
+                      (polyRate->at(i) * totalPolyFlux -
+                       ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
         assert(etchRate[i] >= 0 && "Negative deposition");
       } else if (matId == psMaterial::Polymer) {
         // Etching depo layer
-        etchRate[i] = std::min(
-            (1 / rho_p) * (polyRate->at(i) * totalPolyFlux -
-                           ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)),
-            0.);
+        etchRate[i] =
+            std::min((1 / psParameters::Polymer::rho) *
+                         (polyRate->at(i) * totalPolyFlux -
+                          ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)),
+                     0.);
       } else {
-        NumericType mat_density = 0;
+        NumericType mat_density = 1.;
+        NumericType F_ev = 0.;
         if (matId == psMaterial::Si) // Etching Si
         {
-          mat_density = -rho_Si;
+          mat_density = -psParameters::Si::rho;
+          F_ev = psParameters::Si::K * totalEtchantFlux *
+                 std::exp(-psParameters::Si::E_a /
+                          (psParameters::kB * psParameters::roomTemperature));
         } else if (matId == psMaterial::SiO2) // Etching SiO2
         {
-          mat_density = -rho_SiO2;
-        } else if (matId == psMaterial::Si3N4) // Etching SiNx
+          F_ev = psParameters::SiO2::K * totalEtchantFlux *
+                 std::exp(-psParameters::SiO2::E_a /
+                          (psParameters::kB * psParameters::roomTemperature));
+          mat_density = -psParameters::SiO2::rho;
+        } else if (matId == psMaterial::Si3N4) // Etching Si3N4
         {
-          mat_density = -rho_SiNx;
+          F_ev = psParameters::SiO2::K * totalEtchantFlux *
+                 std::exp(-psParameters::SiO2::E_a /
+                          (psParameters::kB * psParameters::roomTemperature));
+          mat_density = -psParameters::Si3N4::rho;
         }
         etchRate[i] =
             (1 / mat_density) *
@@ -103,7 +122,6 @@ public:
       }
 
       // etch rate is in nm / s
-      // etchRate[i] *= 1e4; // to convert to um / s
 
       assert(!std::isnan(etchRate[i]) && "etchRate NaN");
     }
@@ -116,8 +134,8 @@ public:
     return psSmartPointer<std::vector<NumericType>>::New(etchRate);
   }
 
-  void
-  updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override {
+  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+                       const std::vector<NumericType> &materialIds) override {
 
     const auto ionEnhancedRate = Rates->getScalarData("ionEnhancedRate");
     const auto ionpeRate = Rates->getScalarData("ionpeRate");
@@ -139,8 +157,8 @@ public:
       if (etchantRate->at(i) == 0.) {
         peCoverage->at(i) = 0.;
       } else {
-        peCoverage->at(i) = (etchantRate->at(i) * totalEtchantFlux * gamma_pe) /
-                            (etchantRate->at(i) * totalEtchantFlux * gamma_pe +
+        peCoverage->at(i) = (etchantRate->at(i) * totalEtchantFlux * beta_pe) /
+                            (etchantRate->at(i) * totalEtchantFlux * beta_pe +
                              ionpeRate->at(i) * totalIonFlux);
       }
       assert(!std::isnan(peCoverage->at(i)) && "peCoverage NaN");
@@ -154,7 +172,7 @@ public:
         pCoverage->at(i) = 1.;
       } else {
         pCoverage->at(i) =
-            std::max((polyRate->at(i) * totalPolyFlux * gamma_p - delta_p) /
+            std::max((polyRate->at(i) * totalPolyFlux * beta_p - delta_p) /
                          (ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)),
                      0.);
       }
@@ -167,11 +185,21 @@ public:
         if (etchantRate->at(i) == 0.) {
           eCoverage->at(i) = 0;
         } else {
+          NumericType F_ev;
+          if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Si)) {
+            F_ev = psParameters::Si::K * totalEtchantFlux *
+                   std::exp(-psParameters::Si::E_a /
+                            (psParameters::kB * psParameters::roomTemperature));
+          } else {
+            F_ev = psParameters::SiO2::K * totalEtchantFlux *
+                   std::exp(-psParameters::SiO2::E_a /
+                            (psParameters::kB * psParameters::roomTemperature));
+          }
           eCoverage->at(i) =
-              (etchantRate->at(i) * totalEtchantFlux * gamma_e *
+              (etchantRate->at(i) * totalEtchantFlux * beta_e *
                (1 - pCoverage->at(i))) /
               (k_ie * ionEnhancedRate->at(i) * totalIonFlux + k_ev * F_ev +
-               etchantRate->at(i) * totalEtchantFlux * gamma_e);
+               etchantRate->at(i) * totalEtchantFlux * beta_e);
         }
       } else {
         eCoverage->at(i) = 0.;
@@ -181,28 +209,13 @@ public:
   }
 
 private:
-  static constexpr double rho_SiO2 = 2.3; // in (1e22 atoms/cm³)
-  static constexpr double rho_SiNx = 2.3; // in (1e22 atoms/cm³)
-  static constexpr double rho_Si = 5.02;  // in (1e22 atoms/cm³)
-  static constexpr double rho_p = 2;      // in (1e22 atoms/cm³)
-  static constexpr double rho_mask = 500; // in (1e22 atoms/cm³)
-
   static constexpr double k_ie = 2.;
   static constexpr double k_ev = 2.;
-
-  // sticking probabilities
-  static constexpr NumericType gamma_e = 0.9;
-  static constexpr NumericType gamma_p = 0.26;
-  static constexpr NumericType gamma_pe = 0.6;
-
-  static constexpr double kB = 0.000086173324; // m² kg s⁻² K⁻¹
-  static constexpr double temperature = 300.;  // K
 
   // fluxes in (1e15 /cm²)
   const NumericType totalIonFlux;
   const NumericType totalEtchantFlux;
   const NumericType totalPolyFlux;
-  const NumericType F_ev;
   const NumericType delta_p;
 
   const NumericType etchStopDepth = 0.;
@@ -216,8 +229,10 @@ private:
 template <typename NumericType>
 class Ion : public rayParticle<Ion<NumericType>, NumericType> {
 public:
-  Ion(const NumericType passedMeanEnergy, const NumericType passedSigmaEnergy)
-      : meanEnergy(passedMeanEnergy), sigmaEnergy(passedSigmaEnergy) {}
+  Ion(const NumericType passedMeanEnergy, const NumericType passedSigmaEnergy,
+      const NumericType passedPower)
+      : meanEnergy(passedMeanEnergy), sigmaEnergy(passedSigmaEnergy),
+        power(passedPower) {}
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
                         const rayTriple<NumericType> &geomNormal,
@@ -230,15 +245,25 @@ public:
     assert(E >= 0 && "Negative energy ion");
 
     const auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
+    const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 4 && "Error in calculating cos theta");
 
+    NumericType f_theta;
+    if (cosTheta > 0.5) {
+      f_theta = 1.;
+    } else {
+      f_theta = 3. - 6. * angle / M_PI;
+    }
+
     const auto sqrtE = std::sqrt(E);
-    const auto f_e_sp = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
-    const auto Y_s = Ae_sp * std::max(sqrtE - sqrtE_th_sp, 0.) * f_e_sp;
-    const auto Y_ie = Ae_ie * std::max(sqrtE - sqrtE_th_ie, 0.) * cosTheta;
-    const auto Y_p = Ap_ie * std::max(sqrtE - sqrtE_th_p, 0.) * cosTheta;
+    auto Y_s = psParameters::Si::A_sp *
+               std::max(sqrtE - psParameters::Si::Eth_sp_Ar_sqrt, 0.) *
+               (1 + psParameters::Si::B_sp * (1 - cosTheta * cosTheta)) *
+               cosTheta;
+    auto Y_ie = Ae_ie * std::max(sqrtE - sqrtE_th_ie, 0.) * f_theta;
+    auto Y_p = Ap_ie * std::max(sqrtE - sqrtE_th_p, 0.) * f_theta;
 
     // sputtering yield Y_s
     localData.getVectorData(0)[primID] += rayWeight * Y_s;
@@ -255,31 +280,30 @@ public:
                     const unsigned int primId, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
-    const auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
-    const double Phi = std::acos(cosTheta);
-    std::uniform_real_distribution<NumericType> uniDist;
 
+    // Small incident angles are reflected with the energy fraction centered at
+    // 0
+    double incAngle = std::acos(-rayInternal::DotProduct(rayDir, geomNormal));
     double Eref_peak;
-    if (Phi >= Phi_inflect) {
-      Eref_peak =
-          1 - (1 - A) * std::pow((M_PI_2 - Phi) / (M_PI_2 - Phi_inflect), n_r);
+    if (incAngle >= psParameters::Ion::inflectAngle) {
+      Eref_peak = (1 - (1 - psParameters::Ion::A) * (M_PI_2 - incAngle) /
+                           (M_PI_2 - psParameters::Ion::inflectAngle));
     } else {
-      Eref_peak = A * std::pow(Phi / Phi_inflect, n_l);
+      Eref_peak = psParameters::Ion::A *
+                  std::pow(incAngle / psParameters::Ion::inflectAngle,
+                           psParameters::Ion::n_l);
     }
-
-    const double TempEnergy = Eref_peak * E;
-    double NewEnergy;
+    // Gaussian distribution around the Eref_peak scaled by the particle energy
+    NumericType NewEnergy;
+    std::normal_distribution<NumericType> normalDist{Eref_peak * E, 0.1 * E};
     do {
-      NewEnergy =
-          TempEnergy + (std::min((E - TempEnergy), TempEnergy) + 0.05 * E) *
-                           (1 - 2. * uniDist(Rng)) *
-                           std::sqrt(std::fabs(std::log(uniDist(Rng))));
+      NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);
 
     if (NewEnergy > minEnergy) {
       E = NewEnergy;
       auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
-      return std::pair<NumericType, rayTriple<NumericType>>{1 - Eref_peak,
+      return std::pair<NumericType, rayTriple<NumericType>>{1. - Eref_peak,
                                                             direction};
     } else {
       return std::pair<NumericType, rayTriple<NumericType>>{
@@ -294,32 +318,24 @@ public:
   }
 
   int getRequiredLocalDataSize() const override final { return 3; }
-  NumericType getSourceDistributionPower() const override final { return 100.; }
+  NumericType getSourceDistributionPower() const override final {
+    return power;
+  }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"ionSputteringRate", "ionEnhancedRate",
-                                    "ionpeRate"};
+    return {"ionSputteringRate", "ionEnhancedRate", "ionpeRate"};
   }
 
 private:
-  static constexpr double sqrtE_th_sp = 4.2426406871;
   static constexpr double sqrtE_th_ie = 2.;
   static constexpr double sqrtE_th_p = 2.;
 
-  static constexpr double Ae_sp = 0.0139;
   static constexpr double Ae_ie = 0.0361;
   static constexpr double Ap_ie = 4 * 0.0361;
-
-  static constexpr double B_sp = 9.3;
-
-  static constexpr double Phi_inflect = 1.55334303;
-  static constexpr double n_r = 1.;
-  static constexpr double n_l = 10.;
-
-  const double A = 1. / (1. + (n_l / n_r) * (M_PI_2 / Phi_inflect - 1.));
 
   static constexpr NumericType minEnergy = 4.;
   const NumericType meanEnergy;
   const NumericType sigmaEnergy;
+  const NumericType power;
   NumericType E;
 };
 
@@ -345,21 +361,17 @@ public:
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     NumericType stick;
     if (psMaterialMap::isMaterial(materialId, psMaterial::Mask)) {
-      stick = gamma_p_mask;
+      stick = beta_p_mask;
     } else {
-      stick = gamma_p;
+      stick = beta_p;
     }
     return std::pair<NumericType, rayTriple<NumericType>>{stick, direction};
   }
   int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"polyRate"};
+    return {"polyRate"};
   }
-
-private:
-  static constexpr NumericType gamma_p = 0.26;
-  static constexpr NumericType gamma_p_mask = 0.01;
 };
 
 template <typename NumericType, int D>
@@ -389,11 +401,11 @@ public:
 
     NumericType Seff;
     if (psMaterialMap::isMaterial(materialId, psMaterial::Mask)) {
-      Seff = gamma_e_mask * std::max(1 - phi_e - phi_p, 0.);
+      Seff = beta_e_mask * std::max(1 - phi_e - phi_p, 0.);
     } else if (psMaterialMap::isMaterial(materialId, psMaterial::Polymer)) {
-      Seff = gamma_pe * std::max(1. - phi_pe, 0.);
+      Seff = beta_pe * std::max(1. - phi_pe, 0.);
     } else {
-      Seff = gamma_e * std::max(1 - phi_e - phi_p, 0.);
+      Seff = beta_e * std::max(1 - phi_e - phi_p, 0.);
     }
 
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
@@ -401,13 +413,8 @@ public:
   int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"etchantRate"};
+    return {"etchantRate"};
   }
-
-private:
-  static constexpr NumericType gamma_e = 0.9;
-  static constexpr NumericType gamma_pe = 0.6;
-  static constexpr NumericType gamma_e_mask = 0.1;
 };
 } // namespace FluorocarbonImplementation
 
@@ -417,12 +424,13 @@ public:
   FluorocarbonEtching(const double ionFlux, const double etchantFlux,
                       const double polyFlux, const NumericType meanEnergy,
                       const NumericType sigmaEnergy,
+                      const NumericType ionExponent = 100.,
                       const NumericType deltaP = 0.,
                       const NumericType etchStopDepth =
                           std::numeric_limits<NumericType>::lowest()) {
     // particles
     auto ion = std::make_unique<FluorocarbonImplementation::Ion<NumericType>>(
-        meanEnergy, sigmaEnergy);
+        meanEnergy, sigmaEnergy, ionExponent);
     auto etchant =
         std::make_unique<FluorocarbonImplementation::Etchant<NumericType, D>>();
     auto poly =
