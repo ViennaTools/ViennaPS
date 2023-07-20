@@ -13,7 +13,7 @@
 /*  launch parameters in constant memory, filled in by optix upon
     optixLaunch (this gets filled in from the buffer we pass to
     optixLaunch) */
-extern "C" __constant__ curtLaunchParams<NumericType> params;
+extern "C" __constant__ curtLaunchParams<float> params;
 
 // for this simple example, we have a single ray type
 enum
@@ -25,8 +25,8 @@ enum
 extern "C" __global__ void __closesthit__depoParticle()
 {
     const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-    PerRayData<NumericType> *prd =
-        (PerRayData<NumericType> *)getPRD<PerRayData<NumericType>>();
+    PerRayData<float> *prd =
+        (PerRayData<float> *)getPRD<PerRayData<float>>();
 
     if (sbtData->isBoundary)
     {
@@ -54,7 +54,7 @@ extern "C" __global__ void __closesthit__depoParticle()
 // ------------------------------------------------------------------------------
 extern "C" __global__ void __miss__depoParticle()
 {
-    getPRD<PerRayData<NumericType>>()->rayWeight = 0.f;
+    getPRD<PerRayData<float>>()->rayWeight = 0.f;
 }
 
 //------------------------------------------------------------------------------
@@ -68,13 +68,13 @@ extern "C" __global__ void __raygen__depoParticle()
         idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
     // per-ray data
-    PerRayData<NumericType> prd;
+    PerRayData<float> prd;
     prd.rayWeight = 1.f;
     // each ray has its own RNG state
     initializeRNGState(&prd, linearLaunchIndex, params.seed);
 
     // generate ray direction
-    const NumericType sourcePower = params.cosineExponent;
+    const float sourcePower = params.cosineExponent;
     initializeRayRandom(&prd, &params, sourcePower, idx);
 
     // the values we store the PRD pointer in:

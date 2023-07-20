@@ -164,9 +164,7 @@ extern "C" __global__ void __raygen__ion()
 
   do
   {
-    const auto r = getNextRand(&prd.RNGstate);
-    float rand1 = r * (2.f * PI_F - 2 * peak) + peak;
-    prd.energy = (1 + cosf(rand1)) * (params.ionRF / 2 * 0.75 + 10);
+    prd.energy = getNormalDistRand(&prd.RNGstate) * params.sigmaIonEnergy + params.meanIonEnergy;
   } while (prd.energy < minEnergy);
 
   // the values we store the PRD pointer in:

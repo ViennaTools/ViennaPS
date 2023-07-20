@@ -4,11 +4,10 @@
 
 #include <curtParticle.hpp>
 
-#include <pscuSurfaceModel.hpp>
-
 #include <psAdvectionCallback.hpp>
 #include <psGeometricModel.hpp>
 #include <psSmartPointer.hpp>
+#include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
 template <typename NumericType> class pscuProcessModel {
@@ -16,7 +15,7 @@ private:
   using ParticleTypeList = std::vector<curtParticle<NumericType>>;
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
-  psSmartPointer<pscuSurfaceModel<NumericType>> surfaceModel = nullptr;
+  psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
   psSmartPointer<psAdvectionCallback<NumericType, DIM>> advectionCallback =
       nullptr;
   psSmartPointer<psGeometricModel<NumericType, DIM>> geometricModel = nullptr;
@@ -28,7 +27,7 @@ public:
   virtual psSmartPointer<ParticleTypeList> getParticleTypes() {
     return particles;
   }
-  virtual psSmartPointer<pscuSurfaceModel<NumericType>> getSurfaceModel() {
+  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
   virtual psSmartPointer<psAdvectionCallback<NumericType, DIM>>
@@ -60,7 +59,7 @@ public:
 
   template <typename SurfaceModelType>
   void setSurfaceModel(psSmartPointer<SurfaceModelType> passedSurfaceModel) {
-    surfaceModel = std::dynamic_pointer_cast<pscuSurfaceModel<NumericType>>(
+    surfaceModel = std::dynamic_pointer_cast<psSurfaceModel<NumericType>>(
         passedSurfaceModel);
   }
 

@@ -33,8 +33,8 @@ public:
     return nullptr;
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) {
-  }
+  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+                               const std::vector<NumericType> &materialIDs) {}
 };
 
 #endif

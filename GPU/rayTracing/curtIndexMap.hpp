@@ -8,9 +8,9 @@
 #include <curtParticle.hpp>
 
 template <typename T> class curtIndexMap {
+public:
   using indexMap = std::unordered_map<std::string, unsigned int>;
 
-public:
   static indexMap
   getPointDataIndexMap(std::vector<curtParticle<T>> &particles) {
     indexMap imap;

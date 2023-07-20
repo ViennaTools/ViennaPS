@@ -16,7 +16,7 @@
 #define POLY_PARTICLE_IDX 2
 #define ETCHANTPOLY_PARTICLE_IDX 3
 
-extern "C" __constant__ curtLaunchParams<NumericType> params;
+extern "C" __constant__ curtLaunchParams<float> params;
 enum
 {
   SURFACE_RAY_TYPE = 0,
@@ -53,8 +53,8 @@ __constant__ float gamma_pe = 0.6;
 extern "C" __global__ void __closesthit__ion()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<NumericType> *prd =
-      (PerRayData<NumericType> *)getPRD<PerRayData<NumericType>>();
+  PerRayData<float> *prd =
+      (PerRayData<float> *)getPRD<PerRayData<float>>();
 
   if (sbtData->isBoundary)
   {
@@ -199,7 +199,7 @@ extern "C" __global__ void __closesthit__ion()
 
 extern "C" __global__ void __miss__ion()
 {
-  getPRD<PerRayData<NumericType>>()->rayWeight = 0.f;
+  getPRD<PerRayData<float>>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__ion()
@@ -210,20 +210,18 @@ extern "C" __global__ void __raygen__ion()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<NumericType> prd;
+  PerRayData<float> prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
 
   // generate ray direction
-  const NumericType sourcePower = params.cosineExponent;
+  const float sourcePower = params.cosineExponent;
   initializeRayRandom(&prd, &params, sourcePower, idx);
 
   do
   {
-    const auto r = getNextRand(&prd.RNGstate);
-    float rand1 = r * (2.f * PI_F - 2 * peak) + peak;
-    prd.energy = (1 + cosf(rand1)) * (params.ionRF / 2 * 0.75 + 10);
+    prd.energy = getNormalDistRand(&prd.RNGstate) * params.sigmaIonEnergy + params.meanIonEnergy;
   } while (prd.energy < minEnergy);
 
   // the values we store the PRD pointer in:
@@ -252,8 +250,8 @@ extern "C" __global__ void __raygen__ion()
 extern "C" __global__ void __closesthit__etchant()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<NumericType> *prd =
-      (PerRayData<NumericType> *)getPRD<PerRayData<NumericType>>();
+  PerRayData<float> *prd =
+      (PerRayData<float> *)getPRD<PerRayData<float>>();
 
   if (sbtData->isBoundary)
   {
@@ -269,8 +267,8 @@ extern "C" __global__ void __closesthit__etchant()
   else
   {
     const unsigned int primID = optixGetPrimitiveIndex();
-    NumericType *data = (NumericType *)sbtData->cellData;
-    const NumericType &phi_e = data[primID];
+    float *data = (float *)sbtData->cellData;
+    const float &phi_e = data[primID];
 
     atomicAdd(&params.resultBuffer[getIdx(ETCHANT_PARTICLE_IDX, 0, &params)], prd->rayWeight);
 
@@ -282,7 +280,7 @@ extern "C" __global__ void __closesthit__etchant()
 
 extern "C" __global__ void __miss__etchant()
 {
-  getPRD<PerRayData<NumericType>>()->rayWeight = 0.f;
+  getPRD<PerRayData<float>>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__etchant()
@@ -293,13 +291,13 @@ extern "C" __global__ void __raygen__etchant()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<NumericType> prd;
+  PerRayData<float> prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
 
   // generate ray direction
-  const NumericType sourcePower = 1.;
+  const float sourcePower = 1.;
   initializeRayRandom(&prd, &params, sourcePower, idx);
 
   // the values we store the PRD pointer in:
@@ -328,8 +326,8 @@ extern "C" __global__ void __raygen__etchant()
 extern "C" __global__ void __closesthit__polymer()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<NumericType> *prd =
-      (PerRayData<NumericType> *)getPRD<PerRayData<NumericType>>();
+  PerRayData<float> *prd =
+      (PerRayData<float> *)getPRD<PerRayData<float>>();
 
   if (sbtData->isBoundary)
   {
@@ -347,10 +345,10 @@ extern "C" __global__ void __closesthit__polymer()
     const unsigned int primID = optixGetPrimitiveIndex();
     atomicAdd(&params.resultBuffer[getIdx(POLY_PARTICLE_IDX, 0, &params)], prd->rayWeight);
 
-    NumericType *data = (NumericType *)sbtData->cellData;
-    const NumericType &phi_e = data[primID];
-    const NumericType &phi_p = data[primID + params.numElements];
-    const NumericType &phi_pe = data[primID + 2 * params.numElements];
+    float *data = (float *)sbtData->cellData;
+    const float &phi_e = data[primID];
+    const float &phi_p = data[primID + params.numElements];
+    const float &phi_pe = data[primID + 2 * params.numElements];
 
     const float Seff = gamma_pe * max(1.f - phi_e - phi_pe * phi_p, 0.f);
     prd->rayWeight -= prd->rayWeight * Seff;
@@ -360,7 +358,7 @@ extern "C" __global__ void __closesthit__polymer()
 
 extern "C" __global__ void __miss__polymer()
 {
-  getPRD<PerRayData<NumericType>>()->rayWeight = 0.f;
+  getPRD<PerRayData<float>>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__polymer()
@@ -371,13 +369,13 @@ extern "C" __global__ void __raygen__polymer()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<NumericType> prd;
+  PerRayData<float> prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
 
   // generate ray direction
-  const NumericType sourcePower = 1.;
+  const float sourcePower = 1.;
   initializeRayRandom(&prd, &params, sourcePower, idx);
 
   // the values we store the PRD pointer in:
@@ -406,8 +404,8 @@ extern "C" __global__ void __raygen__polymer()
 extern "C" __global__ void __closesthit__etchantPoly()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<NumericType> *prd =
-      (PerRayData<NumericType> *)getPRD<PerRayData<NumericType>>();
+  PerRayData<float> *prd =
+      (PerRayData<float> *)getPRD<PerRayData<float>>();
 
   if (sbtData->isBoundary)
   {
@@ -424,7 +422,7 @@ extern "C" __global__ void __closesthit__etchantPoly()
   {
     const unsigned int primID = optixGetPrimitiveIndex();
 
-    NumericType *data = (NumericType *)sbtData->cellData;
+    float *data = (float *)sbtData->cellData;
     const auto &phi_pe = data[primID + 2 * params.numElements];
 
     atomicAdd(&params.resultBuffer[getIdx(ETCHANTPOLY_PARTICLE_IDX, 0, &params)], prd->rayWeight);
@@ -436,7 +434,7 @@ extern "C" __global__ void __closesthit__etchantPoly()
 
 extern "C" __global__ void __miss__etchantPoly()
 {
-  getPRD<PerRayData<NumericType>>()->rayWeight = 0.f;
+  getPRD<PerRayData<float>>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__etchantPoly()
@@ -447,13 +445,13 @@ extern "C" __global__ void __raygen__etchantPoly()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<NumericType> prd;
+  PerRayData<float> prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
 
   // generate ray direction
-  const NumericType sourcePower = 1.;
+  const float sourcePower = 1.;
   initializeRayRandom(&prd, &params, sourcePower, idx);
 
   // the values we store the PRD pointer in:

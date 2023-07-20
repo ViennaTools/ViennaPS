@@ -31,4 +31,13 @@ static __device__ void initializeRNGState(PerRayData<T> *prd,
 __device__ float getNextRand(curtRNGState *state) {
   return (float)(curand_uniform(state));
 }
+
+__device__ float getNormalDistRand(curtRNGState *state) {
+  float u0 = curand_uniform(state);
+  float u1 = curand_uniform(state);
+  float r = sqrtf(-2.f * logf(u0));
+  float theta = 2.f * M_PIf * u1;
+  return r * sinf(theta);
+}
+
 #endif

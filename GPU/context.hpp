@@ -13,7 +13,6 @@
 #include <utLog.hpp>
 
 // global definitions
-using NumericType = float;
 constexpr int DIM = 3;
 
 struct pscuContext_t {
@@ -58,9 +57,9 @@ void pscuCreateContext(pscuContext &context) {
   context = new pscuContext_t;
 
   CUmodule normModule;
-  CUmodule transModule;
-  CUmodule SF6O2ProcessModule;
-  CUmodule FluorocarbonProcessModule;
+  // CUmodule transModule;
+  // CUmodule SF6O2ProcessModule;
+  // CUmodule FluorocarbonProcessModule;
 
   CUresult err;
 
@@ -76,32 +75,34 @@ void pscuCreateContext(pscuContext &context) {
   context->moduleNames.push_back(normModuleName);
   context->modules.push_back(normModule);
 
-  std::string transModuleName = "translateKernels.ptx";
-  err = cuModuleLoad(&transModule, transModuleName.c_str());
-  if (err != CUDA_SUCCESS)
-    utLog::getInstance().addModuleError(transModuleName, err).print();
+  // std::string transModuleName = "translateKernels.ptx";
+  // err = cuModuleLoad(&transModule, transModuleName.c_str());
+  // if (err != CUDA_SUCCESS)
+  //   utLog::getInstance().addModuleError(transModuleName, err).print();
 
-  context->moduleNames.push_back(transModuleName);
-  context->modules.push_back(transModule);
+  // context->moduleNames.push_back(transModuleName);
+  // context->modules.push_back(transModule);
 
-  std::string SF6O2ProcessKernelsName = "SF6O2ProcessKernels.ptx";
-  err = cuModuleLoad(&SF6O2ProcessModule, SF6O2ProcessKernelsName.c_str());
-  if (err != CUDA_SUCCESS)
-    utLog::getInstance().addModuleError(SF6O2ProcessKernelsName, err).print();
+  // std::string SF6O2ProcessKernelsName = "SF6O2ProcessKernels.ptx";
+  // err = cuModuleLoad(&SF6O2ProcessModule, SF6O2ProcessKernelsName.c_str());
+  // if (err != CUDA_SUCCESS)
+  //   utLog::getInstance().addModuleError(SF6O2ProcessKernelsName,
+  //   err).print();
 
-  context->moduleNames.push_back(SF6O2ProcessKernelsName);
-  context->modules.push_back(SF6O2ProcessModule);
+  // context->moduleNames.push_back(SF6O2ProcessKernelsName);
+  // context->modules.push_back(SF6O2ProcessModule);
 
-  std::string FluorocarbonProcessKernelsName = "FluorocarbonProcessKernels.ptx";
-  err = cuModuleLoad(&FluorocarbonProcessModule,
-                     FluorocarbonProcessKernelsName.c_str());
-  if (err != CUDA_SUCCESS)
-    utLog::getInstance()
-        .addModuleError(FluorocarbonProcessKernelsName, err)
-        .print();
+  // std::string FluorocarbonProcessKernelsName =
+  // "FluorocarbonProcessKernels.ptx"; err =
+  // cuModuleLoad(&FluorocarbonProcessModule,
+  //                    FluorocarbonProcessKernelsName.c_str());
+  // if (err != CUDA_SUCCESS)
+  //   utLog::getInstance()
+  //       .addModuleError(FluorocarbonProcessKernelsName, err)
+  //       .print();
 
-  context->moduleNames.push_back(FluorocarbonProcessKernelsName);
-  context->modules.push_back(FluorocarbonProcessModule);
+  // context->moduleNames.push_back(FluorocarbonProcessKernelsName);
+  // context->modules.push_back(FluorocarbonProcessModule);
 }
 
 void pscuReleaseContext(pscuContext context) { delete context; }

@@ -71,13 +71,14 @@ struct ApplicationParameters {
   // Process
   NumericType processTime = 1;
   int raysPerPoint = 3000;
+  NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
   // Plasma etching
   // fluxes in in (1e15 atoms/cm³)
   NumericType etchantFlux = 1.8e3;
   NumericType oxygenFlux = 1.0e2;
   NumericType ionFlux = 12.;
-  NumericType ionEnergy = 100; // eV
-  NumericType rfBias = 105;    // W
+  NumericType ionEnergy = 100;     // eV
+  NumericType sigmaIonEnergy = 10; // eV
   NumericType A_O = 3.;
   // Fluorocarbon etching
   NumericType temperature = 300; // K
@@ -118,6 +119,7 @@ struct ApplicationParameters {
     oxygenFlux = 1e18;
     ionFlux = 2e16;
     ionEnergy = 100;
+    sigmaIonEnergy = 10;
     A_O = 3.;
     rate = 1.;
     sticking = 1.;
@@ -132,6 +134,7 @@ struct ApplicationParameters {
     numLayers = 11;
     layerHeight = 1.;
     substrateHeight = 1.;
+    etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
     if (all) {
       logLevel = 2;

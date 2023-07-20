@@ -9,7 +9,7 @@ template <typename T> struct curtParticle {
   std::vector<std::string> dataLabels;
   float sticking = 1.f;
   float cosineExponent = 1.f;
-  float meanIonEnergy = 0.f; // eV
-  float ionRF = 0.f;         // MHz
+  float meanIonEnergy = 0.f;  // eV
+  float sigmaIonEnergy = 0.f; // eV
   float A_O = 0.f;
 };

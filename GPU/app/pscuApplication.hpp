@@ -4,9 +4,10 @@
 
 #include "Application.hpp"
 
-#include "pscuDeposition.hpp"
-#include "pscuFluorocarbonEtching.hpp"
-#include "pscuSF6O2Etching.hpp"
+#include <SF6O2Etching.hpp>
+
+#include <pscuProcess.hpp>
+#include <pscuProcessPipelines.hpp>
 
 class pscuApplication : public Application<DIM> {
   pscuContext context;
@@ -19,34 +20,37 @@ public:
   }
 
 protected:
-  void runSimpleDeposition(
-      psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
-      psSmartPointer<ApplicationParameters> processParams) override {
-    curtParticle<NumericType> depoParticle{.name = "depoParticle",
-                                           .sticking = processParams->sticking,
-                                           .cosineExponent =
-                                               processParams->cosinePower};
-    depoParticle.dataLabels.push_back("depoRate");
+  // void runSimpleDeposition(
+  //     psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
+  //     psSmartPointer<ApplicationParameters> processParams) override {
+  //   curtParticle<NumericType> depoParticle{.name = "depoParticle",
+  //                                          .sticking =
+  //                                          processParams->sticking,
+  //                                          .cosineExponent =
+  //                                              processParams->cosinePower};
+  //   depoParticle.dataLabels.push_back("depoRate");
 
-    auto surfModel =
-        psSmartPointer<DepoSurfaceModel<NumericType>>::New(context);
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
-    auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
+  //   auto surfModel =
+  //       psSmartPointer<DepoSurfaceModel<NumericType>>::New(context);
+  //   auto velField =
+  //   psSmartPointer<psDefaultVelocityField<NumericType>>::New(); auto model =
+  //   psSmartPointer<pscuProcessModel<NumericType>>::New();
 
-    model->insertNextParticleType(depoParticle);
-    model->setSurfaceModel(surfModel);
-    model->setVelocityField(velField);
-    model->setProcessName("Deposition");
-    model->setPtxCode(embedded_deposition_pipeline);
+  //   model->insertNextParticleType(depoParticle);
+  //   model->setSurfaceModel(surfModel);
+  //   model->setVelocityField(velField);
+  //   model->setProcessName("Deposition");
+  //   model->setPtxCode(embedded_deposition_pipeline);
 
-    pscuProcess<NumericType, DIM> process(context);
-    process.setDomain(processGeometry);
-    process.setProcessModel(model);
-    process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
-    process.setProcessDuration(processParams->processTime *
-                               processParams->rate / processParams->sticking);
-    process.apply();
-  }
+  //   pscuProcess<NumericType, DIM> process(context);
+  //   process.setDomain(processGeometry);
+  //   process.setProcessModel(model);
+  //   process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
+  //   process.setProcessDuration(processParams->processTime *
+  //                              processParams->rate /
+  //                              processParams->sticking);
+  //   process.apply();
+  // }
 
   void runSF6O2Etching(
       psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
@@ -55,7 +59,8 @@ protected:
                                   .numberOfData = 3,
                                   .cosineExponent = 100.f,
                                   .meanIonEnergy = processParams->ionEnergy,
-                                  .ionRF = processParams->rfBias,
+                                  .sigmaIonEnergy =
+                                      processParams->sigmaIonEnergy,
                                   .A_O = processParams->A_O};
     ion.dataLabels.push_back("ionSputteringRate");
     ion.dataLabels.push_back("ionEnhancedRate");
@@ -67,9 +72,10 @@ protected:
     curtParticle<NumericType> oxygen{.name = "oxygen", .numberOfData = 1};
     oxygen.dataLabels.push_back("oxygenRate");
 
-    auto surfModel = psSmartPointer<pscuSF6O2SurfaceModel<NumericType>>::New(
-        context, processParams->ionFlux, processParams->etchantFlux,
-        processParams->oxygenFlux);
+    auto surfModel =
+        psSmartPointer<SF6O2Implementation::SurfaceModel<NumericType, DIM>>::
+            New(processParams->ionFlux, processParams->etchantFlux,
+                processParams->oxygenFlux, processParams->etchStopDepth);
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
     auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
 
@@ -90,55 +96,56 @@ protected:
     process.apply();
   }
 
-  void runFluorocarbonEtching(
-      psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
-      psSmartPointer<ApplicationParameters> processParams) override {
+  // void runFluorocarbonEtching(
+  //     psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
+  //     psSmartPointer<ApplicationParameters> processParams) override {
 
-    // insert additional top layer to capture deposition
-    processGeometry->duplicateTopLevelSet(psMaterial::Polymer);
+  //   // insert additional top layer to capture deposition
+  //   processGeometry->duplicateTopLevelSet(psMaterial::Polymer);
 
-    curtParticle<NumericType> ion{.name = "ion",
-                                  .numberOfData = 3,
-                                  .cosineExponent = 100.f,
-                                  .meanIonEnergy = processParams->ionEnergy,
-                                  .ionRF = processParams->rfBias,
-                                  .A_O = processParams->A_O};
-    ion.dataLabels.push_back("ionSputteringFlux");
-    ion.dataLabels.push_back("ionEnhancedFlux");
-    ion.dataLabels.push_back("ionPolymerFlux");
+  //   curtParticle<NumericType> ion{.name = "ion",
+  //                                 .numberOfData = 3,
+  //                                 .cosineExponent = 100.f,
+  //                                 .meanIonEnergy = processParams->ionEnergy,
+  //                                 .ionRF = processParams->rfBias,
+  //                                 .A_O = processParams->A_O};
+  //   ion.dataLabels.push_back("ionSputteringFlux");
+  //   ion.dataLabels.push_back("ionEnhancedFlux");
+  //   ion.dataLabels.push_back("ionPolymerFlux");
 
-    curtParticle<NumericType> etchant{.name = "etchant", .numberOfData = 1};
-    etchant.dataLabels.push_back("etchantFlux");
+  //   curtParticle<NumericType> etchant{.name = "etchant", .numberOfData = 1};
+  //   etchant.dataLabels.push_back("etchantFlux");
 
-    curtParticle<NumericType> polymer{.name = "polymer", .numberOfData = 1};
-    polymer.dataLabels.push_back("polyFlux");
+  //   curtParticle<NumericType> polymer{.name = "polymer", .numberOfData = 1};
+  //   polymer.dataLabels.push_back("polyFlux");
 
-    curtParticle<NumericType> etchantPoly{.name = "etchantPoly",
-                                          .numberOfData = 1};
-    etchantPoly.dataLabels.push_back("etchantPolyFlux");
+  //   curtParticle<NumericType> etchantPoly{.name = "etchantPoly",
+  //                                         .numberOfData = 1};
+  //   etchantPoly.dataLabels.push_back("etchantPolyFlux");
 
-    auto surfModel =
-        psSmartPointer<pscuFluorocarbonSurfaceModel<NumericType>>::New(
-            context, processParams->ionFlux, processParams->etchantFlux,
-            processParams->oxygenFlux, processParams->temperature);
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
-    auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
+  //   auto surfModel =
+  //       psSmartPointer<pscuFluorocarbonSurfaceModel<NumericType>>::New(
+  //           context, processParams->ionFlux, processParams->etchantFlux,
+  //           processParams->oxygenFlux, processParams->temperature);
+  //   auto velField =
+  //   psSmartPointer<psDefaultVelocityField<NumericType>>::New(2); auto model =
+  //   psSmartPointer<pscuProcessModel<NumericType>>::New();
 
-    model->insertNextParticleType(ion);
-    model->insertNextParticleType(etchant);
-    model->insertNextParticleType(polymer);
-    model->insertNextParticleType(etchantPoly);
-    model->setSurfaceModel(surfModel);
-    model->setVelocityField(velField);
-    model->setProcessName("FluorocarbonEtching");
-    model->setPtxCode(embedded_Fluorocarbon_pipeline);
+  //   model->insertNextParticleType(ion);
+  //   model->insertNextParticleType(etchant);
+  //   model->insertNextParticleType(polymer);
+  //   model->insertNextParticleType(etchantPoly);
+  //   model->setSurfaceModel(surfModel);
+  //   model->setVelocityField(velField);
+  //   model->setProcessName("FluorocarbonEtching");
+  //   model->setPtxCode(embedded_Fluorocarbon_pipeline);
 
-    pscuProcess<NumericType, DIM> process(context);
-    process.setDomain(processGeometry);
-    process.setProcessModel(model);
-    process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
-    process.setMaxCoverageInitIterations(10);
-    process.setProcessDuration(processParams->processTime);
-    process.apply();
-  }
+  //   pscuProcess<NumericType, DIM> process(context);
+  //   process.setDomain(processGeometry);
+  //   process.setProcessModel(model);
+  //   process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
+  //   process.setMaxCoverageInitIterations(10);
+  //   process.setProcessDuration(processParams->processTime);
+  //   process.apply();
+  // }
 };

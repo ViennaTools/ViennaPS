@@ -98,7 +98,7 @@ public:
       launchParams.cosineExponent = particles[i].cosineExponent;
       launchParams.sticking = particles[i].sticking;
       launchParams.meanIonEnergy = particles[i].meanIonEnergy;
-      launchParams.ionRF = particles[i].ionRF;
+      launchParams.sigmaIonEnergy = particles[i].sigmaIonEnergy;
       launchParams.A_O = particles[i].A_O;
       launchParamsBuffer.upload(&launchParams, 1);
 

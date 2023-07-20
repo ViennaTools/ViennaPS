@@ -31,7 +31,7 @@ template <typename T, int D> struct curtGeometry {
   void buildAccelFromDomain(
       psSmartPointer<psDomain<T, D>> domain, LaunchParams &launchParams,
       psSmartPointer<lsMesh<float>> mesh,
-      psSmartPointer<psKDTree<T, std::array<float, 3>>> kdTree = nullptr) {
+      psSmartPointer<psKDTree<T, std::array<T, 3>>> kdTree = nullptr) {
     if (domain == nullptr) {
       utLog::getInstance()
           .addError("No level sets passed to curtGeometry.")

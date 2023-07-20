@@ -172,23 +172,26 @@ private:
                            psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "SF6O2Etching") {
       params->processType = ProcessType::SF6O2ETCHING;
-      psUtils::AssignItems(config, psUtils::Item{"time", params->processTime},
-                           psUtils::Item{"ionFlux", params->ionFlux},
-                           psUtils::Item{"rfBias", params->rfBias},
-                           psUtils::Item{"etchantFlux", params->etchantFlux},
-                           psUtils::Item{"oxygenFlux", params->oxygenFlux},
-                           psUtils::Item{"A_O", params->A_O},
-                           psUtils::Item{"raysPerPoint", params->raysPerPoint});
+      psUtils::AssignItems(
+          config, psUtils::Item{"time", params->processTime},
+          psUtils::Item{"ionFlux", params->ionFlux},
+          psUtils::Item{"meanIonEnergy", params->ionEnergy},
+          psUtils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
+          psUtils::Item{"etchantFlux", params->etchantFlux},
+          psUtils::Item{"oxygenFlux", params->oxygenFlux},
+          psUtils::Item{"A_O", params->A_O},
+          psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "FluorocarbonEtching") {
       params->processType = ProcessType::FLUOROCARBONETCHING;
-      psUtils::AssignItems(config, psUtils::Item{"time", params->processTime},
-                           psUtils::Item{"ionFlux", params->ionFlux},
-                           psUtils::Item{"ionEnergy", params->ionEnergy},
-                           psUtils::Item{"rfBias", params->rfBias},
-                           psUtils::Item{"etchantFlux", params->etchantFlux},
-                           psUtils::Item{"oxygenFlux", params->oxygenFlux},
-                           psUtils::Item{"temperature", params->temperature},
-                           psUtils::Item{"raysPerPoint", params->raysPerPoint});
+      psUtils::AssignItems(
+          config, psUtils::Item{"time", params->processTime},
+          psUtils::Item{"ionFlux", params->ionFlux},
+          psUtils::Item{"meanIonEnergy", params->ionEnergy},
+          psUtils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
+          psUtils::Item{"etchantFlux", params->etchantFlux},
+          psUtils::Item{"oxygenFlux", params->oxygenFlux},
+          psUtils::Item{"temperature", params->temperature},
+          psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "SphereDistribution") {
       params->processType = ProcessType::SPHEREDISTRIBUTION;
       psUtils::AssignItems(config, psUtils::Item{"radius", params->radius});
