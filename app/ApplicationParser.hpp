@@ -76,6 +76,20 @@ private:
       params->material = psMaterial::W;
     } else if (materialString == "Dielectric") {
       params->material = psMaterial::Dielectric;
+    } else if (materialString == "SiON") {
+      params->material = psMaterial::SiON;
+    } else if (materialString == "SiN") {
+      params->material = psMaterial::SiN;
+    } else if (materialString == "TiN") {
+      params->material = psMaterial::TiN;
+    } else if (materialString == "Cu") {
+      params->material = psMaterial::Cu;
+    } else if (materialString == "Air") {
+      params->material = psMaterial::Air;
+    } else if (materialString == "GAS") {
+      params->material = psMaterial::GAS;
+    } else if (materialString == "GaN") {
+      params->material = psMaterial::GaN;
     } else {
       std::cout << "Unknown material: " << materialString << std::endl;
       params->material = psMaterial::Undefined;
@@ -163,13 +177,17 @@ private:
     std::string model;
     stream >> model;
     auto config = parseLineStream(stream);
-    if (model == "Deposition") {
-      params->processType = ProcessType::DEPOSITION;
+    if (model == "SimpleDeposition") {
+      std::string material;
+      params->processType = ProcessType::SIMPLEDEPOSITION;
       psUtils::AssignItems(config, psUtils::Item{"rate", params->rate},
                            psUtils::Item{"time", params->processTime},
                            psUtils::Item{"sticking", params->sticking},
                            psUtils::Item{"cosineExponent", params->cosinePower},
-                           psUtils::Item{"raysPerPoint", params->raysPerPoint});
+                           psUtils::Item{"smoothFlux", params->smoothFlux},
+                           psUtils::Item{"raysPerPoint", params->raysPerPoint},
+                           psUtils::Item{"material", material});
+      parseMaterial(material);
     } else if (model == "SF6O2Etching") {
       params->processType = ProcessType::SF6O2ETCHING;
       psUtils::AssignItems(
@@ -180,6 +198,8 @@ private:
           psUtils::Item{"etchantFlux", params->etchantFlux},
           psUtils::Item{"oxygenFlux", params->oxygenFlux},
           psUtils::Item{"A_O", params->A_O},
+          psUtils::Item{"smoothFlux", params->smoothFlux},
+          psUtils::Item{"ionExponent", params->ionExponent},
           psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "FluorocarbonEtching") {
       params->processType = ProcessType::FLUOROCARBONETCHING;
@@ -191,6 +211,7 @@ private:
           psUtils::Item{"etchantFlux", params->etchantFlux},
           psUtils::Item{"oxygenFlux", params->oxygenFlux},
           psUtils::Item{"temperature", params->temperature},
+          psUtils::Item{"smoothFlux", params->smoothFlux},
           psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "SphereDistribution") {
       params->processType = ProcessType::SPHEREDISTRIBUTION;

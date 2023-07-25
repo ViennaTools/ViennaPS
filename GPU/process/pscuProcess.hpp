@@ -27,6 +27,8 @@
 
 #include <culsToSurfaceMesh.hpp>
 
+#include <utArrayOps.hpp>
+
 template <typename NumericType, int D> class pscuProcess {
   using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
@@ -51,7 +53,7 @@ public:
     periodicBoundary = static_cast<bool>(passedPeriodic);
   }
 
-  void setSmoothFlux(bool pSmoothFlux) { smoothFlux = pSmoothFlux; }
+  void setSmoothFlux(NumericType pSmoothFlux) { smoothFlux = pSmoothFlux; }
 
   void apply() {
     /* ---------- Process Setup --------- */
@@ -111,7 +113,7 @@ public:
     /* --------- Setup advection kernel ----------- */
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setIntegrationScheme(integrationScheme);
-    advectionKernel.setIgnoreVoids(true);
+    // advectionKernel.setIgnoreVoids(true);
 
     auto pointKdTree = psSmartPointer<
         psKDTree<NumericType, std::array<NumericType, 3>>>::New();
@@ -140,6 +142,7 @@ public:
     rayTrace.setKdTree(elementKdTree);
 
     diskMeshConv.apply();
+    assert(diskMesh->nodes.size());
 
     pointKdTree->setPoints(diskMesh->nodes);
     pointKdTree->build();
@@ -148,7 +151,7 @@ public:
     const bool useRayTracing = model->getParticleTypes() != nullptr;
     unsigned int numRates = 0;
     unsigned int numCov = 0;
-    typename curtIndexMap<NumericType>::indexMap fluxesIndexMap;
+    curtIndexMap fluxesIndexMap;
 
     if (useRayTracing && !rayTracerInitialized) {
       if (!model->getPtxCode()) {
@@ -166,8 +169,7 @@ public:
         rayTrace.insertNextParticle(particle);
       }
       numRates = rayTrace.prepareParticlePrograms();
-      fluxesIndexMap = curtIndexMap<NumericType>::getPointDataIndexMap(
-          rayTrace.getParticles());
+      fluxesIndexMap = curtIndexMap(rayTrace.getParticles());
     }
 
     // Determine whether advection callback is used
@@ -204,285 +206,313 @@ public:
 
       psLogger::getInstance().addInfo("Using coverages.").print();
 
-      if (!coveragesInitialized) {
-        psUtils::Timer timer;
-        psLogger::getInstance().addInfo("Initializing coverages ... ").print();
+      psUtils::Timer timer;
+      psLogger::getInstance().addInfo("Initializing coverages ... ").print();
 
-        timer.start();
-        for (size_t iterations = 1; iterations <= maxIterations; iterations++) {
+      timer.start();
+      for (size_t iterations = 1; iterations <= maxIterations; iterations++) {
 
-          // get coverages and material ids in ray tracer
-          const auto &materialIds =
-              *diskMesh->getCellData().getScalarData("Material");
-          utCudaBuffer d_coverages; // device buffer
-          translatePointToElementData(materialIds, coverages, d_coverages,
-                                      pointKdTree, mesh);
-          rayTrace.setCellData(d_coverages, numCov);
+        // get coverages and material ids in ray tracer
+        const auto &materialIds =
+            *diskMesh->getCellData().getScalarData("MaterialIds");
+        utCudaBuffer d_coverages; // device buffer
+        translatePointToElementData(materialIds, coverages, d_coverages,
+                                    pointKdTree, mesh);
+        rayTrace.setCellData(d_coverages, numCov + 1); // + material ids
 
-          // run the ray tracer
-          rayTrace.apply();
+        // run the ray tracer
+        rayTrace.apply();
 
-          // extract fluxes on points
-          auto fluxes = psSmartPointer<psPointData<NumericType>>::New();
-          translateElementToPointData(rayTrace.getResults(), fluxes,
-                                      fluxesIndexMap, elementKdTree, diskMesh,
-                                      gridDelta);
+        // extract fluxes on points
+        auto fluxes = psSmartPointer<psPointData<NumericType>>::New();
+        translateElementToPointData(rayTrace.getResults(), fluxes,
+                                    fluxesIndexMap, elementKdTree, diskMesh,
+                                    mesh, gridDelta);
 
-          // calculate coverages
-          model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
+        // calculate coverages
+        model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
 
-          if (psLogger::getLogLevel() >= 3) {
-            assert(numElements == mesh->triangles.size());
+        if (psLogger::getLogLevel() >= 3) {
+          assert(numElements == mesh->triangles.size());
 
-            downloadCoverages(d_coverages, mesh->getCellData(), coverages,
-                              numElements);
+          downloadCoverages(d_coverages, mesh->getCellData(), coverages,
+                            numElements);
 
-            rayTrace.downloadResultsToPointData(mesh->getCellData());
-            lsVTKWriter<NumericType>(
-                mesh, name + "_covIinit_" + std::to_string(iterations) + ".vtp")
-                .apply();
-          }
-          psLogger::getInstance()
-              .addInfo("Iteration: " + std::to_string(iterations))
-              .print();
+          rayTrace.downloadResultsToPointData(mesh->getCellData());
+          lsVTKWriter<NumericType>(mesh, name + "_covIinit_mesh_" +
+                                             std::to_string(iterations) +
+                                             ".vtp")
+              .apply();
+
+          insertReplaceScalarData(diskMesh->getCellData(), fluxes);
+          insertReplaceScalarData(diskMesh->getCellData(), coverages);
+          lsVTKWriter<NumericType>(diskMesh, name + "_covIinit_" +
+                                                 std::to_string(iterations) +
+                                                 ".vtp")
+              .apply();
         }
-        coveragesInitialized = true;
 
-        timer.finish();
+        d_coverages.free();
         psLogger::getInstance()
-            .addTiming("Coverage initialization", timer)
+            .addInfo("Iteration: " + std::to_string(iterations))
             .print();
       }
+
+      timer.finish();
+      psLogger::getInstance()
+          .addTiming("Coverage initialization", timer)
+          .print();
     }
 
-    // // now build kd tree with mesh
-    // rayTrace.setKdTree(kdTree);
-    // rayTrace.updateSurface();
+    double previousTimeStep = 0.;
+    size_t counter = 0;
+    psUtils::Timer rtTimer;
+    psUtils::Timer callbackTimer;
+    psUtils::Timer advTimer;
+    while (remainingTime > 0.) {
+      psLogger::getInstance()
+          .addInfo("Remaining time: " + std::to_string(remainingTime))
+          .print();
 
-    // double previousTimeStep = 0.;
-    // size_t counter = 0;
-    // psUtils::Timer rtTimer;
-    // psUtils::Timer callbackTimer;
-    // psUtils::Timer advTimer;
-    // while (remainingTime > 0.) {
-    //   psLogger::getInstance()
-    //       .addInfo("Remaining time: " + std::to_string(remainingTime))
-    //       .print();
+      const auto &materialIds =
+          *diskMesh->getCellData().getScalarData("MaterialIds");
 
-    //   auto &materialIds = *mesh->getCellData().getScalarData("Material");
+      auto fluxes = psSmartPointer<psPointData<NumericType>>::New();
+      utCudaBuffer d_coverages; // device buffer for material ids and coverages
+      if (useRayTracing) {
+        rayTrace.updateSurface();
+        translatePointToElementData(materialIds, coverages, d_coverages,
+                                    pointKdTree, mesh);
+        rayTrace.setCellData(d_coverages, numCov + 1); // +1 material ids
 
-    //   if (useRayTracing) {
-    //     rtTimer.start();
+        rtTimer.start();
+        rayTrace.apply();
+        rtTimer.finish();
 
-    //     rayTrace.apply();
+        // extract fluxes on points
+        translateElementToPointData(rayTrace.getResults(), fluxes,
+                                    fluxesIndexMap, elementKdTree, diskMesh,
+                                    mesh, gridDelta);
 
-    //     rtTimer.finish();
-    //     psLogger::getInstance()
-    //         .addTiming("Top-down flux calculation", rtTimer)
-    //         .print();
-    //   }
+        psLogger::getInstance()
+            .addTiming("Top-down flux calculation", rtTimer)
+            .print();
+      }
 
-    //   auto velocities = model->getSurfaceModel()->calculateVelocities(
-    //       rayTrace.getResults(), materialIds);
-    //   if (smoothFlux) {
-    //     smoothVelocities(velocities, kdTree, gridDelta);
-    //   }
-    //   model->getVelocityField()->setVelocities(velocities);
+      auto velocities = model->getSurfaceModel()->calculateVelocities(
+          fluxes, diskMesh->nodes, materialIds);
+      model->getVelocityField()->setVelocities(velocities);
+      assert(velocities->size() == pointKdTree->getNumberOfPoints());
 
-    //   if (psLogger::getLogLevel() >= 4) {
+      if (psLogger::getLogLevel() >= 4) {
+        if (useCoverages) {
+          insertReplaceScalarData(diskMesh->getCellData(), coverages);
+          downloadCoverages(d_coverages, mesh->getCellData(), coverages,
+                            rayTrace.getNumberOfElements());
+        }
 
-    //     if (useCoverages)
-    //       downloadCoverages(mesh->getCellData(), numElements);
+        if (useRayTracing) {
+          insertReplaceScalarData(diskMesh->getCellData(), fluxes);
+          rayTrace.downloadResultsToPointData(mesh->getCellData());
 
-    //     if (useRayTracing)
-    //       rayTrace.downloadResultsToPointData(
-    //           mesh->getCellData(), rayTrace.getResults(), numElements);
+          lsVTKWriter<NumericType>(mesh, name + "_mesh_" +
+                                             std::to_string(counter) + ".vtp")
+              .apply();
+        }
 
-    //     if (velocities)
-    //       mesh->getCellData().insertNextScalarData(*velocities,
-    //       "velocities");
+        if (velocities)
+          insertReplaceScalarData(diskMesh->getCellData(), velocities,
+                                  "velocities");
 
-    //     lsVTKWriter<NumericType>(mesh, name + "_step_" +
-    //                                        std::to_string(counter) + ".vtp")
-    //         .apply();
+        lsVTKWriter<NumericType>(diskMesh,
+                                 name + "_" + std::to_string(counter) + ".vtp")
+            .apply();
 
-    //     if (domain->getUseCellSet()) {
-    //       domain->getCellSet()->writeVTU(name + "_cellSet_" +
-    //                                      std::to_string(counter) + ".vtu");
-    //     }
+        if (domain->getUseCellSet()) {
+          domain->getCellSet()->writeVTU(name + "_cellSet_" +
+                                         std::to_string(counter) + ".vtu");
+        }
 
-    //     counter++;
-    //   }
+        counter++;
+      }
 
-    //   // apply advection callback
-    //   if (useAdvectionCallback) {
-    //     callbackTimer.start();
-    //     bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
-    //         processDuration - remainingTime);
-    //     callbackTimer.finish();
-    //     psLogger::getInstance()
-    //         .addTiming("Advection callback pre-advect", callbackTimer)
-    //         .print();
+      if (useRayTracing)
+        d_coverages.free();
 
-    //     if (!continueProcess) {
-    //       psLogger::getInstance()
-    //           .addInfo("Process stopped early by AdvectionCallback during"
-    //                    "`preAdvect`.")
-    //           .print();
-    //       break;
-    //     }
-    //   }
+      // apply advection callback
+      if (useAdvectionCallback) {
+        callbackTimer.start();
+        bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
+            processDuration - remainingTime);
+        callbackTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Advection callback pre-advect", callbackTimer)
+            .print();
 
-    //   // adjust time step near end
-    //   if (remainingTime - previousTimeStep < 0.) {
-    //     advectionKernel.setAdvectionTime(remainingTime);
-    //   }
+        if (!continueProcess) {
+          psLogger::getInstance()
+              .addInfo("Process stopped early by AdvectionCallback during "
+                       "`preAdvect`.")
+              .print();
+          break;
+        }
+      }
 
-    //   advTimer.start();
-    //   advectionKernel.apply();
-    //   advTimer.finish();
+      // adjust time step near end
+      if (remainingTime - previousTimeStep < 0.) {
+        advectionKernel.setAdvectionTime(remainingTime);
+      }
 
-    //   psLogger::getInstance().addTiming("Surface advection",
-    //   advTimer).print();
+      advTimer.start();
+      advectionKernel.apply();
+      advTimer.finish();
 
-    //   // update surface and move coverages to new surface
-    //   auto newKdTree =
-    //       psSmartPointer<psKDTree<NumericType, std::array<float, 3>>>::New();
-    //   rayTrace.setKdTree(newKdTree);
-    //   rayTrace.updateSurface();
-    //   if (useCoverages)
-    //     moveCoverages(kdTree, newKdTree, numCov);
-    //   kdTree = newKdTree;
+      psLogger::getInstance().addTiming("Surface advection", advTimer).print();
 
-    //   // apply advection callback
-    //   if (useAdvectionCallback) {
-    //     callbackTimer.start();
-    //     bool continueProcess =
-    //     model->getAdvectionCallback()->applyPostAdvect(
-    //         advectionKernel.getAdvectedTime());
-    //     callbackTimer.finish();
-    //     psLogger::getInstance()
-    //         .addTiming("Advection callback post-advect", callbackTimer)
-    //         .print();
-    //     if (!continueProcess) {
-    //       psLogger::getInstance()
-    //           .addInfo("Process stopped early by AdvectionCallback during "
-    //                    "`postAdvect`.")
-    //           .print();
-    //       break;
-    //     }
-    //   }
+      // update surface and move coverages to new surface
+      diskMeshConv.apply();
 
-    //   previousTimeStep = advectionKernel.getAdvectedTime();
-    //   remainingTime -= previousTimeStep;
-    // }
+      if (useCoverages)
+        moveCoverages(pointKdTree, diskMesh, coverages);
 
-    // processTime = processDuration - remainingTime;
-    // processTimer.finish();
+      pointKdTree->setPoints(diskMesh->nodes);
+      pointKdTree->build();
 
-    // psLogger::getInstance()
-    //     .addTiming("\nProcess " + name, processTimer)
-    //     .addTiming("Surface advection total time",
-    //                advTimer.totalDuration * 1e-9,
-    //                processTimer.totalDuration * 1e-9)
-    //     .print();
-    // if (useRayTracing) {
-    //   psLogger::getInstance()
-    //       .addTiming("Top-down flux calculation total time
-    // }
-    // if (useAdvectionCallback) {
-    //   psLogger::getInstance()
-    //       .addTiming("Advection callback total time",
-    //                  callbackTimer.totalDuration * 1e-9,
-    //                  processTimer.totalDuration * 1e-9)
-    //       .print();
-    // }
+      // apply advection callback
+      if (useAdvectionCallback) {
+        callbackTimer.start();
+        bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
+            advectionKernel.getAdvectedTime());
+        callbackTimer.finish();
+        psLogger::getInstance()
+            .addTiming("Advection callback post-advect", callbackTimer)
+            .print();
+        if (!continueProcess) {
+          psLogger::getInstance()
+              .addInfo("Process stopped early by AdvectionCallback during "
+                       "`postAdvect`.")
+              .print();
+          break;
+        }
+      }
+
+      previousTimeStep = advectionKernel.getAdvectedTime();
+      remainingTime -= previousTimeStep;
+    }
+
+    processTime = processDuration - remainingTime;
+    processTimer.finish();
+
+    psLogger::getInstance()
+        .addTiming("\nProcess " + name, processTimer)
+        .addTiming("Surface advection total time",
+                   advTimer.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .print();
+    if (useRayTracing) {
+      psLogger::getInstance()
+          .addTiming("Top-down flux calculation total time",
+                     rtTimer.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
+    }
+    if (useAdvectionCallback) {
+      psLogger::getInstance()
+          .addTiming("Advection callback total time",
+                     callbackTimer.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
+    }
   }
 
 private:
-  //   void moveCoverages(
-  //       psSmartPointer<psKDTree<NumericType, std::array<float, 3>>> kdTree,
-  //       psSmartPointer<psKDTree<NumericType, std::array<float, 3>>>
-  //       newkdTree, const unsigned numCov) {
-  //     psPointData<NumericType> oldCoverages, newCoverages;
-  //     downloadCoverages(oldCoverages, kdTree->getNumberOfPoints());
+  static void moveCoverages(
+      psSmartPointer<psKDTree<NumericType, std::array<NumericType, 3>>> kdTree,
+      psSmartPointer<lsMesh<NumericType>> points,
+      psSmartPointer<psPointData<NumericType>> oldCoverages) {
 
-  //     // prepare new coverages
-  //     std::vector<std::vector<NumericType>> newCovData(
-  //         oldCoverages.getScalarDataSize());
-  //     for (unsigned i = 0; i < oldCoverages.getScalarDataSize(); i++) {
-  //       newCovData[i].resize(newkdTree->getNumberOfPoints());
-  //     }
+    psPointData<NumericType> newCoverages;
 
-  //     // move coverages
-  // #pragma omp parallel for
-  //     for (std::size_t i = 0; i < newkdTree->getNumberOfPoints(); i++) {
-  //       auto point = newkdTree->getPoint(i);
-  //       auto nearest = kdTree->findNearest(point);
+    // prepare new coverages
+    for (unsigned i = 0; i < oldCoverages->getScalarDataSize(); i++) {
+      std::vector<NumericType> tmp(points->nodes.size());
+      newCoverages.insertNextScalarData(std::move(tmp),
+                                        oldCoverages->getScalarDataLabel(i));
+    }
 
-  //       for (unsigned j = 0;
-  //            j <
-  //            oldCoverages.getScalarDataSize
-  //            // scalar data with offset
-  //            for (unsigned j = 0; j < numData; j++) {
-  //              elementData[i + (j + 1) * numElements] =
-  //                  pointData->getScalarData(j)[closestPoint->first];
-  //            }();
-  //            j++) {
-  //         newCovData[j][i] =
-  //         oldCoverages.getScalarData(j)->at(nearest->first);
-  //       }
-  //     }
-
-  //     for (unsigned i = 0; i < oldCoverages.getScalarDataSize(); i++) {
-  //       auto label = oldCoverages.getScalarDataLabel(i);
-  //       newCoverages.insertNextScalarData(std::move(newCovData[i]), label);
-  //     }
-
-  //     uploadCoverages(newCoverages);
-  //   }
-
-  void smoothVelocities(
-      psSmartPointer<std::vector<NumericType>> velocities,
-      psSmartPointer<psKDTree<NumericType, std::array<float, 3>>> kdTree,
-      const NumericType gridDelta) {
-    const auto numPoints = velocities->size();
-    std::cout << numPoints << " " << kdTree->getNumberOfPoints() << std::endl;
-    assert(numPoints == kdTree->getNumberOfPoints());
-
-    std::vector<NumericType> smoothed(numPoints, 0.);
-
+    // move coverages
 #pragma omp parallel for
-    for (std::size_t i = 0; i < numPoints; ++i) {
-      auto point = kdTree->getPoint(i);
+    for (std::size_t i = 0; i < points->nodes.size(); i++) {
+      auto &point = points->nodes[i];
+      auto nearest = kdTree->findNearest(point);
 
-      auto closePoints =
-          kdTree->findNearestWithinRadius(point, smoothFlux * gridDelta);
+      for (unsigned j = 0; j < oldCoverages->getScalarDataSize(); j++) {
+        assert(nearest->first < oldCoverages->getScalarData(j)->size());
 
-      unsigned n = 0;
-      for (auto p : closePoints.value()) {
-        smoothed[i] += velocities->at(p.first);
-        n++;
-      }
-
-      if (n > 1) {
-        smoothed[i] /= static_cast<NumericType>(n);
+        newCoverages.getScalarData(j)->at(i) =
+            oldCoverages->getScalarData(j)->at(nearest->first);
       }
     }
 
-    *velocities = std::move(smoothed);
+    for (unsigned i = 0; i < oldCoverages->getScalarDataSize(); i++) {
+      *oldCoverages->getScalarData(i) =
+          std::move(*newCoverages.getScalarData(i));
+    }
   }
+
+  //   void smoothVelocities(
+  //       psSmartPointer<std::vector<NumericType>> velocities,
+  //       psSmartPointer<psKDTree<NumericType, std::array<float, 3>>> kdTree,
+  //       const NumericType gridDelta) {
+  //     const auto numPoints = velocities->size();
+  //     std::cout << numPoints << " " << kdTree->getNumberOfPoints() <<
+  //     std::endl; assert(numPoints == kdTree->getNumberOfPoints());
+
+  //     std::vector<NumericType> smoothed(numPoints, 0.);
+
+  // #pragma omp parallel for
+  //     for (std::size_t i = 0; i < numPoints; ++i) {
+  //       auto point = kdTree->getPoint(i);
+
+  //       auto closePoints = kdTree->findNearestWithinRadius(point, gridDelta);
+
+  //       unsigned n = 0;
+  //       for (auto p : closePoints.value()) {
+  //         smoothed[i] += velocities->at(p.first);
+  //         n++;
+  //       }
+
+  //       if (n > 1) {
+  //         smoothed[i] /= static_cast<NumericType>(n);
+  //       }
+  //     }
+
+  //     *velocities = std::move(smoothed);
+  //   }
 
   void downloadCoverages(utCudaBuffer &d_coverages,
                          psPointData<NumericType> &elementData,
                          psSmartPointer<psPointData<NumericType>> &coverages,
                          unsigned int numElements) {
 
-    auto numCov = coverages->getScalarDataSize();
+    auto numCov = coverages->getScalarDataSize() + 1; // + material ids
     NumericType *temp = new NumericType[numElements * numCov];
     d_coverages.download(temp, numElements * numCov);
 
-    for (unsigned i = 0; i < numCov; i++) {
+    // material IDs at front
+    {
+      auto matIds = elementData.getScalarData("Material");
+      if (matIds == nullptr) {
+        std::vector<NumericType> tmp(numElements);
+        elementData.insertNextScalarData(std::move(tmp), "Material");
+        matIds = elementData.getScalarData("Material");
+      }
+      if (matIds->size() != numElements)
+        matIds->resize(numElements);
+      std::memcpy(matIds->data(), temp, numElements * sizeof(NumericType));
+    }
+
+    for (unsigned i = 0; i < numCov - 1; i++) {
       auto covName = coverages->getScalarDataLabel(i);
       auto cov = elementData.getScalarData(covName);
       if (cov == nullptr) {
@@ -492,41 +522,27 @@ private:
       }
       if (cov->size() != numElements)
         cov->resize(numElements);
-      std::memcpy(cov->data(), temp + i * numElements,
+      std::memcpy(cov->data(), temp + (i + 1) * numElements,
                   numElements * sizeof(NumericType));
     }
 
     delete temp;
   }
 
-  // void uploadCoverages(psPointData<NumericType> &coverages) {
-  //   std::vector<NumericType> flattenedCoverages;
-  //   assert(coverages.getScalarData(0) != nullptr);
-  //   const auto covSize = coverages.getScalarData(0)->size();
-  //   const auto numCoverages = coverages.getScalarDataSize();
-  //   flattenedCoverages.resize(covSize * numCoverages);
-
-  //   auto covIndexMap = model->getSurfaceModel()->getCoverageIndexMap();
-  //   for (auto &i : covIndexMap) {
-  //     auto covData = coverages.getScalarData(i.first);
-  //     std::memcpy(flattenedCoverages.data() + i.second * covSize,
-  //                 covData->data(), covSize * sizeof(NumericType));
-  //   }
-  //   model->getSurfaceModel()->getCoverages().alloc_and_upload(
-  //       flattenedCoverages);
-  // }
-
   void translateElementToPointData(
       utCudaBuffer &d_elementData,
       psSmartPointer<psPointData<NumericType>> pointData,
-      const typename curtIndexMap<NumericType>::indexMap &indexMap,
+      const curtIndexMap &indexMap,
       psSmartPointer<psKDTree<float, std::array<float, 3>>> elementKdTree,
-      psSmartPointer<lsMesh<float>> pointMesh, const NumericType gridDelta) {
+      psSmartPointer<lsMesh<NumericType>> pointMesh,
+      psSmartPointer<lsMesh<float>> surfMesh, const NumericType gridDelta) {
 
-    auto numData = indexMap.size();
+    auto numData = indexMap.getNumberOfData();
     const auto &points = pointMesh->nodes;
     auto numPoints = points.size();
     auto numElements = elementKdTree->getNumberOfPoints();
+    auto normals = pointMesh->cellData.getVectorData("Normals");
+    auto elementNormals = surfMesh->cellData.getVectorData("Normals");
 
     // retrieve data from device
     std::vector<NumericType> elementData(numData * numElements);
@@ -534,11 +550,9 @@ private:
 
     // prepare point data
     pointData->clear();
-    for (const auto &r : indexMap) {
+    for (const auto &label : indexMap) {
       std::vector<NumericType> data(numPoints, 0.);
-      pointData->insertNextScalarData(std::move(data), r.first);
-      assert(pointData->getScalarDataSize() - 1 ==
-             r.second); // assert correct order of data
+      pointData->insertNextScalarData(std::move(data), label);
     }
     assert(pointData->getScalarDataSize() == numData); // assert number of data
 
@@ -548,21 +562,73 @@ private:
       auto closePoints = elementKdTree->findNearestWithinRadius(
           points[i], smoothFlux * gridDelta);
 
+      std::vector<NumericType> weights;
+      weights.reserve(closePoints.value().size());
+      NumericType sum = 0.;
+      for (auto p : closePoints.value()) {
+        assert(p.first < elementNormals->size());
+        weights.push_back(
+            aops::dot(normals->at(i), elementNormals->at(p.first)));
+        if (weights.back() > 1e-6 && !std::isnan(weights.back()))
+          sum += weights.back();
+      }
+
+      std::size_t nearestIdx = 0;
+      if (sum <= 1e-6) {
+        auto nearestPoint = elementKdTree->findNearest(points[i]);
+        nearestIdx = nearestPoint->first;
+      }
+
       for (unsigned j = 0; j < numData; j++) {
 
-        NumericType value = 0;
-        unsigned n = 0;
-        for (auto p : closePoints.value()) {
-          value += elementData[p.first + j * numElements];
-          n++;
-        }
+        NumericType value = 0.;
 
-        if (n > 1)
-          value /= static_cast<NumericType>(n);
+        if (sum > 1e-6) {
+          unsigned n = 0;
+          for (auto p : closePoints.value()) {
+            if (weights[n] > 1e-6 && !std::isnan(weights[n])) {
+              value += weights[n] * elementData[p.first + j * numElements];
+            }
+            n++;
+          }
+          value /= sum;
+        } else {
+          value = elementData[nearestIdx + j * numElements];
+        }
 
         pointData->getScalarData(j)->at(i) = value;
       }
     }
+  }
+
+  template <class T>
+  static void insertReplaceScalarData(psPointData<T> &insertHere,
+                                      psSmartPointer<psPointData<T>> addData) {
+    for (unsigned i = 0; i < addData->getScalarDataSize(); i++) {
+      auto dataName = addData->getScalarDataLabel(i);
+      auto data = insertHere.getScalarData(dataName);
+      auto numElements = addData->getScalarData(i)->size();
+      if (data == nullptr) {
+        std::vector<NumericType> tmp(numElements);
+        insertHere.insertNextScalarData(std::move(tmp), dataName);
+        data = insertHere.getScalarData(dataName);
+      }
+      *data = *addData->getScalarData(i);
+    }
+  }
+
+  template <class T>
+  static void insertReplaceScalarData(psPointData<T> &insertHere,
+                                      psSmartPointer<std::vector<T>> addData,
+                                      std::string dataName) {
+    auto data = insertHere.getScalarData(dataName);
+    auto numElements = addData->size();
+    if (data == nullptr) {
+      std::vector<NumericType> tmp(numElements);
+      insertHere.insertNextScalarData(std::move(tmp), dataName);
+      data = insertHere.getScalarData(dataName);
+    }
+    *data = *addData;
   }
 
   static void translatePointToElementData(
@@ -577,6 +643,10 @@ private:
     const auto &elements = elementMesh->template getElements<D>();
     auto numElements = elements.size();
     std::vector<NumericType> elementData((numData + 1) * numElements);
+    assert(materialIds.size() == pointData->getScalarData(0)->size());
+
+    auto closestPoints =
+        psSmartPointer<std::vector<NumericType>>::New(numElements);
 
 #pragma omp parallel for
     for (unsigned i = 0; i < numElements; i++) {
@@ -593,6 +663,8 @@ private:
               3.f};
 
       auto closestPoint = pointKdTree->findNearest(elementCenter);
+      assert(closestPoint->first < materialIds.size());
+      closestPoints->at(i) = closestPoint->first;
 
       // fill in material ids at front
       elementData[i] = materialIds[closestPoint->first];
@@ -603,6 +675,20 @@ private:
             pointData->getScalarData(j)->at(closestPoint->first);
       }
     }
+
+    insertReplaceScalarData(elementMesh->cellData, closestPoints, "pointIds");
+    // for (int i = 0; i < numData; i++) {
+    //   auto tmp = psSmartPointer<std::vector<NumericType>>::New(
+    //       elementData.begin() + (i + 1) * numElements,
+    //       elementData.begin() + (i + 2) * numElements);
+    //   insertReplaceScalarData(elementMesh->cellData, tmp,
+    //                           pointData->getScalarDataLabel(i));
+    // }
+    // static int insert = 0;
+    // lsVTKWriter<NumericType>(elementMesh, "insertElement_" +
+    //                                           std::to_string(insert++) +
+    //                                           ".vtp")
+    //     .apply();
 
     d_elementData.alloc_and_upload(elementData);
   }

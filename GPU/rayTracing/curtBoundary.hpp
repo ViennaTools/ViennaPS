@@ -17,8 +17,7 @@ __device__ __inline__ gdt::vec3f computeNormal(const HitSBTData *sbt,
   return gdt::normalize(gdt::cross(B - A, C - A));
 }
 
-template <typename T>
-__device__ __inline__ void reflectFromBoundary(PerRayData<T> *prd) {
+__device__ __inline__ void reflectFromBoundary(PerRayData *prd) {
   const unsigned int primID = optixGetPrimitiveIndex();
   prd->pos = prd->pos + optixGetRayTmax() * prd->dir;
 
@@ -29,8 +28,7 @@ __device__ __inline__ void reflectFromBoundary(PerRayData<T> *prd) {
   }
 }
 
-template <typename T>
-__device__ __inline__ void applyPeriodicBoundary(PerRayData<T> *prd,
+__device__ __inline__ void applyPeriodicBoundary(PerRayData *prd,
                                                  const HitSBTData *hsd) {
   const unsigned int primID = optixGetPrimitiveIndex();
 

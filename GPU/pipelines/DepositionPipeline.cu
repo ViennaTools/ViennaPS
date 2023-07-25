@@ -25,8 +25,8 @@ enum
 extern "C" __global__ void __closesthit__depoParticle()
 {
     const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-    PerRayData<float> *prd =
-        (PerRayData<float> *)getPRD<PerRayData<float>>();
+    PerRayData *prd =
+        (PerRayData *)getPRD<PerRayData>();
 
     if (sbtData->isBoundary)
     {
@@ -54,7 +54,7 @@ extern "C" __global__ void __closesthit__depoParticle()
 // ------------------------------------------------------------------------------
 extern "C" __global__ void __miss__depoParticle()
 {
-    getPRD<PerRayData<float>>()->rayWeight = 0.f;
+    getPRD<PerRayData>()->rayWeight = 0.f;
 }
 
 //------------------------------------------------------------------------------
@@ -68,8 +68,7 @@ extern "C" __global__ void __raygen__depoParticle()
         idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
     // per-ray data
-    PerRayData<float> prd;
-    prd.rayWeight = 1.f;
+    PerRayData prd;
     // each ray has its own RNG state
     initializeRNGState(&prd, linearLaunchIndex, params.seed);
 

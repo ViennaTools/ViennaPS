@@ -171,7 +171,7 @@ public:
     NumericType f_sp_theta =
         (1 + psParameters::Si::B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
-    NumericType sqrtE = std::sqrt(E);
+    double sqrtE = std::sqrt(E);
     NumericType Y_sp = psParameters::Si::A_sp *
                        std::max(sqrtE - psParameters::Si::Eth_sp_Ar_sqrt, 0.) *
                        f_sp_theta;
@@ -206,7 +206,7 @@ public:
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
-    double Eref_peak;
+    NumericType Eref_peak;
     if (incAngle >= psParameters::Ion::inflectAngle) {
       Eref_peak = (1 - (1 - psParameters::Ion::A) * (M_PI_2 - incAngle) /
                            (M_PI_2 - psParameters::Ion::inflectAngle));
@@ -217,7 +217,7 @@ public:
     }
     // Gaussian distribution around the Eref_peak scaled by the particle energy
     NumericType NewEnergy;
-    std::normal_distribution<NumericType> normalDist{E * Eref_peak, 0.1 * E};
+    std::normal_distribution<NumericType> normalDist(E * Eref_peak, 0.1 * E);
     do {
       NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);

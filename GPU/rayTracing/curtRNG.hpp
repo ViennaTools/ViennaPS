@@ -20,8 +20,7 @@ static __device__ __inline__ unsigned int tea(unsigned int val0,
   return v0;
 }
 
-template <typename T>
-static __device__ void initializeRNGState(PerRayData<T> *prd,
+static __device__ void initializeRNGState(PerRayData *prd,
                                           unsigned int linearLaunchIndex,
                                           unsigned int seed) {
   auto rngSeed = tea<4>(linearLaunchIndex, seed);

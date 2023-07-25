@@ -7,14 +7,14 @@
 
 #include <utGDT.hpp>
 
-template <typename T> struct PerRayData {
-  T rayWeight = 1.;
+struct PerRayData {
+  float rayWeight = 1.f;
   gdt::vec3f pos;
   gdt::vec3f dir;
 
   curtRNGState RNGstate;
 
-  T energy;
+  float energy;
 };
 
 // this can only get compiled if included in a cuda kernel

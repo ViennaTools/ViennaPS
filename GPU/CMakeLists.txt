@@ -16,8 +16,6 @@ if(NOT ViennaPS_FOUND)
   4. Now the configure step should pick up the built dependencies and proceed as intended.")
 endif()
 
-find_package(CGAL REQUIRED)
-
 list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
 
 # Add subfolders to the include directories, since during installation the directory structure is
@@ -76,7 +74,7 @@ foreach(kernel ${kernels})
   add_dependencies(buildGPUApplication ${kernelName})
 endforeach()
 
-cuda_compile_and_embed(embedded_SF6O2_pipeline ${PROJECT_SOURCE_DIR}/pipelines/SF6O2rayPipeline.cu)
+cuda_compile_and_embed(embedded_SF6O2_pipeline ${PROJECT_SOURCE_DIR}/pipelines/SF6O2Pipeline.cu)
 cuda_compile_and_embed(embedded_Fluorocarbon_pipeline
                        ${PROJECT_SOURCE_DIR}/pipelines/FluorocarbonPipeline.cu)
 
@@ -91,8 +89,7 @@ add_executable(
 target_include_directories(ViennaPS_GPU PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}
                                                ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
 
-target_link_libraries(ViennaPS_GPU CGAL::CGAL ${Boost_LIBRARIES} ${CUDA_LIBRARIES}
-                      ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
+target_link_libraries(ViennaPS_GPU  ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
 
 add_dependencies(buildGPUApplication ViennaPS_GPU)
 
@@ -103,7 +100,6 @@ target_include_directories(
   ViennaPS_GPU_Benchmark PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}
                                 ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
 
-target_link_libraries(ViennaPS_GPU_Benchmark ${Boost_LIBRARIES} ${CUDA_LIBRARIES}
-                      ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
+target_link_libraries(ViennaPS_GPU_Benchmark ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
 
 # add_dependencies(buildGPUBenchmark ViennaPS_GPU_Benchmark)

@@ -105,20 +105,20 @@ protected:
   virtual void
   runSimpleDeposition(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                       psSmartPointer<ApplicationParameters> processParams) {
+
     // copy top layer for deposition
-    auto depoLayer = psSmartPointer<lsDomain<NumericType, D>>::New(
-        processGeometry->getLevelSets()->back());
-    processGeometry->insertNextLevelSet(depoLayer);
+    processGeometry->duplicateTopLevelSet(processParams->material);
 
     auto model = psSmartPointer<SimpleDeposition<NumericType, D>>::New(
-        processParams->sticking, processParams->cosinePower);
+        processParams->rate, processParams->sticking,
+        processParams->cosinePower);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model);
+    process.setSmoothFlux(processParams->smoothFlux);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
-    process.setProcessDuration(processParams->processTime *
-                               processParams->rate / processParams->sticking);
+    process.setProcessDuration(processParams->processTime);
     process.setIntegrationScheme(params->integrationScheme);
     process.apply();
   }
@@ -129,12 +129,14 @@ protected:
     auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
         processParams->ionFlux, processParams->etchantFlux,
         processParams->oxygenFlux, processParams->ionEnergy,
+        processParams->sigmaIonEnergy, processParams->ionExponent,
         processParams->A_O);
 
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setMaxCoverageInitIterations(10);
+    process.setSmoothFlux(processParams->smoothFlux);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
     process.setIntegrationScheme(params->integrationScheme);
@@ -384,18 +386,14 @@ private:
 
     std::cout << "\tModel: ";
     switch (params->processType) {
-    case ProcessType::DEPOSITION: {
+    case ProcessType::SIMPLEDEPOSITION: {
       std::cout << "Single particle deposition\n\tRate: " << params->rate
                 << "\n\tTime: " << params->processTime
+                << "\n\tMaterial: " << materialString(params->material)
                 << "\n\tSticking probability: " << params->sticking
                 << "\n\tCosine exponent: " << params->cosinePower
                 << "\n\tUsing " << params->raysPerPoint
                 << " rays per source grid point\n\n";
-
-      // copy top layer to capture deposition
-      auto topLayerCopy = psSmartPointer<lsDomain<NumericType, D>>::New(
-          geometry->getLevelSets()->back());
-      geometry->insertNextLevelSet(topLayerCopy);
       runSimpleDeposition(geometry, params);
       break;
     }
@@ -530,6 +528,51 @@ private:
   }
 
   std::string boolString(const int in) { return in == 0 ? "false" : "true"; }
+
+  std::string materialString(const psMaterial material) {
+    switch (material) {
+    case psMaterial::Undefined:
+      return "Undefined";
+    case psMaterial::Mask:
+      return "Mask";
+    case psMaterial::Si:
+      return "Si";
+    case psMaterial::Si3N4:
+      return "Si3N4";
+    case psMaterial::SiO2:
+      return "SiO2";
+    case psMaterial::SiON:
+      return "SiON";
+    case psMaterial::PolySi:
+      return "PolySi";
+    case psMaterial::Polymer:
+      return "Polymer";
+    case psMaterial::SiC:
+      return "SiC";
+    case psMaterial::SiN:
+      return "SiN";
+    case psMaterial::Metal:
+      return "Metal";
+    case psMaterial::W:
+      return "W";
+    case psMaterial::TiN:
+      return "TiN";
+    case psMaterial::GaN:
+      return "GaN";
+    case psMaterial::GAS:
+      return "GAS";
+    case psMaterial::Air:
+      return "Air";
+    case psMaterial::Al2O3:
+      return "Al2O3";
+    case psMaterial::Dielectric:
+      return "Dielectric";
+    case psMaterial::Cu:
+      return "Cu";
+    }
+
+    return "Unknown material";
+  }
 
   std::string intSchemeString(lsIntegrationSchemeEnum scheme) {
     switch (scheme) {

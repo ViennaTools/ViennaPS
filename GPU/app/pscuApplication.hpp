@@ -20,44 +20,46 @@ public:
   }
 
 protected:
-  // void runSimpleDeposition(
-  //     psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
-  //     psSmartPointer<ApplicationParameters> processParams) override {
-  //   curtParticle<NumericType> depoParticle{.name = "depoParticle",
-  //                                          .sticking =
-  //                                          processParams->sticking,
-  //                                          .cosineExponent =
-  //                                              processParams->cosinePower};
-  //   depoParticle.dataLabels.push_back("depoRate");
+  void runSimpleDeposition(
+      psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
+      psSmartPointer<ApplicationParameters> processParams) override {
 
-  //   auto surfModel =
-  //       psSmartPointer<DepoSurfaceModel<NumericType>>::New(context);
-  //   auto velField =
-  //   psSmartPointer<psDefaultVelocityField<NumericType>>::New(); auto model =
-  //   psSmartPointer<pscuProcessModel<NumericType>>::New();
+    // copy top layer for deposition
+    processGeometry->duplicateTopLevelSet(processParams->material);
 
-  //   model->insertNextParticleType(depoParticle);
-  //   model->setSurfaceModel(surfModel);
-  //   model->setVelocityField(velField);
-  //   model->setProcessName("Deposition");
-  //   model->setPtxCode(embedded_deposition_pipeline);
+    // particle
+    curtParticle<NumericType> depoParticle{.name = "depoParticle",
+                                           .sticking = processParams->sticking,
+                                           .cosineExponent =
+                                               processParams->cosinePower};
+    depoParticle.dataLabels.push_back("depoRate");
 
-  //   pscuProcess<NumericType, DIM> process(context);
-  //   process.setDomain(processGeometry);
-  //   process.setProcessModel(model);
-  //   process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
-  //   process.setProcessDuration(processParams->processTime *
-  //                              processParams->rate /
-  //                              processParams->sticking);
-  //   process.apply();
-  // }
+    auto surfModel =
+        psSmartPointer<SimpleDepositionImplementation::SurfaceModel<
+            NumericType, DIM>>::New(processParams->rate);
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
+    auto model = psSmartPointer<pscuProcessModel<NumericType>>::New();
+
+    model->insertNextParticleType(depoParticle);
+    model->setSurfaceModel(surfModel);
+    model->setVelocityField(velField);
+    model->setProcessName("SimpleDeposition");
+    model->setPtxCode(embedded_deposition_pipeline);
+
+    pscuProcess<NumericType, DIM> process(context);
+    process.setDomain(processGeometry);
+    process.setProcessModel(model);
+    process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
+    process.setProcessDuration(processParams->processTime);
+    process.apply();
+  }
 
   void runSF6O2Etching(
       psSmartPointer<psDomain<NumericType, DIM>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) override {
     curtParticle<NumericType> ion{.name = "ion",
                                   .numberOfData = 3,
-                                  .cosineExponent = 100.f,
+                                  .cosineExponent = processParams->ionExponent,
                                   .meanIonEnergy = processParams->ionEnergy,
                                   .sigmaIonEnergy =
                                       processParams->sigmaIonEnergy,
@@ -66,11 +68,13 @@ protected:
     ion.dataLabels.push_back("ionEnhancedRate");
     ion.dataLabels.push_back("oxygenSputteringRate");
 
-    curtParticle<NumericType> etchant{.name = "etchant", .numberOfData = 1};
+    curtParticle<NumericType> etchant{.name = "etchant", .numberOfData = 2};
     etchant.dataLabels.push_back("etchantRate");
+    etchant.dataLabels.push_back("sticking_e");
 
-    curtParticle<NumericType> oxygen{.name = "oxygen", .numberOfData = 1};
+    curtParticle<NumericType> oxygen{.name = "oxygen", .numberOfData = 2};
     oxygen.dataLabels.push_back("oxygenRate");
+    oxygen.dataLabels.push_back("sticking_o");
 
     auto surfModel =
         psSmartPointer<SF6O2Implementation::SurfaceModel<NumericType, DIM>>::
@@ -93,6 +97,7 @@ protected:
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setMaxCoverageInitIterations(10);
     process.setProcessDuration(processParams->processTime);
+    process.setSmoothFlux(processParams->smoothFlux);
     process.apply();
   }
 

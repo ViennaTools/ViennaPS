@@ -6,14 +6,13 @@
 #include <curtUtilities.hpp>
 
 #ifdef __CUDACC__
-template <typename T>
-__device__ void initializeDirection(PerRayData<T> *prd, const T power) {
+__device__ void initializeDirection(PerRayData *prd, const float power) {
   // source direction
   auto r1 = getNextRand(&prd->RNGstate);
   auto r2 = getNextRand(&prd->RNGstate);
-  const T ee = 2.f / (power + 1.f);
-  const T tt = pow(r2, ee);
-  prd->dir.z = -1. * sqrtf(tt);
+  const float ee = 2.f / (power + 1.f);
+  const float tt = powf(r2, ee);
+  prd->dir.z = -1.f * sqrtf(tt);
   prd->dir.x = cosf(2 * PI_F * r1) * sqrtf(1 - tt);
   prd->dir.y = sinf(2 * PI_F * r1) * sqrtf(1 - tt);
   gdt::normalize(prd->dir);
@@ -21,7 +20,7 @@ __device__ void initializeDirection(PerRayData<T> *prd, const T power) {
 
 // ** DEPRECATED ** //
 // template <typename T>
-// __device__ void initializeRayOnGrid(PerRayData<T> *prd,
+// __device__ void initializeRayOnGrid(PerRayData *prd,
 //                                     curtLaunchParams<T> *launchParams,
 //                                     const T power, uint3 launchIdx) {
 //   // initial position on source plane
@@ -40,10 +39,9 @@ __device__ void initializeDirection(PerRayData<T> *prd, const T power) {
 //   initializeDirection<T>(prd, power);
 // }
 
-template <typename T, typename LaunchParams>
-__device__ void initializeRayRandom(PerRayData<T> *prd,
-                                    LaunchParams *launchParams, const T power,
-                                    uint3 launchIdx) {
+template <typename LaunchParams>
+__device__ void initializeRayRandom(PerRayData *prd, LaunchParams *launchParams,
+                                    const float power, uint3 launchIdx) {
   auto rx = getNextRand(&prd->RNGstate);
   auto ry = getNextRand(&prd->RNGstate);
   prd->pos.x =

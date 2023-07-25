@@ -79,19 +79,23 @@ public:
       launchParams.seed = gen(rd);
     }
 
-    int numPointsPerDim = static_cast<int>(
-        std::sqrt(static_cast<T>(launchParams.numElements)) + 1);
+    int numPointsPerDim =
+        static_cast<int>(std::sqrt(static_cast<T>(launchParams.numElements)));
 
     if (numberOfRaysFixed > 0) {
       numPointsPerDim = 1;
       numberOfRaysPerPoint = numberOfRaysFixed;
     }
 
-    if (numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint > (1 << 29)) {
-      utLog::getInstance().addError("Too many rays for single launch.").print();
+    numRays = numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint;
+    if (numRays > (1 << 29)) {
+
+      utLog::getInstance()
+          .addError("Too many rays for single launch: " +
+                    gdt::prettyDouble(numRays))
+          .print();
     }
 
-    numRays = numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint;
     // auto start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < particles.size(); i++) {
 

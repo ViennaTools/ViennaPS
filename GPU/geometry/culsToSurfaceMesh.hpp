@@ -30,7 +30,6 @@ class culsToSurfaceMesh {
   psSmartPointer<kdTreeType> kdTree{nullptr};
 
   const MeshNumType epsilon;
-  static constexpr double wrappingLayerEpsilon = 1e-4;
 
 public:
   culsToSurfaceMesh(double eps = 1e-12) : epsilon(eps) {}
@@ -117,6 +116,7 @@ public:
     lsInternal::lsMarchingCubes marchingCubes;
 
     std::vector<std::array<MeshNumType, 3>> triangleCenters;
+    std::vector<std::array<MeshNumType, 3>> normals;
     const bool buildKdTreeFlag = kdTree != nullptr;
 
     // iterate over all active surface points
@@ -220,25 +220,40 @@ public:
         }
 
         if (!triangleMisformed(nod_numbers)) {
-          mesh->insertNextElement(nod_numbers); // insert new surface element
-          if (buildKdTreeFlag) {
-            triangleCenters.push_back(
-                {static_cast<LsNumType>(mesh->nodes[nod_numbers[0]][0] +
-                                        mesh->nodes[nod_numbers[1]][0] +
-                                        mesh->nodes[nod_numbers[2]][0]) /
-                     static_cast<LsNumType>(3.),
-                 static_cast<LsNumType>(mesh->nodes[nod_numbers[0]][1] +
-                                        mesh->nodes[nod_numbers[1]][1] +
-                                        mesh->nodes[nod_numbers[2]][1]) /
-                     static_cast<LsNumType>(3.),
-                 static_cast<LsNumType>(mesh->nodes[nod_numbers[0]][2] +
-                                        mesh->nodes[nod_numbers[1]][2] +
-                                        mesh->nodes[nod_numbers[2]][2]) /
-                     static_cast<LsNumType>(3.)});
+          auto normal = calculateNormal(mesh->nodes[nod_numbers[0]],
+                                        mesh->nodes[nod_numbers[1]],
+                                        mesh->nodes[nod_numbers[2]]);
+          NumericType norm =
+              std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] +
+                        normal[2] * normal[2]);
+          if (norm > gridDelta * gridDelta * 1e-4) {
+            mesh->insertNextElement(nod_numbers); // insert new surface element
+            for (int d = 0; d < D; d++) {
+              normal[d] /= norm;
+            }
+            normals.push_back(normal);
+
+            if (buildKdTreeFlag) {
+              triangleCenters.push_back(
+                  {static_cast<LsNumType>(mesh->nodes[nod_numbers[0]][0] +
+                                          mesh->nodes[nod_numbers[1]][0] +
+                                          mesh->nodes[nod_numbers[2]][0]) /
+                       static_cast<LsNumType>(3.),
+                   static_cast<LsNumType>(mesh->nodes[nod_numbers[0]][1] +
+                                          mesh->nodes[nod_numbers[1]][1] +
+                                          mesh->nodes[nod_numbers[2]][1]) /
+                       static_cast<LsNumType>(3.),
+                   static_cast<LsNumType>(mesh->nodes[nod_numbers[0]][2] +
+                                          mesh->nodes[nod_numbers[1]][2] +
+                                          mesh->nodes[nod_numbers[2]][2]) /
+                       static_cast<LsNumType>(3.)});
+            }
           }
         }
       }
     }
+
+    mesh->cellData.insertNextVectorData(normals, "Normals");
 
     if (buildKdTreeFlag) {
       kdTree->setPoints(triangleCenters);
@@ -295,7 +310,8 @@ public:
     return false;
   }
 
-  static bool triangleMisformed(const std::array<unsigned, D> &nod_numbers) {
+  static bool inline triangleMisformed(
+      const std::array<unsigned, D> &nod_numbers) {
     if constexpr (D == 3) {
       return nod_numbers[0] == nod_numbers[1] ||
              nod_numbers[0] == nod_numbers[2] ||
@@ -303,5 +319,17 @@ public:
     } else {
       return nod_numbers[0] == nod_numbers[1];
     }
+  }
+
+  std::array<MeshNumType, 3>
+  calculateNormal(const std::array<MeshNumType, 3> &nodeA,
+                  const std::array<MeshNumType, 3> &nodeB,
+                  const std::array<MeshNumType, 3> &nodeC) {
+    std::array<MeshNumType, 3> U{nodeB[0] - nodeA[0], nodeB[1] - nodeA[1],
+                                 nodeB[2] - nodeA[2]};
+    std::array<MeshNumType, 3> V{nodeC[0] - nodeA[0], nodeC[1] - nodeA[1],
+                                 nodeC[2] - nodeA[2]};
+    return {U[1] * V[2] - U[2] * V[1], U[2] * V[0] - U[0] * V[2],
+            U[0] * V[1] - U[1] * V[0]};
   }
 };

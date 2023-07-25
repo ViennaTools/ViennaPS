@@ -15,7 +15,7 @@ enum class ProcessType {
   NONE,
   SF6O2ETCHING,
   FLUOROCARBONETCHING,
-  DEPOSITION,
+  SIMPLEDEPOSITION,
   SPHEREDISTRIBUTION,
   BOXDISTRIBUTION,
   DIRECTIONALETCHING,
@@ -72,6 +72,7 @@ struct ApplicationParameters {
   NumericType processTime = 1;
   int raysPerPoint = 3000;
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
+  NumericType smoothFlux = 1.;
   // Plasma etching
   // fluxes in in (1e15 atoms/cm³)
   NumericType etchantFlux = 1.8e3;
@@ -79,6 +80,7 @@ struct ApplicationParameters {
   NumericType ionFlux = 12.;
   NumericType ionEnergy = 100;     // eV
   NumericType sigmaIonEnergy = 10; // eV
+  NumericType ionExponent = 100.;
   NumericType A_O = 3.;
   // Fluorocarbon etching
   NumericType temperature = 300; // K
@@ -119,6 +121,7 @@ struct ApplicationParameters {
     oxygenFlux = 1e18;
     ionFlux = 2e16;
     ionEnergy = 100;
+    ionExponent = 100.;
     sigmaIonEnergy = 10;
     A_O = 3.;
     rate = 1.;
@@ -135,6 +138,7 @@ struct ApplicationParameters {
     layerHeight = 1.;
     substrateHeight = 1.;
     etchStopDepth = std::numeric_limits<NumericType>::lowest();
+    smoothFlux = 0.5;
 
     if (all) {
       logLevel = 2;

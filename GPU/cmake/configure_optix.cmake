@@ -35,7 +35,7 @@ find_program(BIN2C bin2c DOC "Path to the cuda-sdk bin2c executable.")
 # constant. 4) assign the name of the intermediary .o file to the cmake variable 'output_var', which
 # can then be added to cmake targets.
 macro(cuda_compile_and_embed output_var cuda_file)
-  include_directories(${VIENNAPSCU_INCLUDE_DIRS})
+  include_directories(${VIENNAPSCU_INCLUDE_DIRS} ${VIENNAPS_INCLUDE_DIRS})
   set(c_var_name ${output_var})
   cuda_compile_ptx(
     ptx_files

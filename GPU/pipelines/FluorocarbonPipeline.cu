@@ -53,8 +53,8 @@ __constant__ float gamma_pe = 0.6;
 extern "C" __global__ void __closesthit__ion()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<float> *prd =
-      (PerRayData<float> *)getPRD<PerRayData<float>>();
+  PerRayData *prd =
+      (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary)
   {
@@ -123,7 +123,7 @@ extern "C" __global__ void __closesthit__ion()
       prd->energy = NewEnergy;
 
       // coned cosine reflection
-      specularReflection(prd);
+      specularReflection(prd, geomNormal);
       float avgReflAngle =
           max(M_PI_2f - incAngle, minAvgConeAngle);
 
@@ -199,7 +199,7 @@ extern "C" __global__ void __closesthit__ion()
 
 extern "C" __global__ void __miss__ion()
 {
-  getPRD<PerRayData<float>>()->rayWeight = 0.f;
+  getPRD<PerRayData>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__ion()
@@ -210,7 +210,7 @@ extern "C" __global__ void __raygen__ion()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<float> prd;
+  PerRayData prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
@@ -250,8 +250,8 @@ extern "C" __global__ void __raygen__ion()
 extern "C" __global__ void __closesthit__etchant()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<float> *prd =
-      (PerRayData<float> *)getPRD<PerRayData<float>>();
+  PerRayData *prd =
+      (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary)
   {
@@ -280,7 +280,7 @@ extern "C" __global__ void __closesthit__etchant()
 
 extern "C" __global__ void __miss__etchant()
 {
-  getPRD<PerRayData<float>>()->rayWeight = 0.f;
+  getPRD<PerRayData>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__etchant()
@@ -291,7 +291,7 @@ extern "C" __global__ void __raygen__etchant()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<float> prd;
+  PerRayData prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
@@ -326,8 +326,8 @@ extern "C" __global__ void __raygen__etchant()
 extern "C" __global__ void __closesthit__polymer()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<float> *prd =
-      (PerRayData<float> *)getPRD<PerRayData<float>>();
+  PerRayData *prd =
+      (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary)
   {
@@ -358,7 +358,7 @@ extern "C" __global__ void __closesthit__polymer()
 
 extern "C" __global__ void __miss__polymer()
 {
-  getPRD<PerRayData<float>>()->rayWeight = 0.f;
+  getPRD<PerRayData>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__polymer()
@@ -369,7 +369,7 @@ extern "C" __global__ void __raygen__polymer()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<float> prd;
+  PerRayData prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
@@ -404,8 +404,8 @@ extern "C" __global__ void __raygen__polymer()
 extern "C" __global__ void __closesthit__etchantPoly()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  PerRayData<float> *prd =
-      (PerRayData<float> *)getPRD<PerRayData<float>>();
+  PerRayData *prd =
+      (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary)
   {
@@ -434,7 +434,7 @@ extern "C" __global__ void __closesthit__etchantPoly()
 
 extern "C" __global__ void __miss__etchantPoly()
 {
-  getPRD<PerRayData<float>>()->rayWeight = 0.f;
+  getPRD<PerRayData>()->rayWeight = 0.f;
 }
 
 extern "C" __global__ void __raygen__etchantPoly()
@@ -445,7 +445,7 @@ extern "C" __global__ void __raygen__etchantPoly()
       idx.x + idx.y * dims.x + idx.z * dims.x * dims.y;
 
   // per-ray data
-  PerRayData<float> prd;
+  PerRayData prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
   initializeRNGState(&prd, linearLaunchIndex, params.seed);
