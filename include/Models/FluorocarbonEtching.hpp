@@ -245,7 +245,8 @@ public:
     assert(E >= 0 && "Negative energy ion");
 
     const auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
-    const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
+    const double angle =
+        std::acos(std::max(std::min(cosTheta, NumericType(1)), NumericType(0)));
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 4 && "Error in calculating cos theta");
@@ -295,7 +296,7 @@ public:
     }
     // Gaussian distribution around the Eref_peak scaled by the particle energy
     NumericType NewEnergy;
-    std::normal_distribution<NumericType> normalDist{Eref_peak * E, 0.1 * E};
+    std::normal_distribution<NumericType> normalDist(Eref_peak * E, 0.1 * E);
     do {
       NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);
@@ -401,11 +402,11 @@ public:
 
     NumericType Seff;
     if (psMaterialMap::isMaterial(materialId, psMaterial::Mask)) {
-      Seff = beta_e_mask * std::max(1 - phi_e - phi_p, 0.);
+      Seff = beta_e_mask * std::max(1. - phi_e - phi_p, 0.);
     } else if (psMaterialMap::isMaterial(materialId, psMaterial::Polymer)) {
       Seff = beta_pe * std::max(1. - phi_pe, 0.);
     } else {
-      Seff = beta_e * std::max(1 - phi_e - phi_p, 0.);
+      Seff = beta_e * std::max(1. - phi_e - phi_p, 0.);
     }
 
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};

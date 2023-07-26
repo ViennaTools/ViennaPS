@@ -209,8 +209,8 @@ private:
           psUtils::Item{"meanIonEnergy", params->ionEnergy},
           psUtils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
           psUtils::Item{"etchantFlux", params->etchantFlux},
-          psUtils::Item{"oxygenFlux", params->oxygenFlux},
-          psUtils::Item{"temperature", params->temperature},
+          psUtils::Item{"polyFlux", params->oxygenFlux},
+          psUtils::Item{"deltaP", params->deltaP},
           psUtils::Item{"smoothFlux", params->smoothFlux},
           psUtils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "SphereDistribution") {

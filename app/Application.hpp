@@ -23,10 +23,12 @@
 #include <Interrupt.hpp>
 
 #include <DirectionalEtching.hpp>
+#include <FluorocarbonEtching.hpp>
 #include <GeometricDistributionModels.hpp>
 #include <IsotropicProcess.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
+#include <TEOSDeposition.hpp>
 #include <WetEtching.hpp>
 
 template <int D> class Application {
@@ -41,7 +43,7 @@ public:
 
   void run() {
     if (clArgC < 2) {
-      std::cout << "No input file specified. " << std::endl;
+      psLogger::getInstance().addError("No input file specified.").print();
       return;
     }
 
@@ -49,7 +51,7 @@ public:
     inputFile.open(clArgV[1], std::fstream::in);
 
     if (!inputFile.is_open()) {
-      std::cout << "Could not open input file." << std::endl;
+      psLogger::getInstance().addError("Could not open input file.").print();
       return;
     }
 
@@ -124,6 +126,27 @@ protected:
   }
 
   virtual void
+  runTEOSDeposition(psSmartPointer<psDomain<NumericType, D>> processGeometry,
+                    psSmartPointer<ApplicationParameters> processParams) {
+    // copy top layer for deposition
+    processGeometry->duplicateTopLevelSet(processParams->material);
+
+    auto model = psSmartPointer<TEOSDeposition<NumericType, D>>::New(
+        processParams->stickingP1, processParams->rateP1,
+        processParams->orderP1, processParams->stickingP2,
+        processParams->rateP2, processParams->orderP2);
+
+    psProcess<NumericType, D> process;
+    process.setDomain(processGeometry);
+    process.setProcessModel(model);
+    process.setSmoothFlux(processParams->smoothFlux);
+    process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
+    process.setProcessDuration(processParams->processTime);
+    process.setIntegrationScheme(params->integrationScheme);
+    process.apply();
+  }
+
+  virtual void
   runSF6O2Etching(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                   psSmartPointer<ApplicationParameters> processParams) {
     auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
@@ -146,7 +169,21 @@ protected:
   virtual void runFluorocarbonEtching(
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
-    std::cout << "NOT IMPLEMENTED" << std::endl;
+    auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
+        processParams->ionFlux, processParams->etchantFlux,
+        processParams->oxygenFlux, processParams->ionEnergy,
+        processParams->sigmaIonEnergy, processParams->ionExponent,
+        processParams->deltaP);
+
+    psProcess<NumericType, D> process;
+    process.setDomain(processGeometry);
+    process.setProcessModel(model);
+    process.setMaxCoverageInitIterations(10);
+    process.setSmoothFlux(processParams->smoothFlux);
+    process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
+    process.setProcessDuration(processParams->processTime);
+    process.setIntegrationScheme(params->integrationScheme);
+    process.apply();
   }
 
   virtual void runSphereDistribution(
@@ -229,8 +266,9 @@ protected:
           lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
       process.apply();
     } else {
-      std::cout << "Warning: Wet etch model only implemented in 3D."
-                << std::endl;
+      psLogger::getInstance()
+          .addError("Warning: Wet etch model only implemented in 3D.")
+          .print();
     }
   }
 
@@ -343,8 +381,9 @@ private:
                                   params->maskHeight, params->maskInvert);
         geometry->insertNextLevelSetAsMaterial(layer, params->material);
       } else {
-        std::cout << "Warning: Can only parse GDS geometries in 3D application."
-                  << std::endl;
+        psLogger::getInstance()
+            .addError("Can only parse GDS geometries in 3D application.")
+            .print();
       }
       break;
     }
@@ -380,7 +419,9 @@ private:
 
   void runProcess() {
     if (geometry->getLevelSets()->empty()) {
-      std::cout << "Cannot run process on empty geometry." << std::endl;
+      psLogger::getInstance()
+          .addError("Cannot run process on empty geometry.")
+          .print();
       return;
     }
 
@@ -416,7 +457,7 @@ private:
                 << "\n\tOxygen flux: " << params->oxygenFlux
                 << "\n\tIon flux: " << params->ionFlux
                 << "\n\tIon energy: " << params->ionEnergy
-                << "\n\tTemperature: " << params->temperature << "\n\tUsing "
+                << "\n\tDelta P: " << params->deltaP << "\n\tUsing "
                 << params->raysPerPoint << " rays per source grid point\n\n";
       runFluorocarbonEtching(geometry, params);
       break;
@@ -463,8 +504,9 @@ private:
     }
 
     case ProcessType::NONE:
-      std::cout << "Process model could not be parsed. Skipping line."
-                << std::endl;
+      psLogger::getInstance()
+          .addWarning("Process model could not be parsed. Skipping line.")
+          .print();
       break;
 
     default:
@@ -485,12 +527,6 @@ private:
     std::cout << "\tOut file name: " << params->fileName << ".vtp\n\n";
     if (params->out == OutputType::SURFACE) {
       std::cout << "\tWriting surface ...\n";
-      // auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-      // lsToSurfaceMesh<NumericType, D>(geometry->getLevelSets()->back(), mesh)
-      //     .apply();
-      // culsRefineMesh<NumericType>(mesh, geometry->getGrid().getGridDelta())
-      //     .apply();
-      // psVTKWriter<NumericType>(mesh, params->fileName + ".vtp").apply();
       geometry->printSurface(params->fileName + ".vtp");
     } else {
       std::cout << "Writing volume ...\n";
@@ -499,7 +535,8 @@ private:
     }
   }
 
-  std::array<NumericType, 3> getDirection(const std::string &directionString) {
+  static std::array<NumericType, 3>
+  getDirection(const std::string &directionString) {
     std::array<NumericType, 3> direction = {0};
 
     if (directionString == "negZ") {
@@ -521,15 +558,19 @@ private:
     } else if (directionString == "posX") {
       direction[0] = 1.;
     } else {
-      std::cout << "Invalid direction: " << directionString << std::endl;
+      psLogger::getInstance()
+          .addError("Invalid direction: " + directionString)
+          .print();
     }
 
     return direction;
   }
 
-  std::string boolString(const int in) { return in == 0 ? "false" : "true"; }
+  static inline std::string boolString(const int in) {
+    return in == 0 ? "false" : "true";
+  }
 
-  std::string materialString(const psMaterial material) {
+  static std::string materialString(const psMaterial material) {
     switch (material) {
     case psMaterial::Undefined:
       return "Undefined";

@@ -83,11 +83,18 @@ struct ApplicationParameters {
   NumericType ionExponent = 100.;
   NumericType A_O = 3.;
   // Fluorocarbon etching
-  NumericType temperature = 300; // K
+  NumericType deltaP = 0;
   // Deposition
   NumericType rate = 1.;
   NumericType sticking = 1.;
   NumericType cosinePower = 1.;
+  // TEOS Deposition
+  NumericType rateP1 = 1.;
+  NumericType stickingP1 = 1.;
+  NumericType orderP1 = 1.;
+  NumericType rateP2 = 0.;
+  NumericType stickingP2 = 1.;
+  NumericType orderP2 = 1.;
   // Directional etching
   NumericType directionalRate = 1.;
   NumericType isotropicRate = 0.;
@@ -124,6 +131,7 @@ struct ApplicationParameters {
     ionExponent = 100.;
     sigmaIonEnergy = 10;
     A_O = 3.;
+    deltaP = 0.;
     rate = 1.;
     sticking = 1.;
     cosinePower = 1.;
@@ -138,7 +146,13 @@ struct ApplicationParameters {
     layerHeight = 1.;
     substrateHeight = 1.;
     etchStopDepth = std::numeric_limits<NumericType>::lowest();
-    smoothFlux = 0.5;
+    smoothFlux = 1.;
+    rateP1 = 1.;
+    stickingP1 = 1.;
+    orderP1 = 1.;
+    rateP2 = 0.;
+    stickingP2 = 1.;
+    orderP2 = 1.;
 
     if (all) {
       logLevel = 2;
