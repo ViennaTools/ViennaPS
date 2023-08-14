@@ -439,12 +439,40 @@ private:
       break;
     }
 
+    case ProcessType::TEOSDEPOSITION: {
+      if (params->rateP2 != 0.) {
+        std::cout << "Multi particle TEOS deposition"
+                  << "\n\tP1 rate: " << params->rateP1
+                  << "\n\tP1 sticking probability: " << params->stickingP1
+                  << "\n\tP2 reaction order: " << params->orderP1
+                  << "\n\tP2 rate: " << params->rateP2
+                  << "\n\tP2 sticking probability: " << params->stickingP2
+                  << "\n\tP2 reaction order: " << params->orderP2
+                  << "\n\tTime: " << params->processTime
+                  << "\n\tMaterial: " << materialString(params->material)
+                  << "\n\tUsing " << params->raysPerPoint
+                  << " rays per source grid point\n\n";
+      } else {
+        std::cout << "Single particle TEOS deposition\n\tRate: "
+                  << params->rateP1
+                  << "\n\tSticking probability: " << params->stickingP1
+                  << "\n\tReaction order: " << params->orderP1
+                  << "\n\tTime: " << params->processTime
+                  << "\n\tMaterial: " << materialString(params->material)
+                  << "\n\tUsing " << params->raysPerPoint
+                  << " rays per source grid point\n\n";
+      }
+      runTEOSDeposition(geometry, params);
+      break;
+    }
+
     case ProcessType::SF6O2ETCHING: {
       std::cout << "SF6O2 etching\n\tTime: " << params->processTime
                 << "\n\tEtchant flux: " << params->etchantFlux
                 << "\n\tOxygen flux: " << params->oxygenFlux
                 << "\n\tIon flux: " << params->ionFlux
                 << "\n\tIon energy: " << params->ionEnergy
+                << "\n\tIon exponent: " << params->ionExponent
                 << "\n\tA_O: " << params->A_O << "\n\tUsing "
                 << params->raysPerPoint << " rays per source grid point\n\n";
       runSF6O2Etching(geometry, params);

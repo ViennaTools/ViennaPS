@@ -16,6 +16,7 @@ enum class ProcessType {
   SF6O2ETCHING,
   FLUOROCARBONETCHING,
   SIMPLEDEPOSITION,
+  TEOSDEPOSITION,
   SPHEREDISTRIBUTION,
   BOXDISTRIBUTION,
   DIRECTIONALETCHING,
@@ -124,9 +125,9 @@ struct ApplicationParameters {
     maskHeight = 0.1;
     processTime = 1;
     raysPerPoint = 3000;
-    etchantFlux = 4.5e16;
-    oxygenFlux = 1e18;
-    ionFlux = 2e16;
+    etchantFlux = 100;
+    oxygenFlux = 100;
+    ionFlux = 100;
     ionEnergy = 100;
     ionExponent = 100.;
     sigmaIonEnergy = 10;
