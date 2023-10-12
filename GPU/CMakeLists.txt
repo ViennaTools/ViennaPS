@@ -93,6 +93,8 @@ target_link_libraries(ViennaPS_GPU  ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIE
 
 add_dependencies(buildGPUApplication ViennaPS_GPU)
 
+### BENCHMARK ###
+
 add_executable(ViennaPS_GPU_Benchmark ${embedded_deposition_pipeline}
                                       ${PROJECT_SOURCE_DIR}/benchmark/GPU_Benchmark.cpp)
 
@@ -102,4 +104,22 @@ target_include_directories(
 
 target_link_libraries(ViennaPS_GPU_Benchmark ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
 
-# add_dependencies(buildGPUBenchmark ViennaPS_GPU_Benchmark)
+### EXAMPLES ###
+
+add_custom_target(buildGPUExamples)
+
+add_executable(GPU_Trench ${embedded_SF6O2_pipeline}
+                                      ${PROJECT_SOURCE_DIR}/examples/trench.cpp)
+target_include_directories(
+  GPU_Trench PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}
+                                ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
+target_link_libraries(GPU_Trench ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
+add_dependencies(buildGPUExamples GPU_Trench)
+
+add_executable(GPU_Hole ${embedded_SF6O2_pipeline}
+                                      ${PROJECT_SOURCE_DIR}/examples/hole.cpp)
+target_include_directories(
+  GPU_Hole PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}
+                                ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
+target_link_libraries(GPU_Hole ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
+add_dependencies(buildGPUExamples GPU_Hole)

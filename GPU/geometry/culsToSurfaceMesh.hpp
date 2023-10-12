@@ -223,7 +223,7 @@ public:
           auto normal = calculateNormal(mesh->nodes[nod_numbers[0]],
                                         mesh->nodes[nod_numbers[1]],
                                         mesh->nodes[nod_numbers[2]]);
-          NumericType norm =
+          LsNumType norm =
               std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] +
                         normal[2] * normal[2]);
           if (norm > gridDelta * gridDelta * 1e-4) {
