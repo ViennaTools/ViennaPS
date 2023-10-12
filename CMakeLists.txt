@@ -39,11 +39,6 @@ include(ExternalProject)
 add_custom_target(buildDependencies)
 add_subdirectory(external/upstream)
 
-option(VIENNAPS_VERBOSE "Get verbose output and intermediate results." ON)
-if(VIENNAPS_VERBOSE)
-  add_compile_definitions(VIENNAPS_VERBOSE)
-endif(VIENNAPS_VERBOSE)
-
 # install config files locations are provided by GNUInstallDirs
 add_library(${PROJECT_NAME} INTERFACE)
 

@@ -54,13 +54,22 @@ public:
 
 private:
   void parseInit(std::istringstream &stream) {
+    unsigned integrationSchemeNum = 0;
     auto config = parseLineStream(stream);
     psUtils::AssignItems(
         config, psUtils::Item{"xExtent", params->xExtent},
         psUtils::Item{"yExtent", params->yExtent},
         psUtils::Item{"resolution", params->gridDelta},
-        psUtils::Item{"printIntermediate", params->printIntermediate},
-        psUtils::Item{"periodic", params->periodicBoundary});
+        psUtils::Item{"printTimeInterval", params->printTimeInterval},
+        psUtils::Item{"periodic", params->periodicBoundary},
+        psUtils::Item{"integrationScheme", integrationSchemeNum});
+    if (integrationSchemeNum > 9) {
+      std::cout << "Invalid integration scheme number. Using default."
+                << std::endl;
+      integrationSchemeNum = 0;
+    }
+    params->integrationScheme =
+        static_cast<lsIntegrationSchemeEnum>(integrationSchemeNum);
   }
 
   void parseGeometry(std::istringstream &stream) {
@@ -90,7 +99,6 @@ private:
                            psUtils::Item{"layer", params->layers},
                            psUtils::Item{"zPos", params->maskZPos},
                            psUtils::Item{"maskHeight", params->maskHeight},
-                           psUtils::Item{"pointOrder", params->pointOrder},
                            psUtils::Item{"invert", params->maskInvert},
                            psUtils::Item{"xPadding", params->xPadding},
                            psUtils::Item{"yPadding", params->yPadding});
@@ -144,6 +152,11 @@ private:
           psUtils::Item{"isotropicRate", params->isotropicRate},
           psUtils::Item{"time", params->processTime},
           psUtils::Item{"maskId", params->maskId});
+    } else if (model == "Isotropic") {
+      params->processType = ProcessType::ISOTROPIC;
+      psUtils::AssignItems(config, psUtils::Item{"rate", params->rate},
+                           psUtils::Item{"time", params->processTime},
+                           psUtils::Item{"maskId", params->maskId});
     } else if (model == "WetEtching") {
       params->processType = ProcessType::WETETCHING;
       psUtils::AssignItems(config, psUtils::Item{"time", params->processTime},

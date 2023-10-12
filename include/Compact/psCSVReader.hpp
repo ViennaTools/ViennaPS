@@ -10,29 +10,25 @@
 #include <tuple>
 #include <vector>
 
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 #include <psUtils.hpp>
 
 // Simple class for reading CSV files
-template <class NumericType, int NumCols, bool continueOnError = false>
-class psCSVReader {
+template <class NumericType> class psCSVReader {
   // Regex to find trailing and leading whitespaces
   const std::regex wsRegex = std::regex("^ +| +$|( ) +");
 
   std::string filename;
-  int offset = 0;
   char delimiter = ',';
+  int numCols = 0;
 
 public:
   psCSVReader() {}
-  psCSVReader(std::string passedFilename, int passedOffset = 0,
-              char passedDelimiter = ',')
-      : filename(passedFilename), offset(passedOffset),
-        delimiter(passedDelimiter) {}
+  psCSVReader(std::string passedFilename, char passedDelimiter = ',')
+      : filename(passedFilename), delimiter(passedDelimiter) {}
 
   void setFilename(std::string passedFilename) { filename = passedFilename; }
-
-  void setOffset(int passedOffset) { offset = passedOffset; }
 
   void setDelimiter(char passedDelimiter) { delimiter = passedDelimiter; }
 
@@ -61,17 +57,18 @@ public:
         }
       }
     } else {
-      std::cout << "Couldn't open file '" << filename << "'\n";
-      return std::nullopt;
+      psLogger::getInstance()
+          .addWarning("Couldn't open file '" + filename + "'")
+          .print();
+      return {};
     }
     return {header};
   }
 
-  psSmartPointer<std::vector<std::array<NumericType, NumCols>>> readContent() {
+  std::optional<std::vector<std::vector<NumericType>>> readContent() {
     std::ifstream file(filename);
     if (file.is_open()) {
-      auto data =
-          psSmartPointer<std::vector<std::array<NumericType, NumCols>>>::New();
+      auto data = std::vector<std::vector<NumericType>>();
 
       std::string line;
       int lineCount = 0;
@@ -79,8 +76,6 @@ public:
       // Iterate over each line
       while (std::getline(file, line)) {
         ++lineCount;
-        if (lineCount <= offset)
-          continue;
 
         // Remove trailing and leading whitespaces
         line = std::regex_replace(line, wsRegex, "$1");
@@ -90,34 +85,44 @@ public:
 
         std::istringstream iss(line);
         std::string tmp;
-        std::array<NumericType, NumCols> a{0};
+        std::vector<NumericType> a;
         int i = 0;
-        while (std::getline(iss, tmp, delimiter) && i < NumCols) {
-          auto v = psUtils::safeConvert<NumericType>(tmp);
-          if (v.has_value())
-            a[i] = v.value();
+        while (std::getline(iss, tmp, delimiter)) {
+          auto valueOpt = psUtils::safeConvert<NumericType>(tmp);
+          if (valueOpt)
+            a.push_back(valueOpt.value());
           else {
-            std::cout << "Error while reading line " << lineCount - 1 << " in '"
-                      << filename << "'\n";
-            if constexpr (!continueOnError) {
-              return nullptr;
-            }
+            psLogger::getInstance()
+                .addWarning("Error while reading line " +
+                            std::to_string(lineCount - 1) + " in '" + filename +
+                            "'")
+                .print();
+            return {};
           }
           ++i;
         }
-        if (i != NumCols) {
-          std::cout << "Invalid number of columns in line " << lineCount - 1
-                    << " in '" << filename << "'\n";
-          if constexpr (!continueOnError)
-            return nullptr;
+
+        // The first row of actual data determins the data dimension
+        if (numCols == 0)
+          numCols = i;
+
+        if (i != numCols) {
+          psLogger::getInstance()
+              .addWarning("Invalid number of columns in line " +
+                          std::to_string(lineCount - 1) + " in '" + filename +
+                          "'")
+              .print();
+          return {};
         }
-        data->push_back(a);
+        data.push_back(a);
       }
       file.close();
       return data;
     } else {
-      std::cout << "Couldn't open file '" << filename << "'\n";
-      return nullptr;
+      psLogger::getInstance()
+          .addWarning("Couldn't open file '" + filename + "'")
+          .print();
+      return {};
     }
   }
 };

@@ -37,33 +37,29 @@ public:
     }
   }
 
-  NumericType getDissipationAlpha(
-      int /*direction*/, int /*material*/,
-      const std::array<NumericType, 3> & /*centralDifferences*/) {
-    return -1;
-  }
+  // the translation field should be disabled when using a surface model
+  // which only depends on an analytic velocity field
+  int getTranslationFieldOptions() const override { return 0; }
 };
 
 template <typename NumericType, int D>
 class DirectionalEtchingSurfaceModel : public psSurfaceModel<NumericType> {
 public:
-  psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIds) override {
+  psSmartPointer<std::vector<NumericType>> calculateVelocities(
+      psSmartPointer<psPointData<NumericType>> Rates,
+      const std::vector<std::array<NumericType, 3>> &coordinates,
+      const std::vector<NumericType> &materialIds) override {
     return nullptr;
   }
 };
 
-template <typename NumericType, int D> class DirectionalEtching {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
+template <typename NumericType, int D>
+class DirectionalEtching : public psProcessModel<NumericType, D> {
 public:
   DirectionalEtching(const std::array<NumericType, 3> direction,
                      const NumericType directionalVelocity = 1.,
                      const NumericType isotropicVelocity = 0.,
                      const int maskId = 0) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     // surface model
     auto surfModel =
         psSmartPointer<DirectionalEtchingSurfaceModel<NumericType, D>>::New();
@@ -73,12 +69,8 @@ public:
         psSmartPointer<DirectionalEtchVelocityField<NumericType, D>>::New(
             direction, directionalVelocity, isotropicVelocity, maskId);
 
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("DirectionalEtching");
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("DirectionalEtching");
   }
 };

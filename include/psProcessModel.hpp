@@ -15,8 +15,9 @@ private:
       std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
+  std::vector<int> particleLogSize;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psAdvectionCalback<NumericType, D>> advectionCallback =
+  psSmartPointer<psAdvectionCallback<NumericType, D>> advectionCallback =
       nullptr;
   psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
@@ -29,7 +30,7 @@ public:
   virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psAdvectionCalback<NumericType, D>>
+  virtual psSmartPointer<psAdvectionCallback<NumericType, D>>
   getAdvectionCallback() {
     return advectionCallback;
   }
@@ -44,12 +45,18 @@ public:
 
   std::string getProcessName() { return processName; }
 
+  int getParticleLogSize(std::size_t particleIdx) {
+    return particleLogSize[particleIdx];
+  }
+
   template <typename ParticleType>
-  void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle) {
+  void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle,
+                              const int dataLogSize = 0) {
     if (particles == nullptr) {
       particles = psSmartPointer<ParticleTypeList>::New();
     }
     particles->push_back(passedParticle->clone());
+    particleLogSize.push_back(dataLogSize);
   }
 
   template <typename SurfaceModelType>
@@ -62,7 +69,7 @@ public:
   void setAdvectionCallback(
       psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
     advectionCallback =
-        std::dynamic_pointer_cast<psAdvectionCalback<NumericType, D>>(
+        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, D>>(
             passedAdvectionCallback);
   }
 

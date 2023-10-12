@@ -25,8 +25,8 @@ All parameters which are parsed additional to a command are described below. For
   <dd>width of domain in y-direction (this is ignored in 2D mode, numeric value, default: 1)</dd>
   <dt>resolution</dt>
   <dd>distance between grid points in the domain (numeric value, default: 0.02)</dd>
-  <dt>printIntermediate</dt>
-  <dd>output intermediate disk meshes for each process step (boolean, default: 0)</dd>
+  <dt>printTimeInterval</dt>
+  <dd>minimum time between outputing intermediate disk meshes for each process step. If this value is negative, no intermediate meshes will be printed (numeric value, default: 0)</dd>
   <dt>periodic</dt>
   <dd>use periodic boundary conditions (boolean, default: 0)</dd>
 </dl>
@@ -94,8 +94,6 @@ All parameters which are parsed additional to a command are described below. For
   <dd>padding on the boundary of the mask in x-direction (numeric value, default: 0)</dd> 
   <dt>yPadding</dt>
   <dd>padding on the boundary of the mask in y-direction (numeric value, default: 0)</dd> 
-  <dt>pointOrder</dt>
-  <dd>store points order in GDS file. Can vary depending on what GDS editor is used to create to file. If geometry can not be read (timeout error), try changing the value to 1 (boolean, default: 0)</dd>
 </dl>
 
 ---
@@ -163,6 +161,17 @@ All parameters which are parsed additional to a command are described below. For
   <dd>etching rate in primal direction (numeric value, default: 1)</dd>
   <dt>isotropicRate</dt>
   <dd>isotropic etching rate (numeric value, default: 0)</dd>
+  <dt>maskId</dt>
+  <dd>ID of mask material (integer value, default: 0)</dd> 
+</dl>
+
+---
+**PROCESS Isotropic**
+<dl>
+  <dt>time</dt>
+  <dd>process time (numeric value, default: 1)</dd>
+  <dt>rate</dt>
+  <dd>process rate, can be negative for etching (numeric value, default: 0) 
   <dt>maskId</dt>
   <dd>ID of mask material (integer value, default: 0)</dd> 
 </dl>

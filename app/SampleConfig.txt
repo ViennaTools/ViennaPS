@@ -1,4 +1,4 @@
-INIT xExtent=1 yExtent=1 resolution=0.01 printIntermediate=0 periodic=0
+INIT xExtent=1 yExtent=1 resolution=0.01 printTimeInterval=-1 periodic=0
 GEOMETRY Trench width=0.4 depth=0.5 zPos=0.5 tapering=10
 OUTPUT initial
 PROCESS SphereDistribution radius=0.1

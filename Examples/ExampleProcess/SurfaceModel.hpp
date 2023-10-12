@@ -20,9 +20,10 @@ public:
     processParams->insertNextScalar(0., "processParameter");
   }
 
-  psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIds) override {
+  psSmartPointer<std::vector<NumericType>> calculateVelocities(
+      psSmartPointer<psPointData<NumericType>> Rates,
+      const std::vector<std::array<NumericType, 3>> &coordinates,
+      const std::vector<NumericType> &materialIds) override {
     // use coverages and rates here to calculate the velocity here
     return psSmartPointer<std::vector<NumericType>>::New(
         *Rates->getScalarData("particleRate"));

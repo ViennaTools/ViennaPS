@@ -19,11 +19,9 @@ public:
     int i = 0;
     for (auto ls : *domain->getLevelSets()) {
       visMesh.insertNextLevelSet(ls);
-      auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-      lsToSurfaceMesh<NumericType, D>(ls, mesh).apply();
-      psVTKWriter<NumericType>(mesh, "visMesh_" + std::to_string(i++) + ".vtp")
-          .apply();
     }
+    if (domain->getMaterialMap())
+      visMesh.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     visMesh.apply();
   }
 
@@ -35,5 +33,6 @@ public:
 
 private:
   psSmartPointer<psDomain<NumericType, D>> domain;
+  psSmartPointer<lsMaterialMap> materialMap;
   std::string fileName;
 };

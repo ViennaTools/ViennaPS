@@ -1,6 +1,5 @@
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
-#include <psPointValuesToLevelSet.hpp>
 #include <psProcess.hpp>
 #include <psToDiskMesh.hpp>
 #include <psVTKWriter.hpp>

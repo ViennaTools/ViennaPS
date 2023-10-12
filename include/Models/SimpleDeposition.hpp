@@ -12,30 +12,14 @@
 template <typename NumericType, int D>
 class SimpleDepositionSurfaceModel : public psSurfaceModel<NumericType> {
 public:
-  psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(psSmartPointer<psPointData<NumericType>> Rates,
-                      const std::vector<NumericType> &materialIds) override {
+  psSmartPointer<std::vector<NumericType>> calculateVelocities(
+      psSmartPointer<psPointData<NumericType>> Rates,
+      const std::vector<std::array<NumericType, 3>> &coordinates,
+      const std::vector<NumericType> &materialIds) override {
 
     const auto depoRate = Rates->getScalarData("depoRate");
     return psSmartPointer<std::vector<NumericType>>::New(*depoRate);
   }
-};
-
-template <class T>
-class SimpleDepositionVelocityField : public psVelocityField<T> {
-public:
-  T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int /*material*/,
-                      const std::array<T, 3> & /*normalVector*/,
-                      unsigned long pointID) override {
-    return velocities->at(pointID);
-  }
-
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
-    velocities = passedVelocities;
-  }
-
-private:
-  psSmartPointer<std::vector<T>> velocities = nullptr;
 };
 
 template <typename NumericType, int D>
@@ -54,7 +38,7 @@ public:
                         rayTracingData<NumericType> &localData,
                         const rayTracingData<NumericType> *globalData,
                         rayRNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight * stickingProbability;
+    localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -80,14 +64,11 @@ private:
   const NumericType sourcePower = 1.;
 };
 
-template <typename NumericType, int D> class SimpleDeposition {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
+template <typename NumericType, int D>
+class SimpleDeposition : public psProcessModel<NumericType, D> {
 public:
   SimpleDeposition(const NumericType stickingProbability = 0.1,
                    const NumericType sourceDistributionPower = 1.) {
-    processModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
-
     // particles
     auto depoParticle =
         std::make_unique<SimpleDepositionParticle<NumericType, D>>(
@@ -98,16 +79,11 @@ public:
         psSmartPointer<SimpleDepositionSurfaceModel<NumericType, D>>::New();
 
     // velocity field
-    auto velField =
-        psSmartPointer<SimpleDepositionVelocityField<NumericType>>::New();
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
 
-    processModel->setSurfaceModel(surfModel);
-    processModel->setVelocityField(velField);
-    processModel->setProcessName("SimpleDeposition");
-    processModel->insertNextParticleType(depoParticle);
-  }
-
-  psSmartPointer<psProcessModel<NumericType, D>> getProcessModel() {
-    return processModel;
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("SimpleDeposition");
+    this->insertNextParticleType(depoParticle);
   }
 };

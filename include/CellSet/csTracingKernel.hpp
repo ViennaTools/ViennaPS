@@ -231,19 +231,17 @@ public:
           rayHit.ray.time = 0.0f;
 #endif
         } while (reflect);
-#ifdef VIENNAPS_VERBOSE
-        if (threadID == 0)
-          printProgress(idx);
-#endif
+
+        if (psLogger::getLogLevel() >= 3)
+          psUtils::printProgress(idx, mNumRays);
       } // end ray tracing for loop
 
 #pragma omp critical
       myCellSet->mergePath(path, mNumRays);
     } // end parallel section
 
-#ifdef VIENNAPS_VERBOSE
-    std::cout << std::endl;
-#endif
+    if (psLogger::getLogLevel() >= 3)
+      std::cout << std::endl;
 
     rtcReleaseGeometry(rtcGeometry);
     rtcReleaseGeometry(rtcBoundary);
@@ -304,22 +302,4 @@ private:
   lsSmartPointer<csDenseCellSet<T, D>> cellSet = nullptr;
   const T mGridDelta = 0.;
   const int excludeMaterial = -1;
-
-  void printProgress(size_t i) {
-    float progress = static_cast<float>(i) / static_cast<float>(mNumRays);
-    int barWidth = 70;
-
-    std::cout << "[";
-    int pos = barWidth * progress;
-    for (int i = 0; i < barWidth; ++i) {
-      if (i < pos)
-        std::cout << "=";
-      else if (i == pos)
-        std::cout << ">";
-      else
-        std::cout << " ";
-    }
-    std::cout << "] " << int(progress * 100.0) << " %\r";
-    std::cout.flush();
-  }
 };

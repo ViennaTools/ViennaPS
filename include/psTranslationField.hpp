@@ -3,46 +3,50 @@
 
 #include <iostream>
 #include <lsVelocityField.hpp>
+#include <psKDTree.hpp>
 #include <psVelocityField.hpp>
 
 template <typename NumericType>
 class psTranslationField : public lsVelocityField<NumericType> {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
-  const bool useTranslation = true;
+  const int translationMethod = 1;
 
 public:
-  psTranslationField(const bool passedUseTranslationField)
-      : useTranslation(passedUseTranslationField) {}
+  psTranslationField(
+      psSmartPointer<psVelocityField<NumericType>> passedVeloField,
+      psSmartPointer<psMaterialMap> passedMaterialMap)
+      : translationMethod(passedVeloField->getTranslationFieldOptions()),
+        modelVelocityField(passedVeloField), materialMap(passedMaterialMap) {}
 
   NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
                                 int material,
                                 const std::array<NumericType, 3> &normalVector,
                                 unsigned long pointId) {
-    auto surfacePointId = translateLsId(pointId);
-    if (surfacePointId != -1 || !useTranslation) {
-      return modelVelocityField->getScalarVelocity(
-          coordinate, material, normalVector, surfacePointId);
-    } else {
-      return 0;
-    }
+    if (translationMethod > 0)
+      translateLsId(pointId, coordinate);
+    if (materialMap)
+      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
+    return modelVelocityField->getScalarVelocity(coordinate, material,
+                                                 normalVector, pointId);
   }
 
   std::array<NumericType, 3>
   getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
                     const std::array<NumericType, 3> &normalVector,
                     unsigned long pointId) {
-    auto surfacePointId = translateLsId(pointId);
-    if (surfacePointId != -1 || !useTranslation) {
-      return modelVelocityField->getVectorVelocity(
-          coordinate, material, normalVector, surfacePointId);
-    } else {
-      return {0., 0., 0.};
-    }
+    if (translationMethod > 0)
+      translateLsId(pointId, coordinate);
+    if (materialMap)
+      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
+    return modelVelocityField->getVectorVelocity(coordinate, material,
+                                                 normalVector, pointId);
   }
 
   NumericType
   getDissipationAlpha(int direction, int material,
                       const std::array<NumericType, 3> &centralDifferences) {
+    if (materialMap)
+      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
     return modelVelocityField->getDissipationAlpha(direction, material,
                                                    centralDifferences);
   }
@@ -51,22 +55,32 @@ public:
     translator = passedTranslator;
   }
 
-  void setVelocityField(
-      psSmartPointer<psVelocityField<NumericType>> passedVeloField) {
-    modelVelocityField = passedVeloField;
+  void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
+    kdTree.setPoints(points);
+    kdTree.build();
   }
 
-private:
-  long translateLsId(unsigned long lsId) {
-    if (auto it = translator->find(lsId); it != translator->end()) {
-      return it->second;
+  void translateLsId(unsigned long &lsId,
+                     const std::array<NumericType, 3> &coordinate) {
+    if (translationMethod == 2) {
+      auto nearest = kdTree.findNearest(coordinate);
+      lsId = nearest->first;
     } else {
-      return -1;
+      if (auto it = translator->find(lsId); it != translator->end()) {
+        lsId = it->second;
+      } else {
+        psLogger::getInstance()
+            .addWarning("Could not extend velocity from surface to LS point")
+            .print();
+      }
     }
   }
 
+private:
   psSmartPointer<translatorType> translator;
-  psSmartPointer<psVelocityField<NumericType>> modelVelocityField;
+  psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
+  const psSmartPointer<psVelocityField<NumericType>> modelVelocityField;
+  const psSmartPointer<psMaterialMap> materialMap;
 };
 
 #endif

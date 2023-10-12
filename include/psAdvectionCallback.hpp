@@ -4,7 +4,7 @@
 #include <psDomain.hpp>
 #include <psSmartPointer.hpp>
 
-template <typename NumericType, int D> class psAdvectionCalback {
+template <typename NumericType, int D> class psAdvectionCallback {
 protected:
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
 
@@ -13,9 +13,9 @@ public:
     domain = passedDomain;
   }
 
-  virtual void applyPreAdvect(const NumericType processTime) {}
+  virtual bool applyPreAdvect(const NumericType processTime) { return true; }
 
-  virtual void applyPostAdvect(const NumericType advectionTime) {}
+  virtual bool applyPostAdvect(const NumericType advectionTime) { return true; }
 };
 
 #endif

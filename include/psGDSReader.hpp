@@ -35,7 +35,7 @@ public:
 
   void apply() {
     if constexpr (D == 2) {
-      lsMessage::getInstance()
+      psLogger::getInstance()
           .addWarning("Cannot import 2D geometry from GDS file.")
           .print();
       return;
@@ -66,6 +66,16 @@ private:
   // unsused
   float currentWidth;
   char *tempStr;
+
+  bool contains(int32_t X, int32_t Y,
+                const std::vector<std::array<int32_t, 2>> &uniPoints) {
+    for (const auto &p : uniPoints) {
+      if (p[0] == X && p[1] == Y)
+        return true;
+    }
+
+    return false;
+  }
 
   void resetCurrentStructure() {
     currentStructure.name = "";
@@ -216,28 +226,36 @@ private:
     float X, Y;
     unsigned int numPoints = currentRecordLen / 8;
     auto &currentElPointCloud = currentStructure.elements.back().pointCloud;
+    std::vector<std::array<int32_t, 2>> uniquePoints;
 
     // do not include the last point since it
     // is just a copy of the first
     for (unsigned int i = 0; i < numPoints - 1; i++) {
-      X = units * (float)readFourByteSignedInt();
-      Y = units * (float)readFourByteSignedInt();
+      auto pX = readFourByteSignedInt();
+      auto pY = readFourByteSignedInt();
 
-      currentElPointCloud.push_back(std::array<NumericType, 3>{
-          static_cast<NumericType>(X), static_cast<NumericType>(Y),
-          NumericType(0)});
+      if (!contains(pX, pY, uniquePoints)) {
+        uniquePoints.push_back({pX, pY});
 
-      if (X < currentStructure.elementBoundingBox[0][0]) {
-        currentStructure.elementBoundingBox[0][0] = X;
-      }
-      if (X > currentStructure.elementBoundingBox[1][0]) {
-        currentStructure.elementBoundingBox[1][0] = X;
-      }
-      if (Y < currentStructure.elementBoundingBox[0][1]) {
-        currentStructure.elementBoundingBox[0][1] = Y;
-      }
-      if (Y > currentStructure.elementBoundingBox[1][1]) {
-        currentStructure.elementBoundingBox[1][1] = Y;
+        X = units * (float)pX;
+        Y = units * (float)pY;
+
+        currentElPointCloud.push_back(std::array<NumericType, 3>{
+            static_cast<NumericType>(X), static_cast<NumericType>(Y),
+            NumericType(0)});
+
+        if (X < currentStructure.elementBoundingBox[0][0]) {
+          currentStructure.elementBoundingBox[0][0] = X;
+        }
+        if (X > currentStructure.elementBoundingBox[1][0]) {
+          currentStructure.elementBoundingBox[1][0] = X;
+        }
+        if (Y < currentStructure.elementBoundingBox[0][1]) {
+          currentStructure.elementBoundingBox[0][1] = Y;
+        }
+        if (Y > currentStructure.elementBoundingBox[1][1]) {
+          currentStructure.elementBoundingBox[1][1] = Y;
+        }
       }
     }
     readFourByteSignedInt(); // parse remaining points
@@ -466,7 +484,9 @@ private:
       case psGDSRecordNumbers::DataType: // unimportant and should be zero
         currentDataType = readTwoByteSignedInt();
         if (currentDataType != 0)
-          std::cout << "WARNING: unsupported argument in DATATYPE" << std::endl;
+          psLogger::getInstance()
+              .addWarning("Unsupported argument in DATATYPE")
+              .print();
         break;
 
       case psGDSRecordNumbers::Node: // ignore

@@ -1,0 +1,23 @@
+# Domain
+gridDelta=2.
+xExtent=300.0
+
+# Geometry
+numLayers=7
+layerHeight=30.0
+substrateHeight=50.
+trenchWidth=150.0
+
+# Etching
+nitrideEtchRate=6.5
+oxideEtchRate=0.
+targetEtchDepth=200.
+diffusionCoefficient=40. 
+sink=0.01          
+scallopVelocity=5.
+centerVelocity=1.
+
+# Redeposition
+redepositionRate=0.01
+redepositionTimeInt=60.
+redepositionThreshold=0.2
