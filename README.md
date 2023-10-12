@@ -35,7 +35,7 @@ Releases are tagged on the master branch and available in the [releases section]
 The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target.
 
 ```bash
-git clone github.com/ViennaTools/ViennaPS.git
+git clone https://github.com/ViennaTools/ViennaPS.git
 cd ViennaPS
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/

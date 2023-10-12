@@ -4,7 +4,7 @@ project(ViennaPSExamples)
 
 include("${CMAKE_SOURCE_DIR}/cmake/prepare.cmake")
 
-find_package(ViennaPS CONFIG PATHS ${ViennaPS_BINARY_DIR})
+find_package(ViennaPS CONFIG PATHS ${ViennaPS_BINARY_DIR} NO_DEFAULT_PATH)
 if(NOT ViennaPS_FOUND)
   message(
     FATAL_ERROR

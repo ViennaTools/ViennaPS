@@ -22,8 +22,11 @@ public:
   NumericType yExtent = 10;
   NumericType height = 0.;
   bool periodicBoundary = false;
+  bool add = false;
 
-  psMakePlane(PSPtrType passedDomain) : domain(passedDomain) {}
+  psMakePlane(PSPtrType passedDomain, NumericType passedHeight = 0.,
+              bool passedAdd = false)
+      : domain(passedDomain), height(passedHeight), add(passedAdd) {}
 
   psMakePlane(PSPtrType passedDomain, const NumericType passedGridDelta,
               const NumericType passedXExtent, const NumericType passedYExtent,
@@ -33,7 +36,18 @@ public:
         periodicBoundary(passedPeriodic) {}
 
   void apply() {
-    domain->clear();
+    if (add) {
+      if (!domain->getLevelSets()->back()) {
+        lsMessage::getInstance()
+            .addWarning("psMakePlane: Plane can only be added to already "
+                        "existing geometry.")
+            .print();
+        add = false;
+      }
+    } else {
+      domain->clear();
+    }
+
     double bounds[2 * D];
     bounds[0] = -xExtent / 2.;
     bounds[1] = xExtent / 2.;
@@ -62,13 +76,26 @@ public:
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
     origin[D - 1] = height;
-    lsMakeGeometry<NumericType, D>(
-        substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
-        .apply();
+
+    if (add) {
+      auto substrate =
+          LSPtrType::New(domain->getLevelSets()->back()->getGrid());
+      lsMakeGeometry<NumericType, D>(
+          substrate,
+          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          .apply();
+      domain->insertNextLevelSet(substrate);
+    } else {
+      auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
+      lsMakeGeometry<NumericType, D>(
+          substrate,
+          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          .apply();
+      domain->insertNextLevelSet(substrate);
+    }
   }
 };

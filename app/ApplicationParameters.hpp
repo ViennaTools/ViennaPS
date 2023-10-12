@@ -13,8 +13,10 @@ enum class ProcessType {
   NONE,
   SF6O2ETCHING,
   DEPOSITION,
-  GEOMETRICUNIFORMDEPOSITION,
-  DIRECTIONALETCHING
+  SPHEREDISTRIBUTION,
+  BOXDISTRIBUTION,
+  DIRECTIONALETCHING,
+  WETETCHING
 };
 
 #ifdef VIENNAPS_USE_DOUBLE
@@ -49,6 +51,10 @@ struct ApplicationParameters {
   int layers = 0;
   std::string fileName = "";
   NumericType maskHeight = 0.1;
+  int pointOrder = 0;
+  int maskInvert = 0;
+  NumericType xPadding = 0.;
+  NumericType yPadding = 0.;
 
   // Process
   NumericType processTime = 1;
@@ -67,6 +73,11 @@ struct ApplicationParameters {
   NumericType directionalRate = 1.;
   NumericType isotropicRate = 0.;
   std::string direction = "negZ";
+  // Geometric Distributions
+  // sphere
+  NumericType radius = 1.;
+  // box
+  std::array<hrleCoordType, 3> halfAxes = {1., 1., 1.};
 
   ApplicationParameters() {}
 
@@ -95,6 +106,10 @@ struct ApplicationParameters {
     directionalRate = 1.;
     isotropicRate = 0.;
     direction = "negZ";
+    radius = 1.;
+    halfAxes[0] = 1.;
+    halfAxes[1] = 1.;
+    halfAxes[2] = 1.;
 
     if (all) {
       printIntermediate = 0;

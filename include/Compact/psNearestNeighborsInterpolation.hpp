@@ -36,25 +36,20 @@ class psNearestNeighborsInterpolation
   using typename Parent::InputType;
   using typename Parent::OutputType;
 
+  using Parent::data;
+  using Parent::dataChanged;
   using Parent::DataDim;
-  using Parent::dataSource;
-
-  using DataPtr = typename decltype(dataSource)::element_type::DataPtr;
-  using DataVector = std::vector<std::array<NumericType, DataDim>>;
 
   int numberOfNeighbors;
   PointLocator locator;
   NumericType distanceExponent;
-
-  DataPtr data = nullptr;
-  bool initialized = false;
 
 public:
   psNearestNeighborsInterpolation()
       : numberOfNeighbors(3), distanceExponent(2.) {}
 
   psNearestNeighborsInterpolation(int passedNumberOfNeighbors,
-                                  NumericType passedDistanceExponent = 2.)
+                                  NumericType passedDistanceExponent)
       : numberOfNeighbors(passedNumberOfNeighbors),
         distanceExponent(passedDistanceExponent) {}
 
@@ -67,12 +62,10 @@ public:
   }
 
   bool initialize() override {
-    if (!dataSource)
+    if (!data) {
+      std::cout << "No data provided to psNearestNeighborsInterpolation!\n";
       return false;
-
-    data = dataSource->getAll();
-    if (!data)
-      return false;
+    }
 
     if (data->size() == 0)
       return false;
@@ -86,13 +79,14 @@ public:
     locator.setScalingFactors(scalingFactors);
     locator.build();
 
-    initialized = true;
+    dataChanged = false;
+
     return true;
   }
 
   std::tuple<OutputType, NumericType>
   estimate(const InputType &input) override {
-    if (!initialized)
+    if (dataChanged)
       if (!initialize())
         return {{}, {}};
 

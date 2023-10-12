@@ -61,7 +61,9 @@ int main(int argc, char *argv[]) {
 
     psRectilinearGridInterpolation<NumericType, InputDim, TargetDim>
         interpolation;
-    interpolation.setDataSource(dataSource);
+
+    auto data = dataSource->get();
+    interpolation.setData(psSmartPointer<decltype(data)>::New(data));
 
     if (interpolation.initialize() && writer.initialize())
       for (int i = 0; i < numSamples; ++i)
@@ -94,7 +96,9 @@ int main(int argc, char *argv[]) {
 
     psNearestNeighborsInterpolation<NumericType, InputDim, TargetDim>
         interpolation(numberOfNeighbors, distanceExponent);
-    interpolation.setDataSource(dataSource);
+
+    auto data = dataSource->get();
+    interpolation.setData(psSmartPointer<decltype(data)>::New(data));
 
     psCSVWriter<NumericType, 4> writer(
         "nn_std_output.csv",
@@ -131,7 +135,8 @@ int main(int argc, char *argv[]) {
         psMedianDistanceScaler<NumericType, InputDim, DataDim>>
         interpolation(numberOfNeighbors, distanceExponent);
 
-    interpolation.setDataSource(dataSource);
+    auto data = dataSource->get();
+    interpolation.setData(psSmartPointer<decltype(data)>::New(data));
 
     psCSVWriter<NumericType, 4> writer(
         "nn_median_output.csv",
