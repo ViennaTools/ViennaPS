@@ -5,9 +5,8 @@
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 
-#include "Particles.hpp"
+#include "Particle.hpp"
 #include "SurfaceModel.hpp"
-#include "VelocityField.hpp"
 
 int main() {
   using NumericType = double;
@@ -24,7 +23,7 @@ int main() {
   auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = psSmartPointer<VelocityField<NumericType>>::New();
+  auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
 
   /* ------------- Geometry setup (ViennaLS) ------------ */
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();

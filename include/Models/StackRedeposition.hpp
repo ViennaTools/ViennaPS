@@ -214,7 +214,7 @@ private:
 
 #pragma omp parallel for
       for (int e = 0; e < data->size(); e++) {
-        if (!psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
+        if (psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
           continue;
         }
 
