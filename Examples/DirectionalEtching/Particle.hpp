@@ -25,19 +25,15 @@ public:
                     const unsigned int primId, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
-    double angle = rayInternal::PI / 4.;
-    auto direction = rayReflectionConedCosine3<NumericType, D>(
+    double angle = rayInternal::PI / 6.;
+    auto direction = rayReflectionConedCosine<NumericType, D>(
         rayDir, geomNormal, Rng, angle);
     // auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
-
-    // auto refAngle = rayInternal::DotProduct(rayDir, direction);
-    // std::cout << refAngle << "\n";
 
     return std::pair<NumericType, rayTriple<NumericType>>{stickingProbability,
                                                           direction};
   }
   void initNew(rayRNG &RNG) override final {
-    // file.open("refAngles.txt", std::ios_base::app);
   }
 
   int getRequiredLocalDataSize() const override final { return 1; }
@@ -47,10 +43,8 @@ public:
   std::vector<std::string> getLocalDataLabels() const override final {
     return std::vector<std::string>{"particleRate"};
   }
-  // ~Particle() { file.close(); }
 
 private:
-  // std::ofstream file;
   const NumericType stickingProbability = 0.2;
   const NumericType sourcePower = 100.;
 };

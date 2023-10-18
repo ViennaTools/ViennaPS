@@ -17,21 +17,21 @@ int main() {
   psLogger::setLogLevel(psLogLevel::INFO);
 
   // particles
-  auto particle = std::make_unique<Particle<NumericType, D>>(0.5, 100.);
+  auto particle = std::make_unique<Particle<NumericType, D>>(0.7, 100.);
 
   // surface model
   auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
+  auto velField = psSmartPointer<VelocityField<NumericType, D>>::New();
 
   /* ------------- Geometry setup (ViennaLS) ------------ */
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  NumericType gridDelta = 0.2;
-  NumericType extent = 15.;
-  NumericType width = 6.;
-  NumericType depth = 4.;
-  NumericType taper = 10.;
+  NumericType gridDelta = 0.01;
+  NumericType extent = 2.;
+  NumericType width = 0.3;
+  NumericType depth = 0.4;
+  NumericType taper = 35;
   psMakeTrench<NumericType, D>(domain, gridDelta, extent, extent, width, depth,
                                taper, 0., false, true, psMaterial::Si)
       .apply();
@@ -47,7 +47,7 @@ int main() {
   psProcess<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
-  process.setProcessDuration(25);
+  process.setProcessDuration(2);
   process.setNumberOfRaysPerPoint(1000);
   process.apply();
 
