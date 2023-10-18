@@ -5,13 +5,6 @@
 template <typename NumericType>
 class SurfaceModel : public psSurfaceModel<NumericType> {
 public:
-  using psSurfaceModel<NumericType>::Coverages;
-  using psSurfaceModel<NumericType>::processParams;
-
-  void initializeCoverages(unsigned numGeometryPoints) override {}
-
-  void initializeProcessParameters() override {}
-
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> Rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
@@ -27,10 +20,5 @@ public:
     }
 
     return psSmartPointer<std::vector<NumericType>>::New(rates);
-  }
-
-  void
-  updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override {
-    // update coverages
   }
 };
