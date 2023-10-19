@@ -1,5 +1,5 @@
 /*
-  This file is used to generate the python module of viennals.
+  This file is used to generate the python module of viennaps.
   It uses pybind11 to create the modules.
 
   All necessary headers are included here and the interface

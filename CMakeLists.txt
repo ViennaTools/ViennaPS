@@ -85,7 +85,7 @@ endif(VIENNAPS_BUILD_APPLICATION)
 # ##################################################################################################
 option(VIENNAPS_BUILD_PYTHON "Build ViennaPS Python bindings." OFF)
 if(VIENNAPS_BUILD_PYTHON)
-  add_subdirectory(Wrapping)
+  add_subdirectory(Python)
 endif(VIENNAPS_BUILD_PYTHON)
 
 # ##################################################################################################

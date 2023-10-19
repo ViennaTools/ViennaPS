@@ -1,8 +1,8 @@
-get_property(
-  is_cached
-  CACHE pybind11_DIR
-  PROPERTY TYPE)
-if("${is_cached}" STREQUAL "" AND DEFINED pybind11_DIR)
+# ##################################################################################################
+# Check pybind11 Dependency
+# ##################################################################################################
+# If the path to an installation was provided by the user
+if(DEFINED pybind11_DIR AND NOT DEFINED CACHE{pybind11_DIR})
   # Required for windows to convert backslashes to forward slashes
   file(TO_CMAKE_PATH "${pybind11_DIR}" pybind11_DIR)
   set(pybind11_DIR
