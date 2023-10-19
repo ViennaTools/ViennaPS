@@ -23,7 +23,9 @@ template <typename T> struct Parameters {
   T etchantFlux = 150;
   T polymerFlux = 10;
   T ionFlux = 56;
-  T rfBiasPower = 105; // W;
+
+  T energyMean = 100.; // eV
+  T energySigma = 10.; // eV
 
   Parameters() {}
 
@@ -41,7 +43,8 @@ template <typename T> struct Parameters {
         psUtils::Item{"etchantFlux", etchantFlux},         //
         psUtils::Item{"polymerFlux", polymerFlux},         //
         psUtils::Item{"ionFlux", ionFlux},                 //
-        psUtils::Item{"rfBiasPower", rfBiasPower},         //
+        psUtils::Item{"energyMean", energyMean},           //
+        psUtils::Item{"energySigma", energySigma},         //
         psUtils::Item{"processTime", processTime}          //
     );
   }

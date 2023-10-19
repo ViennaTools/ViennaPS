@@ -29,8 +29,8 @@ public:
         *Rates->getScalarData("particleRate"));
   }
 
-  void
-  updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override {
+  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+                       const std::vector<NumericType> &materialIds) override {
     // update coverages
   }
 };

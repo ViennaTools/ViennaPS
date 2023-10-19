@@ -30,7 +30,7 @@ public:
       : dist(passedDist), mask(passedMask) {}
 
   void apply() {
-    if (dist)
+    if (dist) {
       if (mask) {
         lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist,
                                           mask)
@@ -39,6 +39,7 @@ public:
         lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist)
             .apply();
       }
+    }
   }
 };
 

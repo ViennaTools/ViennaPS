@@ -90,7 +90,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            "-DVIENNARAY_BUILD_PYTHON=ON",
+            "-DVIENNAPS_BUILD_PYTHON=ON",
         ]
 
         build_args = []

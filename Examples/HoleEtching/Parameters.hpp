@@ -21,7 +21,8 @@ template <typename T> struct Parameters {
   T ionFlux = 12.;
   T etchantFlux = 1.8e3;
   T oxygenFlux = 1.0e2;
-  T rfBias = 50; // W
+  T meanEnergy = 100; // eV
+  T sigmaEnergy = 10; // eV
   T A_O = 2.;
 
   T etchStopDepth = -100;
@@ -43,7 +44,8 @@ template <typename T> struct Parameters {
         psUtils::Item{"etchantFlux", etchantFlux},     //
         psUtils::Item{"oxygenFlux", oxygenFlux},       //
         psUtils::Item{"ionFlux", ionFlux},             //
-        psUtils::Item{"rfBias", rfBias},               //
+        psUtils::Item{"meanEnergy", meanEnergy},       //
+        psUtils::Item{"sigmaEnergy", sigmaEnergy},     //
         psUtils::Item{"A_O", A_O},                     //
         psUtils::Item{"etchStopDepth", etchStopDepth}, //
         psUtils::Item{"raysPerPoint", raysPerPoint}    //
