@@ -5,4 +5,6 @@ add_subdirectory(viennals)
 
 add_subdirectory(viennaray)
 
-add_subdirectory(pybind11)
+if(VIENNAPS_BUILD_PYTHON)
+  add_subdirectory(pybind11)
+endif()

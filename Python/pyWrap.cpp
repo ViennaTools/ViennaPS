@@ -1,5 +1,5 @@
 /*
-  This file is used to generate the python module of viennals.
+  This file is used to generate the python module of viennaps.
   It uses pybind11 to create the modules.
 
   All necessary headers are included here and the interface
@@ -19,9 +19,9 @@
 #include <vector>
 
 #include <pybind11/iostream.h>
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/numpy.h>
 #include <pybind11/stl_bind.h>
 
 // all header files which define API functions
@@ -70,7 +70,7 @@ typedef std::vector<hrleCoordType> VectorHRLEcoord;
 constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 
 PYBIND11_DECLARE_HOLDER_TYPE(Types, psSmartPointer<Types>)
-PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T> >)
+PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T>>)
 
 PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 
@@ -98,13 +98,15 @@ public:
   psSmartPointer<std::vector<T>>
   calculateVelocities(psSmartPointer<psPointData<T>> Rates,
                       const std::vector<std::array<T, 3>> &coordinates,
-                      const std::vector<T> &materialIDs) override {
+                      const std::vector<T> &materialIds) override {
     PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
-                      calculateVelocities, Rates, coordinates, materialIDs);
+                      calculateVelocities, Rates, coordinates, materialIds);
   }
 
-  void updateCoverages(psSmartPointer<psPointData<T>> Rates) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, Rates);
+  void updateCoverages(psSmartPointer<psPointData<T>> Rates,
+                       const std::vector<T> &materialIds) override {
+    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, Rates,
+                      materialIds);
   }
 };
 
@@ -130,7 +132,7 @@ template <int D> class psParticle : public rayParticle<psParticle<D>, T> {
   using ClassName = rayParticle<psParticle<D>, T>;
 
 public:
-  psParticle(T pSticking, T pPower) 
+  psParticle(T pSticking, T pPower)
       : stickingProbability(pSticking), sourcePower(pPower) {}
   void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
                         const rayTriple<T> &geomNormal,
@@ -168,6 +170,7 @@ public:
   std::vector<std::string> getLocalDataLabels() const override final {
     PYBIND11_OVERRIDE(std::vector<std::string>, ClassName, getLocalDataLabels);
   }
+
 private:
   T stickingProbability = 0.2;
   T sourcePower = 1.0;
@@ -198,7 +201,7 @@ public:
     PYBIND11_OVERRIDE(psSmartPointer<psSurfaceModel<T>>, ClassName,
                       getSurfaceModel);
   }
-  
+
   psSmartPointer<psAdvectionCallback<T, D>> getAdvectionCallback() override {
     using SmartPointerAdvectionCalBack_TD =
         psSmartPointer<psAdvectionCallback<T, D>>;
@@ -231,15 +234,18 @@ public:
   // if we declare a typedef for std::array<T,3>, we will no longer get this
   // error: the compiler doesn't understand why std::array gets 2 template
   // arguments
-  // add template argument as the preprocessor becomes confused with the comma in std::array<T, 3>
+  // add template argument as the preprocessor becomes confused with the comma
+  // in std::array<T, 3>
   typedef std::array<T, 3> arrayType;
   std::array<T, 3> getVectorVelocity(const std::array<T, 3> &coordinate,
                                      int material,
                                      const std::array<T, 3> &normalVector,
                                      unsigned long pointId) override {
-    PYBIND11_OVERRIDE(arrayType, // add template argument here, as the preprocessor becomes confused with the comma in std::array<T, 3>
-                      psVelocityField<T>, getVectorVelocity, coordinate,
-                      material, normalVector, pointId);
+    PYBIND11_OVERRIDE(
+        arrayType, // add template argument here, as the preprocessor becomes
+                   // confused with the comma in std::array<T, 3>
+        psVelocityField<T>, getVectorVelocity, coordinate, material,
+        normalVector, pointId);
   }
 
   T getDissipationAlpha(int direction, int material,
@@ -247,35 +253,28 @@ public:
     PYBIND11_OVERRIDE(T, psVelocityField<T>, getDissipationAlpha, direction,
                       material, centralDifferences);
   }
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override{
-      PYBIND11_OVERRIDE(
-              void,
-              psVelocityField<T>,
-              setVelocities,
-              passedVelocities
-      );
+  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
+    PYBIND11_OVERRIDE(void, psVelocityField<T>, setVelocities,
+                      passedVelocities);
   }
-   int getTranslationFieldOptions() const override{
-      PYBIND11_OVERRIDE(
-              int,
-              psVelocityField<T>,
-              getTranslationFieldOptions,
-      );
-   }
+  int getTranslationFieldOptions() const override {
+    PYBIND11_OVERRIDE(int, psVelocityField<T>, getTranslationFieldOptions, );
+  }
 };
 
 // a function to declare GeometricDistributionModel of type DistType
 template <typename NumericType, int D, typename DistType>
-void declare_GeometricDistributionModel(pybind11::module &m, const std::string &typestr) {
-    using Class = GeometricDistributionModel<NumericType, D, DistType>;
+void declare_GeometricDistributionModel(pybind11::module &m,
+                                        const std::string &typestr) {
+  using Class = GeometricDistributionModel<NumericType, D, DistType>;
 
-    pybind11::class_< Class, psSmartPointer<Class> >(m, typestr.c_str())
-            .def(pybind11::init<psSmartPointer<DistType>>(),pybind11::arg("dist"))
-            .def(pybind11::init<psSmartPointer<DistType>, psSmartPointer<lsDomain<NumericType, D>>>(),
-                 pybind11::arg("dist"), pybind11::arg("mask"))
-            .def("apply", &Class::apply);
+  pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
+      .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))
+      .def(pybind11::init<psSmartPointer<DistType>,
+                          psSmartPointer<lsDomain<NumericType, D>>>(),
+           pybind11::arg("dist"), pybind11::arg("mask"))
+      .def("apply", &Class::apply);
 }
-
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
@@ -291,51 +290,74 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // wrap omp_set_num_threads to control number of threads
   module.def("setNumThreads", &omp_set_num_threads);
 
-  //it was giving an error that it couldnt convert this type to python
-  pybind11::bind_vector<std::vector<double, std::allocator<double> >>(module, "VectorDouble");
+  // it was giving an error that it couldnt convert this type to python
+  pybind11::bind_vector<std::vector<double, std::allocator<double>>>(
+      module, "VectorDouble");
 
-  //psProcessParams
-  pybind11::class_<psProcessParams<double>, psSmartPointer<psProcessParams<double>>>(module, "psProcessParams")
+  // psProcessParams
+  pybind11::class_<psProcessParams<double>,
+                   psSmartPointer<psProcessParams<double>>>(module,
+                                                            "psProcessParams")
       .def(pybind11::init<>())
       .def("insertNextScalar", &psProcessParams<double>::insertNextScalar)
-      .def("getScalarData", (double&(psProcessParams<double>::*)(int)) &psProcessParams<double>::getScalarData)
-      .def("getScalarData", (const double&(psProcessParams<double>::*)(int) const) &psProcessParams<double>::getScalarData)
-      .def("getScalarData", (double&(psProcessParams<double>::*)(std::string)) &psProcessParams<double>::getScalarData)
+      .def("getScalarData", (double &(psProcessParams<double>::*)(int)) &
+                                psProcessParams<double>::getScalarData)
+      .def("getScalarData",
+           (const double &(psProcessParams<double>::*)(int) const) &
+               psProcessParams<double>::getScalarData)
+      .def("getScalarData",
+           (double &(psProcessParams<double>::*)(std::string)) &
+               psProcessParams<double>::getScalarData)
       .def("getScalarDataIndex", &psProcessParams<double>::getScalarDataIndex)
-      .def("getScalarData", (std::vector<double>&(psProcessParams<double>::*)()) &psProcessParams<double>::getScalarData)
-      .def("getScalarData", (const std::vector<double>&(psProcessParams<double>::*)() const) &psProcessParams<double>::getScalarData)
+      .def("getScalarData",
+           (std::vector<double> & (psProcessParams<double>::*)()) &
+               psProcessParams<double>::getScalarData)
+      .def("getScalarData",
+           (const std::vector<double> &(psProcessParams<double>::*)() const) &
+               psProcessParams<double>::getScalarData)
       .def("getScalarDataLabel", &psProcessParams<double>::getScalarDataLabel);
 
-  //rayReflection.hpp
-  module.def("rayReflectionSpecular", [](const std::array<double, 3>& rayDir, const std::array<double, 3>& geomNormal) {
+  // rayReflection.hpp
+  module.def(
+      "rayReflectionSpecular",
+      [](const std::array<double, 3> &rayDir,
+         const std::array<double, 3> &geomNormal) {
         return rayReflectionSpecular(rayDir, geomNormal);
-    }, "Specular reflection");
+      },
+      "Specular reflection");
 
-  module.def("rayReflectionDiffuse2D", [](const std::array<double, 3>& geomNormal, rayRNG& RNG) {
+  module.def(
+      "rayReflectionDiffuse2D",
+      [](const std::array<double, 3> &geomNormal, rayRNG &RNG) {
         return rayReflectionDiffuse<double, 2>(geomNormal, RNG);
-    }, "Diffuse reflection in 2D");
+      },
+      "Diffuse reflection in 2D");
 
-  module.def("rayReflectionDiffuse3D", [](const std::array<double, 3>& geomNormal, rayRNG& RNG) {
+  module.def(
+      "rayReflectionDiffuse3D",
+      [](const std::array<double, 3> &geomNormal, rayRNG &RNG) {
         return rayReflectionDiffuse<double, 3>(geomNormal, RNG);
-    }, "Diffuse reflection in 3D");
+      },
+      "Diffuse reflection in 3D");
 
-  module.def("rayReflectionConedCosine2D", [](double avgReflAngle, const std::array<double, 3>& rayDir,
-                                          const std::array<double, 3>& geomNormal, rayRNG& RNG) {
-        return rayReflectionConedCosine<double, 2>(avgReflAngle, rayDir, geomNormal, RNG);
-    }, "Coned cosine reflection in 2D");
+  /// TODO: coned cosine ... general reflections
+  // module.def(
+  //     "rayReflectionConedCosine2D",
+  //     [](double avgReflAngle, const std::array<double, 3> &rayDir,
+  //        const std::array<double, 3> &geomNormal, rayRNG &RNG) {
+  //       return rayReflectionConedCosine<double, 2>(avgReflAngle, rayDir,
+  //                                                  geomNormal, RNG);
+  //     },
+  //     "Coned cosine reflection in 2D");
 
-  module.def("rayReflectionConedCosine3D", [](double avgReflAngle, const std::array<double, 3>& rayDir,
-                                          const std::array<double, 3>& geomNormal, rayRNG& RNG) {
-        return rayReflectionConedCosine<double, 3>(avgReflAngle, rayDir, geomNormal, RNG);
-    }, "Coned cosine reflection in 3D");
-
-  module.def("rayReflectionConedCosine2_2D", [](const std::array<double, 3>& rayDir, const std::array<double, 3>& geomNormal, rayRNG& RNG, double& minAvgConeAngle) {
-        return rayReflectionConedCosine2<double, 2>(rayDir, geomNormal, RNG, minAvgConeAngle);
-    }, "Coned cosine reflection 2 in 2D");
-
-  module.def("rayReflectionConedCosine2_3D", [](const std::array<double, 3>& rayDir, const std::array<double, 3>& geomNormal, rayRNG& RNG, double& minAvgConeAngle) {
-        return rayReflectionConedCosine2<double, 3>(rayDir, geomNormal, RNG, minAvgConeAngle);
-    }, "Coned cosine reflection 2 in 3D");
+  // module.def(
+  //     "rayReflectionConedCosine3D",
+  //     [](double avgReflAngle, const std::array<double, 3> &rayDir,
+  //        const std::array<double, 3> &geomNormal, rayRNG &RNG) {
+  //       return rayReflectionConedCosine<double, 3>(avgReflAngle, rayDir,
+  //                                                  geomNormal, RNG);
+  //     },
+  //     "Coned cosine reflection in 3D");
 
   // psSurfaceModel
   pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,
@@ -343,13 +365,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<>())
       .def("initializeCoverages", &psSurfaceModel<T>::initializeCoverages)
       .def("initializeProcessParameters",
-          &psSurfaceModel<T>::initializeProcessParameters)
+           &psSurfaceModel<T>::initializeProcessParameters)
       .def("getCoverages", &psSurfaceModel<T>::getCoverages)
       .def("getProcessParameters", &psSurfaceModel<T>::getProcessParameters)
       .def("calculateVelocities", &psSurfaceModel<T>::calculateVelocities)
       .def("updateCoverages", &psSurfaceModel<T>::updateCoverages);
-
-
 
   pybind11::enum_<psLogLevel>(module, "psLogLevel")
       .value("ERROR", psLogLevel::ERROR)
@@ -361,29 +381,35 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .export_values();
 
   // some unexpected behaaviour can happen as it is working with multithreading
-  pybind11::class_<psLogger,psSmartPointer<psLogger>>(module, "psLogger")
+  pybind11::class_<psLogger, psSmartPointer<psLogger>>(module, "psLogger")
       .def_static("setLogLevel", &psLogger::setLogLevel)
       .def_static("getLogLevel", &psLogger::getLogLevel)
-      .def_static("getInstance", &psLogger::getInstance, pybind11::return_value_policy::reference)
+      .def_static("getInstance", &psLogger::getInstance,
+                  pybind11::return_value_policy::reference)
       .def("addDebug", &psLogger::addDebug)
-      .def("addTiming", (psLogger&(psLogger::*)(std::string, double)) &psLogger::addTiming)
-      .def("addTiming", (psLogger&(psLogger::*)(std::string, double, double)) &psLogger::addTiming)
+      .def("addTiming", (psLogger & (psLogger::*)(std::string, double)) &
+                            psLogger::addTiming)
+      .def("addTiming",
+           (psLogger & (psLogger::*)(std::string, double, double)) &
+               psLogger::addTiming)
       .def("addInfo", &psLogger::addInfo)
       .def("addWarning", &psLogger::addWarning)
-      .def("addError", &psLogger::addError, pybind11::arg("s"), pybind11::arg("shouldAbort") = true)
+      .def("addError", &psLogger::addError, pybind11::arg("s"),
+           pybind11::arg("shouldAbort") = true)
       .def("print", [](psLogger &instance) { instance.print(std::cout); });
 
   // psVelocityField
   pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
-                   PyVelocityField>(module,"psVelocityField")
+                   PyVelocityField>(module, "psVelocityField")
       // constructors
       .def(pybind11::init<>())
       // methods
       .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
       .def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
       .def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
-      .def("getTranslationFieldOptions", &psVelocityField<T>::getTranslationFieldOptions)
-      .def("setVelocities",&psVelocityField<T>::setVelocities);
+      .def("getTranslationFieldOptions",
+           &psVelocityField<T>::getTranslationFieldOptions)
+      .def("setVelocities", &psVelocityField<T>::setVelocities);
 
   // psDomain
   pybind11::class_<psDomain<T, D>, psSmartPointer<psDomain<T, D>>>(module,
@@ -395,7 +421,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("insertNextLevelSet", &psDomain<T, D>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
-      .def("insertNextLevelSetAsMaterial", &psDomain<T, D>::insertNextLevelSetAsMaterial)
+      .def("insertNextLevelSetAsMaterial",
+           &psDomain<T, D>::insertNextLevelSetAsMaterial)
       .def("duplicateTopLevelSet", &psDomain<T, D>::duplicateTopLevelSet)
       .def("setMaterialMap", &psDomain<T, D>::setMaterialMap)
       .def("getMaterialMap", &psDomain<T, D>::getMaterialMap)
@@ -436,20 +463,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .export_values();
 
   // psMaterialMap
-  pybind11::class_<psMaterialMap, psSmartPointer<psMaterialMap>>(module, "psMaterialMap")
+  pybind11::class_<psMaterialMap, psSmartPointer<psMaterialMap>>(
+      module, "psMaterialMap")
       .def(pybind11::init<>())
-      .def("insertNextMaterial", &psMaterialMap::insertNextMaterial, 
-          pybind11::arg("material") = psMaterial::Undefined)
+      .def("insertNextMaterial", &psMaterialMap::insertNextMaterial,
+           pybind11::arg("material") = psMaterial::Undefined)
       .def("getMaterialAtIdx", &psMaterialMap::getMaterialAtIdx)
       .def("getMaterialMap", &psMaterialMap::getMaterialMap)
       .def("size", &psMaterialMap::size)
-      .def_static("mapToMaterialInt", [](psMaterialMap& p,const T matId) {
-          return psMaterialMap::mapToMaterial(matId);
-      })
-      .def_static("isMaterialDouble", [](const T matId, const psMaterial material) {
-          return psMaterialMap::isMaterial(matId, material);
-      });
-
+      .def_static("mapToMaterialInt",
+                  [](psMaterialMap &p, const T matId) {
+                    return psMaterialMap::mapToMaterial(matId);
+                  })
+      .def_static("isMaterialDouble",
+                  [](const T matId, const psMaterial material) {
+                    return psMaterialMap::isMaterial(matId, material);
+                  });
 
   // Shim to instantiate the particle class
   pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>>(module,
@@ -474,10 +503,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psProcessModel
   pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>,
-                   PyProcessModel> processModel(module, "psProcessModel");
+                   PyProcessModel>
+      processModel(module, "psProcessModel");
 
-      // constructors
-      processModel
+  // constructors
+  processModel
       .def(pybind11::init<>())
       // methods
       .def("setProcessName", &psProcessModel<T, D>::setProcessName)
@@ -487,53 +517,55 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getGeometricModel", &psProcessModel<T, D>::getGeometricModel)
       .def("getVelocityField", &psProcessModel<T, D>::getVelocityField)
       .def("getParticleLogSize", &psProcessModel<T, D>::getParticleLogSize)
-      .def("getParticleTypes", [](psProcessModel<T, D> &pm) {
-          // Get smart pointer to vector of unique_ptr from the process model
-          auto unique_ptrs_sp = pm.getParticleTypes();
+      .def("getParticleTypes",
+           [](psProcessModel<T, D> &pm) {
+             // Get smart pointer to vector of unique_ptr from the process model
+             auto unique_ptrs_sp = pm.getParticleTypes();
 
-          // Dereference the smart pointer to access the vector
-          auto &unique_ptrs = *unique_ptrs_sp;
+             // Dereference the smart pointer to access the vector
+             auto &unique_ptrs = *unique_ptrs_sp;
 
-          // Create vector to hold shared_ptr
-          std::vector<std::shared_ptr<rayAbstractParticle<T>>> shared_ptrs;
+             // Create vector to hold shared_ptr
+             std::vector<std::shared_ptr<rayAbstractParticle<T>>> shared_ptrs;
 
-          // Loop over unique_ptrs and create shared_ptrs from them
-          for (auto &uptr : unique_ptrs) {
-              shared_ptrs.push_back(std::shared_ptr<rayAbstractParticle<T>>(uptr.release()));
-          }
+             // Loop over unique_ptrs and create shared_ptrs from them
+             for (auto &uptr : unique_ptrs) {
+               shared_ptrs.push_back(
+                   std::shared_ptr<rayAbstractParticle<T>>(uptr.release()));
+             }
 
-          // Return the new vector of shared_ptr
-          return shared_ptrs;
-      })
+             // Return the new vector of shared_ptr
+             return shared_ptrs;
+           })
       .def("setSurfaceModel",
-            [](psProcessModel<T, D> &pm, psSmartPointer<psSurfaceModel<T>> &sm) {
-              pm.setSurfaceModel(sm);
-            })
+           [](psProcessModel<T, D> &pm, psSmartPointer<psSurfaceModel<T>> &sm) {
+             pm.setSurfaceModel(sm);
+           })
       .def("setAdvectionCallback",
-            [](psProcessModel<T, D> &pm,
+           [](psProcessModel<T, D> &pm,
               psSmartPointer<psAdvectionCallback<T, D>> &ac) {
-              pm.setAdvectionCallback(ac);
-            })
+             pm.setAdvectionCallback(ac);
+           })
       .def("insertNextParticleType",
-            [](psProcessModel<T, D> &pm,
+           [](psProcessModel<T, D> &pm,
               psSmartPointer<psParticle<D>> &passedParticle) {
-              if (passedParticle) {
-                auto particle =
-                    std::make_unique<psParticle<D>>(*passedParticle.get());
-                pm.insertNextParticleType(particle);
-              }
-            })
-      // IMPORTANT: here it may be needed to write this function for any type of passed Particle
+             if (passedParticle) {
+               auto particle =
+                   std::make_unique<psParticle<D>>(*passedParticle.get());
+               pm.insertNextParticleType(particle);
+             }
+           })
+      // IMPORTANT: here it may be needed to write this function for any type of
+      // passed Particle
       .def("setGeometricModel",
-            [](psProcessModel<T, D> &pm,
+           [](psProcessModel<T, D> &pm,
               psSmartPointer<psGeometricModel<T, D>> &gm) {
-              pm.setGeometricModel(gm);
-            })
+             pm.setGeometricModel(gm);
+           })
       .def("setVelocityField", [](psProcessModel<T, D> &pm,
                                   psSmartPointer<psVelocityField<T>> &vf) {
         pm.setVelocityField<psVelocityField<T>>(vf);
       });
-
 
   // psProcess
   pybind11::class_<psProcess<T, D>, psSmartPointer<psProcess<T, D>>>(
@@ -544,22 +576,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // methods
       .def("setDomain", &psProcess<T, D>::setDomain, "Set the process domain.")
       .def("setProcessDuration", &psProcess<T, D>::setProcessDuration,
-            "Set the process duraction.")
+           "Set the process duraction.")
       .def("setSourceDirection", &psProcess<T, D>::setSourceDirection,
-            "Set source direction of the process.")
+           "Set source direction of the process.")
       .def("setNumberOfRaysPerPoint", &psProcess<T, D>::setNumberOfRaysPerPoint,
-            "Set the number of rays to traced for each particle in the process. "
-            "The number is per point in the process geometry")
+           "Set the number of rays to traced for each particle in the process. "
+           "The number is per point in the process geometry")
       .def("setMaxCoverageInitIterations",
-            &psProcess<T, D>::setMaxCoverageInitIterations,
-            "Set the number of iterations to initialize the coverages.")
+           &psProcess<T, D>::setMaxCoverageInitIterations,
+           "Set the number of iterations to initialize the coverages.")
       .def("setPrintTimeInterval", &psProcess<T, D>::setPrintTimeInterval,
-            "Sets the minimum time between printing intermediate results during "
-            "the process. If this is set to a non-positive value, no "
-            "intermediate results are printed.")
+           "Sets the minimum time between printing intermediate results during "
+           "the process. If this is set to a non-positive value, no "
+           "intermediate results are printed.")
       .def("setProcessModel",
-            &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
-            "Set the process model.")
+           &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
+           "Set the process model.")
       .def("apply", &psProcess<T, D>::apply, "Run the process.")
       .def("setIntegrationScheme", &psProcess<T, D>::setIntegrationScheme);
 

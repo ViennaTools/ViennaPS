@@ -1,0 +1,11 @@
+"""
+ViennaPS
+========
+
+ViennaPS is a header-only C++ process simulation library,
+which includes surface and volume representations, 
+a ray tracer, and physical models for the simulation of 
+microelectronic fabrication processes.
+"""
+
+from .@MODULE_NAME@ import *
