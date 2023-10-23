@@ -9,3 +9,38 @@ microelectronic fabrication processes.
 """
 
 from .@MODULE_NAME@ import *
+
+# Config file reader helper function
+def psReadConfigFile(fileName : str):
+    """Read a config file in the ViennaPS standard config file format.
+
+    Parameters
+    ----------
+    fileName : str
+               Name of the config file.
+    
+    Returns
+    -------
+    dict
+        A dictonary containing the parameters from the config file.
+    """
+    par_dict = {}
+
+    with open(fileName, "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            # remove comments
+            line = line[:line.find('#')]
+
+            if len(line) > 0:
+                par_name = line[:line.find('=')].strip(' ')
+                par_value = line[line.find('=')+1:]
+
+                try:
+                    val = float(par_value)
+                except:
+                    val = par_value
+
+                par_dict[par_name] = val
+
+    return par_dict
