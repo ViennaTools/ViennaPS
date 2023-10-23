@@ -60,8 +60,7 @@ public:
     if (NewEnergy > minEnergy) {
       reflect = true;
       auto direction = rayReflectionConedCosine<T, D>(
-          rayInternal::PI / 2. - std::min(incAngle, minAngle), rayDir,
-          geomNormal, Rng);
+          rayDir, geomNormal, Rng, std::min(incAngle, minAngle));
       E = NewEnergy;
       return std::pair<T, rayTriple<T>>{impactEnergy, direction};
     } else {

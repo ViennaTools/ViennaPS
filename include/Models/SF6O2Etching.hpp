@@ -228,7 +228,7 @@ public:
       E = NewEnergy;
 
       auto direction = rayReflectionConedCosine<NumericType, D>(
-          halfPI - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
+          rayDir, geomNormal, Rng, std::min(incAngle, minAngle));
 
       return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
     } else {
