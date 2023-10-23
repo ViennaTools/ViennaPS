@@ -227,10 +227,12 @@ public:
       E = NewEnergy;
       // auto direction = rayReflectionConedCosine<NumericType, D>(
       //     M_PI_2 - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
-      auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
+      // auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
 
-      return std::pair<NumericType, rayTriple<NumericType>>{1. - Eref_peak,
-                                                            direction};
+      auto direction = rayReflectionConedCosine<NumericType, D>(
+          rayDir, geomNormal, Rng, std::min(incAngle, minAngle));
+
+      return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
     } else {
       return std::pair<NumericType, rayTriple<NumericType>>{
           1., rayTriple<NumericType>{0., 0., 0.}};
