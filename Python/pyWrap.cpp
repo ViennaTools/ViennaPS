@@ -54,6 +54,7 @@
 #include <PlasmaDamage.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
+#include <TEOSDeposition.hpp>
 #include <WetEtching.hpp>
 
 // CellSet
@@ -468,18 +469,37 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
    *                               VISUALIZATION                              *
    ****************************************************************************/
 
-  // pybind11::class_<psToDiskMesh<T, D>, psSmartPointer<psToDiskMesh<T, D>>>(
-  //     module, "psToDiskMesh")
-  //     .def(pybind11::init(&psSmartPointer<psToDiskMesh<T, D>>::New<
-  //                             DomainType, psSmartPointer<lsMesh<T>>>),
-  //                         pybind11::arg("domain"), pybind11::arg("mesh"))
-  //     .def(pybind11::init<>());
+  // also wrap the lsMesh so it does not have to imported from ViennaLS
+  pybind11::class_<lsMesh<T>, psSmartPointer<lsMesh<T>>>(module, "psMesh");
+
+  // visualization classes are not bound with smart pointer holder types since
+  // they should not be passed to other classes
+  pybind11::class_<psToDiskMesh<T, D>>(module, "psToDiskMesh")
+      .def(pybind11::init<DomainType, psSmartPointer<lsMesh<T>>>(),
+           pybind11::arg("domain"), pybind11::arg("mesh"))
+      .def(pybind11::init())
+      .def("setDomain", &psToDiskMesh<T, D>::setDomain,
+           "Set the domain in the mesh converter.")
+      .def("setMesh", &psToDiskMesh<T, D>::setMesh,
+           "Set the mesh in the mesh converte");
+  // static assertion failed: Holder classes are only supported for custom types
+  // .def("setTranslator", &psToDiskMesh<T, D>::setTranslator,
+  //      "Set the translator in the mesh converter. It used to convert "
+  //      "level-set point IDs to mesh point IDs.")
+  // .def("getTranslator", &psToDiskMesh<T, D>::getTranslator,
+  //      "Retrieve the translator from the mesh converter.");
 
   pybind11::class_<psWriteVisualizationMesh<T, D>>(module,
                                                    "psWriteVisualizationMesh")
+      .def(pybind11::init())
       .def(pybind11::init<DomainType, std::string>(), pybind11::arg("domain"),
            pybind11::arg("fileName"))
-      .def("apply", &psWriteVisualizationMesh<T, D>::apply);
+      .def("apply", &psWriteVisualizationMesh<T, D>::apply)
+      .def("setFileName", &psWriteVisualizationMesh<T, D>::setFileName,
+           "Set the output file name. The file name will be appended by "
+           "'_volume.vtu'.")
+      .def("setDomain", &psWriteVisualizationMesh<T, D>::setDomain,
+           "Set the domain in the mesh converter.");
 
   /****************************************************************************
    *                               MODELS                                     *
@@ -743,6 +763,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                &psSmartPointer<SimpleDeposition<T, D>>::New<const T, const T>),
            pybind11::arg("stickingProbability") = 0.1,
            pybind11::arg("sourceExponent") = 1.);
+
+  // TEOS Deposition
+  pybind11::class_<TEOSDeposition<T, D>, psSmartPointer<TEOSDeposition<T, D>>>(
+      module, "TEOSDeposition", processModel)
+      .def(pybind11::init(
+               &psSmartPointer<TEOSDeposition<T, D>>::New<
+                   const T /*st1*/, const T /*rate1*/, const T /*order1*/,
+                   const T /*st2*/, const T /*rate2*/, const T /*order2*/>),
+           pybind11::arg("stickingProbabilityP1"), pybind11::arg("rateP1"),
+           pybind11::arg("orderP1"),
+           pybind11::arg("stickingProbabilityP2") = 0.,
+           pybind11::arg("rateP2") = 0., pybind11::arg("orderP2") = 0.);
 
   // SF6O2 Etching
   pybind11::class_<SF6O2Etching<T, D>, psSmartPointer<SF6O2Etching<T, D>>>(

@@ -5,6 +5,7 @@ project("TEOSTrenchDeposition")
 add_executable(SingleTEOS SingleTEOS.cpp)
 target_include_directories(SingleTEOS PUBLIC ${VIENNAPS_INCLUDE_DIRS})
 target_link_libraries(SingleTEOS PRIVATE ${VIENNAPS_LIBRARIES})
+configure_file(SingleTEOS.py ${CMAKE_CURRENT_BINARY_DIR}/SingleTEOS.py COPYONLY)
 configure_file(SingleTEOS_config.txt ${CMAKE_CURRENT_BINARY_DIR}/SingleTEOS_config.txt COPYONLY)
 
 add_dependencies(buildExamples SingleTEOS)
