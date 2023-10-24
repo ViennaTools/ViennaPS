@@ -6,285 +6,7 @@
   of the classes which should be exposed defined
 */
 
-#define PYBIND11_DETAILED_ERROR_MESSAGES
-
-// correct module name macro
-#define TOKENPASTE_INTERNAL(x, y, z) x##y##z
-#define TOKENPASTE(x, y, z) TOKENPASTE_INTERNAL(x, y, z)
-#define STRINGIZE2(s) #s
-#define STRINGIZE(s) STRINGIZE2(s)
-#define VIENNAPS_MODULE_VERSION STRINGIZE(VIENNAPS_VERSION)
-
-#include <optional>
-#include <vector>
-
-#include <pybind11/iostream.h>
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <pybind11/stl_bind.h>
-
-// all header files which define API functions
-#include <psAdvectionCallback.hpp>
-#include <psDomain.hpp>
-#include <psExtrude.hpp>
-#include <psGDSGeometry.hpp>
-#include <psGDSReader.hpp>
-#include <psPlanarize.hpp>
-#include <psProcess.hpp>
-#include <psProcessModel.hpp>
-#include <psSurfaceModel.hpp>
-
-// geometries
-#include <psMakeFin.hpp>
-#include <psMakeHole.hpp>
-#include <psMakePlane.hpp>
-#include <psMakeStack.hpp>
-#include <psMakeTrench.hpp>
-
-// visualization
-#include <psToDiskMesh.hpp>
-#include <psToSurfaceMesh.hpp>
-#include <psWriteVisualizationMesh.hpp>
-
-// models
-#include <DirectionalEtching.hpp>
-#include <FluorocarbonEtching.hpp>
-#include <GeometricDistributionModels.hpp>
-#include <IsotropicProcess.hpp>
-#include <PlasmaDamage.hpp>
-#include <SF6O2Etching.hpp>
-#include <SimpleDeposition.hpp>
-#include <StackRedeposition.hpp>
-#include <TEOSDeposition.hpp>
-#include <WetEtching.hpp>
-
-// CellSet
-#include <csDenseCellSet.hpp>
-
-// Compact
-#include <psKDTree.hpp>
-
-// other
-#include <lsDomain.hpp>
-#include <rayParticle.hpp>
-#include <rayReflection.hpp>
-#include <rayTraceDirection.hpp>
-#include <rayUtil.hpp>
-
-// always use double for python export
-typedef double T;
-typedef std::vector<hrleCoordType> VectorHRLEcoord;
-// get dimension from cmake define
-constexpr int D = VIENNAPS_PYTHON_DIMENSION;
-typedef psSmartPointer<psDomain<T, D>> DomainType;
-
-PYBIND11_DECLARE_HOLDER_TYPE(Types, psSmartPointer<Types>)
-PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T>>)
-
-PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
-
-// define trampoline classes for interface functions
-// ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
-// WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
-
-class PypsSurfaceModel : public psSurfaceModel<T> {
-  using psSurfaceModel<T>::Coverages;
-  using psSurfaceModel<T>::processParams;
-  using psSurfaceModel<T>::getCoverages;
-  using psSurfaceModel<T>::getProcessParameters;
-  typedef std::vector<T> vect_type;
-
-public:
-  void initializeCoverages(unsigned numGeometryPoints) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeCoverages,
-                      numGeometryPoints);
-  }
-
-  void initializeProcessParameters() override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters, );
-  }
-
-  psSmartPointer<std::vector<T>>
-  calculateVelocities(psSmartPointer<psPointData<T>> Rates,
-                      const std::vector<std::array<T, 3>> &coordinates,
-                      const std::vector<T> &materialIds) override {
-    PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
-                      calculateVelocities, Rates, coordinates, materialIds);
-  }
-
-  void updateCoverages(psSmartPointer<psPointData<T>> Rates,
-                       const std::vector<T> &materialIds) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, Rates,
-                      materialIds);
-  }
-};
-
-// psAdvectionCallback
-class PyAdvectionCallback : public psAdvectionCallback<T, D> {
-protected:
-  using ClassName = psAdvectionCallback<T, D>;
-
-public:
-  using ClassName::domain;
-
-  bool applyPreAdvect(const T processTime) override {
-    PYBIND11_OVERRIDE(bool, ClassName, applyPreAdvect, processTime);
-  }
-
-  bool applyPostAdvect(const T advectionTime) override {
-    PYBIND11_OVERRIDE(bool, ClassName, applyPostAdvect, advectionTime);
-  }
-};
-
-// Particle Class
-template <int D> class psParticle : public rayParticle<psParticle<D>, T> {
-  using ClassName = rayParticle<psParticle<D>, T>;
-
-public:
-  psParticle(T pSticking, T pPower)
-      : stickingProbability(pSticking), sourcePower(pPower) {}
-  void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-                        const rayTriple<T> &geomNormal,
-                        const unsigned int primID, const int materialID,
-                        rayTracingData<T> &localData,
-                        const rayTracingData<T> *globalData,
-                        rayRNG &Rng) override final {
-    PYBIND11_OVERRIDE(void, ClassName, surfaceCollision, rayWeight, rayDir,
-                      geomNormal, primID, materialID, localData, globalData,
-                      Rng);
-  }
-
-  std::pair<T, rayTriple<T>>
-  surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-                    const rayTriple<T> &geomNormal, const unsigned int primID,
-                    const int materialID, const rayTracingData<T> *globalData,
-                    rayRNG &Rng) override final {
-    using Pair = std::pair<T, rayTriple<T>>;
-    PYBIND11_OVERRIDE(Pair, ClassName, surfaceReflection, rayWeight, rayDir,
-                      geomNormal, primID, materialID, globalData, Rng);
-  }
-
-  void initNew(rayRNG &RNG) override final {
-    PYBIND11_OVERRIDE(void, ClassName, initNew, RNG);
-  }
-
-  int getRequiredLocalDataSize() const override final {
-    PYBIND11_OVERRIDE(int, ClassName, getRequiredLocalDataSize);
-  }
-
-  T getSourceDistributionPower() const override final {
-    PYBIND11_OVERRIDE(T, ClassName, getSourceDistributionPower);
-  }
-
-  std::vector<std::string> getLocalDataLabels() const override final {
-    PYBIND11_OVERRIDE(std::vector<std::string>, ClassName, getLocalDataLabels);
-  }
-
-private:
-  T stickingProbability = 0.2;
-  T sourcePower = 1.0;
-};
-
-// psProcessModel
-class PyProcessModel : public psProcessModel<T, D> {
-public:
-  using psProcessModel<T, D>::psProcessModel;
-  using psProcessModel<T, D>::setProcessName;
-  using psProcessModel<T, D>::getProcessName;
-  using psProcessModel<T, D>::setSurfaceModel;
-  using psProcessModel<T, D>::setAdvectionCallback;
-  using psProcessModel<T, D>::setGeometricModel;
-  using psProcessModel<T, D>::getParticleLogSize;
-  using ParticleTypeList = std::vector<std::unique_ptr<rayAbstractParticle<T>>>;
-  psSmartPointer<ParticleTypeList> particles = nullptr;
-  std::vector<int> particleLogSize;
-  psSmartPointer<psSurfaceModel<T>> surfaceModel = nullptr;
-  psSmartPointer<psAdvectionCallback<T, D>> advectionCallback = nullptr;
-  psSmartPointer<psGeometricModel<T, D>> geometricModel = nullptr;
-  psSmartPointer<psVelocityField<T>> velocityField = nullptr;
-  std::string processName = "default";
-  using ClassName = psProcessModel<T, D>;
-
-  psSmartPointer<psSurfaceModel<T>> getSurfaceModel() override {
-
-    PYBIND11_OVERRIDE(psSmartPointer<psSurfaceModel<T>>, ClassName,
-                      getSurfaceModel);
-  }
-
-  psSmartPointer<psAdvectionCallback<T, D>> getAdvectionCallback() override {
-    using SmartPointerAdvectionCalBack_TD =
-        psSmartPointer<psAdvectionCallback<T, D>>;
-    PYBIND11_OVERRIDE(SmartPointerAdvectionCalBack_TD, ClassName,
-                      getAdvectionCallback, );
-  }
-  psSmartPointer<psGeometricModel<T, D>> getGeometricModel() override {
-    using SmartPointerGeometricModel_TD =
-        psSmartPointer<psGeometricModel<T, D>>;
-    PYBIND11_OVERRIDE(SmartPointerGeometricModel_TD, ClassName,
-                      getGeometricModel, );
-  }
-  psSmartPointer<psVelocityField<T>> getVelocityField() {
-    PYBIND11_OVERRIDE(psSmartPointer<psVelocityField<T>>, ClassName,
-                      getVelocityField, );
-  }
-};
-
-// psVelocityField
-class PyVelocityField : public psVelocityField<T> {
-  using psVelocityField<T>::psVelocityField;
-
-public:
-  T getScalarVelocity(const std::array<T, 3> &coordinate, int material,
-                      const std::array<T, 3> &normalVector,
-                      unsigned long pointId) override {
-    PYBIND11_OVERRIDE(T, psVelocityField<T>, getScalarVelocity, coordinate,
-                      material, normalVector, pointId);
-  }
-  // if we declare a typedef for std::array<T,3>, we will no longer get this
-  // error: the compiler doesn't understand why std::array gets 2 template
-  // arguments
-  // add template argument as the preprocessor becomes confused with the comma
-  // in std::array<T, 3>
-  typedef std::array<T, 3> arrayType;
-  std::array<T, 3> getVectorVelocity(const std::array<T, 3> &coordinate,
-                                     int material,
-                                     const std::array<T, 3> &normalVector,
-                                     unsigned long pointId) override {
-    PYBIND11_OVERRIDE(
-        arrayType, // add template argument here, as the preprocessor becomes
-                   // confused with the comma in std::array<T, 3>
-        psVelocityField<T>, getVectorVelocity, coordinate, material,
-        normalVector, pointId);
-  }
-
-  T getDissipationAlpha(int direction, int material,
-                        const std::array<T, 3> &centralDifferences) override {
-    PYBIND11_OVERRIDE(T, psVelocityField<T>, getDissipationAlpha, direction,
-                      material, centralDifferences);
-  }
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
-    PYBIND11_OVERRIDE(void, psVelocityField<T>, setVelocities,
-                      passedVelocities);
-  }
-  int getTranslationFieldOptions() const override {
-    PYBIND11_OVERRIDE(int, psVelocityField<T>, getTranslationFieldOptions, );
-  }
-};
-
-// a function to declare GeometricDistributionModel of type DistType
-template <typename NumericType, int D, typename DistType>
-void declare_GeometricDistributionModel(pybind11::module &m,
-                                        const std::string &typestr) {
-  using Class = GeometricDistributionModel<NumericType, D, DistType>;
-
-  pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
-      .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))
-      .def(pybind11::init<psSmartPointer<DistType>,
-                          psSmartPointer<lsDomain<NumericType, D>>>(),
-           pybind11::arg("dist"), pybind11::arg("mask"))
-      .def("apply", &Class::apply);
-}
+#include "pyWrap.hpp"
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
@@ -364,8 +86,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psVelocityField
   pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
-                   PyVelocityField>(module, "psVelocityField")
-      // constructors
+                   PyVelocityField>
+      velocityField(module, "psVelocityField");
+  // constructors
+  velocityField
       .def(pybind11::init<>())
       // methods
       .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
@@ -374,6 +98,20 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getTranslationFieldOptions",
            &psVelocityField<T>::getTranslationFieldOptions)
       .def("setVelocities", &psVelocityField<T>::setVelocities);
+
+  pybind11::class_<psDefaultVelocityField<T>,
+                   psSmartPointer<psDefaultVelocityField<T>>>(
+      module, "psDefaultVelocityField", velocityField)
+      // constructors
+      .def(pybind11::init<>())
+      // methods
+      .def("getScalarVelocity", &psDefaultVelocityField<T>::getScalarVelocity)
+      .def("getVectorVelocity", &psDefaultVelocityField<T>::getVectorVelocity)
+      .def("getDissipationAlpha",
+           &psDefaultVelocityField<T>::getDissipationAlpha)
+      .def("getTranslationFieldOptions",
+           &psDefaultVelocityField<T>::getTranslationFieldOptions)
+      .def("setVelocities", &psDefaultVelocityField<T>::setVelocities);
 
   // psDomain
   pybind11::class_<psDomain<T, D>, DomainType>(module, "psDomain")
@@ -524,26 +262,49 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Get the neighbor indices for a cell.");
 
   // Shim to instantiate the particle class
-  // pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>>(module,
-  //                                                                "psParticle")
-  //     // constructors
-  //     .def(pybind11::init<T, T>())
-  //     // methods
-  //     .def("surfaceCollision",
-  //          [](psParticle<D> &p, T rayWeight) {
-  //            rayTracingData<T> rtData;
-  //            rayTriple<T> triple;
-  //            rayRNG rng;
-  //            p.surfaceCollision(rayWeight, triple, triple, 0, 0, rtData,
-  //                               nullptr, rng);
-  //          })
-  //     .def("surfaceReflection", [](psParticle<D> &p, T rayWeight) {
-  //       rayTracingData<T> rtData;
-  //       rayRNG rng;
-  //       rayTriple<T> triple;
-  //       p.surfaceReflection(rayWeight, triple, triple, 0, 0, nullptr,
-  //       rng);
-  //     });
+  pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>> particle(
+      module, "psParticle");
+  particle.def("surfaceCollision", &psParticle<D>::surfaceCollision)
+      .def("surfaceReflection", &psParticle<D>::surfaceReflection)
+      .def("initNew", &psParticle<D>::initNew)
+      .def("getRequiredLocalDataSize", &psParticle<D>::getRequiredLocalDataSize)
+      .def("getLocalDataLabels", &psParticle<D>::getLocalDataLabels)
+      .def("getSourceDistributionPower",
+           &psParticle<D>::getSourceDistributionPower);
+
+  pybind11::class_<psDiffuseParticle<D>, psSmartPointer<psDiffuseParticle<D>>>(
+      module, "psDiffuseParticle", particle)
+      .def(pybind11::init(
+               &psSmartPointer<psDiffuseParticle<D>>::New<const T, const T,
+                                                          const std::string &>),
+           pybind11::arg("stickingProbability") = 1.0,
+           pybind11::arg("cosineExponent") = 1.,
+           pybind11::arg("dataLabel") = "flux")
+      .def("surfaceCollision", &psDiffuseParticle<D>::surfaceCollision)
+      .def("surfaceReflection", &psDiffuseParticle<D>::surfaceReflection)
+      .def("initNew", &psDiffuseParticle<D>::initNew)
+      .def("getRequiredLocalDataSize",
+           &psDiffuseParticle<D>::getRequiredLocalDataSize)
+      .def("getLocalDataLabels", &psDiffuseParticle<D>::getLocalDataLabels)
+      .def("getSourceDistributionPower",
+           &psDiffuseParticle<D>::getSourceDistributionPower);
+
+  pybind11::class_<psSpecularParticle, psSmartPointer<psSpecularParticle>>(
+      module, "psSpecularParticle", particle)
+      .def(pybind11::init(
+               &psSmartPointer<psSpecularParticle>::New<const T, const T,
+                                                        const std::string &>),
+           pybind11::arg("stickingProbability") = 1.0,
+           pybind11::arg("cosineExponent") = 1.,
+           pybind11::arg("dataLabel") = "flux")
+      .def("surfaceCollision", &psSpecularParticle::surfaceCollision)
+      .def("surfaceReflection", &psSpecularParticle::surfaceReflection)
+      .def("initNew", &psSpecularParticle::initNew)
+      .def("getRequiredLocalDataSize",
+           &psSpecularParticle::getRequiredLocalDataSize)
+      .def("getLocalDataLabels", &psSpecularParticle::getLocalDataLabels)
+      .def("getSourceDistributionPower",
+           &psSpecularParticle::getSourceDistributionPower);
 
   /****************************************************************************
    *                               VISUALIZATION *
@@ -583,8 +344,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
    ****************************************************************************/
 
   // psProcessModel
-  pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>,
-                   PyProcessModel>
+  pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>>
       processModel(module, "psProcessModel");
 
   // constructors

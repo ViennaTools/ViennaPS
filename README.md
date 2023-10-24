@@ -105,7 +105,7 @@ cd Examples/ExampleName
 ./ExampleName config.txt
 ```
 
-Individual examples can also be build by calling `make` in their respective build folder.
+Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. 
 
 ### Trench Deposition
 
