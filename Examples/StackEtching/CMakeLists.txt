@@ -8,5 +8,4 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNAPS_LIBRARIES})
 configure_file(StackEtching.py ${CMAKE_CURRENT_BINARY_DIR}/StackEtching.py COPYONLY)
 configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 
-
 add_dependencies(buildExamples ${PROJECT_NAME})

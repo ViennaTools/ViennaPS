@@ -55,6 +55,7 @@
 #include <PlasmaDamage.hpp>
 #include <SF6O2Etching.hpp>
 #include <SimpleDeposition.hpp>
+#include <StackRedeposition.hpp>
 #include <TEOSDeposition.hpp>
 #include <WetEtching.hpp>
 
@@ -445,6 +446,83 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Map a float to a material.")
       .def_static("isMaterial", &psMaterialMap::isMaterial<T>);
 
+  // csDenseCellSet
+  pybind11::class_<csDenseCellSet<T, D>, psSmartPointer<csDenseCellSet<T, D>>>(
+      module, "DenseCellSet")
+      .def(pybind11::init())
+      .def("getBoundingBox", &csDenseCellSet<T, D>::getBoundingBox)
+      .def(
+          "addScalarData",
+          [](csDenseCellSet<T, D> &cellSet, std::string name, T initValue) {
+            cellSet.addScalarData(name, initValue);
+            // discard return value
+          },
+          "Add a scalar value to be stored and modified in each cell.")
+      .def("getCellGrid", &csDenseCellSet<T, D>::getCellGrid,
+           "Get the underlying mesh of the cell set.")
+      .def("getDepth", &csDenseCellSet<T, D>::getDepth,
+           "Get the depth of the cell set.")
+      .def("getGridDelta", &csDenseCellSet<T, D>::getGridDelta,
+           "Get the cell size.")
+      .def("getNodes", &csDenseCellSet<T, D>::getNodes,
+           "Get the nodes of the cell set which correspond to the corner "
+           "points of the cells.")
+      .def("getElements", &csDenseCellSet<T, D>::getElements,
+           "Get elements (cells). The indicies in the elements correspond to "
+           "the corner nodes.")
+      .def("getSurface", &csDenseCellSet<T, D>::getSurface,
+           "Get the surface level-set.")
+      .def("getNumberOfCells", &csDenseCellSet<T, D>::getNumberOfCells)
+      .def("getFillingFraction", &csDenseCellSet<T, D>::getFillingFraction,
+           "Get the filling fraction of the cell containing the point.")
+      .def("getScalarData", &csDenseCellSet<T, D>::getScalarData,
+           "Get the data stored at each cell.")
+      .def("setCellSetPosition", &csDenseCellSet<T, D>::setCellSetPosition,
+           "Set whether the cell set should be created below (false) or above "
+           "(true) the surface.")
+      .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
+      .def("setFillingFraction",
+           pybind11::overload_cast<const int, const T>(
+               &csDenseCellSet<T, D>::setFillingFraction),
+           "Sets the filling fraction at given cell index.")
+      .def("setFillingFraction",
+           pybind11::overload_cast<const std::array<T, 3> &, const T>(
+               &csDenseCellSet<T, D>::setFillingFraction),
+           "Sets the filling fraction for cell which contains given point.")
+      .def("addFillingFraction",
+           pybind11::overload_cast<const int, const T>(
+               &csDenseCellSet<T, D>::addFillingFraction),
+           "Add to the filling fraction at given cell index.")
+      .def("addFillingFraction",
+           pybind11::overload_cast<const std::array<T, 3> &, const T>(
+               &csDenseCellSet<T, D>::addFillingFraction),
+           "Add to the filling fraction for cell which contains given point.")
+      .def("addFillingFractionInMaterial",
+           &csDenseCellSet<T, D>::addFillingFractionInMaterial,
+           "Add to the filling fraction for cell which contains given point "
+           "only if the cell has the specified material ID.")
+      .def("writeVTU", &csDenseCellSet<T, D>::writeVTU,
+           "Write the cell set as .vtu file")
+      .def("writeCellSetData", &csDenseCellSet<T, D>::writeCellSetData,
+           "Save cell set data in simple text format.")
+      .def("readCellSetData", &csDenseCellSet<T, D>::readCellSetData,
+           "Read cell set data from text.")
+      .def("clear", &csDenseCellSet<T, D>::clear,
+           "Clear the filling fractions.")
+      .def("updateMaterials", &csDenseCellSet<T, D>::updateMaterials,
+           "Update the material IDs of the cell set. This function should be "
+           "called if the level sets, the cell set is made out of, have "
+           "changed. This does not work if the surface of the volume has "
+           "changed. In this case, call the function 'updateSurface' first.")
+      .def("updateSurface", &csDenseCellSet<T, D>::updateSurface,
+           "Updates the surface of the cell set. The new surface should be "
+           "below the old surface as this function can only remove cells from "
+           "the cell set.")
+      .def("buildNeighborhood", &csDenseCellSet<T, D>::buildNeighborhood,
+           "Generate fast neighbor access for each cell.")
+      .def("getNeighbors", &csDenseCellSet<T, D>::getNeighbors,
+           "Get the neighbor indices for a cell.");
+
   // Shim to instantiate the particle class
   // pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>>(module,
   //                                                                "psParticle")
@@ -463,18 +541,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //       rayTracingData<T> rtData;
   //       rayRNG rng;
   //       rayTriple<T> triple;
-  //       p.surfaceReflection(rayWeight, triple, triple, 0, 0, nullptr, rng);
+  //       p.surfaceReflection(rayWeight, triple, triple, 0, 0, nullptr,
+  //       rng);
   //     });
 
   /****************************************************************************
-   *                               VISUALIZATION                              *
+   *                               VISUALIZATION *
    ****************************************************************************/
 
-  // also wrap the lsMesh so it does not have to imported from ViennaLS
-  //   pybind11::class_<lsMesh<T>, psSmartPointer<lsMesh<T>>>(module, "psMesh");
-
-  // visualization classes are not bound with smart pointer holder types since
-  // they should not be passed to other classes
+  // visualization classes are not bound with smart pointer holder types
+  // since they should not be passed to other classes
   pybind11::class_<psToDiskMesh<T, D>>(module, "psToDiskMesh")
       .def(pybind11::init<DomainType, psSmartPointer<lsMesh<T>>>(),
            pybind11::arg("domain"), pybind11::arg("mesh"))
@@ -503,7 +579,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set the domain in the mesh converter.");
 
   /****************************************************************************
-   *                               MODELS                                     *
+   *                               PROCESS                                    *
    ****************************************************************************/
 
   // psProcessModel
@@ -874,6 +950,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("ionEnergy") = 100.,
            pybind11::arg("meanFreePath") = 1.,
            pybind11::arg("maskMaterial") = 0);
+
+  // Oxide Regrowth
+  pybind11::class_<OxideRegrowthModel<T, D>,
+                   psSmartPointer<OxideRegrowthModel<T, D>>>(
+      module, "OxideRegrowthModel", processModel)
+      .def(pybind11::init(&psSmartPointer<OxideRegrowthModel<T, D>>::New<
+                          const T, const T, const T, const T, const T, const T,
+                          const T, const T, const T, const T, const T>),
+           pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),
+           pybind11::arg("redepositionRate"),
+           pybind11::arg("redepositionThreshold"),
+           pybind11::arg("redepositionTimeInt"),
+           pybind11::arg("diffusionCoefficient"), pybind11::arg("sinkStrength"),
+           pybind11::arg("scallopVelocitiy"), pybind11::arg("centerVelocity"),
+           pybind11::arg("topHeight"), pybind11::arg("centerWidth"));
 
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
       module, "psPlanarize")

@@ -79,6 +79,4 @@ int main(int argc, char **argv) {
   process.apply();
 
   psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack").apply();
-
-  return 0;
 }

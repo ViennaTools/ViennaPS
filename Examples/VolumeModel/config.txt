@@ -9,4 +9,5 @@ finWidth=5
 finHeight=15
 
 # Process
+ionEnergy=100.
 meanFreePath=0.75

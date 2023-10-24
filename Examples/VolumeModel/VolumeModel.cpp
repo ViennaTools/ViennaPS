@@ -44,6 +44,4 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   geometry->getCellSet()->writeVTU("DamageModel.vtu");
-
-  return EXIT_SUCCESS;
 }
