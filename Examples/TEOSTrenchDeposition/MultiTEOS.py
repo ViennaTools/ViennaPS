@@ -6,7 +6,7 @@ if DIM == 2:
 else:
     import viennaps3d as vps
 
-params = vps.psReadConfigFile("SingleTEOS_config.txt")
+params = vps.psReadConfigFile("MultiTEOS_config.txt")
 
 geometry = vps.psDomain()
 vps.psMakeTrench(
@@ -31,6 +31,9 @@ model = vps.TEOSDeposition(
     stickingProbabilityP1=params["stickingProbabilityP1"],
     rateP1=params["depositionRateP1"],
     orderP1=params["reactionOrderP1"],
+    stickingProbabilityP2=params["stickingProbabilityP2"],
+    rateP2=params["depositionRateP2"],
+    orderP2=params["reactionOrderP2"],
 )
 
 process = vps.psProcess()
@@ -39,11 +42,11 @@ process.setProcessModel(model)
 process.setNumberOfRaysPerPoint(int(params["numRaysPerPoint"]))
 process.setProcessDuration(params["processTime"])
 
-geometry.printSurface("SingleTEOS_initial.vtp")
+geometry.printSurface("MultiTEOS_initial.vtp")
 
 process.apply()
 
-geometry.printSurface("SingleTEOS_final.vtp")
+geometry.printSurface("MultiTEOS_final.vtp")
 
 if DIM == 2:
-    vps.psWriteVisualizationMesh(geometry, "SingleTEOS_final").apply()
+    vps.psWriteVisualizationMesh(geometry, "MultiTEOS_final").apply()

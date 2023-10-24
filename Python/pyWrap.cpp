@@ -1,5 +1,5 @@
 /*
-  This file is used to generate the python module of viennaps.
+  This file is used to generate the python module of ViennaPS.
   It uses pybind11 to create the modules.
 
   All necessary headers are included here and the interface
@@ -27,6 +27,7 @@
 // all header files which define API functions
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
+#include <psExtrude.hpp>
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
@@ -286,7 +287,7 @@ void declare_GeometricDistributionModel(pybind11::module &m,
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
-      "ViennaPS is a header-only C++ process simulation library, which "
+      "ViennaPS is a header-only C++ process simulation library which "
       "includes surface and volume representations, a ray tracer, and physical "
       "models for the simulation of microelectronic fabrication processes. The "
       "main design goals are simplicity and efficiency, tailored towards "
@@ -470,7 +471,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
    ****************************************************************************/
 
   // also wrap the lsMesh so it does not have to imported from ViennaLS
-  pybind11::class_<lsMesh<T>, psSmartPointer<lsMesh<T>>>(module, "psMesh");
+  //   pybind11::class_<lsMesh<T>, psSmartPointer<lsMesh<T>>>(module, "psMesh");
 
   // visualization classes are not bound with smart pointer holder types since
   // they should not be passed to other classes
@@ -833,10 +834,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    psSmartPointer<SphereDistribution<T, D>>>(
       module, "SphereDistribution", processModel)
       .def(pybind11::init([](const T radius, const T gridDelta,
-                             psSmartPointer<lsDomain<T, D>> mask = nullptr) {
-        return psSmartPointer<SphereDistribution<T, D>>::New(radius, gridDelta,
-                                                             mask);
-      }));
+                             psSmartPointer<lsDomain<T, D>> mask) {
+             return psSmartPointer<SphereDistribution<T, D>>::New(
+                 radius, gridDelta, mask);
+           }),
+           pybind11::arg("radius"), pybind11::arg("gridDelta"),
+           pybind11::arg("mask"))
+      .def(pybind11::init([](const T radius, const T gridDelta) {
+             return psSmartPointer<SphereDistribution<T, D>>::New(
+                 radius, gridDelta, nullptr);
+           }),
+           pybind11::arg("radius"), pybind11::arg("gridDelta"));
 
   // Box Distribution
   pybind11::class_<BoxDistribution<T, D>,
@@ -844,10 +852,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       module, "BoxDistribution", processModel)
       .def(
           pybind11::init([](const std::array<T, 3> &halfAxes, const T gridDelta,
-                            psSmartPointer<lsDomain<T, D>> mask = nullptr) {
+                            psSmartPointer<lsDomain<T, D>> mask) {
             return psSmartPointer<BoxDistribution<T, D>>::New(halfAxes,
                                                               gridDelta, mask);
-          }));
+          }),
+          pybind11::arg("halfAxes"), pybind11::arg("gridDelta"),
+          pybind11::arg("mask"))
+      .def(pybind11::init(
+               [](const std::array<T, 3> &halfAxes, const T gridDelta) {
+                 return psSmartPointer<BoxDistribution<T, D>>::New(
+                     halfAxes, gridDelta, nullptr);
+               }),
+           pybind11::arg("halfAxes"), pybind11::arg("gridDelta"));
 
   // Plasma Damage
   pybind11::class_<PlasmaDamage<T, D>, psSmartPointer<PlasmaDamage<T, D>>>(
@@ -919,6 +935,68 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setFileName", &psGDSReader<T, D>::setFileName,
            "Set name of the GDS file.")
       .def("apply", &psGDSReader<T, D>::apply, "Parse the GDS file.");
+#else
+  // wrap a 3D domain in 2D mode to be used with psExtrude
+  // psDomain
+  pybind11::class_<psDomain<T, 3>, psSmartPointer<psDomain<T, 3>>>(module,
+                                                                   "psDomain3D")
+      // constructors
+      .def(pybind11::init<bool>())
+      .def(pybind11::init(&psSmartPointer<psDomain<T, 3>>::New<>))
+      // methods
+      .def("insertNextLevelSet", &psDomain<T, 3>::insertNextLevelSet,
+           pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
+           "Insert a level set to domain.")
+      .def("insertNextLevelSetAsMaterial",
+           &psDomain<T, 3>::insertNextLevelSetAsMaterial)
+      .def("duplicateTopLevelSet", &psDomain<T, 3>::duplicateTopLevelSet)
+      .def("setMaterialMap", &psDomain<T, 3>::setMaterialMap)
+      .def("getMaterialMap", &psDomain<T, 3>::getMaterialMap)
+      .def("generateCellSet", &psDomain<T, 3>::generateCellSet,
+           "Generate the cell set.")
+      .def("getLevelSets",
+           [](psDomain<T, 3> &d)
+               -> std::optional<std::vector<psSmartPointer<lsDomain<T, 3>>>> {
+             auto levelsets = d.getLevelSets();
+             if (levelsets)
+               return *levelsets;
+             return std::nullopt;
+           })
+      .def("getCellSet", &psDomain<T, 3>::getCellSet, "Get the cell set.")
+      .def("getGrid", &psDomain<T, 3>::getGrid, "Get the grid")
+      .def("setUseCellSet", &psDomain<T, 3>::setUseCellSet)
+      .def("getUseCellSet", &psDomain<T, 3>::getUseCellSet)
+      .def("print", &psDomain<T, 3>::print)
+      .def("printSurface", &psDomain<T, 3>::printSurface,
+           pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
+           "Print the surface of the domain.")
+      .def("writeLevelSets", &psDomain<T, 3>::writeLevelSets)
+      .def("clear", &psDomain<T, 3>::clear);
+
+  pybind11::class_<psExtrude<T>>(module, "psExtrude")
+      .def(pybind11::init())
+      .def(pybind11::init<psSmartPointer<psDomain<T, 2>> &,
+                          psSmartPointer<psDomain<T, 3>> &, std::array<T, 2>,
+                          const int,
+                          std::array<lsBoundaryConditionEnum<3>, 3>>(),
+           pybind11::arg("inputDomain"), pybind11::arg("outputDomain"),
+           pybind11::arg("extent"), pybind11::arg("extrudeDimension"),
+           pybind11::arg("boundaryConditions"))
+      .def("setInputDomain", &psExtrude<T>::setInputDomain,
+           "Set the input domain to be extruded.")
+      .def("setOutputDomain", &psExtrude<T>::setOutputDomain,
+           "Set the output domain. The 3D output domain will be overwritten by "
+           "the extruded domain.")
+      .def("setExtent", &psExtrude<T>::setExtent,
+           "Set the min and max extent in the extruded dimension.")
+      .def("setExtrudeDimension", &psExtrude<T>::setExtrudeDimension,
+           "Set which index of the added dimension (x: 0, y: 1, z: 2).")
+      .def("setBoundaryConditions",
+           pybind11::overload_cast<std::array<lsBoundaryConditionEnum<3>, 3>>(
+               &psExtrude<T>::setBoundaryConditions),
+           "Set the boundary conditions in the extruded domain.")
+      .def("apply", &psExtrude<T>::apply, "Run the extrusion.");
+
 #endif
 
   // rayReflection.hpp

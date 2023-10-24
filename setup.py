@@ -60,14 +60,12 @@ PLAT_TO_CMAKE = {
 # The name must be the _single_ output extension from the CMake build.
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
-
     def __init__(self, name: str) -> None:
         super().__init__(name, sources=[])
         self.sourcedir = os.fspath(Path("").resolve())
 
 
 class CMakeBuild(build_ext):
-
     def build_extension(self, ext: CMakeExtension) -> None:
         # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
@@ -132,7 +130,9 @@ class CMakeBuild(build_ext):
 
             # Multi-config generators have a different way to specify configs
             if not single_config:
-                cmake_args += [f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}"]
+                cmake_args += [
+                    f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}"
+                ]
                 build_args += ["--config", cfg]
 
         if sys.platform.startswith("darwin"):
@@ -158,13 +158,19 @@ class CMakeBuild(build_ext):
             build_temp.mkdir(parents=True)
 
         # Configure the project
-        subprocess.run(["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True)
+        subprocess.run(
+            ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
+        )
 
         # Build dependencies if neccesary
-        subprocess.run(["cmake", "--build", ".", *build_args], cwd=build_temp, check=True)
+        subprocess.run(
+            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
+        )
 
         # Build python bindings
-        subprocess.run(["cmake", "--build", ".", *build_args], cwd=build_temp, check=True)
+        subprocess.run(
+            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
+        )
 
         # On windows move the generated pyd (dll in disguise) files to the corresponding
         # folders. Ideally this should be done in CMake, but we have not yet implemented
@@ -173,11 +179,15 @@ class CMakeBuild(build_ext):
             pyd_files = [f for f in os.listdir(extdir) if f.endswith(".pyd")]
             for f in pyd_files:
                 if f.startswith("_viennaps2d"):
-                    shutil.move(src=os.path.join(extdir, f),
-                                dst=os.path.join(extdir, "viennaps2d", f))
+                    shutil.move(
+                        src=os.path.join(extdir, f),
+                        dst=os.path.join(extdir, "viennaps2d", f),
+                    )
                 elif f.startswith("_viennaps3d"):
-                    shutil.move(src=os.path.join(extdir, f),
-                                dst=os.path.join(extdir, "viennaps3d", f))
+                    shutil.move(
+                        src=os.path.join(extdir, f),
+                        dst=os.path.join(extdir, "viennaps3d", f),
+                    )
 
         # Generate stubs (*.pyi files) for autocompletion and type hints
         try:
@@ -191,10 +201,16 @@ class CMakeBuild(build_ext):
             sys.dont_write_bytecode = True
 
             # Initialize the stubgen parser options
-            options = stubgen.parse_options([
-                "-o",
-                str(os.path.abspath(extdir)), "-p", "viennaps2d", "-p", "viennaps3d"
-            ])
+            options = stubgen.parse_options(
+                [
+                    "-o",
+                    str(os.path.abspath(extdir)),
+                    "-p",
+                    "viennaps2d",
+                    "-p",
+                    "viennaps3d",
+                ]
+            )
 
             # Generate the stubs
             stubgen.generate_stubs(options)
@@ -207,6 +223,16 @@ class CMakeBuild(build_ext):
         except ImportError:
             pass
 
+        # Check if the ViennaLS Python bindings are installed on the system
+        try:
+            import viennals3d
+        except ModuleNotFoundError:
+            print(
+                "ViennaLS Python bindings not found. "
+                "Please also build the ViennaLS Python module to "
+                " use all functionalities of ViennaPS."
+            )
+
 
 setup(
     name="ViennaPS",
@@ -216,20 +242,19 @@ setup(
     license="MIT",
     url="https://github.com/ViennaTools/ViennaPS",
     description="Semiconductor fabrication process simulation library.",
-    long_description=
-    "ViennaPS is a header-only C++ process simulation library,"
-    "which includes surface and volume representations," 
-    "a ray tracer, and physical models for the simulation of" 
+    long_description="ViennaPS is a header-only C++ process simulation library,"
+    "which includes surface and volume representations,"
+    "a ray tracer, and physical models for the simulation of"
     "microelectronic fabrication processes..",
     ext_modules=[CMakeExtension("viennaps")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     setup_requires=[
-        'mypy',
+        "mypy",
     ],
     requires=[
-        'ViennaLS',
-        'ViennaRay',
+        "ViennaLS",
+        "ViennaRay",
     ],
     python_requires=">=3.7",
 )

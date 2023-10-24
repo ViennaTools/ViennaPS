@@ -14,8 +14,6 @@ int main(int argc, char *argv[]) {
 
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
-  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
-
   // Parse the parameters
   Parameters<NumericType> params;
   if (argc > 1) {
@@ -60,6 +58,4 @@ int main(int argc, char *argv[]) {
 
   // print final surface
   geometry->printSurface("final.vtp");
-
-  psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
 }

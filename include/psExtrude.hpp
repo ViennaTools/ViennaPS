@@ -14,8 +14,8 @@ template <class NumericType> class psExtrude {
 
 public:
   psExtrude() {}
-  psExtrude(lsSmartPointer<psDomain<NumericType, 2>> passedInputDomain,
-            lsSmartPointer<psDomain<NumericType, 3>> passedOutputDomain,
+  psExtrude(psSmartPointer<psDomain<NumericType, 2>> &passedInputDomain,
+            psSmartPointer<psDomain<NumericType, 3>> &passedOutputDomain,
             std::array<NumericType, 2> passedExtent, const int passedExtrudeDim,
             std::array<lsBoundaryConditionEnum<3>, 3> passedBoundaryConds)
       : inputDomain(passedInputDomain), outputDomain(passedOutputDomain),

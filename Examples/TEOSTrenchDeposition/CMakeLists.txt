@@ -13,6 +13,7 @@ add_dependencies(buildExamples SingleTEOS)
 add_executable(MultiTEOS MultiTEOS.cpp)
 target_include_directories(MultiTEOS PUBLIC ${VIENNAPS_INCLUDE_DIRS})
 target_link_libraries(MultiTEOS PRIVATE ${VIENNAPS_LIBRARIES})
+configure_file(MultiTEOS.py ${CMAKE_CURRENT_BINARY_DIR}/MultiTEOS.py COPYONLY)
 configure_file(MultiTEOS_config.txt ${CMAKE_CURRENT_BINARY_DIR}/MultiTEOS_config.txt COPYONLY)
 
 add_dependencies(buildExamples MultiTEOS)
