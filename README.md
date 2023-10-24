@@ -30,6 +30,8 @@ Releases are tagged on the master branch and available in the [releases section]
 
 * [ViennaRay](https://github.com/ViennaTools/viennaray)
 
+* [pybind11](https://github.com/pybind/pybind11) (only for building Python libs)
+
 ## Installing
 
 The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target.
@@ -46,6 +48,31 @@ make install
 This will install the necessary headers and CMake files to the specified path. If `CMAKE_INSTALL_PREFIX` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
 
 If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding _*_DIR_ variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install)
+
+## Building the Python package
+
+The Python package can be built and installed using the `pip` command:
+
+```bash
+git clone https://github.com/ViennaTools/ViennaPS.git
+cd ViennaPS
+pip install --user .
+```
+
+> Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on you system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
+
+## Using the Python package
+
+The 2D version of the library can be imported as follows:
+```python
+import viennaps2d as vps
+```
+
+In order to switch to three dimensions, only the import needs to be changed:
+
+```python
+import viennaps3d as vps
+```
 
 ## Integration in CMake projects
 
@@ -90,7 +117,7 @@ The picture show an example of the trench deposition process for various value o
 
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
-This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardement. The process and geometry parameters can be varied in the __config.txt__ file. 
+This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process and geometry parameters can be varied in the __config.txt__ file. 
 Below the results after 1, 2, and 3 seconds of etching are shown.
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/hole_etching.svg" width=700 style="background-color:white;">
@@ -110,6 +137,8 @@ This example demonstrates capturing etching byproducts and the subsequent redepo
 
 ## Application
 
+> __Deprecation Warning__: The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.1.0. Please use the Python bindings instead.
+
 It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake:
 > __Important__: Make sure all dependencies are installed and have been built previously
 ```bash
@@ -119,7 +148,7 @@ make buildApplication
 ```
 This creates 2 executables `ViennaPS2D` and `ViennaPS3D` which run processes in 2 or 3 dimensions respectively. Every configuration file can be run in 2D or 3D mode.
 
-The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each succesfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
+The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each successfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
 
 
 ## Contributing
