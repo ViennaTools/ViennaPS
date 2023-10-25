@@ -6,10 +6,10 @@ if DIM == 2:
 else:
     import viennaps3d as vps
 
-params = vps.psReadConfigFile("config.txt")
+params = vps.ReadConfigFile("config.txt")
 
-geometry = vps.psDomain()
-vps.psMakeTrench(
+geometry = vps.Domain()
+vps.MakeTrench(
     domain=geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
@@ -20,17 +20,17 @@ vps.psMakeTrench(
     baseHeight=0.0,
     periodicBoundary=False,
     makeMask=False,
-    material=vps.psMaterial.Si,
+    material=vps.Material.Si,
 ).apply()
 
 # copy top layer to capture deposition
-geometry.duplicateTopLevelSet(vps.psMaterial.SiO2)
+geometry.duplicateTopLevelSet(vps.Material.SiO2)
 
 model = vps.SphereDistribution(
     radius=params["layerThickness"], gridDelta=params["gridDelta"]
 )
 
-process = vps.psProcess()
+process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 
@@ -41,4 +41,4 @@ process.apply()
 geometry.printSurface("final.vtp")
 
 if DIM == 2:
-    vps.psWriteVisualizationMesh(geometry, "final").apply()
+    vps.WriteVisualizationMesh(geometry, "final").apply()

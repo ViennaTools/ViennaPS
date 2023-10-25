@@ -6,10 +6,10 @@ if DIM == 2:
 else:
     import viennaps3d as vps
 
-params = vps.psReadConfigFile("MultiTEOS_config.txt")
+params = vps.ReadConfigFile("MultiTEOS_config.txt")
 
-geometry = vps.psDomain()
-vps.psMakeTrench(
+geometry = vps.Domain()
+vps.MakeTrench(
     domain=geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
@@ -20,11 +20,11 @@ vps.psMakeTrench(
     baseHeight=0.0,
     periodicBoundary=False,
     makeMask=False,
-    material=vps.psMaterial.Si,
+    material=vps.Material.Si,
 ).apply()
 
 # copy top layer to capture deposition
-geometry.duplicateTopLevelSet(vps.psMaterial.SiO2)
+geometry.duplicateTopLevelSet(vps.Material.SiO2)
 
 # process model encompasses surface model and particle types
 model = vps.TEOSDeposition(
@@ -36,7 +36,7 @@ model = vps.TEOSDeposition(
     orderP2=params["reactionOrderP2"],
 )
 
-process = vps.psProcess()
+process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setNumberOfRaysPerPoint(int(params["numRaysPerPoint"]))
@@ -49,4 +49,4 @@ process.apply()
 geometry.printSurface("MultiTEOS_final.vtp")
 
 if DIM == 2:
-    vps.psWriteVisualizationMesh(geometry, "MultiTEOS_final").apply()
+    vps.WriteVisualizationMesh(geometry, "MultiTEOS_final").apply()

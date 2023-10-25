@@ -34,7 +34,8 @@ set(VIENNAPS_PYTHON_MODULE_NAME_2D "_${VIENNAPS_PYTHON_MODULE_NAME}2d")
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d)
 pybind11_add_module(${VIENNAPS_PYTHON_MODULE_NAME_2D} ${VIENNAPS_PYTHON_SOURCE})
-target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME_2D} PUBLIC ${VIENNAPS_INCLUDE_DIRS} "pyWrap.hpp")
+target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME_2D} PUBLIC ${VIENNAPS_INCLUDE_DIRS}
+                                                                    "pyWrap.hpp")
 target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_2D} PRIVATE ${VIENNAPS_LIBRARIES})
 target_compile_definitions(
   ${VIENNAPS_PYTHON_MODULE_NAME_2D}
@@ -50,7 +51,8 @@ set(VIENNAPS_PYTHON_MODULE_NAME_3D "_${VIENNAPS_PYTHON_MODULE_NAME}3d")
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d)
 pybind11_add_module(${VIENNAPS_PYTHON_MODULE_NAME_3D} ${VIENNAPS_PYTHON_SOURCE})
-target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME_3D} PUBLIC ${VIENNAPS_INCLUDE_DIRS} "pyWrap.hpp")
+target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME_3D} PUBLIC ${VIENNAPS_INCLUDE_DIRS}
+                                                                    "pyWrap.hpp")
 target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_3D} PRIVATE ${VIENNAPS_LIBRARIES})
 target_compile_definitions(
   ${VIENNAPS_PYTHON_MODULE_NAME_3D}

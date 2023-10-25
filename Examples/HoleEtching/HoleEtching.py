@@ -6,15 +6,15 @@ if DIM == 2:
 else:
     import viennaps3d as vps
 
-# print intermediate ouput surfaces during the process
-vps.psLogger.setLogLevel(vps.psLogLevel.INTERMEDIATE)
+# print intermediate output surfaces during the process
+vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
 # parse parameters
 params = vps.psReadConfigFile("config.txt")
 
 # geometry setup
-geometry = vps.psDomain()
-vps.psMakeHole(
+geometry = vps.Domain()
+vps.MakeHole(
     domain=geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
@@ -23,7 +23,7 @@ vps.psMakeHole(
     holeDepth=params["maskHeight"],
     taperingAngle=params["taperAngle"],
     makeMask=True,
-    material=vps.psMaterial.Si,
+    material=vps.Material.Si,
 ).apply()
 
 # use pre-defined model SF6O2 etching model
@@ -38,14 +38,14 @@ model = vps.SF6O2Etching(
 )
 
 # process setup
-process = vps.psProcess()
+process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setMaxCoverageInitIterations(10)
 process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])
 
-# print intial surface
+# print initial surface
 geometry.printSurface(filename="initial.vtp", addMaterialIds=True)
 
 # run the process

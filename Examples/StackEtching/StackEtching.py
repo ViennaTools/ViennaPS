@@ -10,14 +10,14 @@ except ModuleNotFoundError:
 
 
 # Set process verbosity
-vps.psLogger.setLogLevel(vps.psLogLevel.INTERMEDIATE)
+vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
 # Parse process parameters
-params = vps.psReadConfigFile("config.txt")
+params = vps.ReadConfigFile("config.txt")
 
 # Geometry setup
-geometry = vps.psDomain()
-vps.psMakeStack(
+geometry = vps.Domain()
+vps.MakeStack(
     geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
@@ -30,7 +30,7 @@ vps.psMakeStack(
     periodicBoundary=False,
 ).apply()
 
-geometry.duplicateTopLevelSet(vps.psMaterial.Polymer)
+geometry.duplicateTopLevelSet(vps.Material.Polymer)
 
 model = vps.FluorocarbonEtching(
     ionFlux=params["ionFlux"],
@@ -41,7 +41,7 @@ model = vps.FluorocarbonEtching(
     ionExponent=params["ionExponent"],
 )
 
-process = vps.psProcess()
+process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
@@ -49,16 +49,16 @@ process.setMaxCoverageInitIterations(10)
 process.setTimeStepRatio(0.25)
 
 # print initial surface
-vps.psWriteVisualizationMesh(geometry, "initial").apply()
+vps.WriteVisualizationMesh(geometry, "initial").apply()
 
 process.apply()
 
 # print final surface
-vps.psWriteVisualizationMesh(geometry, "final").apply()
+vps.WriteVisualizationMesh(geometry, "final").apply()
 
 if extrude:
     print("Extruding to 3D ...")
-    extruded = vps.psDomain3D()
+    extruded = vps.Domain3D()
     extrudeExtent = [-20.0, 20.0]
     boundaryConds = [
         vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
@@ -66,6 +66,6 @@ if extrude:
         vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY,
     ]
 
-    vps.psExtrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
+    vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
 
     extruded.printSurface("extruded_surface.vtp", True)

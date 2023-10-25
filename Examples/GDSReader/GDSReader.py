@@ -14,12 +14,12 @@ boundaryConds = [
     vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
 
-mask = vps.psGDSGeometry(gridDelta)
+mask = vps.GDSGeometry(gridDelta)
 mask.setBoundaryConditions(boundaryConds)
-vps.psGDSReader(mask, "mask.gds").apply()
+vps.GDSReader(mask, "mask.gds").apply()
 
 bounds = mask.getBounds()
-geometry = vps.psDomain()
+geometry = vps.Domain()
 
 # substrate plane
 origin = [0.0, 0.0, 0.0]

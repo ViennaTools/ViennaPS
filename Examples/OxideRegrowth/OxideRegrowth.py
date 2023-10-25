@@ -1,10 +1,10 @@
 # This model/example currently only works in 2D mode
 import viennaps2d as vps
 
-vps.psLogger.setLogLevel(vps.psLogLevel.INTERMEDIATE)
+vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
 # parse the parameters
-params = vps.psReadConfigFile("config.txt")
+params = vps.ReadConfigFile("config.txt")
 
 stability = (
     2
@@ -15,8 +15,8 @@ print(f"Stability: {stability}")
 if 0.5 * stability <= params["gridDelta"]:
     print("Unstable parameters. Reduce grid spacing!")
 
-domain = vps.psDomain()
-vps.psMakeStack(
+domain = vps.Domain()
+vps.MakeStack(
     domain=domain,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
@@ -28,7 +28,7 @@ vps.psMakeStack(
     maskHeight=0.0,
 ).apply()
 # copy top layer for deposition
-domain.duplicateTopLevelSet(vps.psMaterial.Polymer)
+domain.duplicateTopLevelSet(vps.Material.Polymer)
 
 domain.generateCellSet(
     params["substrateHeight"] + params["numLayers"] * params["layerHeight"] + 10.0, True
@@ -57,7 +57,7 @@ model = vps.OxideRegrowthModel(
     params["trenchWidth"],
 )
 
-process = vps.psProcess()
+process = vps.Process()
 process.setDomain(domain)
 process.setProcessModel(model)
 process.setProcessDuration(params["targetEtchDepth"] / params["nitrideEtchRate"] * 60.0)
@@ -65,4 +65,4 @@ process.setPrintTimeInterval(30.0)
 
 process.apply()
 
-vps.psWriteVisualizationMesh(domain, "FinalStack").apply()
+vps.WriteVisualizationMesh(domain, "FinalStack").apply()
