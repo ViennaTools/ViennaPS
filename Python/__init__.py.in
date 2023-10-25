@@ -22,24 +22,24 @@ def ReadConfigFile(fileName : str):
     Returns
     -------
     dict
-        A dictonary containing the parameters from the config file.
+        A dictionary containing the parameters from the config file.
     """
     par_dict = {}
 
     with open(fileName, "r") as file:
         lines = file.readlines()
         for line in lines:
-#remove comments
-            line = line[:line.find('#')]
+            
+            line = line[:line.find('#')] # remove comments
 
             if len(line) > 0:
                 par_name = line[:line.find('=')].strip(' ')
                 par_value = line[line.find('=')+1:]
 
                 try:
-                    val
-= float(par_value) except : val = par_value
+                    val = float(par_value) 
+                except: val = par_value
 
-                                par_dict[par_name] = val
+                par_dict[par_name] = val
 
-                            return par_dict
+    return par_dict

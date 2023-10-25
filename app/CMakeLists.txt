@@ -35,13 +35,15 @@ set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 
 add_custom_target(buildApplication)
 
-add_executable(ViennaPS2D ${PROJECT_SOURCE_DIR}/Application2D.cpp)
-target_include_directories(ViennaPS2D PUBLIC ${VIENNAPS_BUILD_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+add_executable(ViennaPS2D ${PROJECT_SOURCE_DIR}/Application.cpp)
+target_compile_definitions(ViennaPS2D PRIVATE VIENNAPS_APP_DIM=2)
+target_include_directories(ViennaPS2D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS2D ${VIENNAPS_LIBRARIES})
 add_dependencies(buildApplication ViennaPS2D)
 
-add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/Application3D.cpp)
-target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_BUILD_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/Application.cpp)
+target_compile_definitions(ViennaPS3D PRIVATE VIENNAPS_APP_DIM=3)
+target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS3D ${VIENNAPS_LIBRARIES})
 add_dependencies(buildApplication ViennaPS3D)
 

@@ -1,5 +1,4 @@
-#ifndef PS_SURFACE_MODEL
-#define PS_SURFACE_MODEL
+#pragma once
 
 #include <psPointData.hpp>
 #include <psProcessParams.hpp>
@@ -36,5 +35,3 @@ public:
   virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
                                const std::vector<NumericType> &materialIds) {}
 };
-
-#endif

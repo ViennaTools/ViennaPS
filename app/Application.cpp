@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv) {
 
-  Application<3> app(argc, argv);
+  Application<VIENNAPS_APP_DIM> app(argc, argv);
   app.run();
 
   return 0;

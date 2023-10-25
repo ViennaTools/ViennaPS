@@ -1,5 +1,4 @@
-#ifndef PS_PROCESS
-#define PS_PROCESS
+#pragma once
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
@@ -653,5 +652,3 @@ private:
   NumericType processTime = 0.;
   NumericType timeStepRatio = 0.4999;
 };
-
-#endif

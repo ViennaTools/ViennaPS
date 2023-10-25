@@ -22,7 +22,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // wrap omp_set_num_threads to control number of threads
   module.def("setNumThreads", &omp_set_num_threads);
 
-  // it was giving an error that it couldnt convert this type to python
+  // it was giving an error that it could'nt convert this type to python
   // pybind11::bind_vector<std::vector<double, std::allocator<double>>>(
   //     module, "VectorDouble");
 
@@ -314,7 +314,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setDomain", &psToDiskMesh<T, D>::setDomain,
            "Set the domain in the mesh converter.")
       .def("setMesh", &psToDiskMesh<T, D>::setMesh,
-           "Set the mesh in the mesh converte");
+           "Set the mesh in the mesh converter");
   // static assertion failed: Holder classes are only supported for custom types
   // .def("setTranslator", &psToDiskMesh<T, D>::setTranslator,
   //      "Set the translator in the mesh converter. It used to convert "
@@ -413,7 +413,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // methods
       .def("setDomain", &psProcess<T, D>::setDomain, "Set the process domain.")
       .def("setProcessDuration", &psProcess<T, D>::setProcessDuration,
-           "Set the process duraction.")
+           "Set the process duration.")
       .def("setSourceDirection", &psProcess<T, D>::setSourceDirection,
            "Set source direction of the process.")
       .def("setNumberOfRaysPerPoint", &psProcess<T, D>::setNumberOfRaysPerPoint,
@@ -644,21 +644,25 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<IsotropicProcess<T, D>,
                    psSmartPointer<IsotropicProcess<T, D>>>(
       module, "IsotropicProcess", processModel)
-      .def(pybind11::init(
-               &psSmartPointer<IsotropicProcess<T, D>>::New<const double,
-                                                            const int>),
-           pybind11::arg("isotropic rate"), pybind11::arg("maskId") = -1);
+      .def(pybind11::init([](const T rate, const psMaterial mask) {
+             return psSmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
+           }),
+           pybind11::arg("isotropic rate"),
+           pybind11::arg("mask material") = psMaterial::Mask);
 
   // Directional Etching
   pybind11::class_<DirectionalEtching<T, D>,
                    psSmartPointer<DirectionalEtching<T, D>>>(
       module, "DirectionalEtching", processModel)
-      .def(
-          pybind11::init(
-              &psSmartPointer<DirectionalEtching<T, D>>::New<
-                  const std::array<T, 3> &, const T, const T, const int>),
-          pybind11::arg("direction"), pybind11::arg("directionalVelocity") = 1.,
-          pybind11::arg("isotropicVelocity") = 0., pybind11::arg("maskId") = 0);
+      .def(pybind11::init([](const std::array<T, 3> &direction, const T dirVel,
+                             const T isoVel, const psMaterial mask) {
+             return psSmartPointer<DirectionalEtching<T, D>>::New(
+                 direction, dirVel, isoVel, mask);
+           }),
+           pybind11::arg("direction"),
+           pybind11::arg("directionalVelocity") = 1.,
+           pybind11::arg("isotropicVelocity") = 0.,
+           pybind11::arg("mask material") = psMaterial::Mask);
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,
@@ -718,7 +722,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("redepositionThreshold"),
            pybind11::arg("redepositionTimeInt"),
            pybind11::arg("diffusionCoefficient"), pybind11::arg("sinkStrength"),
-           pybind11::arg("scallopVelocitiy"), pybind11::arg("centerVelocity"),
+           pybind11::arg("scallopVelocity"), pybind11::arg("centerVelocity"),
            pybind11::arg("topHeight"), pybind11::arg("centerWidth"));
 
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
@@ -814,7 +818,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getUseCellSet", &psDomain<T, 3>::getUseCellSet)
       .def("print", &psDomain<T, 3>::print)
       .def("printSurface", &psDomain<T, 3>::printSurface,
-           pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
+           pybind11::arg("filename"), pybind11::arg("addMaterialIds") = true,
            "Print the surface of the domain.")
       .def("writeLevelSets", &psDomain<T, 3>::writeLevelSets)
       .def("clear", &psDomain<T, 3>::clear);
