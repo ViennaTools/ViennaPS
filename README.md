@@ -137,7 +137,7 @@ This example demonstrates capturing etching byproducts and the subsequent redepo
 
 ## Application
 
-> __Deprecation Warning__: The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.1.0. Please use the Python bindings instead.
+> __Deprecation Warning__: The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.2.0. Please use the Python bindings instead.
 
 It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake:
 > __Important__: Make sure all dependencies are installed and have been built previously

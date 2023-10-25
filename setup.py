@@ -236,7 +236,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="ViennaPS",
-    version="1.1.0",
+    version="1.3.0",
     author="Institute for Microelectronics",
     author_email="viennatools@iue.tuwien.ac.at",
     license="MIT",
