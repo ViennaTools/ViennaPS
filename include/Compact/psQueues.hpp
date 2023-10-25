@@ -13,7 +13,7 @@
 #include <utility>
 
 // A bounded priority queue implementation.
-// If a certain predifined number of elements are already stored in the queue,
+// If a certain predefined number of elements are already stored in the queue,
 // then a new item with a worse value than the worst already in the queue won't
 // be added when enqueue is called with the new item.
 template <class K, class V, typename Comparator = std::less<K>>

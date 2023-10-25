@@ -22,7 +22,7 @@ public:
   }
 
   void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
-    // additional alerations can be made to the velocities here
+    // additional alterations can be made to the velocities here
     velocities = passedVelocities;
   }
 

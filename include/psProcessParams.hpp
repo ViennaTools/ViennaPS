@@ -1,12 +1,8 @@
+#pragma once
 
-#ifndef PS_PROCESS_PARAMS
-#define PS_PROCESS_PARAMS
-
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
-#include <rayMessage.hpp>
 #include <vector>
-
-// TODO: Implement ViennaPS messaging system
 
 template <typename NumericType> class psProcessParams {
 private:
@@ -34,7 +30,7 @@ public:
         return i;
       }
     }
-    rayMessage::getInstance()
+    psLogger::getInstance()
         .addError("Can not find scalar data label in psProcessParams.")
         .print();
     return -1;
@@ -45,12 +41,10 @@ public:
   const std::vector<NumericType> &getScalarData() const { return scalarData; }
   std::string getScalarDataLabel(int i) const {
     if (i >= scalarDataLabels.size())
-      rayMessage::getInstance()
+      psLogger::getInstance()
           .addError(
               "Getting scalar data label in psProcessParams out of range.")
           .print();
     return scalarDataLabels[i];
   }
 };
-
-#endif

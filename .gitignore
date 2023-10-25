@@ -11,3 +11,8 @@ CMakeSettings.json
 docs/doxygen/*.txt
 dependencies/
 !docs/doxygen/doxygen_template.txt
+*.so
+*.py[cod]
+*.egg-info
+*env*
+.eggs/

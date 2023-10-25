@@ -1,5 +1,4 @@
-#ifndef PS_TRANSLATIONFIELD_HPP
-#define PS_TRANSLATIONFIELD_HPP
+#pragma once
 
 #include <iostream>
 #include <lsVelocityField.hpp>
@@ -82,5 +81,3 @@ private:
   const psSmartPointer<psVelocityField<NumericType>> modelVelocityField;
   const psSmartPointer<psMaterialMap> materialMap;
 };
-
-#endif

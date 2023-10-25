@@ -1,5 +1,5 @@
 # Domain
-gridDelta=2.
+gridDelta=2.5
 xExtent=300.0
 
 # Geometry

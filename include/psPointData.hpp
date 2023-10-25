@@ -1,5 +1,4 @@
-#ifndef PS_POINT_DATA_HPP
-#define PS_POINT_DATA_HPP
+#pragma once
 
 #include <lsPointData.hpp>
 
@@ -15,14 +14,14 @@ template <typename T> using psPointData = lsPointData<T>;
 //     CellDataType data;
 
 // public:
-//     void insterNextCellData(std::vector<NumericType> &passedData, std::string
+//     void insertNextCellData(std::vector<NumericType> &passedData, std::string
 //     dataLabel)
 //     {
 //         data.push_back(passedData);
 //         labels.push_back(dataLabel);
 //     }
 
-//     void insterNextCellData(std::vector<NumericType> &&passedData,
+//     void insertNextCellData(std::vector<NumericType> &&passedData,
 //     std::string dataLabel)
 //     {
 //         data.push_back(std::move(passedData));
@@ -45,5 +44,3 @@ template <typename T> using psPointData = lsPointData<T>;
 //         return nullptr;
 //     }
 // };
-
-#endif

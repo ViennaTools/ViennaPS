@@ -1,5 +1,4 @@
-#ifndef PS_VELOCITY_FIELD
-#define PS_VELOCITY_FIELD
+#pragma once
 
 #include <psSmartPointer.hpp>
 #include <vector>
@@ -64,5 +63,3 @@ private:
   psSmartPointer<std::vector<NumericType>> velocities;
   const int translationFieldOptions = 1; // default: use map translator
 };
-
-#endif

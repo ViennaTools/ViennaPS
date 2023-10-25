@@ -1,5 +1,4 @@
-#ifndef PS_DOMAIN_HPP
-#define PS_DOMAIN_HPP
+#pragma once
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -221,5 +220,3 @@ public:
     }
   }
 };
-
-#endif // PS_DOMAIN_HPP

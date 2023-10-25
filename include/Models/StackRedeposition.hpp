@@ -182,7 +182,7 @@ public:
     cellSet->updateMaterials();
     const auto gridDelta = cellSet->getGridDelta();
 
-    // add byproducs
+    // add byproducts
     for (size_t j = 0; j < nodes.size(); j++) {
       cellSet->addFillingFraction(nodes[j],
                                   etchRate * advectedTime / gridDelta);
@@ -214,7 +214,7 @@ private:
 
 #pragma omp parallel for
       for (int e = 0; e < data->size(); e++) {
-        if (psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
+        if (!psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
           continue;
         }
 
@@ -302,7 +302,7 @@ public:
       const NumericType redepositionThreshold,
       const NumericType redepositionTimeInt,
       const NumericType diffusionCoefficient, const NumericType sinkStrength,
-      const NumericType scallopVelocitiy, const NumericType centerVelocity,
+      const NumericType scallopVelocity, const NumericType centerVelocity,
       const NumericType topHeight, const NumericType centerWidth) {
 
     auto veloField =
@@ -312,7 +312,7 @@ public:
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
     auto dynamics = psSmartPointer<ByproductDynamics<NumericType, D>>::New(
-        diffusionCoefficient, sinkStrength, scallopVelocitiy, centerVelocity,
+        diffusionCoefficient, sinkStrength, scallopVelocity, centerVelocity,
         topHeight, centerWidth / 2., nitrideEtchRate, redepositionRate,
         redepositionThreshold, redepositionTimeInt);
 

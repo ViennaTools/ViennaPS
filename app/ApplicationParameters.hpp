@@ -3,23 +3,28 @@
 #include <string>
 #include <unordered_map>
 
+#include <psLogger.hpp>
 #include <psMaterials.hpp>
 #include <psUtils.hpp>
 
 enum class CommandType { NONE, INIT, GEOMETRY, PROCESS, OUTPUT, PLANARIZE };
 
-enum class GeometryType { NONE, TRENCH, HOLE, PLANE, GDS, IMPORT };
+enum class GeometryType { NONE, TRENCH, HOLE, PLANE, STACK, GDS, IMPORT };
 
 enum class ProcessType {
   NONE,
   SF6O2ETCHING,
-  DEPOSITION,
+  FLUOROCARBONETCHING,
+  SIMPLEDEPOSITION,
+  TEOSDEPOSITION,
   SPHEREDISTRIBUTION,
   BOXDISTRIBUTION,
   DIRECTIONALETCHING,
   WETETCHING,
   ISOTROPIC
 };
+
+enum class OutputType { SURFACE, VOLUME };
 
 #ifdef VIENNAPS_USE_DOUBLE
 using NumericType = double;
@@ -28,7 +33,7 @@ using NumericType = float;
 #endif
 
 struct ApplicationParameters {
-  NumericType printTimeInterval = 0;
+  int logLevel = 2;
   GeometryType geometryType = GeometryType::NONE;
   ProcessType processType = ProcessType::NONE;
 
@@ -51,6 +56,10 @@ struct ApplicationParameters {
   // MAKE hole
   NumericType holeDepth = 0.2;
   NumericType holeRadius = 0.2;
+  // MAKE stack
+  int numLayers = 11;
+  NumericType layerHeight = 1.;
+  NumericType substrateHeight = 1.;
   // GDS / IMPORT
   int layers = 0;
   std::string fileName = "";
@@ -59,20 +68,35 @@ struct ApplicationParameters {
   NumericType xPadding = 0.;
   NumericType yPadding = 0.;
   psMaterial material = psMaterial::Si;
+  psMaterial maskMaterial = psMaterial::Mask;
 
   // Process
   NumericType processTime = 1;
   int raysPerPoint = 3000;
-  // SF6O2Etching
-  NumericType totalEtchantFlux = 4.5e16;
-  NumericType totalOxygenFlux = 1e18;
-  NumericType totalIonFlux = 2e16;
-  NumericType ionEnergy = 100;
+  NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
+  NumericType smoothFlux = 1.;
+  // Plasma etching
+  // fluxes in in (1e15 atoms/cm³)
+  NumericType etchantFlux = 1.8e3;
+  NumericType oxygenFlux = 1.0e2;
+  NumericType ionFlux = 12.;
+  NumericType ionEnergy = 100;     // eV
+  NumericType sigmaIonEnergy = 10; // eV
+  NumericType ionExponent = 100.;
   NumericType A_O = 3.;
+  // Fluorocarbon etching
+  NumericType deltaP = 0;
   // Deposition
   NumericType rate = 1.;
   NumericType sticking = 1.;
   NumericType cosinePower = 1.;
+  // TEOS Deposition
+  NumericType rateP1 = 1.;
+  NumericType stickingP1 = 1.;
+  NumericType orderP1 = 1.;
+  NumericType rateP2 = 0.;
+  NumericType stickingP2 = 1.;
+  NumericType orderP2 = 1.;
   // Directional etching
   NumericType directionalRate = 1.;
   NumericType isotropicRate = 0.;
@@ -82,6 +106,9 @@ struct ApplicationParameters {
   NumericType radius = 1.;
   // box
   std::array<hrleCoordType, 3> halfAxes = {1., 1., 1.};
+
+  // output
+  OutputType out = OutputType::SURFACE;
 
   ApplicationParameters() {}
 
@@ -99,11 +126,14 @@ struct ApplicationParameters {
     maskHeight = 0.1;
     processTime = 1;
     raysPerPoint = 3000;
-    totalEtchantFlux = 4.5e16;
-    totalOxygenFlux = 1e18;
-    totalIonFlux = 2e16;
+    etchantFlux = 100;
+    oxygenFlux = 100;
+    ionFlux = 100;
     ionEnergy = 100;
+    ionExponent = 100.;
+    sigmaIonEnergy = 10;
     A_O = 3.;
+    deltaP = 0.;
     rate = 1.;
     sticking = 1.;
     cosinePower = 1.;
@@ -114,9 +144,20 @@ struct ApplicationParameters {
     halfAxes[0] = 1.;
     halfAxes[1] = 1.;
     halfAxes[2] = 1.;
+    numLayers = 11;
+    layerHeight = 1.;
+    substrateHeight = 1.;
+    etchStopDepth = std::numeric_limits<NumericType>::lowest();
+    smoothFlux = 1.;
+    rateP1 = 1.;
+    stickingP1 = 1.;
+    orderP1 = 1.;
+    rateP2 = 0.;
+    stickingP2 = 1.;
+    orderP2 = 1.;
 
     if (all) {
-      printTimeInterval = 0;
+      logLevel = 2;
       geometryType = GeometryType::NONE;
       processType = ProcessType::NONE;
       gridDelta = 0.02;
