@@ -98,7 +98,7 @@ public:
     const auto oxygenSputteringRate =
         Rates->getScalarData("oxygenSputteringRate");
 
-    // etchant flourine coverage
+    // etchant fluorine coverage
     auto eCoverage = Coverages->getScalarData("eCoverage");
     eCoverage->resize(numPoints);
     // oxygen coverage

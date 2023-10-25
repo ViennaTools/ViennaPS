@@ -75,7 +75,7 @@ public:
       auto matId = psMaterialMap::mapToMaterial(materialIds[i]);
       assert(matId == psMaterial::Mask || matId == psMaterial::Polymer ||
              matId == psMaterial::Si || matId == psMaterial::SiO2 ||
-             matId == psMaterial::Si3N4 && "Unexptected material");
+             matId == psMaterial::Si3N4 && "Unexpected material");
       if (matId == psMaterial::Mask) {
         etchRate[i] = (-1. / psParameters::Mask::rho) *
                       ionSputteringRate->at(i) * totalIonFlux;

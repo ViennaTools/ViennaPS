@@ -575,7 +575,7 @@ private:
   }
 
   int findSurfaceHitPoint(csTriple<T> &hitPoint, const csTriple<T> &direction) {
-    // find surface hitpoint
+    // find surface hit point
     auto idx = findIndex(hitPoint);
 
     if (idx > 0)
