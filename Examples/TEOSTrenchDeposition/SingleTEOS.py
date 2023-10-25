@@ -10,7 +10,7 @@ params = vps.psReadConfigFile("SingleTEOS_config.txt")
 
 geometry = vps.psDomain()
 vps.psMakeTrench(
-    psDomain=geometry,
+    domain=geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],

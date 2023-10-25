@@ -28,7 +28,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psProcessParams
   pybind11::class_<psProcessParams<T>, psSmartPointer<psProcessParams<T>>>(
-      module, "psProcessParams")
+      module, "ProcessParams")
       .def(pybind11::init<>())
       .def("insertNextScalar", &psProcessParams<T>::insertNextScalar)
       .def("getScalarData", (T & (psProcessParams<T>::*)(int)) &
@@ -47,7 +47,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psSurfaceModel
   pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,
-                   PypsSurfaceModel>(module, "psSurfaceModel")
+                   PypsSurfaceModel>(module, "SurfaceModel")
       .def(pybind11::init<>())
       .def("initializeCoverages", &psSurfaceModel<T>::initializeCoverages)
       .def("initializeProcessParameters",
@@ -57,7 +57,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("calculateVelocities", &psSurfaceModel<T>::calculateVelocities)
       .def("updateCoverages", &psSurfaceModel<T>::updateCoverages);
 
-  pybind11::enum_<psLogLevel>(module, "psLogLevel")
+  pybind11::enum_<psLogLevel>(module, "LogLevel")
       .value("ERROR", psLogLevel::ERROR)
       .value("WARNING", psLogLevel::WARNING)
       .value("INFO", psLogLevel::INFO)
@@ -67,7 +67,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .export_values();
 
   // some unexpected behaviour can happen as it is working with multithreading
-  pybind11::class_<psLogger, psSmartPointer<psLogger>>(module, "psLogger")
+  pybind11::class_<psLogger, psSmartPointer<psLogger>>(module, "Logger")
       .def_static("setLogLevel", &psLogger::setLogLevel)
       .def_static("getLogLevel", &psLogger::getLogLevel)
       .def_static("getInstance", &psLogger::getInstance,
@@ -87,7 +87,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // psVelocityField
   pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
                    PyVelocityField>
-      velocityField(module, "psVelocityField");
+      velocityField(module, "VelocityField");
   // constructors
   velocityField
       .def(pybind11::init<>())
@@ -101,7 +101,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   pybind11::class_<psDefaultVelocityField<T>,
                    psSmartPointer<psDefaultVelocityField<T>>>(
-      module, "psDefaultVelocityField", velocityField)
+      module, "DefaultVelocityField", velocityField)
       // constructors
       .def(pybind11::init<>())
       // methods
@@ -114,7 +114,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setVelocities", &psDefaultVelocityField<T>::setVelocities);
 
   // psDomain
-  pybind11::class_<psDomain<T, D>, DomainType>(module, "psDomain")
+  pybind11::class_<psDomain<T, D>, DomainType>(module, "Domain")
       // constructors
       .def(pybind11::init<bool>())
       .def(pybind11::init(&DomainType::New<>))
@@ -149,7 +149,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("clear", &psDomain<T, D>::clear);
 
   // Enum psMaterial
-  pybind11::enum_<psMaterial>(module, "psMaterial")
+  pybind11::enum_<psMaterial>(module, "Material")
       .value("Undefined", psMaterial::Undefined)
       .value("Mask", psMaterial::Mask)
       .value("Si", psMaterial::Si)
@@ -172,8 +172,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .export_values();
 
   // psMaterialMap
-  pybind11::class_<psMaterialMap, psSmartPointer<psMaterialMap>>(
-      module, "psMaterialMap")
+  pybind11::class_<psMaterialMap, psSmartPointer<psMaterialMap>>(module,
+                                                                 "MaterialMap")
       .def(pybind11::init<>())
       .def("insertNextMaterial", &psMaterialMap::insertNextMaterial,
            pybind11::arg("material") = psMaterial::Undefined)
@@ -263,7 +263,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Shim to instantiate the particle class
   pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>> particle(
-      module, "psParticle");
+      module, "Particle");
   particle.def("surfaceCollision", &psParticle<D>::surfaceCollision)
       .def("surfaceReflection", &psParticle<D>::surfaceReflection)
       .def("initNew", &psParticle<D>::initNew)
@@ -272,7 +272,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            &psParticle<D>::getSourceDistributionPower);
 
   pybind11::class_<psDiffuseParticle<D>, psSmartPointer<psDiffuseParticle<D>>>(
-      module, "psDiffuseParticle", particle)
+      module, "DiffuseParticle", particle)
       .def(pybind11::init(
                &psSmartPointer<psDiffuseParticle<D>>::New<const T, const T,
                                                           const std::string &>),
@@ -287,7 +287,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            &psDiffuseParticle<D>::getSourceDistributionPower);
 
   pybind11::class_<psSpecularParticle, psSmartPointer<psSpecularParticle>>(
-      module, "psSpecularParticle", particle)
+      module, "SpecularParticle", particle)
       .def(pybind11::init(
                &psSmartPointer<psSpecularParticle>::New<const T, const T,
                                                         const std::string &>),
@@ -307,7 +307,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // visualization classes are not bound with smart pointer holder types
   // since they should not be passed to other classes
-  pybind11::class_<psToDiskMesh<T, D>>(module, "psToDiskMesh")
+  pybind11::class_<psToDiskMesh<T, D>>(module, "ToDiskMesh")
       .def(pybind11::init<DomainType, psSmartPointer<lsMesh<T>>>(),
            pybind11::arg("domain"), pybind11::arg("mesh"))
       .def(pybind11::init())
@@ -323,7 +323,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //      "Retrieve the translator from the mesh converter.");
 
   pybind11::class_<psWriteVisualizationMesh<T, D>>(module,
-                                                   "psWriteVisualizationMesh")
+                                                   "WriteVisualizationMesh")
       .def(pybind11::init())
       .def(pybind11::init<DomainType, std::string>(), pybind11::arg("domain"),
            pybind11::arg("fileName"))
@@ -340,7 +340,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psProcessModel
   pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>>
-      processModel(module, "psProcessModel");
+      processModel(module, "ProcessModel");
 
   // constructors
   processModel
@@ -405,8 +405,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       });
 
   // psProcess
-  pybind11::class_<psProcess<T, D>, psSmartPointer<psProcess<T, D>>>(
-      module, "psProcess")
+  pybind11::class_<psProcess<T, D>, psSmartPointer<psProcess<T, D>>>(module,
+                                                                     "Process")
       // constructors
       .def(pybind11::init(&psSmartPointer<psProcess<T, D>>::New<>))
 
@@ -443,7 +443,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // psAdvectionCallback
   pybind11::class_<psAdvectionCallback<T, D>,
                    psSmartPointer<psAdvectionCallback<T, D>>,
-                   PyAdvectionCallback>(module, "psAdvectionCallback")
+                   PyAdvectionCallback>(module, "AdvectionCallback")
       // constructors
       .def(pybind11::init<>())
       // methods
@@ -469,7 +469,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psMakePlane
   pybind11::class_<psMakePlane<T, D>, psSmartPointer<psMakePlane<T, D>>>(
-      module, "psMakePlane")
+      module, "MakePlane")
       .def(pybind11::init([](DomainType Domain, const T GridDelta,
                              const T XExtent, const T YExtent, const T Height,
                              const bool Periodic, const psMaterial Material) {
@@ -477,7 +477,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  Domain, GridDelta, XExtent, YExtent, Height, Periodic,
                  Material);
            }),
-           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("height") = 0.,
            pybind11::arg("periodicBoundary") = false,
@@ -487,14 +487,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  return psSmartPointer<psMakePlane<T, D>>::New(Domain, Height,
                                                                Material);
                }),
-           pybind11::arg("psDomain"), pybind11::arg("height") = 0.,
+           pybind11::arg("domain"), pybind11::arg("height") = 0.,
            pybind11::arg("material") = psMaterial::Undefined)
       .def("apply", &psMakePlane<T, D>::apply,
            "Create a plane geometry or add plane to existing geometry.");
 
   // psMakeTrench
   pybind11::class_<psMakeTrench<T, D>, psSmartPointer<psMakeTrench<T, D>>>(
-      module, "psMakeTrench")
+      module, "MakeTrench")
       .def(pybind11::init([](DomainType Domain, const T GridDelta,
                              const T XExtent, const T YExtent,
                              const T TrenchWidth, const T TrenchDepth,
@@ -506,7 +506,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
                  Material);
            }),
-           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("trenchWidth"), pybind11::arg("trenchDepth"),
            pybind11::arg("taperingAngle") = 0.,
@@ -518,7 +518,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psMakeHole
   pybind11::class_<psMakeHole<T, D>, psSmartPointer<psMakeHole<T, D>>>(
-      module, "psMakeHole")
+      module, "MakeHole")
       .def(pybind11::init([](DomainType domain, const T GridDelta,
                              const T xExtent, const T yExtent,
                              const T HoleRadius, const T HoleDepth,
@@ -530,7 +530,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
                  material);
            }),
-           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("holeRadius"), pybind11::arg("holeDepth"),
            pybind11::arg("taperingAngle") = 0.,
@@ -541,8 +541,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &psMakeHole<T, D>::apply, "Create a hole geometry.");
 
   // psMakeFin
-  pybind11::class_<psMakeFin<T, D>, psSmartPointer<psMakeFin<T, D>>>(
-      module, "psMakeFin")
+  pybind11::class_<psMakeFin<T, D>, psSmartPointer<psMakeFin<T, D>>>(module,
+                                                                     "MakeFin")
       .def(pybind11::init([](DomainType Domain, const T gridDelta,
                              const T xExtent, const T yExtent, const T FinWidth,
                              const T FinHeight, const T BaseHeight,
@@ -552,7 +552,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  Domain, gridDelta, xExtent, yExtent, FinWidth, FinHeight,
                  BaseHeight, PeriodicBoundary, MakeMask, material);
            }),
-           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("finWidth"), pybind11::arg("finHeight"),
            pybind11::arg("baseHeight") = 0.,
@@ -563,7 +563,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // psMakeStack
   pybind11::class_<psMakeStack<T, D>, psSmartPointer<psMakeStack<T, D>>>(
-      module, "psMakeStack")
+      module, "MakeStack")
       .def(pybind11::init(
                &psSmartPointer<psMakeStack<T, D>>::New<
                    DomainType &, const T /*gridDelta*/, const T /*xExtent*/,
@@ -571,7 +571,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    const T /*layerHeight*/, const T /*substrateHeight*/,
                    const T /*holeRadius*/, const T /*maskHeight*/,
                    const bool /*PeriodicBoundary*/>),
-           pybind11::arg("psDomain"), pybind11::arg("gridDelta"),
+           pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("numLayers"), pybind11::arg("layerHeight"),
            pybind11::arg("substrateHeight"), pybind11::arg("holeRadius"),
@@ -722,7 +722,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("topHeight"), pybind11::arg("centerWidth"));
 
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
-      module, "psPlanarize")
+      module, "Planarize")
       .def(pybind11::init(
                &psSmartPointer<psPlanarize<T, D>>::New<DomainType &, const T>),
            pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
@@ -736,7 +736,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // GDS file parsing
   pybind11::class_<psGDSGeometry<T, D>, psSmartPointer<psGDSGeometry<T, D>>>(
-      module, "psGDSGeometry")
+      module, "GDSGeometry")
       // constructors
       .def(pybind11::init(&psSmartPointer<psGDSGeometry<T, D>>::New<>))
       .def(pybind11::init(&psSmartPointer<psGDSGeometry<T, D>>::New<const T>),
@@ -770,7 +770,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           "Get the bounds of the geometry.");
 
   pybind11::class_<psGDSReader<T, D>, psSmartPointer<psGDSReader<T, D>>>(
-      module, "psGDSReader")
+      module, "GDSReader")
       // constructors
       .def(pybind11::init(&psSmartPointer<psGDSReader<T, D>>::New<>))
       .def(pybind11::init(&psSmartPointer<psGDSReader<T, D>>::New<
@@ -785,7 +785,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // wrap a 3D domain in 2D mode to be used with psExtrude
   // psDomain
   pybind11::class_<psDomain<T, 3>, psSmartPointer<psDomain<T, 3>>>(module,
-                                                                   "psDomain3D")
+                                                                   "Domain3D")
       // constructors
       .def(pybind11::init<bool>())
       .def(pybind11::init(&psSmartPointer<psDomain<T, 3>>::New<>))
@@ -819,7 +819,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("writeLevelSets", &psDomain<T, 3>::writeLevelSets)
       .def("clear", &psDomain<T, 3>::clear);
 
-  pybind11::class_<psExtrude<T>>(module, "psExtrude")
+  pybind11::class_<psExtrude<T>>(module, "Extrude")
       .def(pybind11::init())
       .def(pybind11::init<psSmartPointer<psDomain<T, 2>> &,
                           psSmartPointer<psDomain<T, 3>> &, std::array<T, 2>,

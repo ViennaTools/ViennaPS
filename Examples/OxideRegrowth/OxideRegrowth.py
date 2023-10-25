@@ -17,7 +17,7 @@ if 0.5 * stability <= params["gridDelta"]:
 
 domain = vps.psDomain()
 vps.psMakeStack(
-    psDomain=domain,
+    domain=domain,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=0.0,

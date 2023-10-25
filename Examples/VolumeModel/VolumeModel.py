@@ -5,7 +5,7 @@ params = vps.psReadConfigFile("config.txt")
 
 geometry = vps.psDomain()
 vps.psMakeFin(
-    psDomain=geometry,
+    domain=geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],

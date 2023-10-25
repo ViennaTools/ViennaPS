@@ -15,7 +15,7 @@ params = vps.psReadConfigFile("config.txt")
 # geometry setup
 geometry = vps.psDomain()
 vps.psMakeHole(
-    psDomain=geometry,
+    domain=geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
