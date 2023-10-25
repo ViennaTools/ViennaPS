@@ -227,7 +227,7 @@ public:
       auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
 
       return std::pair<NumericType, rayTriple<NumericType>>{1. - Eref_peak,
-                                                            direction};
+                                                            direction}
     } else {
       return std::pair<NumericType, rayTriple<NumericType>>{
           1., rayTriple<NumericType>{0., 0., 0.}};
