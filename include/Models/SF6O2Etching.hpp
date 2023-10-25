@@ -226,9 +226,8 @@ public:
       //     M_PI_2 - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
       auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
 
-      return std::pair<NumericType, rayTriple<NumericType>> {
-        1. - Eref_peak, direction
-      }
+      return std::pair<NumericType, rayTriple<NumericType>>{1. - Eref_peak,
+                                                            direction};
     } else {
       return std::pair<NumericType, rayTriple<NumericType>>{
           1., rayTriple<NumericType>{0., 0., 0.}};
