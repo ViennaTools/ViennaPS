@@ -133,7 +133,6 @@ public:
                         rayRNG &Rng) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {dataLabel};
@@ -170,7 +169,6 @@ public:
                         rayRNG &Rng) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {dataLabel};

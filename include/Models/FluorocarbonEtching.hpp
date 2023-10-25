@@ -318,7 +318,6 @@ public:
     } while (E < minEnergy);
   }
 
-  int getRequiredLocalDataSize() const override final { return 3; }
   NumericType getSourceDistributionPower() const override final {
     return power;
   }
@@ -368,7 +367,6 @@ public:
     }
     return std::pair<NumericType, rayTriple<NumericType>>{stick, direction};
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"polyRate"};
@@ -411,7 +409,6 @@ public:
 
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"etchantRate"};

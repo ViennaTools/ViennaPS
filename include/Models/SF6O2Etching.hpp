@@ -2,15 +2,12 @@
 
 #include <ModelParameters.hpp>
 
-#include <csTracingParticle.hpp>
-
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
 #include <psLogger.hpp>
 #include <psProcessModel.hpp>
-#include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
@@ -242,7 +239,6 @@ public:
       E = normalDist(RNG);
     } while (E < minEnergy);
   }
-  int getRequiredLocalDataSize() const override final { return 3; }
   NumericType getSourceDistributionPower() const override final {
     return power;
   }
@@ -296,8 +292,6 @@ public:
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
-  void initNew(rayRNG &RNG) override final {}
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"etchantRate"};
@@ -332,8 +326,6 @@ public:
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
-  void initNew(rayRNG &RNG) override final {}
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"oxygenRate"};

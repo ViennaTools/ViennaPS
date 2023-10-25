@@ -1,6 +1,7 @@
 #pragma once
 
 #define PYBIND11_DETAILED_ERROR_MESSAGES
+#define VIENNAPS_PYTHON_BUILD
 
 // correct module name macro
 #define TOKENPASTE_INTERNAL(x, y, z) x##y##z
@@ -161,10 +162,6 @@ public:
     PYBIND11_OVERRIDE(void, ClassName, initNew, RNG);
   }
 
-  int getRequiredLocalDataSize() const override final {
-    PYBIND11_OVERRIDE(int, ClassName, getRequiredLocalDataSize);
-  }
-
   T getSourceDistributionPower() const override final {
     PYBIND11_OVERRIDE(T, ClassName, getSourceDistributionPower);
   }
@@ -204,8 +201,6 @@ public:
   }
 
   void initNew(rayRNG &RNG) override final {}
-
-  int getRequiredLocalDataSize() const override final { return 1; }
 
   T getSourceDistributionPower() const override final { return cosineExponent; }
 
@@ -247,8 +242,6 @@ public:
   }
 
   void initNew(rayRNG &RNG) override final {}
-
-  int getRequiredLocalDataSize() const override final { return 1; }
 
   T getSourceDistributionPower() const override final { return cosineExponent; }
 

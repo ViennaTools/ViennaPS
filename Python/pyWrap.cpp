@@ -267,7 +267,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   particle.def("surfaceCollision", &psParticle<D>::surfaceCollision)
       .def("surfaceReflection", &psParticle<D>::surfaceReflection)
       .def("initNew", &psParticle<D>::initNew)
-      .def("getRequiredLocalDataSize", &psParticle<D>::getRequiredLocalDataSize)
       .def("getLocalDataLabels", &psParticle<D>::getLocalDataLabels)
       .def("getSourceDistributionPower",
            &psParticle<D>::getSourceDistributionPower);
@@ -283,8 +282,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("surfaceCollision", &psDiffuseParticle<D>::surfaceCollision)
       .def("surfaceReflection", &psDiffuseParticle<D>::surfaceReflection)
       .def("initNew", &psDiffuseParticle<D>::initNew)
-      .def("getRequiredLocalDataSize",
-           &psDiffuseParticle<D>::getRequiredLocalDataSize)
       .def("getLocalDataLabels", &psDiffuseParticle<D>::getLocalDataLabels)
       .def("getSourceDistributionPower",
            &psDiffuseParticle<D>::getSourceDistributionPower);
@@ -300,8 +297,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("surfaceCollision", &psSpecularParticle::surfaceCollision)
       .def("surfaceReflection", &psSpecularParticle::surfaceReflection)
       .def("initNew", &psSpecularParticle::initNew)
-      .def("getRequiredLocalDataSize",
-           &psSpecularParticle::getRequiredLocalDataSize)
       .def("getLocalDataLabels", &psSpecularParticle::getLocalDataLabels)
       .def("getSourceDistributionPower",
            &psSpecularParticle::getSourceDistributionPower);
