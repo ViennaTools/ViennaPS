@@ -1,6 +1,7 @@
 # Domain
-gridDelta=2.5
-xExtent=300.0
+gridDelta=2.
+xExtent=400.0
+yExtent=100.0
 
 # Geometry
 numLayers=7
@@ -11,11 +12,11 @@ trenchWidth=150.0
 # Etching
 nitrideEtchRate=6.5
 oxideEtchRate=0.
-targetEtchDepth=200.
-diffusionCoefficient=40. 
-sink=0.01          
+targetEtchDepth=100.
+diffusionCoefficient=50.
+sink=0.1          
 scallopVelocity=5.
-centerVelocity=1.
+centerVelocity=7.5
 
 # Redeposition
 redepositionRate=0.01

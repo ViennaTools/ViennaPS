@@ -175,6 +175,8 @@ public:
 
   psSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
+  psSmartPointer<lsMesh<T>> getCellGrid() { return cellGrid; }
+
   levelSetsType getLevelSets() const { return levelSets; }
 
   size_t getNumberOfCells() const { return numberOfCells; }

@@ -78,6 +78,7 @@ class ByproductDynamics : public psAdvectionCallback<T, D> {
   const T redepositionFactor;
   const T redepositionThreshold = 0.1;
   const T redepoTimeInt = 60;
+  const T timeStabilityFactor = 0.245;
   std::vector<std::array<T, 3>> nodes;
   T prevProcTime = 0.;
   unsigned counter = 0;
@@ -87,13 +88,15 @@ public:
                     const T passedScallopVel, const T passedHoleVel,
                     const T passedTop, const T passedRadius,
                     const T passedEtchRate, const T passedRedepoFactor,
-                    const T passedRedepThreshold, const T passedRedepTimeInt)
+                    const T passedRedepThreshold, const T passedRedepTimeInt,
+                    const T passedTimeStabilityFactor)
       : diffusionCoefficient(passedDiffCoeff), sink(passedSink),
         scallopStreamVel(passedScallopVel), holeStreamVel(passedHoleVel),
         top(passedTop), holeRadius(passedRadius), etchRate(passedEtchRate),
         redepositionFactor(passedRedepoFactor),
         redepositionThreshold(passedRedepThreshold),
-        redepoTimeInt(passedRedepTimeInt) {}
+        redepoTimeInt(passedRedepTimeInt),
+        timeStabilityFactor(passedTimeStabilityFactor) {}
 
   bool applyPreAdvect(const T processTime) override {
     assert(domain->getUseCellSet());
@@ -202,8 +205,8 @@ private:
     auto nodes = cellSet->getNodes();
     const auto gridDelta = cellSet->getGridDelta();
     // calculate time discretization
-    const T dt =
-        std::min(gridDelta * gridDelta / diffusionCoefficient * 0.245, 1.);
+    const T dt = std::min(
+        gridDelta * gridDelta / diffusionCoefficient * timeStabilityFactor, 1.);
     const int numSteps = static_cast<int>(timeStep / dt);
     const T C = dt * diffusionCoefficient / (gridDelta * gridDelta);
     const T holeC = dt / gridDelta * holeStreamVel;
@@ -240,7 +243,7 @@ private:
             C * (solution[e] - static_cast<T>(numNeighbors) * data->at(e));
 
         // sink at the top
-        if (coord[1] > top - gridDelta) {
+        if (coord[D - 1] > top - gridDelta) {
           solution[e] = std::max(solution[e] - sink, 0.);
           continue;
         }
@@ -248,12 +251,15 @@ private:
         // convection
         if (std::abs(coord[0]) < holeRadius) {
           // in hole
-          assert(cellNeighbors[2] != -1 && "holeStream up neighbor wrong");
-          if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[2]),
-                                        psMaterial::GAS)) {
-            solution[e] -= holeC * (((coord[1] - gridDelta) / top) *
-                                        data->at(cellNeighbors[2]) -
-                                    (coord[1] / top) * data->at(e));
+          assert((cellNeighbors[2] != -1 && D == 2) ||
+                 (cellNeighbors[4] != -1 && D == 3) &&
+                     "holeStream up neighbor wrong");
+          if (psMaterialMap::isMaterial(
+                  materialIds->at(cellNeighbors[2 * (D - 1)]),
+                  psMaterial::GAS)) {
+            solution[e] -= holeC * (((coord[D - 1] - gridDelta) / top) *
+                                        data->at(cellNeighbors[2 * (D - 1)]) -
+                                    (coord[D - 1] / top) * data->at(e));
           }
         } else {
           if (coord[0] < 0) {
@@ -296,14 +302,17 @@ private:
 template <class NumericType, int D>
 class OxideRegrowthModel : public psProcessModel<NumericType, D> {
 public:
-  OxideRegrowthModel(
-      const NumericType nitrideEtchRate, const NumericType oxideEtchRate,
-      const NumericType redepositionRate,
-      const NumericType redepositionThreshold,
-      const NumericType redepositionTimeInt,
-      const NumericType diffusionCoefficient, const NumericType sinkStrength,
-      const NumericType scallopVelocity, const NumericType centerVelocity,
-      const NumericType topHeight, const NumericType centerWidth) {
+  OxideRegrowthModel(const NumericType nitrideEtchRate,
+                     const NumericType oxideEtchRate,
+                     const NumericType redepositionRate,
+                     const NumericType redepositionThreshold,
+                     const NumericType redepositionTimeInt,
+                     const NumericType diffusionCoefficient,
+                     const NumericType sinkStrength,
+                     const NumericType scallopVelocity,
+                     const NumericType centerVelocity,
+                     const NumericType topHeight, const NumericType centerWidth,
+                     const NumericType timeStabilityFactor = 0.245) {
 
     auto veloField =
         psSmartPointer<SelectiveEtchingVelocityField<NumericType>>::New(
@@ -314,7 +323,7 @@ public:
     auto dynamics = psSmartPointer<ByproductDynamics<NumericType, D>>::New(
         diffusionCoefficient, sinkStrength, scallopVelocity, centerVelocity,
         topHeight, centerWidth / 2., nitrideEtchRate, redepositionRate,
-        redepositionThreshold, redepositionTimeInt);
+        redepositionThreshold, redepositionTimeInt, timeStabilityFactor);
 
     this->setVelocityField(veloField);
     this->setSurfaceModel(surfModel);
