@@ -93,9 +93,5 @@ int main(int argc, char **argv) {
 
   process.apply();
 
-  auto materials = createMaterialMap(params.numLayers);
-  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack", materials)
-      .apply();
-
-  return 0;
+  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack").apply();
 }

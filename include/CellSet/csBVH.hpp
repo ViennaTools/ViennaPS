@@ -4,6 +4,8 @@
 
 #include <lsSmartPointer.hpp>
 
+/// Helper class to quickly determine the cell in which a given point resides
+/// in. To do so, an octree is built around the cell set structure.
 template <class T, int D> class csBVH {
 private:
   using BVPtrType = lsSmartPointer<csBoundingVolume<T, D>>;

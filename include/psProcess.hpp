@@ -1,5 +1,4 @@
-#ifndef PS_PROCESS
-#define PS_PROCESS
+#pragma once
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
@@ -10,7 +9,6 @@
 #include <psDomain.hpp>
 #include <psLogger.hpp>
 #include <psProcessModel.hpp>
-#include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
 #include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
@@ -19,6 +17,9 @@
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
+/// This class server as the main process tool, applying a user- or pre-defined
+/// process model to a domain. Depending on the user inputs surface advection, a
+/// single callback function or a geometric advection is applied.
 template <typename NumericType, int D> class psProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
   using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
@@ -56,6 +57,12 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
+  /// Set the CFL condition to use during advection.
+  /// The CFL condition sets the maximum distance a surface can
+  /// be moved during one advection step. It MUST be below 0.5
+  /// to guarantee numerical stability. Defaults to 0.4999.
+  void setTimeStepRatio(const double &cfl) { timeStepRatio = cfl; }
+
   // Sets the minimum time between printing intermediate results during the
   // process. If this is set to a non-positive value, no intermediate results
   // are printed.
@@ -71,7 +78,7 @@ public:
           .print();
       return;
     }
-    auto name = model->getProcessName();
+    const auto name = model->getProcessName();
 
     if (!domain) {
       psLogger::getInstance()
@@ -131,6 +138,7 @@ public:
     lsAdvect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
+    advectionKernel.setTimeStepRatio(timeStepRatio);
 
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -204,6 +212,13 @@ public:
         rayTrace.setMaterialIds(materialIds);
 
         for (size_t iterations = 0; iterations < maxIterations; iterations++) {
+          // We need additional signal handling when running the C++ code from
+          // the
+          // Python bindings to allow interrupts in the Python scripts
+#ifdef VIENNAPS_PYTHON_BUILD
+          if (PyErr_CheckSignals() != 0)
+            throw pybind11::error_already_set();
+#endif
           // move coverages to the ray tracer
           rayTracingData<NumericType> rayTraceCoverages =
               movePointDataToRayData(model->getSurfaceModel()->getCoverages());
@@ -235,7 +250,8 @@ public:
 
             // fill up rates vector with rates from this particle type
             auto &localData = rayTrace.getLocalData();
-            for (int i = 0; i < particle->getRequiredLocalDataSize(); ++i) {
+            int numRates = particle->getLocalDataLabels().size();
+            for (int i = 0; i < numRates; ++i) {
               auto rate = std::move(localData.getVectorData(i));
 
               // normalize fluxes
@@ -255,8 +271,7 @@ public:
           // move coverages back in the model
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
-          model->getSurfaceModel()->updateCoverages(Rates);
-          coveragesInitialized = true;
+          model->getSurfaceModel()->updateCoverages(Rates, materialIds);
 
           if (psLogger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
@@ -277,6 +292,8 @@ public:
                 .print();
           }
         }
+        coveragesInitialized = true;
+
         timer.finish();
         psLogger::getInstance()
             .addTiming("Coverage initialization", timer)
@@ -293,6 +310,13 @@ public:
       psLogger::getInstance()
           .addInfo("Remaining time: " + std::to_string(remainingTime))
           .print();
+
+      // We need additional signal handling when running the C++ code from the
+      // Python bindings to allow interrupts in the Python scripts
+#ifdef VIENNAPS_PYTHON_BUILD
+      if (PyErr_CheckSignals() != 0)
+        throw pybind11::error_already_set();
+#endif
 
       auto Rates = psSmartPointer<psPointData<NumericType>>::New();
       meshConverter.apply();
@@ -337,7 +361,7 @@ public:
           rayTrace.apply();
 
           // fill up rates vector with rates from this particle type
-          auto numRates = particle->getRequiredLocalDataSize();
+          auto numRates = particle->getLocalDataLabels().size();
           auto &localData = rayTrace.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
@@ -367,16 +391,16 @@ public:
       }
 
       // get velocities from rates
-      auto velocitites = model->getSurfaceModel()->calculateVelocities(
+      auto velocities = model->getSurfaceModel()->calculateVelocities(
           Rates, points, materialIds);
-      model->getVelocityField()->setVelocities(velocitites);
+      model->getVelocityField()->setVelocities(velocities);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
-        if (velocitites)
-          diskMesh->getCellData().insertNextScalarData(*velocitites,
+        if (velocities)
+          diskMesh->getCellData().insertNextScalarData(*velocities,
                                                        "velocities");
         if (useCoverages) {
           auto coverages = model->getSurfaceModel()->getCoverages();
@@ -626,6 +650,5 @@ private:
   bool coveragesInitialized = false;
   NumericType printTime = 0.;
   NumericType processTime = 0.;
+  NumericType timeStepRatio = 0.4999;
 };
-
-#endif

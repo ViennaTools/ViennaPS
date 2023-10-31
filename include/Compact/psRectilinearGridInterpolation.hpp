@@ -30,7 +30,7 @@ class psRectilinearGridInterpolation
 
   // For rectilinear grid interpolation to work, we first have to ensure that
   // our input coordinates are arranged in a certain way
-  // Future improvement: parallelize the recursive sorting using OpenMP taks
+  // Future improvement: parallelize the recursive sorting using OpenMP task
   bool rearrange(typename VectorType::iterator start,
                  typename VectorType::iterator end, int axis, bool capture) {
     bool equalSize = true;
@@ -170,7 +170,7 @@ public:
         gridIndices[i] = uniqueValues[i].size() - 1;
         normalizedCoordinates[i] = 1.;
       } else {
-        // The corrdinate is somewhere in between (excluding) the lowest and
+        // The coordinate is somewhere in between (excluding) the lowest and
         // greatest grid point.
 
         // The following function returns an iterator pointing to the first

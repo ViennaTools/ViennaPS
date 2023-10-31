@@ -37,24 +37,21 @@ int main(int argc, char *argv[]) {
 
   // use pre-defined model Fluorocarbon etching model
   auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
-      params.ionFlux, params.etchantFlux, params.polymerFlux,
-      params.rfBiasPower);
+      params.ionFlux, params.etchantFlux, params.polymerFlux, params.energyMean,
+      params.energySigma);
 
   // process setup
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.processTime);
-  process.setMaxCoverageInitIterations(1);
-  process.setSmoothFlux(true);
+  process.setMaxCoverageInitIterations(10);
+  process.setTimeStepRatio(0.25);
 
   // print initial surface
   psWriteVisualizationMesh<NumericType, D>(geometry, "initial").apply();
 
   process.apply();
-
-  // write collected particle meta data (ion energy distribution) to a file
-  process.writeParticleDataLogs("ionEnergyDistribution.txt");
 
   // print final surface
   psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();

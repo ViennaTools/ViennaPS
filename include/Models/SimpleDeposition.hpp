@@ -9,26 +9,32 @@
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
+namespace SimpleDepositionImplementation {
 template <typename NumericType, int D>
-class SimpleDepositionSurfaceModel : public psSurfaceModel<NumericType> {
+class SurfaceModel : public psSurfaceModel<NumericType> {
+  const NumericType rate;
+
 public:
+  SurfaceModel(const NumericType pRate) : rate(pRate) {}
+
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> Rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
 
-    const auto depoRate = Rates->getScalarData("depoRate");
-    return psSmartPointer<std::vector<NumericType>>::New(*depoRate);
+    auto depoRate = *Rates->getScalarData("depoRate");
+    std::for_each(depoRate.begin(), depoRate.end(),
+                  [this](NumericType &v) { v *= rate; });
+
+    return psSmartPointer<std::vector<NumericType>>::New(std::move(depoRate));
   }
 };
 
 template <typename NumericType, int D>
-class SimpleDepositionParticle
-    : public rayParticle<SimpleDepositionParticle<NumericType, D>,
-                         NumericType> {
+class Particle : public rayParticle<Particle<NumericType, D>, NumericType> {
 public:
-  SimpleDepositionParticle(const NumericType passedSticking,
-                           const NumericType passedSourcePower)
+  Particle(const NumericType passedSticking,
+           const NumericType passedSourcePower)
       : stickingProbability(passedSticking), sourcePower(passedSourcePower) {}
 
   void surfaceCollision(NumericType rayWeight,
@@ -51,32 +57,34 @@ public:
                                                           direction};
   }
   void initNew(rayRNG &RNG) override final {}
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final {
     return sourcePower;
   }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"depoRate"};
+    return {"depoRate"};
   }
 
 private:
   const NumericType stickingProbability = 0.1;
   const NumericType sourcePower = 1.;
 };
+} // namespace SimpleDepositionImplementation
 
 template <typename NumericType, int D>
 class SimpleDeposition : public psProcessModel<NumericType, D> {
 public:
-  SimpleDeposition(const NumericType stickingProbability = 0.1,
+  SimpleDeposition(const NumericType rate = 1.,
+                   const NumericType stickingProbability = 0.1,
                    const NumericType sourceDistributionPower = 1.) {
     // particles
-    auto depoParticle =
-        std::make_unique<SimpleDepositionParticle<NumericType, D>>(
-            stickingProbability, sourceDistributionPower);
+    auto depoParticle = std::make_unique<
+        SimpleDepositionImplementation::Particle<NumericType, D>>(
+        stickingProbability, sourceDistributionPower);
 
     // surface model
     auto surfModel =
-        psSmartPointer<SimpleDepositionSurfaceModel<NumericType, D>>::New();
+        psSmartPointer<SimpleDepositionImplementation::SurfaceModel<
+            NumericType, D>>::New(rate);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();

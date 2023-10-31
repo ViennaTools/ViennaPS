@@ -1,5 +1,4 @@
-#ifndef PS_PROCESS_MODEL
-#define PS_PROCESS_MODEL
+#pragma once
 
 #include <psAdvectionCallback.hpp>
 #include <psGeometricModel.hpp>
@@ -9,6 +8,8 @@
 
 #include <rayParticle.hpp>
 
+/// The process model combines all models (particle types, surface model,
+/// geometric model, advection callback)
 template <typename NumericType, int D> class psProcessModel {
 private:
   using ParticleTypeList =
@@ -87,5 +88,3 @@ public:
         passedVelocityField);
   }
 };
-
-#endif

@@ -3,21 +3,23 @@
 #include <psProcessModel.hpp>
 #include <rayParticle.hpp>
 
+namespace TEOSDepositionImplementation {
 template <class NumericType>
-class SingleTEOSSurfaceModel : public psSurfaceModel<NumericType> {
+class SingleSurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::Coverages;
   const NumericType depositionRate;
   const NumericType reactionOrder;
 
 public:
-  SingleTEOSSurfaceModel(const NumericType passedRate,
-                         const NumericType passedOrder)
+  SingleSurfaceModel(const NumericType passedRate,
+                     const NumericType passedOrder)
       : depositionRate(passedRate), reactionOrder(passedOrder) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> Rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) override {
+    updateCoverages(Rates, materialIDs);
     // define the surface reaction here
     auto particleFlux = Rates->getScalarData("particleFlux");
     std::vector<NumericType> velocity(particleFlux->size(), 0.);
@@ -31,15 +33,15 @@ public:
     return psSmartPointer<std::vector<NumericType>>::New(velocity);
   }
 
-  void
-  updateCoverages(psSmartPointer<psPointData<NumericType>> Rates) override {
+  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+                       const std::vector<NumericType> &materialIDs) override {
     // update coverages based on fluxes
     auto particleFlux = Rates->getScalarData("particleFlux");
     auto Coverage = Coverages->getScalarData("Coverage");
     assert(Coverage->size() == particleFlux->size());
 
     for (std::size_t i = 0; i < Coverage->size(); i++) {
-      Coverage->at(i) = std::min(particleFlux->at(i), 1.);
+      Coverage->at(i) = std::min(particleFlux->at(i), NumericType(1));
     }
   }
 
@@ -55,17 +57,17 @@ public:
 };
 
 template <class NumericType>
-class MultiTEOSSurfaceModel : public psSurfaceModel<NumericType> {
+class MultiSurfaceModel : public psSurfaceModel<NumericType> {
   const NumericType depositionRateP1;
   const NumericType reactionOrderP1;
   const NumericType depositionRateP2;
   const NumericType reactionOrderP2;
 
 public:
-  MultiTEOSSurfaceModel(const NumericType passedRateP1,
-                        const NumericType passedOrderP1,
-                        const NumericType passedRateP2,
-                        const NumericType passedOrderP2)
+  MultiSurfaceModel(const NumericType passedRateP1,
+                    const NumericType passedOrderP1,
+                    const NumericType passedRateP2,
+                    const NumericType passedOrderP2)
       : depositionRateP1(passedRateP1), reactionOrderP1(passedOrderP1),
         depositionRateP2(passedRateP2), reactionOrderP2(passedOrderP2) {}
 
@@ -92,12 +94,12 @@ public:
 
 // Particle type (modify at you own risk)
 template <class NumericType, int D>
-class TEOSSingleParticle
-    : public rayParticle<TEOSSingleParticle<NumericType, D>, NumericType> {
+class SingleParticle
+    : public rayParticle<SingleParticle<NumericType, D>, NumericType> {
 public:
-  TEOSSingleParticle(const NumericType pStickingProbability,
-                     const NumericType pReactionOrder,
-                     const std::string pDataLabel = "particleFlux")
+  SingleParticle(const NumericType pStickingProbability,
+                 const NumericType pReactionOrder,
+                 const std::string pDataLabel = "particleFlux")
       : stickingProbability(pStickingProbability),
         reactionOrder(pReactionOrder), dataLabel(pDataLabel) {}
   std::pair<NumericType, rayTriple<NumericType>>
@@ -131,7 +133,6 @@ public:
                         rayRNG &Rng) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {dataLabel};
@@ -144,10 +145,10 @@ private:
 };
 
 template <class NumericType, int D>
-class TEOSMultiParticle
-    : public rayParticle<TEOSMultiParticle<NumericType, D>, NumericType> {
+class MultiParticle
+    : public rayParticle<MultiParticle<NumericType, D>, NumericType> {
 public:
-  TEOSMultiParticle(const NumericType pStickingProbability, std::string pLabel)
+  MultiParticle(const NumericType pStickingProbability, std::string pLabel)
       : stickingProbability(pStickingProbability), dataLabel(pLabel) {}
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
@@ -168,7 +169,6 @@ public:
                         rayRNG &Rng) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {dataLabel};
@@ -178,6 +178,7 @@ private:
   const NumericType stickingProbability;
   const std::string dataLabel;
 };
+} // namespace TEOSDepositionImplementation
 
 template <class NumericType, int D>
 class TEOSDeposition : public psProcessModel<NumericType, D> {
@@ -194,12 +195,14 @@ public:
       // use single particle model
 
       // particle
-      auto particle = std::make_unique<TEOSSingleParticle<NumericType, D>>(
+      auto particle = std::make_unique<
+          TEOSDepositionImplementation::SingleParticle<NumericType, D>>(
           pStickingP1, pOrderP1);
 
       // surface model
-      auto surfModel = psSmartPointer<SingleTEOSSurfaceModel<NumericType>>::New(
-          pRateP1, pOrderP1);
+      auto surfModel =
+          psSmartPointer<TEOSDepositionImplementation::SingleSurfaceModel<
+              NumericType>>::New(pRateP1, pOrderP1);
 
       this->setSurfaceModel(surfModel);
       this->insertNextParticleType(particle);
@@ -208,14 +211,17 @@ public:
       // use multi (two) particle model
 
       // particles
-      auto particle1 = std::make_unique<TEOSMultiParticle<NumericType, D>>(
+      auto particle1 = std::make_unique<
+          TEOSDepositionImplementation::MultiParticle<NumericType, D>>(
           pStickingP1, "particleFluxP1");
-      auto particle2 = std::make_unique<TEOSMultiParticle<NumericType, D>>(
+      auto particle2 = std::make_unique<
+          TEOSDepositionImplementation::MultiParticle<NumericType, D>>(
           pStickingP2, "particleFluxP2");
 
       // surface model
-      auto surfModel = psSmartPointer<MultiTEOSSurfaceModel<NumericType>>::New(
-          pRateP1, pOrderP1, pRateP2, pOrderP2);
+      auto surfModel =
+          psSmartPointer<TEOSDepositionImplementation::MultiSurfaceModel<
+              NumericType>>::New(pRateP1, pOrderP1, pRateP2, pOrderP2);
 
       this->setSurfaceModel(surfModel);
       this->insertNextParticleType(particle1);

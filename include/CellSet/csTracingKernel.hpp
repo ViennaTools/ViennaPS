@@ -59,29 +59,11 @@ public:
           RTCRayHit{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
       const int threadID = omp_get_thread_num();
-      constexpr int numRngStates = 7;
-      unsigned int seeds[numRngStates];
+      unsigned int seed = mRunNumber;
       if (mUseRandomSeeds) {
         std::random_device rd;
-        for (size_t i = 0; i < numRngStates; ++i) {
-          seeds[i] = static_cast<unsigned int>(rd());
-        }
-      } else {
-        for (size_t i = 0; i < numRngStates; ++i) {
-          seeds[i] = static_cast<unsigned int>((omp_get_thread_num() + 1) * 31 +
-                                               i + mRunNumber);
-        }
+        seed = static_cast<unsigned int>(rd());
       }
-      // It seems really important to use two separate seeds / states for
-      // sampling the source and sampling reflections. When we use only one
-      // state for both, then the variance is very high.
-      rayRNG RngState1(seeds[0]);
-      rayRNG RngState2(seeds[1]);
-      rayRNG RngState3(seeds[2]);
-      rayRNG RngState4(seeds[3]);
-      rayRNG RngState5(seeds[4]);
-      rayRNG RngState6(seeds[5]);
-      rayRNG RngState7(seeds[6]);
 
       // thread-local particle object
       auto particle = mParticle->clone();
@@ -96,10 +78,13 @@ public:
 
 #pragma omp for schedule(dynamic)
       for (long long idx = 0; idx < mNumRays; ++idx) {
-        particle->initNew(RngState6);
+        // particle specific RNG seed
+        auto particleSeed = rayInternal::tea<3>(idx, seed);
+        rayRNG RngState(particleSeed);
 
-        mSource.fillRay(rayHit.ray, idx, RngState1, RngState2, RngState3,
-                        RngState4); // fills also tnear
+        particle->initNew(RngState);
+
+        mSource.fillRay(rayHit.ray, idx, RngState); // fills also tnear
 
 #ifdef VIENNARAY_USE_RAY_MASKING
         rayHit.ray.mask = -1;
@@ -165,7 +150,7 @@ public:
 
           // get fill and reflection
           const auto fillnDirection =
-              particle->surfaceHit(rayDir, geomNormal, reflect, RngState5);
+              particle->surfaceHit(rayDir, geomNormal, reflect, RngState);
 
           if (mGeometry.getMaterialId(rayHit.hit.primID) != excludeMaterial) {
             // trace in cell set
@@ -185,7 +170,7 @@ public:
               while (volumeParticle.energy >= 0) {
                 volumeParticle.distance = -1;
                 while (volumeParticle.distance < 0)
-                  volumeParticle.distance = normalDist(RngState7);
+                  volumeParticle.distance = normalDist(RngState);
                 auto travelDist = csUtil::multNew(volumeParticle.direction,
                                                   volumeParticle.distance);
                 csUtil::add(volumeParticle.position, travelDist);
@@ -199,7 +184,7 @@ public:
 
                 if (newIdx != volumeParticle.cellId) {
                   volumeParticle.cellId = newIdx;
-                  auto fill = particle->collision(volumeParticle, RngState7,
+                  auto fill = particle->collision(volumeParticle, RngState,
                                                   particleStack);
                   path.addGridData(newIdx, fill);
                 }

@@ -19,7 +19,7 @@ template <class NumericType, int D> class psMakeStack {
   const NumericType gridDelta;
   const NumericType xExtent;
   const NumericType yExtent;
-  NumericType bounds[2 * D];
+  double bounds[2 * D];
   NumericType normal[D];
   NumericType origin[D] = {0.};
 
@@ -185,7 +185,7 @@ private:
     lsMakeGeometry<NumericType, D>(
         substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
-    domain->insertNextLevelSet(substrate, psMaterial::Si);
+    domain->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
 
     // Si3N4/SiO2 layers
     for (int i = 0; i < numLayers; ++i) {

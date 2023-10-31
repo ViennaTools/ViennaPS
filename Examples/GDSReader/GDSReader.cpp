@@ -10,14 +10,12 @@ int main(int argc, char **argv) {
 
   // read GDS mask file
   const NumericType gridDelta = 0.01;
-  typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
-  for (int i = 0; i < D - 1; i++)
-    boundaryCons[i] =
-        lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-  boundaryCons[D - 1] =
-      lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+  lsBoundaryConditionEnum<D> boundaryConds[D] = {
+      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY};
   auto mask = psSmartPointer<psGDSGeometry<NumericType, D>>::New(gridDelta);
-  mask->setBoundaryConditions(boundaryCons);
+  mask->setBoundaryConditions(boundaryConds);
   psGDSReader<NumericType, D>(mask, "mask.gds").apply();
 
   // geometry setup
@@ -28,7 +26,7 @@ int main(int argc, char **argv) {
   NumericType origin[D] = {0., 0., 0.};
   NumericType normal[D] = {0., 0., 1.};
   auto plane = psSmartPointer<lsDomain<NumericType, D>>::New(
-      bounds, boundaryCons, gridDelta);
+      bounds, boundaryConds, gridDelta);
   lsMakeGeometry<NumericType, D>(
       plane, psSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
       .apply();

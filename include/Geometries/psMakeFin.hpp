@@ -6,7 +6,7 @@
 #include <psDomain.hpp>
 
 /**
- * Creates a fin gemeotry in in z(3D)/y(2D) direction.
+ * Creates a fin geometry in in z(3D)/y(2D) direction.
  */
 template <class NumericType, int D> class psMakeFin {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;

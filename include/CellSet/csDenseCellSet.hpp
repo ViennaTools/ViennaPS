@@ -182,7 +182,10 @@ public:
   std::vector<T> *getFillingFractions() const { return fillingFractions; }
 
   T getFillingFraction(const std::array<T, D> &point) {
-    auto idx = findIndex(point);
+    csTriple<T> point3 = {0., 0., 0.};
+    for (int i = 0; i < D; i++)
+      point3[i] = point[i];
+    auto idx = findIndex(point3);
     if (idx < 0)
       return -1.;
 
@@ -219,7 +222,7 @@ public:
   }
 
   // Add to the filling fraction at given cell index.
-  bool addFillingFraction(int idx, T fill) {
+  bool addFillingFraction(const int idx, const T fill) {
     if (idx < 0)
       return false;
 
@@ -335,7 +338,7 @@ public:
   // Update the material IDs of the cell set. This function should be called if
   // the level sets, the cell set is made out of, have changed. This does not
   // work if the surface of the volume has changed. In this case, call the
-  // funciton update surface first.
+  // function "updateSurface" first.
   void updateMaterials() {
     auto materialIds = getScalarData("Material");
 
@@ -611,7 +614,7 @@ private:
   }
 
   int findSurfaceHitPoint(csTriple<T> &hitPoint, const csTriple<T> &direction) {
-    // find surface hitpoint
+    // find surface hit point
     auto idx = findIndex(hitPoint);
 
     if (idx > 0)
