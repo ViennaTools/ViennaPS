@@ -26,7 +26,7 @@ vps.MakeStack(
     domain=domain,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
-    yExtent=0.0,
+    yExtent=params["yExtent"],
     numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
     substrateHeight=params["substrateHeight"],

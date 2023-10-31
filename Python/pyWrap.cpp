@@ -125,6 +125,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("insertNextLevelSetAsMaterial",
            &psDomain<T, D>::insertNextLevelSetAsMaterial)
       .def("duplicateTopLevelSet", &psDomain<T, D>::duplicateTopLevelSet)
+      .def("removeTopLevelSet", &psDomain<T, D>::removeTopLevelSet)
+      .def("applyBooleanOperation", &psDomain<T, D>::applyBooleanOperation)
       .def("setMaterialMap", &psDomain<T, D>::setMaterialMap)
       .def("getMaterialMap", &psDomain<T, D>::getMaterialMap)
       .def("generateCellSet", &psDomain<T, D>::generateCellSet,
@@ -802,6 +804,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("insertNextLevelSetAsMaterial",
            &psDomain<T, 3>::insertNextLevelSetAsMaterial)
       .def("duplicateTopLevelSet", &psDomain<T, 3>::duplicateTopLevelSet)
+      .def("applyBooleanOperation", &psDomain<T, 3>::applyBooleanOperation)
+      .def("removeTopLevelSet", &psDomain<T, 3>::removeTopLevelSet)
       .def("setMaterialMap", &psDomain<T, 3>::setMaterialMap)
       .def("getMaterialMap", &psDomain<T, 3>::getMaterialMap)
       .def("generateCellSet", &psDomain<T, 3>::generateCellSet,
