@@ -25,7 +25,8 @@ vps.MakeStack(
     numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
     substrateHeight=params["substrateHeight"],
-    holeRadius=params["holeRadius"],
+    holeRadius=0.0,
+    trenchWidth=params["trenchWidth"],
     maskHeight=params["maskHeight"],
     periodicBoundary=False,
 ).apply()

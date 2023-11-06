@@ -1,5 +1,11 @@
-# This model/example currently only works in 2D mode
-import viennaps2d as vps
+DIM = 2
+
+if DIM is 3:
+    stabFac = 0.145
+    import viennaps3d as vps
+else:
+    stabFac = 0.245
+    import viennaps2d as vps
 
 vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
@@ -20,11 +26,12 @@ vps.MakeStack(
     domain=domain,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
-    yExtent=0.0,
+    yExtent=params["yExtent"],
     numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
     substrateHeight=params["substrateHeight"],
-    holeRadius=params["trenchWidth"] / 2.0,
+    holeRadius=0.0,
+    trenchWidth=params["trenchWidth"],
     maskHeight=0.0,
 ).apply()
 # copy top layer for deposition
@@ -36,25 +43,29 @@ domain.generateCellSet(
 cellSet = domain.getCellSet()
 cellSet.addScalarData("byproductSum", 0.0)
 cellSet.writeVTU("initial.vtu")
+if DIM is 3:
+    cellSet.setPeriodicBoundary([False, True, False])
 # we need neighborhood information for solving the
 # convection-diffusion equation on the cell set
 cellSet.buildNeighborhood()
+
 
 # The redeposition model captures byproducts from the selective etching
 # process in the cell set. The byproducts are then distributed by solving a
 # convection-diffusion equation on the cell set.
 model = vps.OxideRegrowthModel(
-    params["nitrideEtchRate"] / 60.0,
-    params["oxideEtchRate"] / 60.0,
-    params["redepositionRate"],
-    params["redepositionThreshold"],
-    params["redepositionTimeInt"],
-    params["diffusionCoefficient"],
-    params["sink"],
-    params["scallopVelocity"],
-    params["centerVelocity"],
-    params["substrateHeight"] + params["numLayers"] * params["layerHeight"],
-    params["trenchWidth"],
+    nitrideEtchRate=params["nitrideEtchRate"] / 60.0,
+    oxideEtchRate=params["oxideEtchRate"] / 60.0,
+    redepositionRate=params["redepositionRate"],
+    redepositionThreshold=params["redepositionThreshold"],
+    redepositionTimeInt=params["redepositionTimeInt"],
+    diffusionCoefficient=params["diffusionCoefficient"],
+    sinkStrength=params["sink"],
+    scallopVelocity=params["scallopVelocity"],
+    centerVelocity=params["centerVelocity"],
+    topHeight=params["substrateHeight"] + params["numLayers"] * params["layerHeight"],
+    centerWidth=params["trenchWidth"],
+    stabilityFactor=stabFac,
 )
 
 process = vps.Process()

@@ -95,3 +95,21 @@ jobs:
         working-directory: ${{github.workspace}}/build/Examples/InterpolationDemo/${{env.BUILD_TYPE}}
         shell: bash
         run: ./InterpolationDemo.exe $(echo "/${{github.workspace}}" | sed -e 's/\\/\//g' -e 's/://')/build/Examples/InterpolationDemo/
+
+  windows-python:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Restore build cache
+        uses: actions/cache@v3
+        id: viennaps-dependency-cache
+        with:
+          key: viennaps-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './external/upstream/**CMakeLists.txt' ) }}
+          path: ${{github.workspace}}/dependencies/Install
+
+      - name: Build and install Python module
+        shell: bash
+        run: pip3 install --user . -v

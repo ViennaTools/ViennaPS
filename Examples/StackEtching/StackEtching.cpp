@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeStack<NumericType, D>(geometry, params.gridDelta, params.xExtent,
                               params.yExtent, params.numLayers,
-                              params.layerHeight, params.substrateHeight,
-                              params.holeRadius, params.maskHeight, false)
+                              params.layerHeight, params.substrateHeight, 0.0,
+                              params.trenchWidth, params.maskHeight, false)
       .apply();
 
   // copy top layer for deposition

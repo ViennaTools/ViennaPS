@@ -125,6 +125,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("insertNextLevelSetAsMaterial",
            &psDomain<T, D>::insertNextLevelSetAsMaterial)
       .def("duplicateTopLevelSet", &psDomain<T, D>::duplicateTopLevelSet)
+      .def("removeTopLevelSet", &psDomain<T, D>::removeTopLevelSet)
+      .def("applyBooleanOperation", &psDomain<T, D>::applyBooleanOperation)
       .def("setMaterialMap", &psDomain<T, D>::setMaterialMap)
       .def("getMaterialMap", &psDomain<T, D>::getMaterialMap)
       .def("generateCellSet", &psDomain<T, D>::generateCellSet,
@@ -218,6 +220,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setCellSetPosition", &csDenseCellSet<T, D>::setCellSetPosition,
            "Set whether the cell set should be created below (false) or above "
            "(true) the surface.")
+      .def("setPeriodicBoundary", &csDenseCellSet<T, D>::setPeriodicBoundary,
+           "Enable periodic boundary conditions in specified dimensions.")
       .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
       .def("setFillingFraction",
            pybind11::overload_cast<const int, const T>(
@@ -569,13 +573,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    DomainType &, const T /*gridDelta*/, const T /*xExtent*/,
                    const T /*yExtent*/, const int /*numLayers*/,
                    const T /*layerHeight*/, const T /*substrateHeight*/,
-                   const T /*holeRadius*/, const T /*maskHeight*/,
-                   const bool /*PeriodicBoundary*/>),
+                   const T /*holeRadius*/, const T /*trenchWidth*/,
+                   const T /*maskHeight*/, const bool /*PeriodicBoundary*/>),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("numLayers"), pybind11::arg("layerHeight"),
            pybind11::arg("substrateHeight"), pybind11::arg("holeRadius"),
-           pybind11::arg("maskHeight"),
+           pybind11::arg("trenchWidth"), pybind11::arg("maskHeight"),
            pybind11::arg("periodicBoundary") = false)
       .def("apply", &psMakeStack<T, D>::apply,
            "Create a stack of alternating SiO2 and Si3N4 layers.")
@@ -714,16 +718,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<OxideRegrowthModel<T, D>,
                    psSmartPointer<OxideRegrowthModel<T, D>>>(
       module, "OxideRegrowthModel", processModel)
-      .def(pybind11::init(&psSmartPointer<OxideRegrowthModel<T, D>>::New<
-                          const T, const T, const T, const T, const T, const T,
-                          const T, const T, const T, const T, const T>),
-           pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),
-           pybind11::arg("redepositionRate"),
-           pybind11::arg("redepositionThreshold"),
-           pybind11::arg("redepositionTimeInt"),
-           pybind11::arg("diffusionCoefficient"), pybind11::arg("sinkStrength"),
-           pybind11::arg("scallopVelocity"), pybind11::arg("centerVelocity"),
-           pybind11::arg("topHeight"), pybind11::arg("centerWidth"));
+      .def(
+          pybind11::init(&psSmartPointer<OxideRegrowthModel<T, D>>::New<
+                         const T, const T, const T, const T, const T, const T,
+                         const T, const T, const T, const T, const T, const T>),
+          pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),
+          pybind11::arg("redepositionRate"),
+          pybind11::arg("redepositionThreshold"),
+          pybind11::arg("redepositionTimeInt"),
+          pybind11::arg("diffusionCoefficient"), pybind11::arg("sinkStrength"),
+          pybind11::arg("scallopVelocity"), pybind11::arg("centerVelocity"),
+          pybind11::arg("topHeight"), pybind11::arg("centerWidth"),
+          pybind11::arg("stabilityFactor"));
 
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
       module, "Planarize")
@@ -800,6 +806,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("insertNextLevelSetAsMaterial",
            &psDomain<T, 3>::insertNextLevelSetAsMaterial)
       .def("duplicateTopLevelSet", &psDomain<T, 3>::duplicateTopLevelSet)
+      .def("applyBooleanOperation", &psDomain<T, 3>::applyBooleanOperation)
+      .def("removeTopLevelSet", &psDomain<T, 3>::removeTopLevelSet)
       .def("setMaterialMap", &psDomain<T, 3>::setMaterialMap)
       .def("getMaterialMap", &psDomain<T, 3>::getMaterialMap)
       .def("generateCellSet", &psDomain<T, 3>::generateCellSet,
