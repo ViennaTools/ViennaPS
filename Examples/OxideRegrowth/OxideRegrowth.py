@@ -1,4 +1,4 @@
-DIM = 3
+DIM = 2
 
 if DIM is 3:
     stabFac = 0.145
@@ -43,9 +43,12 @@ domain.generateCellSet(
 cellSet = domain.getCellSet()
 cellSet.addScalarData("byproductSum", 0.0)
 cellSet.writeVTU("initial.vtu")
+if DIM is 3:
+    cellSet.setPeriodicBoundary([False, True, False])
 # we need neighborhood information for solving the
 # convection-diffusion equation on the cell set
 cellSet.buildNeighborhood()
+
 
 # The redeposition model captures byproducts from the selective etching
 # process in the cell set. The byproducts are then distributed by solving a

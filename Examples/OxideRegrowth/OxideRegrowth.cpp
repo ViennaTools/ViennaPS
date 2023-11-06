@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
   using NumericType = double;
 
   omp_set_num_threads(12);
-  constexpr int D = 3;
+  constexpr int D = 2;
 
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
@@ -49,8 +49,11 @@ int main(int argc, char **argv) {
   auto &cellSet = domain->getCellSet();
   cellSet->addScalarData("byproductSum", 0.);
   cellSet->writeVTU("initial.vtu");
-  if constexpr (D == 3)
-    cellSet->setPeriodicBoundary({false, true, false});
+  if constexpr (D == 3) {
+    std::array<bool, D> boundaryConds = {false};
+    boundaryConds[1] = true;
+    cellSet->setPeriodicBoundary(boundaryConds);
+  }
   // we need neighborhood information for solving the
   // convection-diffusion equation on the cell set
   cellSet->buildNeighborhood();
