@@ -220,6 +220,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setCellSetPosition", &csDenseCellSet<T, D>::setCellSetPosition,
            "Set whether the cell set should be created below (false) or above "
            "(true) the surface.")
+      .def("setPeriodicBoundary", &csDenseCellSet<T, D>::setPeriodicBoundary,
+           "Enable periodic boundary conditions in specified dimensions.")
       .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
       .def("setFillingFraction",
            pybind11::overload_cast<const int, const T>(
