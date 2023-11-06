@@ -113,27 +113,3 @@ jobs:
       - name: Run
         working-directory: ${{github.workspace}}/build/Examples/InterpolationDemo
         run: ./InterpolationDemo
-
-  macos-python:
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Dependency Cache
-        uses: actions/cache@v3
-        id: cache-dependencies
-        with:
-          key: viennaps-dependency-cache-${{ runner.os }}-${{env.BUILD_TYPE}}-${{ hashFiles( './external/upstream/**CMakeLists.txt' ) }}
-          path: ${{github.workspace}}/dependencies/Install
-
-      - name: Build and install Python module
-        shell: bash
-        run: |
-          export OpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include"
-          export OpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$(brew --prefix libomp)/include"
-          export OpenMP_C_LIB_NAMES="omp"
-          export OpenMP_CXX_LIB_NAMES="omp"
-          export OpenMP_omp_LIBRARY="$(brew --prefix libomp)/lib/libomp.a"
-          pip3 install --user . -v

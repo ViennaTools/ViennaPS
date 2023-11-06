@@ -186,10 +186,13 @@ private:
             mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
             .apply();
       } else if (trenchWidth > 0.) {
-        NumericType minPoint[D] = {-trenchWidth / 2., -yExtent / 2. - gridDelta,
-                                   origin[D - 1]};
-        NumericType maxPoint[D] = {trenchWidth / 2., yExtent / 2. + gridDelta,
-                                   origin[D - 1] + maskHeight + gridDelta};
+        NumericType minPoint[D] = {
+            static_cast<NumericType>(-trenchWidth / 2.),
+            static_cast<NumericType>(-yExtent / 2. - gridDelta), origin[D - 1]};
+        NumericType maxPoint[D] = {
+            static_cast<NumericType>(trenchWidth / 2.),
+            static_cast<NumericType>(yExtent / 2. + gridDelta),
+            origin[D - 1] + maskHeight + gridDelta};
         lsMakeGeometry<NumericType, D>(
             maskAdd,
             lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
@@ -242,11 +245,13 @@ private:
       }
     } else if (trenchWidth > 0. && maskHeight == 0.) {
       auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
-      NumericType minPoint[D] = {-trenchWidth / 2., -yExtent / 2. - gridDelta,
-                                 0.};
-      NumericType maxPoint[D] = {trenchWidth / 2., yExtent / 2. + gridDelta,
-                                 substrateHeight + layerHeight * numLayers +
-                                     maskHeight + gridDelta};
+      NumericType minPoint[D] = {
+          static_cast<NumericType>(-trenchWidth / 2.),
+          static_cast<NumericType>(-yExtent / 2. - gridDelta), (NumericType)0.};
+      NumericType maxPoint[D] = {
+          static_cast<NumericType>(trenchWidth / 2.),
+          static_cast<NumericType>(yExtent / 2. + gridDelta),
+          substrateHeight + layerHeight * numLayers + maskHeight + gridDelta};
       lsMakeGeometry<NumericType, D>(
           cutOut,
           lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
