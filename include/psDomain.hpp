@@ -71,9 +71,10 @@ public:
   }
 
   void deepCopy(psSmartPointer<psDomain> passedDomain) {
-    levelSets->resize(passedDomain->levelSets->size());
-    for (unsigned i = 0; i < levelSets->size(); ++i) {
-      levelSets->at(i)->deepCopy(passedDomain->levelSets->at(i));
+    unsigned numLevelSets = passedDomain->levelSets->size();
+    for (unsigned i = 0; i < numLevelSets; ++i) {
+      levelSets->push_back(lsSmartPointer<lsDomain<NumericType, D>>::New(
+          passedDomain->levelSets->at(i)));
     }
     useCellSet = passedDomain->useCellSet;
     if (useCellSet) {

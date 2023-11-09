@@ -33,8 +33,7 @@ public:
     return std::pair<NumericType, rayTriple<NumericType>>{stickingProbability,
                                                           direction};
   }
-  void initNew(rayRNG &RNG) override final {
-  }
+  void initNew(rayRNG &RNG) override final {}
 
   NumericType getSourceDistributionPower() const override final {
     return sourcePower;

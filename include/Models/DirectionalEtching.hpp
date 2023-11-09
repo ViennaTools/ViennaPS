@@ -46,10 +46,10 @@ public:
 template <typename NumericType, int D>
 class DirectionalEtching : public psProcessModel<NumericType, D> {
 public:
-  DirectionalEtching(const std::array<NumericType, 3> direction,
-                     const NumericType directionalVelocity = 1.,
-                     const NumericType isotropicVelocity = 0.,
-                     const psMaterial mask = psMaterial::Mask) {
+  explicit DirectionalEtching(const std::array<NumericType, 3> direction,
+                              const NumericType directionalVelocity = 1.,
+                              const NumericType isotropicVelocity = 0.,
+                              const psMaterial mask = psMaterial::Mask) {
     // default surface model
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 

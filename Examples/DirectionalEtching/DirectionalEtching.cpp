@@ -1,7 +1,7 @@
 #include <lsMakeGeometry.hpp>
 
-#include <psMakeTrench.hpp>
 #include <psMakeHole.hpp>
+#include <psMakeTrench.hpp>
 #include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
@@ -34,7 +34,7 @@ int main() {
   NumericType depth = 0.2;
   NumericType taper = 0.;
   psMakeHole<NumericType, D>(domain, gridDelta, extent, extent, width, depth,
-                               taper, 0., false, true, psMaterial::Si)
+                             taper, 0., false, true, psMaterial::Si)
       .apply();
 
   domain->printSurface("initial.vtp");
