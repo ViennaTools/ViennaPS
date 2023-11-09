@@ -39,17 +39,12 @@ int main(int argc, char *argv[]) {
   process.setDomain(geometry);
   process.setProcessModel(model);
 
-  auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-  psToSurfaceMesh<NumericType, D>(geometry, mesh).apply();
-  psVTKWriter<NumericType>(mesh, "initial.vtp").apply();
+  geometry->printSurface("initial.vtp");
 
   process.apply();
 
-  psToSurfaceMesh<NumericType, D>(geometry, mesh).apply();
-  psVTKWriter<NumericType>(mesh, "final.vtp").apply();
+  geometry->printSurface("final.vtp");
 
   if constexpr (D == 2)
     psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
-
-  return EXIT_SUCCESS;
 }

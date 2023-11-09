@@ -1,5 +1,6 @@
 #pragma once
 
+#include <psMaterials.hpp>
 #include <psProcessModel.hpp>
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
@@ -8,21 +9,22 @@
 template <class NumericType, int D>
 class IsotropicVelocityField : public psVelocityField<NumericType> {
   const NumericType vel = 1.;
-  const int maskId;
+  const psMaterial maskMaterial;
 
 public:
-  IsotropicVelocityField(const NumericType rate, const int mask = 0)
-      : vel(rate), maskId(mask) {}
+  IsotropicVelocityField(const NumericType rate,
+                         const psMaterial mask = psMaterial::Mask)
+      : vel(rate), maskMaterial(mask) {}
 
   NumericType
   getScalarVelocity(const std::array<NumericType, 3> & /*coordinate*/,
                     int material,
                     const std::array<NumericType, 3> & /* normalVector */,
                     unsigned long /*pointID*/) override {
-    if (material != maskId) {
-      return vel;
+    if (psMaterialMap::isMaterial(material, maskMaterial)) {
+      return 0.;
     } else {
-      return 0;
+      return vel;
     }
   }
 
@@ -32,28 +34,16 @@ public:
 };
 
 template <typename NumericType, int D>
-class IsotropicSurfaceModel : public psSurfaceModel<NumericType> {
-public:
-  psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) override {
-    return nullptr;
-  }
-};
-
-template <typename NumericType, int D>
 class IsotropicProcess : public psProcessModel<NumericType, D> {
 public:
-  IsotropicProcess(const NumericType isotropicRate = 0.,
-                   const int maskId = -1) {
-    // surface model
-    auto surfModel =
-        psSmartPointer<IsotropicSurfaceModel<NumericType, D>>::New();
+  IsotropicProcess(const NumericType isotropicRate,
+                   const psMaterial maskMaterial = psMaterial::Mask) {
+    // default surface model
+    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
     // velocity field
     auto velField = psSmartPointer<IsotropicVelocityField<NumericType, D>>::New(
-        isotropicRate, maskId);
+        isotropicRate, maskMaterial);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

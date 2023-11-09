@@ -2,15 +2,12 @@
 
 #include <ModelParameters.hpp>
 
-#include <csTracingParticle.hpp>
-
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
 #include <psLogger.hpp>
 #include <psProcessModel.hpp>
-#include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
@@ -101,7 +98,7 @@ public:
     const auto oxygenSputteringRate =
         Rates->getScalarData("oxygenSputteringRate");
 
-    // etchant flourine coverage
+    // etchant fluorine coverage
     auto eCoverage = Coverages->getScalarData("eCoverage");
     eCoverage->resize(numPoints);
     // oxygen coverage
@@ -227,12 +224,10 @@ public:
       E = NewEnergy;
       // auto direction = rayReflectionConedCosine<NumericType, D>(
       //     M_PI_2 - std::min(incAngle, minAngle), rayDir, geomNormal, Rng);
-      // auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
+      auto direction = rayReflectionSpecular<NumericType>(rayDir, geomNormal);
 
-      auto direction = rayReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, Rng, std::min(incAngle, minAngle));
-
-      return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
+      return std::pair<NumericType, rayTriple<NumericType>>{1. - Eref_peak,
+                                                            direction};
     } else {
       return std::pair<NumericType, rayTriple<NumericType>>{
           1., rayTriple<NumericType>{0., 0., 0.}};
@@ -244,7 +239,6 @@ public:
       E = normalDist(RNG);
     } while (E < minEnergy);
   }
-  int getRequiredLocalDataSize() const override final { return 3; }
   NumericType getSourceDistributionPower() const override final {
     return power;
   }
@@ -298,8 +292,6 @@ public:
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
-  void initNew(rayRNG &RNG) override final {}
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"etchantRate"};
@@ -334,8 +326,6 @@ public:
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
-  void initNew(rayRNG &RNG) override final {}
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"oxygenRate"};

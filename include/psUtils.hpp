@@ -1,5 +1,4 @@
-#ifndef PS_UTIL_HPP
-#define PS_UTIL_HPP
+#pragma once
 
 #include <chrono>
 #include <fstream>
@@ -185,7 +184,7 @@ public:
   }
 };
 
-// If the key is found inthe unordered_map, then the
+// If the key is found in the unordered_map, then the
 template <typename K, typename V, typename C>
 void AssignItems(std::unordered_map<std::string, std::string> &map,
                  Item<K, V, C> &&item) {
@@ -208,4 +207,3 @@ void AssignItems(std::unordered_map<std::string, std::string> &map,
 }
 
 }; // namespace psUtils
-#endif

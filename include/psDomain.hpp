@@ -1,5 +1,4 @@
-#ifndef PS_DOMAIN_HPP
-#define PS_DOMAIN_HPP
+#pragma once
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -151,6 +150,18 @@ public:
     }
   }
 
+  // Boolean Operation of all level sets in the domain with the specified LS
+  void applyBooleanOperation(lsDomainType levelSet,
+                             lsBooleanOperationEnum operation) {
+    if (levelSets->empty()) {
+      return;
+    }
+
+    for (auto ls : *levelSets) {
+      lsBooleanOperation<NumericType, D>(ls, levelSet, operation).apply();
+    }
+  }
+
   materialMapType getMaterialMap() const { return materialMap; }
 
   void generateCellSet(const NumericType depth = 0.,
@@ -221,5 +232,3 @@ public:
     }
   }
 };
-
-#endif // PS_DOMAIN_HPP

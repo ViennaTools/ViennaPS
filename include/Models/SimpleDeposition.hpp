@@ -57,7 +57,6 @@ public:
                                                           direction};
   }
   void initNew(rayRNG &RNG) override final {}
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final {
     return sourcePower;
   }

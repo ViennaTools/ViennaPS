@@ -20,6 +20,8 @@ public:
       if (!psMaterialMap::isMaterial(materialIds[i], psMaterial::Mask))
       {
         rates[i] = -0.7 * flux->at(i);
+      } else {
+        rates[i] = -0.07 * flux->at(i);
       }
     }
 
@@ -27,7 +29,7 @@ public:
   }
 };
 
-template <class T, int D>
+template <class T>
 class VelocityField : public psVelocityField<T>
 {
 public:
@@ -37,7 +39,8 @@ public:
                       const std::array<T, 3> &normalVector,
                       unsigned long pointID) override
   {
-    return std::exp(-(normalVector[D - 1] - 1) * (normalVector[D - 1] - 1) / fac) * velocities->at(pointID);
+    return velocities->at(pointID);
+    // return std::exp(-(normalVector[D - 1] - 1) * (normalVector[D - 1] - 1) / fac) * velocities->at(pointID);
   }
 
   void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override

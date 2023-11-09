@@ -9,8 +9,8 @@
 #include <psMaterials.hpp>
 
 /**
- * Creates a hole geometry in z direction. For 2D geometries a regular trench is
- * created.
+ * Creates a hole geometry in z direction. In 2D mode, this is equivalent to a
+ * trench geometry
  */
 template <class NumericType, int D> class psMakeHole {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;

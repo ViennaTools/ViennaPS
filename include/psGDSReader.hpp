@@ -63,7 +63,7 @@ private:
   double units; // units in micron
   double userUnits;
 
-  // unsused
+  // unused
   float currentWidth;
   char *tempStr;
 

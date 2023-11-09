@@ -1,5 +1,4 @@
-#ifndef PS_GEOMETRIC_MODEL_HPP
-#define PS_GEOMETRIC_MODEL_HPP
+#pragma once
 
 #include <psDomain.hpp>
 #include <psSmartPointer.hpp>
@@ -15,5 +14,3 @@ public:
 
   virtual void apply(){};
 };
-
-#endif

@@ -36,12 +36,11 @@ public:
   void initNew(rayRNG &RNG) override final {
   }
 
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final {
     return sourcePower;
   }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return std::vector<std::string>{"particleRate"};
+    return {"particleRate"};
   }
 
 private:

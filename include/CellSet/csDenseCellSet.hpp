@@ -40,6 +40,7 @@ private:
   T depth = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
+  std::bitset<D> periodicBoundary;
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
   hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
@@ -147,14 +148,18 @@ public:
           cellGrid->maximumExtent[0], cellGrid->maximumExtent[1]};
   }
 
+  void setPeriodicBoundary(std::array<bool, D> isPeriodic) {
+    for (int i = 0; i < D; i++) {
+      periodicBoundary[i] = isPeriodic[i];
+    }
+  }
+
   std::vector<T> *addScalarData(std::string name, T initValue) {
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
     return cellGrid->getCellData().getScalarData(name);
   }
-
-  gridType getCellGrid() { return cellGrid; }
 
   T getDepth() const { return depth; }
 
@@ -170,6 +175,8 @@ public:
 
   psSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
+  psSmartPointer<lsMesh<T>> getCellGrid() { return cellGrid; }
+
   levelSetsType getLevelSets() const { return levelSets; }
 
   size_t getNumberOfCells() const { return numberOfCells; }
@@ -177,7 +184,10 @@ public:
   std::vector<T> *getFillingFractions() const { return fillingFractions; }
 
   T getFillingFraction(const std::array<T, D> &point) {
-    auto idx = findIndex(point);
+    csTriple<T> point3 = {0., 0., 0.};
+    for (int i = 0; i < D; i++)
+      point3[i] = point[i];
+    auto idx = findIndex(point3);
     if (idx < 0)
       return -1.;
 
@@ -214,7 +224,7 @@ public:
   }
 
   // Add to the filling fraction at given cell index.
-  bool addFillingFraction(int idx, T fill) {
+  bool addFillingFraction(const int idx, const T fill) {
     if (idx < 0)
       return false;
 
@@ -330,7 +340,7 @@ public:
   // Update the material IDs of the cell set. This function should be called if
   // the level sets, the cell set is made out of, have changed. This does not
   // work if the surface of the volume has changed. In this case, call the
-  // funciton update surface first.
+  // function "updateSurface" first.
   void updateMaterials() {
     auto materialIds = getScalarData("Material");
 
@@ -479,11 +489,14 @@ public:
   }
 
   void buildNeighborhood() {
+    psUtils::Timer timer;
+    timer.start();
     const auto &cells = cellGrid->template getElements<(1 << D)>();
     const auto &nodes = cellGrid->getNodes();
     unsigned const numNodes = nodes.size();
     unsigned const numCells = cells.size();
     cellNeighbors.resize(numCells);
+    const bool usePeriodicBoundary = periodicBoundary.any();
 
     std::vector<std::vector<unsigned>> nodeCellConnections(numNodes);
 
@@ -501,6 +514,32 @@ public:
         coord[i] += gridDelta / 2.;
         cellNeighbors[cellIdx][i] = -1;
         cellNeighbors[cellIdx][i + D] = -1;
+      }
+
+      if (usePeriodicBoundary) {
+        auto onBoundary = isBoundaryCell(coord);
+        if (onBoundary.any()) {
+          /*look for neighbor cells using BVH*/
+          for (std::size_t i = 0; i < 2 * D; i++) {
+            auto neighborCoord = coord;
+            bool minBoundary = i % 2 == 0;
+
+            if (onBoundary.test(i)) {
+              // wrap around boundary
+              if (!minBoundary) {
+                neighborCoord[i / 2] =
+                    cellGrid->minimumExtent[i / 2] + gridDelta / 2.;
+              } else {
+                neighborCoord[i / 2] =
+                    cellGrid->maximumExtent[i / 2] - gridDelta / 2.;
+              }
+            } else {
+              neighborCoord[i / 2] += minBoundary ? -gridDelta : gridDelta;
+            }
+            cellNeighbors[cellIdx][i] = findIndex(neighborCoord);
+          }
+          continue;
+        }
       }
 
       for (unsigned cellNodeIdx = 0; cellNodeIdx < (1 << D); cellNodeIdx++) {
@@ -527,6 +566,11 @@ public:
         }
       }
     }
+    timer.finish();
+    psLogger::getInstance()
+        .addTiming("Building cell set neighborhood structure took",
+                   timer.currentDuration * 1e-9)
+        .print();
   }
 
   const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) {
@@ -572,7 +616,7 @@ private:
   }
 
   int findSurfaceHitPoint(csTriple<T> &hitPoint, const csTriple<T> &direction) {
-    // find surface hitpoint
+    // find surface hit point
     auto idx = findIndex(hitPoint);
 
     if (idx > 0)
@@ -602,6 +646,8 @@ private:
   }
 
   void buildBVH() {
+    psUtils::Timer timer;
+    timer.start();
     auto &elems = cellGrid->template getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
     BVH->clearCellIds();
@@ -616,6 +662,10 @@ private:
         cell->insert(elemIdx);
       }
     }
+    timer.finish();
+    psLogger::getInstance()
+        .addTiming("Building cell set BVH took", timer.currentDuration * 1e-9)
+        .print();
   }
 
   void calculateMinMaxIndex(
@@ -638,6 +688,23 @@ private:
                                                 : grid.getMaxBounds(i));
       }
     }
+  }
+
+  std::bitset<2 * D> isBoundaryCell(const std::array<T, 3> &cellCoord) {
+    std::bitset<2 * D> onBoundary;
+    for (int i = 0; i < 2 * D; i += 2) {
+      if (!periodicBoundary[i / 2])
+        continue;
+      if (cellCoord[i / 2] - cellGrid->minimumExtent[i / 2] < gridDelta) {
+        /* cell is at min boundary */
+        onBoundary.set(i);
+      }
+      if (cellGrid->maximumExtent[i / 2] - cellCoord[i / 2] < gridDelta) {
+        /* cell is at max boundary */
+        onBoundary.set(i + 1);
+      }
+    }
+    return onBoundary;
   }
 };
 

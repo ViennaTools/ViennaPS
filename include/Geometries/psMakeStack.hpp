@@ -26,7 +26,8 @@ template <class NumericType, int D> class psMakeStack {
   const int numLayers;
   const NumericType layerHeight;
   const NumericType substrateHeight;
-  const NumericType holeRadius;
+  NumericType holeRadius;
+  const NumericType trenchWidth;
   const NumericType maskHeight;
   const bool periodicBoundary = false;
 
@@ -38,12 +39,14 @@ public:
               const int passedNumLayers, const NumericType passedLayerHeight,
               const NumericType passedSubstrateHeight,
               const NumericType passedHoleRadius,
+              const NumericType passedTrenchWidth,
               const NumericType passedMaskHeight, const bool periodic = false)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         numLayers(passedNumLayers), layerHeight(passedLayerHeight),
         substrateHeight(passedSubstrateHeight), holeRadius(passedHoleRadius),
-        maskHeight(passedMaskHeight), periodicBoundary(periodic) {
+        trenchWidth(passedTrenchWidth), maskHeight(passedMaskHeight),
+        periodicBoundary(periodic) {
     init();
   }
 
@@ -85,6 +88,9 @@ private:
                                          lsBooleanOperationEnum::INTERSECT)
           .apply();
 
+      if (holeRadius == 0.) {
+        holeRadius = trenchWidth / 2.;
+      }
       NumericType minPoint[D] = {
           -holeRadius, substrateHeight + layerHeight * numLayers - gridDelta};
       NumericType maxPoint[D] = {holeRadius, substrateHeight +
@@ -125,7 +131,10 @@ private:
       }
     }
 
-    if (holeRadius > 0. && maskHeight == 0.) {
+    if ((holeRadius > 0. || trenchWidth > 0.) && maskHeight == 0.) {
+      if (holeRadius == 0.) {
+        holeRadius = trenchWidth / 2.;
+      }
       // cut out middle
       auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
       NumericType minPoint[D] = {-holeRadius, 0.};
@@ -166,15 +175,33 @@ private:
                                          lsBooleanOperationEnum::INTERSECT)
           .apply();
 
-      normal[D - 1] = 1.;
-      lsMakeGeometry<NumericType, D>(
-          maskAdd, lsSmartPointer<lsCylinder<NumericType, D>>::New(
-                       origin, normal, maskHeight + gridDelta, holeRadius))
-          .apply();
+      if (holeRadius > 0.) {
+        normal[D - 1] = 1.;
+        lsMakeGeometry<NumericType, D>(
+            maskAdd, lsSmartPointer<lsCylinder<NumericType, D>>::New(
+                         origin, normal, maskHeight + gridDelta, holeRadius))
+            .apply();
 
-      lsBooleanOperation<NumericType, D>(
-          mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-          .apply();
+        lsBooleanOperation<NumericType, D>(
+            mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+      } else if (trenchWidth > 0.) {
+        NumericType minPoint[D] = {
+            static_cast<NumericType>(-trenchWidth / 2.),
+            static_cast<NumericType>(-yExtent / 2. - gridDelta), origin[D - 1]};
+        NumericType maxPoint[D] = {
+            static_cast<NumericType>(trenchWidth / 2.),
+            static_cast<NumericType>(yExtent / 2. + gridDelta),
+            origin[D - 1] + maskHeight + gridDelta};
+        lsMakeGeometry<NumericType, D>(
+            maskAdd,
+            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+            .apply();
+
+        lsBooleanOperation<NumericType, D>(
+            mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+      }
 
       domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
     }
@@ -216,12 +243,31 @@ private:
             layer, cutOut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
             .apply();
       }
+    } else if (trenchWidth > 0. && maskHeight == 0.) {
+      auto cutOut = LSPtrType::New(bounds, boundaryConds, gridDelta);
+      NumericType minPoint[D] = {
+          static_cast<NumericType>(-trenchWidth / 2.),
+          static_cast<NumericType>(-yExtent / 2. - gridDelta), (NumericType)0.};
+      NumericType maxPoint[D] = {
+          static_cast<NumericType>(trenchWidth / 2.),
+          static_cast<NumericType>(yExtent / 2. + gridDelta),
+          substrateHeight + layerHeight * numLayers + maskHeight + gridDelta};
+      lsMakeGeometry<NumericType, D>(
+          cutOut,
+          lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+          .apply();
+
+      for (auto layer : *domain->getLevelSets()) {
+        lsBooleanOperation<NumericType, D>(
+            layer, cutOut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+      }
     }
   }
 
   void init() {
-    bounds[0] = -xExtent;
-    bounds[1] = xExtent;
+    bounds[0] = -xExtent / 2.;
+    bounds[1] = xExtent / 2.;
     normal[0] = 0.;
     if (periodicBoundary)
       boundaryConds[0] =
@@ -239,8 +285,8 @@ private:
     } else {
       normal[1] = 0.;
       normal[2] = 1.;
-      bounds[2] = -yExtent;
-      bounds[3] = yExtent;
+      bounds[2] = -yExtent / 2.;
+      bounds[3] = yExtent / 2.;
       bounds[4] = 0;
       bounds[5] = layerHeight * numLayers + gridDelta;
       if (periodicBoundary)

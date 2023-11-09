@@ -12,14 +12,14 @@ template <typename T> struct Parameters {
   T yExtent = 120.0; // nm
 
   // Geometry
-  int numLayers = 7;
+  int numLayers = 5;
   T layerHeight = 30.;     // nm
   T substrateHeight = 50.; // nm
-  T holeRadius = 75;       // nm
+  T trenchWidth = 75;      // nm
   T maskHeight = 50;       // nm
 
   // Process
-  T processTime = 10;
+  T processTime = 20;
   T etchantFlux = 150;
   T polymerFlux = 10;
   T ionFlux = 56;
@@ -35,7 +35,7 @@ template <typename T> struct Parameters {
         psUtils::Item{"gridDelta", gridDelta},             //
         psUtils::Item{"xExtent", xExtent},                 //
         psUtils::Item{"yExtent", yExtent},                 //
-        psUtils::Item{"holeRadius", holeRadius},           //
+        psUtils::Item{"trenchWidth", trenchWidth},         //
         psUtils::Item{"numLayers", numLayers},             //
         psUtils::Item{"layerHeight", layerHeight},         //
         psUtils::Item{"substrateHeight", substrateHeight}, //

@@ -12,18 +12,19 @@ template <typename T> struct Parameters {
   T oxideEtchRate = 0.;
 
   T gridDelta = 2.;  // nm
-  T xExtent = 300.0; // nm
+  T xExtent = 400.0; // nm
+  T yExtent = 100.0; // nm
 
   // Geometry
-  int numLayers = 7;
+  int numLayers = 11;
   T layerHeight = 30.;     // nm
   T substrateHeight = 50.; // nm
   T trenchWidth = 150.;    // nm
 
   // Process
-  T targetEtchDepth = 200.;     // nm
-  T diffusionCoefficient = 50.; // diffusion cofficient nm²/s
-  T sink = 0.01;                // sink strength
+  T targetEtchDepth = 100.;    // nm
+  T diffusionCoefficient = 1.; // diffusion cofficient nm²/s
+  T sink = 0.01;               // sink strength
   // convection velocity in the scallops towards the center nm/s
   T scallopVelocity = 5.;
   // convection velocity in the center towards the sink on the top nm/s

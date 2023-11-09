@@ -78,7 +78,7 @@ public:
       if (!initialize())
         return false;
 
-    // The first row determins the number of colums
+    // The first row determins the number of columns
     if (numCols == 0)
       numCols = data.size();
 
@@ -105,7 +105,7 @@ public:
       if (!initialize())
         return false;
 
-    // The first row determins the number of colums
+    // The first row determins the number of columns
     if (numCols == 0)
       numCols = data.size();
 

@@ -75,7 +75,7 @@ public:
       auto matId = psMaterialMap::mapToMaterial(materialIds[i]);
       assert(matId == psMaterial::Mask || matId == psMaterial::Polymer ||
              matId == psMaterial::Si || matId == psMaterial::SiO2 ||
-             matId == psMaterial::Si3N4 && "Unexptected material");
+             matId == psMaterial::Si3N4 && "Unexpected material");
       if (matId == psMaterial::Mask) {
         etchRate[i] = (-1. / psParameters::Mask::rho) *
                       ionSputteringRate->at(i) * totalIonFlux;
@@ -317,8 +317,6 @@ public:
       E = normalDist(RNG);
     } while (E < minEnergy);
   }
-
-  int getRequiredLocalDataSize() const override final { return 3; }
   NumericType getSourceDistributionPower() const override final {
     return power;
   }
@@ -368,7 +366,6 @@ public:
     }
     return std::pair<NumericType, rayTriple<NumericType>>{stick, direction};
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"polyRate"};
@@ -411,7 +408,6 @@ public:
 
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
   }
-  int getRequiredLocalDataSize() const override final { return 1; }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"etchantRate"};

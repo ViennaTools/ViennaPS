@@ -1,6 +1,7 @@
 #include <lsMakeGeometry.hpp>
 
 #include <psMakeTrench.hpp>
+#include <psMakeHole.hpp>
 #include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
@@ -10,29 +11,29 @@
 
 int main() {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   omp_set_num_threads(20);
 
-  psLogger::setLogLevel(psLogLevel::INFO);
+  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
   // particles
-  auto particle = std::make_unique<Particle<NumericType, D>>(0.7, 100.);
+  auto particle = std::make_unique<Particle<NumericType, D>>(0.7, 10.);
 
   // surface model
   auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = psSmartPointer<VelocityField<NumericType, D>>::New();
+  auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
 
   /* ------------- Geometry setup (ViennaLS) ------------ */
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  NumericType gridDelta = 0.01;
+  NumericType gridDelta = 0.05;
   NumericType extent = 2.;
   NumericType width = 0.3;
-  NumericType depth = 0.4;
-  NumericType taper = 35;
-  psMakeTrench<NumericType, D>(domain, gridDelta, extent, extent, width, depth,
+  NumericType depth = 0.2;
+  NumericType taper = 0.;
+  psMakeHole<NumericType, D>(domain, gridDelta, extent, extent, width, depth,
                                taper, 0., false, true, psMaterial::Si)
       .apply();
 
@@ -47,7 +48,7 @@ int main() {
   psProcess<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
-  process.setProcessDuration(2);
+  process.setProcessDuration(1);
   process.setNumberOfRaysPerPoint(1000);
   process.apply();
 

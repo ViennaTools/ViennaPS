@@ -12,12 +12,12 @@ maskHeight=0.4
 taperAngle=0
 
 # Process paramters
-processTime=100 # seconds
+processTime=0.1 # seconds
 
 # all flux values are units 1e15 / cm²
 ionFlux=10.
 etchantFlux=1800.
-oxygenFlux=100.
+oxygenFlux=200.
 
 meanEnergy=100 # eV
 sigmaEnergy=10
