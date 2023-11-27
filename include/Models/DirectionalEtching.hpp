@@ -5,7 +5,7 @@
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
-// Directional etch for one material
+namespace DirectionalEtchingImplementation {
 template <class NumericType, int D>
 class DirectionalEtchVelocityField : public psVelocityField<NumericType> {
   const std::array<NumericType, 3> direction;
@@ -42,21 +42,24 @@ public:
   // which only depends on an analytic velocity field
   int getTranslationFieldOptions() const override { return 0; }
 };
+} // namespace DirectionalEtchingImplementation
 
+/// Directional etching with one masking material.
 template <typename NumericType, int D>
 class DirectionalEtching : public psProcessModel<NumericType, D> {
 public:
-  DirectionalEtching(const std::array<NumericType, 3> direction,
-                     const NumericType directionalVelocity = 1.,
-                     const NumericType isotropicVelocity = 0.,
-                     const psMaterial mask = psMaterial::Mask) {
+  explicit DirectionalEtching(const std::array<NumericType, 3> direction,
+                              const NumericType directionalVelocity = 1.,
+                              const NumericType isotropicVelocity = 0.,
+                              const psMaterial mask = psMaterial::Mask) {
     // default surface model
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
     // velocity field
-    auto velField =
-        psSmartPointer<DirectionalEtchVelocityField<NumericType, D>>::New(
-            direction, directionalVelocity, isotropicVelocity, mask);
+    auto velField = psSmartPointer<
+        DirectionalEtchingImplementation::DirectionalEtchVelocityField<
+            NumericType, D>>::New(direction, directionalVelocity,
+                                  isotropicVelocity, mask);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

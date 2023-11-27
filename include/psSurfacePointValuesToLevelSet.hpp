@@ -59,7 +59,6 @@ public:
     const auto gridDelta = levelSet->getGrid().getGridDelta();
 
     std::vector<std::size_t> levelSetPointToMeshIds(
-
         levelSet->getNumberOfPoints());
 
     for (hrleConstSparseIterator<typename lsDomain<NumericType, D>::DomainType>

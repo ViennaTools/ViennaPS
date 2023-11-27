@@ -317,7 +317,6 @@ public:
       E = normalDist(RNG);
     } while (E < minEnergy);
   }
-
   NumericType getSourceDistributionPower() const override final {
     return power;
   }

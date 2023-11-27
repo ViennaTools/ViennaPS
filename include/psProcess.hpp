@@ -25,6 +25,18 @@ template <typename NumericType, int D> class psProcess {
   using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
 public:
+  psProcess() {}
+  psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain)
+      : domain(passedDomain) {}
+  template <typename ProcessModelType>
+  psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain,
+            psSmartPointer<ProcessModelType> passedProcessModel,
+            const NumericType passedDuration = 0.)
+      : domain(passedDomain), processDuration(passedDuration) {
+    model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
+        passedProcessModel);
+  }
+
   template <typename ProcessModelType>
   void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
     model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
@@ -359,6 +371,8 @@ public:
           }
           rayTrace.setParticleType(particle);
           rayTrace.apply();
+
+          // std::cout << rayTrace.getRayTraceInfo().numRays << std::endl;
 
           // fill up rates vector with rates from this particle type
           auto numRates = particle->getLocalDataLabels().size();

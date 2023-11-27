@@ -12,17 +12,18 @@ enum class psMaterial : int {
   SiN = 4,
   SiON = 5,
   SiC = 6,
-  PolySi = 7,
-  GaN = 8,
-  W = 9,
-  Al2O3 = 10,
-  TiN = 11,
-  Cu = 12,
-  Polymer = 13,
-  Dielectric = 14,
-  Metal = 15,
-  Air = 16,
-  GAS = 17
+  SiGe = 7,
+  PolySi = 8,
+  GaN = 9,
+  W = 10,
+  Al2O3 = 11,
+  TiN = 12,
+  Cu = 13,
+  Polymer = 14,
+  Dielectric = 15,
+  Metal = 16,
+  Air = 17,
+  GAS = 18
 };
 
 class psMaterialMap {

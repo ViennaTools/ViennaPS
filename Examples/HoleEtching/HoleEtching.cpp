@@ -58,4 +58,6 @@ int main(int argc, char *argv[]) {
 
   // print final surface
   geometry->printSurface("final.vtp");
+
+  psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
 }
