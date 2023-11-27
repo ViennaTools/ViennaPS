@@ -5,7 +5,7 @@
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
-// Isotropic etch for one material
+namespace IsotropicImplementation {
 template <class NumericType, int D>
 class IsotropicVelocityField : public psVelocityField<NumericType> {
   const NumericType vel = 1.;
@@ -32,7 +32,9 @@ public:
   // which only depends on an analytic velocity field
   int getTranslationFieldOptions() const override { return 0; }
 };
+} // namespace IsotropicImplementation
 
+/// Isotropic etching with one masking material.
 template <typename NumericType, int D>
 class IsotropicProcess : public psProcessModel<NumericType, D> {
 public:
@@ -42,8 +44,9 @@ public:
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
     // velocity field
-    auto velField = psSmartPointer<IsotropicVelocityField<NumericType, D>>::New(
-        isotropicRate, maskMaterial);
+    auto velField =
+        psSmartPointer<IsotropicImplementation::IsotropicVelocityField<
+            NumericType, D>>::New(isotropicRate, maskMaterial);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
