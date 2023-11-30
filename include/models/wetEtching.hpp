@@ -6,7 +6,7 @@
 
 #include <rayUtil.hpp>
 
-// Wet etch for one material
+namespace WetEtchingImplementation {
 template <class NumericType, int D>
 class WetEtchingVelocityField : public psVelocityField<NumericType> {
   const std::array<NumericType, 3> direction100 = {0.707106781187,
@@ -98,7 +98,9 @@ public:
     return nullptr;
   }
 };
+} // namespace WetEtchingImplementation
 
+// Wet etch for one material
 // The wet etching model should be used in combination with the
 // STENCIL_LOCAL_LAX_FRIEDRIECH integration scheme.
 template <typename NumericType, int D>
@@ -124,12 +126,14 @@ private:
   void initialize() {
     // surface model
     auto surfModel =
-        psSmartPointer<WetEtchingSurfaceModel<NumericType, D>>::New();
+        psSmartPointer<WetEtchingImplementation::WetEtchingSurfaceModel<
+            NumericType, D>>::New();
 
     // velocity field
     auto velField =
-        psSmartPointer<WetEtchingVelocityField<NumericType, D>>::New(
-            direction100, direction010, r100, r110, r111, r311, maskId);
+        psSmartPointer<WetEtchingImplementation::WetEtchingVelocityField<
+            NumericType, D>>::New(direction100, direction010, r100, r110, r111,
+                                  r311, maskId);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

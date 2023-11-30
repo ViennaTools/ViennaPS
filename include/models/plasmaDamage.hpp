@@ -5,6 +5,7 @@
 
 #include <rayUtil.hpp>
 
+namespace PlasmaDamageImplementation {
 template <class T, int D>
 class DamageIon : public csParticle<DamageIon<T, D>, T> {
 public:
@@ -209,17 +210,16 @@ public:
     return true;
   }
 };
+} // namespace PlasmaDamageImplementation
 
 template <typename NumericType, int D>
 class PlasmaDamage : public psProcessModel<NumericType, D> {
-  psSmartPointer<psProcessModel<NumericType, D>> processModel = nullptr;
-
 public:
   PlasmaDamage(const NumericType ionEnergy = 100.,
                const NumericType meanFreePath = 1.,
                const int maskMaterial = 0) {
-    auto volumeModel = psSmartPointer<DamageModel<NumericType, D>>::New(
-        ionEnergy, meanFreePath, maskMaterial);
+    auto volumeModel = psSmartPointer<PlasmaDamageImplementation::DamageModel<
+        NumericType, D>>::New(ionEnergy, meanFreePath, maskMaterial);
 
     this->setProcessName("PlasmaDamage");
     this->setAdvectionCallback(volumeModel);

@@ -9,8 +9,7 @@
 #include <psProcessModel.hpp>
 #include <psToDiskMesh.hpp>
 
-// The selective etching model works in accordance with the geometry generated
-// by psMakeStack
+namespace OxideRegrowthImplementation {
 template <class NumericType>
 class SelectiveEtchingVelocityField : public psVelocityField<NumericType> {
 public:
@@ -298,32 +297,38 @@ private:
     }
   }
 };
+} // namespace OxideRegrowthImplementation
 
+// The selective etching model works in accordance with the geometry generated
+// by psMakeStack
 template <class NumericType, int D>
-class OxideRegrowthModel : public psProcessModel<NumericType, D> {
+class OxideRegrowth : public psProcessModel<NumericType, D> {
 public:
-  OxideRegrowthModel(const NumericType nitrideEtchRate,
-                     const NumericType oxideEtchRate,
-                     const NumericType redepositionRate,
-                     const NumericType redepositionThreshold,
-                     const NumericType redepositionTimeInt,
-                     const NumericType diffusionCoefficient,
-                     const NumericType sinkStrength,
-                     const NumericType scallopVelocity,
-                     const NumericType centerVelocity,
-                     const NumericType topHeight, const NumericType centerWidth,
-                     const NumericType timeStabilityFactor = 0.245) {
+  OxideRegrowth(const NumericType nitrideEtchRate,
+                const NumericType oxideEtchRate,
+                const NumericType redepositionRate,
+                const NumericType redepositionThreshold,
+                const NumericType redepositionTimeInt,
+                const NumericType diffusionCoefficient,
+                const NumericType sinkStrength,
+                const NumericType scallopVelocity,
+                const NumericType centerVelocity, const NumericType topHeight,
+                const NumericType centerWidth,
+                const NumericType timeStabilityFactor = 0.245) {
 
-    auto veloField =
-        psSmartPointer<SelectiveEtchingVelocityField<NumericType>>::New(
-            nitrideEtchRate, oxideEtchRate);
+    auto veloField = psSmartPointer<
+        OxideRegrowthImplementation::SelectiveEtchingVelocityField<
+            NumericType>>::New(nitrideEtchRate, oxideEtchRate);
 
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
-    auto dynamics = psSmartPointer<ByproductDynamics<NumericType, D>>::New(
-        diffusionCoefficient, sinkStrength, scallopVelocity, centerVelocity,
-        topHeight, centerWidth / 2., nitrideEtchRate, redepositionRate,
-        redepositionThreshold, redepositionTimeInt, timeStabilityFactor);
+    auto dynamics =
+        psSmartPointer<OxideRegrowthImplementation::ByproductDynamics<
+            NumericType, D>>::New(diffusionCoefficient, sinkStrength,
+                                  scallopVelocity, centerVelocity, topHeight,
+                                  centerWidth / 2., nitrideEtchRate,
+                                  redepositionRate, redepositionThreshold,
+                                  redepositionTimeInt, timeStabilityFactor);
 
     this->setVelocityField(veloField);
     this->setSurfaceModel(surfModel);
