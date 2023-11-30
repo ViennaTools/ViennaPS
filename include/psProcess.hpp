@@ -678,7 +678,7 @@ private:
   long raysPerPoint = 1000;
   std::vector<rayDataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds = true;
-  bool smoothFlux = false;
+  bool smoothFlux = true;
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
   NumericType printTime = 0.;

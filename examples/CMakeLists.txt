@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
-project(ViennaPSApplication)
+project(ViennaPSExamples)
 
-find_package(ViennaPS CONFIG PATHS ${ViennaPS_BINARY_DIR})
+include("${CMAKE_SOURCE_DIR}/cmake/prepare.cmake")
+
+find_package(ViennaPS CONFIG PATHS ${ViennaPS_BINARY_DIR} NO_DEFAULT_PATH)
 if(NOT ViennaPS_FOUND)
   message(
     FATAL_ERROR
@@ -24,27 +26,14 @@ list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
      ${VIENNAPS_BUILD_INCLUDE_DIRS}/geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/models
      ${VIENNAPS_BUILD_INCLUDE_DIRS}/compact)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
-option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application." OFF)
-if(VIENNAPS_USE_DOUBLE)
-  add_compile_definitions(VIENNAPS_USE_DOUBLE)
-endif(VIENNAPS_USE_DOUBLE)
-
+# Exclude the buildExamples target from the `all` target
 set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 
-add_custom_target(buildApplication)
+add_custom_target(buildExamples)
 
-add_executable(ViennaPS2D ${PROJECT_SOURCE_DIR}/application.cpp)
-target_compile_definitions(ViennaPS2D PRIVATE VIENNAPS_APP_DIM=2)
-target_include_directories(ViennaPS2D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
-target_link_libraries(ViennaPS2D ${VIENNAPS_LIBRARIES})
-add_dependencies(buildApplication ViennaPS2D)
+subdirlist(EXAMPLE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 
-add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/application.cpp)
-target_compile_definitions(ViennaPS3D PRIVATE VIENNAPS_APP_DIM=3)
-target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
-target_link_libraries(ViennaPS3D ${VIENNAPS_LIBRARIES})
-add_dependencies(buildApplication ViennaPS3D)
-
-configure_file(sampleConfig.txt ${CMAKE_BINARY_DIR}/sampleConfig.txt COPYONLY)
+# add all examples
+foreach(subdir ${EXAMPLE_DIRS})
+  add_subdirectory(${subdir})
+endforeach()
