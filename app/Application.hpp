@@ -118,7 +118,8 @@ protected:
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model);
-    process.setSmoothFlux(processParams->smoothFlux);
+    if (processParams->smoothFlux)
+      process.enableFluxSmoothing();
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
     process.setIntegrationScheme(params->integrationScheme);
@@ -139,7 +140,8 @@ protected:
     psProcess<NumericType, D> process;
     process.setDomain(processGeometry);
     process.setProcessModel(model);
-    process.setSmoothFlux(processParams->smoothFlux);
+    if (processParams->smoothFlux)
+      process.enableFluxSmoothing();
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
     process.setIntegrationScheme(params->integrationScheme);
@@ -159,7 +161,8 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setMaxCoverageInitIterations(10);
-    process.setSmoothFlux(processParams->smoothFlux);
+    if (processParams->smoothFlux)
+      process.enableFluxSmoothing();
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
     process.setIntegrationScheme(params->integrationScheme);
@@ -179,7 +182,8 @@ protected:
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setMaxCoverageInitIterations(10);
-    process.setSmoothFlux(processParams->smoothFlux);
+    if (processParams->smoothFlux)
+      process.enableFluxSmoothing();
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
     process.setProcessDuration(processParams->processTime);
     process.setIntegrationScheme(params->integrationScheme);
