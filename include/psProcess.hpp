@@ -37,42 +37,60 @@ public:
         passedProcessModel);
   }
 
+  // Set the process model. This can be either a pre-configured process model or
+  // a custom process model. A custom process model must interface the
+  // psProcessModel class.
   template <typename ProcessModelType>
   void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
     model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);
   }
 
+  // Set the process domain.
   void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }
 
-  /// Set the source direction, where the rays should be traced from.
+  // Set the source direction, where the rays should be traced from.
   void setSourceDirection(const rayTraceDirection passedDirection) {
     sourceDirection = passedDirection;
   }
 
+  // Set the duration of the process.
   void setProcessDuration(NumericType passedDuration) {
     processDuration = passedDuration;
   }
 
+  // Returns the duration of the recently run process. This duration can
+  // sometimes slightly vary from the set process duration, due to the maximum
+  // timestep according to the CFL condition.
   NumericType getProcessDuration() const { return processTime; }
 
+  // Set the number of rays to traced for each particle in the process.
+  // The number is per point in the process geometry.
   void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
 
+  // Set the number of iterations to initialize the coverages.
   void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
 
-  void setSmoothFlux(bool pSmoothFlux) { smoothFlux = pSmoothFlux; }
+  /// Enable flux smoothing. The flux at each surface point, calculated
+  /// by the ray tracer, is averaged over the surface point neighbors.
+  void enableFluxSmoothing() { smoothFlux = true; }
 
+  // Disable flux smoothing.
+  void disableFluxSmoothing() { smoothFlux = false; }
+
+  // Set the integration scheme for solving the level-set equation.
+  // Possible integration schemes are specified in lsIntegrationSchemeEnum.
   void
   setIntegrationScheme(const lsIntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme = passedIntegrationScheme;
   }
 
-  /// Set the CFL condition to use during advection.
-  /// The CFL condition sets the maximum distance a surface can
-  /// be moved during one advection step. It MUST be below 0.5
-  /// to guarantee numerical stability. Defaults to 0.4999.
+  // Set the CFL condition to use during advection.
+  // The CFL condition sets the maximum distance a surface can
+  // be moved during one advection step. It MUST be below 0.5
+  // to guarantee numerical stability. Defaults to 0.4999.
   void setTimeStepRatio(const double &cfl) { timeStepRatio = cfl; }
 
   // Sets the minimum time between printing intermediate results during the
@@ -82,6 +100,7 @@ public:
     printTime = passedTime;
   }
 
+  // Run the process.
   void apply() {
     /* ---------- Process Setup --------- */
     if (!model) {

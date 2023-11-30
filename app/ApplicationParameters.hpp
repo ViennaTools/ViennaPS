@@ -74,7 +74,7 @@ struct ApplicationParameters {
   NumericType processTime = 1;
   int raysPerPoint = 3000;
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
-  NumericType smoothFlux = 1.;
+  int smoothFlux = 1.;
   // Plasma etching
   // fluxes in in (1e15 atoms/cm³)
   NumericType etchantFlux = 1.8e3;

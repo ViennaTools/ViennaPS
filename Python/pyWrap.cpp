@@ -409,20 +409,28 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       });
 
   // psProcess
-  pybind11::class_<psProcess<T, D>, psSmartPointer<psProcess<T, D>>>(module,
-                                                                     "Process")
+  pybind11::class_<psProcess<T, D>>(module, "Process")
       // constructors
-      .def(pybind11::init(&psSmartPointer<psProcess<T, D>>::New<>))
-
+      .def(pybind11::init())
+      .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
+      .def(
+          pybind11::init<DomainType, psSmartPointer<psProcessModel<T, D>>, T>(),
+          pybind11::arg("domain"), pybind11::arg("model"),
+          pybind11::arg("duration"))
       // methods
+      .def("apply", &psProcess<T, D>::apply, "Run the process.")
       .def("setDomain", &psProcess<T, D>::setDomain, "Set the process domain.")
+      .def("setProcessModel",
+           &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
+           "Set the process model. This has to be a pre-configured process "
+           "model.")
       .def("setProcessDuration", &psProcess<T, D>::setProcessDuration,
            "Set the process duration.")
       .def("setSourceDirection", &psProcess<T, D>::setSourceDirection,
            "Set source direction of the process.")
       .def("setNumberOfRaysPerPoint", &psProcess<T, D>::setNumberOfRaysPerPoint,
            "Set the number of rays to traced for each particle in the process. "
-           "The number is per point in the process geometry")
+           "The number is per point in the process geometry.")
       .def("setMaxCoverageInitIterations",
            &psProcess<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
@@ -430,19 +438,24 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Sets the minimum time between printing intermediate results during "
            "the process. If this is set to a non-positive value, no "
            "intermediate results are printed.")
-      .def("setProcessModel",
-           &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
-           "Set the process model.")
-      .def("apply", &psProcess<T, D>::apply, "Run the process.")
       .def("setIntegrationScheme", &psProcess<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
-           "Should be used out of the ones specified in "
+           "Possible integration schemes are specified in "
            "lsIntegrationSchemeEnum.")
       .def("setTimeStepRatio", &psProcess<T, D>::setTimeStepRatio,
            "Set the CFL condition to use during advection. The CFL condition "
            "sets the maximum distance a surface can be moved during one "
            "advection step. It MUST be below 0.5 to guarantee numerical "
-           "stability. Defaults to 0.4999.");
+           "stability. Defaults to 0.4999.")
+      .def("enableFluxSmoothing", &psProcess<T, D>::enableFluxSmoothing,
+           "Enable flux smoothing. The flux at each surface point, calculated "
+           "by the ray tracer, is averaged over the surface point neighbors.")
+      .def("disableFluxSmoothing", &psProcess<T, D>::disableFluxSmoothing,
+           "Disable flux smoothing")
+      .def("getProcessDuration", &psProcess<T, D>::getProcessDuration,
+           "Returns the duration of the recently run process. This duration "
+           "can sometimes slightly vary from the set process duration, due to "
+           "the maximum timestep according to the CFL condition.");
 
   // psAdvectionCallback
   pybind11::class_<psAdvectionCallback<T, D>,
