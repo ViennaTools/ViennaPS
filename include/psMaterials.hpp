@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lsMaterialMap.hpp>
+#include <psLogger.hpp>
 #include <psSmartPointer.hpp>
 
 enum class psMaterial : int {
@@ -37,15 +38,24 @@ public:
   }
 
   psMaterial getMaterialAtIdx(std::size_t idx) const {
-    if (idx >= map->getNumberOfLayers())
+    if (idx >= size())
       return psMaterial::GAS;
     int matId = map->getMaterialId(idx);
     return mapToMaterial(matId);
   }
 
+  void setMaterialAtIdx(std::size_t idx, const psMaterial material) {
+    if (idx >= size()) {
+      psLogger::getInstance()
+          .addWarning("Setting material with out-of-bounds index.")
+          .print();
+    }
+    map->setMaterialId(idx, static_cast<int>(material));
+  }
+
   psSmartPointer<lsMaterialMap> getMaterialMap() const { return map; }
 
-  std::size_t size() const { return map->getNumberOfLayers(); }
+  inline std::size_t size() const { return map->getNumberOfLayers(); }
 
   static inline psMaterial mapToMaterial(const int matId) {
     if (matId > 17 || matId < -1)
