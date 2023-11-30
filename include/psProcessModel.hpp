@@ -23,6 +23,7 @@ private:
   psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
+  std::array<NumericType, 3> primaryDirection = {0.};
 
 public:
   virtual psSmartPointer<ParticleTypeList> getParticleTypes() {
@@ -42,9 +43,14 @@ public:
     return velocityField;
   }
 
+  /// Set a primary direction for the source distribution (tilted distribution).
+  std::optional<std::array<NumericType, 3>> getPrimaryDirection() const {
+    return std::nullopt;
+  }
+
   void setProcessName(std::string name) { processName = name; }
 
-  std::string getProcessName() { return processName; }
+  std::string getProcessName() const { return processName; }
 
   int getParticleLogSize(std::size_t particleIdx) {
     return particleLogSize[particleIdx];

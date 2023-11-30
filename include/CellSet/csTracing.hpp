@@ -53,9 +53,10 @@ public:
     auto boundary =
         rayBoundary<T, D>(mDevice, boundingBox, mBoundaryConds, traceSettings);
 
+    std::array<rayTriple<T>, 3> orthoBasis;
     auto raySource = raySourceRandom<T, D>(
         boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
-        mGeometry.getNumPoints());
+        mGeometry.getNumPoints(), false, orthoBasis);
 
     auto tracer = csTracingKernel<T, D>(
         mDevice, mGeometry, boundary, raySource, mParticle,
