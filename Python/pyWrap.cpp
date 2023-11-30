@@ -455,7 +455,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getProcessDuration", &psProcess<T, D>::getProcessDuration,
            "Returns the duration of the recently run process. This duration "
            "can sometimes slightly vary from the set process duration, due to "
-           "the maximum timestep according to the CFL condition.");
+           "the maximum time step according to the CFL condition.");
 
   // psAdvectionCallback
   pybind11::class_<psAdvectionCallback<T, D>,

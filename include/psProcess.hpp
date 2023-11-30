@@ -63,7 +63,7 @@ public:
 
   // Returns the duration of the recently run process. This duration can
   // sometimes slightly vary from the set process duration, due to the maximum
-  // timestep according to the CFL condition.
+  // time step according to the CFL condition.
   NumericType getProcessDuration() const { return processTime; }
 
   // Set the number of rays to traced for each particle in the process.
