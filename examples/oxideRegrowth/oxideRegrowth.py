@@ -63,7 +63,7 @@ cellSet.buildNeighborhood()
 # The redeposition model captures byproducts from the selective etching
 # process in the cell set. The byproducts are then distributed by solving a
 # convection-diffusion equation on the cell set.
-model = vps.OxideRegrowthModel(
+model = vps.OxideRegrowth(
     nitrideEtchRate=params["nitrideEtchRate"] / 60.0,
     oxideEtchRate=params["oxideEtchRate"] / 60.0,
     redepositionRate=params["redepositionRate"],

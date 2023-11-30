@@ -728,11 +728,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("maskMaterial") = 0);
 
   // Oxide Regrowth
-  pybind11::class_<OxideRegrowthModel<T, D>,
-                   psSmartPointer<OxideRegrowthModel<T, D>>>(
-      module, "OxideRegrowthModel", processModel)
+  pybind11::class_<OxideRegrowth<T, D>, psSmartPointer<OxideRegrowth<T, D>>>(
+      module, "OxideRegrowth", processModel)
       .def(
-          pybind11::init(&psSmartPointer<OxideRegrowthModel<T, D>>::New<
+          pybind11::init(&psSmartPointer<OxideRegrowth<T, D>>::New<
                          const T, const T, const T, const T, const T, const T,
                          const T, const T, const T, const T, const T, const T>),
           pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),

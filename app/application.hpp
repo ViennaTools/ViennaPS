@@ -22,14 +22,14 @@
 #include "applicationParser.hpp"
 #include "interrupt.hpp"
 
-#include <DirectionalEtching.hpp>
-#include <FluorocarbonEtching.hpp>
-#include <GeometricDistributionModels.hpp>
-#include <IsotropicProcess.hpp>
 #include <SF6O2Etching.hpp>
-#include <SimpleDeposition.hpp>
 #include <TEOSDeposition.hpp>
-#include <WetEtching.hpp>
+#include <directionalEtching.hpp>
+#include <fluorocarbonEtching.hpp>
+#include <geometricDistributionModels.hpp>
+#include <isotropicProcess.hpp>
+#include <simpleDeposition.hpp>
+#include <wetEtching.hpp>
 
 template <int D> class Application {
   psSmartPointer<psDomain<NumericType, D>> geometry = nullptr;

@@ -11,9 +11,9 @@ list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
 
 # Add subfolders to the include directories, since during installation the directory structure is
 # flattened, but in the source tree - which we are using here - it is not.
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/CellSet
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/Geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/Models
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/Compact)
+list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
+     ${VIENNAPS_BUILD_INCLUDE_DIRS}/geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/models
+     ${VIENNAPS_BUILD_INCLUDE_DIRS}/compact)
 
 message(STATUS "ViennaPS version: ${VIENNAPS_VERSION}")
 

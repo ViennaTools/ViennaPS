@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include <ModelParameters.hpp>
+#include <modelParameters.hpp>
 
 #include <psLogger.hpp>
 #include <psMaterials.hpp>

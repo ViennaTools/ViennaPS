@@ -43,16 +43,16 @@
 #include <psWriteVisualizationMesh.hpp>
 
 // models
-#include <DirectionalEtching.hpp>
-#include <FluorocarbonEtching.hpp>
-#include <GeometricDistributionModels.hpp>
-#include <IsotropicProcess.hpp>
-#include <PlasmaDamage.hpp>
 #include <SF6O2Etching.hpp>
-#include <SimpleDeposition.hpp>
-#include <StackRedeposition.hpp>
 #include <TEOSDeposition.hpp>
-#include <WetEtching.hpp>
+#include <directionalEtching.hpp>
+#include <fluorocarbonEtching.hpp>
+#include <geometricDistributionModels.hpp>
+#include <isotropicProcess.hpp>
+#include <oxideRegrowth.hpp>
+#include <plasmaDamage.hpp>
+#include <simpleDeposition.hpp>
+#include <wetEtching.hpp>
 
 // CellSet
 #include <csDenseCellSet.hpp>
