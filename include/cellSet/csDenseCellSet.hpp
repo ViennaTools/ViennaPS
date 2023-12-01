@@ -48,10 +48,11 @@ private:
 public:
   csDenseCellSet() {}
 
-  csDenseCellSet(levelSetsType passedLevelSets, T passedDepth = 0.,
-                 bool passedCellSetPosition = false)
+  csDenseCellSet(levelSetsType passedLevelSets,
+                 materialMapType passedMaterialMap = nullptr,
+                 T passedDepth = 0., bool passedCellSetPosition = false)
       : levelSets(passedLevelSets), cellSetAboveSurface(passedCellSetPosition) {
-    fromLevelSets(passedLevelSets, passedDepth);
+    fromLevelSets(passedLevelSets, passedMaterialMap, passedDepth);
   }
 
   void fromLevelSets(levelSetsType passedLevelSets,

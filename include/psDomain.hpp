@@ -46,27 +46,27 @@ public:
   }
 
   psDomain(lsDomainType passedLevelSet, bool passedUseCellSet = false,
-           const NumericType passedDepth = 0.,
+           const NumericType passedCellSetDepth = 0.,
            const bool passedCellSetPosition = false)
-      : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
+      : useCellSet(passedUseCellSet), cellSetDepth(passedCellSetDepth) {
     levelSets = lsDomainsType::New();
     levelSets->push_back(passedLevelSet);
     // generate CellSet
     if (useCellSet) {
-      cellSet =
-          csDomainType::New(levelSets, cellSetDepth, passedCellSetPosition);
+      cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth,
+                                  passedCellSetPosition);
     }
   }
 
   psDomain(lsDomainsType passedLevelSets, bool passedUseCellSet = false,
-           const NumericType passedDepth = 0.,
+           const NumericType passedCellSetDepth = 0.,
            const bool passedCellSetPosition = false)
-      : useCellSet(passedUseCellSet), cellSetDepth(passedDepth) {
+      : useCellSet(passedUseCellSet), cellSetDepth(passedCellSetDepth) {
     levelSets = passedLevelSets;
     // generate CellSet
     if (useCellSet) {
-      cellSet =
-          csDomainType::New(levelSets, cellSetDepth, passedCellSetPosition);
+      cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth,
+                                  passedCellSetPosition);
     }
   }
 
@@ -114,6 +114,12 @@ public:
     }
     materialMap->insertNextMaterial(material);
     levelSets->push_back(passedLevelSet);
+    materialMapCheck();
+  }
+
+  void setMaterialMap(materialMapType passedMaterialMap) {
+    materialMap = passedMaterialMap;
+    materialMapCheck();
   }
 
   void setMaterial(unsigned int lsId, const psMaterial material) {
@@ -121,6 +127,7 @@ public:
       materialMap = materialMapType::New();
     }
     materialMap->setMaterialAtIdx(lsId, material);
+    materialMapCheck();
   }
 
   // copy the top LS and insert it in the domain (used to capture depositing
@@ -136,10 +143,6 @@ public:
     } else {
       insertNextLevelSetAsMaterial(copy, material, false);
     }
-  }
-
-  void setMaterialMap(materialMapType passedMaterialMap) {
-    materialMap = passedMaterialMap;
   }
 
   // remove the top LS
@@ -165,8 +168,8 @@ public:
       return;
     }
 
-    for (auto ls : *levelSets) {
-      lsBooleanOperation<NumericType, D>(ls, levelSet, operation).apply();
+    for (auto layer : *levelSets) {
+      lsBooleanOperation<NumericType, D>(layer, levelSet, operation).apply();
     }
   }
 
@@ -237,6 +240,19 @@ public:
     levelSets = lsDomainsType::New();
     if (useCellSet) {
       cellSet = csDomainType::New();
+    }
+  }
+
+private:
+  void materialMapCheck() const {
+    if (!materialMap)
+      return;
+
+    if (materialMap->size() != levelSets->size()) {
+      psLogger::getInstance()
+          .addWarning("Size mismatch in material map and number of Level-Sets "
+                      "in domain.")
+          .print();
     }
   }
 };
