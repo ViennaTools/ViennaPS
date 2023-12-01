@@ -179,7 +179,7 @@ public:
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
 
-    rayTraceBoundary rayBoundaryCondition[D];
+    rayBoundaryCondition rayBoundaryCondition[D];
     rayTrace<NumericType, D> rayTracer;
 
     if (useRayTracing) {
@@ -583,25 +583,25 @@ private:
     psVTKWriter<NumericType>(mesh, name).apply();
   }
 
-  rayTraceBoundary convertBoundaryCondition(
+  rayBoundaryCondition convertBoundaryCondition(
       lsBoundaryConditionEnum<D> originalBoundaryCondition) {
     switch (originalBoundaryCondition) {
     case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-      return rayTraceBoundary::REFLECTIVE;
+      return rayBoundaryCondition::REFLECTIVE;
 
     case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
 
     case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-      return rayTraceBoundary::PERIODIC;
+      return rayBoundaryCondition::PERIODIC;
 
     case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
 
     case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
     }
-    return rayTraceBoundary::IGNORE;
+    return rayBoundaryCondition::IGNORE;
   }
 
   rayTracingData<NumericType>

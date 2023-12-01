@@ -8,6 +8,7 @@
 
 #include <lsToDiskMesh.hpp>
 
+#include <rayBoundary.hpp>
 #include <rayGeometry.hpp>
 #include <rayParticle.hpp>
 #include <raySourceRandom.hpp>
@@ -23,7 +24,7 @@ private:
   size_t mNumberOfRaysPerPoint = 0;
   size_t mNumberOfRaysFixed = 1000;
   T mGridDelta = 0;
-  rayTraceBoundary mBoundaryConds[D] = {};
+  rayBoundaryCondition mBoundaryConds[D] = {};
   rayTraceDirection mSourceDirection = rayTraceDirection::POS_Z;
   bool mUseRandomSeeds = true;
   size_t mRunNumber = 0;
@@ -34,7 +35,7 @@ public:
     // TODO: currently only periodic boundary conditions are implemented in
     // csTracingKernel
     for (int i = 0; i < D; i++)
-      mBoundaryConds[i] = rayTraceBoundary::PERIODIC;
+      mBoundaryConds[i] = rayBoundaryCondition::PERIODIC;
   }
 
   ~csTracing() {
