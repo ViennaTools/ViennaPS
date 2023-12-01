@@ -5,6 +5,7 @@
 #include <iostream>
 #include <optional>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -204,6 +205,17 @@ void AssignItems(std::unordered_map<std::string, std::string> &map,
                  Item<K, V, C> &&item, ARGS &&...args) {
   AssignItems(map, std::forward<Item<K, V, C>>(item));
   AssignItems(map, std::forward<ARGS>(args)...);
+}
+
+template <class NumericType, std::size_t D>
+std::string arrayToString(const std::array<NumericType, D> arr) {
+  std::stringstream arrayStr;
+  arrayStr << "[";
+  for (std::size_t i = 0; i < D - 1; i++) {
+    arrayStr << arr[i] << ", ";
+  }
+  arrayStr << arr[D - 1] << "]";
+  return arrayStr.str();
 }
 
 }; // namespace psUtils
