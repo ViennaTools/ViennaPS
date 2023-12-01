@@ -5,6 +5,7 @@
 #include <iostream>
 #include <optional>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
