@@ -109,7 +109,7 @@ public:
           .print();
       return;
     }
-    const auto name = model->getProcessName();
+    const auto name = model->getProcessName().value_or("default");
 
     if (!domain) {
       psLogger::getInstance()
@@ -194,6 +194,10 @@ public:
       rayTracer.setUseRandomSeeds(useRandomSeeds);
       auto primaryDirection = model->getPrimaryDirection();
       if (primaryDirection) {
+        psLogger::getInstance()
+            .addInfo("Using primary direction: " +
+                     psUtils::arrayToString(primaryDirection.value()))
+            .print();
         rayTracer.setPrimaryDirection(primaryDirection.value());
       }
       rayTracer.setCalculateFlux(false);

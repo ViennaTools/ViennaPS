@@ -11,8 +11,8 @@ holeRadius=0.2
 maskHeight=0.4
 taperAngle=0
 
-# Process paramters
-processTime=0.1 # seconds
+# Process parameters
+processTime=0.1 
 
 # all flux values are units 1e15 / cm²
 ionFlux=10.

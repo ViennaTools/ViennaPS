@@ -17,7 +17,7 @@ template <typename T> struct Parameters {
   T taperAngle = 0.;  // degree
 
   // Process
-  T processTime = 100; // s
+  T processTime = 0.1;
   T ionFlux = 12.;
   T etchantFlux = 1.8e3;
   T oxygenFlux = 1.0e2;
