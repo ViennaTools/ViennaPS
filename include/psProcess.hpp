@@ -13,7 +13,6 @@
 #include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
 
-#include <rayBoundCondition.hpp>
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
@@ -109,7 +108,7 @@ public:
           .print();
       return;
     }
-    const auto name = model->getProcessName();
+    const auto name = model->getProcessName().value_or("default");
 
     if (!domain) {
       psLogger::getInstance()
@@ -179,8 +178,8 @@ public:
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
 
-    rayTraceBoundary rayBoundaryCondition[D];
-    rayTrace<NumericType, D> rayTrace;
+    rayBoundaryCondition rayBoundaryCondition[D];
+    rayTrace<NumericType, D> rayTracer;
 
     if (useRayTracing) {
       // Map the domain boundary to the ray tracing boundaries
@@ -188,11 +187,19 @@ public:
         rayBoundaryCondition[i] = convertBoundaryCondition(
             domain->getGrid().getBoundaryConditions(i));
 
-      rayTrace.setSourceDirection(sourceDirection);
-      rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
-      rayTrace.setBoundaryConditions(rayBoundaryCondition);
-      rayTrace.setUseRandomSeeds(useRandomSeeds);
-      rayTrace.setCalculateFlux(false);
+      rayTracer.setSourceDirection(sourceDirection);
+      rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
+      rayTracer.setBoundaryConditions(rayBoundaryCondition);
+      rayTracer.setUseRandomSeeds(useRandomSeeds);
+      auto primaryDirection = model->getPrimaryDirection();
+      if (primaryDirection) {
+        psLogger::getInstance()
+            .addInfo("Using primary direction: " +
+                     psUtils::arrayToString(primaryDirection.value()))
+            .print();
+        rayTracer.setPrimaryDirection(primaryDirection.value());
+      }
+      rayTracer.setCalculateFlux(false);
 
       // initialize particle data logs
       particleDataLogs.resize(model->getParticleTypes()->size());
@@ -239,8 +246,8 @@ public:
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         auto materialIds =
             *diskMesh->getCellData().getScalarData("MaterialIds");
-        rayTrace.setGeometry(points, normals, gridDelta);
-        rayTrace.setMaterialIds(materialIds);
+        rayTracer.setGeometry(points, normals, gridDelta);
+        rayTracer.setMaterialIds(materialIds);
 
         for (size_t iterations = 0; iterations < maxIterations; iterations++) {
           // We need additional signal handling when running the C++ code from
@@ -265,7 +272,7 @@ public:
                   processParams->getScalarDataLabel(i));
             }
           }
-          rayTrace.setGlobalData(rayTraceCoverages);
+          rayTracer.setGlobalData(rayTraceCoverages);
 
           auto Rates = psSmartPointer<psPointData<NumericType>>::New();
 
@@ -273,28 +280,28 @@ public:
           for (auto &particle : *model->getParticleTypes()) {
             int dataLogSize = model->getParticleLogSize(particleIdx);
             if (dataLogSize > 0) {
-              rayTrace.getDataLog().data.resize(1);
-              rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+              rayTracer.getDataLog().data.resize(1);
+              rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
             }
-            rayTrace.setParticleType(particle);
-            rayTrace.apply();
+            rayTracer.setParticleType(particle);
+            rayTracer.apply();
 
             // fill up rates vector with rates from this particle type
-            auto &localData = rayTrace.getLocalData();
+            auto &localData = rayTracer.getLocalData();
             int numRates = particle->getLocalDataLabels().size();
             for (int i = 0; i < numRates; ++i) {
               auto rate = std::move(localData.getVectorData(i));
 
               // normalize fluxes
-              rayTrace.normalizeFlux(rate);
+              rayTracer.normalizeFlux(rate);
               if (smoothFlux)
-                rayTrace.smoothFlux(rate);
+                rayTracer.smoothFlux(rate);
               Rates->insertNextScalarData(std::move(rate),
                                           localData.getVectorDataLabel(i));
             }
 
             if (dataLogSize > 0) {
-              particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+              particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
             }
             ++particleIdx;
           }
@@ -358,8 +365,8 @@ public:
       if (useRayTracing) {
         rtTimer.start();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
-        rayTrace.setGeometry(points, normals, gridDelta);
-        rayTrace.setMaterialIds(materialIds);
+        rayTracer.setGeometry(points, normals, gridDelta);
+        rayTracer.setMaterialIds(materialIds);
 
         // move coverages to ray tracer
         rayTracingData<NumericType> rayTraceCoverages;
@@ -378,37 +385,37 @@ public:
                   processParams->getScalarDataLabel(i));
             }
           }
-          rayTrace.setGlobalData(rayTraceCoverages);
+          rayTracer.setGlobalData(rayTraceCoverages);
         }
 
         std::size_t particleIdx = 0;
         for (auto &particle : *model->getParticleTypes()) {
           int dataLogSize = model->getParticleLogSize(particleIdx);
           if (dataLogSize > 0) {
-            rayTrace.getDataLog().data.resize(1);
-            rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+            rayTracer.getDataLog().data.resize(1);
+            rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
           }
-          rayTrace.setParticleType(particle);
-          rayTrace.apply();
+          rayTracer.setParticleType(particle);
+          rayTracer.apply();
 
-          // std::cout << rayTrace.getRayTraceInfo().numRays << std::endl;
+          // std::cout << rayTracer.getRayTraceInfo().numRays << std::endl;
 
           // fill up rates vector with rates from this particle type
           auto numRates = particle->getLocalDataLabels().size();
-          auto &localData = rayTrace.getLocalData();
+          auto &localData = rayTracer.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
 
             // normalize rates
-            rayTrace.normalizeFlux(rate);
+            rayTracer.normalizeFlux(rate);
             if (smoothFlux)
-              rayTrace.smoothFlux(rate);
+              rayTracer.smoothFlux(rate);
             Rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
 
           if (dataLogSize > 0) {
-            particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+            particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
           }
           ++particleIdx;
         }
@@ -575,25 +582,25 @@ private:
     psVTKWriter<NumericType>(mesh, name).apply();
   }
 
-  rayTraceBoundary convertBoundaryCondition(
+  rayBoundaryCondition convertBoundaryCondition(
       lsBoundaryConditionEnum<D> originalBoundaryCondition) {
     switch (originalBoundaryCondition) {
     case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-      return rayTraceBoundary::REFLECTIVE;
+      return rayBoundaryCondition::REFLECTIVE;
 
     case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
 
     case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-      return rayTraceBoundary::PERIODIC;
+      return rayBoundaryCondition::PERIODIC;
 
     case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
 
     case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
     }
-    return rayTraceBoundary::IGNORE;
+    return rayBoundaryCondition::IGNORE;
   }
 
   rayTracingData<NumericType>

@@ -39,7 +39,9 @@ int main(int argc, char *argv[]) {
   auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
       params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
       params.oxygenFlux /*oxygen flux*/, params.meanEnergy /*mean energy*/,
-      params.sigmaEnergy /*energy sigma*/, params.A_O /*oxy sputter yield*/,
+      params.sigmaEnergy /*energy sigma*/,
+      params.ionExponent /*source power cosine distribution exponent*/,
+      params.A_O /*oxy sputter yield*/,
       params.etchStopDepth /*max etch depth*/);
 
   // process setup

@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 
   auto model = psSmartPointer<SimpleDeposition<NumericType, D>>::New(
       params.stickingProbability /*particle sticking probability*/,
-      params.sourcePower /*particel source power*/);
+      params.sourcePower /*particle source power*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
