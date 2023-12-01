@@ -19,6 +19,7 @@ ionFlux=10.
 etchantFlux=1800.
 oxygenFlux=200.
 
+ionExponent=200
 meanEnergy=100 # eV
 sigmaEnergy=10
 A_O=3 # passivation layer sputtering coefficient

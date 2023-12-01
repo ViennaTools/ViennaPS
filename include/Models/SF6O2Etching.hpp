@@ -155,6 +155,7 @@ public:
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
+    assert(rayWeight > 0. && "Invalid ray weight");
 
     const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
@@ -175,6 +176,10 @@ public:
     NumericType Y_Si =
         A_Si * std::max(sqrtE - std::sqrt(Eth_Si), 0.) * f_Si_theta;
     NumericType Y_O = A_O * std::max(sqrtE - std::sqrt(Eth_O), 0.) * f_O_theta;
+
+    assert(Y_sp >= 0. && "Invalid yield");
+    assert(Y_Si >= 0. && "Invalid yield");
+    assert(Y_O >= 0. && "Invalid yield");
 
     // sputtering yield Y_sp ionSputteringRate
     localData.getVectorData(0)[primID] += rayWeight * Y_sp;

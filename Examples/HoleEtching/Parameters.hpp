@@ -23,6 +23,7 @@ template <typename T> struct Parameters {
   T oxygenFlux = 1.0e2;
   T meanEnergy = 100; // eV
   T sigmaEnergy = 10; // eV
+  T ionExponent = 200;
   T A_O = 2.;
 
   T etchStopDepth = -100;
@@ -46,6 +47,7 @@ template <typename T> struct Parameters {
         psUtils::Item{"ionFlux", ionFlux},             //
         psUtils::Item{"meanEnergy", meanEnergy},       //
         psUtils::Item{"sigmaEnergy", sigmaEnergy},     //
+        psUtils::Item{"ionExponent", ionExponent},     //
         psUtils::Item{"A_O", A_O},                     //
         psUtils::Item{"etchStopDepth", etchStopDepth}, //
         psUtils::Item{"raysPerPoint", raysPerPoint}    //
