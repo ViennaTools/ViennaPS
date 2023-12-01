@@ -13,7 +13,6 @@
 #include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
 
-#include <rayBoundCondition.hpp>
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
