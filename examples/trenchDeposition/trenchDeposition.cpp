@@ -1,10 +1,10 @@
-#include <SimpleDeposition.hpp>
 #include <geometries/psMakeTrench.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
 #include <psVTKWriter.hpp>
 #include <psWriteVisualizationMesh.hpp>
+#include <simpleDeposition.hpp>
 
 #include "parameters.hpp"
 

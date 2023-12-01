@@ -1,5 +1,5 @@
-#include <FluorocarbonEtching.hpp>
 #include <SF6O2Etching.hpp>
+#include <fluorocarbonEtching.hpp>
 #include <psMakeHole.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>

@@ -48,7 +48,7 @@ int main() {
     auto domain =
         psSmartPointer<psDomain<double, D>>::New(levelSets, true, 3., true);
     assert(domain->getLevelSets()->size() == 2);
-    assert(domain->getUseCellSet());
+    assert(domain->getCellSet());
 
     auto cellSet = domain->getCellSet();
     assert(cellSet);
@@ -66,5 +66,22 @@ int main() {
     domain->insertNextLevelSetAsMaterial(plane1, psMaterial::Si);
     assert(domain->getLevelSets()->size() == 1);
     assert(domain->getMaterialMap());
+
+    // deep copy
+    domain->insertNextLevelSetAsMaterial(plane2, psMaterial::SiO2);
+    domain->generateCellSet(3., true);
+
+    auto domainCopy = psSmartPointer<psDomain<double, D>>::New();
+    domainCopy->deepCopy(domain);
+    assert(domainCopy->getLevelSets());
+    assert(domainCopy->getLevelSets()->size() == 2);
+    assert(domainCopy->getMaterialMap());
+    assert(domainCopy->getCellSet());
+
+    // assert deep copy
+    assert(domainCopy->getLevelSets().get() != domain->getLevelSets().get());
+    assert(domainCopy->getCellSet().get() != domain->getCellSet().get());
+    assert(domainCopy->getMaterialMap().get() !=
+           domain->getMaterialMap().get());
   }
 }

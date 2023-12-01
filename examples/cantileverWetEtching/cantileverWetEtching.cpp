@@ -3,7 +3,7 @@
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
-#include <WetEtching.hpp>
+#include <wetEtching.hpp>
 
 int main(int argc, char **argv) {
   using NumericType = double;

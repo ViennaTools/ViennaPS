@@ -459,7 +459,7 @@ public:
             ((processDuration - remainingTime) - printTime * counter) > -1.) {
           printDiskMesh(diskMesh,
                         name + "_" + std::to_string(counter) + ".vtp");
-          if (domain->getUseCellSet()) {
+          if (domain->getCellSet()) {
             domain->getCellSet()->writeVTU(name + "_cellSet_" +
                                            std::to_string(counter) + ".vtu");
           }

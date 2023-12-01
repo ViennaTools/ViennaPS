@@ -34,37 +34,31 @@ private:
   lsDomainsType levelSets = nullptr;
   csDomainType cellSet = nullptr;
   materialMapType materialMap = nullptr;
-  bool useCellSet = false;
   NumericType cellSetDepth = 0.;
 
 public:
-  psDomain(bool passedUseCellSet = false) : useCellSet(passedUseCellSet) {
-    levelSets = lsDomainsType::New();
-    if (useCellSet) {
-      cellSet = csDomainType::New();
-    }
-  }
+  psDomain() : levelSets(lsDomainsType::New()) {}
 
-  psDomain(lsDomainType passedLevelSet, bool passedUseCellSet = false,
+  psDomain(psSmartPointer<psDomain> passedDomain) { deepCopy(passedDomain); }
+
+  psDomain(lsDomainType passedLevelSet, bool generateCellSet = false,
            const NumericType passedCellSetDepth = 0.,
            const bool passedCellSetPosition = false)
-      : useCellSet(passedUseCellSet), cellSetDepth(passedCellSetDepth) {
-    levelSets = lsDomainsType::New();
+      : levelSets(lsDomainsType::New()), cellSetDepth(passedCellSetDepth) {
     levelSets->push_back(passedLevelSet);
     // generate CellSet
-    if (useCellSet) {
+    if (generateCellSet) {
       cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth,
                                   passedCellSetPosition);
     }
   }
 
-  psDomain(lsDomainsType passedLevelSets, bool passedUseCellSet = false,
+  psDomain(lsDomainsType passedLevelSets, bool generateCellSet = false,
            const NumericType passedCellSetDepth = 0.,
            const bool passedCellSetPosition = false)
-      : useCellSet(passedUseCellSet), cellSetDepth(passedCellSetDepth) {
-    levelSets = passedLevelSets;
+      : levelSets(passedLevelSets), cellSetDepth(passedCellSetDepth) {
     // generate CellSet
-    if (useCellSet) {
+    if (generateCellSet) {
       cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth,
                                   passedCellSetPosition);
     }
@@ -76,18 +70,20 @@ public:
       levelSets->push_back(lsSmartPointer<lsDomain<NumericType, D>>::New(
           passedDomain->levelSets->at(i)));
     }
-    useCellSet = passedDomain->useCellSet;
-    if (useCellSet) {
-      cellSetDepth = passedDomain->cellSetDepth;
-      cellSet->fromLevelSets(passedDomain->levelSets, passedDomain->materialMap,
-                             cellSetDepth);
-    }
     if (passedDomain->materialMap) {
       materialMap = materialMapType::New();
       for (std::size_t i = 0; i < passedDomain->materialMap->size(); i++) {
         materialMap->insertNextMaterial(
             passedDomain->materialMap->getMaterialAtIdx(i));
       }
+    } else {
+      materialMap = nullptr;
+    }
+    if (passedDomain->cellSet) {
+      cellSetDepth = passedDomain->cellSetDepth;
+      cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth);
+    } else {
+      cellSet = nullptr;
     }
   }
 
@@ -99,6 +95,13 @@ public:
           .apply();
     }
     levelSets->push_back(passedLevelSet);
+    if (materialMap) {
+      psLogger::getInstance()
+          .addWarning("Inserting non-material specific Level-Set in domain "
+                      "with material mapping.")
+          .print();
+      materialMapCheck();
+    }
   }
 
   void insertNextLevelSetAsMaterial(lsDomainType passedLevelSet,
@@ -114,19 +117,6 @@ public:
     }
     materialMap->insertNextMaterial(material);
     levelSets->push_back(passedLevelSet);
-    materialMapCheck();
-  }
-
-  void setMaterialMap(materialMapType passedMaterialMap) {
-    materialMap = passedMaterialMap;
-    materialMapCheck();
-  }
-
-  void setMaterial(unsigned int lsId, const psMaterial material) {
-    if (materialMap) {
-      materialMap = materialMapType::New();
-    }
-    materialMap->setMaterialAtIdx(lsId, material);
     materialMapCheck();
   }
 
@@ -173,30 +163,37 @@ public:
     }
   }
 
-  materialMapType getMaterialMap() const { return materialMap; }
-
   void generateCellSet(const NumericType depth = 0.,
                        const bool passedCellSetPosition = false) {
-    useCellSet = true;
     cellSetDepth = depth;
-    if (cellSet == nullptr) {
+    if (!cellSet)
       cellSet = csDomainType::New();
-    }
     cellSet->setCellSetPosition(passedCellSetPosition);
     cellSet->fromLevelSets(levelSets, materialMap, cellSetDepth);
   }
 
-  auto &getLevelSets() { return levelSets; }
+  void setMaterialMap(materialMapType passedMaterialMap) {
+    materialMap = passedMaterialMap;
+    materialMapCheck();
+  }
 
-  auto &getCellSet() { return cellSet; }
+  void setMaterial(unsigned int lsId, const psMaterial material) {
+    if (materialMap) {
+      materialMap = materialMapType::New();
+    }
+    materialMap->setMaterialAtIdx(lsId, material);
+    materialMapCheck();
+  }
 
-  auto &getGrid() { return levelSets->back()->getGrid(); }
+  auto &getLevelSets() const { return levelSets; }
 
-  void setUseCellSet(bool useCS) { useCellSet = useCS; }
+  auto &getMaterialMap() const { return materialMap; }
 
-  bool getUseCellSet() { return useCellSet; }
+  auto &getCellSet() const { return cellSet; }
 
-  void print() {
+  auto &getGrid() const { return levelSets->back()->getGrid(); }
+
+  void print() const {
     std::cout << "Process Simulation Domain:" << std::endl;
     std::cout << "**************************" << std::endl;
     for (auto &ls : *levelSets) {
@@ -228,7 +225,7 @@ public:
     psVTKWriter<NumericType>(mesh, name).apply();
   }
 
-  void writeLevelSets(std::string fileName) {
+  void writeLevelSets(std::string fileName) const {
     for (int i = 0; i < levelSets->size(); i++) {
       lsWriter<NumericType, D>(
           levelSets->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
@@ -238,9 +235,10 @@ public:
 
   void clear() {
     levelSets = lsDomainsType::New();
-    if (useCellSet) {
+    if (cellSet)
       cellSet = csDomainType::New();
-    }
+    if (materialMap)
+      materialMap = materialMapType::New();
   }
 
 private:

@@ -142,7 +142,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, D>::getGrid, "Get the grid")
       .def("setUseCellSet", &psDomain<T, D>::setUseCellSet)
-      .def("getUseCellSet", &psDomain<T, D>::getUseCellSet)
       .def("print", &psDomain<T, D>::print)
       .def("printSurface", &psDomain<T, D>::printSurface,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
@@ -835,7 +834,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, 3>::getGrid, "Get the grid")
       .def("setUseCellSet", &psDomain<T, 3>::setUseCellSet)
-      .def("getUseCellSet", &psDomain<T, 3>::getUseCellSet)
       .def("print", &psDomain<T, 3>::print)
       .def("printSurface", &psDomain<T, 3>::printSurface,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = true,

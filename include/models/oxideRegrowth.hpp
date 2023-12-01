@@ -98,7 +98,7 @@ public:
         timeStabilityFactor(passedTimeStabilityFactor) {}
 
   bool applyPreAdvect(const T processTime) override {
-    assert(domain->getUseCellSet());
+    assert(domain->getCellSet());
     auto &cellSet = domain->getCellSet();
 
     // redeposition

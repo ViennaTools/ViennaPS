@@ -198,7 +198,7 @@ public:
   }
 
   bool applyPreAdvect(const NumericType processTime) override {
-    assert(domain->getUseCellSet());
+    assert(domain->getCellSet());
 
     tracer.setCellSet(domain->getCellSet());
     tracer.apply();

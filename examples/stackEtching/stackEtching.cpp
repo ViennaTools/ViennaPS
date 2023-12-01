@@ -1,4 +1,4 @@
-#include <FluorocarbonEtching.hpp>
+#include <fluorocarbonEtching.hpp>
 #include <psExtrude.hpp>
 #include <psMakeStack.hpp>
 #include <psProcess.hpp>

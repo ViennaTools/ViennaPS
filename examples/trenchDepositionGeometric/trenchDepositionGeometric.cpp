@@ -1,4 +1,4 @@
-#include <GeometricDistributionModels.hpp>
+#include <geometricDistributionModels.hpp>
 #include <geometries/psMakeTrench.hpp>
 #include <psProcess.hpp>
 #include <psToSurfaceMesh.hpp>
