@@ -8,12 +8,14 @@ int main() {
   {
     // default constructor
     auto domain = psSmartPointer<psDomain<double, D>>::New();
+    assert(domain);
   }
 
   {
     // single LS constructor
     auto ls = psSmartPointer<lsDomain<double, D>>::New();
     auto domain = psSmartPointer<psDomain<double, D>>::New(ls);
+    assert(domain);
   }
 
   {
