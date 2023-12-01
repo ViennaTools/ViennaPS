@@ -7,17 +7,17 @@
 
 template <typename T> struct Parameters {
   // Domain
-  T gridDelta = 0.05; // um
-  T xExtent = 1.0;    // um
-  T yExtent = 1.0;    // um
+  T gridDelta = 5.0; // um
+  T xExtent = 100.;  // um
+  T yExtent = 100.;  // um
 
   // Geometry
-  T holeRadius = 0.2; // um
-  T maskHeight = 0.2; // um
+  T holeRadius = 20.; // um
+  T maskHeight = 20.; // um
   T taperAngle = 0.;  // degree
 
   // Process
-  T processTime = 0.1;
+  T processTime = 10.;
   T ionFlux = 12.;
   T etchantFlux = 1.8e3;
   T oxygenFlux = 1.0e2;
@@ -26,7 +26,7 @@ template <typename T> struct Parameters {
   T ionExponent = 200;
   T A_O = 2.;
 
-  T etchStopDepth = -100;
+  T etchStopDepth = -1000;
 
   int raysPerPoint = 1000;
 
