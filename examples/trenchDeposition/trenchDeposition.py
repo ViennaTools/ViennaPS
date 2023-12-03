@@ -36,7 +36,7 @@ vps.MakeTrench(
 
 geometry.duplicateTopLevelSet(vps.Material.SiO2)
 
-model = vps.SimpleDeposition(
+model = vps.SingleParticleProcess(
     stickingProbability=params["stickingProbability"],
     sourceExponent=params["sourcePower"],
 )

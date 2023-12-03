@@ -23,7 +23,7 @@ template <class NumericType, int D> class psMakeFin {
   const NumericType finHeight;
   const bool periodicBoundary = false;
   const bool makeMask = false;
-  const psMaterial material = psMaterial::Undefined;
+  const psMaterial material = psMaterial::None;
 
 public:
   psMakeFin(PSPtrType passedDomain, const NumericType passedGridDelta,
@@ -32,7 +32,7 @@ public:
             const NumericType passedBaseHeight = 0.,
             const bool passedPeriodic = false,
             const bool passedMakeMask = false,
-            const psMaterial passedMaterial = psMaterial::Undefined)
+            const psMaterial passedMaterial = psMaterial::None)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         finWidth(passedFinWidth), finHeight(passedFinHeight),
@@ -78,7 +78,7 @@ public:
                                          lsBooleanOperationEnum::UNION)
           .apply();
 
-      if (material == psMaterial::Undefined) {
+      if (material == psMaterial::None) {
         if (makeMask)
           domain->insertNextLevelSet(mask);
         domain->insertNextLevelSet(substrate, false);
@@ -119,7 +119,7 @@ public:
                                          lsBooleanOperationEnum::UNION)
           .apply();
 
-      if (material == psMaterial::Undefined) {
+      if (material == psMaterial::None) {
         if (makeMask)
           domain->insertNextLevelSet(mask);
         domain->insertNextLevelSet(substrate, false);

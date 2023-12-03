@@ -219,7 +219,8 @@ public:
                  const NumericType meanFreePath = 1.,
                  const psMaterial maskMaterial = psMaterial::Mask) {
     auto volumeModel = psSmartPointer<PlasmaDamageImplementation::DamageModel<
-        NumericType, D>>::New(ionEnergy, meanFreePath, maskMaterial);
+        NumericType, D>>::New(ionEnergy, meanFreePath,
+                              static_cast<int>(maskMaterial));
 
     this->setProcessName("PlasmaDamage");
     this->setAdvectionCallback(volumeModel);

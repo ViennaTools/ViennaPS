@@ -24,18 +24,18 @@ template <class NumericType, int D> class psMakePlane {
   const bool periodicBoundary = false;
   const bool add = false;
 
-  const psMaterial material = psMaterial::Undefined;
+  const psMaterial material = psMaterial::None;
 
 public:
   psMakePlane(PSPtrType passedDomain, NumericType passedHeight = 0.,
-              const psMaterial passedMaterial = psMaterial::Undefined)
+              const psMaterial passedMaterial = psMaterial::None)
       : domain(passedDomain), height(passedHeight), add(true),
         material(passedMaterial) {}
 
   psMakePlane(PSPtrType passedDomain, const NumericType passedGridDelta,
               const NumericType passedXExtent, const NumericType passedYExtent,
               const NumericType passedHeight, const bool passedPeriodic = false,
-              const psMaterial passedMaterial = psMaterial::Undefined)
+              const psMaterial passedMaterial = psMaterial::None)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent), height(passedHeight),
         periodicBoundary(passedPeriodic), material(passedMaterial) {}
@@ -93,7 +93,7 @@ public:
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material == psMaterial::Undefined) {
+      if (material == psMaterial::None) {
         domain->insertNextLevelSet(substrate);
       } else {
         domain->insertNextLevelSetAsMaterial(substrate, material);
@@ -104,7 +104,7 @@ public:
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material == psMaterial::Undefined) {
+      if (material == psMaterial::None) {
         domain->insertNextLevelSet(substrate);
       } else {
         domain->insertNextLevelSetAsMaterial(substrate, material);

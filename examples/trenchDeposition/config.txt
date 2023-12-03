@@ -10,6 +10,7 @@ trenchHeight=0.8
 taperAngle=0
 
 # Process
+rate=1.
 stickingProbability=0.1
 sourcePower=1
 processTime=5

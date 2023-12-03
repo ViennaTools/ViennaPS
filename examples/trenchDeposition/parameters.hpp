@@ -17,7 +17,8 @@ template <typename T> struct Parameters {
   T taperAngle = 0.;
 
   // Process
-  T processTime = 0.5;
+  T processTime = 5.;
+  T rate = 1.;
   T stickingProbability = 0.1;
   T sourcePower = 1.;
 
@@ -33,6 +34,7 @@ template <typename T> struct Parameters {
         psUtils::Item{"trenchHeight", trenchHeight},               //
         psUtils::Item{"taperAngle", taperAngle},                   //
         psUtils::Item{"processTime", processTime},                 //
+        psUtils::Item{"rate", rate},                               //
         psUtils::Item{"stickingProbability", stickingProbability}, //
         psUtils::Item{"sourcePower", sourcePower}                  //
     );

@@ -43,16 +43,16 @@
 #include <psWriteVisualizationMesh.hpp>
 
 // models
-#include <TEOSDeposition.hpp>
-#include <fluorocarbonEtching.hpp>
-#include <geometricDistributionModels.hpp>
-#include <isotropicProcess.hpp>
-#include <oxideRegrowth.hpp>
-#include <plasmaDamage.hpp>
 #include <psDirectionalEtching.hpp>
+#include <psFluorocarbonEtching.hpp>
+#include <psGeometricDistributionModels.hpp>
+#include <psIsotropicProcess.hpp>
+#include <psOxideRegrowth.hpp>
+#include <psPlasmaDamage.hpp>
 #include <psSF6O2Etching.hpp>
+#include <psSingleParticleProcess.hpp>
+#include <psTEOSDeposition.hpp>
 #include <psWetEtching.hpp>
-#include <simpleDeposition.hpp>
 
 // CellSet
 #include <csDenseCellSet.hpp>
@@ -301,7 +301,7 @@ public:
 template <typename NumericType, int D, typename DistType>
 void declare_GeometricDistributionModel(pybind11::module &m,
                                         const std::string &typestr) {
-  using Class = GeometricDistributionModel<NumericType, D, DistType>;
+  using Class = psGeometricDistributionModel<NumericType, D, DistType>;
 
   pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
       .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))

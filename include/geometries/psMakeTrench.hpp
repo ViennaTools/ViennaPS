@@ -27,7 +27,7 @@ template <class NumericType, int D> class psMakeTrench {
   const bool periodicBoundary = false;
   const bool makeMask = false;
 
-  psMaterial material = psMaterial::Undefined;
+  psMaterial material = psMaterial::None;
 
 public:
   psMakeTrench(PSPtrType passedDomain, const NumericType passedGridDelta,
@@ -38,7 +38,7 @@ public:
                const NumericType passedBaseHeight = 0.,
                const bool passedPeriodicBoundary = false,
                const bool passedMakeMask = false,
-               const psMaterial passedMaterial = psMaterial::Undefined)
+               const psMaterial passedMaterial = psMaterial::None)
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         trenchWidth(passedTrenchWidth), trenchDepth(passedTrenchDepth),
@@ -215,7 +215,7 @@ public:
                                        lsBooleanOperationEnum::UNION)
         .apply();
 
-    if (material == psMaterial::Undefined) {
+    if (material == psMaterial::None) {
       if (makeMask)
         domain->insertNextLevelSet(mask);
       domain->insertNextLevelSet(substrate, false);

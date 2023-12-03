@@ -122,13 +122,13 @@ public:
 
   // copy the top LS and insert it in the domain (used to capture depositing
   // material)
-  void duplicateTopLevelSet(const psMaterial material = psMaterial::Undefined) {
+  void duplicateTopLevelSet(const psMaterial material = psMaterial::None) {
     if (levelSets->empty()) {
       return;
     }
 
     auto copy = lsDomainType::New(levelSets->back());
-    if (material == psMaterial::Undefined) {
+    if (material == psMaterial::None) {
       insertNextLevelSet(copy, false);
     } else {
       insertNextLevelSetAsMaterial(copy, material, false);

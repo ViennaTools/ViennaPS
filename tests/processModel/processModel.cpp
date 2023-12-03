@@ -8,6 +8,7 @@
 #include <psOxideRegrowth.hpp>
 #include <psPlasmaDamage.hpp>
 #include <psSF6O2Etching.hpp>
+#include <psSingleParticleProcess.hpp>
 #include <psTEOSDeposition.hpp>
 #include <psWetEtching.hpp>
 
@@ -75,6 +76,15 @@ template <class NumericType, int D> void runTest() {
   {
     auto model =
         psSmartPointer<psSF6O2Etching<NumericType, D>>::New(0., 0., 0., 0., 0.);
+    PSTEST_ASSERT(model->getSurfaceModel());
+    PSTEST_ASSERT(model->getVelocityField());
+    PSTEST_ASSERT(model->getParticleTypes());
+    PSTEST_ASSERT(model->getParticleTypes()->size() == 3);
+  }
+
+  // single particle process
+  {
+    auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New();
     PSTEST_ASSERT(model->getSurfaceModel());
     PSTEST_ASSERT(model->getVelocityField());
     PSTEST_ASSERT(model->getParticleTypes());

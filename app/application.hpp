@@ -27,7 +27,7 @@
 #include <psGeometricDistributionModels.hpp>
 #include <psIsotropicProcess.hpp>
 #include <psSF6O2Etching.hpp>
-#include <psSimpleDeposition.hpp>
+#include <psSingleParticleProcess.hpp>
 #include <psTEOSDeposition.hpp>
 #include <psWetEtching.hpp>
 
@@ -104,14 +104,14 @@ public:
   }
 
 protected:
-  virtual void
-  runSimpleDeposition(psSmartPointer<psDomain<NumericType, D>> processGeometry,
-                      psSmartPointer<ApplicationParameters> processParams) {
+  virtual void runSingleParticleProcess(
+      psSmartPointer<psDomain<NumericType, D>> processGeometry,
+      psSmartPointer<ApplicationParameters> processParams) {
 
     // copy top layer for deposition
     processGeometry->duplicateTopLevelSet(processParams->material);
 
-    auto model = psSmartPointer<SimpleDeposition<NumericType, D>>::New(
+    auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New(
         processParams->rate, processParams->sticking,
         processParams->cosinePower);
 
@@ -429,7 +429,7 @@ private:
 
     std::cout << "\tModel: ";
     switch (params->processType) {
-    case ProcessType::SIMPLEDEPOSITION: {
+    case ProcessType::SINGLEPARTICLEPROCESS: {
       std::cout << "Single particle deposition\n\tRate: " << params->rate
                 << "\n\tTime: " << params->processTime
                 << "\n\tMaterial: " << materialString(params->material)
@@ -437,7 +437,7 @@ private:
                 << "\n\tCosine exponent: " << params->cosinePower
                 << "\n\tUsing " << params->raysPerPoint
                 << " rays per source grid point\n\n";
-      runSimpleDeposition(geometry, params);
+      runSingleParticleProcess(geometry, params);
       break;
     }
 
@@ -619,8 +619,8 @@ private:
 
   static std::string materialString(const psMaterial material) {
     switch (material) {
-    case psMaterial::Undefined:
-      return "Undefined";
+    case psMaterial::None:
+      return "None";
     case psMaterial::Mask:
       return "Mask";
     case psMaterial::Si:

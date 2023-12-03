@@ -1,6 +1,6 @@
 #pragma once
 
-#include <modelParameters.hpp>
+#include <psModelParameters.hpp>
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>

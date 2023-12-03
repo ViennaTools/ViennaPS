@@ -2,31 +2,36 @@
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
-#include <rayUtil.hpp>
 
+#include <psMaterials.hpp>
 #include <psProcessModel.hpp>
-#include <psSmartPointer.hpp>
-#include <psSurfaceModel.hpp>
-#include <psVelocityField.hpp>
 
-namespace SimpleDepositionImplementation {
+namespace SingleParticleImplementation {
 template <typename NumericType, int D>
 class SurfaceModel : public psSurfaceModel<NumericType> {
-  const NumericType rate;
+  const NumericType rateFactor;
+  const psMaterial mask;
 
 public:
-  SurfaceModel(const NumericType pRate) : rate(pRate) {}
+  SurfaceModel(const NumericType pRate, const psMaterial pMask)
+      : rateFactor(pRate), mask(pMask) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> Rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
 
-    auto depoRate = *Rates->getScalarData("depoRate");
-    std::for_each(depoRate.begin(), depoRate.end(),
-                  [this](NumericType &v) { v *= rate; });
+    auto rate =
+        psSmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
+    auto flux = Rates->getScalarData("particleFlux");
 
-    return psSmartPointer<std::vector<NumericType>>::New(std::move(depoRate));
+    for (std::size_t i = 0; i < rate->size(); i++) {
+      if (!psMaterialMap::isMaterial(materialIds[i], mask)) {
+        rate->at(i) = flux->at(i) * rateFactor;
+      }
+    }
+
+    return rate;
   }
 };
 
@@ -61,37 +66,39 @@ public:
     return sourcePower;
   }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"depoRate"};
+    return {"particleFlux"};
   }
 
 private:
-  const NumericType stickingProbability = 0.1;
-  const NumericType sourcePower = 1.;
+  const NumericType stickingProbability;
+  const NumericType sourcePower;
 };
-} // namespace SimpleDepositionImplementation
+} // namespace SingleParticleImplementation
 
+// Etching or deposition based on a single particle model with diffuse
+// reflections.
 template <typename NumericType, int D>
-class psSimpleDeposition : public psProcessModel<NumericType, D> {
+class psSingleParticleProcess : public psProcessModel<NumericType, D> {
 public:
-  psSimpleDeposition(const NumericType rate = 1.,
-                     const NumericType stickingProbability = 0.1,
-                     const NumericType sourceDistributionPower = 1.) {
+  psSingleParticleProcess(const NumericType rate = 1.,
+                          const NumericType stickingProbability = 1.,
+                          const NumericType sourceDistributionPower = 1.,
+                          const psMaterial maskMaterial = psMaterial::None) {
     // particles
     auto depoParticle = std::make_unique<
-        SimpleDepositionImplementation::Particle<NumericType, D>>(
+        SingleParticleImplementation::Particle<NumericType, D>>(
         stickingProbability, sourceDistributionPower);
 
     // surface model
-    auto surfModel =
-        psSmartPointer<SimpleDepositionImplementation::SurfaceModel<
-            NumericType, D>>::New(rate);
+    auto surfModel = psSmartPointer<SingleParticleImplementation::SurfaceModel<
+        NumericType, D>>::New(rate, maskMaterial);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->setProcessName("SimpleDeposition");
     this->insertNextParticleType(depoParticle);
+    this->setProcessName("SingleParticleProcess");
   }
 };

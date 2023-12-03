@@ -5,7 +5,7 @@
 #include <psSmartPointer.hpp>
 
 enum class psMaterial : int {
-  Undefined = -1,
+  None = -1,
   Mask = 0,
   Si = 1,
   SiO2 = 2,
@@ -33,7 +33,7 @@ class psMaterialMap {
 public:
   psMaterialMap() { map = psSmartPointer<lsMaterialMap>::New(); };
 
-  void insertNextMaterial(psMaterial material = psMaterial::Undefined) {
+  void insertNextMaterial(psMaterial material = psMaterial::None) {
     map->insertNextMaterial(static_cast<int>(material));
   }
 
@@ -59,7 +59,7 @@ public:
 
   static inline psMaterial mapToMaterial(const int matId) {
     if (matId > 17 || matId < -1)
-      return psMaterial::Undefined;
+      return psMaterial::None;
     return static_cast<psMaterial>(matId);
   }
 

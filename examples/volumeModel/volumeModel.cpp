@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   auto model = psSmartPointer<psPlasmaDamage<NumericType, D>>::New(
       params.ionEnergy /* mean ion energy (eV) */,
       params.meanFreePath /* damage ion mean free path */,
-      -1 /*mask material ID (no mask)*/);
+      psMaterial::None /*mask material (no mask)*/);
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);

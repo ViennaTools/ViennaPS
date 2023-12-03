@@ -1,6 +1,6 @@
 #include <geometries/psMakeTrench.hpp>
 #include <psProcess.hpp>
-#include <psSimpleDeposition.hpp>
+#include <psSingleParticleProcess.hpp>
 #include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>
 
@@ -32,7 +32,8 @@ int main(int argc, char *argv[]) {
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet();
 
-  auto model = psSmartPointer<psSimpleDeposition<NumericType, D>>::New(
+  auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New(
+      params.rate /*deposition rate*/,
       params.stickingProbability /*particle sticking probability*/,
       params.sourcePower /*particle source power*/);
 

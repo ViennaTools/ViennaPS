@@ -55,7 +55,7 @@ public:
 private:
   void parseMaterial(const std::string materialString, psMaterial &material) {
     if (materialString == "Undefined") {
-      material = psMaterial::Undefined;
+      material = psMaterial::None;
     } else if (materialString == "Si") {
       material = psMaterial::Si;
     } else if (materialString == "SiO2") {
@@ -92,7 +92,7 @@ private:
       material = psMaterial::GaN;
     } else {
       std::cout << "Unknown material: " << materialString << std::endl;
-      material = psMaterial::Undefined;
+      material = psMaterial::None;
     }
   }
 
@@ -177,9 +177,9 @@ private:
     std::string model;
     stream >> model;
     auto config = parseLineStream(stream);
-    if (model == "SimpleDeposition") {
+    if (model == "SingleParticleProcess") {
       std::string material;
-      params->processType = ProcessType::SIMPLEDEPOSITION;
+      params->processType = ProcessType::SINGLEPARTICLEPROCESS;
       psUtils::AssignItems(config, psUtils::Item{"rate", params->rate},
                            psUtils::Item{"time", params->processTime},
                            psUtils::Item{"sticking", params->sticking},
