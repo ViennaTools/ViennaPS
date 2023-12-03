@@ -22,14 +22,14 @@
 #include "applicationParser.hpp"
 #include "interrupt.hpp"
 
-#include <SF6O2Etching.hpp>
-#include <TEOSDeposition.hpp>
-#include <directionalEtching.hpp>
-#include <fluorocarbonEtching.hpp>
-#include <geometricDistributionModels.hpp>
-#include <isotropicProcess.hpp>
-#include <simpleDeposition.hpp>
-#include <wetEtching.hpp>
+#include <psDirectionalEtching.hpp>
+#include <psFluorocarbonEtching.hpp>
+#include <psGeometricDistributionModels.hpp>
+#include <psIsotropicProcess.hpp>
+#include <psSF6O2Etching.hpp>
+#include <psSimpleDeposition.hpp>
+#include <psTEOSDeposition.hpp>
+#include <psWetEtching.hpp>
 
 template <int D> class Application {
   psSmartPointer<psDomain<NumericType, D>> geometry = nullptr;
@@ -151,7 +151,7 @@ protected:
   virtual void
   runSF6O2Etching(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                   psSmartPointer<ApplicationParameters> processParams) {
-    auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
+    auto model = psSmartPointer<psSF6O2Etching<NumericType, D>>::New(
         processParams->ionFlux, processParams->etchantFlux,
         processParams->oxygenFlux, processParams->ionEnergy,
         processParams->sigmaIonEnergy, processParams->ionExponent,
@@ -220,7 +220,7 @@ protected:
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
 
-    auto model = psSmartPointer<DirectionalEtching<NumericType, D>>::New(
+    auto model = psSmartPointer<psDirectionalEtching<NumericType, D>>::New(
         getDirection(processParams->direction), processParams->directionalRate,
         processParams->isotropicRate, processParams->maskMaterial);
 
@@ -241,7 +241,7 @@ protected:
       processGeometry->duplicateTopLevelSet(processParams->material);
     }
 
-    auto model = psSmartPointer<IsotropicProcess<NumericType, D>>::New(
+    auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(
         processParams->rate, processParams->maskMaterial);
 
     psProcess<NumericType, D> process;
@@ -258,7 +258,7 @@ protected:
 
     if constexpr (D == 3) {
 
-      auto model = psSmartPointer<WetEtching<NumericType, D>>::New(
+      auto model = psSmartPointer<psWetEtching<NumericType, D>>::New(
           processParams->maskId);
       psProcess<NumericType, D> process;
       process.setDomain(processGeometry);

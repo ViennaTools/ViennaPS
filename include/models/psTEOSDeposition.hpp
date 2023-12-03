@@ -181,12 +181,13 @@ private:
 } // namespace TEOSDepositionImplementation
 
 template <class NumericType, int D>
-class TEOSDeposition : public psProcessModel<NumericType, D> {
+class psTEOSDeposition : public psProcessModel<NumericType, D> {
 public:
-  TEOSDeposition(const NumericType pStickingP1, const NumericType pRateP1,
-                 const NumericType pOrderP1, const NumericType pStickingP2 = 0.,
-                 const NumericType pRateP2 = 0.,
-                 const NumericType pOrderP2 = 0.) {
+  psTEOSDeposition(const NumericType pStickingP1, const NumericType pRateP1,
+                   const NumericType pOrderP1,
+                   const NumericType pStickingP2 = 0.,
+                   const NumericType pRateP2 = 0.,
+                   const NumericType pOrderP2 = 0.) {
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
     this->setVelocityField(velField);

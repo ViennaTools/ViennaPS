@@ -3,7 +3,7 @@
 #include <psProcess.hpp>
 #include <psWriteVisualizationMesh.hpp>
 
-#include <TEOSDeposition.hpp>
+#include <psTEOSDeposition.hpp>
 
 #include "parameters.hpp"
 
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   geometry->duplicateTopLevelSet(psMaterial::SiO2);
 
   // process model encompasses surface model and particle types
-  auto model = psSmartPointer<TEOSDeposition<NumericType, D>>::New(
+  auto model = psSmartPointer<psTEOSDeposition<NumericType, D>>::New(
       params.stickingProbabilityP1 /*particle sticking probability*/,
       params.depositionRateP1 /*process deposition rate*/,
       params.reactionOrderP1 /*process reaction order*/,

@@ -1,7 +1,6 @@
-#include <SF6O2Etching.hpp>
-#include <fluorocarbonEtching.hpp>
 #include <psMakeHole.hpp>
 #include <psProcess.hpp>
+#include <psSF6O2Etching.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>
@@ -36,7 +35,7 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  auto model = psSmartPointer<SF6O2Etching<NumericType, D>>::New(
+  auto model = psSmartPointer<psSF6O2Etching<NumericType, D>>::New(
       params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
       params.oxygenFlux /*oxygen flux*/, params.meanEnergy /*mean energy*/,
       params.sigmaEnergy /*energy sigma*/,

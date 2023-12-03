@@ -71,11 +71,11 @@ private:
 } // namespace SimpleDepositionImplementation
 
 template <typename NumericType, int D>
-class SimpleDeposition : public psProcessModel<NumericType, D> {
+class psSimpleDeposition : public psProcessModel<NumericType, D> {
 public:
-  SimpleDeposition(const NumericType rate = 1.,
-                   const NumericType stickingProbability = 0.1,
-                   const NumericType sourceDistributionPower = 1.) {
+  psSimpleDeposition(const NumericType rate = 1.,
+                     const NumericType stickingProbability = 0.1,
+                     const NumericType sourceDistributionPower = 1.) {
     // particles
     auto depoParticle = std::make_unique<
         SimpleDepositionImplementation::Particle<NumericType, D>>(

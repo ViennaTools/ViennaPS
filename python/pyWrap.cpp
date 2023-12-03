@@ -604,19 +604,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
    *                               MODELS                                     *
    ****************************************************************************/
   // Simple Deposition
-  pybind11::class_<SimpleDeposition<T, D>,
-                   psSmartPointer<SimpleDeposition<T, D>>>(
+  pybind11::class_<psSimpleDeposition<T, D>,
+                   psSmartPointer<psSimpleDeposition<T, D>>>(
       module, "SimpleDeposition", processModel)
-      .def(pybind11::init(
-               &psSmartPointer<SimpleDeposition<T, D>>::New<const T, const T>),
-           pybind11::arg("stickingProbability") = 0.1,
-           pybind11::arg("sourceExponent") = 1.);
+      .def(
+          pybind11::init(
+              &psSmartPointer<psSimpleDeposition<T, D>>::New<const T, const T>),
+          pybind11::arg("stickingProbability") = 0.1,
+          pybind11::arg("sourceExponent") = 1.);
 
   // TEOS Deposition
-  pybind11::class_<TEOSDeposition<T, D>, psSmartPointer<TEOSDeposition<T, D>>>(
+  pybind11::class_<psTEOSDeposition<T, D>,
+                   psSmartPointer<psTEOSDeposition<T, D>>>(
       module, "TEOSDeposition", processModel)
       .def(pybind11::init(
-               &psSmartPointer<TEOSDeposition<T, D>>::New<
+               &psSmartPointer<psTEOSDeposition<T, D>>::New<
                    const T /*st1*/, const T /*rate1*/, const T /*order1*/,
                    const T /*st2*/, const T /*rate2*/, const T /*order2*/>),
            pybind11::arg("stickingProbabilityP1"), pybind11::arg("rateP1"),
@@ -625,7 +627,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rateP2") = 0., pybind11::arg("orderP2") = 0.);
 
   // SF6O2 Etching
-  pybind11::class_<SF6O2Etching<T, D>, psSmartPointer<SF6O2Etching<T, D>>>(
+  pybind11::class_<psSF6O2Etching<T, D>, psSmartPointer<psSF6O2Etching<T, D>>>(
       module, "SF6O2Etching", processModel)
       .def(pybind11::init(
                &psSmartPointer<SF6O2Etching<T, D>>::New<
@@ -641,11 +643,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest());
 
   // Fluorocarbon Etching
-  pybind11::class_<FluorocarbonEtching<T, D>,
-                   psSmartPointer<FluorocarbonEtching<T, D>>>(
+  pybind11::class_<psFluorocarbonEtching<T, D>,
+                   psSmartPointer<psFluorocarbonEtching<T, D>>>(
       module, "FluorocarbonEtching", processModel)
       .def(
-          pybind11::init(&psSmartPointer<FluorocarbonEtching<T, D>>::New<
+          pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
                          const double /*ionFlux*/, const double /*etchantFlux*/,
                          const double /*polyFlux*/, T /*meanEnergy*/,
                          const T /*sigmaEnergy*/, const T /*ionExponent*/,
@@ -657,22 +659,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest());
 
   // Isotropic Process
-  pybind11::class_<IsotropicProcess<T, D>,
-                   psSmartPointer<IsotropicProcess<T, D>>>(
+  pybind11::class_<psIsotropicProcess<T, D>,
+                   psSmartPointer<psIsotropicProcess<T, D>>>(
       module, "IsotropicProcess", processModel)
       .def(pybind11::init([](const T rate, const psMaterial mask) {
-             return psSmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
+             return psSmartPointer<psIsotropicProcess<T, D>>::New(rate, mask);
            }),
            pybind11::arg("isotropic rate"),
            pybind11::arg("mask material") = psMaterial::Mask);
 
   // Directional Etching
-  pybind11::class_<DirectionalEtching<T, D>,
-                   psSmartPointer<DirectionalEtching<T, D>>>(
+  pybind11::class_<psDirectionalEtching<T, D>,
+                   psSmartPointer<psDirectionalEtching<T, D>>>(
       module, "DirectionalEtching", processModel)
       .def(pybind11::init([](const std::array<T, 3> &direction, const T dirVel,
                              const T isoVel, const psMaterial mask) {
-             return psSmartPointer<DirectionalEtching<T, D>>::New(
+             return psSmartPointer<psDirectionalEtching<T, D>>::New(
                  direction, dirVel, isoVel, mask);
            }),
            pybind11::arg("direction"),
@@ -681,12 +683,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("mask material") = psMaterial::Mask);
 
   // Sphere Distribution
-  pybind11::class_<SphereDistribution<T, D>,
-                   psSmartPointer<SphereDistribution<T, D>>>(
+  pybind11::class_<psSphereDistribution<T, D>,
+                   psSmartPointer<psSphereDistribution<T, D>>>(
       module, "SphereDistribution", processModel)
       .def(pybind11::init([](const T radius, const T gridDelta,
                              psSmartPointer<lsDomain<T, D>> mask) {
-             return psSmartPointer<SphereDistribution<T, D>>::New(
+             return psSmartPointer<psSphereDistribution<T, D>>::New(
                  radius, gridDelta, mask);
            }),
            pybind11::arg("radius"), pybind11::arg("gridDelta"),
@@ -698,14 +700,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("radius"), pybind11::arg("gridDelta"));
 
   // Box Distribution
-  pybind11::class_<BoxDistribution<T, D>,
-                   psSmartPointer<BoxDistribution<T, D>>>(
+  pybind11::class_<psBoxDistribution<T, D>,
+                   psSmartPointer<psBoxDistribution<T, D>>>(
       module, "BoxDistribution", processModel)
       .def(
           pybind11::init([](const std::array<T, 3> &halfAxes, const T gridDelta,
                             psSmartPointer<lsDomain<T, D>> mask) {
-            return psSmartPointer<BoxDistribution<T, D>>::New(halfAxes,
-                                                              gridDelta, mask);
+            return psSmartPointer<psBoxDistribution<T, D>>::New(
+                halfAxes, gridDelta, mask);
           }),
           pybind11::arg("halfAxes"), pybind11::arg("gridDelta"),
           pybind11::arg("mask"))
@@ -717,20 +719,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("halfAxes"), pybind11::arg("gridDelta"));
 
   // Plasma Damage
-  pybind11::class_<PlasmaDamage<T, D>, psSmartPointer<PlasmaDamage<T, D>>>(
+  pybind11::class_<psParticle<T, D>, psSmartPointer<psParticle<T, D>>>(
       module, "PlasmaDamage", processModel)
       .def(pybind11::init(
-               &psSmartPointer<PlasmaDamage<T, D>>::New<const T, const T,
-                                                        const int>),
+               &psSmartPointer<psPlasmaDamage<T, D>>::New<const T, const T,
+                                                          const int>),
            pybind11::arg("ionEnergy") = 100.,
            pybind11::arg("meanFreePath") = 1.,
            pybind11::arg("maskMaterial") = 0);
 
   // Oxide Regrowth
-  pybind11::class_<OxideRegrowth<T, D>, psSmartPointer<OxideRegrowth<T, D>>>(
+  pybind11::class_<psOxideRegrowth<T, D>,
+                   psSmartPointer<psOxideRegrowth<T, D>>>(
       module, "OxideRegrowth", processModel)
       .def(
-          pybind11::init(&psSmartPointer<OxideRegrowth<T, D>>::New<
+          pybind11::init(&psSmartPointer<psOxideRegrowth<T, D>>::New<
                          const T, const T, const T, const T, const T, const T,
                          const T, const T, const T, const T, const T, const T>),
           pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),
@@ -750,9 +753,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
-  pybind11::class_<WetEtching<T, D>, psSmartPointer<WetEtching<T, D>>>(
+  pybind11::class_<psWetEtching<T, D>, psSmartPointer<psWetEtching<T, D>>>(
       module, "WetEtching", processModel)
-      .def(pybind11::init(&psSmartPointer<WetEtching<T, D>>::New<const int>),
+      .def(pybind11::init(&psSmartPointer<psWetEtching<T, D>>::New<const int>),
            pybind11::arg("maskId") = 0);
 
   // GDS file parsing

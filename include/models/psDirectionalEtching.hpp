@@ -2,8 +2,6 @@
 
 #include <psMaterials.hpp>
 #include <psProcessModel.hpp>
-#include <psSurfaceModel.hpp>
-#include <psVelocityField.hpp>
 
 namespace DirectionalEtchingImplementation {
 template <class NumericType, int D>
@@ -46,12 +44,12 @@ public:
 
 /// Directional etching with one masking material.
 template <typename NumericType, int D>
-class DirectionalEtching : public psProcessModel<NumericType, D> {
+class psDirectionalEtching : public psProcessModel<NumericType, D> {
 public:
-  DirectionalEtching(const std::array<NumericType, 3> &direction,
-                     const NumericType directionalVelocity = 1.,
-                     const NumericType isotropicVelocity = 0.,
-                     const psMaterial mask = psMaterial::Mask) {
+  psDirectionalEtching(const std::array<NumericType, 3> &direction,
+                       const NumericType directionalVelocity = 1.,
+                       const NumericType isotropicVelocity = 0.,
+                       const psMaterial mask = psMaterial::Mask) {
     // default surface model
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 

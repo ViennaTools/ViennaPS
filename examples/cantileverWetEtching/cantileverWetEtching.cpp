@@ -3,7 +3,7 @@
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
-#include <wetEtching.hpp>
+#include <psWetEtching.hpp>
 
 int main(int argc, char **argv) {
   using NumericType = double;
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   geometry->printSurface("InitialGeometry.vtp");
 
   /* -------- wet etch process --------- */
-  auto model = psSmartPointer<WetEtching<NumericType, D>>::New();
+  auto model = psSmartPointer<psWetEtching<NumericType, D>>::New();
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);

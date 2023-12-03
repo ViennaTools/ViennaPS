@@ -302,19 +302,19 @@ private:
 // The selective etching model works in accordance with the geometry generated
 // by psMakeStack
 template <class NumericType, int D>
-class OxideRegrowth : public psProcessModel<NumericType, D> {
+class psOxideRegrowth : public psProcessModel<NumericType, D> {
 public:
-  OxideRegrowth(const NumericType nitrideEtchRate,
-                const NumericType oxideEtchRate,
-                const NumericType redepositionRate,
-                const NumericType redepositionThreshold,
-                const NumericType redepositionTimeInt,
-                const NumericType diffusionCoefficient,
-                const NumericType sinkStrength,
-                const NumericType scallopVelocity,
-                const NumericType centerVelocity, const NumericType topHeight,
-                const NumericType centerWidth,
-                const NumericType timeStabilityFactor = 0.245) {
+  psOxideRegrowth(const NumericType nitrideEtchRate,
+                  const NumericType oxideEtchRate,
+                  const NumericType redepositionRate,
+                  const NumericType redepositionThreshold,
+                  const NumericType redepositionTimeInt,
+                  const NumericType diffusionCoefficient,
+                  const NumericType sinkStrength,
+                  const NumericType scallopVelocity,
+                  const NumericType centerVelocity, const NumericType topHeight,
+                  const NumericType centerWidth,
+                  const NumericType timeStabilityFactor = 0.245) {
 
     auto veloField = psSmartPointer<
         OxideRegrowthImplementation::SelectiveEtchingVelocityField<

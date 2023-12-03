@@ -2,7 +2,7 @@
 #include <psProcess.hpp>
 #include <psWriteVisualizationMesh.hpp>
 
-#include <oxideRegrowth.hpp>
+#include <psOxideRegrowth.hpp>
 
 #include "parameters.hpp"
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   // The redeposition model captures byproducts from the selective etching
   // process in the cell set. The byproducts are then distributed by solving a
   // convection-diffusion equation on the cell set.
-  auto model = psSmartPointer<OxideRegrowth<NumericType, D>>::New(
+  auto model = psSmartPointer<psOxideRegrowth<NumericType, D>>::New(
       params.nitrideEtchRate / 60., params.oxideEtchRate / 60.,
       params.redepositionRate, params.redepositionThreshold,
       params.redepositionTimeInt, params.diffusionCoefficient, params.sink,

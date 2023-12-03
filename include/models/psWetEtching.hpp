@@ -104,17 +104,17 @@ public:
 // The wet etching model should be used in combination with the
 // STENCIL_LOCAL_LAX_FRIEDRIECH integration scheme.
 template <typename NumericType, int D>
-class WetEtching : public psProcessModel<NumericType, D> {
+class psWetEtching : public psProcessModel<NumericType, D> {
 public:
-  WetEtching(const int passedMaskId = 0) : maskId(passedMaskId) {
+  psWetEtching(const int passedMaskId = 0) : maskId(passedMaskId) {
     static_assert(D == 3 && "Wet etch model is only implemented in 3D.");
     initialize();
   }
-  WetEtching(const std::array<NumericType, 3> passedDir100,
-             const std::array<NumericType, 3> passedDir010,
-             const NumericType passedR100, const NumericType passedR110,
-             const NumericType passedR111, const NumericType passedR311,
-             const int passedMaskId = 0)
+  psWetEtching(const std::array<NumericType, 3> passedDir100,
+               const std::array<NumericType, 3> passedDir010,
+               const NumericType passedR100, const NumericType passedR110,
+               const NumericType passedR111, const NumericType passedR311,
+               const int passedMaskId = 0)
       : direction100(passedDir100), direction010(passedDir010),
         r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
         maskId(passedMaskId) {

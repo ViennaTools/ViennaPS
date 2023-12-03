@@ -11,7 +11,7 @@
 
 // Simple geometric model that implements a
 template <typename NumericType, int D, typename DistType>
-class GeometricDistributionModel : public psGeometricModel<NumericType, D> {
+class psGeometricDistributionModel : public psGeometricModel<NumericType, D> {
   static_assert(std::is_base_of_v<
                 lsGeometricAdvectDistribution<hrleCoordType, D>, DistType>);
 
@@ -24,9 +24,9 @@ class GeometricDistributionModel : public psGeometricModel<NumericType, D> {
   LSPtr mask = nullptr;
 
 public:
-  GeometricDistributionModel(GeomDistPtr passedDist) : dist(passedDist) {}
+  psGeometricDistributionModel(GeomDistPtr passedDist) : dist(passedDist) {}
 
-  GeometricDistributionModel(GeomDistPtr passedDist, LSPtr passedMask)
+  psGeometricDistributionModel(GeomDistPtr passedDist, LSPtr passedMask)
       : dist(passedDist), mask(passedMask) {}
 
   void apply() {
@@ -44,16 +44,16 @@ public:
 };
 
 template <typename NumericType, int D>
-class SphereDistribution : public psProcessModel<NumericType, D> {
+class psSphereDistribution : public psProcessModel<NumericType, D> {
   using LSPtr = psSmartPointer<lsDomain<NumericType, D>>;
 
 public:
-  SphereDistribution(const NumericType radius, const NumericType gridDelta,
-                     LSPtr mask = nullptr) {
+  psSphereDistribution(const NumericType radius, const NumericType gridDelta,
+                       LSPtr mask = nullptr) {
     auto dist = psSmartPointer<lsSphereDistribution<hrleCoordType, D>>::New(
         radius, gridDelta);
 
-    auto geomModel = psSmartPointer<GeometricDistributionModel<
+    auto geomModel = psSmartPointer<psGeometricDistributionModel<
         NumericType, D, lsSphereDistribution<hrleCoordType, D>>>::New(dist,
                                                                       mask);
 
@@ -63,16 +63,16 @@ public:
 };
 
 template <typename NumericType, int D>
-class BoxDistribution : public psProcessModel<NumericType, D> {
+class psBoxDistribution : public psProcessModel<NumericType, D> {
   using LSPtr = psSmartPointer<lsDomain<NumericType, D>>;
 
 public:
-  BoxDistribution(const std::array<hrleCoordType, 3> &halfAxes,
-                  const NumericType gridDelta, LSPtr mask = nullptr) {
+  psBoxDistribution(const std::array<hrleCoordType, 3> &halfAxes,
+                    const NumericType gridDelta, LSPtr mask = nullptr) {
     auto dist = psSmartPointer<lsBoxDistribution<hrleCoordType, D>>::New(
         halfAxes, gridDelta);
 
-    auto geomModel = psSmartPointer<GeometricDistributionModel<
+    auto geomModel = psSmartPointer<psGeometricDistributionModel<
         NumericType, D, lsBoxDistribution<hrleCoordType, D>>>::New(dist, mask);
 
     this->setGeometricModel(geomModel);

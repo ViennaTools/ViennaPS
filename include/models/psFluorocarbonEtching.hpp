@@ -416,15 +416,15 @@ public:
 } // namespace FluorocarbonImplementation
 
 template <typename NumericType, int D>
-class FluorocarbonEtching : public psProcessModel<NumericType, D> {
+class psFluorocarbonEtching : public psProcessModel<NumericType, D> {
 public:
-  FluorocarbonEtching(const double ionFlux, const double etchantFlux,
-                      const double polyFlux, const NumericType meanEnergy,
-                      const NumericType sigmaEnergy,
-                      const NumericType ionExponent = 100.,
-                      const NumericType deltaP = 0.,
-                      const NumericType etchStopDepth =
-                          std::numeric_limits<NumericType>::lowest()) {
+  psFluorocarbonEtching(const double ionFlux, const double etchantFlux,
+                        const double polyFlux, const NumericType meanEnergy,
+                        const NumericType sigmaEnergy,
+                        const NumericType ionExponent = 100.,
+                        const NumericType deltaP = 0.,
+                        const NumericType etchStopDepth =
+                            std::numeric_limits<NumericType>::lowest()) {
     // particles
     auto ion = std::make_unique<FluorocarbonImplementation::Ion<NumericType>>(
         meanEnergy, sigmaEnergy, ionExponent);

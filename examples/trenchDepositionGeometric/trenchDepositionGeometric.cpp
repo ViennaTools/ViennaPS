@@ -1,9 +1,7 @@
-#include <geometricDistributionModels.hpp>
 #include <geometries/psMakeTrench.hpp>
+#include <psGeometricDistributionModels.hpp>
 #include <psProcess.hpp>
-#include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
-#include <psVTKWriter.hpp>
 #include <psWriteVisualizationMesh.hpp>
 
 #include "parameters.hpp"
@@ -32,7 +30,7 @@ int main(int argc, char *argv[]) {
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet();
 
-  auto model = psSmartPointer<SphereDistribution<NumericType, D>>::New(
+  auto model = psSmartPointer<psSphereDistribution<NumericType, D>>::New(
       params.layerThickness, params.gridDelta);
 
   psProcess<NumericType, D> process;

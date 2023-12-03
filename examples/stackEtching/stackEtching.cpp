@@ -1,5 +1,5 @@
-#include <fluorocarbonEtching.hpp>
 #include <psExtrude.hpp>
+#include <psFluorocarbonEtching.hpp>
 #include <psMakeStack.hpp>
 #include <psProcess.hpp>
 #include <psWriteVisualizationMesh.hpp>
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   geometry->duplicateTopLevelSet(psMaterial::Polymer);
 
   // use pre-defined model Fluorocarbon etching model
-  auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
+  auto model = psSmartPointer<psFluorocarbonEtching<NumericType, D>>::New(
       params.ionFlux, params.etchantFlux, params.polymerFlux, params.energyMean,
       params.energySigma);
 

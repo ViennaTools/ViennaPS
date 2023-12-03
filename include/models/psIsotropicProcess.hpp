@@ -36,10 +36,10 @@ public:
 
 /// Isotropic etching with one masking material.
 template <typename NumericType, int D>
-class IsotropicProcess : public psProcessModel<NumericType, D> {
+class psIsotropicProcess : public psProcessModel<NumericType, D> {
 public:
-  IsotropicProcess(const NumericType isotropicRate,
-                   const psMaterial maskMaterial = psMaterial::Mask) {
+  psIsotropicProcess(const NumericType isotropicRate,
+                     const psMaterial maskMaterial = psMaterial::Mask) {
     // default surface model
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 

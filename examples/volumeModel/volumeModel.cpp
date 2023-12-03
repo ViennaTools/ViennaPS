@@ -1,8 +1,6 @@
 #include <geometries/psMakeFin.hpp>
-#include <plasmaDamage.hpp>
+#include <psPlasmaDamage.hpp>
 #include <psProcess.hpp>
-#include <psToSurfaceMesh.hpp>
-#include <psVTKWriter.hpp>
 
 #include "parameters.hpp"
 
@@ -31,7 +29,7 @@ int main(int argc, char *argv[]) {
   // generate cell set with depth 5
   geometry->generateCellSet(-5. /*depth*/, false /*cell set below surface*/);
 
-  auto model = psSmartPointer<PlasmaDamage<NumericType, D>>::New(
+  auto model = psSmartPointer<psPlasmaDamage<NumericType, D>>::New(
       params.ionEnergy /* mean ion energy (eV) */,
       params.meanFreePath /* damage ion mean free path */,
       -1 /*mask material ID (no mask)*/);
@@ -39,7 +37,7 @@ int main(int argc, char *argv[]) {
   psProcess<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setProcessDuration(0); // apply only damage model
+  process.setProcessDuration(0.); // apply only damage model
 
   process.apply();
 

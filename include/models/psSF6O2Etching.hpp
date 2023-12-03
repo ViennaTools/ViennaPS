@@ -339,15 +339,15 @@ public:
 } // namespace SF6O2Implementation
 
 template <typename NumericType, int D>
-class SF6O2Etching : public psProcessModel<NumericType, D> {
+class psSF6O2Etching : public psProcessModel<NumericType, D> {
 public:
-  SF6O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType meanEnergy,
-               const NumericType sigmaEnergy,
-               const NumericType ionExponent = 100.,
-               const NumericType oxySputterYield = 2.,
-               const NumericType etchStopDepth =
-                   std::numeric_limits<NumericType>::lowest()) {
+  psSF6O2Etching(const double ionFlux, const double etchantFlux,
+                 const double oxygenFlux, const NumericType meanEnergy,
+                 const NumericType sigmaEnergy,
+                 const NumericType ionExponent = 100.,
+                 const NumericType oxySputterYield = 2.,
+                 const NumericType etchStopDepth =
+                     std::numeric_limits<NumericType>::lowest()) {
     // particles
     auto ion = std::make_unique<SF6O2Implementation::Ion<NumericType, D>>(
         meanEnergy, sigmaEnergy, ionExponent, oxySputterYield);

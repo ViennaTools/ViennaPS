@@ -213,11 +213,11 @@ public:
 } // namespace PlasmaDamageImplementation
 
 template <typename NumericType, int D>
-class PlasmaDamage : public psProcessModel<NumericType, D> {
+class psPlasmaDamage : public psProcessModel<NumericType, D> {
 public:
-  PlasmaDamage(const NumericType ionEnergy = 100.,
-               const NumericType meanFreePath = 1.,
-               const int maskMaterial = 0) {
+  psPlasmaDamage(const NumericType ionEnergy = 100.,
+                 const NumericType meanFreePath = 1.,
+                 const int maskMaterial = 0) {
     auto volumeModel = psSmartPointer<PlasmaDamageImplementation::DamageModel<
         NumericType, D>>::New(ionEnergy, meanFreePath, maskMaterial);
 
