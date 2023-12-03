@@ -12,7 +12,7 @@
 #include <psTEOSDeposition.hpp>
 #include <psWetEtching.hpp>
 
-template <class NumericType, int D> void runTest() {
+template <class NumericType, int D> void psRunTest() {
   // default constructors
   { auto model = psSmartPointer<psProcessModel<NumericType, D>>::New(); }
 
@@ -110,11 +110,14 @@ template <class NumericType, int D> void runTest() {
     PSTEST_ASSERT(model->getParticleTypes());
     PSTEST_ASSERT(model->getParticleTypes()->size() == 2);
   }
+
+  // wet etching
+  if constexpr (D == 3) {
+    auto model = psSmartPointer<psWetEtching<NumericType, D>>::New();
+    PSTEST_ASSERT(model->getSurfaceModel());
+    PSTEST_ASSERT(model->getVelocityField());
+    PSTEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() == 0);
+  }
 }
 
-int main() {
-  runTest<double, 2>();
-  runTest<double, 3>();
-  runTest<float, 2>();
-  runTest<float, 3>();
-}
+int main() { PSRUN_ALL_TESTS }

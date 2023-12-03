@@ -290,10 +290,10 @@ private:
       bounds[4] = 0;
       bounds[5] = layerHeight * numLayers + gridDelta;
       if (periodicBoundary)
-        boundaryConds[0] =
+        boundaryConds[1] =
             lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
       else
-        boundaryConds[0] =
+        boundaryConds[1] =
             lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
       boundaryConds[2] =
           lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;

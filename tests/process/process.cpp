@@ -1,12 +1,15 @@
 #include <psProcess.hpp>
+#include <psTestAssert.hpp>
 
-int main() {
+template <class NumericType, int D> void psRunTest() {
 
-  auto domain = psSmartPointer<psDomain<double, 2>>::New();
-  auto model = psSmartPointer<psProcessModel<double, 2>>::New();
+  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto model = psSmartPointer<psProcessModel<NumericType, D>>::New();
 
   // constructors
-  { psProcess<double, 2> process; }
-  { psProcess<double, 2> process(domain); }
-  { psProcess<double, 2> process(domain, model, 0.); }
+  { psProcess<NumericType, D> process; }
+  { psProcess<NumericType, D> process(domain); }
+  { psProcess<NumericType, D> process(domain, model, 0.); }
 }
+
+int main() { PSRUN_ALL_TESTS }
