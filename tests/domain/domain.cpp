@@ -1,4 +1,5 @@
 #include <psDomain.hpp>
+#include <psTestAssert.hpp>
 
 #include <lsMakeGeometry.hpp>
 
@@ -8,14 +9,14 @@ int main() {
   {
     // default constructor
     auto domain = psSmartPointer<psDomain<double, D>>::New();
-    assert(domain);
+    PSTEST_ASSERT(domain);
   }
 
   {
     // single LS constructor
     auto ls = psSmartPointer<lsDomain<double, D>>::New();
     auto domain = psSmartPointer<psDomain<double, D>>::New(ls);
-    assert(domain);
+    PSTEST_ASSERT(domain);
   }
 
   {
@@ -49,25 +50,25 @@ int main() {
 
     auto domain =
         psSmartPointer<psDomain<double, D>>::New(levelSets, true, 3., true);
-    assert(domain->getLevelSets()->size() == 2);
-    assert(domain->getCellSet());
+    PSTEST_ASSERT(domain->getLevelSets()->size() == 2);
+    PSTEST_ASSERT(domain->getCellSet());
 
     auto cellSet = domain->getCellSet();
-    assert(cellSet);
-    assert(cellSet->getDepth() == 3.);
-    assert(cellSet->getNumberOfCells() == 160);
+    PSTEST_ASSERT(cellSet);
+    PSTEST_ASSERT(cellSet->getDepth() == 3.);
+    PSTEST_ASSERT(cellSet->getNumberOfCells() == 160);
 
     domain->clear();
-    assert(domain->getLevelSets()->size() == 0);
+    PSTEST_ASSERT(domain->getLevelSets()->size() == 0);
 
     // insert level sets
     domain->insertNextLevelSet(plane1);
-    assert(domain->getLevelSets()->size() == 1);
+    PSTEST_ASSERT(domain->getLevelSets()->size() == 1);
 
     domain->clear();
     domain->insertNextLevelSetAsMaterial(plane1, psMaterial::Si);
-    assert(domain->getLevelSets()->size() == 1);
-    assert(domain->getMaterialMap());
+    PSTEST_ASSERT(domain->getLevelSets()->size() == 1);
+    PSTEST_ASSERT(domain->getMaterialMap());
 
     // deep copy
     domain->insertNextLevelSetAsMaterial(plane2, psMaterial::SiO2);
@@ -75,15 +76,16 @@ int main() {
 
     auto domainCopy = psSmartPointer<psDomain<double, D>>::New();
     domainCopy->deepCopy(domain);
-    assert(domainCopy->getLevelSets());
-    assert(domainCopy->getLevelSets()->size() == 2);
-    assert(domainCopy->getMaterialMap());
-    assert(domainCopy->getCellSet());
+    PSTEST_ASSERT(domainCopy->getLevelSets());
+    PSTEST_ASSERT(domainCopy->getLevelSets()->size() == 2);
+    PSTEST_ASSERT(domainCopy->getMaterialMap());
+    PSTEST_ASSERT(domainCopy->getCellSet());
 
-    // assert deep copy
-    assert(domainCopy->getLevelSets().get() != domain->getLevelSets().get());
-    assert(domainCopy->getCellSet().get() != domain->getCellSet().get());
-    assert(domainCopy->getMaterialMap().get() !=
-           domain->getMaterialMap().get());
+    // PSTEST_ASSERT deep copy
+    PSTEST_ASSERT(domainCopy->getLevelSets().get() !=
+                  domain->getLevelSets().get());
+    PSTEST_ASSERT(domainCopy->getCellSet().get() != domain->getCellSet().get());
+    PSTEST_ASSERT(domainCopy->getMaterialMap().get() !=
+                  domain->getMaterialMap().get());
   }
 }
