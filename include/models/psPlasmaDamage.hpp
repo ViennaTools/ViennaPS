@@ -217,7 +217,7 @@ class psPlasmaDamage : public psProcessModel<NumericType, D> {
 public:
   psPlasmaDamage(const NumericType ionEnergy = 100.,
                  const NumericType meanFreePath = 1.,
-                 const int maskMaterial = 0) {
+                 const psMaterial maskMaterial = psMaterial::Mask) {
     auto volumeModel = psSmartPointer<PlasmaDamageImplementation::DamageModel<
         NumericType, D>>::New(ionEnergy, meanFreePath, maskMaterial);
 

@@ -292,10 +292,10 @@ public:
     // O surface coverage
     const auto &phi_O = globalData->getVectorData(1)[primID];
     // Obtain the sticking probability
-    NumericType Seff = beta_F * std::max(1. - phi_F - phi_O, 0.);
+    NumericType S_eff = beta_F * std::max(1. - phi_F - phi_O, 0.);
 
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
+    return std::pair<NumericType, rayTriple<NumericType>>{S_eff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
@@ -323,13 +323,13 @@ public:
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
 
-    NumericType Seff;
+    NumericType S_eff;
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
-    Seff = beta_O * std::max(1. - phi_O - phi_F, 0.);
+    S_eff = beta_O * std::max(1. - phi_O - phi_F, 0.);
 
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
+    return std::pair<NumericType, rayTriple<NumericType>>{S_eff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
@@ -343,7 +343,7 @@ class psSF6O2Etching : public psProcessModel<NumericType, D> {
 public:
   psSF6O2Etching(const double ionFlux, const double etchantFlux,
                  const double oxygenFlux, const NumericType meanEnergy,
-                 const NumericType sigmaEnergy,
+                 const NumericType sigmaEnergy, // 5 parameters
                  const NumericType ionExponent = 100.,
                  const NumericType oxySputterYield = 2.,
                  const NumericType etchStopDepth =

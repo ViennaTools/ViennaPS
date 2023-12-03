@@ -74,9 +74,9 @@ class ByproductDynamics : public psAdvectionCallback<T, D> {
   const T top;
   const T holeRadius;
   const T etchRate;
-  const T redepositionFactor;
-  const T redepositionThreshold = 0.1;
-  const T redepoTimeInt = 60;
+  const T reDepositionFactor;
+  const T reDepositionThreshold = 0.1;
+  const T reDepoTimeInt = 60;
   const T timeStabilityFactor = 0.245;
   std::vector<std::array<T, 3>> nodes;
   T prevProcTime = 0.;
@@ -87,14 +87,14 @@ public:
                     const T passedScallopVel, const T passedHoleVel,
                     const T passedTop, const T passedRadius,
                     const T passedEtchRate, const T passedRedepoFactor,
-                    const T passedRedepThreshold, const T passedRedepTimeInt,
+                    const T passedRedepoThreshold, const T passedRedepoTimeInt,
                     const T passedTimeStabilityFactor)
       : diffusionCoefficient(passedDiffCoeff), sink(passedSink),
         scallopStreamVel(passedScallopVel), holeStreamVel(passedHoleVel),
         top(passedTop), holeRadius(passedRadius), etchRate(passedEtchRate),
-        redepositionFactor(passedRedepoFactor),
-        redepositionThreshold(passedRedepThreshold),
-        redepoTimeInt(passedRedepTimeInt),
+        reDepositionFactor(passedRedepoFactor),
+        reDepositionThreshold(passedRedepoThreshold),
+        reDepoTimeInt(passedRedepoTimeInt),
         timeStabilityFactor(passedTimeStabilityFactor) {}
 
   bool applyPreAdvect(const T processTime) override {
@@ -119,7 +119,7 @@ public:
     nodes.shrink_to_fit();
 
     // redeposit oxide
-    if (processTime - redepoTimeInt * (counter + 1) > -1) {
+    if (processTime - reDepoTimeInt * (counter + 1) > -1) {
       const auto numPoints = points.size();
       std::vector<T> depoRate(numPoints, 0.);
       auto ff = cellSet->getScalarData("byproductSum");
@@ -155,20 +155,20 @@ public:
 
           depoRate[i] /= processTime;
 
-          if (depoRate[i] < redepositionThreshold)
+          if (depoRate[i] < reDepositionThreshold)
             depoRate[i] = 0.;
 
-          depoRate[i] *= redepositionFactor;
+          depoRate[i] *= reDepositionFactor;
         }
       }
 
       // advect surface
-      auto redepVelField =
+      auto redepoVelField =
           psSmartPointer<RedepositionVelocityField<T>>::New(depoRate, points);
 
       lsAdvect<T, D> advectionKernel;
       advectionKernel.insertNextLevelSet(domain->getLevelSets()->back());
-      advectionKernel.setVelocityField(redepVelField);
+      advectionKernel.setVelocityField(redepoVelField);
       advectionKernel.setAdvectionTime(processTime - prevProcTime);
       advectionKernel.apply();
 
@@ -204,8 +204,9 @@ private:
     auto nodes = cellSet->getNodes();
     const auto gridDelta = cellSet->getGridDelta();
     // calculate time discretization
-    const T dt = std::min(
-        gridDelta * gridDelta / diffusionCoefficient * timeStabilityFactor, 1.);
+    const T dt = std::min(gridDelta * gridDelta / diffusionCoefficient *
+                              timeStabilityFactor,
+                          T(1.));
     const int numSteps = static_cast<int>(timeStep / dt);
     const T C = dt * diffusionCoefficient / (gridDelta * gridDelta);
     const T holeC = dt / gridDelta * holeStreamVel;
@@ -243,7 +244,7 @@ private:
 
         // sink at the top
         if (coord[D - 1] > top - gridDelta) {
-          solution[e] = std::max(solution[e] - sink, 0.);
+          solution[e] = std::max(solution[e] - sink, T(0.));
           continue;
         }
 
@@ -307,16 +308,16 @@ public:
   psOxideRegrowth(const NumericType nitrideEtchRate,
                   const NumericType oxideEtchRate,
                   const NumericType redepositionRate,
-                  const NumericType redepositionThreshold,
+                  const NumericType reDepositionThreshold,
                   const NumericType redepositionTimeInt,
                   const NumericType diffusionCoefficient,
                   const NumericType sinkStrength,
                   const NumericType scallopVelocity,
                   const NumericType centerVelocity, const NumericType topHeight,
-                  const NumericType centerWidth,
+                  const NumericType centerWidth, // 11 parameters
                   const NumericType timeStabilityFactor = 0.245) {
 
-    auto veloField = psSmartPointer<
+    auto velocityField = psSmartPointer<
         OxideRegrowthImplementation::SelectiveEtchingVelocityField<
             NumericType>>::New(nitrideEtchRate, oxideEtchRate);
 
@@ -327,10 +328,10 @@ public:
             NumericType, D>>::New(diffusionCoefficient, sinkStrength,
                                   scallopVelocity, centerVelocity, topHeight,
                                   centerWidth / 2., nitrideEtchRate,
-                                  redepositionRate, redepositionThreshold,
+                                  redepositionRate, reDepositionThreshold,
                                   redepositionTimeInt, timeStabilityFactor);
 
-    this->setVelocityField(veloField);
+    this->setVelocityField(velocityField);
     this->setSurfaceModel(surfModel);
     this->setAdvectionCallback(dynamics);
     this->setProcessName("OxideRegrowth");

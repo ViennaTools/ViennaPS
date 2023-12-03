@@ -24,7 +24,7 @@ private:
   size_t mNumberOfRaysPerPoint = 0;
   size_t mNumberOfRaysFixed = 1000;
   T mGridDelta = 0;
-  rayBoundaryCondition mBoundaryConds[D] = {};
+  rayBoundaryCondition mBoundaryConditions[D] = {};
   rayTraceDirection mSourceDirection = rayTraceDirection::POS_Z;
   bool mUseRandomSeeds = true;
   size_t mRunNumber = 0;
@@ -35,7 +35,7 @@ public:
     // TODO: currently only periodic boundary conditions are implemented in
     // csTracingKernel
     for (int i = 0; i < D; i++)
-      mBoundaryConds[i] = rayBoundaryCondition::PERIODIC;
+      mBoundaryConditions[i] = rayBoundaryCondition::PERIODIC;
   }
 
   ~csTracing() {
@@ -51,8 +51,8 @@ public:
         boundingBox, mSourceDirection, mGridDelta * rayInternal::DiskFactor<D>);
     auto traceSettings = rayInternal::getTraceSettings(mSourceDirection);
 
-    auto boundary =
-        rayBoundary<T, D>(mDevice, boundingBox, mBoundaryConds, traceSettings);
+    auto boundary = rayBoundary<T, D>(mDevice, boundingBox, mBoundaryConditions,
+                                      traceSettings);
 
     std::array<rayTriple<T>, 3> orthoBasis;
     auto raySource = raySourceRandom<T, D>(
