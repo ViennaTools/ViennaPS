@@ -17,6 +17,8 @@ template <class NumericType, int D> void psRunTest() {
 
   PSTEST_ASSERT(domain->getLevelSets()->size() == 2);
   PSTEST_ASSERT(domain->getMaterialMap()->size() == 2);
+
+  LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
 }
 
 int main() { PSRUN_ALL_TESTS }
