@@ -102,14 +102,19 @@ jobs:
             -D OpenMP_CXX_LIB_NAMES="omp" \
             -D OpenMP_omp_LIBRARY="$(brew --prefix libomp)/lib/libomp.a" \
             -D VIENNAPS_BUILD_EXAMPLES=ON \
-            -D VIENNAPS_BUILD_APPLICATION=ON
+            -D VIENNAPS_BUILD_APPLICATION=ON \
+            -D VIENNAPS_BUILD_TESTS=ON
 
       - name: Build Examples
         run: cmake --build ./build --target buildExamples
 
-      - name: Build application
+      - name: Build Application
         run: cmake --build ./build --target buildApplication
 
-      - name: Run
-        working-directory: ${{github.workspace}}/build/Examples/InterpolationDemo
-        run: ./InterpolationDemo
+      - name: Build Tests
+        run: cmake --build ./build --target buildTests
+
+      - name: Run Tests
+        working-directory: ${{github.workspace}}/build
+        # Execute tests defined by the CMake configuration.  
+        run: ctest -C ${{env.BUILD_TYPE}}

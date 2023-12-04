@@ -101,7 +101,7 @@ make buildExamples
 
 The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
-cd Examples/ExampleName
+cd examples/exampleName
 ./ExampleName config.txt
 ```
 
