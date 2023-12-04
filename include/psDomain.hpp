@@ -16,10 +16,15 @@
 
 /**
   This class represents all materials in the simulation domain.
-  It contains level sets for the accurate surface representation
+  It contains Level-Sets for an accurate surface representation
   and a cell-based structure for the storage of volume information.
   These structures are used depending on the process applied to the material.
   Processes may use one of either structures or both.
+
+  Level-Sets in the domain automatically wrap all lower domains when inserted.
+  If specified, each Level-Set is assigned a specific material,
+  which can be used in a process to implement material specific rates or
+  similar.
 */
 template <class NumericType = float, int D = 3> class psDomain {
 public:
@@ -37,10 +42,13 @@ private:
   NumericType cellSetDepth = 0.;
 
 public:
+  // Default constructor.
   psDomain() : levelSets(lsDomainsType::New()) {}
 
+  // Deep copy constructor.
   psDomain(psSmartPointer<psDomain> passedDomain) { deepCopy(passedDomain); }
 
+  // Constructor for domain with a single initial Level-Set.
   psDomain(lsDomainType passedLevelSet, bool generateCellSet = false,
            const NumericType passedCellSetDepth = 0.,
            const bool passedCellSetPosition = false)
@@ -53,6 +61,7 @@ public:
     }
   }
 
+  // Constructor for domain with multiple initial Level-Sets.
   psDomain(lsDomainsType passedLevelSets, bool generateCellSet = false,
            const NumericType passedCellSetDepth = 0.,
            const bool passedCellSetPosition = false)
@@ -64,6 +73,7 @@ public:
     }
   }
 
+  // Create a deep copy of all Level-Set and the Cell-Set in the passed domain.
   void deepCopy(psSmartPointer<psDomain> passedDomain) {
     unsigned numLevelSets = passedDomain->levelSets->size();
     for (unsigned i = 0; i < numLevelSets; ++i) {
@@ -120,8 +130,8 @@ public:
     materialMapCheck();
   }
 
-  // copy the top LS and insert it in the domain (used to capture depositing
-  // material)
+  // Copy the top Level-Set and insert it in the domain (e.g. in order to
+  // capture depositing material on top of the surface).
   void duplicateTopLevelSet(const psMaterial material = psMaterial::None) {
     if (levelSets->empty()) {
       return;
@@ -135,7 +145,7 @@ public:
     }
   }
 
-  // remove the top LS
+  // Remove the top (last inserted) Level-Set.
   void removeTopLevelSet() {
     if (levelSets->empty()) {
       return;
@@ -151,7 +161,8 @@ public:
     }
   }
 
-  // Boolean Operation of all level sets in the domain with the specified LS
+  // Apply a boolean operation with the passed Level-Set to all of the
+  // Level-Sets in the domain.
   void applyBooleanOperation(lsDomainType levelSet,
                              lsBooleanOperationEnum operation) {
     if (levelSets->empty()) {
@@ -163,6 +174,8 @@ public:
     }
   }
 
+  // Generate the Cell-Set from the Level-Sets in the domain. The Cell-Set can
+  // be used to store and track volume data.
   void generateCellSet(const NumericType depth = 0.,
                        const bool passedCellSetPosition = false) {
     cellSetDepth = depth;
@@ -177,6 +190,7 @@ public:
     materialMapCheck();
   }
 
+  // Set the material of a specific Level-Set in the domain.
   void setMaterial(unsigned int lsId, const psMaterial material) {
     if (materialMap) {
       materialMap = materialMapType::New();
@@ -185,12 +199,16 @@ public:
     materialMapCheck();
   }
 
+  // Returns a vector with all Level-Sets in the domain.
   auto &getLevelSets() const { return levelSets; }
 
+  // Returns the material map which contains the specified material for each
+  // Level-Set in the domain.
   auto &getMaterialMap() const { return materialMap; }
 
   auto &getCellSet() const { return cellSet; }
 
+  // Returns the underlying HRLE grid of the top Level-Set in the domain.
   auto &getGrid() const { return levelSets->back()->getGrid(); }
 
   void print() const {
@@ -226,6 +244,9 @@ public:
     psVTKWriter<NumericType>(mesh, name).apply();
   }
 
+  // Write the all Level-Sets in the domain to individual files. The file name
+  // serves as the prefix for the individual files and is append by
+  // "_layerX.lvst", where X is the number of the Level-Set in the domain.
   void writeLevelSets(std::string fileName) const {
     for (int i = 0; i < levelSets->size(); i++) {
       lsWriter<NumericType, D>(
