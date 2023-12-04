@@ -398,8 +398,6 @@ public:
           rayTracer.setParticleType(particle);
           rayTracer.apply();
 
-          // std::cout << rayTracer.getRayTraceInfo().numRays << std::endl;
-
           // fill up rates vector with rates from this particle type
           auto numRates = particle->getLocalDataLabels().size();
           auto &localData = rayTracer.getLocalData();

@@ -147,7 +147,6 @@ make buildTests
 ctest -C Debug
 ```
 
-
 ## Application
 
 > __Deprecation Warning__: The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.2.0. Please use the Python bindings instead.

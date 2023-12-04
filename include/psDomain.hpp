@@ -19,7 +19,7 @@
   It contains Level-Sets for an accurate surface representation
   and a cell-based structure for the storage of volume information.
   These structures are used depending on the process applied to the material.
-  Processes may use one of either structures or both.
+  Processes may use one of either structure or both.
 
   Level-Sets in the domain automatically wrap all lower domains when inserted.
   If specified, each Level-Set is assigned a specific material,

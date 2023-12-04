@@ -314,7 +314,7 @@ private:
   void parseFile() {
     filePtr = fopen(fileName.c_str(), "rb");
     if (!filePtr) {
-      std::cerr << "Could not open GDS file." << std::endl;
+      psLogger::getInstance().addError("Could not open GDS file.").apply();
       return;
     }
 
@@ -657,7 +657,9 @@ private:
         break;
 
       default:
-        std::cerr << "Unknown record type!" << std::endl;
+        psLogger::getInstance()
+            .addWarning("Unknown record type in GDS file.")
+            .print();
         return;
       }
     }

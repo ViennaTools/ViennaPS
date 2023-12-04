@@ -39,7 +39,7 @@ template <typename NumericType, int D>
 class psIsotropicProcess : public psProcessModel<NumericType, D> {
 public:
   psIsotropicProcess(const NumericType isotropicRate,
-                     const psMaterial maskMaterial = psMaterial::Mask) {
+                     const psMaterial maskMaterial = psMaterial::None) {
     // default surface model
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
