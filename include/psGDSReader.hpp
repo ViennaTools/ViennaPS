@@ -314,7 +314,7 @@ private:
   void parseFile() {
     filePtr = fopen(fileName.c_str(), "rb");
     if (!filePtr) {
-      psLogger::getInstance().addError("Could not open GDS file.").apply();
+      psLogger::getInstance().addError("Could not open GDS file.").print();
       return;
     }
 

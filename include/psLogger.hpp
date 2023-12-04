@@ -8,8 +8,8 @@
 // 0 errors
 // 1 + warnings
 // 2 + info
-// 3 + intermediate output (meshes)
-// 4 + timings
+// 3 + timings
+// 4 + intermediate output (meshes)
 // 5 + debug
 enum class psLogLevel : unsigned {
   ERROR = 0,

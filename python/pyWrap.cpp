@@ -400,10 +400,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
               psSmartPointer<psGeometricModel<T, D>> &gm) {
              pm.setGeometricModel(gm);
            })
-      .def("setVelocityField", [](psProcessModel<T, D> &pm,
-                                  psSmartPointer<psVelocityField<T>> &vf) {
-        pm.setVelocityField<psVelocityField<T>>(vf);
-      });
+      .def(
+          "setVelocityField",
+          [](psProcessModel<T, D> &pm, psSmartPointer<psVelocityField<T>> &vf) {
+            pm.setVelocityField<psVelocityField<T>>(vf);
+          })
+      .def("setPrimaryDirection", &psProcessModel<T, D>::setPrimaryDirection)
+      .def("getPrimaryDirection", &psProcessModel<T, D>::getPrimaryDirection);
 
   // psProcess
   pybind11::class_<psProcess<T, D>>(module, "Process")
