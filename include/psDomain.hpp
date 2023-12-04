@@ -202,6 +202,7 @@ public:
     std::cout << "**************************" << std::endl;
   }
 
+  // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
   void printSurface(std::string name, bool addMaterialIds = true) {
 
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
