@@ -135,6 +135,19 @@ This example demonstrates capturing etching byproducts and the subsequent redepo
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/redeposition.gif" width=700 style="background-color:white;">
 </div>
 
+## Tests
+
+ViennaPS uses CTest to run its tests. In order to check whether ViennaPS runs without issues on your system, you can run:
+> __Important__: Make sure all dependencies are installed and have been built previously
+
+```bash
+mkdir build && cd build
+cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=DEBUG
+make buildTests
+ctest -C Debug
+```
+
+
 ## Application
 
 > __Deprecation Warning__: The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.2.0. Please use the Python bindings instead.
