@@ -23,7 +23,7 @@ static constexpr double beta_pe = 0.6;
 
 template <typename NumericType, int D>
 class SurfaceModel : public psSurfaceModel<NumericType> {
-  using psSurfaceModel<NumericType>::Coverages;
+  using psSurfaceModel<NumericType>::coverages;
   static constexpr double eps = 1e-6;
 
 public:
@@ -35,33 +35,33 @@ public:
         etchStopDepth(passedEtchStopDepth) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
-    if (Coverages == nullptr) {
-      Coverages = psSmartPointer<psPointData<NumericType>>::New();
+    if (coverages == nullptr) {
+      coverages = psSmartPointer<psPointData<NumericType>>::New();
     } else {
-      Coverages->clear();
+      coverages->clear();
     }
     std::vector<NumericType> cov(numGeometryPoints);
-    Coverages->insertNextScalarData(cov, "eCoverage");
-    Coverages->insertNextScalarData(cov, "pCoverage");
-    Coverages->insertNextScalarData(cov, "peCoverage");
+    coverages->insertNextScalarData(cov, "eCoverage");
+    coverages->insertNextScalarData(cov, "pCoverage");
+    coverages->insertNextScalarData(cov, "peCoverage");
   }
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
+      psSmartPointer<psPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
-    updateCoverages(Rates, materialIds);
+    updateCoverages(rates, materialIds);
     const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedRate = Rates->getScalarData("ionEnhancedRate");
-    const auto ionSputteringRate = Rates->getScalarData("ionSputteringRate");
-    const auto ionpeRate = Rates->getScalarData("ionpeRate");
-    const auto polyRate = Rates->getScalarData("polyRate");
+    const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
+    const auto ionSputteringRate = rates->getScalarData("ionSputteringRate");
+    const auto ionpeRate = rates->getScalarData("ionpeRate");
+    const auto polyRate = rates->getScalarData("polyRate");
 
-    const auto eCoverage = Coverages->getScalarData("eCoverage");
-    const auto pCoverage = Coverages->getScalarData("pCoverage");
-    const auto peCoverage = Coverages->getScalarData("peCoverage");
+    const auto eCoverage = coverages->getScalarData("eCoverage");
+    const auto pCoverage = coverages->getScalarData("pCoverage");
+    const auto peCoverage = coverages->getScalarData("peCoverage");
 
     bool etchStop = false;
 
@@ -134,17 +134,17 @@ public:
     return psSmartPointer<std::vector<NumericType>>::New(etchRate);
   }
 
-  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+  void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIds) override {
 
-    const auto ionEnhancedRate = Rates->getScalarData("ionEnhancedRate");
-    const auto ionpeRate = Rates->getScalarData("ionpeRate");
-    const auto polyRate = Rates->getScalarData("polyRate");
-    const auto etchantRate = Rates->getScalarData("etchantRate");
+    const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
+    const auto ionpeRate = rates->getScalarData("ionpeRate");
+    const auto polyRate = rates->getScalarData("polyRate");
+    const auto etchantRate = rates->getScalarData("etchantRate");
 
-    const auto eCoverage = Coverages->getScalarData("eCoverage");
-    const auto pCoverage = Coverages->getScalarData("pCoverage");
-    const auto peCoverage = Coverages->getScalarData("peCoverage");
+    const auto eCoverage = coverages->getScalarData("eCoverage");
+    const auto pCoverage = coverages->getScalarData("pCoverage");
+    const auto peCoverage = coverages->getScalarData("peCoverage");
 
     // update coverages based on fluxes
     const auto numPoints = ionEnhancedRate->size();

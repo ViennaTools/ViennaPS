@@ -87,17 +87,6 @@ public:
   // which only depends on an analytic velocity field
   int getTranslationFieldOptions() const override { return 0; }
 };
-
-template <typename NumericType, int D>
-class WetEtchingSurfaceModel : public psSurfaceModel<NumericType> {
-public:
-  psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) override {
-    return nullptr;
-  }
-};
 } // namespace WetEtchingImplementation
 
 // Wet etch for one material
@@ -124,10 +113,8 @@ public:
 
 private:
   void initialize() {
-    // surface model
-    auto surfModel =
-        psSmartPointer<WetEtchingImplementation::WetEtchingSurfaceModel<
-            NumericType, D>>::New();
+    // default surface model
+    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
     // velocity field
     auto velField =

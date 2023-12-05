@@ -17,21 +17,21 @@ public:
       : rateFactor(pRate), mask(pMask) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
+      psSmartPointer<psPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
 
-    auto rate =
+    auto velocity =
         psSmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
-    auto flux = Rates->getScalarData("particleFlux");
+    auto flux = rates->getScalarData("particleFlux");
 
-    for (std::size_t i = 0; i < rate->size(); i++) {
+    for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!psMaterialMap::isMaterial(materialIds[i], mask)) {
-        rate->at(i) = flux->at(i) * rateFactor;
+        velocity->at(i) = flux->at(i) * rateFactor;
       }
     }
 
-    return rate;
+    return velocity;
   }
 };
 

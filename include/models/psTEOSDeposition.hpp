@@ -6,7 +6,7 @@
 namespace TEOSDepositionImplementation {
 template <class NumericType>
 class SingleSurfaceModel : public psSurfaceModel<NumericType> {
-  using psSurfaceModel<NumericType>::Coverages;
+  using psSurfaceModel<NumericType>::coverages;
   const NumericType depositionRate;
   const NumericType reactionOrder;
 
@@ -16,12 +16,12 @@ public:
       : depositionRate(passedRate), reactionOrder(passedOrder) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
+      psSmartPointer<psPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) override {
-    updateCoverages(Rates, materialIDs);
+    updateCoverages(rates, materialIDs);
     // define the surface reaction here
-    auto particleFlux = Rates->getScalarData("particleFlux");
+    auto particleFlux = rates->getScalarData("particleFlux");
     std::vector<NumericType> velocity(particleFlux->size(), 0.);
 
     for (std::size_t i = 0; i < velocity.size(); i++) {
@@ -33,11 +33,11 @@ public:
     return psSmartPointer<std::vector<NumericType>>::New(velocity);
   }
 
-  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+  void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIDs) override {
     // update coverages based on fluxes
-    auto particleFlux = Rates->getScalarData("particleFlux");
-    auto Coverage = Coverages->getScalarData("Coverage");
+    auto particleFlux = rates->getScalarData("particleFlux");
+    auto Coverage = coverages->getScalarData("Coverage");
     assert(Coverage->size() == particleFlux->size());
 
     for (std::size_t i = 0; i < Coverage->size(); i++) {
@@ -46,13 +46,13 @@ public:
   }
 
   void initializeCoverages(unsigned numGeometryPoints) override {
-    if (Coverages == nullptr) {
-      Coverages = psSmartPointer<psPointData<NumericType>>::New();
+    if (coverages == nullptr) {
+      coverages = psSmartPointer<psPointData<NumericType>>::New();
     } else {
-      Coverages->clear();
+      coverages->clear();
     }
     std::vector<NumericType> cov(numGeometryPoints);
-    Coverages->insertNextScalarData(cov, "Coverage");
+    coverages->insertNextScalarData(cov, "Coverage");
   }
 };
 
@@ -72,12 +72,12 @@ public:
         depositionRateP2(passedRateP2), reactionOrderP2(passedOrderP2) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
+      psSmartPointer<psPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) override {
     // define the surface reaction here
-    auto particleFluxP1 = Rates->getScalarData("particleFluxP1");
-    auto particleFluxP2 = Rates->getScalarData("particleFluxP2");
+    auto particleFluxP1 = rates->getScalarData("particleFluxP1");
+    auto particleFluxP2 = rates->getScalarData("particleFluxP2");
 
     std::vector<NumericType> velocity(particleFluxP1->size(), 0.);
 

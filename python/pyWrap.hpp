@@ -84,7 +84,7 @@ PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
 
 class PypsSurfaceModel : public psSurfaceModel<T> {
-  using psSurfaceModel<T>::Coverages;
+  using psSurfaceModel<T>::coverages;
   using psSurfaceModel<T>::processParams;
   using psSurfaceModel<T>::getCoverages;
   using psSurfaceModel<T>::getProcessParameters;
@@ -101,16 +101,16 @@ public:
   }
 
   psSmartPointer<std::vector<T>>
-  calculateVelocities(psSmartPointer<psPointData<T>> Rates,
+  calculateVelocities(psSmartPointer<psPointData<T>> rates,
                       const std::vector<std::array<T, 3>> &coordinates,
                       const std::vector<T> &materialIds) override {
     PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
-                      calculateVelocities, Rates, coordinates, materialIds);
+                      calculateVelocities, rates, coordinates, materialIds);
   }
 
-  void updateCoverages(psSmartPointer<psPointData<T>> Rates,
+  void updateCoverages(psSmartPointer<psPointData<T>> rates,
                        const std::vector<T> &materialIds) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, Rates,
+    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, rates,
                       materialIds);
   }
 };

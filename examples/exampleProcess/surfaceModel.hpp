@@ -5,14 +5,14 @@
 template <typename NumericType>
 class SurfaceModel : public psSurfaceModel<NumericType> {
 public:
-  using psSurfaceModel<NumericType>::Coverages;
+  using psSurfaceModel<NumericType>::coverages;
   using psSurfaceModel<NumericType>::processParams;
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     std::vector<NumericType> someCoverages(numGeometryPoints, 0);
 
-    Coverages = psSmartPointer<psPointData<NumericType>>::New();
-    Coverages->insertNextScalarData(someCoverages, "coverages");
+    coverages = psSmartPointer<psPointData<NumericType>>::New();
+    coverages->insertNextScalarData(someCoverages, "coverages");
   }
 
   void initializeProcessParameters() override {
@@ -21,15 +21,15 @@ public:
   }
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
+      psSmartPointer<psPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
     // use coverages and rates here to calculate the velocity here
     return psSmartPointer<std::vector<NumericType>>::New(
-        *Rates->getScalarData("particleRate"));
+        *rates->getScalarData("particleRate"));
   }
 
-  void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+  void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages
   }
