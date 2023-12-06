@@ -5,14 +5,17 @@
 #include <lsMakeGeometry.hpp>
 #include <psDomain.hpp>
 
-/**
- * Creates a fin geometry in in z(3D)/y(2D) direction.
- */
+/// Generates a new fin geometry extending in the z (3D) or y (2D) direction,
+/// centered at the origin with specified dimensions in the x and y directions.
+/// The fin may incorporate periodic boundaries in the x and y directions
+/// (limited to 3D). Users can define the width and height of the fin, and it
+/// can function as a mask, with the specified material exclusively applied to
+/// the bottom of the fin, while the upper portion adopts the mask material.
 template <class NumericType, int D> class psMakeFin {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
-  using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
+  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
-  PSPtrType domain = nullptr;
+  psDomainType domain = nullptr;
 
   const NumericType gridDelta;
   const NumericType xExtent;
@@ -26,7 +29,7 @@ template <class NumericType, int D> class psMakeFin {
   const psMaterial material = psMaterial::None;
 
 public:
-  psMakeFin(PSPtrType passedDomain, const NumericType passedGridDelta,
+  psMakeFin(psDomainType passedDomain, const NumericType passedGridDelta,
             const NumericType passedXExtent, const NumericType passedYExtent,
             const NumericType passedFinWidth, const NumericType passedFinHeight,
             const NumericType passedBaseHeight = 0.,

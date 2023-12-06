@@ -27,6 +27,9 @@ enum class psMaterial : int {
   GAS = 18
 };
 
+/// A class that wraps the lsMaterialMap class and provides a more user
+/// friendly interface. It also provides a mapping from the integer material id
+/// to the psMaterial enum.
 class psMaterialMap {
   psSmartPointer<lsMaterialMap> map;
 
@@ -37,6 +40,8 @@ public:
     map->insertNextMaterial(static_cast<int>(material));
   }
 
+  // Returns the material at the given index. If the index is out of bounds, it
+  // returns psMaterial::GAS.
   psMaterial getMaterialAtIdx(std::size_t idx) const {
     if (idx >= size())
       return psMaterial::GAS;

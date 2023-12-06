@@ -6,10 +6,14 @@
 
 #include <psDomain.hpp>
 
-/**
- * Creates a stack of alternating SiO2/Si3N4 layers with an optional etched
- * hole(3D)/trench(2D) in the middle.
- */
+/// Generates a stack of alternating SiO2/Si3N4 layers featuring an optionally
+/// etched hole (3D) or trench (2D) at the center. The stack emerges in the
+/// positive z direction (3D) or y direction (2D) and is centered around the
+/// origin, with its x/y extent specified. Users have the flexibility to
+/// introduce periodic boundaries in the x and y directions. Additionally, the
+/// stack can incorporate a top mask with a central hole of a specified radius
+/// or a trench with a designated width. This versatile functionality enables
+/// users to create diverse and customized structures for simulation scenarios.
 template <class NumericType, int D> class psMakeStack {
   using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;

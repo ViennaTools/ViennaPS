@@ -7,14 +7,18 @@
 #include <psLogger.hpp>
 #include <psMaterials.hpp>
 
-/**
- * Creates a plane in z(3D)/y(2D) direction.
- */
+/// This class provides a simple way to create a plane in a level set. It can be
+/// used to create a substrate of any material. The plane can be added to an
+/// already existing geometry or a new geometry can be created. The plane is
+/// created with normal direction in the positive z direction in 3D and positive
+/// y direction in 2D. The plane is centered around the origin with the total
+/// specified extent and height. The plane can have a periodic boundary in the x
+/// and y (only 3D) direction.
 template <class NumericType, int D> class psMakePlane {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
-  using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
+  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
-  PSPtrType domain = nullptr;
+  psDomainType domain = nullptr;
 
   const NumericType gridDelta = 0.;
   const NumericType xExtent = 0.;
@@ -27,12 +31,12 @@ template <class NumericType, int D> class psMakePlane {
   const psMaterial material = psMaterial::None;
 
 public:
-  psMakePlane(PSPtrType passedDomain, NumericType passedHeight = 0.,
+  psMakePlane(psDomainType passedDomain, NumericType passedHeight = 0.,
               const psMaterial passedMaterial = psMaterial::None)
       : domain(passedDomain), height(passedHeight), add(true),
         material(passedMaterial) {}
 
-  psMakePlane(PSPtrType passedDomain, const NumericType passedGridDelta,
+  psMakePlane(psDomainType passedDomain, const NumericType passedGridDelta,
               const NumericType passedXExtent, const NumericType passedYExtent,
               const NumericType passedHeight, const bool passedPeriodic = false,
               const psMaterial passedMaterial = psMaterial::None)

@@ -8,15 +8,21 @@
 #include <psMakeTrench.hpp>
 #include <psMaterials.hpp>
 
-/**
- * Creates a hole geometry in z direction. In 2D mode, this is equivalent to a
- * trench geometry
- */
+/// Generates new a hole geometry in the z direction, which, in 2D mode,
+/// corresponds to a trench geometry. Positioned at the origin, the hole is
+/// centered, with the total extent defined in the x and y directions. The
+/// normal direction for the hole creation is in the positive z direction in 3D
+/// and the positive y direction in 2D. Users can specify the hole's radius,
+/// depth, and opt for tapering with a designated angle. The hole configuration
+/// may include periodic boundaries in both the x and y directions.
+/// Additionally, the hole can serve as a mask, with the specified material only
+/// applied to the bottom of the hole, while the remainder adopts the mask
+/// material.
 template <class NumericType, int D> class psMakeHole {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
-  using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
+  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
-  PSPtrType domain = nullptr;
+  psDomainType domain = nullptr;
 
   const NumericType gridDelta;
   const NumericType xExtent;
@@ -32,7 +38,7 @@ template <class NumericType, int D> class psMakeHole {
   const psMaterial material = psMaterial::None;
 
 public:
-  psMakeHole(PSPtrType passedDomain, const NumericType passedGridDelta,
+  psMakeHole(psDomainType passedDomain, const NumericType passedGridDelta,
              const NumericType passedXExtent, const NumericType passedYExtent,
              const NumericType passedHoleRadius,
              const NumericType passedHoleDepth,

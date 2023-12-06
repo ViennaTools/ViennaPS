@@ -7,14 +7,19 @@
 
 #include <psDomain.hpp>
 
-/**
- * Creates a trench geometry in z(3D)/y(2D) direction.
- */
+/// Generates new a trench geometry extending in the z (3D) or y (2D) direction,
+/// centrally positioned at the origin with the total extent specified in the x
+/// and y directions. The trench configuration may include periodic boundaries
+/// in both the x and y directions. Users have the flexibility to define the
+/// trench's width, depth, and incorporate tapering with a designated angle.
+/// Moreover, the trench can serve as a mask, applying the specified material
+/// exclusively to the bottom while the remaining portion adopts the mask
+/// material.
 template <class NumericType, int D> class psMakeTrench {
   using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
-  using PSPtrType = psSmartPointer<psDomain<NumericType, D>>;
+  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
-  PSPtrType domain = nullptr;
+  psDomainType domain = nullptr;
 
   const NumericType gridDelta;
   const NumericType xExtent;
@@ -30,7 +35,7 @@ template <class NumericType, int D> class psMakeTrench {
   psMaterial material = psMaterial::None;
 
 public:
-  psMakeTrench(PSPtrType passedDomain, const NumericType passedGridDelta,
+  psMakeTrench(psDomainType passedDomain, const NumericType passedGridDelta,
                const NumericType passedXExtent, const NumericType passedYExtent,
                const NumericType passedTrenchWidth,
                const NumericType passedTrenchDepth,
