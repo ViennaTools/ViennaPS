@@ -17,19 +17,21 @@
 #define endian_swap_short(w) (((w & 0xff) << 8) | ((w & 0xff00) >> 8))
 #endif
 
+/// This class reads a GDS file and creates a psGDSGeometry object. It is a very
+/// simple implementation and does not support all GDS features.
 template <typename NumericType, int D = 3> class psGDSReader {
-  using PSPtrType = psSmartPointer<psGDSGeometry<NumericType, D>>;
+  using psDomainType = psSmartPointer<psGDSGeometry<NumericType, D>>;
 
   FILE *filePtr = nullptr;
-  PSPtrType geometry = nullptr;
+  psDomainType geometry = nullptr;
   std::string fileName;
 
 public:
   psGDSReader() {}
-  psGDSReader(PSPtrType passedGeometry, std::string passedFileName)
+  psGDSReader(psDomainType passedGeometry, std::string passedFileName)
       : geometry(passedGeometry), fileName(passedFileName) {}
 
-  void setGeometry(PSPtrType passedGeometry) { geometry = passedGeometry; }
+  void setGeometry(psDomainType passedGeometry) { geometry = passedGeometry; }
 
   void setFileName(std::string passedFileName) { fileName = passedFileName; }
 
