@@ -274,7 +274,7 @@ public:
           }
           rayTracer.setGlobalData(rayTraceCoverages);
 
-          auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+          auto rates = psSmartPointer<psPointData<NumericType>>::New();
 
           std::size_t particleIdx = 0;
           for (auto &particle : *model->getParticleTypes()) {
@@ -296,7 +296,7 @@ public:
               rayTracer.normalizeFlux(rate);
               if (smoothFlux)
                 rayTracer.smoothFlux(rate);
-              Rates->insertNextScalarData(std::move(rate),
+              rates->insertNextScalarData(std::move(rate),
                                           localData.getVectorDataLabel(i));
             }
 
@@ -309,7 +309,7 @@ public:
           // move coverages back in the model
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
-          model->getSurfaceModel()->updateCoverages(Rates, materialIds);
+          model->getSurfaceModel()->updateCoverages(rates, materialIds);
 
           if (psLogger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
@@ -318,10 +318,10 @@ public:
               diskMesh->getCellData().insertNextScalarData(
                   *coverages->getScalarData(idx), label);
             }
-            for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-              auto label = Rates->getScalarDataLabel(idx);
+            for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
+              auto label = rates->getScalarDataLabel(idx);
               diskMesh->getCellData().insertNextScalarData(
-                  *Rates->getScalarData(idx), label);
+                  *rates->getScalarData(idx), label);
             }
             printDiskMesh(diskMesh, name + "_covIinit_" +
                                         std::to_string(iterations) + ".vtp");
@@ -356,7 +356,7 @@ public:
         throw pybind11::error_already_set();
 #endif
 
-      auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+      auto rates = psSmartPointer<psPointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
@@ -398,8 +398,6 @@ public:
           rayTracer.setParticleType(particle);
           rayTracer.apply();
 
-          // std::cout << rayTracer.getRayTraceInfo().numRays << std::endl;
-
           // fill up rates vector with rates from this particle type
           auto numRates = particle->getLocalDataLabels().size();
           auto &localData = rayTracer.getLocalData();
@@ -410,7 +408,7 @@ public:
             rayTracer.normalizeFlux(rate);
             if (smoothFlux)
               rayTracer.smoothFlux(rate);
-            Rates->insertNextScalarData(std::move(rate),
+            rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
 
@@ -432,7 +430,7 @@ public:
 
       // get velocities from rates
       auto velocities = model->getSurfaceModel()->calculateVelocities(
-          Rates, points, materialIds);
+          rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocities);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
@@ -450,16 +448,16 @@ public:
                 *coverages->getScalarData(idx), label);
           }
         }
-        for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-          auto label = Rates->getScalarDataLabel(idx);
+        for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
+          auto label = rates->getScalarDataLabel(idx);
           diskMesh->getCellData().insertNextScalarData(
-              *Rates->getScalarData(idx), label);
+              *rates->getScalarData(idx), label);
         }
         if (printTime >= 0. &&
             ((processDuration - remainingTime) - printTime * counter) > -1.) {
           printDiskMesh(diskMesh,
                         name + "_" + std::to_string(counter) + ".vtp");
-          if (domain->getUseCellSet()) {
+          if (domain->getCellSet()) {
             domain->getCellSet()->writeVTU(name + "_cellSet_" +
                                            std::to_string(counter) + ".vtu");
           }
@@ -685,7 +683,7 @@ private:
   long raysPerPoint = 1000;
   std::vector<rayDataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds = true;
-  bool smoothFlux = false;
+  bool smoothFlux = true;
   size_t maxIterations = 20;
   bool coveragesInitialized = false;
   NumericType printTime = 0.;

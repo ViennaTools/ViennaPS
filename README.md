@@ -3,7 +3,7 @@
 [![macOS](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml)
 [![Windows](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml)
 
-ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. 
+ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems.
 
 IMPORTANT NOTE: ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
@@ -34,7 +34,7 @@ Releases are tagged on the master branch and available in the [releases section]
 
 ## Installing
 
-The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target.
+The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory:
 
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
@@ -47,7 +47,7 @@ make install
 
 This will install the necessary headers and CMake files to the specified path. If `CMAKE_INSTALL_PREFIX` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
 
-If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding _*_DIR_ variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install)
+If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding _*_DIR_ variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install).
 
 ## Building the Python package
 
@@ -101,7 +101,7 @@ make buildExamples
 
 The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
-cd Examples/ExampleName
+cd examples/exampleName
 ./ExampleName config.txt
 ```
 
@@ -134,6 +134,18 @@ This example demonstrates capturing etching byproducts and the subsequent redepo
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/redeposition.gif" width=700 style="background-color:white;">
 </div>
+
+## Tests
+
+ViennaPS uses CTest to run its tests. In order to check whether ViennaPS runs without issues on your system, you can run:
+> __Important__: Make sure all dependencies are installed and have been built previously
+
+```bash
+mkdir build && cd build
+cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=DEBUG
+make buildTests
+ctest -C Debug
+```
 
 ## Application
 

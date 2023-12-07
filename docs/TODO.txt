@@ -1,1 +1,0 @@
-- Implement separate num_threads for domain splitting and ray tracing

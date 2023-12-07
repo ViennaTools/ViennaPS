@@ -86,12 +86,15 @@ jobs:
           cmake -B ${{github.workspace}}/build -DViennaLS_DIR=${{github.workspace}}/viennals/install/lib/cmake/ViennaLS/ -DViennaRay_DIR=${{github.workspace}}/viennaray/install/lib/cmake/ViennaRay/ -D CMAKE_CXX_FLAGS="-openmp:llvm" -D VIENNAPS_BUILD_EXAMPLES=ON -D VIENNAPS_BUILD_APPLICATION=ON
 
       - name: Build ViennaPS Examples
-        run: cmake --build ${{github.workspace}}/build/Examples --config ${{env.BUILD_TYPE}}
+        run: cmake --build ${{github.workspace}}/build/examples --config ${{env.BUILD_TYPE}}
 
       - name: Build ViennaPS Application
         run: cmake --build ${{github.workspace}}/build/app --config ${{env.BUILD_TYPE}}
 
-      - name: Run ViennaPS Example
-        working-directory: ${{github.workspace}}/build/Examples/InterpolationDemo/${{env.BUILD_TYPE}}
-        shell: bash
-        run: ./InterpolationDemo.exe $(echo "/${{github.workspace}}" | sed -e 's/\\/\//g' -e 's/://')/build/Examples/InterpolationDemo/
+      - name: Build ViennaPS Tests
+        run: cmake --build ${{github.workspace}}/build/tests --config ${{env.BUILD_TYPE}}
+
+      - name: Run Tests
+        working-directory: ${{github.workspace}}/build
+        # Execute tests defined by the CMake configuration.  
+        run: ctest -C ${{env.BUILD_TYPE}} 

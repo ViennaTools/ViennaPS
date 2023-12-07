@@ -20,9 +20,9 @@ list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
 
 # Add subfolders to the include directories, since during installation the directory structure is
 # flattened, but in the source tree - which we are using here - it is not.
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/CellSet
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/Geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/Models
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/Compact)
+list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
+     ${VIENNAPS_BUILD_INCLUDE_DIRS}/geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/models
+     ${VIENNAPS_BUILD_INCLUDE_DIRS}/compact)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -35,16 +35,16 @@ set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 
 add_custom_target(buildApplication)
 
-add_executable(ViennaPS2D ${PROJECT_SOURCE_DIR}/Application.cpp)
+add_executable(ViennaPS2D ${PROJECT_SOURCE_DIR}/application.cpp)
 target_compile_definitions(ViennaPS2D PRIVATE VIENNAPS_APP_DIM=2)
 target_include_directories(ViennaPS2D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS2D ${VIENNAPS_LIBRARIES})
 add_dependencies(buildApplication ViennaPS2D)
 
-add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/Application.cpp)
+add_executable(ViennaPS3D ${PROJECT_SOURCE_DIR}/application.cpp)
 target_compile_definitions(ViennaPS3D PRIVATE VIENNAPS_APP_DIM=3)
 target_include_directories(ViennaPS3D PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 target_link_libraries(ViennaPS3D ${VIENNAPS_LIBRARIES})
 add_dependencies(buildApplication ViennaPS3D)
 
-configure_file(SampleConfig.txt ${CMAKE_BINARY_DIR}/SampleConfig.txt COPYONLY)
+configure_file(sampleConfig.txt ${CMAKE_BINARY_DIR}/sampleConfig.txt COPYONLY)

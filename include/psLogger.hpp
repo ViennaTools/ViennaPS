@@ -8,8 +8,8 @@
 // 0 errors
 // 1 + warnings
 // 2 + info
-// 3 + intermediate output (meshes)
-// 4 + timings
+// 3 + timings
+// 4 + intermediate output (meshes)
 // 5 + debug
 enum class psLogLevel : unsigned {
   ERROR = 0,
@@ -20,7 +20,11 @@ enum class psLogLevel : unsigned {
   DEBUG = 5
 };
 
-/// Singleton class for thread-safe logging.
+/// Singleton class for thread-safe logging. The logger can be accessed via
+/// psLogger::getInstance(). The logger can be configured to print messages of a
+/// certain level or lower. The default level is INFO. The different logging
+/// levels are: ERROR, WARNING, INFO, TIMING, INTERMEDIATE, DEBUG. The logger
+/// can also be used to print timing information.
 class psLogger {
   std::string message;
 
@@ -35,6 +39,7 @@ public:
   psLogger(const psLogger &) = delete;
   void operator=(const psLogger &) = delete;
 
+  // Set the log level for all instances of the logger.
   static void setLogLevel(const psLogLevel passedLogLevel) {
     logLevel = passedLogLevel;
   }
@@ -46,6 +51,7 @@ public:
     return instance;
   }
 
+  // Add debug message if log level is high enough.
   psLogger &addDebug(std::string s) {
     if (getLogLevel() < 5)
       return *this;
@@ -54,6 +60,7 @@ public:
     return *this;
   }
 
+  // Add timing message if log level is high enough.
   template <class Clock>
   psLogger &addTiming(std::string s, psUtils::Timer<Clock> &timer) {
     if (getLogLevel() < 3)
@@ -93,6 +100,7 @@ public:
     return *this;
   }
 
+  // Add info message if log level is high enough.
   psLogger &addInfo(std::string s) {
     if (getLogLevel() < 2)
       return *this;
@@ -101,6 +109,7 @@ public:
     return *this;
   }
 
+  // Add warning message if log level is high enough.
   psLogger &addWarning(std::string s) {
     if (getLogLevel() < 1)
       return *this;
@@ -109,6 +118,7 @@ public:
     return *this;
   }
 
+  // Add error message if log level is high enough.
   psLogger &addError(std::string s, bool shouldAbort = true) {
 #pragma omp critical
     {
@@ -122,6 +132,7 @@ public:
     return *this;
   }
 
+  // Print message to std::cout if log level is high enough.
   void print(std::ostream &out = std::cout) {
 #pragma omp critical
     {

@@ -44,6 +44,9 @@ option(VIENNAPS_BUILD_EXAMPLES "Build examples." OFF)
 # Build the application binary
 option(VIENNAPS_BUILD_APPLICATION "Build ViennaPS application." OFF)
 
+# Build the included tests
+option(VIENNAPS_BUILD_TESTS "Build tests." OFF)
+
 # ##################################################################################################
 # AUTOMATIC DEPENDENCY PREPARATION
 # ##################################################################################################
@@ -150,7 +153,7 @@ configure_package_config_file(
 # BUILD EXAMPLES
 # ##################################################################################################
 if(VIENNAPS_BUILD_EXAMPLES AND DEPENDENCIES_FOUND)
-  add_subdirectory(Examples)
+  add_subdirectory(examples)
 endif()
 
 # ##################################################################################################
@@ -161,12 +164,20 @@ if(VIENNAPS_BUILD_APPLICATION AND DEPENDENCIES_FOUND)
 endif()
 
 # ##################################################################################################
+# BUILD TESTS (Smaller examples for testing)
+# ##################################################################################################
+if(VIENNAPS_BUILD_TESTS AND DEPENDENCIES_FOUND)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
+
+# ##################################################################################################
 # BUILD VIENNAPS PYTHON BINDINGS
 # ##################################################################################################
 # Build Python bindings
 option(VIENNAPS_BUILD_PYTHON "Build for python3.x." OFF)
 if(VIENNAPS_BUILD_PYTHON AND DEPENDENCIES_FOUND)
-  add_subdirectory(Python)
+  add_subdirectory(python)
 endif()
 
 # ##################################################################################################
