@@ -55,7 +55,7 @@ else()
                  -DVIENNALS_BUILD_EXAMPLES=OFF
                  -DVIENNALS_BUILD_TESTS=OFF
                  -DVIENNALS_USE_VTK=ON
-      BUILD_COMMAND ${CMAKE_COMMAND} --build . --target all
+      BUILD_COMMAND ${CMAKE_COMMAND} --build . --target buildDependencies all
       USES_TERMINAL_DOWNLOAD 1
       USES_TERMINAL_UPDATE 1
       GIT_PROGRESS 1
