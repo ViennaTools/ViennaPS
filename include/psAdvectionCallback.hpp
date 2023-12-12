@@ -3,6 +3,7 @@
 #include <psDomain.hpp>
 #include <psSmartPointer.hpp>
 
+/// Callback class for applying pre- and post-advection operations.
 template <typename NumericType, int D> class psAdvectionCallback {
 protected:
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;

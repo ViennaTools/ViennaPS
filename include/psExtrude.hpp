@@ -5,6 +5,17 @@
 #include <lsExtrude.hpp>
 #include <lsToMesh.hpp>
 
+/// Extrude a 2D domain into 3D, allowing users to define the extrusion
+/// direction and extent. Additionally, users have the flexibility to specify
+/// the boundary conditions for the extruded domain.
+/// Example usage:
+/// \code{.cpp}
+///   psExtrude<double>(domain2D, domain3D, {0., 1.}, 2,
+///                     {lsBoundaryConditionEnum::REFLECTIVE,
+///                      lsBoundaryConditionEnum::REFLECTIVE,
+///                      lsBoundaryConditionEnum::INFINITE_BOUNDARY})
+///       .apply();
+/// \endcode
 template <class NumericType> class psExtrude {
   psSmartPointer<psDomain<NumericType, 2>> inputDomain;
   psSmartPointer<psDomain<NumericType, 3>> outputDomain;
