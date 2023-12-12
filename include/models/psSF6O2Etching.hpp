@@ -69,7 +69,7 @@ public:
         break;
       }
 
-      if (!psMaterialMap::isMaterial(materialIds[i], psMaterial::Mask)) {
+      if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Si)) {
 
         etchRate[i] = -(1 / psParameters::Si::rho) *
                       (k_sigma_Si * eCoverage->at(i) / 4. +
@@ -338,6 +338,9 @@ public:
 };
 } // namespace SF6O2Implementation
 
+/// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
+/// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
+/// DOI: https://doi.org/10.1116/1.1830495
 template <typename NumericType, int D>
 class psSF6O2Etching : public psProcessModel<NumericType, D> {
 public:
