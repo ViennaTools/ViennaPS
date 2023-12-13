@@ -27,6 +27,7 @@ public:
   psProcess() {}
   psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain)
       : domain(passedDomain) {}
+  // Constructor for a process with a pre-configured process model.
   template <typename ProcessModelType>
   psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain,
             psSmartPointer<ProcessModelType> passedProcessModel,
@@ -51,7 +52,7 @@ public:
   }
 
   // Set the source direction, where the rays should be traced from.
-  void setSourceDirection(const rayTraceDirection passedDirection) {
+  void setSourceDirection(rayTraceDirection passedDirection) {
     sourceDirection = passedDirection;
   }
 
@@ -65,12 +66,13 @@ public:
   // time step according to the CFL condition.
   NumericType getProcessDuration() const { return processTime; }
 
-  // Set the number of rays to traced for each particle in the process.
-  // The number is per point in the process geometry.
-  void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
+  // Specify the number of rays to be traced for each particle throughout the
+  // process. The total count of rays is the product of this number and the
+  // number of points in the process geometry.
+  void setNumberOfRaysPerPoint(unsigned numRays) { raysPerPoint = numRays; }
 
   // Set the number of iterations to initialize the coverages.
-  void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
+  void setMaxCoverageInitIterations(unsigned maxIt) { maxIterations = maxIt; }
 
   /// Enable flux smoothing. The flux at each surface point, calculated
   /// by the ray tracer, is averaged over the surface point neighbors.
@@ -81,23 +83,20 @@ public:
 
   // Set the integration scheme for solving the level-set equation.
   // Possible integration schemes are specified in lsIntegrationSchemeEnum.
-  void
-  setIntegrationScheme(const lsIntegrationSchemeEnum passedIntegrationScheme) {
+  void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme = passedIntegrationScheme;
   }
 
-  // Set the CFL condition to use during advection.
-  // The CFL condition sets the maximum distance a surface can
-  // be moved during one advection step. It MUST be below 0.5
-  // to guarantee numerical stability. Defaults to 0.4999.
-  void setTimeStepRatio(const double &cfl) { timeStepRatio = cfl; }
+  // Set the CFL (Courant-Friedrichs-Levy) condition to use during surface
+  // advection in the level-set. The CFL condition defines the maximum distance
+  // a surface is allowed to move in a single advection step. It MUST be below
+  // 0.5 to guarantee numerical stability. Defaults to 0.4999.
+  void setTimeStepRatio(NumericType cfl) { timeStepRatio = cfl; }
 
   // Sets the minimum time between printing intermediate results during the
   // process. If this is set to a non-positive value, no intermediate results
   // are printed.
-  void setPrintTimeInterval(const NumericType passedTime) {
-    printTime = passedTime;
-  }
+  void setPrintTimeInterval(NumericType passedTime) { printTime = passedTime; }
 
   // Run the process.
   void apply() {
@@ -140,6 +139,13 @@ public:
     if (!model->getSurfaceModel()) {
       psLogger::getInstance()
           .addWarning("No surface model passed to psProcess.")
+          .print();
+      return;
+    }
+
+    if (!model->getVelocityField()) {
+      psLogger::getInstance()
+          .addWarning("No velocity field passed to psProcess.")
           .print();
       return;
     }
@@ -454,7 +460,7 @@ public:
               *rates->getScalarData(idx), label);
         }
         if (printTime >= 0. &&
-            ((processDuration - remainingTime) - printTime * counter) > -1.) {
+            ((processDuration - remainingTime) - printTime * counter) > 0.) {
           printDiskMesh(diskMesh,
                         name + "_" + std::to_string(counter) + ".vtp");
           if (domain->getCellSet()) {
@@ -680,11 +686,11 @@ private:
       D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
   lsIntegrationSchemeEnum integrationScheme =
       lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
-  long raysPerPoint = 1000;
+  unsigned raysPerPoint = 1000;
   std::vector<rayDataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds = true;
   bool smoothFlux = true;
-  size_t maxIterations = 20;
+  unsigned maxIterations = 20;
   bool coveragesInitialized = false;
   NumericType printTime = 0.;
   NumericType processTime = 0.;
