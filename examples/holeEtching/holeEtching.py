@@ -19,7 +19,7 @@ params = vps.ReadConfigFile(args.filename)
 # print intermediate output surfaces during the process
 vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
-# geometry setup
+# geometry setup, all units in um
 geometry = vps.Domain()
 vps.MakeHole(
     domain=geometry,
@@ -50,7 +50,7 @@ process.setDomain(geometry)
 process.setProcessModel(model)
 process.setMaxCoverageInitIterations(10)
 process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
-process.setProcessDuration(params["processTime"])
+process.setProcessDuration(params["processTime"])  # seconds
 
 # print initial surface
 geometry.printSurface(filename="initial.vtp", addMaterialIds=True)

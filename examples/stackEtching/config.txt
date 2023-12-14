@@ -1,17 +1,17 @@
 # Domain
-gridDelta = 2.  
-xExtent = 120.0 
-yExtent = 120.0 
+gridDelta = 2.  # nm
+xExtent = 120.0 # nm
+yExtent = 120.0 # nm 
 
 # Geometry
 numLayers = 5
-layerHeight = 30.     
-substrateHeight = 50. 
-trenchWidth = 75       
-maskHeight = 50       
+layerHeight = 30.     # nm
+substrateHeight = 50. # nm
+trenchWidth = 75      # nm
+maskHeight = 50       # nm
 
 # Process
-processTime = 20
+processTime = 20 # seconds
 
 # fluxes in 1e15 atoms/cm3
 etchantFlux = 150
