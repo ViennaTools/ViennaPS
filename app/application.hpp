@@ -16,7 +16,6 @@
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include "applicationParameters.hpp"
 #include "applicationParser.hpp"
@@ -552,7 +551,7 @@ private:
                                      suffix.size(), suffix))) {
         outFileName += ".vtp";
       }
-      geometry->printSurface(outFileName);
+      geometry->saveSurfaceMesh(outFileName);
     } else {
       std::cout << "Writing volume ...\n";
       const std::string suffix = ".vtu";
@@ -562,8 +561,7 @@ private:
                                    suffix.size(), suffix)) {
         outFileName.erase(outFileName.length() - 4);
       }
-      psWriteVisualizationMesh<NumericType, D>(geometry, params->fileName)
-          .apply();
+      geometry->saveVolumeMesh(outFileName);
       outFileName += "_volume.vtu";
     }
     std::cout << "\tOut file name: " << outFileName << "\n\n";

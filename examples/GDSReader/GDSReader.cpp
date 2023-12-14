@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
                                       0.45 /*height*/);
   geometry->insertNextLevelSet(layer1);
 
-  geometry->printSurface("Geometry.vtp", true /* add material IDs */);
+  geometry->saveSurfaceMesh("Geometry.vtp", true /* add material IDs */);
 
   return 0;
 }

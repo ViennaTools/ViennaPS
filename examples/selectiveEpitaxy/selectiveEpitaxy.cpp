@@ -1,9 +1,7 @@
-#include <geometries/psMakeHole.hpp>
 #include <geometries/psMakePlane.hpp>
 #include <models/psAnisotropicProcess.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include "parameters.hpp"
 
@@ -43,7 +41,7 @@ int main(int argc, char *argv[]) {
         fin, psSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
     geometry->insertNextLevelSetAsMaterial(fin, psMaterial::Si);
-    geometry->printSurface("fin.vtp");
+    geometry->saveSurfaceMesh("fin.vtp");
   }
 
   // copy top layer to capture deposition
@@ -61,11 +59,9 @@ int main(int argc, char *argv[]) {
   process.setIntegrationScheme(
       lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
-  geometry->printSurface("initial.vtp");
-  psWriteVisualizationMesh<NumericType, D>(geometry, "initial").apply();
+  geometry->saveVolumeMesh("initial");
 
   process.apply();
 
-  geometry->printSurface("final.vtp");
-  psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
+  geometry->saveVolumeMesh("final");
 }

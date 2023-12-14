@@ -78,9 +78,8 @@ process.setIntegrationScheme(
     vls.lsIntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
-geometry.printSurface("initial.vtp")
+geometry.saveVolume("initial")
 
 process.apply()
 
-geometry.printSurface("final.vtp")
-vps.WriteVisualizationMesh(geometry, "final").apply()
+geometry.saveVolume("final")

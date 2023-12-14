@@ -86,4 +86,4 @@ process.setPrintTimeInterval(30.0)
 
 process.apply()
 
-vps.WriteVisualizationMesh(domain, "FinalStack").apply()
+domain.saveVolume("finalStack")

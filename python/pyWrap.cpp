@@ -144,10 +144,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, D>::getGrid, "Get the grid")
       .def("print", &psDomain<T, D>::print)
-      .def("printSurface", &psDomain<T, D>::printSurface,
+      .def("saveLevelSetMesh", &psDomain<T, D>::saveLevelSetMesh,
+           pybind11::arg("filename"), pybind11::arg("width") = 1,
+           "Save the level set grids of layers in the domain.")
+      .def("saveSurfaceMesh", &psDomain<T, D>::saveSurfaceMesh,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
-           "Print the surface of the domain.")
-      .def("writeLevelSets", &psDomain<T, D>::writeLevelSets)
+           "Save the surface of the domain.")
+      .def("saveVolumeMesh", &psDomain<T, D>::saveVolumeMesh,
+           pybind11::arg("filename"),
+           "Save the volume representation of the domain.")
+      .def("saveLevelSets", &psDomain<T, D>::saveLevelSets)
       .def("clear", &psDomain<T, D>::clear);
 
   // Enum psMaterial
@@ -860,10 +866,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, 3>::getGrid, "Get the grid")
       .def("print", &psDomain<T, 3>::print)
-      .def("printSurface", &psDomain<T, 3>::printSurface,
+      .def("saveLevelSetMesh", &psDomain<T, 3>::saveLevelSetMesh,
+           pybind11::arg("filename"), pybind11::arg("width") = 1,
+           "Save the level set grids of layers in the domain.")
+      .def("saveSurfaceMesh", &psDomain<T, 3>::saveSurfaceMesh,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = true,
-           "Print the surface of the domain.")
-      .def("writeLevelSets", &psDomain<T, 3>::writeLevelSets)
+           "Save the surface of the domain.")
+      .def("saveVolumeMesh", &psDomain<T, 3>::saveVolumeMesh,
+           pybind11::arg("filename"),
+           "Save the volume representation of the domain.")
+      .def("saveLevelSets", &psDomain<T, 3>::saveLevelSets)
       .def("clear", &psDomain<T, 3>::clear);
 
   pybind11::class_<psExtrude<T>>(module, "Extrude")

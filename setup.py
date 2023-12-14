@@ -252,9 +252,5 @@ setup(
     setup_requires=[
         "mypy",
     ],
-    requires=[
-        "ViennaLS",
-        "ViennaRay",
-    ],
     python_requires=">=3.7",
 )

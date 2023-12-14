@@ -2,7 +2,6 @@
 #include <psGeometricDistributionModels.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include "parameters.hpp"
 
@@ -37,12 +36,12 @@ int main(int argc, char *argv[]) {
   process.setDomain(geometry);
   process.setProcessModel(model);
 
-  geometry->printSurface("initial.vtp");
+  geometry->saveSurfaceMesh("initial.vtp");
 
   process.apply();
 
-  geometry->printSurface("final.vtp");
+  geometry->saveSurfaceMesh("final.vtp");
 
   if constexpr (D == 2)
-    psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
+    geometry->saveVolumeMesh("final");
 }
