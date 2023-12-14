@@ -1,7 +1,6 @@
 #include <psDomain.hpp>
 #include <psMakeTrench.hpp>
 #include <psProcess.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include <psTEOSDeposition.hpp>
 
@@ -49,13 +48,12 @@ int main(int argc, char **argv) {
   process.setNumberOfRaysPerPoint(params.numRaysPerPoint);
   process.setProcessDuration(params.processTime);
 
-  geometry->printSurface("MulitTEOS_initial.vtp");
+  geometry->saveSurface("MulitTEOS_initial.vtp");
 
   process.apply();
 
-  geometry->printSurface("MulitTEOS_final.vtp");
+  geometry->saveSurface("MulitTEOS_final.vtp");
 
   if constexpr (D == 2)
-    psWriteVisualizationMesh<NumericType, D>(geometry, "MutliTEOS_final")
-        .apply();
+    geometry->saveVolume("MulitTEOS_final");
 }

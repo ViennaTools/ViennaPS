@@ -53,10 +53,10 @@ process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
 
 # print initial surface
-geometry.printSurface(filename="initial.vtp", addMaterialIds=True)
+geometry.saveSurface(filename="initial.vtp", addMaterialIds=True)
 
 # run the process
 process.apply()
 
 # print final surface
-geometry.printSurface(filename="final.vtp", addMaterialIds=True)
+geometry.saveSurface(filename="final.vtp", addMaterialIds=True)

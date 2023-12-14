@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   geometry->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
   geometry->insertNextLevelSetAsMaterial(plane, psMaterial::Si);
-  geometry->printSurface("initialGeometry.vtp");
+  geometry->saveSurface("initialGeometry.vtp");
 
   // Anisotropic wet etching process model
   auto model = psSmartPointer<psAnisotropicProcess<NumericType, D>>::New(
@@ -78,8 +78,8 @@ int main(int argc, char **argv) {
 
   for (int n = 0; n < minutes; n++) {
     process.apply(); // run process
-    geometry->printSurface("wetEtchingSurface_" + std::to_string(n) + ".vtp");
+    geometry->saveSurface("wetEtchingSurface_" + std::to_string(n) + ".vtp");
   }
 
-  geometry->printSurface("finalGeometry.vtp");
+  geometry->saveSurface("finalGeometry.vtp");
 }

@@ -144,10 +144,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, D>::getGrid, "Get the grid")
       .def("print", &psDomain<T, D>::print)
-      .def("printSurface", &psDomain<T, D>::printSurface,
+      .def("saveSurface", &psDomain<T, D>::saveSurface,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
            "Print the surface of the domain.")
-      .def("writeLevelSets", &psDomain<T, D>::writeLevelSets)
+      .def("saveVolume", &psDomain<T, D>::saveVolume, pybind11::arg("filename"),
+           "Print the volume representation of the domain.")
+      .def("saveLevelSets", &psDomain<T, D>::saveLevelSets)
       .def("clear", &psDomain<T, D>::clear);
 
   // Enum psMaterial
@@ -860,10 +862,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, 3>::getGrid, "Get the grid")
       .def("print", &psDomain<T, 3>::print)
-      .def("printSurface", &psDomain<T, 3>::printSurface,
+      .def("saveSurface", &psDomain<T, 3>::saveSurface,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = true,
            "Print the surface of the domain.")
-      .def("writeLevelSets", &psDomain<T, 3>::writeLevelSets)
+      .def("saveVolume", &psDomain<T, 3>::saveVolume, pybind11::arg("filename"),
+           "Print the volume representation of the domain.")
+      .def("saveLevelSets", &psDomain<T, 3>::saveLevelSets)
       .def("clear", &psDomain<T, 3>::clear);
 
   pybind11::class_<psExtrude<T>>(module, "Extrude")

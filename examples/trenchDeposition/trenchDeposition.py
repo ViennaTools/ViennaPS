@@ -41,11 +41,11 @@ model = vps.SingleParticleProcess(
     sourceExponent=params["sourcePower"],
 )
 
-geometry.printSurface("initial.vtp")
+geometry.saveSurface("initial.vtp")
 
 vps.Process(geometry, model, params["processTime"]).apply()
 
-geometry.printSurface("final.vtp")
+geometry.saveSurface("final.vtp")
 
 if args.dim == 2:
-    vps.WriteVisualizationMesh(geometry, "final").apply()
+    geometry.saveVolume("final")

@@ -2,7 +2,6 @@
 #include <psProcess.hpp>
 #include <psSingleParticleProcess.hpp>
 #include <psUtils.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include "parameters.hpp"
 
@@ -43,12 +42,12 @@ int main(int argc, char *argv[]) {
   process.setNumberOfRaysPerPoint(1000);
   process.setProcessDuration(params.processTime);
 
-  geometry->printSurface("initial.vtp");
+  geometry->saveSurface("initial.vtp");
 
   process.apply();
 
-  geometry->printSurface("final.vtp");
+  geometry->saveSurface("final.vtp");
 
   if constexpr (D == 2)
-    psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
+    geometry->saveVolume("final");
 }

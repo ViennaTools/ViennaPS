@@ -3,7 +3,6 @@
 #include <psSF6O2Etching.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include "parameters.hpp"
 
@@ -52,13 +51,11 @@ int main(int argc, char *argv[]) {
   process.setProcessDuration(params.processTime);
 
   // print initial surface
-  geometry->printSurface("initial.vtp");
+  geometry->saveSurface("initial.vtp");
 
   // run the process
   process.apply();
 
   // print final surface
-  geometry->printSurface("final.vtp");
-
-  psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
+  geometry->saveSurface("final.vtp");
 }

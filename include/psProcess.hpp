@@ -574,8 +574,8 @@ public:
   }
 
 private:
-  void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
-                        std::string name) {
+  void saveSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
+                       std::string name) {
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
     psVTKWriter<NumericType>(mesh, name).apply();

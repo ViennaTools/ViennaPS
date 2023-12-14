@@ -5,6 +5,7 @@
 #include <lsMakeGeometry.hpp>
 #include <lsToDiskMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
+#include <lsWriteVisualizationMesh.hpp>
 #include <lsWriter.hpp>
 
 #include <csDenseCellSet.hpp>
@@ -221,7 +222,7 @@ public:
   }
 
   // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
-  void printSurface(std::string name, bool addMaterialIds = true) {
+  void saveSurface(std::string name, bool addMaterialIds = true) {
 
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
 
@@ -244,10 +245,22 @@ public:
     psVTKWriter<NumericType>(mesh, name).apply();
   }
 
+  // Save the domain as a volume mesh
+  void saveVolume(std::string name) {
+    lsWriteVisualizationMesh<NumericType, D> visMesh;
+    visMesh.setFileName(name);
+    for (auto ls : *levelSets) {
+      visMesh.insertNextLevelSet(ls);
+    }
+    if (materialMap)
+      visMesh.setMaterialMap(materialMap->getMaterialMap());
+    visMesh.apply();
+  }
+
   // Write the all Level-Sets in the domain to individual files. The file name
   // serves as the prefix for the individual files and is append by
   // "_layerX.lvst", where X is the number of the Level-Set in the domain.
-  void writeLevelSets(std::string fileName) const {
+  void saveLevelSets(std::string fileName) const {
     for (int i = 0; i < levelSets->size(); i++) {
       lsWriter<NumericType, D>(
           levelSets->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")

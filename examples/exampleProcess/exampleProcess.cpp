@@ -84,7 +84,7 @@ int main() {
     domain->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
   }
 
-  domain->printSurface("initial.vtp");
+  domain->saveSurface("initial.vtp");
 
   auto model = psSmartPointer<psProcessModel<NumericType, D>>::New();
   model->insertNextParticleType(particle);
@@ -98,7 +98,7 @@ int main() {
   process.setProcessDuration(5);
   process.apply();
 
-  domain->printSurface("ExampleProcess.vtp");
+  domain->saveSurface("ExampleProcess.vtp");
 
   return 0;
 }
