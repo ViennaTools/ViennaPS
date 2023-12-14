@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -22,11 +22,13 @@ int main(int argc, char *argv[]) {
   }
 
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
+  // substrate
   psMakePlane<NumericType, D>(geometry, params.gridDelta, params.xExtent,
-                              params.yExtent, 0., false, psMaterial::Si)
+                              params.yExtent, 0., false, psMaterial::Mask)
       .apply();
+  // create fin on substrate
   {
-    auto box = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto fin = psSmartPointer<lsDomain<NumericType, D>>::New(
         geometry->getLevelSets()->back()->getGrid());
     NumericType minPoint[3] = {-params.finWidth / 2., -params.finLength / 2.,
                                -params.gridDelta};
@@ -37,19 +39,19 @@ int main(int argc, char *argv[]) {
       maxPoint[1] = params.finHeight;
     }
     lsMakeGeometry<NumericType, D>(
-        box, psSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+        fin, psSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
-    geometry->applyBooleanOperation(box, lsBooleanOperationEnum::UNION);
+    geometry->insertNextLevelSetAsMaterial(fin, psMaterial::Si);
+    geometry->printSurface("fin.vtp");
   }
 
-  psMakePlane<NumericType, D>(geometry, params.maskHeight, psMaterial::Mask)
-      .apply();
-
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet(psMaterial::SiO2);
+  geometry->duplicateTopLevelSet(psMaterial::SiGe);
 
   auto model = psSmartPointer<psSelectiveEpitaxy<NumericType, D>>::New(
-      std::vector<psMaterial>{psMaterial::Si, psMaterial::SiO2});
+      std::vector<std::pair<psMaterial, NumericType>>{
+          {psMaterial::Si, params.epitaxyRate},
+          {psMaterial::SiGe, params.epitaxyRate}});
 
   psProcess<NumericType, D> process;
   process.setDomain(geometry);

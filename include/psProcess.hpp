@@ -343,6 +343,14 @@ public:
             .addTiming("Coverage initialization", timer)
             .print();
       }
+    } // end coverage initialization
+
+    if (integrationScheme ==
+        lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER) {
+      psLogger::getInstance()
+          .addWarning("Make sure level-set are wrapped correctly when using "
+                      "the stencil local Lax-Friedrichs integration scheme.")
+          .print();
     }
 
     double previousTimeStep = 0.;

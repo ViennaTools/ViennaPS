@@ -1,14 +1,14 @@
 # Config file for a selective epitaxy example
 # Domain
-gridDelta=0.04
-xExtent=2
-yExtent=2.5
+gridDelta=0.72
+xExtent=40.0
+yExtent=80.0
 
 # Geometry
-finWidth=0.4
-finHeight=1.2
-finLength=1.
-maskHeight=0.4
+finWidth=10.0   
+finHeight=10.0
+finLength=60.0
 
 # Process
-processTime=100
+processTime=100.
+epitaxyRate=10.
