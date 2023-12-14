@@ -2,7 +2,7 @@
 
 ![](data/images/logo.png)
 
-<h1>ViennaLS</h1>
+<h1>ViennaPS - Process Simulation Library</h1>
 
 [![Linux](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml)
 [![macOS](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml)

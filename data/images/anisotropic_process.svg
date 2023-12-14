@@ -3,8 +3,8 @@
 
 <svg
    width="627.84851mm"
-   height="145.82605mm"
-   viewBox="0 0 627.84851 145.82605"
+   height="147.43895mm"
+   viewBox="0 0 627.84851 147.43895"
    version="1.1"
    id="svg1"
    xml:space="preserve"
@@ -85,14 +85,14 @@
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,-189.76912,12.241686)"
        id="text4"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:42.6667px;font-family:FreeSans;-inkscape-font-specification:'FreeSans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;white-space:pre;shape-inside:url(#rect5);fill:#000000;fill-opacity:1;stroke:none;stroke-width:4.90961;stroke-linecap:square;stroke-linejoin:round;paint-order:stroke fill markers"><tspan
-         x="254.38332"
-         y="503.07607"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeSans;-inkscape-font-specification:'FreeSans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;white-space:pre;shape-inside:url(#rect5);display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:4.90961;stroke-linecap:square;stroke-linejoin:round;paint-order:stroke fill markers"><tspan
+         x="216.00766"
+         y="508.00937"
          id="tspan2">Selective epitaxial growth on a fin</tspan></text><text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,142.09422,12.140086)"
        id="text4-5"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:42.6667px;font-family:FreeSans;-inkscape-font-specification:'FreeSans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;white-space:pre;shape-inside:url(#rect5-8);display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:4.90961;stroke-linecap:square;stroke-linejoin:round;paint-order:stroke fill markers"><tspan
-         x="316.76186"
-         y="503.07607"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:48px;font-family:FreeSans;-inkscape-font-specification:'FreeSans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;white-space:pre;shape-inside:url(#rect5-8);display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:4.90961;stroke-linecap:square;stroke-linejoin:round;paint-order:stroke fill markers"><tspan
+         x="286.18347"
+         y="508.00937"
          id="tspan3">Wet etching of a cantilever</tspan></text></g></svg>
