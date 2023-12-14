@@ -141,7 +141,7 @@ By changing the dimension of the hole etching example (_D = 2_), we can easily s
 In the anisotropic process model, the etch or deposition rates are dependent on the crystallographic directions of the surface. This enables the accurate modeling of intricate processes like epitaxial growth or anisotropic wet etching. Basic examples, illustrating these processes are provided with the library and shown below.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/epitaxy/data/images/anisotropic_process.svg" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/anisotropic_process.svg" width=700 style="background-color:white;">
 </div>
 
 ### Redeposition During Selective Etching
