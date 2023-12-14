@@ -7,13 +7,13 @@
 
 template <typename T> struct Parameters {
   // Domain
-  T gridDelta = 0.92;
+  T gridDelta = 0.72;
   T xExtent = 40.0;
   T yExtent = 80.0;
 
   // Geometry
   T finWidth = 10.0;
-  T finHeight = 10.0;
+  T finHeight = 20.0;
   T finLength = 60.0;
 
   // Process

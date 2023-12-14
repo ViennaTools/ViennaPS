@@ -5,7 +5,7 @@
 
 #include <rayUtil.hpp>
 
-namespace SelectiveEpitaxyImplementation {
+namespace AnisotropicProcessImplementation {
 
 template <class NumericType, int D>
 class VelocityField : public psVelocityField<NumericType> {
@@ -21,18 +21,18 @@ class VelocityField : public psVelocityField<NumericType> {
   const NumericType r110;
   const NumericType r111;
   const NumericType r311;
-  const std::vector<std::pair<psMaterial, NumericType>> &epitaxyMaterials;
+  const std::vector<std::pair<psMaterial, NumericType>> &materials;
 
 public:
-  VelocityField(const std::array<NumericType, 3> passedDir100,
-                const std::array<NumericType, 3> passedDir010,
-                const NumericType passedR100, const NumericType passedR110,
-                const NumericType passedR111, const NumericType passedR311,
-                const std::vector<std::pair<psMaterial, NumericType>>
-                    &passedEpitaxyMaterials)
+  VelocityField(
+      const std::array<NumericType, 3> passedDir100,
+      const std::array<NumericType, 3> passedDir010,
+      const NumericType passedR100, const NumericType passedR110,
+      const NumericType passedR111, const NumericType passedR311,
+      const std::vector<std::pair<psMaterial, NumericType>> &passedmaterials)
       : direction100(passedDir100), direction010(passedDir010),
         r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
-        epitaxyMaterials(passedEpitaxyMaterials) {
+        materials(passedmaterials) {
 
     rayInternal::Normalize(direction100);
     rayInternal::Normalize(direction010);
@@ -51,7 +51,7 @@ public:
   getScalarVelocity(const std::array<NumericType, 3> & /*coordinate*/,
                     int material, const std::array<NumericType, 3> &nv,
                     unsigned long /*pointID*/) override {
-    for (auto epitaxyMaterial : epitaxyMaterials) {
+    for (auto epitaxyMaterial : materials) {
       if (psMaterialMap::isMaterial(material, epitaxyMaterial.first)) {
         if (std::abs(rayInternal::Norm(nv) - 1.) > 1e-4)
           return 0.;
@@ -76,13 +76,13 @@ public:
         NumericType velocity;
         if (rayInternal::DotProduct(
                 N, std::array<NumericType, 3>{-1., 1., 2.}) < 0) {
-          velocity = ((r100 * (N[0] - N[1] - 2 * N[2]) + r110 * (N[1] - N[2]) +
-                       3 * r311 * N[2]) /
-                      N[0]);
+          velocity = (r100 * (N[0] - N[1] - 2 * N[2]) + r110 * (N[1] - N[2]) +
+                      3 * r311 * N[2]) /
+                     N[0];
         } else {
-          velocity = ((r111 * ((N[1] - N[0]) * 0.5 + N[2]) +
-                       r110 * (N[1] - N[2]) + 1.5 * r311 * (N[0] - N[1])) /
-                      N[0]);
+          velocity = (r111 * ((N[1] - N[0]) * 0.5 + N[2]) +
+                      r110 * (N[1] - N[2]) + 1.5 * r311 * (N[0] - N[1])) /
+                     N[0];
         }
 
         return velocity * epitaxyMaterial.second;
@@ -97,34 +97,36 @@ public:
   // which only depends on an analytic velocity field
   int getTranslationFieldOptions() const override { return 0; }
 };
-} // namespace SelectiveEpitaxyImplementation
+} // namespace AnisotropicProcessImplementation
 
+// Model for an anisotropic process, like selective epitaxy or wet etching.
 template <typename NumericType, int D>
-class psSelectiveEpitaxy : public psProcessModel<NumericType, D> {
+class psAnisotropicProcess : public psProcessModel<NumericType, D> {
 public:
   // The constructor expects the materials where epitaxy is allowed including
   // the corresponding rates.
-  psSelectiveEpitaxy(
-      const std::vector<std::pair<psMaterial, NumericType>> pEpitaxyMaterials)
-      : epitaxyMaterials(pEpitaxyMaterials) {
+  psAnisotropicProcess(
+      const std::vector<std::pair<psMaterial, NumericType>> pMaterials)
+      : materials(pMaterials) {
     if constexpr (D == 2) {
       direction100 = {0., 1., 0.};
       direction010 = {1., 0., -1.};
     } else {
-      direction100 = {0., 0., 1.};
+      direction100 = {0.707106781187, 0.707106781187, 0};
       direction010 = {-0.707106781187, 0.707106781187, 0.};
     }
     initialize();
   }
 
-  psSelectiveEpitaxy(const std::array<NumericType, 3> passedDir100,
-                     const std::array<NumericType, 3> passedDir010,
-                     const NumericType passedR100, const NumericType passedR110,
-                     const NumericType passedR111, const NumericType passedR311,
-                     const std::vector<psMaterial> pEpitaxyMaterials)
+  psAnisotropicProcess(
+      const std::array<NumericType, 3> passedDir100,
+      const std::array<NumericType, 3> passedDir010,
+      const NumericType passedR100, const NumericType passedR110,
+      const NumericType passedR111, const NumericType passedR311,
+      const std::vector<std::pair<psMaterial, NumericType>> pMaterials)
       : direction100(passedDir100), direction010(passedDir010),
         r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
-        epitaxyMaterials(pEpitaxyMaterials) {
+        materials(pMaterials) {
     initialize();
   }
 
@@ -135,13 +137,13 @@ private:
 
     // velocity field
     auto velField =
-        psSmartPointer<SelectiveEpitaxyImplementation::VelocityField<
+        psSmartPointer<AnisotropicProcessImplementation::VelocityField<
             NumericType, D>>::New(direction100, direction010, r100, r110, r111,
-                                  r311, epitaxyMaterials);
+                                  r311, materials);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->setProcessName("SelectiveEpitaxy");
+    this->setProcessName("AnisotropicProcess");
   }
 
   // crystal surface direction
@@ -154,5 +156,5 @@ private:
   NumericType r111 = 0.000121666666667;
   NumericType r311 = 0.0300166666667;
 
-  std::vector<std::pair<psMaterial, NumericType>> epitaxyMaterials;
+  std::vector<std::pair<psMaterial, NumericType>> materials;
 };

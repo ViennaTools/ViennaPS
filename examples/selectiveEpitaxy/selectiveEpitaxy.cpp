@@ -1,6 +1,7 @@
+#include <geometries/psMakeHole.hpp>
 #include <geometries/psMakePlane.hpp>
+#include <models/psAnisotropicProcess.hpp>
 #include <psProcess.hpp>
-#include <psSelectiveEpitaxy.hpp>
 #include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>
 
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet(psMaterial::SiGe);
 
-  auto model = psSmartPointer<psSelectiveEpitaxy<NumericType, D>>::New(
+  auto model = psSmartPointer<psAnisotropicProcess<NumericType, D>>::New(
       std::vector<std::pair<psMaterial, NumericType>>{
           {psMaterial::Si, params.epitaxyRate},
           {psMaterial::SiGe, params.epitaxyRate}});

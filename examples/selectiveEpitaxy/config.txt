@@ -10,5 +10,5 @@ finHeight=10.0
 finLength=60.0
 
 # Process
-processTime=100.
+processTime=20.
 epitaxyRate=10.
