@@ -4,7 +4,18 @@ import viennals3d as vls
 
 maskFileName = "cantilever_mask.gds"
 
+# crystal surface direction
+direction100 = [0.707106781187, 0.707106781187, 0.0]
+direction010 = [-0.707106781187, 0.707106781187, 0.0]
+# etch rates for crystal directions in um / s
+# 30 % KOH at 70°C
+# https://doi.org/10.1016/S0924-4247(97)01658-0
+r100 = 0.797 / 60.0
+r110 = 1.455 / 60.0
+r111 = 0.005 / 60.0
+r311 = 1.436 / 60.0
 minutes = int(120 / 5)  # total etch time (2 hours)
+
 x_add = 50.0  # add space to domain boundary
 y_add = 50.0
 gridDelta = 5.0  # um
@@ -29,27 +40,34 @@ bounds = gds_mask.getBounds()
 plane = vls.lsDomain(bounds, boundaryConditions, gridDelta)
 vls.lsMakeGeometry(plane, vls.lsPlane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0])).apply()
 
-# combine geometries
+# set up domain
 geometry = vps.Domain()
 geometry.insertNextLevelSet(mask)
 geometry.insertNextLevelSet(plane)
-geometry.printSurface("InitialGeometry.vtp", True)
+geometry.printSurface("initialGeometry.vtp", True)
 
 # wet etch process
-model = vps.WetEtching(0)
+model = vps.AnisotropicProcess(
+    direction100=direction100,
+    direction010=direction010,
+    rate100=r100,
+    rate110=r110,
+    rate111=r111,
+    rate311=r311,
+    materials=[(vps.Material.Si, -1.0)],
+)
 
 process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(5.0 * 60.0)  # 5 minutes of etching
-process.setPrintTimeInterval(-1.0)
 process.setIntegrationScheme(
     vls.lsIntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
 for n in range(minutes):
-    process.apply()
     # run process
-    geometry.printSurface("WetEtchingSurface_" + str(n) + ".vtp", True)
+    process.apply()
+    geometry.printSurface("wetEtchingSurface_" + str(n) + ".vtp", True)
 
-geometry.printSurface("FinalGeometry.vtp", True)
+geometry.printSurface("finalGeometry.vtp", True)

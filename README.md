@@ -1,11 +1,20 @@
-# ViennaPS
+<div align="center">
+
+![](data/images/logo.png)
+
+<h1>ViennaPS - Process Simulation Library</h1>
+
 [![Linux](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml)
 [![macOS](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml)
 [![Windows](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml)
 
+</div>
+
+
 ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems.
 
-IMPORTANT NOTE: ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
+> [!NOTE]  
+> ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
 ## Releases
 Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
@@ -109,8 +118,7 @@ Individual examples can also be build by calling `make` in their respective buil
 
 ### Trench Deposition
 
-This example contains a single particle deposition process in a trench geometry. By default, a 2D representation of the trench is simulated. However, 3D simulations are also possible by setting the value of the constant _D_ in __TrenchDeposition.cpp__ to 3. In the __config.txt__ file the process and geometry parameters can be varied. 
-The picture show an example of the trench deposition process for various value of the particle sticking probability _s_.
+This example focuses on a particle deposition process within a trench geometry. By default, the simulation presents a 2D representation of the trench. Nevertheless, users have the flexibility to conduct 3D simulations by adjusting the value of the constant _D_ in __trenchDeposition.cpp__ to 3. Customization of process and geometry parameters is achieved through the __config.txt__ file. The accompanying image illustrates instances of the trench deposition process, showcasing variations in the particle sticking probability _s_.
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/deposition.svg" width=700 style="background-color:white;">
 </div>
@@ -118,7 +126,7 @@ The picture show an example of the trench deposition process for various value o
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
 This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process and geometry parameters can be varied in the __config.txt__ file. 
-Below the results after 1, 2, and 3 seconds of etching are shown.
+Below the results after 10, 20, and 30 seconds of etching are shown.
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/hole_etching.svg" width=700 style="background-color:white;">
 </div>
@@ -126,6 +134,14 @@ Below the results after 1, 2, and 3 seconds of etching are shown.
 By changing the dimension of the hole etching example (_D = 2_), we can easily simulate the profile of a trench etching process with the same plasma chemistry. Here we can, for example, vary the mask tapering angle to observe increased micro-trenching, as shown below.
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/sidewall_tapering.svg" width=700 style="background-color:white;">
+</div>
+
+### Anisotropic Processes
+
+In the anisotropic process model, the etch or deposition rates are dependent on the crystallographic directions of the surface. This enables the accurate modeling of intricate processes like epitaxial growth or anisotropic wet etching. Basic examples, illustrating these processes are provided with the library and shown below.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/anisotropic_process.svg" width=700 style="background-color:white;">
 </div>
 
 ### Redeposition During Selective Etching
