@@ -50,6 +50,16 @@ namespace Si3N4 {
 static constexpr double rho = 2.3; // 1e22 atoms/cm³
 } // namespace Si3N4
 
+namespace TiN {
+// density
+static constexpr double rho = 5.0804; // 1e22 atoms/cm³
+} // namespace TiN
+
+namespace Cl {
+// density
+static constexpr double rho = 0.0042399; // 1e22 atoms/cm³
+} // namespace Cl
+
 namespace Mask {
 // density
 static constexpr double rho = 500.; // 1e22 atoms/cm³
