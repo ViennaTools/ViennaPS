@@ -2,8 +2,10 @@
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
+#include <lsExpand.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsToDiskMesh.hpp>
+#include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsWriteVisualizationMesh.hpp>
 #include <lsWriter.hpp>
@@ -221,8 +223,20 @@ public:
     std::cout << "**************************" << std::endl;
   }
 
+  // Save the level set as a VTK file.
+  void saveLevelSetMesh(std::string name, int width = 1) {
+    for (int i = 0; i < levelSets->size(); i++) {
+      auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+      lsExpand<NumericType, D>(levelSets->at(i), width).apply();
+      lsToMesh<NumericType, D>(levelSets->at(i), mesh).apply();
+      psVTKWriter<NumericType>(mesh,
+                               name + "_layer" + std::to_string(i) + ".vtp")
+          .apply();
+    }
+  }
+
   // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
-  void saveSurface(std::string name, bool addMaterialIds = true) {
+  void saveSurfaceMesh(std::string name, bool addMaterialIds = true) {
 
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
 
@@ -246,7 +260,7 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolume(std::string name) {
+  void saveVolumeMesh(std::string name) {
     lsWriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(name);
     for (auto ls : *levelSets) {

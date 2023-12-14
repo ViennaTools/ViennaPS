@@ -48,12 +48,12 @@ int main(int argc, char *argv[]) {
   process.setTimeStepRatio(0.25);
 
   // print initial surface
-  geometry->saveVolume("initial");
+  geometry->saveVolumeMesh("initial");
 
   process.apply();
 
   // print final surface
-  geometry->saveVolume("final");
+  geometry->saveVolumeMesh("final");
 
   std::cout << "Extruding to 3D ..." << std::endl;
   auto extruded = psSmartPointer<psDomain<NumericType, 3>>::New();
@@ -64,6 +64,6 @@ int main(int argc, char *argv[]) {
                           lsBoundaryConditionEnum<3>::INFINITE_BOUNDARY})
       .apply();
 
-  extruded->saveSurface("surface.vtp");
-  geometry->saveVolume("final_extruded");
+  extruded->saveSurfaceMesh("surface.vtp");
+  geometry->saveVolumeMesh("final_extruded");
 }

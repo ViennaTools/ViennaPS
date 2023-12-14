@@ -48,12 +48,12 @@ int main(int argc, char **argv) {
   process.setNumberOfRaysPerPoint(params.numRaysPerPoint);
   process.setProcessDuration(params.processTime);
 
-  geometry->saveSurface("MulitTEOS_initial.vtp");
+  geometry->saveSurfaceMesh("MulitTEOS_initial.vtp");
 
   process.apply();
 
-  geometry->saveSurface("MulitTEOS_final.vtp");
+  geometry->saveSurfaceMesh("MulitTEOS_final.vtp");
 
   if constexpr (D == 2)
-    geometry->saveVolume("MulitTEOS_final");
+    geometry->saveVolumeMesh("MulitTEOS_final");
 }

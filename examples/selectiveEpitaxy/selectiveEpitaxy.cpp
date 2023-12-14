@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
         fin, psSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
     geometry->insertNextLevelSetAsMaterial(fin, psMaterial::Si);
-    geometry->saveSurface("fin.vtp");
+    geometry->saveSurfaceMesh("fin.vtp");
   }
 
   // copy top layer to capture deposition
@@ -59,9 +59,9 @@ int main(int argc, char *argv[]) {
   process.setIntegrationScheme(
       lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
-  geometry->saveVolume("initial");
+  geometry->saveVolumeMesh("initial");
 
   process.apply();
 
-  geometry->saveVolume("final");
+  geometry->saveVolumeMesh("final");
 }

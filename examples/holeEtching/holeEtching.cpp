@@ -51,11 +51,11 @@ int main(int argc, char *argv[]) {
   process.setProcessDuration(params.processTime);
 
   // print initial surface
-  geometry->saveSurface("initial.vtp");
+  geometry->saveSurfaceMesh("initial.vtp");
 
   // run the process
   process.apply();
 
   // print final surface
-  geometry->saveSurface("final.vtp");
+  geometry->saveSurfaceMesh("final.vtp");
 }

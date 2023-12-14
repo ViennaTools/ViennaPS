@@ -551,7 +551,7 @@ private:
                                      suffix.size(), suffix))) {
         outFileName += ".vtp";
       }
-      geometry->saveSurface(outFileName);
+      geometry->saveSurfaceMesh(outFileName);
     } else {
       std::cout << "Writing volume ...\n";
       const std::string suffix = ".vtu";
@@ -561,7 +561,7 @@ private:
                                    suffix.size(), suffix)) {
         outFileName.erase(outFileName.length() - 4);
       }
-      geometry->saveVolume(outFileName);
+      geometry->saveVolumeMesh(outFileName);
       outFileName += "_volume.vtu";
     }
     std::cout << "\tOut file name: " << outFileName << "\n\n";
