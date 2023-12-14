@@ -2,7 +2,6 @@
 #include <psFluorocarbonEtching.hpp>
 #include <psMakeStack.hpp>
 #include <psProcess.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include "parameters.hpp"
 
@@ -49,12 +48,12 @@ int main(int argc, char *argv[]) {
   process.setTimeStepRatio(0.25);
 
   // print initial surface
-  psWriteVisualizationMesh<NumericType, D>(geometry, "initial").apply();
+  geometry->saveVolumeMesh("initial");
 
   process.apply();
 
   // print final surface
-  psWriteVisualizationMesh<NumericType, D>(geometry, "final").apply();
+  geometry->saveVolumeMesh("final");
 
   std::cout << "Extruding to 3D ..." << std::endl;
   auto extruded = psSmartPointer<psDomain<NumericType, 3>>::New();
@@ -65,6 +64,6 @@ int main(int argc, char *argv[]) {
                           lsBoundaryConditionEnum<3>::INFINITE_BOUNDARY})
       .apply();
 
-  extruded->printSurface("surface.vtp");
-  psWriteVisualizationMesh<NumericType, 3>(extruded, "final_extruded").apply();
+  extruded->saveSurfaceMesh("surface.vtp");
+  geometry->saveVolumeMesh("final_extruded");
 }

@@ -1,22 +1,23 @@
 # Domain
-gridDelta=2.
-xExtent=400.0
-yExtent=100.0
+# all length units are in nm
+gridDelta=2.  # nm
+xExtent=400.0 # nm
+yExtent=100.0 # nm
 
 # Geometry
 numLayers=7
-layerHeight=30.0
-substrateHeight=50.
-trenchWidth=150.0
+layerHeight=30.0    # nm
+substrateHeight=50. # nm 
+trenchWidth=150.0   # nm
 
 # Etching
-nitrideEtchRate=6.5
-oxideEtchRate=0.
-targetEtchDepth=100.
-diffusionCoefficient=50.
+nitrideEtchRate=6.5     # nm / min
+oxideEtchRate=0.        # nm / min
+targetEtchDepth=100.    # nm
+diffusionCoefficient=50. # nm / s²
 sink=0.1          
-scallopVelocity=5.
-centerVelocity=7.5
+scallopVelocity=5.  # nm / s
+centerVelocity=7.5  # nm / s
 
 # Redeposition
 redepositionRate=0.01

@@ -236,7 +236,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="ViennaPS",
-    version="1.3.0",
+    version="1.3.1",
     author="Institute for Microelectronics",
     author_email="viennatools@iue.tuwien.ac.at",
     license="MIT",
@@ -251,10 +251,6 @@ setup(
     zip_safe=False,
     setup_requires=[
         "mypy",
-    ],
-    requires=[
-        "ViennaLS",
-        "ViennaRay",
     ],
     python_requires=">=3.7",
 )

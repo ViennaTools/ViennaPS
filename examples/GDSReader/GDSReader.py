@@ -35,4 +35,4 @@ geometry.insertNextLevelSet(layer0)
 layer1 = mask.layerToLevelSet(1, -0.15, 0.45, False)
 geometry.insertNextLevelSet(layer1)
 
-geometry.printSurface("Geometry.vtp", True)
+geometry.saveSurface("Geometry.vtp", True)
