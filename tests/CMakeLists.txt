@@ -18,9 +18,6 @@ list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
 set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 
 add_custom_target(buildTests DEPENDS ${VIENNAPS_DEPENDENCIES})
-if(MSVC)
-  target_compile_options(buildTests PRIVATE /bigobj)
-endif()
 
 subdirlist(TEST_DIRS ${CMAKE_CURRENT_LIST_DIR})
 
