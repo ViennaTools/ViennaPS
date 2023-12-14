@@ -1,6 +1,7 @@
 #include <psProcessModel.hpp>
 #include <psTestAssert.hpp>
 
+#include <psAnisotropicProcess.hpp>
 #include <psDirectionalEtching.hpp>
 #include <psFluorocarbonEtching.hpp>
 #include <psGeometricDistributionModels.hpp>
@@ -10,7 +11,6 @@
 #include <psSF6O2Etching.hpp>
 #include <psSingleParticleProcess.hpp>
 #include <psTEOSDeposition.hpp>
-#include <psWetEtching.hpp>
 
 template <class NumericType, int D> void psRunTest() {
   // default constructors
@@ -111,9 +111,10 @@ template <class NumericType, int D> void psRunTest() {
     PSTEST_ASSERT(model->getParticleTypes()->size() == 2);
   }
 
-  // wet etching
-  if constexpr (D == 3) {
-    auto model = psSmartPointer<psWetEtching<NumericType, D>>::New();
+  // anisotropic model
+  {
+    auto model = psSmartPointer<psAnisotropicProcess<NumericType, D>>::New(
+        std::vector<std::pair<psMaterial, NumericType>>{});
     PSTEST_ASSERT(model->getSurfaceModel());
     PSTEST_ASSERT(model->getVelocityField());
     PSTEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() == 0);

@@ -204,16 +204,6 @@ All parameters which are parsed additional to a command are described below. For
 </dl>
 
 ---
-**PROCESS WetEtching**
-Wet etching process in 30% KOH solution at 70°C.
-<dl>
-  <dt>time</dt>
-  <dd>process time (numeric value, default: 1)</dd>
-  <dt>maskId</dt>
-  <dd>ID of mask material (integer value, default: 0)</dd> 
-</dl>
-
----
 **PLANARIZE**
 <dl>
   <dt>height</dt>

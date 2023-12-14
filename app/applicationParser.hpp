@@ -243,10 +243,8 @@ private:
                            psUtils::Item{"maskMaterial", maskMaterial});
       parseMaterial(material, params->material);
       parseMaterial(maskMaterial, params->maskMaterial);
-    } else if (model == "WetEtching") {
-      params->processType = ProcessType::WETETCHING;
-      psUtils::AssignItems(config, psUtils::Item{"time", params->processTime},
-                           psUtils::Item{"maskId", params->maskId});
+    } else if (model == "Anisotropic") {
+      params->processType = ProcessType::ANISOTROPIC;
     } else {
       params->processType = ProcessType::NONE;
       std::cout << "Invalid process model: " << model << std::endl;

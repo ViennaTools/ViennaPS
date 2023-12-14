@@ -22,6 +22,7 @@
 #include "applicationParser.hpp"
 #include "interrupt.hpp"
 
+#include <psAnisotropicProcess.hpp>
 #include <psDirectionalEtching.hpp>
 #include <psFluorocarbonEtching.hpp>
 #include <psGeometricDistributionModels.hpp>
@@ -29,7 +30,6 @@
 #include <psSF6O2Etching.hpp>
 #include <psSingleParticleProcess.hpp>
 #include <psTEOSDeposition.hpp>
-#include <psWetEtching.hpp>
 
 template <int D> class Application {
   psSmartPointer<psDomain<NumericType, D>> geometry = nullptr;
@@ -132,7 +132,7 @@ protected:
     // copy top layer for deposition
     processGeometry->duplicateTopLevelSet(processParams->material);
 
-    auto model = psSmartPointer<TEOSDeposition<NumericType, D>>::New(
+    auto model = psSmartPointer<psTEOSDeposition<NumericType, D>>::New(
         processParams->stickingP1, processParams->rateP1,
         processParams->orderP1, processParams->stickingP2,
         processParams->rateP2, processParams->orderP2);
@@ -172,7 +172,7 @@ protected:
   virtual void runFluorocarbonEtching(
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
-    auto model = psSmartPointer<FluorocarbonEtching<NumericType, D>>::New(
+    auto model = psSmartPointer<psFluorocarbonEtching<NumericType, D>>::New(
         processParams->ionFlux, processParams->etchantFlux,
         processParams->oxygenFlux, processParams->ionEnergy,
         processParams->sigmaIonEnergy, processParams->ionExponent,
@@ -193,7 +193,7 @@ protected:
   virtual void runSphereDistribution(
       psSmartPointer<psDomain<NumericType, D>> processGeometry,
       psSmartPointer<ApplicationParameters> processParams) {
-    auto model = psSmartPointer<SphereDistribution<NumericType, D>>::New(
+    auto model = psSmartPointer<psSphereDistribution<NumericType, D>>::New(
         processParams->radius, processParams->gridDelta);
 
     psProcess<NumericType, D> process;
@@ -206,7 +206,7 @@ protected:
   virtual void
   runBoxDistribution(psSmartPointer<psDomain<NumericType, D>> processGeometry,
                      psSmartPointer<ApplicationParameters> processParams) {
-    auto model = psSmartPointer<BoxDistribution<NumericType, D>>::New(
+    auto model = psSmartPointer<psBoxDistribution<NumericType, D>>::New(
         processParams->halfAxes, processParams->gridDelta);
 
     psProcess<NumericType, D> process;
@@ -252,26 +252,13 @@ protected:
     process.apply();
   }
 
-  virtual void
-  runWetEtching(psSmartPointer<psDomain<NumericType, D>> processGeometry,
-                psSmartPointer<ApplicationParameters> processParams) {
-
-    if constexpr (D == 3) {
-
-      auto model = psSmartPointer<psWetEtching<NumericType, D>>::New(
-          processParams->maskId);
-      psProcess<NumericType, D> process;
-      process.setDomain(processGeometry);
-      process.setProcessModel(model);
-      process.setProcessDuration(params->processTime);
-      process.setIntegrationScheme(
-          lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
-      process.apply();
-    } else {
-      psLogger::getInstance()
-          .addError("Warning: Wet etch model only implemented in 3D.")
-          .print();
-    }
+  virtual void runAnisotropicProcess(
+      psSmartPointer<psDomain<NumericType, D>> processGeometry,
+      psSmartPointer<ApplicationParameters> processParams) {
+    psLogger::getInstance()
+        .addError("Warning: Anisotropic process model not implemented in "
+                  "application.")
+        .print();
   }
 
 private:
@@ -523,13 +510,13 @@ private:
       break;
     }
 
-    case ProcessType::WETETCHING: {
+    case ProcessType::ANISOTROPIC: {
       std::cout << "Wet etching\n\tTime: " << params->processTime
                 << "\n\tUsing integration scheme: "
                 << intSchemeString(lsIntegrationSchemeEnum::
                                        STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER)
                 << "\n\n";
-      runWetEtching(geometry, params);
+      runAnisotropicProcess(geometry, params);
       break;
     }
 
