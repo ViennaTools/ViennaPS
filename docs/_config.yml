@@ -31,3 +31,5 @@ callouts:
   note:
     title: Note
     color: iueblue
+
+pythonlabel: "Python {: .label .label-green }"
