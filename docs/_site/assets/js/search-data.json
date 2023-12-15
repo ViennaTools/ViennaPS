@@ -1,0 +1,296 @@
+{"0": {
+    "doc": "Custom Geometry",
+    "title": "Custom Geometry using ViennaLS",
+    "content": ". ",
+    "url": "/geo/custom.html#custom-geometry-using-viennals",
+    
+    "relUrl": "/geo/custom.html#custom-geometry-using-viennals"
+  },"1": {
+    "doc": "Custom Geometry",
+    "title": "Custom Geometry",
+    "content": " ",
+    "url": "/geo/custom.html",
+    
+    "relUrl": "/geo/custom.html"
+  },"2": {
+    "doc": "Custom",
+    "title": "Custom",
+    "content": " ",
+    "url": "/models/custom.html",
+    
+    "relUrl": "/models/custom.html"
+  },"3": {
+    "doc": "Geometry Extrusion",
+    "title": "Extrude a Geometry from 2D to 3D",
+    "content": ". ",
+    "url": "/misc/extrusion.html#extrude-a-geometry-from-2d-to-3d",
+    
+    "relUrl": "/misc/extrusion.html#extrude-a-geometry-from-2d-to-3d"
+  },"4": {
+    "doc": "Geometry Extrusion",
+    "title": "Geometry Extrusion",
+    "content": " ",
+    "url": "/misc/extrusion.html",
+    
+    "relUrl": "/misc/extrusion.html"
+  },"5": {
+    "doc": "Fin",
+    "title": "Fin",
+    "content": ". ",
+    "url": "/geo/basic/fin.html",
+    
+    "relUrl": "/geo/basic/fin.html"
+  },"6": {
+    "doc": "Member Functions",
+    "title": "Member Functions",
+    "content": " ",
+    "url": "/domain/functions.html",
+    
+    "relUrl": "/domain/functions.html"
+  },"7": {
+    "doc": "GDS File Import",
+    "title": "Importing a GDSII Mask File",
+    "content": ". ",
+    "url": "/geo/gdsimport.html#importing-a-gdsii-mask-file",
+    
+    "relUrl": "/geo/gdsimport.html#importing-a-gdsii-mask-file"
+  },"8": {
+    "doc": "GDS File Import",
+    "title": "GDS File Import",
+    "content": " ",
+    "url": "/geo/gdsimport.html",
+    
+    "relUrl": "/geo/gdsimport.html"
+  },"9": {
+    "doc": "Hole",
+    "title": "Hole",
+    "content": ". ",
+    "url": "/geo/basic/hole.html",
+    
+    "relUrl": "/geo/basic/hole.html"
+  },"10": {
+    "doc": "Simulation Domain",
+    "title": "Simulation Domain",
+    "content": " ",
+    "url": "/domain/",
+    
+    "relUrl": "/domain/"
+  },"11": {
+    "doc": "Basic Geometries",
+    "title": "Basic Geometries",
+    "content": ". ViennaPS provides a set of functions to effortlessly create basic geometries, facilitating quick testing of models or serving as the groundwork for your process simulation configuration. The various available geometries are outlined below: . ",
+    "url": "/geo/basic/",
+    
+    "relUrl": "/geo/basic/"
+  },"12": {
+    "doc": "Creating a Geometry",
+    "title": "Creating a Geometry",
+    "content": ". Create intricate geometries using the versatile tools offered by ViennaLS or generate a fundamental geometry. Alternatively, seamlessly import a geometry from a GDSII mask file for added flexibility and convenience. ",
+    "url": "/geo/",
+    
+    "relUrl": "/geo/"
+  },"13": {
+    "doc": "Advanced Cell-Set Functionalities",
+    "title": "Advanced Cell-Set Functionalities",
+    "content": " ",
+    "url": "/cellset/",
+    
+    "relUrl": "/cellset/"
+  },"14": {
+    "doc": "Examples",
+    "title": "Examples",
+    "content": " ",
+    "url": "/examples/",
+    
+    "relUrl": "/examples/"
+  },"15": {
+    "doc": "Installation",
+    "title": "Building the Python package",
+    "content": "The Python package can be built and installed using the pip command: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS pip install --user . Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the ViennaLS Git Repository. ",
+    "url": "/inst/#building-the-python-package",
+    
+    "relUrl": "/inst/#building-the-python-package"
+  },"16": {
+    "doc": "Installation",
+    "title": "Using the Python package",
+    "content": "The 2D version of the library can be imported as follows: . import viennaps2d as vps . In order to switch to three dimensions, only the import needs to be changed: . import viennaps3d as vps . ",
+    "url": "/inst/#using-the-python-package",
+    
+    "relUrl": "/inst/#using-the-python-package"
+  },"17": {
+    "doc": "Installation",
+    "title": "Integration in CMake projects",
+    "content": "In order to use this library in your CMake project, add the following lines to the CMakeLists.txt of your project: . set(ViennaPS_DIR \"/path/to/your/custom/install/\") find_package(ViennaPS REQUIRED) add_executable(${PROJECT_NAME} ...) target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS}) target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES}) . ",
+    "url": "/inst/#integration-in-cmake-projects",
+    
+    "relUrl": "/inst/#integration-in-cmake-projects"
+  },"18": {
+    "doc": "Installation",
+    "title": "Installation",
+    "content": "The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the buildDependencies target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS mkdir build &amp;&amp; cd build cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/ make buildDependencies # this will install all dependencies and might take a while make install . This will install the necessary headers and CMake files to the specified path. If CMAKE_INSTALL_PREFIX is not specified, it will be installed to the standard path for your system, usually /usr/local/ . If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding *_DIR variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install). ",
+    "url": "/inst/",
+    
+    "relUrl": "/inst/"
+  },"19": {
+    "doc": "Geometry Output",
+    "title": "Geometry Output",
+    "content": " ",
+    "url": "/output/",
+    
+    "relUrl": "/output/"
+  },"20": {
+    "doc": "Running a Process",
+    "title": "Running a Process",
+    "content": " ",
+    "url": "/process/",
+    
+    "relUrl": "/process/"
+  },"21": {
+    "doc": "Dependencies",
+    "title": "Dependencies",
+    "content": " ",
+    "url": "/deps/",
+    
+    "relUrl": "/deps/"
+  },"22": {
+    "doc": "Process Models",
+    "title": "Process Models",
+    "content": " ",
+    "url": "/models/",
+    
+    "relUrl": "/models/"
+  },"23": {
+    "doc": "Compact Modelling",
+    "title": "Compact Modelling",
+    "content": " ",
+    "url": "/compact/",
+    
+    "relUrl": "/compact/"
+  },"24": {
+    "doc": "Miscellaneous",
+    "title": "Miscellaneous",
+    "content": " ",
+    "url": "/misc/",
+    
+    "relUrl": "/misc/"
+  },"25": {
+    "doc": "Home",
+    "title": "ViennaPS",
+    "content": "Process Simulation Library . Get started now View it on GitHub . ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems. ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know on GitHub or contact us directly at viennatools@iue.tuwien.ac.at! . This documentation serves as your comprehensive guide to understanding, implementing, and harnessing the capabilities of our process simulation library. Whether you are a seasoned researcher seeking to refine your simulations or an engineer aiming to optimize real-world processes, this library provides a versatile and robust platform to meet your diverse needs. Throughout this documentation, you will find detailed explanations, practical examples, and best practices to effectively utilize the library. We aim to empower users with the knowledge and tools necessary to simulate a wide range of processes accurately and efficiently, making informed decisions and driving innovation in the field. ",
+    "url": "/#viennaps",
+    
+    "relUrl": "/#viennaps"
+  },"26": {
+    "doc": "Home",
+    "title": "Getting Started",
+    "content": " ",
+    "url": "/#getting-started",
+    
+    "relUrl": "/#getting-started"
+  },"27": {
+    "doc": "Home",
+    "title": "Home",
+    "content": " ",
+    "url": "/",
+    
+    "relUrl": "/"
+  },"28": {
+    "doc": "Isotropic",
+    "title": "Isotropic",
+    "content": " ",
+    "url": "/models/isotropic.html",
+    
+    "relUrl": "/models/isotropic.html"
+  },"29": {
+    "doc": "Level Set",
+    "title": "Level Set",
+    "content": " ",
+    "url": "/output/levelset.html",
+    
+    "relUrl": "/output/levelset.html"
+  },"30": {
+    "doc": "Logging",
+    "title": "Logging",
+    "content": ". ",
+    "url": "/misc/logging.html",
+    
+    "relUrl": "/misc/logging.html"
+  },"31": {
+    "doc": "Material Mapping",
+    "title": "Material Mapping",
+    "content": " ",
+    "url": "/domain/material.html",
+    
+    "relUrl": "/domain/material.html"
+  },"32": {
+    "doc": "Parsing Parameters",
+    "title": "Parsing Parameters",
+    "content": ". ",
+    "url": "/misc/parsing.html",
+    
+    "relUrl": "/misc/parsing.html"
+  },"33": {
+    "doc": "Planarize Geometry",
+    "title": "Planarize a Geometry",
+    "content": ". ",
+    "url": "/misc/planarize.html#planarize-a-geometry",
+    
+    "relUrl": "/misc/planarize.html#planarize-a-geometry"
+  },"34": {
+    "doc": "Planarize Geometry",
+    "title": "Planarize Geometry",
+    "content": " ",
+    "url": "/misc/planarize.html",
+    
+    "relUrl": "/misc/planarize.html"
+  },"35": {
+    "doc": "Plane",
+    "title": "Plane",
+    "content": ". This class provides a simple way to create a plane in a level set. It can be used to create a substrate of any material. The plane can be added to an already existing geometry or a new geometry can be created. The plane is created with normal direction in the positive z direction in 3D and positive y direction in 2D. The plane is centered around the origin with the total specified extent and height. The plane can have a periodic boundary in the x and y (only 3D) direction. ",
+    "url": "/geo/basic/plane.html",
+    
+    "relUrl": "/geo/basic/plane.html"
+  },"36": {
+    "doc": "Stack",
+    "title": "Stack",
+    "content": ". ",
+    "url": "/geo/basic/stack.html",
+    
+    "relUrl": "/geo/basic/stack.html"
+  },"37": {
+    "doc": "Surface and Material Interfaces",
+    "title": "Surface and Material Interfaces",
+    "content": " ",
+    "url": "/domain/surface.html",
+    
+    "relUrl": "/domain/surface.html"
+  },"38": {
+    "doc": "Surface Mesh",
+    "title": "Surface Mesh",
+    "content": " ",
+    "url": "/output/surface.html",
+    
+    "relUrl": "/output/surface.html"
+  },"39": {
+    "doc": "Trench",
+    "title": "Trench",
+    "content": ". ",
+    "url": "/geo/basic/trench.html",
+    
+    "relUrl": "/geo/basic/trench.html"
+  },"40": {
+    "doc": "Volume",
+    "title": "Volume",
+    "content": " ",
+    "url": "/domain/volume.html",
+    
+    "relUrl": "/domain/volume.html"
+  },"41": {
+    "doc": "Volume Mesh",
+    "title": "Volume Mesh",
+    "content": " ",
+    "url": "/output/volume.html",
+    
+    "relUrl": "/output/volume.html"
+  }
+}
