@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: ${{github.repository_owner}}/ViennaLS
+          ref: legacy
           path: ./viennals
 
       - name: Restore ViennaLS build cache
@@ -83,7 +84,7 @@ jobs:
       # ViennaPS
       - name: Configure ViennaPS
         run: |
-          cmake -B ${{github.workspace}}/build -DViennaLS_DIR=${{github.workspace}}/viennals/install/lib/cmake/ViennaLS/ -DViennaRay_DIR=${{github.workspace}}/viennaray/install/lib/cmake/ViennaRay/ -D CMAKE_CXX_FLAGS="-openmp:llvm" -D VIENNAPS_BUILD_EXAMPLES=ON -D VIENNAPS_BUILD_APPLICATION=ON
+          cmake -B ${{github.workspace}}/build -DViennaLS_DIR=${{github.workspace}}/viennals/install/lib/cmake/ViennaLS/ -DViennaRay_DIR=${{github.workspace}}/viennaray/install/lib/cmake/ViennaRay/ -D CMAKE_CXX_FLAGS="-openmp:llvm" -D VIENNAPS_BUILD_EXAMPLES=ON -D VIENNAPS_BUILD_APPLICATION=ON -D VIENNAPS_BUILD_TESTS=ON
 
       - name: Build ViennaPS Examples
         run: cmake --build ${{github.workspace}}/build/examples --config ${{env.BUILD_TYPE}}

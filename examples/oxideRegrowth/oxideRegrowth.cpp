@@ -1,6 +1,5 @@
 #include <psMakeStack.hpp>
 #include <psProcess.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
 #include <psOxideRegrowth.hpp>
 
@@ -78,5 +77,5 @@ int main(int argc, char **argv) {
 
   process.apply();
 
-  psWriteVisualizationMesh<NumericType, D>(domain, "FinalStack").apply();
+  domain->saveVolumeMesh("finalStack");
 }

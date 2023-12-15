@@ -122,7 +122,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
       .def("insertNextLevelSetAsMaterial",
-           &psDomain<T, D>::insertNextLevelSetAsMaterial)
+           &psDomain<T, D>::insertNextLevelSetAsMaterial,
+           pybind11::arg("levelSet"), pybind11::arg("material"),
+           pybind11::arg("wrapLowerLevelSet") = true,
+           "Insert a level set to domain as a material.")
       .def("duplicateTopLevelSet", &psDomain<T, D>::duplicateTopLevelSet)
       .def("removeTopLevelSet", &psDomain<T, D>::removeTopLevelSet)
       .def("applyBooleanOperation", &psDomain<T, D>::applyBooleanOperation)
@@ -141,10 +144,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, D>::getGrid, "Get the grid")
       .def("print", &psDomain<T, D>::print)
-      .def("printSurface", &psDomain<T, D>::printSurface,
+      .def("saveLevelSetMesh", &psDomain<T, D>::saveLevelSetMesh,
+           pybind11::arg("filename"), pybind11::arg("width") = 1,
+           "Save the level set grids of layers in the domain.")
+      .def("saveSurfaceMesh", &psDomain<T, D>::saveSurfaceMesh,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
-           "Print the surface of the domain.")
-      .def("writeLevelSets", &psDomain<T, D>::writeLevelSets)
+           "Save the surface of the domain.")
+      .def("saveVolumeMesh", &psDomain<T, D>::saveVolumeMesh,
+           pybind11::arg("filename"),
+           "Save the volume representation of the domain.")
+      .def("saveLevelSets", &psDomain<T, D>::saveLevelSets)
       .def("clear", &psDomain<T, D>::clear);
 
   // Enum psMaterial
@@ -157,6 +166,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("SiN", psMaterial::SiN)
       .value("SiON", psMaterial::SiON)
       .value("SiC", psMaterial::SiC)
+      .value("SiGe", psMaterial::SiGe)
       .value("PolySi", psMaterial::PolySi)
       .value("GaN", psMaterial::GaN)
       .value("W", psMaterial::W)
@@ -752,6 +762,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("topHeight"), pybind11::arg("centerWidth"),
           pybind11::arg("stabilityFactor"));
 
+  pybind11::class_<psAnisotropicProcess<T, D>,
+                   psSmartPointer<psAnisotropicProcess<T, D>>>(
+      module, "AnisotropicProcess", processModel)
+      .def(pybind11::init(&psSmartPointer<psAnisotropicProcess<T, D>>::New<
+                          const std::vector<std::pair<psMaterial, T>>>),
+           pybind11::arg("materials"))
+      .def(pybind11::init(&psSmartPointer<psAnisotropicProcess<T, D>>::New<
+                          const std::array<T, 3> &, const std::array<T, 3> &,
+                          const T, const T, const T, const T,
+                          const std::vector<std::pair<psMaterial, T>>>),
+           pybind11::arg("direction100"), pybind11::arg("direction010"),
+           pybind11::arg("rate100"), pybind11::arg("rate110"),
+           pybind11::arg("rate111"), pybind11::arg("rate311"),
+           pybind11::arg("materials"));
+
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
       module, "Planarize")
       .def(pybind11::init(
@@ -760,11 +785,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
-  pybind11::class_<psWetEtching<T, D>, psSmartPointer<psWetEtching<T, D>>>(
-      module, "WetEtching", processModel)
-      .def(pybind11::init(&psSmartPointer<psWetEtching<T, D>>::New<const int>),
-           pybind11::arg("maskId") = 0);
-
   // GDS file parsing
   pybind11::class_<psGDSGeometry<T, D>, psSmartPointer<psGDSGeometry<T, D>>>(
       module, "GDSGeometry")
@@ -821,10 +841,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init(&psSmartPointer<psDomain<T, 3>>::New<>))
       // methods
       .def("insertNextLevelSet", &psDomain<T, 3>::insertNextLevelSet,
-           pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
+           pybind11::arg("levelSet"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
       .def("insertNextLevelSetAsMaterial",
-           &psDomain<T, 3>::insertNextLevelSetAsMaterial)
+           &psDomain<T, 3>::insertNextLevelSetAsMaterial,
+           pybind11::arg("levelSet"), pybind11::arg("material"),
+           pybind11::arg("wrapLowerLevelSet") = true,
+           "Insert a level set to domain as a material.")
       .def("duplicateTopLevelSet", &psDomain<T, 3>::duplicateTopLevelSet)
       .def("applyBooleanOperation", &psDomain<T, 3>::applyBooleanOperation)
       .def("removeTopLevelSet", &psDomain<T, 3>::removeTopLevelSet)
@@ -843,10 +866,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellSet", &psDomain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &psDomain<T, 3>::getGrid, "Get the grid")
       .def("print", &psDomain<T, 3>::print)
-      .def("printSurface", &psDomain<T, 3>::printSurface,
+      .def("saveLevelSetMesh", &psDomain<T, 3>::saveLevelSetMesh,
+           pybind11::arg("filename"), pybind11::arg("width") = 1,
+           "Save the level set grids of layers in the domain.")
+      .def("saveSurfaceMesh", &psDomain<T, 3>::saveSurfaceMesh,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = true,
-           "Print the surface of the domain.")
-      .def("writeLevelSets", &psDomain<T, 3>::writeLevelSets)
+           "Save the surface of the domain.")
+      .def("saveVolumeMesh", &psDomain<T, 3>::saveVolumeMesh,
+           pybind11::arg("filename"),
+           "Save the volume representation of the domain.")
+      .def("saveLevelSets", &psDomain<T, 3>::saveLevelSets)
       .def("clear", &psDomain<T, 3>::clear);
 
   pybind11::class_<psExtrude<T>>(module, "Extrude")

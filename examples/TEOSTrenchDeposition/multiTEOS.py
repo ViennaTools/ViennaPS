@@ -53,11 +53,11 @@ process.setProcessModel(model)
 process.setNumberOfRaysPerPoint(int(params["numRaysPerPoint"]))
 process.setProcessDuration(params["processTime"])
 
-geometry.printSurface("MultiTEOS_initial.vtp")
+geometry.saveSurface("MultiTEOS_initial.vtp")
 
 process.apply()
 
-geometry.printSurface("MultiTEOS_final.vtp")
+geometry.saveSurface("MultiTEOS_final.vtp")
 
 if args.dim == 2:
-    vps.WriteVisualizationMesh(geometry, "MultiTEOS_final").apply()
+    geometry.saveVolume("MultiTEOS_final")

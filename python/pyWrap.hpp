@@ -43,6 +43,7 @@
 #include <psWriteVisualizationMesh.hpp>
 
 // models
+#include <psAnisotropicProcess.hpp>
 #include <psDirectionalEtching.hpp>
 #include <psFluorocarbonEtching.hpp>
 #include <psGeometricDistributionModels.hpp>
@@ -52,7 +53,6 @@
 #include <psSF6O2Etching.hpp>
 #include <psSingleParticleProcess.hpp>
 #include <psTEOSDeposition.hpp>
-#include <psWetEtching.hpp>
 
 // CellSet
 #include <csDenseCellSet.hpp>

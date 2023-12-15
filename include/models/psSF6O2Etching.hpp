@@ -69,13 +69,13 @@ public:
         break;
       }
 
-      if (!psMaterialMap::isMaterial(materialIds[i], psMaterial::Mask)) {
+      if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Si)) {
 
         etchRate[i] = -(1 / psParameters::Si::rho) *
                       (k_sigma_Si * eCoverage->at(i) / 4. +
                        ionSputteringRate->at(i) * totalIonFlux +
                        eCoverage->at(i) * ionEnhancedRate->at(i) *
-                           totalIonFlux); // in nm / s
+                           totalIonFlux); // in um / s
       }
     }
 
@@ -256,8 +256,8 @@ private:
   static constexpr NumericType B_sp = 9.3;
   const NumericType A_O;
 
-  static constexpr NumericType Eth_Si = 15.;
-  static constexpr NumericType Eth_O = 10.;
+  static constexpr NumericType Eth_Si = 15.; // eV
+  static constexpr NumericType Eth_O = 10.;  // eV
 
   // ion energy
   static constexpr NumericType minEnergy =
@@ -338,12 +338,17 @@ public:
 };
 } // namespace SF6O2Implementation
 
+/// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
+/// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
+/// DOI: https://doi.org/10.1116/1.1830495
+/// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
 class psSF6O2Etching : public psProcessModel<NumericType, D> {
 public:
+  // All flux values are in units 1e16 / cm²
   psSF6O2Etching(const double ionFlux, const double etchantFlux,
-                 const double oxygenFlux, const NumericType meanEnergy,
-                 const NumericType sigmaEnergy, // 5 parameters
+                 const double oxygenFlux, const NumericType meanEnergy /* eV */,
+                 const NumericType sigmaEnergy /* eV */, // 5 parameters
                  const NumericType ionExponent = 100.,
                  const NumericType oxySputterYield = 2.,
                  const NumericType etchStopDepth =
