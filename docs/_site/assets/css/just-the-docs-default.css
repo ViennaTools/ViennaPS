@@ -644,7 +644,7 @@ p {
 }
 
 a {
-  color: #2c84fa;
+  color: #005077;
   text-decoration: none;
 }
 
@@ -654,7 +654,7 @@ a:not([class]) {
   text-underline-offset: 2px;
 }
 a:not([class]):hover {
-  text-decoration-color: rgba(44, 132, 250, 0.45);
+  text-decoration-color: rgba(0, 80, 119, 0.45);
 }
 
 code {
@@ -917,7 +917,7 @@ body {
 .icon {
   width: 1.5rem;
   height: 1.5rem;
-  color: #2c84fa;
+  color: #005077;
 }
 
 .main-content {
@@ -1065,7 +1065,7 @@ body {
   display: inline-block;
   width: 100%;
   height: 100%;
-  color: #2c84fa;
+  color: #005077;
   visibility: hidden;
 }
 .main-content .anchor-heading:hover svg,
@@ -1213,7 +1213,7 @@ body {
   width: 3rem;
   height: 3rem;
   padding: 0.75rem;
-  color: #2c84fa;
+  color: #005077;
 }
 @media (min-width: 50rem) {
   .nav-list .nav-list-item .nav-list-expander {
@@ -1280,10 +1280,10 @@ body {
   padding: 0;
 }
 .nav-list.nav-category-list > .nav-list-item > .nav-list > .nav-list-item > .nav-list-link {
-  color: #2c84fa;
+  color: #005077;
 }
 .nav-list.nav-category-list > .nav-list-item > .nav-list > .nav-list-item > .nav-list-expander {
-  color: #2c84fa;
+  color: #005077;
 }
 
 .aux-nav {
@@ -1499,7 +1499,7 @@ h6,
   font-size: inherit;
   font-weight: 500;
   line-height: 1.5;
-  color: #2c84fa;
+  color: #005077;
   text-decoration: none;
   vertical-align: baseline;
   cursor: pointer;
@@ -1518,7 +1518,7 @@ h6,
   box-shadow: 0 0 0 3px rgba(0, 0, 255, 0.25);
 }
 .btn:hover, .btn.zeroclipboard-is-hover {
-  color: #227efa;
+  color: #00496d;
 }
 .btn:hover, .btn:active, .btn.zeroclipboard-is-hover, .btn.zeroclipboard-is-active {
   text-decoration: none;
@@ -1541,12 +1541,12 @@ h6,
 }
 
 .btn-outline {
-  color: #2c84fa;
+  color: #005077;
   background: transparent;
   box-shadow: inset 0 0 0 2px #e6e1e8;
 }
 .btn-outline:hover, .btn-outline:active, .btn-outline.zeroclipboard-is-hover, .btn-outline.zeroclipboard-is-active {
-  color: #1878fa;
+  color: #004263;
   text-decoration: none;
   background-color: transparent;
   box-shadow: inset 0 0 0 3px #e6e1e8;
@@ -1715,7 +1715,7 @@ h6,
   outline: 0;
 }
 .search-input:focus + .search-label .search-icon {
-  color: #2c84fa;
+  color: #005077;
 }
 
 .search-label {
@@ -1834,7 +1834,7 @@ h6,
   width: 1rem;
   height: 1rem;
   margin-right: 0.5rem;
-  color: #2c84fa;
+  color: #005077;
   flex-shrink: 0;
 }
 .search-result-doc .search-result-doc-title {
@@ -1914,7 +1914,7 @@ h6,
   width: 3.5rem;
   height: 3.5rem;
   background-color: #fff;
-  border: 1px solid rgba(44, 132, 250, 0.3);
+  border: 1px solid rgba(0, 80, 119, 0.3);
   border-radius: 1.75rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.08);
   align-items: center;
@@ -7279,7 +7279,7 @@ a.skip-to-main {
 
 a.skip-to-main:focus,
 a.skip-to-main:active {
-  color: #2c84fa;
+  color: #005077;
   background-color: #fff;
   left: auto;
   top: auto;
@@ -7430,14 +7430,14 @@ blockquote.danger-title > p:last-child {
 }
 
 p.note, blockquote.note {
-  background: rgba(44, 132, 250, 0.2);
-  border-left: 4px solid #183385;
+  background: rgba(0, 80, 119, 0.2);
+  border-left: 4px solid #005077;
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.08);
   padding: 0.8rem;
 }
 p.note::before, blockquote.note::before {
-  color: #183385;
+  color: #005077;
   content: "Note";
   display: block;
   font-weight: bold;
@@ -7446,7 +7446,7 @@ p.note::before, blockquote.note::before {
   padding-bottom: 0.125rem;
 }
 p.note > .note-title, blockquote.note > .note-title {
-  color: #183385;
+  color: #005077;
   display: block;
   font-weight: bold;
   text-transform: uppercase;
@@ -7455,8 +7455,8 @@ p.note > .note-title, blockquote.note > .note-title {
 }
 
 p.note-title, blockquote.note-title {
-  background: rgba(44, 132, 250, 0.2);
-  border-left: 4px solid #183385;
+  background: rgba(0, 80, 119, 0.2);
+  border-left: 4px solid #005077;
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.08);
   padding: 0.8rem;
@@ -7464,7 +7464,7 @@ p.note-title, blockquote.note-title {
 p.note-title > p:first-child, blockquote.note-title > p:first-child {
   margin-top: 0;
   margin-bottom: 0;
-  color: #183385;
+  color: #005077;
   display: block;
   font-weight: bold;
   text-transform: uppercase;

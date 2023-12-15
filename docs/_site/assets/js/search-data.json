@@ -1,296 +1,429 @@
 {"0": {
+    "doc": "TEOS Trench Deposition",
+    "title": "TEOS Trench Deposition",
+    "content": ". ",
+    "url": "/examples/TEOSdeposition.html",
+    
+    "relUrl": "/examples/TEOSdeposition.html"
+  },"1": {
+    "doc": "Cantilever Wet Etching",
+    "title": "Cantilever Wet Etching",
+    "content": ". ",
+    "url": "/examples/cantileverWetEtching.html",
+    
+    "relUrl": "/examples/cantileverWetEtching.html"
+  },"2": {
     "doc": "Custom Geometry",
     "title": "Custom Geometry using ViennaLS",
     "content": ". ",
     "url": "/geo/custom.html#custom-geometry-using-viennals",
     
     "relUrl": "/geo/custom.html#custom-geometry-using-viennals"
-  },"1": {
+  },"3": {
     "doc": "Custom Geometry",
     "title": "Custom Geometry",
     "content": " ",
     "url": "/geo/custom.html",
     
     "relUrl": "/geo/custom.html"
-  },"2": {
+  },"4": {
     "doc": "Custom",
     "title": "Custom",
-    "content": " ",
-    "url": "/models/custom.html",
+    "content": ". ",
+    "url": "/models/custom/custom.html",
     
-    "relUrl": "/models/custom.html"
-  },"3": {
+    "relUrl": "/models/custom/custom.html"
+  },"5": {
+    "doc": "Example Process",
+    "title": "Example Process",
+    "content": ". ",
+    "url": "/examples/exampleProcess.html",
+    
+    "relUrl": "/examples/exampleProcess.html"
+  },"6": {
     "doc": "Geometry Extrusion",
     "title": "Extrude a Geometry from 2D to 3D",
     "content": ". ",
     "url": "/misc/extrusion.html#extrude-a-geometry-from-2d-to-3d",
     
     "relUrl": "/misc/extrusion.html#extrude-a-geometry-from-2d-to-3d"
-  },"4": {
+  },"7": {
     "doc": "Geometry Extrusion",
     "title": "Geometry Extrusion",
     "content": " ",
     "url": "/misc/extrusion.html",
     
     "relUrl": "/misc/extrusion.html"
-  },"5": {
+  },"8": {
     "doc": "Fin",
     "title": "Fin",
     "content": ". ",
     "url": "/geo/basic/fin.html",
     
     "relUrl": "/geo/basic/fin.html"
-  },"6": {
+  },"9": {
     "doc": "Member Functions",
     "title": "Member Functions",
     "content": " ",
     "url": "/domain/functions.html",
     
     "relUrl": "/domain/functions.html"
-  },"7": {
+  },"10": {
+    "doc": "GDS Reader",
+    "title": "GDS Reader",
+    "content": ". ",
+    "url": "/examples/gdsReader.html",
+    
+    "relUrl": "/examples/gdsReader.html"
+  },"11": {
     "doc": "GDS File Import",
     "title": "Importing a GDSII Mask File",
     "content": ". ",
     "url": "/geo/gdsimport.html#importing-a-gdsii-mask-file",
     
     "relUrl": "/geo/gdsimport.html#importing-a-gdsii-mask-file"
-  },"8": {
+  },"12": {
     "doc": "GDS File Import",
     "title": "GDS File Import",
     "content": " ",
     "url": "/geo/gdsimport.html",
     
     "relUrl": "/geo/gdsimport.html"
-  },"9": {
+  },"13": {
     "doc": "Hole",
     "title": "Hole",
     "content": ". ",
     "url": "/geo/basic/hole.html",
     
     "relUrl": "/geo/basic/hole.html"
-  },"10": {
+  },"14": {
+    "doc": "Hole Etching",
+    "title": "Hole Etching",
+    "content": ". ",
+    "url": "/examples/holeEtching.html",
+    
+    "relUrl": "/examples/holeEtching.html"
+  },"15": {
     "doc": "Simulation Domain",
     "title": "Simulation Domain",
-    "content": " ",
+    "content": ". #include &lt;psDomain.hpp&gt; . In our simulation framework, the essential hub for all geometry details is the psDomain class. This class is like a smart keeper of information, holding everything about the materials in the simulation domain. It uses level sets to show surfaces and material interfaces with great detail and organizes data in a cell-based structure for the underlying volumes. Depending on the specific process, it can use one or both of these methods. This flexibility ensures that the simulation can handle different processes accurately and efficiently. ",
     "url": "/domain/",
     
     "relUrl": "/domain/"
-  },"11": {
+  },"16": {
     "doc": "Basic Geometries",
     "title": "Basic Geometries",
     "content": ". ViennaPS provides a set of functions to effortlessly create basic geometries, facilitating quick testing of models or serving as the groundwork for your process simulation configuration. The various available geometries are outlined below: . ",
     "url": "/geo/basic/",
     
     "relUrl": "/geo/basic/"
-  },"12": {
+  },"17": {
     "doc": "Creating a Geometry",
     "title": "Creating a Geometry",
     "content": ". Create intricate geometries using the versatile tools offered by ViennaLS or generate a fundamental geometry. Alternatively, seamlessly import a geometry from a GDSII mask file for added flexibility and convenience. ",
     "url": "/geo/",
     
     "relUrl": "/geo/"
-  },"13": {
+  },"18": {
     "doc": "Advanced Cell-Set Functionalities",
     "title": "Advanced Cell-Set Functionalities",
-    "content": " ",
+    "content": ". Coming soon . ",
     "url": "/cellset/",
     
     "relUrl": "/cellset/"
-  },"14": {
+  },"19": {
     "doc": "Examples",
     "title": "Examples",
     "content": " ",
     "url": "/examples/",
     
     "relUrl": "/examples/"
-  },"15": {
+  },"20": {
+    "doc": "Installation",
+    "title": "Installation",
+    "content": ". The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the buildDependencies target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS mkdir build &amp;&amp; cd build cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/ make buildDependencies # this will install all dependencies and might take a while make install . This will install the necessary headers and CMake files to the specified path. If CMAKE_INSTALL_PREFIX is not specified, it will be installed to the standard path for your system, usually /usr/local/ . If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding *_DIR variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install). ",
+    "url": "/inst/",
+    
+    "relUrl": "/inst/"
+  },"21": {
     "doc": "Installation",
     "title": "Building the Python package",
     "content": "The Python package can be built and installed using the pip command: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS pip install --user . Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the ViennaLS Git Repository. ",
     "url": "/inst/#building-the-python-package",
     
     "relUrl": "/inst/#building-the-python-package"
-  },"16": {
+  },"22": {
     "doc": "Installation",
     "title": "Using the Python package",
     "content": "The 2D version of the library can be imported as follows: . import viennaps2d as vps . In order to switch to three dimensions, only the import needs to be changed: . import viennaps3d as vps . ",
     "url": "/inst/#using-the-python-package",
     
     "relUrl": "/inst/#using-the-python-package"
-  },"17": {
+  },"23": {
     "doc": "Installation",
     "title": "Integration in CMake projects",
     "content": "In order to use this library in your CMake project, add the following lines to the CMakeLists.txt of your project: . set(ViennaPS_DIR \"/path/to/your/custom/install/\") find_package(ViennaPS REQUIRED) add_executable(${PROJECT_NAME} ...) target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS}) target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES}) . ",
     "url": "/inst/#integration-in-cmake-projects",
     
     "relUrl": "/inst/#integration-in-cmake-projects"
-  },"18": {
-    "doc": "Installation",
-    "title": "Installation",
-    "content": "The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the buildDependencies target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS mkdir build &amp;&amp; cd build cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/ make buildDependencies # this will install all dependencies and might take a while make install . This will install the necessary headers and CMake files to the specified path. If CMAKE_INSTALL_PREFIX is not specified, it will be installed to the standard path for your system, usually /usr/local/ . If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding *_DIR variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install). ",
-    "url": "/inst/",
-    
-    "relUrl": "/inst/"
-  },"19": {
+  },"24": {
     "doc": "Geometry Output",
     "title": "Geometry Output",
     "content": " ",
     "url": "/output/",
     
     "relUrl": "/output/"
-  },"20": {
+  },"25": {
     "doc": "Running a Process",
     "title": "Running a Process",
     "content": " ",
     "url": "/process/",
     
     "relUrl": "/process/"
-  },"21": {
+  },"26": {
     "doc": "Dependencies",
     "title": "Dependencies",
-    "content": " ",
+    "content": ". ",
     "url": "/deps/",
     
     "relUrl": "/deps/"
-  },"22": {
+  },"27": {
+    "doc": "Dependencies",
+    "title": "ViennaLS",
+    "content": "ViennaLS forms the foundation of the process simulator, applying the level-set surface representation concepts for topography simulations. This module not only stores the level-set surface but also encompasses essential algorithms for geometry initialization, level-set value manipulation based on a velocity field, surface feature analysis, and seamless conversion of the level-set representation to other commonly employed material representations in device simulators. ",
+    "url": "/deps/#viennals",
+    
+    "relUrl": "/deps/#viennals"
+  },"28": {
+    "doc": "Dependencies",
+    "title": "ViennaRay",
+    "content": "ViennaPS relies on ViennaRay, a top-down Monte Carlo flux calculation library, to carry out essential flux calculations. This library is built upon Intel®’s ray tracing kernel, Embree. Crafted with a focus on efficiency and high-performance ray tracing, ViennaRay ensures a seamless user experience through its straightforward and user-friendly interface. In the top-down Monte Carlo approach, a large number of pseudo-particles are launched from a source plane situated above the surface, and their points of impact on the surface are determined. These pseudo-particles are initialized with a uniform initial position on the source plane and an initial direction that follows a power-cosine distribution. Each pseudo-particle carries a specific payload, representing a fraction of the total source flux. Upon reaching the surface, the current payload of the pseudo-particle contributes to the flux at that particular surface location. Furthermore, pseudo-particles have the capability to undergo reflection from the surface. The payload of a pseudo-particle undergoes reduction by the sticking coefficient during reflection. As a result, a pseudo-particle is tracked until its payload falls below a certain threshold or until it exits the simulation domain. This tracking mechanism provides a comprehensive understanding of the particle dynamics during its interaction with the sample surface. ",
+    "url": "/deps/#viennaray",
+    
+    "relUrl": "/deps/#viennaray"
+  },"29": {
+    "doc": "Pre-Built Models",
+    "title": "Pre-Built Models",
+    "content": " ",
+    "url": "/models/prebuilt/",
+    
+    "relUrl": "/models/prebuilt/"
+  },"30": {
+    "doc": "Custom Models",
+    "title": "Custom Models",
+    "content": " ",
+    "url": "/models/custom/",
+    
+    "relUrl": "/models/custom/"
+  },"31": {
     "doc": "Process Models",
     "title": "Process Models",
     "content": " ",
     "url": "/models/",
     
     "relUrl": "/models/"
-  },"23": {
+  },"32": {
     "doc": "Compact Modelling",
     "title": "Compact Modelling",
     "content": " ",
     "url": "/compact/",
     
     "relUrl": "/compact/"
-  },"24": {
+  },"33": {
     "doc": "Miscellaneous",
     "title": "Miscellaneous",
     "content": " ",
     "url": "/misc/",
     
     "relUrl": "/misc/"
-  },"25": {
+  },"34": {
     "doc": "Home",
     "title": "ViennaPS",
     "content": "Process Simulation Library . Get started now View it on GitHub . ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems. ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know on GitHub or contact us directly at viennatools@iue.tuwien.ac.at! . This documentation serves as your comprehensive guide to understanding, implementing, and harnessing the capabilities of our process simulation library. Whether you are a seasoned researcher seeking to refine your simulations or an engineer aiming to optimize real-world processes, this library provides a versatile and robust platform to meet your diverse needs. Throughout this documentation, you will find detailed explanations, practical examples, and best practices to effectively utilize the library. We aim to empower users with the knowledge and tools necessary to simulate a wide range of processes accurately and efficiently, making informed decisions and driving innovation in the field. ",
     "url": "/#viennaps",
     
     "relUrl": "/#viennaps"
-  },"26": {
+  },"35": {
     "doc": "Home",
     "title": "Getting Started",
     "content": " ",
     "url": "/#getting-started",
     
     "relUrl": "/#getting-started"
-  },"27": {
+  },"36": {
     "doc": "Home",
     "title": "Home",
     "content": " ",
     "url": "/",
     
     "relUrl": "/"
-  },"28": {
+  },"37": {
+    "doc": "Interpolation Demo",
+    "title": "Interpolation Demo",
+    "content": ". ",
+    "url": "/examples/interpolationDemo.html",
+    
+    "relUrl": "/examples/interpolationDemo.html"
+  },"38": {
     "doc": "Isotropic",
     "title": "Isotropic",
     "content": " ",
-    "url": "/models/isotropic.html",
+    "url": "/models/prebuilt/isotropic.html",
     
-    "relUrl": "/models/isotropic.html"
-  },"29": {
+    "relUrl": "/models/prebuilt/isotropic.html"
+  },"39": {
+    "doc": "KD-Tree Benchmark",
+    "title": "KD-Tree Benchmark",
+    "content": ". ",
+    "url": "/examples/kdTreeBenchmark.html",
+    
+    "relUrl": "/examples/kdTreeBenchmark.html"
+  },"40": {
     "doc": "Level Set",
     "title": "Level Set",
     "content": " ",
     "url": "/output/levelset.html",
     
     "relUrl": "/output/levelset.html"
-  },"30": {
+  },"41": {
     "doc": "Logging",
     "title": "Logging",
     "content": ". ",
     "url": "/misc/logging.html",
     
     "relUrl": "/misc/logging.html"
-  },"31": {
+  },"42": {
     "doc": "Material Mapping",
     "title": "Material Mapping",
     "content": " ",
     "url": "/domain/material.html",
     
     "relUrl": "/domain/material.html"
-  },"32": {
+  },"43": {
+    "doc": "Oxide Regrowth",
+    "title": "Oxide Regrowth",
+    "content": ". ",
+    "url": "/examples/oxideRegrowth.html",
+    
+    "relUrl": "/examples/oxideRegrowth.html"
+  },"44": {
     "doc": "Parsing Parameters",
     "title": "Parsing Parameters",
     "content": ". ",
     "url": "/misc/parsing.html",
     
     "relUrl": "/misc/parsing.html"
-  },"33": {
+  },"45": {
     "doc": "Planarize Geometry",
     "title": "Planarize a Geometry",
     "content": ". ",
     "url": "/misc/planarize.html#planarize-a-geometry",
     
     "relUrl": "/misc/planarize.html#planarize-a-geometry"
-  },"34": {
+  },"46": {
     "doc": "Planarize Geometry",
     "title": "Planarize Geometry",
     "content": " ",
     "url": "/misc/planarize.html",
     
     "relUrl": "/misc/planarize.html"
-  },"35": {
+  },"47": {
     "doc": "Plane",
     "title": "Plane",
     "content": ". This class provides a simple way to create a plane in a level set. It can be used to create a substrate of any material. The plane can be added to an already existing geometry or a new geometry can be created. The plane is created with normal direction in the positive z direction in 3D and positive y direction in 2D. The plane is centered around the origin with the total specified extent and height. The plane can have a periodic boundary in the x and y (only 3D) direction. ",
     "url": "/geo/basic/plane.html",
     
     "relUrl": "/geo/basic/plane.html"
-  },"36": {
+  },"48": {
     "doc": "Stack",
     "title": "Stack",
     "content": ". ",
     "url": "/geo/basic/stack.html",
     
     "relUrl": "/geo/basic/stack.html"
-  },"37": {
+  },"49": {
+    "doc": "Stack Etching",
+    "title": "Stack Etching",
+    "content": ". ",
+    "url": "/examples/stackEtching.html",
+    
+    "relUrl": "/examples/stackEtching.html"
+  },"50": {
+    "doc": "Surface and Material Interfaces",
+    "title": "Surface and Material Interfaces",
+    "content": ". The surface, as well as the material interfaces, are described implicitly by a level set (LS) function $\\phi(\\vec{x})$ which is defined at every point $\\vec{x}$ in space. This function is obtained using signed distance transforms, describing the surface $S$ as the zero LS: . \\[S = \\{\\vec{x}\\!: \\, \\phi(\\vec{x}) = 0 \\}.\\] For a more detailed description of the Level-Set method, please refer to one of the following sources1. If the domain contains multiple LSs, the top LS wraps the entire structure and therefore represents the surface, while all other LS functions just describe material interfaces. Formally, the different material regions can be described by ${M}$ LS functions satisfying . \\[\\Phi_k(\\vec{x}) \\leq 0 \\quad \\Leftrightarrow \\quad \\vec{x} \\in \\bigcup_{i=1}^k \\mathcal{M}_i.\\] Here $\\Phi_M$ describes the entire structure $\\mathcal{M}$, and the other LS functions correspond to material interfaces. When inserting a new LS into the domain, an automatic wrapping process ensues. This process involves enveloping all existing Level-Sets through a Boolean operation, specifically a union with the topmost LS. It’s worth noting, though, that this default behavior is not obligatory. In instances where a specialized domain structure is desired, users have the option to circumvent this automatic wrapping mechanism. Coming soon . | Source &#8617; . | . ",
+    "url": "/domain/surface.html#surface-and-material-interfaces",
+    
+    "relUrl": "/domain/surface.html#surface-and-material-interfaces"
+  },"51": {
     "doc": "Surface and Material Interfaces",
     "title": "Surface and Material Interfaces",
     "content": " ",
     "url": "/domain/surface.html",
     
     "relUrl": "/domain/surface.html"
-  },"38": {
+  },"52": {
     "doc": "Surface Mesh",
     "title": "Surface Mesh",
     "content": " ",
     "url": "/output/surface.html",
     
     "relUrl": "/output/surface.html"
-  },"39": {
+  },"53": {
     "doc": "Trench",
     "title": "Trench",
     "content": ". ",
     "url": "/geo/basic/trench.html",
     
     "relUrl": "/geo/basic/trench.html"
-  },"40": {
+  },"54": {
+    "doc": "Trench Deposition",
+    "title": "Trench Deposition",
+    "content": ". ",
+    "url": "/examples/trenchDeposition.html",
+    
+    "relUrl": "/examples/trenchDeposition.html"
+  },"55": {
+    "doc": "Geometric Trench Deposition",
+    "title": "Geometric Trench Deposition",
+    "content": ". ",
+    "url": "/examples/trenchDepositionGeometric.html",
+    
+    "relUrl": "/examples/trenchDepositionGeometric.html"
+  },"56": {
     "doc": "Volume",
     "title": "Volume",
-    "content": " ",
+    "content": ". A Cell-Set (CS) is used to store and track volume information in the domain. The CS is stored over the whole simulation domain, above and/or below the surface described by the Level-Set. It uses the same grid as the Level-Set, such that each Level-Set grid point acts as the corner of the cells around the point. To determine which material region a cell lies in, the LS values at the cell corner of the material interface are inspected. If the sum of the values is negative the cell belongs to the underlying material, otherwise it represents the material on the other side of the interface. To find a cell in which an arbitrary point in space resides, a bounding volume hierarchy (BVH) is built on top of the CS. This allows for fast access to random cells in the CS. Additionally, cell-neighbor relations are established when setting up the CS. This allows for quick access to neighbor cells. ",
     "url": "/domain/volume.html",
     
     "relUrl": "/domain/volume.html"
-  },"41": {
-    "doc": "Volume Mesh",
-    "title": "Volume Mesh",
+  },"57": {
+    "doc": "Volume",
+    "title": "How to use the Cell-Set",
+    "content": "To generate the CS from your domain, use the function: . auto domain = psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt;::New() ... // Add level-sets to domain ... domain-&gt;generateCellSet(position, isCellSetAboveSurface) . The position parameter describes the location of the cell set surface. With the parameter isCellSetAboveSurface one can specify whether the Cell-Set should be placed above or below the surface. If the Cell-Set is above the surface it covers all material in the domain and the position parameter should be set higher than the highest surface point in the domain. ",
+    "url": "/domain/volume.html#how-to-use-the-cell-set",
+    
+    "relUrl": "/domain/volume.html#how-to-use-the-cell-set"
+  },"58": {
+    "doc": "Volume",
+    "title": "Related Examples",
+    "content": ". | Volume Model | Oxide Regrowth | . ",
+    "url": "/domain/volume.html#related-examples",
+    
+    "relUrl": "/domain/volume.html#related-examples"
+  },"59": {
+    "doc": "Compact Modelling",
+    "title": "Compact Modelling",
     "content": " ",
     "url": "/output/volume.html",
     
     "relUrl": "/output/volume.html"
+  },"60": {
+    "doc": "Volume Model",
+    "title": "Volume Model",
+    "content": ". ",
+    "url": "/examples/volumeModel.html",
+    
+    "relUrl": "/examples/volumeModel.html"
   }
 }

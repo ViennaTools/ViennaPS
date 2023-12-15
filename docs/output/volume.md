@@ -1,6 +1,5 @@
 ---
 layout: default
-title: Volume Mesh
-parent: Geometry Output
-nav_order: 4
+title: Compact Modelling
+nav_order: 10
 ---

@@ -1,6 +1,7 @@
 ---
 layout: default
-title: Custom
+title: Custom Models
 parent: Process Models
 nav_order: 0
+has_children: true
 ---

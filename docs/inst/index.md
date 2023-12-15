@@ -4,6 +4,11 @@ title: Installation
 nav_order: 3
 ---
 
+# Installation
+{: .fs-9 .fw-700}
+
+---
+
 The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory:
 
 ```bash
@@ -29,6 +34,7 @@ cd ViennaPS
 pip install --user .
 ```
 
+{: .note}
 > Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
 
 ## Using the Python package
