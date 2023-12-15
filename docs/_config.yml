@@ -1,0 +1,8 @@
+title: ViennaPS Documentation
+description: The documentation for ViennaPS
+theme: just-the-docs
+
+url: https://viennatools.github.io/ViennaPS/
+
+aux_links:
+  Template Repository: https://github.com/just-the-docs/just-the-docs-template
