@@ -7,6 +7,7 @@ has_children: true
 ---
 
 # Basic Geometries 
+{: .fs-9 .fw-500 }
 
 ---
 

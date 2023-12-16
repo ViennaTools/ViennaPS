@@ -8,3 +8,6 @@ nav_order: 3
 # Logging
 
 ---
+
+Coming soon
+{: .label .label-yellow}

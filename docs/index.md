@@ -10,7 +10,7 @@ nav_order: 1
 Process Simulation Library
 {: .fs-6 .fw-300 }
 
-[Get started now](#getting-started){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Get started now]({% link start/index.md %}){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View it on GitHub](https://github.com/ViennaTools/ViennaPS){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -26,7 +26,21 @@ Throughout this documentation, you will find detailed explanations, practical ex
 
 
 
-## Getting Started
+## About the project
+
+ViennaPS was developed under the aegis of the [Institute for Microelectronics](http://www.iue.tuwien.ac.at/) at the __TU Wien__.
+
+Current contributors: Tobias Reiter, Julius Piso
+
+Contact us via: [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.at)
+
+### Contributing
+
+If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html). Before creating a pull request, make sure ALL files have been formatted by clang-format, which can be done using the `format-project.sh` script in the root directory.
+
+### License 
+
+See file [LICENSE](https://github.com/ViennaTools/ViennaPS/blob/master/LICENSE) in the base directory.
 
 [ViennaPS repo]: https://github.com/ViennaTools/ViennaPS
 [ViennaPS issues]: https://github.com/ViennaTools/ViennaPS/issues

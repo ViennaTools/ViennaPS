@@ -7,3 +7,6 @@ parent: Examples
 # KD-Tree Benchmark
 
 ---
+
+Coming soon
+{: .label .label-yellow}

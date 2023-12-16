@@ -7,3 +7,6 @@ parent: Examples
 # Interpolation Demo
 
 ---
+
+Coming soon
+{: .label .label-yellow}

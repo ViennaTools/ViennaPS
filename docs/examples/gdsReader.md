@@ -7,3 +7,6 @@ parent: Examples
 # GDS Reader
 
 ---
+
+Coming soon
+{: .label .label-yellow}

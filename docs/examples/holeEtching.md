@@ -7,3 +7,6 @@ parent: Examples
 # Hole Etching
 
 ---
+
+Coming soon
+{: .label .label-yellow}
