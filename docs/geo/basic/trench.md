@@ -52,17 +52,24 @@ psMakeTrench(psDomainType domain,
 
 __Example usage__:
 
-C++:
+<details markdown="1">
+<summary markdown="1">
+C++
 {: .label .label-blue }
+</summary>
 ```c++
 auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
 psMakeTrench<NumericType, D>(domain, 0.5, 10.0, 10.0, 5.0, 5.0, 10., 0.,
                             false, false, psMaterial::Si)
     .apply();
 ```
+</details>
 
-Python:
+<details markdown="1">
+<summary markdown="1">
+Python
 {: .label .label-green }
+</summary>
 ```python
 domain = vps.Domain()
 vps.MakeTrench(domain=domain,
@@ -78,3 +85,4 @@ vps.MakeTrench(domain=domain,
               material=vps.Material.Si,
              ).apply()
 ```
+</details>

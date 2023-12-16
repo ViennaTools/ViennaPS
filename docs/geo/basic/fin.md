@@ -44,17 +44,24 @@ psMakeFin(psDomainType domain,
 
 __Example usage:__
 
-C++:
+<details markdown="1">
+<summary markdown="1">
+C++
 {: .label .label-blue }
+</summary>
 ```c++
 auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
 psMakeFin<NumericType, D>(domain, 0.5, 10.0, 10.0, 5.0, 5.0, 0., false, false,
                           psMaterial::Si)
     .apply();
 ```
+</details>
 
+<details markdown="1">
+<summary markdown="1">
 Python:
 {: .label .label-green }
+</summary>
 ```python
 domain = vps.Domain()
 vps.MakeFin(domain=domain,
@@ -69,3 +76,4 @@ vps.MakeFin(domain=domain,
             material=vps.Material.Si,
            ).apply()
 ```
+</details>

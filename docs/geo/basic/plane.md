@@ -49,15 +49,23 @@ __Example usage__:
 
 * Creating a new domain: 
 
-C++:
+<details markdown="1">
+<summary markdown="1">
+C++
 {: .label .label-blue }
+</summary>
 ```c++
 auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
 psMakePlane<NumericType, D>(domain, 0.5, 10.0, 10.0, 0.0, false,
                             psMaterial::Si).apply();
 ```
-Python:
+</details>
+
+<details markdown="1">
+<summary markdown="1">
+Python
 {: .label .label-green }
+</summary>
 ```python
 domain = vps.Domain()
 vps.MakePlane(domain=domain,
@@ -69,18 +77,26 @@ vps.MakePlane(domain=domain,
               material=vps.Material.Si,
              ).apply()
 ```
+</details>
 
 * Adding plane to existing domain
 
-C++: 
+<details markdown="1">
+<summary markdown="1">
+C++
 {: .label .label-blue }
+</summary>
 ```c++
 auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
 psMakePlane<NumericType, D>(domain, 10.0, psMaterial::Si).apply();
 ```
+</details>
 
-Python:
+<details markdown="1">
+<summary markdown="1">
+Python
 {: .label .label-green }
+</summary>
 ```python
 domain = vps.Domain()
 vps.MakePlane(domain=domain,
@@ -88,3 +104,4 @@ vps.MakePlane(domain=domain,
               material=vps.Material.Si,
              ).apply()
 ```
+</details>

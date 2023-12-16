@@ -49,17 +49,24 @@ psMakeStack(psDomainType domain,
 
 __Example usage:__
 
-C++:
+<details markdown="1">
+<summary markdown="1">
+C++
 {: .label .label-blue }
+</summary>
 ```c++
 auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
 psMakeStack<NumericType, D>(domain, 0.5, 10.0, 10.0, 5, 5.0, 10., 0.0, 5.0,
                             0.0, false)
     .apply();
 ```
+</details>
 
-Python:
+<details markdown="1">
+<summary markdown="1">
+Python
 {: .label .label-green }
+</summary>
 ```python
 domain = vps.Domain()
 vps.MakeStack(domain=domain,
@@ -75,3 +82,4 @@ vps.MakeStack(domain=domain,
               periodicBoundary=False,
              ).apply()
 ```
+</details>

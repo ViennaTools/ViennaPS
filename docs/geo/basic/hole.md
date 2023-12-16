@@ -47,17 +47,24 @@ psMakeHole(psDomainType domain,
 
 __Example usage:__
 
-C++:
+<details markdown="1">
+<summary markdown="1">
+C++
 {: .label .label-blue }
+</summary>
 ```c++
 auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
 psMakeHole<NumericType, D>(domain, 0.5, 10.0, 10.0, 2.5, 5.0, 10., 0., false,
                             false, psMaterial::Si)
     .apply();
 ```
+</details>
 
-Python:
+<details markdown="1">
+<summary markdown="1">
+Python
 {: .label .label-green }
+</summary>
 ```python
 domain = vps.Domain()
 vps.MakeHole(domain=domain,
@@ -73,3 +80,4 @@ vps.MakeHole(domain=domain,
               material=vps.Material.Si,
              ).apply()
 ```
+</details>
