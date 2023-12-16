@@ -94,7 +94,7 @@ domain.saveVolumeMesh("trench_final")
 </details>
 
 Results:
-![](../../../assets/images/isotropicDeposition.png)
+![](../../assets/images/isotropicDeposition.png)
 
 __Etching example:__
 <details markdown="1">
