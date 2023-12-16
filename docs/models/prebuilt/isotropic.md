@@ -28,8 +28,11 @@ psIsotropicProcess(const NumericType rate,
 
 __Deposition example:__
 
-C++:
+<details markdown="1">
+<summary markdown="1">
+C++
 {: .label .label-blue}
+</summary>
 ```c++
 #include <psIsotropicProcess.hpp>
 #include <psMakeTrench.hpp>
@@ -56,9 +59,13 @@ int main() {
   domain->saveVolumeMesh("trench_final");
 }
 ```
+</details>
 
-Python:
+<details markdown="1">
+<summary markdown="1">
+Python
 {: .label .label-green}
+</summary>
 ```python
 import viennaps2d as vps
 
@@ -84,5 +91,69 @@ domain.saveVolumeMesh("trench_initial")
 vps.Process(domain, model, 20.0).apply()
 domain.saveVolumeMesh("trench_final")
 ```
+</details>
 
+Results:
 ![](../../../assets/images/isotropicDeposition.png)
+
+__Etching example:__
+<details markdown="1">
+<summary markdown="1">
+C++
+{: .label .label-blue}
+</summary>
+```c++
+#include <psIsotropicProcess.hpp>
+#include <psMakeTrench.hpp>
+#include <psProcess.hpp>
+
+int main() {
+  using NumericType = double;
+  constexpr int D = 2;
+
+  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+  psMakeTrench<NumericType, D>(domain, 0.1 /*gridDelta*/, 20. /*xExtent*/,
+                               20. /*yExtent*/, 5. /*trenchWidth*/,
+                               5. /*trenchDepth*/, 0., 0., false, true /*makeMask*/,
+                               psMaterial::Si)
+      .apply();
+
+  auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(
+      -0.1 /*rate*/, psMaterial::Mask);
+
+  domain->saveVolumeMesh("trench_initial");
+  psProcess<NumericType, D>(domain, model, 50.).apply(); // run process for 20s
+  domain->saveVolumeMesh("trench_final");
+}
+```
+</details>
+
+<details markdown="1">
+<summary markdown="1">
+Python
+{: .label .label-green}
+</summary>
+```python
+import viennaps2d as vps
+
+domain = vps.Domain()
+vps.MakeTrench(domain=domain,
+               gridDelta=0.1,
+               xExtent=20.0,
+               yExtent=20.0,
+               trenchWidth=5.0,
+               trenchDepth=5.0,
+               taperingAngle=0.0,
+               baseHeight=0.0,
+               periodicBoundary=False,
+               makeMask=True,
+               material=vps.Material.Si
+              ).apply()
+
+model = vps.IsotropicProcess(rate=-0.1, maskMaterial=vps.Material.Mask)
+
+domain.saveVolumeMesh("trench_initial", True)
+vps.Process(domain, model, 50.0).apply()
+domain.saveVolumeMesh("trench_final", True)
+```
+</details>
