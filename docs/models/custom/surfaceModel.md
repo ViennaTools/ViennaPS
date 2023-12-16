@@ -13,7 +13,7 @@ nav_order: 1
 
 The `psSurfaceModel` class serves as a comprehensive framework for detailing surface chemistries. Users have the flexibility to create a customized child class where they can precisely dictate how surface coverages evolve, driven by the rates at which particles impact the surface. The method `updateCoverages()` encapsulates the user-defined description of surface coverage evolution.
 
-Furthermore, within `psSurfaceModel`, the method `calculateVelocities()` utilizes data obtained through ray tracing, providing velocities crucial for surface advection. To initialize the coverage data vector, the method `initializeCoverages()` is employed, assuming an equilibrium state. Users can define the container size with values initialized to $0$ at each surface point, initiating ray tracing until equilibrium is attained. While our default implementation typically converges in around $10$ iterations, users can easily customize this parameter based on their specific simulation requirements.
+Furthermore, within `psSurfaceModel`, the method `calculateVelocities()` utilizes data obtained through ray tracing, providing velocities crucial for surface advection. To initialize the coverage data vector, the method `initializeCoverages()` is employed, assuming an equilibrium state. Users can define the container size with values initialized to 0 at each surface point, initiating ray tracing until equilibrium is attained. While our default implementation typically converges in around 10 iterations, users can easily customize this parameter based on their specific simulation requirements.
 
 In order to create a custom surface the user has to interface the `psSurfaceModel` class. An example implementation of a custom surface model is given below:
 ```c++
