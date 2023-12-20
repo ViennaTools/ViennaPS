@@ -23,3 +23,6 @@ MathJax = {
 #include <psPlasmaDamage.hpp>
 ```
 ---
+
+Coming soon
+{: .label .label-yellow}

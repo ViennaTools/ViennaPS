@@ -5,7 +5,7 @@ nav_order: 10
 ---
 
 # Compact Modelling
-{: .fs-9 .fw-500}
+{: .fs-9 .fw-700}
 
 ---
 

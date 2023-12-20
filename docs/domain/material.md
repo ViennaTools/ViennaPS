@@ -6,6 +6,7 @@ nav_order: 2
 ---
 
 # Material Mapping
+{: .fs-9 .fw-500 }
 
 ---
 

@@ -10,7 +10,7 @@ nav_order: 1
 Process Simulation Library
 {: .fs-6 .fw-300 }
 
-[Get started now]({% link start/index.md %}){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Get started now]({% link inst/index.md %}){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View it on GitHub](https://github.com/ViennaTools/ViennaPS){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---

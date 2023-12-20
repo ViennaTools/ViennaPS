@@ -21,7 +21,7 @@ nav_order: 3
 
 * C++17 Compiler with OpenMP support
 
-## First Steps
+## Installation
 
 Since this is a header only project, it does not require any installation. However, we recommend the following procedure in order to set up all dependencies correctly and relocate all header files to a designated directory:
 
