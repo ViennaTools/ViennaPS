@@ -16,6 +16,8 @@ nav_external_links:
   - title: "ViennaPS on Github" 
     url: https://github.com/ViennaTools/ViennaPS
 
+# For copy button on code
+enable_copy_code_button: true
 
 # Footer last edited timestamp
 last_edit_timestamp: true # show or hide edit time - page must have `last_modified_date` defined in the frontmatter

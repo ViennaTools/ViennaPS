@@ -12,3 +12,8 @@ has_children: true
 ---
 
 Users can create a custom process model by interfacing one or more of the classes described below and then inserting them into their custom process model.
+
+- The `psSurfaceModel` class is used to describe surface reactions, combining particle fluxes with the surface chemical reactions.
+- The `psVelocityField` provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step.
+- ViennaPS seamlessly integrates ViennaRay functionality through the `rayParticle` class, providing users with a versatile interface to define the key characteristics of the simulated particle species.
+

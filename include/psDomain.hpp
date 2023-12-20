@@ -188,11 +188,6 @@ public:
     cellSet->fromLevelSets(levelSets, materialMap, cellSetDepth);
   }
 
-  void setMaterialMap(materialMapType passedMaterialMap) {
-    materialMap = passedMaterialMap;
-    materialMapCheck();
-  }
-
   // Set the material of a specific Level-Set in the domain.
   void setMaterial(unsigned int lsId, const psMaterial material) {
     if (materialMap) {

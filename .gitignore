@@ -1,5 +1,9 @@
-build*
+# Build and dependencies folder
+build/
+dependencies/
+
 old_*
+
 *a.out
 install*
 *.vtk
@@ -8,9 +12,6 @@ install*
 *.vscode
 .vs
 CMakeSettings.json
-docs/doxygen/*.txt
-dependencies/
-!docs/doxygen/doxygen_template.txt
 *.so
 *.py[cod]
 *.egg-info

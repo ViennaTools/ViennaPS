@@ -1,13 +1,11 @@
 ---
 layout: default
-title: Parsing Parameters
+title: Point Data
 parent: Miscellaneous
-nav_order: 4
+nav_order: 5
 ---
 
-# Parsing Parameters
-{: .fs-9 .fw-500}
-
+# Point Data
 ---
 
 Coming soon

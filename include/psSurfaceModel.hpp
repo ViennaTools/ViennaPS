@@ -11,7 +11,7 @@ protected:
   psSmartPointer<psProcessParams<NumericType>> processParams = nullptr;
 
 public:
-  virtual void initializeCoverages(unsigned numGeometryPoints) {
+  virtual void initializeCoverages(unsigned numSurfacePoints) {
     // if no coverages get initialized here, they wont be used at all
   }
 
@@ -26,12 +26,13 @@ public:
   }
 
   virtual psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> rates,
+      psSmartPointer<psPointData<NumericType>> particleFluxes,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) {
     return nullptr;
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
-                               const std::vector<NumericType> &materialIds) {}
+  virtual void
+  updateCoverages(psSmartPointer<psPointData<NumericType>> particleFluxes,
+                  const std::vector<NumericType> &materialIds) {}
 };

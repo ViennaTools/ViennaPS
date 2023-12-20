@@ -26,3 +26,7 @@ MathJax = {
 
 Coming soon
 {: .label .label-yellow}
+
+## Related Examples
+
+* [Oxide Regrowth]({% link examples/oxideRegrowth.md %})
