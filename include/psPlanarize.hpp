@@ -32,6 +32,7 @@ public:
     lsMakeGeometry<NumericType, D>(
         plane, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
-    domain->applyOperation(plane, lsBooleanOperationEnum::RELATIVE_COMPLEMENT);
+    domain->applyBooleanOperation(plane,
+                                  lsBooleanOperationEnum::RELATIVE_COMPLEMENT);
   }
 };
