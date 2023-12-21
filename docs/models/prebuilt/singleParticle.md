@@ -19,4 +19,4 @@ Coming soon
 
 ## Related Examples
 
-* [Trench Deposition]({% link examples/trenchDeposition.md %})
+* [Trench Deposition](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDeposition)

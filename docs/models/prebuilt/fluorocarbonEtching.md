@@ -29,4 +29,4 @@ Coming soon
 
 ## Related Examples
 
-* [Stack Etching]({% link examples/stackEtching.md %})
+* [Stack Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/stackEtching)

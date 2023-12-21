@@ -19,5 +19,5 @@ Coming soon
 
 ## Related Examples
 
-* [Cantilever Wet Etching]({% link examples/cantileverWetEtching.md %})
-* [Selective Epitaxy]({% link examples/selectiveEpitaxy.md %})
+* [Cantilever Wet Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching)
+* [Selective Epitaxy](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy)

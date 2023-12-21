@@ -29,4 +29,4 @@ Coming soon
 
 ## Related Examples
 
-* [Oxide Regrowth]({% link examples/oxideRegrowth.md %})
+* [Oxide Regrowth](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxideRegrowth)

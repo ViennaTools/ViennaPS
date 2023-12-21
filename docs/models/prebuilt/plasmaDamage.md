@@ -29,4 +29,4 @@ Coming soon
 
 ## Related Examples
 
-* [Volume Model]({% link examples/volumeModel.md %})
+* [Volume Model](https://github.com/ViennaTools/ViennaPS/tree/master/examples/volumeModel)

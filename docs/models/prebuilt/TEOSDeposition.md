@@ -19,4 +19,4 @@ Coming soon
 
 ## Related Examples
 
-* [TEOS Trench Deposition]({% link examples/TEOSdeposition.md %})
+* [TEOS Trench Deposition](https://github.com/ViennaTools/ViennaPS/tree/master/examples/TEOSTrenchDeposition)

@@ -94,7 +94,7 @@ psSF6O2Etching(const double ionFlux, const double etchantFlux,
 
 ## Related Examples
 
-* [Hole Etching]({% link examples/holeEtching.md %})
+* [Hole Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching)
 
 ---
 

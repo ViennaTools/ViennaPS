@@ -34,5 +34,5 @@ The `position` parameter describes the location of the cell set surface. With th
 
 ## Related Examples
 
-* [Volume Model]({% link examples/volumeModel.md %})
-* [Oxide Regrowth]({% link examples/oxideRegrowth.md %})
+* [Volume Model](https://github.com/ViennaTools/ViennaPS/tree/master/examples/volumeModel)
+* [Oxide Regrowth](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxideRegrowth)
