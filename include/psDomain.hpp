@@ -218,7 +218,8 @@ public:
     std::cout << "**************************" << std::endl;
   }
 
-  // Save the level set as a VTK file.
+  // Save all level sets as a VTK files. The width parameter specifies the
+  // number of grid points around the zero level set to be saved.
   void saveLevelSetMesh(std::string name, int width = 1) {
     for (int i = 0; i < levelSets->size(); i++) {
       auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
