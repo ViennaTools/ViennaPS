@@ -570,19 +570,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // psMakeFin
   pybind11::class_<psMakeFin<T, D>, psSmartPointer<psMakeFin<T, D>>>(module,
                                                                      "MakeFin")
-      .def(pybind11::init([](DomainType Domain, const T gridDelta,
-                             const T xExtent, const T yExtent, const T FinWidth,
-                             const T FinHeight, const T BaseHeight,
-                             const bool PeriodicBoundary, const bool MakeMask,
-                             const psMaterial material) {
+      .def(pybind11::init([](DomainType domain, const T gridDelta,
+                             const T xExtent, const T yExtent, const T finWidth,
+                             const T finHeight, const T taperAngle,
+                             const T baseHeight, const bool periodicBoundary,
+                             const bool makeMask, const psMaterial material) {
              return psSmartPointer<psMakeFin<T, D>>::New(
-                 Domain, gridDelta, xExtent, yExtent, FinWidth, FinHeight,
-                 BaseHeight, PeriodicBoundary, MakeMask, material);
+                 domain, gridDelta, xExtent, yExtent, finWidth, finHeight,
+                 taperAngle, baseHeight, periodicBoundary, makeMask, material);
            }),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("finWidth"), pybind11::arg("finHeight"),
-           pybind11::arg("baseHeight") = 0.,
+           pybind11::arg("taperAngle") = 0., pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
            pybind11::arg("material") = psMaterial::None)

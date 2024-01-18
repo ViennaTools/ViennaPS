@@ -21,6 +21,7 @@ template <class NumericType, int D> class psMakeFin {
   const NumericType xExtent;
   const NumericType yExtent;
   const NumericType baseHeight = 0.;
+  const NumericType taperAngle = 0; // tapering angle in degrees
 
   const NumericType finWidth;
   const NumericType finHeight;
@@ -32,6 +33,7 @@ public:
   psMakeFin(psDomainType passedDomain, const NumericType passedGridDelta,
             const NumericType passedXExtent, const NumericType passedYExtent,
             const NumericType passedFinWidth, const NumericType passedFinHeight,
+            const NumericType passedTaperAngle = 0.,
             const NumericType passedBaseHeight = 0.,
             const bool passedPeriodic = false,
             const bool passedMakeMask = false,
@@ -39,15 +41,18 @@ public:
       : domain(passedDomain), gridDelta(passedGridDelta),
         xExtent(passedXExtent), yExtent(passedYExtent),
         finWidth(passedFinWidth), finHeight(passedFinHeight),
-        baseHeight(passedBaseHeight), periodicBoundary(passedPeriodic),
-        makeMask(passedMakeMask), material(passedMaterial) {}
+        taperAngle(passedTaperAngle), baseHeight(passedBaseHeight),
+        periodicBoundary(passedPeriodic), makeMask(passedMakeMask),
+        material(passedMaterial) {}
 
   void apply() {
     domain->clear();
     if constexpr (D == 3) {
 
-      double bounds[2 * D] = {-xExtent / 2, xExtent / 2, -yExtent / 2,
-                              yExtent / 2,  -gridDelta,  finHeight + gridDelta};
+      double bounds[2 * D] = {
+          -xExtent / 2,           xExtent / 2,
+          -yExtent / 2,           yExtent / 2,
+          baseHeight - gridDelta, baseHeight + finHeight + gridDelta};
 
       typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D] = {
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
@@ -62,7 +67,7 @@ public:
 
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
       NumericType normal[D] = {0., 0., 1.};
-      NumericType origin[D] = {0., 0., 0.};
+      NumericType origin[D] = {0., 0., baseHeight};
       lsMakeGeometry<NumericType, D>(
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
@@ -70,16 +75,26 @@ public:
 
       auto mask = LSPtrType::New(bounds, boundaryCons, gridDelta);
 
-      NumericType minPoint[D] = {-finWidth / 2, -yExtent / 2, -gridDelta};
-      NumericType maxPoint[D] = {finWidth / 2, yExtent / 2, finHeight};
+      if (taperAngle == 0.) {
+        NumericType minPoint[D] = {-finWidth / 2, -yExtent / 2,
+                                   baseHeight - gridDelta};
+        NumericType maxPoint[D] = {finWidth / 2, yExtent / 2,
+                                   baseHeight + finHeight};
 
-      lsMakeGeometry<NumericType, D>(
-          mask, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-          .apply();
+        lsMakeGeometry<NumericType, D>(
+            mask,
+            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+            .apply();
 
-      lsBooleanOperation<NumericType, D>(substrate, mask,
-                                         lsBooleanOperationEnum::UNION)
-          .apply();
+        lsBooleanOperation<NumericType, D>(substrate, mask,
+                                           lsBooleanOperationEnum::UNION)
+            .apply();
+      } else {
+        psLogger::getInstance()
+            .addWarning(
+                "psMakeFin: Tapered fins are not yet implemented in 3D!")
+            .print();
+      }
 
       if (material == psMaterial::None) {
         if (makeMask)
@@ -92,8 +107,8 @@ public:
       }
     } else if constexpr (D == 2) {
 
-      double bounds[2 * D] = {-xExtent / 2, xExtent / 2, -gridDelta,
-                              finHeight + gridDelta};
+      double bounds[2 * D] = {-xExtent / 2, xExtent / 2, baseHeight - gridDelta,
+                              baseHeight + finHeight + gridDelta};
 
       typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D] = {
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
@@ -105,18 +120,54 @@ public:
 
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
       NumericType normal[D] = {0., 1.};
-      NumericType origin[D] = {0., 0.};
+      NumericType origin[D] = {0., baseHeight};
       lsMakeGeometry<NumericType, D>(
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
 
       auto mask = LSPtrType::New(bounds, boundaryCons, gridDelta);
-      NumericType minPoint[D] = {-finWidth / 2, -gridDelta};
-      NumericType maxPoint[D] = {finWidth / 2, finHeight};
-      lsMakeGeometry<NumericType, D>(
-          mask, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-          .apply();
+
+      if (taperAngle == 0.) {
+        NumericType minPoint[D] = {-finWidth / 2, baseHeight - gridDelta};
+        NumericType maxPoint[D] = {finWidth / 2, baseHeight + finHeight};
+        lsMakeGeometry<NumericType, D>(
+            mask,
+            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+            .apply();
+      } else {
+        if (taperAngle >= 90 || taperAngle <= -90) {
+          psLogger::getInstance()
+              .addError("psMakeFin: Taper angle must be between -90 and 90 "
+                        "degrees!")
+              .print();
+          return;
+        }
+
+        auto boxMesh = psSmartPointer<lsMesh<NumericType>>::New();
+        boxMesh->insertNextNode({-finWidth / 2, baseHeight - gridDelta});
+        boxMesh->insertNextNode({finWidth / 2, baseHeight - gridDelta});
+        boxMesh->insertNextLine({1, 0});
+
+        NumericType taperAngleRad = taperAngle * M_PI / 180.;
+        NumericType offSet = finHeight * std::tan(taperAngleRad);
+        if (offSet >= finWidth / 2) {
+          boxMesh->insertNextNode(
+              {0., baseHeight + finWidth / 2 / std::tan(taperAngleRad)});
+          boxMesh->insertNextLine({2, 1});
+          boxMesh->insertNextLine({0, 2});
+        } else {
+          boxMesh->insertNextNode(
+              {finWidth / 2 - offSet, baseHeight + finHeight});
+          boxMesh->insertNextNode(
+              {-finWidth / 2 + offSet, baseHeight + finHeight});
+          boxMesh->insertNextLine({2, 1});
+          boxMesh->insertNextLine({3, 2});
+          boxMesh->insertNextLine({0, 3});
+        }
+
+        lsFromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
+      }
 
       lsBooleanOperation<NumericType, D>(substrate, mask,
                                          lsBooleanOperationEnum::UNION)
