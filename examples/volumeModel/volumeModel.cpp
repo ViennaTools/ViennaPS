@@ -34,12 +34,8 @@ int main(int argc, char *argv[]) {
       params.meanFreePath /* damage ion mean free path */,
       psMaterial::None /*mask material (no mask)*/);
 
-  psProcess<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
-  process.setProcessDuration(0.); // apply only damage model
-
-  process.apply();
+  psProcess<NumericType, D>(geometry, model, 0.)
+      .apply(); // apply only damage model
 
   geometry->getCellSet()->writeVTU("DamageModel.vtu");
 }

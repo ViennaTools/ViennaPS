@@ -25,8 +25,11 @@ private:
   size_t mNumberOfRaysFixed = 1000;
   T mGridDelta = 0;
   rayBoundaryCondition mBoundaryConditions[D] = {};
-  rayTraceDirection mSourceDirection = rayTraceDirection::POS_Z;
+  const rayTraceDirection mSourceDirection =
+      D == 2 ? rayTraceDirection::POS_Y : rayTraceDirection::POS_Z;
   bool mUseRandomSeeds = true;
+  bool usePrimaryDirection = false;
+  rayTriple<T> primaryDirection = {0.};
   size_t mRunNumber = 0;
   int excludeMaterialId = -1;
 
@@ -55,9 +58,18 @@ public:
                                       traceSettings);
 
     std::array<rayTriple<T>, 3> orthoBasis;
+    if (usePrimaryDirection) {
+      orthoBasis = rayInternal::getOrthonormalBasis(primaryDirection);
+      psLogger::getInstance()
+          .addInfo("Using primary direction: " +
+                   std::to_string(primaryDirection[0]) + " " +
+                   std::to_string(primaryDirection[1]) + " " +
+                   std::to_string(primaryDirection[2]))
+          .print();
+    }
     auto raySource = raySourceRandom<T, D>(
         boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
-        mGeometry.getNumPoints(), false, orthoBasis);
+        mGeometry.getNumPoints(), usePrimaryDirection, orthoBasis);
 
     auto tracer = csTracingKernel<T, D>(
         mDevice, mGeometry, boundary, raySource, mParticle,
@@ -88,6 +100,11 @@ public:
   void setNumberOfRaysPerPoint(const size_t passedNumber) {
     mNumberOfRaysPerPoint = passedNumber;
     mNumberOfRaysFixed = 0;
+  }
+
+  void setPrimaryDirection(const rayTriple<T> pPrimaryDirection) {
+    primaryDirection = pPrimaryDirection;
+    usePrimaryDirection = true;
   }
 
   void setExcludeMaterialId(int passedId) { excludeMaterialId = passedId; }
