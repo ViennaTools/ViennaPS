@@ -3,6 +3,7 @@
 #include <embree3/rtcore.h>
 
 #include <csDenseCellSet.hpp>
+#include <csPointSource.hpp>
 #include <csTracingKernel.hpp>
 #include <csTracingParticle.hpp>
 
@@ -32,6 +33,9 @@ private:
   rayTriple<T> primaryDirection = {0.};
   size_t mRunNumber = 0;
   int excludeMaterialId = -1;
+  bool usePointSource = false;
+  csTriple<T> pointSourceOrigin = {0.};
+  csTriple<T> pointSourceDirection = {0.};
 
 public:
   csTracing() : mDevice(rtcNewDevice("hugepages=1")) {
@@ -67,15 +71,28 @@ public:
                    std::to_string(primaryDirection[2]))
           .print();
     }
-    auto raySource = raySourceRandom<T, D>(
-        boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
-        mGeometry.getNumPoints(), usePrimaryDirection, orthoBasis);
 
-    auto tracer = csTracingKernel<T, D>(
-        mDevice, mGeometry, boundary, raySource, mParticle,
-        mNumberOfRaysPerPoint, mNumberOfRaysFixed, mUseRandomSeeds,
-        mRunNumber++, cellSet, excludeMaterialId - 1);
-    tracer.apply();
+    if (usePointSource) {
+      auto raySource =
+          csPointSource<T, D>(pointSourceOrigin, pointSourceDirection,
+                              traceSettings, mGeometry.getNumPoints());
+
+      csTracingKernel<T, D>(mDevice, mGeometry, boundary, raySource, mParticle,
+                            mNumberOfRaysPerPoint, mNumberOfRaysFixed,
+                            mUseRandomSeeds, mRunNumber++, cellSet,
+                            excludeMaterialId - 1)
+          .apply();
+    } else {
+      auto raySource = raySourceRandom<T, D>(
+          boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
+          mGeometry.getNumPoints(), usePrimaryDirection, orthoBasis);
+
+      csTracingKernel<T, D>(mDevice, mGeometry, boundary, raySource, mParticle,
+                            mNumberOfRaysPerPoint, mNumberOfRaysFixed,
+                            mUseRandomSeeds, mRunNumber++, cellSet,
+                            excludeMaterialId - 1)
+          .apply();
+    }
 
     averageNeighborhood();
     boundary.releaseGeometry();
@@ -83,6 +100,13 @@ public:
 
   void setCellSet(lsSmartPointer<csDenseCellSet<T, D>> passedCellSet) {
     cellSet = passedCellSet;
+  }
+
+  void setPointSource(const csTriple<T> &passedOrigin,
+                      const csTriple<T> &passedDirection) {
+    usePointSource = true;
+    pointSourceOrigin = passedOrigin;
+    pointSourceDirection = passedDirection;
   }
 
   template <typename ParticleType>
