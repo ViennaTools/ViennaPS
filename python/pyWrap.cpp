@@ -429,6 +429,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("duration"))
       // methods
       .def("apply", &psProcess<T, D>::apply, "Run the process.")
+      .def("calculateFlux", &psProcess<T, D>::calculateFlux,
+           "Perform a single-pass flux calculation.")
       .def("setDomain", &psProcess<T, D>::setDomain, "Set the process domain.")
       .def("setProcessModel",
            &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
