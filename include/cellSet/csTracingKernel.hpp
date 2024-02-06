@@ -216,17 +216,11 @@ public:
           rayHit.ray.time = 0.0f;
 #endif
         } while (reflect);
-
-        if (psLogger::getLogLevel() >= 3)
-          psUtils::printProgress(idx, mNumRays);
       } // end ray tracing for loop
 
 #pragma omp critical
       myCellSet->mergePath(path, mNumRays);
     } // end parallel section
-
-    if (psLogger::getLogLevel() >= 3)
-      std::cout << std::endl;
 
     rtcReleaseGeometry(rtcGeometry);
     rtcReleaseGeometry(rtcBoundary);

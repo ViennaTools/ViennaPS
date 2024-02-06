@@ -11,7 +11,7 @@
 /// The process model combines all models (particle types, surface model,
 /// geometric model, advection callback)
 template <typename NumericType, int D> class psProcessModel {
-private:
+protected:
   using ParticleTypeList =
       std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
@@ -59,7 +59,7 @@ public:
 
   void setProcessName(std::string name) { processName = name; }
 
-  void
+  virtual void
   setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
     primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
   }

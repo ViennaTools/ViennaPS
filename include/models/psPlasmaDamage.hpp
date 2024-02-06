@@ -209,6 +209,11 @@ public:
     domain->getCellSet()->updateSurface();
     return true;
   }
+
+  void
+  setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
+    tracer.setPrimaryDirection(passedPrimaryDirection);
+  }
 };
 } // namespace PlasmaDamageImplementation
 
@@ -224,5 +229,14 @@ public:
 
     this->setProcessName("PlasmaDamage");
     this->setAdvectionCallback(volumeModel);
+  }
+
+  void setPrimaryDirection(
+      const std::array<NumericType, 3> passedPrimaryDirection) override final {
+    this->primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
+    auto cb = std::dynamic_pointer_cast<
+        PlasmaDamageImplementation::DamageModel<NumericType, D>>(
+        this->getAdvectionCallback());
+    cb->setPrimaryDirection(passedPrimaryDirection);
   }
 };

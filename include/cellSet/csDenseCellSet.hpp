@@ -195,6 +195,23 @@ public:
     return getFillingFractions()->at(idx);
   }
 
+  T getAverageFillingFraction(const std::array<T, 3> &point,
+                              const T radius) const {
+    T sum = 0.;
+    int count = 0;
+    for (int i = 0; i < numberOfCells; i++) {
+      auto &cell = cellGrid->template getElements<(1 << D)>()[i];
+      auto node = cellGrid->getNodes()[cell[0]];
+      for (int j = 0; j < D; j++)
+        node[j] += gridDelta / 2.;
+      if (csUtil::distance(node, point) < radius) {
+        sum += fillingFractions->at(i);
+        count++;
+      }
+    }
+    return sum / count;
+  }
+
   int getIndex(const std::array<T, 3> &point) { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
