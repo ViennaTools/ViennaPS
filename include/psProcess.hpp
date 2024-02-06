@@ -98,6 +98,75 @@ public:
   // are printed.
   void setPrintTimeInterval(NumericType passedTime) { printTime = passedTime; }
 
+  // A single flux calculation is performed on the domain surface. The result is
+  // stored as point data on the nodes of the mesh.
+  psSmartPointer<lsMesh<NumericType>> calculateFlux() const {
+
+    // Generate disk mesh from domain
+    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+    lsToDiskMesh<NumericType, D> meshConverter(mesh);
+    for (auto dom : *domain->getLevelSets()) {
+      meshConverter.insertNextLevelSet(dom);
+    }
+    meshConverter.apply();
+
+    if (model->getSurfaceModel()->getCoverages() != nullptr) {
+      psLogger::getInstance()
+          .addWarning(
+              "Coverages are not supported for single-pass flux calculation.")
+          .print();
+      return mesh;
+    }
+
+    rayBoundaryCondition rayBoundaryCondition[D];
+    rayTrace<NumericType, D> rayTracer;
+
+    // Map the domain boundary to the ray tracing boundaries
+    for (unsigned i = 0; i < D; ++i)
+      rayBoundaryCondition[i] =
+          convertBoundaryCondition(domain->getGrid().getBoundaryConditions(i));
+    rayTracer.setSourceDirection(sourceDirection);
+    rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
+    rayTracer.setBoundaryConditions(rayBoundaryCondition);
+    rayTracer.setUseRandomSeeds(useRandomSeeds);
+    rayTracer.setCalculateFlux(false);
+    auto primaryDirection = model->getPrimaryDirection();
+    if (primaryDirection) {
+      psLogger::getInstance()
+          .addInfo("Using primary direction: " +
+                   psUtils::arrayToString(primaryDirection.value()))
+          .print();
+      rayTracer.setPrimaryDirection(primaryDirection.value());
+    }
+
+    auto points = mesh->getNodes();
+    auto normals = *mesh->getCellData().getVectorData("Normals");
+    auto materialIds = *mesh->getCellData().getScalarData("MaterialIds");
+    rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
+    rayTracer.setMaterialIds(materialIds);
+
+    for (auto &particle : *model->getParticleTypes()) {
+      rayTracer.setParticleType(particle);
+      rayTracer.apply();
+
+      // fill up rates vector with rates from this particle type
+      auto &localData = rayTracer.getLocalData();
+      int numRates = particle->getLocalDataLabels().size();
+      for (int i = 0; i < numRates; ++i) {
+        auto rate = std::move(localData.getVectorData(i));
+
+        // normalize fluxes
+        rayTracer.normalizeFlux(rate);
+        if (smoothFlux)
+          rayTracer.smoothFlux(rate);
+        mesh->getCellData().insertNextScalarData(
+            std::move(rate), localData.getVectorDataLabel(i));
+      }
+    }
+
+    return mesh;
+  }
+
   // Run the process.
   void apply() {
     /* ---------- Process Setup --------- */
@@ -587,7 +656,7 @@ private:
   }
 
   rayBoundaryCondition convertBoundaryCondition(
-      lsBoundaryConditionEnum<D> originalBoundaryCondition) {
+      lsBoundaryConditionEnum<D> originalBoundaryCondition) const {
     switch (originalBoundaryCondition) {
     case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
       return rayBoundaryCondition::REFLECTIVE;
