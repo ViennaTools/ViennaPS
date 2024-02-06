@@ -98,7 +98,8 @@ public:
   // are printed.
   void setPrintTimeInterval(NumericType passedTime) { printTime = passedTime; }
 
-  // A single flux calculation is performed on the domain surface.
+  // A single flux calculation is performed on the domain surface. The result is
+  // stored as point data on the nodes of the mesh.
   psSmartPointer<lsMesh<NumericType>> calculateFlux() const {
 
     // Generate disk mesh from domain
@@ -108,8 +109,6 @@ public:
       meshConverter.insertNextLevelSet(dom);
     }
     meshConverter.apply();
-    const NumericType gridDelta =
-        domain->getLevelSets()->back()->getGrid().getGridDelta();
 
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
       psLogger::getInstance()
@@ -130,6 +129,7 @@ public:
     rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
     rayTracer.setBoundaryConditions(rayBoundaryCondition);
     rayTracer.setUseRandomSeeds(useRandomSeeds);
+    rayTracer.setCalculateFlux(false);
     auto primaryDirection = model->getPrimaryDirection();
     if (primaryDirection) {
       psLogger::getInstance()
@@ -138,15 +138,12 @@ public:
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }
-    rayTracer.setCalculateFlux(false);
 
     auto points = mesh->getNodes();
     auto normals = *mesh->getCellData().getVectorData("Normals");
     auto materialIds = *mesh->getCellData().getScalarData("MaterialIds");
-    rayTracer.setGeometry(points, normals, gridDelta);
+    rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
     rayTracer.setMaterialIds(materialIds);
-
-    auto rates = psSmartPointer<psPointData<NumericType>>::New();
 
     for (auto &particle : *model->getParticleTypes()) {
       rayTracer.setParticleType(particle);
