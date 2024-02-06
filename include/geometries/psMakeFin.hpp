@@ -85,16 +85,86 @@ public:
             mask,
             lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
             .apply();
-
-        lsBooleanOperation<NumericType, D>(substrate, mask,
-                                           lsBooleanOperationEnum::UNION)
-            .apply();
       } else {
-        psLogger::getInstance()
-            .addWarning(
-                "psMakeFin: Tapered fins are not yet implemented in 3D!")
-            .print();
+        if (taperAngle >= 90 || taperAngle <= -90) {
+          psLogger::getInstance()
+              .addError("psMakeFin: Taper angle must be between -90 and 90 "
+                        "degrees!")
+              .print();
+          return;
+        }
+
+        auto boxMesh = psSmartPointer<lsMesh<NumericType>>::New();
+        boxMesh->insertNextNode(
+            {-finWidth / 2, yExtent / 2 + gridDelta, baseHeight - gridDelta});
+        boxMesh->insertNextNode(
+            {finWidth / 2, yExtent / 2 + gridDelta, baseHeight - gridDelta});
+
+        NumericType taperAngleRad = taperAngle * M_PI / 180.;
+        NumericType offSet = finHeight * std::tan(taperAngleRad);
+        if (offSet >= finWidth / 2) {
+          boxMesh->insertNextNode(
+              {0., yExtent / 2 + gridDelta,
+               baseHeight + finWidth / 2 / std::tan(taperAngleRad)});
+
+          // shifted nodes by y extent
+          boxMesh->insertNextNode({-finWidth / 2, -yExtent / 2 - gridDelta,
+                                   baseHeight - gridDelta});
+          boxMesh->insertNextNode(
+              {finWidth / 2, -yExtent / 2 - gridDelta, baseHeight - gridDelta});
+          boxMesh->insertNextNode(
+              {0., -yExtent / 2 - gridDelta,
+               baseHeight + finWidth / 2 / std::tan(taperAngleRad)});
+
+          // triangles
+          boxMesh->insertNextTriangle({0, 2, 1}); // front
+          boxMesh->insertNextTriangle({3, 4, 5}); // back
+          boxMesh->insertNextTriangle({0, 1, 3}); // bottom
+          boxMesh->insertNextTriangle({1, 4, 3}); // bottom
+          boxMesh->insertNextTriangle({1, 2, 5}); // right
+          boxMesh->insertNextTriangle({1, 5, 4}); // right
+          boxMesh->insertNextTriangle({0, 3, 2}); // left
+          boxMesh->insertNextTriangle({3, 5, 2}); // left
+        } else {
+          boxMesh->insertNextNode({finWidth / 2 - offSet,
+                                   yExtent / 2 + gridDelta,
+                                   baseHeight + finHeight});
+          boxMesh->insertNextNode({-finWidth / 2 + offSet,
+                                   yExtent / 2 + gridDelta,
+                                   baseHeight + finHeight});
+
+          // shifted nodes by y extent
+          boxMesh->insertNextNode({-finWidth / 2, -yExtent / 2 - gridDelta,
+                                   baseHeight - gridDelta});
+          boxMesh->insertNextNode(
+              {finWidth / 2, -yExtent / 2 - gridDelta, baseHeight - gridDelta});
+          boxMesh->insertNextNode({finWidth / 2 - offSet,
+                                   -yExtent / 2 - gridDelta,
+                                   baseHeight + finHeight});
+          boxMesh->insertNextNode({-finWidth / 2 + offSet,
+                                   -yExtent / 2 - gridDelta,
+                                   baseHeight + finHeight});
+
+          // triangles
+          boxMesh->insertNextTriangle({0, 3, 1}); // front
+          boxMesh->insertNextTriangle({1, 3, 2}); // front
+          boxMesh->insertNextTriangle({4, 5, 6}); // back
+          boxMesh->insertNextTriangle({4, 6, 7}); // back
+          boxMesh->insertNextTriangle({0, 1, 4}); // bottom
+          boxMesh->insertNextTriangle({1, 5, 4}); // bottom
+          boxMesh->insertNextTriangle({1, 2, 5}); // right
+          boxMesh->insertNextTriangle({2, 6, 5}); // right
+          boxMesh->insertNextTriangle({0, 4, 3}); // left
+          boxMesh->insertNextTriangle({3, 4, 7}); // left
+          boxMesh->insertNextTriangle({3, 7, 2}); // top
+          boxMesh->insertNextTriangle({2, 7, 6}); // top
+        }
+        lsFromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
       }
+
+      lsBooleanOperation<NumericType, D>(substrate, mask,
+                                         lsBooleanOperationEnum::UNION)
+          .apply();
 
       if (material == psMaterial::None) {
         if (makeMask)
