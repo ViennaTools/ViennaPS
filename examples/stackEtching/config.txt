@@ -1,0 +1,22 @@
+# Domain
+gridDelta = 2.  # nm
+xExtent = 120.0 # nm
+yExtent = 120.0 # nm 
+
+# Geometry
+numLayers = 5
+layerHeight = 30.     # nm
+substrateHeight = 50. # nm
+trenchWidth = 75      # nm
+maskHeight = 50       # nm
+
+# Process
+processTime = 20 # seconds
+
+# fluxes in 1e15 atoms/cm3
+etchantFlux = 150
+polyFlux = 10
+ionFlux = 56
+meanIonEnergy = 100.
+sigmaIonEnergy = 10.
+ionExponent = 100.

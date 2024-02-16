@@ -27,7 +27,7 @@ template <class NumericType, int D = 3> class psGDSGeometry {
   static constexpr double eps = 1e-6;
 
   double bounds[6];
-  NumericType gridDelta;
+  NumericType gridDelta = 1.;
   typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
       lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
       lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
@@ -249,6 +249,16 @@ public:
     }
   }
 
+  void printBound() const {
+    std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
+              << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
+              << std::endl;
+  }
+
+  std::array<std::array<NumericType, 2>, 2> getBoundingBox() const {
+    return {minBounds, maxBounds};
+  }
+
   void calculateBoundingBoxes() {
     minBounds[0] = std::numeric_limits<NumericType>::max();
     minBounds[1] = std::numeric_limits<NumericType>::max();
@@ -328,18 +338,9 @@ public:
     bounds[5] = 1.;
   }
 
-  void printBound() const {
-    std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
-              << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
-              << std::endl;
-  }
-
-  std::array<std::array<NumericType, 2>, 2> getBoundingBox() const {
-    return {minBounds, maxBounds};
-  }
-
   double *getBounds() { return bounds; }
 
+private:
   void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
               psGDSElement<NumericType> &element, const NumericType baseHeight,
               const NumericType height, const NumericType xOffset,
@@ -511,7 +512,7 @@ public:
       for (int d = 0; d < 3; d++) {
         triangle[d] += numPointsFlat;
       }
-      swap(triangle[0], triangle[2]); // swap for correct orientation
+      std::swap(triangle[0], triangle[2]); // swap for correct orientation
       mesh->insertNextTriangle(triangle);
     }
 
@@ -552,12 +553,6 @@ public:
     }
 
     return true;
-  }
-
-  inline void swap(unsigned &a, unsigned &b) {
-    unsigned t = a;
-    a = b;
-    b = t;
   }
 
   void adjustPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,

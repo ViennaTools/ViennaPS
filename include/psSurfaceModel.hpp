@@ -1,5 +1,4 @@
-#ifndef PS_SURFACE_MODEL
-#define PS_SURFACE_MODEL
+#pragma once
 
 #include <psPointData.hpp>
 #include <psProcessParams.hpp>
@@ -8,7 +7,7 @@
 
 template <typename NumericType> class psSurfaceModel {
 protected:
-  psSmartPointer<psPointData<NumericType>> Coverages = nullptr;
+  psSmartPointer<psPointData<NumericType>> coverages = nullptr;
   psSmartPointer<psProcessParams<NumericType>> processParams = nullptr;
 
 public:
@@ -20,21 +19,19 @@ public:
     // if no process parameters get initialized here, they wont be used at all
   }
 
-  psSmartPointer<psPointData<NumericType>> getCoverages() { return Coverages; }
+  psSmartPointer<psPointData<NumericType>> getCoverages() { return coverages; }
 
   psSmartPointer<psProcessParams<NumericType>> getProcessParameters() {
     return processParams;
   }
 
   virtual psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> Rates,
+      psSmartPointer<psPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIDs) {
+      const std::vector<NumericType> &materialIds) {
     return nullptr;
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> Rates,
+  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
                                const std::vector<NumericType> &materialIds) {}
 };
-
-#endif

@@ -44,6 +44,7 @@ else()
       viennals_external
       GIT_REPOSITORY https://github.com/ViennaTools/ViennaLS.git
       GIT_SHALLOW 1
+      GIT_TAG legacy
       INSTALL_DIR "${DEPENDENCIES_DIR}/Install/viennals_external"
       CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
                  -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}

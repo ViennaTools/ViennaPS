@@ -1,11 +1,11 @@
-#ifndef PS_UTIL_HPP
-#define PS_UTIL_HPP
+#pragma once
 
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <optional>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -185,7 +185,7 @@ public:
   }
 };
 
-// If the key is found inthe unordered_map, then the
+// If the key is found in the unordered_map, then the
 template <typename K, typename V, typename C>
 void AssignItems(std::unordered_map<std::string, std::string> &map,
                  Item<K, V, C> &&item) {
@@ -207,5 +207,15 @@ void AssignItems(std::unordered_map<std::string, std::string> &map,
   AssignItems(map, std::forward<ARGS>(args)...);
 }
 
+template <class NumericType, std::size_t D>
+std::string arrayToString(const std::array<NumericType, D> arr) {
+  std::stringstream arrayStr;
+  arrayStr << "[";
+  for (std::size_t i = 0; i < D - 1; i++) {
+    arrayStr << arr[i] << ", ";
+  }
+  arrayStr << arr[D - 1] << "]";
+  return arrayStr.str();
+}
+
 }; // namespace psUtils
-#endif

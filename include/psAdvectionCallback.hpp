@@ -1,5 +1,4 @@
-#ifndef PS_ADVECTION_CALLBACK
-#define PS_ADVECTION_CALLBACK
+#pragma once
 
 #include <psDomain.hpp>
 #include <psSmartPointer.hpp>
@@ -17,5 +16,3 @@ public:
 
   virtual bool applyPostAdvect(const NumericType advectionTime) { return true; }
 };
-
-#endif

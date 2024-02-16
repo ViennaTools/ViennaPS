@@ -1,11 +1,20 @@
-# ViennaPS
+<div align="center">
+
+![](data/images/logo.png)
+
+<h1>ViennaPS - Process Simulation Library</h1>
+
 [![Linux](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/linux_test.yml)
 [![macOS](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/macos_test.yml)
 [![Windows](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/windows_test.yml)
 
-ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. 
+</div>
 
-IMPORTANT NOTE: ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
+
+ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems.
+
+> [!NOTE]  
+> ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
 ## Releases
 Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
@@ -30,9 +39,11 @@ Releases are tagged on the master branch and available in the [releases section]
 
 * [ViennaRay](https://github.com/ViennaTools/viennaray)
 
+* [pybind11](https://github.com/pybind/pybind11) (only for building Python libs)
+
 ## Installing
 
-The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target.
+The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory:
 
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
@@ -45,7 +56,32 @@ make install
 
 This will install the necessary headers and CMake files to the specified path. If `CMAKE_INSTALL_PREFIX` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
 
-If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding _*_DIR_ variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install)
+If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding _*_DIR_ variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install).
+
+## Building the Python package
+
+The Python package can be built and installed using the `pip` command:
+
+```bash
+git clone https://github.com/ViennaTools/ViennaPS.git
+cd ViennaPS
+pip install --user .
+```
+
+> Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
+
+## Using the Python package
+
+The 2D version of the library can be imported as follows:
+```python
+import viennaps2d as vps
+```
+
+In order to switch to three dimensions, only the import needs to be changed:
+
+```python
+import viennaps3d as vps
+```
 
 ## Integration in CMake projects
 
@@ -74,31 +110,38 @@ make buildExamples
 
 The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
-cd Examples/ExampleName
+cd examples/exampleName
 ./ExampleName config.txt
 ```
 
-Individual examples can also be build by calling `make` in their respective build folder.
+Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. 
 
 ### Trench Deposition
 
-This example contains a single particle deposition process in a trench geometry. By default, a 2D representation of the trench is simulated. However, 3D simulations are also possible by setting the value of the constant _D_ in __TrenchDeposition.cpp__ to 3. In the __config.txt__ file the process and geometry parameters can be varied. 
-The picture show an example of the trench deposition process for various value of the particle sticking probability _s_.
+This example focuses on a particle deposition process within a trench geometry. By default, the simulation presents a 2D representation of the trench. Nevertheless, users have the flexibility to conduct 3D simulations by adjusting the value of the constant _D_ in __trenchDeposition.cpp__ to 3. Customization of process and geometry parameters is achieved through the __config.txt__ file. The accompanying image illustrates instances of the trench deposition process, showcasing variations in the particle sticking probability _s_.
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/deposition.svg" width=700 style="background-color:white;">
 </div>
 
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
-This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardement. The process and geometry parameters can be varied in the __config.txt__ file. 
-Below the results after 1, 2, and 3 seconds of etching are shown.
+This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process and geometry parameters can be varied in the __config.txt__ file. 
+Below the results after 10, 20, and 30 seconds of etching are shown.
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/hole_etching.svg" width=700 style="background-color:white;">
 </div>
 
-By changing the dimension of the hole etching example (_D = 2_), we can easily simulate the profile of a trench etching process with the same plasma chemistry. Here we can, for example, vary the mask tapering angle to observe increased microtrenching, as shown below.
+By changing the dimension of the hole etching example (_D = 2_), we can easily simulate the profile of a trench etching process with the same plasma chemistry. Here we can, for example, vary the mask tapering angle to observe increased micro-trenching, as shown below.
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/sidewall_tapering.svg" width=700 style="background-color:white;">
+</div>
+
+### Anisotropic Processes
+
+In the anisotropic process model, the etch or deposition rates are dependent on the crystallographic directions of the surface. This enables the accurate modeling of intricate processes like epitaxial growth or anisotropic wet etching. Basic examples, illustrating these processes are provided with the library and shown below.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/anisotropic_process.svg" width=700 style="background-color:white;">
 </div>
 
 ### Redeposition During Selective Etching
@@ -108,7 +151,21 @@ This example demonstrates capturing etching byproducts and the subsequent redepo
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/data/images/redeposition.gif" width=700 style="background-color:white;">
 </div>
 
+## Tests
+
+ViennaPS uses CTest to run its tests. In order to check whether ViennaPS runs without issues on your system, you can run:
+> __Important__: Make sure all dependencies are installed and have been built previously
+
+```bash
+mkdir build && cd build
+cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=DEBUG
+make buildTests
+ctest -C Debug
+```
+
 ## Application
+
+> __Deprecation Warning__: The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.2.0. Please use the Python bindings instead.
 
 It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake:
 > __Important__: Make sure all dependencies are installed and have been built previously
@@ -119,7 +176,7 @@ make buildApplication
 ```
 This creates 2 executables `ViennaPS2D` and `ViennaPS3D` which run processes in 2 or 3 dimensions respectively. Every configuration file can be run in 2D or 3D mode.
 
-The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each succesfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
+The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each successfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
 
 
 ## Contributing
@@ -128,7 +185,7 @@ If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guid
 
 ## Authors
 
-Current contributors: Tobias Reiter, Julius Piso, Josip Bobinac, Xaver Klemenschits
+Current contributors: Tobias Reiter, Julius Piso
 
 Contact us via: viennatools@iue.tuwien.ac.at
 

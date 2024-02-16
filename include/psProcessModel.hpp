@@ -1,5 +1,4 @@
-#ifndef PS_PROCESS_MODEL
-#define PS_PROCESS_MODEL
+#pragma once
 
 #include <psAdvectionCallback.hpp>
 #include <psGeometricModel.hpp>
@@ -9,8 +8,10 @@
 
 #include <rayParticle.hpp>
 
+/// The process model combines all models (particle types, surface model,
+/// geometric model, advection callback)
 template <typename NumericType, int D> class psProcessModel {
-private:
+protected:
   using ParticleTypeList =
       std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
@@ -21,32 +22,46 @@ private:
       nullptr;
   psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
   psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
-  std::string processName = "default";
+  std::optional<std::string> processName = std::nullopt;
+  std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
 
 public:
-  virtual psSmartPointer<ParticleTypeList> getParticleTypes() {
+  virtual psSmartPointer<ParticleTypeList> getParticleTypes() const {
     return particles;
   }
-  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
+  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() const {
     return surfaceModel;
   }
   virtual psSmartPointer<psAdvectionCallback<NumericType, D>>
-  getAdvectionCallback() {
+  getAdvectionCallback() const {
     return advectionCallback;
   }
-  virtual psSmartPointer<psGeometricModel<NumericType, D>> getGeometricModel() {
+  virtual psSmartPointer<psGeometricModel<NumericType, D>>
+  getGeometricModel() const {
     return geometricModel;
   }
-  virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
+  virtual psSmartPointer<psVelocityField<NumericType>>
+  getVelocityField() const {
     return velocityField;
+  }
+
+  /// Set a primary direction for the source distribution (tilted distribution).
+  virtual std::optional<std::array<NumericType, 3>>
+  getPrimaryDirection() const {
+    return primaryDirection;
+  }
+
+  std::optional<std::string> getProcessName() const { return processName; }
+
+  int getParticleLogSize(std::size_t particleIdx) const {
+    return particleLogSize[particleIdx];
   }
 
   void setProcessName(std::string name) { processName = name; }
 
-  std::string getProcessName() { return processName; }
-
-  int getParticleLogSize(std::size_t particleIdx) {
-    return particleLogSize[particleIdx];
+  virtual void
+  setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
+    primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
   }
 
   template <typename ParticleType>
@@ -87,5 +102,3 @@ public:
         passedVelocityField);
   }
 };
-
-#endif

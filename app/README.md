@@ -1,12 +1,12 @@
 # Configuration File Documentation
 
-The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in **SampleConfig.txt**. The configuration file is parsed line by line and each succesfully parsed line is executed immediately.
+The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in **SampleConfig.txt**. The configuration file is parsed line by line and each successfully parsed line is executed immediately.
 
 ## Commands
 Every line has to start with a command statement, followed by a list of parameters for the command. Possible commands are:
 
 - **INIT**: Initialize the simulation domain.
-- **GEOMETRY** _\<GeometryType>_: Create or import a geometry. Possible options for creating geometries are: _Trench_, _Hole_ and _Plane_. It is also possible to import geometries from _.lvst_ files by specifying _Import_ or to import layers from GDSII file format by secifying _GDS_ (only possible in 3D mode). Parameters for the geometries are described below.
+- **GEOMETRY** _\<GeometryType>_: Create or import a geometry. Possible options for creating geometries are: _Trench_, _Hole_ and _Plane_. It is also possible to import geometries from _.lvst_ files by specifying _Import_ or to import layers from GDSII file format by specifying _GDS_ (only possible in 3D mode). Parameters for the geometries are described below.
 - **PROCESS** _\<ProcessType>_: Run a process. Possible process types are: _Deposition_, _GeometricUniformDeposition_, _SF6O2Etching_ and _DirectionalEtching_. Parameters for the processes are described below.
 - **PLANARIZE**: Planarize the geometry at a given height.
 - **OUTPUT** _\<fileName>_: Print the surface of the geometry in _fileName.vtp_ file format.
@@ -26,7 +26,7 @@ All parameters which are parsed additional to a command are described below. For
   <dt>resolution</dt>
   <dd>distance between grid points in the domain (numeric value, default: 0.02)</dd>
   <dt>printTimeInterval</dt>
-  <dd>minimum time between outputing intermediate disk meshes for each process step. If this value is negative, no intermediate meshes will be printed (numeric value, default: 0)</dd>
+  <dd>minimum time between outputting intermediate disk meshes for each process step. If this value is negative, no intermediate meshes will be printed (numeric value, default: 0)</dd>
   <dt>periodic</dt>
   <dd>use periodic boundary conditions (boolean, default: 0)</dd>
 </dl>
@@ -137,13 +137,38 @@ All parameters which are parsed additional to a command are described below. For
   <dt>ionFlux</dt>
   <dd>total flux of ions in plasma (numeric value, default: 2e16)</dd>
   <dt>ionEnergy</dt>
-  <dd>mean ion energy (numeric value, default: 100)</dd>
+  <dd>mean ion energy in eV (numeric value, default: 100)</dd>
+  <dt>rfBias</dt>
+  <dd>rf bias in W (numeric value, default: 105)</dd>
   <dt>etchantFlux</dt>
   <dd>total flux of etchant species in plasma (numeric value, default: 4.5e16)</dd>
   <dt>oxygenFlux</dt>
   <dd>total flux of oxygen in plasma (numeric value, default: 1e18)</dd>
   <dt>A_O</dt>
   <dd>factor for ion etching yield on oxygen (numeric value, default: 3)</dd>
+  <dt>raysPerPoint</dt>
+  <dd>number of rays traced per grid point in the surface geometry (integer value, default: 3000)</dd>
+  <dt>maskId</dt>
+  <dd>ID of mask material (integer value, default: 0)</dd> 
+</dl>
+
+---
+**PROCESS FluorocarbonEtching**
+<dl>
+  <dt>time</dt>
+  <dd>process time (numeric value, default: 1)</dd>
+  <dt>ionFlux</dt>
+  <dd>total flux of ions in plasma (numeric value, default: 2e16)</dd>
+  <dt>ionEnergy</dt>
+  <dd>mean ion energy in eV (numeric value, default: 100)</dd>
+  <dt>plasmaFrequency</dt>
+  <dd>RF plasma frequency in MHz (numeric value, default: 0.1)</dd>
+  <dt>etchantFlux</dt>
+  <dd>total flux of etchant species in plasma (numeric value, default: 4.5e16)</dd>
+  <dt>oxygenFlux</dt>
+  <dd>total flux of oxygen in plasma (numeric value, default: 1e18)</dd>
+  <dt>temperature</dt>
+  <dd>reactor temperature in K (numeric value, default: 300)</dd>
   <dt>raysPerPoint</dt>
   <dd>number of rays traced per grid point in the surface geometry (integer value, default: 3000)</dd>
   <dt>maskId</dt>
@@ -161,8 +186,8 @@ All parameters which are parsed additional to a command are described below. For
   <dd>etching rate in primal direction (numeric value, default: 1)</dd>
   <dt>isotropicRate</dt>
   <dd>isotropic etching rate (numeric value, default: 0)</dd>
-  <dt>maskId</dt>
-  <dd>ID of mask material (integer value, default: 0)</dd> 
+  <dt>maskMaterial</dt>
+  <dd>mask material (string, default: Mask)</dd> 
 </dl>
 
 ---
@@ -172,18 +197,10 @@ All parameters which are parsed additional to a command are described below. For
   <dd>process time (numeric value, default: 1)</dd>
   <dt>rate</dt>
   <dd>process rate, can be negative for etching (numeric value, default: 0) 
-  <dt>maskId</dt>
-  <dd>ID of mask material (integer value, default: 0)</dd> 
-</dl>
-
----
-**PROCESS WetEtching**
-Wet etching process in 30% KOH solution at 70°C.
-<dl>
-  <dt>time</dt>
-  <dd>process time (numeric value, default: 1)</dd>
-  <dt>maskId</dt>
-  <dd>ID of mask material (integer value, default: 0)</dd> 
+  <dt>material</dt>
+  <dd>deposited material if rate is positive (string, default: Undefined)</dd> 
+  <dt>maskMaterial</dt>
+  <dd>mask material (string, default: Mask)</dd> 
 </dl>
 
 ---

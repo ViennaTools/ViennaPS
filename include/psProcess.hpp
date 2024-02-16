@@ -1,5 +1,4 @@
-#ifndef PS_PROCESS
-#define PS_PROCESS
+#pragma once
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
@@ -10,65 +9,165 @@
 #include <psDomain.hpp>
 #include <psLogger.hpp>
 #include <psProcessModel.hpp>
-#include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
 #include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
 
-#include <rayBoundCondition.hpp>
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
+/// This class server as the main process tool, applying a user- or pre-defined
+/// process model to a domain. Depending on the user inputs surface advection, a
+/// single callback function or a geometric advection is applied.
 template <typename NumericType, int D> class psProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
   using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
 public:
+  psProcess() {}
+  psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain)
+      : domain(passedDomain) {}
+  // Constructor for a process with a pre-configured process model.
+  template <typename ProcessModelType>
+  psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain,
+            psSmartPointer<ProcessModelType> passedProcessModel,
+            const NumericType passedDuration = 0.)
+      : domain(passedDomain), processDuration(passedDuration) {
+    model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
+        passedProcessModel);
+  }
+
+  // Set the process model. This can be either a pre-configured process model or
+  // a custom process model. A custom process model must interface the
+  // psProcessModel class.
   template <typename ProcessModelType>
   void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
     model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);
   }
 
+  // Set the process domain.
   void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }
 
-  /// Set the source direction, where the rays should be traced from.
-  void setSourceDirection(const rayTraceDirection passedDirection) {
+  // Set the source direction, where the rays should be traced from.
+  void setSourceDirection(rayTraceDirection passedDirection) {
     sourceDirection = passedDirection;
   }
 
+  // Set the duration of the process.
   void setProcessDuration(NumericType passedDuration) {
     processDuration = passedDuration;
   }
 
+  // Returns the duration of the recently run process. This duration can
+  // sometimes slightly vary from the set process duration, due to the maximum
+  // time step according to the CFL condition.
   NumericType getProcessDuration() const { return processTime; }
 
-  void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
+  // Specify the number of rays to be traced for each particle throughout the
+  // process. The total count of rays is the product of this number and the
+  // number of points in the process geometry.
+  void setNumberOfRaysPerPoint(unsigned numRays) { raysPerPoint = numRays; }
 
-  void setMaxCoverageInitIterations(size_t maxIt) { maxIterations = maxIt; }
+  // Set the number of iterations to initialize the coverages.
+  void setMaxCoverageInitIterations(unsigned maxIt) { maxIterations = maxIt; }
 
-  void setSmoothFlux(bool pSmoothFlux) { smoothFlux = pSmoothFlux; }
+  /// Enable flux smoothing. The flux at each surface point, calculated
+  /// by the ray tracer, is averaged over the surface point neighbors.
+  void enableFluxSmoothing() { smoothFlux = true; }
 
-  void
-  setIntegrationScheme(const lsIntegrationSchemeEnum passedIntegrationScheme) {
+  // Disable flux smoothing.
+  void disableFluxSmoothing() { smoothFlux = false; }
+
+  // Set the integration scheme for solving the level-set equation.
+  // Possible integration schemes are specified in lsIntegrationSchemeEnum.
+  void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme = passedIntegrationScheme;
   }
 
-  /// Set the CFL condition to use during advection.
-  /// The CFL condition sets the maximum distance a surface can
-  /// be moved during one advection step. It MUST be below 0.5
-  /// to guarantee numerical stability. Defaults to 0.4999.
-  void setTimeStepRatio(const double &cfl) { timeStepRatio = cfl; }
+  // Set the CFL (Courant-Friedrichs-Levy) condition to use during surface
+  // advection in the level-set. The CFL condition defines the maximum distance
+  // a surface is allowed to move in a single advection step. It MUST be below
+  // 0.5 to guarantee numerical stability. Defaults to 0.4999.
+  void setTimeStepRatio(NumericType cfl) { timeStepRatio = cfl; }
 
   // Sets the minimum time between printing intermediate results during the
   // process. If this is set to a non-positive value, no intermediate results
   // are printed.
-  void setPrintTimeInterval(const NumericType passedTime) {
-    printTime = passedTime;
+  void setPrintTimeInterval(NumericType passedTime) { printTime = passedTime; }
+
+  // A single flux calculation is performed on the domain surface. The result is
+  // stored as point data on the nodes of the mesh.
+  psSmartPointer<lsMesh<NumericType>> calculateFlux() const {
+
+    // Generate disk mesh from domain
+    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+    lsToDiskMesh<NumericType, D> meshConverter(mesh);
+    for (auto dom : *domain->getLevelSets()) {
+      meshConverter.insertNextLevelSet(dom);
+    }
+    meshConverter.apply();
+
+    if (model->getSurfaceModel()->getCoverages() != nullptr) {
+      psLogger::getInstance()
+          .addWarning(
+              "Coverages are not supported for single-pass flux calculation.")
+          .print();
+      return mesh;
+    }
+
+    rayBoundaryCondition rayBoundaryCondition[D];
+    rayTrace<NumericType, D> rayTracer;
+
+    // Map the domain boundary to the ray tracing boundaries
+    for (unsigned i = 0; i < D; ++i)
+      rayBoundaryCondition[i] =
+          convertBoundaryCondition(domain->getGrid().getBoundaryConditions(i));
+    rayTracer.setSourceDirection(sourceDirection);
+    rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
+    rayTracer.setBoundaryConditions(rayBoundaryCondition);
+    rayTracer.setUseRandomSeeds(useRandomSeeds);
+    rayTracer.setCalculateFlux(false);
+    auto primaryDirection = model->getPrimaryDirection();
+    if (primaryDirection) {
+      psLogger::getInstance()
+          .addInfo("Using primary direction: " +
+                   psUtils::arrayToString(primaryDirection.value()))
+          .print();
+      rayTracer.setPrimaryDirection(primaryDirection.value());
+    }
+
+    auto points = mesh->getNodes();
+    auto normals = *mesh->getCellData().getVectorData("Normals");
+    auto materialIds = *mesh->getCellData().getScalarData("MaterialIds");
+    rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
+    rayTracer.setMaterialIds(materialIds);
+
+    for (auto &particle : *model->getParticleTypes()) {
+      rayTracer.setParticleType(particle);
+      rayTracer.apply();
+
+      // fill up rates vector with rates from this particle type
+      auto &localData = rayTracer.getLocalData();
+      int numRates = particle->getLocalDataLabels().size();
+      for (int i = 0; i < numRates; ++i) {
+        auto rate = std::move(localData.getVectorData(i));
+
+        // normalize fluxes
+        rayTracer.normalizeFlux(rate);
+        if (smoothFlux)
+          rayTracer.smoothFlux(rate);
+        mesh->getCellData().insertNextScalarData(
+            std::move(rate), localData.getVectorDataLabel(i));
+      }
+    }
+
+    return mesh;
   }
 
+  // Run the process.
   void apply() {
     /* ---------- Process Setup --------- */
     if (!model) {
@@ -77,7 +176,7 @@ public:
           .print();
       return;
     }
-    const auto name = model->getProcessName();
+    const auto name = model->getProcessName().value_or("default");
 
     if (!domain) {
       psLogger::getInstance()
@@ -109,6 +208,13 @@ public:
     if (!model->getSurfaceModel()) {
       psLogger::getInstance()
           .addWarning("No surface model passed to psProcess.")
+          .print();
+      return;
+    }
+
+    if (!model->getVelocityField()) {
+      psLogger::getInstance()
+          .addWarning("No velocity field passed to psProcess.")
           .print();
       return;
     }
@@ -147,8 +253,8 @@ public:
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = model->getParticleTypes() != nullptr;
 
-    rayTraceBoundary rayBoundaryCondition[D];
-    rayTrace<NumericType, D> rayTrace;
+    rayBoundaryCondition rayBoundaryCondition[D];
+    rayTrace<NumericType, D> rayTracer;
 
     if (useRayTracing) {
       // Map the domain boundary to the ray tracing boundaries
@@ -156,11 +262,19 @@ public:
         rayBoundaryCondition[i] = convertBoundaryCondition(
             domain->getGrid().getBoundaryConditions(i));
 
-      rayTrace.setSourceDirection(sourceDirection);
-      rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
-      rayTrace.setBoundaryConditions(rayBoundaryCondition);
-      rayTrace.setUseRandomSeeds(useRandomSeeds);
-      rayTrace.setCalculateFlux(false);
+      rayTracer.setSourceDirection(sourceDirection);
+      rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
+      rayTracer.setBoundaryConditions(rayBoundaryCondition);
+      rayTracer.setUseRandomSeeds(useRandomSeeds);
+      auto primaryDirection = model->getPrimaryDirection();
+      if (primaryDirection) {
+        psLogger::getInstance()
+            .addInfo("Using primary direction: " +
+                     psUtils::arrayToString(primaryDirection.value()))
+            .print();
+        rayTracer.setPrimaryDirection(primaryDirection.value());
+      }
+      rayTracer.setCalculateFlux(false);
 
       // initialize particle data logs
       particleDataLogs.resize(model->getParticleTypes()->size());
@@ -207,10 +321,17 @@ public:
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         auto materialIds =
             *diskMesh->getCellData().getScalarData("MaterialIds");
-        rayTrace.setGeometry(points, normals, gridDelta);
-        rayTrace.setMaterialIds(materialIds);
+        rayTracer.setGeometry(points, normals, gridDelta);
+        rayTracer.setMaterialIds(materialIds);
 
         for (size_t iterations = 0; iterations < maxIterations; iterations++) {
+          // We need additional signal handling when running the C++ code from
+          // the
+          // Python bindings to allow interrupts in the Python scripts
+#ifdef VIENNAPS_PYTHON_BUILD
+          if (PyErr_CheckSignals() != 0)
+            throw pybind11::error_already_set();
+#endif
           // move coverages to the ray tracer
           rayTracingData<NumericType> rayTraceCoverages =
               movePointDataToRayData(model->getSurfaceModel()->getCoverages());
@@ -226,35 +347,36 @@ public:
                   processParams->getScalarDataLabel(i));
             }
           }
-          rayTrace.setGlobalData(rayTraceCoverages);
+          rayTracer.setGlobalData(rayTraceCoverages);
 
-          auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+          auto rates = psSmartPointer<psPointData<NumericType>>::New();
 
           std::size_t particleIdx = 0;
           for (auto &particle : *model->getParticleTypes()) {
             int dataLogSize = model->getParticleLogSize(particleIdx);
             if (dataLogSize > 0) {
-              rayTrace.getDataLog().data.resize(1);
-              rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+              rayTracer.getDataLog().data.resize(1);
+              rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
             }
-            rayTrace.setParticleType(particle);
-            rayTrace.apply();
+            rayTracer.setParticleType(particle);
+            rayTracer.apply();
 
             // fill up rates vector with rates from this particle type
-            auto &localData = rayTrace.getLocalData();
-            for (int i = 0; i < particle->getRequiredLocalDataSize(); ++i) {
+            auto &localData = rayTracer.getLocalData();
+            int numRates = particle->getLocalDataLabels().size();
+            for (int i = 0; i < numRates; ++i) {
               auto rate = std::move(localData.getVectorData(i));
 
               // normalize fluxes
-              rayTrace.normalizeFlux(rate);
+              rayTracer.normalizeFlux(rate);
               if (smoothFlux)
-                rayTrace.smoothFlux(rate);
-              Rates->insertNextScalarData(std::move(rate),
+                rayTracer.smoothFlux(rate);
+              rates->insertNextScalarData(std::move(rate),
                                           localData.getVectorDataLabel(i));
             }
 
             if (dataLogSize > 0) {
-              particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+              particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
             }
             ++particleIdx;
           }
@@ -262,7 +384,7 @@ public:
           // move coverages back in the model
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
-          model->getSurfaceModel()->updateCoverages(Rates, materialIds);
+          model->getSurfaceModel()->updateCoverages(rates, materialIds);
 
           if (psLogger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
@@ -271,10 +393,10 @@ public:
               diskMesh->getCellData().insertNextScalarData(
                   *coverages->getScalarData(idx), label);
             }
-            for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-              auto label = Rates->getScalarDataLabel(idx);
+            for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
+              auto label = rates->getScalarDataLabel(idx);
               diskMesh->getCellData().insertNextScalarData(
-                  *Rates->getScalarData(idx), label);
+                  *rates->getScalarData(idx), label);
             }
             printDiskMesh(diskMesh, name + "_covIinit_" +
                                         std::to_string(iterations) + ".vtp");
@@ -290,7 +412,7 @@ public:
             .addTiming("Coverage initialization", timer)
             .print();
       }
-    }
+    } // end coverage initialization
 
     double previousTimeStep = 0.;
     size_t counter = 0;
@@ -302,7 +424,14 @@ public:
           .addInfo("Remaining time: " + std::to_string(remainingTime))
           .print();
 
-      auto Rates = psSmartPointer<psPointData<NumericType>>::New();
+      // We need additional signal handling when running the C++ code from the
+      // Python bindings to allow interrupts in the Python scripts
+#ifdef VIENNAPS_PYTHON_BUILD
+      if (PyErr_CheckSignals() != 0)
+        throw pybind11::error_already_set();
+#endif
+
+      auto rates = psSmartPointer<psPointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
@@ -311,8 +440,8 @@ public:
       if (useRayTracing) {
         rtTimer.start();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
-        rayTrace.setGeometry(points, normals, gridDelta);
-        rayTrace.setMaterialIds(materialIds);
+        rayTracer.setGeometry(points, normals, gridDelta);
+        rayTracer.setMaterialIds(materialIds);
 
         // move coverages to ray tracer
         rayTracingData<NumericType> rayTraceCoverages;
@@ -331,35 +460,35 @@ public:
                   processParams->getScalarDataLabel(i));
             }
           }
-          rayTrace.setGlobalData(rayTraceCoverages);
+          rayTracer.setGlobalData(rayTraceCoverages);
         }
 
         std::size_t particleIdx = 0;
         for (auto &particle : *model->getParticleTypes()) {
           int dataLogSize = model->getParticleLogSize(particleIdx);
           if (dataLogSize > 0) {
-            rayTrace.getDataLog().data.resize(1);
-            rayTrace.getDataLog().data[0].resize(dataLogSize, 0.);
+            rayTracer.getDataLog().data.resize(1);
+            rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
           }
-          rayTrace.setParticleType(particle);
-          rayTrace.apply();
+          rayTracer.setParticleType(particle);
+          rayTracer.apply();
 
           // fill up rates vector with rates from this particle type
-          auto numRates = particle->getRequiredLocalDataSize();
-          auto &localData = rayTrace.getLocalData();
+          auto numRates = particle->getLocalDataLabels().size();
+          auto &localData = rayTracer.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
 
             // normalize rates
-            rayTrace.normalizeFlux(rate);
+            rayTracer.normalizeFlux(rate);
             if (smoothFlux)
-              rayTrace.smoothFlux(rate);
-            Rates->insertNextScalarData(std::move(rate),
+              rayTracer.smoothFlux(rate);
+            rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
 
           if (dataLogSize > 0) {
-            particleDataLogs[particleIdx].merge(rayTrace.getDataLog());
+            particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
           }
           ++particleIdx;
         }
@@ -376,34 +505,34 @@ public:
 
       // get velocities from rates
       auto velocities = model->getSurfaceModel()->calculateVelocities(
-          Rates, points, materialIds);
+          rates, points, materialIds);
       model->getVelocityField()->setVelocities(velocities);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
-        if (velocities)
-          diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                       "velocities");
-        if (useCoverages) {
-          auto coverages = model->getSurfaceModel()->getCoverages();
-          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-            auto label = coverages->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *coverages->getScalarData(idx), label);
-          }
-        }
-        for (size_t idx = 0; idx < Rates->getScalarDataSize(); idx++) {
-          auto label = Rates->getScalarDataLabel(idx);
-          diskMesh->getCellData().insertNextScalarData(
-              *Rates->getScalarData(idx), label);
-        }
         if (printTime >= 0. &&
-            ((processDuration - remainingTime) - printTime * counter) > -1.) {
+            ((processDuration - remainingTime) - printTime * counter) > 0.) {
+          if (velocities)
+            diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                         "velocities");
+          if (useCoverages) {
+            auto coverages = model->getSurfaceModel()->getCoverages();
+            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+              auto label = coverages->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *coverages->getScalarData(idx), label);
+            }
+          }
+          for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
+            auto label = rates->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *rates->getScalarData(idx), label);
+          }
           printDiskMesh(diskMesh,
                         name + "_" + std::to_string(counter) + ".vtp");
-          if (domain->getUseCellSet()) {
+          if (domain->getCellSet()) {
             domain->getCellSet()->writeVTU(name + "_cellSet_" +
                                            std::to_string(counter) + ".vtu");
           }
@@ -514,8 +643,8 @@ public:
   }
 
 private:
-  void printSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
-                        std::string name) {
+  void saveSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
+                       std::string name) {
     auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
     psVTKWriter<NumericType>(mesh, name).apply();
@@ -526,25 +655,25 @@ private:
     psVTKWriter<NumericType>(mesh, name).apply();
   }
 
-  rayTraceBoundary convertBoundaryCondition(
-      lsBoundaryConditionEnum<D> originalBoundaryCondition) {
+  rayBoundaryCondition convertBoundaryCondition(
+      lsBoundaryConditionEnum<D> originalBoundaryCondition) const {
     switch (originalBoundaryCondition) {
     case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-      return rayTraceBoundary::REFLECTIVE;
+      return rayBoundaryCondition::REFLECTIVE;
 
     case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
 
     case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-      return rayTraceBoundary::PERIODIC;
+      return rayBoundaryCondition::PERIODIC;
 
     case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
 
     case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-      return rayTraceBoundary::IGNORE;
+      return rayBoundaryCondition::IGNORE;
     }
-    return rayTraceBoundary::IGNORE;
+    return rayBoundaryCondition::IGNORE;
   }
 
   rayTracingData<NumericType>
@@ -626,15 +755,13 @@ private:
       D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
   lsIntegrationSchemeEnum integrationScheme =
       lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
-  long raysPerPoint = 1000;
+  unsigned raysPerPoint = 1000;
   std::vector<rayDataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds = true;
-  bool smoothFlux = false;
-  size_t maxIterations = 20;
+  bool smoothFlux = true;
+  unsigned maxIterations = 20;
   bool coveragesInitialized = false;
   NumericType printTime = 0.;
   NumericType processTime = 0.;
   NumericType timeStepRatio = 0.4999;
 };
-
-#endif

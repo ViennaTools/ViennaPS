@@ -3,8 +3,6 @@
 #include <lsToSurfaceMesh.hpp>
 #include <lsWriteVisualizationMesh.hpp>
 
-#include <psDomain.hpp>
-
 template <class NumericType, int D> class psWriteVisualizationMesh {
 public:
   psWriteVisualizationMesh() {}
@@ -16,7 +14,6 @@ public:
   void apply() {
     lsWriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(fileName);
-    int i = 0;
     for (auto ls : *domain->getLevelSets()) {
       visMesh.insertNextLevelSet(ls);
     }
@@ -33,6 +30,5 @@ public:
 
 private:
   psSmartPointer<psDomain<NumericType, D>> domain;
-  psSmartPointer<lsMaterialMap> materialMap;
   std::string fileName;
 };
