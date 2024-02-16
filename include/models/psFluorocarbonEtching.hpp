@@ -29,10 +29,11 @@ class SurfaceModel : public psSurfaceModel<NumericType> {
 public:
   SurfaceModel(const NumericType ionFlux, const NumericType etchantFlux,
                const NumericType polyFlux, const NumericType passedDeltaP,
+               const NumericType passedMaskRate,
                const NumericType passedEtchStopDepth)
       : totalIonFlux(ionFlux), totalEtchantFlux(etchantFlux),
         totalPolyFlux(polyFlux), delta_p(passedDeltaP),
-        etchStopDepth(passedEtchStopDepth) {}
+        maskRate(passedMaskRate), etchStopDepth(passedEtchStopDepth) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
@@ -54,10 +55,12 @@ public:
     const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
-    const auto ionSputteringRate = rates->getScalarData("ionSputteringRate");
-    const auto ionpeRate = rates->getScalarData("ionpeRate");
-    const auto polyRate = rates->getScalarData("polyRate");
+    auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
+    auto ionSputteringRate = rates->getScalarData("ionSputteringRate");
+    auto ionpeRate = rates->getScalarData("ionpeRate");
+    auto polyRate = rates->getScalarData("polyRate");
+    rates->insertNextScalarData(etchRate, "F_ev");
+    auto F_ev_rate = rates->getScalarData("F_ev");
 
     const auto eCoverage = coverages->getScalarData("eCoverage");
     const auto pCoverage = coverages->getScalarData("pCoverage");
@@ -77,19 +80,20 @@ public:
              matId == psMaterial::Si || matId == psMaterial::SiO2 ||
              matId == psMaterial::Si3N4 && "Unexpected material");
       if (matId == psMaterial::Mask) {
-        etchRate[i] = (-1. / psParameters::Mask::rho) *
+        etchRate[i] = (-maskRate / psParameters::Mask::rho) *
                       ionSputteringRate->at(i) * totalIonFlux;
-      } else if (pCoverage->at(i) >= 1.) {
+      } else if (pCoverage->at(i) - delta_p >= 1.) {
         // Deposition
         etchRate[i] = (1 / psParameters::Polymer::rho) *
-                      (polyRate->at(i) * totalPolyFlux -
-                       ionpeRate->at(i) * totalIonFlux * peCoverage->at(i));
+                      (polyRate->at(i) * totalPolyFlux * beta_p -
+                       ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)) /
+                      delta_p;
         assert(etchRate[i] >= 0 && "Negative deposition");
       } else if (matId == psMaterial::Polymer) {
         // Etching depo layer
         etchRate[i] =
             std::min((1 / psParameters::Polymer::rho) *
-                         (polyRate->at(i) * totalPolyFlux -
+                         (polyRate->at(i) * totalPolyFlux * beta_p -
                           ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)),
                      0.);
       } else {
@@ -119,6 +123,11 @@ public:
             (F_ev * eCoverage->at(i) +
              ionEnhancedRate->at(i) * totalIonFlux * eCoverage->at(i) +
              ionSputteringRate->at(i) * totalIonFlux * (1 - eCoverage->at(i)));
+        F_ev_rate->at(i) = F_ev * eCoverage->at(i);
+        ionSputteringRate->at(i) =
+            ionSputteringRate->at(i) * totalIonFlux * (1 - eCoverage->at(i));
+        ionEnhancedRate->at(i) =
+            ionEnhancedRate->at(i) * totalIonFlux * eCoverage->at(i);
       }
 
       // etch rate is in nm / s
@@ -172,7 +181,7 @@ public:
         pCoverage->at(i) = 1.;
       } else {
         pCoverage->at(i) =
-            std::max((polyRate->at(i) * totalPolyFlux * beta_p - delta_p) /
+            std::max((polyRate->at(i) * totalPolyFlux * beta_p) /
                          (ionpeRate->at(i) * totalIonFlux * peCoverage->at(i)),
                      0.);
       }
@@ -218,6 +227,7 @@ private:
   const NumericType totalPolyFlux;
   const NumericType delta_p;
 
+  const NumericType maskRate;
   const NumericType etchStopDepth = 0.;
 };
 
@@ -354,15 +364,20 @@ public:
   std::pair<NumericType, rayTriple<NumericType>>
   surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
                     const rayTriple<NumericType> &geomNormal,
-                    const unsigned int primId, const int materialId,
+                    const unsigned int primID, const int materialId,
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+
+    const auto &phi_e = globalData->getVectorData(0)[primID];
+    const auto &phi_p = globalData->getVectorData(1)[primID];
+    const auto &phi_pe = globalData->getVectorData(2)[primID];
+
     NumericType stick;
     if (psMaterialMap::isMaterial(materialId, psMaterial::Mask)) {
-      stick = beta_p_mask;
+      stick = beta_p_mask * std::max(1 - phi_e - phi_p, 0.);
     } else {
-      stick = beta_p;
+      stick = beta_p * std::max(1 - phi_e - phi_p, 0.);
     }
     return std::pair<NumericType, rayTriple<NumericType>>{stick, direction};
   }
@@ -423,6 +438,7 @@ public:
                         const NumericType sigmaEnergy,
                         const NumericType ionExponent = 100.,
                         const NumericType deltaP = 0.,
+                        const NumericType maskRate = 1.,
                         const NumericType etchStopDepth =
                             std::numeric_limits<NumericType>::lowest()) {
     // particles
@@ -435,7 +451,7 @@ public:
 
     // surface model
     auto surfModel = psSmartPointer<FluorocarbonImplementation::SurfaceModel<
-        NumericType, D>>::New(ionFlux, etchantFlux, polyFlux, deltaP,
+        NumericType, D>>::New(ionFlux, etchantFlux, polyFlux, deltaP, maskRate,
                               etchStopDepth);
 
     // velocity field

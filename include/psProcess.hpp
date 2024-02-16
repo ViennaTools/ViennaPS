@@ -512,24 +512,24 @@ public:
 
       // print debug output
       if (psLogger::getLogLevel() >= 4) {
-        if (velocities)
-          diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                       "velocities");
-        if (useCoverages) {
-          auto coverages = model->getSurfaceModel()->getCoverages();
-          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-            auto label = coverages->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *coverages->getScalarData(idx), label);
-          }
-        }
-        for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
-          auto label = rates->getScalarDataLabel(idx);
-          diskMesh->getCellData().insertNextScalarData(
-              *rates->getScalarData(idx), label);
-        }
         if (printTime >= 0. &&
             ((processDuration - remainingTime) - printTime * counter) > 0.) {
+          if (velocities)
+            diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                         "velocities");
+          if (useCoverages) {
+            auto coverages = model->getSurfaceModel()->getCoverages();
+            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+              auto label = coverages->getScalarDataLabel(idx);
+              diskMesh->getCellData().insertNextScalarData(
+                  *coverages->getScalarData(idx), label);
+            }
+          }
+          for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
+            auto label = rates->getScalarDataLabel(idx);
+            diskMesh->getCellData().insertNextScalarData(
+                *rates->getScalarData(idx), label);
+          }
           printDiskMesh(diskMesh,
                         name + "_" + std::to_string(counter) + ".vtp");
           if (domain->getCellSet()) {
