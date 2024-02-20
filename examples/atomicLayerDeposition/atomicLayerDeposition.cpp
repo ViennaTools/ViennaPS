@@ -7,6 +7,7 @@
 int main(int argc, char *argv[]) {
   constexpr int D = 2;
   using NumericType = double;
+  omp_set_num_threads(12);
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -36,7 +37,7 @@ int main(int argc, char *argv[]) {
   double time = 0.;
   int i = 0;
   while (time < params.processTime) {
-    time += model.timeStep();
+    time += model.timeStep(false);
     if (time - i > 0.1) {
       cellSet->writeVTU("ALD_" + std::to_string(i++) + ".vtu");
       std::cout << "Time: " << time << std::endl;

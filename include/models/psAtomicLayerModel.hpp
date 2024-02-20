@@ -24,64 +24,82 @@ public:
     segmentCells();
     cellSet->addScalarData("Flux", 0.);
     cellSet->addScalarData("Adsorbed", 0.);
+    cellSet->addScalarData("FluxReduce", 0.);
+    cellSet->addScalarData("FluxAdsorbed", 0.);
+
     top = cellSet->getBoundingBox()[1][D - 1];
   }
 
-  NumericType timeStep() {
+  NumericType timeStep(const bool deposit = true) {
     auto &cellSet = domain->getCellSet();
     auto gridDelta = cellSet->getGridDelta();
     auto cellType = cellSet->getScalarData("CellType");
     auto flux = cellSet->getScalarData("Flux");
     auto adsorbed = cellSet->getScalarData("Adsorbed");
+    auto fluxReduce = cellSet->getScalarData("FluxReduce");
+    auto fluxAdsorbed = cellSet->getScalarData("FluxAdsorbed");
+    std::fill(fluxReduce->begin(), fluxReduce->end(), 0.);
 
     const NumericType dt = std::min(
         gridDelta * gridDelta / diffusionCoefficient * timeStabilityFactor,
         NumericType(1.));
     const NumericType C = dt * diffusionCoefficient / (gridDelta * gridDelta);
 
+    // shared
     std::vector<NumericType> newFlux(cellType->size(), 0.);
 
-#pragma omp parallel for
-    for (unsigned i = 0; i < cellType->size(); ++i) {
-      const auto &neighbors = cellSet->getNeighbors(i);
+#pragma omp parallel shared(newFlux)
+    {
+      // local
+      std::vector<NumericType> reduceFlux(cellType->size(), 0.);
 
-      if (cellType->at(i) == 1.) {
-        // inner cell
-        auto center = cellSet->getCellCenter(i);
-        if (center[D - 1] > top - gridDelta) {
-          newFlux[i] = inFlux;
-        } else {
-          // Diffusion
+#pragma omp for
+      for (unsigned i = 0; i < cellType->size(); ++i) {
+        const auto &neighbors = cellSet->getNeighbors(i);
+
+        if (cellType->at(i) == 1.) {
+          // inner cell
+          auto center = cellSet->getCellCenter(i);
+          if (center[D - 1] > top - gridDelta) {
+            newFlux[i] = inFlux;
+          } else {
+            // Diffusion
+            newFlux[i] = diffusion(flux, cellType, i, neighbors, C);
+          }
+
+        } else if (cellType->at(i) == 0. &&
+                   adsorbed->at(i) < depositionThreshold) {
+          // surface cell
+          NumericType adsorbedAmount = 0.;
           int num_neighbors = 0;
           for (auto n : neighbors) {
             if (n >= 0 && cellType->at(n) == 1.) {
-              newFlux[i] += flux->at(n);
+              auto adsorb = dt * adsorptionRate * flux->at(n);
+              adsorbedAmount += adsorb;
+              reduceFlux[n] += adsorb;
               num_neighbors++;
             }
           }
-          newFlux[i] =
-              flux->at(i) + C * (newFlux[i] - num_neighbors * flux->at(i));
+          if (num_neighbors > 1)
+            adsorbedAmount /= num_neighbors;
+          adsorbed->at(i) += adsorbedAmount;
+          fluxAdsorbed->at(i) = adsorbedAmount;
+          adsorbed->at(i) = std::min(adsorbed->at(i), depositionThreshold);
         }
+      }
 
-      } else if (cellType->at(i) == 0.) {
-        // surface cell
-        int num_neighbors = 0;
-        NumericType adsorbedAmount = 0.;
-        for (auto n : neighbors) {
-          if (n >= 0 && cellType->at(n) == 1.) {
-            adsorbedAmount += flux->at(n);
-            num_neighbors++;
-          }
+#pragma omp critical
+      {
+        for (unsigned i = 0; i < cellType->size(); ++i) {
+          flux->at(i) -= reduceFlux[i];
+          fluxReduce->at(i) += reduceFlux[i];
         }
-        if (num_neighbors > 1)
-          adsorbedAmount /= num_neighbors;
-        adsorbed->at(i) += dt * adsorptionRate * adsorbedAmount;
       }
     }
 
-    for (unsigned i = 0; i < cellType->size(); ++i) {
-      if (cellType->at(i) == 0.) {
-        if (adsorbed->at(i) > depositionThreshold) {
+    if (deposit) {
+      for (unsigned i = 0; i < cellType->size(); ++i) {
+        if (cellType->at(i) == 0. && adsorbed->at(i) > depositionThreshold) {
           const auto &neighbors = cellSet->getNeighbors(i);
           for (auto n : neighbors) {
             if (n >= 0 && cellType->at(n) == 1.) {
@@ -95,7 +113,10 @@ public:
           cellType->at(i) = -1.;
         }
       }
+    }
 
+#pragma omp parallel for
+    for (unsigned i = 0; i < cellType->size(); ++i) {
       if (cellType->at(i) == 1.)
         flux->at(i) = newFlux[i];
     }
@@ -104,6 +125,22 @@ public:
   }
 
 private:
+  static NumericType diffusion(const std::vector<NumericType> *flux,
+                               const std::vector<NumericType> *cellType,
+                               const unsigned i,
+                               const std::array<int, 2 * D> &neighbors,
+                               const NumericType C) {
+    NumericType newFlux = 0.;
+    int num_neighbors = 0;
+    for (auto n : neighbors) {
+      if (n >= 0 && cellType->at(n) == 1.) {
+        newFlux += flux->at(n);
+        num_neighbors++;
+      }
+    }
+    return flux->at(i) + C * (newFlux - num_neighbors * flux->at(i));
+  }
+
   void segmentCells() {
     auto &cellSet = domain->getCellSet();
     auto cellType = cellSet->addScalarData("CellType", -1.);
