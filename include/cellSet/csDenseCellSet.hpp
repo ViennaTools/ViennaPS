@@ -40,6 +40,7 @@ private:
   T depth = 0.;
   int BVHlayers = 0;
   bool cellSetAboveSurface = false;
+  psMaterial coverMaterial = psMaterial::None;
   std::bitset<D> periodicBoundary;
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
@@ -106,8 +107,7 @@ public:
     psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
-    if (!cellSetAboveSurface || materialMap)
-      adjustMaterialIds();
+    adjustMaterialIds();
 
     // create filling fractions as default scalar cell data
     numberOfCells = cellGrid->template getElements<(1 << D)>().size();
@@ -212,6 +212,15 @@ public:
     return sum / count;
   }
 
+  std::array<T, 3> getCellCenter(unsigned long idx) {
+    auto center =
+        cellGrid
+            ->getNodes()[cellGrid->template getElements<(1 << D)>()[idx][0]];
+    for (int i = 0; i < D; i++)
+      center[i] += gridDelta / 2.;
+    return center;
+  }
+
   int getIndex(const std::array<T, 3> &point) { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
@@ -222,6 +231,10 @@ public:
   // the surface.
   void setCellSetPosition(const bool passedCellSetPosition) {
     cellSetAboveSurface = passedCellSetPosition;
+  }
+
+  void setCoverMaterial(const psMaterial passedCoverMaterial) {
+    coverMaterial = passedCoverMaterial;
   }
 
   bool getCellSetPosition() const { return cellSetAboveSurface; }
@@ -616,19 +629,21 @@ private:
 
   void adjustMaterialIds() {
     auto matIds = getScalarData("Material");
+    if (!materialMap)
+      return;
+
+    auto numMaterials = materialMap->size();
 
 #pragma omp parallel for
     for (size_t i = 0; i < matIds->size(); i++) {
       int materialId = static_cast<int>(matIds->at(i));
-
-      if (!cellSetAboveSurface && materialId > 0) {
-        materialId -= 1;
-      }
-
-      assert(materialId >= 0);
-      if (materialMap) {
+      if (!cellSetAboveSurface)
+        materialId--;
+      if (materialId >= 0 && materialId < numMaterials) {
         matIds->at(i) =
             static_cast<int>(materialMap->getMaterialAtIdx(materialId));
+      } else {
+        matIds->at(i) = static_cast<int>(coverMaterial);
       }
     }
   }

@@ -1,0 +1,17 @@
+# Domain
+gridDelta = .5 # nm
+xExtent = 50.   # nm
+yExtent = 50.   # nm
+
+# Geometry
+trenchWidth = 20.  # nm
+trenchHeight = 50. # nm
+taperAngle = 0.    # degree
+topSpace = 100.
+
+# Process
+processTime = 100.
+diffusionCoefficient = 60.0
+inFlux = 1.0
+depositionThreshold = 1.
+adsorptionRate = 0.1

@@ -42,7 +42,6 @@ private:
   lsDomainsType levelSets = nullptr;
   csDomainType cellSet = nullptr;
   materialMapType materialMap = nullptr;
-  NumericType cellSetDepth = 0.;
 
 public:
   // Default constructor.
@@ -52,29 +51,12 @@ public:
   psDomain(psSmartPointer<psDomain> passedDomain) { deepCopy(passedDomain); }
 
   // Constructor for domain with a single initial Level-Set.
-  psDomain(lsDomainType passedLevelSet, bool generateCellSet = false,
-           const NumericType passedCellSetDepth = 0.,
-           const bool passedCellSetPosition = false)
-      : levelSets(lsDomainsType::New()), cellSetDepth(passedCellSetDepth) {
+  psDomain(lsDomainType passedLevelSet) : levelSets(lsDomainsType::New()) {
     levelSets->push_back(passedLevelSet);
-    // generate CellSet
-    if (generateCellSet) {
-      cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth,
-                                  passedCellSetPosition);
-    }
   }
 
   // Constructor for domain with multiple initial Level-Sets.
-  psDomain(lsDomainsType passedLevelSets, bool generateCellSet = false,
-           const NumericType passedCellSetDepth = 0.,
-           const bool passedCellSetPosition = false)
-      : levelSets(passedLevelSets), cellSetDepth(passedCellSetDepth) {
-    // generate CellSet
-    if (generateCellSet) {
-      cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth,
-                                  passedCellSetPosition);
-    }
-  }
+  psDomain(lsDomainsType passedLevelSets) : levelSets(passedLevelSets) {}
 
   // Create a deep copy of all Level-Set and the Cell-Set in the passed domain.
   void deepCopy(psSmartPointer<psDomain> passedDomain) {
@@ -93,7 +75,7 @@ public:
       materialMap = nullptr;
     }
     if (passedDomain->cellSet) {
-      cellSetDepth = passedDomain->cellSetDepth;
+      auto cellSetDepth = passedDomain->getCellSet()->getDepth();
       cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth);
     } else {
       cellSet = nullptr;
@@ -179,13 +161,14 @@ public:
 
   // Generate the Cell-Set from the Level-Sets in the domain. The Cell-Set can
   // be used to store and track volume data.
-  void generateCellSet(const NumericType depth = 0.,
+  void generateCellSet(const NumericType position,
+                       const psMaterial coverMaterial,
                        const bool passedCellSetPosition = false) {
-    cellSetDepth = depth;
     if (!cellSet)
       cellSet = csDomainType::New();
     cellSet->setCellSetPosition(passedCellSetPosition);
-    cellSet->fromLevelSets(levelSets, materialMap, cellSetDepth);
+    cellSet->setCoverMaterial(coverMaterial);
+    cellSet->fromLevelSets(levelSets, materialMap, position);
   }
 
   void setMaterialMap(materialMapType passedMaterialMap) {
@@ -213,6 +196,16 @@ public:
 
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
   auto &getGrid() const { return levelSets->back()->getGrid(); }
+
+  // Returns the bounding box of the top Level-Set in the domain.
+  auto getBoundingBox() {
+    std::array<std::array<NumericType, 3>, 2> boundingBox;
+    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+    lsToDiskMesh<NumericType, D>(levelSets->back(), mesh).apply();
+    boundingBox[0] = mesh->minimumExtent;
+    boundingBox[1] = mesh->maximumExtent;
+    return boundingBox;
+  }
 
   void print() const {
     std::cout << "Process Simulation Domain:" << std::endl;
