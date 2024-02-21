@@ -39,6 +39,10 @@ struct Parameters {
     double rho = 500.; // 1e22 atoms/cm³
     double beta_p = 0.01;
     double beta_e = 0.1;
+
+    double A_sp = 0.0139;
+    double B_sp = 9.3;
+    double Eth_sp = 20.; // eV
   } Mask;
 
   // SiO2
@@ -167,12 +171,13 @@ public:
       auto matId = psMaterialMap::mapToMaterial(materialIds[i]);
       if (matId == psMaterial::Mask) {
         etchRate[i] = (-1. / p.Mask.rho) * ionSputteringRate->at(i) * p.ionFlux;
-      } else if (pCoverage->at(i) - p.delta_p >= 1.) {
+      } else if (pCoverage->at(i) >= 1.) {
         // Deposition
-        etchRate[i] = (1 / p.Polymer.rho) *
-                      (polyRate->at(i) * p.polyFlux * p.beta_p -
-                       ionpeRate->at(i) * p.ionFlux * peCoverage->at(i)) /
-                      p.delta_p;
+        etchRate[i] =
+            (1 / p.Polymer.rho) *
+            std::max((polyRate->at(i) * p.polyFlux * p.beta_p -
+                      ionpeRate->at(i) * p.ionFlux * peCoverage->at(i)),
+                     0.);
         assert(etchRate[i] >= 0 && "Negative deposition");
       } else if (matId == psMaterial::Polymer) {
         // Etching depo layer
@@ -265,8 +270,9 @@ public:
       } else if (peCoverage->at(i) < eps || ionpeRate->at(i) < eps) {
         pCoverage->at(i) = 1.;
       } else {
-        pCoverage->at(i) = (polyRate->at(i) * p.polyFlux * p.beta_p) /
-                           (ionpeRate->at(i) * p.ionFlux * peCoverage->at(i));
+        pCoverage->at(i) =
+            (polyRate->at(i) * p.polyFlux * p.beta_p) /
+            (ionpeRate->at(i) * p.ionFlux * peCoverage->at(i) + p.delta_p);
       }
       assert(!std::isnan(pCoverage->at(i)) && "pCoverage NaN");
     }
@@ -334,9 +340,9 @@ public:
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 4 && "Error in calculating cos theta");
 
-    NumericType A_sp = 1.;
+    NumericType A_sp = 0.;
     NumericType B_sp = 1.;
-    NumericType A_ie = 1.;
+    NumericType A_ie = 0.;
     NumericType Eth_sp = 1.;
     NumericType Eth_ie = 1.;
     switch (psMaterialMap::mapToMaterial(materialId)) {
@@ -426,8 +432,6 @@ public:
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"ionSputteringRate", "ionEnhancedRate", "ionpeRate"};
   }
-
-private:
 };
 
 template <typename NumericType, int D>
