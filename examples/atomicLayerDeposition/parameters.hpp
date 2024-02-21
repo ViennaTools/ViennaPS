@@ -23,6 +23,7 @@ template <typename T> struct Parameters {
   T inFlux = 1.0;
   T depositionThreshold = 1.;
   T adsorptionRate = 0.1;
+  T desorptionRate = 0.1;
 
   Parameters() {}
 
@@ -40,6 +41,7 @@ template <typename T> struct Parameters {
         psUtils::Item{"diffusionCoefficient", diffusionCoefficient}, //
         psUtils::Item{"inFlux", inFlux},                             //
         psUtils::Item{"depositionThreshold", depositionThreshold},   //
-        psUtils::Item{"adsorptionRate", adsorptionRate});
+        psUtils::Item{"adsorptionRate", adsorptionRate},             //
+        psUtils::Item{"desorptionRate", desorptionRate});
   }
 };

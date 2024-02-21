@@ -7,7 +7,7 @@
 int main(int argc, char *argv[]) {
   constexpr int D = 2;
   using NumericType = double;
-  omp_set_num_threads(12);
+  omp_set_num_threads(16);
 
   // Parse the parameters
   Parameters<NumericType> params;
@@ -27,12 +27,13 @@ int main(int argc, char *argv[]) {
                                params.trenchHeight, params.taperAngle, 0.,
                                false, false, psMaterial::Si)
       .apply();
-  domain->generateCellSet(params.topSpace, psMaterial::GAS, true);
-  auto cellSet = domain->getCellSet();
+  domain->generateCellSet(params.trenchHeight + params.topSpace,
+                          psMaterial::GAS, true);
+  auto &cellSet = domain->getCellSet();
 
-  psAtomicLayerModel<NumericType, D> model(domain, params.diffusionCoefficient,
-                                           params.inFlux, params.adsorptionRate,
-                                           params.depositionThreshold);
+  psAtomicLayerModel<NumericType, D> model(
+      domain, params.diffusionCoefficient, params.inFlux, params.adsorptionRate,
+      params.desorptionRate, params.depositionThreshold);
 
   double time = 0.;
   int i = 0;

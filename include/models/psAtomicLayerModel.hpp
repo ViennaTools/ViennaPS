@@ -4,28 +4,29 @@
 
 template <class NumericType, int D> class psAtomicLayerModel {
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
-  NumericType inFlux = 1.0;
   NumericType top = 0.;
+  const NumericType inFlux = 1.0;
   const NumericType diffusionCoefficient = 20.0;
-  const NumericType timeStabilityFactor = 0.245;
   const NumericType adsorptionRate = 0.1;
-  const NumericType depositionThreshold = 10.;
+  const NumericType depositionThreshold = 1.;
+  const NumericType desorptionRate = 0.1;
+  const NumericType stabilityFactor = 0.245;
 
 public:
   psAtomicLayerModel(
       const psSmartPointer<psDomain<NumericType, D>> &passedDomain,
       NumericType passedDiffusionCoefficient, NumericType passedInFlux,
-      NumericType passedAdsorptionRate, NumericType passedDepositionThreshold)
-      : diffusionCoefficient(passedDiffusionCoefficient), inFlux(passedInFlux),
-        adsorptionRate(passedAdsorptionRate),
+      NumericType passedAdsorptionRate, NumericType passedDesorptionRate,
+      NumericType passedDepositionThreshold)
+      : domain(passedDomain), diffusionCoefficient(passedDiffusionCoefficient),
+        inFlux(passedInFlux), adsorptionRate(passedAdsorptionRate),
+        desorptionRate(passedDesorptionRate),
         depositionThreshold(passedDepositionThreshold) {
-    domain = passedDomain;
+
     auto &cellSet = domain->getCellSet();
     segmentCells();
     cellSet->addScalarData("Flux", 0.);
-    cellSet->addScalarData("Adsorbed", 0.);
-    cellSet->addScalarData("FluxReduce", 0.);
-    cellSet->addScalarData("FluxAdsorbed", 0.);
+    cellSet->addScalarData("SurfaceCoverage", 0.);
 
     top = cellSet->getBoundingBox()[1][D - 1];
   }
@@ -35,14 +36,14 @@ public:
     auto gridDelta = cellSet->getGridDelta();
     auto cellType = cellSet->getScalarData("CellType");
     auto flux = cellSet->getScalarData("Flux");
-    auto adsorbed = cellSet->getScalarData("Adsorbed");
-    auto fluxReduce = cellSet->getScalarData("FluxReduce");
-    auto fluxAdsorbed = cellSet->getScalarData("FluxAdsorbed");
-    std::fill(fluxReduce->begin(), fluxReduce->end(), 0.);
+    auto coverage = cellSet->getScalarData("SurfaceCoverage");
 
-    const NumericType dt = std::min(
-        gridDelta * gridDelta / diffusionCoefficient * timeStabilityFactor,
-        NumericType(1.));
+    const NumericType dt =
+        std::min(gridDelta * gridDelta / diffusionCoefficient * stabilityFactor,
+                 NumericType(1.));
+    // The time step has to fulfill the stability condition for the explicit
+    // finite difference method, the stability factor has to smaller than 0.5.
+    // https://en.wikipedia.org/wiki/Numerical_solution_of_the_convection%E2%80%93diffusion_equation#Stability_criteria
     const NumericType C = dt * diffusionCoefficient / (gridDelta * gridDelta);
 
     // shared
@@ -58,67 +59,81 @@ public:
         const auto &neighbors = cellSet->getNeighbors(i);
 
         if (cellType->at(i) == 1.) {
-          // inner cell
-          auto center = cellSet->getCellCenter(i);
+          /* ----- GAS cell ----- */
+
+          const auto &center = cellSet->getCellCenter(i);
           if (center[D - 1] > top - gridDelta) {
+            // Inlet at the top
             newFlux[i] = inFlux;
           } else {
             // Diffusion
             newFlux[i] = diffusion(flux, cellType, i, neighbors, C);
           }
-
         } else if (cellType->at(i) == 0. &&
-                   adsorbed->at(i) < depositionThreshold) {
-          // surface cell
+                   coverage->at(i) < depositionThreshold) {
+          /* ----- Surface cell ----- */
+
+          // Adsorption
+          NumericType effectiveSticking =
+              adsorptionRate * (1 - coverage->at(i));
           NumericType adsorbedAmount = 0.;
           int num_neighbors = 0;
           for (auto n : neighbors) {
             if (n >= 0 && cellType->at(n) == 1.) {
-              auto adsorb = dt * adsorptionRate * flux->at(n);
+              auto adsorb = dt * effectiveSticking * flux->at(n);
               adsorbedAmount += adsorb;
               reduceFlux[n] += adsorb;
               num_neighbors++;
             }
           }
-          if (num_neighbors > 1)
-            adsorbedAmount /= num_neighbors;
-          adsorbed->at(i) += adsorbedAmount;
-          fluxAdsorbed->at(i) = adsorbedAmount;
-          adsorbed->at(i) = std::min(adsorbed->at(i), depositionThreshold);
+          coverage->at(i) += num_neighbors > 1 ? adsorbedAmount / num_neighbors
+                                               : adsorbedAmount;
+
+          // Desorption
+          NumericType desorbedAmount = dt * desorptionRate * coverage->at(i);
+          coverage->at(i) -= desorbedAmount;
+          for (const auto &n : neighbors) {
+            if (n >= 0 && cellType->at(n) == 1.) {
+              reduceFlux[n] -= desorbedAmount / num_neighbors;
+            }
+          }
         }
       }
 
+#pragma omp barrier
+#pragma omp for
+      for (unsigned i = 0; i < cellType->size(); ++i) {
+        if (cellType->at(i) == 1.)
+          flux->at(i) = newFlux[i];
+      }
+
+#pragma omp barrier
 #pragma omp critical
       {
+        // add/subtract desorbed/adsorbed flux
         for (unsigned i = 0; i < cellType->size(); ++i) {
-          flux->at(i) -= reduceFlux[i];
-          fluxReduce->at(i) += reduceFlux[i];
+          if (cellType->at(i) == 1. && reduceFlux[i] != 0.)
+            flux->at(i) -= reduceFlux[i];
         }
       }
-    }
+    } // end of parallel region
 
     if (deposit) {
       for (unsigned i = 0; i < cellType->size(); ++i) {
-        if (cellType->at(i) == 0. && adsorbed->at(i) > depositionThreshold) {
+        if (cellType->at(i) == 0. && coverage->at(i) > depositionThreshold) {
           const auto &neighbors = cellSet->getNeighbors(i);
           for (auto n : neighbors) {
             if (n >= 0 && cellType->at(n) == 1.) {
               cellType->at(n) = 0.;
-              adsorbed->at(n) = 0.;
+              coverage->at(n) = 0.;
               flux->at(n) = 0.;
             }
           }
-          adsorbed->at(i) = 0.;
+          coverage->at(i) = 0.;
           flux->at(i) = 0.;
           cellType->at(i) = -1.;
         }
       }
-    }
-
-#pragma omp parallel for
-    for (unsigned i = 0; i < cellType->size(); ++i) {
-      if (cellType->at(i) == 1.)
-        flux->at(i) = newFlux[i];
     }
 
     return dt;
@@ -132,7 +147,7 @@ private:
                                const NumericType C) {
     NumericType newFlux = 0.;
     int num_neighbors = 0;
-    for (auto n : neighbors) {
+    for (const auto &n : neighbors) {
       if (n >= 0 && cellType->at(n) == 1.) {
         newFlux += flux->at(n);
         num_neighbors++;
