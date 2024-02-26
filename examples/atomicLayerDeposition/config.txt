@@ -10,13 +10,19 @@ taperAngle = 0.    # degree
 topSpace = 20.
 
 # Process
-processTime = 100.
+p1_time = 100.
+p2_time = 100.
+purge_time = 50.
 
-diffusionCoefficient = 80.0
-inFlux = 1.0
+D_p1 = 80.0
+D_p2 = 80.0
+D_purge = 400.0
 
-adsorptionRate = 0.5
-desorptionRate = 0.01
+H2O_adsorptionRate = 0.05
+H2O_desorptionRate = 0.001
 
-depositionThreshold = 1.
+TMA_adsorptionRate = 0.075
+TMA_desorptionRate = 0.01
+
+
 

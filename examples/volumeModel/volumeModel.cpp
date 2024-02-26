@@ -22,12 +22,14 @@ int main(int argc, char *argv[]) {
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
   psMakeFin<NumericType, D>(geometry, params.gridDelta, params.xExtent,
                             params.yExtent, params.finWidth, params.finHeight,
-                            0. /* base height*/, false /*periodic boundary*/,
-                            false /*create mask*/)
+                            0. /*taper angle*/, 0. /* base height*/,
+                            false /*periodic boundary*/, false /*create mask*/,
+                            psMaterial::Si /*material*/)
       .apply();
 
   // generate cell set with depth 5
-  geometry->generateCellSet(-5. /*depth*/, false /*cell set below surface*/);
+  geometry->generateCellSet(-5. /*depth*/, psMaterial::Si,
+                            false /*cell set below surface*/);
 
   auto model = psSmartPointer<psPlasmaDamage<NumericType, D>>::New(
       params.ionEnergy /* mean ion energy (eV) */,

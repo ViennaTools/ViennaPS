@@ -42,9 +42,9 @@ int main(int argc, char **argv) {
   // copy top layer for deposition
   domain->duplicateTopLevelSet(psMaterial::Polymer);
 
-  domain->generateCellSet(params.substrateHeight +
-                              params.numLayers * params.layerHeight + 10.,
-                          true /* true means cell set above surface */);
+  domain->generateCellSet(
+      params.substrateHeight + params.numLayers * params.layerHeight + 10.,
+      psMaterial::GAS, true /* true means cell set above surface */);
   auto &cellSet = domain->getCellSet();
   cellSet->addScalarData("byproductSum", 0.);
   cellSet->writeVTU("initial.vtu");

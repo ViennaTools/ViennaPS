@@ -2,41 +2,58 @@
 
 #include <psDomain.hpp>
 
+#include <random>
+
 template <class NumericType, int D> class psAtomicLayerModel {
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
   NumericType top = 0.;
-  const NumericType inFlux = 1.0;
-  const NumericType diffusionCoefficient = 20.0;
-  const NumericType adsorptionRate = 0.1;
-  const NumericType depositionThreshold = 1.;
-  const NumericType desorptionRate = 0.1;
   const NumericType stabilityFactor = 0.245;
+  const std::string precursor_p1;
+  const std::string precursor_p2;
+  NumericType depositTime = 0.;
+  int depositCount = 0;
+
+  std::mt19937_64 rng;
 
 public:
   psAtomicLayerModel(
       const psSmartPointer<psDomain<NumericType, D>> &passedDomain,
-      NumericType passedDiffusionCoefficient, NumericType passedInFlux,
-      NumericType passedAdsorptionRate, NumericType passedDesorptionRate,
-      NumericType passedDepositionThreshold)
-      : domain(passedDomain), diffusionCoefficient(passedDiffusionCoefficient),
-        inFlux(passedInFlux), adsorptionRate(passedAdsorptionRate),
-        desorptionRate(passedDesorptionRate),
-        depositionThreshold(passedDepositionThreshold) {
+      std::string pPrecursor_p1, std::string pPrecursor_p2)
+      : domain(passedDomain), precursor_p1(pPrecursor_p1),
+        precursor_p2(pPrecursor_p2) {
 
     auto &cellSet = domain->getCellSet();
     segmentCells();
     cellSet->addScalarData("Flux", 0.);
-    cellSet->addScalarData("SurfaceCoverage", 0.);
+    cellSet->addScalarData(precursor_p1, 0.);
+    cellSet->addScalarData(precursor_p2, 0.);
 
     top = cellSet->getBoundingBox()[1][D - 1];
+
+    // initialize RNG
+    std::random_device rd;
+    rng.seed(rd());
   }
 
-  NumericType timeStep(const bool deposit = true) {
+  NumericType timeStep(const NumericType diffusionCoefficient,
+                       const NumericType adsorptionRate,
+                       const NumericType desorptionRate,
+                       const NumericType inFlux, bool deposit) {
     auto &cellSet = domain->getCellSet();
-    auto gridDelta = cellSet->getGridDelta();
-    auto cellType = cellSet->getScalarData("CellType");
+    const auto gridDelta = cellSet->getGridDelta();
+    const auto cellType = cellSet->getScalarData("CellType");
     auto flux = cellSet->getScalarData("Flux");
-    auto coverage = cellSet->getScalarData("SurfaceCoverage");
+    std::string coverageName = deposit ? precursor_p2 : precursor_p1;
+    auto coverage = cellSet->getScalarData(coverageName);
+    auto adsorbat = cellSet->getScalarData(precursor_p1);
+    if (coverage == nullptr) {
+      std::cerr << "Coverage scalar data not found" << std::endl;
+      exit(1);
+    }
+    if (adsorbat == nullptr) {
+      std::cerr << "Adsorbat scalar data not found" << std::endl;
+      exit(1);
+    }
 
     const NumericType dt =
         std::min(gridDelta * gridDelta / diffusionCoefficient * stabilityFactor,
@@ -61,16 +78,14 @@ public:
         if (cellType->at(i) == 1.) {
           /* ----- GAS cell ----- */
 
-          const auto &center = cellSet->getCellCenter(i);
-          if (center[D - 1] > top - gridDelta) {
-            // Inlet at the top
+          if (cellSet->getCellCenter(i)[D - 1] > top - gridDelta) {
+            // Inlet/outlet at the top
             newFlux[i] = inFlux;
           } else {
             // Diffusion
             newFlux[i] = diffusion(flux, cellType, i, neighbors, C);
           }
-        } else if (cellType->at(i) == 0. &&
-                   coverage->at(i) < depositionThreshold) {
+        } else if (cellType->at(i) == 0.) {
           /* ----- Surface cell ----- */
 
           // Adsorption
@@ -119,20 +134,27 @@ public:
     } // end of parallel region
 
     if (deposit) {
-      for (unsigned i = 0; i < cellType->size(); ++i) {
-        if (cellType->at(i) == 0. && coverage->at(i) > depositionThreshold) {
-          const auto &neighbors = cellSet->getNeighbors(i);
-          for (auto n : neighbors) {
-            if (n >= 0 && cellType->at(n) == 1.) {
-              cellType->at(n) = 0.;
-              coverage->at(n) = 0.;
-              flux->at(n) = 0.;
+      depositTime += dt;
+      if (depositTime - depositCount > 0) {
+        std::uniform_real_distribution<NumericType> dist(0., 1.);
+        for (unsigned i = 0; i < cellType->size(); ++i) {
+          if (dist(rng) < coverage->at(i) && dist(rng) < adsorbat->at(i)) {
+            const auto &neighbors = cellSet->getNeighbors(i);
+            for (auto n : neighbors) {
+              if (n >= 0 && cellType->at(n) == 1.) {
+                cellType->at(n) = 0.;
+                coverage->at(n) = 0.;
+                flux->at(n) = 0.;
+                adsorbat->at(n) = 0.;
+              }
             }
+            coverage->at(i) = 0.;
+            flux->at(i) = 0.;
+            cellType->at(i) = -1.;
+            adsorbat->at(i) = 0.;
           }
-          coverage->at(i) = 0.;
-          flux->at(i) = 0.;
-          cellType->at(i) = -1.;
         }
+        depositCount++;
       }
     }
 
