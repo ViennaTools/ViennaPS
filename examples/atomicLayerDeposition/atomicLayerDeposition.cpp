@@ -22,14 +22,13 @@ int main(int argc, char *argv[]) {
 
   // Create a domain
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  // makeLShape(domain, params, psMaterial::TiN);
-  psMakeTrench<NumericType, D>(
-      domain, params.get("gridDelta"),
-      params.get("verticalWidth") + 2. * params.get("xPad"),
-      params.get("verticalWidth") + 2. * params.get("xPad"),
-      params.get("verticalWidth"), params.get("verticalDepth"), 0., 0., false,
-      false, psMaterial::TiN)
-      .apply();
+  makeLShape(domain, params, psMaterial::TiN);
+  // psMakeTrench<NumericType, D>(
+  //     domain, params.get("gridDelta"),
+  //     params.get("verticalWidth") + 2. * params.get("xPad"),
+  //     params.get("verticalWidth") + 2. * params.get("xPad"),
+  //     params.get("verticalWidth"), params.get("verticalDepth"), 0., 0.,
+  //     false, false, psMaterial::TiN) .apply();
   domain->saveSurfaceMesh("trench.vtp", false);
 
   domain->generateCellSet(params.get("verticalDepth") + params.get("topSpace"),
@@ -41,8 +40,7 @@ int main(int argc, char *argv[]) {
                                          params.get<int>("reflectionLimit"),
                                          params.get<int>("raysPerPoint"))
       .apply(params.get("minCoord"), params.get("maxCoord"),
-             params.get("verticalDepth") + params.get("gridDelta"),
-             params.get("radius"));
+             params.get("verticalDepth"), params.get<int>("numNeighbors"));
 
   cellSet->writeVTU("diffusivity.vtu");
 

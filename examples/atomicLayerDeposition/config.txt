@@ -14,7 +14,7 @@ maxCoord = 10
 
 reflectionLimit = 1000
 raysPerPoint = 10000
-radius = 25
+numNeighbors = 20
 
 # Process
 p1_time = 100.

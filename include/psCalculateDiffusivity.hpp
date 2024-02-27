@@ -1,13 +1,14 @@
 #pragma once
 
 #include <psDomain.hpp>
+#include <psKDTree.hpp>
 #include <psUtils.hpp>
+
 #include <rayBoundary.hpp>
 #include <rayGeometry.hpp>
 #include <rayRNG.hpp>
-#include <rayTraceDirection.hpp>
-
 #include <raySource.hpp>
+#include <rayTraceDirection.hpp>
 
 template <typename NumericType, int D>
 class CustomSource : public raySource<NumericType, D> {
@@ -104,7 +105,7 @@ public:
   }
 
   void apply(NumericType minCoord, NumericType maxCoord, NumericType top,
-             NumericType radius) {
+             int numNeighbors) {
     initMemoryFlags();
     initGeometry();
 
@@ -114,7 +115,7 @@ public:
     auto traceSettings = rayInternal::getTraceSettings(sourceDirection);
     auto boundary = rayBoundary<NumericType, D>(
         traceDevice, boundingBox, boundaryConditions, traceSettings);
-    std::array<NumericType, 3> coords = {minCoord, maxCoord, top};
+    std::array<NumericType, 3> coords = {minCoord, maxCoord, top + diskRadius};
     auto raySource = CustomSource<NumericType, D>(coords, 1., traceSettings);
 
     auto result = runKernel(boundary, raySource);
@@ -128,24 +129,36 @@ public:
     auto &cellSet = domain->getCellSet();
     auto cellType = cellSet->getScalarData("CellType");
     auto diff = cellSet->addScalarData("Diffusivity", 0.);
-    auto cells = cellSet->getElements();
-    auto numCells = cells.size();
+    auto numCells = cellSet->getElements().size();
     auto &points = mesh->getNodes();
+
+    psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
+    kdTree.setPoints(points);
+    kdTree.build();
 
     for (unsigned i = 0; i < numCells; ++i) {
       auto cellCenter = cellSet->getCellCenter(i);
       if (cellType->at(i) != 1. || cellCenter[D - 1] > top) {
         continue;
       }
-      NumericType distSum = 0.;
-      for (unsigned j = 0; j < points.size(); j++) {
-        auto distance = rayInternal::Distance(cellCenter, points[j]);
-        if (distance < radius) {
-          distSum += distance;
-          diff->at(i) += distance * result.first[j];
-        }
+
+      auto neighbors = kdTree.findKNearest(cellCenter, numNeighbors);
+
+      if (!neighbors) {
+        std::cout << "No neighbors found for cell " << i << std::endl;
+        continue;
       }
-      diff->at(i) /= distSum;
+
+      NumericType distanceSum = 0.;
+      for (const auto &n : neighbors.value()) {
+        auto &point = points[n.first];
+        if (point[D - 1] >= top)
+          continue;
+
+        distanceSum += n.second; // distance
+        diff->at(i) += n.second * result.first[n.first];
+      }
+      diff->at(i) /= distanceSum;
     }
   }
 
@@ -249,6 +262,7 @@ private:
 #endif
         bool reflect = false;
         bool hitFromBack = false;
+        std::vector<unsigned> sourcePrimIDs;
         unsigned numReflections = 0;
         do {
           rayHit.ray.tfar = std::numeric_limits<rtcNumericType>::max();
@@ -302,16 +316,21 @@ private:
 
           /* -------- Surface hit -------- */
           assert(rayHit.hit.geomID == geometryID && "Geometry hit ID invalid");
-          data[rayHit.hit.primID] += rayHit.ray.tfar;
-          hitCount[rayHit.hit.primID]++;
+          if (!sourcePrimIDs.empty()) {
+            for (const auto &id : sourcePrimIDs) {
+              data[id] += rayHit.ray.tfar;
+              hitCount[id]++;
+            }
+          }
 
+          sourcePrimIDs.clear();
+          sourcePrimIDs.push_back(rayHit.hit.primID);
           // check for additional intersections
           for (const auto &id :
                traceGeometry.getNeighborIndicies(rayHit.hit.primID)) {
             rtcNumericType distance;
             if (checkLocalIntersection(ray, id, distance)) {
-              data[id] += rayHit.ray.tfar;
-              hitCount[id]++;
+              sourcePrimIDs.push_back(id);
             }
           }
 
@@ -368,7 +387,10 @@ private:
 
     // normalize data
     for (unsigned i = 0; i < traceGeometry.getNumPoints(); ++i) {
-      result[i] /= hitCounts[i] * diskAreas[i];
+      if (hitCounts[i] > 0)
+        result[i] /= hitCounts[i] * diskAreas[i];
+      else
+        result[i] = -1;
     }
 
     rtcReleaseScene(rtcScene);
