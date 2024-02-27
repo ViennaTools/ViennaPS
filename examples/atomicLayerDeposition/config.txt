@@ -1,13 +1,20 @@
 # Domain
 gridDelta = 1. # nm
-xExtent = 50.   # nm
-yExtent = 50.   # nm
+xPad = 10.   # nm
 
 # Geometry
-trenchWidth = 20.  # nm
-trenchHeight = 100. # nm
-taperAngle = 0.    # degree
+verticalWidth = 20.  # nm
+verticalDepth = 100. # nm
+horizontalWidth = 100.  # nm
+horizontalHeight = 20. # nm
 topSpace = 20.
+
+minCoord = -10
+maxCoord = 10
+
+reflectionLimit = 1000
+raysPerPoint = 10000
+radius = 25
 
 # Process
 p1_time = 100.
