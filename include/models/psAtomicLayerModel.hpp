@@ -166,7 +166,7 @@ private:
                                const std::vector<NumericType> *cellType,
                                const unsigned i,
                                const std::array<int, 2 * D> &neighbors,
-                               const NumericType C) {
+                               const NumericType Dij) {
     NumericType newFlux = 0.;
     int num_neighbors = 0;
     for (const auto &n : neighbors) {
@@ -175,7 +175,7 @@ private:
         num_neighbors++;
       }
     }
-    return flux->at(i) + C * (newFlux - num_neighbors * flux->at(i));
+    return Dij * (newFlux - num_neighbors * flux->at(i));
   }
 
   void segmentCells() {

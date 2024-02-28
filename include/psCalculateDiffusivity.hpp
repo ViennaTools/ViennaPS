@@ -122,6 +122,8 @@ public:
 
     boundary.releaseGeometry();
 
+    smoothResult(result.first);
+
     mesh->getCellData().insertNextScalarData(result.first, "Diffusivity");
     mesh->getCellData().insertNextScalarData(result.second, "NumHits");
     lsVTKWriter<NumericType>(mesh, "diffusivity.vtp").apply();
@@ -513,6 +515,20 @@ private:
       return true;
     }
     return false;
+  }
+
+  void smoothResult(std::vector<NumericType> &flux) {
+    assert(flux.size() == traceGeometry.getNumPoints() &&
+           "Unequal number of points in smoothResult");
+    auto oldFlux = flux;
+#pragma omp parallel for
+    for (size_t idx = 0; idx < traceGeometry.getNumPoints(); idx++) {
+      auto neighborhood = traceGeometry.getNeighborIndicies(idx);
+      for (auto const &nbi : neighborhood) {
+        flux[idx] += oldFlux[nbi];
+      }
+      flux[idx] /= (neighborhood.size() + 1);
+    }
   }
 
 private:
