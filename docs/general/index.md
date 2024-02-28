@@ -25,5 +25,14 @@ For users who need to transition from a 2D to a 3D simulation, ViennaPS offers t
 
 ## Using Smart Pointers
 
-Coming soon
-{: .label .label-yellow}
+In ViennaPS, smart pointers are utilized to pass domains, models, and other essential objects to processes and utility functions. To facilitate this, the library includes a custom class named `psSmartPointer`, serving as a shared pointer implementation. This design choice ensures efficient memory management and enables seamless interaction between different components within the simulation framework.
+
+__Example:__
+
+```c++
+// Creating a new domain
+auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+
+// Using a pre-built model
+auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(/*pass constructor arguments*/);
+```
