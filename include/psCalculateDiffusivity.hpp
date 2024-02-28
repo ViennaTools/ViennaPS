@@ -4,25 +4,37 @@
 #include <psKDTree.hpp>
 #include <psUtils.hpp>
 
-#include <rayBoundary.hpp>
 #include <rayGeometry.hpp>
 #include <rayRNG.hpp>
-#include <raySource.hpp>
-#include <rayTraceDirection.hpp>
+#include <rayReflection.hpp>
 
-template <typename NumericType, int D>
-class CustomSource : public raySource<NumericType, D> {
+template <typename NumericType, int D> class CustomSource {
 public:
-  CustomSource(std::array<NumericType, 3> pCoords, NumericType pCosinePower,
-               std::array<int, 5> &pTraceSettings)
-      : sourceBox(pCoords), rayDir(pTraceSettings[0]),
-        firstDir(pTraceSettings[1]), secondDir(pTraceSettings[2]),
-        minMax(pTraceSettings[3]), posNeg(pTraceSettings[4]),
-        ee(((NumericType)2) / (pCosinePower + 1)) {}
+  CustomSource(psSmartPointer<csDenseCellSet<NumericType, D>> passCellSet,
+               const NumericType passedCutoff)
+      : cellSet(passCellSet), numCells(cellSet->getElements().size()),
+        materialIds(cellSet->getScalarData("Material")) {}
 
-  void fillRay(RTCRay &ray, const size_t idx, rayRNG &RngState) override final {
-    auto origin = getOrigin(RngState);
-    auto direction = getDirection(RngState);
+  void fillRay(RTCRay &ray, const size_t idx, rayRNG &RngState) {
+    std::uniform_real_distribution<NumericType> uniDist;
+
+    unsigned cellIdx = static_cast<unsigned>(uniDist(RngState) * numCells);
+    auto material = materialIds->at(cellIdx);
+    auto origin = cellSet->getCellCenter(cellIdx);
+    while (!psMaterialMap::isMaterial(material, psMaterial::GAS) ||
+           origin[D - 2] > cutoff) {
+      cellIdx = static_cast<unsigned>(uniDist(RngState) * numCells);
+      material = materialIds->at(cellIdx);
+      origin = cellSet->getCellCenter(cellIdx);
+    }
+
+    rayTriple<NumericType> direction{0., 0., 0.};
+
+    for (int i = 0; i < D; ++i) {
+      direction[i] = uniDist(RngState) * 2 - 1;
+    }
+
+    rayInternal::Normalize(direction);
 
 #ifdef ARCH_X86
     reinterpret_cast<__m128 &>(ray) =
@@ -44,45 +56,10 @@ public:
   }
 
 private:
-  rayTriple<NumericType> getOrigin(rayRNG &RngState) {
-    rayTriple<NumericType> origin{0., 0., 0.};
-    std::uniform_real_distribution<NumericType> uniDist;
-    auto r1 = uniDist(RngState);
-
-    origin[rayDir] = sourceBox[2];
-    origin[firstDir] = sourceBox[0] + (sourceBox[1] - sourceBox[0]) * r1;
-    origin[secondDir] = 0.;
-
-    return origin;
-  }
-
-  rayTriple<NumericType> getDirection(rayRNG &RngState) {
-    rayTriple<NumericType> direction{0., 0., 0.};
-    std::uniform_real_distribution<NumericType> uniDist;
-    auto r1 = uniDist(RngState);
-    auto r2 = uniDist(RngState);
-
-    const NumericType tt = pow(r2, ee);
-    direction[rayDir] = posNeg * sqrtf(tt);
-    direction[firstDir] = cosf(M_PI * 2.f * r1) * sqrtf(1 - tt);
-
-    if constexpr (D == 2) {
-      direction[secondDir] = 0;
-      rayInternal::Normalize(direction);
-    } else {
-      direction[secondDir] = sinf(M_PI * 2.f * r1) * sqrtf(1 - tt);
-    }
-
-    return direction;
-  }
-
-  const std::array<NumericType, 3> sourceBox;
-  const int rayDir;
-  const int firstDir;
-  const int secondDir;
-  const int minMax;
-  const NumericType posNeg;
-  const NumericType ee;
+  psSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
+  const std::size_t numCells;
+  const NumericType cutoff = 0.;
+  std::vector<NumericType> *materialIds;
 };
 
 template <class NumericType, int D> class psCalculateDiffusivity {
@@ -95,42 +72,29 @@ public:
   psCalculateDiffusivity() : traceDevice(rtcNewDevice("hugepages=1")) {}
   psCalculateDiffusivity(psSmartPointer<psDomain<NumericType, D>> passedDomain,
                          const int passedReflectionLimit = 100,
-                         const int passedNumRaysPerPoint = 1000)
+                         const int passedNumRaysPerPoint = 1000,
+                         const psMaterial passedMaterial = psMaterial::GAS)
       : traceDevice(rtcNewDevice("hugepages=1")), domain(passedDomain),
         reflectionLimit(passedReflectionLimit),
-        numRaysPerPoint(passedNumRaysPerPoint) {}
+        numRaysPerPoint(passedNumRaysPerPoint), material(passedMaterial) {}
   ~psCalculateDiffusivity() {
     traceGeometry.releaseGeometry();
     rtcReleaseDevice(traceDevice);
   }
 
-  void apply(NumericType minCoord, NumericType maxCoord, NumericType top,
-             int numNeighbors) {
+  NumericType apply(NumericType top, int numNeighbors) {
     initMemoryFlags();
     initGeometry();
 
-    auto boundingBox = traceGeometry.getBoundingBox();
-    rayInternal::adjustBoundingBox<NumericType, D>(boundingBox, sourceDirection,
-                                                   diskRadius);
-    auto traceSettings = rayInternal::getTraceSettings(sourceDirection);
-    auto boundary = rayBoundary<NumericType, D>(
-        traceDevice, boundingBox, boundaryConditions, traceSettings);
-    std::array<NumericType, 3> coords = {minCoord, maxCoord, top + diskRadius};
-    auto raySource = CustomSource<NumericType, D>(coords, 1., traceSettings);
+    auto result = runKernel(top);
 
-    auto result = runKernel(boundary, raySource);
-
-    boundary.releaseGeometry();
-
-    smoothResult(result.first);
-
-    mesh->getCellData().insertNextScalarData(result.first, "Diffusivity");
+    mesh->getCellData().insertNextScalarData(result.first, "MeanFreePath");
     mesh->getCellData().insertNextScalarData(result.second, "NumHits");
     lsVTKWriter<NumericType>(mesh, "diffusivity.vtp").apply();
 
     auto &cellSet = domain->getCellSet();
     auto cellType = cellSet->getScalarData("CellType");
-    auto diff = cellSet->addScalarData("Diffusivity", 0.);
+    auto diff = cellSet->addScalarData("MeanFreePath", 0.);
     auto numCells = cellSet->getElements().size();
     auto &points = mesh->getNodes();
 
@@ -138,6 +102,7 @@ public:
     kdTree.setPoints(points);
     kdTree.build();
 
+    NumericType maxDiffusivity = -1.;
     for (unsigned i = 0; i < numCells; ++i) {
       auto cellCenter = cellSet->getCellCenter(i);
       if (cellType->at(i) != 1. || cellCenter[D - 1] > top) {
@@ -161,7 +126,13 @@ public:
         diff->at(i) += n.second * result.first[n.first];
       }
       diff->at(i) /= distanceSum;
+
+      if (diff->at(i) > maxDiffusivity) {
+        maxDiffusivity = diff->at(i);
+      }
     }
+
+    return maxDiffusivity;
   }
 
 private:
@@ -174,9 +145,6 @@ private:
     assert(normals);
     diskRadius = gridDelta * rayInternal::DiskFactor<D>;
     traceGeometry.initGeometry(traceDevice, points, *normals, diskRadius);
-    for (unsigned i = 0; i < D; ++i)
-      boundaryConditions[i] =
-          convertBoundaryCondition(domain->getGrid().getBoundaryConditions(i));
     numRays = points.size() * numRaysPerPoint;
   }
 
@@ -189,38 +157,15 @@ private:
 #endif
   }
 
-  rayBoundaryCondition convertBoundaryCondition(
-      lsBoundaryConditionEnum<D> originalBoundaryCondition) const {
-    switch (originalBoundaryCondition) {
-    case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-      return rayBoundaryCondition::REFLECTIVE;
-
-    case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-      return rayBoundaryCondition::PERIODIC;
-
-    case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-    }
-    return rayBoundaryCondition::IGNORE;
-  }
-
   std::pair<std::vector<NumericType>, std::vector<NumericType>>
-  runKernel(rayBoundary<NumericType, D> &boundary,
-            raySource<NumericType, D> &source) {
+  runKernel(const NumericType top) {
+    auto source = CustomSource<NumericType, D>(domain->getCellSet(), top);
+
     auto rtcScene = rtcNewScene(traceDevice);
     rtcSetSceneFlags(rtcScene, RTC_SCENE_FLAG_NONE);
     auto bbquality = RTC_BUILD_QUALITY_HIGH;
     rtcSetSceneBuildQuality(rtcScene, bbquality);
     auto rtcGeometry = traceGeometry.getRTCGeometry();
-    auto rtcBoundary = boundary.getRTCGeometry();
-
-    auto boundaryID = rtcAttachGeometry(rtcScene, rtcBoundary);
     auto geometryID = rtcAttachGeometry(rtcScene, rtcGeometry);
     assert(rtcGetDeviceError(traceDevice) == RTC_ERROR_NONE &&
            "Embree device error");
@@ -257,7 +202,7 @@ private:
         auto particleSeed = rayInternal::tea<3>(idx, seed);
         rayRNG RngState(particleSeed);
 
-        source.fillRay(rayHit.ray, idx, RngState); // fills also tnear
+        source.fillRay(rayHit.ray, idx, RngState);
 
 #ifdef VIENNARAY_USE_RAY_MASKING
         rayHit.ray.mask = -1;
@@ -278,12 +223,6 @@ private:
           if (rayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
             reflect = false;
             break;
-          }
-
-          /* -------- Boundary hit -------- */
-          if (rayHit.hit.geomID == boundaryID) {
-            boundary.processHit(rayHit, reflect);
-            continue;
           }
 
           // Calculate point of impact
@@ -369,7 +308,7 @@ private:
       }
     }
 
-    diskAreas = computeDiskAreas(boundary);
+    rtcReleaseScene(rtcScene);
 
     // reduce data
     std::vector<NumericType> result(traceGeometry.getNumPoints(), 0);
@@ -388,85 +327,18 @@ private:
     }
 
     // normalize data
+#pragma omp parallel for
     for (unsigned i = 0; i < traceGeometry.getNumPoints(); ++i) {
       if (hitCounts[i] > 0)
-        result[i] /= hitCounts[i] * diskAreas[i];
+        result[i] /= hitCounts[i];
       else
         result[i] = -1;
     }
 
-    rtcReleaseScene(rtcScene);
+    smoothResult(result);
 
     return std::pair<std::vector<NumericType>, std::vector<NumericType>>{
         result, hitCounts};
-  }
-
-  std::vector<NumericType>
-  computeDiskAreas(rayBoundary<NumericType, D> &boundary) {
-    constexpr double eps = 1e-3;
-    auto bdBox = traceGeometry.getBoundingBox();
-    const auto numOfPrimitives = traceGeometry.getNumPoints();
-    const auto boundaryDirs = boundary.getDirs();
-    auto areas = std::vector<NumericType>(numOfPrimitives, 0);
-
-#pragma omp parallel for
-    for (long idx = 0; idx < numOfPrimitives; ++idx) {
-      auto const &disk = traceGeometry.getPrimRef(idx);
-
-      if constexpr (D == 3) {
-        areas[idx] = disk[3] * disk[3] * M_PI; // full disk area
-
-        if (std::fabs(disk[boundaryDirs[0]] - bdBox[0][boundaryDirs[0]]) <
-                eps ||
-            std::fabs(disk[boundaryDirs[0]] - bdBox[1][boundaryDirs[0]]) <
-                eps) {
-          // disk intersects boundary in first direction
-          areas[idx] /= 2;
-        }
-
-        if (std::fabs(disk[boundaryDirs[1]] - bdBox[0][boundaryDirs[1]]) <
-                eps ||
-            std::fabs(disk[boundaryDirs[1]] - bdBox[1][boundaryDirs[1]]) <
-                eps) {
-          // disk intersects boundary in second direction
-          areas[idx] /= 2;
-        }
-      } else {
-        areas[idx] = 2 * disk[3];
-        auto normal = traceGeometry.getNormalRef(idx);
-
-        // test min boundary
-        if (std::abs(disk[boundaryDirs[0]] - bdBox[0][boundaryDirs[0]]) <
-            disk[3]) {
-          NumericType insideTest =
-              1 - normal[boundaryDirs[0]] * normal[boundaryDirs[0]];
-          if (insideTest > 1e-4) {
-            insideTest =
-                std::abs(disk[boundaryDirs[0]] - bdBox[0][boundaryDirs[0]]) /
-                std::sqrt(insideTest);
-            if (insideTest < disk[3]) {
-              areas[idx] -= disk[3] - insideTest;
-            }
-          }
-        }
-
-        // test max boundary
-        if (std::abs(disk[boundaryDirs[0]] - bdBox[1][boundaryDirs[0]]) <
-            disk[3]) {
-          NumericType insideTest =
-              1 - normal[boundaryDirs[0]] * normal[boundaryDirs[0]];
-          if (insideTest > 1e-4) {
-            insideTest =
-                std::abs(disk[boundaryDirs[0]] - bdBox[1][boundaryDirs[0]]) /
-                std::sqrt(insideTest);
-            if (insideTest < disk[3]) {
-              areas[idx] -= disk[3] - insideTest;
-            }
-          }
-        }
-      }
-    }
-    return areas;
   }
 
   bool checkLocalIntersection(RTCRay const &ray, const unsigned int primID,
@@ -535,10 +407,8 @@ private:
   const unsigned int reflectionLimit = 100;
   NumericType gridDelta = 0;
   NumericType diskRadius = 0;
-  rayTraceDirection sourceDirection =
-      D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
-  rayBoundaryCondition boundaryConditions[D] = {};
   unsigned int seed = 15235135;
   long long numRays = 0;
   long numRaysPerPoint = 1000;
+  const psMaterial material = psMaterial::GAS;
 };

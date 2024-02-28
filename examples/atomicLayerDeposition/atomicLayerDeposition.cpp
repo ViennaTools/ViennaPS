@@ -36,11 +36,13 @@ int main(int argc, char *argv[]) {
   auto &cellSet = domain->getCellSet();
   psAtomicLayerModel<NumericType, D> model(domain, "H2O", "TMA");
 
-  psCalculateDiffusivity<NumericType, D>(domain,
-                                         params.get<int>("reflectionLimit"),
-                                         params.get<int>("raysPerPoint"))
-      .apply(params.get("minCoord"), params.get("maxCoord"),
-             params.get("verticalDepth"), params.get<int>("numNeighbors"));
+  auto maxMfp =
+      psCalculateDiffusivity<NumericType, D>(domain,
+                                             params.get<int>("reflectionLimit"),
+                                             params.get<int>("raysPerPoint"))
+          .apply(params.get("verticalDepth"), params.get<int>("numNeighbors"));
+
+  std::cout << "Max MFP: " << maxMfp << std::endl;
 
   cellSet->writeVTU("diffusivity.vtu");
 

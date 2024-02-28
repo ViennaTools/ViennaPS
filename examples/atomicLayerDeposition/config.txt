@@ -4,7 +4,7 @@ xPad = 10.   # nm
 
 # Geometry
 verticalWidth = 20.  # nm
-verticalDepth = 100. # nm
+verticalDepth = 50. # nm
 horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
 topSpace = 20.
