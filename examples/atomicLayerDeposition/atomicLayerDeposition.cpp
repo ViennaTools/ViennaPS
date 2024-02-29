@@ -40,7 +40,8 @@ int main(int argc, char *argv[]) {
       psCalculateDiffusivity<NumericType, D>(domain,
                                              params.get<int>("reflectionLimit"),
                                              params.get<int>("raysPerPoint"))
-          .apply(params.get("verticalDepth"), params.get<int>("numNeighbors"));
+          .apply(params.get("verticalDepth"), params.get<int>("numNeighbors"),
+                 params.get("sourceMFP"));
 
   std::cout << "Max MFP: " << maxMfp << std::endl;
 

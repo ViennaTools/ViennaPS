@@ -12,9 +12,10 @@ topSpace = 20.
 minCoord = -10
 maxCoord = 10
 
-reflectionLimit = 5000
-raysPerPoint = 50000
-numNeighbors = 20
+reflectionLimit = 1000
+raysPerPoint = 10000
+numNeighbors = 10
+sourceMFP = 100.
 
 # Process
 p1_time = 100.

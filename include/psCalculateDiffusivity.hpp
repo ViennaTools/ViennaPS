@@ -13,17 +13,18 @@ public:
   CustomSource(psSmartPointer<csDenseCellSet<NumericType, D>> passCellSet,
                const NumericType passedCutoff)
       : cellSet(passCellSet), numCells(cellSet->getElements().size()),
-        materialIds(cellSet->getScalarData("Material")) {}
+        materialIds(cellSet->getScalarData("Material")), cutoff(passedCutoff) {}
 
   void fillRay(RTCRay &ray, const size_t idx, rayRNG &RngState) {
     std::uniform_real_distribution<NumericType> uniDist;
+    std::uniform_int_distribution<unsigned> cellDist(0, numCells - 1);
 
-    unsigned cellIdx = static_cast<unsigned>(uniDist(RngState) * numCells);
+    unsigned cellIdx = cellDist(RngState);
     auto material = materialIds->at(cellIdx);
     auto origin = cellSet->getCellCenter(cellIdx);
     while (!psMaterialMap::isMaterial(material, psMaterial::GAS) ||
-           origin[D - 2] > cutoff) {
-      cellIdx = static_cast<unsigned>(uniDist(RngState) * numCells);
+           origin[D - 1] > cutoff) {
+      cellIdx = cellDist(RngState);
       material = materialIds->at(cellIdx);
       origin = cellSet->getCellCenter(cellIdx);
     }
@@ -82,11 +83,12 @@ public:
     rtcReleaseDevice(traceDevice);
   }
 
-  NumericType apply(NumericType top, int numNeighbors) {
+  NumericType apply(NumericType top, int numNeighbors,
+                    NumericType sourceMfp = 0.) {
     initMemoryFlags();
     initGeometry();
 
-    auto result = runKernel(top);
+    auto result = runKernel(top, sourceMfp);
 
     mesh->getCellData().insertNextScalarData(result.first, "MeanFreePath");
     mesh->getCellData().insertNextScalarData(result.second, "NumHits");
@@ -158,8 +160,25 @@ private:
   }
 
   std::pair<std::vector<NumericType>, std::vector<NumericType>>
-  runKernel(const NumericType top) {
+  runKernel(const NumericType top, const NumericType sourceMfp) {
     auto source = CustomSource<NumericType, D>(domain->getCellSet(), top);
+    auto topGeometry = rayGeometry<NumericType, D>();
+    {
+      auto boundingBox = domain->getBoundingBox();
+      NumericType minx = boundingBox[0][0];
+      NumericType maxx = boundingBox[1][0];
+      auto topPoints = std::vector<rayTriple<NumericType>>();
+      auto topNormals = std::vector<rayTriple<NumericType>>();
+      rayTriple<NumericType> normal = {0., 0., 0.};
+      normal[D - 1] = -1.;
+      while (minx < maxx) {
+        rayTriple<NumericType> point = {minx, top + gridDelta, 0.};
+        topPoints.push_back(point);
+        topNormals.push_back(normal);
+        minx += gridDelta;
+      }
+      topGeometry.initGeometry(traceDevice, topPoints, topNormals, gridDelta);
+    }
 
     auto rtcScene = rtcNewScene(traceDevice);
     rtcSetSceneFlags(rtcScene, RTC_SCENE_FLAG_NONE);
@@ -167,6 +186,8 @@ private:
     rtcSetSceneBuildQuality(rtcScene, bbquality);
     auto rtcGeometry = traceGeometry.getRTCGeometry();
     auto geometryID = rtcAttachGeometry(rtcScene, rtcGeometry);
+    auto rtcTopGeometry = topGeometry.getRTCGeometry();
+    auto sourceID = rtcAttachGeometry(rtcScene, rtcTopGeometry);
     assert(rtcGetDeviceError(traceDevice) == RTC_ERROR_NONE &&
            "Embree device error");
 
@@ -174,7 +195,6 @@ private:
     const int numThreads = omp_get_max_threads();
     std::vector<std::vector<NumericType>> threadLocalData(numThreads);
     std::vector<std::vector<unsigned>> threadLocalHitCount(numThreads);
-    std::vector<NumericType> diskAreas;
 
 #pragma omp parallel
     {
@@ -207,8 +227,7 @@ private:
 #ifdef VIENNARAY_USE_RAY_MASKING
         rayHit.ray.mask = -1;
 #endif
-        bool reflect = false;
-        bool hitFromBack = false;
+        bool reflect = true;
         std::vector<unsigned> sourcePrimIDs;
         unsigned numReflections = 0;
         do {
@@ -225,43 +244,39 @@ private:
             break;
           }
 
-          // Calculate point of impact
           const auto &ray = rayHit.ray;
+          const auto rayDir =
+              rayTriple<NumericType>{ray.dir_x, ray.dir_y, ray.dir_z};
+          rayTriple<NumericType> geomNormal;
+          if (rayHit.hit.geomID == sourceID) {
+            geomNormal = topGeometry.getPrimNormal(rayHit.hit.primID);
+          } else {
+            geomNormal = traceGeometry.getPrimNormal(rayHit.hit.primID);
+          }
+
+          /* -------- Hit at disk backside -------- */
+          if (rayInternal::DotProduct(rayDir, geomNormal) > 0) {
+            break;
+          }
+
+          // Calculate point of impact
           const rtcNumericType xx = ray.org_x + ray.dir_x * ray.tfar;
           const rtcNumericType yy = ray.org_y + ray.dir_y * ray.tfar;
           const rtcNumericType zz = ray.org_z + ray.dir_z * ray.tfar;
 
-          /* -------- Hit from back -------- */
-          const auto rayDir =
-              rayTriple<NumericType>{ray.dir_x, ray.dir_y, ray.dir_z};
-          const auto geomNormal =
-              traceGeometry.getPrimNormal(rayHit.hit.primID);
-          if (rayInternal::DotProduct(rayDir, geomNormal) > 0) {
-            if (hitFromBack) {
-              break;
-            }
-            hitFromBack = true;
-            reflect = true;
-#ifdef ARCH_X86
-            reinterpret_cast<__m128 &>(rayHit.ray) =
-                _mm_set_ps(1e-4f, zz, yy, xx);
-#else
-            rayHit.ray.org_x = xx;
-            rayHit.ray.org_y = yy;
-            rayHit.ray.org_z = zz;
-            rayHit.ray.tnear = 1e-4f;
-#endif
-            // keep ray direction as it is
-            continue;
+          NumericType sourceAdd = 0.;
+          if (rayHit.hit.geomID == sourceID) {
+            sourceAdd = sourceMfp;
           }
 
-          /* -------- Surface hit -------- */
-          assert(rayHit.hit.geomID == geometryID && "Geometry hit ID invalid");
-          if (!sourcePrimIDs.empty()) {
-            for (const auto &id : sourcePrimIDs) {
-              data[id] += rayHit.ray.tfar;
-              hitCount[id]++;
-            }
+          for (const auto &id : sourcePrimIDs) {
+            data[id] += rayHit.ray.tfar + sourceAdd;
+            hitCount[id]++;
+          }
+
+          if (rayHit.hit.geomID == sourceID) {
+            reflect = false;
+            break;
           }
 
           sourcePrimIDs.clear();

@@ -198,6 +198,7 @@ public:
   auto &getGrid() const { return levelSets->back()->getGrid(); }
 
   // Returns the bounding box of the top Level-Set in the domain.
+  // [min, max][x, y, z]
   auto getBoundingBox() {
     std::array<std::array<NumericType, 3>, 2> boundingBox;
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
