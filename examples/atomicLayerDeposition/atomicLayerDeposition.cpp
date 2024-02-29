@@ -36,39 +36,53 @@ int main(int argc, char *argv[]) {
   auto &cellSet = domain->getCellSet();
   psAtomicLayerModel<NumericType, D> model(domain, "H2O", "TMA");
 
-  auto maxMfp =
-      psCalculateDiffusivity<NumericType, D>(domain,
-                                             params.get<int>("reflectionLimit"),
-                                             params.get<int>("raysPerPoint"))
-          .apply(params.get("verticalDepth"), params.get<int>("numNeighbors"),
-                 params.get("sourceMFP"));
+  psCalculateDiffusivity<NumericType, D> diffCalc;
+  diffCalc.setDomain(domain);
+  diffCalc.setMaterial(psMaterial::GAS);
+  diffCalc.setBulkLambda(params.get("bulkLambda"));
+  diffCalc.setMeanThermalVelocity(params.get("meanThermalVelocity"));
+  diffCalc.setNumNeighbors(params.get<int>("numNeighbors"));
+  diffCalc.setTopCutoff(params.get("verticalDepth"));
+  diffCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
+  diffCalc.setNumRaysPerPoint(params.get<int>("raysPerPoint"));
+  diffCalc.apply();
 
-  std::cout << "Max MFP: " << maxMfp << std::endl;
+  auto maxDiff = diffCalc.getMaxDiffusivity();
+  std::cout << "Max diffusivity: " << maxDiff << std::endl;
 
   cellSet->writeVTU("diffusivity.vtu");
 
   // double time = 0.;
   // int i = 0;
-  // while (time < params.get("p1_time")) {
-  //   time += model.timeStep(params.get("D_p1"),
+  // while (time < params.get("p1_time"))
+  // {
+  //   time +=
+  //   model.timeStep(params.get("D_p1"),
   //   params.get("H2O_adsorptionRate"),
-  //                          params.get("H2O_desorptionRate"), 1., false);
+  //                          params.get("H2O_desorptionRate"),
+  //                          1., false);
   //   if (time - i > 0.1) {
-  //     cellSet->writeVTU("ALD_" + std::to_string(i++) + ".vtu");
-  //     std::cout << "P1 Time: " << time << std::endl;
+  //     cellSet->writeVTU("ALD_" +
+  //     std::to_string(i++) + ".vtu");
+  //     std::cout << "P1 Time: " << time
+  //     << std::endl;
   //   }
   // }
 
   // time = 0.;
   // int j = 0;
-  // while (time < params.get("purge_time")) {
+  // while (time <
+  // params.get("purge_time")) {
   //   time +=
   //       model.timeStep(params.get("D_purge"),
   //       params.get("H2O_adsorptionRate"),
-  //                      params.get("H2O_desorptionRate"), 0., false);
+  //                      params.get("H2O_desorptionRate"),
+  //                      0., false);
   //   if (time - j > 0.1) {
-  //     cellSet->writeVTU("ALD_" + std::to_string(i++) + ".vtu");
-  //     std::cout << "Purge Time: " << time << std::endl;
+  //     cellSet->writeVTU("ALD_" +
+  //     std::to_string(i++) + ".vtu");
+  //     std::cout << "Purge Time: " <<
+  //     time << std::endl;
   //     ++j;
   //   }
   // }
@@ -76,16 +90,23 @@ int main(int argc, char *argv[]) {
   // time = 0.;
   // int k = 0;
   // {
-  //   auto flux = cellSet->getScalarData("Flux");
-  //   std::fill(flux->begin(), flux->end(), 0.);
+  //   auto flux =
+  //   cellSet->getScalarData("Flux");
+  //   std::fill(flux->begin(),
+  //   flux->end(), 0.);
   // }
-  // while (time < params.get("p2_time")) {
-  //   time += model.timeStep(params.get("D_p2"),
+  // while (time < params.get("p2_time"))
+  // {
+  //   time +=
+  //   model.timeStep(params.get("D_p2"),
   //   params.get("TMA_adsorptionRate"),
-  //                          params.get("TMA_desorptionRate"), 1., true);
+  //                          params.get("TMA_desorptionRate"),
+  //                          1., true);
   //   if (time - k > 0.1) {
-  //     cellSet->writeVTU("ALD_" + std::to_string(i++) + ".vtu");
-  //     std::cout << "P2 Time: " << time << std::endl;
+  //     cellSet->writeVTU("ALD_" +
+  //     std::to_string(i++) + ".vtu");
+  //     std::cout << "P2 Time: " << time
+  //     << std::endl;
   //     ++k;
   //   }
   // }

@@ -2,6 +2,7 @@
 
 #include <psDomain.hpp>
 #include <psKDTree.hpp>
+#include <psLogger.hpp>
 #include <psUtils.hpp>
 
 #include <rayGeometry.hpp>
@@ -64,39 +65,67 @@ private:
 };
 
 template <class NumericType, int D> class psCalculateDiffusivity {
-  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
-  psSmartPointer<lsMesh<NumericType>> mesh = nullptr;
-  rayGeometry<NumericType, D> traceGeometry;
-  RTCDevice traceDevice;
 
 public:
-  psCalculateDiffusivity() : traceDevice(rtcNewDevice("hugepages=1")) {}
-  psCalculateDiffusivity(psSmartPointer<psDomain<NumericType, D>> passedDomain,
-                         const int passedReflectionLimit = 100,
-                         const int passedNumRaysPerPoint = 1000,
-                         const psMaterial passedMaterial = psMaterial::GAS)
-      : traceDevice(rtcNewDevice("hugepages=1")), domain(passedDomain),
-        reflectionLimit(passedReflectionLimit),
-        numRaysPerPoint(passedNumRaysPerPoint), material(passedMaterial) {}
+  psCalculateDiffusivity() : traceDevice(rtcNewDevice("hugepages=1")) {
+    static_assert(D == 2 && "Diffusivity calculation only implemented for 2D");
+  }
+
   ~psCalculateDiffusivity() {
     traceGeometry.releaseGeometry();
     rtcReleaseDevice(traceDevice);
   }
 
-  NumericType apply(NumericType top, int numNeighbors,
-                    NumericType sourceMfp = 0.) {
-    initMemoryFlags();
+  void setDomain(const psSmartPointer<psDomain<NumericType, D>> passedDomain) {
+    domain = passedDomain;
+  }
+
+  void setMeanThermalVelocity(const NumericType passedMeanThermalVelocity) {
+    meanThermalVelocity = passedMeanThermalVelocity;
+  }
+
+  void setBulkLambda(const NumericType passedBulkLambda) {
+    bulkLambda = passedBulkLambda;
+  }
+
+  void setMaterial(const psMaterial passedMaterial) {
+    material = passedMaterial;
+  }
+
+  void setTopCutoff(const NumericType passedTop) { top = passedTop; }
+
+  void setNumNeighbors(const unsigned int passedNumNeighbors) {
+    numNeighbors = passedNumNeighbors;
+  }
+
+  void setNumRaysPerPoint(const int passedNumRaysPerPoint) {
+    numRaysPerPoint = passedNumRaysPerPoint;
+  }
+
+  void setReflectionLimit(const int passedReflectionLimit) {
+    reflectionLimit = passedReflectionLimit;
+  }
+
+  NumericType getMaxDiffusivity() const { return maxDiffusivity; }
+
+  void apply() {
     initGeometry();
+    auto result = runKernel();
+    interpolateResult(result);
+  }
 
-    auto result = runKernel(top, sourceMfp);
-
-    mesh->getCellData().insertNextScalarData(result.first, "MeanFreePath");
-    mesh->getCellData().insertNextScalarData(result.second, "NumHits");
-    lsVTKWriter<NumericType>(mesh, "diffusivity.vtp").apply();
-
+private:
+  void interpolateResult(
+      std::pair<std::vector<NumericType>, std::vector<NumericType>> &result) {
     auto &cellSet = domain->getCellSet();
     auto cellType = cellSet->getScalarData("CellType");
-    auto diff = cellSet->addScalarData("MeanFreePath", 0.);
+    if (!cellType) {
+      psLogger::getInstance()
+          .addWarning("Cell set not segmented. Segmentation required.")
+          .print();
+      return;
+    }
+    auto diff = cellSet->addScalarData("Diffusivity", 0.);
     auto numCells = cellSet->getElements().size();
     auto &points = mesh->getNodes();
 
@@ -104,7 +133,7 @@ public:
     kdTree.setPoints(points);
     kdTree.build();
 
-    NumericType maxDiffusivity = -1.;
+    maxDiffusivity = 0.;
     for (unsigned i = 0; i < numCells; ++i) {
       auto cellCenter = cellSet->getCellCenter(i);
       if (cellType->at(i) != 1. || cellCenter[D - 1] > top) {
@@ -114,7 +143,9 @@ public:
       auto neighbors = kdTree.findKNearest(cellCenter, numNeighbors);
 
       if (!neighbors) {
-        std::cout << "No neighbors found for cell " << i << std::endl;
+        psLogger::getInstance()
+            .addWarning("No neighbors found for cell " + std::to_string(i))
+            .print();
         continue;
       }
 
@@ -127,17 +158,14 @@ public:
         distanceSum += n.second; // distance
         diff->at(i) += n.second * result.first[n.first];
       }
-      diff->at(i) /= distanceSum;
+      diff->at(i) *= meanThermalVelocity / (3. * distanceSum);
 
       if (diff->at(i) > maxDiffusivity) {
         maxDiffusivity = diff->at(i);
       }
     }
-
-    return maxDiffusivity;
   }
 
-private:
   void initGeometry() {
     mesh = lsSmartPointer<lsMesh<NumericType>>::New();
     lsToDiskMesh<NumericType, D>(domain->getLevelSets()->back(), mesh).apply();
@@ -150,17 +178,13 @@ private:
     numRays = points.size() * numRaysPerPoint;
   }
 
-  void initMemoryFlags() {
+  std::pair<std::vector<NumericType>, std::vector<NumericType>> runKernel() {
 #ifdef ARCH_X86
     // for best performance set FTZ and DAZ flags in MXCSR control and status
     // register
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
-  }
-
-  std::pair<std::vector<NumericType>, std::vector<NumericType>>
-  runKernel(const NumericType top, const NumericType sourceMfp) {
     auto source = CustomSource<NumericType, D>(domain->getCellSet(), top);
     auto topGeometry = rayGeometry<NumericType, D>();
     {
@@ -227,10 +251,9 @@ private:
 #ifdef VIENNARAY_USE_RAY_MASKING
         rayHit.ray.mask = -1;
 #endif
-        bool reflect = true;
         std::vector<unsigned> sourcePrimIDs;
         unsigned numReflections = 0;
-        do {
+        while (true) {
           rayHit.ray.tfar = std::numeric_limits<rtcNumericType>::max();
           rayHit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
           rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
@@ -240,43 +263,32 @@ private:
 
           /* -------- No hit -------- */
           if (rayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
-            reflect = false;
             break;
           }
 
+          /* -------- Source hit -------- */
+          if (rayHit.hit.geomID == sourceID) {
+            for (const auto &id : sourcePrimIDs) {
+              data[id] += rayHit.ray.tfar + bulkLambda;
+              hitCount[id]++;
+            }
+            break;
+          }
+
+          /* -------- Geometry hit -------- */
           const auto &ray = rayHit.ray;
           const auto rayDir =
               rayTriple<NumericType>{ray.dir_x, ray.dir_y, ray.dir_z};
-          rayTriple<NumericType> geomNormal;
-          if (rayHit.hit.geomID == sourceID) {
-            geomNormal = topGeometry.getPrimNormal(rayHit.hit.primID);
-          } else {
-            geomNormal = traceGeometry.getPrimNormal(rayHit.hit.primID);
-          }
+          auto geomNormal = traceGeometry.getPrimNormal(rayHit.hit.primID);
 
           /* -------- Hit at disk backside -------- */
           if (rayInternal::DotProduct(rayDir, geomNormal) > 0) {
             break;
           }
 
-          // Calculate point of impact
-          const rtcNumericType xx = ray.org_x + ray.dir_x * ray.tfar;
-          const rtcNumericType yy = ray.org_y + ray.dir_y * ray.tfar;
-          const rtcNumericType zz = ray.org_z + ray.dir_z * ray.tfar;
-
-          NumericType sourceAdd = 0.;
-          if (rayHit.hit.geomID == sourceID) {
-            sourceAdd = sourceMfp;
-          }
-
           for (const auto &id : sourcePrimIDs) {
-            data[id] += rayHit.ray.tfar + sourceAdd;
+            data[id] += rayHit.ray.tfar;
             hitCount[id]++;
-          }
-
-          if (rayHit.hit.geomID == sourceID) {
-            reflect = false;
-            break;
           }
 
           sourcePrimIDs.clear();
@@ -293,14 +305,15 @@ private:
           // Reflect
           ++numReflections;
           if (numReflections >= reflectionLimit) {
-            reflect = false;
             break;
           }
 
           auto reflectedDirection =
               rayReflectionDiffuse<NumericType, D>(geomNormal, RngState);
 
-          // Update ray direction and origin
+          const rtcNumericType xx = ray.org_x + ray.dir_x * ray.tfar;
+          const rtcNumericType yy = ray.org_y + ray.dir_y * ray.tfar;
+          const rtcNumericType zz = ray.org_z + ray.dir_z * ray.tfar;
 #ifdef ARCH_X86
           reinterpret_cast<__m128 &>(rayHit.ray) =
               _mm_set_ps(1e-4f, zz, yy, xx);
@@ -319,10 +332,11 @@ private:
           rayHit.ray.dir_z = (rtcNumericType)reflectedDirection[2];
           rayHit.ray.time = 0.0f;
 #endif
-        } while (reflect);
+        }
       }
     }
 
+    topGeometry.releaseGeometry();
     rtcReleaseScene(rtcScene);
 
     // reduce data
@@ -350,7 +364,16 @@ private:
         result[i] = -1;
     }
 
-    smoothResult(result);
+    // smooth result
+    auto oldResult = result;
+#pragma omp parallel for
+    for (size_t idx = 0; idx < traceGeometry.getNumPoints(); idx++) {
+      auto neighborhood = traceGeometry.getNeighborIndicies(idx);
+      for (auto const &nbi : neighborhood) {
+        result[idx] += oldResult[nbi];
+      }
+      result[idx] /= (neighborhood.size() + 1);
+    }
 
     return std::pair<std::vector<NumericType>, std::vector<NumericType>>{
         result, hitCounts};
@@ -404,26 +427,22 @@ private:
     return false;
   }
 
-  void smoothResult(std::vector<NumericType> &flux) {
-    assert(flux.size() == traceGeometry.getNumPoints() &&
-           "Unequal number of points in smoothResult");
-    auto oldFlux = flux;
-#pragma omp parallel for
-    for (size_t idx = 0; idx < traceGeometry.getNumPoints(); idx++) {
-      auto neighborhood = traceGeometry.getNeighborIndicies(idx);
-      for (auto const &nbi : neighborhood) {
-        flux[idx] += oldFlux[nbi];
-      }
-      flux[idx] /= (neighborhood.size() + 1);
-    }
-  }
-
 private:
-  const unsigned int reflectionLimit = 100;
+  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  psSmartPointer<lsMesh<NumericType>> mesh = nullptr;
+  rayGeometry<NumericType, D> traceGeometry;
+  RTCDevice traceDevice;
+
+  NumericType top = 0;
+  NumericType bulkLambda = 0;
+  NumericType meanThermalVelocity = 1.;
   NumericType gridDelta = 0;
   NumericType diskRadius = 0;
+  NumericType maxDiffusivity = 0.;
+  unsigned int numNeighbors = 10;
   unsigned int seed = 15235135;
+  unsigned int reflectionLimit = 100;
   long long numRays = 0;
   long numRaysPerPoint = 1000;
-  const psMaterial material = psMaterial::GAS;
+  psMaterial material = psMaterial::GAS;
 };

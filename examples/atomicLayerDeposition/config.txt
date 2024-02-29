@@ -9,13 +9,14 @@ horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
 topSpace = 20.
 
-minCoord = -10
-maxCoord = 10
+
 
 reflectionLimit = 1000
 raysPerPoint = 10000
-numNeighbors = 10
-sourceMFP = 100.
+numNeighbors = 20
+
+bulkLambda = 100.
+meanThermalVelocity = 10.
 
 # Process
 p1_time = 100.
