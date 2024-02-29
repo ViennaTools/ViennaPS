@@ -1,3 +1,4 @@
+#include <csSegmentCells.hpp>
 #include <psAtomicLayerModel.hpp>
 #include <psCalculateDiffusivity.hpp>
 #include <psDomain.hpp>
@@ -34,6 +35,8 @@ int main(int argc, char *argv[]) {
   domain->generateCellSet(params.get("verticalDepth") + params.get("topSpace"),
                           psMaterial::GAS, true);
   auto &cellSet = domain->getCellSet();
+  csSegmentCells<NumericType, D>(cellSet).apply();
+
   psAtomicLayerModel<NumericType, D> model(domain, "H2O", "TMA");
 
   psCalculateDiffusivity<NumericType, D> diffCalc;
@@ -41,8 +44,8 @@ int main(int argc, char *argv[]) {
   diffCalc.setMaterial(psMaterial::GAS);
   diffCalc.setBulkLambda(params.get("bulkLambda"));
   diffCalc.setMeanThermalVelocity(params.get("meanThermalVelocity"));
-  diffCalc.setNumNeighbors(params.get<int>("numNeighbors"));
   diffCalc.setTopCutoff(params.get("verticalDepth"));
+  diffCalc.setNumNeighbors(params.get<int>("numNeighbors"));
   diffCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
   diffCalc.setNumRaysPerPoint(params.get<int>("raysPerPoint"));
   diffCalc.apply();

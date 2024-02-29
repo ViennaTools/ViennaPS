@@ -7,6 +7,7 @@
 template <class NumericType, int D> class psAtomicLayerModel {
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
   NumericType top = 0.;
+  NumericType maxDiffusivity = -1.;
   const NumericType stabilityFactor = 0.245;
   const std::string precursor_p1;
   const std::string precursor_p2;
@@ -178,26 +179,5 @@ private:
     return Dij * (newFlux - num_neighbors * flux->at(i));
   }
 
-  void segmentCells() {
-    auto &cellSet = domain->getCellSet();
-    auto cellType = cellSet->addScalarData("CellType", -1.);
-
-    cellSet->buildNeighborhood();
-    auto materials = cellSet->getScalarData("Material");
-
-    for (unsigned i = 0; i < materials->size(); ++i) {
-      if (!psMaterialMap::isMaterial(materials->at(i), psMaterial::GAS)) {
-        auto neighbors = cellSet->getNeighbors(i);
-        for (auto n : neighbors) {
-          if (n >= 0 &&
-              psMaterialMap::isMaterial(materials->at(n), psMaterial::GAS)) {
-            cellType->at(i) = 0.;
-            break;
-          }
-        }
-      } else {
-        cellType->at(i) = 1.;
-      }
-    }
-  }
+  void segmentCells() {}
 };
