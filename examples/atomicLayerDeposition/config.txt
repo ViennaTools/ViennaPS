@@ -20,18 +20,20 @@ bulkLambda = 80.
 # ALD Process 
 inFlux = 1.
 
-p1_time = 20.
+p1_time = 60.
 H2O_meanThermalVelocity = 75.
 H2O_adsorptionRate = 0.075
 H2O_desorptionRate = 0.001
 
-purge_time = 20.
+purge_time = 60.
 purge_meanThermalVelocity = 100.
 
-p2_time = 20.
+p2_time = 60.
 TMA_meanThermalVelocity = 75.
 TMA_adsorptionRate = 0.095
 TMA_desorptionRate = 0.01
 
+reactionOrder = 10.
+
 stabilityFactor = 0.2
-printInterval = 0.25
+printInterval = 0.5

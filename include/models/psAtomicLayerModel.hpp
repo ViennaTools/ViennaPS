@@ -18,14 +18,11 @@ public:
   };
 
 private:
-  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
-  const NumericType top = 0.;
-
   std::array<Precursor, 2> precursors;
   NumericType purge_meanThermalVelocity = 0.;
   NumericType purge_duration = 0.;
 
-  NumericType depoProbabilityFactor = 6.;
+  NumericType reactionOrder = 1.;
 
   NumericType maxLambda = 0.;
   NumericType stabilityFactor = 0.245;
@@ -33,8 +30,6 @@ private:
   NumericType depositTime = 0.;
   int depositCount = 0;
   NumericType printInterval = -1.;
-
-  std::mt19937_64 rng;
 
 public:
   psAtomicLayerModel(
@@ -79,6 +74,8 @@ public:
     purge_duration = duration;
   }
 
+  void setReactionOrder(const NumericType &value) { reactionOrder = value; }
+
   void setMaxLambda(const NumericType &value) { maxLambda = value; }
 
   void setStabilityFactor(const NumericType &value) { stabilityFactor = value; }
@@ -89,9 +86,23 @@ public:
 
   void apply() {
     auto &cellSet = domain->getCellSet();
-    cellSet->addScalarData("Flux", 0.);
+    flux = cellSet->addScalarData("Flux", 0.);
     cellSet->addScalarData(precursors[0].name, 0.);
     cellSet->addScalarData(precursors[1].name, 0.);
+
+    lambda = cellSet->getScalarData("MeanFreePath");
+    if (lambda == nullptr) {
+      psLogger::getInstance()
+          .addError("MeanFreePath scalar data not found.")
+          .print();
+    }
+
+    cellType = cellSet->getScalarData("CellType");
+    if (cellType == nullptr) {
+      psLogger::getInstance()
+          .addError("CellType scalar data not found.")
+          .print();
+    }
 
     std::string fileName =
         "ALD_" + precursors[0].name + "_" + precursors[1].name + "_";
@@ -99,10 +110,13 @@ public:
     // P1 step
     double time = 0.;
     int i = 0, ii = 0;
+    auto coverage = cellSet->getScalarData(precursors[0].name);
+    auto adsorbat = cellSet->getScalarData(precursors[0].name);
     while (time < precursors[0].duration) {
-      time += timeStep(
-          precursors[0].meanThermalVelocity, precursors[0].adsorptionRate,
-          precursors[0].desorptionRate, precursors[0].inFlux, false);
+      time +=
+          timeStep(coverage, adsorbat, precursors[0].meanThermalVelocity,
+                   precursors[0].adsorptionRate, precursors[0].desorptionRate,
+                   precursors[0].inFlux, false);
       if (time - ii * 0.1 > 0) {
         ++ii;
         psLogger::getInstance()
@@ -119,7 +133,8 @@ public:
     time = 0.;
     int j = 0, jj = 0;
     while (time < purge_duration) {
-      time += timeStep(purge_meanThermalVelocity, precursors[0].adsorptionRate,
+      time += timeStep(coverage, adsorbat, purge_meanThermalVelocity,
+                       precursors[0].adsorptionRate,
                        precursors[0].desorptionRate, 0., false);
       if (time - jj * 0.1 > 0) {
         ++jj;
@@ -140,10 +155,13 @@ public:
     // P2 step
     time = 0.;
     int k = 0, kk = 0;
+    coverage = cellSet->getScalarData(precursors[1].name);
+    adsorbat = cellSet->getScalarData(precursors[0].name);
     while (time < precursors[1].duration) {
-      time += timeStep(
-          precursors[1].meanThermalVelocity, precursors[1].adsorptionRate,
-          precursors[1].desorptionRate, precursors[1].inFlux, true);
+      time +=
+          timeStep(coverage, adsorbat, precursors[1].meanThermalVelocity,
+                   precursors[1].adsorptionRate, precursors[1].desorptionRate,
+                   precursors[1].inFlux, true);
       if (time - kk * 0.1 > 0) {
         ++kk;
         psLogger::getInstance()
@@ -159,32 +177,17 @@ public:
   }
 
 private:
-  NumericType timeStep(const NumericType meanThermalVelocity,
+  NumericType timeStep(std::vector<NumericType> *coverage,
+                       std::vector<NumericType> *adsorbat,
+                       const NumericType meanThermalVelocity,
                        const NumericType adsorptionRate,
                        const NumericType desorptionRate,
                        const NumericType inFlux, bool deposit) {
     auto &cellSet = domain->getCellSet();
+
     const auto gridDelta = cellSet->getGridDelta();
-    const auto cellType = cellSet->getScalarData("CellType");
-    if (cellType == nullptr) {
-      psLogger::getInstance()
-          .addError("CellType scalar data not found.")
-          .print();
-    }
-    auto lambda = cellSet->getScalarData("MeanFreePath");
-    if (lambda == nullptr) {
-      psLogger::getInstance()
-          .addError("MeanFreePath scalar data not found.")
-          .print();
-    }
-    auto flux = cellSet->getScalarData("Flux");
-
-    std::string coverageName =
-        deposit ? precursors[1].name : precursors[0].name;
-    auto coverage = cellSet->getScalarData(coverageName);
-    auto adsorbat = cellSet->getScalarData(precursors[0].name);
-
-    const NumericType diffusionFactor = meanThermalVelocity / 3.;
+    const NumericType diffusionFactor =
+        meanThermalVelocity / 3.; // D = 1/3 * v * lambda
     const NumericType dt = std::min(
         gridDelta * gridDelta / (maxLambda * diffusionFactor) * stabilityFactor,
         maxTimeStep);
@@ -194,13 +197,15 @@ private:
     const NumericType dtdx2 = dt / (gridDelta * gridDelta);
 
     // shared
+    const unsigned numThreads = omp_get_max_threads();
     std::vector<NumericType> newFlux(cellType->size(), 0.);
-    std::vector<unsigned int> threadSeeds(omp_get_max_threads());
+    std::vector<std::vector<NumericType>> reduceFluxes(numThreads);
 
-#pragma omp parallel shared(newFlux)
+#pragma omp parallel
     {
       // local
-      std::vector<NumericType> reduceFlux(cellType->size(), 0.);
+      auto &reduceFlux = reduceFluxes[omp_get_thread_num()];
+      reduceFlux.resize(cellType->size(), 0.);
 
 #pragma omp for
       for (unsigned i = 0; i < cellType->size(); ++i) {
@@ -258,17 +263,13 @@ private:
 #pragma omp barrier
 #pragma omp for
       for (unsigned i = 0; i < flux->size(); ++i) {
-        if (cellType->at(i) == 1.)
-          flux->at(i) = newFlux[i];
-      }
-
-#pragma omp barrier
-#pragma omp critical
-      {
-        // add/subtract desorbed/adsorbed flux
-        for (unsigned i = 0; i < cellType->size(); ++i) {
-          if (cellType->at(i) == 1. && reduceFlux[i] != 0.)
-            flux->at(i) -= reduceFlux[i];
+        if (cellType->at(i) == 1.) {
+          NumericType reduce = 0.;
+          for (unsigned j = 0; j < numThreads; j++) {
+            reduce += reduceFluxes[j][i];
+          }
+          flux->at(i) = newFlux[i] - reduce;
+          assert(flux->at(i) >= 0. && "Negative flux");
         }
       }
     } // end of parallel region
@@ -278,16 +279,13 @@ private:
       if (depositTime - depositCount > 0) {
         std::uniform_real_distribution<NumericType> dist(0., 1.);
         for (unsigned i = 0; i < cellType->size(); ++i) {
-          if (cellType->at(i) != 0.)
-            continue;
-
-          NumericType depositionProbability = std::exp(
-              -depoProbabilityFactor * (1 - coverage->at(i) * adsorbat->at(i)));
-          if (dist(rng) < depositionProbability) {
+          if (cellType->at(i) == 0. &&
+              dist(rng) <
+                  std::pow(coverage->at(i) * adsorbat->at(i), reactionOrder)) {
             const auto &neighbors = cellSet->getNeighbors(i);
             for (auto n : neighbors) {
               if (n >= 0 && cellType->at(n) == 1.) {
-                cellType->at(n) = 0.;
+                cellType->at(n) = 2.;
                 coverage->at(n) = 0.;
                 flux->at(n) = 0.;
                 adsorbat->at(n) = 0.;
@@ -305,4 +303,12 @@ private:
 
     return dt;
   }
+
+private:
+  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  const NumericType top = 0.;
+  std::mt19937_64 rng;
+  std::vector<NumericType> *flux;
+  std::vector<NumericType> *lambda;
+  std::vector<NumericType> *cellType;
 };

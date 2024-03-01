@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
                            params.get("p2_time"), params.get("inFlux"));
   model.setPurgeParameters(params.get("purge_meanThermalVelocity"),
                            params.get("purge_time"));
+  model.setReactionOrder(params.get("reactionOrder"));
 
   model.apply();
 }
