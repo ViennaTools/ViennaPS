@@ -64,24 +64,20 @@ private:
   std::vector<NumericType> *materialIds;
 };
 
-template <class NumericType, int D> class psCalculateDiffusivity {
+template <class NumericType, int D> class psMeanFreePath {
 
 public:
-  psCalculateDiffusivity() : traceDevice(rtcNewDevice("hugepages=1")) {
+  psMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {
     static_assert(D == 2 && "Diffusivity calculation only implemented for 2D");
   }
 
-  ~psCalculateDiffusivity() {
+  ~psMeanFreePath() {
     traceGeometry.releaseGeometry();
     rtcReleaseDevice(traceDevice);
   }
 
   void setDomain(const psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;
-  }
-
-  void setMeanThermalVelocity(const NumericType passedMeanThermalVelocity) {
-    meanThermalVelocity = passedMeanThermalVelocity;
   }
 
   void setBulkLambda(const NumericType passedBulkLambda) {
@@ -106,9 +102,10 @@ public:
     reflectionLimit = passedReflectionLimit;
   }
 
-  NumericType getMaxDiffusivity() const { return maxDiffusivity; }
+  NumericType getMaxLambda() const { return maxLambda; }
 
   void apply() {
+    psLogger::getInstance().addInfo("Calculating mean free path ...").print();
     initGeometry();
     auto result = runKernel();
     interpolateResult(result);
@@ -125,7 +122,7 @@ private:
           .print();
       return;
     }
-    auto diff = cellSet->addScalarData("Diffusivity", 0.);
+    auto lambda = cellSet->addScalarData("MeanFreePath", 0.);
     auto numCells = cellSet->getElements().size();
     auto &points = mesh->getNodes();
 
@@ -133,10 +130,15 @@ private:
     kdTree.setPoints(points);
     kdTree.build();
 
-    maxDiffusivity = 0.;
+    maxLambda = bulkLambda;
     for (unsigned i = 0; i < numCells; ++i) {
       auto cellCenter = cellSet->getCellCenter(i);
-      if (cellType->at(i) != 1. || cellCenter[D - 1] > top) {
+      if (cellType->at(i) != 1.) {
+        continue;
+      }
+
+      if (cellCenter[D - 1] > top) {
+        lambda->at(i) = bulkLambda;
         continue;
       }
 
@@ -156,12 +158,12 @@ private:
           continue;
 
         distanceSum += n.second; // distance
-        diff->at(i) += n.second * result.first[n.first];
+        lambda->at(i) += n.second * result.first[n.first];
       }
-      diff->at(i) *= meanThermalVelocity / (3. * distanceSum);
+      lambda->at(i) /= distanceSum;
 
-      if (diff->at(i) > maxDiffusivity) {
-        maxDiffusivity = diff->at(i);
+      if (lambda->at(i) > maxLambda) {
+        maxLambda = lambda->at(i);
       }
     }
   }
@@ -238,10 +240,6 @@ private:
 
 #pragma omp for schedule(dynamic)
       for (long long idx = 0; idx < numRays; ++idx) {
-        if (threadNum == 0) {
-          psUtils::printProgress(idx, numRays);
-        }
-
         // particle specific RNG seed
         auto particleSeed = rayInternal::tea<3>(idx, seed);
         rayRNG RngState(particleSeed);
@@ -393,27 +391,21 @@ private:
 
     auto prodOfDirections = rayInternal::DotProduct(normal, rayDirection);
     if (prodOfDirections > 0.f) {
-      // Disk normal is pointing away from the ray direction,
-      // i.e., this might be a hit from the back or no hit at all.
       return false;
     }
 
     constexpr auto eps = 1e-6f;
     if (std::fabs(prodOfDirections) < eps) {
-      // Ray is parallel to disk surface
       return false;
     }
 
-    // TODO: Memoize ddneg
     auto ddneg = rayInternal::DotProduct(diskOrigin, normal);
     auto tt =
         (ddneg - rayInternal::DotProduct(normal, rayOrigin)) / prodOfDirections;
     if (tt <= 0) {
-      // Intersection point is behind or exactly on the ray origin.
       return false;
     }
 
-    // copy ray direction
     auto rayDirectionC = rayTriple<rtcNumericType>{
         rayDirection[0], rayDirection[1], rayDirection[2]};
     rayInternal::Scale(tt, rayDirectionC);
@@ -438,7 +430,7 @@ private:
   NumericType meanThermalVelocity = 1.;
   NumericType gridDelta = 0;
   NumericType diskRadius = 0;
-  NumericType maxDiffusivity = 0.;
+  NumericType maxLambda = 0.;
   unsigned int numNeighbors = 10;
   unsigned int seed = 15235135;
   unsigned int reflectionLimit = 100;

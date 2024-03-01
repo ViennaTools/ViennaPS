@@ -156,6 +156,11 @@ public:
   }
 
   std::vector<T> *addScalarData(std::string name, T initValue) {
+    if (cellGrid->getCellData().getScalarData(name) != nullptr) {
+      auto data = cellGrid->getCellData().getScalarData(name);
+      data->resize(numberOfCells, initValue);
+      return data;
+    }
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
