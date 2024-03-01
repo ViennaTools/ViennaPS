@@ -5,32 +5,33 @@ xPad = 10.   # nm
 # Geometry
 trench = 0
 verticalWidth = 20.  # nm
-verticalDepth = 50. # nm
+verticalDepth = 60. # nm
 horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
 topSpace = 20.
 
+# Mean free path calculation
 reflectionLimit = 1000
 raysPerPoint = 5000
 numNeighbors = 20
 
 bulkLambda = 80.
 
-# Process 
+# ALD Process 
 inFlux = 1.
 
-p1_time = 100.
-H2O_meanThermalVelocity = 5.
-H2O_adsorptionRate = 0.05
+p1_time = 20.
+H2O_meanThermalVelocity = 75.
+H2O_adsorptionRate = 0.075
 H2O_desorptionRate = 0.001
 
-purge_time = 50.
-purge_meanThermalVelocity = 10.
+purge_time = 20.
+purge_meanThermalVelocity = 100.
 
-p2_time = 100.
-TMA_meanThermalVelocity = 5.
-TMA_adsorptionRate = 0.075
+p2_time = 20.
+TMA_meanThermalVelocity = 75.
+TMA_adsorptionRate = 0.095
 TMA_desorptionRate = 0.01
 
 stabilityFactor = 0.2
-printInterval = 0.5
+printInterval = 0.25

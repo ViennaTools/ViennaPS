@@ -25,6 +25,8 @@ private:
   NumericType purge_meanThermalVelocity = 0.;
   NumericType purge_duration = 0.;
 
+  NumericType depoProbabilityFactor = 6.;
+
   NumericType maxLambda = 0.;
   NumericType stabilityFactor = 0.245;
   NumericType maxTimeStep = 1.;
@@ -96,31 +98,37 @@ public:
 
     // P1 step
     double time = 0.;
-    int i = 0;
+    int i = 0, ii = 0;
     while (time < precursors[0].duration) {
       time += timeStep(
           precursors[0].meanThermalVelocity, precursors[0].adsorptionRate,
           precursors[0].desorptionRate, precursors[0].inFlux, false);
-      psLogger::getInstance()
-          .addInfo("P1 step remaining time: " +
-                   std::to_string(precursors[0].duration - time))
-          .print();
-      if (time - i > printInterval && psLogger::getLogLevel() > 3) {
+      if (time - ii * 0.1 > 0) {
+        ++ii;
+        psLogger::getInstance()
+            .addInfo("P1 step remaining time: " +
+                     std::to_string(precursors[0].duration - time))
+            .print();
+      }
+      if (time - i * printInterval > 0. && psLogger::getLogLevel() > 3) {
         cellSet->writeVTU(fileName + std::to_string(i++) + ".vtu");
       }
     }
 
     // Purge step
     time = 0.;
-    int j = 0;
+    int j = 0, jj = 0;
     while (time < purge_duration) {
       time += timeStep(purge_meanThermalVelocity, precursors[0].adsorptionRate,
                        precursors[0].desorptionRate, 0., false);
-      psLogger::getInstance()
-          .addInfo("Purge step remaining time: " +
-                   std::to_string(purge_duration - time))
-          .print();
-      if (time - j > printInterval && psLogger::getLogLevel() > 3) {
+      if (time - jj * 0.1 > 0) {
+        ++jj;
+        psLogger::getInstance()
+            .addInfo("Purge step remaining time: " +
+                     std::to_string(purge_duration - time))
+            .print();
+      }
+      if (time - j * printInterval > 0. && psLogger::getLogLevel() > 3) {
         cellSet->writeVTU(fileName + std::to_string(i++) + ".vtu");
         ++j;
       }
@@ -131,16 +139,19 @@ public:
 
     // P2 step
     time = 0.;
-    int k = 0;
+    int k = 0, kk = 0;
     while (time < precursors[1].duration) {
       time += timeStep(
           precursors[1].meanThermalVelocity, precursors[1].adsorptionRate,
           precursors[1].desorptionRate, precursors[1].inFlux, true);
-      psLogger::getInstance()
-          .addInfo("P2 step remaining time: " +
-                   std::to_string(precursors[1].duration - time))
-          .print();
-      if (time - k > printInterval && psLogger::getLogLevel() > 3) {
+      if (time - kk * 0.1 > 0) {
+        ++kk;
+        psLogger::getInstance()
+            .addInfo("P2 step remaining time: " +
+                     std::to_string(precursors[1].duration - time))
+            .print();
+      }
+      if (time - k * printInterval > 0. && psLogger::getLogLevel() > 3) {
         cellSet->writeVTU(fileName + std::to_string(i++) + ".vtu");
         ++k;
       }
@@ -267,7 +278,12 @@ private:
       if (depositTime - depositCount > 0) {
         std::uniform_real_distribution<NumericType> dist(0., 1.);
         for (unsigned i = 0; i < cellType->size(); ++i) {
-          if (dist(rng) < coverage->at(i) && dist(rng) < adsorbat->at(i)) {
+          if (cellType->at(i) != 0.)
+            continue;
+
+          NumericType depositionProbability = std::exp(
+              -depoProbabilityFactor * (1 - coverage->at(i) * adsorbat->at(i)));
+          if (dist(rng) < depositionProbability) {
             const auto &neighbors = cellSet->getNeighbors(i);
             for (auto n : neighbors) {
               if (n >= 0 && cellType->at(n) == 1.) {
