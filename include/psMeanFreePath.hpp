@@ -126,6 +126,11 @@ private:
     auto numCells = cellSet->getElements().size();
     auto &points = mesh->getNodes();
 
+    if (psLogger::getLogLevel() > 3) {
+      mesh->getCellData().insertNextScalarData(result.first);
+      lsVTKWriter<NumericType>(mesh, "meanFreePathCalculation.vtp").apply();
+    }
+
     psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
     kdTree.setPoints(points);
     kdTree.build();

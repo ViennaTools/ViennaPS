@@ -1,11 +1,11 @@
 # Domain
-gridDelta = 1. # nm
+gridDelta = .5 # nm
 xPad = 10.   # nm
 
 # Geometry
 trench = 0
 verticalWidth = 20.  # nm
-verticalDepth = 60. # nm
+verticalDepth = 80. # nm
 horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
 topSpace = 20.
@@ -13,9 +13,9 @@ topSpace = 20.
 # Mean free path calculation
 reflectionLimit = 1000
 raysPerPoint = 5000
-numNeighbors = 20
+numNeighbors = 20 # number of closest points to average from
 
-bulkLambda = 80.
+bulkLambda = 80. # mean free path in gas-phase
 
 # ALD Process 
 inFlux = 1.
@@ -30,10 +30,10 @@ purge_meanThermalVelocity = 100.
 
 p2_time = 60.
 TMA_meanThermalVelocity = 75.
-TMA_adsorptionRate = 0.095
+TMA_adsorptionRate = 0.075
 TMA_desorptionRate = 0.01
 
-reactionOrder = 10.
+reactionOrder = 4.
 
-stabilityFactor = 0.2
+stabilityFactor = 0.245
 printInterval = 0.5

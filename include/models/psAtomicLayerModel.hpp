@@ -27,8 +27,6 @@ private:
   NumericType maxLambda = 0.;
   NumericType stabilityFactor = 0.245;
   NumericType maxTimeStep = 1.;
-  NumericType depositTime = 0.;
-  int depositCount = 0;
   NumericType printInterval = -1.;
 
 public:
@@ -87,6 +85,7 @@ public:
   void apply() {
     auto &cellSet = domain->getCellSet();
     flux = cellSet->addScalarData("Flux", 0.);
+    depoProb = cellSet->addScalarData("DepositionProbability", 0.);
     cellSet->addScalarData(precursors[0].name, 0.);
     cellSet->addScalarData(precursors[1].name, 0.);
 
@@ -111,7 +110,7 @@ public:
     double time = 0.;
     int i = 0, ii = 0;
     auto coverage = cellSet->getScalarData(precursors[0].name);
-    auto adsorbat = cellSet->getScalarData(precursors[0].name);
+    auto adsorbat = cellSet->getScalarData(precursors[1].name);
     while (time < precursors[0].duration) {
       time +=
           timeStep(coverage, adsorbat, precursors[0].meanThermalVelocity,
@@ -182,7 +181,7 @@ private:
                        const NumericType meanThermalVelocity,
                        const NumericType adsorptionRate,
                        const NumericType desorptionRate,
-                       const NumericType inFlux, bool deposit) {
+                       const NumericType inFlux, const bool deposit) {
     auto &cellSet = domain->getCellSet();
 
     const auto gridDelta = cellSet->getGridDelta();
@@ -275,13 +274,12 @@ private:
     } // end of parallel region
 
     if (deposit) {
-      depositTime += dt;
-      if (depositTime - depositCount > 0) {
-        std::uniform_real_distribution<NumericType> dist(0., 1.);
-        for (unsigned i = 0; i < cellType->size(); ++i) {
-          if (cellType->at(i) == 0. &&
-              dist(rng) <
-                  std::pow(coverage->at(i) * adsorbat->at(i), reactionOrder)) {
+      std::uniform_real_distribution<NumericType> dist(0., 1.);
+      for (unsigned i = 0; i < cellType->size(); ++i) {
+        if (cellType->at(i) == 0.) {
+          depoProb->at(i) =
+              std::pow(coverage->at(i) * adsorbat->at(i), reactionOrder);
+          if (dist(rng) < depoProb->at(i) * dt) {
             const auto &neighbors = cellSet->getNeighbors(i);
             for (auto n : neighbors) {
               if (n >= 0 && cellType->at(n) == 1.) {
@@ -297,7 +295,6 @@ private:
             adsorbat->at(i) = 0.;
           }
         }
-        depositCount++;
       }
     }
 
@@ -311,4 +308,5 @@ private:
   std::vector<NumericType> *flux;
   std::vector<NumericType> *lambda;
   std::vector<NumericType> *cellType;
+  std::vector<NumericType> *depoProb;
 };

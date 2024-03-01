@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   mfpCalc.apply();
 
   auto maxLambda = mfpCalc.getMaxLambda();
-  std::cout << "Max mean free path: " << maxLambda << std::endl;
+  std::cout << "Max. mean free path: " << maxLambda << std::endl;
 
   psAtomicLayerModel<NumericType, D> model(domain);
   model.setMaxLambda(maxLambda);
@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
                            params.get("p2_time"), params.get("inFlux"));
   model.setPurgeParameters(params.get("purge_meanThermalVelocity"),
                            params.get("purge_time"));
+  // The deposition probability is (H2O_cov * TMA_cov)^order
   model.setReactionOrder(params.get("reactionOrder"));
 
   model.apply();
