@@ -9,63 +9,7 @@
 #include <rayRNG.hpp>
 #include <rayReflection.hpp>
 
-template <typename NumericType, int D> class CustomSource {
-public:
-  CustomSource(psSmartPointer<csDenseCellSet<NumericType, D>> passCellSet,
-               const NumericType passedCutoff)
-      : cellSet(passCellSet), numCells(cellSet->getElements().size()),
-        materialIds(cellSet->getScalarData("Material")), cutoff(passedCutoff) {}
-
-  void fillRay(RTCRay &ray, const size_t idx, rayRNG &RngState) {
-    std::uniform_real_distribution<NumericType> uniDist;
-    std::uniform_int_distribution<unsigned> cellDist(0, numCells - 1);
-
-    unsigned cellIdx = cellDist(RngState);
-    auto material = materialIds->at(cellIdx);
-    auto origin = cellSet->getCellCenter(cellIdx);
-    while (!psMaterialMap::isMaterial(material, psMaterial::GAS) ||
-           origin[D - 1] > cutoff) {
-      cellIdx = cellDist(RngState);
-      material = materialIds->at(cellIdx);
-      origin = cellSet->getCellCenter(cellIdx);
-    }
-
-    rayTriple<NumericType> direction{0., 0., 0.};
-
-    for (int i = 0; i < D; ++i) {
-      direction[i] = uniDist(RngState) * 2 - 1;
-    }
-
-    rayInternal::Normalize(direction);
-
-#ifdef ARCH_X86
-    reinterpret_cast<__m128 &>(ray) =
-        _mm_set_ps(1e-4f, (float)origin[2], (float)origin[1], (float)origin[0]);
-
-    reinterpret_cast<__m128 &>(ray.dir_x) = _mm_set_ps(
-        0.0f, (float)direction[2], (float)direction[1], (float)direction[0]);
-#else
-    ray.org_x = (float)origin[0];
-    ray.org_y = (float)origin[1];
-    ray.org_z = (float)origin[2];
-    ray.tnear = 1e-4f;
-
-    ray.dir_x = (float)direction[0];
-    ray.dir_y = (float)direction[1];
-    ray.dir_z = (float)direction[2];
-    ray.time = 0.0f;
-#endif
-  }
-
-private:
-  psSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
-  const std::size_t numCells;
-  const NumericType cutoff = 0.;
-  std::vector<NumericType> *materialIds;
-};
-
 template <class NumericType, int D> class psMeanFreePath {
-
 public:
   psMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {
     static_assert(D == 2 && "Diffusivity calculation only implemented for 2D");
@@ -78,6 +22,8 @@ public:
 
   void setDomain(const psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;
+    cellSet = domain->getCellSet();
+    numCells = cellSet->getElements().size();
   }
 
   void setBulkLambda(const NumericType passedBulkLambda) {
@@ -87,8 +33,6 @@ public:
   void setMaterial(const psMaterial passedMaterial) {
     material = passedMaterial;
   }
-
-  void setTopCutoff(const NumericType passedTop) { top = passedTop; }
 
   void setNumNeighbors(const unsigned int passedNumNeighbors) {
     numNeighbors = passedNumNeighbors;
@@ -114,7 +58,6 @@ public:
 private:
   void interpolateResult(
       std::pair<std::vector<NumericType>, std::vector<NumericType>> &result) {
-    auto &cellSet = domain->getCellSet();
     auto cellType = cellSet->getScalarData("CellType");
     if (!cellType) {
       psLogger::getInstance()
@@ -142,11 +85,6 @@ private:
         continue;
       }
 
-      if (cellCenter[D - 1] > top) {
-        lambda->at(i) = bulkLambda;
-        continue;
-      }
-
       auto neighbors = kdTree.findKNearest(cellCenter, numNeighbors);
 
       if (!neighbors) {
@@ -159,9 +97,6 @@ private:
       NumericType distanceSum = 0.;
       for (const auto &n : neighbors.value()) {
         auto &point = points[n.first];
-        if (point[D - 1] >= top)
-          continue;
-
         distanceSum += n.second; // distance
         lambda->at(i) += n.second * result.first[n.first];
       }
@@ -192,33 +127,13 @@ private:
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
-    auto source = CustomSource<NumericType, D>(domain->getCellSet(), top);
-    auto topGeometry = rayGeometry<NumericType, D>();
-    {
-      auto boundingBox = domain->getBoundingBox();
-      NumericType minx = boundingBox[0][0];
-      NumericType maxx = boundingBox[1][0];
-      auto topPoints = std::vector<rayTriple<NumericType>>();
-      auto topNormals = std::vector<rayTriple<NumericType>>();
-      rayTriple<NumericType> normal = {0., 0., 0.};
-      normal[D - 1] = -1.;
-      while (minx < maxx) {
-        rayTriple<NumericType> point = {minx, top + gridDelta, 0.};
-        topPoints.push_back(point);
-        topNormals.push_back(normal);
-        minx += gridDelta;
-      }
-      topGeometry.initGeometry(traceDevice, topPoints, topNormals, gridDelta);
-    }
+    auto materialIds = cellSet->getScalarData("Material");
 
     auto rtcScene = rtcNewScene(traceDevice);
     rtcSetSceneFlags(rtcScene, RTC_SCENE_FLAG_NONE);
-    auto bbquality = RTC_BUILD_QUALITY_HIGH;
-    rtcSetSceneBuildQuality(rtcScene, bbquality);
+    rtcSetSceneBuildQuality(rtcScene, RTC_BUILD_QUALITY_HIGH);
     auto rtcGeometry = traceGeometry.getRTCGeometry();
     auto geometryID = rtcAttachGeometry(rtcScene, rtcGeometry);
-    auto rtcTopGeometry = topGeometry.getRTCGeometry();
-    auto sourceID = rtcAttachGeometry(rtcScene, rtcTopGeometry);
     assert(rtcGetDeviceError(traceDevice) == RTC_ERROR_NONE &&
            "Embree device error");
 
@@ -249,7 +164,7 @@ private:
         auto particleSeed = rayInternal::tea<3>(idx, seed);
         rayRNG RngState(particleSeed);
 
-        source.fillRay(rayHit.ray, idx, RngState);
+        fillRay(rayHit, materialIds, RngState);
 
 #ifdef VIENNARAY_USE_RAY_MASKING
         rayHit.ray.mask = -1;
@@ -266,13 +181,8 @@ private:
 
           /* -------- No hit -------- */
           if (rayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
-            break;
-          }
-
-          /* -------- Source hit -------- */
-          if (rayHit.hit.geomID == sourceID) {
             for (const auto &id : sourcePrimIDs) {
-              data[id] += rayHit.ray.tfar + bulkLambda;
+              data[id] += bulkLambda;
               hitCount[id]++;
             }
             break;
@@ -339,7 +249,6 @@ private:
       }
     }
 
-    topGeometry.releaseGeometry();
     rtcReleaseScene(rtcScene);
 
     // reduce data
@@ -380,6 +289,47 @@ private:
 
     return std::pair<std::vector<NumericType>, std::vector<NumericType>>{
         result, hitCounts};
+  }
+
+  void fillRay(RTCRayHit &rayHit, const std::vector<NumericType> *materialIds,
+               rayRNG &RngState) {
+    std::uniform_real_distribution<NumericType> uniDist;
+    std::uniform_int_distribution<unsigned> cellDist(0, numCells - 1);
+
+    unsigned cellIdx = cellDist(RngState);
+    auto material = materialIds->at(cellIdx);
+    auto origin = cellSet->getCellCenter(cellIdx);
+    while (!psMaterialMap::isMaterial(material, psMaterial::GAS)) {
+      cellIdx = cellDist(RngState);
+      material = materialIds->at(cellIdx);
+      origin = cellSet->getCellCenter(cellIdx);
+    }
+
+    rayTriple<NumericType> direction{0., 0., 0.};
+
+    for (int i = 0; i < D; ++i) {
+      direction[i] = uniDist(RngState) * 2 - 1;
+    }
+
+    rayInternal::Normalize(direction);
+
+#ifdef ARCH_X86
+    reinterpret_cast<__m128 &>(rayHit.ray) =
+        _mm_set_ps(1e-4f, (float)origin[2], (float)origin[1], (float)origin[0]);
+
+    reinterpret_cast<__m128 &>(rayHit.ray.dir_x) = _mm_set_ps(
+        0.0f, (float)direction[2], (float)direction[1], (float)direction[0]);
+#else
+    rayHit.ray.org_x = (float)origin[0];
+    rayHit.ray.org_y = (float)origin[1];
+    rayHit.ray.org_z = (float)origin[2];
+    rayHit.ray.tnear = 1e-4f;
+
+    rayHit.ray.dir_x = (float)direction[0];
+    rayHit.ray.dir_y = (float)direction[1];
+    rayHit.ray.dir_z = (float)direction[2];
+    rayHit.ray.time = 0.0f;
+#endif
   }
 
   bool checkLocalIntersection(RTCRay const &ray, const unsigned int primID,
@@ -426,16 +376,16 @@ private:
 
 private:
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  psSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
   psSmartPointer<lsMesh<NumericType>> mesh = nullptr;
   rayGeometry<NumericType, D> traceGeometry;
   RTCDevice traceDevice;
 
-  NumericType top = 0;
   NumericType bulkLambda = 0;
-  NumericType meanThermalVelocity = 1.;
   NumericType gridDelta = 0;
   NumericType diskRadius = 0;
   NumericType maxLambda = 0.;
+  unsigned int numCells = 0;
   unsigned int numNeighbors = 10;
   unsigned int seed = 15235135;
   unsigned int reflectionLimit = 100;

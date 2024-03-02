@@ -1,5 +1,5 @@
 # Domain
-gridDelta = .5 # nm
+gridDelta = 1. # nm
 xPad = 10.   # nm
 
 # Geometry
@@ -12,8 +12,8 @@ topSpace = 20.
 
 # Mean free path calculation
 reflectionLimit = 1000
-raysPerPoint = 1000
-numNeighbors = 20 # number of closest points to average from
+raysPerPoint = 10000
+numNeighbors = 10 # number of closest points to average from
 
 bulkLambda = 80. # mean free path in gas-phase
 

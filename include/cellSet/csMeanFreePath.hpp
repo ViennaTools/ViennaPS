@@ -6,8 +6,6 @@
 #include <psUtils.hpp>
 
 #include <rayGeometry.hpp>
-#include <rayRNG.hpp>
-#include <rayReflection.hpp>
 
 template <class NumericType, int D> class csMeanFreePath {
 
@@ -30,8 +28,6 @@ public:
   void setMaterial(const psMaterial passedMaterial) {
     material = passedMaterial;
   }
-
-  void setTopCutoff(const NumericType passedTop) { top = passedTop; }
 
   void setNumRaysPerCell(const int passedNumRaysPerCell) {
     numRaysPerCell = passedNumRaysPerCell;
@@ -70,32 +66,11 @@ private:
                                  gridDelta * rayInternal::DiskFactor<D>);
     }
 
-    auto topGeometry = rayGeometry<NumericType, D>();
-    {
-      auto boundingBox = domain->getBoundingBox();
-      NumericType minx = boundingBox[0][0];
-      NumericType maxx = boundingBox[1][0];
-      auto topPoints = std::vector<rayTriple<NumericType>>();
-      auto topNormals = std::vector<rayTriple<NumericType>>();
-      rayTriple<NumericType> normal = {0., 0., 0.};
-      normal[D - 1] = -1.;
-      while (minx < maxx) {
-        rayTriple<NumericType> point = {minx, top + gridDelta, 0.};
-        topPoints.push_back(point);
-        topNormals.push_back(normal);
-        minx += gridDelta;
-      }
-      topGeometry.initGeometry(traceDevice, topPoints, topNormals, gridDelta);
-    }
-
     auto rtcScene = rtcNewScene(traceDevice);
     rtcSetSceneFlags(rtcScene, RTC_SCENE_FLAG_NONE);
-    auto bbquality = RTC_BUILD_QUALITY_HIGH;
-    rtcSetSceneBuildQuality(rtcScene, bbquality);
+    rtcSetSceneBuildQuality(rtcScene, RTC_BUILD_QUALITY_HIGH);
     auto rtcGeometry = traceGeometry.getRTCGeometry();
     auto geometryID = rtcAttachGeometry(rtcScene, rtcGeometry);
-    auto rtcTopGeometry = topGeometry.getRTCGeometry();
-    auto sourceID = rtcAttachGeometry(rtcScene, rtcTopGeometry);
     assert(rtcGetDeviceError(traceDevice) == RTC_ERROR_NONE &&
            "Embree device error");
 
@@ -117,11 +92,6 @@ private:
           continue;
 
         auto cellCenter = cellSet->getCellCenter(idx);
-        if (cellCenter[D - 1] > top) {
-          data->at(idx) = bulkLambda;
-          continue;
-        }
-
         auto &ray = rayHit.ray;
 #ifdef ARCH_X86
         reinterpret_cast<__m128 &>(ray) =
@@ -161,12 +131,7 @@ private:
 
           /* -------- No hit -------- */
           if (rayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
-            continue;
-          }
-
-          /* -------- Source hit -------- */
-          if (rayHit.hit.geomID == sourceID) {
-            data->at(idx) += ray.tfar + bulkLambda;
+            data->at(idx) += bulkLambda;
             continue;
           }
 
@@ -189,7 +154,6 @@ private:
     } // end of parallel section
 
     traceGeometry.releaseGeometry();
-    topGeometry.releaseGeometry();
     rtcReleaseScene(rtcScene);
   }
 
@@ -206,7 +170,6 @@ private:
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
   RTCDevice traceDevice;
 
-  NumericType top = 0;
   NumericType gridDelta = 0;
   NumericType bulkLambda = 0;
   NumericType maxLambda = 0.;
