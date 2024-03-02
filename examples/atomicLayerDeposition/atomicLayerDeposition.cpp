@@ -1,3 +1,4 @@
+#include <csMeanFreePath.hpp>
 #include <csSegmentCells.hpp>
 #include <psAtomicLayerModel.hpp>
 #include <psDomain.hpp>
@@ -41,14 +42,14 @@ int main(int argc, char *argv[]) {
   auto &cellSet = domain->getCellSet();
   csSegmentCells<NumericType, D>(cellSet).apply();
 
-  psMeanFreePath<NumericType, D> mfpCalc;
+  csMeanFreePath<NumericType, D> mfpCalc;
   mfpCalc.setDomain(domain);
   mfpCalc.setMaterial(psMaterial::GAS);
   mfpCalc.setBulkLambda(params.get("bulkLambda"));
   mfpCalc.setTopCutoff(params.get("verticalDepth"));
-  mfpCalc.setNumNeighbors(params.get<int>("numNeighbors"));
-  mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
-  mfpCalc.setNumRaysPerPoint(params.get<int>("raysPerPoint"));
+  // mfpCalc.setNumNeighbors(params.get<int>("numNeighbors"));
+  // mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
+  mfpCalc.setNumRaysPerCell(params.get<int>("raysPerPoint"));
   mfpCalc.apply();
 
   auto maxLambda = mfpCalc.getMaxLambda();

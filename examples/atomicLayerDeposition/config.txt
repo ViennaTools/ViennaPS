@@ -12,7 +12,7 @@ topSpace = 20.
 
 # Mean free path calculation
 reflectionLimit = 1000
-raysPerPoint = 5000
+raysPerPoint = 1000
 numNeighbors = 20 # number of closest points to average from
 
 bulkLambda = 80. # mean free path in gas-phase
