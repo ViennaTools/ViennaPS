@@ -155,7 +155,7 @@ public:
     }
   }
 
-  std::vector<T> *addScalarData(std::string name, T initValue) {
+  std::vector<T> *addScalarData(std::string name, T initValue = 0.) {
     if (cellGrid->getCellData().getScalarData(name) != nullptr) {
       auto data = cellGrid->getCellData().getScalarData(name);
       data->resize(numberOfCells, initValue);
@@ -175,8 +175,16 @@ public:
     return cellGrid->getNodes();
   }
 
+  const std::array<T, 3> &getNode(unsigned int idx) const {
+    return cellGrid->getNodes()[idx];
+  }
+
   std::vector<std::array<unsigned, (1 << D)>> getElements() {
     return cellGrid->template getElements<(1 << D)>();
+  }
+
+  const std::array<unsigned, (1 << D)> &getElement(unsigned int idx) const {
+    return cellGrid->template getElements<(1 << D)>()[idx];
   }
 
   psSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
@@ -226,7 +234,7 @@ public:
     return center;
   }
 
-  int getIndex(const std::array<T, 3> &point) { return findIndex(point); }
+  int getIndex(const std::array<T, 3> &point) const { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
     return cellGrid->getCellData().getScalarData(name);
@@ -614,8 +622,14 @@ public:
     return cellNeighbors[cellIdx];
   }
 
+  bool isPointInCell(const csTriple<T> &point, unsigned int cellIdx) const {
+    const auto &elem = getElement(cellIdx);
+    const auto &cellMin = getNode(elem[0]);
+    return isPointInCell(point, cellMin);
+  }
+
 private:
-  int findIndex(const csTriple<T> &point) {
+  int findIndex(const csTriple<T> &point) const {
     const auto &elems = cellGrid->template getElements<(1 << D)>();
     const auto &nodes = cellGrid->getNodes();
     int idx = -1;
@@ -624,7 +638,7 @@ private:
     if (!cellIds)
       return idx;
     for (const auto cellId : *cellIds) {
-      if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
+      if (isPointInCell(point, nodes[elems[cellId][0]])) {
         idx = cellId;
         break;
       }
@@ -673,7 +687,8 @@ private:
     return idx;
   }
 
-  bool isInsideVoxel(const csTriple<T> &point, const csTriple<T> &cellMin) {
+  bool isPointInCell(const csTriple<T> &point,
+                     const csTriple<T> &cellMin) const {
     if constexpr (D == 3)
       return point[0] >= cellMin[0] && point[0] <= (cellMin[0] + gridDelta) &&
              point[1] >= cellMin[1] && point[1] <= (cellMin[1] + gridDelta) &&

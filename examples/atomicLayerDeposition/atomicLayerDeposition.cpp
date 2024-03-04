@@ -3,7 +3,7 @@
 #include <psAtomicLayerModel.hpp>
 #include <psDomain.hpp>
 #include <psMakeTrench.hpp>
-#include <psMeanFreePath.hpp>
+#include <psMeanFreePath2.hpp>
 
 #include "geometry.hpp"
 #include "parameters.hpp"
@@ -42,10 +42,10 @@ int main(int argc, char *argv[]) {
   auto &cellSet = domain->getCellSet();
   csSegmentCells<NumericType, D>(cellSet).apply();
 
-  psMeanFreePath<NumericType, D> mfpCalc;
-  mfpCalc.setNumNeighbors(params.get<int>("numNeighbors"));
+  psMeanFreePath2<NumericType, D> mfpCalc;
+  // mfpCalc.setNumNeighbors(params.get<int>("numNeighbors"));
   mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
-  mfpCalc.setNumRaysPerPoint(params.get<int>("raysPerPoint"));
+  mfpCalc.setNumRaysPerPoint(params.get("raysPerPoint"));
   // mfpCalc.setNumRaysPerCell(params.get<int>("raysPerPoint"));
 
   mfpCalc.setDomain(domain);
@@ -53,11 +53,13 @@ int main(int argc, char *argv[]) {
   mfpCalc.setBulkLambda(params.get("bulkLambda"));
   mfpCalc.apply();
 
-  auto maxLambda = mfpCalc.getMaxLambda();
-  std::cout << "Max. mean free path: " << maxLambda << std::endl;
+  cellSet->writeVTU("meanFreePath.vtu");
+
+  // auto maxLambda = mfpCalc.getMaxLambda();
+  // std::cout << "Max. mean free path: " << maxLambda << std::endl;
 
   psAtomicLayerModel<NumericType, D> model(domain);
-  model.setMaxLambda(maxLambda);
+  model.setMaxLambda(params.get("bulkLambda"));
   model.setPrintInterval(params.get("printInterval"));
   model.setStabilityFactor(params.get("stabilityFactor"));
   model.setFirstPrecursor("H2O", params.get("H2O_meanThermalVelocity"),

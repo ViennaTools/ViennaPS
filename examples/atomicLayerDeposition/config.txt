@@ -3,19 +3,19 @@ gridDelta = 1. # nm
 xPad = 10.   # nm
 
 # Geometry
-trench = 0
+trench = 1
 verticalWidth = 20.  # nm
-verticalDepth = 80. # nm
+verticalDepth = 500. # nm
 horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
 topSpace = 20.
 
 # Mean free path calculation
 reflectionLimit = 1000
-raysPerPoint = 10000
+raysPerPoint = 1000
 numNeighbors = 10 # number of closest points to average from
 
-bulkLambda = 80. # mean free path in gas-phase
+bulkLambda = 100. # mean free path in gas-phase
 
 # ALD Process 
 inFlux = 1.
