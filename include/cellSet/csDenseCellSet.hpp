@@ -159,6 +159,7 @@ public:
     if (cellGrid->getCellData().getScalarData(name) != nullptr) {
       auto data = cellGrid->getCellData().getScalarData(name);
       data->resize(numberOfCells, initValue);
+      std::fill(data->begin(), data->end(), initValue);
       return data;
     }
     std::vector<T> newData(numberOfCells, initValue);

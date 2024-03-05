@@ -44,6 +44,12 @@ public:
     reflectionLimit = passedReflectionLimit;
   }
 
+  void setSeed(const unsigned int passedSeed) { seed = passedSeed; }
+
+  void disableSmoothing() { smoothing = false; }
+
+  void enableSmoothing() { smoothing = true; }
+
   void apply() {
     psLogger::getInstance().addInfo("Calculating mean free path ...").print();
     initGeometry();
@@ -193,6 +199,7 @@ private:
     // reduce data
     std::vector<NumericType> result(numCells, 0);
     for (const auto &data : threadLocalData) {
+#pragma omp parallel for
       for (unsigned i = 0; i < numCells; ++i) {
         result[i] += data[i];
       }
@@ -201,12 +208,14 @@ private:
     // reduce hit counts
     std::vector<NumericType> hitCounts(numCells, 0);
     for (const auto &data : threadLocalHitCount) {
+#pragma omp parallel for
       for (unsigned i = 0; i < numCells; ++i) {
         hitCounts[i] += data[i];
       }
     }
 
     // normalize data
+#pragma omp parallel for
     for (unsigned i = 0; i < numCells; ++i) {
       if (hitCounts[i] > 0)
         result[i] = result[i] / hitCounts[i];
@@ -217,25 +226,30 @@ private:
     // smooth result
     auto finalResult = cellSet->addScalarData("MeanFreePath");
     materialIds = cellSet->getScalarData("Material");
+#pragma omp parallel for
     for (unsigned i = 0; i < numCells; i++) {
       if (!psMaterialMap::isMaterial(materialIds->at(i), material))
         continue;
 
-      const auto &neighbors = cellSet->getNeighbors(i);
-      NumericType sum = 0;
-      unsigned count = 0;
-      for (const auto &n : neighbors) {
-        if (n < 0 || result[n] < 0)
-          continue;
-        sum += result[n];
-        count++;
+      if (smoothing) {
+        const auto &neighbors = cellSet->getNeighbors(i);
+        NumericType sum = 0;
+        unsigned count = 0;
+        for (const auto &n : neighbors) {
+          if (n < 0 || result[n] < 0)
+            continue;
+          sum += result[n];
+          count++;
+        }
+        if (count > 0)
+          finalResult->at(i) = sum / count;
+      } else {
+        finalResult->at(i) = result[i];
       }
-      if (count > 0)
-        finalResult->at(i) = sum / count;
     }
   }
 
-  void fillRay(RTCRayHit &rayHit, rayRNG &RngState) {
+  void fillRay(RTCRayHit &rayHit, rayRNG &RngState) const {
     std::uniform_real_distribution<NumericType> uniDist;
     std::uniform_int_distribution<unsigned> cellDist(0, numCells - 1);
 
@@ -340,6 +354,7 @@ private:
   unsigned int reflectionLimit = 100;
   long long numRays = 0;
   NumericType numRaysPerPoint = 1000;
+  bool smoothing = true;
   psMaterial material = psMaterial::GAS;
 };
 

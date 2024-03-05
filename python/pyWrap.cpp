@@ -942,6 +942,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
       .def("setNumRaysPerPoint", &psMeanFreePath<T, D>::setNumRaysPerPoint)
       .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
+      .def("setSeed", &psMeanFreePath<T, D>::setSeed)
+      .def("disableSmoothing", &psMeanFreePath<T, D>::disableSmoothing)
+      .def("enableSmoothing", &psMeanFreePath<T, D>::enableSmoothing)
       .def("apply", &psMeanFreePath<T, D>::apply);
 
 #endif
