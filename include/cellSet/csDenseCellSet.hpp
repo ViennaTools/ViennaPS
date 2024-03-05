@@ -179,7 +179,7 @@ public:
     return cellGrid->getNodes()[idx];
   }
 
-  std::vector<std::array<unsigned, (1 << D)>> getElements() {
+  std::vector<std::array<unsigned, (1 << D)>> &getElements() const {
     return cellGrid->template getElements<(1 << D)>();
   }
 
@@ -225,7 +225,7 @@ public:
     return sum / count;
   }
 
-  std::array<T, 3> getCellCenter(unsigned long idx) {
+  std::array<T, 3> getCellCenter(unsigned long idx) const {
     auto center =
         cellGrid
             ->getNodes()[cellGrid->template getElements<(1 << D)>()[idx][0]];
@@ -493,7 +493,7 @@ public:
     voxelConverter.apply();
 
     auto cutMatIds = updateCellGrid->getCellData().getScalarData("Material");
-    auto &hexas = cellGrid->template getElements<(1 << D)>();
+    auto &elements = cellGrid->template getElements<(1 << D)>();
 
     const auto nCutCells =
         updateCellGrid->template getElements<(1 << D)>().size();
@@ -506,10 +506,10 @@ public:
           auto data = cellGrid->getCellData().getScalarData(i);
           data->erase(data->begin() + elIdx);
         }
-        hexas.erase(hexas.begin() + elIdx);
+        elements.erase(elements.begin() + elIdx);
       }
     }
-    numberOfCells = hexas.size();
+    numberOfCells = elements.size();
     surface->deepCopy(levelSets->back());
 
     buildBVH();
@@ -532,7 +532,10 @@ public:
     }
   }
 
-  void buildNeighborhood() {
+  void buildNeighborhood(bool forceRebuild = false) {
+    if (!cellNeighbors.empty() && !forceRebuild)
+      return;
+
     psUtils::Timer timer;
     timer.start();
     const auto &cells = cellGrid->template getElements<(1 << D)>();
@@ -617,7 +620,7 @@ public:
         .print();
   }
 
-  const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) {
+  const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) const {
     assert(cellIdx < numberOfCells && "Cell idx out of bounds");
     return cellNeighbors[cellIdx];
   }

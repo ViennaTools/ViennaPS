@@ -25,6 +25,7 @@
 #include <psExtrude.hpp>
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
+#include <psMeanFreePath.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>

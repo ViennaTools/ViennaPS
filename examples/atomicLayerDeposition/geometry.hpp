@@ -4,12 +4,11 @@
 #include <lsMakeGeometry.hpp>
 #include <psDomain.hpp>
 #include <psMakeTrench.hpp>
-
-#include "parameters.hpp"
+#include <psUtils.hpp>
 
 template <class NumericType, int D>
 void makeLShape(psSmartPointer<psDomain<NumericType, D>> domain,
-                Parameters &params, psMaterial material) {
+                psUtils::Parameters &params, psMaterial material) {
   static_assert(D == 2, "This function only works in 2D");
   domain->clear();
   const auto gridDelta = params.get("gridDelta");
@@ -61,9 +60,8 @@ void makeLShape(psSmartPointer<psDomain<NumericType, D>> domain,
   {
     auto horiBox =
         lsSmartPointer<lsDomain<NumericType, D>>::New(domain->getGrid());
-    NumericType minPoint[D] = {params.get("verticalWidth") / 2.0 - gridDelta,
-                               0.};
-    NumericType maxPoint[D] = {params.get("verticalWidth") / 2.0 +
+    NumericType minPoint[D] = {-params.get("verticalWidth") / 2.0, 0.};
+    NumericType maxPoint[D] = {-params.get("verticalWidth") / 2.0 +
                                    params.get("horizontalWidth"),
                                params.get("horizontalHeight")};
 

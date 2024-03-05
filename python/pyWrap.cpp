@@ -158,26 +158,26 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Enum psMaterial
   pybind11::enum_<psMaterial>(module, "Material")
-      .value("Undefined", psMaterial::None)
+      .value("Undefined", psMaterial::None) // 1
       .value("Mask", psMaterial::Mask)
       .value("Si", psMaterial::Si)
       .value("SiO2", psMaterial::SiO2)
-      .value("Si3N4", psMaterial::Si3N4)
+      .value("Si3N4", psMaterial::Si3N4) // 5
       .value("SiN", psMaterial::SiN)
       .value("SiON", psMaterial::SiON)
       .value("SiC", psMaterial::SiC)
       .value("SiGe", psMaterial::SiGe)
-      .value("PolySi", psMaterial::PolySi)
+      .value("PolySi", psMaterial::PolySi) // 10
       .value("GaN", psMaterial::GaN)
       .value("W", psMaterial::W)
       .value("Al2O3", psMaterial::Al2O3)
       .value("TiN", psMaterial::TiN)
-      .value("Cu", psMaterial::Cu)
+      .value("Cu", psMaterial::Cu) // 15
       .value("Polymer", psMaterial::Polymer)
       .value("Dielectric", psMaterial::Dielectric)
       .value("Metal", psMaterial::Metal)
       .value("Air", psMaterial::Air)
-      .value("GAS", psMaterial::GAS)
+      .value("GAS", psMaterial::GAS) // 20
       .export_values();
 
   // psMaterialMap
@@ -205,8 +205,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
             // discard return value
           },
           "Add a scalar value to be stored and modified in each cell.")
-      .def("getCellGrid", &csDenseCellSet<T, D>::getCellGrid,
-           "Get the underlying mesh of the cell set.")
       .def("getDepth", &csDenseCellSet<T, D>::getDepth,
            "Get the depth of the cell set.")
       .def("getGridDelta", &csDenseCellSet<T, D>::getGridDelta,
@@ -214,22 +212,41 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getNodes", &csDenseCellSet<T, D>::getNodes,
            "Get the nodes of the cell set which correspond to the corner "
            "points of the cells.")
+      .def("getNode", &csDenseCellSet<T, D>::getNode,
+           "Get the node at the given index.")
       .def("getElements", &csDenseCellSet<T, D>::getElements,
            "Get elements (cells). The indicies in the elements correspond to "
            "the corner nodes.")
+      .def("getElement", &csDenseCellSet<T, D>::getElement,
+           "Get the element at the given index.")
       .def("getSurface", &csDenseCellSet<T, D>::getSurface,
            "Get the surface level-set.")
-      .def("getNumberOfCells", &csDenseCellSet<T, D>::getNumberOfCells)
+      .def("getCellGrid", &csDenseCellSet<T, D>::getCellGrid,
+           "Get the underlying mesh of the cell set.")
+      .def("getNumberOfCells", &csDenseCellSet<T, D>::getNumberOfCells,
+           "Get the number of cells.")
       .def("getFillingFraction", &csDenseCellSet<T, D>::getFillingFraction,
            "Get the filling fraction of the cell containing the point.")
+      .def("getFillingFractions", &csDenseCellSet<T, D>::getFillingFractions,
+           "Get the filling fractions of all cells.")
+      .def("getAverageFillingFraction",
+           &csDenseCellSet<T, D>::getAverageFillingFraction,
+           "Get the average filling at a point in some radius.")
+      .def("getCellCenter", &csDenseCellSet<T, D>::getCellCenter,
+           "Get the center of a cell with given index")
       .def("getScalarData", &csDenseCellSet<T, D>::getScalarData,
            "Get the data stored at each cell.")
+      .def("getIndex", &csDenseCellSet<T, D>::getIndex,
+           "Get the index of the cell containing the given point.")
+      .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
       .def("setCellSetPosition", &csDenseCellSet<T, D>::setCellSetPosition,
            "Set whether the cell set should be created below (false) or above "
            "(true) the surface.")
+      .def("setCoverMaterial", &csDenseCellSet<T, D>::setCoverMaterial,
+           "Set the material of the cells which are above or below the "
+           "surface.")
       .def("setPeriodicBoundary", &csDenseCellSet<T, D>::setPeriodicBoundary,
            "Enable periodic boundary conditions in specified dimensions.")
-      .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
       .def("setFillingFraction",
            pybind11::overload_cast<const int, const T>(
                &csDenseCellSet<T, D>::setFillingFraction),
@@ -903,6 +920,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                &psExtrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &psExtrude<T>::apply, "Run the extrusion.");
+
+  // psMeanFreePath (only implemented in 2D for now)
+  pybind11::class_<psMeanFreePath<T, D>, psSmartPointer<psMeanFreePath<T, D>>>(
+      module, "MeanFreePath")
+      .def(pybind11::init<>())
+      .def("setDomain", &psMeanFreePath<T, D>::setDomain)
+      .def("setBulkLambda", &psMeanFreePath<T, D>::setBulkLambda)
+      .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
+      .def("setNumRaysPerPoint", &psMeanFreePath<T, D>::setNumRaysPerPoint)
+      .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
+      .def("apply", &psMeanFreePath<T, D>::apply);
 
 #endif
 

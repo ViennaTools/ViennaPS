@@ -3,10 +3,9 @@
 #include <psAtomicLayerModel.hpp>
 #include <psDomain.hpp>
 #include <psMakeTrench.hpp>
-#include <psMeanFreePath2.hpp>
+#include <psMeanFreePath.hpp>
 
 #include "geometry.hpp"
-#include "parameters.hpp"
 
 int main(int argc, char *argv[]) {
   constexpr int D = 2;
@@ -16,7 +15,7 @@ int main(int argc, char *argv[]) {
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
   // Parse the parameters
-  Parameters params;
+  psUtils::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
@@ -42,11 +41,9 @@ int main(int argc, char *argv[]) {
   auto &cellSet = domain->getCellSet();
   csSegmentCells<NumericType, D>(cellSet).apply();
 
-  psMeanFreePath2<NumericType, D> mfpCalc;
-  // mfpCalc.setNumNeighbors(params.get<int>("numNeighbors"));
+  psMeanFreePath<NumericType, D> mfpCalc;
   mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
   mfpCalc.setNumRaysPerPoint(params.get("raysPerPoint"));
-  // mfpCalc.setNumRaysPerCell(params.get<int>("raysPerPoint"));
 
   mfpCalc.setDomain(domain);
   mfpCalc.setMaterial(psMaterial::GAS);
