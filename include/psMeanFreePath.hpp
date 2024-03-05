@@ -11,9 +11,7 @@
 
 template <class NumericType, int D> class psMeanFreePath {
 public:
-  psMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {
-    static_assert(D == 2 && "Diffusivity calculation only implemented for 2D");
-  }
+  psMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {}
 
   ~psMeanFreePath() {
     traceGeometry.releaseGeometry();
@@ -63,7 +61,6 @@ private:
     auto &points = mesh->getNodes();
     auto normals = mesh->getCellData().getVectorData("Normals");
     gridDelta = domain->getGrid().getGridDelta();
-    assert(normals);
     diskRadius = gridDelta * rayInternal::DiskFactor<D>;
     traceGeometry.initGeometry(traceDevice, points, *normals, diskRadius);
     numRays =
@@ -109,6 +106,7 @@ private:
 
 #pragma omp for schedule(dynamic)
       for (long long idx = 0; idx < numRays; ++idx) {
+
         // particle specific RNG seed
         auto particleSeed = rayInternal::tea<3>(idx, seed);
         rayRNG RngState(particleSeed);
@@ -253,23 +251,21 @@ private:
     std::uniform_real_distribution<NumericType> uniDist;
     std::uniform_int_distribution<unsigned> cellDist(0, numCells - 1);
 
-    unsigned cellIdx = cellDist(RngState);
-    auto material = materialIds->at(cellIdx);
-    auto origin = cellSet->getCellCenter(cellIdx);
-    while (!psMaterialMap::isMaterial(material, psMaterial::GAS)) {
+    auto cellIdx = cellDist(RngState);
+    auto cellMaterial = materialIds->at(cellIdx);
+    while (!psMaterialMap::isMaterial(cellMaterial, material)) {
       cellIdx = cellDist(RngState);
-      material = materialIds->at(cellIdx);
-      origin = cellSet->getCellCenter(cellIdx);
+      cellMaterial = materialIds->at(cellIdx);
     }
 
     rayTriple<NumericType> direction{0., 0., 0.};
-
     for (int i = 0; i < D; ++i) {
       direction[i] = uniDist(RngState) * 2 - 1;
     }
 
     rayInternal::Normalize(direction);
 
+    auto origin = cellSet->getCellCenter(cellIdx);
 #ifdef ARCH_X86
     reinterpret_cast<__m128 &>(rayHit.ray) =
         _mm_set_ps(1e-4f, (float)origin[2], (float)origin[1], (float)origin[0]);
@@ -316,7 +312,7 @@ private:
           n == prevIdx)
         continue;
       auto &cellMin = cellSet->getNode(cellSet->getElement(n)[0]);
-      auto &cellMax = cellSet->getNode(cellSet->getElement(n)[2]);
+      auto &cellMax = cellSet->getNode(cellSet->getElement(n)[D == 2 ? 2 : 6]);
       if (intersectLineBox(origin, direction, cellMin, cellMax))
         return n;
     }
@@ -332,8 +328,16 @@ private:
       t1[i] = (min[i] - origin[i]) / direction[i];
       t2[i] = (max[i] - origin[i]) / direction[i];
     }
-    auto tmin = std::max(std::min(t1[0], t2[0]), std::min(t1[1], t2[1]));
-    auto tmax = std::min(std::max(t1[0], t2[0]), std::max(t1[1], t2[1]));
+    NumericType tmin, tmax;
+    if constexpr (D == 2) {
+      tmin = std::max(std::min(t1[0], t2[0]), std::min(t1[1], t2[1]));
+      tmax = std::min(std::max(t1[0], t2[0]), std::max(t1[1], t2[1]));
+    } else {
+      tmin = std::max(std::min(t1[0], t2[0]),
+                      std::min(std::min(t1[1], t2[1]), std::min(t1[2], t2[2])));
+      tmax = std::min(std::max(t1[0], t2[0]),
+                      std::max(std::max(t1[1], t2[1]), std::max(t1[2], t2[2])));
+    }
     return tmax > 0 && tmin < tmax;
   }
 

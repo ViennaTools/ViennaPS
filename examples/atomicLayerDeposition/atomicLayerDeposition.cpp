@@ -8,9 +8,9 @@
 #include "geometry.hpp"
 
 int main(int argc, char *argv[]) {
-  constexpr int D = 2;
+  constexpr int D = 3;
   using NumericType = double;
-  omp_set_num_threads(14);
+  omp_set_num_threads(1);
 
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
         false, psMaterial::TiN)
         .apply();
   } else {
-    makeLShape(domain, params, psMaterial::TiN);
+    // makeLShape(domain, params, psMaterial::TiN);
   }
   domain->generateCellSet(params.get("verticalDepth") + params.get("topSpace"),
                           psMaterial::GAS, true);
@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
   mfpCalc.apply();
 
   cellSet->writeVTU("meanFreePath.vtu");
+  return 0;
 
   // auto maxLambda = mfpCalc.getMaxLambda();
   // std::cout << "Max. mean free path: " << maxLambda << std::endl;

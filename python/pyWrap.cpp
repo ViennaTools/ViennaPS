@@ -803,6 +803,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate111"), pybind11::arg("rate311"),
            pybind11::arg("materials"));
 
+  /****************************************************************************
+   *                               OTHER                                      *
+   ****************************************************************************/
+
+  // psPlanarize
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
       module, "Planarize")
       .def(pybind11::init(
@@ -810,9 +815,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
       .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
 
-  /****************************************************************************
-   *                               OTHER                                      *
-   ****************************************************************************/
+  // psMeanFreePath
+  pybind11::class_<psMeanFreePath<T, D>, psSmartPointer<psMeanFreePath<T, D>>>(
+      module, "MeanFreePath")
+      .def(pybind11::init<>())
+      .def("setDomain", &psMeanFreePath<T, D>::setDomain)
+      .def("setBulkLambda", &psMeanFreePath<T, D>::setBulkLambda)
+      .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
+      .def("setNumRaysPerPoint", &psMeanFreePath<T, D>::setNumRaysPerPoint)
+      .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
+      .def("setSeed", &psMeanFreePath<T, D>::setSeed)
+      .def("disableSmoothing", &psMeanFreePath<T, D>::disableSmoothing)
+      .def("enableSmoothing", &psMeanFreePath<T, D>::enableSmoothing)
+      .def("apply", &psMeanFreePath<T, D>::apply);
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
   // GDS file parsing
@@ -932,21 +947,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                &psExtrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &psExtrude<T>::apply, "Run the extrusion.");
-
-  // psMeanFreePath (only implemented in 2D for now)
-  pybind11::class_<psMeanFreePath<T, D>, psSmartPointer<psMeanFreePath<T, D>>>(
-      module, "MeanFreePath")
-      .def(pybind11::init<>())
-      .def("setDomain", &psMeanFreePath<T, D>::setDomain)
-      .def("setBulkLambda", &psMeanFreePath<T, D>::setBulkLambda)
-      .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
-      .def("setNumRaysPerPoint", &psMeanFreePath<T, D>::setNumRaysPerPoint)
-      .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
-      .def("setSeed", &psMeanFreePath<T, D>::setSeed)
-      .def("disableSmoothing", &psMeanFreePath<T, D>::disableSmoothing)
-      .def("enableSmoothing", &psMeanFreePath<T, D>::enableSmoothing)
-      .def("apply", &psMeanFreePath<T, D>::apply);
-
 #endif
 
   // rayReflection.hpp

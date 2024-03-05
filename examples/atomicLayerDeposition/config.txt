@@ -5,15 +5,14 @@ xPad = 10.   # nm
 # Geometry
 trench = 1
 verticalWidth = 20.  # nm
-verticalDepth = 500. # nm
+verticalDepth = 40. # nm
 horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
-topSpace = 20.
+topSpace = 10.
 
 # Mean free path calculation
-reflectionLimit = 1000
-raysPerPoint = 1000
-numNeighbors = 10 # number of closest points to average from
+reflectionLimit = 2
+raysPerPoint = 0.01
 
 bulkLambda = 100. # mean free path in gas-phase
 
