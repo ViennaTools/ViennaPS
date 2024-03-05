@@ -76,7 +76,7 @@ constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 typedef psSmartPointer<psDomain<T, D>> DomainType;
 
 PYBIND11_DECLARE_HOLDER_TYPE(Types, psSmartPointer<Types>)
-PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T>>)
+// PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T>>) // can not be used
 
 PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 
@@ -84,37 +84,38 @@ PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
 
-class PypsSurfaceModel : public psSurfaceModel<T> {
-  using psSurfaceModel<T>::coverages;
-  using psSurfaceModel<T>::processParams;
-  using psSurfaceModel<T>::getCoverages;
-  using psSurfaceModel<T>::getProcessParameters;
-  typedef std::vector<T> vect_type;
+// class PypsSurfaceModel : public psSurfaceModel<T> {
+//   using psSurfaceModel<T>::coverages;
+//   using psSurfaceModel<T>::processParams;
+//   using psSurfaceModel<T>::getCoverages;
+//   using psSurfaceModel<T>::getProcessParameters;
+//   typedef std::vector<T> vect_type;
 
-public:
-  void initializeCoverages(unsigned numGeometryPoints) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeCoverages,
-                      numGeometryPoints);
-  }
+// public:
+//   void initializeCoverages(unsigned numGeometryPoints) override {
+//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeCoverages,
+//                       numGeometryPoints);
+//   }
 
-  void initializeProcessParameters() override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters, );
-  }
+//   void initializeProcessParameters() override {
+//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters,
+//     );
+//   }
 
-  psSmartPointer<std::vector<T>>
-  calculateVelocities(psSmartPointer<psPointData<T>> rates,
-                      const std::vector<std::array<T, 3>> &coordinates,
-                      const std::vector<T> &materialIds) override {
-    PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
-                      calculateVelocities, rates, coordinates, materialIds);
-  }
+//   psSmartPointer<std::vector<T>>
+//   calculateVelocities(psSmartPointer<psPointData<T>> rates,
+//                       const std::vector<std::array<T, 3>> &coordinates,
+//                       const std::vector<T> &materialIds) override {
+//     PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
+//                       calculateVelocities, rates, coordinates, materialIds);
+//   }
 
-  void updateCoverages(psSmartPointer<psPointData<T>> rates,
-                       const std::vector<T> &materialIds) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, rates,
-                      materialIds);
-  }
-};
+//   void updateCoverages(psSmartPointer<psPointData<T>> rates,
+//                        const std::vector<T> &materialIds) override {
+//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, rates,
+//                       materialIds);
+//   }
+// };
 
 // psAdvectionCallback
 class PyAdvectionCallback : public psAdvectionCallback<T, D> {
@@ -257,46 +258,49 @@ private:
 };
 
 // psVelocityField
-class PyVelocityField : public psVelocityField<T> {
-  using psVelocityField<T>::psVelocityField;
+// class PyVelocityField : public psVelocityField<T> {
+//   using psVelocityField<T>::psVelocityField;
 
-public:
-  T getScalarVelocity(const std::array<T, 3> &coordinate, int material,
-                      const std::array<T, 3> &normalVector,
-                      unsigned long pointId) override {
-    PYBIND11_OVERRIDE(T, psVelocityField<T>, getScalarVelocity, coordinate,
-                      material, normalVector, pointId);
-  }
-  // if we declare a typedef for std::array<T,3>, we will no longer get this
-  // error: the compiler doesn't understand why std::array gets 2 template
-  // arguments
-  // add template argument as the preprocessor becomes confused with the comma
-  // in std::array<T, 3>
-  typedef std::array<T, 3> arrayType;
-  std::array<T, 3> getVectorVelocity(const std::array<T, 3> &coordinate,
-                                     int material,
-                                     const std::array<T, 3> &normalVector,
-                                     unsigned long pointId) override {
-    PYBIND11_OVERRIDE(
-        arrayType, // add template argument here, as the preprocessor becomes
-                   // confused with the comma in std::array<T, 3>
-        psVelocityField<T>, getVectorVelocity, coordinate, material,
-        normalVector, pointId);
-  }
+// public:
+//   T getScalarVelocity(const std::array<T, 3> &coordinate, int material,
+//                       const std::array<T, 3> &normalVector,
+//                       unsigned long pointId) override {
+//     PYBIND11_OVERRIDE(T, psVelocityField<T>, getScalarVelocity, coordinate,
+//                       material, normalVector, pointId);
+//   }
+//   // if we declare a typedef for std::array<T,3>, we will no longer get this
+//   // error: the compiler doesn't understand why std::array gets 2 template
+//   // arguments
+//   // add template argument as the preprocessor becomes confused with the
+//   comma
+//   // in std::array<T, 3>
+//   typedef std::array<T, 3> arrayType;
+//   std::array<T, 3> getVectorVelocity(const std::array<T, 3> &coordinate,
+//                                      int material,
+//                                      const std::array<T, 3> &normalVector,
+//                                      unsigned long pointId) override {
+//     PYBIND11_OVERRIDE(
+//         arrayType, // add template argument here, as the preprocessor becomes
+//                    // confused with the comma in std::array<T, 3>
+//         psVelocityField<T>, getVectorVelocity, coordinate, material,
+//         normalVector, pointId);
+//   }
 
-  T getDissipationAlpha(int direction, int material,
-                        const std::array<T, 3> &centralDifferences) override {
-    PYBIND11_OVERRIDE(T, psVelocityField<T>, getDissipationAlpha, direction,
-                      material, centralDifferences);
-  }
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
-    PYBIND11_OVERRIDE(void, psVelocityField<T>, setVelocities,
-                      passedVelocities);
-  }
-  int getTranslationFieldOptions() const override {
-    PYBIND11_OVERRIDE(int, psVelocityField<T>, getTranslationFieldOptions, );
-  }
-};
+//   T getDissipationAlpha(int direction, int material,
+//                         const std::array<T, 3> &centralDifferences) override
+//                         {
+//     PYBIND11_OVERRIDE(T, psVelocityField<T>, getDissipationAlpha, direction,
+//                       material, centralDifferences);
+//   }
+//   void setVelocities(psSmartPointer<std::vector<T>> passedVelocities)
+//   override {
+//     PYBIND11_OVERRIDE(void, psVelocityField<T>, setVelocities,
+//                       passedVelocities);
+//   }
+//   int getTranslationFieldOptions() const override {
+//     PYBIND11_OVERRIDE(int, psVelocityField<T>, getTranslationFieldOptions, );
+//   }
+// };
 
 // a function to declare GeometricDistributionModel of type DistType
 template <typename NumericType, int D, typename DistType>

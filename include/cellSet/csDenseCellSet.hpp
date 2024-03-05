@@ -240,6 +240,15 @@ public:
     return cellGrid->getCellData().getScalarData(name);
   }
 
+  std::vector<std::string> getScalarDataLabels() const {
+    std::vector<std::string> labels;
+    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
+    for (int i = 0; i < numScalarData; i++) {
+      labels.push_back(cellGrid->getCellData().getScalarDataLabel(i));
+    }
+    return labels;
+  }
+
   // Set whether the cell set should be created below (false) or above (true)
   // the surface.
   void setCellSetPosition(const bool passedCellSetPosition) {

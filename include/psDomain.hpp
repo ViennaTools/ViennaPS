@@ -163,10 +163,10 @@ public:
   // be used to store and track volume data.
   void generateCellSet(const NumericType position,
                        const psMaterial coverMaterial,
-                       const bool passedCellSetPosition = false) {
+                       const bool isAboveSurface = false) {
     if (!cellSet)
       cellSet = csDomainType::New();
-    cellSet->setCellSetPosition(passedCellSetPosition);
+    cellSet->setCellSetPosition(isAboveSurface);
     cellSet->setCoverMaterial(coverMaterial);
     cellSet->fromLevelSets(levelSets, materialMap, position);
   }

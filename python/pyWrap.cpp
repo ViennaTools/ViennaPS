@@ -46,16 +46,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getScalarDataLabel", &psProcessParams<T>::getScalarDataLabel);
 
   // psSurfaceModel
-  pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,
-                   PypsSurfaceModel>(module, "SurfaceModel")
-      .def(pybind11::init<>())
-      .def("initializeCoverages", &psSurfaceModel<T>::initializeCoverages)
-      .def("initializeProcessParameters",
-           &psSurfaceModel<T>::initializeProcessParameters)
-      .def("getCoverages", &psSurfaceModel<T>::getCoverages)
-      .def("getProcessParameters", &psSurfaceModel<T>::getProcessParameters)
-      .def("calculateVelocities", &psSurfaceModel<T>::calculateVelocities)
-      .def("updateCoverages", &psSurfaceModel<T>::updateCoverages);
+  //   pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,
+  //                    PypsSurfaceModel>(module, "SurfaceModel")
+  //       .def(pybind11::init<>())
+  //       .def("initializeCoverages", &psSurfaceModel<T>::initializeCoverages)
+  //       .def("initializeProcessParameters",
+  //            &psSurfaceModel<T>::initializeProcessParameters)
+  //       .def("getCoverages", &psSurfaceModel<T>::getCoverages)
+  //       .def("getProcessParameters",
+  //       &psSurfaceModel<T>::getProcessParameters) .def("calculateVelocities",
+  //       &psSurfaceModel<T>::calculateVelocities) .def("updateCoverages",
+  //       &psSurfaceModel<T>::updateCoverages);
 
   pybind11::enum_<psLogLevel>(module, "LogLevel")
       .value("ERROR", psLogLevel::ERROR)
@@ -85,33 +86,35 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("print", [](psLogger &instance) { instance.print(std::cout); });
 
   // psVelocityField
-  pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
-                   PyVelocityField>
-      velocityField(module, "VelocityField");
-  // constructors
-  velocityField
-      .def(pybind11::init<>())
-      // methods
-      .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
-      .def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
-      .def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
-      .def("getTranslationFieldOptions",
-           &psVelocityField<T>::getTranslationFieldOptions)
-      .def("setVelocities", &psVelocityField<T>::setVelocities);
+  //   pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
+  //                    PyVelocityField>
+  //       velocityField(module, "VelocityField");
+  //   // constructors
+  //   velocityField
+  //       .def(pybind11::init<>())
+  //       // methods
+  //       .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
+  //       .def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
+  //       .def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
+  //       .def("getTranslationFieldOptions",
+  //            &psVelocityField<T>::getTranslationFieldOptions)
+  //       .def("setVelocities", &psVelocityField<T>::setVelocities);
 
-  pybind11::class_<psDefaultVelocityField<T>,
-                   psSmartPointer<psDefaultVelocityField<T>>>(
-      module, "DefaultVelocityField", velocityField)
-      // constructors
-      .def(pybind11::init<>())
-      // methods
-      .def("getScalarVelocity", &psDefaultVelocityField<T>::getScalarVelocity)
-      .def("getVectorVelocity", &psDefaultVelocityField<T>::getVectorVelocity)
-      .def("getDissipationAlpha",
-           &psDefaultVelocityField<T>::getDissipationAlpha)
-      .def("getTranslationFieldOptions",
-           &psDefaultVelocityField<T>::getTranslationFieldOptions)
-      .def("setVelocities", &psDefaultVelocityField<T>::setVelocities);
+  //   pybind11::class_<psDefaultVelocityField<T>,
+  //                    psSmartPointer<psDefaultVelocityField<T>>>(
+  //       module, "DefaultVelocityField", velocityField)
+  //       // constructors
+  //       .def(pybind11::init<>())
+  //       // methods
+  //       .def("getScalarVelocity",
+  //       &psDefaultVelocityField<T>::getScalarVelocity)
+  //       .def("getVectorVelocity",
+  //       &psDefaultVelocityField<T>::getVectorVelocity)
+  //       .def("getDissipationAlpha",
+  //            &psDefaultVelocityField<T>::getDissipationAlpha)
+  //       .def("getTranslationFieldOptions",
+  //            &psDefaultVelocityField<T>::getTranslationFieldOptions)
+  //       .def("setVelocities", &psDefaultVelocityField<T>::setVelocities);
 
   // psDomain
   pybind11::class_<psDomain<T, D>, DomainType>(module, "Domain")
@@ -235,7 +238,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getCellCenter", &csDenseCellSet<T, D>::getCellCenter,
            "Get the center of a cell with given index")
       .def("getScalarData", &csDenseCellSet<T, D>::getScalarData,
-           "Get the data stored at each cell.")
+           "Get the data stored at each cell. WARNING: This function only "
+           "returns a "
+           "copy of the data")
+      .def("getScalarDataLabels", &csDenseCellSet<T, D>::getScalarDataLabels,
+           "Get the labels of the scalar data stored in the cell set.")
       .def("getIndex", &csDenseCellSet<T, D>::getIndex,
            "Get the index of the cell containing the given point.")
       .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
@@ -803,6 +810,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
       .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
 
+  /****************************************************************************
+   *                               OTHER                                      *
+   ****************************************************************************/
+
 #if VIENNAPS_PYTHON_DIMENSION > 2
   // GDS file parsing
   pybind11::class_<psGDSGeometry<T, D>, psSmartPointer<psGDSGeometry<T, D>>>(
@@ -873,7 +884,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaterialMap", &psDomain<T, 3>::setMaterialMap)
       .def("getMaterialMap", &psDomain<T, 3>::getMaterialMap)
       .def("generateCellSet", &psDomain<T, 3>::generateCellSet,
-           "Generate the cell set.")
+           pybind11::arg("position"), pybind11::arg("coverMaterial"),
+           pybind11::arg("isAboveSurface"), "Generate the cell set.")
       .def("getLevelSets",
            [](psDomain<T, 3> &d)
                -> std::optional<std::vector<psSmartPointer<lsDomain<T, 3>>>> {
