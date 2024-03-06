@@ -72,10 +72,10 @@ private:
         auto particleSeed = rayInternal::tea<3>(idx, seed);
         rayRNG RngState(particleSeed);
 
-        auto idx = pointDist(RngState);
-        auto direction =
-            rayReflectionDiffuse<NumericType, D>(surfaceNormals[idx], RngState);
-        auto cellIdx = getStartingCell(surfacePoints[idx]);
+        auto pointIdx = pointDist(RngState);
+        auto direction = rayReflectionDiffuse<NumericType, D>(
+            surfaceNormals[pointIdx], RngState);
+        auto cellIdx = getStartingCell(surfacePoints[pointIdx]);
         auto origin = cellSet->getCellCenter(cellIdx);
 
         unsigned numReflections = 0;
@@ -86,6 +86,10 @@ private:
           NumericType distance = 0;
           int prevIdx = -1;
           int hitState = -1; // -1 bulk hit, 1 material hit
+          // invert direction for faster computation
+          for (int i = 0; i < D; ++i) {
+            direction[i] = 1. / direction[i];
+          }
 
           while (true) {
 
@@ -260,8 +264,9 @@ private:
                                NumericType &distance) {
     rayTriple<NumericType> t1, t2;
     for (int i = 0; i < D; ++i) {
-      t1[i] = (min[i] - origin[i]) / direction[i];
-      t2[i] = (max[i] - origin[i]) / direction[i];
+      // direction is inverted
+      t1[i] = (min[i] - origin[i]) * direction[i];
+      t2[i] = (max[i] - origin[i]) * direction[i];
     }
     NumericType tmin, tmax;
     if constexpr (D == 2) {
