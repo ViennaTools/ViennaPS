@@ -148,7 +148,7 @@ private:
             while (cellIdx >= 0) {
               data[cellIdx] += distance;
               hitCount[cellIdx] += 1;
-              auto nextCell = getNextCell(rayOrg, rayDir, cellIdx, prevIdx);
+              int nextCell = getNextCell(rayOrg, rayDir, cellIdx, prevIdx);
               prevIdx = cellIdx;
               cellIdx = nextCell;
             }
@@ -308,9 +308,10 @@ private:
                   int prevIdx) const {
     const auto &neighbors = cellSet->getNeighbors(cellIdx);
     for (const auto &n : neighbors) {
-      if (n < 0 || !psMaterialMap::isMaterial(materialIds->at(n), material) ||
-          n == prevIdx)
+      if (n < 0 || n == prevIdx ||
+          !psMaterialMap::isMaterial(materialIds->at(n), material))
         continue;
+
       auto &cellMin = cellSet->getNode(cellSet->getElement(n)[0]);
       auto &cellMax = cellSet->getNode(cellSet->getElement(n)[D == 2 ? 2 : 6]);
       if (intersectLineBox(origin, direction, cellMin, cellMax))
@@ -319,10 +320,11 @@ private:
     return -1;
   }
 
-  bool intersectLineBox(const rayTriple<NumericType> &origin,
-                        const rayTriple<NumericType> &direction,
-                        const rayTriple<NumericType> &min,
-                        const rayTriple<NumericType> &max) const {
+  // https://gamedev.stackexchange.com/a/18459
+  static bool intersectLineBox(const rayTriple<NumericType> &origin,
+                               const rayTriple<NumericType> &direction,
+                               const rayTriple<NumericType> &min,
+                               const rayTriple<NumericType> &max) {
     rayTriple<NumericType> t1, t2;
     for (int i = 0; i < D; ++i) {
       t1[i] = (min[i] - origin[i]) / direction[i];
@@ -333,10 +335,10 @@ private:
       tmin = std::max(std::min(t1[0], t2[0]), std::min(t1[1], t2[1]));
       tmax = std::min(std::max(t1[0], t2[0]), std::max(t1[1], t2[1]));
     } else {
-      tmin = std::max(std::min(t1[0], t2[0]),
-                      std::min(std::min(t1[1], t2[1]), std::min(t1[2], t2[2])));
-      tmax = std::min(std::max(t1[0], t2[0]),
-                      std::max(std::max(t1[1], t2[1]), std::max(t1[2], t2[2])));
+      tmin = std::max(std::max(std::min(t1[0], t2[0]), std::min(t1[1], t2[1])),
+                      std::min(t1[2], t2[2]));
+      tmax = std::min(std::min(std::max(t1[0], t2[0]), std::max(t1[1], t2[1])),
+                      std::max(t1[2], t2[2]));
     }
     return tmax > 0 && tmin < tmax;
   }

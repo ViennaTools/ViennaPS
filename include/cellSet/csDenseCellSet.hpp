@@ -605,9 +605,7 @@ public:
         for (const auto &neighborCell : cellsAtNode) {
           if (neighborCell != cellIdx) {
 
-            auto neighborCoord = nodes[cells[neighborCell][0]];
-            for (int i = 0; i < D; i++)
-              neighborCoord[i] += gridDelta / 2.;
+            auto neighborCoord = getCellCenter(neighborCell);
 
             if (csUtil::distance(coord, neighborCoord) < gridDelta + eps) {
 
