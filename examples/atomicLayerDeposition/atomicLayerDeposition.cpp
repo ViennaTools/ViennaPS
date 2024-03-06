@@ -10,7 +10,6 @@
 int main(int argc, char *argv[]) {
   constexpr int D = 2;
   using NumericType = double;
-  omp_set_num_threads(16);
 
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
 
@@ -22,6 +21,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
     return 1;
   }
+  omp_set_num_threads(params.get<int>("numThreads"));
 
   // Create a domain
   auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
@@ -43,16 +43,22 @@ int main(int argc, char *argv[]) {
 
   cellSet->writeVTU("initial.vtu");
 
+  psUtils::Timer timer;
+  timer.start();
+
   psMeanFreePath<NumericType, D> mfpCalc;
   mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
   mfpCalc.setNumRaysPerPoint(params.get("raysPerPoint"));
-
+  mfpCalc.setSeed(params.get<int>("seed"));
   mfpCalc.setDomain(domain);
   mfpCalc.setMaterial(psMaterial::GAS);
   mfpCalc.setBulkLambda(params.get("bulkLambda"));
+  mfpCalc.disableSmoothing();
   mfpCalc.apply();
 
-  cellSet->writeVTU("meanFreePath.vtu");
+  timer.finish();
+  std::cout << ";ean free path calculation took " << timer.totalDuration * 1e-9
+            << " seconds." << std::endl;
 
   psAtomicLayerModel<NumericType, D> model(domain);
   model.setMaxLambda(params.get("bulkLambda"));

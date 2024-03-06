@@ -11,10 +11,11 @@ horizontalHeight = 20. # nm
 topSpace = 10.
 
 # Mean free path calculation
+seed = 918
 reflectionLimit = 100
 raysPerPoint = 1000
 
-bulkLambda = 100. # mean free path in gas-phase
+bulkLambda = 30. # mean free path in gas-phase
 
 # ALD Process 
 inFlux = 1.
@@ -36,3 +37,5 @@ reactionOrder = 4.
 
 stabilityFactor = 0.245
 printInterval = 0.5
+
+numThreads=16

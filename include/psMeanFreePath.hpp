@@ -11,9 +11,305 @@
 
 template <class NumericType, int D> class psMeanFreePath {
 public:
-  psMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {}
+  psMeanFreePath() {}
 
-  ~psMeanFreePath() {
+  void setDomain(const psSmartPointer<psDomain<NumericType, D>> passedDomain) {
+    domain = passedDomain;
+    cellSet = domain->getCellSet();
+    numCells = cellSet->getNumberOfCells();
+    materialIds = cellSet->getScalarData("Material");
+    cellSet->buildNeighborhood();
+  }
+
+  void setBulkLambda(const NumericType passedBulkLambda) {
+    bulkLambda = passedBulkLambda;
+  }
+
+  void setMaterial(const psMaterial passedMaterial) {
+    material = passedMaterial;
+  }
+
+  void setNumRaysPerPoint(const NumericType passedNumRaysPerPoint) {
+    numRaysPerPoint = passedNumRaysPerPoint;
+  }
+
+  void setReflectionLimit(const int passedReflectionLimit) {
+    reflectionLimit = passedReflectionLimit;
+  }
+
+  void setSeed(const unsigned int passedSeed) { seed = passedSeed; }
+
+  void disableSmoothing() { smoothing = false; }
+
+  void enableSmoothing() { smoothing = true; }
+
+  void apply() {
+    psLogger::getInstance().addInfo("Calculating mean free path ...").print();
+    initGeometry();
+    runKernel();
+  }
+
+private:
+  void runKernel() {
+    // thread local data storage
+    const int numThreads = omp_get_max_threads();
+    std::vector<std::vector<NumericType>> threadLocalData(numThreads);
+    std::vector<std::vector<unsigned>> threadLocalHitCount(numThreads);
+
+#pragma omp parallel
+    {
+      const int threadNum = omp_get_thread_num();
+      auto &data = threadLocalData[threadNum];
+      data.resize(numCells, 0.);
+      auto &hitCount = threadLocalHitCount[threadNum];
+      hitCount.resize(numCells, 0);
+      std::uniform_int_distribution<unsigned> pointDist(0, numPoints - 1);
+
+#pragma omp for schedule(dynamic)
+      for (long long idx = 0; idx < numRays; ++idx) {
+
+        // particle specific RNG seed
+        auto particleSeed = rayInternal::tea<3>(idx, seed);
+        rayRNG RngState(particleSeed);
+
+        auto idx = pointDist(RngState);
+        auto direction =
+            rayReflectionDiffuse<NumericType, D>(surfaceNormals[idx], RngState);
+        auto cellIdx = getStartingCell(surfacePoints[idx]);
+        auto origin = cellSet->getCellCenter(cellIdx);
+
+        unsigned numReflections = 0;
+        while (true) {
+
+          /* -------- Cell Marching -------- */
+          std::vector<int> hitCells(1, cellIdx);
+          NumericType distance = 0;
+          int prevIdx = -1;
+          int hitState = -1; // -1 bulk hit, 1 material hit
+
+          while (true) {
+
+            hitState = -1;
+            int currentCell = hitCells.back();
+            int nextCell = -1;
+
+            const auto &neighbors = cellSet->getNeighbors(currentCell);
+            for (const auto &n : neighbors) {
+              if (n < 0 || n == prevIdx) {
+                continue;
+              }
+
+              if (!psMaterialMap::isMaterial(materialIds->at(n), material)) {
+                hitState = 1; // could be a hit
+                continue;
+              }
+
+              auto &cellMin = cellSet->getNode(cellSet->getElement(n)[0]);
+              auto &cellMax =
+                  cellSet->getNode(cellSet->getElement(n)[D == 2 ? 2 : 6]);
+
+              if (intersectLineBox(origin, direction, cellMin, cellMax,
+                                   distance)) {
+                nextCell = n;
+                break;
+              }
+            }
+
+            if (nextCell < 0 && hitState == 1) {
+              // hit a different material
+              cellIdx = currentCell;
+              break;
+            }
+
+            if (nextCell < 0) {
+              // no hit
+              distance = bulkLambda;
+              break;
+            }
+
+            if (distance > bulkLambda) {
+              // gas phase hit
+              cellIdx = currentCell;
+              break;
+            }
+
+            prevIdx = currentCell;
+            hitCells.push_back(nextCell);
+          }
+
+          /* -------- Add to cells -------- */
+          for (const auto &c : hitCells) {
+            data[c] += distance + gridDelta;
+            hitCount[c]++;
+          }
+
+          /* -------- Reflect -------- */
+          if (hitState < 0)
+            break;
+
+          if (++numReflections >= reflectionLimit)
+            break;
+
+          // update origin
+          origin = cellSet->getCellCenter(cellIdx);
+
+          // update direction
+          auto closestSurfacePoint = kdTree.findNearest(origin);
+          assert(closestSurfacePoint->second < gridDelta);
+          auto geomNormal = surfaceNormals[closestSurfacePoint->first];
+          direction =
+              rayReflectionDiffuse<NumericType, D>(geomNormal, RngState);
+        }
+      }
+    }
+
+    // reduce data
+    std::vector<NumericType> result(numCells, 0);
+    for (const auto &data : threadLocalData) {
+#pragma omp parallel for
+      for (unsigned i = 0; i < numCells; ++i) {
+        result[i] += data[i];
+      }
+    }
+
+    // reduce hit counts
+    std::vector<NumericType> hitCounts(numCells, 0);
+    for (const auto &data : threadLocalHitCount) {
+#pragma omp parallel for
+      for (unsigned i = 0; i < numCells; ++i) {
+        hitCounts[i] += data[i];
+      }
+    }
+
+    // normalize data
+#pragma omp parallel for
+    for (unsigned i = 0; i < numCells; ++i) {
+      if (hitCounts[i] > 0)
+        result[i] = result[i] / hitCounts[i];
+      else
+        result[i] = -1.;
+    }
+
+    // smooth result
+    auto finalResult = cellSet->addScalarData("MeanFreePath");
+    materialIds = cellSet->getScalarData("Material");
+#pragma omp parallel for
+    for (unsigned i = 0; i < numCells; i++) {
+      if (!psMaterialMap::isMaterial(materialIds->at(i), material))
+        continue;
+
+      if (smoothing) {
+        const auto &neighbors = cellSet->getNeighbors(i);
+        NumericType sum = 0;
+        unsigned count = 0;
+        for (const auto &n : neighbors) {
+          if (n < 0 || result[n] < 0)
+            continue;
+          sum += result[n];
+          count++;
+        }
+        if (count > 0)
+          finalResult->at(i) = sum / count;
+      } else {
+        finalResult->at(i) = result[i];
+      }
+    }
+  }
+
+  void initGeometry() {
+    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+    lsToDiskMesh<NumericType, D>(domain->getLevelSets()->back(), mesh).apply();
+    surfacePoints = mesh->getNodes();
+    surfaceNormals = *mesh->getCellData().getVectorData("Normals");
+    numPoints = surfacePoints.size();
+
+    kdTree.setPoints(surfacePoints);
+    kdTree.build();
+
+    gridDelta = domain->getGrid().getGridDelta();
+    numRays = static_cast<long long>(numCells * numRaysPerPoint);
+  }
+
+  int getStartingCell(const rayTriple<NumericType> &origin) const {
+    int cellIdx = cellSet->getIndex(origin);
+    if (cellIdx < 0) {
+      psLogger::getInstance()
+          .addError("No starting cell found for ray " +
+                    std::to_string(origin[0]) + " " +
+                    std::to_string(origin[1]) + " " + std::to_string(origin[2]))
+          .print();
+    }
+
+    if (!psMaterialMap::isMaterial(materialIds->at(cellIdx), material)) {
+      const auto &neighbors = cellSet->getNeighbors(cellIdx);
+      for (const auto &n : neighbors) {
+        if (n >= 0 && psMaterialMap::isMaterial(materialIds->at(n), material)) {
+          cellIdx = n;
+          break;
+        }
+      }
+    }
+    return cellIdx;
+  }
+
+  // https://gamedev.stackexchange.com/a/18459
+  static bool intersectLineBox(const rayTriple<NumericType> &origin,
+                               const rayTriple<NumericType> &direction,
+                               const rayTriple<NumericType> &min,
+                               const rayTriple<NumericType> &max,
+                               NumericType &distance) {
+    rayTriple<NumericType> t1, t2;
+    for (int i = 0; i < D; ++i) {
+      t1[i] = (min[i] - origin[i]) / direction[i];
+      t2[i] = (max[i] - origin[i]) / direction[i];
+    }
+    NumericType tmin, tmax;
+    if constexpr (D == 2) {
+      tmin = std::max(std::min(t1[0], t2[0]), std::min(t1[1], t2[1]));
+      tmax = std::min(std::max(t1[0], t2[0]), std::max(t1[1], t2[1]));
+    } else {
+      tmin = std::max(std::max(std::min(t1[0], t2[0]), std::min(t1[1], t2[1])),
+                      std::min(t1[2], t2[2]));
+      tmax = std::min(std::min(std::max(t1[0], t2[0]), std::max(t1[1], t2[1])),
+                      std::max(t1[2], t2[2]));
+    }
+
+    if (tmax > 0 && tmin < tmax) {
+      // ray intersects box
+      distance = tmin;
+      return true;
+    }
+
+    return false;
+  }
+
+private:
+  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  psSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
+  psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
+
+  std::vector<NumericType> *materialIds;
+  std::vector<std::array<NumericType, 3>> surfaceNormals;
+  std::vector<std::array<NumericType, 3>> surfacePoints;
+
+  NumericType bulkLambda = 0;
+  NumericType gridDelta = 0;
+  unsigned int numCells = 0;
+  unsigned int numPoints = 0;
+  unsigned int seed = 15235135;
+  unsigned int reflectionLimit = 100;
+  long long numRays = 0;
+  NumericType numRaysPerPoint = 1000;
+  bool smoothing = true;
+  psMaterial material = psMaterial::GAS;
+};
+
+namespace psLegacy {
+template <class NumericType, int D> class psMeanFreePathRT {
+public:
+  psMeanFreePathRT() : traceDevice(rtcNewDevice("hugepages=1")) {}
+
+  ~psMeanFreePathRT() {
     traceGeometry.releaseGeometry();
     rtcReleaseDevice(traceDevice);
   }
@@ -64,7 +360,7 @@ private:
     diskRadius = gridDelta * rayInternal::DiskFactor<D>;
     traceGeometry.initGeometry(traceDevice, points, *normals, diskRadius);
     numRays =
-        static_cast<long long>(traceGeometry.getNumPoints() * numRaysPerPoint);
+        static_cast<long long>(cellSet->getNumberOfCells() * numRaysPerPoint);
   }
 
   void runKernel() {
@@ -144,11 +440,12 @@ private:
           /* -------- Cell Marching -------- */
           if (numReflections > 0) {
             auto cellIdx = getStartingCell(rayOrg);
+            auto origin = cellSet->getCellCenter(cellIdx);
             int prevIdx = -1;
             while (cellIdx >= 0) {
               data[cellIdx] += distance;
               hitCount[cellIdx] += 1;
-              int nextCell = getNextCell(rayOrg, rayDir, cellIdx, prevIdx);
+              int nextCell = getNextCell(origin, rayDir, cellIdx, prevIdx);
               prevIdx = cellIdx;
               cellIdx = nextCell;
             }
@@ -355,7 +652,6 @@ private:
   NumericType gridDelta = 0;
   NumericType diskRadius = 0;
   unsigned int numCells = 0;
-  unsigned int numNeighbors = 10;
   unsigned int seed = 15235135;
   unsigned int reflectionLimit = 100;
   long long numRays = 0;
@@ -364,7 +660,6 @@ private:
   psMaterial material = psMaterial::GAS;
 };
 
-namespace psLegacy {
 template <class NumericType, int D> class psMeanFreePath {
 public:
   psMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {
@@ -473,7 +768,7 @@ private:
     assert(normals);
     diskRadius = gridDelta * rayInternal::DiskFactor<D>;
     traceGeometry.initGeometry(traceDevice, points, *normals, diskRadius);
-    numRays = points.size() * numRaysPerPoint;
+    numRays = cellSet->getNumberOfCells() * numRaysPerPoint;
   }
 
   std::pair<std::vector<NumericType>, std::vector<NumericType>> runKernel() {
