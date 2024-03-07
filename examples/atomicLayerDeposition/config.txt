@@ -5,7 +5,7 @@ xPad = 10.   # nm
 # Geometry
 trench = 1
 verticalWidth = 10.  # nm
-verticalDepth = 2000. # nm
+verticalDepth = 200. # nm
 horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
 topSpace = 10.
@@ -15,7 +15,7 @@ seed = 918
 reflectionLimit = 100
 raysPerPoint = 100
 
-bulkLambda = 1000. # mean free path in gas-phase
+bulkLambda = 125. # (nm) mean free path in gas-phase
 
 # ALD Process 
 inFlux = 1.

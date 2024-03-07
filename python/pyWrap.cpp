@@ -822,7 +822,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setDomain", &psMeanFreePath<T, D>::setDomain)
       .def("setBulkLambda", &psMeanFreePath<T, D>::setBulkLambda)
       .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
-      .def("setNumRaysPerPoint", &psMeanFreePath<T, D>::setNumRaysPerPoint)
+      .def("setNumRaysPerCell", &psMeanFreePath<T, D>::setNumRaysPerCell)
       .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
       .def("setSeed", &psMeanFreePath<T, D>::setSeed)
       .def("disableSmoothing", &psMeanFreePath<T, D>::disableSmoothing)
