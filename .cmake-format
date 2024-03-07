@@ -1,0 +1,3 @@
+include: ["cmake/.cpm-format"]
+format:
+  line_width: 100
