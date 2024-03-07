@@ -1,5 +1,5 @@
 # Domain
-gridDelta=1. # um
+gridDelta=2.5 # um
 xExtent=110. # um
 yExtent=110. # um (3D mode only)
 
