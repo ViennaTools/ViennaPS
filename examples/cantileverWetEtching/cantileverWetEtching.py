@@ -44,7 +44,7 @@ vls.lsMakeGeometry(plane, vls.lsPlane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0])).apply()
 geometry = vps.Domain()
 geometry.insertNextLevelSet(mask)
 geometry.insertNextLevelSet(plane)
-geometry.saveSurface("initialGeometry.vtp", True)
+geometry.saveSurfaceMesh("initialGeometry.vtp", True)
 
 # wet etch process
 model = vps.AnisotropicProcess(
@@ -68,6 +68,6 @@ process.setIntegrationScheme(
 for n in range(minutes):
     # run process
     process.apply()
-    geometry.saveSurface("wetEtchingSurface_" + str(n) + ".vtp", True)
+    geometry.saveSurfaceMesh("wetEtchingSurface_" + str(n) + ".vtp", True)
 
-geometry.saveSurface("finalGeometry.vtp", True)
+geometry.saveSurfaceMesh("finalGeometry.vtp", True)

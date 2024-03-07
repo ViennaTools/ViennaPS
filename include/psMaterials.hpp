@@ -63,7 +63,7 @@ public:
   inline std::size_t size() const { return map->getNumberOfLayers(); }
 
   static inline psMaterial mapToMaterial(const int matId) {
-    if (matId > 17 || matId < -1)
+    if (matId > 18 || matId < -1)
       return psMaterial::None;
     return static_cast<psMaterial>(matId);
   }

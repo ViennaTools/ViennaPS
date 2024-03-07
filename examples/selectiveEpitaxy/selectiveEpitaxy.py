@@ -78,8 +78,8 @@ process.setIntegrationScheme(
     vls.lsIntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
-geometry.saveVolume("initial")
+geometry.saveVolumeMesh("initial")
 
 process.apply()
 
-geometry.saveVolume("final")
+geometry.saveVolumeMesh("final")
