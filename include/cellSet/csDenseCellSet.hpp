@@ -34,17 +34,21 @@ private:
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
   materialMapType materialMap = nullptr;
-  std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
+
   T gridDelta;
-  size_t numberOfCells;
   T depth = 0.;
+  std::size_t numberOfCells;
   int BVHlayers = 0;
+
+  std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
+  hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
+
   bool cellSetAboveSurface = false;
   psMaterial coverMaterial = psMaterial::None;
   std::bitset<D> periodicBoundary;
+
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
-  hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
 
 public:
   csDenseCellSet() {}

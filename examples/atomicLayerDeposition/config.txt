@@ -4,8 +4,8 @@ xPad = 10.   # nm
 
 # Geometry
 trench = 1
-verticalWidth = 20.  # nm
-verticalDepth = 80. # nm
+verticalWidth = 10.  # nm
+verticalDepth = 2000. # nm
 horizontalWidth = 100.  # nm
 horizontalHeight = 20. # nm
 topSpace = 10.
@@ -13,15 +13,15 @@ topSpace = 10.
 # Mean free path calculation
 seed = 918
 reflectionLimit = 100
-raysPerPoint = 1000
+raysPerPoint = 100
 
-bulkLambda = 30. # mean free path in gas-phase
+bulkLambda = 1000. # mean free path in gas-phase
 
 # ALD Process 
 inFlux = 1.
 
 p1_time = 60.
-H2O_meanThermalVelocity = 75.
+H2O_meanThermalVelocity = 1000.
 H2O_adsorptionRate = 0.075
 H2O_desorptionRate = 0.001
 

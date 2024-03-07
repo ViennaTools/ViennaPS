@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 
   psMeanFreePath<NumericType, D> mfpCalc;
   mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
-  mfpCalc.setNumRaysPerPoint(params.get("raysPerPoint"));
+  mfpCalc.setNumRaysPerCell(params.get("raysPerPoint"));
   mfpCalc.setSeed(params.get<int>("seed"));
   mfpCalc.setDomain(domain);
   mfpCalc.setMaterial(psMaterial::GAS);
