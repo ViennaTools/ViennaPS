@@ -1,27 +1,20 @@
-cmake_minimum_required(VERSION 3.14)
+add_custom_target(ViennaPS_Tests ALL)
 
-project(ViennaPSTests)
+include("${ViennaRay_SOURCE_DIR}/cmake/embree.cmake")
 
-include("${CMAKE_SOURCE_DIR}/cmake/prepare.cmake")
+# TODO: Setup VTK Env as well
+setup_embree_env(ViennaPS_Tests "tests")
 
-# Point find_package to the binary directory instead of the install location
-find_package(ViennaPS REQUIRED CONFIG PATHS ${ViennaPS_BINARY_DIR} NO_DEFAULT_PATH)
+file(
+  GLOB entries
+  LIST_DIRECTORIES true
+  "*")
 
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
+foreach(entry ${entries})
+  if(NOT IS_DIRECTORY ${entry})
+    continue()
+  endif()
 
-# Add subfolders to the include directories, since during installation the directory structure is
-# flattened, but in the source tree - which we are using here - it is not.
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/models
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/compact)
-
-set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
-
-add_custom_target(buildTests DEPENDS ${VIENNAPS_DEPENDENCIES})
-
-subdirlist(TEST_DIRS ${CMAKE_CURRENT_LIST_DIR})
-
-# add all tests
-foreach(subdir ${TEST_DIRS})
-  add_subdirectory(${subdir})
+  message(STATUS "[ViennaPS] Adding Test ${entry}")
+  add_subdirectory(${entry})
 endforeach()

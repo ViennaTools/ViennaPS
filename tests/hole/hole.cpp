@@ -1,5 +1,5 @@
+#include <geometries/psMakeHole.hpp>
 #include <psDomain.hpp>
-#include <psMakeHole.hpp>
 #include <psTestAssert.hpp>
 
 template <class NumericType, int D> void psRunTest() {
