@@ -1,5 +1,5 @@
-#include <psDirectionalEtching.hpp>
 #include <psDomain.hpp>
+#include <psIsotropicProcess.hpp>
 #include <psMakeTrench.hpp>
 #include <psProcess.hpp>
 #include <psTestAssert.hpp>
@@ -12,10 +12,8 @@ template <class NumericType, int D> void psRunTest() {
     psMakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
                                  true, psMaterial::Si)
         .apply();
-    std::array<NumericType, 3> direction{0., 0., 0.};
-    direction[D - 1] = -1.;
-    auto model = psSmartPointer<psDirectionalEtching<NumericType, D>>::New(
-        direction, 1., 0., psMaterial::Mask);
+    auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(
+        1., psMaterial::Mask);
 
     PSTEST_ASSERT(model->getSurfaceModel());
     PSTEST_ASSERT(model->getVelocityField());
@@ -36,10 +34,8 @@ template <class NumericType, int D> void psRunTest() {
                                  true, psMaterial::Si)
         .apply();
     std::vector<psMaterial> maskMaterials(1, psMaterial::Mask);
-    std::array<NumericType, 3> direction{0., 0., 0.};
-    direction[D - 1] = -1.;
-    auto model = psSmartPointer<psDirectionalEtching<NumericType, D>>::New(
-        direction, 1., 0., maskMaterials);
+    auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(
+        1., maskMaterials);
 
     PSTEST_ASSERT(model->getSurfaceModel());
     PSTEST_ASSERT(model->getVelocityField());

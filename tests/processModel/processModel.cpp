@@ -16,15 +16,6 @@ template <class NumericType, int D> void psRunTest() {
   // default constructors
   { auto model = psSmartPointer<psProcessModel<NumericType, D>>::New(); }
 
-  // directional etching
-  {
-    const std::array<NumericType, 3> dir = {0.};
-    auto model = psSmartPointer<psDirectionalEtching<NumericType, D>>::New(dir);
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() == 0);
-  }
-
   // fluorocarbon etching
   {
     auto model = psSmartPointer<psFluorocarbonEtching<NumericType, D>>::New(
@@ -47,14 +38,6 @@ template <class NumericType, int D> void psRunTest() {
     auto model =
         psSmartPointer<psBoxDistribution<NumericType, D>>::New(axes, 0.);
     PSTEST_ASSERT(model->getGeometricModel());
-  }
-
-  // isotropic model
-  {
-    auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(1.);
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() == 0);
   }
 
   // oxide regrowth

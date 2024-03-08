@@ -726,8 +726,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init([](const T rate, const psMaterial mask) {
              return psSmartPointer<psIsotropicProcess<T, D>>::New(rate, mask);
            }),
-           pybind11::arg("isotropicVelocity") = 1.,
-           pybind11::arg("maskMaterial") = psMaterial::Mask);
+           pybind11::arg("rate") = 1.,
+           pybind11::arg("maskMaterial") = psMaterial::Mask)
+      .def(pybind11::init([](const T rate, const std::vector<psMaterial> mask) {
+             return psSmartPointer<psIsotropicProcess<T, D>>::New(rate, mask);
+           }),
+           pybind11::arg("rate"), pybind11::arg("maskMaterial"));
 
   // Directional Etching
   pybind11::class_<psDirectionalEtching<T, D>,

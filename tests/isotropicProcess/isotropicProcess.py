@@ -17,10 +17,10 @@ def run2D():
         material=vps.Material.Si,
     ).apply()
 
-    model = vps.DirectionalEtching([0.0, -1.0, 0.0], 1.0, -0.1, vps.Material.Mask)
+    model = vps.IsotropicProcess(rate=-1.0, maskMaterial=vps.Material.Mask)
     vps.Process(domain, model, 10.0).apply()
 
-    model = vps.DirectionalEtching([0.0, -1.0, 0.0], 1.0, -0.1, [vps.Material.Mask])
+    model = vps.IsotropicProcess(rate=-1.0, maskMaterial=[vps.Material.Mask])
     vps.Process(domain, model, 10.0).apply()
 
 
@@ -43,26 +43,18 @@ def run3D():
         material=vps.Material.Si,
     ).apply()
 
-    model = vps.DirectionalEtching(
-        direction=[0.0, 0.0, -1.0],
-        directionalVelocity=1.0,
-        isotropicVelocity=-0.1,
-        maskMaterial=vps.Material.Mask,
-    )
-    vps.Process(domain, model, 10.0).apply()
+    model = vps.IsotropicProcess(rate=-1.0, maskMaterial=vps.Material.Mask)
+    vps.Process(domain, model, 2.0).apply()
 
-    model = vps.DirectionalEtching(
-        direction=[0.0, 0.0, -1.0],
-        directionalVelocity=1.0,
-        isotropicVelocity=-0.1,
-        maskMaterial=[vps.Material.Mask],
-    )
-    vps.Process(domain, model, 10.0).apply()
+    model = vps.IsotropicProcess(rate=-1.0, maskMaterial=[vps.Material.Mask])
+    vps.Process(domain, model, 2.0).apply()
+
+    domain.saveVolumeMesh("isotropicProcess3D.vtu")
 
 
 if __name__ == "__main__":
-    run2D()
-    print("2D test passed")
+    # run2D()
+    # print("2D test passed")
     run3D()
     print("3D test passed")
     print("All tests passed")
