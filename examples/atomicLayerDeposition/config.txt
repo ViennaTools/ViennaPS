@@ -1,0 +1,41 @@
+# Domain
+gridDelta = 2. # nm
+xPad = 10.   # nm
+
+# Geometry
+trench = 0
+verticalWidth = 20.  # nm
+verticalDepth = 100. # nm
+horizontalWidth = 150.  # nm
+horizontalHeight = 20. # nm
+topSpace = 20.
+
+# Mean free path calculation
+seed = 918
+reflectionLimit = 100
+raysPerCell = 100
+
+bulkLambda = 125. # (nm) mean free path in gas-phase
+
+# ALD Process 
+inFlux = 1.
+
+p1_time = 60.
+H2O_meanThermalVelocity = 75.
+H2O_adsorptionRate = 0.075
+H2O_desorptionRate = 0.001
+
+purge_time = 60.
+purge_meanThermalVelocity = 100.
+
+p2_time = 60.
+TMA_meanThermalVelocity = 75.
+TMA_adsorptionRate = 0.075
+TMA_desorptionRate = 0.01
+
+reactionOrder = 4.
+
+stabilityFactor = 0.245
+printInterval = 0.5
+
+numThreads=16

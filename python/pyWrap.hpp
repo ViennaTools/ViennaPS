@@ -25,6 +25,7 @@
 #include <psExtrude.hpp>
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
+#include <psMeanFreePath.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
@@ -44,6 +45,7 @@
 
 // models
 #include <psAnisotropicProcess.hpp>
+#include <psAtomicLayerProcess.hpp>
 #include <psDirectionalEtching.hpp>
 #include <psFluorocarbonEtching.hpp>
 #include <psGeometricDistributionModels.hpp>
@@ -56,12 +58,14 @@
 
 // CellSet
 #include <csDenseCellSet.hpp>
+#include <csSegmentCells.hpp>
 
 // Compact
 #include <psKDTree.hpp>
 
 // other
 #include <lsDomain.hpp>
+#include <psUtils.hpp>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 #include <rayTraceDirection.hpp>
@@ -75,7 +79,7 @@ constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 typedef psSmartPointer<psDomain<T, D>> DomainType;
 
 PYBIND11_DECLARE_HOLDER_TYPE(Types, psSmartPointer<Types>)
-PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T>>)
+// PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T>>) // can not be used
 
 PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 
@@ -83,37 +87,38 @@ PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
 
-class PypsSurfaceModel : public psSurfaceModel<T> {
-  using psSurfaceModel<T>::coverages;
-  using psSurfaceModel<T>::processParams;
-  using psSurfaceModel<T>::getCoverages;
-  using psSurfaceModel<T>::getProcessParameters;
-  typedef std::vector<T> vect_type;
+// class PypsSurfaceModel : public psSurfaceModel<T> {
+//   using psSurfaceModel<T>::coverages;
+//   using psSurfaceModel<T>::processParams;
+//   using psSurfaceModel<T>::getCoverages;
+//   using psSurfaceModel<T>::getProcessParameters;
+//   typedef std::vector<T> vect_type;
 
-public:
-  void initializeCoverages(unsigned numGeometryPoints) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeCoverages,
-                      numGeometryPoints);
-  }
+// public:
+//   void initializeCoverages(unsigned numGeometryPoints) override {
+//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeCoverages,
+//                       numGeometryPoints);
+//   }
 
-  void initializeProcessParameters() override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters, );
-  }
+//   void initializeProcessParameters() override {
+//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters,
+//     );
+//   }
 
-  psSmartPointer<std::vector<T>>
-  calculateVelocities(psSmartPointer<psPointData<T>> rates,
-                      const std::vector<std::array<T, 3>> &coordinates,
-                      const std::vector<T> &materialIds) override {
-    PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
-                      calculateVelocities, rates, coordinates, materialIds);
-  }
+//   psSmartPointer<std::vector<T>>
+//   calculateVelocities(psSmartPointer<psPointData<T>> rates,
+//                       const std::vector<std::array<T, 3>> &coordinates,
+//                       const std::vector<T> &materialIds) override {
+//     PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
+//                       calculateVelocities, rates, coordinates, materialIds);
+//   }
 
-  void updateCoverages(psSmartPointer<psPointData<T>> rates,
-                       const std::vector<T> &materialIds) override {
-    PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, rates,
-                      materialIds);
-  }
-};
+//   void updateCoverages(psSmartPointer<psPointData<T>> rates,
+//                        const std::vector<T> &materialIds) override {
+//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, rates,
+//                       materialIds);
+//   }
+// };
 
 // psAdvectionCallback
 class PyAdvectionCallback : public psAdvectionCallback<T, D> {
@@ -172,141 +177,146 @@ public:
 };
 
 // Default particle classes
-template <int D>
-class psDiffuseParticle : public rayParticle<psDiffuseParticle<D>, T> {
-  using ClassName = rayParticle<psDiffuseParticle<D>, T>;
+// template <int D>
+// class psDiffuseParticle : public rayParticle<psDiffuseParticle<D>, T> {
+//   using ClassName = rayParticle<psDiffuseParticle<D>, T>;
 
-public:
-  psDiffuseParticle(const T pStickingProbability, const T pCosineExponent,
-                    const std::string &pDataLabel)
-      : stickingProbability(pStickingProbability),
-        cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
+// public:
+//   psDiffuseParticle(const T pStickingProbability, const T pCosineExponent,
+//                     const std::string &pDataLabel)
+//       : stickingProbability(pStickingProbability),
+//         cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
 
-  void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-                        const rayTriple<T> &geomNormal,
-                        const unsigned int primID, const int materialID,
-                        rayTracingData<T> &localData,
-                        const rayTracingData<T> *globalData,
-                        rayRNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
+//   void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
+//                         const rayTriple<T> &geomNormal,
+//                         const unsigned int primID, const int materialID,
+//                         rayTracingData<T> &localData,
+//                         const rayTracingData<T> *globalData,
+//                         rayRNG &Rng) override final {
+//     localData.getVectorData(0)[primID] += rayWeight;
+//   }
 
-  std::pair<T, rayTriple<T>>
-  surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-                    const rayTriple<T> &geomNormal, const unsigned int primID,
-                    const int materialID, const rayTracingData<T> *globalData,
-                    rayRNG &Rng) override final {
-    auto direction = rayReflectionDiffuse<T, D>(geomNormal, Rng);
-    return {stickingProbability, direction};
-  }
+//   std::pair<T, rayTriple<T>>
+//   surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
+//                     const rayTriple<T> &geomNormal, const unsigned int
+//                     primID, const int materialID, const rayTracingData<T>
+//                     *globalData, rayRNG &Rng) override final {
+//     auto direction = rayReflectionDiffuse<T, D>(geomNormal, Rng);
+//     return {stickingProbability, direction};
+//   }
 
-  void initNew(rayRNG &RNG) override final {}
+//   void initNew(rayRNG &RNG) override final {}
 
-  T getSourceDistributionPower() const override final { return cosineExponent; }
+//   T getSourceDistributionPower() const override final { return
+//   cosineExponent; }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {dataLabel};
-  }
+//   std::vector<std::string> getLocalDataLabels() const override final {
+//     return {dataLabel};
+//   }
 
-private:
-  const T stickingProbability = 1.;
-  const T cosineExponent = 1.;
-  const std::string dataLabel = "flux";
-};
+// private:
+//   const T stickingProbability = 1.;
+//   const T cosineExponent = 1.;
+//   const std::string dataLabel = "flux";
+// };
 
-class psSpecularParticle : public rayParticle<psSpecularParticle, T> {
-  using ClassName = rayParticle<psSpecularParticle, T>;
+// class psSpecularParticle : public rayParticle<psSpecularParticle, T> {
+//   using ClassName = rayParticle<psSpecularParticle, T>;
 
-public:
-  psSpecularParticle(const T pStickingProbability, const T pCosineExponent,
-                     const std::string &pDataLabel)
-      : stickingProbability(pStickingProbability),
-        cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
+// public:
+//   psSpecularParticle(const T pStickingProbability, const T pCosineExponent,
+//                      const std::string &pDataLabel)
+//       : stickingProbability(pStickingProbability),
+//         cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
 
-  void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-                        const rayTriple<T> &geomNormal,
-                        const unsigned int primID, const int materialID,
-                        rayTracingData<T> &localData,
-                        const rayTracingData<T> *globalData,
-                        rayRNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
+//   void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
+//                         const rayTriple<T> &geomNormal,
+//                         const unsigned int primID, const int materialID,
+//                         rayTracingData<T> &localData,
+//                         const rayTracingData<T> *globalData,
+//                         rayRNG &Rng) override final {
+//     localData.getVectorData(0)[primID] += rayWeight;
+//   }
 
-  std::pair<T, rayTriple<T>>
-  surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-                    const rayTriple<T> &geomNormal, const unsigned int primID,
-                    const int materialID, const rayTracingData<T> *globalData,
-                    rayRNG &Rng) override final {
-    auto direction = rayReflectionSpecular<T>(rayDir, geomNormal);
-    return {stickingProbability, direction};
-  }
+//   std::pair<T, rayTriple<T>>
+//   surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
+//                     const rayTriple<T> &geomNormal, const unsigned int
+//                     primID, const int materialID, const rayTracingData<T>
+//                     *globalData, rayRNG &Rng) override final {
+//     auto direction = rayReflectionSpecular<T>(rayDir, geomNormal);
+//     return {stickingProbability, direction};
+//   }
 
-  void initNew(rayRNG &RNG) override final {}
+//   void initNew(rayRNG &RNG) override final {}
 
-  T getSourceDistributionPower() const override final { return cosineExponent; }
+//   T getSourceDistributionPower() const override final { return
+//   cosineExponent; }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {dataLabel};
-  }
+//   std::vector<std::string> getLocalDataLabels() const override final {
+//     return {dataLabel};
+//   }
 
-private:
-  const T stickingProbability = 1.;
-  const T cosineExponent = 1.;
-  const std::string dataLabel = "flux";
-};
+// private:
+//   const T stickingProbability = 1.;
+//   const T cosineExponent = 1.;
+//   const std::string dataLabel = "flux";
+// };
 
 // psVelocityField
-class PyVelocityField : public psVelocityField<T> {
-  using psVelocityField<T>::psVelocityField;
+// class PyVelocityField : public psVelocityField<T> {
+//   using psVelocityField<T>::psVelocityField;
 
-public:
-  T getScalarVelocity(const std::array<T, 3> &coordinate, int material,
-                      const std::array<T, 3> &normalVector,
-                      unsigned long pointId) override {
-    PYBIND11_OVERRIDE(T, psVelocityField<T>, getScalarVelocity, coordinate,
-                      material, normalVector, pointId);
-  }
-  // if we declare a typedef for std::array<T,3>, we will no longer get this
-  // error: the compiler doesn't understand why std::array gets 2 template
-  // arguments
-  // add template argument as the preprocessor becomes confused with the comma
-  // in std::array<T, 3>
-  typedef std::array<T, 3> arrayType;
-  std::array<T, 3> getVectorVelocity(const std::array<T, 3> &coordinate,
-                                     int material,
-                                     const std::array<T, 3> &normalVector,
-                                     unsigned long pointId) override {
-    PYBIND11_OVERRIDE(
-        arrayType, // add template argument here, as the preprocessor becomes
-                   // confused with the comma in std::array<T, 3>
-        psVelocityField<T>, getVectorVelocity, coordinate, material,
-        normalVector, pointId);
-  }
+// public:
+//   T getScalarVelocity(const std::array<T, 3> &coordinate, int material,
+//                       const std::array<T, 3> &normalVector,
+//                       unsigned long pointId) override {
+//     PYBIND11_OVERRIDE(T, psVelocityField<T>, getScalarVelocity, coordinate,
+//                       material, normalVector, pointId);
+//   }
+//   // if we declare a typedef for std::array<T,3>, we will no longer get this
+//   // error: the compiler doesn't understand why std::array gets 2 template
+//   // arguments
+//   // add template argument as the preprocessor becomes confused with the
+//   comma
+//   // in std::array<T, 3>
+//   typedef std::array<T, 3> arrayType;
+//   std::array<T, 3> getVectorVelocity(const std::array<T, 3> &coordinate,
+//                                      int material,
+//                                      const std::array<T, 3> &normalVector,
+//                                      unsigned long pointId) override {
+//     PYBIND11_OVERRIDE(
+//         arrayType, // add template argument here, as the preprocessor becomes
+//                    // confused with the comma in std::array<T, 3>
+//         psVelocityField<T>, getVectorVelocity, coordinate, material,
+//         normalVector, pointId);
+//   }
 
-  T getDissipationAlpha(int direction, int material,
-                        const std::array<T, 3> &centralDifferences) override {
-    PYBIND11_OVERRIDE(T, psVelocityField<T>, getDissipationAlpha, direction,
-                      material, centralDifferences);
-  }
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
-    PYBIND11_OVERRIDE(void, psVelocityField<T>, setVelocities,
-                      passedVelocities);
-  }
-  int getTranslationFieldOptions() const override {
-    PYBIND11_OVERRIDE(int, psVelocityField<T>, getTranslationFieldOptions, );
-  }
-};
+//   T getDissipationAlpha(int direction, int material,
+//                         const std::array<T, 3> &centralDifferences) override
+//                         {
+//     PYBIND11_OVERRIDE(T, psVelocityField<T>, getDissipationAlpha, direction,
+//                       material, centralDifferences);
+//   }
+//   void setVelocities(psSmartPointer<std::vector<T>> passedVelocities)
+//   override {
+//     PYBIND11_OVERRIDE(void, psVelocityField<T>, setVelocities,
+//                       passedVelocities);
+//   }
+//   int getTranslationFieldOptions() const override {
+//     PYBIND11_OVERRIDE(int, psVelocityField<T>, getTranslationFieldOptions, );
+//   }
+// };
 
 // a function to declare GeometricDistributionModel of type DistType
-template <typename NumericType, int D, typename DistType>
-void declare_GeometricDistributionModel(pybind11::module &m,
-                                        const std::string &typestr) {
-  using Class = psGeometricDistributionModel<NumericType, D, DistType>;
+// template <typename NumericType, int D, typename DistType>
+// void declare_GeometricDistributionModel(pybind11::module &m,
+//                                         const std::string &typestr) {
+//   using Class = psGeometricDistributionModel<NumericType, D, DistType>;
 
-  pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
-      .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))
-      .def(pybind11::init<psSmartPointer<DistType>,
-                          psSmartPointer<lsDomain<NumericType, D>>>(),
-           pybind11::arg("dist"), pybind11::arg("mask"))
-      .def("apply", &Class::apply);
-}
+//   pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
+//       .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))
+//       .def(pybind11::init<psSmartPointer<DistType>,
+//                           psSmartPointer<lsDomain<NumericType, D>>>(),
+//            pybind11::arg("dist"), pybind11::arg("mask"))
+//       .def("apply", &Class::apply);
+// }

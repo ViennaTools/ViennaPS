@@ -19,12 +19,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // set version string of python module
   module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 
+  // set dimension
+  module.attr("D") = D;
+
   // wrap omp_set_num_threads to control number of threads
   module.def("setNumThreads", &omp_set_num_threads);
-
-  // it was giving an error that it could'nt convert this type to python
-  // pybind11::bind_vector<std::vector<double, std::allocator<double>>>(
-  //     module, "VectorDouble");
 
   // psProcessParams
   pybind11::class_<psProcessParams<T>, psSmartPointer<psProcessParams<T>>>(
@@ -46,16 +45,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getScalarDataLabel", &psProcessParams<T>::getScalarDataLabel);
 
   // psSurfaceModel
-  pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,
-                   PypsSurfaceModel>(module, "SurfaceModel")
-      .def(pybind11::init<>())
-      .def("initializeCoverages", &psSurfaceModel<T>::initializeCoverages)
-      .def("initializeProcessParameters",
-           &psSurfaceModel<T>::initializeProcessParameters)
-      .def("getCoverages", &psSurfaceModel<T>::getCoverages)
-      .def("getProcessParameters", &psSurfaceModel<T>::getProcessParameters)
-      .def("calculateVelocities", &psSurfaceModel<T>::calculateVelocities)
-      .def("updateCoverages", &psSurfaceModel<T>::updateCoverages);
+  //   pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,
+  //                    PypsSurfaceModel>(module, "SurfaceModel")
+  //       .def(pybind11::init<>())
+  //       .def("initializeCoverages", &psSurfaceModel<T>::initializeCoverages)
+  //       .def("initializeProcessParameters",
+  //            &psSurfaceModel<T>::initializeProcessParameters)
+  //       .def("getCoverages", &psSurfaceModel<T>::getCoverages)
+  //       .def("getProcessParameters",
+  //       &psSurfaceModel<T>::getProcessParameters) .def("calculateVelocities",
+  //       &psSurfaceModel<T>::calculateVelocities) .def("updateCoverages",
+  //       &psSurfaceModel<T>::updateCoverages);
 
   pybind11::enum_<psLogLevel>(module, "LogLevel")
       .value("ERROR", psLogLevel::ERROR)
@@ -85,33 +85,35 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("print", [](psLogger &instance) { instance.print(std::cout); });
 
   // psVelocityField
-  pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
-                   PyVelocityField>
-      velocityField(module, "VelocityField");
-  // constructors
-  velocityField
-      .def(pybind11::init<>())
-      // methods
-      .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
-      .def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
-      .def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
-      .def("getTranslationFieldOptions",
-           &psVelocityField<T>::getTranslationFieldOptions)
-      .def("setVelocities", &psVelocityField<T>::setVelocities);
+  //   pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
+  //                    PyVelocityField>
+  //       velocityField(module, "VelocityField");
+  //   // constructors
+  //   velocityField
+  //       .def(pybind11::init<>())
+  //       // methods
+  //       .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
+  //       .def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
+  //       .def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
+  //       .def("getTranslationFieldOptions",
+  //            &psVelocityField<T>::getTranslationFieldOptions)
+  //       .def("setVelocities", &psVelocityField<T>::setVelocities);
 
-  pybind11::class_<psDefaultVelocityField<T>,
-                   psSmartPointer<psDefaultVelocityField<T>>>(
-      module, "DefaultVelocityField", velocityField)
-      // constructors
-      .def(pybind11::init<>())
-      // methods
-      .def("getScalarVelocity", &psDefaultVelocityField<T>::getScalarVelocity)
-      .def("getVectorVelocity", &psDefaultVelocityField<T>::getVectorVelocity)
-      .def("getDissipationAlpha",
-           &psDefaultVelocityField<T>::getDissipationAlpha)
-      .def("getTranslationFieldOptions",
-           &psDefaultVelocityField<T>::getTranslationFieldOptions)
-      .def("setVelocities", &psDefaultVelocityField<T>::setVelocities);
+  //   pybind11::class_<psDefaultVelocityField<T>,
+  //                    psSmartPointer<psDefaultVelocityField<T>>>(
+  //       module, "DefaultVelocityField", velocityField)
+  //       // constructors
+  //       .def(pybind11::init<>())
+  //       // methods
+  //       .def("getScalarVelocity",
+  //       &psDefaultVelocityField<T>::getScalarVelocity)
+  //       .def("getVectorVelocity",
+  //       &psDefaultVelocityField<T>::getVectorVelocity)
+  //       .def("getDissipationAlpha",
+  //            &psDefaultVelocityField<T>::getDissipationAlpha)
+  //       .def("getTranslationFieldOptions",
+  //            &psDefaultVelocityField<T>::getTranslationFieldOptions)
+  //       .def("setVelocities", &psDefaultVelocityField<T>::setVelocities);
 
   // psDomain
   pybind11::class_<psDomain<T, D>, DomainType>(module, "Domain")
@@ -158,26 +160,26 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Enum psMaterial
   pybind11::enum_<psMaterial>(module, "Material")
-      .value("Undefined", psMaterial::None)
+      .value("Undefined", psMaterial::None) // 1
       .value("Mask", psMaterial::Mask)
       .value("Si", psMaterial::Si)
       .value("SiO2", psMaterial::SiO2)
-      .value("Si3N4", psMaterial::Si3N4)
+      .value("Si3N4", psMaterial::Si3N4) // 5
       .value("SiN", psMaterial::SiN)
       .value("SiON", psMaterial::SiON)
       .value("SiC", psMaterial::SiC)
       .value("SiGe", psMaterial::SiGe)
-      .value("PolySi", psMaterial::PolySi)
+      .value("PolySi", psMaterial::PolySi) // 10
       .value("GaN", psMaterial::GaN)
       .value("W", psMaterial::W)
       .value("Al2O3", psMaterial::Al2O3)
       .value("TiN", psMaterial::TiN)
-      .value("Cu", psMaterial::Cu)
+      .value("Cu", psMaterial::Cu) // 15
       .value("Polymer", psMaterial::Polymer)
       .value("Dielectric", psMaterial::Dielectric)
       .value("Metal", psMaterial::Metal)
       .value("Air", psMaterial::Air)
-      .value("GAS", psMaterial::GAS)
+      .value("GAS", psMaterial::GAS) // 20
       .export_values();
 
   // psMaterialMap
@@ -205,8 +207,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
             // discard return value
           },
           "Add a scalar value to be stored and modified in each cell.")
-      .def("getCellGrid", &csDenseCellSet<T, D>::getCellGrid,
-           "Get the underlying mesh of the cell set.")
       .def("getDepth", &csDenseCellSet<T, D>::getDepth,
            "Get the depth of the cell set.")
       .def("getGridDelta", &csDenseCellSet<T, D>::getGridDelta,
@@ -214,22 +214,45 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getNodes", &csDenseCellSet<T, D>::getNodes,
            "Get the nodes of the cell set which correspond to the corner "
            "points of the cells.")
+      .def("getNode", &csDenseCellSet<T, D>::getNode,
+           "Get the node at the given index.")
       .def("getElements", &csDenseCellSet<T, D>::getElements,
            "Get elements (cells). The indicies in the elements correspond to "
            "the corner nodes.")
+      .def("getElement", &csDenseCellSet<T, D>::getElement,
+           "Get the element at the given index.")
       .def("getSurface", &csDenseCellSet<T, D>::getSurface,
            "Get the surface level-set.")
-      .def("getNumberOfCells", &csDenseCellSet<T, D>::getNumberOfCells)
+      .def("getCellGrid", &csDenseCellSet<T, D>::getCellGrid,
+           "Get the underlying mesh of the cell set.")
+      .def("getNumberOfCells", &csDenseCellSet<T, D>::getNumberOfCells,
+           "Get the number of cells.")
       .def("getFillingFraction", &csDenseCellSet<T, D>::getFillingFraction,
            "Get the filling fraction of the cell containing the point.")
+      .def("getFillingFractions", &csDenseCellSet<T, D>::getFillingFractions,
+           "Get the filling fractions of all cells.")
+      .def("getAverageFillingFraction",
+           &csDenseCellSet<T, D>::getAverageFillingFraction,
+           "Get the average filling at a point in some radius.")
+      .def("getCellCenter", &csDenseCellSet<T, D>::getCellCenter,
+           "Get the center of a cell with given index")
       .def("getScalarData", &csDenseCellSet<T, D>::getScalarData,
-           "Get the data stored at each cell.")
+           "Get the data stored at each cell. WARNING: This function only "
+           "returns a "
+           "copy of the data")
+      .def("getScalarDataLabels", &csDenseCellSet<T, D>::getScalarDataLabels,
+           "Get the labels of the scalar data stored in the cell set.")
+      .def("getIndex", &csDenseCellSet<T, D>::getIndex,
+           "Get the index of the cell containing the given point.")
+      .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
       .def("setCellSetPosition", &csDenseCellSet<T, D>::setCellSetPosition,
            "Set whether the cell set should be created below (false) or above "
            "(true) the surface.")
+      .def("setCoverMaterial", &csDenseCellSet<T, D>::setCoverMaterial,
+           "Set the material of the cells which are above or below the "
+           "surface.")
       .def("setPeriodicBoundary", &csDenseCellSet<T, D>::setPeriodicBoundary,
            "Enable periodic boundary conditions in specified dimensions.")
-      .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
       .def("setFillingFraction",
            pybind11::overload_cast<const int, const T>(
                &csDenseCellSet<T, D>::setFillingFraction),
@@ -272,6 +295,24 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getNeighbors", &csDenseCellSet<T, D>::getNeighbors,
            "Get the neighbor indices for a cell.");
 
+  // csSegmentCells
+  pybind11::class_<csSegmentCells<T, D>, psSmartPointer<csSegmentCells<T, D>>>(
+      module, "SegmentCells")
+      .def(pybind11::init<psSmartPointer<csDenseCellSet<T, D>>>())
+      .def(pybind11::init<psSmartPointer<csDenseCellSet<T, D>>, std::string,
+                          psMaterial>(),
+           pybind11::arg("cellSet"),
+           pybind11::arg("cellTypeString") = "CellType",
+           pybind11::arg("bulkMaterial") = psMaterial::GAS)
+      .def("setCellSet", &csSegmentCells<T, D>::setCellSet,
+           "Set the cell set in the segmenter.")
+      .def("setCellTypeString", &csSegmentCells<T, D>::setCellTypeString,
+           "Set the cell type string in the segmenter.")
+      .def("setBulkMaterial", &csSegmentCells<T, D>::setBulkMaterial,
+           "Set the bulk material in the segmenter.")
+      .def("apply", &csSegmentCells<T, D>::apply,
+           "Segment the cells into surface, material, and gas cells.");
+
   // Shim to instantiate the particle class
   pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>> particle(
       module, "Particle");
@@ -282,35 +323,38 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getSourceDistributionPower",
            &psParticle<D>::getSourceDistributionPower);
 
-  pybind11::class_<psDiffuseParticle<D>, psSmartPointer<psDiffuseParticle<D>>>(
-      module, "DiffuseParticle", particle)
-      .def(pybind11::init(
-               &psSmartPointer<psDiffuseParticle<D>>::New<const T, const T,
-                                                          const std::string &>),
-           pybind11::arg("stickingProbability") = 1.0,
-           pybind11::arg("cosineExponent") = 1.,
-           pybind11::arg("dataLabel") = "flux")
-      .def("surfaceCollision", &psDiffuseParticle<D>::surfaceCollision)
-      .def("surfaceReflection", &psDiffuseParticle<D>::surfaceReflection)
-      .def("initNew", &psDiffuseParticle<D>::initNew)
-      .def("getLocalDataLabels", &psDiffuseParticle<D>::getLocalDataLabels)
-      .def("getSourceDistributionPower",
-           &psDiffuseParticle<D>::getSourceDistributionPower);
+  //   pybind11::class_<psDiffuseParticle<D>,
+  //   psSmartPointer<psDiffuseParticle<D>>>(
+  //       module, "DiffuseParticle", particle)
+  //       .def(pybind11::init(
+  //                &psSmartPointer<psDiffuseParticle<D>>::New<const T, const T,
+  //                                                           const std::string
+  //                                                           &>),
+  //            pybind11::arg("stickingProbability") = 1.0,
+  //            pybind11::arg("cosineExponent") = 1.,
+  //            pybind11::arg("dataLabel") = "flux")
+  //       .def("surfaceCollision", &psDiffuseParticle<D>::surfaceCollision)
+  //       .def("surfaceReflection", &psDiffuseParticle<D>::surfaceReflection)
+  //       .def("initNew", &psDiffuseParticle<D>::initNew)
+  //       .def("getLocalDataLabels", &psDiffuseParticle<D>::getLocalDataLabels)
+  //       .def("getSourceDistributionPower",
+  //            &psDiffuseParticle<D>::getSourceDistributionPower);
 
-  pybind11::class_<psSpecularParticle, psSmartPointer<psSpecularParticle>>(
-      module, "SpecularParticle", particle)
-      .def(pybind11::init(
-               &psSmartPointer<psSpecularParticle>::New<const T, const T,
-                                                        const std::string &>),
-           pybind11::arg("stickingProbability") = 1.0,
-           pybind11::arg("cosineExponent") = 1.,
-           pybind11::arg("dataLabel") = "flux")
-      .def("surfaceCollision", &psSpecularParticle::surfaceCollision)
-      .def("surfaceReflection", &psSpecularParticle::surfaceReflection)
-      .def("initNew", &psSpecularParticle::initNew)
-      .def("getLocalDataLabels", &psSpecularParticle::getLocalDataLabels)
-      .def("getSourceDistributionPower",
-           &psSpecularParticle::getSourceDistributionPower);
+  //   pybind11::class_<psSpecularParticle, psSmartPointer<psSpecularParticle>>(
+  //       module, "SpecularParticle", particle)
+  //       .def(pybind11::init(
+  //                &psSmartPointer<psSpecularParticle>::New<const T, const T,
+  //                                                         const std::string
+  //                                                         &>),
+  //            pybind11::arg("stickingProbability") = 1.0,
+  //            pybind11::arg("cosineExponent") = 1.,
+  //            pybind11::arg("dataLabel") = "flux")
+  //       .def("surfaceCollision", &psSpecularParticle::surfaceCollision)
+  //       .def("surfaceReflection", &psSpecularParticle::surfaceReflection)
+  //       .def("initNew", &psSpecularParticle::initNew)
+  //       .def("getLocalDataLabels", &psSpecularParticle::getLocalDataLabels)
+  //       .def("getSourceDistributionPower",
+  //            &psSpecularParticle::getSourceDistributionPower);
 
   /****************************************************************************
    *                               VISUALIZATION *
@@ -779,12 +823,75 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate111"), pybind11::arg("rate311"),
            pybind11::arg("materials"));
 
+  // psAtomicLayerProcess
+  pybind11::class_<psAtomicLayerProcess<T, D>,
+                   psSmartPointer<psAtomicLayerProcess<T, D>>>(
+      module, "AtomicLayerProcess")
+      .def(pybind11::init<DomainType, const bool>(), pybind11::arg("domain"),
+           pybind11::arg("etch") = false)
+      .def("setFirstPrecursor",
+           pybind11::overload_cast<std::string, T, T, T, T, T>(
+               &psAtomicLayerProcess<T, D>::setFirstPrecursor))
+      .def("setFirstPrecursor",
+           pybind11::overload_cast<
+               const psAtomicLayerProcess<T, D>::Precursor &>(
+               &psAtomicLayerProcess<T, D>::setFirstPrecursor))
+      .def("setSecondPrecursor",
+           pybind11::overload_cast<std::string, T, T, T, T, T>(
+               &psAtomicLayerProcess<T, D>::setSecondPrecursor))
+      .def("setSecondPrecursor",
+           pybind11::overload_cast<
+               const psAtomicLayerProcess<T, D>::Precursor &>(
+               &psAtomicLayerProcess<T, D>::setSecondPrecursor))
+      .def("setPurgeParameters",
+           &psAtomicLayerProcess<T, D>::setPurgeParameters)
+      .def("setReactionOrder", &psAtomicLayerProcess<T, D>::setReactionOrder)
+      .def("setMaxLambda", &psAtomicLayerProcess<T, D>::setMaxLambda)
+      .def("setStabilityFactor",
+           &psAtomicLayerProcess<T, D>::setStabilityFactor)
+      .def("setMaxTimeStep", &psAtomicLayerProcess<T, D>::setMaxTimeStep)
+      .def("setPrintInterval", &psAtomicLayerProcess<T, D>::setPrintInterval)
+      .def("apply", &psAtomicLayerProcess<T, D>::apply);
+
+  pybind11::class_<psAtomicLayerProcess<T, D>::Precursor>(module, "Precursor")
+      .def(pybind11::init<>())
+      .def_readwrite("name", &psAtomicLayerProcess<T, D>::Precursor::name)
+      .def_readwrite(
+          "meanThermalVelocity",
+          &psAtomicLayerProcess<T, D>::Precursor::meanThermalVelocity)
+      .def_readwrite("adsorptionRate",
+                     &psAtomicLayerProcess<T, D>::Precursor::adsorptionRate)
+      .def_readwrite("desorptionRate",
+                     &psAtomicLayerProcess<T, D>::Precursor::desorptionRate)
+      .def_readwrite("duration",
+                     &psAtomicLayerProcess<T, D>::Precursor::duration)
+      .def_readwrite("inFlux", &psAtomicLayerProcess<T, D>::Precursor::inFlux);
+
+  /****************************************************************************
+   *                               OTHER                                      *
+   ****************************************************************************/
+
+  // psPlanarize
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
       module, "Planarize")
       .def(pybind11::init(
                &psSmartPointer<psPlanarize<T, D>>::New<DomainType &, const T>),
            pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
       .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
+
+  // psMeanFreePath
+  pybind11::class_<psMeanFreePath<T, D>, psSmartPointer<psMeanFreePath<T, D>>>(
+      module, "MeanFreePath")
+      .def(pybind11::init<>())
+      .def("setDomain", &psMeanFreePath<T, D>::setDomain)
+      .def("setBulkLambda", &psMeanFreePath<T, D>::setBulkLambda)
+      .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
+      .def("setNumRaysPerCell", &psMeanFreePath<T, D>::setNumRaysPerCell)
+      .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
+      .def("setRngSeed", &psMeanFreePath<T, D>::setRngSeed)
+      .def("disableSmoothing", &psMeanFreePath<T, D>::disableSmoothing)
+      .def("enableSmoothing", &psMeanFreePath<T, D>::enableSmoothing)
+      .def("apply", &psMeanFreePath<T, D>::apply);
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
   // GDS file parsing
@@ -856,7 +963,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaterialMap", &psDomain<T, 3>::setMaterialMap)
       .def("getMaterialMap", &psDomain<T, 3>::getMaterialMap)
       .def("generateCellSet", &psDomain<T, 3>::generateCellSet,
-           "Generate the cell set.")
+           pybind11::arg("position"), pybind11::arg("coverMaterial"),
+           pybind11::arg("isAboveSurface"), "Generate the cell set.")
       .def("getLevelSets",
            [](psDomain<T, 3> &d)
                -> std::optional<std::vector<psSmartPointer<lsDomain<T, 3>>>> {
@@ -903,7 +1011,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                &psExtrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &psExtrude<T>::apply, "Run the extrusion.");
-
 #endif
 
   // rayReflection.hpp
@@ -913,4 +1020,24 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
              "Diffuse reflection.");
   module.def("rayReflectionConedCosine", &rayReflectionConedCosine<T, D>,
              "Coned cosine reflection.");
+
+  // psUtils::Timer
+  pybind11::class_<psUtils::Timer<std::chrono::high_resolution_clock>>(module,
+                                                                       "Timer")
+      .def(pybind11::init<>())
+      .def("start", &psUtils::Timer<std::chrono::high_resolution_clock>::start,
+           "Start the timer.")
+      .def("finish",
+           &psUtils::Timer<std::chrono::high_resolution_clock>::finish,
+           "Stop the timer.")
+      .def("reset", &psUtils::Timer<std::chrono::high_resolution_clock>::reset,
+           "Reset the timer.")
+      .def_readonly(
+          "currentDuration",
+          &psUtils::Timer<std::chrono::high_resolution_clock>::currentDuration,
+          "Get the current duration of the timer in nanoseconds.")
+      .def_readonly(
+          "totalDuration",
+          &psUtils::Timer<std::chrono::high_resolution_clock>::totalDuration,
+          "Get the total duration of the timer in nanoseconds.");
 }
