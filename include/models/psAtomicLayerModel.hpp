@@ -31,8 +31,9 @@ private:
 
 public:
   psAtomicLayerModel(
-      const psSmartPointer<psDomain<NumericType, D>> &passedDomain)
-      : domain(passedDomain),
+      const psSmartPointer<psDomain<NumericType, D>> &passedDomain,
+      const bool passedEtch = false)
+      : domain(passedDomain), etch(passedEtch),
         top(domain->getCellSet()->getBoundingBox()[1][D - 1]) {
     // initialize random number generator
     std::random_device rd;
@@ -85,7 +86,7 @@ public:
   void apply() {
     auto &cellSet = domain->getCellSet();
     flux = cellSet->addScalarData("Flux", 0.);
-    depoProb = cellSet->addScalarData("DepositionProbability", 0.);
+    depoProb = cellSet->addScalarData("ReactionProbability", 0.);
     cellSet->addScalarData(precursors[0].name, 0.);
     cellSet->addScalarData(precursors[1].name, 0.);
 
@@ -104,7 +105,7 @@ public:
     }
 
     std::string fileName =
-        "ALD_" + precursors[0].name + "_" + precursors[1].name + "_";
+        "ALP_" + precursors[0].name + "_" + precursors[1].name + "_";
 
     // P1 step
     double time = 0.;
@@ -181,7 +182,7 @@ private:
                        const NumericType meanThermalVelocity,
                        const NumericType adsorptionRate,
                        const NumericType desorptionRate,
-                       const NumericType inFlux, const bool deposit) {
+                       const NumericType inFlux, const bool modify) {
     auto &cellSet = domain->getCellSet();
 
     const auto gridDelta = cellSet->getGridDelta();
@@ -273,26 +274,33 @@ private:
       }
     } // end of parallel region
 
-    if (deposit) {
+    if (modify) {
       std::uniform_real_distribution<NumericType> dist(0., 1.);
       for (unsigned i = 0; i < cellType->size(); ++i) {
         if (cellType->at(i) == 0.) {
           depoProb->at(i) =
               std::pow(coverage->at(i) * adsorbat->at(i), reactionOrder);
           if (dist(rng) < depoProb->at(i) * dt) {
-            const auto &neighbors = cellSet->getNeighbors(i);
-            for (auto n : neighbors) {
-              if (n >= 0 && cellType->at(n) == 1.) {
-                cellType->at(n) = 2.;
-                coverage->at(n) = 0.;
-                flux->at(n) = 0.;
-                adsorbat->at(n) = 0.;
+            if (etch) {
+              cellType->at(i) = 1.;
+              coverage->at(i) = 0.;
+              flux->at(i) = 0.;
+              adsorbat->at(i) = 0.;
+            } else {
+              const auto &neighbors = cellSet->getNeighbors(i);
+              for (auto n : neighbors) {
+                if (n >= 0 && cellType->at(n) == 1.) {
+                  cellType->at(n) = 2.;
+                  coverage->at(n) = 0.;
+                  flux->at(n) = 0.;
+                  adsorbat->at(n) = 0.;
+                }
               }
+              coverage->at(i) = 0.;
+              flux->at(i) = 0.;
+              cellType->at(i) = -1.;
+              adsorbat->at(i) = 0.;
             }
-            coverage->at(i) = 0.;
-            flux->at(i) = 0.;
-            cellType->at(i) = -1.;
-            adsorbat->at(i) = 0.;
           }
         }
       }
@@ -303,6 +311,7 @@ private:
 
 private:
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  const bool etch = false;
   const NumericType top = 0.;
   std::mt19937_64 rng;
   std::vector<NumericType> *flux;

@@ -199,7 +199,7 @@ public:
 
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
-  auto getBoundingBox() {
+  auto getBoundingBox() const {
     std::array<std::array<NumericType, 3>, 2> boundingBox;
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
     lsToDiskMesh<NumericType, D>(levelSets->back(), mesh).apply();
@@ -254,7 +254,7 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string name) {
+  void saveVolumeMesh(std::string name) const {
     lsWriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(name);
     for (auto ls : *levelSets) {

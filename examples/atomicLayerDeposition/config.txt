@@ -1,19 +1,19 @@
 # Domain
-gridDelta = 1. # nm
+gridDelta = 2. # nm
 xPad = 10.   # nm
 
 # Geometry
-trench = 1
-verticalWidth = 10.  # nm
-verticalDepth = 200. # nm
-horizontalWidth = 100.  # nm
+trench = 0
+verticalWidth = 20.  # nm
+verticalDepth = 100. # nm
+horizontalWidth = 150.  # nm
 horizontalHeight = 20. # nm
-topSpace = 10.
+topSpace = 20.
 
 # Mean free path calculation
 seed = 918
 reflectionLimit = 100
-raysPerPoint = 100
+raysPerPoint = 500
 
 bulkLambda = 125. # (nm) mean free path in gas-phase
 
@@ -21,7 +21,7 @@ bulkLambda = 125. # (nm) mean free path in gas-phase
 inFlux = 1.
 
 p1_time = 60.
-H2O_meanThermalVelocity = 1000.
+H2O_meanThermalVelocity = 75.
 H2O_adsorptionRate = 0.075
 H2O_desorptionRate = 0.001
 

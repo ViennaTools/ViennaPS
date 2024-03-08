@@ -36,9 +36,11 @@ int main(int argc, char *argv[]) {
   } else {
     makeLShape(domain, params, psMaterial::TiN);
   }
+  // Generate the cell set from the domain
   domain->generateCellSet(params.get("verticalDepth") + params.get("topSpace"),
                           psMaterial::GAS, true);
   auto &cellSet = domain->getCellSet();
+  // Segment the cells into surface, material, and gas cells
   csSegmentCells<NumericType, D>(cellSet).apply();
 
   cellSet->writeVTU("initial.vtu");
@@ -46,18 +48,18 @@ int main(int argc, char *argv[]) {
   psUtils::Timer timer;
   timer.start();
 
+  // Calculate the mean free path for the gas cells
   psMeanFreePath<NumericType, D> mfpCalc;
-  mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
-  mfpCalc.setNumRaysPerCell(params.get("raysPerPoint"));
-  mfpCalc.setSeed(params.get<int>("seed"));
   mfpCalc.setDomain(domain);
+  mfpCalc.setNumRaysPerCell(params.get("raysPerPoint"));
+  mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
+  mfpCalc.setRngSeed(params.get<int>("seed"));
   mfpCalc.setMaterial(psMaterial::GAS);
   mfpCalc.setBulkLambda(params.get("bulkLambda"));
-  mfpCalc.disableSmoothing();
   mfpCalc.apply();
 
   timer.finish();
-  std::cout << ";ean free path calculation took " << timer.totalDuration * 1e-9
+  std::cout << "Mean free path calculation took " << timer.totalDuration * 1e-9
             << " seconds." << std::endl;
 
   psAtomicLayerModel<NumericType, D> model(domain);

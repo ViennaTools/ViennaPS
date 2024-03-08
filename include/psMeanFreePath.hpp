@@ -37,7 +37,7 @@ public:
     reflectionLimit = passedReflectionLimit;
   }
 
-  void setSeed(const unsigned int passedSeed) { seed = passedSeed; }
+  void setRngSeed(const unsigned int passedSeed) { seed = passedSeed; }
 
   void disableSmoothing() { smoothing = false; }
 

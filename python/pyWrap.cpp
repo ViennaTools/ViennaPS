@@ -803,6 +803,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate111"), pybind11::arg("rate311"),
            pybind11::arg("materials"));
 
+  pybind11::class_<psAtomicLayerModel<T, D>,
+                   psSmartPointer<psAtomicLayerModel<T, D>>>(
+      module, "AnisotropicProcess", processModel)
+      .def(pybind11::init(&psSmartPointer<psAtomicLayerModel<T, D>>::New<
+                          const std::vector<std::pair<psMaterial, T>>>),
+           pybind11::arg("materials"));
+
   /****************************************************************************
    *                               OTHER                                      *
    ****************************************************************************/
@@ -824,7 +831,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
       .def("setNumRaysPerCell", &psMeanFreePath<T, D>::setNumRaysPerCell)
       .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
-      .def("setSeed", &psMeanFreePath<T, D>::setSeed)
+      .def("setRngSeed", &psMeanFreePath<T, D>::setRngSeed)
       .def("disableSmoothing", &psMeanFreePath<T, D>::disableSmoothing)
       .def("enableSmoothing", &psMeanFreePath<T, D>::enableSmoothing)
       .def("apply", &psMeanFreePath<T, D>::apply);
