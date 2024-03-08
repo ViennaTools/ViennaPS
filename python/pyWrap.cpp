@@ -826,7 +826,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // psAtomicLayerProcess
   pybind11::class_<psAtomicLayerProcess<T, D>,
                    psSmartPointer<psAtomicLayerProcess<T, D>>>(
-      module, "AtomicLayerModel")
+      module, "AtomicLayerProcess")
       .def(pybind11::init<DomainType, const bool>(), pybind11::arg("domain"),
            pybind11::arg("etch") = false)
       .def("setFirstPrecursor",

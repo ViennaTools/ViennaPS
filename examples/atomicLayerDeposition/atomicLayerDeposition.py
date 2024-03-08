@@ -97,7 +97,7 @@ timer.finish()
 print(f"Mean free path calculation took {timer.totalDuration * 1e-9} seconds.")
 
 # Run the atomic layer deposition model
-model = vps.AtomicLayerModel(domain)
+model = vps.AtomicLayerProcess(domain)
 model.setMaxLambda(params["bulkLambda"])
 model.setPrintInterval(params["printInterval"])
 model.setStabilityFactor(params["stabilityFactor"])
