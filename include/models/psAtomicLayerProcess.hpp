@@ -5,7 +5,7 @@
 
 #include <random>
 
-template <class NumericType, int D> class psAtomicLayerModel {
+template <class NumericType, int D> class psAtomicLayerProcess {
 
 public:
   struct Precursor {
@@ -30,7 +30,7 @@ private:
   NumericType printInterval = -1.;
 
 public:
-  psAtomicLayerModel(
+  psAtomicLayerProcess(
       const psSmartPointer<psDomain<NumericType, D>> &passedDomain,
       const bool passedEtch = false)
       : domain(passedDomain), etch(passedEtch),

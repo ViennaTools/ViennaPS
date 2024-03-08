@@ -1,6 +1,6 @@
 #include <csMeanFreePath.hpp>
 #include <csSegmentCells.hpp>
-#include <psAtomicLayerModel.hpp>
+#include <psAtomicLayerProcess.hpp>
 #include <psDomain.hpp>
 #include <psMakeHole.hpp>
 #include <psMeanFreePath.hpp>
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Mean free path calculation took " << timer.totalDuration * 1e-9
             << " seconds." << std::endl;
 
-  psAtomicLayerModel<NumericType, D> model(domain);
+  psAtomicLayerProcess<NumericType, D> model(domain);
   model.setMaxLambda(params.get("bulkLambda"));
   model.setPrintInterval(params.get("printInterval"));
   model.setStabilityFactor(params.get("stabilityFactor"));

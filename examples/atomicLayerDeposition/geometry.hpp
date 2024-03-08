@@ -15,9 +15,8 @@ void makeLShape(psSmartPointer<psDomain<NumericType, D>> domain,
 
   double bounds[2 * D];
   bounds[0] = -params.get("verticalWidth") / 2. - params.get("xPad");
-  bounds[1] = params.get("verticalWidth") / 2. + params.get("xPad") +
+  bounds[1] = -params.get("verticalWidth") / 2. + params.get("xPad") +
               params.get("horizontalWidth");
-
   bounds[2] = -gridDelta;
   bounds[3] = params.get("verticalDepth") + gridDelta;
 

@@ -45,7 +45,7 @@
 
 // models
 #include <psAnisotropicProcess.hpp>
-#include <psAtomicLayerModel.hpp>
+#include <psAtomicLayerProcess.hpp>
 #include <psDirectionalEtching.hpp>
 #include <psFluorocarbonEtching.hpp>
 #include <psGeometricDistributionModels.hpp>

@@ -13,7 +13,7 @@ topSpace = 20.
 # Mean free path calculation
 seed = 918
 reflectionLimit = 100
-raysPerCell = 500
+raysPerCell = 100
 
 bulkLambda = 125. # (nm) mean free path in gas-phase
 

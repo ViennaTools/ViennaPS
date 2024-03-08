@@ -13,12 +13,18 @@ def makeLShape(params: dict, material: vps.Material) -> vps.Domain:
 
     domain = vps.Domain()
     gridDelta = params["gridDelta"]
-    bounds = [
-        -params["verticalWidth"] / 2.0 - params["xPad"],
-        params["verticalWidth"] / 2.0 + params["xPad"] + params["horizontalWidth"],
-        -gridDelta,
-        params["verticalDepth"] + gridDelta,
-    ]
+    bounds = [0] * vps.D * 2
+    bounds[0] = -params["verticalWidth"] / 2.0 - params["xPad"]
+    bounds[1] = params["verticalWidth"] / 2.0 + params["xPad"]
+    if vps.D == 3:
+        bounds[2] = -params["verticalWidth"] / 2.0 - params["xPad"]
+        bounds[3] = (
+            -params["verticalWidth"] / 2.0 + params["xPad"] + params["horizontalWidth"]
+        )
+    else:
+        bounds[1] = (
+            -params["verticalWidth"] / 2.0 + params["xPad"] + params["horizontalWidth"]
+        )
 
     boundaryCons = [vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY] * (vps.D - 1)
     boundaryCons.append(vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY)
@@ -33,8 +39,12 @@ def makeLShape(params: dict, material: vps.Material) -> vps.Domain:
 
     # Create the vertical trench
     vertBox = vls.lsDomain(domain.getLevelSets()[0])
-    minPoint = [-params["verticalWidth"] / 2.0, 0.0]
-    maxPoint = [params["verticalWidth"] / 2.0, params["verticalDepth"]]
+    minPoint = [0] * vps.D
+    maxPoint = [0] * vps.D
+    for i in range(vps.D - 1):
+        minPoint[i] = -params["verticalWidth"] / 2.0
+        maxPoint[i] = params["verticalWidth"] / 2.0
+    maxPoint[vps.D - 1] = params["verticalDepth"]
     vls.lsMakeGeometry(vertBox, vls.lsBox(minPoint, maxPoint)).apply()
     domain.applyBooleanOperation(
         vertBox, vls.lsBooleanOperationEnum.RELATIVE_COMPLEMENT
@@ -42,11 +52,12 @@ def makeLShape(params: dict, material: vps.Material) -> vps.Domain:
 
     # Create the horizontal trench
     horiBox = vls.lsDomain(domain.getLevelSets()[0])
-    minPoint = [-params["verticalWidth"] / 2.0, 0.0]
-    maxPoint = [
-        -params["verticalWidth"] / 2.0 + params["horizontalWidth"],
-        params["horizontalHeight"],
-    ]
+    minPoint = [0] * vps.D
+    maxPoint = [params["verticalWidth"] / 2.0] * vps.D
+    for i in range(vps.D - 1):
+        minPoint[i] = -params["verticalWidth"] / 2.0
+    maxPoint[vps.D - 1] = params["horizontalHeight"]
+    maxPoint[vps.D - 2] = -params["verticalWidth"] / 2.0 + params["horizontalWidth"]
     vls.lsMakeGeometry(horiBox, vls.lsBox(minPoint, maxPoint)).apply()
     domain.applyBooleanOperation(
         horiBox, vls.lsBooleanOperationEnum.RELATIVE_COMPLEMENT
