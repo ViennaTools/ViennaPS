@@ -45,6 +45,7 @@
 
 // models
 #include <psAnisotropicProcess.hpp>
+#include <psAtomicLayerModel.hpp>
 #include <psDirectionalEtching.hpp>
 #include <psFluorocarbonEtching.hpp>
 #include <psGeometricDistributionModels.hpp>
@@ -57,12 +58,14 @@
 
 // CellSet
 #include <csDenseCellSet.hpp>
+#include <csSegmentCells.hpp>
 
 // Compact
 #include <psKDTree.hpp>
 
 // other
 #include <lsDomain.hpp>
+#include <psUtils.hpp>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 #include <rayTraceDirection.hpp>
@@ -174,88 +177,90 @@ public:
 };
 
 // Default particle classes
-template <int D>
-class psDiffuseParticle : public rayParticle<psDiffuseParticle<D>, T> {
-  using ClassName = rayParticle<psDiffuseParticle<D>, T>;
+// template <int D>
+// class psDiffuseParticle : public rayParticle<psDiffuseParticle<D>, T> {
+//   using ClassName = rayParticle<psDiffuseParticle<D>, T>;
 
-public:
-  psDiffuseParticle(const T pStickingProbability, const T pCosineExponent,
-                    const std::string &pDataLabel)
-      : stickingProbability(pStickingProbability),
-        cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
+// public:
+//   psDiffuseParticle(const T pStickingProbability, const T pCosineExponent,
+//                     const std::string &pDataLabel)
+//       : stickingProbability(pStickingProbability),
+//         cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
 
-  void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-                        const rayTriple<T> &geomNormal,
-                        const unsigned int primID, const int materialID,
-                        rayTracingData<T> &localData,
-                        const rayTracingData<T> *globalData,
-                        rayRNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
+//   void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
+//                         const rayTriple<T> &geomNormal,
+//                         const unsigned int primID, const int materialID,
+//                         rayTracingData<T> &localData,
+//                         const rayTracingData<T> *globalData,
+//                         rayRNG &Rng) override final {
+//     localData.getVectorData(0)[primID] += rayWeight;
+//   }
 
-  std::pair<T, rayTriple<T>>
-  surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-                    const rayTriple<T> &geomNormal, const unsigned int primID,
-                    const int materialID, const rayTracingData<T> *globalData,
-                    rayRNG &Rng) override final {
-    auto direction = rayReflectionDiffuse<T, D>(geomNormal, Rng);
-    return {stickingProbability, direction};
-  }
+//   std::pair<T, rayTriple<T>>
+//   surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
+//                     const rayTriple<T> &geomNormal, const unsigned int
+//                     primID, const int materialID, const rayTracingData<T>
+//                     *globalData, rayRNG &Rng) override final {
+//     auto direction = rayReflectionDiffuse<T, D>(geomNormal, Rng);
+//     return {stickingProbability, direction};
+//   }
 
-  void initNew(rayRNG &RNG) override final {}
+//   void initNew(rayRNG &RNG) override final {}
 
-  T getSourceDistributionPower() const override final { return cosineExponent; }
+//   T getSourceDistributionPower() const override final { return
+//   cosineExponent; }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {dataLabel};
-  }
+//   std::vector<std::string> getLocalDataLabels() const override final {
+//     return {dataLabel};
+//   }
 
-private:
-  const T stickingProbability = 1.;
-  const T cosineExponent = 1.;
-  const std::string dataLabel = "flux";
-};
+// private:
+//   const T stickingProbability = 1.;
+//   const T cosineExponent = 1.;
+//   const std::string dataLabel = "flux";
+// };
 
-class psSpecularParticle : public rayParticle<psSpecularParticle, T> {
-  using ClassName = rayParticle<psSpecularParticle, T>;
+// class psSpecularParticle : public rayParticle<psSpecularParticle, T> {
+//   using ClassName = rayParticle<psSpecularParticle, T>;
 
-public:
-  psSpecularParticle(const T pStickingProbability, const T pCosineExponent,
-                     const std::string &pDataLabel)
-      : stickingProbability(pStickingProbability),
-        cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
+// public:
+//   psSpecularParticle(const T pStickingProbability, const T pCosineExponent,
+//                      const std::string &pDataLabel)
+//       : stickingProbability(pStickingProbability),
+//         cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
 
-  void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-                        const rayTriple<T> &geomNormal,
-                        const unsigned int primID, const int materialID,
-                        rayTracingData<T> &localData,
-                        const rayTracingData<T> *globalData,
-                        rayRNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
+//   void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
+//                         const rayTriple<T> &geomNormal,
+//                         const unsigned int primID, const int materialID,
+//                         rayTracingData<T> &localData,
+//                         const rayTracingData<T> *globalData,
+//                         rayRNG &Rng) override final {
+//     localData.getVectorData(0)[primID] += rayWeight;
+//   }
 
-  std::pair<T, rayTriple<T>>
-  surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-                    const rayTriple<T> &geomNormal, const unsigned int primID,
-                    const int materialID, const rayTracingData<T> *globalData,
-                    rayRNG &Rng) override final {
-    auto direction = rayReflectionSpecular<T>(rayDir, geomNormal);
-    return {stickingProbability, direction};
-  }
+//   std::pair<T, rayTriple<T>>
+//   surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
+//                     const rayTriple<T> &geomNormal, const unsigned int
+//                     primID, const int materialID, const rayTracingData<T>
+//                     *globalData, rayRNG &Rng) override final {
+//     auto direction = rayReflectionSpecular<T>(rayDir, geomNormal);
+//     return {stickingProbability, direction};
+//   }
 
-  void initNew(rayRNG &RNG) override final {}
+//   void initNew(rayRNG &RNG) override final {}
 
-  T getSourceDistributionPower() const override final { return cosineExponent; }
+//   T getSourceDistributionPower() const override final { return
+//   cosineExponent; }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {dataLabel};
-  }
+//   std::vector<std::string> getLocalDataLabels() const override final {
+//     return {dataLabel};
+//   }
 
-private:
-  const T stickingProbability = 1.;
-  const T cosineExponent = 1.;
-  const std::string dataLabel = "flux";
-};
+// private:
+//   const T stickingProbability = 1.;
+//   const T cosineExponent = 1.;
+//   const std::string dataLabel = "flux";
+// };
 
 // psVelocityField
 // class PyVelocityField : public psVelocityField<T> {
@@ -303,15 +308,15 @@ private:
 // };
 
 // a function to declare GeometricDistributionModel of type DistType
-template <typename NumericType, int D, typename DistType>
-void declare_GeometricDistributionModel(pybind11::module &m,
-                                        const std::string &typestr) {
-  using Class = psGeometricDistributionModel<NumericType, D, DistType>;
+// template <typename NumericType, int D, typename DistType>
+// void declare_GeometricDistributionModel(pybind11::module &m,
+//                                         const std::string &typestr) {
+//   using Class = psGeometricDistributionModel<NumericType, D, DistType>;
 
-  pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
-      .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))
-      .def(pybind11::init<psSmartPointer<DistType>,
-                          psSmartPointer<lsDomain<NumericType, D>>>(),
-           pybind11::arg("dist"), pybind11::arg("mask"))
-      .def("apply", &Class::apply);
-}
+//   pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
+//       .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))
+//       .def(pybind11::init<psSmartPointer<DistType>,
+//                           psSmartPointer<lsDomain<NumericType, D>>>(),
+//            pybind11::arg("dist"), pybind11::arg("mask"))
+//       .def("apply", &Class::apply);
+// }

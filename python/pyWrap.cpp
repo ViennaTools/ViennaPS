@@ -19,12 +19,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // set version string of python module
   module.attr("__version__") = VIENNAPS_MODULE_VERSION;
 
+  // set dimension
+  module.attr("D") = D;
+
   // wrap omp_set_num_threads to control number of threads
   module.def("setNumThreads", &omp_set_num_threads);
-
-  // it was giving an error that it could'nt convert this type to python
-  // pybind11::bind_vector<std::vector<double, std::allocator<double>>>(
-  //     module, "VectorDouble");
 
   // psProcessParams
   pybind11::class_<psProcessParams<T>, psSmartPointer<psProcessParams<T>>>(
@@ -296,6 +295,24 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getNeighbors", &csDenseCellSet<T, D>::getNeighbors,
            "Get the neighbor indices for a cell.");
 
+  // csSegmentCells
+  pybind11::class_<csSegmentCells<T, D>, psSmartPointer<csSegmentCells<T, D>>>(
+      module, "SegmentCells")
+      .def(pybind11::init<psSmartPointer<csDenseCellSet<T, D>>>())
+      .def(pybind11::init<psSmartPointer<csDenseCellSet<T, D>>, std::string,
+                          psMaterial>(),
+           pybind11::arg("cellSet"),
+           pybind11::arg("cellTypeString") = "CellType",
+           pybind11::arg("bulkMaterial") = psMaterial::GAS)
+      .def("setCellSet", &csSegmentCells<T, D>::setCellSet,
+           "Set the cell set in the segmenter.")
+      .def("setCellTypeString", &csSegmentCells<T, D>::setCellTypeString,
+           "Set the cell type string in the segmenter.")
+      .def("setBulkMaterial", &csSegmentCells<T, D>::setBulkMaterial,
+           "Set the bulk material in the segmenter.")
+      .def("apply", &csSegmentCells<T, D>::apply,
+           "Segment the cells into surface, material, and gas cells.");
+
   // Shim to instantiate the particle class
   pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>> particle(
       module, "Particle");
@@ -306,35 +323,38 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getSourceDistributionPower",
            &psParticle<D>::getSourceDistributionPower);
 
-  pybind11::class_<psDiffuseParticle<D>, psSmartPointer<psDiffuseParticle<D>>>(
-      module, "DiffuseParticle", particle)
-      .def(pybind11::init(
-               &psSmartPointer<psDiffuseParticle<D>>::New<const T, const T,
-                                                          const std::string &>),
-           pybind11::arg("stickingProbability") = 1.0,
-           pybind11::arg("cosineExponent") = 1.,
-           pybind11::arg("dataLabel") = "flux")
-      .def("surfaceCollision", &psDiffuseParticle<D>::surfaceCollision)
-      .def("surfaceReflection", &psDiffuseParticle<D>::surfaceReflection)
-      .def("initNew", &psDiffuseParticle<D>::initNew)
-      .def("getLocalDataLabels", &psDiffuseParticle<D>::getLocalDataLabels)
-      .def("getSourceDistributionPower",
-           &psDiffuseParticle<D>::getSourceDistributionPower);
+  //   pybind11::class_<psDiffuseParticle<D>,
+  //   psSmartPointer<psDiffuseParticle<D>>>(
+  //       module, "DiffuseParticle", particle)
+  //       .def(pybind11::init(
+  //                &psSmartPointer<psDiffuseParticle<D>>::New<const T, const T,
+  //                                                           const std::string
+  //                                                           &>),
+  //            pybind11::arg("stickingProbability") = 1.0,
+  //            pybind11::arg("cosineExponent") = 1.,
+  //            pybind11::arg("dataLabel") = "flux")
+  //       .def("surfaceCollision", &psDiffuseParticle<D>::surfaceCollision)
+  //       .def("surfaceReflection", &psDiffuseParticle<D>::surfaceReflection)
+  //       .def("initNew", &psDiffuseParticle<D>::initNew)
+  //       .def("getLocalDataLabels", &psDiffuseParticle<D>::getLocalDataLabels)
+  //       .def("getSourceDistributionPower",
+  //            &psDiffuseParticle<D>::getSourceDistributionPower);
 
-  pybind11::class_<psSpecularParticle, psSmartPointer<psSpecularParticle>>(
-      module, "SpecularParticle", particle)
-      .def(pybind11::init(
-               &psSmartPointer<psSpecularParticle>::New<const T, const T,
-                                                        const std::string &>),
-           pybind11::arg("stickingProbability") = 1.0,
-           pybind11::arg("cosineExponent") = 1.,
-           pybind11::arg("dataLabel") = "flux")
-      .def("surfaceCollision", &psSpecularParticle::surfaceCollision)
-      .def("surfaceReflection", &psSpecularParticle::surfaceReflection)
-      .def("initNew", &psSpecularParticle::initNew)
-      .def("getLocalDataLabels", &psSpecularParticle::getLocalDataLabels)
-      .def("getSourceDistributionPower",
-           &psSpecularParticle::getSourceDistributionPower);
+  //   pybind11::class_<psSpecularParticle, psSmartPointer<psSpecularParticle>>(
+  //       module, "SpecularParticle", particle)
+  //       .def(pybind11::init(
+  //                &psSmartPointer<psSpecularParticle>::New<const T, const T,
+  //                                                         const std::string
+  //                                                         &>),
+  //            pybind11::arg("stickingProbability") = 1.0,
+  //            pybind11::arg("cosineExponent") = 1.,
+  //            pybind11::arg("dataLabel") = "flux")
+  //       .def("surfaceCollision", &psSpecularParticle::surfaceCollision)
+  //       .def("surfaceReflection", &psSpecularParticle::surfaceReflection)
+  //       .def("initNew", &psSpecularParticle::initNew)
+  //       .def("getLocalDataLabels", &psSpecularParticle::getLocalDataLabels)
+  //       .def("getSourceDistributionPower",
+  //            &psSpecularParticle::getSourceDistributionPower);
 
   /****************************************************************************
    *                               VISUALIZATION *
@@ -803,12 +823,43 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate111"), pybind11::arg("rate311"),
            pybind11::arg("materials"));
 
+  // psAtomicLayerModel
   pybind11::class_<psAtomicLayerModel<T, D>,
-                   psSmartPointer<psAtomicLayerModel<T, D>>>(
-      module, "AnisotropicProcess", processModel)
-      .def(pybind11::init(&psSmartPointer<psAtomicLayerModel<T, D>>::New<
-                          const std::vector<std::pair<psMaterial, T>>>),
-           pybind11::arg("materials"));
+                   psSmartPointer<psAtomicLayerModel<T, D>>>(module,
+                                                             "AtomicLayerModel")
+      .def(pybind11::init<DomainType, const bool>(), pybind11::arg("domain"),
+           pybind11::arg("etch") = false)
+      .def("setFirstPrecursor",
+           pybind11::overload_cast<std::string, T, T, T, T, T>(
+               &psAtomicLayerModel<T, D>::setFirstPrecursor))
+      .def("setFirstPrecursor",
+           pybind11::overload_cast<const psAtomicLayerModel<T, D>::Precursor &>(
+               &psAtomicLayerModel<T, D>::setFirstPrecursor))
+      .def("setSecondPrecursor",
+           pybind11::overload_cast<std::string, T, T, T, T, T>(
+               &psAtomicLayerModel<T, D>::setSecondPrecursor))
+      .def("setSecondPrecursor",
+           pybind11::overload_cast<const psAtomicLayerModel<T, D>::Precursor &>(
+               &psAtomicLayerModel<T, D>::setSecondPrecursor))
+      .def("setPurgeParameters", &psAtomicLayerModel<T, D>::setPurgeParameters)
+      .def("setReactionOrder", &psAtomicLayerModel<T, D>::setReactionOrder)
+      .def("setMaxLambda", &psAtomicLayerModel<T, D>::setMaxLambda)
+      .def("setStabilityFactor", &psAtomicLayerModel<T, D>::setStabilityFactor)
+      .def("setMaxTimeStep", &psAtomicLayerModel<T, D>::setMaxTimeStep)
+      .def("setPrintInterval", &psAtomicLayerModel<T, D>::setPrintInterval)
+      .def("apply", &psAtomicLayerModel<T, D>::apply);
+
+  pybind11::class_<psAtomicLayerModel<T, D>::Precursor>(module, "Precursor")
+      .def(pybind11::init<>())
+      .def_readwrite("name", &psAtomicLayerModel<T, D>::Precursor::name)
+      .def_readwrite("meanThermalVelocity",
+                     &psAtomicLayerModel<T, D>::Precursor::meanThermalVelocity)
+      .def_readwrite("adsorptionRate",
+                     &psAtomicLayerModel<T, D>::Precursor::adsorptionRate)
+      .def_readwrite("desorptionRate",
+                     &psAtomicLayerModel<T, D>::Precursor::desorptionRate)
+      .def_readwrite("duration", &psAtomicLayerModel<T, D>::Precursor::duration)
+      .def_readwrite("inFlux", &psAtomicLayerModel<T, D>::Precursor::inFlux);
 
   /****************************************************************************
    *                               OTHER                                      *
@@ -963,4 +1014,24 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
              "Diffuse reflection.");
   module.def("rayReflectionConedCosine", &rayReflectionConedCosine<T, D>,
              "Coned cosine reflection.");
+
+  // psUtils::Timer
+  pybind11::class_<psUtils::Timer<std::chrono::high_resolution_clock>>(module,
+                                                                       "Timer")
+      .def(pybind11::init<>())
+      .def("start", &psUtils::Timer<std::chrono::high_resolution_clock>::start,
+           "Start the timer.")
+      .def("finish",
+           &psUtils::Timer<std::chrono::high_resolution_clock>::finish,
+           "Stop the timer.")
+      .def("reset", &psUtils::Timer<std::chrono::high_resolution_clock>::reset,
+           "Reset the timer.")
+      .def_readonly(
+          "currentDuration",
+          &psUtils::Timer<std::chrono::high_resolution_clock>::currentDuration,
+          "Get the current duration of the timer in nanoseconds.")
+      .def_readonly(
+          "totalDuration",
+          &psUtils::Timer<std::chrono::high_resolution_clock>::totalDuration,
+          "Get the total duration of the timer in nanoseconds.");
 }

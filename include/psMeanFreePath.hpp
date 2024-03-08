@@ -70,6 +70,10 @@ private:
 
         if (threadNum == 0 && psLogger::getLogLevel() >= 4) {
           psUtils::printProgress(idx, numRays);
+#ifdef VIENNAPS_PYTHON_BUILD
+          if (PyErr_CheckSignals() != 0)
+            throw pybind11::error_already_set();
+#endif
         }
 
         // particle specific RNG seed

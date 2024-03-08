@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
   // Calculate the mean free path for the gas cells
   psMeanFreePath<NumericType, D> mfpCalc;
   mfpCalc.setDomain(domain);
-  mfpCalc.setNumRaysPerCell(params.get("raysPerPoint"));
+  mfpCalc.setNumRaysPerCell(params.get("raysPerCell"));
   mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
   mfpCalc.setRngSeed(params.get<int>("seed"));
   mfpCalc.setMaterial(psMaterial::GAS);

@@ -183,6 +183,10 @@ private:
                        const NumericType adsorptionRate,
                        const NumericType desorptionRate,
                        const NumericType inFlux, const bool modify) {
+#ifdef VIENNAPS_PYTHON_BUILD
+    if (PyErr_CheckSignals() != 0)
+      throw pybind11::error_already_set();
+#endif
     auto &cellSet = domain->getCellSet();
 
     const auto gridDelta = cellSet->getGridDelta();
