@@ -35,7 +35,7 @@ struct Parameters {
   double beta_e = 0.9;
 
   // Mask
-  struct {
+  struct MaskType {
     double rho = 500.; // 1e22 atoms/cm³
     double beta_p = 0.01;
     double beta_e = 0.1;
@@ -46,7 +46,7 @@ struct Parameters {
   } Mask;
 
   // SiO2
-  struct {
+  struct SiO2Type {
     // density
     double rho = 2.2; // 1e22 atoms/cm³
 
@@ -63,7 +63,7 @@ struct Parameters {
   } SiO2;
 
   // Polymer
-  struct {
+  struct PolymerType {
     double rho = 2.; // 1e22 atoms/cm³
 
     // sputtering coefficients
@@ -72,7 +72,7 @@ struct Parameters {
   } Polymer;
 
   // Si3N4
-  struct {
+  struct Si3N4Type {
     // density
     double rho = 2.3; // 1e22 atoms/cm³
 
@@ -89,7 +89,7 @@ struct Parameters {
   } Si3N4;
 
   // Si
-  struct {
+  struct SiType {
     // density
     double rho = 5.02; // 1e22 atoms/cm³
 
@@ -105,7 +105,7 @@ struct Parameters {
     double E_a = 0.108; // eV
   } Si;
 
-  struct {
+  struct IonType {
     double meanEnergy = 100.; // eV
     double sigmaEnergy = 10.; // eV
     double exponent = 500.;
@@ -205,6 +205,8 @@ public:
                  std::exp(-p.Si3N4.E_a / (Parameters::kB * p.temperature));
           density = -p.Si3N4.rho;
           break;
+        default:
+          assert(false && "Unknown material");
         }
 
         etchRate[i] =
@@ -297,6 +299,8 @@ public:
             F_ev = p.Si3N4.K * p.etchantFlux *
                    std::exp(-p.Si3N4.E_a / (Parameters::kB * p.temperature));
             break;
+          default:
+            assert(false && "Unknown material");
           }
           eCoverage->at(i) =
               (etchantRate->at(i) * p.etchantFlux * p.beta_e *
@@ -367,6 +371,8 @@ public:
       Eth_sp = p.Si3N4.Eth_sp;
       Eth_ie = p.Si3N4.Eth_ie;
       break;
+    default:
+      assert(false && "Unknown material");
     }
 
     const auto sqrtE = std::sqrt(E);

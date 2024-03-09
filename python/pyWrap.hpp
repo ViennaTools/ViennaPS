@@ -73,7 +73,6 @@
 
 // always use double for python export
 typedef double T;
-typedef std::vector<hrleCoordType> VectorHRLEcoord;
 // get dimension from cmake define
 constexpr int D = VIENNAPS_PYTHON_DIMENSION;
 typedef psSmartPointer<psDomain<T, D>> DomainType;
@@ -320,3 +319,9 @@ public:
 //            pybind11::arg("dist"), pybind11::arg("mask"))
 //       .def("apply", &Class::apply);
 // }
+
+void wrapGeometries(pybind11::module_ &module);
+
+void wrapProcesses(pybind11::module_ &module);
+
+void wrapModels(pybind11::module_ &module);
