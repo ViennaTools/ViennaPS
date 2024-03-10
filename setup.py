@@ -218,6 +218,7 @@ class CMakeBuild(build_ext):
             # Remove mypy_cache, if it exists
             if os.path.exists(os.path.join(extdir, ".mypy_cache")):
                 shutil.rmtree(os.path.join(extdir, ".mypy_cache"))
+
         except ModuleNotFoundError:
             pass
         except ImportError:

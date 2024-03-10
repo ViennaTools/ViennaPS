@@ -28,13 +28,16 @@ class SurfaceModel : public psSurfaceModel<NumericType> {
   static constexpr NumericType k_sigma_Si = 3.0e2; // in (1e15 cm⁻²s⁻¹)
   static constexpr NumericType beta_sigma_Si = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
 
+  const NumericType maskRate = 1.;
   const NumericType etchStop;
 
 public:
   SurfaceModel(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType etchStopDepth)
+               const double oxygenFlux, const NumericType passedMaskRate,
+               const NumericType etchStopDepth)
       : totalIonFlux(ionFlux), totalEtchantFlux(etchantFlux),
-        totalOxygenFlux(oxygenFlux), etchStop(etchStopDepth) {}
+        totalOxygenFlux(oxygenFlux), maskRate(passedMaskRate),
+        etchStop(etchStopDepth) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
@@ -69,8 +72,10 @@ public:
         break;
       }
 
-      if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Si)) {
-
+      if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Mask)) {
+        etchRate[i] = -(maskRate / psParameters::Mask::rho) *
+                      ionSputteringRate->at(i) * totalIonFlux;
+      } else {
         etchRate[i] = -(1 / psParameters::Si::rho) *
                       (k_sigma_Si * eCoverage->at(i) / 4. +
                        ionSputteringRate->at(i) * totalIonFlux +
@@ -351,6 +356,7 @@ public:
                  const NumericType sigmaEnergy /* eV */, // 5 parameters
                  const NumericType ionExponent = 100.,
                  const NumericType oxySputterYield = 2.,
+                 const NumericType maskRate = 1.,
                  const NumericType etchStopDepth =
                      std::numeric_limits<NumericType>::lowest()) {
     // particles
@@ -364,7 +370,7 @@ public:
     // surface model
     auto surfModel =
         psSmartPointer<SF6O2Implementation::SurfaceModel<NumericType, D>>::New(
-            ionFlux, etchantFlux, oxygenFlux, etchStopDepth);
+            ionFlux, etchantFlux, oxygenFlux, maskRate, etchStopDepth);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);

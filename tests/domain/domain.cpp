@@ -48,8 +48,8 @@ int main() {
     levelSets->push_back(plane1);
     levelSets->push_back(plane2);
 
-    auto domain =
-        psSmartPointer<psDomain<double, D>>::New(levelSets, true, 3., true);
+    auto domain = psSmartPointer<psDomain<double, D>>::New(levelSets);
+    domain->generateCellSet(3., psMaterial::GAS, true);
     PSTEST_ASSERT(domain->getLevelSets()->size() == 2);
     PSTEST_ASSERT(domain->getCellSet());
 
@@ -72,7 +72,7 @@ int main() {
 
     // deep copy
     domain->insertNextLevelSetAsMaterial(plane2, psMaterial::SiO2);
-    domain->generateCellSet(3., true);
+    domain->generateCellSet(3., psMaterial::GAS, true);
 
     auto domainCopy = psSmartPointer<psDomain<double, D>>::New();
     domainCopy->deepCopy(domain);
