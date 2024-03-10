@@ -549,7 +549,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate") = 1.,
            pybind11::arg("stickingProbability") = 1.,
            pybind11::arg("sourceExponent") = 1.,
-           pybind11::arg("maskMaterial") = psMaterial::None);
+           pybind11::arg("maskMaterial") = psMaterial::None)
+      .def(pybind11::init([](const T rate, const T sticking, const T power,
+                             const std::vector<psMaterial> mask) {
+             return psSmartPointer<psSingleParticleProcess<T, D>>::New(
+                 rate, sticking, power, mask);
+           }),
+           pybind11::arg("rate"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"));
 
   // TEOS Deposition
   pybind11::class_<psTEOSDeposition<T, D>,
