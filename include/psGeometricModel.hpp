@@ -12,5 +12,5 @@ public:
     domain = passedDomain;
   }
 
-  virtual void apply(){};
+  virtual void apply() {};
 };
