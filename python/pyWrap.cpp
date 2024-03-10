@@ -513,6 +513,30 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //                                  MODELS
   // ***************************************************************************
 
+  // Enum psMaterial
+  pybind11::enum_<psMaterial>(module, "Material")
+      .value("Undefined", psMaterial::None) // 1
+      .value("Mask", psMaterial::Mask)
+      .value("Si", psMaterial::Si)
+      .value("SiO2", psMaterial::SiO2)
+      .value("Si3N4", psMaterial::Si3N4) // 5
+      .value("SiN", psMaterial::SiN)
+      .value("SiON", psMaterial::SiON)
+      .value("SiC", psMaterial::SiC)
+      .value("SiGe", psMaterial::SiGe)
+      .value("PolySi", psMaterial::PolySi) // 10
+      .value("GaN", psMaterial::GaN)
+      .value("W", psMaterial::W)
+      .value("Al2O3", psMaterial::Al2O3)
+      .value("TiN", psMaterial::TiN)
+      .value("Cu", psMaterial::Cu) // 15
+      .value("Polymer", psMaterial::Polymer)
+      .value("Dielectric", psMaterial::Dielectric)
+      .value("Metal", psMaterial::Metal)
+      .value("Air", psMaterial::Air)
+      .value("GAS", psMaterial::GAS) // 20
+      .export_values();
+
   // Single Particle Process
   pybind11::class_<psSingleParticleProcess<T, D>,
                    psSmartPointer<psSingleParticleProcess<T, D>>>(
@@ -560,6 +584,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<psFluorocarbonEtching<T, D>,
                    psSmartPointer<psFluorocarbonEtching<T, D>>>(
       module, "FluorocarbonEtching", processModel)
+      .def(pybind11::init<>())
       .def(
           pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
                          const double /*ionFlux*/, const double /*etchantFlux*/,
@@ -570,30 +595,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("polyFlux"), pybind11::arg("meanIonEnergy") = 100.,
           pybind11::arg("sigmaIonEnergy") = 10.,
           pybind11::arg("ionExponent") = 100., pybind11::arg("deltaP") = 0.,
-          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest());
+          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+      .def(pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
+                          const FluorocarbonImplementation::Parameters &>),
+           pybind11::arg("parameters"))
+      .def("setParameters", &psFluorocarbonEtching<T, D>::setParameters)
+      .def("getParameters", &psFluorocarbonEtching<T, D>::getParameters,
+           pybind11::return_value_policy::reference);
 
   // Fluorocarbon Parameters
-  pybind11::class_<FluorocarbonImplementation::Parameters>(
-      module, "FluorocarbonParameters")
-      .def(pybind11::init<>())
-      .def_readwrite("ionFlux",
-                     &FluorocarbonImplementation::Parameters::ionFlux)
-      .def_readwrite("etchantFlux",
-                     &FluorocarbonImplementation::Parameters::etchantFlux)
-      .def_readwrite("polyFlux",
-                     &FluorocarbonImplementation::Parameters::polyFlux)
-      .def_readwrite("delta_p",
-                     &FluorocarbonImplementation::Parameters::delta_p)
-      .def_readwrite("etchStopDepth",
-                     &FluorocarbonImplementation::Parameters::etchStopDepth)
-      .def_readwrite("Mask", &FluorocarbonImplementation::Parameters::Mask)
-      .def_readwrite("SiO2", &FluorocarbonImplementation::Parameters::SiO2)
-      .def_readwrite("Si3N4", &FluorocarbonImplementation::Parameters::Si3N4)
-      .def_readwrite("Si", &FluorocarbonImplementation::Parameters::Si)
-      .def_readwrite("Polymer",
-                     &FluorocarbonImplementation::Parameters::Polymer)
-      .def_readwrite("Ions", &FluorocarbonImplementation::Parameters::Ions);
-
   pybind11::class_<FluorocarbonImplementation::Parameters::MaskType>(
       module, "FluorocarbonParametersMask")
       .def(pybind11::init<>())
@@ -697,6 +707,27 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite(
           "minAngle",
           &FluorocarbonImplementation::Parameters::IonType::minAngle);
+
+  pybind11::class_<FluorocarbonImplementation::Parameters>(
+      module, "FluorocarbonParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("ionFlux",
+                     &FluorocarbonImplementation::Parameters::ionFlux)
+      .def_readwrite("etchantFlux",
+                     &FluorocarbonImplementation::Parameters::etchantFlux)
+      .def_readwrite("polyFlux",
+                     &FluorocarbonImplementation::Parameters::polyFlux)
+      .def_readwrite("delta_p",
+                     &FluorocarbonImplementation::Parameters::delta_p)
+      .def_readwrite("etchStopDepth",
+                     &FluorocarbonImplementation::Parameters::etchStopDepth)
+      .def_readwrite("Mask", &FluorocarbonImplementation::Parameters::Mask)
+      .def_readwrite("SiO2", &FluorocarbonImplementation::Parameters::SiO2)
+      .def_readwrite("Si3N4", &FluorocarbonImplementation::Parameters::Si3N4)
+      .def_readwrite("Si", &FluorocarbonImplementation::Parameters::Si)
+      .def_readwrite("Polymer",
+                     &FluorocarbonImplementation::Parameters::Polymer)
+      .def_readwrite("Ions", &FluorocarbonImplementation::Parameters::Ions);
 
   // Isotropic Process
   pybind11::class_<psIsotropicProcess<T, D>,
@@ -985,6 +1016,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //                                 PROCESS
   // ***************************************************************************
 
+  // rayTraceDirection Enum
+  pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
+      .value("POS_X", rayTraceDirection::POS_X)
+      .value("POS_Y", rayTraceDirection::POS_Y)
+      .value("POS_Z", rayTraceDirection::POS_Z)
+      .value("NEG_X", rayTraceDirection::NEG_X)
+      .value("NEG_Y", rayTraceDirection::NEG_Y)
+      .value("NEG_Z", rayTraceDirection::NEG_Z)
+      .export_values();
+
   // psProcess
   pybind11::class_<psProcess<T, D>>(module, "Process")
       // constructors
@@ -1035,15 +1076,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Returns the duration of the recently run process. This duration "
            "can sometimes slightly vary from the set process duration, due to "
            "the maximum time step according to the CFL condition.");
-
-  // rayTraceDirection Enum
-  pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
-      .value("POS_X", rayTraceDirection::POS_X)
-      .value("POS_Y", rayTraceDirection::POS_Y)
-      .value("POS_Z", rayTraceDirection::POS_Z)
-      .value("NEG_X", rayTraceDirection::NEG_X)
-      .value("NEG_Y", rayTraceDirection::NEG_Y)
-      .value("NEG_Z", rayTraceDirection::NEG_Z);
 
   pybind11::enum_<psLogLevel>(module, "LogLevel")
       .value("ERROR", psLogLevel::ERROR)
@@ -1115,30 +1147,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Save the volume representation of the domain.")
       .def("saveLevelSets", &psDomain<T, D>::saveLevelSets)
       .def("clear", &psDomain<T, D>::clear);
-
-  // Enum psMaterial
-  pybind11::enum_<psMaterial>(module, "Material")
-      .value("Undefined", psMaterial::None) // 1
-      .value("Mask", psMaterial::Mask)
-      .value("Si", psMaterial::Si)
-      .value("SiO2", psMaterial::SiO2)
-      .value("Si3N4", psMaterial::Si3N4) // 5
-      .value("SiN", psMaterial::SiN)
-      .value("SiON", psMaterial::SiON)
-      .value("SiC", psMaterial::SiC)
-      .value("SiGe", psMaterial::SiGe)
-      .value("PolySi", psMaterial::PolySi) // 10
-      .value("GaN", psMaterial::GaN)
-      .value("W", psMaterial::W)
-      .value("Al2O3", psMaterial::Al2O3)
-      .value("TiN", psMaterial::TiN)
-      .value("Cu", psMaterial::Cu) // 15
-      .value("Polymer", psMaterial::Polymer)
-      .value("Dielectric", psMaterial::Dielectric)
-      .value("Metal", psMaterial::Metal)
-      .value("Air", psMaterial::Air)
-      .value("GAS", psMaterial::GAS) // 20
-      .export_values();
 
   // psMaterialMap
   pybind11::class_<psMaterialMap, psSmartPointer<psMaterialMap>>(module,
