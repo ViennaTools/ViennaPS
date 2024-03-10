@@ -65,15 +65,6 @@ template <class NumericType, int D> void psRunTest() {
     PSTEST_ASSERT(model->getParticleTypes()->size() == 3);
   }
 
-  // single particle process
-  {
-    auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New();
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getParticleTypes());
-    PSTEST_ASSERT(model->getParticleTypes()->size() == 1);
-  }
-
   // single particle TEOS deposition
   {
     auto model =

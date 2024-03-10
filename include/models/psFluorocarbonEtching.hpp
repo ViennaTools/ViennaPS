@@ -17,102 +17,102 @@ namespace FluorocarbonImplementation {
 // etching of SiO2: Modeling and experimental verification" Journal of the
 // Electrochemical Society 150(10) 2003 pp. 1896-1902
 
-struct Parameters {
+template <typename NumericType> struct Parameters {
   // fluxes in (1e15 /cm² /s)
-  double ionFlux = 56.;
-  double etchantFlux = 500.;
-  double polyFlux = 100.;
+  NumericType ionFlux = 56.;
+  NumericType etchantFlux = 500.;
+  NumericType polyFlux = 100.;
 
-  double delta_p = 1.;
-  double etchStopDepth = std::numeric_limits<double>::lowest();
+  NumericType delta_p = 1.;
+  NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
-  double temperature = 300.; // K
-  double k_ie = 2.;
-  double k_ev = 2.;
+  NumericType temperature = 300.; // K
+  NumericType k_ie = 2.;
+  NumericType k_ev = 2.;
 
-  double beta_pe = 0.6;
-  double beta_p = 0.26;
-  double beta_e = 0.9;
+  NumericType beta_pe = 0.6;
+  NumericType beta_p = 0.26;
+  NumericType beta_e = 0.9;
 
   // Mask
   struct MaskType {
-    double rho = 500.; // 1e22 atoms/cm³
-    double beta_p = 0.01;
-    double beta_e = 0.1;
+    NumericType rho = 500.; // 1e22 atoms/cm³
+    NumericType beta_p = 0.01;
+    NumericType beta_e = 0.1;
 
-    double A_sp = 0.0139;
-    double B_sp = 9.3;
-    double Eth_sp = 20.; // eV
+    NumericType A_sp = 0.0139;
+    NumericType B_sp = 9.3;
+    NumericType Eth_sp = 20.; // eV
   } Mask;
 
   // SiO2
   struct SiO2Type {
     // density
-    double rho = 2.2; // 1e22 atoms/cm³
+    NumericType rho = 2.2; // 1e22 atoms/cm³
 
     // sputtering coefficients
-    double Eth_sp = 18.; // eV
-    double Eth_ie = 4.;  // eV
-    double A_sp = 0.0139;
-    double B_sp = 9.3;
-    double A_ie = 0.0361;
+    NumericType Eth_sp = 18.; // eV
+    NumericType Eth_ie = 4.;  // eV
+    NumericType A_sp = 0.0139;
+    NumericType B_sp = 9.3;
+    NumericType A_ie = 0.0361;
 
     // chemical etching
-    double K = 0.002789491704544977;
-    double E_a = 0.168; // eV
+    NumericType K = 0.002789491704544977;
+    NumericType E_a = 0.168; // eV
   } SiO2;
 
   // Polymer
   struct PolymerType {
-    double rho = 2.; // 1e22 atoms/cm³
+    NumericType rho = 2.; // 1e22 atoms/cm³
 
     // sputtering coefficients
-    double Eth_ie = 4.; // eV
-    double A_ie = 0.0361 * 4;
+    NumericType Eth_ie = 4.; // eV
+    NumericType A_ie = 0.0361 * 4;
   } Polymer;
 
   // Si3N4
   struct Si3N4Type {
     // density
-    double rho = 2.3; // 1e22 atoms/cm³
+    NumericType rho = 2.3; // 1e22 atoms/cm³
 
     // sputtering coefficients
-    double Eth_sp = 18.; // eV
-    double Eth_ie = 4.;  // eV
-    double A_sp = 0.0139;
-    double B_sp = 9.3;
-    double A_ie = 0.0361;
+    NumericType Eth_sp = 18.; // eV
+    NumericType Eth_ie = 4.;  // eV
+    NumericType A_sp = 0.0139;
+    NumericType B_sp = 9.3;
+    NumericType A_ie = 0.0361;
 
     // chemical etching
-    double K = 0.002789491704544977;
-    double E_a = 0.168; // eV
+    NumericType K = 0.002789491704544977;
+    NumericType E_a = 0.168; // eV
   } Si3N4;
 
   // Si
   struct SiType {
     // density
-    double rho = 5.02; // 1e22 atoms/cm³
+    NumericType rho = 5.02; // 1e22 atoms/cm³
 
     // sputtering coefficients
-    double Eth_sp = 20.; // eV
-    double Eth_ie = 4.;  // eV
-    double A_sp = 0.0337;
-    double B_sp = 9.3;
-    double A_ie = 0.0361;
+    NumericType Eth_sp = 20.; // eV
+    NumericType Eth_ie = 4.;  // eV
+    NumericType A_sp = 0.0337;
+    NumericType B_sp = 9.3;
+    NumericType A_ie = 0.0361;
 
     // chemical etching
-    double K = 0.029997010728956663;
-    double E_a = 0.108; // eV
+    NumericType K = 0.029997010728956663;
+    NumericType E_a = 0.108; // eV
   } Si;
 
   struct IonType {
-    double meanEnergy = 100.; // eV
-    double sigmaEnergy = 10.; // eV
-    double exponent = 500.;
+    NumericType meanEnergy = 100.; // eV
+    NumericType sigmaEnergy = 10.; // eV
+    NumericType exponent = 500.;
 
-    double inflectAngle = 1.55334303;
-    double n_l = 10.;
-    double minAngle = 1.3962634;
+    NumericType inflectAngle = 1.55334303;
+    NumericType n_l = 10.;
+    NumericType minAngle = 1.3962634;
   } Ions;
 
   // fixed
@@ -123,10 +123,10 @@ template <typename NumericType, int D>
 class SurfaceModel : public psSurfaceModel<NumericType> {
   using psSurfaceModel<NumericType>::coverages;
   static constexpr double eps = 1e-6;
-  const Parameters &p;
+  const Parameters<NumericType> &p;
 
 public:
-  SurfaceModel(const Parameters &pParams) : p(pParams) {}
+  SurfaceModel(const Parameters<NumericType> &pParams) : p(pParams) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
@@ -177,7 +177,7 @@ public:
             (1 / p.Polymer.rho) *
             std::max((polyRate->at(i) * p.polyFlux * p.beta_p -
                       ionpeRate->at(i) * p.ionFlux * peCoverage->at(i)),
-                     0.);
+                     (NumericType)0);
         assert(etchRate[i] >= 0 && "Negative deposition");
       } else if (matId == psMaterial::Polymer) {
         // Etching depo layer
@@ -185,7 +185,7 @@ public:
             std::min((1 / p.Polymer.rho) *
                          (polyRate->at(i) * p.polyFlux * p.beta_p -
                           ionpeRate->at(i) * p.ionFlux * peCoverage->at(i)),
-                     0.);
+                     (NumericType)0);
       } else {
         NumericType density = 1.;
         NumericType F_ev = 0.;
@@ -193,16 +193,19 @@ public:
         case psMaterial::Si:
           density = -p.Si.rho;
           F_ev = p.Si.K * p.etchantFlux *
-                 std::exp(-p.Si.E_a / (Parameters::kB * p.temperature));
+                 std::exp(-p.Si.E_a /
+                          (Parameters<NumericType>::kB * p.temperature));
           break;
         case psMaterial::SiO2:
           F_ev = p.SiO2.K * p.etchantFlux *
-                 std::exp(-p.SiO2.E_a / (Parameters::kB * p.temperature));
+                 std::exp(-p.SiO2.E_a /
+                          (Parameters<NumericType>::kB * p.temperature));
           density = -p.SiO2.rho;
           break;
         case psMaterial::Si3N4:
           F_ev = p.Si3N4.K * p.etchantFlux *
-                 std::exp(-p.Si3N4.E_a / (Parameters::kB * p.temperature));
+                 std::exp(-p.Si3N4.E_a /
+                          (Parameters<NumericType>::kB * p.temperature));
           density = -p.Si3N4.rho;
           break;
         default:
@@ -289,15 +292,18 @@ public:
           switch (psMaterialMap::mapToMaterial(materialIds[i])) {
           case psMaterial::Si:
             F_ev = p.Si.K * p.etchantFlux *
-                   std::exp(-p.Si.E_a / (Parameters::kB * p.temperature));
+                   std::exp(-p.Si.E_a /
+                            (Parameters<NumericType>::kB * p.temperature));
             break;
           case psMaterial::SiO2:
             F_ev = p.SiO2.K * p.etchantFlux *
-                   std::exp(-p.SiO2.E_a / (Parameters::kB * p.temperature));
+                   std::exp(-p.SiO2.E_a /
+                            (Parameters<NumericType>::kB * p.temperature));
             break;
           case psMaterial::Si3N4:
             F_ev = p.Si3N4.K * p.etchantFlux *
-                   std::exp(-p.Si3N4.E_a / (Parameters::kB * p.temperature));
+                   std::exp(-p.Si3N4.E_a /
+                            (Parameters<NumericType>::kB * p.temperature));
             break;
           default:
             assert(false && "Unknown material");
@@ -318,13 +324,13 @@ public:
 
 template <typename NumericType, int D>
 class Ion : public rayParticle<Ion<NumericType, D>, NumericType> {
-  const Parameters &p;
+  const Parameters<NumericType> &p;
   const NumericType A;
   const NumericType minEnergy;
   NumericType E;
 
 public:
-  Ion(const Parameters &pParams)
+  Ion(const Parameters<NumericType> &pParams)
       : p(pParams),
         A(1. / (1. + p.Ions.n_l * (M_PI_2 / p.Ions.inflectAngle - 1.))),
         minEnergy(std::min({p.Si.Eth_ie, p.SiO2.Eth_ie, p.Si3N4.Eth_ie})) {}
@@ -379,16 +385,17 @@ public:
 
     // sputtering yield Y_s
     localData.getVectorData(0)[primID] +=
-        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) *
+        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), (NumericType)0) *
         (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
 
     // ion enhanced etching yield Y_ie
     localData.getVectorData(1)[primID] +=
-        A_ie * std::max(sqrtE - std::sqrt(Eth_ie), 0.) * cosTheta;
+        A_ie * std::max(sqrtE - std::sqrt(Eth_ie), (NumericType)0) * cosTheta;
 
     // polymer yield Y_p
     localData.getVectorData(2)[primID] +=
-        p.Polymer.A_ie * std::max(sqrtE - std::sqrt(p.Polymer.Eth_ie), 0.) *
+        p.Polymer.A_ie *
+        std::max(sqrtE - std::sqrt(p.Polymer.Eth_ie), (NumericType)0) *
         cosTheta;
   }
   std::pair<NumericType, rayTriple<NumericType>>
@@ -400,8 +407,9 @@ public:
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
-    double incAngle = std::acos(-rayInternal::DotProduct(rayDir, geomNormal));
-    double Eref_peak;
+    NumericType incAngle =
+        std::acos(-rayInternal::DotProduct(rayDir, geomNormal));
+    NumericType Eref_peak;
     if (incAngle >= p.Ions.inflectAngle) {
       Eref_peak =
           1. - (1. - A) * (M_PI_2 - incAngle) / (M_PI_2 - p.Ions.inflectAngle);
@@ -442,10 +450,10 @@ public:
 
 template <typename NumericType, int D>
 class Polymer : public rayParticle<Polymer<NumericType, D>, NumericType> {
-  const Parameters &p;
+  const Parameters<NumericType> &p;
 
 public:
-  Polymer(const Parameters &pParams) : p(pParams) {}
+  Polymer(const Parameters<NumericType> &pParams) : p(pParams) {}
   void surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &,
                         const rayTriple<NumericType> &,
                         const unsigned int primID, const int,
@@ -472,7 +480,7 @@ public:
       stick = p.Mask.beta_p;
     else
       stick = p.beta_p;
-    stick *= std::max(1 - phi_e - phi_p, (NumericType)0.);
+    stick *= std::max(1 - phi_e - phi_p, (NumericType)0);
     return std::pair<NumericType, rayTriple<NumericType>>{stick, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
@@ -483,10 +491,10 @@ public:
 
 template <typename NumericType, int D>
 class Etchant : public rayParticle<Etchant<NumericType, D>, NumericType> {
-  const Parameters &p;
+  const Parameters<NumericType> &p;
 
 public:
-  Etchant(const Parameters &pParams) : p(pParams) {}
+  Etchant(const Parameters<NumericType> &pParams) : p(pParams) {}
   void surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &,
                         const rayTriple<NumericType> &,
                         const unsigned int primID, const int,
@@ -510,11 +518,11 @@ public:
 
     NumericType Seff;
     if (psMaterialMap::isMaterial(materialId, psMaterial::Mask)) {
-      Seff = p.Mask.beta_p * std::max(1. - phi_e - phi_p, 0.);
+      Seff = p.Mask.beta_p * std::max(1 - phi_e - phi_p, (NumericType)0);
     } else if (psMaterialMap::isMaterial(materialId, psMaterial::Polymer)) {
-      Seff = p.beta_pe * std::max(1. - phi_pe, 0.);
+      Seff = p.beta_pe * std::max(1 - phi_pe, (NumericType)0);
     } else {
-      Seff = p.beta_e * std::max(1. - phi_e - phi_p, 0.);
+      Seff = p.beta_e * std::max(1 - phi_e - phi_p, (NumericType)0);
     }
 
     return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
@@ -547,18 +555,22 @@ public:
     params.etchStopDepth = etchStopDepth;
     initialize();
   }
-  psFluorocarbonEtching(const FluorocarbonImplementation::Parameters &pParams)
+  psFluorocarbonEtching(
+      const FluorocarbonImplementation::Parameters<NumericType> &pParams)
       : params(pParams) {
     initialize();
   }
 
-  FluorocarbonImplementation::Parameters &getParameters() { return params; }
-  void setParameters(const FluorocarbonImplementation::Parameters &pParams) {
+  FluorocarbonImplementation::Parameters<NumericType> &getParameters() {
+    return params;
+  }
+  void setParameters(
+      const FluorocarbonImplementation::Parameters<NumericType> &pParams) {
     params = pParams;
   }
 
 private:
-  FluorocarbonImplementation::Parameters params;
+  FluorocarbonImplementation::Parameters<NumericType> params;
 
   void initialize() {
     // particles
