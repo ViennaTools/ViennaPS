@@ -145,4 +145,4 @@ public:
 };
 
 // initialize static member of logger
-psLogLevel psLogger::logLevel = psLogLevel::INFO;
+inline psLogLevel psLogger::logLevel = psLogLevel::INFO;
