@@ -58,12 +58,12 @@ process.setMaxCoverageInitIterations(10)
 process.setTimeStepRatio(0.25)
 
 # print initial surface
-geometry.saveVolume("initial")
+geometry.saveVolumeMesh("initial")
 
 process.apply()
 
 # print final surface
-geometry.saveVolume("final")
+geometry.saveVolumeMesh("final")
 
 if extrude:
     print("Extruding to 3D ...")
@@ -77,5 +77,5 @@ if extrude:
 
     vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
 
-    extruded.saveSurface("extruded_surface.vtp", True)
-    extruded.saveVolume("extruded_volume")
+    extruded.saveSurfaceMesh("extruded_surface.vtp", True)
+    extruded.saveVolumeMesh("extruded_volume")

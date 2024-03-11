@@ -158,7 +158,7 @@ ViennaPS uses CTest to run its tests. In order to check whether ViennaPS runs wi
 
 ```bash
 mkdir build && cd build
-cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=DEBUG
+cmake .. -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=DEBUG
 make buildTests
 ctest -C Debug
 ```

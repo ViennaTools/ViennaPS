@@ -83,6 +83,13 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
+  // Enable the use of random seeds for ray tracing. This is useful to
+  // prevent the formation of artifacts in the flux calculation.
+  void enableRandomSeeds() { useRandomSeeds = true; }
+
+  // Disable the use of random seeds for ray tracing.
+  void disableRandomSeeds() { useRandomSeeds = false; }
+
   // Set the CFL (Courant-Friedrichs-Levy) condition to use during surface
   // advection in the level-set. The CFL condition defines the maximum distance
   // a surface is allowed to move in a single advection step. It MUST be below
