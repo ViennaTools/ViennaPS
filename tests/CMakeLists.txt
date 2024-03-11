@@ -1,9 +1,15 @@
 add_custom_target(ViennaPS_Tests ALL)
 
-include("${ViennaRay_SOURCE_DIR}/cmake/embree.cmake")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${PROJECT_BINARY_DIR}/tests-bin>)
 
-# TODO: Setup VTK Env as well
-setup_embree_env(ViennaPS_Tests "tests")
+if(WIN32 AND NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
+  setup_embree_env(ViennaPS_Tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endif()
+
+if(WIN32 AND NOT VIENNALS_SYSTEM_VTK)
+  setup_vtk_env(ViennaPS_Tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endif()
+
 
 file(
   GLOB entries
