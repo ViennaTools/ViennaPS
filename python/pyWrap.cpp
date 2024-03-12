@@ -604,137 +604,137 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("ionExponent") = 100., pybind11::arg("deltaP") = 0.,
           pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
       .def(pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
-                          const FluorocarbonImplementation::Parameters &>),
+                          const FluorocarbonImplementation::Parameters<T> &>),
            pybind11::arg("parameters"))
       .def("setParameters", &psFluorocarbonEtching<T, D>::setParameters)
       .def("getParameters", &psFluorocarbonEtching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
   // Fluorocarbon Parameters
-  pybind11::class_<FluorocarbonImplementation::Parameters::MaskType>(
+  pybind11::class_<FluorocarbonImplementation::Parameters<T>::MaskType>(
       module, "FluorocarbonParametersMask")
       .def(pybind11::init<>())
       .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters::MaskType::rho)
+                     &FluorocarbonImplementation::Parameters<T>::MaskType::rho)
       .def_readwrite("beta_p",
-                     &FluorocarbonImplementation::Parameters::MaskType::beta_p)
+                     &FluorocarbonImplementation::Parameters<T>::MaskType::beta_p)
       .def_readwrite("beta_e",
-                     &FluorocarbonImplementation::Parameters::MaskType::beta_e)
+                     &FluorocarbonImplementation::Parameters<T>::MaskType::beta_e)
       .def_readwrite("A_sp",
-                     &FluorocarbonImplementation::Parameters::MaskType::A_sp)
+                     &FluorocarbonImplementation::Parameters<T>::MaskType::A_sp)
       .def_readwrite("B_sp",
-                     &FluorocarbonImplementation::Parameters::MaskType::B_sp)
+                     &FluorocarbonImplementation::Parameters<T>::MaskType::B_sp)
       .def_readwrite("Eth_sp",
-                     &FluorocarbonImplementation::Parameters::MaskType::Eth_sp);
+                     &FluorocarbonImplementation::Parameters<T>::MaskType::Eth_sp);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters::SiO2Type>(
+  pybind11::class_<FluorocarbonImplementation::Parameters<T>::SiO2Type>(
       module, "FluorocarbonParametersSiO2")
       .def(pybind11::init<>())
       .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters::SiO2Type::rho)
+                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::rho)
       .def_readwrite("E_a",
-                     &FluorocarbonImplementation::Parameters::SiO2Type::E_a)
-      .def_readwrite("K", &FluorocarbonImplementation::Parameters::SiO2Type::K)
+                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::E_a)
+      .def_readwrite("K", &FluorocarbonImplementation::Parameters<T>::SiO2Type::K)
       .def_readwrite("A_sp",
-                     &FluorocarbonImplementation::Parameters::SiO2Type::A_sp)
+                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::A_sp)
       .def_readwrite("B_sp",
-                     &FluorocarbonImplementation::Parameters::SiO2Type::B_sp)
+                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::B_sp)
       .def_readwrite("Eth_ie",
-                     &FluorocarbonImplementation::Parameters::SiO2Type::Eth_ie)
+                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::Eth_ie)
       .def_readwrite("Eth_sp",
-                     &FluorocarbonImplementation::Parameters::SiO2Type::Eth_sp)
+                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::Eth_sp)
       .def_readwrite("A_ie",
-                     &FluorocarbonImplementation::Parameters::SiO2Type::A_ie);
+                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters::Si3N4Type>(
+  pybind11::class_<FluorocarbonImplementation::Parameters<T>::Si3N4Type>(
       module, "FluorocarbonParametersSi3N4")
       .def(pybind11::init<>())
       .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters::Si3N4Type::rho)
+                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::rho)
       .def_readwrite("E_a",
-                     &FluorocarbonImplementation::Parameters::Si3N4Type::E_a)
-      .def_readwrite("K", &FluorocarbonImplementation::Parameters::Si3N4Type::K)
+                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::E_a)
+      .def_readwrite("K", &FluorocarbonImplementation::Parameters<T>::Si3N4Type::K)
       .def_readwrite("A_sp",
-                     &FluorocarbonImplementation::Parameters::Si3N4Type::A_sp)
+                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::A_sp)
       .def_readwrite("B_sp",
-                     &FluorocarbonImplementation::Parameters::Si3N4Type::B_sp)
+                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::B_sp)
       .def_readwrite("Eth_ie",
-                     &FluorocarbonImplementation::Parameters::Si3N4Type::Eth_ie)
+                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::Eth_ie)
       .def_readwrite("Eth_sp",
-                     &FluorocarbonImplementation::Parameters::Si3N4Type::Eth_sp)
+                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::Eth_sp)
       .def_readwrite("A_ie",
-                     &FluorocarbonImplementation::Parameters::Si3N4Type::A_ie);
+                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters::SiType>(
+  pybind11::class_<FluorocarbonImplementation::Parameters<T>::SiType>(
       module, "FluorocarbonParametersSi")
       .def(pybind11::init<>())
       .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters::SiType::rho)
+                     &FluorocarbonImplementation::Parameters<T>::SiType::rho)
       .def_readwrite("E_a",
-                     &FluorocarbonImplementation::Parameters::SiType::E_a)
-      .def_readwrite("K", &FluorocarbonImplementation::Parameters::SiType::K)
+                     &FluorocarbonImplementation::Parameters<T>::SiType::E_a)
+      .def_readwrite("K", &FluorocarbonImplementation::Parameters<T>::SiType::K)
       .def_readwrite("A_sp",
-                     &FluorocarbonImplementation::Parameters::SiType::A_sp)
+                     &FluorocarbonImplementation::Parameters<T>::SiType::A_sp)
       .def_readwrite("B_sp",
-                     &FluorocarbonImplementation::Parameters::SiType::B_sp)
+                     &FluorocarbonImplementation::Parameters<T>::SiType::B_sp)
       .def_readwrite("Eth_ie",
-                     &FluorocarbonImplementation::Parameters::SiType::Eth_ie)
+                     &FluorocarbonImplementation::Parameters<T>::SiType::Eth_ie)
       .def_readwrite("Eth_sp",
-                     &FluorocarbonImplementation::Parameters::SiType::Eth_sp)
+                     &FluorocarbonImplementation::Parameters<T>::SiType::Eth_sp)
       .def_readwrite("A_ie",
-                     &FluorocarbonImplementation::Parameters::SiType::A_ie);
+                     &FluorocarbonImplementation::Parameters<T>::SiType::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters::PolymerType>(
+  pybind11::class_<FluorocarbonImplementation::Parameters<T>::PolymerType>(
       module, "FluorocarbonParametersPolymer")
       .def(pybind11::init<>())
       .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters::PolymerType::rho)
+                     &FluorocarbonImplementation::Parameters<T>::PolymerType::rho)
       .def_readwrite(
           "Eth_ie",
-          &FluorocarbonImplementation::Parameters::PolymerType::Eth_ie)
+          &FluorocarbonImplementation::Parameters<T>::PolymerType::Eth_ie)
       .def_readwrite(
-          "A_ie", &FluorocarbonImplementation::Parameters::PolymerType::A_ie);
+          "A_ie", &FluorocarbonImplementation::Parameters<T>::PolymerType::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters::IonType>(
+  pybind11::class_<FluorocarbonImplementation::Parameters<T>::IonType>(
       module, "FluorocarbonParametersIons")
       .def(pybind11::init<>())
       .def_readwrite(
           "meanEnergy",
-          &FluorocarbonImplementation::Parameters::IonType::meanEnergy)
+          &FluorocarbonImplementation::Parameters<T>::IonType::meanEnergy)
       .def_readwrite(
           "sigmaEnergy",
-          &FluorocarbonImplementation::Parameters::IonType::sigmaEnergy)
+          &FluorocarbonImplementation::Parameters<T>::IonType::sigmaEnergy)
       .def_readwrite("exponent",
-                     &FluorocarbonImplementation::Parameters::IonType::exponent)
+                     &FluorocarbonImplementation::Parameters<T>::IonType::exponent)
       .def_readwrite(
           "inflectAngle",
-          &FluorocarbonImplementation::Parameters::IonType::inflectAngle)
+          &FluorocarbonImplementation::Parameters<T>::IonType::inflectAngle)
       .def_readwrite("n_l",
-                     &FluorocarbonImplementation::Parameters::IonType::n_l)
+                     &FluorocarbonImplementation::Parameters<T>::IonType::n_l)
       .def_readwrite(
           "minAngle",
-          &FluorocarbonImplementation::Parameters::IonType::minAngle);
+          &FluorocarbonImplementation::Parameters<T>::IonType::minAngle);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters>(
+  pybind11::class_<FluorocarbonImplementation::Parameters<T>>(
       module, "FluorocarbonParameters")
       .def(pybind11::init<>())
       .def_readwrite("ionFlux",
-                     &FluorocarbonImplementation::Parameters::ionFlux)
+                     &FluorocarbonImplementation::Parameters<T>::ionFlux)
       .def_readwrite("etchantFlux",
-                     &FluorocarbonImplementation::Parameters::etchantFlux)
+                     &FluorocarbonImplementation::Parameters<T>::etchantFlux)
       .def_readwrite("polyFlux",
-                     &FluorocarbonImplementation::Parameters::polyFlux)
+                     &FluorocarbonImplementation::Parameters<T>::polyFlux)
       .def_readwrite("delta_p",
-                     &FluorocarbonImplementation::Parameters::delta_p)
+                     &FluorocarbonImplementation::Parameters<T>::delta_p)
       .def_readwrite("etchStopDepth",
-                     &FluorocarbonImplementation::Parameters::etchStopDepth)
-      .def_readwrite("Mask", &FluorocarbonImplementation::Parameters::Mask)
-      .def_readwrite("SiO2", &FluorocarbonImplementation::Parameters::SiO2)
-      .def_readwrite("Si3N4", &FluorocarbonImplementation::Parameters::Si3N4)
-      .def_readwrite("Si", &FluorocarbonImplementation::Parameters::Si)
+                     &FluorocarbonImplementation::Parameters<T>::etchStopDepth)
+      .def_readwrite("Mask", &FluorocarbonImplementation::Parameters<T>::Mask)
+      .def_readwrite("SiO2", &FluorocarbonImplementation::Parameters<T>::SiO2)
+      .def_readwrite("Si3N4", &FluorocarbonImplementation::Parameters<T>::Si3N4)
+      .def_readwrite("Si", &FluorocarbonImplementation::Parameters<T>::Si)
       .def_readwrite("Polymer",
-                     &FluorocarbonImplementation::Parameters::Polymer)
-      .def_readwrite("Ions", &FluorocarbonImplementation::Parameters::Ions);
+                     &FluorocarbonImplementation::Parameters<T>::Polymer)
+      .def_readwrite("Ions", &FluorocarbonImplementation::Parameters<T>::Ions);
 
   // Isotropic Process
   pybind11::class_<psIsotropicProcess<T, D>,
