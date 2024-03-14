@@ -12,7 +12,7 @@ option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
-option(VIENNAPS_BUILD_TESTS "Build tests" ON) # TODO: Default off
+option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Library
@@ -62,7 +62,7 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 3.0.0
+  GIT_TAG 6ccef11 # TODO: Create new tag and use VERSION
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS")
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaRay ViennaTools::ViennaLS)
