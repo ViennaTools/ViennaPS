@@ -94,7 +94,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: ViennaTools/ViennaRay
-          ref: legacy
           path: ./viennaray
 
       - name: Store cache key in ENV
