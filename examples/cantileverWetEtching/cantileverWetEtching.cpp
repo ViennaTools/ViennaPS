@@ -3,7 +3,7 @@
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
-#include <psAnisotropicProcess.hpp>
+#include <models/psAnisotropicProcess.hpp>
 
 int main(int argc, char **argv) {
   using NumericType = double;

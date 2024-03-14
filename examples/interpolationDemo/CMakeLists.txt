@@ -1,13 +1,11 @@
-cmake_minimum_required(VERSION 3.4)
+project(interpolationDemo LANGUAGES CXX)
 
-project("interpolationDemo")
-
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNAPS_LIBRARIES})
+add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cpp")
+target_link_libraries(${PROJECT_NAME} PRIVATE ViennaPS)
 
 configure_file(griddata.csv ${CMAKE_CURRENT_BINARY_DIR}/griddata.csv COPYONLY)
 configure_file(scatterdata.csv ${CMAKE_CURRENT_BINARY_DIR}/scatterdata.csv COPYONLY)
 configure_file(plot.py ${CMAKE_CURRENT_BINARY_DIR}/plot.py COPYONLY)
 
-add_dependencies(buildExamples ${PROJECT_NAME})
+add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
+add_test(NAME ${PROJECT_NAME} COMMAND $<TARGET_FILE:${PROJECT_NAME}>)

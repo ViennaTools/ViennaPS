@@ -1,39 +1,27 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+add_custom_target(ViennaPS_Examples ALL)
 
-project(ViennaPSExamples)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${PROJECT_BINARY_DIR}/examples-bin>)
 
-include("${CMAKE_SOURCE_DIR}/cmake/prepare.cmake")
-
-find_package(ViennaPS CONFIG PATHS ${ViennaPS_BINARY_DIR} NO_DEFAULT_PATH)
-if(NOT ViennaPS_FOUND)
-  message(
-    FATAL_ERROR
-      "One of the dependencies hasn't been built yet and thus can't be used by the buildExamples target.\n\
-  Try the following steps to fix the problem:\n\
-  1. Turn off the buildExamples target by disabling the VIENNAPS_BUILD_EXAMPLES option when configuring the project\n\
-  (e.g. with the `-D VIENNAPS_BUILD_EXAMPLES=OFF` flag)\n\
-  2. Build the dependencies target: e.g. `make buildDependencies` when using Makefiles\n\
-  3. Turn on the buildExamples target again by re-enabling the VIENNAPS_BUILD_EXAMPLES option\n\
-  (e.g. with the `-D VIENNAPS_BUILD_EXAMPLES=ON` flag)\n\
-  4. Now the configure step should pick up the built dependencies and proceed as intended.")
+if(WIN32
+   AND NOT VIENNARAY_DISABLE_COPY
+   AND NOT VIENNARAY_SYSTEM_EMBREE)
+  setup_embree_env(ViennaPS_Examples ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endif()
 
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
+if(WIN32 AND NOT VIENNALS_SYSTEM_VTK)
+  setup_vtk_env(ViennaPS_Examples ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endif()
 
-# Add subfolders to the include directories, since during installation the directory structure is
-# flattened, but in the source tree - which we are using here - it is not.
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/models
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/compact)
+file(
+  GLOB entries
+  LIST_DIRECTORIES true
+  "*")
 
-# Exclude the buildExamples target from the `all` target
-set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
+foreach(entry ${entries})
+  if(NOT IS_DIRECTORY ${entry})
+    continue()
+  endif()
 
-add_custom_target(buildExamples)
-
-subdirlist(EXAMPLE_DIRS ${CMAKE_CURRENT_LIST_DIR})
-
-# add all examples
-foreach(subdir ${EXAMPLE_DIRS})
-  add_subdirectory(${subdir})
+  message(STATUS "[ViennaPS] Adding Example ${entry}")
+  add_subdirectory(${entry})
 endforeach()

@@ -1,6 +1,7 @@
-#include <psMakeHole.hpp>
+#include <geometries/psMakeHole.hpp>
+#include <models/psSF6O2Etching.hpp>
+
 #include <psProcess.hpp>
-#include <psSF6O2Etching.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>

@@ -1,12 +1,11 @@
-cmake_minimum_required(VERSION 3.4)
+project(atomicLayerDeposition LANGUAGES CXX)
 
-project("atomicLayerDeposition")
+add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cpp")
+target_link_libraries(${PROJECT_NAME} PRIVATE ViennaPS)
 
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNAPS_LIBRARIES})
 configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 configure_file(atomicLayerDeposition.py ${CMAKE_CURRENT_BINARY_DIR}/atomicLayerDeposition.py
                COPYONLY)
 
-add_dependencies(buildExamples ${PROJECT_NAME})
+add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
+add_test(NAME ${PROJECT_NAME} COMMAND $<TARGET_FILE:${PROJECT_NAME}>)
