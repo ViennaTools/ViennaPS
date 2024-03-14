@@ -8,7 +8,18 @@ a ray tracer, and physical models for the simulation of
 microelectronic fabrication processes.
 """
 
+import sys
 from .@MODULE_NAME@ import *
+
+def _windows_dll_path():
+    
+    import os
+    import vtk
+
+    os.add_dll_directory(vtk.__path__)
+
+if sys.platform == "win32":
+    _windows_dll_path()
 
 #Config file reader helper function
 def ReadConfigFile(fileName : str):
