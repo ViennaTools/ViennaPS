@@ -1,9 +1,7 @@
 #pragma once
 
-#include <psDomain.hpp>
-#include <psKDTree.hpp>
-#include <psLogger.hpp>
-#include <psUtils.hpp>
+#include "psDomain.hpp"
+#include "psLogger.hpp"
 
 #include <rayGeometry.hpp>
 
@@ -83,8 +81,10 @@ private:
       alignas(128) auto rayHit =
           RTCRayHit{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+#if VIENNARAY_EMBREE_VERSION < 4
       auto rtcContext = RTCIntersectContext{};
       rtcInitIntersectContext(&rtcContext);
+#endif
 
 #pragma omp for
       for (unsigned idx = 0; idx < numCells; ++idx) {
@@ -126,8 +126,12 @@ private:
           rayHit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
           rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 
+#if VIENNARAY_EMBREE_VERSION < 4
           // Run the intersection
           rtcIntersect1(rtcScene, &rtcContext, &rayHit);
+#else
+          rtcIntersect1(rtcScene, &rayHit);
+#endif
 
           /* -------- No hit -------- */
           if (rayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {

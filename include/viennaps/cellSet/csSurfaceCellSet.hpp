@@ -1,7 +1,7 @@
 #pragma once
 
-#include <csDenseCellSet.hpp>
-#include <psDomain.hpp>
+#include "../psDomain.hpp"
+#include "csDenseCellSet.hpp"
 
 template <class T> class cellBase {
   std::array<T, 3> center;
@@ -44,7 +44,7 @@ public:
     auto cellIds = BVH->getCellIds(point);
     if (!cellIds) {
       psLogger::getInstance()
-          .addError("Point " + csUtil::arrayToString(point) +
+          .addError("Point " + psUtils::arrayToString(point) +
                     " not in domain. BVH failure.")
           .print();
     } else {
@@ -56,15 +56,16 @@ public:
       }
     }
 
-    std::vector<cellType &> getNeighbors(const cellType &cell) {
-      std::vector<cellType &> neighbors;
-      auto cellSet = domain->getCellSet();
+    // What happened here?
+    // std::vector<cellType &> getNeighbors(const cellType &cell) {
+    //   std::vector<cellType &> neighbors;
+    //   auto cellSet = domain->getCellSet();
 
-      return neighbors;
-    }
+    //   return neighbors;
+    // }
 
     psLogger::getInstance()
-        .addError("Point " + csUtil::arrayToString(point) + " not in domain")
+        .addError("Point " + psUtils::arrayToString(point) + " not in domain")
         .print();
     return surfaceCells[0];
   }

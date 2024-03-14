@@ -2,8 +2,6 @@
 
 #include <cmath>
 
-#include "psModelParameters.hpp"
-
 #include "../psLogger.hpp"
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"

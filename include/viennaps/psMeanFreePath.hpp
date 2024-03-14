@@ -1,9 +1,10 @@
 #pragma once
 
-#include <psDomain.hpp>
-#include <psKDTree.hpp>
-#include <psLogger.hpp>
-#include <psUtils.hpp>
+#include "compact/psKDTree.hpp"
+
+#include "psDomain.hpp"
+#include "psLogger.hpp"
+#include "psUtils.hpp"
 
 #include <rayGeometry.hpp>
 #include <rayRNG.hpp>

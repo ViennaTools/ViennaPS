@@ -1,6 +1,6 @@
 #pragma once
 
-#include <csDenseCellSet.hpp>
+#include "csDenseCellSet.hpp"
 
 template <class NumericType, int D> class csSegmentCells {
   psSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
