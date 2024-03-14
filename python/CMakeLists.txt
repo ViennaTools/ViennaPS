@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(ViennaPS_Python LANGUAGES CXX)
 
+add_custom_target(${PROJECT_NAME} ALL)
+
 # --------------------------------------------------------------------------------------------------------
-# Setup Target
+# Global CMake Configuration
+# └ As mentioned earlier we re-use the vtk python package libs, to do so we
+#   set the rpath for our python modules to point to the vtkmodules folder.
 # --------------------------------------------------------------------------------------------------------
 
-add_custom_target(${PROJECT_NAME} ALL)
+list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../vtkmodules")
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Dependencies
@@ -72,12 +76,8 @@ configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
 # Setup Install Target
 # --------------------------------------------------------------------------------------------------------
 
-install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_2D}
-        LIBRARY DESTINATION viennaps2d)
-install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d/__init__.py"
-        DESTINATION viennaps2d)
+install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_2D} LIBRARY DESTINATION viennaps2d)
+install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d/__init__.py" DESTINATION viennaps2d)
 
-install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_3D}
-        LIBRARY DESTINATION viennaps3d)
-install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d/__init__.py"
-        DESTINATION viennaps3d)
+install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_3D} LIBRARY DESTINATION viennaps3d)
+install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d/__init__.py" DESTINATION viennaps3d)

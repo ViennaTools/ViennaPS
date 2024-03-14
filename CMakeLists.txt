@@ -15,6 +15,16 @@ option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 # --------------------------------------------------------------------------------------------------------
+# Global CMake Configuration
+# └ We depend on the vtk python package for our python build and re-use
+#   their existing vtk libraries, which are not versioned. Because we (possibly) pull in VTK ourselves
+#   during build time though, we disable the soname versioning so that we can easily set the rpath to
+#   link against the vtk-python libs
+# --------------------------------------------------------------------------------------------------------
+
+set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ${VIENNAPS_BUILD_PYTHON})
+
+# --------------------------------------------------------------------------------------------------------
 # Setup Library
 # --------------------------------------------------------------------------------------------------------
 
@@ -57,13 +67,15 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  GIT_TAG 31add75 # TODO: Create new tag and use VERSION
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay")
+  GIT_TAG b03c7e2 # TODO: Create new tag and use VERSION
+  GIT_REPOSITORY "https://github.com/Curve/ViennaRay"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaLS
-  GIT_TAG 6ccef11 # TODO: Create new tag and use VERSION
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS")
+  GIT_TAG 8d9bd73 # TODO: Create new tag and use VERSION
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaRay ViennaTools::ViennaLS)
 
@@ -94,6 +106,7 @@ endif()
 if(VIENNAPS_BUILD_PYTHON)
   message(STATUS "[ViennaPS] Building Python Bindings")
   add_subdirectory(python)
+  return()
 endif()
 
 # --------------------------------------------------------------------------------------------------------
