@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Finding Nearest Neighbors...\n";
     startTime = getTime();
     for (unsigned i = 0; i < repetitions; ++i) {
-      for (const auto &pt : testPoints)
-        [[maybe_unused]] auto result = tree->findNearest(pt);
+      for (const auto &pt : testPoints) [[maybe_unused]]
+        auto result = tree->findNearest(pt);
     }
     endTime = getTime();
 

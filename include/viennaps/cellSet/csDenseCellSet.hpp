@@ -34,16 +34,21 @@ private:
   psSmartPointer<lsDomain<T, D>> surface = nullptr;
   psSmartPointer<csBVH<T, D>> BVH = nullptr;
   materialMapType materialMap = nullptr;
-  std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
+
   T gridDelta;
-  size_t numberOfCells;
   T depth = 0.;
+  std::size_t numberOfCells;
   int BVHlayers = 0;
+
+  std::vector<std::array<int, 2 * D>> cellNeighbors; // -x, x, -y, y, -z, z
+  hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
+
   bool cellSetAboveSurface = false;
+  psMaterial coverMaterial = psMaterial::None;
   std::bitset<D> periodicBoundary;
+
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
-  hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
 
 public:
   csDenseCellSet() {}
@@ -106,8 +111,7 @@ public:
     psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
-    if (!cellSetAboveSurface || materialMap)
-      adjustMaterialIds();
+    adjustMaterialIds();
 
     // create filling fractions as default scalar cell data
     numberOfCells = cellGrid->template getElements<(1 << D)>().size();
@@ -155,7 +159,13 @@ public:
     }
   }
 
-  std::vector<T> *addScalarData(std::string name, T initValue) {
+  std::vector<T> *addScalarData(std::string name, T initValue = 0.) {
+    if (cellGrid->getCellData().getScalarData(name) != nullptr) {
+      auto data = cellGrid->getCellData().getScalarData(name);
+      data->resize(numberOfCells, initValue);
+      std::fill(data->begin(), data->end(), initValue);
+      return data;
+    }
     std::vector<T> newData(numberOfCells, initValue);
     cellGrid->getCellData().insertNextScalarData(std::move(newData), name);
     fillingFractions = cellGrid->getCellData().getScalarData("fillingFraction");
@@ -170,8 +180,16 @@ public:
     return cellGrid->getNodes();
   }
 
-  std::vector<std::array<unsigned, (1 << D)>> getElements() {
+  const std::array<T, 3> &getNode(unsigned int idx) const {
+    return cellGrid->getNodes()[idx];
+  }
+
+  std::vector<std::array<unsigned, (1 << D)>> &getElements() const {
     return cellGrid->template getElements<(1 << D)>();
+  }
+
+  const std::array<unsigned, (1 << D)> &getElement(unsigned int idx) const {
+    return cellGrid->template getElements<(1 << D)>()[idx];
   }
 
   psSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
@@ -212,16 +230,38 @@ public:
     return sum / count;
   }
 
-  int getIndex(const std::array<T, 3> &point) { return findIndex(point); }
+  std::array<T, 3> getCellCenter(unsigned long idx) const {
+    auto center =
+        cellGrid
+            ->getNodes()[cellGrid->template getElements<(1 << D)>()[idx][0]];
+    for (int i = 0; i < D; i++)
+      center[i] += gridDelta / 2.;
+    return center;
+  }
+
+  int getIndex(const std::array<T, 3> &point) const { return findIndex(point); }
 
   std::vector<T> *getScalarData(std::string name) {
     return cellGrid->getCellData().getScalarData(name);
+  }
+
+  std::vector<std::string> getScalarDataLabels() const {
+    std::vector<std::string> labels;
+    auto numScalarData = cellGrid->getCellData().getScalarDataSize();
+    for (int i = 0; i < numScalarData; i++) {
+      labels.push_back(cellGrid->getCellData().getScalarDataLabel(i));
+    }
+    return labels;
   }
 
   // Set whether the cell set should be created below (false) or above (true)
   // the surface.
   void setCellSetPosition(const bool passedCellSetPosition) {
     cellSetAboveSurface = passedCellSetPosition;
+  }
+
+  void setCoverMaterial(const psMaterial passedCoverMaterial) {
+    coverMaterial = passedCoverMaterial;
   }
 
   bool getCellSetPosition() const { return cellSetAboveSurface; }
@@ -467,7 +507,7 @@ public:
     voxelConverter.apply();
 
     auto cutMatIds = updateCellGrid->getCellData().getScalarData("Material");
-    auto &hexas = cellGrid->template getElements<(1 << D)>();
+    auto &elements = cellGrid->template getElements<(1 << D)>();
 
     const auto nCutCells =
         updateCellGrid->template getElements<(1 << D)>().size();
@@ -480,10 +520,10 @@ public:
           auto data = cellGrid->getCellData().getScalarData(i);
           data->erase(data->begin() + elIdx);
         }
-        hexas.erase(hexas.begin() + elIdx);
+        elements.erase(elements.begin() + elIdx);
       }
     }
-    numberOfCells = hexas.size();
+    numberOfCells = elements.size();
     surface->deepCopy(levelSets->back());
 
     buildBVH();
@@ -506,7 +546,10 @@ public:
     }
   }
 
-  void buildNeighborhood() {
+  void buildNeighborhood(bool forceRebuild = false) {
+    if (!cellNeighbors.empty() && !forceRebuild)
+      return;
+
     psUtils::Timer timer;
     timer.start();
     const auto &cells = cellGrid->template getElements<(1 << D)>();
@@ -566,9 +609,7 @@ public:
         for (const auto &neighborCell : cellsAtNode) {
           if (neighborCell != cellIdx) {
 
-            auto neighborCoord = nodes[cells[neighborCell][0]];
-            for (int i = 0; i < D; i++)
-              neighborCoord[i] += gridDelta / 2.;
+            auto neighborCoord = getCellCenter(neighborCell);
 
             if (csUtil::distance(coord, neighborCoord) < gridDelta + eps) {
 
@@ -591,13 +632,19 @@ public:
         .print();
   }
 
-  const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) {
+  const std::array<int, 2 * D> &getNeighbors(unsigned long cellIdx) const {
     assert(cellIdx < numberOfCells && "Cell idx out of bounds");
     return cellNeighbors[cellIdx];
   }
 
+  bool isPointInCell(const csTriple<T> &point, unsigned int cellIdx) const {
+    const auto &elem = getElement(cellIdx);
+    const auto &cellMin = getNode(elem[0]);
+    return isPointInCell(point, cellMin);
+  }
+
 private:
-  int findIndex(const csTriple<T> &point) {
+  int findIndex(const csTriple<T> &point) const {
     const auto &elems = cellGrid->template getElements<(1 << D)>();
     const auto &nodes = cellGrid->getNodes();
     int idx = -1;
@@ -606,7 +653,7 @@ private:
     if (!cellIds)
       return idx;
     for (const auto cellId : *cellIds) {
-      if (isInsideVoxel(point, nodes[elems[cellId][0]])) {
+      if (isPointInCell(point, nodes[elems[cellId][0]])) {
         idx = cellId;
         break;
       }
@@ -616,19 +663,21 @@ private:
 
   void adjustMaterialIds() {
     auto matIds = getScalarData("Material");
+    if (!materialMap)
+      return;
+
+    auto numMaterials = materialMap->size();
 
 #pragma omp parallel for
     for (size_t i = 0; i < matIds->size(); i++) {
       int materialId = static_cast<int>(matIds->at(i));
-
-      if (!cellSetAboveSurface && materialId > 0) {
-        materialId -= 1;
-      }
-
-      assert(materialId >= 0);
-      if (materialMap) {
+      if (!cellSetAboveSurface)
+        materialId--;
+      if (materialId >= 0 && materialId < numMaterials) {
         matIds->at(i) =
             static_cast<int>(materialMap->getMaterialAtIdx(materialId));
+      } else {
+        matIds->at(i) = static_cast<int>(coverMaterial);
       }
     }
   }
@@ -653,7 +702,8 @@ private:
     return idx;
   }
 
-  bool isInsideVoxel(const csTriple<T> &point, const csTriple<T> &cellMin) {
+  bool isPointInCell(const csTriple<T> &point,
+                     const csTriple<T> &cellMin) const {
     if constexpr (D == 3)
       return point[0] >= cellMin[0] && point[0] <= (cellMin[0] + gridDelta) &&
              point[1] >= cellMin[1] && point[1] <= (cellMin[1] + gridDelta) &&

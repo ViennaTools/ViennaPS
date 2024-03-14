@@ -3,6 +3,7 @@
 #include <psSF6O2Etching.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
+#include <psWriteVisualizationMesh.hpp>
 
 #include "parameters.hpp"
 

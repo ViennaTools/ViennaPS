@@ -10,11 +10,11 @@ namespace SingleParticleImplementation {
 template <typename NumericType, int D>
 class SurfaceModel : public psSurfaceModel<NumericType> {
   const NumericType rateFactor;
-  const psMaterial mask;
+  const std::vector<psMaterial> maskMaterials;
 
 public:
-  SurfaceModel(const NumericType pRate, const psMaterial pMask)
-      : rateFactor(pRate), mask(pMask) {}
+  SurfaceModel(const NumericType pRate, const std::vector<psMaterial> &pMask)
+      : rateFactor(pRate), maskMaterials(pMask) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> rates,
@@ -26,12 +26,21 @@ public:
     auto flux = rates->getScalarData("particleFlux");
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
-      if (!psMaterialMap::isMaterial(materialIds[i], mask)) {
+      if (!isMaskMaterial(materialIds[i])) {
         velocity->at(i) = flux->at(i) * rateFactor;
       }
     }
 
     return velocity;
+  }
+
+private:
+  bool isMaskMaterial(const NumericType &material) const {
+    for (const auto &mat : maskMaterials) {
+      if (psMaterialMap::isMaterial(material, mat))
+        return true;
+    }
+    return false;
   }
 };
 
@@ -84,6 +93,23 @@ public:
                           const NumericType stickingProbability = 1.,
                           const NumericType sourceDistributionPower = 1.,
                           const psMaterial maskMaterial = psMaterial::None) {
+    std::vector<psMaterial> maskMaterialVec = {maskMaterial};
+    initialize(rate, stickingProbability, sourceDistributionPower,
+               maskMaterialVec);
+  }
+
+  psSingleParticleProcess(const NumericType rate,
+                          const NumericType stickingProbability,
+                          const NumericType sourceDistributionPower,
+                          const std::vector<psMaterial> maskMaterial) {
+    initialize(rate, stickingProbability, sourceDistributionPower,
+               maskMaterial);
+  }
+
+private:
+  void initialize(const NumericType rate, const NumericType stickingProbability,
+                  const NumericType sourceDistributionPower,
+                  const std::vector<psMaterial> &maskMaterial) {
     // particles
     auto depoParticle = std::make_unique<
         SingleParticleImplementation::Particle<NumericType, D>>(
@@ -94,7 +120,7 @@ public:
         NumericType, D>>::New(rate, maskMaterial);
 
     // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New();
+    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

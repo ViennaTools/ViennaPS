@@ -9,19 +9,21 @@ class DirectionalEtchVelocityField : public psVelocityField<NumericType> {
   const std::array<NumericType, 3> direction;
   const NumericType dirVel;
   const NumericType isoVel;
-  const psMaterial maskMaterial;
+  const std::vector<int> maskMaterials;
 
 public:
   DirectionalEtchVelocityField(std::array<NumericType, 3> dir,
                                const NumericType dVel, const NumericType iVel,
-                               const psMaterial mask)
-      : direction(dir), dirVel(dVel), isoVel(iVel), maskMaterial(mask) {}
+                               const std::vector<int> &mask)
+      : direction(dir), dirVel(dVel), isoVel(iVel), maskMaterials(mask) {}
 
   std::array<NumericType, 3>
   getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
                     const std::array<NumericType, 3> &normalVector,
                     unsigned long) override {
-    if (!psMaterialMap::isMaterial(material, maskMaterial)) {
+    if (isMaskMaterial(material)) {
+      return {0.};
+    } else {
       std::array<NumericType, 3> dir(direction);
       for (unsigned i = 0; i < D; ++i) {
         if (dir[i] == 0.) {
@@ -31,14 +33,21 @@ public:
         }
       }
       return dir;
-    } else {
-      return {0.};
     }
   }
 
   // the translation field should be disabled when using a surface model
   // which only depends on an analytic velocity field
   int getTranslationFieldOptions() const override { return 0; }
+
+private:
+  bool isMaskMaterial(const int material) const {
+    for (const auto &mat : maskMaterials) {
+      if (material == mat)
+        return true;
+    }
+    return false;
+  }
 };
 } // namespace DirectionalEtchingImplementation
 
@@ -54,10 +63,33 @@ public:
     auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
 
     // velocity field
+    std::vector<int> maskMaterialsInt = {static_cast<int>(mask)};
     auto velField = psSmartPointer<
         DirectionalEtchingImplementation::DirectionalEtchVelocityField<
             NumericType, D>>::New(direction, directionalVelocity,
-                                  isotropicVelocity, mask);
+                                  isotropicVelocity, maskMaterialsInt);
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("DirectionalEtching");
+  }
+
+  psDirectionalEtching(const std::array<NumericType, 3> &direction,
+                       const NumericType directionalVelocity,
+                       const NumericType isotropicVelocity,
+                       const std::vector<psMaterial> maskMaterials) {
+    // default surface model
+    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+
+    std::vector<int> maskMaterialsInt;
+    for (const auto &mat : maskMaterials) {
+      maskMaterialsInt.push_back(static_cast<int>(mat));
+    }
+    // velocity field
+    auto velField = psSmartPointer<
+        DirectionalEtchingImplementation::DirectionalEtchVelocityField<
+            NumericType, D>>::New(direction, directionalVelocity,
+                                  isotropicVelocity, maskMaterialsInt);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
