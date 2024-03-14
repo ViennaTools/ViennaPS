@@ -17,7 +17,7 @@ set(PYBIND11_FINDPYTHON ON)
 
 CPMFindPackage(
   NAME pybind11
-  VERSION 2.11.1  
+  VERSION 2.11.1
   GIT_REPOSITORY "https://github.com/pybind/pybind11")
 
 # --------------------------------------------------------------------------------------------------------
@@ -67,3 +67,17 @@ target_compile_definitions(
 
 set(MODULE_NAME ${VIENNAPS_PYTHON_MODULE_NAME_3D})
 configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Install Target
+# --------------------------------------------------------------------------------------------------------
+
+install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_2D}
+        LIBRARY DESTINATION viennaps2d)
+install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d/__init__.py"
+        DESTINATION viennaps2d)
+
+install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_3D}
+        LIBRARY DESTINATION viennaps3d)
+install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d/__init__.py"
+        DESTINATION viennaps3d)
