@@ -85,6 +85,7 @@ private:
             surfaceNormals[pointIdx], RngState);
         auto cellIdx = getStartingCell(surfacePoints[pointIdx]);
         auto origin = cellSet->getCellCenter(cellIdx);
+        NumericType distanceOffset = gridDelta;
 
         unsigned numReflections = 0;
         while (true) {
@@ -134,9 +135,36 @@ private:
             }
 
             if (nextCell < 0) {
-              // no hit
-              distance = bulkLambda;
-              break;
+              if (currentCell == prevIdx) {
+                // no hit
+                distance = bulkLambda;
+                break;
+              }
+
+              int atBoundary = -1;
+              auto currentCellCenter = cellSet->getCellCenter(currentCell);
+              for (int i = 0; i < D; ++i) {
+                if (std::abs(currentCellCenter[i] - min[i]) < gridDelta ||
+                    std::abs(currentCellCenter[i] - max[i]) < gridDelta) {
+                  atBoundary = i;
+                  break;
+                }
+              }
+
+              if (atBoundary >= 0) {
+                // boundary hit
+                direction[atBoundary] = -direction[atBoundary];
+                distanceOffset += distance;
+
+                // update origin
+                origin = currentCellCenter;
+                prevIdx = currentCell;
+                continue;
+              } else {
+                // no hit
+                distance = bulkLambda;
+                break;
+              }
             }
 
             if (distance > bulkLambda) {
@@ -151,7 +179,7 @@ private:
 
           /* -------- Add to cells -------- */
           for (const auto &c : hitCells) {
-            data[c] += distance + gridDelta;
+            data[c] += distance + distanceOffset;
             hitCount[c]++;
           }
 
@@ -163,6 +191,7 @@ private:
             break;
 
           // update origin
+          assert(cellIdx >= 0);
           origin = cellSet->getCellCenter(cellIdx);
 
           // update direction
@@ -249,6 +278,19 @@ private:
 
     gridDelta = domain->getGrid().getGridDelta();
     numRays = static_cast<long long>(numCells * numRaysPerCell);
+
+    // set up boundaries
+    auto &grid = domain->getGrid();
+    auto boundingBox = cellSet->getBoundingBox();
+    for (int i = 0; i < D; ++i) {
+      if (grid.isBoundaryPeriodic(i) || grid.isBoundaryReflective(i)) {
+        min[i] = boundingBox[0][i];
+        max[i] = boundingBox[1][i];
+      } else {
+        min[i] = std::numeric_limits<NumericType>::lowest();
+        max[i] = std::numeric_limits<NumericType>::max();
+      }
+    }
   }
 
   int getStartingCell(const rayTriple<NumericType> &origin) const {
@@ -322,6 +364,7 @@ private:
   std::vector<NumericType> *materialIds;
   std::vector<std::array<NumericType, 3>> surfaceNormals;
   std::vector<std::array<NumericType, 3>> surfacePoints;
+  std::array<NumericType, 3> min, max;
 
   NumericType bulkLambda = 0;
   NumericType gridDelta = 0;
