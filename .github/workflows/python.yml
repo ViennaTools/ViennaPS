@@ -28,10 +28,18 @@ jobs:
           install-vtk: false
           container: ${{ matrix.os }}
 
-      - name: 🐍 Build Python Module
+      - name: 🐍 Build Python Module (Linux)
+        if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python3 -m venv venv
           ./venv/bin/pip install .
+
+      - name: 🐍 Build Python Module (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          python3 -m venv venv
+          ./venv/Scripts/activate.bat
+          pip install .
 
       - name: 📦 Upload Artifact
         if: ${{ matrix.config == 'Release' }}
