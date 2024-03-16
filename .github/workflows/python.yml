@@ -30,7 +30,7 @@ jobs:
 
       - name: 🐍 Build Python Module
         run: |
-          python3 -m venv venc
+          python3 -m venv venv
           ./venv/bin/pip install .
 
       - name: 📦 Upload Artifact
