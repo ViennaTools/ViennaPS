@@ -44,7 +44,6 @@ jobs:
           ./venv/bin/python -c "import viennaps2d"
 
       - name: 📦 Upload Artifact
-        if: ${{ matrix.config == 'Release' }}
         uses: actions/upload-artifact@v3
         with:
           name: Pre-Built (${{ matrix.os }}-${{ matrix.vtk-system }})
