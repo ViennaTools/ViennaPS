@@ -28,18 +28,20 @@ jobs:
           install-vtk: false
           container: ${{ matrix.os }}
 
-      - name: 🐍 Build Python Module (Linux)
+      - name: 🐍 Build and check Python Module (Linux)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python3 -m venv venv
           ./venv/bin/pip install .
+          ./venv/bin/python -c "import viennaps2d"
 
-      - name: 🐍 Build Python Module (Windows)
+      - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           python3 -m venv venv
           ./venv/Scripts/activate.bat
           pip install .
+          python3 -c "import viennaps2d"
 
       - name: 📦 Upload Artifact
         if: ${{ matrix.config == 'Release' }}
