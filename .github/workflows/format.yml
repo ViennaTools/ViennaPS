@@ -1,0 +1,26 @@
+name: 🔍 Check Formatting
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check-coding-style:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v3
+
+      - name: 📋 Install Dependencies
+        run: pip install -U cmakelang
+
+      - name: 🏗️ Format
+        run: ./format-project.sh
+
+      - name: 🔍 Check changes
+        run: |
+          if [[ $(git diff-index --name-only --exit-code HEAD) ]]; then
+              git diff
+              exit -1
+          fi

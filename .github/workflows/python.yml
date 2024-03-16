@@ -1,0 +1,41 @@
+name: 🐍 Build Bindings
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bindings:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.os == 'ubuntu-latest' && 'fedora:38' || null }}
+
+    name: "🐍 Build Bindings on ${{ matrix.os }}"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v3
+
+      - name: 🖥️ Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          install-vtk: false
+          container: ${{ matrix.os }}
+
+      - name: 🐍 Build Python Module
+        run: |
+          python3 -m venv venc
+          ./venv/bin/pip install .
+
+      - name: 📦 Upload Artifact
+        if: ${{ matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: Pre-Built (${{ matrix.os }}-${{ matrix.vtk-system }})
+          path: venv

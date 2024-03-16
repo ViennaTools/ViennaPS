@@ -1,0 +1,52 @@
+name: 🧪 Run Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        config: [Release, Debug]
+        vtk-system: [true, false]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+        exclude:
+          - os: macos-latest
+            vtk-system: true
+
+          - os: windows-latest
+            vtk-system: true
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.os == 'ubuntu-latest' && 'fedora:38' || null }}
+
+    name: '🧪 Test on ${{ matrix.os }} ["${{ matrix.config }}", VTK: "${{ matrix.vtk-system }}"]'
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v3
+
+      - name: 🖥️ Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          container: ${{ matrix.os }}
+          install-vtk: ${{ matrix.vtk-system }}
+
+      - name: 🦥 Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          key: ${{ matrix.os }}-${{ matrix.config }}-cache
+          path: |
+            deps-cache
+            build
+
+      - name: 🏗️ Compile
+        run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DCPM_SOURCE_CACHE=deps-cache -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build
+
+      - name: 🧪 Test
+        run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
