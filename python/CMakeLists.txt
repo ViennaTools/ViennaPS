@@ -9,6 +9,7 @@ add_custom_target(${PROJECT_NAME} ALL)
 #   set the rpath for our python modules to point to the vtkmodules folder.
 # --------------------------------------------------------------------------------------------------------
 
+set(CMAKE_MACOSX_RPATH ON)
 list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../vtkmodules")
 
 # --------------------------------------------------------------------------------------------------------
