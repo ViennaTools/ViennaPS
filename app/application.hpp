@@ -5,30 +5,28 @@
 
 #include <lsReader.hpp>
 
-// #include <culsRefineMesh.hpp>
+#include <geometries/psMakeHole.hpp>
+#include <geometries/psMakePlane.hpp>
+#include <geometries/psMakeStack.hpp>
+#include <geometries/psMakeTrench.hpp>
+
+#include <models/psAnisotropicProcess.hpp>
+#include <models/psDirectionalEtching.hpp>
+#include <models/psFluorocarbonEtching.hpp>
+#include <models/psGeometricDistributionModels.hpp>
+#include <models/psIsotropicProcess.hpp>
+#include <models/psSF6O2Etching.hpp>
+#include <models/psSingleParticleProcess.hpp>
+#include <models/psTEOSDeposition.hpp>
 
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
-#include <psMakeHole.hpp>
-#include <psMakePlane.hpp>
-#include <psMakeStack.hpp>
-#include <psMakeTrench.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
 #include "applicationParameters.hpp"
 #include "applicationParser.hpp"
-#include "interrupt.hpp"
-
-#include <psAnisotropicProcess.hpp>
-#include <psDirectionalEtching.hpp>
-#include <psFluorocarbonEtching.hpp>
-#include <psGeometricDistributionModels.hpp>
-#include <psIsotropicProcess.hpp>
-#include <psSF6O2Etching.hpp>
-#include <psSingleParticleProcess.hpp>
-#include <psTEOSDeposition.hpp>
 
 template <int D> class Application {
   psSmartPointer<psDomain<NumericType, D>> geometry = nullptr;
@@ -306,8 +304,7 @@ private:
       break;
 
     case GeometryType::PLANE:
-      std::cout << "Plane"
-                << "\n\tzPos: " << params->maskZPos << "\n\n";
+      std::cout << "Plane" << "\n\tzPos: " << params->maskZPos << "\n\n";
       if (geometry->getLevelSets()->back()) {
         std::cout << "\tAdding plane to current geometry...\n\n";
         psMakePlane<NumericType, D>(geometry, params->maskZPos,
@@ -342,8 +339,8 @@ private:
                 << "\n\tzPos: " << params->maskZPos
                 << "\n\tinvert: " << boolString(params->maskInvert)
                 << "\n\txPadding: " << params->xPadding
-                << "\n\tyPadding: " << params->yPadding << "\n\tPoint order: "
-                << "\n\n";
+                << "\n\tyPadding: " << params->yPadding
+                << "\n\tPoint order: " << "\n\n";
 
       if constexpr (D == 3) {
         typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
@@ -556,9 +553,8 @@ private:
       std::cout << "Writing volume ...\n";
       const std::string suffix = ".vtu";
       // check if string ends with .vtu
-      if (!outFileName.size() >= suffix.size() &&
-          0 == outFileName.compare(outFileName.size() - suffix.size(),
-                                   suffix.size(), suffix)) {
+      if (outFileName.size() > suffix.size() &&
+          std::equal(suffix.rbegin(), suffix.rend(), suffix.rbegin())) {
         outFileName.erase(outFileName.length() - 4);
       }
       geometry->saveVolumeMesh(outFileName);
@@ -642,9 +638,9 @@ private:
       return "Dielectric";
     case psMaterial::Cu:
       return "Cu";
+    default:
+      return "Unknown material";
     }
-
-    return "Unknown material";
   }
 
   std::string intSchemeString(lsIntegrationSchemeEnum scheme) {

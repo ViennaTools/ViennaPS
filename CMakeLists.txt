@@ -8,9 +8,10 @@ project(
 # Library options
 # --------------------------------------------------------------------------------------------------------
 
+option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
-option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 
+option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
@@ -78,6 +79,15 @@ CPMFindPackage(
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaRay ViennaTools::ViennaLS)
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Application
+# --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_BUILD_APPLICATION)
+  message(STATUS "[ViennaPS] Building Application")
+  add_subdirectory(app)
+endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Examples
