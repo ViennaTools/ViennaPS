@@ -304,7 +304,8 @@ private:
       break;
 
     case GeometryType::PLANE:
-      std::cout << "Plane" << "\n\tzPos: " << params->maskZPos << "\n\n";
+      std::cout << "Plane"
+                << "\n\tzPos: " << params->maskZPos << "\n\n";
       if (geometry->getLevelSets()->back()) {
         std::cout << "\tAdding plane to current geometry...\n\n";
         psMakePlane<NumericType, D>(geometry, params->maskZPos,
