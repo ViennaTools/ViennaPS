@@ -28,23 +28,29 @@ jobs:
           install-vtk: false
           container: ${{ matrix.os }}
 
+      - name: 🦥 Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          key: python-${{ matrix.os }}-${{ matrix.config }}-${{ matrix.vtk-system }}
+          path: build
+
       - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           python3 -m venv venv
           ./venv/Scripts/activate.bat
           pip install .
-          python3 -c "import viennaps2d"
+          python3 -c "import viennaps2d; print(viennaps2d.__doc__)"
 
       - name: 🐍 Build and check Python Module (Other)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python3 -m venv venv
           ./venv/bin/pip install .
-          ./venv/bin/python -c "import viennaps2d"
+          ./venv/bin/python -c "import viennaps2d; print(viennaps2d.__doc__)"
 
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: Pre-Built (${{ matrix.os }}-${{ matrix.vtk-system }})
+          name: Pre-Built (${{ matrix.os }}
           path: venv
