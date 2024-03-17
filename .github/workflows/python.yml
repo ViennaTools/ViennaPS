@@ -31,7 +31,7 @@ jobs:
       - name: 🦥 Cache Dependencies
         uses: actions/cache@v3
         with:
-          key: python-${{ matrix.os }}-${{ matrix.config }}-${{ matrix.vtk-system }}
+          key: python-${{ matrix.os }}
           path: build
 
       - name: 🐍 Build and check Python Module (Windows)
