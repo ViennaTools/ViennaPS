@@ -11,9 +11,19 @@ jobs:
       fail-fast: false
 
       matrix:
-        config: [Release, Debug]
+        config:
+          - Release
+          - Debug
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+
         vtk-system: [true, false]
-        os: [ubuntu-latest, windows-latest, macos-latest]
+
+        include:
+          - os: windows-latest
+            cmake_args: '-DCMAKE_CXX_FLAGS="-openmp:llvm"'
 
         exclude:
           - os: macos-latest
@@ -46,7 +56,7 @@ jobs:
             build
 
       - name: 🏗️ Compile
-        run: cmake -DCPM_SOURCE_CACHE=deps-cache -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build --config ${{ matrix.config }}
+        run: cmake -DCPM_SOURCE_CACHE=deps-cache -DVIENNAPS_BUILD_TESTS=ON ${{ matrix.cmake_args }} -B build && cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
         run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
