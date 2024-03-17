@@ -46,13 +46,11 @@ jobs:
       - name: 🦥 Cache Dependencies
         uses: actions/cache@v3
         with:
-          key: ${{ matrix.os }}-${{ matrix.config }}-cache
-          path: |
-            deps-cache
-            build
+          key: test-${{ matrix.os }}-${{ matrix.config }}-${{ matrix.vtk-system }}
+          path: build
 
       - name: 🏗️ Compile
-        run: cmake -DCPM_SOURCE_CACHE=deps-cache -DVIENNAPS_BUILD_TESTS=ON ${{ matrix.cmake_args }} -B build && cmake --build build --config ${{ matrix.config }}
+        run: cmake -DVIENNAPS_BUILD_TESTS=ON ${{ matrix.cmake_args }} -B build && cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
         run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
