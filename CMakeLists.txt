@@ -21,10 +21,9 @@ option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 set(VIENNAPS_LOOKUP_DIRS
     ""
-    CACHE STRING
-          "Directories to account for when searching installed dependencies (e.g. ViennaLS, ...)")
+    CACHE STRING "Directories to account for when searching installed dependencies")
 
-          list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
+list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 
 # --------------------------------------------------------------------------------------------------------
 # Global CMake Configuration
