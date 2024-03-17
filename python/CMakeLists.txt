@@ -66,12 +66,18 @@ endmacro()
 setup_binding(viennaps2d -DVIENNAPS_PYTHON_DIMENSION=2)
 setup_binding(viennaps3d -DVIENNAPS_PYTHON_DIMENSION=3)
 
+set(VIENNARAY_HAS_LIBS OFF)
+
 if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
+  set(VIENNARAY_HAS_LIBS ON)
   setup_embree_env(${MODULE_NAME} ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs)
 endif()
 
 if(WIN32 AND NOT VIENNALS_SYSTEM_VTK)
+  set(VIENNARAY_HAS_LIBS ON)
   setup_vtk_env(${MODULE_NAME} ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs)
 endif()
 
-install(DIRECTORY "viennaps.libs" DESTINATION .)
+if(VIENNARAY_HAS_LIBS)
+  install(DIRECTORY "viennaps.libs" DESTINATION .)
+endif()
