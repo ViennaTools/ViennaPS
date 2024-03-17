@@ -79,5 +79,5 @@ if(WIN32 AND NOT VIENNALS_SYSTEM_VTK)
 endif()
 
 if(VIENNARAY_HAS_LIBS)
-  install(DIRECTORY "viennaps.libs" DESTINATION .)
+  install(DIRECTORY "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs" DESTINATION .)
 endif()
