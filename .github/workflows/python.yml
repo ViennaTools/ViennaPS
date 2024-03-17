@@ -52,5 +52,5 @@ jobs:
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: Pre-Built (${{ matrix.os }}
+          name: Pre-Built (${{ matrix.os }})
           path: venv
