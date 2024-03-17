@@ -17,7 +17,7 @@ def _windows_dll_path():
 
     additional_paths = [
         vtk.__path__[0],
-        os.path.join(os.path.dirname(vtk_path), 'vtk.libs')
+        os.path.join(os.path.dirname(vtk_path), 'vtk.libs'),
         os.path.join(os.path.dirname(os.path.dirname(__file__)), 'viennaps.libs')
     ]
 
