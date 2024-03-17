@@ -669,7 +669,7 @@ private:
     auto numMaterials = materialMap->size();
 
 #pragma omp parallel for
-    for (int i = 0; i < matIds->size(); i++) {
+    for (ssize_t i = 0; i < matIds->size(); i++) {
       int materialId = static_cast<int>(matIds->at(i));
       if (!cellSetAboveSurface)
         materialId--;
