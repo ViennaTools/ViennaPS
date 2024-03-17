@@ -13,6 +13,7 @@ set(CMAKE_MACOSX_RPATH ON)
 
 list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN")
 list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../vtkmodules")
+list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../viennaps.libs")
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Dependencies
