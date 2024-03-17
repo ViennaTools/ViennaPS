@@ -88,7 +88,7 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaLS
-  GIT_TAG 8d9bd73 # TODO: Create new tag and use VERSION
+  GIT_TAG 646d1a98f9145551a49f22e62476d40e6eb76d9f # TODO: Create new tag and use VERSION
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
