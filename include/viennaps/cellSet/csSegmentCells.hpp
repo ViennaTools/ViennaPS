@@ -37,7 +37,7 @@ public:
     auto materials = cellSet->getScalarData("Material");
 
 #pragma omp parallel for
-    for (int i = 0; i < materials->size(); ++i) {
+    for (unsigned i = 0; i < materials->size(); ++i) {
       if (!psMaterialMap::isMaterial(materials->at(i), bulkMaterial)) {
         auto neighbors = cellSet->getNeighbors(i);
         for (auto n : neighbors) {

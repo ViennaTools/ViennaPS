@@ -569,7 +569,7 @@ public:
     }
 
 #pragma omp parallel for
-    for (int cellIdx = 0; cellIdx < numCells; cellIdx++) {
+    for (unsigned cellIdx = 0; cellIdx < numCells; cellIdx++) {
       auto coord = nodes[cells[cellIdx][0]];
       for (int i = 0; i < D; i++) {
         coord[i] += gridDelta / 2.;
@@ -669,7 +669,7 @@ private:
     auto numMaterials = materialMap->size();
 
 #pragma omp parallel for
-    for (ssize_t i = 0; i < matIds->size(); i++) {
+    for (size_t i = 0; i < matIds->size(); i++) {
       int materialId = static_cast<int>(matIds->at(i));
       if (!cellSetAboveSurface)
         materialId--;

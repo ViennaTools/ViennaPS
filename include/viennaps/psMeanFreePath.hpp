@@ -185,7 +185,7 @@ private:
     std::vector<NumericType> result(numCells, 0);
     for (const auto &data : threadLocalData) {
 #pragma omp parallel for
-      for (int i = 0; i < numCells; ++i) {
+      for (unsigned i = 0; i < numCells; ++i) {
         result[i] += data[i];
       }
     }
@@ -194,14 +194,14 @@ private:
     std::vector<NumericType> hitCounts(numCells, 0);
     for (const auto &data : threadLocalHitCount) {
 #pragma omp parallel for
-      for (int i = 0; i < numCells; ++i) {
+      for (unsigned i = 0; i < numCells; ++i) {
         hitCounts[i] += data[i];
       }
     }
 
     // normalize data
 #pragma omp parallel for
-    for (int i = 0; i < numCells; ++i) {
+    for (unsigned i = 0; i < numCells; ++i) {
       if (hitCounts[i] > 0)
         result[i] = result[i] / hitCounts[i];
       else
@@ -212,7 +212,7 @@ private:
     auto finalResult = cellSet->addScalarData("MeanFreePath");
     materialIds = cellSet->getScalarData("Material");
 #pragma omp parallel for
-    for (int i = 0; i < numCells; i++) {
+    for (unsigned i = 0; i < numCells; i++) {
       if (!psMaterialMap::isMaterial(materialIds->at(i), material))
         continue;
 
