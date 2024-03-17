@@ -38,9 +38,8 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           python3 -m venv venv
-          ./venv/Scripts/activate.bat
-          pip install .
-          python3 -c "import viennaps2d; print(viennaps2d.__doc__)"
+          ./venv/Scripts/pip install .
+          ./venv/Scripts/python -c "import viennaps2d; print(viennaps2d.__doc__)"
 
       - name: 🐍 Build and check Python Module (Other)
         if: ${{ matrix.os != 'windows-latest' }}

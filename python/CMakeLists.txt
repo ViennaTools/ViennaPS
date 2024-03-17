@@ -50,10 +50,6 @@ macro(setup_binding NAME FLAGS)
   pybind11_add_module("${MODULE_NAME}" "pyWrap.cpp")
   add_dependencies(${PROJECT_NAME} ${MODULE_NAME})
 
-  if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
-    setup_embree_env(${MODULE_NAME} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-  endif()
-
   target_link_libraries(${MODULE_NAME} PUBLIC ViennaPS)
   target_compile_definitions(${MODULE_NAME} PRIVATE ${FLAGS} -DVIENNAPS_MODULE_NAME=${MODULE_NAME})
 
@@ -69,3 +65,13 @@ endmacro()
 
 setup_binding(viennaps2d -DVIENNAPS_PYTHON_DIMENSION=2)
 setup_binding(viennaps3d -DVIENNAPS_PYTHON_DIMENSION=3)
+
+if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
+  setup_embree_env(${MODULE_NAME} ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs)
+endif()
+
+if(WIN32 AND NOT VIENNALS_SYSTEM_VTK)
+  setup_vtk_env(${MODULE_NAME} ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs)
+endif()
+
+install(DIRECTORY "viennaps.libs" DESTINATION .)
