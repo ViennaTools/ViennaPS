@@ -40,55 +40,34 @@ if(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
 endif()
 
 # --------------------------------------------------------------------------------------------------------
-# Setup 2D-Bindings
+# Binding macro
 # --------------------------------------------------------------------------------------------------------
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d)
-set(VIENNAPS_PYTHON_MODULE_NAME_2D "_${VIENNAPS_PYTHON_MODULE_NAME}2d")
+macro(setup_binding NAME FLAGS)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/${NAME})
+  set(MODULE_NAME "_${NAME}")
 
-pybind11_add_module("${VIENNAPS_PYTHON_MODULE_NAME_2D}" "pyWrap.cpp")
-add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME_2D})
+  pybind11_add_module("${MODULE_NAME}" "pyWrap.cpp")
+  add_dependencies(${PROJECT_NAME} ${MODULE_NAME})
 
-if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
-  setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME_2D} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-endif()
+  if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
+    setup_embree_env(${MODULE_NAME} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+  endif()
 
-target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_2D} PUBLIC ViennaPS)
-target_compile_definitions(
-  ${VIENNAPS_PYTHON_MODULE_NAME_2D}
-  PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2 -DVIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME_2D})
+  target_link_libraries(${MODULE_NAME} PUBLIC ViennaPS)
+  target_compile_definitions(
+    ${MODULE_NAME}
+    PRIVATE ${FLAGS} -DVIENNAPS_MODULE_NAME=${MODULE_NAME})
 
-set(MODULE_NAME ${VIENNAPS_PYTHON_MODULE_NAME_2D})
-configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
+  configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
 
-# --------------------------------------------------------------------------------------------------------
-# Setup 3D-Bindings
-# --------------------------------------------------------------------------------------------------------
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d)
-set(VIENNAPS_PYTHON_MODULE_NAME_3D "_${VIENNAPS_PYTHON_MODULE_NAME}3d")
-
-pybind11_add_module("${VIENNAPS_PYTHON_MODULE_NAME_3D}" "pyWrap.cpp")
-add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME_3D})
-
-if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
-  setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME_3D} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-endif()
-
-target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_3D} PUBLIC ViennaPS)
-target_compile_definitions(
-  ${VIENNAPS_PYTHON_MODULE_NAME_3D}
-  PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3 -DVIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME_3D})
-
-set(MODULE_NAME ${VIENNAPS_PYTHON_MODULE_NAME_3D})
-configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
+  install(TARGETS ${MODULE_NAME} LIBRARY DESTINATION ${NAME})
+  install(DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/" DESTINATION ${NAME})
+endmacro()
 
 # --------------------------------------------------------------------------------------------------------
-# Setup Install Target
+# Setup Bindings
 # --------------------------------------------------------------------------------------------------------
 
-install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_2D} LIBRARY DESTINATION viennaps2d)
-install(DIRECTORY "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d" DESTINATION viennaps2d)
-
-install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_3D} LIBRARY DESTINATION viennaps3d)
-install(DIRECTORY "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d" DESTINATION viennaps3d)
+setup_binding(viennaps2d -DVIENNAPS_PYTHON_DIMENSION=2)
+setup_binding(viennaps3d -DVIENNAPS_PYTHON_DIMENSION=3)
