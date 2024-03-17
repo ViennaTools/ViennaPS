@@ -21,14 +21,14 @@ def _windows_dll_path():
 if sys.platform == "win32":
     _windows_dll_path()
 
-#Config file reader helper function
-def ReadConfigFile(fileName : str):
+# Config file reader helper function
+def ReadConfigFile(fileName: str):
     """Read a config file in the ViennaPS standard config file format.
 
     Parameters
     ----------
-    fileName : str
-               Name of the config file.
+    fileName: str
+              Name of the config file.
     
     Returns
     -------
