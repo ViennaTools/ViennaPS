@@ -5,7 +5,7 @@ project(
   VERSION 2.0.0)
 
 # --------------------------------------------------------------------------------------------------------
-# Library options
+# Library switches
 # --------------------------------------------------------------------------------------------------------
 
 option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
@@ -14,6 +14,17 @@ option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
+
+# --------------------------------------------------------------------------------------------------------
+# Library options
+# --------------------------------------------------------------------------------------------------------
+
+set(VIENNAPS_LOOKUP_DIRS
+    ""
+    CACHE STRING
+          "Directories to account for when searching installed dependencies (e.g. ViennaLS, ...)")
+
+          list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 
 # --------------------------------------------------------------------------------------------------------
 # Global CMake Configuration
