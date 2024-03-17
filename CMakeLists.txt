@@ -33,7 +33,9 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 #   link against the vtk-python libs
 # --------------------------------------------------------------------------------------------------------
 
-set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ${VIENNAPS_BUILD_PYTHON})
+if (VIENNAPS_BUILD_PYTHON)
+  set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
+endif()
 
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:llvm /bigobj")
@@ -88,7 +90,7 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaLS
-  GIT_TAG f3302b5 # TODO: Create new tag and use VERSION
+  GIT_TAG a5d3a63 # TODO: Create new tag and use VERSION
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
