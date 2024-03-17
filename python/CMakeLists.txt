@@ -10,6 +10,8 @@ add_custom_target(${PROJECT_NAME} ALL)
 # --------------------------------------------------------------------------------------------------------
 
 set(CMAKE_MACOSX_RPATH ON)
+
+list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN")
 list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../vtkmodules")
 
 # --------------------------------------------------------------------------------------------------------
@@ -47,6 +49,10 @@ set(VIENNAPS_PYTHON_MODULE_NAME_2D "_${VIENNAPS_PYTHON_MODULE_NAME}2d")
 pybind11_add_module("${VIENNAPS_PYTHON_MODULE_NAME_2D}" "pyWrap.cpp")
 add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME_2D})
 
+if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
+  setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME_2D} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+endif()
+
 target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_2D} PUBLIC ViennaPS)
 target_compile_definitions(
   ${VIENNAPS_PYTHON_MODULE_NAME_2D}
@@ -65,6 +71,10 @@ set(VIENNAPS_PYTHON_MODULE_NAME_3D "_${VIENNAPS_PYTHON_MODULE_NAME}3d")
 pybind11_add_module("${VIENNAPS_PYTHON_MODULE_NAME_3D}" "pyWrap.cpp")
 add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME_3D})
 
+if(NOT VIENNARAY_DISABLE_COPY AND NOT VIENNARAY_SYSTEM_EMBREE)
+  setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME_3D} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+endif()
+
 target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_3D} PUBLIC ViennaPS)
 target_compile_definitions(
   ${VIENNAPS_PYTHON_MODULE_NAME_3D}
@@ -78,7 +88,7 @@ configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
 # --------------------------------------------------------------------------------------------------------
 
 install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_2D} LIBRARY DESTINATION viennaps2d)
-install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d/__init__.py" DESTINATION viennaps2d)
+install(DIRECTORY "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d" DESTINATION viennaps2d)
 
 install(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME_3D} LIBRARY DESTINATION viennaps3d)
-install(FILES "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d/__init__.py" DESTINATION viennaps3d)
+install(DIRECTORY "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d" DESTINATION viennaps3d)

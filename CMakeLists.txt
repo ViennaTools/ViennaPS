@@ -68,8 +68,8 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  GIT_TAG b03c7e2 # TODO: Create new tag and use VERSION
-  GIT_REPOSITORY "https://github.com/Curve/ViennaRay"
+  GIT_TAG 091fc29 # TODO: Create new tag and use VERSION
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
