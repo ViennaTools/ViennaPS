@@ -55,9 +55,7 @@ macro(setup_binding NAME FLAGS)
   endif()
 
   target_link_libraries(${MODULE_NAME} PUBLIC ViennaPS)
-  target_compile_definitions(
-    ${MODULE_NAME}
-    PRIVATE ${FLAGS} -DVIENNAPS_MODULE_NAME=${MODULE_NAME})
+  target_compile_definitions(${MODULE_NAME} PRIVATE ${FLAGS} -DVIENNAPS_MODULE_NAME=${MODULE_NAME})
 
   configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
 
