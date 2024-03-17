@@ -25,6 +25,10 @@ option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ${VIENNAPS_BUILD_PYTHON})
 
+if (MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:llvm")
+endif()
+
 # --------------------------------------------------------------------------------------------------------
 # Setup Library
 # --------------------------------------------------------------------------------------------------------

@@ -21,10 +21,6 @@ jobs:
 
         vtk-system: [true, false]
 
-        include:
-          - os: windows-latest
-            cmake_args: '-DCMAKE_CXX_FLAGS="-openmp:llvm"'
-
         exclude:
           - os: macos-latest
             vtk-system: true
