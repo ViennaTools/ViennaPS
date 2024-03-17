@@ -33,7 +33,7 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 #   link against the vtk-python libs
 # --------------------------------------------------------------------------------------------------------
 
-if (VIENNAPS_BUILD_PYTHON)
+if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
 endif()
 
