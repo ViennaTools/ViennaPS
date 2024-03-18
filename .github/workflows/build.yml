@@ -12,8 +12,8 @@ jobs:
 
       matrix:
         config:
-          - Release
           - Debug
+          - Release
         os:
           - macos-latest
           - ubuntu-latest

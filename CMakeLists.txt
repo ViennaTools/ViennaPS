@@ -34,7 +34,6 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 # --------------------------------------------------------------------------------------------------------
 
 if(VIENNAPS_BUILD_PYTHON)
-  set(CMAKE_MACOSX_RPATH ON)
   set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
 endif()
 

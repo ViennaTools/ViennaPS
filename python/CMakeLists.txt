@@ -9,6 +9,8 @@ add_custom_target(${PROJECT_NAME} ALL)
 #   set the rpath for our python modules to point to the vtkmodules folder.
 # --------------------------------------------------------------------------------------------------------
 
+set(CMAKE_MACOSX_RPATH ON)
+
 if(NOT APPLE)
   list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN")
   list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../vtkmodules")
@@ -18,6 +20,7 @@ else()
   list(APPEND CMAKE_INSTALL_RPATH "@loader_path/../vtkmodules")
   list(APPEND CMAKE_INSTALL_RPATH "@loader_path/../viennaps.libs")
 endif()
+
 # --------------------------------------------------------------------------------------------------------
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
