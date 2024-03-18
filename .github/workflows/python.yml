@@ -49,6 +49,7 @@ jobs:
           ./venv/bin/python -c "import viennaps2d; print(viennaps2d.__doc__)"
 
       - name: 📦 Upload Artifact
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: Pre-Built (${{ matrix.os }})
