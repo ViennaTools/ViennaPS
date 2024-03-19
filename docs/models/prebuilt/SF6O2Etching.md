@@ -92,6 +92,73 @@ psSF6O2Etching(const double ionFlux, const double etchantFlux,
 {: .note}
 > All flux values are units 10<sup>16</sup> / cm<sup>2</sup>.
 
+Alternatively, users can access and modify all detailed parameters by retrieving the parameter struct, which encapsulates the following values:
+
+| Parameter           | Description                                            | Default Value          |
+|---------------------|--------------------------------------------------------|------------------------|
+| `ionFlux`             | Ion flux (10<sup>16</sup> /cm² /s)                     | 12.0                   |
+| `etchantFlux`         | Etchant flux (10<sup>16</sup> /cm² /s)                 | 1800.0                 |
+| `oxygenFlux`          | Oxygen flux (10<sup>16</sup> /cm² /s)                  | 100.0                  |
+| `etchStopDepth`       | Depth at which etching stops                           | -inf                   |
+| `beta_F`              | Sticking probability for fluorine                      | 0.7                    |
+| `beta_O`              | Sticking probability for oxygen                        | 1.0                    |
+| `Mask.rho`            | Mask density (10<sup>22</sup> atoms/cm³)               | 500.0                  |
+| `Mask.beta_F`         | Mask sticking probability for fluorine                 | 0.01                   |
+| `Mask.beta_O`         | Mask sticking probability for oxygen                   | 0.1                    |
+| `Mask.Eth_sp`         | Mask sputtering threshold energy (eV)                  | 20.0                   |
+| `Mask.A_sp`           | Mask sputtering coefficient                            | 0.0139                 |
+| `Mask.B_sp`           | Mask sputtering coefficient                            | 9.3                    |
+| `Si.rho`              | Silicon density (10<sup>22</sup> atoms/cm³)            | 5.02                   |
+| `Si.Eth_sp`           | Silicon sputtering threshold energy (eV)               | 20.0                   |
+| `Si.Eth_ie`           | Silicon ion enhanced etching threshold energy (eV)     | 4.0                    |
+| `Si.A_sp`             | Silicon sputtering coefficient                         | 0.0337                 |
+| `Si.B_sp`             | Silicon sputtering coefficient                         | 9.3                    |
+| `Si.A_ie`             | Silicon ion enhanced etching coefficient               | 0.0361                 |
+| `Si.k_sigma`          | Silicon chemical etching coefficient                   | 300.0                  |
+| `Si.beta_sigma`       | Silicon chemical etching coefficient                   | 0.05                   |
+| `Passivation.Eth_ie`  | Passivation ion enhanced etching threshold energy (eV) | 4.0                    |
+| `Passivation.A_ie`    | Passivation ion enhanced etching coefficient           | 0.0361                 |
+| `Ions.meanEnergy`     | Mean ion energy (eV)                                   | 100.0                  |
+| `Ions.sigmaEnergy`    | Standard deviation of ion energy (eV)                  | 10.0                   |
+| `Ions.exponent`       | Exponent of power cosine source distribution           | 500.0                  |
+| `Ions.inflectAngle`   | Inflection angle                                       | 1.55334303             |
+| `Ions.n_l`            | Exponent of reflection power                           | 10.0                   |
+| `Ions.minAngle`       | Minimum cone angle                                     | 1.3962634              |
+
+__Example usage:__
+
+<details markdown="1">
+<summary markdown="1">
+C++
+{: .label .label-blue}
+</summary>
+```c++
+...
+auto model = psSmartPointer<psSF6O2Etching<NumericType, D>>::New();
+auto &parameters = model->getParameters();
+parameters.ionFlux = 10.; 
+parameters.Mask.rho = 500.;
+// this modifies a direct reference of the parameters
+...
+```
+</details>
+
+<details markdown="1">
+<summary markdown="1">
+Python
+{: .label .label-green}
+</summary>
+```python
+...
+model = vps.SF6O2Etching()
+parameters = model.getParameters()
+parameters.ionFlux = 10.
+parameters.Mask.rho = 500.
+# this modifies a direct reference of the parameters
+...
+```
+</details>
+
 ## Related Examples
 
 * [Hole Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching)

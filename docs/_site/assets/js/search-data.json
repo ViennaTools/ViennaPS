@@ -8,7 +8,7 @@
   },"1": {
     "doc": "SF<sub>6</sub>O<sub>2</sub> Etching",
     "title": "Implementation",
-    "content": "psSF6O2Etching(const double ionFlux, const double etchantFlux, const double oxygenFlux, const NumericType meanEnergy /* eV */, const NumericType sigmaEnergy /* eV */, const NumericType ionExponent = 100., const NumericType oxySputterYield = 2., const NumericType etchStopDepth = std::numeric_limits&lt;NumericType&gt;::lowest()) . | Parameter | Description | Type | . | ionFlux | Ion flux for the SF6O2 etching process. | double | . | etchantFlux | Etchant flux for the SF6O2 etching process. | double | . | oxygenFlux | Oxygen flux for the SF6O2 etching process. | double | . | meanEnergy | Mean energy of particles in electronvolts (eV). | NumericType | . | sigmaEnergy | Energy distribution standard deviation in electronvolts (eV). | NumericType | . | ionExponent | (Optional) Exponent power cosine source distribution of the ions. Default is set to 100. | NumericType | . | oxySputterYield | (Optional) Oxygen sputtering yield. Default is set to 2. | NumericType | . | etchStopDepth | (Optional) Depth at which etching should stop. Default is negative infinity. | NumericType | . All flux values are units 1016 / cm2. ",
+    "content": "psSF6O2Etching(const double ionFlux, const double etchantFlux, const double oxygenFlux, const NumericType meanEnergy /* eV */, const NumericType sigmaEnergy /* eV */, const NumericType ionExponent = 100., const NumericType oxySputterYield = 2., const NumericType etchStopDepth = std::numeric_limits&lt;NumericType&gt;::lowest()) . | Parameter | Description | Type | . | ionFlux | Ion flux for the SF6O2 etching process. | double | . | etchantFlux | Etchant flux for the SF6O2 etching process. | double | . | oxygenFlux | Oxygen flux for the SF6O2 etching process. | double | . | meanEnergy | Mean energy of particles in electronvolts (eV). | NumericType | . | sigmaEnergy | Energy distribution standard deviation in electronvolts (eV). | NumericType | . | ionExponent | (Optional) Exponent power cosine source distribution of the ions. Default is set to 100. | NumericType | . | oxySputterYield | (Optional) Oxygen sputtering yield. Default is set to 2. | NumericType | . | etchStopDepth | (Optional) Depth at which etching should stop. Default is negative infinity. | NumericType | . All flux values are units 1016 / cm2. Alternatively, users can access and modify all detailed parameters by retrieving the parameter struct, which encapsulates the following values: . | Parameter | Description | Default Value | . | ionFlux | Ion flux (1016 /cm² /s) | 12.0 | . | etchantFlux | Etchant flux (1016 /cm² /s) | 1800.0 | . | oxygenFlux | Oxygen flux (1016 /cm² /s) | 100.0 | . | etchStopDepth | Depth at which etching stops | -inf | . | beta_F | Sticking probability for fluorine | 0.7 | . | beta_O | Sticking probability for oxygen | 1.0 | . | Mask.rho | Mask density (1022 atoms/cm³) | 500.0 | . | Mask.beta_F | Mask sticking probability for fluorine | 0.01 | . | Mask.beta_O | Mask sticking probability for oxygen | 0.1 | . | Mask.Eth_sp | Mask sputtering threshold energy (eV) | 20.0 | . | Mask.A_sp | Mask sputtering coefficient | 0.0139 | . | Mask.B_sp | Mask sputtering coefficient | 9.3 | . | Si.rho | Silicon density (1022 atoms/cm³) | 5.02 | . | Si.Eth_sp | Silicon sputtering threshold energy (eV) | 20.0 | . | Si.Eth_ie | Silicon ion enhanced etching threshold energy (eV) | 4.0 | . | Si.A_sp | Silicon sputtering coefficient | 0.0337 | . | Si.B_sp | Silicon sputtering coefficient | 9.3 | . | Si.A_ie | Silicon ion enhanced etching coefficient | 0.0361 | . | Si.k_sigma | Silicon chemical etching coefficient | 300.0 | . | Si.beta_sigma | Silicon chemical etching coefficient | 0.05 | . | Passivation.Eth_ie | Passivation ion enhanced etching threshold energy (eV) | 4.0 | . | Passivation.A_ie | Passivation ion enhanced etching coefficient | 0.0361 | . | Ions.meanEnergy | Mean ion energy (eV) | 100.0 | . | Ions.sigmaEnergy | Standard deviation of ion energy (eV) | 10.0 | . | Ions.exponent | Exponent of power cosine source distribution | 500.0 | . | Ions.inflectAngle | Inflection angle | 1.55334303 | . | Ions.n_l | Exponent of reflection power | 10.0 | . | Ions.minAngle | Minimum cone angle | 1.3962634 | . Example usage: . C++ ... auto model = psSmartPointer&lt;psSF6O2Etching&lt;NumericType, D&gt;&gt;::New(); auto &amp;parameters = model-&gt;getParameters(); parameters.ionFlux = 10.; parameters.Mask.rho = 500.; // this modifies a direct reference of the parameters ... Python ... model = vps.SF6O2Etching() parameters = model.getParameters() parameters.ionFlux = 10. parameters.Mask.rho = 500. # this modifies a direct reference of the parameters ... ",
     "url": "/models/prebuilt/SF6O2Etching.html#implementation",
     
     "relUrl": "/models/prebuilt/SF6O2Etching.html#implementation"
@@ -181,187 +181,187 @@
     
     "relUrl": "/geo/basic/hole.html"
   },"26": {
-    "doc": "Advanced Cell-Set Functionalities",
-    "title": "Advanced Cell-Set Functionalities",
-    "content": ". Coming soon . ",
-    "url": "/cellset/",
-    
-    "relUrl": "/cellset/"
-  },"27": {
-    "doc": "Miscellaneous",
-    "title": "Miscellaneous",
-    "content": " ",
-    "url": "/misc/",
-    
-    "relUrl": "/misc/"
-  },"28": {
-    "doc": "Examples",
-    "title": "Examples",
-    "content": ". | Custom Example Process | GDS Reader | Cantilever Wet Etching | Selective Epitaxy | Trench Deposition | Trench Deposition Geometric | TEOS Trench Deposition | Hole Etching | Stack Etching | Oxide Regrowth | Volume Model | KD Tree Benchmark | Interpolation Demo | . ",
-    "url": "/examples/",
-    
-    "relUrl": "/examples/"
-  },"29": {
-    "doc": "Basic Geometries",
-    "title": "Basic Geometries",
-    "content": ". ViennaPS provides a set of functions to effortlessly create basic geometries, facilitating quick testing of models or serving as the groundwork for your process simulation configuration. The various available geometries are outlined below: . ",
-    "url": "/geo/basic/",
-    
-    "relUrl": "/geo/basic/"
-  },"30": {
-    "doc": "Creating a Geometry",
-    "title": "Creating a Geometry",
-    "content": ". Create intricate geometries using the versatile tools offered by ViennaLS or generate a basic geometry using of the provided geometry builders. Alternatively, you can import a geometry from a GDSII mask file. ",
-    "url": "/geo/",
-    
-    "relUrl": "/geo/"
-  },"31": {
-    "doc": "Geometry Output",
-    "title": "Geometry Output",
-    "content": ". ViennaPS provides various methods for outputting the surface or volume of the processed domain. The data is typically saved in the VTK file format, with surfaces stored in .vtp files and volumes in .vtu files. For visualization, we recommend using ParaView, a powerful open-source visualization tool. Below, you’ll find further details on the available geometry outputs. In addition to VTK file formats, ViennaPS provides the flexibility to store level sets directly in the proprietary .lvst format. This feature enables users to save intermediate states during the process, allowing for more detailed analysis and the ability to revisit specific simulation stages. ",
-    "url": "/output/",
-    
-    "relUrl": "/output/"
-  },"32": {
-    "doc": "Pre-Built Models",
-    "title": "Pre-Built Models",
-    "content": " ",
-    "url": "/models/prebuilt/",
-    
-    "relUrl": "/models/prebuilt/"
-  },"33": {
-    "doc": "Custom Models",
-    "title": "Custom Models",
-    "content": ". Users can create a custom process model by interfacing one or more of the classes described below and then inserting them into their custom process model. | The psSurfaceModel class is used to describe surface reactions, combining particle fluxes with the surface chemical reactions. | The psVelocityField provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step. | ViennaPS seamlessly integrates ViennaRay functionality through the rayParticle class, providing users with a versatile interface to define the key characteristics of the simulated particle species. | . ",
-    "url": "/models/custom/",
-    
-    "relUrl": "/models/custom/"
-  },"34": {
-    "doc": "Process Models",
-    "title": "Process Models",
-    "content": "#include &lt;psProcessModel.hpp&gt; . All the information about the process is encompassed in the class psProcessModel, as it includes all the particle type information required for ray tracing, the surface model, as well as advection callbacks, for generating volume models describing chemical processes inside the material. Users have the flexibility to configure their own custom process model or opt for pre-defined models encompassing frequently used processes. ",
-    "url": "/models/",
-    
-    "relUrl": "/models/"
-  },"35": {
     "doc": "General Notes",
     "title": "General Notes",
     "content": ". ",
     "url": "/general/",
     
     "relUrl": "/general/"
-  },"36": {
+  },"27": {
     "doc": "General Notes",
     "title": "Numeric Types",
     "content": "ViennaPS supports the utilization of either float or double as the underlying numeric type. While float might offer slightly higher performance in some cases, it is generally recommended to use double in your simulation due to its enhanced precision. It’s essential to note that the choice of numeric type is a static (compile-time) parameter in every ViennaPS class and function. Once a numeric type is selected for a particular simulation, it is not possible to switch to a different numeric type within the program. Additionally, for users working with Python bindings, it’s important to be aware that the Python interface always uses double as the numeric type. ",
     "url": "/general/#numeric-types",
     
     "relUrl": "/general/#numeric-types"
-  },"37": {
+  },"28": {
     "doc": "General Notes",
     "title": "Switching between 2D and 3D mode",
     "content": "ViennaPS provides the flexibility for users to choose between 2D and 3D modes during compile time. The dimensionality is specified as a second template (static) parameter, and most classes and functions in ViennaPS adhere to this structure. It’s important to note that 2D and 3D classes cannot be mixed within the same simulation, and the choice of dimensionality is fixed at compile time. For users who need to transition from a 2D to a 3D simulation, ViennaPS offers the psExtrude utility. This utility enables the extrusion of a 2D domain to 3D, providing a seamless way to extend simulations across different dimensions. ",
     "url": "/general/#switching-between-2d-and-3d-mode",
     
     "relUrl": "/general/#switching-between-2d-and-3d-mode"
-  },"38": {
+  },"29": {
     "doc": "General Notes",
     "title": "Using Smart Pointers",
     "content": "In ViennaPS, smart pointers are utilized to pass domains, models, and other essential objects to processes and utility functions. To facilitate this, the library includes a custom class named psSmartPointer, serving as a shared pointer implementation. This design choice ensures efficient memory management and enables seamless interaction between different components within the simulation framework. Example: . // Creating a new domain auto domain = psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt;::New(); // Using a pre-built model auto model = psSmartPointer&lt;psIsotropicProcess&lt;NumericType, D&gt;&gt;::New(/*pass constructor arguments*/); . ",
     "url": "/general/#using-smart-pointers",
     
     "relUrl": "/general/#using-smart-pointers"
-  },"39": {
-    "doc": "Running a Process",
-    "title": "Running a Process",
-    "content": "#include &lt;psProcess.hpp&gt; . The psProcess class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also encompasses the necessary methods for configuring these attributes. Upon setting these parameters, the apply() method is employed to execute the process, initiating and conducting the simulation. Example usage: . C++ ... psProcess&lt;NumericType, D&gt; process; process.setDomain(myDomain); process.setProcessModel(myModel); process.setProcessDuration(10.); process.setNumberOfRaysPerPoint(1000); process.enableFluxSmoothing(); process.apply(); ... Python ... process = vps.Process() process.setDomain(myDomain) process.setProcessModel(myModel) process.setProcessDuration(10.) process.setNumberOfRaysPerPoint(1000) process.enableFluxSmoothing() process.apply() ... ",
-    "url": "/process/",
-    
-    "relUrl": "/process/"
-  },"40": {
-    "doc": "Running a Process",
-    "title": "Member Functions",
-    "content": "Constructors . // Default constructor psProcess() // Constructor from domain psProcess(psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt; passedDomain) // Constructor from domain, process model, and duration, // to apply simple processes template &lt;typename ProcessModelType&gt; psProcess(psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt; passedDomain, psSmartPointer&lt;ProcessModelType&gt; passedProcessModel, const NumericType passedDuration = 0.) . In summary, these constructors provide different ways to create a psProcess object, allowing for flexibility depending on what data is available at the time of object creation. | The first constructor is a default constructor. It’s defined as psProcess() and it doesn’t take any arguments. This constructor allows for the creation of a psProcess object without any initial values. | The second constructor takes a single argument: a smart pointer to a psDomain object. This constructor initializes the domain member variable of the psProcess class with the passed psDomain object. | The third constructor is a template constructor that takes three arguments: a smart pointer to a psDomain object, a smart pointer to a ProcessModelType object, and a NumericType representing the process duration. This constructor initializes the domain and processDuration member variables with the passed values and also sets the model member variable to the dynamically cast ProcessModelType object. This allows the user to run a process from an anonymous object. For example: psProcess&lt;NumericType, D&gt;(myDomain, myModel, processDuration).apply() . | . Set the domain . void setDomain(psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt; passedDomain) . Sets the process domain. Set the process model . template &lt;typename ProcessModelType&gt; void setProcessModel(psSmartPointer&lt;ProcessModelType&gt; passedProcessModel) . Sets the process model. This can be either a pre-configured process model or a custom process model. A custom process model must interface the psProcessModel class. Set the source direction . void setSourceDirection(const rayTraceDirection passedDirection) . Set the source direction, where the rays should be traced from. The passed direction parameter is using the enum rayTraceDirection which contains the following values: POS_X, NEG_X, POS_Y, NEG_Y, POS_Z, NEG_Z. Set the process duration . void setProcessDuration(NumericType passedDuration) . Specifies the duration of the process. If the process duration is set to 0, exclusively the advection callback applyPreAdvect() is executed on the domain. This feature is particularly useful for applying only a volume model without engaging in further simulation steps. Set the number of rays to be traced . void setNumberOfRaysPerPoint(unsigned raysPerPoint) . Specify the number of rays to be traced for each particle throughout the process. The total count of rays is the product of this number and the number of points in the process geometry. Set the number of coverage initialization iterations . void setMaxCoverageInitIterations(unsigned numIter) . Set the number of iterations to initialize the coverages. Enable or disable flux smoothing . void enableFluxSmoothing() void disableFluxSmoothing() . Toggle the option to enable or disable flux smoothing. When flux smoothing is activated, the flux at each surface point, computed by the ray tracer, undergoes averaging across the neighboring surface points. Per default, flux smoothing is enabled. Set the integration scheme . void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) . Set the integration scheme for solving the level-set equation. Possible integration schemes are specified in lsIntegrationSchemeEnum. Set the time step ratio . void setTimeStepRatio(NumericType cfl) . Set the CFL (Courant-Friedrichs-Levy) condition to use during surface advection in the level-set. The CFL condition defines the maximum distance a surface is allowed to move in a single advection step. It MUST be below 0.5 to guarantee numerical stability. Defaults to 0.4999. Set time interval to save intermediate results . void setPrintTimeInterval(NumericType passedTime) . Sets the minimum time between printing intermediate results during the process. If this is set to a non-positive value, no intermediate results are printed. ",
-    "url": "/process/#member-functions",
-    
-    "relUrl": "/process/#member-functions"
-  },"41": {
+  },"30": {
     "doc": "Dependencies",
     "title": "Dependencies",
     "content": ". ",
     "url": "/deps/",
     
     "relUrl": "/deps/"
-  },"42": {
+  },"31": {
     "doc": "Dependencies",
     "title": "ViennaLS",
     "content": "ViennaLS forms the foundation of the process simulator, applying the level-set surface representation concepts for topography simulations. This module not only stores the level-set surface but also encompasses essential algorithms for geometry initialization, level-set value manipulation based on a velocity field, surface feature analysis, and seamless conversion of the level-set representation to other commonly employed material representations in device simulators. ",
     "url": "/deps/#viennals",
     
     "relUrl": "/deps/#viennals"
-  },"43": {
+  },"32": {
     "doc": "Dependencies",
     "title": "ViennaRay",
     "content": "ViennaPS relies on ViennaRay, a top-down Monte Carlo flux calculation library, to carry out essential flux calculations. This library is built upon Intel®’s ray tracing kernel, Embree. Crafted with a focus on efficiency and high-performance ray tracing, ViennaRay ensures a seamless user experience through its straightforward and user-friendly interface. In the top-down Monte Carlo approach, a large number of pseudo-particles are launched from a source plane situated above the surface, and their points of impact on the surface are determined. These pseudo-particles are initialized with a uniform initial position on the source plane and an initial direction that follows a power-cosine distribution. Each pseudo-particle carries a specific payload, representing a fraction of the total source flux. Upon reaching the surface, the current payload of the pseudo-particle contributes to the flux at that particular surface location. Furthermore, pseudo-particles have the capability to undergo reflection from the surface. The payload of a pseudo-particle undergoes reduction by the sticking coefficient during reflection. As a result, a pseudo-particle is tracked until its payload falls below a certain threshold or until it exits the simulation domain. This tracking mechanism provides a comprehensive understanding of the particle dynamics during its interaction with the sample surface. ",
     "url": "/deps/#viennaray",
     
     "relUrl": "/deps/#viennaray"
-  },"44": {
-    "doc": "Simulation Domain",
-    "title": "Simulation Domain",
-    "content": "#include &lt;psDomain.hpp&gt; . In our simulation framework, the essential hub for all geometry details is the psDomain class. This class is like a smart keeper of information, holding everything about the materials in the simulation domain. It uses level sets to show surfaces and material interfaces with great detail and organizes data in a cell-based structure for the underlying volumes. Depending on the specific process, it can use one or both of these methods. This flexibility ensures that the simulation can handle different processes accurately and efficiently. ",
-    "url": "/domain/",
+  },"33": {
+    "doc": "Miscellaneous",
+    "title": "Miscellaneous",
+    "content": " ",
+    "url": "/misc/",
     
-    "relUrl": "/domain/"
-  },"45": {
+    "relUrl": "/misc/"
+  },"34": {
+    "doc": "Geometry Output",
+    "title": "Geometry Output",
+    "content": ". ViennaPS provides various methods for outputting the surface or volume of the processed domain. The data is typically saved in the VTK file format, with surfaces stored in .vtp files and volumes in .vtu files. For visualization, we recommend using ParaView, a powerful open-source visualization tool. Below, you’ll find further details on the available geometry outputs. In addition to VTK file formats, ViennaPS provides the flexibility to store level sets directly in the proprietary .lvst format. This feature enables users to save intermediate states during the process, allowing for more detailed analysis and the ability to revisit specific simulation stages. ",
+    "url": "/output/",
+    
+    "relUrl": "/output/"
+  },"35": {
+    "doc": "Advanced Cell-Set Functionalities",
+    "title": "Advanced Cell-Set Functionalities",
+    "content": ". Coming soon . ",
+    "url": "/cellset/",
+    
+    "relUrl": "/cellset/"
+  },"36": {
     "doc": "Installing the Library",
     "title": "Installing the Library",
     "content": ". ",
     "url": "/inst/",
     
     "relUrl": "/inst/"
-  },"46": {
+  },"37": {
     "doc": "Installing the Library",
     "title": "Supported Operating Systems",
     "content": ". | Windows (Visual Studio) . | Linux (g++ / clang) . | macOS (XCode) . | . ",
     "url": "/inst/#supported-operating-systems",
     
     "relUrl": "/inst/#supported-operating-systems"
-  },"47": {
+  },"38": {
     "doc": "Installing the Library",
     "title": "System Requirements",
     "content": ". | C++17 Compiler with OpenMP support | . ",
     "url": "/inst/#system-requirements",
     
     "relUrl": "/inst/#system-requirements"
-  },"48": {
+  },"39": {
     "doc": "Installing the Library",
     "title": "Installation",
     "content": "Since this is a header only project, it does not require any installation. However, we recommend the following procedure in order to set up all dependencies correctly and relocate all header files to a designated directory: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS mkdir build &amp;&amp; cd build cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/ make buildDependencies # this will install all dependencies and might take a while make install . The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the buildDependencies target. This will install the necessary headers and CMake files to the specified path. If CMAKE_INSTALL_PREFIX is not specified, it will be installed to the standard path for your system, usually /usr/local/ . If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding *_DIR variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install). ViennaLS and ViennaRay both have external dependencies which can be installed beforehand to save some time when building the dependencies. ViennaLS uses VTK as dependency and ViennaRay uses Embree. On Linux based systems, these dependencies can be installed using the package manager: sudo apt install libvtk9.1 libvtk9-dev libembree3-3 libembree-dev. On macOS, one can use Homebrew to install these dependencies: brew install vtk embree. ",
     "url": "/inst/#installation",
     
     "relUrl": "/inst/#installation"
-  },"49": {
+  },"40": {
     "doc": "Installing the Library",
     "title": "Building the Python package",
     "content": "In order to build the Python bindings, the pybind11 library is required. On Linux based system (Ubuntu/Debian), pybind11 can be installed via the package manager: sudo apt install pybind11-dev. For macOS, the installation via Homebrew is recommended: brew install pybind11. The ViennaPS Python package can be built and installed using the pip command: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS pip install --user . Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the ViennaLS Git Repository. ",
     "url": "/inst/#building-the-python-package",
     
     "relUrl": "/inst/#building-the-python-package"
-  },"50": {
+  },"41": {
     "doc": "Installing the Library",
     "title": "Using the Python package",
     "content": "The 2D version of the library can be imported as follows: . import viennaps2d as vps . In order to switch to three dimensions, only the import needs to be changed: . import viennaps3d as vps . ",
     "url": "/inst/#using-the-python-package",
     
     "relUrl": "/inst/#using-the-python-package"
-  },"51": {
+  },"42": {
     "doc": "Installing the Library",
     "title": "Integration in CMake projects",
     "content": "In order to use this library in your CMake project, add the following lines to the CMakeLists.txt of your project: . set(ViennaPS_DIR \"/path/to/your/custom/install/\") find_package(ViennaPS REQUIRED) add_executable(${PROJECT_NAME} ...) target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS}) target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES}) . ",
     "url": "/inst/#integration-in-cmake-projects",
     
     "relUrl": "/inst/#integration-in-cmake-projects"
+  },"43": {
+    "doc": "Pre-Built Models",
+    "title": "Pre-Built Models",
+    "content": " ",
+    "url": "/models/prebuilt/",
+    
+    "relUrl": "/models/prebuilt/"
+  },"44": {
+    "doc": "Custom Models",
+    "title": "Custom Models",
+    "content": ". Users can create a custom process model by interfacing one or more of the classes described below and then inserting them into their custom process model. | The psSurfaceModel class is used to describe surface reactions, combining particle fluxes with the surface chemical reactions. | The psVelocityField provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step. | ViennaPS seamlessly integrates ViennaRay functionality through the rayParticle class, providing users with a versatile interface to define the key characteristics of the simulated particle species. | . ",
+    "url": "/models/custom/",
+    
+    "relUrl": "/models/custom/"
+  },"45": {
+    "doc": "Process Models",
+    "title": "Process Models",
+    "content": "#include &lt;psProcessModel.hpp&gt; . All the information about the process is encompassed in the class psProcessModel, as it includes all the particle type information required for ray tracing, the surface model, as well as advection callbacks, for generating volume models describing chemical processes inside the material. Users have the flexibility to configure their own custom process model or opt for pre-defined models encompassing frequently used processes. ",
+    "url": "/models/",
+    
+    "relUrl": "/models/"
+  },"46": {
+    "doc": "Running a Process",
+    "title": "Running a Process",
+    "content": "#include &lt;psProcess.hpp&gt; . The psProcess class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also encompasses the necessary methods for configuring these attributes. Upon setting these parameters, the apply() method is employed to execute the process, initiating and conducting the simulation. Example usage: . C++ ... psProcess&lt;NumericType, D&gt; process; process.setDomain(myDomain); process.setProcessModel(myModel); process.setProcessDuration(10.); process.setNumberOfRaysPerPoint(1000); process.enableFluxSmoothing(); process.apply(); ... Python ... process = vps.Process() process.setDomain(myDomain) process.setProcessModel(myModel) process.setProcessDuration(10.) process.setNumberOfRaysPerPoint(1000) process.enableFluxSmoothing() process.apply() ... ",
+    "url": "/process/",
+    
+    "relUrl": "/process/"
+  },"47": {
+    "doc": "Running a Process",
+    "title": "Member Functions",
+    "content": "Constructors . // Default constructor psProcess() // Constructor from domain psProcess(psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt; passedDomain) // Constructor from domain, process model, and duration, // to apply simple processes template &lt;typename ProcessModelType&gt; psProcess(psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt; passedDomain, psSmartPointer&lt;ProcessModelType&gt; passedProcessModel, const NumericType passedDuration = 0.) . In summary, these constructors provide different ways to create a psProcess object, allowing for flexibility depending on what data is available at the time of object creation. | The first constructor is a default constructor. It’s defined as psProcess() and it doesn’t take any arguments. This constructor allows for the creation of a psProcess object without any initial values. | The second constructor takes a single argument: a smart pointer to a psDomain object. This constructor initializes the domain member variable of the psProcess class with the passed psDomain object. | The third constructor is a template constructor that takes three arguments: a smart pointer to a psDomain object, a smart pointer to a ProcessModelType object, and a NumericType representing the process duration. This constructor initializes the domain and processDuration member variables with the passed values and also sets the model member variable to the dynamically cast ProcessModelType object. This allows the user to run a process from an anonymous object. For example: psProcess&lt;NumericType, D&gt;(myDomain, myModel, processDuration).apply() . | . Set the domain . void setDomain(psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt; passedDomain) . Sets the process domain. Set the process model . template &lt;typename ProcessModelType&gt; void setProcessModel(psSmartPointer&lt;ProcessModelType&gt; passedProcessModel) . Sets the process model. This can be either a pre-configured process model or a custom process model. A custom process model must interface the psProcessModel class. Set the source direction . void setSourceDirection(const rayTraceDirection passedDirection) . Set the source direction, where the rays should be traced from. The passed direction parameter is using the enum rayTraceDirection which contains the following values: POS_X, NEG_X, POS_Y, NEG_Y, POS_Z, NEG_Z. Set the process duration . void setProcessDuration(NumericType passedDuration) . Specifies the duration of the process. If the process duration is set to 0, exclusively the advection callback applyPreAdvect() is executed on the domain. This feature is particularly useful for applying only a volume model without engaging in further simulation steps. Set the number of rays to be traced . void setNumberOfRaysPerPoint(unsigned raysPerPoint) . Specify the number of rays to be traced for each particle throughout the process. The total count of rays is the product of this number and the number of points in the process geometry. Set the number of coverage initialization iterations . void setMaxCoverageInitIterations(unsigned numIter) . Set the number of iterations to initialize the coverages. Enable or disable flux smoothing . void enableFluxSmoothing() void disableFluxSmoothing() . Toggle the option to enable or disable flux smoothing. When flux smoothing is activated, the flux at each surface point, computed by the ray tracer, undergoes averaging across the neighboring surface points. Per default, flux smoothing is enabled. Set the integration scheme . void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) . Set the integration scheme for solving the level-set equation. Possible integration schemes are specified in lsIntegrationSchemeEnum. Set the time step ratio . void setTimeStepRatio(NumericType cfl) . Set the CFL (Courant-Friedrichs-Levy) condition to use during surface advection in the level-set. The CFL condition defines the maximum distance a surface is allowed to move in a single advection step. It MUST be below 0.5 to guarantee numerical stability. Defaults to 0.4999. Set time interval to save intermediate results . void setPrintTimeInterval(NumericType passedTime) . Sets the minimum time between printing intermediate results during the process. If this is set to a non-positive value, no intermediate results are printed. ",
+    "url": "/process/#member-functions",
+    
+    "relUrl": "/process/#member-functions"
+  },"48": {
+    "doc": "Simulation Domain",
+    "title": "Simulation Domain",
+    "content": "#include &lt;psDomain.hpp&gt; . In our simulation framework, the essential hub for all geometry details is the psDomain class. This class is like a smart keeper of information, holding everything about the materials in the simulation domain. It uses level sets to show surfaces and material interfaces with great detail and organizes data in a cell-based structure for the underlying volumes. Depending on the specific process, it can use one or both of these methods. This flexibility ensures that the simulation can handle different processes accurately and efficiently. ",
+    "url": "/domain/",
+    
+    "relUrl": "/domain/"
+  },"49": {
+    "doc": "Basic Geometries",
+    "title": "Basic Geometries",
+    "content": ". ViennaPS provides a set of functions to effortlessly create basic geometries, facilitating quick testing of models or serving as the groundwork for your process simulation configuration. The various available geometries are outlined below: . ",
+    "url": "/geo/basic/",
+    
+    "relUrl": "/geo/basic/"
+  },"50": {
+    "doc": "Creating a Geometry",
+    "title": "Creating a Geometry",
+    "content": ". Create intricate geometries using the versatile tools offered by ViennaLS or generate a basic geometry using of the provided geometry builders. Alternatively, you can import a geometry from a GDSII mask file. ",
+    "url": "/geo/",
+    
+    "relUrl": "/geo/"
+  },"51": {
+    "doc": "Examples",
+    "title": "Examples",
+    "content": ". | Custom Example Process | GDS Reader | Cantilever Wet Etching | Selective Epitaxy | Trench Deposition | Trench Deposition Geometric | TEOS Trench Deposition | Hole Etching | Stack Etching | Oxide Regrowth | Volume Model | KD Tree Benchmark | Interpolation Demo | . ",
+    "url": "/examples/",
+    
+    "relUrl": "/examples/"
   },"52": {
     "doc": "Home",
     "title": "ViennaPS",
