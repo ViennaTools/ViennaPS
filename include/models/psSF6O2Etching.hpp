@@ -53,14 +53,9 @@ template <typename NumericType> struct Parameters {
 
   // Passivation
   struct PassivationType {
-
     // sputtering coefficients
     NumericType Eth_ie = 4.; // eV
     NumericType A_ie = 0.0361;
-
-    // chemical etching
-    NumericType k_sigma = 3.0e2;     // in (1e15 cm⁻²s⁻¹)
-    NumericType beta_sigma = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
   } Passivation;
 
   struct IonType {
@@ -404,6 +399,8 @@ public:
 template <typename NumericType, int D>
 class psSF6O2Etching : public psProcessModel<NumericType, D> {
 public:
+  psSF6O2Etching() { initializeModel(); }
+
   // All flux values are in units 1e16 / cm²
   psSF6O2Etching(const double ionFlux, const double etchantFlux,
                  const double oxygenFlux, const NumericType meanEnergy /* eV */,

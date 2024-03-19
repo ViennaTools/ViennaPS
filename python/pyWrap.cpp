@@ -571,6 +571,80 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("stickingProbabilityP2") = 0.,
            pybind11::arg("rateP2") = 0., pybind11::arg("orderP2") = 0.);
 
+  // SF6O2 Parameters
+  pybind11::class_<SF6O2Implementation::Parameters<T>::MaskType>(
+      module, "SF6O2ParametersMask")
+      .def(pybind11::init<>())
+      .def_readwrite("rho", &SF6O2Implementation::Parameters<T>::MaskType::rho)
+      .def_readwrite("beta_F",
+                     &SF6O2Implementation::Parameters<T>::MaskType::beta_F)
+      .def_readwrite("beta_O",
+                     &SF6O2Implementation::Parameters<T>::MaskType::beta_O)
+      .def_readwrite("A_sp",
+                     &SF6O2Implementation::Parameters<T>::MaskType::A_sp)
+      .def_readwrite("B_sp",
+                     &SF6O2Implementation::Parameters<T>::MaskType::B_sp)
+      .def_readwrite("Eth_sp",
+                     &SF6O2Implementation::Parameters<T>::MaskType::Eth_sp);
+
+  pybind11::class_<SF6O2Implementation::Parameters<T>::SiType>(
+      module, "SF6O2ParametersSi")
+      .def(pybind11::init<>())
+      .def_readwrite("rho", &SF6O2Implementation::Parameters<T>::SiType::rho)
+      .def_readwrite("k_sigma",
+                     &SF6O2Implementation::Parameters<T>::SiType::k_sigma)
+      .def_readwrite("beta_sigma",
+                     &SF6O2Implementation::Parameters<T>::SiType::beta_sigma)
+      .def_readwrite("A_sp", &SF6O2Implementation::Parameters<T>::SiType::A_sp)
+      .def_readwrite("B_sp", &SF6O2Implementation::Parameters<T>::SiType::B_sp)
+      .def_readwrite("Eth_ie",
+                     &SF6O2Implementation::Parameters<T>::SiType::Eth_ie)
+      .def_readwrite("Eth_sp",
+                     &SF6O2Implementation::Parameters<T>::SiType::Eth_sp)
+      .def_readwrite("A_ie", &SF6O2Implementation::Parameters<T>::SiType::A_ie);
+
+  pybind11::class_<SF6O2Implementation::Parameters<T>::PassivationType>(
+      module, "SF6O2ParametersPassivation")
+      .def(pybind11::init<>())
+      .def_readwrite(
+          "Eth_ie",
+          &SF6O2Implementation::Parameters<T>::PassivationType::Eth_ie)
+      .def_readwrite(
+          "A_ie", &SF6O2Implementation::Parameters<T>::PassivationType::A_ie);
+
+  pybind11::class_<SF6O2Implementation::Parameters<T>::IonType>(
+      module, "SF6O2ParametersIons")
+      .def(pybind11::init<>())
+      .def_readwrite("meanEnergy",
+                     &SF6O2Implementation::Parameters<T>::IonType::meanEnergy)
+      .def_readwrite("sigmaEnergy",
+                     &SF6O2Implementation::Parameters<T>::IonType::sigmaEnergy)
+      .def_readwrite("exponent",
+                     &SF6O2Implementation::Parameters<T>::IonType::exponent)
+      .def_readwrite("inflectAngle",
+                     &SF6O2Implementation::Parameters<T>::IonType::inflectAngle)
+      .def_readwrite("n_l", &SF6O2Implementation::Parameters<T>::IonType::n_l)
+      .def_readwrite("minAngle",
+                     &SF6O2Implementation::Parameters<T>::IonType::minAngle);
+
+  pybind11::class_<SF6O2Implementation::Parameters<T>>(module,
+                                                       "SF6O2Parameters")
+      .def(pybind11::init<>())
+      .def_readwrite("ionFlux", &SF6O2Implementation::Parameters<T>::ionFlux)
+      .def_readwrite("etchantFlux",
+                     &SF6O2Implementation::Parameters<T>::etchantFlux)
+      .def_readwrite("oxygenFlux",
+                     &SF6O2Implementation::Parameters<T>::oxygenFlux)
+      .def_readwrite("etchStopDepth",
+                     &SF6O2Implementation::Parameters<T>::etchStopDepth)
+      .def_readwrite("beta_F", &SF6O2Implementation::Parameters<T>::beta_F)
+      .def_readwrite("beta_O", &SF6O2Implementation::Parameters<T>::beta_O)
+      .def_readwrite("Mask", &SF6O2Implementation::Parameters<T>::Mask)
+      .def_readwrite("Si", &SF6O2Implementation::Parameters<T>::Si)
+      .def_readwrite("Polymer",
+                     &SF6O2Implementation::Parameters<T>::Passivation)
+      .def_readwrite("Ions", &SF6O2Implementation::Parameters<T>::Ions);
+
   // SF6O2 Etching
   pybind11::class_<psSF6O2Etching<T, D>, psSmartPointer<psSF6O2Etching<T, D>>>(
       module, "SF6O2Etching", processModel)
@@ -592,29 +666,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("parameters"))
       .def("setParameters", &psSF6O2Etching<T, D>::setParameters)
       .def("getParameters", &psSF6O2Etching<T, D>::getParameters,
-           pybind11::return_value_policy::reference);
-
-  // Fluorocarbon Etching
-  pybind11::class_<psFluorocarbonEtching<T, D>,
-                   psSmartPointer<psFluorocarbonEtching<T, D>>>(
-      module, "FluorocarbonEtching", processModel)
-      .def(pybind11::init<>())
-      .def(
-          pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
-                         const double /*ionFlux*/, const double /*etchantFlux*/,
-                         const double /*polyFlux*/, T /*meanEnergy*/,
-                         const T /*sigmaEnergy*/, const T /*ionExponent*/,
-                         const T /*deltaP*/, const T /*etchStopDepth*/>),
-          pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
-          pybind11::arg("polyFlux"), pybind11::arg("meanIonEnergy") = 100.,
-          pybind11::arg("sigmaIonEnergy") = 10.,
-          pybind11::arg("ionExponent") = 100., pybind11::arg("deltaP") = 0.,
-          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
-      .def(pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
-                          const FluorocarbonImplementation::Parameters<T> &>),
-           pybind11::arg("parameters"))
-      .def("setParameters", &psFluorocarbonEtching<T, D>::setParameters)
-      .def("getParameters", &psFluorocarbonEtching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
   // Fluorocarbon Parameters
@@ -753,6 +804,29 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Polymer",
                      &FluorocarbonImplementation::Parameters<T>::Polymer)
       .def_readwrite("Ions", &FluorocarbonImplementation::Parameters<T>::Ions);
+
+  // Fluorocarbon Etching
+  pybind11::class_<psFluorocarbonEtching<T, D>,
+                   psSmartPointer<psFluorocarbonEtching<T, D>>>(
+      module, "FluorocarbonEtching", processModel)
+      .def(pybind11::init<>())
+      .def(
+          pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
+                         const double /*ionFlux*/, const double /*etchantFlux*/,
+                         const double /*polyFlux*/, T /*meanEnergy*/,
+                         const T /*sigmaEnergy*/, const T /*ionExponent*/,
+                         const T /*deltaP*/, const T /*etchStopDepth*/>),
+          pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
+          pybind11::arg("polyFlux"), pybind11::arg("meanIonEnergy") = 100.,
+          pybind11::arg("sigmaIonEnergy") = 10.,
+          pybind11::arg("ionExponent") = 100., pybind11::arg("deltaP") = 0.,
+          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+      .def(pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
+                          const FluorocarbonImplementation::Parameters<T> &>),
+           pybind11::arg("parameters"))
+      .def("setParameters", &psFluorocarbonEtching<T, D>::setParameters)
+      .def("getParameters", &psFluorocarbonEtching<T, D>::getParameters,
+           pybind11::return_value_policy::reference);
 
   // Isotropic Process
   pybind11::class_<psIsotropicProcess<T, D>,
