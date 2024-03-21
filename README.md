@@ -107,15 +107,18 @@ The examples can be built using CMake:
 > __Important__: Make sure all dependencies are installed and have been built previously
 
 ```bash
-mkdir build && cd build
-cmake .. -DVIENNAPS_BUILD_EXAMPLES=ON
-make buildExamples
+git clone https://github.com/ViennaTools/ViennaPS.git
+cd ViennaPS
+
+cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON
+cmake --build build
 ```
 
 The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
 cd examples/exampleName
-./ExampleName config.txt
+./ExampleName.bat config.txt # (Windows)
+./ExampleName config.txt # (Other)
 ```
 
 Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. 
