@@ -1,5 +1,5 @@
 macro(setup_windows_bat TARGET LIB_FOLDER)
-  if(WIN32)
+  if(NOT WIN32)
     return()
   endif()
 
