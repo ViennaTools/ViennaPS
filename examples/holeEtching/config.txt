@@ -2,7 +2,7 @@
 
 # all length units are in micrometers (um)
 # Domain
-gridDelta=5.0 # um
+gridDelta=4.0 # um
 xExtent=100.0 # um
 yExtent=100.0 # um
 
