@@ -10,6 +10,7 @@ add_custom_target(${PROJECT_NAME} ALL)
 # --------------------------------------------------------------------------------------------------------
 
 set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
 if(NOT APPLE)
   list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN")
