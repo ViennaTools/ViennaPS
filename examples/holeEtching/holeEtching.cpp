@@ -13,6 +13,7 @@ int main(int argc, char *argv[]) {
   constexpr int D = 3;
 
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+  omp_set_num_threads(16);
 
   // Parse the parameters
   Parameters<NumericType> params;
