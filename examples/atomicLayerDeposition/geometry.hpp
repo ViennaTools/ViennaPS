@@ -2,8 +2,9 @@
 
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
+
+#include <geometries/psMakeTrench.hpp>
 #include <psDomain.hpp>
-#include <psMakeTrench.hpp>
 #include <psUtils.hpp>
 
 template <class NumericType, int D>

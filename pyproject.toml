@@ -1,0 +1,21 @@
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+version = "2.0.0"
+name = "ViennaPS_Python"
+readme = "README.md"
+license = {file = "LICENSE"}
+description = "Semiconductor fabrication process simulation library"
+dependencies = ['vtk >= 9.0.0, < 10']
+
+[project.urls]
+Homepage = "https://viennatools.github.io/ViennaPS/"
+Documentation = "https://viennatools.github.io/ViennaPS/"
+Repository = "https://github.com/ViennaTools/ViennaPS"
+Issues = "https://github.com/ViennaTools/ViennaPS/issues"
+
+[tool.scikit-build]
+build-dir = "build"
+cmake.args = ["-DVIENNAPS_BUILD_PYTHON=ON"]

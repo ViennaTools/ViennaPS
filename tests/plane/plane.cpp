@@ -1,5 +1,5 @@
+#include <geometries/psMakePlane.hpp>
 #include <psDomain.hpp>
-#include <psMakePlane.hpp>
 #include <psTestAssert.hpp>
 
 template <class NumericType, int D> void psRunTest() {

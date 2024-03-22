@@ -43,6 +43,8 @@ model = vps.SF6O2Etching(
     oxySputterYield=params["A_O"],
     etchStopDepth=params["etchStopDepth"],
 )
+parameters = model.getParameters()
+parameters.Mask.rho = 100.
 
 # process setup
 process = vps.Process()

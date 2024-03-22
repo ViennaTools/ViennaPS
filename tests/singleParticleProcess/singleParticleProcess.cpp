@@ -1,7 +1,8 @@
+#include <geometries/psMakeTrench.hpp>
+#include <models/psSingleParticleProcess.hpp>
+
 #include <psDomain.hpp>
-#include <psMakeTrench.hpp>
 #include <psProcess.hpp>
-#include <psSingleParticleProcess.hpp>
 #include <psTestAssert.hpp>
 
 template <class NumericType, int D> void psRunTest() {

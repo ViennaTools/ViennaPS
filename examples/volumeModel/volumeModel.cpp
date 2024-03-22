@@ -1,5 +1,6 @@
 #include <geometries/psMakeFin.hpp>
-#include <psPlasmaDamage.hpp>
+#include <models/psPlasmaDamage.hpp>
+
 #include <psProcess.hpp>
 
 #include "parameters.hpp"

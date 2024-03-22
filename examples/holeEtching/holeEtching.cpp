@@ -1,6 +1,7 @@
-#include <psMakeHole.hpp>
+#include <geometries/psMakeHole.hpp>
+#include <models/psSF6O2Etching.hpp>
+
 #include <psProcess.hpp>
-#include <psSF6O2Etching.hpp>
 #include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
 #include <psWriteVisualizationMesh.hpp>
@@ -12,6 +13,7 @@ int main(int argc, char *argv[]) {
   constexpr int D = 3;
 
   psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+  omp_set_num_threads(16);
 
   // Parse the parameters
   Parameters<NumericType> params;

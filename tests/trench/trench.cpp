@@ -1,5 +1,5 @@
+#include <geometries/psMakeTrench.hpp>
 #include <psDomain.hpp>
-#include <psMakeTrench.hpp>
 #include <psTestAssert.hpp>
 
 template <class NumericType, int D> void psRunTest() {

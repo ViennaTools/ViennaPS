@@ -1,5 +1,6 @@
 #include <geometries/psMakeTrench.hpp>
-#include <psGeometricDistributionModels.hpp>
+#include <models/psGeometricDistributionModels.hpp>
+
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 

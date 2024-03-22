@@ -1,60 +1,97 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+project(ViennaPS_Python LANGUAGES CXX)
 
-project(ViennaPSPython)
+add_custom_target(${PROJECT_NAME} ALL)
 
-include("${CMAKE_SOURCE_DIR}/cmake/prepare.cmake")
+# --------------------------------------------------------------------------------------------------------
+# Global CMake Configuration
+# └ As mentioned earlier we re-use the vtk python package libs, to do so we
+#   set the rpath for our python modules to point to the vtkmodules folder.
+# --------------------------------------------------------------------------------------------------------
 
-# Point find_package to the binary directory instead of the install location
-find_package(ViennaPS REQUIRED PATHS ${ViennaPS_BINARY_DIR} NO_DEFAULT_PATH)
+set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
+if(NOT APPLE)
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN")
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../vtkmodules")
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../viennaps.libs")
+else()
+  list(APPEND CMAKE_INSTALL_RPATH "@loader_path")
+  list(APPEND CMAKE_INSTALL_RPATH "@loader_path/../vtkmodules")
+  list(APPEND CMAKE_INSTALL_RPATH "@loader_path/../viennaps.libs")
+endif()
 
-# Add subfolders to the include directories, since during installation the directory structure is
-# flattened, but in the source tree - which we are using here - it is not.
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/models
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/compact)
+# --------------------------------------------------------------------------------------------------------
+# Setup Dependencies
+# --------------------------------------------------------------------------------------------------------
 
-message(STATUS "ViennaPS version: ${VIENNAPS_VERSION}")
+include("../cmake/cpm.cmake")
 
-set(PYBIND11_PYTHON_VERSION
-    3
-    CACHE STRING "Python version")
+set(PYBIND11_FINDPYTHON ON)
 
-find_package(pybind11 REQUIRED PATHS ${pybind11_DIR} NO_DEFAULT_PATH)
+CPMFindPackage(
+  NAME pybind11
+  VERSION 2.11.1
+  GIT_REPOSITORY "https://github.com/pybind/pybind11")
 
-set(VIENNAPS_PYTHON_SOURCE pyWrap.cpp)
+# --------------------------------------------------------------------------------------------------------
+# Constants
+# --------------------------------------------------------------------------------------------------------
+
 set(VIENNAPS_PYTHON_MODULE_NAME "viennaps")
-set(VIENNAPS_LIBRARY_OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+set(VIENNAPS_LIBRARY_OUTPUT_DIR ${CMAKE_BINARY_DIR})
 
-# ##################################################################################################
-# BUILD 2D PYTHON LIBRARY
-# ##################################################################################################
-set(VIENNAPS_PYTHON_MODULE_NAME_2D "_${VIENNAPS_PYTHON_MODULE_NAME}2d")
+if(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+  set(VIENNAPS_LIBRARY_OUTPUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+  message(STATUS "[ViennaPS] Using Library Output Directory for bindings")
+endif()
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps2d)
-pybind11_add_module(${VIENNAPS_PYTHON_MODULE_NAME_2D} ${VIENNAPS_PYTHON_SOURCE})
-target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME_2D} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_2D} PRIVATE ${VIENNAPS_LIBRARIES})
-target_compile_definitions(
-  ${VIENNAPS_PYTHON_MODULE_NAME_2D}
-  PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2 -DVIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME_2D})
+# --------------------------------------------------------------------------------------------------------
+# Binding macro
+# --------------------------------------------------------------------------------------------------------
 
-set(MODULE_NAME ${VIENNAPS_PYTHON_MODULE_NAME_2D})
-configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
+macro(setup_binding NAME FLAGS)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/${NAME})
+  set(MODULE_NAME "_${NAME}")
 
-# ##################################################################################################
-# BUILD 3D PYTHON LIBRARY
-# ##################################################################################################
-set(VIENNAPS_PYTHON_MODULE_NAME_3D "_${VIENNAPS_PYTHON_MODULE_NAME}3d")
+  pybind11_add_module("${MODULE_NAME}" "pyWrap.cpp")
+  add_dependencies(${PROJECT_NAME} ${MODULE_NAME})
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps3d)
-pybind11_add_module(${VIENNAPS_PYTHON_MODULE_NAME_3D} ${VIENNAPS_PYTHON_SOURCE})
-target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME_3D} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME_3D} PRIVATE ${VIENNAPS_LIBRARIES})
-target_compile_definitions(
-  ${VIENNAPS_PYTHON_MODULE_NAME_3D}
-  PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3 -DVIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME_3D})
+  target_link_libraries(${MODULE_NAME} PUBLIC ViennaPS)
+  target_compile_definitions(${MODULE_NAME} PRIVATE ${FLAGS} -DVIENNAPS_MODULE_NAME=${MODULE_NAME})
 
-set(MODULE_NAME ${VIENNAPS_PYTHON_MODULE_NAME_3D})
-configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
+  configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
+
+  install(TARGETS ${MODULE_NAME} LIBRARY DESTINATION ${NAME})
+  install(DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/" DESTINATION ${NAME})
+endmacro()
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Bindings
+# --------------------------------------------------------------------------------------------------------
+
+setup_binding(viennaps2d -DVIENNAPS_PYTHON_DIMENSION=2)
+setup_binding(viennaps3d -DVIENNAPS_PYTHON_DIMENSION=3)
+
+set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs")
+set(VIENNAPS_USE_LIB_FOLDER OFF)
+
+if(NOT VIENNARAY_SYSTEM_EMBREE)
+  set(VIENNAPS_USE_LIB_FOLDER ON)
+  setup_embree_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+endif()
+
+if(NOT VIENNARAY_SYSTEM_TBB)
+  set(VIENNAPS_USE_LIB_FOLDER ON)
+  setup_tbb_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+endif()
+
+if((APPLE OR WIN32) AND NOT VIENNALS_SYSTEM_VTK)
+  set(VIENNAPS_USE_LIB_FOLDER ON)
+  setup_vtk_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+endif()
+
+if(VIENNAPS_USE_LIB_FOLDER)
+  install(DIRECTORY "${VIENNAPS_LIB_FOLDER}" DESTINATION .)
+endif()

@@ -1,6 +1,7 @@
+#include <geometries/psMakeTrench.hpp>
+#include <models/psIsotropicProcess.hpp>
+
 #include <psDomain.hpp>
-#include <psIsotropicProcess.hpp>
-#include <psMakeTrench.hpp>
 #include <psProcess.hpp>
 #include <psTestAssert.hpp>
 

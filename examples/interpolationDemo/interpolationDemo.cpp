@@ -10,12 +10,13 @@
 #include <iostream>
 #include <string>
 
-#include <psCSVDataSource.hpp>
-#include <psCSVWriter.hpp>
-#include <psNearestNeighborsInterpolation.hpp>
-#include <psRectilinearGridInterpolation.hpp>
+#include <compact/psCSVDataSource.hpp>
+#include <compact/psCSVWriter.hpp>
 
-#include <psDataScaler.hpp>
+#include <compact/psNearestNeighborsInterpolation.hpp>
+#include <compact/psRectilinearGridInterpolation.hpp>
+
+#include <compact/psDataScaler.hpp>
 
 namespace fs = std::filesystem;
 
