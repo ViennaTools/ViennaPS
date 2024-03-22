@@ -21,26 +21,22 @@ nav_order: 3
 
 * C++17 Compiler with OpenMP support
 
-## Installation
+## Installing
 
-Since this is a header only project, it does not require any installation. However, we recommend the following procedure in order to set up all dependencies correctly and relocate all header files to a designated directory:
+The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory:
 
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
 cd ViennaPS
-mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/your/custom/install/
-make buildDependencies # this will install all dependencies and might take a while
-make install
+
+cmake -B build && cmake --build build
+cmake --install build --prefix "/path/to/your/custom/install/"
 ```
 
-The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target.
-This will install the necessary headers and CMake files to the specified path. If `CMAKE_INSTALL_PREFIX` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
-
-If one wants to use a specific installation of one or more of the dependencies, just pass the corresponding _*_DIR_ variable as a configuration option (e.g. -DViennaLS_DIR=/path/to/viennals/install -DViennaRay_DIR=/path/to/viennaray/install).
+This will install the necessary headers and CMake files to the specified path. If `--prefix` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
 
 {: .note}
-> ViennaLS and ViennaRay both have external dependencies which can be installed beforehand to save some time when building the dependencies. ViennaLS uses [VTK](https://gitlab.kitware.com/vtk/vtk) as dependency and ViennaRay uses [Embree](https://github.com/embree/embree). On Linux based systems, these dependencies can be installed using the package manager: `sudo apt install libvtk9.1 libvtk9-dev libembree3-3 libembree-dev`. On macOS, one can use Homebrew to install these dependencies: `brew install vtk embree`.
+> ViennaLS uses [VTK](https://gitlab.kitware.com/vtk/vtk) as dependency which can be installed beforehand to save some time when building the dependencies. On Linux based systems, it can be installed using the package manager: `sudo apt install libvtk9.1 libvtk9-dev`. On macOS, one can use Homebrew to install it: `brew install vtk`.
 
 ## Building the Python package
 
@@ -50,6 +46,7 @@ The ViennaPS Python package can be built and installed using the `pip` command:
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
 cd ViennaPS
+
 pip install --user .
 ```
 
@@ -71,12 +68,19 @@ import viennaps3d as vps
 
 ## Integration in CMake projects
 
-In order to use this library in your CMake project, add the following lines to the CMakeLists.txt of your project:
+We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consume this library.
 
-```CMake
-set(ViennaPS_DIR "/path/to/your/custom/install/")
-find_package(ViennaPS REQUIRED)
-add_executable(${PROJECT_NAME} ...)
-target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${VIENNAPS_LIBRARIES})
-``` 
+* Installation with CPM
+  ```cmake
+  CPMAddPackage("gh:viennatools/viennaps@2.0.0")
+  ```
+
+* With a local installation
+    > In case you have ViennaPS installed in a custom directory, make sure to properly specify the [`CMAKE_PREFIX_PATH`](https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html#envvar:CMAKE_PREFIX_PATH).
+
+    ```cmake
+    list(APPEND CMAKE_PREFIX_PATH "/your/local/installation")
+
+    find_package(ViennaPS)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
+    ```
