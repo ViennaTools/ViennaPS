@@ -8,16 +8,38 @@ a ray tracer, and physical models for the simulation of
 microelectronic fabrication processes.
 """
 
+import sys
+
+def _windows_dll_path():
+    
+    import os
+    import vtk
+
+    vtk_path = vtk.__path__[0]
+
+    additional_paths = [
+        vtk_path,
+        os.path.join(os.path.dirname(vtk_path), 'vtk.libs'),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'viennaps.libs')
+    ]
+
+    for path in additional_paths:
+        os.add_dll_directory(path)
+        os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
+
+if sys.platform == "win32":
+    _windows_dll_path()
+
 from .@MODULE_NAME@ import *
 
-#Config file reader helper function
-def ReadConfigFile(fileName : str):
+# Config file reader helper function
+def ReadConfigFile(fileName: str):
     """Read a config file in the ViennaPS standard config file format.
 
     Parameters
     ----------
-    fileName : str
-               Name of the config file.
+    fileName: str
+              Name of the config file.
     
     Returns
     -------

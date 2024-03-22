@@ -1,11 +1,10 @@
-cmake_minimum_required(VERSION 3.4)
+project(selectiveEpitaxy LANGUAGES CXX)
 
-project("selectiveEpitaxy")
+add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cpp")
+target_link_libraries(${PROJECT_NAME} PRIVATE ViennaPS)
 
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNAPS_LIBRARIES})
 configure_file(selectiveEpitaxy.py ${CMAKE_CURRENT_BINARY_DIR}/selectiveEpitaxy.py COPYONLY)
 configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 
-add_dependencies(buildExamples ${PROJECT_NAME})
+add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
+setup_windows_bat(${PROJECT_NAME} ${VIENNAPS_EXAMPLES_LIB})

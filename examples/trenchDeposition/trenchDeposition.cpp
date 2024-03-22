@@ -1,6 +1,7 @@
 #include <geometries/psMakeTrench.hpp>
+#include <models/psSingleParticleProcess.hpp>
+
 #include <psProcess.hpp>
-#include <psSingleParticleProcess.hpp>
 #include <psUtils.hpp>
 
 #include "parameters.hpp"

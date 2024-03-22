@@ -1,4 +1,3 @@
-#include <array>
 #include <iostream>
 #include <random>
 #include <vector>
@@ -7,7 +6,7 @@
 #include <omp.h>
 #endif
 
-#include <psKDTree.hpp>
+#include <compact/psKDTree.hpp>
 #include <psSmartPointer.hpp>
 
 inline double getTime() {

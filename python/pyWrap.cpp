@@ -33,11 +33,11 @@
 #include <psProcess.hpp>
 
 // geometries
-#include <psMakeFin.hpp>
-#include <psMakeHole.hpp>
-#include <psMakePlane.hpp>
-#include <psMakeStack.hpp>
-#include <psMakeTrench.hpp>
+#include <geometries/psMakeFin.hpp>
+#include <geometries/psMakeHole.hpp>
+#include <geometries/psMakePlane.hpp>
+#include <geometries/psMakeStack.hpp>
+#include <geometries/psMakeTrench.hpp>
 
 // model framework
 #include <psAdvectionCallback.hpp>
@@ -47,17 +47,17 @@
 #include <psVelocityField.hpp>
 
 // models
-#include <psAnisotropicProcess.hpp>
-#include <psAtomicLayerProcess.hpp>
-#include <psDirectionalEtching.hpp>
-#include <psFluorocarbonEtching.hpp>
-#include <psGeometricDistributionModels.hpp>
-#include <psIsotropicProcess.hpp>
-#include <psOxideRegrowth.hpp>
-#include <psPlasmaDamage.hpp>
-#include <psSF6O2Etching.hpp>
-#include <psSingleParticleProcess.hpp>
-#include <psTEOSDeposition.hpp>
+#include <models/psAnisotropicProcess.hpp>
+#include <models/psAtomicLayerProcess.hpp>
+#include <models/psDirectionalEtching.hpp>
+#include <models/psFluorocarbonEtching.hpp>
+#include <models/psGeometricDistributionModels.hpp>
+#include <models/psIsotropicProcess.hpp>
+#include <models/psOxideRegrowth.hpp>
+#include <models/psPlasmaDamage.hpp>
+#include <models/psSF6O2Etching.hpp>
+#include <models/psSingleParticleProcess.hpp>
+#include <models/psTEOSDeposition.hpp>
 
 // visualization
 #include <psToDiskMesh.hpp>
@@ -65,11 +65,11 @@
 #include <psWriteVisualizationMesh.hpp>
 
 // CellSet
-#include <csDenseCellSet.hpp>
-#include <csSegmentCells.hpp>
+#include <cellSet/csDenseCellSet.hpp>
+#include <cellSet/csSegmentCells.hpp>
 
 // Compact
-#include <psKDTree.hpp>
+#include <compact/psKDTree.hpp>
 
 // other
 #include <psUtils.hpp>

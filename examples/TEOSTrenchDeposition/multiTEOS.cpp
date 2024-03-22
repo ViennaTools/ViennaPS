@@ -1,8 +1,8 @@
-#include <psDomain.hpp>
-#include <psMakeTrench.hpp>
-#include <psProcess.hpp>
+#include <geometries/psMakeTrench.hpp>
+#include <models/psTEOSDeposition.hpp>
 
-#include <psTEOSDeposition.hpp>
+#include <psDomain.hpp>
+#include <psProcess.hpp>
 
 #include "parameters.hpp"
 

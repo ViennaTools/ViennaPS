@@ -1,6 +1,7 @@
+#include <geometries/psMakeStack.hpp>
+#include <models/psFluorocarbonEtching.hpp>
+
 #include <psExtrude.hpp>
-#include <psFluorocarbonEtching.hpp>
-#include <psMakeStack.hpp>
 #include <psProcess.hpp>
 
 #include "parameters.hpp"

@@ -1,6 +1,7 @@
-#include <psDirectionalEtching.hpp>
+#include <geometries/psMakeTrench.hpp>
+#include <models/psDirectionalEtching.hpp>
+
 #include <psDomain.hpp>
-#include <psMakeTrench.hpp>
 #include <psProcess.hpp>
 #include <psTestAssert.hpp>
 

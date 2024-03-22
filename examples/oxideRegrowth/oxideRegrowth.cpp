@@ -1,7 +1,7 @@
-#include <psMakeStack.hpp>
+#include <geometries/psMakeStack.hpp>
 #include <psProcess.hpp>
 
-#include <psOxideRegrowth.hpp>
+#include <models/psOxideRegrowth.hpp>
 
 #include "parameters.hpp"
 

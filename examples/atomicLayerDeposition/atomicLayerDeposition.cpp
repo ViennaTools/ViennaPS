@@ -1,8 +1,9 @@
-#include <csMeanFreePath.hpp>
-#include <csSegmentCells.hpp>
-#include <psAtomicLayerProcess.hpp>
+#include <cellSet/csMeanFreePath.hpp>
+#include <cellSet/csSegmentCells.hpp>
+#include <geometries/psMakeHole.hpp>
+#include <models/psAtomicLayerProcess.hpp>
+
 #include <psDomain.hpp>
-#include <psMakeHole.hpp>
 #include <psMeanFreePath.hpp>
 
 #include "geometry.hpp"
