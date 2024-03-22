@@ -200,7 +200,7 @@ If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guid
 
 ## Authors
 
-Current contributors: Tobias Reiter, Julius Piso
+Current contributors: Tobias Reiter, Noah Karnel, Julius Piso
 
 Contact us via: viennatools@iue.tuwien.ac.at
 

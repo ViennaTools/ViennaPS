@@ -2,3 +2,17 @@ build/
 venv/
 
 .vscode
+.vs
+
+old_*
+*a.out
+install*
+*.vtk
+*.vtu
+*.vtp
+CMakeSettings.json
+*.so
+*.py[cod]
+*.egg-info
+*env*
+.eggs/
