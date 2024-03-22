@@ -39,6 +39,8 @@ public:
 
   void setRngSeed(const unsigned int passedSeed) { seed = passedSeed; }
 
+  void setExtent(const NumericType passedExtent) { extent = passedExtent; }
+
   void disableSmoothing() { smoothing = false; }
 
   void enableSmoothing() { smoothing = true; }
@@ -64,6 +66,7 @@ private:
       auto &hitCount = threadLocalHitCount[threadNum];
       hitCount.resize(numCells, 0);
       std::uniform_int_distribution<unsigned> pointDist(0, numPoints - 1);
+      std::uniform_int_distribution<unsigned> cellDist(0, numCells - 1);
 
 #pragma omp for schedule(dynamic)
       for (long long idx = 0; idx < numRays; ++idx) {
@@ -80,12 +83,24 @@ private:
         auto particleSeed = rayInternal::tea<3>(idx, seed);
         rayRNG RngState(particleSeed);
 
-        auto pointIdx = pointDist(RngState);
-        auto direction = rayReflectionDiffuse<NumericType, D>(
-            surfaceNormals[pointIdx], RngState);
-        auto cellIdx = getStartingCell(surfacePoints[pointIdx]);
-        auto origin = cellSet->getCellCenter(cellIdx);
-        NumericType distanceOffset = gridDelta;
+        rayTriple<NumericType> origin, direction;
+        int cellIdx = -1;
+
+        if constexpr (D == 3) {
+          auto pointIdx = pointDist(RngState);
+          direction = rayReflectionDiffuse<NumericType, 3>(
+              surfaceNormals[pointIdx], RngState);
+          cellIdx = getStartingCell(surfacePoints[pointIdx]);
+          origin = cellSet->getCellCenter(cellIdx);
+        } else {
+          auto cellIdx = cellDist(RngState);
+          while (
+              !psMaterialMap::isMaterial(materialIds->at(cellIdx), material)) {
+            cellIdx = cellDist(RngState);
+          }
+        }
+
+        NumericType distanceOffset = 0.;
 
         unsigned numReflections = 0;
         while (true) {
@@ -118,8 +133,7 @@ private:
               }
 
               auto &cellMin = cellSet->getNode(cellSet->getElement(n)[0]);
-              auto &cellMax =
-                  cellSet->getNode(cellSet->getElement(n)[D == 2 ? 2 : 6]);
+              auto &cellMax = cellSet->getNode(cellSet->getElement(n)[cMaxIdx]);
 
               if (intersectLineBox(origin, direction, cellMin, cellMax,
                                    distance)) {
@@ -128,17 +142,26 @@ private:
               }
             }
 
+            if constexpr (D == 2) {
+              // limit extent
+              if (extent >= 0. && std::abs(distance * direction[2]) > extent) {
+                distance = extent;
+                hitState = false;
+                break; // end cell marching
+              }
+            }
+
             if (nextCell < 0 && hitState) {
               // hit a different material
               cellIdx = currentCell;
-              break;
+              break; // end cell marching
             }
 
             if (nextCell < 0) {
               if (currentCell == prevIdx) {
                 // no hit
                 distance = bulkLambda;
-                break;
+                break; // end cell marching
               }
 
               int atBoundary = -1;
@@ -163,19 +186,19 @@ private:
               } else {
                 // no hit
                 distance = bulkLambda;
-                break;
+                break; // end cell marching
               }
             }
 
             if (distance > bulkLambda) {
               // gas phase hit
               cellIdx = currentCell;
-              break;
+              break; // end cell marching
             }
 
             prevIdx = currentCell;
             hitCells.push_back(nextCell);
-          }
+          } // end cell marching
 
           /* -------- Add to cells -------- */
           for (const auto &c : hitCells) {
@@ -350,7 +373,7 @@ private:
   static void randomDirection(rayTriple<NumericType> &direction,
                               rayRNG &rngState) {
     std::uniform_real_distribution<NumericType> dist(-1, 1);
-    for (int i = 0; i < D; ++i) {
+    for (int i = 0; i < 3; ++i) {
       direction[i] = dist(rngState);
     }
     rayInternal::Normalize(direction);
@@ -376,4 +399,6 @@ private:
   NumericType numRaysPerCell = 1000;
   bool smoothing = true;
   psMaterial material = psMaterial::GAS;
+  NumericType extent = -1.;
+  static constexpr unsigned cMaxIdx = D == 2 ? 2 : 6;
 };
