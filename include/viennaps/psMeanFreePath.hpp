@@ -84,22 +84,11 @@ private:
         auto particleSeed = rayInternal::tea<3>(idx, seed);
         rayRNG RngState(particleSeed);
 
-        rayTriple<NumericType> origin, direction;
-        int cellIdx = -1;
-
-        if constexpr (D == 3) {
-          auto pointIdx = pointDist(RngState);
-          direction = rayReflectionDiffuse<NumericType, 3>(
-              surfaceNormals[pointIdx], RngState);
-          cellIdx = getStartingCell(surfacePoints[pointIdx]);
-          origin = cellSet->getCellCenter(cellIdx);
-        } else {
-          auto cellIdx = cellDist(RngState);
-          while (
-              !psMaterialMap::isMaterial(materialIds->at(cellIdx), material)) {
-            cellIdx = cellDist(RngState);
-          }
-        }
+        auto pointIdx = pointDist(RngState);
+        auto direction = rayReflectionDiffuse<NumericType, 3>(
+            surfaceNormals[pointIdx], RngState);
+        int cellIdx = getStartingCell(surfacePoints[pointIdx]);
+        auto origin = cellSet->getCellCenter(cellIdx);
 
         NumericType distanceOffset = 0.;
 
