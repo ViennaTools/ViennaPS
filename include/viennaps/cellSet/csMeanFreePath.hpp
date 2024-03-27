@@ -87,7 +87,7 @@ private:
 #endif
 
 #pragma omp for
-      for (unsigned idx = 0; idx < numCells; ++idx) {
+      for (int idx = 0; idx < numCells; ++idx) {
         if (!psMaterialMap::isMaterial(materials->at(idx), material))
           continue;
 

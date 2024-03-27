@@ -31,7 +31,7 @@ std::vector<std::vector<T>> generatePoints(unsigned N, unsigned D) {
     auto engine = std::default_random_engine(rd());
     std::uniform_real_distribution<> d{-10., 10.};
 #pragma omp for
-    for (unsigned i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i) {
       std::vector<T> point;
       point.reserve(D);
       std::generate_n(std::back_inserter(point), D,

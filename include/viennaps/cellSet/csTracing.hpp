@@ -140,7 +140,7 @@ public:
     std::vector<T> average(data->size(), 0.);
 
 #pragma omp parallel for
-    for (size_t i = 0; i < data->size(); i++) {
+    for (int i = 0; i < data->size(); i++) {
       if (data->at(i) < 0) {
         average[i] = -1.;
         continue;
@@ -177,7 +177,7 @@ public:
     }
 
 #pragma omp parallel for
-    for (size_t i = 0; i < data->size(); i++) {
+    for (int i = 0; i < data->size(); i++) {
       data->at(i) = average[i];
     }
   }
@@ -190,7 +190,7 @@ public:
     std::vector<T> average(data->size(), 0.);
 
 #pragma omp parallel for
-    for (size_t i = 0; i < data->size(); i++) {
+    for (int i = 0; i < data->size(); i++) {
       if (materialIds->at(i) != materialId)
         continue;
 
@@ -220,7 +220,7 @@ public:
     }
 
 #pragma omp parallel for
-    for (size_t i = 0; i < data->size(); i++) {
+    for (int i = 0; i < data->size(); i++) {
       data->at(i) = average[i];
     }
   }
