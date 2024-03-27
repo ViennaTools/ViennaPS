@@ -1153,7 +1153,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaxCoverageInitIterations",
            &psProcess<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
-      .def("setPrintTimeInterval ", &psProcess<T, D>::setPrintTimeInterval,
+      .def("setPrintTimeInterval", &psProcess<T, D>::setPrintTimeInterval,
            "Sets the minimum time between printing intermediate results during "
            "the process. If this is set to a non-positive value, no "
            "intermediate results are printed.")
