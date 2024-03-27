@@ -212,7 +212,7 @@ private:
       reduceFlux.resize(cellType->size(), 0.);
 
 #pragma omp for
-      for (unsigned i = 0; i < cellType->size(); ++i) {
+      for (int i = 0; i < cellType->size(); ++i) {
         const auto &neighbors = cellSet->getNeighbors(i);
 
         if (cellType->at(i) == 1.) {
@@ -266,10 +266,10 @@ private:
 
 #pragma omp barrier
 #pragma omp for
-      for (unsigned i = 0; i < flux->size(); ++i) {
+      for (int i = 0; i < flux->size(); ++i) {
         if (cellType->at(i) == 1.) {
           NumericType reduce = 0.;
-          for (unsigned j = 0; j < numThreads; j++) {
+          for (int j = 0; j < numThreads; j++) {
             reduce += reduceFluxes[j][i];
           }
           flux->at(i) = newFlux[i] - reduce;

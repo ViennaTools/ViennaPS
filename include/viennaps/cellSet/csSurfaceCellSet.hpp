@@ -126,7 +126,7 @@ private:
       auto localInnerCells = &sharedInnerCells[threadNum];
 
 #pragma omp for
-      for (unsigned i = 0; i < materials->size(); ++i) {
+      for (int i = 0; i < materials->size(); ++i) {
         if (!psMaterialMap::isMaterial(materials->at(i), psMaterial::GAS)) {
           auto neighbors = cellSet->getNeighbors(i);
           for (auto n : neighbors) {
