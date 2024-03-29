@@ -1209,6 +1209,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // constructors
       .def(pybind11::init(&DomainType::New<>))
       // methods
+      .def("deepCopy", &psDomain<T, D>::deepCopy)
       .def("insertNextLevelSet", &psDomain<T, D>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
@@ -1497,6 +1498,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // constructors
       .def(pybind11::init(&psSmartPointer<psDomain<T, 3>>::New<>))
       // methods
+      .def("deepCopy", &psDomain<T, 3>::deepCopy)
       .def("insertNextLevelSet", &psDomain<T, 3>::insertNextLevelSet,
            pybind11::arg("levelSet"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
