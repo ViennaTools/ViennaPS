@@ -121,25 +121,25 @@ psSF6O2Etching(const double ionFlux, const double etchantFlux,
 
 | Parameter           | Description                                                               | Type           |
 |----------------------|--------------------------------------------------------------------------|----------------|
-| `ionFlux`           | Ion flux for the {{ page.sf6o2 }} etching process.                                   | `double`       |
-| `etchantFlux`       | Etchant flux for the {{ page.sf6o2 }} etching process.                               | `double`       |
-| `oxygenFlux`        | Oxygen flux for the {{ page.sf6o2 }} etching process.                                | `double`       |
-| `meanEnergy`        | Mean energy of ions in electronvolts (eV).                           | `NumericType`  |
-| `sigmaEnergy`       | Energy distribution standard deviation in electronvolts (eV).             | `NumericType`  |
+| `ionFlux`           | Ion flux for the {{ page.sf6o2 }} etching process.                        | `double`       |
+| `etchantFlux`       | Etchant flux for the {{ page.sf6o2 }} etching process.                    | `double`       |
+| `oxygenFlux`        | Oxygen flux for the {{ page.sf6o2 }} etching process.                     | `double`       |
+| `meanEnergy`        | Mean energy of ions (eV).                                                 | `NumericType`  |
+| `sigmaEnergy`       | Energy distribution standard deviation (eV).                              | `NumericType`  |
 | `ionExponent`       | (Optional) Exponent in the power cosine source distribution of ions for initial directions. Default is set to 100.       | `NumericType`  |
 | `oxySputterYield`   | (Optional) Oxygen sputtering yield. Default is set to 2.                  | `NumericType`  |
 | `etchStopDepth`     | (Optional) Depth at which etching should stop. Default is negative infinity.| `NumericType`  |
 
 {: .note}
-> All flux values are units 10<sup>16</sup> / cm<sup>2</sup>.
+> All flux values are units 10<sup>15</sup> / cm<sup>2</sup> /s<sup>2</sup> .
 
 Alternatively, users can access and modify all detailed parameters by retrieving the parameter struct, which encapsulates the following values:
 
 | Parameter           | Description                                            | Default Value          |
 |---------------------|--------------------------------------------------------|------------------------|
-| `ionFlux`             | Ion flux (10<sup>16</sup> /cm² /s)                     | 12.0                   |
-| `etchantFlux`         | Etchant flux (10<sup>16</sup> /cm² /s)                 | 1800.0                 |
-| `oxygenFlux`          | Oxygen flux (10<sup>16</sup> /cm² /s)                  | 100.0                  |
+| `ionFlux`             | Ion flux (10<sup>15</sup> /cm² /s)                     | 12.0                   |
+| `etchantFlux`         | Etchant flux (10<sup>15</sup> /cm² /s)                 | 1800.0                 |
+| `oxygenFlux`          | Oxygen flux (10<sup>15</sup> /cm² /s)                  | 100.0                  |
 | `etchStopDepth`       | Depth at which etching stops                           | -inf                   |
 | `beta_F`              | Sticking probability for fluorine                      | 0.7                    |
 | `beta_O`              | Sticking probability for oxygen                        | 1.0                    |
@@ -155,14 +155,14 @@ Alternatively, users can access and modify all detailed parameters by retrieving
 | `Si.A_sp`             | Silicon sputtering coefficient                         | 0.0337                 |
 | `Si.B_sp`             | Silicon sputtering coefficient                         | 9.3                    |
 | `Si.A_ie`             | Silicon ion enhanced etching coefficient               | 0.0361                 |
-| `Si.k_sigma`          | Silicon chemical etching coefficient                   | 300.0                  |
-| `Si.beta_sigma`       | Silicon chemical etching coefficient                   | 0.05                   |
+| `Si.k_sigma`          | Silicon chemical etch rate coefficient (10<sup>15</sup> /cm² /s) | 300.         |
+| `Si.beta_sigma`       | Silicon oxygen recombination coefficient (10<sup>15</sup> /cm² /s) | 0.05       |
 | `Passivation.Eth_ie`  | Passivation ion enhanced etching threshold energy (eV) | 4.0                    |
 | `Passivation.A_ie`    | Passivation ion enhanced etching coefficient           | 0.0361                 |
 | `Ions.meanEnergy`     | Mean ion energy (eV)                                   | 100.0                  |
 | `Ions.sigmaEnergy`    | Standard deviation of ion energy (eV)                  | 10.0                   |
-| `Ions.exponent`       | Exponent of power cosine source distribution of initial ion directions  | 500.0                  |
-| `Ions.inflectAngle`   | Inflection angle                                       | 1.55334303             |
+| `Ions.exponent`       | Exponent of power cosine source distribution of initial ion directions  | 500.0 |
+| `Ions.inflectAngle`   | Inflection angle (rad)                                 | 1.55334303             |
 | `Ions.n_l`            | Exponent of reflection power                           | 10.0                   |
 | `Ions.minAngle`       | Minimum cone angle for ion reflection                  | 1.3962634              |
 
