@@ -6,7 +6,7 @@
 
 template <typename NumericType> class psVelocityField {
 public:
-  psVelocityField() {}
+  virtual ~psVelocityField() = default;
 
   virtual NumericType
   getScalarVelocity(const std::array<NumericType, 3> &coordinate, int material,

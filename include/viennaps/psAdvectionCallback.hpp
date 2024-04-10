@@ -8,6 +8,8 @@ protected:
   psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
 
 public:
+  virtual ~psAdvectionCallback() = default;
+
   void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }

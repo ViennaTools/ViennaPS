@@ -1423,9 +1423,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // psPlanarize
   pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
       module, "Planarize")
+      .def(pybind11::init(&psSmartPointer<psPlanarize<T, D>>::New<>))
       .def(pybind11::init(
                &psSmartPointer<psPlanarize<T, D>>::New<DomainType &, const T>),
            pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
+      .def("setDomain", &psPlanarize<T, D>::setDomain,
+           "Set the domain in the planarization.")
+      .def("setCutoffPosition", &psPlanarize<T, D>::setCutoffPosition,
+           "Set the cutoff height for the planarization.")
       .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
 
   // psMeanFreePath

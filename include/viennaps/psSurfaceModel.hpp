@@ -12,6 +12,8 @@ protected:
   psSmartPointer<psProcessParams<NumericType>> processParams = nullptr;
 
 public:
+  virtual ~psSurfaceModel() = default;
+
   virtual void initializeCoverages(unsigned numGeometryPoints) {
     // if no coverages get initialized here, they wont be used at all
   }
