@@ -222,19 +222,19 @@ public:
   }
 
   // Save the level set as a VTK file.
-  void saveLevelSetMesh(std::string name, int width = 1) {
+  void saveLevelSetMesh(std::string fileName, int width = 1) {
     for (int i = 0; i < levelSets->size(); i++) {
       auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
       lsExpand<NumericType, D>(levelSets->at(i), width).apply();
       lsToMesh<NumericType, D>(levelSets->at(i), mesh).apply();
       psVTKWriter<NumericType>(mesh,
-                               name + "_layer" + std::to_string(i) + ".vtp")
+                               fileName + "_layer" + std::to_string(i) + ".vtp")
           .apply();
     }
   }
 
   // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
-  void saveSurfaceMesh(std::string name, bool addMaterialIds = true) {
+  void saveSurfaceMesh(std::string fileName, bool addMaterialIds = true) {
 
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
 
@@ -254,14 +254,14 @@ public:
     }
 
     lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
-    psVTKWriter<NumericType>(mesh, name).apply();
+    psVTKWriter<NumericType>(mesh, fileName).apply();
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string name) const {
+  void saveVolumeMesh(std::string fileName) const {
     lsWriteVisualizationMesh<NumericType, D> visMesh;
-    visMesh.setFileName(name);
-    for (auto ls : *levelSets) {
+    visMesh.setFileName(fileName);
+    for (auto &ls : *levelSets) {
       visMesh.insertNextLevelSet(ls);
     }
     if (materialMap)

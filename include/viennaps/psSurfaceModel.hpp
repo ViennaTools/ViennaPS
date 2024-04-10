@@ -22,12 +22,6 @@ public:
     // if no process parameters get initialized here, they wont be used at all
   }
 
-  psSmartPointer<psPointData<NumericType>> getCoverages() { return coverages; }
-
-  psSmartPointer<psProcessParams<NumericType>> getProcessParameters() {
-    return processParams;
-  }
-
   virtual psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
@@ -37,4 +31,11 @@ public:
 
   virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
                                const std::vector<NumericType> &materialIds) {}
+
+  // non-virtual functions
+  psSmartPointer<psPointData<NumericType>> getCoverages() { return coverages; }
+
+  psSmartPointer<psProcessParams<NumericType>> getProcessParameters() {
+    return processParams;
+  }
 };

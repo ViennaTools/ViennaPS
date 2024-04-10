@@ -60,7 +60,7 @@ public:
     return particleLogSize[particleIdx];
   }
 
-  void setProcessName(std::string name) { processName = name; }
+  void setProcessName(std::string name) { processName = std::move(name); }
 
   virtual void
   setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {

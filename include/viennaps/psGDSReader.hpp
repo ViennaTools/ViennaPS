@@ -28,11 +28,13 @@ template <typename NumericType, int D = 3> class psGDSReader {
 public:
   psGDSReader() {}
   psGDSReader(psDomainType passedGeometry, std::string passedFileName)
-      : geometry(passedGeometry), fileName(passedFileName) {}
+      : geometry(passedGeometry), fileName(std::move(passedFileName)) {}
 
   void setGeometry(psDomainType passedGeometry) { geometry = passedGeometry; }
 
-  void setFileName(std::string passedFileName) { fileName = passedFileName; }
+  void setFileName(std::string passedFileName) {
+    fileName = std::move(passedFileName);
+  }
 
   void apply() {
     if constexpr (D == 2) {
