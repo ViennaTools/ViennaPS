@@ -10,7 +10,6 @@
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsExpand.hpp>
-#include <lsMakeGeometry.hpp>
 #include <lsToDiskMesh.hpp>
 #include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
@@ -29,12 +28,12 @@
   which can be used in a process to implement material specific rates or
   similar.
 */
-template <class NumericType = float, int D = 3> class psDomain {
+template <class NumericType, int D> class psDomain {
 public:
-  typedef psSmartPointer<lsDomain<NumericType, D>> lsDomainType;
-  typedef psSmartPointer<std::vector<lsDomainType>> lsDomainsType;
-  typedef psSmartPointer<csDenseCellSet<NumericType, D>> csDomainType;
-  typedef psSmartPointer<psMaterialMap> materialMapType;
+  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainsType = psSmartPointer<std::vector<lsDomainType>>;
+  using csDomainType = psSmartPointer<csDenseCellSet<NumericType, D>>;
+  using materialMapType = psSmartPointer<psMaterialMap>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
 
@@ -58,13 +57,16 @@ public:
   // Constructor for domain with multiple initial Level-Sets.
   psDomain(lsDomainsType passedLevelSets) : levelSets(passedLevelSets) {}
 
-  // Create a deep copy of all Level-Set and the Cell-Set in the passed domain.
+  // Create a deep copy of all Level-Sets and the Cell-Set from the passed
+  // domain.
   void deepCopy(psSmartPointer<psDomain> passedDomain) {
-    unsigned numLevelSets = passedDomain->levelSets->size();
-    for (unsigned i = 0; i < numLevelSets; ++i) {
-      levelSets->push_back(lsSmartPointer<lsDomain<NumericType, D>>::New(
-          passedDomain->levelSets->at(i)));
+
+    // Copy all Level-Sets.
+    for (auto &ls : *passedDomain->levelSets) {
+      levelSets->push_back(lsDomainType::New(ls));
     }
+
+    // Copy material map.
     if (passedDomain->materialMap) {
       materialMap = materialMapType::New();
       for (std::size_t i = 0; i < passedDomain->materialMap->size(); i++) {
@@ -74,6 +76,8 @@ public:
     } else {
       materialMap = nullptr;
     }
+
+    // Copy Cell-Set.
     if (passedDomain->cellSet) {
       auto cellSetDepth = passedDomain->getCellSet()->getDepth();
       cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth);
@@ -154,7 +158,7 @@ public:
       return;
     }
 
-    for (auto layer : *levelSets) {
+    for (auto &layer : *levelSets) {
       lsBooleanOperation<NumericType, D>(layer, levelSet, operation).apply();
     }
   }

@@ -1171,6 +1171,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "by the ray tracer, is averaged over the surface point neighbors.")
       .def("disableFluxSmoothing", &psProcess<T, D>::disableFluxSmoothing,
            "Disable flux smoothing")
+      .def("enableRandomSeeds", &psProcess<T, D>::enableRandomSeeds,
+           "Enable random seeds for the ray tracer. This will make the process "
+           "results non-deterministic.")
+      .def(
+          "disableRandomSeeds", &psProcess<T, D>::disableRandomSeeds,
+          "Disable random seeds for the ray tracer. This will make the process "
+          "results deterministic.")
       .def("getProcessDuration", &psProcess<T, D>::getProcessDuration,
            "Returns the duration of the recently run process. This duration "
            "can sometimes slightly vary from the set process duration, due to "
