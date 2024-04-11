@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX
-  VERSION 2.0.1)
+  VERSION 2.0.2)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -90,7 +90,7 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 3.1.0
+  VERSION 3.1.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
