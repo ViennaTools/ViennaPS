@@ -18,8 +18,8 @@ public:
     do {
       const auto rand1 = uniDist(RNG);
       const auto rand2 = uniDist(RNG);
-      E = std::cos(rayInternal::PI * 2 * rand1) *
-              std::sqrt(-2. * std::log(rand2)) * deltaIonEnergy +
+      E = std::cos(M_PI * 2 * rand1) * std::sqrt(-2. * std::log(rand2)) *
+              deltaIonEnergy +
           meanIonEnergy;
     } while (E < minEnergy);
   }
@@ -39,8 +39,7 @@ public:
     if (incAngle >= inflectAngle) {
       Eref_peak =
           Eref_max *
-          (1 - (1 - A) * std::pow((rayInternal::PI / 2. - incAngle) /
-                                      (rayInternal::PI / 2. - inflectAngle),
+          (1 - (1 - A) * std::pow((M_PI_2 - incAngle) / (M_PI_2 - inflectAngle),
                                   n_r));
     } else {
       Eref_peak = Eref_max * A * std::pow(incAngle / inflectAngle, n_l);
@@ -165,8 +164,7 @@ private:
   static constexpr T n_l = 10.;
   static constexpr T n_r = 1.;
 
-  static constexpr T A =
-      1. / (1. + (n_l / n_r) * (rayInternal::PI / (2 * inflectAngle) - 1.));
+  static constexpr T A = 1. / (1. + (n_l / n_r) * (M_PI_2 / inflectAngle - 1.));
 
   T E;
 

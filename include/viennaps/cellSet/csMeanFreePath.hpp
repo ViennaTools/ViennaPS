@@ -122,7 +122,7 @@ private:
           ray.time = 0.0f;
 #endif
 
-          ray.tfar = std::numeric_limits<rtcNumericType>::max();
+          ray.tfar = std::numeric_limits<rayInternal::rtcNumericType>::max();
           rayHit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
           rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 

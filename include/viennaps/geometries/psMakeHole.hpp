@@ -130,7 +130,7 @@ public:
 
     NumericType topRadius = holeRadius;
     if (taperAngle) {
-      topRadius += std::tan(taperAngle * rayInternal::PI / 180.) * holeDepth;
+      topRadius += std::tan(taperAngle * M_PI / 180.) * holeDepth;
     }
 
     lsMakeGeometry<NumericType, D>(
