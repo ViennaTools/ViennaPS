@@ -8,86 +8,82 @@
 
 /// Generates a new fin geometry extending in the z (3D) or y (2D) direction,
 /// centered at the origin with specified dimensions in the x and y directions.
-/// The fin may incorporate periodic boundaries in the x and y directions
-/// (limited to 3D). Users can define the width and height of the fin, and it
-/// can function as a mask, with the specified material exclusively applied to
-/// the bottom of the fin, while the upper portion adopts the mask material.
+/// The fin may incorporate periodic boundaries in the x and y directions. Users
+/// can define the width and height of the fin, and it can function as a mask,
+/// with the specified material exclusively applied to the bottom of the fin,
+/// while the upper portion adopts the mask material.
 template <class NumericType, int D> class psMakeFin {
-  using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
   using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
 
-  psDomainType domain = nullptr;
+  psDomainType pDomain_ = nullptr;
 
-  const NumericType gridDelta;
-  const NumericType xExtent;
-  const NumericType yExtent;
-  const NumericType baseHeight = 0.;
-  const NumericType taperAngle = 0; // tapering angle in degrees
+  const NumericType gridDelta_;
+  const NumericType xExtent_;
+  const NumericType yExtent_;
 
-  const NumericType finWidth;
-  const NumericType finHeight;
-  const bool periodicBoundary = false;
-  const bool makeMask = false;
-  const psMaterial material = psMaterial::None;
+  const NumericType finWidth_;
+  const NumericType finHeight_;
+  const NumericType taperAngle_; // taper angle in degrees
+  const NumericType baseHeight_;
+
+  const bool periodicBoundary_;
+  const bool makeMask_;
+  const psMaterial material_;
 
 public:
-  psMakeFin(psDomainType passedDomain, const NumericType passedGridDelta,
-            const NumericType passedXExtent, const NumericType passedYExtent,
-            const NumericType passedFinWidth, const NumericType passedFinHeight,
-            const NumericType passedTaperAngle = 0.,
-            const NumericType passedBaseHeight = 0.,
-            const bool passedPeriodic = false,
-            const bool passedMakeMask = false,
-            const psMaterial passedMaterial = psMaterial::None)
-      : domain(passedDomain), gridDelta(passedGridDelta),
-        xExtent(passedXExtent), yExtent(passedYExtent),
-        finWidth(passedFinWidth), finHeight(passedFinHeight),
-        taperAngle(passedTaperAngle), baseHeight(passedBaseHeight),
-        periodicBoundary(passedPeriodic), makeMask(passedMakeMask),
-        material(passedMaterial) {}
+  explicit psMakeFin(psDomainType domain, NumericType gridDelta,
+                     NumericType xExtent, NumericType yExtent,
+                     NumericType finWidth, NumericType finHeight,
+                     NumericType taperAngle = 0., NumericType baseHeight = 0.,
+                     bool periodicBoundary = false, bool makeMask = false,
+                     psMaterial material = psMaterial::None)
+      : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
+        yExtent_(yExtent), finWidth_(finWidth), finHeight_(finHeight),
+        taperAngle_(taperAngle), baseHeight_(baseHeight),
+        periodicBoundary_(periodicBoundary), makeMask_(makeMask),
+        material_(material) {}
 
   void apply() {
-    domain->clear();
+    pDomain_->clear();
+
     if constexpr (D == 3) {
+      double bounds[2 * D] = {-xExtent_ / 2, xExtent_ / 2, -yExtent_ / 2,
+                              yExtent_ / 2,  -1.,          1.};
 
-      double bounds[2 * D] = {
-          -xExtent / 2,           xExtent / 2,
-          -yExtent / 2,           yExtent / 2,
-          baseHeight - gridDelta, baseHeight + finHeight + gridDelta};
-
-      typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D] = {
+      typename lsDomain<NumericType, D>::BoundaryType boundaryConds[D] = {
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
-      if (periodicBoundary) {
-        boundaryCons[0] =
+      if (periodicBoundary_) {
+        boundaryConds[0] =
             lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
-        boundaryCons[1] =
+        boundaryConds[1] =
             lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
       }
 
-      auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
+      auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
       NumericType normal[D] = {0., 0., 1.};
-      NumericType origin[D] = {0., 0., baseHeight};
+      NumericType origin[D] = {0., 0., baseHeight_};
       lsMakeGeometry<NumericType, D>(
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      auto mask = LSPtrType::New(bounds, boundaryCons, gridDelta);
+      auto mask = lsDomainType::New(bounds, boundaryConds, gridDelta_);
 
-      if (taperAngle == 0.) {
-        NumericType minPoint[D] = {-finWidth / 2, -yExtent / 2,
-                                   baseHeight - gridDelta};
-        NumericType maxPoint[D] = {finWidth / 2, yExtent / 2,
-                                   baseHeight + finHeight};
+      if (taperAngle_ == 0.) {
+        NumericType minPoint[D] = {-finWidth_ / 2, -yExtent_ / 2,
+                                   baseHeight_ - gridDelta_};
+        NumericType maxPoint[D] = {finWidth_ / 2, yExtent_ / 2,
+                                   baseHeight_ + finHeight_};
 
         lsMakeGeometry<NumericType, D>(
             mask,
             lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
             .apply();
       } else {
-        if (taperAngle >= 90 || taperAngle <= -90) {
+        if (taperAngle_ >= 90 || taperAngle_ <= -90) {
           psLogger::getInstance()
               .addError("psMakeFin: Taper angle must be between -90 and 90 "
                         "degrees!")
@@ -96,26 +92,26 @@ public:
         }
 
         auto boxMesh = psSmartPointer<lsMesh<NumericType>>::New();
-        boxMesh->insertNextNode(
-            {-finWidth / 2, yExtent / 2 + gridDelta, baseHeight - gridDelta});
-        boxMesh->insertNextNode(
-            {finWidth / 2, yExtent / 2 + gridDelta, baseHeight - gridDelta});
+        boxMesh->insertNextNode({-finWidth_ / 2, yExtent_ / 2 + gridDelta_,
+                                 baseHeight_ - gridDelta_});
+        boxMesh->insertNextNode({finWidth_ / 2, yExtent_ / 2 + gridDelta_,
+                                 baseHeight_ - gridDelta_});
 
-        NumericType taperAngleRad = taperAngle * M_PI / 180.;
-        NumericType offSet = finHeight * std::tan(taperAngleRad);
-        if (offSet >= finWidth / 2) {
+        NumericType taperAngleRad = taperAngle_ * M_PI / 180.;
+        NumericType offSet = finHeight_ * std::tan(taperAngleRad);
+        if (offSet >= finWidth_ / 2) {
           boxMesh->insertNextNode(
-              {0., yExtent / 2 + gridDelta,
-               baseHeight + finWidth / 2 / std::tan(taperAngleRad)});
+              {0., yExtent_ / 2 + gridDelta_,
+               baseHeight_ + finWidth_ / 2 / std::tan(taperAngleRad)});
 
           // shifted nodes by y extent
-          boxMesh->insertNextNode({-finWidth / 2, -yExtent / 2 - gridDelta,
-                                   baseHeight - gridDelta});
+          boxMesh->insertNextNode({-finWidth_ / 2, -yExtent_ / 2 - gridDelta_,
+                                   baseHeight_ - gridDelta_});
+          boxMesh->insertNextNode({finWidth_ / 2, -yExtent_ / 2 - gridDelta_,
+                                   baseHeight_ - gridDelta_});
           boxMesh->insertNextNode(
-              {finWidth / 2, -yExtent / 2 - gridDelta, baseHeight - gridDelta});
-          boxMesh->insertNextNode(
-              {0., -yExtent / 2 - gridDelta,
-               baseHeight + finWidth / 2 / std::tan(taperAngleRad)});
+              {0., -yExtent_ / 2 - gridDelta_,
+               baseHeight_ + finWidth_ / 2 / std::tan(taperAngleRad)});
 
           // triangles
           boxMesh->insertNextTriangle({0, 2, 1}); // front
@@ -127,24 +123,24 @@ public:
           boxMesh->insertNextTriangle({0, 3, 2}); // left
           boxMesh->insertNextTriangle({3, 5, 2}); // left
         } else {
-          boxMesh->insertNextNode({finWidth / 2 - offSet,
-                                   yExtent / 2 + gridDelta,
-                                   baseHeight + finHeight});
-          boxMesh->insertNextNode({-finWidth / 2 + offSet,
-                                   yExtent / 2 + gridDelta,
-                                   baseHeight + finHeight});
+          boxMesh->insertNextNode({finWidth_ / 2 - offSet,
+                                   yExtent_ / 2 + gridDelta_,
+                                   baseHeight_ + finHeight_});
+          boxMesh->insertNextNode({-finWidth_ / 2 + offSet,
+                                   yExtent_ / 2 + gridDelta_,
+                                   baseHeight_ + finHeight_});
 
           // shifted nodes by y extent
-          boxMesh->insertNextNode({-finWidth / 2, -yExtent / 2 - gridDelta,
-                                   baseHeight - gridDelta});
-          boxMesh->insertNextNode(
-              {finWidth / 2, -yExtent / 2 - gridDelta, baseHeight - gridDelta});
-          boxMesh->insertNextNode({finWidth / 2 - offSet,
-                                   -yExtent / 2 - gridDelta,
-                                   baseHeight + finHeight});
-          boxMesh->insertNextNode({-finWidth / 2 + offSet,
-                                   -yExtent / 2 - gridDelta,
-                                   baseHeight + finHeight});
+          boxMesh->insertNextNode({-finWidth_ / 2, -yExtent_ / 2 - gridDelta_,
+                                   baseHeight_ - gridDelta_});
+          boxMesh->insertNextNode({finWidth_ / 2, -yExtent_ / 2 - gridDelta_,
+                                   baseHeight_ - gridDelta_});
+          boxMesh->insertNextNode({finWidth_ / 2 - offSet,
+                                   -yExtent_ / 2 - gridDelta_,
+                                   baseHeight_ + finHeight_});
+          boxMesh->insertNextNode({-finWidth_ / 2 + offSet,
+                                   -yExtent_ / 2 - gridDelta_,
+                                   baseHeight_ + finHeight_});
 
           // triangles
           boxMesh->insertNextTriangle({0, 3, 1}); // front
@@ -167,47 +163,48 @@ public:
                                          lsBooleanOperationEnum::UNION)
           .apply();
 
-      if (material == psMaterial::None) {
-        if (makeMask)
-          domain->insertNextLevelSet(mask);
-        domain->insertNextLevelSet(substrate, false);
+      if (material_ == psMaterial::None) {
+        if (makeMask_)
+          pDomain_->insertNextLevelSet(mask);
+        pDomain_->insertNextLevelSet(substrate, false);
       } else {
-        if (makeMask)
-          domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
-        domain->insertNextLevelSetAsMaterial(substrate, material, false);
+        if (makeMask_)
+          pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+        pDomain_->insertNextLevelSetAsMaterial(substrate, material_, false);
       }
     } else if constexpr (D == 2) {
 
-      double bounds[2 * D] = {-xExtent / 2, xExtent / 2, baseHeight - gridDelta,
-                              baseHeight + finHeight + gridDelta};
+      double bounds[2 * D] = {-xExtent_ / 2, xExtent_ / 2,
+                              baseHeight_ - gridDelta_,
+                              baseHeight_ + finHeight_ + gridDelta_};
 
-      typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D] = {
+      typename lsDomain<NumericType, D>::BoundaryType boundaryConds[D] = {
           lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
           lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
-      if (periodicBoundary) {
-        boundaryCons[0] =
+      if (periodicBoundary_) {
+        boundaryConds[0] =
             lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
       }
 
-      auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
+      auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
       NumericType normal[D] = {0., 1.};
-      NumericType origin[D] = {0., baseHeight};
+      NumericType origin[D] = {0., baseHeight_};
       lsMakeGeometry<NumericType, D>(
           substrate,
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      auto mask = LSPtrType::New(bounds, boundaryCons, gridDelta);
+      auto mask = lsDomainType::New(bounds, boundaryConds, gridDelta_);
 
-      if (taperAngle == 0.) {
-        NumericType minPoint[D] = {-finWidth / 2, baseHeight - gridDelta};
-        NumericType maxPoint[D] = {finWidth / 2, baseHeight + finHeight};
+      if (taperAngle_ == 0.) {
+        NumericType minPoint[D] = {-finWidth_ / 2, baseHeight_ - gridDelta_};
+        NumericType maxPoint[D] = {finWidth_ / 2, baseHeight_ + finHeight_};
         lsMakeGeometry<NumericType, D>(
             mask,
             lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
             .apply();
       } else {
-        if (taperAngle >= 90 || taperAngle <= -90) {
+        if (taperAngle_ >= 90 || taperAngle_ <= -90) {
           psLogger::getInstance()
               .addError("psMakeFin: Taper angle must be between -90 and 90 "
                         "degrees!")
@@ -216,22 +213,22 @@ public:
         }
 
         auto boxMesh = psSmartPointer<lsMesh<NumericType>>::New();
-        boxMesh->insertNextNode({-finWidth / 2, baseHeight - gridDelta});
-        boxMesh->insertNextNode({finWidth / 2, baseHeight - gridDelta});
+        boxMesh->insertNextNode({-finWidth_ / 2, baseHeight_ - gridDelta_});
+        boxMesh->insertNextNode({finWidth_ / 2, baseHeight_ - gridDelta_});
         boxMesh->insertNextLine({1, 0});
 
-        NumericType taperAngleRad = taperAngle * M_PI / 180.;
-        NumericType offSet = finHeight * std::tan(taperAngleRad);
-        if (offSet >= finWidth / 2) {
+        NumericType taperAngleRad = taperAngle_ * M_PI / 180.;
+        NumericType offSet = finHeight_ * std::tan(taperAngleRad);
+        if (offSet >= finWidth_ / 2) {
           boxMesh->insertNextNode(
-              {0., baseHeight + finWidth / 2 / std::tan(taperAngleRad)});
+              {0., baseHeight_ + finWidth_ / 2 / std::tan(taperAngleRad)});
           boxMesh->insertNextLine({2, 1});
           boxMesh->insertNextLine({0, 2});
         } else {
           boxMesh->insertNextNode(
-              {finWidth / 2 - offSet, baseHeight + finHeight});
+              {finWidth_ / 2 - offSet, baseHeight_ + finHeight_});
           boxMesh->insertNextNode(
-              {-finWidth / 2 + offSet, baseHeight + finHeight});
+              {-finWidth_ / 2 + offSet, baseHeight_ + finHeight_});
           boxMesh->insertNextLine({2, 1});
           boxMesh->insertNextLine({3, 2});
           boxMesh->insertNextLine({0, 3});
@@ -244,14 +241,14 @@ public:
                                          lsBooleanOperationEnum::UNION)
           .apply();
 
-      if (material == psMaterial::None) {
-        if (makeMask)
-          domain->insertNextLevelSet(mask);
-        domain->insertNextLevelSet(substrate, false);
+      if (material_ == psMaterial::None) {
+        if (makeMask_)
+          pDomain_->insertNextLevelSet(mask);
+        pDomain_->insertNextLevelSet(substrate, false);
       } else {
-        if (makeMask)
-          domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
-        domain->insertNextLevelSetAsMaterial(substrate, material, false);
+        if (makeMask_)
+          pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+        pDomain_->insertNextLevelSetAsMaterial(substrate, material_, false);
       }
     }
   }
