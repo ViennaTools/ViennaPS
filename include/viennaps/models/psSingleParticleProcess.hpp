@@ -9,12 +9,12 @@
 namespace SingleParticleImplementation {
 template <typename NumericType, int D>
 class SurfaceModel : public psSurfaceModel<NumericType> {
-  const NumericType rateFactor;
-  const std::vector<psMaterial> maskMaterials;
+  const NumericType rateFactor_;
+  const std::vector<psMaterial> maskMaterials_;
 
 public:
-  SurfaceModel(const NumericType pRate, const std::vector<psMaterial> &pMask)
-      : rateFactor(pRate), maskMaterials(pMask) {}
+  SurfaceModel(NumericType rate, const std::vector<psMaterial> &mask)
+      : rateFactor_(rate), maskMaterials_(mask) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> rates,
@@ -27,7 +27,7 @@ public:
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!isMaskMaterial(materialIds[i])) {
-        velocity->at(i) = flux->at(i) * rateFactor;
+        velocity->at(i) = flux->at(i) * rateFactor_;
       }
     }
 
@@ -36,7 +36,7 @@ public:
 
 private:
   bool isMaskMaterial(const NumericType &material) const {
-    for (const auto &mat : maskMaterials) {
+    for (const auto &mat : maskMaterials_) {
       if (psMaterialMap::isMaterial(material, mat))
         return true;
     }
@@ -47,9 +47,8 @@ private:
 template <typename NumericType, int D>
 class Particle : public rayParticle<Particle<NumericType, D>, NumericType> {
 public:
-  Particle(const NumericType passedSticking,
-           const NumericType passedSourcePower)
-      : stickingProbability(passedSticking), sourcePower(passedSourcePower) {}
+  Particle(NumericType sticking, NumericType sourcePower)
+      : stickingProbability_(sticking), sourcePower_(sourcePower) {}
 
   void surfaceCollision(NumericType rayWeight,
                         const rayTriple<NumericType> &rayDir,
@@ -67,20 +66,20 @@ public:
                     const rayTracingData<NumericType> *globalData,
                     rayRNG &Rng) override final {
     auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, rayTriple<NumericType>>{stickingProbability,
+    return std::pair<NumericType, rayTriple<NumericType>>{stickingProbability_,
                                                           direction};
   }
   void initNew(rayRNG &RNG) override final {}
   NumericType getSourceDistributionPower() const override final {
-    return sourcePower;
+    return sourcePower_;
   }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"particleFlux"};
   }
 
 private:
-  const NumericType stickingProbability;
-  const NumericType sourcePower;
+  const NumericType stickingProbability_;
+  const NumericType sourcePower_;
 };
 } // namespace SingleParticleImplementation
 
@@ -89,27 +88,26 @@ private:
 template <typename NumericType, int D>
 class psSingleParticleProcess : public psProcessModel<NumericType, D> {
 public:
-  psSingleParticleProcess(const NumericType rate = 1.,
-                          const NumericType stickingProbability = 1.,
-                          const NumericType sourceDistributionPower = 1.,
-                          const psMaterial maskMaterial = psMaterial::None) {
+  psSingleParticleProcess(NumericType rate = 1.,
+                          NumericType stickingProbability = 1.,
+                          NumericType sourceDistributionPower = 1.,
+                          psMaterial maskMaterial = psMaterial::None) {
     std::vector<psMaterial> maskMaterialVec = {maskMaterial};
     initialize(rate, stickingProbability, sourceDistributionPower,
-               maskMaterialVec);
+               std::move(maskMaterialVec));
   }
 
-  psSingleParticleProcess(const NumericType rate,
-                          const NumericType stickingProbability,
-                          const NumericType sourceDistributionPower,
-                          const std::vector<psMaterial> maskMaterial) {
+  psSingleParticleProcess(NumericType rate, NumericType stickingProbability,
+                          NumericType sourceDistributionPower,
+                          std::vector<psMaterial> maskMaterial) {
     initialize(rate, stickingProbability, sourceDistributionPower,
-               maskMaterial);
+               std::move(maskMaterial));
   }
 
 private:
-  void initialize(const NumericType rate, const NumericType stickingProbability,
-                  const NumericType sourceDistributionPower,
-                  const std::vector<psMaterial> &maskMaterial) {
+  void initialize(NumericType rate, NumericType stickingProbability,
+                  NumericType sourceDistributionPower,
+                  std::vector<psMaterial> &&maskMaterial) {
     // particles
     auto depoParticle = std::make_unique<
         SingleParticleImplementation::Particle<NumericType, D>>(
