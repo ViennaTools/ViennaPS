@@ -3,7 +3,7 @@
 #include "../psDomain.hpp"
 
 #include <lsBooleanOperation.hpp>
-#include <lsDomain.hpp>
+#include <lsFromSurfaceMesh.hpp>
 #include <lsMakeGeometry.hpp>
 
 /// Generates a new fin geometry extending in the z (3D) or y (2D) direction,
@@ -15,6 +15,7 @@
 template <class NumericType, int D> class psMakeFin {
   using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
   using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
+  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
 
@@ -32,12 +33,11 @@ template <class NumericType, int D> class psMakeFin {
   const psMaterial material_;
 
 public:
-  explicit psMakeFin(psDomainType domain, NumericType gridDelta,
-                     NumericType xExtent, NumericType yExtent,
-                     NumericType finWidth, NumericType finHeight,
-                     NumericType taperAngle = 0., NumericType baseHeight = 0.,
-                     bool periodicBoundary = false, bool makeMask = false,
-                     psMaterial material = psMaterial::None)
+  psMakeFin(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+            NumericType yExtent, NumericType finWidth, NumericType finHeight,
+            NumericType taperAngle = 0., NumericType baseHeight = 0.,
+            bool periodicBoundary = false, bool makeMask = false,
+            psMaterial material = psMaterial::None)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), finWidth_(finWidth), finHeight_(finHeight),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
@@ -51,15 +51,12 @@ public:
       double bounds[2 * D] = {-xExtent_ / 2, xExtent_ / 2, -yExtent_ / 2,
                               yExtent_ / 2,  -1.,          1.};
 
-      typename lsDomain<NumericType, D>::BoundaryType boundaryConds[D] = {
-          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-          lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+      BoundaryEnum boundaryConds[D] = {BoundaryEnum::REFLECTIVE_BOUNDARY,
+                                       BoundaryEnum::REFLECTIVE_BOUNDARY,
+                                       BoundaryEnum::INFINITE_BOUNDARY};
       if (periodicBoundary_) {
-        boundaryConds[0] =
-            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
-        boundaryConds[1] =
-            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+        boundaryConds[0] = BoundaryEnum::PERIODIC_BOUNDARY;
+        boundaryConds[1] = BoundaryEnum::PERIODIC_BOUNDARY;
       }
 
       auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
@@ -178,12 +175,10 @@ public:
                               baseHeight_ - gridDelta_,
                               baseHeight_ + finHeight_ + gridDelta_};
 
-      typename lsDomain<NumericType, D>::BoundaryType boundaryConds[D] = {
-          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-          lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+      BoundaryEnum boundaryConds[D] = {BoundaryEnum::REFLECTIVE_BOUNDARY,
+                                       BoundaryEnum::INFINITE_BOUNDARY};
       if (periodicBoundary_) {
-        boundaryConds[0] =
-            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+        boundaryConds[0] = BoundaryEnum::PERIODIC_BOUNDARY;
       }
 
       auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
