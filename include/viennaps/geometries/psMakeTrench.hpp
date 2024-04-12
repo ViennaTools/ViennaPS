@@ -112,7 +112,7 @@ public:
     if (taperingAngle) {
       auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
       const NumericType offset =
-          std::tan(taperingAngle * rayInternal::PI / 180.) * trenchDepth;
+          std::tan(taperingAngle * M_PI / 180.) * trenchDepth;
       if constexpr (D == 2) {
         for (int i = 0; i < 4; i++) {
           std::array<NumericType, 3> node = {0., 0., 0.};

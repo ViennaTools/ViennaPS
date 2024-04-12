@@ -583,6 +583,6 @@ private:
   }
 
   static inline NumericType deg2rad(const NumericType angleDeg) {
-    return angleDeg * rayInternal::PI / 180.;
+    return angleDeg * M_PI / 180.;
   }
 };

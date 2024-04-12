@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX
-  VERSION 2.0.1)
+  VERSION 2.0.2)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -84,7 +84,7 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 2.0.4
+  VERSION 2.1.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

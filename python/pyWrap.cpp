@@ -75,7 +75,6 @@
 #include <psUtils.hpp>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
-#include <rayTraceDirection.hpp>
 #include <rayUtil.hpp>
 
 // always use double for python export

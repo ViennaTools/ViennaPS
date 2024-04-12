@@ -5,7 +5,7 @@
 #include <raySource.hpp>
 
 template <typename NumericType, int D>
-class csPointSource : public raySource<NumericType, D> {
+class csPointSource : public raySource<csPointSource<NumericType, D>> {
   const unsigned mNumPoints;
   const csTriple<NumericType> origin;
   const csTriple<NumericType> direction;
@@ -17,7 +17,7 @@ public:
       : origin(passedOrigin), direction(passedDirection),
         mNumPoints(pNumPoints) {}
 
-  void fillRay(RTCRay &ray, const size_t idx, rayRNG &RngState) override final {
+  void fillRay(RTCRay &ray, const size_t idx, rayRNG &RngState) const {
 #ifdef ARCH_X86
     reinterpret_cast<__m128 &>(ray) =
         _mm_set_ps(1e-4f, (float)origin[2], (float)origin[1], (float)origin[0]);
@@ -37,5 +37,5 @@ public:
 #endif
   }
 
-  size_t getNumPoints() const override final { return mNumPoints; }
+  size_t getNumPoints() const { return mNumPoints; }
 };

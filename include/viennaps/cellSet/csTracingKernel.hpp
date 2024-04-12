@@ -11,10 +11,11 @@
 #include <raySource.hpp>
 #include <rayUtil.hpp>
 
-template <typename T, int D> class csTracingKernel {
+template <typename SourceType, typename T, int D> class csTracingKernel {
 public:
   csTracingKernel(RTCDevice &pDevice, rayGeometry<T, D> &pRTCGeometry,
-                  rayBoundary<T, D> &pRTCBoundary, raySource<T, D> &pSource,
+                  rayBoundary<T, D> &pRTCBoundary,
+                  raySource<SourceType> &pSource,
                   std::unique_ptr<csAbstractParticle<T>> &pParticle,
                   const size_t pNumOfRayPerPoint, const size_t pNumOfRayFixed,
                   const bool pUseRandomSeed, const size_t pRunNumber,
@@ -94,7 +95,8 @@ public:
         bool reflect = false;
         bool hitFromBack = false;
         do {
-          rayHit.ray.tfar = std::numeric_limits<rtcNumericType>::max();
+          rayHit.ray.tfar =
+              std::numeric_limits<rayInternal::rtcNumericType>::max();
           rayHit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
           rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 
@@ -119,9 +121,12 @@ public:
 
           // Calculate point of impact
           const auto &ray = rayHit.ray;
-          const rtcNumericType xx = ray.org_x + ray.dir_x * ray.tfar;
-          const rtcNumericType yy = ray.org_y + ray.dir_y * ray.tfar;
-          const rtcNumericType zz = ray.org_z + ray.dir_z * ray.tfar;
+          const rayInternal::rtcNumericType xx =
+              ray.org_x + ray.dir_x * ray.tfar;
+          const rayInternal::rtcNumericType yy =
+              ray.org_y + ray.dir_y * ray.tfar;
+          const rayInternal::rtcNumericType zz =
+              ray.org_z + ray.dir_z * ray.tfar;
 
           /* -------- Hit from back -------- */
           const auto rayDir = rayTriple<T>{ray.dir_x, ray.dir_y, ray.dir_z};
@@ -205,19 +210,22 @@ public:
 #ifdef ARCH_X86
           reinterpret_cast<__m128 &>(rayHit.ray) =
               _mm_set_ps(1e-4f, zz, yy, xx);
-          reinterpret_cast<__m128 &>(rayHit.ray.dir_x) =
-              _mm_set_ps(0.0f, (rtcNumericType)fillnDirection.second[2],
-                         (rtcNumericType)fillnDirection.second[1],
-                         (rtcNumericType)fillnDirection.second[0]);
+          reinterpret_cast<__m128 &>(rayHit.ray.dir_x) = _mm_set_ps(
+              0.0f, (rayInternal::rtcNumericType)fillnDirection.second[2],
+              (rayInternal::rtcNumericType)fillnDirection.second[1],
+              (rayInternal::rtcNumericType)fillnDirection.second[0]);
 #else
           rayHit.ray.org_x = xx;
           rayHit.ray.org_y = yy;
           rayHit.ray.org_z = zz;
           rayHit.ray.tnear = 1e-4f;
 
-          rayHit.ray.dir_x = (rtcNumericType)fillnDirection.second[0];
-          rayHit.ray.dir_y = (rtcNumericType)fillnDirection.second[1];
-          rayHit.ray.dir_z = (rtcNumericType)fillnDirection.second[2];
+          rayHit.ray.dir_x =
+              (rayInternal::rtcNumericType)fillnDirection.second[0];
+          rayHit.ray.dir_y =
+              (rayInternal::rtcNumericType)fillnDirection.second[1];
+          rayHit.ray.dir_z =
+              (rayInternal::rtcNumericType)fillnDirection.second[2];
           rayHit.ray.time = 0.0f;
 #endif
         } while (reflect);
@@ -278,7 +286,7 @@ private:
   RTCDevice &mDevice;
   rayGeometry<T, D> &mGeometry;
   rayBoundary<T, D> &mBoundary;
-  raySource<T, D> &mSource;
+  raySource<SourceType> &mSource;
   std::unique_ptr<csAbstractParticle<T>> const mParticle = nullptr;
   const long long mNumRays;
   const bool mUseRandomSeeds;
