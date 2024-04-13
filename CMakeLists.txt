@@ -76,7 +76,9 @@ target_include_directories(
 # └ VTK requires C Language support (HDF5)
 # --------------------------------------------------------------------------------------------------------
 
-enable_language(C)
+if (NOT APPLE)
+  enable_language(C)
+endif()
 
 find_package(ViennaRay QUIET)
 find_package(ViennaLS QUIET)
