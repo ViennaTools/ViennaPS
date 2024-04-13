@@ -76,7 +76,7 @@ target_include_directories(
 # └ VTK requires C Language support (HDF5)
 # --------------------------------------------------------------------------------------------------------
 
-if (NOT APPLE)
+if(NOT APPLE)
   enable_language(C)
 endif()
 
