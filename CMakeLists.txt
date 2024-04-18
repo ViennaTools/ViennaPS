@@ -11,7 +11,9 @@ project(
 option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
 
+option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
+
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
@@ -32,6 +34,16 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 #   during build time though, we disable the soname versioning so that we can easily set the rpath to
 #   link against the vtk-python libs
 # --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_PACKAGE_PYTHON)
+  message(
+    STATUS
+      "[ViennaPS] Skipping system dependencies due to 'VIENNALS_PACKAGE_PYTHON', the build will take a long time!"
+  )
+
+  set(CPM_DOWNLOAD_ALL ON)
+  set(VIENNAPS_BUILD_PYTHON ON)
+endif()
 
 if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
