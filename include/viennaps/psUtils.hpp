@@ -225,13 +225,13 @@ struct Parameters {
     m = psUtils::readConfigFile(fileName);
   }
 
-  template <typename T = double> T get(const std::string &key) {
+  template <typename T = double> T get(const std::string &key) const {
     if (m.find(key) == m.end()) {
       std::cout << "Key not found in parameters: " << key << std::endl;
       exit(1);
       return T();
     }
-    return convert<T>(m[key]);
+    return convert<T>(m.at(key));
   }
 };
 }; // namespace psUtils

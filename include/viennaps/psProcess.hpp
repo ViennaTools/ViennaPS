@@ -227,8 +227,7 @@ public:
 
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
-    const NumericType gridDelta =
-        domain->getLevelSets()->back()->getGrid().getGridDelta();
+    const NumericType gridDelta = domain->getGrid().getGridDelta();
 
     auto diskMesh = lsSmartPointer<lsMesh<NumericType>>::New();
     auto translator = lsSmartPointer<translatorType>::New();
@@ -646,16 +645,9 @@ public:
   }
 
 private:
-  void saveSurfaceMesh(lsSmartPointer<lsDomain<NumericType, D>> dom,
-                       std::string name) {
-    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-    lsToSurfaceMesh<NumericType, D>(dom, mesh).apply();
-    psVTKWriter<NumericType>(mesh, name).apply();
-  }
-
   void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
-                     std::string name) {
-    psVTKWriter<NumericType>(mesh, name).apply();
+                     std::string name) const {
+    psVTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
   rayBoundaryCondition convertBoundaryCondition(
@@ -724,17 +716,6 @@ private:
     }
   }
 
-  void addMaterialIdsToTopLS(lsSmartPointer<translatorType> translator,
-                             std::vector<NumericType> *materialIds) {
-    auto topLS = domain->getLevelSets()->back();
-    std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
-    for (const auto iter : *translator.get()) {
-      levelSetData[iter.first] = materialIds->at(iter.second);
-    }
-    topLS->getPointData().insertNextScalarData(std::move(levelSetData),
-                                               "Material");
-  }
-
   void updateCoveragesFromAdvectedSurface(
       lsSmartPointer<translatorType> translator,
       psSmartPointer<psPointData<NumericType>> coverages) {
@@ -752,7 +733,6 @@ private:
 
   psDomainType domain = nullptr;
   psSmartPointer<psProcessModel<NumericType, D>> model = nullptr;
-  psSmartPointer<psMaterialMap> materialMap = nullptr;
   NumericType processDuration;
   rayTraceDirection sourceDirection =
       D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
