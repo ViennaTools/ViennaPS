@@ -11,7 +11,7 @@ public:
   psWriteVisualizationMesh(
       psSmartPointer<psDomain<NumericType, D>> passedDomain,
       std::string passedFileName)
-      : domain(passedDomain), fileName(passedFileName) {}
+      : domain(passedDomain), fileName(std::move(passedFileName)) {}
 
   void apply() {
     lsWriteVisualizationMesh<NumericType, D> visMesh;
@@ -24,7 +24,9 @@ public:
     visMesh.apply();
   }
 
-  void setFileName(std::string passedFileName) { fileName = passedFileName; }
+  void setFileName(std::string passedFileName) {
+    fileName = std::move(passedFileName);
+  }
 
   void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
     domain = passedDomain;

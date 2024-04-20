@@ -6,6 +6,7 @@
 #include "psSurfaceModel.hpp"
 #include "psVelocityField.hpp"
 
+#include <lsConcepts.hpp>
 #include <rayParticle.hpp>
 
 /// The process model combines all models (particle types, surface model,
@@ -26,6 +27,8 @@ protected:
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
 
 public:
+  virtual ~psProcessModel() = default;
+
   virtual psSmartPointer<ParticleTypeList> getParticleTypes() const {
     return particles;
   }
@@ -57,14 +60,16 @@ public:
     return particleLogSize[particleIdx];
   }
 
-  void setProcessName(std::string name) { processName = name; }
+  void setProcessName(std::string name) { processName = std::move(name); }
 
   virtual void
   setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
     primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
   }
 
-  template <typename ParticleType>
+  template <typename ParticleType,
+            lsConcepts::IsBaseOf<rayParticle<ParticleType, NumericType>,
+                                 ParticleType> = lsConcepts::assignable>
   void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle,
                               const int dataLogSize = 0) {
     if (particles == nullptr) {
@@ -74,13 +79,18 @@ public:
     particleLogSize.push_back(dataLogSize);
   }
 
-  template <typename SurfaceModelType>
+  template <typename SurfaceModelType,
+            lsConcepts::IsBaseOf<psSurfaceModel<NumericType>,
+                                 SurfaceModelType> = lsConcepts::assignable>
   void setSurfaceModel(psSmartPointer<SurfaceModelType> passedSurfaceModel) {
     surfaceModel = std::dynamic_pointer_cast<psSurfaceModel<NumericType>>(
         passedSurfaceModel);
   }
 
-  template <typename AdvectionCallbackType>
+  template <
+      typename AdvectionCallbackType,
+      lsConcepts::IsBaseOf<psAdvectionCallback<NumericType, D>,
+                           AdvectionCallbackType> = lsConcepts::assignable>
   void setAdvectionCallback(
       psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
     advectionCallback =
@@ -88,7 +98,9 @@ public:
             passedAdvectionCallback);
   }
 
-  template <typename GeometricModelType>
+  template <typename GeometricModelType,
+            lsConcepts::IsBaseOf<psGeometricModel<NumericType, D>,
+                                 GeometricModelType> = lsConcepts::assignable>
   void
   setGeometricModel(psSmartPointer<GeometricModelType> passedGeometricModel) {
     geometricModel =
@@ -96,7 +108,9 @@ public:
             passedGeometricModel);
   }
 
-  template <typename VelocityFieldType>
+  template <typename VelocityFieldType,
+            lsConcepts::IsBaseOf<psVelocityField<NumericType>,
+                                 VelocityFieldType> = lsConcepts::assignable>
   void setVelocityField(psSmartPointer<VelocityFieldType> passedVelocityField) {
     velocityField = std::dynamic_pointer_cast<psVelocityField<NumericType>>(
         passedVelocityField);

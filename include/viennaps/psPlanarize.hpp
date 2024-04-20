@@ -15,6 +15,14 @@ public:
               const NumericType passedCutoff)
       : domain(passedDomain), cutoffPosition(passedCutoff) {}
 
+  void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
+    domain = passedDomain;
+  }
+
+  void setCutoffPosition(const NumericType passedCutoff) {
+    cutoffPosition = passedCutoff;
+  }
+
   void apply() {
     NumericType origin[D] = {0.};
     origin[D - 1] = cutoffPosition;

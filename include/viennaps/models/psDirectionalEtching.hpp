@@ -6,16 +6,18 @@
 namespace DirectionalEtchingImplementation {
 template <class NumericType, int D>
 class DirectionalEtchVelocityField : public psVelocityField<NumericType> {
-  const std::array<NumericType, 3> direction;
-  const NumericType dirVel;
-  const NumericType isoVel;
-  const std::vector<int> maskMaterials;
+  const std::array<NumericType, 3> direction_;
+  const NumericType directionalVelocity_;
+  const NumericType isotropicVelocity_;
+  const std::vector<int> maskMaterials_;
 
 public:
-  DirectionalEtchVelocityField(std::array<NumericType, 3> dir,
-                               const NumericType dVel, const NumericType iVel,
+  DirectionalEtchVelocityField(std::array<NumericType, 3> direction,
+                               const NumericType directionalVelocity,
+                               const NumericType isotropicVelocity,
                                const std::vector<int> &mask)
-      : direction(dir), dirVel(dVel), isoVel(iVel), maskMaterials(mask) {}
+      : direction_(direction), directionalVelocity_(directionalVelocity),
+        isotropicVelocity_(isotropicVelocity), maskMaterials_(mask) {}
 
   std::array<NumericType, 3>
   getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
@@ -24,15 +26,15 @@ public:
     if (isMaskMaterial(material)) {
       return {0.};
     } else {
-      std::array<NumericType, 3> dir(direction);
-      for (unsigned i = 0; i < D; ++i) {
-        if (dir[i] == 0.) {
-          dir[i] -= isoVel * (normalVector[i] < 0 ? -1 : 1);
+      auto rate = direction_;
+      for (int i = 0; i < D; ++i) {
+        if (rate[i] == 0.) {
+          rate[i] -= isotropicVelocity_ * (normalVector[i] < 0 ? -1 : 1);
         } else {
-          dir[i] *= dirVel;
+          rate[i] *= directionalVelocity_;
         }
       }
-      return dir;
+      return rate;
     }
   }
 
@@ -42,7 +44,7 @@ public:
 
 private:
   bool isMaskMaterial(const int material) const {
-    for (const auto &mat : maskMaterials) {
+    for (const auto &mat : maskMaterials_) {
       if (material == mat)
         return true;
     }

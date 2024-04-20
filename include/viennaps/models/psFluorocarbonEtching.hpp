@@ -126,7 +126,7 @@ class SurfaceModel : public psSurfaceModel<NumericType> {
   const Parameters<NumericType> &p;
 
 public:
-  SurfaceModel(const Parameters<NumericType> &pParams) : p(pParams) {}
+  SurfaceModel(const Parameters<NumericType> &parameters) : p(parameters) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
@@ -190,26 +190,31 @@ public:
         NumericType density = 1.;
         NumericType F_ev = 0.;
         switch (matId) {
-        case psMaterial::Si:
+        case psMaterial::Si: {
+
           density = -p.Si.rho;
           F_ev = p.Si.K * p.etchantFlux *
                  std::exp(-p.Si.E_a /
                           (Parameters<NumericType>::kB * p.temperature));
           break;
-        case psMaterial::SiO2:
+        }
+        case psMaterial::SiO2: {
+
           F_ev = p.SiO2.K * p.etchantFlux *
                  std::exp(-p.SiO2.E_a /
                           (Parameters<NumericType>::kB * p.temperature));
           density = -p.SiO2.rho;
           break;
-        case psMaterial::Si3N4:
+        }
+        case psMaterial::Si3N4: {
+
           F_ev = p.Si3N4.K * p.etchantFlux *
                  std::exp(-p.Si3N4.E_a /
                           (Parameters<NumericType>::kB * p.temperature));
           density = -p.Si3N4.rho;
           break;
+        }
         default:
-          assert(false && "Unknown material");
         }
 
         etchRate[i] =
@@ -306,7 +311,7 @@ public:
                             (Parameters<NumericType>::kB * p.temperature));
             break;
           default:
-            assert(false && "Unknown material");
+            F_ev = 0.;
           }
           eCoverage->at(i) =
               (etchantRate->at(i) * p.etchantFlux * p.beta_e *
@@ -330,8 +335,8 @@ class Ion : public rayParticle<Ion<NumericType, D>, NumericType> {
   NumericType E;
 
 public:
-  Ion(const Parameters<NumericType> &pParams)
-      : p(pParams),
+  Ion(const Parameters<NumericType> &parameters)
+      : p(parameters),
         A(1. / (1. + p.Ions.n_l * (M_PI_2 / p.Ions.inflectAngle - 1.))),
         minEnergy(std::min({p.Si.Eth_ie, p.SiO2.Eth_ie, p.Si3N4.Eth_ie})) {}
   void surfaceCollision(NumericType rayWeight,
@@ -377,8 +382,19 @@ public:
       Eth_sp = p.Si3N4.Eth_sp;
       Eth_ie = p.Si3N4.Eth_ie;
       break;
+    case psMaterial::Polymer:
+      A_sp = p.Polymer.A_ie;
+      B_sp = 1.;
+      A_ie = p.Polymer.A_ie;
+      Eth_sp = p.Polymer.Eth_ie;
+      Eth_ie = p.Polymer.Eth_ie;
+      break;
     default:
-      assert(false && "Unknown material");
+      A_sp = 0.;
+      B_sp = 0.;
+      A_ie = 0.;
+      Eth_sp = 0.;
+      Eth_ie = 0.;
     }
 
     const auto sqrtE = std::sqrt(E);
@@ -453,7 +469,7 @@ class Polymer : public rayParticle<Polymer<NumericType, D>, NumericType> {
   const Parameters<NumericType> &p;
 
 public:
-  Polymer(const Parameters<NumericType> &pParams) : p(pParams) {}
+  Polymer(const Parameters<NumericType> &parameters) : p(parameters) {}
   void surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &,
                         const rayTriple<NumericType> &,
                         const unsigned int primID, const int,
@@ -494,7 +510,7 @@ class Etchant : public rayParticle<Etchant<NumericType, D>, NumericType> {
   const Parameters<NumericType> &p;
 
 public:
-  Etchant(const Parameters<NumericType> &pParams) : p(pParams) {}
+  Etchant(const Parameters<NumericType> &parameters) : p(parameters) {}
   void surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &,
                         const rayTriple<NumericType> &,
                         const unsigned int primID, const int,
@@ -545,48 +561,48 @@ public:
                         const NumericType deltaP = 0.,
                         const NumericType etchStopDepth =
                             std::numeric_limits<NumericType>::lowest()) {
-    params.ionFlux = ionFlux;
-    params.etchantFlux = etchantFlux;
-    params.polyFlux = polyFlux;
-    params.Ions.meanEnergy = meanEnergy;
-    params.Ions.sigmaEnergy = sigmaEnergy;
-    params.Ions.exponent = exponent;
-    params.delta_p = deltaP;
-    params.etchStopDepth = etchStopDepth;
+    params_.ionFlux = ionFlux;
+    params_.etchantFlux = etchantFlux;
+    params_.polyFlux = polyFlux;
+    params_.Ions.meanEnergy = meanEnergy;
+    params_.Ions.sigmaEnergy = sigmaEnergy;
+    params_.Ions.exponent = exponent;
+    params_.delta_p = deltaP;
+    params_.etchStopDepth = etchStopDepth;
     initialize();
   }
   psFluorocarbonEtching(
-      const FluorocarbonImplementation::Parameters<NumericType> &pParams)
-      : params(pParams) {
+      const FluorocarbonImplementation::Parameters<NumericType> &parameters)
+      : params_(parameters) {
     initialize();
   }
 
   FluorocarbonImplementation::Parameters<NumericType> &getParameters() {
-    return params;
+    return params_;
   }
   void setParameters(
-      const FluorocarbonImplementation::Parameters<NumericType> &pParams) {
-    params = pParams;
+      const FluorocarbonImplementation::Parameters<NumericType> &parameters) {
+    params_ = parameters;
   }
 
 private:
-  FluorocarbonImplementation::Parameters<NumericType> params;
+  FluorocarbonImplementation::Parameters<NumericType> params_;
 
   void initialize() {
     // particles
     auto ion =
         std::make_unique<FluorocarbonImplementation::Ion<NumericType, D>>(
-            params);
+            params_);
     auto etchant =
         std::make_unique<FluorocarbonImplementation::Etchant<NumericType, D>>(
-            params);
+            params_);
     auto poly =
         std::make_unique<FluorocarbonImplementation::Polymer<NumericType, D>>(
-            params);
+            params_);
 
     // surface model
     auto surfModel = psSmartPointer<
-        FluorocarbonImplementation::SurfaceModel<NumericType, D>>::New(params);
+        FluorocarbonImplementation::SurfaceModel<NumericType, D>>::New(params_);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);

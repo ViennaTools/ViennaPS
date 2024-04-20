@@ -38,9 +38,8 @@ public:
   psGDSGeometry() {
     if constexpr (D == 2) {
       psLogger::getInstance()
-          .addWarning("Cannot import 2D geometry from GDS file.")
+          .addError("Cannot import 2D geometry from GDS file.")
           .print();
-      return;
     }
   }
 
@@ -48,9 +47,8 @@ public:
       : gridDelta(passedGridDelta) {
     if constexpr (D == 2) {
       psLogger::getInstance()
-          .addWarning("Cannot import 2D geometry from GDS file.")
+          .addError("Cannot import 2D geometry from GDS file.")
           .print();
-      return;
     }
   }
 

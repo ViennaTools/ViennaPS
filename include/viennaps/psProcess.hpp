@@ -36,7 +36,9 @@ public:
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
   // psProcessModel class.
-  template <typename ProcessModelType>
+  template <typename ProcessModelType,
+            lsConcepts::IsBaseOf<psProcessModel<NumericType, D>,
+                                 ProcessModelType> = lsConcepts::assignable>
   void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
     model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);

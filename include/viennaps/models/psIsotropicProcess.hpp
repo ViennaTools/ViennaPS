@@ -8,22 +8,21 @@
 namespace IsotropicImplementation {
 template <class NumericType, int D>
 class IsotropicVelocityField : public psVelocityField<NumericType> {
-  const NumericType vel = 1.;
-  const std::vector<int> maskMaterials;
+  const NumericType rate_ = 1.;
+  const std::vector<int> maskMaterials_;
 
 public:
-  IsotropicVelocityField(const NumericType rate, const std::vector<int> &mask)
-      : vel(rate), maskMaterials(mask) {}
+  IsotropicVelocityField(NumericType rate, std::vector<int> &&mask)
+      : rate_{rate}, maskMaterials_{std::move(mask)} {}
 
-  NumericType
-  getScalarVelocity(const std::array<NumericType, 3> & /*coordinate*/,
-                    int material,
-                    const std::array<NumericType, 3> & /* normalVector */,
-                    unsigned long /*pointID*/) override {
+  NumericType getScalarVelocity(const std::array<NumericType, 3> &,
+                                int material,
+                                const std::array<NumericType, 3> &,
+                                unsigned long) override {
     if (isMaskMaterial(material)) {
       return 0.;
     } else {
-      return vel;
+      return rate_;
     }
   }
 
@@ -33,7 +32,7 @@ public:
 
 private:
   bool isMaskMaterial(const int material) const {
-    for (const auto &mat : maskMaterials) {
+    for (const auto &mat : maskMaterials_) {
       if (material == mat)
         return true;
     }
@@ -55,7 +54,7 @@ public:
     std::vector<int> maskMaterialsInt = {static_cast<int>(maskMaterial)};
     auto velField =
         psSmartPointer<IsotropicImplementation::IsotropicVelocityField<
-            NumericType, D>>::New(isotropicRate, maskMaterialsInt);
+            NumericType, D>>::New(isotropicRate, std::move(maskMaterialsInt));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
@@ -74,7 +73,7 @@ public:
     }
     auto velField =
         psSmartPointer<IsotropicImplementation::IsotropicVelocityField<
-            NumericType, D>>::New(isotropicRate, maskMaterialsInt);
+            NumericType, D>>::New(isotropicRate, std::move(maskMaterialsInt));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
