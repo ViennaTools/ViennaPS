@@ -9,7 +9,7 @@
 
 #include <lsGeometries.hpp>
 
-typedef enum psGDSElementType {
+enum class psGDSElementType {
   elBoundary,
   elBox,
   elPath,
@@ -17,9 +17,9 @@ typedef enum psGDSElementType {
   elARef,
   elText,
   elNone
-} psGDSElementType;
+};
 
-enum psGDSRecordNumbers {
+enum class psGDSRecordNumbers {
   Header, /* 0 */
   BgnLib,
   LibName,
@@ -143,7 +143,7 @@ template <class T> struct psGDSStructure {
     std::cout << name << ":\n\nBoundary elements: " << boundaryElements
               << std::endl;
     for (auto &e : elements) {
-      if (e.elementType == elBoundary) {
+      if (e.elementType == psGDSElementType::elBoundary) {
         std::cout << "---------------------------\n";
         std::cout << "Layer: " << e.layer << "\n";
         if (e.plexNumber > 0) {
@@ -159,7 +159,7 @@ template <class T> struct psGDSStructure {
 
     std::cout << "\nBox elements: " << boxElements << std::endl;
     for (auto &e : elements) {
-      if (e.elementType == elBox) {
+      if (e.elementType == psGDSElementType::elBox) {
         std::cout << "---------------------------\n";
         std::cout << "Layer: " << e.layer << "\n";
         if (e.plexNumber > 0) {

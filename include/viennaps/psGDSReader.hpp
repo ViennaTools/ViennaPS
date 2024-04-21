@@ -216,9 +216,9 @@ private:
     // parse the structure reference
     char *str = readAsciiString();
     if (str) {
-      if (currentElement == elSRef) {
+      if (currentElement == psGDSElementType::elSRef) {
         currentStructure.sRefs.back().strName = str;
-      } else if (currentElement == elARef) {
+      } else if (currentElement == psGDSElementType::elARef) {
         currentStructure.aRefs.back().strName = str;
       }
       delete[] str;
@@ -275,7 +275,7 @@ private:
   void parseXYRef() {
     bool flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
 
-    if (currentElement == elSRef) {
+    if (currentElement == psGDSElementType::elSRef) {
       float X = units * (float)readFourByteSignedInt();
       float Y = units * (float)readFourByteSignedInt();
       currentStructure.sRefs.back().refPoint[0] = static_cast<NumericType>(X);
@@ -330,7 +330,7 @@ private:
       (void)!fread(&dataType, 1, 1, filePtr);
       currentRecordLen -= 4;
 
-      switch (recordType) {
+      switch (static_cast<psGDSRecordNumbers>(recordType)) {
       case psGDSRecordNumbers::Header:
         parseHeader();
         break;
@@ -377,14 +377,15 @@ private:
 
       case psGDSRecordNumbers::Boundary:
         currentStructure.elements.push_back(
-            psGDSElement<NumericType>{elBoundary});
-        currentElement = elBoundary;
+            psGDSElement<NumericType>{psGDSElementType::elBoundary});
+        currentElement = psGDSElementType::elBoundary;
         currentStructure.boundaryElements++;
         break;
 
       case psGDSRecordNumbers::Box:
-        currentStructure.elements.push_back(psGDSElement<NumericType>{elBox});
-        currentElement = elBox;
+        currentStructure.elements.push_back(
+            psGDSElement<NumericType>{psGDSElementType::elBox});
+        currentElement = psGDSElementType::elBox;
         currentStructure.boxElements++;
         break;
 
@@ -410,9 +411,11 @@ private:
         break;
 
       case psGDSRecordNumbers::XY:
-        if (currentElement == elBoundary || currentElement == elBox) {
+        if (currentElement == psGDSElementType::elBoundary ||
+            currentElement == psGDSElementType::elBox) {
           parseXYBoundary();
-        } else if (currentElement == elSRef || currentElement == elARef) {
+        } else if (currentElement == psGDSElementType::elSRef ||
+                   currentElement == psGDSElementType::elARef) {
           parseXYRef();
         } else {
           parseXYIgnore();
@@ -420,12 +423,12 @@ private:
         break;
 
       case psGDSRecordNumbers::SRef:
-        currentElement = elSRef;
+        currentElement = psGDSElementType::elSRef;
         currentStructure.sRefs.push_back(psGDSSRef<NumericType>{});
         break;
 
       case psGDSRecordNumbers::ARef:
-        currentElement = elARef;
+        currentElement = psGDSElementType::elARef;
         currentStructure.aRefs.push_back(psGDSARef<NumericType>{});
         break;
 
@@ -451,7 +454,7 @@ private:
         break;
 
       case psGDSRecordNumbers::Text: // ignore
-        currentElement = elText;
+        currentElement = psGDSElementType::elText;
         ignore = true;
         break;
 
@@ -469,7 +472,7 @@ private:
         break;
 
       case psGDSRecordNumbers::Path: // ignore
-        currentElement = elPath;
+        currentElement = psGDSElementType::elPath;
         ignore = true;
         break;
 
@@ -493,7 +496,7 @@ private:
         break;
 
       case psGDSRecordNumbers::Node: // ignore
-        currentElement = elNone;
+        currentElement = psGDSElementType::elNone;
         while (currentRecordLen) {
           readTwoByteSignedInt();
         }

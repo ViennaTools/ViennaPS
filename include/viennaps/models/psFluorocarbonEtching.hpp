@@ -215,6 +215,7 @@ public:
           break;
         }
         default:
+          break;
         }
 
         etchRate[i] =

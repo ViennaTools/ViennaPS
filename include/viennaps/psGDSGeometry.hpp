@@ -8,12 +8,13 @@
 #include <lsDomain.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometries.hpp>
+#include <lsMakeGeometry.hpp>
 #include <lsTransformMesh.hpp>
-#include <rayUtil.hpp>
 
 template <class NumericType, int D = 3> class psGDSGeometry {
   using structureLayers =
       std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
+  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
 
   std::vector<psGDSStructure<NumericType>> structures;
   std::unordered_map<std::string, structureLayers> assembledStructures;
@@ -74,7 +75,7 @@ public:
     structures.push_back(structure);
   }
 
-  void print() {
+  void print() const {
     std::cout << "======= STRUCTURES ========" << std::endl;
     for (auto &s : structures) {
       s.print();
@@ -91,12 +92,11 @@ public:
     return nullptr;
   }
 
-  psSmartPointer<lsDomain<NumericType, D>>
-  layerToLevelSet(const int16_t layer, const NumericType baseHeight,
-                  const NumericType height, bool mask = false) {
+  lsDomainType layerToLevelSet(const int16_t layer,
+                               const NumericType baseHeight,
+                               const NumericType height, bool mask = false) {
 
-    auto levelSet = psSmartPointer<lsDomain<NumericType, D>>::New(
-        bounds, boundaryCons, gridDelta);
+    auto levelSet = lsDomainType::New(bounds, boundaryCons, gridDelta);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
@@ -105,7 +105,7 @@ public:
             contains != str.containsLayers.end()) {
           for (auto &el : str.elements) {
             if (el.layer == layer) {
-              if (el.elementType == elBox) {
+              if (el.elementType == psGDSElementType::elBox) {
                 addBox(levelSet, el, baseHeight, height, 0., 0.);
               } else {
                 addPolygon(levelSet, el, baseHeight, height, 0, 0);
@@ -161,8 +161,7 @@ public:
           }
         }
         if (strMesh->nodes.size() > 0) {
-          auto tmpLS = psSmartPointer<lsDomain<NumericType, D>>::New(
-              levelSet->getGrid());
+          auto tmpLS = lsDomainType::New(levelSet->getGrid());
           lsFromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
           lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
                                              lsBooleanOperationEnum::UNION)
@@ -172,8 +171,7 @@ public:
     }
 
     if (mask) {
-      auto topPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
-          bounds, boundaryCons, gridDelta);
+      auto topPlane = lsDomainType::New(bounds, boundaryCons, gridDelta);
       NumericType normal[3] = {0., 0., 1.};
       NumericType origin[3] = {0., 0., baseHeight + height};
       lsMakeGeometry<NumericType, D>(
@@ -181,8 +179,7 @@ public:
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      auto botPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
-          bounds, boundaryCons, gridDelta);
+      auto botPlane = lsDomainType::New(bounds, boundaryCons, gridDelta);
       normal[D - 1] = -1.;
       origin[D - 1] = baseHeight;
       lsMakeGeometry<NumericType, D>(
@@ -230,7 +227,7 @@ public:
 
         for (auto &el : str.elements) {
           psSmartPointer<lsMesh<NumericType>> mesh;
-          if (el.elementType == elBox) {
+          if (el.elementType == psGDSElementType::elBox) {
             mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
           } else {
             bool retry = false;
@@ -340,12 +337,10 @@ public:
   double *getBounds() { return bounds; }
 
 private:
-  void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
-              psGDSElement<NumericType> &element, const NumericType baseHeight,
-              const NumericType height, const NumericType xOffset,
-              const NumericType yOffset) {
-    auto tmpLS =
-        psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
+  void addBox(lsDomainType levelSet, psGDSElement<NumericType> &element,
+              const NumericType baseHeight, const NumericType height,
+              const NumericType xOffset, const NumericType yOffset) const {
+    auto tmpLS = lsDomainType::New(levelSet->getGrid());
 
     auto minPoint = element.pointCloud[1];
     minPoint[2] = baseHeight;
@@ -361,8 +356,7 @@ private:
         .apply();
   }
 
-  void addPolygon(psSmartPointer<lsDomain<NumericType, D>> levelSet,
-                  psGDSElement<NumericType> &element,
+  void addPolygon(lsDomainType levelSet, psGDSElement<NumericType> &element,
                   const NumericType baseHeight, const NumericType height,
                   const NumericType xOffset, const NumericType yOffset) {
     bool retry = false;
@@ -373,8 +367,7 @@ private:
       mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset,
                                   retry);
     }
-    auto tmpLS =
-        psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
+    auto tmpLS = lsDomainType::New(levelSet->getGrid());
     lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
     lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
                                        lsBooleanOperationEnum::UNION)
@@ -519,7 +512,7 @@ private:
   }
 
   bool isEar(int i, int j, int k, psSmartPointer<lsMesh<NumericType>> mesh,
-             unsigned numPoints) {
+             unsigned numPoints) const {
     auto &points = mesh->getNodes();
 
     // check if triangle is clockwise orientated
@@ -556,7 +549,7 @@ private:
 
   void adjustPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
                                 const NumericType baseHeight,
-                                const NumericType height) {
+                                const NumericType height) const {
     auto &nodes = mesh->getNodes();
 
     for (auto &n : nodes) {
@@ -570,7 +563,7 @@ private:
 
   void resetPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
                                const NumericType baseHeight,
-                               const NumericType height) {
+                               const NumericType height) const {
     auto &nodes = mesh->getNodes();
 
     for (auto &n : nodes) {

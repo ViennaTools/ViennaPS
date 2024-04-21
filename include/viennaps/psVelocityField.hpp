@@ -29,7 +29,7 @@ public:
   }
 
   virtual void
-  setVelocities(psSmartPointer<std::vector<NumericType>> passedVelocities) {}
+  setVelocities(psSmartPointer<std::vector<NumericType>> velocities) {}
 
   // translation field options
   // 0: do not translate level set ID to surface ID
@@ -41,26 +41,25 @@ public:
 template <typename NumericType>
 class psDefaultVelocityField : public psVelocityField<NumericType> {
 public:
-  psDefaultVelocityField(const int passedTranslationFieldOptions = 1)
-      : translationFieldOptions(passedTranslationFieldOptions) {}
+  psDefaultVelocityField(const int translationFieldOptions = 1)
+      : translationFieldOptions_(translationFieldOptions) {}
 
-  virtual NumericType
-  getScalarVelocity(const std::array<NumericType, 3> &coordinate, int material,
-                    const std::array<NumericType, 3> &normalVector,
-                    unsigned long pointId) override {
-    return velocities->at(pointId);
+  virtual NumericType getScalarVelocity(const std::array<NumericType, 3> &, int,
+                                        const std::array<NumericType, 3> &,
+                                        unsigned long pointId) override {
+    return velocities_->at(pointId);
   }
 
-  void setVelocities(
-      psSmartPointer<std::vector<NumericType>> passedVelocities) override {
-    velocities = passedVelocities;
+  void
+  setVelocities(psSmartPointer<std::vector<NumericType>> velocities) override {
+    velocities_ = velocities;
   }
 
   int getTranslationFieldOptions() const override {
-    return translationFieldOptions;
+    return translationFieldOptions_;
   }
 
 private:
-  psSmartPointer<std::vector<NumericType>> velocities;
-  const int translationFieldOptions = 1; // default: use map translator
+  psSmartPointer<std::vector<NumericType>> velocities_;
+  const int translationFieldOptions_ = 1; // default: use map translator
 };

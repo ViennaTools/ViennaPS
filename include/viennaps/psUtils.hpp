@@ -1,5 +1,8 @@
 #pragma once
 
+#include <lsDomain.hpp>
+#include <rayBoundary.hpp>
+
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -234,4 +237,27 @@ struct Parameters {
     return convert<T>(m.at(key));
   }
 };
+
+template <int D>
+rayBoundaryCondition
+convertBoundaryCondition(lsBoundaryConditionEnum<D> originalBoundaryCondition) {
+  switch (originalBoundaryCondition) {
+  case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
+    return rayBoundaryCondition::REFLECTIVE;
+
+  case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
+    return rayBoundaryCondition::IGNORE;
+
+  case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
+    return rayBoundaryCondition::PERIODIC;
+
+  case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
+    return rayBoundaryCondition::IGNORE;
+
+  case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
+    return rayBoundaryCondition::IGNORE;
+  }
+  return rayBoundaryCondition::IGNORE;
+}
+
 }; // namespace psUtils

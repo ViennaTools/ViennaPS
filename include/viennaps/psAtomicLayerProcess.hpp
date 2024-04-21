@@ -18,12 +18,12 @@ template <typename NumericType, int D> class psAtomicLayerProcess {
 
 public:
   psAtomicLayerProcess() {}
-  psAtomicLayerProcess(psDomainType passedDomain) : pDomain_(passedDomain) {}
+  psAtomicLayerProcess(psDomainType domain) : pDomain_(domain) {}
   // Constructor for a process with a pre-configured process model.
   template <typename ProcessModelType>
-  psAtomicLayerProcess(psDomainType passedDomain,
+  psAtomicLayerProcess(psDomainType domain,
                        psSmartPointer<ProcessModelType> passedProcessModel)
-      : pDomain_(passedDomain) {
+      : pDomain_(domain), pModel_() {
     pModel_ = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);
   }
@@ -38,7 +38,7 @@ public:
   }
 
   // Set the process domain.
-  void setDomain(psDomainType passedDomain) { pDomain_ = passedDomain; }
+  void setDomain(psDomainType domain) { pDomain_ = domain; }
 
   // Set the source direction, where the rays should be traced from.
   void setSourceDirection(rayTraceDirection passedDirection) {
@@ -111,18 +111,13 @@ public:
     }
 
     /* --------- Setup for ray tracing ----------- */
-    if (pModel_->getParticleTypes() == nullptr) {
-      psLogger::getInstance()
-          .addError("No particle types specified for ray tracing.")
-          .print();
-    }
 
     rayBoundaryCondition rayBoundaryCondition[D];
     rayTrace<NumericType, D> rayTracer;
 
     // Map the domain boundary to the ray tracing boundaries
     for (unsigned i = 0; i < D; ++i)
-      rayBoundaryCondition[i] = convertBoundaryCondition(
+      rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
           pDomain_->getGrid().getBoundaryConditions(i));
 
     rayTracer.setSourceDirection(sourceDirection_);
@@ -309,27 +304,6 @@ private:
     psVTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
-  rayBoundaryCondition convertBoundaryCondition(
-      lsBoundaryConditionEnum<D> originalBoundaryCondition) const {
-    switch (originalBoundaryCondition) {
-    case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-      return rayBoundaryCondition::REFLECTIVE;
-
-    case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-      return rayBoundaryCondition::PERIODIC;
-
-    case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-    }
-    return rayBoundaryCondition::IGNORE;
-  }
-
   rayTracingData<NumericType>
   movePointDataToRayData(psSmartPointer<psPointData<NumericType>> pointData) {
     rayTracingData<NumericType> rayData;
@@ -382,6 +356,12 @@ private:
     if (!pModel_->getVelocityField()) {
       psLogger::getInstance()
           .addError("No velocity field passed to psAtomicLayerProcess.")
+          .print();
+    }
+
+    if (!pModel_->getParticleTypes()) {
+      psLogger::getInstance()
+          .addError("No particle types specified for ray tracing.")
           .print();
     }
 

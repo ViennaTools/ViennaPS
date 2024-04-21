@@ -8,25 +8,23 @@
 
 template <typename NumericType>
 class psTranslationField : public lsVelocityField<NumericType> {
-  using translatorType = std::unordered_map<unsigned long, unsigned long>;
-  const int translationMethod = 1;
+  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
 public:
-  psTranslationField(
-      psSmartPointer<psVelocityField<NumericType>> passedVeloField,
-      psSmartPointer<psMaterialMap> passedMaterialMap)
-      : translationMethod(passedVeloField->getTranslationFieldOptions()),
-        modelVelocityField(passedVeloField), materialMap(passedMaterialMap) {}
+  psTranslationField(psSmartPointer<psVelocityField<NumericType>> velocityField,
+                     psSmartPointer<psMaterialMap> materialMap)
+      : translationMethod_(velocityField->getTranslationFieldOptions()),
+        modelVelocityField_(velocityField), materialMap_(materialMap) {}
 
   NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
                                 int material,
                                 const std::array<NumericType, 3> &normalVector,
                                 unsigned long pointId) {
     translateLsId(pointId, coordinate);
-    if (materialMap)
-      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
-    return modelVelocityField->getScalarVelocity(coordinate, material,
-                                                 normalVector, pointId);
+    if (materialMap_)
+      material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
+    return modelVelocityField_->getScalarVelocity(coordinate, material,
+                                                  normalVector, pointId);
   }
 
   std::array<NumericType, 3>
@@ -34,35 +32,35 @@ public:
                     const std::array<NumericType, 3> &normalVector,
                     unsigned long pointId) {
     translateLsId(pointId, coordinate);
-    if (materialMap)
-      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
-    return modelVelocityField->getVectorVelocity(coordinate, material,
-                                                 normalVector, pointId);
+    if (materialMap_)
+      material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
+    return modelVelocityField_->getVectorVelocity(coordinate, material,
+                                                  normalVector, pointId);
   }
 
   NumericType
   getDissipationAlpha(int direction, int material,
                       const std::array<NumericType, 3> &centralDifferences) {
-    if (materialMap)
-      material = static_cast<int>(materialMap->getMaterialAtIdx(material));
-    return modelVelocityField->getDissipationAlpha(direction, material,
-                                                   centralDifferences);
+    if (materialMap_)
+      material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
+    return modelVelocityField_->getDissipationAlpha(direction, material,
+                                                    centralDifferences);
   }
 
-  void setTranslator(psSmartPointer<translatorType> passedTranslator) {
-    translator = passedTranslator;
+  void setTranslator(psSmartPointer<TranslatorType> translator) {
+    translator_ = translator;
   }
 
   void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
-    kdTree.setPoints(points);
-    kdTree.build();
+    kdTree_.setPoints(points);
+    kdTree_.build();
   }
 
   void translateLsId(unsigned long &lsId,
-                     const std::array<NumericType, 3> &coordinate) {
-    switch (translationMethod) {
+                     const std::array<NumericType, 3> &coordinate) const {
+    switch (translationMethod_) {
     case 1: {
-      if (auto it = translator->find(lsId); it != translator->end()) {
+      if (auto it = translator_->find(lsId); it != translator_->end()) {
         lsId = it->second;
       } else {
         psLogger::getInstance()
@@ -72,7 +70,7 @@ public:
       break;
     }
     case 2: {
-      auto nearest = kdTree.findNearest(coordinate);
+      auto nearest = kdTree_.findNearest(coordinate);
       lsId = nearest->first;
       break;
     }
@@ -82,8 +80,9 @@ public:
   }
 
 private:
-  psSmartPointer<translatorType> translator;
-  psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
-  const psSmartPointer<psVelocityField<NumericType>> modelVelocityField;
-  const psSmartPointer<psMaterialMap> materialMap;
+  psSmartPointer<TranslatorType> translator_;
+  psKDTree<NumericType, std::array<NumericType, 3>> kdTree_;
+  const psSmartPointer<psVelocityField<NumericType>> modelVelocityField_;
+  const psSmartPointer<psMaterialMap> materialMap_;
+  const int translationMethod_ = 1;
 };

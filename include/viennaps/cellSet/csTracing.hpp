@@ -74,20 +74,20 @@ public:
           csPointSource<T, D>(pointSourceOrigin, pointSourceDirection,
                               traceSettings, mGeometry.getNumPoints());
 
-      csTracingKernel(mDevice, mGeometry, boundary, raySource, mParticle,
-                      mNumberOfRaysPerPoint, mNumberOfRaysFixed,
-                      mUseRandomSeeds, mRunNumber++, cellSet,
-                      excludeMaterialId - 1)
+      csTracingKernel<csPointSource<T, D>, T, D>(
+          mDevice, mGeometry, boundary, raySource, mParticle,
+          mNumberOfRaysPerPoint, mNumberOfRaysFixed, mUseRandomSeeds,
+          mRunNumber++, cellSet, excludeMaterialId - 1)
           .apply();
     } else {
       auto raySource = raySourceRandom<T, D>(
           boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
           mGeometry.getNumPoints(), usePrimaryDirection, orthoBasis);
 
-      csTracingKernel(mDevice, mGeometry, boundary, raySource, mParticle,
-                      mNumberOfRaysPerPoint, mNumberOfRaysFixed,
-                      mUseRandomSeeds, mRunNumber++, cellSet,
-                      excludeMaterialId - 1)
+      csTracingKernel<raySourceRandom<T, D>, T, D>(
+          mDevice, mGeometry, boundary, raySource, mParticle,
+          mNumberOfRaysPerPoint, mNumberOfRaysFixed, mUseRandomSeeds,
+          mRunNumber++, cellSet, excludeMaterialId - 1)
           .apply();
     }
 

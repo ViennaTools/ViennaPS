@@ -87,10 +87,10 @@ public:
 
   // Enable the use of random seeds for ray tracing. This is useful to
   // prevent the formation of artifacts in the flux calculation.
-  void enableRandomSeeds() { useRandomSeeds = true; }
+  void enableRandomSeeds() { useRandomSeeds_ = true; }
 
   // Disable the use of random seeds for ray tracing.
-  void disableRandomSeeds() { useRandomSeeds = false; }
+  void disableRandomSeeds() { useRandomSeeds_ = false; }
 
   // Set the CFL (Courant-Friedrichs-Levy) condition to use during surface
   // advection in the level-set. The CFL condition defines the maximum distance
@@ -128,12 +128,12 @@ public:
 
     // Map the domain boundary to the ray tracing boundaries
     for (unsigned i = 0; i < D; ++i)
-      rayBoundaryCondition[i] =
-          convertBoundaryCondition(domain->getGrid().getBoundaryConditions(i));
+      rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
+          domain->getGrid().getBoundaryConditions(i));
     rayTracer.setSourceDirection(sourceDirection);
     rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
     rayTracer.setBoundaryConditions(rayBoundaryCondition);
-    rayTracer.setUseRandomSeeds(useRandomSeeds);
+    rayTracer.setUseRandomSeeds_(useRandomSeeds_);
     rayTracer.setCalculateFlux(false);
     auto primaryDirection = model->getPrimaryDirection();
     if (primaryDirection) {
@@ -263,13 +263,13 @@ public:
     if (useRayTracing) {
       // Map the domain boundary to the ray tracing boundaries
       for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = convertBoundaryCondition(
+        rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
             domain->getGrid().getBoundaryConditions(i));
 
       rayTracer.setSourceDirection(sourceDirection);
       rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
       rayTracer.setBoundaryConditions(rayBoundaryCondition);
-      rayTracer.setUseRandomSeeds(useRandomSeeds);
+      rayTracer.setUseRandomSeeds(useRandomSeeds_);
       auto primaryDirection = model->getPrimaryDirection();
       if (primaryDirection) {
         psLogger::getInstance()
@@ -312,13 +312,13 @@ public:
     // Initialize coverages
     meshConverter.apply();
     auto numPoints = diskMesh->getNodes().size();
-    if (!coveragesInitialized)
+    if (!coveragesInitialized_)
       model->getSurfaceModel()->initializeCoverages(numPoints);
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
       psUtils::Timer timer;
       useCoverages = true;
       psLogger::getInstance().addInfo("Using coverages.").print();
-      if (!coveragesInitialized) {
+      if (!coveragesInitialized_) {
         timer.start();
         psLogger::getInstance().addInfo("Initializing coverages ... ").print();
         auto points = diskMesh->getNodes();
@@ -409,7 +409,7 @@ public:
                 .print();
           }
         }
-        coveragesInitialized = true;
+        coveragesInitialized_ = true;
 
         timer.finish();
         psLogger::getInstance()
@@ -652,29 +652,8 @@ private:
     psVTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
-  rayBoundaryCondition convertBoundaryCondition(
-      lsBoundaryConditionEnum<D> originalBoundaryCondition) const {
-    switch (originalBoundaryCondition) {
-    case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-      return rayBoundaryCondition::REFLECTIVE;
-
-    case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-      return rayBoundaryCondition::PERIODIC;
-
-    case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-
-    case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-      return rayBoundaryCondition::IGNORE;
-    }
-    return rayBoundaryCondition::IGNORE;
-  }
-
-  rayTracingData<NumericType>
-  movePointDataToRayData(psSmartPointer<psPointData<NumericType>> pointData) {
+  rayTracingData<NumericType> movePointDataToRayData(
+      psSmartPointer<psPointData<NumericType>> pointData) const {
     rayTracingData<NumericType> rayData;
     const auto numData = pointData->getScalarDataSize();
     rayData.setNumberOfVectorData(numData);
@@ -689,7 +668,7 @@ private:
 
   void
   moveRayDataToPointData(psSmartPointer<psPointData<NumericType>> pointData,
-                         rayTracingData<NumericType> &rayData) {
+                         rayTracingData<NumericType> &rayData) const {
     pointData->clear();
     const auto numData = rayData.getVectorData().size();
     for (size_t i = 0; i < numData; ++i)
@@ -720,7 +699,7 @@ private:
 
   void updateCoveragesFromAdvectedSurface(
       lsSmartPointer<translatorType> translator,
-      psSmartPointer<psPointData<NumericType>> coverages) {
+      psSmartPointer<psPointData<NumericType>> coverages) const {
     auto topLS = domain->getLevelSets()->back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
@@ -733,8 +712,8 @@ private:
     }
   }
 
-  psDomainType domain = nullptr;
-  psSmartPointer<psProcessModel<NumericType, D>> model = nullptr;
+  psDomainType domain;
+  psSmartPointer<psProcessModel<NumericType, D>> model;
   NumericType processDuration;
   rayTraceDirection sourceDirection =
       D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
@@ -742,10 +721,10 @@ private:
       lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   unsigned raysPerPoint = 1000;
   std::vector<rayDataLog<NumericType>> particleDataLogs;
-  bool useRandomSeeds = true;
+  bool useRandomSeeds_ = true;
   bool smoothFlux = true;
   unsigned maxIterations = 20;
-  bool coveragesInitialized = false;
+  bool coveragesInitialized_ = false;
   NumericType printTime = 0.;
   NumericType processTime = 0.;
   NumericType timeStepRatio = 0.4999;

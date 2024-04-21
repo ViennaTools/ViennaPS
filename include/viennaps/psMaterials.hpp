@@ -32,13 +32,13 @@ enum class psMaterial : int {
 /// friendly interface. It also provides a mapping from the integer material id
 /// to the psMaterial enum.
 class psMaterialMap {
-  psSmartPointer<lsMaterialMap> map;
+  psSmartPointer<lsMaterialMap> map_;
 
 public:
-  psMaterialMap() { map = psSmartPointer<lsMaterialMap>::New(); };
+  psMaterialMap() { map_ = psSmartPointer<lsMaterialMap>::New(); };
 
   void insertNextMaterial(psMaterial material = psMaterial::None) {
-    map->insertNextMaterial(static_cast<int>(material));
+    map_->insertNextMaterial(static_cast<int>(material));
   }
 
   // Returns the material at the given index. If the index is out of bounds, it
@@ -46,7 +46,7 @@ public:
   psMaterial getMaterialAtIdx(std::size_t idx) const {
     if (idx >= size())
       return psMaterial::GAS;
-    int matId = map->getMaterialId(idx);
+    int matId = map_->getMaterialId(idx);
     return mapToMaterial(matId);
   }
 
@@ -56,12 +56,12 @@ public:
           .addWarning("Setting material with out-of-bounds index.")
           .print();
     }
-    map->setMaterialId(idx, static_cast<int>(material));
+    map_->setMaterialId(idx, static_cast<int>(material));
   }
 
-  psSmartPointer<lsMaterialMap> getMaterialMap() const { return map; }
+  psSmartPointer<lsMaterialMap> getMaterialMap() const { return map_; }
 
-  inline std::size_t size() const { return map->getNumberOfLayers(); }
+  inline std::size_t const size() const { return map_->getNumberOfLayers(); }
 
   static inline psMaterial mapToMaterial(const int matId) {
     if (matId > 18 || matId < -1)
