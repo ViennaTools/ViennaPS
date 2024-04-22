@@ -139,7 +139,7 @@ template <class T> struct psGDSStructure {
               << boundingBox[1][1] << ")" << std::endl;
   }
 
-  void print() {
+  void print() const {
     std::cout << name << ":\n\nBoundary elements: " << boundaryElements
               << std::endl;
     for (auto &e : elements) {

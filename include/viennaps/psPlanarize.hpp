@@ -34,6 +34,6 @@ public:
         plane, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
     pDomain_->applyBooleanOperation(
-        ls, lsBooleanOperationEnum::RELATIVE_COMPLEMENT);
+        plane, lsBooleanOperationEnum::RELATIVE_COMPLEMENT);
   }
 };

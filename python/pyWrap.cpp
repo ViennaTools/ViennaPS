@@ -48,7 +48,6 @@
 
 // models
 #include <models/psAnisotropicProcess.hpp>
-#include <models/psAtomicLayerProcess.hpp>
 #include <models/psDirectionalEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
@@ -65,6 +64,7 @@
 #include <psWriteVisualizationMesh.hpp>
 
 // CellSet
+#include <cellSet/csAtomicLayerProcess.hpp>
 #include <cellSet/csDenseCellSet.hpp>
 #include <cellSet/csSegmentCells.hpp>
 
@@ -938,48 +938,48 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("materials"));
 
   // Atomic Layer Process
-  pybind11::class_<psAtomicLayerProcess<T, D>,
-                   psSmartPointer<psAtomicLayerProcess<T, D>>>(
-      module, "AtomicLayerProcess")
+  pybind11::class_<csAtomicLayerProcess<T, D>,
+                   psSmartPointer<csAtomicLayerProcess<T, D>>>(
+      module, "csAtomicLayerProcess")
       .def(pybind11::init<DomainType, const bool>(), pybind11::arg("domain"),
            pybind11::arg("etch") = false)
       .def("setFirstPrecursor",
            pybind11::overload_cast<std::string, T, T, T, T, T>(
-               &psAtomicLayerProcess<T, D>::setFirstPrecursor))
+               &csAtomicLayerProcess<T, D>::setFirstPrecursor))
       .def("setFirstPrecursor",
            pybind11::overload_cast<
-               const psAtomicLayerProcess<T, D>::Precursor &>(
-               &psAtomicLayerProcess<T, D>::setFirstPrecursor))
+               const csAtomicLayerProcess<T, D>::Precursor &>(
+               &csAtomicLayerProcess<T, D>::setFirstPrecursor))
       .def("setSecondPrecursor",
            pybind11::overload_cast<std::string, T, T, T, T, T>(
-               &psAtomicLayerProcess<T, D>::setSecondPrecursor))
+               &csAtomicLayerProcess<T, D>::setSecondPrecursor))
       .def("setSecondPrecursor",
            pybind11::overload_cast<
-               const psAtomicLayerProcess<T, D>::Precursor &>(
-               &psAtomicLayerProcess<T, D>::setSecondPrecursor))
+               const csAtomicLayerProcess<T, D>::Precursor &>(
+               &csAtomicLayerProcess<T, D>::setSecondPrecursor))
       .def("setPurgeParameters",
-           &psAtomicLayerProcess<T, D>::setPurgeParameters)
-      .def("setReactionOrder", &psAtomicLayerProcess<T, D>::setReactionOrder)
-      .def("setMaxLambda", &psAtomicLayerProcess<T, D>::setMaxLambda)
+           &csAtomicLayerProcess<T, D>::setPurgeParameters)
+      .def("setReactionOrder", &csAtomicLayerProcess<T, D>::setReactionOrder)
+      .def("setMaxLambda", &csAtomicLayerProcess<T, D>::setMaxLambda)
       .def("setStabilityFactor",
-           &psAtomicLayerProcess<T, D>::setStabilityFactor)
-      .def("setMaxTimeStep", &psAtomicLayerProcess<T, D>::setMaxTimeStep)
-      .def("setPrintInterval", &psAtomicLayerProcess<T, D>::setPrintInterval)
-      .def("apply", &psAtomicLayerProcess<T, D>::apply);
+           &csAtomicLayerProcess<T, D>::setStabilityFactor)
+      .def("setMaxTimeStep", &csAtomicLayerProcess<T, D>::setMaxTimeStep)
+      .def("setPrintInterval", &csAtomicLayerProcess<T, D>::setPrintInterval)
+      .def("apply", &csAtomicLayerProcess<T, D>::apply);
 
-  pybind11::class_<psAtomicLayerProcess<T, D>::Precursor>(module, "Precursor")
+  pybind11::class_<csAtomicLayerProcess<T, D>::Precursor>(module, "Precursor")
       .def(pybind11::init<>())
-      .def_readwrite("name", &psAtomicLayerProcess<T, D>::Precursor::name)
+      .def_readwrite("name", &csAtomicLayerProcess<T, D>::Precursor::name)
       .def_readwrite(
           "meanThermalVelocity",
-          &psAtomicLayerProcess<T, D>::Precursor::meanThermalVelocity)
+          &csAtomicLayerProcess<T, D>::Precursor::meanThermalVelocity)
       .def_readwrite("adsorptionRate",
-                     &psAtomicLayerProcess<T, D>::Precursor::adsorptionRate)
+                     &csAtomicLayerProcess<T, D>::Precursor::adsorptionRate)
       .def_readwrite("desorptionRate",
-                     &psAtomicLayerProcess<T, D>::Precursor::desorptionRate)
+                     &csAtomicLayerProcess<T, D>::Precursor::desorptionRate)
       .def_readwrite("duration",
-                     &psAtomicLayerProcess<T, D>::Precursor::duration)
-      .def_readwrite("inFlux", &psAtomicLayerProcess<T, D>::Precursor::inFlux);
+                     &csAtomicLayerProcess<T, D>::Precursor::duration)
+      .def_readwrite("inFlux", &csAtomicLayerProcess<T, D>::Precursor::inFlux);
 
   // ***************************************************************************
   //                               GEOMETRIES

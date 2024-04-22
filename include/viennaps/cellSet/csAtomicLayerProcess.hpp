@@ -1,11 +1,11 @@
 #pragma once
 
-#include "psDomain.hpp"
-#include "psLogger.hpp"
+#include "../psDomain.hpp"
+#include "../psLogger.hpp"
 
 #include <random>
 
-template <class NumericType, int D> class psAtomicLayerProcess {
+template <class NumericType, int D> class csAtomicLayerProcess {
 
 public:
   struct Precursor {
@@ -30,7 +30,7 @@ private:
   NumericType printInterval = -1.;
 
 public:
-  psAtomicLayerProcess(
+  csAtomicLayerProcess(
       const psSmartPointer<psDomain<NumericType, D>> &passedDomain,
       const bool passedEtch = false)
       : domain(passedDomain), etch(passedEtch),

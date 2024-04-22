@@ -133,7 +133,7 @@ public:
     rayTracer.setSourceDirection(sourceDirection);
     rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
     rayTracer.setBoundaryConditions(rayBoundaryCondition);
-    rayTracer.setUseRandomSeeds_(useRandomSeeds_);
+    rayTracer.setUseRandomSeeds(useRandomSeeds_);
     rayTracer.setCalculateFlux(false);
     auto primaryDirection = model->getPrimaryDirection();
     if (primaryDirection) {
