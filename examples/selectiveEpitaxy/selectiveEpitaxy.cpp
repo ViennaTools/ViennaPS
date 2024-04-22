@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
       .apply();
   // create fin on substrate
   {
-    auto fin = psSmartPointer<lsDomain<NumericType, D>>::New(
-        geometry->getLevelSets()->back()->getGrid());
+    auto fin =
+        psSmartPointer<lsDomain<NumericType, D>>::New(geometry->getGrid());
     NumericType minPoint[3] = {-params.finWidth / 2., -params.finLength / 2.,
                                -params.gridDelta};
     NumericType maxPoint[3] = {params.finWidth / 2., params.finLength / 2.,

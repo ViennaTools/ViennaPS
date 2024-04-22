@@ -14,7 +14,6 @@
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
-#include <rayUtil.hpp>
 
 #include <bitset>
 

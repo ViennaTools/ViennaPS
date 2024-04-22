@@ -23,7 +23,7 @@ public:
   template <typename ProcessModelType>
   psAtomicLayerProcess(psDomainType domain,
                        psSmartPointer<ProcessModelType> passedProcessModel)
-      : pDomain_(domain), pModel_() {
+      : pDomain_(domain) {
     pModel_ = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);
   }
@@ -90,8 +90,7 @@ public:
     auto translator = lsSmartPointer<translatorType>::New();
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
-    if (pDomain_->getMaterialMap() && pDomain_->getMaterialMap()->size() ==
-                                          pDomain_->getLevelSets()->size()) {
+    if (pDomain_->getMaterialMap()) {
       meshConverter.setMaterialMap(
           pDomain_->getMaterialMap()->getMaterialMap());
     }

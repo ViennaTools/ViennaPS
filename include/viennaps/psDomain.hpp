@@ -1,11 +1,11 @@
 #pragma once
 
-#include "cellSet/csDenseCellSet.hpp"
-
 #include "psMaterials.hpp"
 #include "psSmartPointer.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
 #include "psVTKWriter.hpp"
+
+#include "cellSet/csDenseCellSet.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -38,63 +38,63 @@ public:
   static constexpr char materialIdsLabel[] = "MaterialIds";
 
 private:
-  lsDomainsType levelSets = nullptr;
-  csDomainType cellSet = nullptr;
-  materialMapType materialMap = nullptr;
+  lsDomainsType levelSets_ = nullptr;
+  csDomainType cellSet_ = nullptr;
+  materialMapType materialMap_ = nullptr;
 
 public:
   // Default constructor.
-  psDomain() : levelSets(lsDomainsType::New()) {}
+  psDomain() : levelSets_(lsDomainsType::New()) {}
 
   // Deep copy constructor.
-  psDomain(psSmartPointer<psDomain> passedDomain) { deepCopy(passedDomain); }
+  psDomain(psSmartPointer<psDomain> domain) { deepCopy(domain); }
 
   // Constructor for domain with a single initial Level-Set.
-  psDomain(lsDomainType passedLevelSet) : levelSets(lsDomainsType::New()) {
-    levelSets->push_back(passedLevelSet);
+  psDomain(lsDomainType levelSet) : levelSets_(lsDomainsType::New()) {
+    levelSets_->push_back(levelSet);
   }
 
   // Constructor for domain with multiple initial Level-Sets.
-  psDomain(lsDomainsType passedLevelSets) : levelSets(passedLevelSets) {}
+  psDomain(lsDomainsType levelSets) : levelSets_(levelSets) {}
 
   // Create a deep copy of all Level-Sets and the Cell-Set from the passed
   // domain.
-  void deepCopy(psSmartPointer<psDomain> passedDomain) {
+  void deepCopy(psSmartPointer<psDomain> domain) {
 
     // Copy all Level-Sets.
-    for (auto &ls : *passedDomain->levelSets) {
-      levelSets->push_back(lsDomainType::New(ls));
+    for (auto &ls : *domain->levelSets_) {
+      levelSets_->push_back(lsDomainType::New(ls));
     }
 
     // Copy material map.
-    if (passedDomain->materialMap) {
-      materialMap = materialMapType::New();
-      for (std::size_t i = 0; i < passedDomain->materialMap->size(); i++) {
-        materialMap->insertNextMaterial(
-            passedDomain->materialMap->getMaterialAtIdx(i));
+    if (domain->materialMap_) {
+      materialMap_ = materialMapType::New();
+      for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
+        materialMap_->insertNextMaterial(
+            domain->materialMap_->getMaterialAtIdx(i));
       }
     } else {
-      materialMap = nullptr;
+      materialMap_ = nullptr;
     }
 
     // Copy Cell-Set.
-    if (passedDomain->cellSet) {
-      auto cellSetDepth = passedDomain->getCellSet()->getDepth();
-      cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth);
+    if (domain->cellSet_) {
+      auto cellSetDepth = domain->getCellSet()->getDepth();
+      cellSet_ = csDomainType::New(levelSets_, materialMap_, cellSetDepth);
     } else {
-      cellSet = nullptr;
+      cellSet_ = nullptr;
     }
   }
 
-  void insertNextLevelSet(lsDomainType passedLevelSet,
+  void insertNextLevelSet(lsDomainType levelSet,
                           bool wrapLowerLevelSet = true) {
-    if (!levelSets->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->back(),
+    if (!levelSets_->empty() && wrapLowerLevelSet) {
+      lsBooleanOperation<NumericType, D>(levelSet, levelSets_->back(),
                                          lsBooleanOperationEnum::UNION)
           .apply();
     }
-    levelSets->push_back(passedLevelSet);
-    if (materialMap) {
+    levelSets_->push_back(levelSet);
+    if (materialMap_) {
       psLogger::getInstance()
           .addWarning("Inserting non-material specific Level-Set in domain "
                       "with material mapping.")
@@ -103,30 +103,30 @@ public:
     }
   }
 
-  void insertNextLevelSetAsMaterial(lsDomainType passedLevelSet,
+  void insertNextLevelSetAsMaterial(lsDomainType levelSet,
                                     const psMaterial material,
                                     bool wrapLowerLevelSet = true) {
-    if (!levelSets->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(passedLevelSet, levelSets->back(),
+    if (!levelSets_->empty() && wrapLowerLevelSet) {
+      lsBooleanOperation<NumericType, D>(levelSet, levelSets_->back(),
                                          lsBooleanOperationEnum::UNION)
           .apply();
     }
-    if (!materialMap) {
-      materialMap = materialMapType::New();
+    if (!materialMap_) {
+      materialMap_ = materialMapType::New();
     }
-    materialMap->insertNextMaterial(material);
-    levelSets->push_back(passedLevelSet);
+    materialMap_->insertNextMaterial(material);
+    levelSets_->push_back(levelSet);
     materialMapCheck();
   }
 
   // Copy the top Level-Set and insert it in the domain (e.g. in order to
   // capture depositing material on top of the surface).
   void duplicateTopLevelSet(const psMaterial material = psMaterial::None) {
-    if (levelSets->empty()) {
+    if (levelSets_->empty()) {
       return;
     }
 
-    auto copy = lsDomainType::New(levelSets->back());
+    auto copy = lsDomainType::New(levelSets_->back());
     if (material == psMaterial::None) {
       insertNextLevelSet(copy, false);
     } else {
@@ -136,17 +136,17 @@ public:
 
   // Remove the top (last inserted) Level-Set.
   void removeTopLevelSet() {
-    if (levelSets->empty()) {
+    if (levelSets_->empty()) {
       return;
     }
 
-    levelSets->pop_back();
-    if (materialMap) {
+    levelSets_->pop_back();
+    if (materialMap_) {
       auto newMatMap = materialMapType::New();
-      for (std::size_t i = 0; i < levelSets->size(); i++) {
-        newMatMap->insertNextMaterial(materialMap->getMaterialAtIdx(i));
+      for (std::size_t i = 0; i < levelSets_->size(); i++) {
+        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
       }
-      materialMap = newMatMap;
+      materialMap_ = newMatMap;
     }
   }
 
@@ -154,11 +154,11 @@ public:
   // Level-Sets in the domain.
   void applyBooleanOperation(lsDomainType levelSet,
                              lsBooleanOperationEnum operation) {
-    if (levelSets->empty()) {
+    if (levelSets_->empty()) {
       return;
     }
 
-    for (auto &layer : *levelSets) {
+    for (auto &layer : *levelSets_) {
       lsBooleanOperation<NumericType, D>(layer, levelSet, operation).apply();
     }
   }
@@ -168,45 +168,45 @@ public:
   void generateCellSet(const NumericType position,
                        const psMaterial coverMaterial,
                        const bool isAboveSurface = false) {
-    if (!cellSet)
-      cellSet = csDomainType::New();
-    cellSet->setCellSetPosition(isAboveSurface);
-    cellSet->setCoverMaterial(coverMaterial);
-    cellSet->fromLevelSets(levelSets, materialMap, position);
+    if (!cellSet_)
+      cellSet_ = csDomainType::New();
+    cellSet_->setCellSetPosition(isAboveSurface);
+    cellSet_->setCoverMaterial(coverMaterial);
+    cellSet_->fromLevelSets(levelSets_, materialMap_, position);
   }
 
   void setMaterialMap(materialMapType passedMaterialMap) {
-    materialMap = passedMaterialMap;
+    materialMap_ = passedMaterialMap;
     materialMapCheck();
   }
 
   // Set the material of a specific Level-Set in the domain.
   void setMaterial(unsigned int lsId, const psMaterial material) {
-    if (materialMap) {
-      materialMap = materialMapType::New();
+    if (materialMap_) {
+      materialMap_ = materialMapType::New();
     }
-    materialMap->setMaterialAtIdx(lsId, material);
+    materialMap_->setMaterialAtIdx(lsId, material);
     materialMapCheck();
   }
 
   // Returns a vector with all Level-Sets in the domain.
-  auto &getLevelSets() const { return levelSets; }
+  auto &getLevelSets() const { return levelSets_; }
 
   // Returns the material map which contains the specified material for each
   // Level-Set in the domain.
-  auto &getMaterialMap() const { return materialMap; }
+  auto &getMaterialMap() const { return materialMap_; }
 
-  auto &getCellSet() const { return cellSet; }
+  auto &getCellSet() const { return cellSet_; }
 
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
-  auto &getGrid() const { return levelSets->back()->getGrid(); }
+  auto &getGrid() const { return levelSets_->back()->getGrid(); }
 
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
   auto getBoundingBox() const {
     std::array<std::array<NumericType, 3>, 2> boundingBox;
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-    lsToDiskMesh<NumericType, D>(levelSets->back(), mesh).apply();
+    lsToDiskMesh<NumericType, D>(levelSets_->back(), mesh).apply();
     boundingBox[0] = mesh->minimumExtent;
     boundingBox[1] = mesh->maximumExtent;
     return boundingBox;
@@ -215,7 +215,7 @@ public:
   void print() const {
     std::cout << "Process Simulation Domain:" << std::endl;
     std::cout << "**************************" << std::endl;
-    for (auto &ls : *levelSets) {
+    for (auto &ls : *levelSets_) {
       ls->print();
     }
     std::cout << "**************************" << std::endl;
@@ -223,10 +223,10 @@ public:
 
   // Save the level set as a VTK file.
   void saveLevelSetMesh(std::string fileName, int width = 1) {
-    for (int i = 0; i < levelSets->size(); i++) {
+    for (int i = 0; i < levelSets_->size(); i++) {
       auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-      lsExpand<NumericType, D>(levelSets->at(i), width).apply();
-      lsToMesh<NumericType, D>(levelSets->at(i), mesh).apply();
+      lsExpand<NumericType, D>(levelSets_->at(i), width).apply();
+      lsToMesh<NumericType, D>(levelSets_->at(i), mesh).apply();
       psVTKWriter<NumericType>(mesh,
                                fileName + "_layer" + std::to_string(i) + ".vtp")
           .apply();
@@ -241,19 +241,19 @@ public:
     if (addMaterialIds) {
       lsToDiskMesh<NumericType, D> meshConverter;
       meshConverter.setMesh(mesh);
-      if (materialMap)
-        meshConverter.setMaterialMap(materialMap->getMaterialMap());
-      for (const auto ls : *levelSets) {
+      if (materialMap_)
+        meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+      for (const auto ls : *levelSets_) {
         meshConverter.insertNextLevelSet(ls);
       }
       meshConverter.apply();
 
-      psSurfacePointValuesToLevelSet<NumericType, D>(levelSets->back(), mesh,
+      psSurfacePointValuesToLevelSet<NumericType, D>(levelSets_->back(), mesh,
                                                      {"MaterialIds"})
           .apply();
     }
 
-    lsToSurfaceMesh<NumericType, D>(levelSets->back(), mesh).apply();
+    lsToSurfaceMesh<NumericType, D>(levelSets_->back(), mesh).apply();
     psVTKWriter<NumericType>(mesh, fileName).apply();
   }
 
@@ -261,11 +261,11 @@ public:
   void saveVolumeMesh(std::string fileName) const {
     lsWriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(fileName);
-    for (auto &ls : *levelSets) {
+    for (auto &ls : *levelSets_) {
       visMesh.insertNextLevelSet(ls);
     }
-    if (materialMap)
-      visMesh.setMaterialMap(materialMap->getMaterialMap());
+    if (materialMap_)
+      visMesh.setMaterialMap(materialMap_->getMaterialMap());
     visMesh.apply();
   }
 
@@ -273,27 +273,27 @@ public:
   // serves as the prefix for the individual files and is append by
   // "_layerX.lvst", where X is the number of the Level-Set in the domain.
   void saveLevelSets(std::string fileName) const {
-    for (int i = 0; i < levelSets->size(); i++) {
+    for (int i = 0; i < levelSets_->size(); i++) {
       lsWriter<NumericType, D>(
-          levelSets->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
+          levelSets_->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
           .apply();
     }
   }
 
   void clear() {
-    levelSets = lsDomainsType::New();
-    if (cellSet)
-      cellSet = csDomainType::New();
-    if (materialMap)
-      materialMap = materialMapType::New();
+    levelSets_ = lsDomainsType::New();
+    if (cellSet_)
+      cellSet_ = csDomainType::New();
+    if (materialMap_)
+      materialMap_ = materialMapType::New();
   }
 
 private:
   void materialMapCheck() const {
-    if (!materialMap)
+    if (!materialMap_)
       return;
 
-    if (materialMap->size() != levelSets->size()) {
+    if (materialMap_->size() != levelSets_->size()) {
       psLogger::getInstance()
           .addWarning("Size mismatch in material map and number of Level-Sets "
                       "in domain.")
