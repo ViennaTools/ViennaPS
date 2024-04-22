@@ -12,28 +12,10 @@
 #include <lsTransformMesh.hpp>
 
 template <class NumericType, int D = 3> class psGDSGeometry {
-  using structureLayers =
+  using StructureLayers =
       std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
   using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
-
-  std::vector<psGDSStructure<NumericType>> structures;
-  std::unordered_map<std::string, structureLayers> assembledStructures;
-  std::string libName = "";
-  double units;
-  double userUnits;
-  std::array<NumericType, 2> boundaryPadding = {0., 0.};
-  std::array<NumericType, 2> minBounds;
-  std::array<NumericType, 2> maxBounds;
-  bool pointOrderFlag = true;
-  unsigned triangulationTimeOut = 1000000;
-  static constexpr double eps = 1e-6;
-
-  double bounds[6];
-  NumericType gridDelta = 1.;
-  typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
-      lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-      lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-      lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+  using BoundaryType = typename lsDomain<NumericType, D>::BoundaryType;
 
 public:
   psGDSGeometry() {
@@ -44,8 +26,7 @@ public:
     }
   }
 
-  psGDSGeometry(const NumericType passedGridDelta)
-      : gridDelta(passedGridDelta) {
+  psGDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
     if constexpr (D == 2) {
       psLogger::getInstance()
           .addError("Cannot import 2D geometry from GDS file.")
@@ -53,11 +34,7 @@ public:
     }
   }
 
-  void setGridDelta(const NumericType passedGridDelta) {
-    gridDelta = passedGridDelta;
-  }
-
-  void setLibName(const char *str) { libName = str; }
+  void setGridDelta(const NumericType gridDelta) { gridDelta_ = gridDelta; }
 
   void setBoundaryPadding(const NumericType xPadding,
                           const NumericType yPadding) {
@@ -65,38 +42,24 @@ public:
     boundaryPadding[1] = yPadding;
   }
 
-  void setBoundaryConditions(
-      typename lsDomain<NumericType, D>::BoundaryType passedBoundaryCons[3]) {
+  void setBoundaryConditions(BoundaryType boundaryConds[3]) {
     for (int i = 0; i < 3; i++)
-      boundaryCons[i] = passedBoundaryCons[i];
-  }
-
-  void insertNextStructure(psGDSStructure<NumericType> &structure) {
-    structures.push_back(structure);
+      boundaryConds_[i] = boundaryConds[i];
   }
 
   void print() const {
-    std::cout << "======= STRUCTURES ========" << std::endl;
+    std::cout << "======== STRUCTURES ========" << std::endl;
     for (auto &s : structures) {
       s.print();
     }
     std::cout << "============================" << std::endl;
   }
 
-  psGDSStructure<NumericType> *getStructure(std::string strName) {
-    for (size_t i = 0; i < structures.size(); i++) {
-      if (strName == structures[i].name) {
-        return &structures[i];
-      }
-    }
-    return nullptr;
-  }
-
   lsDomainType layerToLevelSet(const int16_t layer,
                                const NumericType baseHeight,
                                const NumericType height, bool mask = false) {
 
-    auto levelSet = lsDomainType::New(bounds, boundaryCons, gridDelta);
+    auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
@@ -105,7 +68,7 @@ public:
             contains != str.containsLayers.end()) {
           for (auto &el : str.elements) {
             if (el.layer == layer) {
-              if (el.elementType == psGDSElementType::elBox) {
+              if (el.elementType == psGDS::ElementType::elBox) {
                 addBox(levelSet, el, baseHeight, height, 0., 0.);
               } else {
                 addPolygon(levelSet, el, baseHeight, height, 0, 0);
@@ -171,7 +134,7 @@ public:
     }
 
     if (mask) {
-      auto topPlane = lsDomainType::New(bounds, boundaryCons, gridDelta);
+      auto topPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       NumericType normal[3] = {0., 0., 1.};
       NumericType origin[3] = {0., 0., baseHeight + height};
       lsMakeGeometry<NumericType, D>(
@@ -179,7 +142,7 @@ public:
           lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      auto botPlane = lsDomainType::New(bounds, boundaryCons, gridDelta);
+      auto botPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       normal[D - 1] = -1.;
       origin[D - 1] = baseHeight;
       lsMakeGeometry<NumericType, D>(
@@ -200,6 +163,38 @@ public:
     return levelSet;
   }
 
+  void printBound() const {
+    std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
+              << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
+              << std::endl;
+  }
+
+  std::array<std::array<NumericType, 2>, 2> getBoundingBox() const {
+    return {minBounds, maxBounds};
+  }
+
+  auto getBounds() { return bounds_; }
+
+  void insertNextStructure(psGDS::Structure<NumericType> const &structure) {
+    structures.push_back(structure);
+  }
+
+  void finalize() {
+    checkReferences();
+    preBuildStructures();
+    calculateBoundingBoxes();
+  }
+
+private:
+  psGDS::Structure<NumericType> *getStructure(const std::string &strName) {
+    for (size_t i = 0; i < structures.size(); i++) {
+      if (strName == structures[i].name) {
+        return &structures[i];
+      }
+    }
+    return nullptr;
+  }
+
   void checkReferences() {
     for (auto &str : structures) {
       for (auto &sref : str.sRefs) {
@@ -218,7 +213,7 @@ public:
           continue;
         }
 
-        structureLayers strLayerMapping;
+        StructureLayers strLayerMapping;
 
         for (auto layer : str.containsLayers) {
           strLayerMapping.insert(
@@ -227,7 +222,7 @@ public:
 
         for (auto &el : str.elements) {
           psSmartPointer<lsMesh<NumericType>> mesh;
-          if (el.elementType == psGDSElementType::elBox) {
+          if (el.elementType == psGDS::ElementType::elBox) {
             mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
           } else {
             bool retry = false;
@@ -243,16 +238,6 @@ public:
         assembledStructures.insert({str.name, strLayerMapping});
       }
     }
-  }
-
-  void printBound() const {
-    std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
-              << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
-              << std::endl;
-  }
-
-  std::array<std::array<NumericType, 2>, 2> getBoundingBox() const {
-    return {minBounds, maxBounds};
   }
 
   void calculateBoundingBoxes() {
@@ -326,18 +311,15 @@ public:
         processed[structures[i].name] = true;
       }
     }
-    bounds[0] = minBounds[0] - boundaryPadding[0];
-    bounds[1] = maxBounds[0] + boundaryPadding[0];
-    bounds[2] = minBounds[1] - boundaryPadding[1];
-    bounds[3] = maxBounds[1] + boundaryPadding[1];
-    bounds[4] = -1.;
-    bounds[5] = 1.;
+    bounds_[0] = minBounds[0] - boundaryPadding[0];
+    bounds_[1] = maxBounds[0] + boundaryPadding[0];
+    bounds_[2] = minBounds[1] - boundaryPadding[1];
+    bounds_[3] = maxBounds[1] + boundaryPadding[1];
+    bounds_[4] = -1.;
+    bounds_[5] = 1.;
   }
 
-  double *getBounds() { return bounds; }
-
-private:
-  void addBox(lsDomainType levelSet, psGDSElement<NumericType> &element,
+  void addBox(lsDomainType levelSet, psGDS::Element<NumericType> &element,
               const NumericType baseHeight, const NumericType height,
               const NumericType xOffset, const NumericType yOffset) const {
     auto tmpLS = lsDomainType::New(levelSet->getGrid());
@@ -356,7 +338,7 @@ private:
         .apply();
   }
 
-  void addPolygon(lsDomainType levelSet, psGDSElement<NumericType> &element,
+  void addPolygon(lsDomainType levelSet, psGDS::Element<NumericType> &element,
                   const NumericType baseHeight, const NumericType height,
                   const NumericType xOffset, const NumericType yOffset) {
     bool retry = false;
@@ -375,7 +357,7 @@ private:
   }
 
   psSmartPointer<lsMesh<NumericType>>
-  boxToSurfaceMesh(psGDSElement<NumericType> &element,
+  boxToSurfaceMesh(psGDS::Element<NumericType> &element,
                    const NumericType baseHeight, const NumericType height,
                    const NumericType xOffset, const NumericType yOffset) {
     auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
@@ -408,7 +390,7 @@ private:
   }
 
   psSmartPointer<lsMesh<NumericType>>
-  polygonToSurfaceMesh(psGDSElement<NumericType> &element,
+  polygonToSurfaceMesh(psGDS::Element<NumericType> &element,
                        const NumericType baseHeight, const NumericType height,
                        const NumericType xOffset, const NumericType yOffset,
                        bool &retry) {
@@ -578,4 +560,23 @@ private:
   static inline NumericType deg2rad(const NumericType angleDeg) {
     return angleDeg * M_PI / 180.;
   }
+
+private:
+  std::vector<psGDS::Structure<NumericType>> structures;
+  std::unordered_map<std::string, StructureLayers> assembledStructures;
+  std::array<NumericType, 2> boundaryPadding = {0., 0.};
+  std::array<NumericType, 2> minBounds;
+  std::array<NumericType, 2> maxBounds;
+  static bool pointOrderFlag;
+  unsigned triangulationTimeOut = 1000000;
+  static constexpr double eps = 1e-6;
+
+  double bounds_[6];
+  NumericType gridDelta_ = 1.;
+  BoundaryType boundaryConds_[3] = {BoundaryType::REFLECTIVE_BOUNDARY,
+                                    BoundaryType::REFLECTIVE_BOUNDARY,
+                                    BoundaryType::INFINITE_BOUNDARY};
 };
+
+template <class NumericType, int D>
+bool psGDSGeometry<NumericType, D>::pointOrderFlag = true;

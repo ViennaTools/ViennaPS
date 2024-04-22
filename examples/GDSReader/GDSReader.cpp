@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   psGDSReader<NumericType, D>(mask, "mask.gds").apply();
 
   // geometry setup
-  double *bounds = mask->getBounds();
+  auto bounds = mask->getBounds();
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
 
   // substrate plane
