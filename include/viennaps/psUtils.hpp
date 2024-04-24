@@ -55,7 +55,7 @@ inline void printProgress(size_t i, size_t finalCount = 100) {
 }
 
 // Checks if a string starts with a - or not
-inline bool isSigned(const std::string &s) {
+[[nodiscard]] inline bool isSigned(const std::string &s) {
   auto pos = s.find_first_not_of(' ');
   if (pos == s.npos)
     return false;
@@ -65,7 +65,7 @@ inline bool isSigned(const std::string &s) {
 }
 
 // Converts string to the given numeric datatype
-template <typename T> T convert(const std::string &s) {
+template <typename T> [[nodiscard]] T convert(const std::string &s) {
   if constexpr (std::is_same_v<T, int>) {
     return std::stoi(s);
   } else if constexpr (std::is_same_v<T, unsigned int>) {
@@ -228,7 +228,8 @@ struct Parameters {
     m = psUtils::readConfigFile(fileName);
   }
 
-  template <typename T = double> T get(const std::string &key) const {
+  template <typename T = double>
+  [[nodiscard]] T get(const std::string &key) const {
     if (m.find(key) == m.end()) {
       std::cout << "Key not found in parameters: " << key << std::endl;
       exit(1);
@@ -239,7 +240,7 @@ struct Parameters {
 };
 
 template <int D>
-rayBoundaryCondition
+[[nodiscard]] rayBoundaryCondition
 convertBoundaryCondition(lsBoundaryConditionEnum<D> originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
   case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:

@@ -33,9 +33,11 @@ public:
                                const std::vector<NumericType> &materialIds) {}
 
   // non-virtual functions
-  psSmartPointer<psPointData<NumericType>> getCoverages() { return coverages; }
+  psSmartPointer<psPointData<NumericType>> getCoverages() const {
+    return coverages;
+  }
 
-  psSmartPointer<psProcessParams<NumericType>> getProcessParameters() {
+  psSmartPointer<psProcessParams<NumericType>> getProcessParameters() const {
     return processParams;
   }
 };

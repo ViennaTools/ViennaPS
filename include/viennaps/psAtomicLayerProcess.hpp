@@ -9,7 +9,6 @@
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
 
-#include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
 template <typename NumericType, int D> class psAtomicLayerProcess {
