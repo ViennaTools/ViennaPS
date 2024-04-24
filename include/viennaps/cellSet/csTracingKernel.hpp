@@ -11,20 +11,20 @@
 #include <raySource.hpp>
 #include <rayUtil.hpp>
 
-template <typename SourceType, typename T, int D> class csTracingKernel {
+template <typename T, int D> class csTracingKernel {
 public:
   csTracingKernel(RTCDevice &pDevice, rayGeometry<T, D> &pRTCGeometry,
                   rayBoundary<T, D> &pRTCBoundary,
-                  raySource<SourceType> &pSource,
+                  std::unique_ptr<raySource<T, D>> pSource,
                   std::unique_ptr<csAbstractParticle<T>> &pParticle,
                   const size_t pNumOfRayPerPoint, const size_t pNumOfRayFixed,
                   const bool pUseRandomSeed, const size_t pRunNumber,
                   lsSmartPointer<csDenseCellSet<T, D>> passedCellSet,
                   int passedExclude)
       : mDevice(pDevice), mGeometry(pRTCGeometry), mBoundary(pRTCBoundary),
-        mSource(pSource), mParticle(pParticle->clone()),
+        mSource(std::move(pSource)), mParticle(pParticle->clone()),
         mNumRays(pNumOfRayFixed == 0
-                     ? pSource.getNumPoints() * pNumOfRayPerPoint
+                     ? mSource->getNumPoints() * pNumOfRayPerPoint
                      : pNumOfRayFixed),
         mUseRandomSeeds(pUseRandomSeed), mRunNumber(pRunNumber),
         cellSet(passedCellSet), excludeMaterial(passedExclude),
@@ -86,7 +86,9 @@ public:
 
         particle->initNew(RngState);
 
-        mSource.fillRay(rayHit.ray, idx, RngState); // fills also tnear
+        auto originAndDirection = mSource->getOriginAndDirection(idx, RngState);
+        rayInternal::fillRay(rayHit.ray, originAndDirection[0],
+                             originAndDirection[1]);
 
 #ifdef VIENNARAY_USE_RAY_MASKING
         rayHit.ray.mask = -1;
@@ -286,7 +288,7 @@ private:
   RTCDevice &mDevice;
   rayGeometry<T, D> &mGeometry;
   rayBoundary<T, D> &mBoundary;
-  raySource<SourceType> &mSource;
+  std::unique_ptr<raySource<T, D>> const mSource;
   std::unique_ptr<csAbstractParticle<T>> const mParticle = nullptr;
   const long long mNumRays;
   const bool mUseRandomSeeds;

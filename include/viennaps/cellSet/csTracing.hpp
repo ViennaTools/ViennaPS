@@ -70,24 +70,24 @@ public:
     }
 
     if (usePointSource) {
-      auto raySource =
-          csPointSource<T, D>(pointSourceOrigin, pointSourceDirection,
-                              traceSettings, mGeometry.getNumPoints());
+      auto raySource = std::make_unique<csPointSource<T, D>>(
+          pointSourceOrigin, pointSourceDirection, traceSettings,
+          mGeometry.getNumPoints());
 
-      csTracingKernel<csPointSource<T, D>, T, D>(
-          mDevice, mGeometry, boundary, raySource, mParticle,
-          mNumberOfRaysPerPoint, mNumberOfRaysFixed, mUseRandomSeeds,
-          mRunNumber++, cellSet, excludeMaterialId - 1)
+      csTracingKernel<T, D>(mDevice, mGeometry, boundary, std::move(raySource),
+                            mParticle, mNumberOfRaysPerPoint,
+                            mNumberOfRaysFixed, mUseRandomSeeds, mRunNumber++,
+                            cellSet, excludeMaterialId - 1)
           .apply();
     } else {
-      auto raySource = raySourceRandom<T, D>(
+      auto raySource = std::make_unique<raySourceRandom<T, D>>(
           boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
           mGeometry.getNumPoints(), usePrimaryDirection, orthoBasis);
 
-      csTracingKernel<raySourceRandom<T, D>, T, D>(
-          mDevice, mGeometry, boundary, raySource, mParticle,
-          mNumberOfRaysPerPoint, mNumberOfRaysFixed, mUseRandomSeeds,
-          mRunNumber++, cellSet, excludeMaterialId - 1)
+      csTracingKernel<T, D>(mDevice, mGeometry, boundary, std::move(raySource),
+                            mParticle, mNumberOfRaysPerPoint,
+                            mNumberOfRaysFixed, mUseRandomSeeds, mRunNumber++,
+                            cellSet, excludeMaterialId - 1)
           .apply();
     }
 

@@ -4,6 +4,7 @@ venv/
 .vscode
 .vs
 
+*.ipynb
 old_*
 *a.out
 install*

@@ -9,7 +9,42 @@
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
 
+#include <rayReflection.hpp>
+#include <raySource.hpp>
 #include <rayTrace.hpp>
+
+template <typename NumericType, int D>
+class DesorptionSource : public raySource<NumericType, D> {
+public:
+  DesorptionSource(const std::vector<std::array<NumericType, 3>> &points,
+                   const std::vector<std::array<NumericType, 3>> &normals,
+                   const std::vector<NumericType> &desorptionRates,
+                   const int numRaysPerPoint)
+      : points_(points), normals_(normals), desorptionRates_(desorptionRates),
+        numRaysPerPoint_(numRaysPerPoint) {}
+
+  rayPair<rayTriple<NumericType>>
+  getOriginAndDirection(const size_t idx, rayRNG &RngState) const override {
+    size_t pointIdx = idx / numRaysPerPoint_;
+    auto direction =
+        rayReflectionDiffuse<NumericType, D>(normals_[pointIdx], RngState);
+    return {points_[pointIdx], direction};
+  }
+
+  size_t getNumPoints() const override {
+    return points_.size() * numRaysPerPoint_;
+  }
+
+  NumericType getInitialRayWeight(const size_t idx) const override {
+    return desorptionRates_[idx / numRaysPerPoint_] / numRaysPerPoint_;
+  }
+
+private:
+  const std::vector<std::array<NumericType, 3>> &points_;
+  const std::vector<std::array<NumericType, 3>> &normals_;
+  const std::vector<NumericType> &desorptionRates_;
+  const int numRaysPerPoint_;
+};
 
 template <typename NumericType, int D> class psAtomicLayerProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
@@ -174,6 +209,7 @@ public:
 
       NumericType time = 0.;
       int pulseCounter = 0;
+
       while (time < pulseTime_) {
 #ifdef VIENNAPS_PYTHON_BUILD
         if (PyErr_CheckSignals() != 0)
@@ -254,7 +290,55 @@ public:
         }
 
         time += coverageTimeStep_;
-      }
+      } // end of gas pulse
+
+      if (purgePulseTime_ > 0.) {
+        psLogger::getInstance().addInfo("Purge pulse ...").print();
+
+        auto purgeRates = psSmartPointer<psPointData<NumericType>>::New();
+
+        rayTrace<NumericType, D> purgeTracer;
+        purgeTracer.setSourceDirection(sourceDirection_);
+        purgeTracer.setBoundaryConditions(rayBoundaryCondition);
+        purgeTracer.setUseRandomSeeds(useRandomSeeds_);
+        purgeTracer.setCalculateFlux(false);
+        purgeTracer.setMeanFreePath(lambda_);
+        purgeTracer.setGeometry(points, normals, gridDelta);
+        purgeTracer.setMaterialIds(materialIds);
+        if (primaryDirection)
+          purgeTracer.setPrimaryDirection(primaryDirection.value());
+
+        // move coverages to ray tracer
+        auto rayTraceCoverages =
+            movePointDataToRayData(surfaceModel->getCoverages());
+        purgeTracer.setGlobalData(rayTraceCoverages);
+
+        std::size_t particleIdx = 0;
+        for (auto &particle : *pModel_->getParticleTypes()) {
+          auto desorb = rayTraceCoverages.getVectorData(particleIdx);
+          for (auto &c : desorb)
+            c = c * desorptionRates_[particleIdx] * purgePulseTime_;
+          auto source = std::make_unique<DesorptionSource<NumericType, D>>(
+              points, normals, desorb, 100);
+          purgeTracer.setSource(std::move(source));
+
+          purgeTracer.setParticleType(particle);
+          purgeTracer.apply();
+
+          // fill up rates vector with rates from this particle type
+          auto numRates = particle->getLocalDataLabels().size();
+          auto &localData = purgeTracer.getLocalData();
+          for (int i = 0; i < numRates; ++i) {
+            auto rate = std::move(localData.getVectorData(i));
+            purgeTracer.smoothFlux(rate);
+            purgeRates->insertNextScalarData(std::move(rate),
+                                             localData.getVectorDataLabel(i));
+          }
+
+          ++particleIdx;
+        }
+
+      } // end of purge pulse
 
       // get velocities
       auto velocities =
@@ -359,19 +443,21 @@ private:
 
     if (!pModel_->getParticleTypes()) {
       psLogger::getInstance()
-          .addError("No particle types specified for ray tracing.")
+          .addError("No particle types specified for ray tracing in "
+                    "psAtomicLayerProcess.")
           .print();
     }
 
     if (pModel_->getGeometricModel()) {
       psLogger::getInstance()
-          .addWarning("Geometric model not supported in ALP ...")
+          .addWarning("Geometric model not supported in psAtomicLayerProcess.")
           .print();
     }
 
     if (pModel_->getAdvectionCallback()) {
       psLogger::getInstance()
-          .addWarning("Advection callback not supported in ALP ...")
+          .addWarning(
+              "Advection callback not supported in psAtomicLayerProcess.")
           .print();
     }
   }
@@ -389,6 +475,8 @@ private:
 
   unsigned int numCycles_ = 0;
   NumericType pulseTime_ = 0.;
+  NumericType purgePulseTime_ = 0.;
   NumericType coverageTimeStep_ = 1.;
   NumericType lambda_ = -1.;
+  std::vector<NumericType> desorptionRates_;
 };
