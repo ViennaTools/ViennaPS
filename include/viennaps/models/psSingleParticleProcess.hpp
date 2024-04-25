@@ -109,7 +109,7 @@ private:
                   NumericType sourceDistributionPower,
                   std::vector<psMaterial> &&maskMaterial) {
     // particles
-    auto depoParticle = std::make_unique<
+    auto particle = std::make_unique<
         SingleParticleImplementation::Particle<NumericType, D>>(
         stickingProbability, sourceDistributionPower);
 
@@ -122,7 +122,7 @@ private:
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->insertNextParticleType(depoParticle);
+    this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
   }
 };

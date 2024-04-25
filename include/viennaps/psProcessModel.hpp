@@ -8,6 +8,7 @@
 
 #include <lsConcepts.hpp>
 #include <rayParticle.hpp>
+#include <raySource.hpp>
 
 /// The process model combines all models (particle types, surface model,
 /// geometric model, advection callback)
@@ -17,6 +18,7 @@ protected:
       std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
+  std::unique_ptr<raySource<NumericType, D>> source = nullptr;
   std::vector<int> particleLogSize;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
   psSmartPointer<psAdvectionCallback<NumericType, D>> advectionCallback =
@@ -46,6 +48,9 @@ public:
   virtual psSmartPointer<psVelocityField<NumericType>>
   getVelocityField() const {
     return velocityField;
+  }
+  virtual std::unique_ptr<raySource<NumericType, D>> getSource() {
+    return std::move(source);
   }
 
   /// Set a primary direction for the source distribution (tilted distribution).
@@ -77,6 +82,10 @@ public:
     }
     particles->push_back(passedParticle->clone());
     particleLogSize.push_back(dataLogSize);
+  }
+
+  void setSource(std::unique_ptr<raySource<NumericType, D>> passedSource) {
+    source = std::move(passedSource);
   }
 
   template <typename SurfaceModelType,

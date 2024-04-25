@@ -135,6 +135,11 @@ public:
     rayTracer.setBoundaryConditions(rayBoundaryCondition);
     rayTracer.setUseRandomSeeds(useRandomSeeds_);
     rayTracer.setCalculateFlux(false);
+    auto source = model->getSource();
+    if (source) {
+      rayTracer.setSource(std::move(source));
+      psLogger::getInstance().addInfo("Using custom source.").print();
+    }
     auto primaryDirection = model->getPrimaryDirection();
     if (primaryDirection) {
       psLogger::getInstance()
