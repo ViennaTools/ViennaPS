@@ -79,9 +79,6 @@ public:
     sourceDirection_ = passedDirection;
   }
 
-  // Set the duration of the process.
-  void setMeanFreePath(NumericType lambda) { lambda_ = lambda; }
-
   void setDesorptionRates(std::vector<NumericType> desorptionRates) {
     desorptionRates_ = std::move(desorptionRates);
   }
@@ -170,7 +167,6 @@ public:
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }
     rayTracer.setCalculateFlux(false);
-    rayTracer.setMeanFreePath(lambda_);
 
     // initialize particle data logs
     auto const numParticles = pModel_->getParticleTypes()->size();
@@ -312,7 +308,6 @@ public:
         purgeTracer.setBoundaryConditions(rayBoundaryCondition);
         purgeTracer.setUseRandomSeeds(useRandomSeeds_);
         purgeTracer.setCalculateFlux(false);
-        purgeTracer.setMeanFreePath(lambda_);
         purgeTracer.setGeometry(points, normals, gridDelta);
         purgeTracer.setMaterialIds(materialIds);
         if (primaryDirection)
@@ -489,6 +484,5 @@ private:
   NumericType pulseTime_ = 0.;
   NumericType purgePulseTime_ = 0.;
   NumericType coverageTimeStep_ = 1.;
-  NumericType lambda_ = -1.;
   std::vector<NumericType> desorptionRates_;
 };
