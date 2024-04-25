@@ -82,6 +82,10 @@ public:
   // Set the duration of the process.
   void setMeanFreePath(NumericType lambda) { lambda_ = lambda; }
 
+  void setDesorptionRates(std::vector<NumericType> desorptionRates) {
+    desorptionRates_ = std::move(desorptionRates);
+  }
+
   void setPulseTime(NumericType pulseTime) { pulseTime_ = pulseTime; }
 
   void setCoverageTimeStep(NumericType coverageTimeStep) {
@@ -169,8 +173,9 @@ public:
     rayTracer.setMeanFreePath(lambda_);
 
     // initialize particle data logs
-    particleDataLogs_.resize(pModel_->getParticleTypes()->size());
-    for (std::size_t i = 0; i < pModel_->getParticleTypes()->size(); i++) {
+    auto const numParticles = pModel_->getParticleTypes()->size();
+    particleDataLogs_.resize(numParticles);
+    for (std::size_t i = 0; i < numParticles; i++) {
       int logSize = pModel_->getParticleLogSize(i);
       if (logSize > 0) {
         particleDataLogs_[i].data.resize(1);
@@ -294,6 +299,11 @@ public:
 
       if (purgePulseTime_ > 0.) {
         psLogger::getInstance().addInfo("Purge pulse ...").print();
+        if (desorptionRates_.size() != numParticles) {
+          psLogger::getInstance()
+              .addError("Desorption rates not set for all particle types.")
+              .print();
+        }
 
         auto purgeRates = psSmartPointer<psPointData<NumericType>>::New();
 
@@ -326,7 +336,7 @@ public:
           purgeTracer.apply();
 
           // fill up rates vector with rates from this particle type
-          auto numRates = particle->getLocalDataLabels().size();
+          auto const numRates = particle->getLocalDataLabels().size();
           auto &localData = purgeTracer.getLocalData();
           for (int i = 0; i < numRates; ++i) {
             auto rate = std::move(localData.getVectorData(i));
@@ -337,6 +347,8 @@ public:
 
           ++particleIdx;
         }
+
+        surfaceModel->updateCoverages(purgeRates, materialIds);
 
       } // end of purge pulse
 
