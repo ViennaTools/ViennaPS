@@ -17,8 +17,8 @@ public:
 };
 
 template <class T, int D, class cellType = cellBase<T>> class csSurfaceCellSet {
-  psSmartPointer<psDomain<T, D>> domain = nullptr;
-  psSmartPointer<csBVH<T, D>> BVH = nullptr;
+  lsSmartPointer<psDomain<T, D>> domain = nullptr;
+  lsSmartPointer<csBVH<T, D>> BVH = nullptr;
 
   std::vector<cellType> surfaceCells;
   std::vector<cellType> innerCells;
@@ -26,7 +26,7 @@ template <class T, int D, class cellType = cellBase<T>> class csSurfaceCellSet {
 public:
   csSurfaceCellSet() = default;
 
-  csSurfaceCellSet(const psSmartPointer<psDomain<T, D>> &passedDomain,
+  csSurfaceCellSet(const lsSmartPointer<psDomain<T, D>> &passedDomain,
                    const T extraHeight = 0.) {
     domain = passedDomain;
     auto highestPoint = domain->getBoundingBox()[1][D - 1];
@@ -70,7 +70,7 @@ public:
     return surfaceCells[0];
   }
 
-  psSmartPointer<psDomain<T, D>> getDomain() { return domain; }
+  lsSmartPointer<psDomain<T, D>> getDomain() { return domain; }
 
   void makeSurfaceCells(const std::vector<unsigned> &surfaceCellIds) {
     for (auto id : surfaceCellIds) {
@@ -182,7 +182,7 @@ private:
     }
 
     BVH =
-        psSmartPointer<csBVH<T, D>>::New(cellSet->getBoundingBox(), BVHlayers);
+        lsSmartPointer<csBVH<T, D>>::New(cellSet->getBoundingBox(), BVHlayers);
 
     psUtils::Timer timer;
     timer.start();

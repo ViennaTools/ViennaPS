@@ -1,11 +1,19 @@
 #pragma once
 
-#include "psDomain.hpp"
+#include "csDenseCellSet.hpp"
+
 #include "psLogger.hpp"
 
+#include <lsDomain.hpp>
+#include <lsToDiskMesh.hpp>
 #include <rayGeometry.hpp>
 
 template <class NumericType, int D> class csMeanFreePath {
+
+private:
+  using levelSetsType =
+      lsSmartPointer<std::vector<lsSmartPointer<lsDomain<NumericType, D>>>>;
+  using cellSetType = lsSmartPointer<csDenseCellSet<NumericType, D>>;
 
 public:
   csMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {
@@ -15,8 +23,12 @@ public:
 
   ~csMeanFreePath() { rtcReleaseDevice(traceDevice); }
 
-  void setDomain(const psSmartPointer<psDomain<NumericType, D>> passedDomain) {
-    domain = passedDomain;
+  void setLevelSets(levelSetsType passedLevelSets) {
+    levelSets = passedLevelSets;
+  }
+
+  void setCellSet(cellSetType passedCellSet) {
+    cellSet = passedCellSet;
   }
 
   void setBulkLambda(const NumericType passedBulkLambda) {
@@ -35,7 +47,7 @@ public:
 
   void apply() {
     psLogger::getInstance().addInfo("Calculating mean free path ...").print();
-    domain->getCellSet()->addScalarData("MeanFreePath", 0.);
+    cellSet->addScalarData("MeanFreePath", 0.);
     runKernel();
   }
 
@@ -47,7 +59,6 @@ private:
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
-    auto &cellSet = domain->getCellSet();
     unsigned numCells = cellSet->getElements().size();
     auto data = cellSet->getScalarData("MeanFreePath");
     auto materials = cellSet->getScalarData("Material");
@@ -55,11 +66,11 @@ private:
     auto traceGeometry = rayGeometry<NumericType, D>();
     {
       auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-      lsToDiskMesh<NumericType, D>(domain->getLevelSets()->back(), mesh)
+      lsToDiskMesh<NumericType, D>(levelSets->back(), mesh)
           .apply();
       auto &points = mesh->getNodes();
       auto normals = mesh->getCellData().getVectorData("Normals");
-      gridDelta = domain->getGrid().getGridDelta();
+      gridDelta = levelSets->back()->getGrid().getGridDelta();
       traceGeometry.initGeometry(traceDevice, points, *normals,
                                  gridDelta * rayInternal::DiskFactor<D>);
     }
@@ -171,7 +182,8 @@ private:
   }
 
 private:
-  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  levelSetsType levelSets = nullptr;
+  cellSetType cellSet = nullptr;
   RTCDevice traceDevice;
 
   NumericType gridDelta = 0;

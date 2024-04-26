@@ -3,23 +3,23 @@
 #include "csDenseCellSet.hpp"
 
 template <class NumericType, int D> class csSegmentCells {
-  psSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
+  lsSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
   std::string cellTypeString = "CellType";
   psMaterial bulkMaterial = psMaterial::GAS;
 
 public:
   csSegmentCells(
-      const psSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet)
+      const lsSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet)
       : cellSet(passedCellSet) {}
 
   csSegmentCells(
-      const psSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet,
+      const lsSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet,
       const std::string cellTypeString, const psMaterial passedBulkMaterial)
       : cellSet(passedCellSet), cellTypeString(cellTypeString),
         bulkMaterial(passedBulkMaterial) {}
 
   void setCellSet(
-      const psSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet) {
+      const lsSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet) {
     cellSet = passedCellSet;
   }
 

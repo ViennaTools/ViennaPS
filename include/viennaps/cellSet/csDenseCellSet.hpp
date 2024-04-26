@@ -6,14 +6,13 @@
 
 #include "../psLogger.hpp"
 #include "../psMaterials.hpp"
-#include "../psSmartPointer.hpp"
-#include "../psVTKWriter.hpp"
 
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
+#include <lsVTKWriter.hpp>
 #include <rayUtil.hpp>
 
 #include <bitset>
@@ -24,15 +23,15 @@
 */
 template <class T, int D> class csDenseCellSet {
 private:
-  using gridType = psSmartPointer<lsMesh<T>>;
+  using gridType = lsSmartPointer<lsMesh<T>>;
   using levelSetsType =
-      psSmartPointer<std::vector<psSmartPointer<lsDomain<T, D>>>>;
-  using materialMapType = psSmartPointer<psMaterialMap>;
+      lsSmartPointer<std::vector<lsSmartPointer<lsDomain<T, D>>>>;
+  using materialMapType = lsSmartPointer<psMaterialMap>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
-  psSmartPointer<lsDomain<T, D>> surface = nullptr;
-  psSmartPointer<csBVH<T, D>> BVH = nullptr;
+  lsSmartPointer<lsDomain<T, D>> surface = nullptr;
+  lsSmartPointer<csBVH<T, D>> BVH = nullptr;
   materialMapType materialMap = nullptr;
 
   T gridDelta;
@@ -67,25 +66,25 @@ public:
     materialMap = passedMaterialMap;
 
     if (cellGrid == nullptr)
-      cellGrid = psSmartPointer<lsMesh<T>>::New();
+      cellGrid = lsSmartPointer<lsMesh<T>>::New();
 
     if (surface == nullptr)
-      surface = psSmartPointer<lsDomain<T, D>>::New(levelSets->back());
+      surface = lsSmartPointer<lsDomain<T, D>>::New(levelSets->back());
     else
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
 
     depth = passedDepth;
-    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
-    auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    std::vector<lsSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
+    auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
     {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
-                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface)
@@ -103,12 +102,12 @@ public:
 #ifndef NDEBUG
     int db_ls = 0;
     for (auto &ls : levelSetsInOrder) {
-      auto mesh = psSmartPointer<lsMesh<T>>::New();
+      auto mesh = lsSmartPointer<lsMesh<T>>::New();
       lsToSurfaceMesh<T, D>(ls, mesh).apply();
-      psVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
+      lsVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
           .apply();
     }
-    psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
+    lsVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
     adjustMaterialIds();
@@ -139,7 +138,7 @@ public:
       minExtent /= 2;
     }
 
-    BVH = psSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
+    BVH = lsSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
     buildBVH();
   }
 
@@ -192,9 +191,9 @@ public:
     return cellGrid->template getElements<(1 << D)>()[idx];
   }
 
-  psSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
+  lsSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
-  psSmartPointer<lsMesh<T>> getCellGrid() { return cellGrid; }
+  lsSmartPointer<lsMesh<T>> getCellGrid() { return cellGrid; }
 
   levelSetsType getLevelSets() const { return levelSets; }
 
@@ -309,7 +308,7 @@ public:
 
   // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
-    psVTKWriter<T>(cellGrid, fileName).apply();
+    lsVTKWriter<T>(cellGrid, fileName).apply();
   }
 
   // Save cell set data in simple text format
@@ -403,15 +402,15 @@ public:
     auto materialIds = getScalarData("Material");
 
     // create overlay material
-    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
-    auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    std::vector<lsSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
+    auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
     {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
-                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface)
@@ -487,18 +486,18 @@ public:
   // Updates the surface of the cell set. The new surface should be below the
   // old surface as this function can only remove cells from the cell set.
   void updateSurface() {
-    auto updateCellGrid = psSmartPointer<lsMesh<T>>::New();
+    auto updateCellGrid = lsSmartPointer<lsMesh<T>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(updateCellGrid);
     {
-      auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+      auto plane = lsSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
 
       lsMakeGeometry<T, D>(plane,
-                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
       voxelConverter.insertNextLevelSet(plane);
     }
@@ -737,7 +736,7 @@ private:
   }
 
   void calculateMinMaxIndex(
-      const std::vector<psSmartPointer<lsDomain<T, D>>> &levelSetsInOrder) {
+      const std::vector<lsSmartPointer<lsDomain<T, D>>> &levelSetsInOrder) {
     // set to zero
     for (unsigned i = 0; i < D; ++i) {
       minIndex[i] = std::numeric_limits<hrleIndexType>::max();
