@@ -18,7 +18,7 @@ protected:
       std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
   psSmartPointer<ParticleTypeList> particles = nullptr;
-  std::unique_ptr<raySource<NumericType, D>> source = nullptr;
+  std::unique_ptr<raySource<NumericType, D>> source;
   std::vector<int> particleLogSize;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
   psSmartPointer<psAdvectionCallback<NumericType, D>> advectionCallback =
