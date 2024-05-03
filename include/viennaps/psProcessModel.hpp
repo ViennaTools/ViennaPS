@@ -50,7 +50,11 @@ public:
     return velocityField;
   }
   virtual std::unique_ptr<raySource<NumericType, D>> getSource() {
-    return std::move(source);
+    if (source) {
+      return std::move(source);
+    } else {
+      return nullptr;
+    }
   }
 
   /// Set a primary direction for the source distribution (tilted distribution).

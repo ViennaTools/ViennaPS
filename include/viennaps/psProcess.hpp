@@ -284,6 +284,11 @@ public:
         rayTracer.setPrimaryDirection(primaryDirection.value());
       }
       rayTracer.setCalculateFlux(false);
+      auto source = model->getSource();
+      if (source) {
+        rayTracer.setSource(std::move(source));
+        psLogger::getInstance().addInfo("Using custom source.").print();
+      }
 
       // initialize particle data logs
       particleDataLogs.resize(model->getParticleTypes()->size());

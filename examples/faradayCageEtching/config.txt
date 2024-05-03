@@ -1,10 +1,12 @@
-gridDelta = 1.0
-xExtent = 25.0
+gridDelta = 0.5
+xExtent = 35.0
 yExtent = 25.0
 
-holeRadius = 8.0
-maskHeight = 10.0
+finWidth = 8.0
+finHeight = 3.0
 taperAngle = 0.0
 
 processTime = 10.0
 raysPerPoint = 1000
+
+angle = 45

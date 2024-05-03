@@ -18,6 +18,7 @@ template <typename NumericType> struct Parameters {
   NumericType n = 10;
   NumericType inflectAngle = 89; // degree
   NumericType minAngle = 5;      // degree
+  NumericType tiltAngle = 0;     // degree
   std::function<NumericType(NumericType)> yieldFunction =
       [](NumericType cosTheta) { return 1.; };
 };
@@ -26,12 +27,11 @@ template <typename NumericType>
 class SurfaceModel : public psSurfaceModel<NumericType> {
   const Parameters<NumericType> params_;
   const std::vector<psMaterial> maskMaterials_;
-  const NumericType tiltAngle_ = 0.;
 
 public:
   SurfaceModel(const Parameters<NumericType> &params,
-               const std::vector<psMaterial> &mask, const NumericType tiltAngle)
-      : maskMaterials_(mask), params_(params), tiltAngle_(tiltAngle) {}
+               const std::vector<psMaterial> &mask)
+      : maskMaterials_(mask), params_(params) {}
 
   psSmartPointer<std::vector<NumericType>> calculateVelocities(
       psSmartPointer<psPointData<NumericType>> rates,
@@ -45,7 +45,7 @@ public:
     const NumericType norm =
         params_.planeWaferRate /
         ((std::sqrt(params_.meanEnergy) - std::sqrt(params_.thresholdEnergy)) *
-         params_.yieldFunction(std::cos(tiltAngle_)));
+         params_.yieldFunction(std::cos(params_.tiltAngle * M_PI / 180.)));
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!isMaskMaterial(materialIds[i])) {
@@ -180,7 +180,7 @@ private:
     // surface model
     auto surfModel =
         psSmartPointer<IBEImplementation::SurfaceModel<NumericType>>::New(
-            params_, maskMaterial, 0.);
+            params_, maskMaterial);
 
     // velocity field
     auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
