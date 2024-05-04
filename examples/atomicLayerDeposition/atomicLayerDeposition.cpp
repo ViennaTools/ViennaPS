@@ -42,7 +42,9 @@ int main(int argc, char *argv[]) {
                           psMaterial::GAS, true);
   auto &cellSet = domain->getCellSet();
   // Segment the cells into surface, material, and gas cells
-  csSegmentCells<NumericType, D>(cellSet).apply();
+  csSegmentCells<NumericType, D> segmentation(cellSet);
+  segmentation.setBulkMaterial(psMaterial::GAS);
+  segmentation.apply();
 
   cellSet->writeVTU("initial.vtu");
 

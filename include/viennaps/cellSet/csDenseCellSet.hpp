@@ -5,7 +5,6 @@
 #include "csUtil.hpp"
 
 #include "../psLogger.hpp"
-#include "../psMaterials.hpp"
 
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
@@ -26,7 +25,7 @@ private:
   using gridType = lsSmartPointer<lsMesh<T>>;
   using levelSetsType =
       lsSmartPointer<std::vector<lsSmartPointer<lsDomain<T, D>>>>;
-  using materialMapType = lsSmartPointer<psMaterialMap>;
+  using materialMapType = lsSmartPointer<lsMaterialMap>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
@@ -43,7 +42,7 @@ private:
   hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
 
   bool cellSetAboveSurface = false;
-  psMaterial coverMaterial = psMaterial::None;
+  int coverMaterial = -1;
   std::bitset<D> periodicBoundary;
 
   std::vector<T> *fillingFractions;
@@ -259,8 +258,9 @@ public:
     cellSetAboveSurface = passedCellSetPosition;
   }
 
-  void setCoverMaterial(const psMaterial passedCoverMaterial) {
-    coverMaterial = passedCoverMaterial;
+  template <class Material>
+  void setCoverMaterial(const Material passedCoverMaterial) {
+    coverMaterial = static_cast<int>(passedCoverMaterial);
   }
 
   bool getCellSetPosition() const { return cellSetAboveSurface; }
@@ -467,8 +467,8 @@ public:
 
           if (isVoxel) {
             if (matMapPtr) {
-              auto material = matMapPtr->getMaterialAtIdx(materialId);
-              materialIds->at(cellIdx++) = static_cast<int>(material);
+              int material = matMapPtr->getMaterialId(materialId);
+              materialIds->at(cellIdx++) = material;
             } else {
               materialIds->at(cellIdx++) = materialId;
             }
@@ -665,7 +665,7 @@ private:
     if (!materialMap)
       return;
 
-    auto numMaterials = materialMap->size();
+    auto numMaterials = materialMap->getNumberOfLayers();
 
 #pragma omp parallel for
     for (int i = 0; i < matIds->size(); i++) {
@@ -673,10 +673,9 @@ private:
       if (!cellSetAboveSurface)
         materialId--;
       if (materialId >= 0 && materialId < numMaterials) {
-        matIds->at(i) =
-            static_cast<int>(materialMap->getMaterialAtIdx(materialId));
+        matIds->at(i) = materialMap->getMaterialId(materialId);
       } else {
-        matIds->at(i) = static_cast<int>(coverMaterial);
+        matIds->at(i) = coverMaterial;
       }
     }
   }

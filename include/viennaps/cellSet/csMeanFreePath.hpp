@@ -35,8 +35,9 @@ public:
     bulkLambda = passedBulkLambda;
   }
 
-  void setMaterial(const psMaterial passedMaterial) {
-    material = passedMaterial;
+  template <class Material>
+  void setMaterial(const Material passedMaterial) {
+    material = static_cast<int>(passedMaterial);
   }
 
   void setNumRaysPerCell(const int passedNumRaysPerCell) {
@@ -99,7 +100,7 @@ private:
 
 #pragma omp for
       for (int idx = 0; idx < numCells; ++idx) {
-        if (!psMaterialMap::isMaterial(materials->at(idx), material))
+        if (static_cast<int>(materials->at(idx)) != material)
           continue;
 
         auto cellCenter = cellSet->getCellCenter(idx);
@@ -190,5 +191,5 @@ private:
   NumericType bulkLambda = 0;
   NumericType maxLambda = 0.;
   long numRaysPerCell = 100;
-  psMaterial material = psMaterial::GAS;
+  int material = -1;
 };

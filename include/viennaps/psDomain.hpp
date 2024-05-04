@@ -76,7 +76,8 @@ public:
     }
     if (passedDomain->cellSet) {
       auto cellSetDepth = passedDomain->getCellSet()->getDepth();
-      cellSet = csDomainType::New(levelSets, materialMap, cellSetDepth);
+      auto matMap = materialMap ? materialMap->getMaterialMap() : nullptr;
+      cellSet = csDomainType::New(levelSets, matMap, cellSetDepth);
     } else {
       cellSet = nullptr;
     }
@@ -168,7 +169,8 @@ public:
       cellSet = csDomainType::New();
     cellSet->setCellSetPosition(isAboveSurface);
     cellSet->setCoverMaterial(coverMaterial);
-    cellSet->fromLevelSets(levelSets, materialMap, position);
+    auto matMap = materialMap ? materialMap->getMaterialMap() : nullptr;
+    cellSet->fromLevelSets(levelSets, matMap, position);
   }
 
   void setMaterialMap(materialMapType passedMaterialMap) {

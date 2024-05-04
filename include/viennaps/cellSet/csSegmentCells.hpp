@@ -5,18 +5,19 @@
 template <class NumericType, int D> class csSegmentCells {
   lsSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
   std::string cellTypeString = "CellType";
-  psMaterial bulkMaterial = psMaterial::GAS;
+  int bulkMaterial = -1;
 
 public:
   csSegmentCells(
       const lsSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet)
       : cellSet(passedCellSet) {}
 
+  template <class Material>
   csSegmentCells(
       const lsSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet,
-      const std::string cellTypeString, const psMaterial passedBulkMaterial)
+      const std::string cellTypeString, const Material passedBulkMaterial)
       : cellSet(passedCellSet), cellTypeString(cellTypeString),
-        bulkMaterial(passedBulkMaterial) {}
+        bulkMaterial(static_cast<int>(passedBulkMaterial)) {}
 
   void setCellSet(
       const lsSmartPointer<csDenseCellSet<NumericType, D>> &passedCellSet) {
@@ -27,8 +28,9 @@ public:
     cellTypeString = passedCellTypeString;
   }
 
-  void setBulkMaterial(const psMaterial passedBulkMaterial) {
-    bulkMaterial = passedBulkMaterial;
+  template <class Material>
+  void setBulkMaterial(const Material passedBulkMaterial) {
+    bulkMaterial = static_cast<int>(passedBulkMaterial);
   }
 
   void apply() {
@@ -38,11 +40,11 @@ public:
 
 #pragma omp parallel for
     for (int i = 0; i < materials->size(); ++i) {
-      if (!psMaterialMap::isMaterial(materials->at(i), bulkMaterial)) {
+      if (static_cast<int>(materials->at(i)) != bulkMaterial) {
         auto neighbors = cellSet->getNeighbors(i);
         for (auto n : neighbors) {
           if (n >= 0 &&
-              psMaterialMap::isMaterial(materials->at(n), bulkMaterial)) {
+              static_cast<int>(materials->at(n)) == bulkMaterial) {
             cellType->at(i) = 0.;
             break;
           }
