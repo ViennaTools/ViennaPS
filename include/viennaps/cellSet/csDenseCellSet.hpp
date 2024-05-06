@@ -467,7 +467,12 @@ public:
 
           if (isVoxel) {
             if (matMapPtr) {
-              int material = matMapPtr->getMaterialId(materialId);
+              int index = materialId;
+              if (!cellSetAboveSurface)
+                --index;
+              int material = coverMaterial;
+              if (index >= 0 && index < matMapPtr->getNumberOfLayers())
+                material = matMapPtr->getMaterialId(index);
               materialIds->at(cellIdx++) = material;
             } else {
               materialIds->at(cellIdx++) = materialId;
