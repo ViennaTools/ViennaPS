@@ -85,32 +85,18 @@ public:
         passedSurfaceModel);
   }
 
-  template <
-      typename AdvectionCallbackType,
-      lsConcepts::IsBaseOf<psAdvectionCallback<NumericType, D>,
-                           AdvectionCallbackType> = lsConcepts::assignable>
-  void setAdvectionCallback(
-      psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
-    advectionCallback =
-        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, D>>(
-            passedAdvectionCallback);
+  void setAdvectionCallback(psSmartPointer<psAdvectionCallback<NumericType, D>>
+                                passedAdvectionCallback) {
+    advectionCallback = passedAdvectionCallback;
   }
 
-  template <typename GeometricModelType,
-            lsConcepts::IsBaseOf<psGeometricModel<NumericType, D>,
-                                 GeometricModelType> = lsConcepts::assignable>
-  void
-  setGeometricModel(psSmartPointer<GeometricModelType> passedGeometricModel) {
-    geometricModel =
-        std::dynamic_pointer_cast<psGeometricModel<NumericType, D>>(
-            passedGeometricModel);
+  void setGeometricModel(
+      psSmartPointer<psGeometricModel<NumericType, D>> passedGeometricModel) {
+    geometricModel = passedGeometricModel;
   }
 
-  template <typename VelocityFieldType,
-            lsConcepts::IsBaseOf<psVelocityField<NumericType>,
-                                 VelocityFieldType> = lsConcepts::assignable>
-  void setVelocityField(psSmartPointer<VelocityFieldType> passedVelocityField) {
-    velocityField = std::dynamic_pointer_cast<psVelocityField<NumericType>>(
-        passedVelocityField);
+  void setVelocityField(
+      psSmartPointer<psVelocityField<NumericType>> passedVelocityField) {
+    velocityField = passedVelocityField;
   }
 };

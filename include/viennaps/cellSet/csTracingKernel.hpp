@@ -15,14 +15,14 @@ template <typename T, int D> class csTracingKernel {
 public:
   csTracingKernel(RTCDevice &pDevice, rayGeometry<T, D> &pRTCGeometry,
                   rayBoundary<T, D> &pRTCBoundary,
-                  std::unique_ptr<raySource<T, D>> pSource,
+                  std::shared_ptr<raySource<T>> pSource,
                   std::unique_ptr<csAbstractParticle<T>> &pParticle,
                   const size_t pNumOfRayPerPoint, const size_t pNumOfRayFixed,
                   const bool pUseRandomSeed, const size_t pRunNumber,
                   lsSmartPointer<csDenseCellSet<T, D>> passedCellSet,
                   int passedExclude)
       : mDevice(pDevice), mGeometry(pRTCGeometry), mBoundary(pRTCBoundary),
-        mSource(std::move(pSource)), mParticle(pParticle->clone()),
+        mSource(pSource), mParticle(pParticle->clone()),
         mNumRays(pNumOfRayFixed == 0
                      ? mSource->getNumPoints() * pNumOfRayPerPoint
                      : pNumOfRayFixed),
@@ -288,7 +288,7 @@ private:
   RTCDevice &mDevice;
   rayGeometry<T, D> &mGeometry;
   rayBoundary<T, D> &mBoundary;
-  std::unique_ptr<raySource<T, D>> const mSource;
+  std::shared_ptr<raySource<T>> const mSource;
   std::unique_ptr<csAbstractParticle<T>> const mParticle = nullptr;
   const long long mNumRays;
   const bool mUseRandomSeeds;

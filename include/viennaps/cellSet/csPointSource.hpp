@@ -5,7 +5,7 @@
 #include <raySource.hpp>
 
 template <typename NumericType, int D>
-class csPointSource : public raySource<NumericType, D> {
+class csPointSource : public raySource<NumericType> {
   const unsigned mNumPoints;
   const csTriple<NumericType> origin;
   const csTriple<NumericType> direction;

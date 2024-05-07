@@ -70,7 +70,7 @@ public:
     }
 
     if (usePointSource) {
-      auto raySource = std::make_unique<csPointSource<T, D>>(
+      auto raySource = std::make_shared<csPointSource<T, D>>(
           pointSourceOrigin, pointSourceDirection, traceSettings,
           mGeometry.getNumPoints());
 
@@ -80,7 +80,7 @@ public:
                             cellSet, excludeMaterialId - 1)
           .apply();
     } else {
-      auto raySource = std::make_unique<raySourceRandom<T, D>>(
+      auto raySource = std::make_shared<raySourceRandom<T, D>>(
           boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
           mGeometry.getNumPoints(), usePrimaryDirection, orthoBasis);
 
