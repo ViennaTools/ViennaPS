@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -21,6 +22,27 @@ template <typename T> struct csVolumeParticle {
 };
 
 namespace csUtil {
+
+template <class Clock = std::chrono::high_resolution_clock> struct Timer {
+  using TimePoint = typename Clock::time_point;
+
+  TimePoint mStart;
+  typename Clock::duration::rep totalDuration = 0.; // in ns
+  typename Clock::duration::rep currentDuration;    // in ns
+
+  void start() { mStart = Clock::now(); }
+  void finish() {
+    TimePoint end = Clock::now();
+    typename Clock::duration dur(end - mStart);
+    currentDuration = dur.count();
+    totalDuration += currentDuration;
+  }
+  void reset() {
+    currentDuration = 0.;
+    totalDuration = 0.;
+  }
+};
+
 template <typename T> void printTriple(const csTriple<T> &p) {
   std::cout << "[" << p[0] << ", " << p[1] << ", " << p[2] << "]\n";
 }

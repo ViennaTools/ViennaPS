@@ -1,8 +1,7 @@
 #pragma once
 
 #include "csDenseCellSet.hpp"
-
-#include "psLogger.hpp"
+#include "csLogger.hpp"
 
 #include <lsDomain.hpp>
 #include <lsToDiskMesh.hpp>
@@ -47,7 +46,7 @@ public:
   NumericType getMaxLambda() const { return maxLambda; }
 
   void apply() {
-    psLogger::getInstance().addInfo("Calculating mean free path ...").print();
+    csLogger::getInstance().addInfo("Calculating mean free path ...").print();
     cellSet->addScalarData("MeanFreePath", 0.);
     runKernel();
   }
