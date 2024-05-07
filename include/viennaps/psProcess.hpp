@@ -137,7 +137,7 @@ public:
     rayTracer.setCalculateFlux(false);
     auto source = model->getSource();
     if (source) {
-      rayTracer.setSource(std::move(source));
+      rayTracer.setSource(source);
       psLogger::getInstance().addInfo("Using custom source.").print();
     }
     auto primaryDirection = model->getPrimaryDirection();
@@ -155,7 +155,7 @@ public:
     rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
     rayTracer.setMaterialIds(materialIds);
 
-    for (auto &particle : *model->getParticleTypes()) {
+    for (auto &particle : model->getParticleTypes()) {
       rayTracer.setParticleType(particle);
       rayTracer.apply();
 
@@ -260,7 +260,7 @@ public:
     }
 
     /* --------- Setup for ray tracing ----------- */
-    const bool useRayTracing = model->getParticleTypes() != nullptr;
+    const bool useRayTracing = !model->getParticleTypes().empty();
 
     rayBoundaryCondition rayBoundaryCondition[D];
     rayTrace<NumericType, D> rayTracer;
@@ -286,13 +286,13 @@ public:
       rayTracer.setCalculateFlux(false);
       auto source = model->getSource();
       if (source) {
-        rayTracer.setSource(std::move(source));
+        rayTracer.setSource(source);
         psLogger::getInstance().addInfo("Using custom source.").print();
       }
 
       // initialize particle data logs
-      particleDataLogs.resize(model->getParticleTypes()->size());
-      for (std::size_t i = 0; i < model->getParticleTypes()->size(); i++) {
+      particleDataLogs.resize(model->getParticleTypes().size());
+      for (std::size_t i = 0; i < model->getParticleTypes().size(); i++) {
         int logSize = model->getParticleLogSize(i);
         if (logSize > 0) {
           particleDataLogs[i].data.resize(1);
@@ -366,7 +366,7 @@ public:
           auto rates = psSmartPointer<psPointData<NumericType>>::New();
 
           std::size_t particleIdx = 0;
-          for (auto &particle : *model->getParticleTypes()) {
+          for (auto &particle : model->getParticleTypes()) {
             int dataLogSize = model->getParticleLogSize(particleIdx);
             if (dataLogSize > 0) {
               rayTracer.getDataLog().data.resize(1);
@@ -478,7 +478,7 @@ public:
         }
 
         std::size_t particleIdx = 0;
-        for (auto &particle : *model->getParticleTypes()) {
+        for (auto &particle : model->getParticleTypes()) {
           int dataLogSize = model->getParticleLogSize(particleIdx);
           if (dataLogSize > 0) {
             rayTracer.getDataLog().data.resize(1);

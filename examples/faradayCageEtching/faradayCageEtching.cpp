@@ -4,14 +4,14 @@
 #include <psProcess.hpp>
 
 template <typename NumericType, int D>
-class FaradayCageSource : public raySource<NumericType, D> {
+class FaradayCageSource : public raySource<NumericType> {
 public:
   FaradayCageSource(const NumericType xExtent, const NumericType yExtent,
                     const NumericType zPos, const NumericType gridDelta,
                     const NumericType angle)
-      : minPoint_{-xExtent / 2., -yExtent / 2.}, maxPoint_{xExtent / 2.,
-                                                           yExtent / 2.},
-        zPos_(zPos), gridDelta_(gridDelta), angle_(angle * M_PI / 180.) {}
+      : minPoint_{-xExtent / 2., -yExtent / 2.},
+        maxPoint_{xExtent / 2., yExtent / 2.}, zPos_(zPos),
+        gridDelta_(gridDelta), angle_(angle * M_PI / 180.) {}
 
   rayPair<rayTriple<NumericType>>
   getOriginAndDirection(const size_t idx, rayRNG &RngState) const {
@@ -87,11 +87,11 @@ int main(int argc, char *argv[]) {
   auto &modelParams = model->getParameters();
 
   // faraday cage source setup
-  auto source = std::make_unique<FaradayCageSource<NumericType, D>>(
+  auto source = psSmartPointer<FaradayCageSource<NumericType, D>>::New(
       params.get("xExtent"), params.get("yExtent"),
       params.get("finHeight") + params.get("gridDelta") / 2.,
       params.get("gridDelta"), params.get("angle"));
-  model->setSource(std::move(source));
+  model->setSource(source);
   modelParams.tiltAngle = params.get("angle");
 
   // process setup

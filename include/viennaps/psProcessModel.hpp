@@ -17,8 +17,8 @@ protected:
   using ParticleTypeList =
       std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
 
-  psSmartPointer<ParticleTypeList> particles = nullptr;
-  std::unique_ptr<raySource<NumericType, D>> source;
+  ParticleTypeList particles;
+  psSmartPointer<raySource<NumericType>> source = nullptr;
   std::vector<int> particleLogSize;
   psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
   psSmartPointer<psAdvectionCallback<NumericType, D>> advectionCallback =
@@ -31,31 +31,21 @@ protected:
 public:
   virtual ~psProcessModel() = default;
 
-  virtual psSmartPointer<ParticleTypeList> getParticleTypes() const {
-    return particles;
-  }
-  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() const {
+  ParticleTypeList const &getParticleTypes() const { return particles; }
+  psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() const {
     return surfaceModel;
   }
-  virtual psSmartPointer<psAdvectionCallback<NumericType, D>>
+  psSmartPointer<psAdvectionCallback<NumericType, D>>
   getAdvectionCallback() const {
     return advectionCallback;
   }
-  virtual psSmartPointer<psGeometricModel<NumericType, D>>
-  getGeometricModel() const {
+  psSmartPointer<psGeometricModel<NumericType, D>> getGeometricModel() const {
     return geometricModel;
   }
-  virtual psSmartPointer<psVelocityField<NumericType>>
-  getVelocityField() const {
+  psSmartPointer<psVelocityField<NumericType>> getVelocityField() const {
     return velocityField;
   }
-  virtual std::unique_ptr<raySource<NumericType, D>> getSource() {
-    if (source) {
-      return std::move(source);
-    } else {
-      return nullptr;
-    }
-  }
+  psSmartPointer<raySource<NumericType>> getSource() { return source; }
 
   /// Set a primary direction for the source distribution (tilted distribution).
   virtual std::optional<std::array<NumericType, 3>>
@@ -81,21 +71,16 @@ public:
                                  ParticleType> = lsConcepts::assignable>
   void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle,
                               const int dataLogSize = 0) {
-    if (particles == nullptr) {
-      particles = psSmartPointer<ParticleTypeList>::New();
-    }
-    particles->push_back(passedParticle->clone());
+    particles.push_back(passedParticle->clone());
     particleLogSize.push_back(dataLogSize);
   }
 
-  void setSource(std::unique_ptr<raySource<NumericType, D>> passedSource) {
-    source = std::move(passedSource);
+  void setSource(psSmartPointer<raySource<NumericType>> passedSource) {
+    source = passedSource;
   }
 
-  template <typename SurfaceModelType,
-            lsConcepts::IsBaseOf<psSurfaceModel<NumericType>,
-                                 SurfaceModelType> = lsConcepts::assignable>
-  void setSurfaceModel(psSmartPointer<SurfaceModelType> passedSurfaceModel) {
+  void setSurfaceModel(
+      psSmartPointer<psSurfaceModel<NumericType>> passedSurfaceModel) {
     surfaceModel = std::dynamic_pointer_cast<psSurfaceModel<NumericType>>(
         passedSurfaceModel);
   }
