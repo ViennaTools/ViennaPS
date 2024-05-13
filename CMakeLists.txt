@@ -72,6 +72,24 @@ target_include_directories(
                             $<INSTALL_INTERFACE:include/viennaps-${PROJECT_VERSION}>)
 
 # --------------------------------------------------------------------------------------------------------
+# Check whether or not dependencies are installed on the system
+# └ VTK requires C Language support (HDF5)
+# --------------------------------------------------------------------------------------------------------
+
+enable_language(C)
+
+find_package(ViennaRay QUIET)
+find_package(ViennaLS QUIET)
+
+set(VIENNAPS_SYSTEM_VIENNARAY
+    ${ViennaRay_FOUND}
+    CACHE INTERNAL "")
+
+set(VIENNAPS_SYSTEM_VIENNALS
+    ${ViennaLS_FOUND}
+    CACHE INTERNAL "")
+
+# --------------------------------------------------------------------------------------------------------
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
 
