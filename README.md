@@ -6,6 +6,7 @@
 
 [![🐍 Build Bindings](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml)
 [![🧪 Run Tests](https://github.com/ViennaTools/ViennaPS/actions/workflows/build.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/build.yml)
+<img alt="Static Badge" src="https://img.shields.io/badge/Documentation?style=flat&link=https%3A%2F%2Fviennatools.github.io%2FViennaPS%2F">
 
 </div>
 
@@ -41,6 +42,9 @@ Releases are tagged on the master branch and available in the [releases section]
 * [pybind11](https://github.com/pybind/pybind11) (only for building Python libs)
 
 ## Installing
+
+> [!NOTE]  
+> For more detailed installation instructions and troubleshooting tips, please refer to the ViennaPS [documentation](https://viennatools.github.io/ViennaPS/inst/).
 
 The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory:
 
