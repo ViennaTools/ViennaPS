@@ -6,7 +6,6 @@
 
 [![🐍 Build Bindings](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml)
 [![🧪 Run Tests](https://github.com/ViennaTools/ViennaPS/actions/workflows/build.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/build.yml)
-![Doc Badge](https://img.shields.io/badge/Documenation-000000.svg?link=https%3A%2F%2Fviennatools.github.io%2FViennaPS%2F)
 
 </div>
 
