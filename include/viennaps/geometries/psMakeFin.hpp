@@ -70,15 +70,19 @@ public:
       auto mask = lsDomainType::New(bounds, boundaryConds, gridDelta_);
 
       if (taperAngle_ == 0.) {
-        NumericType minPoint[D] = {-finWidth_ / 2, -yExtent_ / 2,
+        NumericType minPoint[D] = {-finWidth_ / 2,
+                                   -yExtent_ / 2 - gridDelta_ / 2.,
                                    baseHeight_ - gridDelta_};
-        NumericType maxPoint[D] = {finWidth_ / 2, yExtent_ / 2,
+        NumericType maxPoint[D] = {finWidth_ / 2,
+                                   yExtent_ / 2 + gridDelta_ / 2.,
                                    baseHeight_ + finHeight_};
 
-        lsMakeGeometry<NumericType, D>(
+        lsMakeGeometry<NumericType, D> geo(
             mask,
-            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-            .apply();
+            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint));
+        geo.setIgnoreBoundaryConditions(true);
+        geo.apply();
+
       } else {
         if (taperAngle_ >= 90 || taperAngle_ <= -90) {
           psLogger::getInstance()
@@ -194,10 +198,11 @@ public:
       if (taperAngle_ == 0.) {
         NumericType minPoint[D] = {-finWidth_ / 2, baseHeight_ - gridDelta_};
         NumericType maxPoint[D] = {finWidth_ / 2, baseHeight_ + finHeight_};
-        lsMakeGeometry<NumericType, D>(
+        lsMakeGeometry<NumericType, D> geo(
             mask,
-            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-            .apply();
+            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint));
+        geo.setIgnoreBoundaryConditions(true);
+        geo.apply();
       } else {
         if (taperAngle_ >= 90 || taperAngle_ <= -90) {
           psLogger::getInstance()

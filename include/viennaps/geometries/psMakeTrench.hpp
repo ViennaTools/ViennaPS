@@ -189,18 +189,19 @@ public:
       maxPoint[0] = trenchWidth_ / 2;
 
       if constexpr (D == 3) {
-        minPoint[1] = -yExtent_ / 2.;
-        maxPoint[1] = yExtent_ / 2.;
+        minPoint[1] = -yExtent_ / 2. - gridDelta_ / 2.;
+        maxPoint[1] = yExtent_ / 2. + gridDelta_ / 2.;
         minPoint[2] = baseHeight_;
         maxPoint[2] = trenchDepth_ + baseHeight_;
       } else {
         minPoint[1] = baseHeight_;
         maxPoint[1] = trenchDepth_ + baseHeight_;
       }
-      lsMakeGeometry<NumericType, D>(
+      lsMakeGeometry<NumericType, D> geo(
           cutout,
-          lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-          .apply();
+          lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint));
+      geo.setIgnoreBoundaryConditions(true);
+      geo.apply();
     }
 
     lsBooleanOperation<NumericType, D>(
