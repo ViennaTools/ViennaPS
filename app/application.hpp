@@ -304,8 +304,7 @@ private:
       break;
 
     case GeometryType::PLANE:
-      std::cout << "Plane"
-                << "\n\tzPos: " << params->maskZPos << "\n\n";
+      std::cout << "Plane" << "\n\tzPos: " << params->maskZPos << "\n\n";
       if (geometry->getLevelSets()->back()) {
         std::cout << "\tAdding plane to current geometry...\n\n";
         psMakePlane<NumericType, D>(geometry, params->maskZPos,
@@ -340,8 +339,8 @@ private:
                 << "\n\tzPos: " << params->maskZPos
                 << "\n\tinvert: " << boolString(params->maskInvert)
                 << "\n\txPadding: " << params->xPadding
-                << "\n\tyPadding: " << params->yPadding << "\n\tPoint order: "
-                << "\n\n";
+                << "\n\tyPadding: " << params->yPadding
+                << "\n\tPoint order: " << "\n\n";
 
       if constexpr (D == 3) {
         typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
