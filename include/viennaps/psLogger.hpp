@@ -3,6 +3,7 @@
 #include "psUtils.hpp"
 
 #include <iostream>
+#include <sstream>
 
 // verbosity levels:
 // 0 errors
@@ -67,9 +68,11 @@ public:
       return *this;
 #pragma omp critical
     {
-      message += std::string(tabWidth, ' ') + s +
-                 " took: " + std::to_string(timer.currentDuration * 1e-9) +
-                 " s \n";
+      std::stringstream stream;
+      stream << std::fixed << std::setprecision(4)
+             << timer.currentDuration * 1e-9;
+      message +=
+          std::string(tabWidth, ' ') + s + " took: " + stream.str() + " s \n";
     }
     return *this;
   }

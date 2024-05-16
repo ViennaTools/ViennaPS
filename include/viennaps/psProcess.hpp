@@ -434,10 +434,6 @@ public:
     psUtils::Timer callbackTimer;
     psUtils::Timer advTimer;
     while (remainingTime > 0.) {
-      psLogger::getInstance()
-          .addInfo("Remaining time: " + std::to_string(remainingTime))
-          .print();
-
       // We need additional signal handling when running the C++ code from the
       // Python bindings to allow interrupts in the Python scripts
 #ifdef VIENNAPS_PYTHON_BUILD
@@ -613,6 +609,14 @@ public:
 
       previousTimeStep = advectionKernel.getAdvectedTime();
       remainingTime -= previousTimeStep;
+
+      if (psLogger::getLogLevel() >= 2) {
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(4)
+               << "Process time: " << processDuration - remainingTime << " / "
+               << processDuration;
+        psLogger::getInstance().addInfo(stream.str()).print();
+      }
     }
 
     processTime = processDuration - remainingTime;
