@@ -1,12 +1,19 @@
 gridDelta = 0.5
-xExtent = 35.0
-yExtent = 35.0
+xExtent = 45.0
+yExtent = 45.0
+extendFac = 2.5
 
 boxWidth = 10.0
 boxHeight = 5.0
 
-sourceExtend = 2.
-processTime = 10.0
-raysPerPoint = 1000
+meanEnergy = 250
+sigmaEnergy = 10
+yieldFac = 1.0
 
-angle = 50
+
+zPos = 20.
+processTime = 50.0
+raysPerPoint = 10000
+
+tiltAngle = 45
+cageAngle = 15

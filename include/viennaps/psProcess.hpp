@@ -79,6 +79,11 @@ public:
   // Disable flux smoothing.
   void disableFluxSmoothing() { smoothFlux = false; }
 
+  void enableFluxBoundaries() { ignoreFluxBoundaries = false; }
+
+  // Ignore boundary conditions during the flux calculation.
+  void disableFluxBoundaries() { ignoreFluxBoundaries = true; }
+
   // Set the integration scheme for solving the level-set equation.
   // Possible integration schemes are specified in lsIntegrationSchemeEnum.
   void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) {
@@ -127,9 +132,14 @@ public:
     rayTrace<NumericType, D> rayTracer;
 
     // Map the domain boundary to the ray tracing boundaries
-    for (unsigned i = 0; i < D; ++i)
-      rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
-          domain->getGrid().getBoundaryConditions(i));
+    if (ignoreFluxBoundaries) {
+      for (unsigned i = 0; i < D; ++i)
+        rayBoundaryCondition[i] = rayBoundaryCondition::IGNORE;
+    } else {
+      for (unsigned i = 0; i < D; ++i)
+        rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
+            domain->getGrid().getBoundaryConditions(i));
+    }
     rayTracer.setSourceDirection(sourceDirection);
     rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
     rayTracer.setBoundaryConditions(rayBoundaryCondition);
@@ -267,9 +277,14 @@ public:
 
     if (useRayTracing) {
       // Map the domain boundary to the ray tracing boundaries
-      for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
-            domain->getGrid().getBoundaryConditions(i));
+      if (ignoreFluxBoundaries) {
+        for (unsigned i = 0; i < D; ++i)
+          rayBoundaryCondition[i] = rayBoundaryCondition::IGNORE;
+      } else {
+        for (unsigned i = 0; i < D; ++i)
+          rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
+              domain->getGrid().getBoundaryConditions(i));
+      }
 
       rayTracer.setSourceDirection(sourceDirection);
       rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
@@ -737,6 +752,7 @@ private:
   std::vector<rayDataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds_ = true;
   bool smoothFlux = true;
+  bool ignoreFluxBoundaries = false;
   unsigned maxIterations = 20;
   bool coveragesInitialized_ = false;
   NumericType printTime = 0.;

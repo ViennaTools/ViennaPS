@@ -1,5 +1,4 @@
 #include <geometries/psMakePlane.hpp>
-
 #include <models/psDirectionalEtching.hpp>
 #include <models/psIonBeamEtching.hpp>
 #include <models/psSingleParticleProcess.hpp>
@@ -10,31 +9,37 @@ class FaradayCageSource : public raySource<NumericType> {
 public:
   FaradayCageSource(const NumericType xExtent, const NumericType yExtent,
                     const NumericType zPos, const NumericType gridDelta,
-                    const NumericType angle, const NumericType extendFac = 1.)
+                    const NumericType tiltAngle, const NumericType cageAngle,
+                    const NumericType extendFac = 1.)
       : minPoint_{-xExtent / 2., -yExtent / 2.}, extent_{xExtent, yExtent},
-        zPos_(zPos), gridDelta_(gridDelta), angle_(angle * M_PI / 180.),
-        extendFac_(extendFac) {}
+        zPos_(zPos), gridDelta_(gridDelta), extendFac_(extendFac),
+        cosTilt(std::cos(tiltAngle * M_PI / 180.)),
+        sinTilt(std::sin(tiltAngle * M_PI / 180.)),
+        cage_x(std::cos(cageAngle * M_PI / 180.)),
+        cage_y(std::sin(cageAngle * M_PI / 180.)) {}
 
   rayPair<rayTriple<NumericType>>
   getOriginAndDirection(const size_t idx, rayRNG &RngState) const {
     std::uniform_real_distribution<NumericType> dist(0., 1.);
 
     rayTriple<NumericType> origin;
-    origin[0] = extendFac_ * minPoint_[0] +
-                (extent_[0] * extendFac_ * 2. - extent_[0]) * dist(RngState);
-    origin[1] = extendFac_ * minPoint_[1] +
-                (extent_[1] * extendFac_ * 2. - extent_[1]) * dist(RngState);
+    origin[0] = (minPoint_[0] - (extendFac_ * extent_[0])) +
+                (extent_[0] + extent_[0] * extendFac_ * 2.) * dist(RngState);
+    origin[1] = (minPoint_[1] - (extendFac_ * extent_[1])) +
+                (extent_[1] + extent_[1] * extendFac_ * 2.) * dist(RngState);
+    // origin[0] = minPoint_[0] + extent_[0] * dist(RngState);
+    // origin[1] = minPoint_[1] + extent_[1] * dist(RngState);
     origin[2] = zPos_;
 
     rayTriple<NumericType> direction;
-    if (origin[0] < 0) {
-      direction[0] = cos(angle_);
-      direction[1] = 0.;
-      direction[2] = -sin(angle_);
+    if (cage_x * origin[1] - cage_y * origin[0] < 0) {
+      direction[0] = -cosTilt * cage_y;
+      direction[1] = cosTilt * cage_x;
+      direction[2] = -sinTilt;
     } else {
-      direction[0] = -cos(angle_);
-      direction[1] = 0.;
-      direction[2] = -sin(angle_);
+      direction[0] = cosTilt * cage_y;
+      direction[1] = -cosTilt * cage_x;
+      direction[2] = -sinTilt;
     }
     rayInternal::Normalize(direction);
 
@@ -50,8 +55,11 @@ private:
   std::array<NumericType, 2> const extent_;
   NumericType const zPos_;
   NumericType const gridDelta_;
-  NumericType const angle_;
   NumericType const extendFac_;
+  const NumericType cosTilt;
+  const NumericType sinTilt;
+  const NumericType cage_x;
+  const NumericType cage_y;
 };
 
 int main(int argc, char *argv[]) {
@@ -75,7 +83,7 @@ int main(int argc, char *argv[]) {
   psMakePlane<NumericType, D>(geometry, params.get("gridDelta"),
                               params.get("xExtent"), params.get("yExtent"),
                               0. /* base height */,
-                              true /* periodic boundary */, psMaterial::Si)
+                              false /* periodic boundary */, psMaterial::Si)
       .apply();
   {
     auto box = psSmartPointer<lsDomain<NumericType, D>>::New(
@@ -100,14 +108,24 @@ int main(int argc, char *argv[]) {
 
   // use pre-defined IBE etching model
   auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New(
-      -1.0, 1.0, 1.0, std::vector<psMaterial>{psMaterial::Mask});
+      -1., 1., 1., psMaterial::Mask);
+  // auto model = psSmartPointer<psIonBeamEtching<NumericType, D>>::New(
+  //     std::vector<psMaterial>{psMaterial::Mask});
   // auto &modelParams = model->getParameters();
+  // modelParams.meanEnergy = params.get("meanEnergy");
+  // modelParams.sigmaEnergy = params.get("sigmaEnergy");
+  // const NumericType yieldFac = params.get("yieldFac");
+  // modelParams.yieldFunction = [yieldFac](NumericType cosTheta) {
+  //   return (yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
+  //           0.65 * cosTheta * cosTheta * cosTheta) /
+  //          (yieldFac - 1.55 + 0.65);
+  // };
 
   // faraday cage source setup
   auto source = psSmartPointer<FaradayCageSource<NumericType, D>>::New(
-      params.get("xExtent"), params.get("yExtent"),
-      params.get("boxHeight") + params.get("gridDelta") / 2.,
-      params.get("gridDelta"), params.get("angle"));
+      params.get("xExtent"), params.get("yExtent"), params.get("zPos"),
+      params.get("gridDelta"), params.get("tiltAngle"), params.get("cageAngle"),
+      params.get("extendFac"));
   model->setSource(source);
   // modelParams.tiltAngle = params.get("angle");
 
@@ -119,6 +137,7 @@ int main(int argc, char *argv[]) {
       lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
   process.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
+  process.disableFluxBoundaries();
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");
