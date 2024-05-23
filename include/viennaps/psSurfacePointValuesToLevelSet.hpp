@@ -1,31 +1,36 @@
 #pragma once
 
 #include "compact/psKDTree.hpp"
-#include "psSmartPointer.hpp"
 
 #include <hrleSparseIterator.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
 template <class NumericType, int D> class psSurfacePointValuesToLevelSet {
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
 
   lsDomainType levelSet;
-  psSmartPointer<lsMesh<NumericType>> mesh;
+  SmartPointer<lsMesh<NumericType>> mesh;
   std::vector<std::string> dataNames;
 
 public:
   psSurfacePointValuesToLevelSet() {}
 
   psSurfacePointValuesToLevelSet(lsDomainType passedLevelSet,
-                                 psSmartPointer<lsMesh<NumericType>> passedMesh,
+                                 SmartPointer<lsMesh<NumericType>> passedMesh,
                                  std::vector<std::string> passedDataNames)
       : levelSet(passedLevelSet), mesh(passedMesh), dataNames(passedDataNames) {
   }
 
   void setLevelSet(lsDomainType passedLevelSet) { levelSet = passedLevelSet; }
 
-  void setMesh(psSmartPointer<lsMesh<NumericType>> passedMesh) {
+  void setMesh(SmartPointer<lsMesh<NumericType>> passedMesh) {
     mesh = passedMesh;
   }
 
@@ -40,21 +45,20 @@ public:
 
   void apply() {
     if (!levelSet) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No level set passed to psSurfacePointValuesToLevelSet.")
           .print();
       return;
     }
 
     if (!mesh) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No mesh passed to psSurfacePointValuesToLevelSet.")
           .print();
       return;
     }
 
-    psKDTree<NumericType, std::array<NumericType, 3>> transTree(
-        mesh->getNodes());
+    KDTree<NumericType, std::array<NumericType, 3>> transTree(mesh->getNodes());
     transTree.build();
     const auto gridDelta = levelSet->getGrid().getGridDelta();
 
@@ -80,7 +84,7 @@ public:
     for (const auto dataName : dataNames) {
       auto pointData = mesh->getCellData().getScalarData(dataName);
       if (!pointData) {
-        psLogger::getInstance()
+        Logger::getInstance()
             .addWarning("Could not find " + dataName + " in mesh values.")
             .print();
         continue;
@@ -100,3 +104,5 @@ public:
     }
   }
 };
+
+} // namespace viennaps

@@ -1,19 +1,22 @@
 #include <geometries/psMakeStack.hpp>
+#include <lsTestAsserts.hpp>
 #include <psDomain.hpp>
-#include <psTestAssert.hpp>
+#include <vcTestAsserts.hpp>
 
-template <class NumericType, int D> void psRunTest() {
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+using namespace viennaps;
 
-  psMakeStack<NumericType, D>(domain, 1., 10., 10., 3 /*num layers*/, 3., 2.,
-                              0., 0., 10, true)
+template <class NumericType, int D> void vtRunTest() {
+  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+
+  MakeStack<NumericType, D>(domain, 1., 10., 10., 3 /*num layers*/, 3., 2., 0.,
+                            0., 10, true)
       .apply();
 
-  PSTEST_ASSERT(domain->getLevelSets());
-  PSTEST_ASSERT(domain->getLevelSets()->size() == 5);
-  PSTEST_ASSERT(domain->getMaterialMap());
+  VC_TEST_ASSERT(domain->getLevelSets());
+  VC_TEST_ASSERT(domain->getLevelSets()->size() == 5);
+  VC_TEST_ASSERT(domain->getMaterialMap());
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
 }
 
-int main() { PSRUN_ALL_TESTS }
+int main() { VC_RUN_ALL_TESTS }

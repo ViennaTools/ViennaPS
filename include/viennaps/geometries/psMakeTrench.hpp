@@ -6,6 +6,10 @@
 #include <lsFromSurfaceMesh.hpp>
 #include <lsMakeGeometry.hpp>
 
+namespace viennaps {
+
+using namespace viennacore;
+
 /// Generates new a trench geometry extending in the z (3D) or y (2D) direction,
 /// centrally positioned at the origin with the total extent specified in the x
 /// and y directions. The trench configuration may include periodic boundaries
@@ -14,9 +18,9 @@
 /// Moreover, the trench can serve as a mask, applying the specified material_
 /// exclusively to the bottom while the remaining portion adopts the mask
 /// material_.
-template <class NumericType, int D> class psMakeTrench {
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
+template <class NumericType, int D> class MakeTrench {
+  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
   using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
@@ -32,14 +36,14 @@ template <class NumericType, int D> class psMakeTrench {
 
   const bool periodicBoundary_;
   const bool makeMask_;
-  psMaterial material_;
+  Material material_;
 
 public:
-  psMakeTrench(psDomainType domain, NumericType gridDelta, NumericType xExtent,
-               NumericType yExtent, NumericType trenchWidth,
-               NumericType trenchDepth, NumericType taperAngle = 0.,
-               NumericType baseHeight = 0., bool periodicBoundary = false,
-               bool makeMask = false, psMaterial material = psMaterial::None)
+  MakeTrench(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+             NumericType yExtent, NumericType trenchWidth,
+             NumericType trenchDepth, NumericType taperAngle = 0.,
+             NumericType baseHeight = 0., bool periodicBoundary = false,
+             bool makeMask = false, Material material = Material::None)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
@@ -101,7 +105,7 @@ public:
     auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta_);
 
     if (taperAngle_) {
-      auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+      auto mesh = SmartPointer<lsMesh<NumericType>>::New();
       const NumericType offset =
           std::tan(taperAngle_ * M_PI / 180.) * trenchDepth_;
       if constexpr (D == 2) {
@@ -212,14 +216,16 @@ public:
                                        lsBooleanOperationEnum::UNION)
         .apply();
 
-    if (material_ == psMaterial::None) {
+    if (material_ == Material::None) {
       if (makeMask_)
         pDomain_->insertNextLevelSet(mask);
       pDomain_->insertNextLevelSet(substrate, false);
     } else {
       if (makeMask_)
-        pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+        pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
       pDomain_->insertNextLevelSetAsMaterial(substrate, material_, false);
     }
   }
 };
+
+} // namespace viennaps

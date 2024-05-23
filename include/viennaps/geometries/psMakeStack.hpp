@@ -5,6 +5,10 @@
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
 
+namespace viennaps {
+
+using namespace viennacore;
+
 /// Generates a stack of alternating SiO2/Si3N4 layers featuring an optionally
 /// etched hole (3D) or trench (2D) at the center. The stack emerges in the
 /// positive z direction (3D) or y direction (2D) and is centered around the
@@ -13,9 +17,9 @@
 /// stack can incorporate a top mask with a central hole of a specified radius
 /// or a trench with a designated width. This versatile functionality enables
 /// users to create diverse and customized structures for simulation scenarios.
-template <class NumericType, int D> class psMakeStack {
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
+template <class NumericType, int D> class MakeStack {
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
   using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
@@ -38,11 +42,11 @@ template <class NumericType, int D> class psMakeStack {
   BoundaryEnum boundaryConds_[D];
 
 public:
-  psMakeStack(psDomainType domain, NumericType gridDelta, NumericType xExtent,
-              NumericType yExtent, int numLayers, NumericType layerHeight,
-              NumericType substrateHeight, NumericType holeRadius,
-              NumericType trenchWidth, NumericType maskHeight,
-              bool periodicBoundary = false)
+  MakeStack(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+            NumericType yExtent, int numLayers, NumericType layerHeight,
+            NumericType substrateHeight, NumericType holeRadius,
+            NumericType trenchWidth, NumericType maskHeight,
+            bool periodicBoundary = false)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), numLayers_(numLayers), layerHeight_(layerHeight),
         substrateHeight_(substrateHeight), holeRadius_(holeRadius),
@@ -109,7 +113,7 @@ private:
           mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
 
-      pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+      pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
     }
 
     // Silicon substrate
@@ -119,7 +123,7 @@ private:
         substrate,
         lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
         .apply();
-    pDomain_->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
+    pDomain_->insertNextLevelSetAsMaterial(substrate, Material::Si);
 
     // Si3N4/SiO2 layers
     NumericType current = substrateHeight_ + layerHeight_;
@@ -130,9 +134,9 @@ private:
           ls, lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
           .apply();
       if (i % 2 == 0) {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::SiO2);
       } else {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::Si3N4);
       }
     }
 
@@ -212,7 +216,7 @@ private:
             .apply();
       }
 
-      pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+      pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
     }
 
     // Silicon substrate
@@ -222,7 +226,7 @@ private:
         substrate,
         lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
         .apply();
-    pDomain_->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
+    pDomain_->insertNextLevelSetAsMaterial(substrate, Material::Si);
 
     // Si3N4/SiO2 layers
     for (int i = 0; i < numLayers_; ++i) {
@@ -232,9 +236,9 @@ private:
           ls, lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
           .apply();
       if (i % 2 == 0) {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::SiO2);
       } else {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::Si3N4);
       }
     }
 
@@ -306,3 +310,5 @@ private:
     }
   }
 };
+
+} // namespace viennaps

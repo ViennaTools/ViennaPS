@@ -15,45 +15,6 @@
 
 namespace psUtils {
 
-template <class Clock = std::chrono::high_resolution_clock> struct Timer {
-  using TimePoint = typename Clock::time_point;
-
-  TimePoint mStart;
-  typename Clock::duration::rep totalDuration = 0.; // in ns
-  typename Clock::duration::rep currentDuration;    // in ns
-
-  void start() { mStart = Clock::now(); }
-  void finish() {
-    TimePoint end = Clock::now();
-    typename Clock::duration dur(end - mStart);
-    currentDuration = dur.count();
-    totalDuration += currentDuration;
-  }
-  void reset() {
-    currentDuration = 0.;
-    totalDuration = 0.;
-  }
-};
-
-// Small function to print a progress bar ()
-inline void printProgress(size_t i, size_t finalCount = 100) {
-  float progress = static_cast<float>(i) / static_cast<float>(finalCount);
-  int barWidth = 70;
-
-  std::cout << "[";
-  int pos = static_cast<int>(static_cast<float>(barWidth) * progress);
-  for (int i = 0; i < barWidth; ++i) {
-    if (i < pos)
-      std::cout << "=";
-    else if (i == pos)
-      std::cout << ">";
-    else
-      std::cout << " ";
-  }
-  std::cout << "] " << static_cast<int>(progress * 100.0) << " %\r";
-  std::cout.flush();
-}
-
 // Checks if a string starts with a - or not
 [[nodiscard]] inline bool isSigned(const std::string &s) {
   auto pos = s.find_first_not_of(' ');
@@ -240,25 +201,25 @@ struct Parameters {
 };
 
 template <int D>
-[[nodiscard]] rayBoundaryCondition
+[[nodiscard]] viennaray::BoundaryCondition
 convertBoundaryCondition(lsBoundaryConditionEnum<D> originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
   case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-    return rayBoundaryCondition::REFLECTIVE;
+    return viennaray::BoundaryCondition::REFLECTIVE;
 
   case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-    return rayBoundaryCondition::IGNORE;
+    return viennaray::BoundaryCondition::IGNORE;
 
   case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-    return rayBoundaryCondition::PERIODIC;
+    return viennaray::BoundaryCondition::PERIODIC;
 
   case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-    return rayBoundaryCondition::IGNORE;
+    return viennaray::BoundaryCondition::IGNORE;
 
   case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-    return rayBoundaryCondition::IGNORE;
+    return viennaray::BoundaryCondition::IGNORE;
   }
-  return rayBoundaryCondition::IGNORE;
+  return viennaray::BoundaryCondition::IGNORE;
 }
 
 }; // namespace psUtils

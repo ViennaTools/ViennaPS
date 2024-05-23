@@ -1,11 +1,15 @@
 #pragma once
 
-#include "psLogger.hpp"
-#include "psSmartPointer.hpp"
-
 #include <lsMaterialMap.hpp>
 
-enum class psMaterial : int {
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+enum class Material : int {
   None = -1,
   Mask = 0,
   Si = 1,
@@ -30,51 +34,53 @@ enum class psMaterial : int {
 
 /// A class that wraps the lsMaterialMap class and provides a more user
 /// friendly interface. It also provides a mapping from the integer material id
-/// to the psMaterial enum.
-class psMaterialMap {
-  psSmartPointer<lsMaterialMap> map_;
+/// to the Material enum.
+class MaterialMap {
+  SmartPointer<lsMaterialMap> map_;
 
 public:
-  psMaterialMap() { map_ = psSmartPointer<lsMaterialMap>::New(); };
+  MaterialMap() { map_ = SmartPointer<lsMaterialMap>::New(); };
 
-  void insertNextMaterial(psMaterial material = psMaterial::None) {
+  void insertNextMaterial(Material material = Material::None) {
     map_->insertNextMaterial(static_cast<int>(material));
   }
 
   // Returns the material at the given index. If the index is out of bounds, it
-  // returns psMaterial::GAS.
-  psMaterial getMaterialAtIdx(std::size_t idx) const {
+  // returns Material::GAS.
+  Material getMaterialAtIdx(std::size_t idx) const {
     if (idx >= size())
-      return psMaterial::GAS;
+      return Material::GAS;
     int matId = map_->getMaterialId(idx);
     return mapToMaterial(matId);
   }
 
-  void setMaterialAtIdx(std::size_t idx, const psMaterial material) {
+  void setMaterialAtIdx(std::size_t idx, const Material material) {
     if (idx >= size()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Setting material with out-of-bounds index.")
           .print();
     }
     map_->setMaterialId(idx, static_cast<int>(material));
   }
 
-  psSmartPointer<lsMaterialMap> getMaterialMap() const { return map_; }
+  SmartPointer<lsMaterialMap> getMaterialMap() const { return map_; }
 
   inline std::size_t const size() const { return map_->getNumberOfLayers(); }
 
-  static inline psMaterial mapToMaterial(const int matId) {
+  static inline Material mapToMaterial(const int matId) {
     if (matId > 18 || matId < -1)
-      return psMaterial::None;
-    return static_cast<psMaterial>(matId);
+      return Material::None;
+    return static_cast<Material>(matId);
   }
 
-  template <class T> static inline psMaterial mapToMaterial(const T matId) {
+  template <class T> static inline Material mapToMaterial(const T matId) {
     return mapToMaterial(static_cast<int>(matId));
   }
 
   template <class T>
-  static inline bool isMaterial(const T matId, const psMaterial material) {
+  static inline bool isMaterial(const T matId, const Material material) {
     return mapToMaterial(matId) == material;
   }
 };
+
+} // namespace viennaps

@@ -38,11 +38,16 @@
 #include <omp.h>
 #endif
 
-#include "../psLogger.hpp"
 #include "psQueues.hpp"
 
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
 template <class NumericType, class ValueType = std::vector<NumericType>>
-class psKDTree {
+class KDTree {
   typedef typename std::vector<NumericType>::size_type SizeType;
 
   struct Node;
@@ -54,9 +59,9 @@ class psKDTree {
   Node *rootNode = nullptr;
 
 public:
-  psKDTree() {}
+  KDTree() {}
 
-  psKDTree(const std::vector<ValueType> &passedPoints) {
+  KDTree(const std::vector<ValueType> &passedPoints) {
     if (!passedPoints.empty()) {
       // The first row determins the data dimension
       D = passedPoints[0].size();
@@ -72,8 +77,8 @@ public:
         }
       }
     } else {
-      psLogger::getInstance()
-          .addWarning("psKDTree: the provided points vector is empty.")
+      Logger::getInstance()
+          .addWarning("KDTree: the provided points vector is empty.")
           .print();
       return;
     }
@@ -82,8 +87,8 @@ public:
   void setPoints(const std::vector<ValueType> &passedPoints,
                  const std::vector<NumericType> &passedScalingFactors = {}) {
     if (passedPoints.empty()) {
-      psLogger::getInstance()
-          .addWarning("psKDTree: the provided points vector is empty.")
+      Logger::getInstance()
+          .addWarning("KDTree: the provided points vector is empty.")
           .print();
       return;
     }
@@ -161,7 +166,7 @@ public:
 
   void build() {
     if (nodes.size() == 0) {
-      psLogger::getInstance().addWarning("KDTree: No points provided!").print();
+      Logger::getInstance().addWarning("KDTree: No points provided!").print();
       return;
     }
 
@@ -449,3 +454,5 @@ private:
     }
   };
 };
+
+} // namespace viennaps

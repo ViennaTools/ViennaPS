@@ -4,34 +4,38 @@
 #include "csTracePath.hpp"
 #include "csUtil.hpp"
 
-#include "../psLogger.hpp"
 #include "../psMaterials.hpp"
-#include "../psSmartPointer.hpp"
-#include "../psVTKWriter.hpp"
 
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
+#include <lsVTKWriter.hpp>
+
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
 
 #include <bitset>
+
+namespace viennacs {
+
+using namespace viennacore;
 
 /**
   This class represents a cell-based voxel implementation of a volume. The
   depth of the cell set in z-direction can be specified.
 */
-template <class T, int D> class csDenseCellSet {
+template <class T, int D> class DenseCellSet {
 private:
-  using gridType = psSmartPointer<lsMesh<T>>;
-  using levelSetsType =
-      psSmartPointer<std::vector<psSmartPointer<lsDomain<T, D>>>>;
-  using materialMapType = psSmartPointer<psMaterialMap>;
+  using gridType = SmartPointer<lsMesh<T>>;
+  using levelSetsType = SmartPointer<std::vector<SmartPointer<lsDomain<T, D>>>>;
+  using materialMapType = SmartPointer<viennaps::MaterialMap>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
-  psSmartPointer<lsDomain<T, D>> surface = nullptr;
-  psSmartPointer<csBVH<T, D>> BVH = nullptr;
+  SmartPointer<lsDomain<T, D>> surface = nullptr;
+  SmartPointer<csBVH<T, D>> BVH = nullptr;
   materialMapType materialMap = nullptr;
 
   T gridDelta;
@@ -43,18 +47,18 @@ private:
   hrleVectorType<hrleIndexType, D> minIndex, maxIndex;
 
   bool cellSetAboveSurface = false;
-  psMaterial coverMaterial = psMaterial::None;
+  viennaps::Material coverMaterial = viennaps::Material::None;
   std::bitset<D> periodicBoundary;
 
   std::vector<T> *fillingFractions;
   const T eps = 1e-4;
 
 public:
-  csDenseCellSet() {}
+  DenseCellSet() {}
 
-  csDenseCellSet(levelSetsType passedLevelSets,
-                 materialMapType passedMaterialMap = nullptr,
-                 T passedDepth = 0., bool passedCellSetPosition = false)
+  DenseCellSet(levelSetsType passedLevelSets,
+               materialMapType passedMaterialMap = nullptr, T passedDepth = 0.,
+               bool passedCellSetPosition = false)
       : levelSets(passedLevelSets), cellSetAboveSurface(passedCellSetPosition) {
     fromLevelSets(passedLevelSets, passedMaterialMap, passedDepth);
   }
@@ -66,25 +70,25 @@ public:
     materialMap = passedMaterialMap;
 
     if (cellGrid == nullptr)
-      cellGrid = psSmartPointer<lsMesh<T>>::New();
+      cellGrid = SmartPointer<lsMesh<T>>::New();
 
     if (surface == nullptr)
-      surface = psSmartPointer<lsDomain<T, D>>::New(levelSets->back());
+      surface = SmartPointer<lsDomain<T, D>>::New(levelSets->back());
     else
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
 
     depth = passedDepth;
-    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
-    auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    std::vector<lsSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
+    auto plane = SmartPointer<lsDomain<T, D>>::New(surface->getGrid());
     {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
-                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface)
@@ -102,12 +106,12 @@ public:
 #ifndef NDEBUG
     int db_ls = 0;
     for (auto &ls : levelSetsInOrder) {
-      auto mesh = psSmartPointer<lsMesh<T>>::New();
+      auto mesh = SmartPointer<lsMesh<T>>::New();
       lsToSurfaceMesh<T, D>(ls, mesh).apply();
-      psVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
+      lsVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
           .apply();
     }
-    psVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
+    lsVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
     adjustMaterialIds();
@@ -138,7 +142,7 @@ public:
       minExtent /= 2;
     }
 
-    BVH = psSmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
+    BVH = SmartPointer<csBVH<T, D>>::New(getBoundingBox(), BVHlayers);
     buildBVH();
   }
 
@@ -191,9 +195,9 @@ public:
     return cellGrid->template getElements<(1 << D)>()[idx];
   }
 
-  psSmartPointer<lsDomain<T, D>> getSurface() { return surface; }
+  SmartPointer<lsDomain<T, D>> getSurface() { return surface; }
 
-  psSmartPointer<lsMesh<T>> getCellGrid() { return cellGrid; }
+  SmartPointer<lsMesh<T>> getCellGrid() { return cellGrid; }
 
   levelSetsType getLevelSets() const { return levelSets; }
 
@@ -259,7 +263,7 @@ public:
     cellSetAboveSurface = passedCellSetPosition;
   }
 
-  void setCoverMaterial(const psMaterial passedCoverMaterial) {
+  void setCoverMaterial(const viennaps::Material passedCoverMaterial) {
     coverMaterial = passedCoverMaterial;
   }
 
@@ -308,7 +312,7 @@ public:
 
   // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
-    psVTKWriter<T>(cellGrid, fileName).apply();
+    lsVTKWriter<T>(cellGrid, fileName).apply();
   }
 
   // Save cell set data in simple text format
@@ -339,7 +343,7 @@ public:
     std::string line;
 
     if (!file.is_open()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Could not open file " + fileName)
           .print();
       return;
@@ -347,7 +351,7 @@ public:
 
     std::getline(file, line);
     if (std::stoi(line) != numberOfCells) {
-      psLogger::getInstance().addWarning("Incompatible cell set data.").print();
+      Logger::getInstance().addWarning("Incompatible cell set data.").print();
       return;
     }
 
@@ -402,15 +406,15 @@ public:
     auto materialIds = getScalarData("Material");
 
     // create overlay material
-    std::vector<psSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
-    auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    std::vector<SmartPointer<lsDomain<T, D>>> levelSetsInOrder;
+    auto plane = SmartPointer<lsDomain<T, D>>::New(surface->getGrid());
     {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
       lsMakeGeometry<T, D>(plane,
-                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           SmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface)
@@ -486,18 +490,18 @@ public:
   // Updates the surface of the cell set. The new surface should be below the
   // old surface as this function can only remove cells from the cell set.
   void updateSurface() {
-    auto updateCellGrid = psSmartPointer<lsMesh<T>>::New();
+    auto updateCellGrid = SmartPointer<lsMesh<T>>::New();
 
     lsToVoxelMesh<T, D> voxelConverter(updateCellGrid);
     {
-      auto plane = psSmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+      auto plane = SmartPointer<lsDomain<T, D>>::New(surface->getGrid());
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
 
       lsMakeGeometry<T, D>(plane,
-                           psSmartPointer<lsPlane<T, D>>::New(origin, normal))
+                           SmartPointer<lsPlane<T, D>>::New(origin, normal))
           .apply();
       voxelConverter.insertNextLevelSet(plane);
     }
@@ -549,7 +553,7 @@ public:
     if (!cellNeighbors.empty() && !forceRebuild)
       return;
 
-    psUtils::Timer timer;
+    Timer timer;
     timer.start();
     const auto &cells = cellGrid->template getElements<(1 << D)>();
     const auto &nodes = cellGrid->getNodes();
@@ -625,7 +629,7 @@ public:
       }
     }
     timer.finish();
-    psLogger::getInstance()
+    Logger::getInstance()
         .addTiming("Building cell set neighborhood structure took",
                    timer.currentDuration * 1e-9)
         .print();
@@ -713,7 +717,7 @@ private:
   }
 
   void buildBVH() {
-    psUtils::Timer timer;
+    Timer timer;
     timer.start();
     auto &elems = cellGrid->template getElements<(1 << D)>();
     auto &nodes = cellGrid->getNodes();
@@ -724,19 +728,19 @@ private:
         auto &node = nodes[elems[elemIdx][n]];
         auto cell = BVH->getCellIds(node);
         if (cell == nullptr) {
-          psLogger::getInstance().addError("BVH building error.").print();
+          Logger::getInstance().addError("BVH building error.").print();
         }
         cell->insert(elemIdx);
       }
     }
     timer.finish();
-    psLogger::getInstance()
+    Logger::getInstance()
         .addTiming("Building cell set BVH took", timer.currentDuration * 1e-9)
         .print();
   }
 
   void calculateMinMaxIndex(
-      const std::vector<psSmartPointer<lsDomain<T, D>>> &levelSetsInOrder) {
+      const std::vector<lsSmartPointer<lsDomain<T, D>>> &levelSetsInOrder) {
     // set to zero
     for (unsigned i = 0; i < D; ++i) {
       minIndex[i] = std::numeric_limits<hrleIndexType>::max();
@@ -774,3 +778,5 @@ private:
     return onBoundary;
   }
 };
+
+} // namespace viennacs
