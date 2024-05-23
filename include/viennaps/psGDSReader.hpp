@@ -7,21 +7,28 @@
 #include "psGDSGeometry.hpp"
 #include "psGDSUtils.hpp"
 
-/// This class reads a GDS file and creates a psGDSGeometry object. It is a
-/// very simple implementation and does not support all GDS features.
-template <typename NumericType, int D = 3> class psGDSReader {
-  using GeometryType = psSmartPointer<psGDSGeometry<NumericType, D>>;
+#include <vcLogger.hpp>
 
+namespace viennaps {
+
+using namespace viennacore;
+
+/// This class reads a GDS file and creates a GDSGeometry object. It is a
+/// very simple implementation and does not support all GDS features.
+template <typename NumericType, int D = 3> class GDSReader {
   FILE *filePtr = nullptr;
-  GeometryType geometry = nullptr;
+  SmartPointer<GDSGeometry<NumericType, D>> geometry = nullptr;
   std::string fileName;
 
 public:
-  psGDSReader() {}
-  psGDSReader(GeometryType passedGeometry, std::string passedFileName)
+  GDSReader() {}
+  GDSReader(SmartPointer<GDSGeometry<NumericType, D>> passedGeometry,
+            std::string passedFileName)
       : geometry(passedGeometry), fileName(std::move(passedFileName)) {}
 
-  void setGeometry(GeometryType passedGeometry) { geometry = passedGeometry; }
+  void setGeometry(SmartPointer<GDSGeometry<NumericType, D>> passedGeometry) {
+    geometry = passedGeometry;
+  }
 
   void setFileName(std::string passedFileName) {
     fileName = std::move(passedFileName);
@@ -29,7 +36,7 @@ public:
 
   void apply() {
     if constexpr (D == 2) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Cannot import 2D geometry from GDS file.")
           .print();
       return;
@@ -40,7 +47,7 @@ public:
   }
 
 private:
-  psGDS::Structure<NumericType> currentStructure;
+  GDS::Structure<NumericType> currentStructure;
 
   int16_t currentRecordLen = 0;
   int16_t currentLayer;
@@ -51,7 +58,7 @@ private:
   double currentAngle = 0;
   int16_t arrayCols, arrayRows;
   bool ignore = false;
-  psGDS::ElementType currentElement;
+  GDS::ElementType currentElement;
   double units; // units in micron
   double userUnits;
 
@@ -163,7 +170,7 @@ private:
   void parseHeader() {
     short version;
     version = readTwoByteSignedInt();
-    psLogger::getInstance()
+    Logger::getInstance()
         .addDebug("GDS Version: " + std::to_string(version))
         .print();
   }
@@ -171,7 +178,7 @@ private:
   void parseLibName() {
     char *str;
     str = readAsciiString();
-    psLogger::getInstance()
+    Logger::getInstance()
         .addDebug("GDS Library name: " + std::string(str))
         .print();
     delete[] str;
@@ -196,9 +203,9 @@ private:
     // parse the structure reference
     char *str = readAsciiString();
     if (str) {
-      if (currentElement == psGDS::ElementType::elSRef) {
+      if (currentElement == GDS::ElementType::elSRef) {
         currentStructure.sRefs.back().strName = str;
-      } else if (currentElement == psGDS::ElementType::elARef) {
+      } else if (currentElement == GDS::ElementType::elARef) {
         currentStructure.aRefs.back().strName = str;
       }
       delete[] str;
@@ -255,7 +262,7 @@ private:
   void parseXYRef() {
     bool flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
 
-    if (currentElement == psGDS::ElementType::elSRef) {
+    if (currentElement == GDS::ElementType::elSRef) {
       float X = units * (float)readFourByteSignedInt();
       float Y = units * (float)readFourByteSignedInt();
       currentStructure.sRefs.back().refPoint[0] = static_cast<NumericType>(X);
@@ -297,7 +304,7 @@ private:
   void parseFile() {
     filePtr = fopen(fileName.c_str(), "rb");
     if (!filePtr) {
-      psLogger::getInstance().addError("Could not open GDS file.").print();
+      Logger::getInstance().addError("Could not open GDS file.").print();
       return;
     }
 
@@ -310,29 +317,29 @@ private:
       (void)!fread(&dataType, 1, 1, filePtr);
       currentRecordLen -= 4;
 
-      switch (static_cast<psGDS::RecordNumbers>(recordType)) {
-      case psGDS::RecordNumbers::Header:
+      switch (static_cast<GDS::RecordNumbers>(recordType)) {
+      case GDS::RecordNumbers::Header:
         parseHeader();
         break;
 
-      case psGDS::RecordNumbers::BgnLib:
+      case GDS::RecordNumbers::BgnLib:
         while (currentRecordLen)
           readTwoByteSignedInt(); // read modification date/time
         break;
 
-      case psGDS::RecordNumbers::LibName:
+      case GDS::RecordNumbers::LibName:
         parseLibName();
         break;
 
-      case psGDS::RecordNumbers::Units:
+      case GDS::RecordNumbers::Units:
         parseUnits();
         break;
 
-      case psGDS::RecordNumbers::EndLib:
+      case GDS::RecordNumbers::EndLib:
         fseek(filePtr, 0, SEEK_END);
         return;
 
-      case psGDS::RecordNumbers::BgnStr: // begin structure
+      case GDS::RecordNumbers::BgnStr: // begin structure
         assert(currentStructure.name == "" &&
                currentStructure.elements.empty() &&
                currentStructure.sRefs.empty() &&
@@ -342,38 +349,38 @@ private:
           readTwoByteSignedInt(); // read modification date/time
         break;
 
-      case psGDS::RecordNumbers::StrName:
+      case GDS::RecordNumbers::StrName:
         parseStructureName();
         break;
 
-      case psGDS::RecordNumbers::EndStr: // current structure finished
+      case GDS::RecordNumbers::EndStr: // current structure finished
         geometry->insertNextStructure(currentStructure);
         resetCurrentStructure();
         break;
 
-      case psGDS::RecordNumbers::EndEl:
+      case GDS::RecordNumbers::EndEl:
         ignore = false;
         break;
 
-      case psGDS::RecordNumbers::Boundary:
+      case GDS::RecordNumbers::Boundary:
         currentStructure.elements.push_back(
-            psGDS::Element<NumericType>{psGDS::ElementType::elBoundary});
-        currentElement = psGDS::ElementType::elBoundary;
+            GDS::Element<NumericType>{GDS::ElementType::elBoundary});
+        currentElement = GDS::ElementType::elBoundary;
         currentStructure.boundaryElements++;
         break;
 
-      case psGDS::RecordNumbers::Box:
+      case GDS::RecordNumbers::Box:
         currentStructure.elements.push_back(
-            psGDS::Element<NumericType>{psGDS::ElementType::elBox});
-        currentElement = psGDS::ElementType::elBox;
+            GDS::Element<NumericType>{GDS::ElementType::elBox});
+        currentElement = GDS::ElementType::elBox;
         currentStructure.boxElements++;
         break;
 
-      case psGDS::RecordNumbers::BoxType: // ignore
+      case GDS::RecordNumbers::BoxType: // ignore
         readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Layer:
+      case GDS::RecordNumbers::Layer:
         currentLayer = readTwoByteSignedInt();
         if (!ignore) {
           assert(currentStructure.elements.size() > 0);
@@ -382,7 +389,7 @@ private:
         }
         break;
 
-      case psGDS::RecordNumbers::Plex:
+      case GDS::RecordNumbers::Plex:
         currentPlexNumber = readFourByteSignedInt();
         if (!ignore) {
           assert(currentStructure.elements.size() > 0);
@@ -390,260 +397,260 @@ private:
         }
         break;
 
-      case psGDS::RecordNumbers::XY:
-        if (currentElement == psGDS::ElementType::elBoundary ||
-            currentElement == psGDS::ElementType::elBox) {
+      case GDS::RecordNumbers::XY:
+        if (currentElement == GDS::ElementType::elBoundary ||
+            currentElement == GDS::ElementType::elBox) {
           parseXYBoundary();
-        } else if (currentElement == psGDS::ElementType::elSRef ||
-                   currentElement == psGDS::ElementType::elARef) {
+        } else if (currentElement == GDS::ElementType::elSRef ||
+                   currentElement == GDS::ElementType::elARef) {
           parseXYRef();
         } else {
           parseXYIgnore();
         }
         break;
 
-      case psGDS::RecordNumbers::SRef:
-        currentElement = psGDS::ElementType::elSRef;
-        currentStructure.sRefs.push_back(psGDS::SRef<NumericType>{});
+      case GDS::RecordNumbers::SRef:
+        currentElement = GDS::ElementType::elSRef;
+        currentStructure.sRefs.push_back(GDS::SRef<NumericType>{});
         break;
 
-      case psGDS::RecordNumbers::ARef:
-        currentElement = psGDS::ElementType::elARef;
-        currentStructure.aRefs.push_back(psGDS::ARef<NumericType>{});
+      case GDS::RecordNumbers::ARef:
+        currentElement = GDS::ElementType::elARef;
+        currentStructure.aRefs.push_back(GDS::ARef<NumericType>{});
         break;
 
-      case psGDS::RecordNumbers::SName:
+      case GDS::RecordNumbers::SName:
         parseSName();
         break;
 
-      case psGDS::RecordNumbers::STrans:
+      case GDS::RecordNumbers::STrans:
         currentSTrans = readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Mag:
+      case GDS::RecordNumbers::Mag:
         currentMag = readEightByteReal();
         break;
 
-      case psGDS::RecordNumbers::Angle:
+      case GDS::RecordNumbers::Angle:
         currentAngle = readEightByteReal();
         break;
 
-      case psGDS::RecordNumbers::ColRow:
+      case GDS::RecordNumbers::ColRow:
         arrayCols = readTwoByteSignedInt();
         arrayRows = readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Text: // ignore
-        currentElement = psGDS::ElementType::elText;
+      case GDS::RecordNumbers::Text: // ignore
+        currentElement = GDS::ElementType::elText;
         ignore = true;
         break;
 
-      case psGDS::RecordNumbers::TextType: // ignore
+      case GDS::RecordNumbers::TextType: // ignore
         readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Presentation: // ignore
+      case GDS::RecordNumbers::Presentation: // ignore
         readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::String: // ignore
+      case GDS::RecordNumbers::String: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::Path: // ignore
-        currentElement = psGDS::ElementType::elPath;
+      case GDS::RecordNumbers::Path: // ignore
+        currentElement = GDS::ElementType::elPath;
         ignore = true;
         break;
 
-      case psGDS::RecordNumbers::PathType: // ignore
+      case GDS::RecordNumbers::PathType: // ignore
         readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Width: // ignore (only used in path and text)
+      case GDS::RecordNumbers::Width: // ignore (only used in path and text)
         currentWidth = (float)readFourByteSignedInt();
         if (currentWidth > 0) {
           currentWidth *= units;
         }
         break;
 
-      case psGDS::RecordNumbers::DataType: // unimportant and should be zero
+      case GDS::RecordNumbers::DataType: // unimportant and should be zero
         currentDataType = readTwoByteSignedInt();
         if (currentDataType != 0)
-          psLogger::getInstance()
+          Logger::getInstance()
               .addWarning("Unsupported argument in DATATYPE")
               .print();
         break;
 
-      case psGDS::RecordNumbers::Node: // ignore
-        currentElement = psGDS::ElementType::elNone;
+      case GDS::RecordNumbers::Node: // ignore
+        currentElement = GDS::ElementType::elNone;
         while (currentRecordLen) {
           readTwoByteSignedInt();
         }
         ignore = true;
         break;
 
-      case psGDS::RecordNumbers::ElFlags: // ignore
+      case GDS::RecordNumbers::ElFlags: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::ElKey: // ignore
+      case GDS::RecordNumbers::ElKey: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::RefLibs: // ignore
+      case GDS::RecordNumbers::RefLibs: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::Fonts: // ignore
+      case GDS::RecordNumbers::Fonts: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::Generations: // ignore
+      case GDS::RecordNumbers::Generations: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
-      case psGDS::RecordNumbers::AttrTable: // ignore
+      case GDS::RecordNumbers::AttrTable: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::StypTable: // ignore
+      case GDS::RecordNumbers::StypTable: // ignore
         readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::StrType: // ignore
+      case GDS::RecordNumbers::StrType: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::LinkType: // ignore
+      case GDS::RecordNumbers::LinkType: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::LinkKeys: // ignore
+      case GDS::RecordNumbers::LinkKeys: // ignore
         while (currentRecordLen)
           readFourByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::NodeType: // ignore
+      case GDS::RecordNumbers::NodeType: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::PropAttr: // ignore
+      case GDS::RecordNumbers::PropAttr: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::PropValue: // ignore
+      case GDS::RecordNumbers::PropValue: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::BgnExtn: // ignore
+      case GDS::RecordNumbers::BgnExtn: // ignore
         readFourByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::EndExtn: // ignore
+      case GDS::RecordNumbers::EndExtn: // ignore
         readFourByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::TapeNum: // ignore
+      case GDS::RecordNumbers::TapeNum: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::TapeCode: // ignore
+      case GDS::RecordNumbers::TapeCode: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::StrClass: // ignore
+      case GDS::RecordNumbers::StrClass: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Reserved: // ignore
+      case GDS::RecordNumbers::Reserved: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::Format: // ignore
+      case GDS::RecordNumbers::Format: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Mask: // ignore
+      case GDS::RecordNumbers::Mask: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::EndMasks: // ignore
+      case GDS::RecordNumbers::EndMasks: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::LibDirSize: // ignore
+      case GDS::RecordNumbers::LibDirSize: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::SrfName: // ignore
+      case GDS::RecordNumbers::SrfName: // ignore
         tempStr = readAsciiString();
         delete[] tempStr;
         break;
 
-      case psGDS::RecordNumbers::LibSecur: // ignore
+      case GDS::RecordNumbers::LibSecur: // ignore
         while (currentRecordLen)
           readTwoByteSignedInt();
         break;
 
-      case psGDS::RecordNumbers::Border: // ignore
+      case GDS::RecordNumbers::Border: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::SoftFence: // ignore
+      case GDS::RecordNumbers::SoftFence: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::HardFence: // ignore
+      case GDS::RecordNumbers::HardFence: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::SoftWire: // ignore
+      case GDS::RecordNumbers::SoftWire: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::HardWire: // ignore
+      case GDS::RecordNumbers::HardWire: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::PathPort: // ignore
+      case GDS::RecordNumbers::PathPort: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::NodePort: // ignore
+      case GDS::RecordNumbers::NodePort: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::UserConstraint: // ignore
+      case GDS::RecordNumbers::UserConstraint: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::SpacerError: // ignore
+      case GDS::RecordNumbers::SpacerError: // ignore
         /* Empty */
         break;
 
-      case psGDS::RecordNumbers::Contact: // ignore
+      case GDS::RecordNumbers::Contact: // ignore
         /* Empty */
         break;
 
       default:
-        psLogger::getInstance()
+        Logger::getInstance()
             .addWarning("Unknown record type in GDS file.")
             .print();
         return;
@@ -651,3 +658,5 @@ private:
     }
   }
 };
+
+} // namespace viennaps

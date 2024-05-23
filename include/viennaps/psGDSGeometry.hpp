@@ -1,8 +1,6 @@
 #pragma once
 
 #include "psGDSUtils.hpp"
-#include "psLogger.hpp"
-#include "psSmartPointer.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -11,24 +9,31 @@
 #include <lsMakeGeometry.hpp>
 #include <lsTransformMesh.hpp>
 
-template <class NumericType, int D = 3> class psGDSGeometry {
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType, int D = 3> class GDSGeometry {
   using StructureLayers =
-      std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
+      std::unordered_map<int16_t, SmartPointer<lsMesh<NumericType>>>;
+  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
   using BoundaryType = typename lsDomain<NumericType, D>::BoundaryType;
 
 public:
-  psGDSGeometry() {
+  GDSGeometry() {
     if constexpr (D == 2) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("Cannot import 2D geometry from GDS file.")
           .print();
     }
   }
 
-  psGDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
+  GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
     if constexpr (D == 2) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("Cannot import 2D geometry from GDS file.")
           .print();
     }
@@ -68,7 +73,7 @@ public:
             contains != str.containsLayers.end()) {
           for (auto &el : str.elements) {
             if (el.layer == layer) {
-              if (el.elementType == psGDS::ElementType::elBox) {
+              if (el.elementType == GDS::ElementType::elBox) {
                 addBox(levelSet, el, baseHeight, height, 0., 0.);
               } else {
                 addPolygon(levelSet, el, baseHeight, height, 0, 0);
@@ -78,7 +83,7 @@ public:
         }
 
         // add structure references
-        auto strMesh = psSmartPointer<lsMesh<NumericType>>::New();
+        auto strMesh = SmartPointer<lsMesh<NumericType>>::New();
         for (auto &sref : str.sRefs) {
           auto refStr = getStructure(sref.strName);
           if (auto contains = refStr->containsLayers.find(layer);
@@ -87,7 +92,7 @@ public:
 
             // copy mesh here
             auto copy = assembledStructures[refStr->name][layer];
-            auto preBuiltStrMesh = psSmartPointer<lsMesh<NumericType>>::New();
+            auto preBuiltStrMesh = SmartPointer<lsMesh<NumericType>>::New();
             preBuiltStrMesh->nodes = copy->nodes;
             preBuiltStrMesh->triangles = copy->triangles;
             adjustPreBuiltMeshHeight(preBuiltStrMesh, baseHeight, height);
@@ -108,7 +113,7 @@ public:
             }
 
             if (sref.flipped) {
-              psLogger::getInstance()
+              Logger::getInstance()
                   .addWarning("Flipping x-axis currently not supported.")
                   .print();
               continue;
@@ -175,7 +180,7 @@ public:
 
   auto getBounds() { return bounds_; }
 
-  void insertNextStructure(psGDS::Structure<NumericType> const &structure) {
+  void insertNextStructure(GDS::Structure<NumericType> const &structure) {
     structures.push_back(structure);
   }
 
@@ -186,7 +191,7 @@ public:
   }
 
 private:
-  psGDS::Structure<NumericType> *getStructure(const std::string &strName) {
+  GDS::Structure<NumericType> *getStructure(const std::string &strName) {
     for (size_t i = 0; i < structures.size(); i++) {
       if (strName == structures[i].name) {
         return &structures[i];
@@ -217,12 +222,12 @@ private:
 
         for (auto layer : str.containsLayers) {
           strLayerMapping.insert(
-              {layer, psSmartPointer<lsMesh<NumericType>>::New()});
+              {layer, SmartPointer<lsMesh<NumericType>>::New()});
         }
 
         for (auto &el : str.elements) {
-          psSmartPointer<lsMesh<NumericType>> mesh;
-          if (el.elementType == psGDS::ElementType::elBox) {
+          SmartPointer<lsMesh<NumericType>> mesh;
+          if (el.elementType == GDS::ElementType::elBox) {
             mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
           } else {
             bool retry = false;
@@ -319,7 +324,7 @@ private:
     bounds_[5] = 1.;
   }
 
-  void addBox(lsDomainType levelSet, psGDS::Element<NumericType> &element,
+  void addBox(lsDomainType levelSet, GDS::Element<NumericType> &element,
               const NumericType baseHeight, const NumericType height,
               const NumericType xOffset, const NumericType yOffset) const {
     auto tmpLS = lsDomainType::New(levelSet->getGrid());
@@ -338,7 +343,7 @@ private:
         .apply();
   }
 
-  void addPolygon(lsDomainType levelSet, psGDS::Element<NumericType> &element,
+  void addPolygon(lsDomainType levelSet, GDS::Element<NumericType> &element,
                   const NumericType baseHeight, const NumericType height,
                   const NumericType xOffset, const NumericType yOffset) {
     bool retry = false;
@@ -356,11 +361,11 @@ private:
         .apply();
   }
 
-  psSmartPointer<lsMesh<NumericType>>
-  boxToSurfaceMesh(psGDS::Element<NumericType> &element,
+  SmartPointer<lsMesh<NumericType>>
+  boxToSurfaceMesh(GDS::Element<NumericType> &element,
                    const NumericType baseHeight, const NumericType height,
                    const NumericType xOffset, const NumericType yOffset) {
-    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
 
     for (auto &point : element.pointCloud) {
       point[0] += xOffset;
@@ -389,12 +394,12 @@ private:
     return mesh;
   }
 
-  psSmartPointer<lsMesh<NumericType>>
-  polygonToSurfaceMesh(psGDS::Element<NumericType> &element,
+  SmartPointer<lsMesh<NumericType>>
+  polygonToSurfaceMesh(GDS::Element<NumericType> &element,
                        const NumericType baseHeight, const NumericType height,
                        const NumericType xOffset, const NumericType yOffset,
                        bool &retry) {
-    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
 
     unsigned numPointsFlat = element.pointCloud.size();
 
@@ -471,7 +476,7 @@ private:
           retry = true;
           return mesh;
         } else {
-          psLogger::getInstance()
+          Logger::getInstance()
               .addError("Timeout in surface triangulation.")
               .print();
         }
@@ -493,7 +498,7 @@ private:
     return mesh;
   }
 
-  bool isEar(int i, int j, int k, psSmartPointer<lsMesh<NumericType>> mesh,
+  bool isEar(int i, int j, int k, SmartPointer<lsMesh<NumericType>> mesh,
              unsigned numPoints) const {
     auto &points = mesh->getNodes();
 
@@ -529,7 +534,7 @@ private:
     return true;
   }
 
-  void adjustPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
+  void adjustPreBuiltMeshHeight(SmartPointer<lsMesh<NumericType>> mesh,
                                 const NumericType baseHeight,
                                 const NumericType height) const {
     auto &nodes = mesh->getNodes();
@@ -543,7 +548,7 @@ private:
     }
   }
 
-  void resetPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
+  void resetPreBuiltMeshHeight(SmartPointer<lsMesh<NumericType>> mesh,
                                const NumericType baseHeight,
                                const NumericType height) const {
     auto &nodes = mesh->getNodes();
@@ -562,7 +567,7 @@ private:
   }
 
 private:
-  std::vector<psGDS::Structure<NumericType>> structures;
+  std::vector<GDS::Structure<NumericType>> structures;
   std::unordered_map<std::string, StructureLayers> assembledStructures;
   std::array<NumericType, 2> boundaryPadding = {0., 0.};
   std::array<NumericType, 2> minBounds;
@@ -579,4 +584,6 @@ private:
 };
 
 template <class NumericType, int D>
-bool psGDSGeometry<NumericType, D>::pointOrderFlag = true;
+bool GDSGeometry<NumericType, D>::pointOrderFlag = true;
+
+} // namespace viennaps
