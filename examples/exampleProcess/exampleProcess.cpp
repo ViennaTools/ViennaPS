@@ -1,7 +1,6 @@
 #include <geometries/psMakeHole.hpp>
 #include <lsMakeGeometry.hpp>
 
-#include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 
@@ -9,23 +8,25 @@
 #include "surfaceModel.hpp"
 #include "velocityField.hpp"
 
+namespace ps = viennaps;
+
 int main() {
   using NumericType = double;
   constexpr int D = 3;
 
-  psLogger::setLogLevel(psLogLevel::INFO);
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   // particles
   auto particle = std::make_unique<Particle<NumericType, D>>(0.2, 10.);
 
   // surface model
-  auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New();
+  auto surfModel = ps::SmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = psSmartPointer<VelocityField<NumericType>>::New();
+  auto velField = ps::SmartPointer<VelocityField<NumericType>>::New();
 
   /* ------------- Geometry setup (ViennaLS) ------------ */
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   {
     NumericType extent = 8;
     NumericType gridDelta = 0.5;
@@ -39,7 +40,7 @@ int main() {
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    auto mask = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto mask = lsSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
     NumericType normal[3] = {0.};
@@ -49,7 +50,7 @@ int main() {
         mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    auto maskCut = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto maskCut = lsSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
     normal[D - 1] = 1.;
     origin[D - 1] = 2.;
@@ -72,27 +73,27 @@ int main() {
         mask, maskCut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
 
-    domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+    domain->insertNextLevelSetAsMaterial(mask, ps::Material::Mask);
 
-    auto substrate = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto substrate = lsSmartPointer<lsDomain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
     lsMakeGeometry<NumericType, D>(
         substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    domain->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
+    domain->insertNextLevelSetAsMaterial(substrate, ps::Material::Si);
   }
 
   domain->saveSurfaceMesh("initial.vtp");
 
-  auto model = psSmartPointer<psProcessModel<NumericType, D>>::New();
+  auto model = ps::SmartPointer<ps::ProcessModel<NumericType, D>>::New();
   model->insertNextParticleType(particle);
   model->setSurfaceModel(surfModel);
   model->setVelocityField(velField);
   model->setProcessName("ExampleProcess");
 
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
   process.setProcessDuration(5);

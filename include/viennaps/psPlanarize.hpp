@@ -5,17 +5,21 @@
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
 
-template <class NumericType, int D> class psPlanarize {
-  psSmartPointer<psDomain<NumericType, D>> pDomain_;
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType, int D> class Planarize {
+  SmartPointer<Domain<NumericType, D>> pDomain_;
   NumericType cutoffPosition_ = 0.;
 
 public:
-  psPlanarize() {}
-  psPlanarize(psSmartPointer<psDomain<NumericType, D>> domain,
-              const NumericType passedCutoff)
+  Planarize() {}
+  Planarize(SmartPointer<Domain<NumericType, D>> domain,
+            const NumericType passedCutoff)
       : pDomain_(domain), cutoffPosition_(passedCutoff) {}
 
-  void setDomain(psSmartPointer<psDomain<NumericType, D>> domain) {
+  void setDomain(SmartPointer<Domain<NumericType, D>> domain) {
     pDomain_ = domain;
   }
 
@@ -37,3 +41,5 @@ public:
         plane, lsBooleanOperationEnum::RELATIVE_COMPLEMENT);
   }
 };
+
+} // namespace viennaps

@@ -6,7 +6,6 @@
 
 #include <rayBoundary.hpp>
 #include <rayGeometry.hpp>
-#include <rayRNG.hpp>
 #include <raySource.hpp>
 #include <rayUtil.hpp>
 
@@ -85,11 +84,11 @@ public:
       for (long long idx = 0; idx < mNumRays; ++idx) {
         // particle specific RNG seed
         auto particleSeed = rayInternal::tea<3>(idx, seed);
-        viennaray::RNG RngState(particleSeed);
+        RNG rngState(particleSeed);
 
-        particle->initNew(RngState);
+        particle->initNew(rngState);
 
-        auto originAndDirection = mSource->getOriginAndDirection(idx, RngState);
+        auto originAndDirection = mSource->getOriginAndDirection(idx, rngState);
         rayInternal::fillRay(rayHit.ray, originAndDirection[0],
                              originAndDirection[1]);
 
@@ -165,7 +164,7 @@ public:
 
           // get fill and reflection
           const auto fillnDirection =
-              particle->surfaceHit(rayDir, geomNormal, reflect, RngState);
+              particle->surfaceHit(rayDir, geomNormal, reflect, rngState);
 
           if (mGeometry.getMaterialId(rayHit.hit.primID) != excludeMaterial) {
             // trace in cell set
@@ -185,7 +184,7 @@ public:
               while (volumeParticle.energy >= 0) {
                 volumeParticle.distance = -1;
                 while (volumeParticle.distance < 0)
-                  volumeParticle.distance = normalDist(RngState);
+                  volumeParticle.distance = normalDist(rngState);
                 auto travelDist = csUtil::multNew(volumeParticle.direction,
                                                   volumeParticle.distance);
                 csUtil::add(volumeParticle.position, travelDist);
@@ -199,7 +198,7 @@ public:
 
                 if (newIdx != volumeParticle.cellId) {
                   volumeParticle.cellId = newIdx;
-                  auto fill = particle->collision(volumeParticle, RngState,
+                  auto fill = particle->collision(volumeParticle, rngState,
                                                   particleStack);
                   path.addGridData(newIdx, fill);
                 }

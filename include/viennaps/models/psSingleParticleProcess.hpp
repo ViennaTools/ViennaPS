@@ -56,27 +56,25 @@ public:
   SingleParticle(NumericType sticking, NumericType sourcePower)
       : stickingProbability_(sticking), sourcePower_(sourcePower) {}
 
-  void surfaceCollision(NumericType rayWeight,
-                        const Triple<NumericType> &rayDir,
-                        const Triple<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
+  void surfaceCollision(NumericType rayWeight, const Triple<NumericType> &,
+                        const Triple<NumericType> &, const unsigned int primID,
+                        const int,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &Rng) override final {
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
-                    const Triple<NumericType> &geomNormal,
-                    const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+  surfaceReflection(NumericType, const Triple<NumericType> &,
+                    const Triple<NumericType> &geomNormal, const unsigned int,
+                    const int, const viennaray::TracingData<NumericType> *,
+                    RNG &rngState) override final {
     auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Triple<NumericType>>{stickingProbability_,
                                                        direction};
   }
-  void initNew(viennaray::RNG &RNG) override final {}
+  void initNew(RNG &) override final {}
   NumericType getSourceDistributionPower() const override final {
     return sourcePower_;
   }

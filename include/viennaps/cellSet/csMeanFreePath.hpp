@@ -1,21 +1,25 @@
 #pragma once
 
 #include "psDomain.hpp"
-#include "psLogger.hpp"
 
 #include <rayGeometry.hpp>
 
-template <class NumericType, int D> class csMeanFreePath {
+namespace viennacs {
+
+using namespace viennacore;
+
+template <class NumericType, int D> class MeanFreePath {
 
 public:
-  csMeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {
+  MeanFreePath() : traceDevice(rtcNewDevice("hugepages=1")) {
     static_assert(D == 2 &&
                   "Mean free path calculation only implemented for 2D");
   }
 
-  ~csMeanFreePath() { rtcReleaseDevice(traceDevice); }
+  ~MeanFreePath() { rtcReleaseDevice(traceDevice); }
 
-  void setDomain(const psSmartPointer<psDomain<NumericType, D>> passedDomain) {
+  void
+  setDomain(const SmartPointer<viennaps::Domain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }
 
@@ -23,7 +27,7 @@ public:
     bulkLambda = passedBulkLambda;
   }
 
-  void setMaterial(const psMaterial passedMaterial) {
+  void setMaterial(const viennaps::Material passedMaterial) {
     material = passedMaterial;
   }
 
@@ -52,7 +56,7 @@ private:
     auto data = cellSet->getScalarData("MeanFreePath");
     auto materials = cellSet->getScalarData("Material");
 
-    auto traceGeometry = rayGeometry<NumericType, D>();
+    auto traceGeometry = viennaray::Geometry<NumericType, D>();
     {
       auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
       lsToDiskMesh<NumericType, D>(domain->getLevelSets()->back(), mesh)
@@ -61,7 +65,8 @@ private:
       auto normals = mesh->getCellData().getVectorData("Normals");
       gridDelta = domain->getGrid().getGridDelta();
       traceGeometry.initGeometry(traceDevice, points, *normals,
-                                 gridDelta * rayInternal::DiskFactor<D>);
+                                 gridDelta *
+                                     viennaray::rayInternal::DiskFactor<D>);
     }
 
     auto rtcScene = rtcNewScene(traceDevice);
@@ -88,7 +93,7 @@ private:
 
 #pragma omp for
       for (int idx = 0; idx < numCells; ++idx) {
-        if (!psMaterialMap::isMaterial(materials->at(idx), material))
+        if (!viennaps::MaterialMap::isMaterial(materials->at(idx), material))
           continue;
 
         auto cellCenter = cellSet->getCellCenter(idx);
@@ -122,7 +127,7 @@ private:
           ray.time = 0.0f;
 #endif
 
-          ray.tfar = std::numeric_limits<rayInternal::rtcNumericType>::max();
+          ray.tfar = std::numeric_limits<float>::max();
           rayHit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
           rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 
@@ -141,11 +146,11 @@ private:
 
           /* -------- Geometry hit -------- */
           const auto rayDir =
-              rayTriple<NumericType>{ray.dir_x, ray.dir_y, ray.dir_z};
+              Triple<NumericType>{ray.dir_x, ray.dir_y, ray.dir_z};
           auto geomNormal = traceGeometry.getPrimNormal(rayHit.hit.primID);
 
           /* -------- Hit at disk backside -------- */
-          if (rayInternal::DotProduct(rayDir, geomNormal) > 0) {
+          if (DotProduct(rayDir, geomNormal) > 0) {
             continue;
           }
 
@@ -161,8 +166,8 @@ private:
     rtcReleaseScene(rtcScene);
   }
 
-  std::array<NumericType, 3> getDirection(const unsigned int idx) {
-    std::array<NumericType, 3> direction;
+  Triple<NumericType> getDirection(const unsigned int idx) {
+    Triple<NumericType> direction;
     NumericType theta = idx * 2. * M_PI / numRaysPerCell;
     direction[0] = std::cos(theta);
     direction[1] = std::sin(theta);
@@ -171,12 +176,14 @@ private:
   }
 
 private:
-  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  SmartPointer<viennaps::Domain<NumericType, D>> domain = nullptr;
   RTCDevice traceDevice;
 
   NumericType gridDelta = 0;
   NumericType bulkLambda = 0;
   NumericType maxLambda = 0.;
   long numRaysPerCell = 100;
-  psMaterial material = psMaterial::GAS;
+  viennaps::Material material = viennaps::Material::GAS;
 };
+
+} // namespace viennacs

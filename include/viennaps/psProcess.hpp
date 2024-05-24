@@ -133,7 +133,7 @@ public:
         rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
     } else {
       for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
+        rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
             domain->getGrid().getBoundaryConditions(i));
     }
     rayTracer.setSourceDirection(sourceDirection);
@@ -150,7 +150,7 @@ public:
     if (primaryDirection) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
-                   psUtils::arrayToString(primaryDirection.value()))
+                   utils::arrayToString(primaryDirection.value()))
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }
@@ -278,7 +278,7 @@ public:
           rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
       } else {
         for (unsigned i = 0; i < D; ++i)
-          rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
+          rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
               domain->getGrid().getBoundaryConditions(i));
       }
 
@@ -290,7 +290,7 @@ public:
       if (primaryDirection) {
         Logger::getInstance()
             .addInfo("Using primary direction: " +
-                     psUtils::arrayToString(primaryDirection.value()))
+                     utils::arrayToString(primaryDirection.value()))
             .print();
         rayTracer.setPrimaryDirection(primaryDirection.value());
       }

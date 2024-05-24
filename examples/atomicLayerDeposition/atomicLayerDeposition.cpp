@@ -5,17 +5,20 @@
 
 #include <psDomain.hpp>
 #include <psMeanFreePath.hpp>
+#include <psUtils.hpp>
 
 #include "geometry.hpp"
+
+namespace viennaps = ps;
 
 int main(int argc, char *argv[]) {
   constexpr int D = 2;
   using NumericType = double;
 
-  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
 
   // Parse the parameters
-  psUtils::Parameters params;
+  ps::utils::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
@@ -25,21 +28,21 @@ int main(int argc, char *argv[]) {
   omp_set_num_threads(params.get<int>("numThreads"));
 
   // Create a domain
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   if (params.get<int>("trench") > 0) {
-    psMakeHole<NumericType, D>(
+    ps::MakeHole<NumericType, D>(
         domain, params.get("gridDelta"),
         2 * params.get("verticalWidth") + 2. * params.get("xPad"),
         2 * params.get("verticalWidth") + 2. * params.get("xPad"),
         params.get("verticalWidth"), params.get("verticalDepth"), 0., 0., false,
-        false, psMaterial::TiN)
+        false, ps::Material::TiN)
         .apply();
   } else {
-    makeLShape(domain, params, psMaterial::TiN);
+    makeLShape(domain, params, ps::Material::TiN);
   }
   // Generate the cell set from the domain
   domain->generateCellSet(params.get("verticalDepth") + params.get("topSpace"),
-                          psMaterial::GAS, true);
+                          ps::Material::GAS, true);
   auto &cellSet = domain->getCellSet();
   // Segment the cells into surface, material, and gas cells
   csSegmentCells<NumericType, D>(cellSet).apply();

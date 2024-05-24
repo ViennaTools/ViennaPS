@@ -20,8 +20,7 @@ public:
         mNumPoints(pNumPoints) {}
 
   Pair<Triple<NumericType>>
-  getOriginAndDirection(const size_t idx,
-                        viennaray::RNG &RngState) const override {
+  getOriginAndDirection(const size_t idx, RNG &rngState) const override {
     return {origin, direction};
   }
 

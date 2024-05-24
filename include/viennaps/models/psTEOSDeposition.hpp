@@ -109,11 +109,11 @@ public:
       : stickingProbability(pStickingProbability),
         reactionOrder(pReactionOrder), dataLabel(pDataLabel) {}
   std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
+  surfaceReflection(NumericType, const Triple<NumericType> &,
                     const Triple<NumericType> &geomNormal,
-                    const unsigned int primID, const int materialId,
+                    const unsigned int primID, const int,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &rngState) override final {
     const auto &cov = globalData->getVectorData(0)[primID];
     NumericType sticking;
     if (cov > 0.) {
@@ -128,16 +128,15 @@ public:
       }
     }
     auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Triple<NumericType>>{sticking, direction};
   }
-  void surfaceCollision(NumericType rayWeight,
-                        const Triple<NumericType> &rayDir,
-                        const Triple<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
+  void surfaceCollision(NumericType rayWeight, const Triple<NumericType> &,
+                        const Triple<NumericType> &, const unsigned int primID,
+                        const int,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &Rng) override final {
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
   NumericType getSourceDistributionPower() const override final { return 1; }
@@ -163,7 +162,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &Rng) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
     return std::pair<NumericType, Triple<NumericType>>{stickingProbability,
@@ -175,7 +174,7 @@ public:
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &Rng) override final {
+                        RNG &Rng) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
   NumericType getSourceDistributionPower() const override final { return 1; }

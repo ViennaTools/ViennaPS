@@ -18,11 +18,11 @@ public:
                   const T passedMeanFreePath = 1.)
       : meanIonEnergy(passedMeanEnergy), meanFreePath(passedMeanFreePath) {}
 
-  void initNew(viennaray::RNG &RNG) override final {
+  void initNew(RNG &rngState) override final {
     std::uniform_real_distribution<T> uniDist;
     do {
-      const auto rand1 = uniDist(RNG);
-      const auto rand2 = uniDist(RNG);
+      const auto rand1 = uniDist(rngState);
+      const auto rand2 = uniDist(rngState);
       E = std::cos(M_PI * 2 * rand1) * std::sqrt(-2. * std::log(rand2)) *
               deltaIonEnergy +
           meanIonEnergy;
@@ -31,7 +31,7 @@ public:
 
   std::pair<T, Triple<T>> surfaceHit(const Triple<T> &rayDir,
                                      const Triple<T> &geomNormal, bool &reflect,
-                                     viennaray::RNG &Rng) override final {
+                                     RNG &rngState) override final {
     auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
     const T incAngle = std::acos(std::max(std::min(cosTheta, T(1)), T(0)));
     std::uniform_real_distribution<T> uniDist;
@@ -53,8 +53,8 @@ public:
 
     T NewEnergy;
     do {
-      const auto rand1 = uniDist(Rng);
-      const auto rand2 = uniDist(Rng);
+      const auto rand1 = uniDist(rngState);
+      const auto rand2 = uniDist(rngState);
       NewEnergy = tempEnergy +
                   (std::min((E - tempEnergy), tempEnergy) + E * 0.05) *
                       (1 - 2. * rand1) * std::sqrt(std::fabs(std::log(rand2)));
@@ -65,7 +65,7 @@ public:
     if (NewEnergy > minEnergy) {
       reflect = true;
       auto direction = viennaray::ReflectionConedCosine<T, D>(
-          rayDir, geomNormal, Rng, std::min(incAngle, minAngle));
+          rayDir, geomNormal, rngState, std::min(incAngle, minAngle));
       E = NewEnergy;
       return std::pair<T, Triple<T>>{impactEnergy, direction};
     } else {
@@ -74,7 +74,7 @@ public:
     }
   }
 
-  T collision(csVolumeParticle<T> &particle, viennaray::RNG &RNG,
+  T collision(csVolumeParticle<T> &particle, RNG &rngState,
               std::vector<csVolumeParticle<T>> &particleStack) override final {
     T fill = 0.;
 
@@ -91,7 +91,7 @@ public:
     if (particle.scattered < maxScatter) {
       std::uniform_int_distribution<> particleDist(1, maxScatter -
                                                           particle.scattered);
-      numParticles = particleDist(RNG);
+      numParticles = particleDist(rngState);
     }
 
     for (int i = 0; i < numParticles; i++) {
@@ -99,9 +99,9 @@ public:
       csTriple<T> direction;
       do {
         // random direction
-        direction[0] = negUniDist(RNG);
-        direction[1] = negUniDist(RNG);
-        direction[2] = negUniDist(RNG);
+        direction[0] = negUniDist(rngState);
+        direction[1] = negUniDist(rngState);
+        direction[2] = negUniDist(rngState);
 
         // normalize
         tmp = csUtil::norm(direction);

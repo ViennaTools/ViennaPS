@@ -360,7 +360,7 @@ public:
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &) override final {
+                        RNG &) override final {
     // collect data for this hit
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
     assert(E >= 0 && "Negative energy ion");
@@ -434,7 +434,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &Rng) override final {
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
@@ -463,7 +463,7 @@ public:
           1., Triple<NumericType>{0., 0., 0.}};
     }
   }
-  void initNew(viennaray::RNG &RNG) override final {
+  void initNew(RNG &RNG) override final {
     std::normal_distribution<NumericType> normalDist{p.Ions.meanEnergy,
                                                      p.Ions.sigmaEnergy};
     do {
@@ -492,7 +492,7 @@ public:
                         const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
-                        viennaray::RNG &) override final {
+                        RNG &) override final {
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
@@ -501,7 +501,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &Rng) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
 
@@ -537,7 +537,7 @@ public:
                         const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
-                        viennaray::RNG &) override final {
+                        RNG &) override final {
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
@@ -546,7 +546,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &Rng) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
 

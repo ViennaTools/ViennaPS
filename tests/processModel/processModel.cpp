@@ -84,7 +84,7 @@ template <class NumericType, int D> void RunTest() {
 
   // anisotropic model
   {
-    auto model = SmartPointer<psAnisotropicProcess<NumericType, D>>::New(
+    auto model = SmartPointer<AnisotropicProcess<NumericType, D>>::New(
         std::vector<std::pair<Material, NumericType>>{});
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());

@@ -196,7 +196,7 @@ public:
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &Rng) override final {
+                        RNG &) override final {
 
     // collect data for this hit
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
@@ -255,7 +255,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &Rng) override final {
     auto cosTheta = -DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
@@ -293,11 +293,11 @@ public:
           1., Triple<NumericType>{0., 0., 0.}};
     }
   }
-  void initNew(viennaray::RNG &RNG) override final {
+  void initNew(RNG &rngState) override final {
     std::normal_distribution<NumericType> normalDist{params.Ions.meanEnergy,
                                                      params.Ions.sigmaEnergy};
     do {
-      E = normalDist(RNG);
+      E = normalDist(rngState);
     } while (E <= 0.);
   }
   NumericType getSourceDistributionPower() const override final {
@@ -321,13 +321,12 @@ class SF6O2Etchant
 public:
   SF6O2Etchant(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {}
 
-  void surfaceCollision(NumericType rayWeight,
-                        const Triple<NumericType> &rayDir,
-                        const Triple<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
+  void surfaceCollision(NumericType rayWeight, const Triple<NumericType> &,
+                        const Triple<NumericType> &, const unsigned int primID,
+                        const int,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &Rng) override final {
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, Triple<NumericType>>
@@ -335,7 +334,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &rngState) override final {
 
     // F surface coverage
     const auto &phi_F = globalData->getVectorData(0)[primID];
@@ -348,7 +347,7 @@ public:
     NumericType S_eff = beta * std::max(1. - phi_F - phi_O, 0.);
 
     auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Triple<NumericType>>{S_eff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
@@ -365,13 +364,12 @@ class SF6O2Oxygen
 public:
   SF6O2Oxygen(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {}
 
-  void surfaceCollision(NumericType rayWeight,
-                        const Triple<NumericType> &rayDir,
-                        const Triple<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
+  void surfaceCollision(NumericType rayWeight, const Triple<NumericType> &,
+                        const Triple<NumericType> &, const unsigned int primID,
+                        const int,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &Rng) override final {
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     // Rate is normalized by dividing with the local sticking coefficient
     localData.getVectorData(0)[primID] += rayWeight;
   }
@@ -380,7 +378,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &rngState) override final {
 
     NumericType S_eff;
     const auto &phi_F = globalData->getVectorData(0)[primID];
@@ -391,7 +389,7 @@ public:
     S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
 
     auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Triple<NumericType>>{S_eff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }

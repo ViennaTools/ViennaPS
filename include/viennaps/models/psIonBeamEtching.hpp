@@ -84,10 +84,10 @@ public:
   void surfaceCollision(NumericType rayWeight,
                         const Triple<NumericType> &rayDir,
                         const Triple<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
+                        const unsigned int primID, const int,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &Rng) override final {
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     NumericType cosTheta = -DotProduct(rayDir, geomNormal);
 
     localData.getVectorData(0)[primID] +=
@@ -100,7 +100,7 @@ public:
                     const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &Rng) override final {
+                    RNG &rngState) override final {
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
@@ -117,13 +117,13 @@ public:
     std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
                                                      0.1 * energy_);
     do {
-      newEnergy = normalDist(Rng);
+      newEnergy = normalDist(rngState);
     } while (newEnergy > energy_ || newEnergy < 0.);
 
     if (newEnergy > params_.thresholdEnergy) {
       energy_ = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, Rng, std::max(incAngle, minAngle_));
+          rayDir, geomNormal, rngState, std::max(incAngle, minAngle_));
       return std::pair<NumericType, Triple<NumericType>>{0., direction};
     } else {
       return std::pair<NumericType, Triple<NumericType>>{
@@ -131,9 +131,9 @@ public:
     }
   }
 
-  void initNew(viennaray::RNG &RNG) override final {
+  void initNew(RNG &rngState) override final {
     do {
-      energy_ = normalDist_(RNG);
+      energy_ = normalDist_(rngState);
     } while (energy_ < params_.thresholdEnergy);
   }
 

@@ -3,18 +3,23 @@
 #include "compact/psKDTree.hpp"
 
 #include "psDomain.hpp"
-#include "psLogger.hpp"
-#include "psUtils.hpp"
 
-#include <rayGeometry.hpp>
 #include <rayRNG.hpp>
 #include <rayReflection.hpp>
 
-template <class NumericType, int D> class psMeanFreePath {
-public:
-  psMeanFreePath() {}
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
+#include <vcUtil.hpp>
 
-  void setDomain(const psSmartPointer<psDomain<NumericType, D>> passedDomain) {
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType, int D> class MeanFreePath {
+public:
+  MeanFreePath() {}
+
+  void setDomain(const SmartPointer<Domain<NumericType, D>> passedDomain) {
     domain = passedDomain;
     cellSet = domain->getCellSet();
     numCells = cellSet->getNumberOfCells();
@@ -26,9 +31,7 @@ public:
     bulkLambda = passedBulkLambda;
   }
 
-  void setMaterial(const psMaterial passedMaterial) {
-    material = passedMaterial;
-  }
+  void setMaterial(const Material passedMaterial) { material = passedMaterial; }
 
   void setNumRaysPerCell(const NumericType passedNumRaysPerCell) {
     numRaysPerCell = passedNumRaysPerCell;
@@ -45,7 +48,7 @@ public:
   void enableSmoothing() { smoothing = true; }
 
   void apply() {
-    psLogger::getInstance().addInfo("Calculating mean free path ...").print();
+    Logger::getInstance().addInfo("Calculating mean free path ...").print();
     initGeometry();
     runKernel();
   }
@@ -69,8 +72,8 @@ private:
 #pragma omp for schedule(dynamic)
       for (long long idx = 0; idx < numRays; ++idx) {
 
-        if (threadNum == 0 && psLogger::getLogLevel() >= 4) {
-          psUtils::printProgress(idx, numRays);
+        if (threadNum == 0 && Logger::getLogLevel() >= 4) {
+          PrintProgress(idx, numRays);
 #ifdef VIENNAPS_PYTHON_BUILD
           if (PyErr_CheckSignals() != 0)
             throw pybind11::error_already_set();
@@ -78,11 +81,11 @@ private:
         }
 
         // particle specific RNG seed
-        auto particleSeed = rayInternal::tea<3>(idx, seed);
-        rayRNG RngState(particleSeed);
+        auto particleSeed = tea<3>(idx, seed);
+        RNG RngState(particleSeed);
 
         auto pointIdx = pointDist(RngState);
-        auto direction = rayReflectionDiffuse<NumericType, D>(
+        auto direction = viennaray::ReflectionDiffuse<NumericType, D>(
             surfaceNormals[pointIdx], RngState);
         auto cellIdx = getStartingCell(surfacePoints[pointIdx]);
         auto origin = cellSet->getCellCenter(cellIdx);
@@ -112,7 +115,7 @@ private:
                 continue;
               }
 
-              if (!psMaterialMap::isMaterial(materialIds->at(n), material)) {
+              if (!MaterialMap::isMaterial(materialIds->at(n), material)) {
                 hitState = true; // could be a hit
                 continue;
               }
@@ -174,7 +177,7 @@ private:
             // material reflection
             auto closestSurfacePoint = kdTree.findNearest(origin);
             assert(closestSurfacePoint->second < gridDelta);
-            direction = rayReflectionDiffuse<NumericType, D>(
+            direction = viennaray::ReflectionDiffuse<NumericType, D>(
                 surfaceNormals[closestSurfacePoint->first], RngState);
           }
         }
@@ -213,7 +216,7 @@ private:
     materialIds = cellSet->getScalarData("Material");
 #pragma omp parallel for
     for (int i = 0; i < numCells; i++) {
-      if (!psMaterialMap::isMaterial(materialIds->at(i), material))
+      if (!MaterialMap::isMaterial(materialIds->at(i), material))
         continue;
 
       if (smoothing) {
@@ -221,7 +224,7 @@ private:
         NumericType sum = 0;
         unsigned count = 0;
         for (const auto &n : neighbors) {
-          if (n < 0 || !psMaterialMap::isMaterial(materialIds->at(n), material))
+          if (n < 0 || !MaterialMap::isMaterial(materialIds->at(n), material))
             continue;
           sum += result[n];
           count++;
@@ -233,7 +236,7 @@ private:
       }
     }
 
-    if (psLogger::getLogLevel() >= 4) {
+    if (Logger::getLogLevel() >= 4) {
       std::cout << std::endl;
     }
   }
@@ -252,20 +255,20 @@ private:
     numRays = static_cast<long long>(numCells * numRaysPerCell);
   }
 
-  int getStartingCell(const rayTriple<NumericType> &origin) const {
+  int getStartingCell(const Triple<NumericType> &origin) const {
     int cellIdx = cellSet->getIndex(origin);
     if (cellIdx < 0) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("No starting cell found for ray " +
                     std::to_string(origin[0]) + " " +
                     std::to_string(origin[1]) + " " + std::to_string(origin[2]))
           .print();
     }
 
-    if (!psMaterialMap::isMaterial(materialIds->at(cellIdx), material)) {
+    if (!MaterialMap::isMaterial(materialIds->at(cellIdx), material)) {
       const auto &neighbors = cellSet->getNeighbors(cellIdx);
       for (const auto &n : neighbors) {
-        if (n >= 0 && psMaterialMap::isMaterial(materialIds->at(n), material)) {
+        if (n >= 0 && MaterialMap::isMaterial(materialIds->at(n), material)) {
           cellIdx = n;
           break;
         }
@@ -275,12 +278,12 @@ private:
   }
 
   // https://gamedev.stackexchange.com/a/18459
-  static bool intersectLineBox(const rayTriple<NumericType> &origin,
-                               const rayTriple<NumericType> &direction,
-                               const rayTriple<NumericType> &min,
-                               const rayTriple<NumericType> &max,
+  static bool intersectLineBox(const Triple<NumericType> &origin,
+                               const Triple<NumericType> &direction,
+                               const Triple<NumericType> &min,
+                               const Triple<NumericType> &max,
                                NumericType &distance) {
-    rayTriple<NumericType> t1, t2;
+    Triple<NumericType> t1, t2;
     for (int i = 0; i < D; ++i) {
       // direction is inverted
       t1[i] = (min[i] - origin[i]) * direction[i];
@@ -306,8 +309,7 @@ private:
     return false;
   }
 
-  static void randomDirection(rayTriple<NumericType> &direction,
-                              rayRNG &rngState) {
+  static void randomDirection(Triple<NumericType> &direction, RNG &rngState) {
     std::uniform_real_distribution<NumericType> dist(-1, 1);
     for (int i = 0; i < D; ++i) {
       direction[i] = dist(rngState);
@@ -316,9 +318,9 @@ private:
   }
 
 private:
-  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
-  psSmartPointer<csDenseCellSet<NumericType, D>> cellSet = nullptr;
-  psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
+  SmartPointer<Domain<NumericType, D>> domain = nullptr;
+  SmartPointer<viennacs::DenseCellSet<NumericType, D>> cellSet = nullptr;
+  KDTree<NumericType, std::array<NumericType, 3>> kdTree;
 
   std::vector<NumericType> *materialIds;
   std::vector<std::array<NumericType, 3>> surfaceNormals;
@@ -333,5 +335,7 @@ private:
   long long numRays = 0;
   NumericType numRaysPerCell = 1000;
   bool smoothing = true;
-  psMaterial material = psMaterial::GAS;
+  Material material = Material::GAS;
 };
+
+} // namespace viennaps

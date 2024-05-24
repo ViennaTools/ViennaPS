@@ -13,7 +13,9 @@
 #include <type_traits>
 #include <unordered_map>
 
-namespace psUtils {
+namespace viennaps {
+
+namespace utils {
 
 // Checks if a string starts with a - or not
 [[nodiscard]] inline bool isSigned(const std::string &s) {
@@ -115,7 +117,7 @@ parseConfigStream(std::istream &input) {
 
 // Opens a file and forwards its stream to the config stream parser.
 inline std::unordered_map<std::string, std::string>
-readConfigFile(const std::string &filename) {
+readFile(const std::string &filename) {
   std::ifstream f(filename);
   if (!f.is_open()) {
     std::cout << "Failed to open config file '" << filename << "'\n";
@@ -185,9 +187,7 @@ std::string arrayToString(const std::array<NumericType, D> arr) {
 struct Parameters {
   std::unordered_map<std::string, std::string> m;
 
-  void readConfigFile(const std::string &fileName) {
-    m = psUtils::readConfigFile(fileName);
-  }
+  void readConfigFile(const std::string &fileName) { m = readFile(fileName); }
 
   template <typename T = double>
   [[nodiscard]] T get(const std::string &key) const {
@@ -222,4 +222,5 @@ convertBoundaryCondition(lsBoundaryConditionEnum<D> originalBoundaryCondition) {
   return viennaray::BoundaryCondition::IGNORE;
 }
 
-}; // namespace psUtils
+}; // namespace utils
+} // namespace viennaps

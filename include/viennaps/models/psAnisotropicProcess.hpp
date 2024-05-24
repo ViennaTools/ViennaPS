@@ -95,11 +95,11 @@ public:
 
 // Model for an anisotropic process, like selective epitaxy or wet etching.
 template <typename NumericType, int D>
-class psAnisotropicProcess : public ProcessModel<NumericType, D> {
+class AnisotropicProcess : public ProcessModel<NumericType, D> {
 public:
   // The constructor expects the materials where epitaxy is allowed including
   // the corresponding rates.
-  psAnisotropicProcess(
+  AnisotropicProcess(
       const std::vector<std::pair<Material, NumericType>> pMaterials)
       : materials(pMaterials) {
     if constexpr (D == 2) {
@@ -112,7 +112,7 @@ public:
     initialize();
   }
 
-  psAnisotropicProcess(
+  AnisotropicProcess(
       const Triple<NumericType> passedDir100,
       const Triple<NumericType> passedDir010, const NumericType passedR100,
       const NumericType passedR110, const NumericType passedR111,
