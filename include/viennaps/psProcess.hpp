@@ -1,56 +1,52 @@
 #pragma once
 
-#include "psLogger.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
+#include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
+#include <lsVTKWriter.hpp>
 
 #include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
+namespace viennaps {
+
+using namespace viennacore;
+
 /// This class server as the main process tool, applying a user- or pre-defined
 /// process model to a domain. Depending on the user inputs surface advection, a
 /// single callback function or a geometric advection is applied.
-template <typename NumericType, int D> class psProcess {
+template <typename NumericType, int D> class Process {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
 
 public:
-  psProcess() {}
-  psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain)
-      : domain(passedDomain) {}
+  Process() {}
+  Process(psDomainType passedDomain) : domain(passedDomain) {}
   // Constructor for a process with a pre-configured process model.
-  template <typename ProcessModelType>
-  psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain,
-            psSmartPointer<ProcessModelType> passedProcessModel,
-            const NumericType passedDuration = 0.)
-      : domain(passedDomain), processDuration(passedDuration) {
-    model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
-        passedProcessModel);
-  }
+  Process(psDomainType passedDomain,
+          SmartPointer<ProcessModel<NumericType, D>> passedProcessModel,
+          const NumericType passedDuration = 0.)
+      : domain(passedDomain), model(passedProcessModel),
+        processDuration(passedDuration) {}
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
   // psProcessModel class.
-  template <typename ProcessModelType,
-            lsConcepts::IsBaseOf<psProcessModel<NumericType, D>,
-                                 ProcessModelType> = lsConcepts::assignable>
-  void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
-    model = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
-        passedProcessModel);
+  void setProcessModel(
+      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
+    model = passedProcessModel;
   }
 
   // Set the process domain.
-  void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
-    domain = passedDomain;
-  }
+  void setDomain(psDomainType passedDomain) { domain = passedDomain; }
 
   // Set the source direction, where the rays should be traced from.
-  void setSourceDirection(rayTraceDirection passedDirection) {
+  void setSourceDirection(viennaray::TraceDirection passedDirection) {
     sourceDirection = passedDirection;
   }
 
@@ -110,10 +106,10 @@ public:
 
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
-  psSmartPointer<lsMesh<NumericType>> calculateFlux() const {
+  SmartPointer<lsMesh<NumericType>> calculateFlux() const {
 
     // Generate disk mesh from domain
-    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
     lsToDiskMesh<NumericType, D> meshConverter(mesh);
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -121,20 +117,20 @@ public:
     meshConverter.apply();
 
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning(
               "Coverages are not supported for single-pass flux calculation.")
           .print();
       return mesh;
     }
 
-    rayBoundaryCondition rayBoundaryCondition[D];
-    rayTrace<NumericType, D> rayTracer;
+    viennaray::BoundaryCondition rayBoundaryCondition[D];
+    viennaray::Trace<NumericType, D> rayTracer;
 
     // Map the domain boundary to the ray tracing boundaries
     if (ignoreFluxBoundaries) {
       for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = rayBoundaryCondition::IGNORE;
+        rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
     } else {
       for (unsigned i = 0; i < D; ++i)
         rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
@@ -148,11 +144,11 @@ public:
     auto source = model->getSource();
     if (source) {
       rayTracer.setSource(source);
-      psLogger::getInstance().addInfo("Using custom source.").print();
+      Logger::getInstance().addInfo("Using custom source.").print();
     }
     auto primaryDirection = model->getPrimaryDirection();
     if (primaryDirection) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addInfo("Using primary direction: " +
                    psUtils::arrayToString(primaryDirection.value()))
           .print();
@@ -191,7 +187,7 @@ public:
   void apply() {
     /* ---------- Process Setup --------- */
     if (!model) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No process model passed to psProcess.")
           .print();
       return;
@@ -199,7 +195,7 @@ public:
     const auto name = model->getProcessName().value_or("default");
 
     if (!domain) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No domain passed to psProcess.")
           .print();
       return;
@@ -207,7 +203,7 @@ public:
 
     if (model->getGeometricModel()) {
       model->getGeometricModel()->setDomain(domain);
-      psLogger::getInstance().addInfo("Applying geometric model...").print();
+      Logger::getInstance().addInfo("Applying geometric model...").print();
       model->getGeometricModel()->apply();
       return;
     }
@@ -218,7 +214,7 @@ public:
         model->getAdvectionCallback()->setDomain(domain);
         model->getAdvectionCallback()->applyPreAdvect(0);
       } else {
-        psLogger::getInstance()
+        Logger::getInstance()
             .addWarning("No advection callback passed to psProcess.")
             .print();
       }
@@ -226,28 +222,28 @@ public:
     }
 
     if (!model->getSurfaceModel()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No surface model passed to psProcess.")
           .print();
       return;
     }
 
     if (!model->getVelocityField()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No velocity field passed to psProcess.")
           .print();
       return;
     }
 
-    psUtils::Timer processTimer;
+    Timer processTimer;
     processTimer.start();
 
     double remainingTime = processDuration;
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta = domain->getGrid().getGridDelta();
 
-    auto diskMesh = lsSmartPointer<lsMesh<NumericType>>::New();
-    auto translator = lsSmartPointer<translatorType>::New();
+    auto diskMesh = SmartPointer<lsMesh<NumericType>>::New();
+    auto translator = SmartPointer<translatorType>::New();
     lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
     if (domain->getMaterialMap() &&
@@ -255,7 +251,7 @@ public:
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
+    auto transField = lsSmartPointer<TranslationField<NumericType>>::New(
         model->getVelocityField(), domain->getMaterialMap());
     transField->setTranslator(translator);
 
@@ -272,14 +268,14 @@ public:
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = !model->getParticleTypes().empty();
 
-    rayBoundaryCondition rayBoundaryCondition[D];
-    rayTrace<NumericType, D> rayTracer;
+    viennaray::BoundaryCondition rayBoundaryCondition[D];
+    viennaray::Trace<NumericType, D> rayTracer;
 
     if (useRayTracing) {
       // Map the domain boundary to the ray tracing boundaries
       if (ignoreFluxBoundaries) {
         for (unsigned i = 0; i < D; ++i)
-          rayBoundaryCondition[i] = rayBoundaryCondition::IGNORE;
+          rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
       } else {
         for (unsigned i = 0; i < D; ++i)
           rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
@@ -292,7 +288,7 @@ public:
       rayTracer.setUseRandomSeeds(useRandomSeeds_);
       auto primaryDirection = model->getPrimaryDirection();
       if (primaryDirection) {
-        psLogger::getInstance()
+        Logger::getInstance()
             .addInfo("Using primary direction: " +
                      psUtils::arrayToString(primaryDirection.value()))
             .print();
@@ -302,7 +298,7 @@ public:
       auto source = model->getSource();
       if (source) {
         rayTracer.setSource(source);
-        psLogger::getInstance().addInfo("Using custom source.").print();
+        Logger::getInstance().addInfo("Using custom source.").print();
       }
 
       // initialize particle data logs
@@ -328,9 +324,9 @@ public:
         model->getSurfaceModel()->getProcessParameters() != nullptr;
 
     if (useProcessParams)
-      psLogger::getInstance().addInfo("Using process parameters.").print();
+      Logger::getInstance().addInfo("Using process parameters.").print();
     if (useAdvectionCallback)
-      psLogger::getInstance().addInfo("Using advection callback.").print();
+      Logger::getInstance().addInfo("Using advection callback.").print();
 
     bool useCoverages = false;
 
@@ -340,12 +336,12 @@ public:
     if (!coveragesInitialized_)
       model->getSurfaceModel()->initializeCoverages(numPoints);
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
-      psUtils::Timer timer;
+      Timer timer;
       useCoverages = true;
-      psLogger::getInstance().addInfo("Using coverages.").print();
+      Logger::getInstance().addInfo("Using coverages.").print();
       if (!coveragesInitialized_) {
         timer.start();
-        psLogger::getInstance().addInfo("Initializing coverages ... ").print();
+        Logger::getInstance().addInfo("Initializing coverages ... ").print();
         auto points = diskMesh->getNodes();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         auto materialIds =
@@ -362,7 +358,7 @@ public:
             throw pybind11::error_already_set();
 #endif
           // move coverages to the ray tracer
-          rayTracingData<NumericType> rayTraceCoverages =
+          viennaray::TracingData<NumericType> rayTraceCoverages =
               movePointDataToRayData(model->getSurfaceModel()->getCoverages());
           if (useProcessParams) {
             // store scalars in addition to coverages
@@ -378,7 +374,7 @@ public:
           }
           rayTracer.setGlobalData(rayTraceCoverages);
 
-          auto rates = psSmartPointer<psPointData<NumericType>>::New();
+          auto rates = SmartPointer<lsPointData<NumericType>>::New();
 
           std::size_t particleIdx = 0;
           for (auto &particle : model->getParticleTypes()) {
@@ -415,7 +411,7 @@ public:
                                  rayTraceCoverages);
           model->getSurfaceModel()->updateCoverages(rates, materialIds);
 
-          if (psLogger::getLogLevel() >= 3) {
+          if (Logger::getLogLevel() >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
             for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
               auto label = coverages->getScalarDataLabel(idx);
@@ -429,7 +425,7 @@ public:
             }
             printDiskMesh(diskMesh, name + "_covIinit_" +
                                         std::to_string(iterations) + ".vtp");
-            psLogger::getInstance()
+            Logger::getInstance()
                 .addInfo("Iteration: " + std::to_string(iterations))
                 .print();
           }
@@ -437,7 +433,7 @@ public:
         coveragesInitialized_ = true;
 
         timer.finish();
-        psLogger::getInstance()
+        Logger::getInstance()
             .addTiming("Coverage initialization", timer)
             .print();
       }
@@ -445,9 +441,9 @@ public:
 
     double previousTimeStep = 0.;
     size_t counter = 0;
-    psUtils::Timer rtTimer;
-    psUtils::Timer callbackTimer;
-    psUtils::Timer advTimer;
+    Timer rtTimer;
+    Timer callbackTimer;
+    Timer advTimer;
     while (remainingTime > 0.) {
       // We need additional signal handling when running the C++ code from the
       // Python bindings to allow interrupts in the Python scripts
@@ -456,7 +452,7 @@ public:
         throw pybind11::error_already_set();
 #endif
 
-      auto rates = psSmartPointer<psPointData<NumericType>>::New();
+      auto rates = SmartPointer<lsPointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
@@ -469,7 +465,7 @@ public:
         rayTracer.setMaterialIds(materialIds);
 
         // move coverages to ray tracer
-        rayTracingData<NumericType> rayTraceCoverages;
+        viennaray::TracingData<NumericType> rayTraceCoverages;
         if (useCoverages) {
           rayTraceCoverages =
               movePointDataToRayData(model->getSurfaceModel()->getCoverages());
@@ -523,7 +519,7 @@ public:
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
         rtTimer.finish();
-        psLogger::getInstance()
+        Logger::getInstance()
             .addTiming("Top-down flux calculation", rtTimer)
             .print();
       }
@@ -536,7 +532,7 @@ public:
         transField->buildKdTree(points);
 
       // print debug output
-      if (psLogger::getLogLevel() >= 4) {
+      if (Logger::getLogLevel() >= 4) {
         if (printTime >= 0. &&
             ((processDuration - remainingTime) - printTime * counter) > 0.) {
           if (velocities)
@@ -571,12 +567,12 @@ public:
         bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
             processDuration - remainingTime);
         callbackTimer.finish();
-        psLogger::getInstance()
+        Logger::getInstance()
             .addTiming("Advection callback pre-advect", callbackTimer)
             .print();
 
         if (!continueProcess) {
-          psLogger::getInstance()
+          Logger::getInstance()
               .addInfo("Process stopped early by AdvectionCallback during "
                        "`preAdvect`.")
               .print();
@@ -596,7 +592,7 @@ public:
       advTimer.start();
       advectionKernel.apply();
       advTimer.finish();
-      psLogger::getInstance().addTiming("Surface advection", advTimer).print();
+      Logger::getInstance().addTiming("Surface advection", advTimer).print();
 
       // update the translator to retrieve the correct coverages from the LS
       meshConverter.apply();
@@ -610,11 +606,11 @@ public:
         bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
             advectionKernel.getAdvectedTime());
         callbackTimer.finish();
-        psLogger::getInstance()
+        Logger::getInstance()
             .addTiming("Advection callback post-advect", callbackTimer)
             .print();
         if (!continueProcess) {
-          psLogger::getInstance()
+          Logger::getInstance()
               .addInfo("Process stopped early by AdvectionCallback during "
                        "`postAdvect`.")
               .print();
@@ -625,33 +621,33 @@ public:
       previousTimeStep = advectionKernel.getAdvectedTime();
       remainingTime -= previousTimeStep;
 
-      if (psLogger::getLogLevel() >= 2) {
+      if (Logger::getLogLevel() >= 2) {
         std::stringstream stream;
         stream << std::fixed << std::setprecision(4)
                << "Process time: " << processDuration - remainingTime << " / "
                << processDuration;
-        psLogger::getInstance().addInfo(stream.str()).print();
+        Logger::getInstance().addInfo(stream.str()).print();
       }
     }
 
     processTime = processDuration - remainingTime;
     processTimer.finish();
 
-    psLogger::getInstance()
+    Logger::getInstance()
         .addTiming("\nProcess " + name, processTimer)
         .addTiming("Surface advection total time",
                    advTimer.totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
         .print();
     if (useRayTracing) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addTiming("Top-down flux calculation total time",
                      rtTimer.totalDuration * 1e-9,
                      processTimer.totalDuration * 1e-9)
           .print();
     }
     if (useAdvectionCallback) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addTiming("Advection callback total time",
                      callbackTimer.totalDuration * 1e-9,
                      processTimer.totalDuration * 1e-9)
@@ -676,14 +672,14 @@ public:
   }
 
 private:
-  void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
+  void printDiskMesh(SmartPointer<lsMesh<NumericType>> mesh,
                      std::string name) const {
-    psVTKWriter<NumericType>(mesh, std::move(name)).apply();
+    lsVTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
-  rayTracingData<NumericType> movePointDataToRayData(
-      psSmartPointer<psPointData<NumericType>> pointData) const {
-    rayTracingData<NumericType> rayData;
+  viennaray::TracingData<NumericType> movePointDataToRayData(
+      SmartPointer<lsPointData<NumericType>> pointData) const {
+    viennaray::TracingData<NumericType> rayData;
     const auto numData = pointData->getScalarDataSize();
     rayData.setNumberOfVectorData(numData);
     for (size_t i = 0; i < numData; ++i) {
@@ -696,8 +692,8 @@ private:
   }
 
   void
-  moveRayDataToPointData(psSmartPointer<psPointData<NumericType>> pointData,
-                         rayTracingData<NumericType> &rayData) const {
+  moveRayDataToPointData(SmartPointer<lsPointData<NumericType>> pointData,
+                         viennaray::TracingData<NumericType> &rayData) const {
     pointData->clear();
     const auto numData = rayData.getVectorData().size();
     for (size_t i = 0; i < numData; ++i)
@@ -705,9 +701,8 @@ private:
                                       rayData.getVectorDataLabel(i));
   }
 
-  void
-  moveCoveragesToTopLS(lsSmartPointer<translatorType> translator,
-                       psSmartPointer<psPointData<NumericType>> coverages) {
+  void moveCoveragesToTopLS(SmartPointer<translatorType> translator,
+                            SmartPointer<lsPointData<NumericType>> coverages) {
     auto topLS = domain->getLevelSets()->back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
@@ -727,8 +722,8 @@ private:
   }
 
   void updateCoveragesFromAdvectedSurface(
-      lsSmartPointer<translatorType> translator,
-      psSmartPointer<psPointData<NumericType>> coverages) const {
+      SmartPointer<translatorType> translator,
+      SmartPointer<lsPointData<NumericType>> coverages) const {
     auto topLS = domain->getLevelSets()->back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
@@ -742,14 +737,15 @@ private:
   }
 
   psDomainType domain;
-  psSmartPointer<psProcessModel<NumericType, D>> model;
+  SmartPointer<ProcessModel<NumericType, D>> model;
   NumericType processDuration;
-  rayTraceDirection sourceDirection =
-      D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
+  viennaray::TraceDirection sourceDirection =
+      D == 3 ? viennaray::TraceDirection::POS_Z
+             : viennaray::TraceDirection::POS_Y;
   lsIntegrationSchemeEnum integrationScheme =
       lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   unsigned raysPerPoint = 1000;
-  std::vector<rayDataLog<NumericType>> particleDataLogs;
+  std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds_ = true;
   bool smoothFlux = true;
   bool ignoreFluxBoundaries = false;
@@ -759,3 +755,5 @@ private:
   NumericType processTime = 0.;
   NumericType timeStepRatio = 0.4999;
 };
+
+} // namespace viennaps

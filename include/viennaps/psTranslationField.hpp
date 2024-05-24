@@ -6,19 +6,27 @@
 
 #include <lsVelocityField.hpp>
 
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
+#include <vcVectorUtil.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
 template <typename NumericType>
-class psTranslationField : public lsVelocityField<NumericType> {
+class TranslationField : public lsVelocityField<NumericType> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
 public:
-  psTranslationField(psSmartPointer<psVelocityField<NumericType>> velocityField,
-                     psSmartPointer<psMaterialMap> materialMap)
+  TranslationField(SmartPointer<VelocityField<NumericType>> velocityField,
+                   SmartPointer<MaterialMap> materialMap)
       : translationMethod_(velocityField->getTranslationFieldOptions()),
         modelVelocityField_(velocityField), materialMap_(materialMap) {}
 
-  NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
+  NumericType getScalarVelocity(const Triple<NumericType> &coordinate,
                                 int material,
-                                const std::array<NumericType, 3> &normalVector,
+                                const Triple<NumericType> &normalVector,
                                 unsigned long pointId) {
     translateLsId(pointId, coordinate);
     if (materialMap_)
@@ -27,10 +35,10 @@ public:
                                                   normalVector, pointId);
   }
 
-  std::array<NumericType, 3>
-  getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
-                    const std::array<NumericType, 3> &normalVector,
-                    unsigned long pointId) {
+  Triple<NumericType> getVectorVelocity(const Triple<NumericType> &coordinate,
+                                        int material,
+                                        const Triple<NumericType> &normalVector,
+                                        unsigned long pointId) {
     translateLsId(pointId, coordinate);
     if (materialMap_)
       material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
@@ -40,30 +48,30 @@ public:
 
   NumericType
   getDissipationAlpha(int direction, int material,
-                      const std::array<NumericType, 3> &centralDifferences) {
+                      const Triple<NumericType> &centralDifferences) {
     if (materialMap_)
       material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
     return modelVelocityField_->getDissipationAlpha(direction, material,
                                                     centralDifferences);
   }
 
-  void setTranslator(psSmartPointer<TranslatorType> translator) {
+  void setTranslator(SmartPointer<TranslatorType> translator) {
     translator_ = translator;
   }
 
-  void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
+  void buildKdTree(const std::vector<Triple<NumericType>> &points) {
     kdTree_.setPoints(points);
     kdTree_.build();
   }
 
   void translateLsId(unsigned long &lsId,
-                     const std::array<NumericType, 3> &coordinate) const {
+                     const Triple<NumericType> &coordinate) const {
     switch (translationMethod_) {
     case 1: {
       if (auto it = translator_->find(lsId); it != translator_->end()) {
         lsId = it->second;
       } else {
-        psLogger::getInstance()
+        Logger::getInstance()
             .addWarning("Could not extend velocity from surface to LS point")
             .print();
       }
@@ -80,9 +88,11 @@ public:
   }
 
 private:
-  psSmartPointer<TranslatorType> translator_;
-  psKDTree<NumericType, std::array<NumericType, 3>> kdTree_;
-  const psSmartPointer<psVelocityField<NumericType>> modelVelocityField_;
-  const psSmartPointer<psMaterialMap> materialMap_;
+  SmartPointer<TranslatorType> translator_;
+  KDTree<NumericType, Triple<NumericType>> kdTree_;
+  const SmartPointer<VelocityField<NumericType>> modelVelocityField_;
+  const SmartPointer<MaterialMap> materialMap_;
   const int translationMethod_ = 1;
 };
+
+} // namespace viennaps

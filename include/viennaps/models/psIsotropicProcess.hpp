@@ -5,9 +5,16 @@
 #include "../psSurfaceModel.hpp"
 #include "../psVelocityField.hpp"
 
-namespace IsotropicImplementation {
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+namespace impl {
+
 template <class NumericType, int D>
-class IsotropicVelocityField : public psVelocityField<NumericType> {
+class IsotropicVelocityField : public VelocityField<NumericType> {
   const NumericType rate_ = 1.;
   const std::vector<int> maskMaterials_;
 
@@ -39,32 +46,32 @@ private:
     return false;
   }
 };
-} // namespace IsotropicImplementation
+} // namespace impl
 
 /// Isotropic etching with one masking material.
 template <typename NumericType, int D>
-class psIsotropicProcess : public psProcessModel<NumericType, D> {
+class IsotropicProcess : public ProcessModel<NumericType, D> {
 public:
-  psIsotropicProcess(const NumericType isotropicRate,
-                     const psMaterial maskMaterial = psMaterial::None) {
+  IsotropicProcess(const NumericType isotropicRate,
+                   const Material maskMaterial = Material::None) {
     // default surface model
-    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
     std::vector<int> maskMaterialsInt = {static_cast<int>(maskMaterial)};
     auto velField =
-        psSmartPointer<IsotropicImplementation::IsotropicVelocityField<
-            NumericType, D>>::New(isotropicRate, std::move(maskMaterialsInt));
+        SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
+            isotropicRate, std::move(maskMaterialsInt));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("IsotropicProcess");
   }
 
-  psIsotropicProcess(const NumericType isotropicRate,
-                     const std::vector<psMaterial> maskMaterials) {
+  IsotropicProcess(const NumericType isotropicRate,
+                   const std::vector<Material> maskMaterials) {
     // default surface model
-    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
     std::vector<int> maskMaterialsInt;
@@ -72,11 +79,13 @@ public:
       maskMaterialsInt.push_back(static_cast<int>(mat));
     }
     auto velField =
-        psSmartPointer<IsotropicImplementation::IsotropicVelocityField<
-            NumericType, D>>::New(isotropicRate, std::move(maskMaterialsInt));
+        SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
+            isotropicRate, std::move(maskMaterialsInt));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("IsotropicProcess");
   }
 };
+
+} // namespace viennaps
