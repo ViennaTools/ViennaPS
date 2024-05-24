@@ -8,22 +8,26 @@
 
 #include <lsAdvect.hpp>
 
-namespace OxideRegrowthImplementation {
+namespace viennaps {
+
+using namespace viennacore;
+
+namespace impl {
 template <class NumericType>
-class SelectiveEtchingVelocityField : public psVelocityField<NumericType> {
+class SelectiveEtchingVelocityField : public VelocityField<NumericType> {
 public:
   SelectiveEtchingVelocityField(const NumericType pRate,
                                 const NumericType pOxideRate)
       : rate(pRate), oxide_rate(pOxideRate) {}
 
-  NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
+  NumericType getScalarVelocity(const Triple<NumericType> &coordinate,
                                 int matId,
-                                const std::array<NumericType, 3> &normalVector,
+                                const Triple<NumericType> &normalVector,
                                 unsigned long pointId) override {
-    auto material = psMaterialMap::mapToMaterial(matId);
-    if (material == psMaterial::Si3N4) {
+    auto material = MaterialMap::mapToMaterial(matId);
+    if (material == Material::Si3N4) {
       return -rate;
-    } else if (material == psMaterial::SiO2) {
+    } else if (material == Material::SiO2) {
       return -oxide_rate;
     } else {
       return 0.;
@@ -40,17 +44,16 @@ private:
 template <class NumericType>
 class RedepositionVelocityField : public lsVelocityField<NumericType> {
 public:
-  RedepositionVelocityField(
-      const std::vector<NumericType> &passedVelocities,
-      const std::vector<std::array<NumericType, 3>> &points)
+  RedepositionVelocityField(const std::vector<NumericType> &passedVelocities,
+                            const std::vector<Triple<NumericType>> &points)
       : velocities(passedVelocities), kdTree(points) {
     assert(points.size() == passedVelocities.size());
     kdTree.build();
   }
 
-  NumericType getScalarVelocity(const std::array<NumericType, 3> &coordinate,
+  NumericType getScalarVelocity(const Triple<NumericType> &coordinate,
                                 int matId,
-                                const std::array<NumericType, 3> &normalVector,
+                                const Triple<NumericType> &normalVector,
                                 unsigned long pointId) override {
     auto nearest = kdTree.findNearest(coordinate);
     assert(nearest->first < velocities.size());
@@ -59,12 +62,12 @@ public:
 
 private:
   const std::vector<NumericType> &velocities;
-  psKDTree<NumericType, std::array<NumericType, 3>> kdTree;
+  KDTree<NumericType, Triple<NumericType>> kdTree;
 };
 
 template <class T, int D>
-class ByproductDynamics : public psAdvectionCallback<T, D> {
-  using psAdvectionCallback<T, D>::domain;
+class ByproductDynamics : public AdvectionCallback<T, D> {
+  using AdvectionCallback<T, D>::domain;
 
   const T diffusionCoefficient = 1.;
   const T sink = 1;
@@ -101,8 +104,8 @@ public:
     auto &cellSet = domain->getCellSet();
 
     // redeposition
-    auto mesh = psSmartPointer<lsMesh<T>>::New();
-    psToDiskMesh<T, D>(domain, mesh).apply();
+    auto mesh = SmartPointer<lsMesh<T>>::New();
+    ToDiskMesh<T, D>(domain, mesh).apply();
 
     const auto &points = mesh->nodes;
     auto materialIds = mesh->getCellData().getScalarData("MaterialIds");
@@ -111,8 +114,8 @@ public:
     nodes.clear();
     nodes.reserve(points.size());
     for (size_t i = 0; i < points.size(); i++) {
-      auto material = psMaterialMap::mapToMaterial(materialIds->at(i));
-      if (material == psMaterial::Si3N4)
+      auto material = MaterialMap::mapToMaterial(materialIds->at(i));
+      if (material == Material::Si3N4)
         nodes.push_back(points[i]);
     }
     nodes.shrink_to_fit();
@@ -125,25 +128,25 @@ public:
       auto cellMatIds = cellSet->getScalarData("Material");
 
       for (size_t i = 0; i < numPoints; ++i) {
-        auto surfaceMaterial = psMaterialMap::mapToMaterial(materialIds->at(i));
+        auto surfaceMaterial = MaterialMap::mapToMaterial(materialIds->at(i));
         const auto &node = points[i];
 
         // redeposit only on oxide
-        if ((surfaceMaterial == psMaterial::SiO2 ||
-             surfaceMaterial == psMaterial::Polymer) &&
+        if ((surfaceMaterial == Material::SiO2 ||
+             surfaceMaterial == Material::Polymer) &&
             node[D - 1] < top) {
           auto cellIdx = cellSet->getIndex(node);
           int n = 0;
           if (cellIdx == -1)
             continue;
-          if (psMaterialMap::mapToMaterial(cellMatIds->at(cellIdx)) ==
-              psMaterial::GAS) {
+          if (MaterialMap::mapToMaterial(cellMatIds->at(cellIdx)) ==
+              Material::GAS) {
             depoRate[i] = ff->at(cellIdx);
             n++;
           }
           for (const auto ni : cellSet->getNeighbors(cellIdx)) {
-            if (ni != -1 && psMaterialMap::mapToMaterial(cellMatIds->at(ni)) ==
-                                psMaterial::GAS) {
+            if (ni != -1 && MaterialMap::mapToMaterial(cellMatIds->at(ni)) ==
+                                Material::GAS) {
               depoRate[i] += ff->at(ni);
               n++;
             }
@@ -163,7 +166,7 @@ public:
 
       // advect surface
       auto redepoVelField =
-          psSmartPointer<RedepositionVelocityField<T>>::New(depoRate, points);
+          SmartPointer<RedepositionVelocityField<T>>::New(depoRate, points);
 
       lsAdvect<T, D> advectionKernel;
       advectionKernel.insertNextLevelSet(domain->getLevelSets()->back());
@@ -195,7 +198,7 @@ public:
   }
 
 private:
-  void diffuseByproducts(psSmartPointer<csDenseCellSet<T, D>> cellSet,
+  void diffuseByproducts(SmartPointer<viennacs::DenseCellSet<T, D>> cellSet,
                          const T timeStep) {
     auto data = cellSet->getFillingFractions();
     auto materialIds = cellSet->getScalarData("Material");
@@ -216,7 +219,7 @@ private:
 
 #pragma omp parallel for
       for (int e = 0; e < data->size(); e++) {
-        if (!psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
+        if (!MaterialMap::isMaterial(materialIds->at(e), Material::GAS)) {
           continue;
         }
 
@@ -229,7 +232,7 @@ private:
         auto cellNeighbors = cellSet->getNeighbors(e);
         for (const auto &n : cellNeighbors) {
           if (n == -1 ||
-              !psMaterialMap::isMaterial(materialIds->at(n), psMaterial::GAS))
+              !MaterialMap::isMaterial(materialIds->at(n), Material::GAS))
             continue;
 
           solution[e] += data->at(n);
@@ -253,9 +256,8 @@ private:
           assert((cellNeighbors[2] != -1 && D == 2) ||
                  (cellNeighbors[4] != -1 && D == 3) &&
                      "holeStream up neighbor wrong");
-          if (psMaterialMap::isMaterial(
-                  materialIds->at(cellNeighbors[2 * (D - 1)]),
-                  psMaterial::GAS)) {
+          if (MaterialMap::isMaterial(
+                  materialIds->at(cellNeighbors[2 * (D - 1)]), Material::GAS)) {
             solution[e] -= holeC * (((coord[D - 1] - gridDelta) / top) *
                                         data->at(cellNeighbors[2 * (D - 1)]) -
                                     (coord[D - 1] / top) * data->at(e));
@@ -265,8 +267,8 @@ private:
             // left side scallop - use forward difference
             assert(cellNeighbors[1] != -1 &&
                    "scallopStream right neighbor wrong");
-            if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[1]),
-                                          psMaterial::GAS)) {
+            if (MaterialMap::isMaterial(materialIds->at(cellNeighbors[1]),
+                                        Material::GAS)) {
               solution[e] -=
                   scallopC * (data->at(cellNeighbors[1]) - data->at(e));
             }
@@ -274,8 +276,8 @@ private:
             // right side scallop - use backward difference
             assert(cellNeighbors[0] != -1 &&
                    "scallopStream left neighbor wrong");
-            if (psMaterialMap::isMaterial(materialIds->at(cellNeighbors[0]),
-                                          psMaterial::GAS)) {
+            if (MaterialMap::isMaterial(materialIds->at(cellNeighbors[0]),
+                                        Material::GAS)) {
               solution[e] +=
                   scallopC * (data->at(e) - data->at(cellNeighbors[0]));
             }
@@ -288,7 +290,7 @@ private:
 
 #pragma omp parallel for shared(sum)
     for (int e = 0; e < data->size(); e++) {
-      if (!psMaterialMap::isMaterial(materialIds->at(e), psMaterial::GAS)) {
+      if (!MaterialMap::isMaterial(materialIds->at(e), Material::GAS)) {
         continue;
       }
 
@@ -297,38 +299,35 @@ private:
     }
   }
 };
-} // namespace OxideRegrowthImplementation
+} // namespace impl
 
 // The selective etching model works in accordance with the geometry generated
 // by psMakeStack
 template <class NumericType, int D>
-class psOxideRegrowth : public psProcessModel<NumericType, D> {
+class OxideRegrowth : public ProcessModel<NumericType, D> {
 public:
-  psOxideRegrowth(const NumericType nitrideEtchRate,
-                  const NumericType oxideEtchRate,
-                  const NumericType redepositionRate,
-                  const NumericType reDepositionThreshold,
-                  const NumericType redepositionTimeInt,
-                  const NumericType diffusionCoefficient,
-                  const NumericType sinkStrength,
-                  const NumericType scallopVelocity,
-                  const NumericType centerVelocity, const NumericType topHeight,
-                  const NumericType centerWidth, // 11 parameters
-                  const NumericType timeStabilityFactor = 0.245) {
+  OxideRegrowth(const NumericType nitrideEtchRate,
+                const NumericType oxideEtchRate,
+                const NumericType redepositionRate,
+                const NumericType reDepositionThreshold,
+                const NumericType redepositionTimeInt,
+                const NumericType diffusionCoefficient,
+                const NumericType sinkStrength,
+                const NumericType scallopVelocity,
+                const NumericType centerVelocity, const NumericType topHeight,
+                const NumericType centerWidth, // 11 parameters
+                const NumericType timeStabilityFactor = 0.245) {
 
-    auto velocityField = psSmartPointer<
-        OxideRegrowthImplementation::SelectiveEtchingVelocityField<
-            NumericType>>::New(nitrideEtchRate, oxideEtchRate);
+    auto velocityField =
+        SmartPointer<impl::SelectiveEtchingVelocityField<NumericType>>::New(
+            nitrideEtchRate, oxideEtchRate);
 
-    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
-    auto dynamics =
-        psSmartPointer<OxideRegrowthImplementation::ByproductDynamics<
-            NumericType, D>>::New(diffusionCoefficient, sinkStrength,
-                                  scallopVelocity, centerVelocity, topHeight,
-                                  centerWidth / 2., nitrideEtchRate,
-                                  redepositionRate, reDepositionThreshold,
-                                  redepositionTimeInt, timeStabilityFactor);
+    auto dynamics = SmartPointer<impl::ByproductDynamics<NumericType, D>>::New(
+        diffusionCoefficient, sinkStrength, scallopVelocity, centerVelocity,
+        topHeight, centerWidth / 2., nitrideEtchRate, redepositionRate,
+        reDepositionThreshold, redepositionTimeInt, timeStabilityFactor);
 
     this->setVelocityField(velocityField);
     this->setSurfaceModel(surfModel);
@@ -336,3 +335,5 @@ public:
     this->setProcessName("OxideRegrowth");
   }
 };
+
+} // namespace viennaps

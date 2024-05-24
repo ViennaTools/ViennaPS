@@ -1,15 +1,21 @@
 #include <psProcess.hpp>
-#include <psTestAssert.hpp>
+#include <vcTestAsserts.hpp>
 
-template <class NumericType, int D> void psRunTest() {
+namespace viennacore {
 
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  auto model = psSmartPointer<psProcessModel<NumericType, D>>::New();
+using namespace viennaps;
+
+template <class NumericType, int D> void RunTest() {
+
+  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  auto model = SmartPointer<ProcessModel<NumericType, D>>::New();
 
   // constructors
-  { psProcess<NumericType, D> process; }
-  { psProcess<NumericType, D> process(domain); }
-  { psProcess<NumericType, D> process(domain, model, 0.); }
+  { Process<NumericType, D> process; }
+  { Process<NumericType, D> process(domain); }
+  { Process<NumericType, D> process(domain, model, 0.); }
 }
 
-int main() { PSRUN_ALL_TESTS }
+} // namespace viennacore
+
+int main() { VC_RUN_ALL_TESTS }

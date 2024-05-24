@@ -101,6 +101,12 @@ CPMAddPackage(
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
 CPMFindPackage(
+  NAME ViennaCore
+  GIT_TAG main
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+
+CPMFindPackage(
   NAME ViennaRay
   VERSION 2.1.2
   GIT_TAG viennacore

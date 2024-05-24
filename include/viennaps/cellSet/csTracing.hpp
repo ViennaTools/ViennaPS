@@ -12,37 +12,42 @@
 #include <raySourceRandom.hpp>
 #include <rayUtil.hpp>
 
-template <class T, int D> class csTracing {
+namespace viennacs {
+
+using namespace viennacore;
+
+template <class T, int D> class Tracing {
 private:
-  lsSmartPointer<csDenseCellSet<T, D>> cellSet = nullptr;
-  std::unique_ptr<csAbstractParticle<T>> mParticle = nullptr;
+  SmartPointer<DenseCellSet<T, D>> cellSet = nullptr;
+  std::unique_ptr<AbstractParticle<T>> mParticle = nullptr;
 
   RTCDevice mDevice;
-  rayGeometry<T, D> mGeometry;
+  viennaray::Geometry<T, D> mGeometry;
   size_t mNumberOfRaysPerPoint = 0;
   size_t mNumberOfRaysFixed = 1000;
   T mGridDelta = 0;
-  rayBoundaryCondition mBoundaryConditions[D] = {};
-  const rayTraceDirection mSourceDirection =
-      D == 2 ? rayTraceDirection::POS_Y : rayTraceDirection::POS_Z;
+  viennaray::BoundaryCondition mBoundaryConditions[D] = {};
+  const viennaray::TraceDirection mSourceDirection =
+      D == 2 ? viennaray::TraceDirection::POS_Y
+             : viennaray::TraceDirection::POS_Z;
   bool mUseRandomSeeds = true;
   bool usePrimaryDirection = false;
-  rayTriple<T> primaryDirection = {0.};
+  Triple<T> primaryDirection = {0.};
   size_t mRunNumber = 0;
   int excludeMaterialId = -1;
   bool usePointSource = false;
-  csTriple<T> pointSourceOrigin = {0.};
-  csTriple<T> pointSourceDirection = {0.};
+  Triple<T> pointSourceOrigin = {0.};
+  Triple<T> pointSourceDirection = {0.};
 
 public:
-  csTracing() : mDevice(rtcNewDevice("hugepages=1")) {
+  Tracing() : mDevice(rtcNewDevice("hugepages=1")) {
     // TODO: currently only periodic boundary conditions are implemented in
-    // csTracingKernel
+    // TracingKernel
     for (int i = 0; i < D; i++)
-      mBoundaryConditions[i] = rayBoundaryCondition::PERIODIC;
+      mBoundaryConditions[i] = viennaray::BoundaryCondition::PERIODIC;
   }
 
-  ~csTracing() {
+  ~Tracing() {
     mGeometry.releaseGeometry();
     rtcReleaseDevice(mDevice);
   }
@@ -55,13 +60,13 @@ public:
         boundingBox, mSourceDirection, mGridDelta * rayInternal::DiskFactor<D>);
     auto traceSettings = rayInternal::getTraceSettings(mSourceDirection);
 
-    auto boundary = rayBoundary<T, D>(mDevice, boundingBox, mBoundaryConditions,
-                                      traceSettings);
+    auto boundary = viennaray::Boundary<T, D>(
+        mDevice, boundingBox, mBoundaryConditions, traceSettings);
 
-    std::array<rayTriple<T>, 3> orthoBasis;
+    std::array<Triple<T>, 3> orthoBasis;
     if (usePrimaryDirection) {
       orthoBasis = rayInternal::getOrthonormalBasis(primaryDirection);
-      psLogger::getInstance()
+      Logger::getInstance()
           .addInfo("Using primary direction: " +
                    std::to_string(primaryDirection[0]) + " " +
                    std::to_string(primaryDirection[1]) + " " +
@@ -70,24 +75,24 @@ public:
     }
 
     if (usePointSource) {
-      auto raySource = std::make_shared<csPointSource<T, D>>(
+      auto raySource = std::make_shared<PointSource<T, D>>(
           pointSourceOrigin, pointSourceDirection, traceSettings,
           mGeometry.getNumPoints());
 
-      csTracingKernel<T, D>(mDevice, mGeometry, boundary, std::move(raySource),
-                            mParticle, mNumberOfRaysPerPoint,
-                            mNumberOfRaysFixed, mUseRandomSeeds, mRunNumber++,
-                            cellSet, excludeMaterialId - 1)
+      TracingKernel<T, D>(mDevice, mGeometry, boundary, std::move(raySource),
+                          mParticle, mNumberOfRaysPerPoint, mNumberOfRaysFixed,
+                          mUseRandomSeeds, mRunNumber++, cellSet,
+                          excludeMaterialId - 1)
           .apply();
     } else {
-      auto raySource = std::make_shared<raySourceRandom<T, D>>(
+      auto raySource = std::make_shared<viennaray::SourceRandom<T, D>>(
           boundingBox, mParticle->getSourceDistributionPower(), traceSettings,
           mGeometry.getNumPoints(), usePrimaryDirection, orthoBasis);
 
-      csTracingKernel<T, D>(mDevice, mGeometry, boundary, std::move(raySource),
-                            mParticle, mNumberOfRaysPerPoint,
-                            mNumberOfRaysFixed, mUseRandomSeeds, mRunNumber++,
-                            cellSet, excludeMaterialId - 1)
+      TracingKernel<T, D>(mDevice, mGeometry, boundary, std::move(raySource),
+                          mParticle, mNumberOfRaysPerPoint, mNumberOfRaysFixed,
+                          mUseRandomSeeds, mRunNumber++, cellSet,
+                          excludeMaterialId - 1)
           .apply();
     }
 
@@ -95,12 +100,12 @@ public:
     boundary.releaseGeometry();
   }
 
-  void setCellSet(lsSmartPointer<csDenseCellSet<T, D>> passedCellSet) {
+  void setCellSet(SmartPointer<DenseCellSet<T, D>> passedCellSet) {
     cellSet = passedCellSet;
   }
 
-  void setPointSource(const csTriple<T> &passedOrigin,
-                      const csTriple<T> &passedDirection) {
+  void setPointSource(const Triple<T> &passedOrigin,
+                      const Triple<T> &passedDirection) {
     usePointSource = true;
     pointSourceOrigin = passedOrigin;
     pointSourceDirection = passedDirection;
@@ -108,7 +113,7 @@ public:
 
   template <typename ParticleType>
   void setParticle(std::unique_ptr<ParticleType> &p) {
-    static_assert(std::is_base_of<csAbstractParticle<T>, ParticleType>::value &&
+    static_assert(std::is_base_of<AbstractParticle<T>, ParticleType>::value &&
                   "Particle object does not interface correct class");
     mParticle = p->clone();
   }
@@ -123,14 +128,14 @@ public:
     mNumberOfRaysFixed = 0;
   }
 
-  void setPrimaryDirection(const rayTriple<T> pPrimaryDirection) {
+  void setPrimaryDirection(const Triple<T> pPrimaryDirection) {
     primaryDirection = pPrimaryDirection;
     usePrimaryDirection = true;
   }
 
   void setExcludeMaterialId(int passedId) { excludeMaterialId = passedId; }
 
-  lsSmartPointer<csDenseCellSet<T, D>> getCellSet() const { return cellSet; }
+  SmartPointer<DenseCellSet<T, D>> getCellSet() const { return cellSet; }
 
   void averageNeighborhood() {
     auto data = cellSet->getFillingFractions();
@@ -228,7 +233,7 @@ public:
 private:
   void createGeometry() {
     auto levelSets = cellSet->getLevelSets();
-    auto diskMesh = lsSmartPointer<lsMesh<T>>::New();
+    auto diskMesh = SmartPointer<lsMesh<T>>::New();
     lsToDiskMesh<T, D> converter(diskMesh);
     for (auto ls : *levelSets) {
       converter.insertNextLevelSet(ls);
@@ -243,10 +248,10 @@ private:
     mGeometry.setMaterialIds(materialIds);
   }
 
-  inline csTriple<T> calcMidPoint(const csTriple<T> &minNode) {
-    return csTriple<T>{minNode[0] + mGridDelta / T(2),
-                       minNode[1] + mGridDelta / T(2),
-                       minNode[2] + mGridDelta / T(2)};
+  inline Triple<T> calcMidPoint(const Triple<T> &minNode) {
+    return Triple<T>{minNode[0] + mGridDelta / T(2),
+                     minNode[1] + mGridDelta / T(2),
+                     minNode[2] + mGridDelta / T(2)};
   }
 
   void initMemoryFlags() {
@@ -258,3 +263,5 @@ private:
 #endif
   }
 };
+
+} // namespace viennacs

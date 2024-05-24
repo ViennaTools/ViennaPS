@@ -1,34 +1,36 @@
 #include "psMaterials.hpp"
 #include <cassert>
 
+using namespace viennaps;
+
 int main() {
   // Constructor test
-  psMaterialMap materialMap;
+  MaterialMap materialMap;
   assert(materialMap.size() == 0);
 
   // InsertNextMaterial test
-  materialMap.insertNextMaterial(psMaterial::Si);
+  materialMap.insertNextMaterial(Material::Si);
   assert(materialMap.size() == 1);
-  assert(materialMap.getMaterialAtIdx(0) == psMaterial::Si);
+  assert(materialMap.getMaterialAtIdx(0) == Material::Si);
 
   // GetMaterialAtIdx test
-  materialMap.insertNextMaterial(psMaterial::SiO2);
-  assert(materialMap.getMaterialAtIdx(0) == psMaterial::Si);
-  assert(materialMap.getMaterialAtIdx(1) == psMaterial::SiO2);
-  assert(materialMap.getMaterialAtIdx(2) == psMaterial::GAS);
+  materialMap.insertNextMaterial(Material::SiO2);
+  assert(materialMap.getMaterialAtIdx(0) == Material::Si);
+  assert(materialMap.getMaterialAtIdx(1) == Material::SiO2);
+  assert(materialMap.getMaterialAtIdx(2) == Material::GAS);
 
   // SetMaterialAtIdx test
-  materialMap.setMaterialAtIdx(0, psMaterial::SiO2);
-  assert(materialMap.getMaterialAtIdx(0) == psMaterial::SiO2);
+  materialMap.setMaterialAtIdx(0, Material::SiO2);
+  assert(materialMap.getMaterialAtIdx(0) == Material::SiO2);
 
   // MapToMaterial test
-  assert(psMaterialMap::mapToMaterial(1) == psMaterial::Si);
-  assert(psMaterialMap::mapToMaterial(2) == psMaterial::SiO2);
-  assert(psMaterialMap::mapToMaterial(19) == psMaterial::None);
+  assert(MaterialMap::mapToMaterial(1) == Material::Si);
+  assert(MaterialMap::mapToMaterial(2) == Material::SiO2);
+  assert(MaterialMap::mapToMaterial(19) == Material::None);
 
   // IsMaterial test
-  assert(psMaterialMap::isMaterial(1, psMaterial::Si));
-  assert(!psMaterialMap::isMaterial(1, psMaterial::SiO2));
+  assert(MaterialMap::isMaterial(1, Material::Si));
+  assert(!MaterialMap::isMaterial(1, Material::SiO2));
 
   return 0;
 }

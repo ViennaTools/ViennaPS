@@ -6,23 +6,28 @@
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
-namespace SingleParticleImplementation {
+namespace viennaps {
+
+using namespace viennacore;
+
+namespace impl {
 template <typename NumericType, int D>
-class SurfaceModel : public psSurfaceModel<NumericType> {
+class SingleParticleSurfaceModel : public viennaps::SurfaceModel<NumericType> {
   const NumericType rateFactor_;
-  const std::vector<psMaterial> maskMaterials_;
+  const std::vector<Material> maskMaterials_;
 
 public:
-  SurfaceModel(NumericType rate, const std::vector<psMaterial> &mask)
+  SingleParticleSurfaceModel(NumericType rate,
+                             const std::vector<Material> &mask)
       : rateFactor_(rate), maskMaterials_(mask) {}
 
-  psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> rates,
+  SmartPointer<std::vector<NumericType>> calculateVelocities(
+      SmartPointer<lsPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
 
     auto velocity =
-        psSmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
+        SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("particleFlux");
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
@@ -37,7 +42,7 @@ public:
 private:
   bool isMaskMaterial(const NumericType &material) const {
     for (const auto &mat : maskMaterials_) {
-      if (psMaterialMap::isMaterial(material, mat))
+      if (MaterialMap::isMaterial(material, mat))
         return true;
     }
     return false;
@@ -45,31 +50,33 @@ private:
 };
 
 template <typename NumericType, int D>
-class Particle : public rayParticle<Particle<NumericType, D>, NumericType> {
+class SingleParticle
+    : public viennaray::Particle<SingleParticle<NumericType, D>, NumericType> {
 public:
-  Particle(NumericType sticking, NumericType sourcePower)
+  SingleParticle(NumericType sticking, NumericType sourcePower)
       : stickingProbability_(sticking), sourcePower_(sourcePower) {}
 
   void surfaceCollision(NumericType rayWeight,
-                        const rayTriple<NumericType> &rayDir,
-                        const rayTriple<NumericType> &geomNormal,
+                        const Triple<NumericType> &rayDir,
+                        const Triple<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *globalData,
-                        rayRNG &Rng) override final {
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *globalData,
+                        viennaray::RNG &Rng) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Triple<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
+                    const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
-    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, rayTriple<NumericType>>{stickingProbability_,
-                                                          direction};
+                    const viennaray::TracingData<NumericType> *globalData,
+                    viennaray::RNG &Rng) override final {
+    auto direction =
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+    return std::pair<NumericType, Triple<NumericType>>{stickingProbability_,
+                                                       direction};
   }
-  void initNew(rayRNG &RNG) override final {}
+  void initNew(viennaray::RNG &RNG) override final {}
   NumericType getSourceDistributionPower() const override final {
     return sourcePower_;
   }
@@ -81,25 +88,25 @@ private:
   const NumericType stickingProbability_;
   const NumericType sourcePower_;
 };
-} // namespace SingleParticleImplementation
+} // namespace impl
 
 // Etching or deposition based on a single particle model with diffuse
 // reflections.
 template <typename NumericType, int D>
-class psSingleParticleProcess : public psProcessModel<NumericType, D> {
+class SingleParticleProcess : public ProcessModel<NumericType, D> {
 public:
-  psSingleParticleProcess(NumericType rate = 1.,
-                          NumericType stickingProbability = 1.,
-                          NumericType sourceDistributionPower = 1.,
-                          psMaterial maskMaterial = psMaterial::None) {
-    std::vector<psMaterial> maskMaterialVec = {maskMaterial};
+  SingleParticleProcess(NumericType rate = 1.,
+                        NumericType stickingProbability = 1.,
+                        NumericType sourceDistributionPower = 1.,
+                        Material maskMaterial = Material::None) {
+    std::vector<Material> maskMaterialVec = {maskMaterial};
     initialize(rate, stickingProbability, sourceDistributionPower,
                std::move(maskMaterialVec));
   }
 
-  psSingleParticleProcess(NumericType rate, NumericType stickingProbability,
-                          NumericType sourceDistributionPower,
-                          std::vector<psMaterial> maskMaterial) {
+  SingleParticleProcess(NumericType rate, NumericType stickingProbability,
+                        NumericType sourceDistributionPower,
+                        std::vector<Material> maskMaterial) {
     initialize(rate, stickingProbability, sourceDistributionPower,
                std::move(maskMaterial));
   }
@@ -107,18 +114,18 @@ public:
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
                   NumericType sourceDistributionPower,
-                  std::vector<psMaterial> &&maskMaterial) {
+                  std::vector<Material> &&maskMaterial) {
     // particles
-    auto particle = std::make_unique<
-        SingleParticleImplementation::Particle<NumericType, D>>(
+    auto particle = std::make_unique<impl::SingleParticle<NumericType, D>>(
         stickingProbability, sourceDistributionPower);
 
     // surface model
-    auto surfModel = psSmartPointer<SingleParticleImplementation::SurfaceModel<
-        NumericType, D>>::New(rate, maskMaterial);
+    auto surfModel =
+        SmartPointer<impl::SingleParticleSurfaceModel<NumericType, D>>::New(
+            rate, maskMaterial);
 
     // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
@@ -126,3 +133,5 @@ private:
     this->setProcessName("SingleParticleProcess");
   }
 };
+
+} // namespace viennaps

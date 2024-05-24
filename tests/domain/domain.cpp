@@ -2,9 +2,11 @@
 #include <psDomain.hpp>
 #include <vcTestAsserts.hpp>
 
+namespace viennacore {
+
 namespace ps = viennaps;
 
-template <class NumericType, int D> void vtRunTest() {
+template <class NumericType, int D> void RunTest() {
   {
     // default constructor
     auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
@@ -89,5 +91,7 @@ template <class NumericType, int D> void vtRunTest() {
                    domain->getMaterialMap().get());
   }
 }
+
+} // namespace viennacore
 
 int main() { VC_RUN_ALL_TESTS }

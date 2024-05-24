@@ -6,6 +6,8 @@
 #include "psVelocityField.hpp"
 
 #include <lsConcepts.hpp>
+#include <lsPointData.hpp>
+
 #include <rayParticle.hpp>
 #include <raySource.hpp>
 

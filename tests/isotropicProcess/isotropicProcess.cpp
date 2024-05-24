@@ -7,9 +7,11 @@
 #include <lsTestAsserts.hpp>
 #include <vcTestAsserts.hpp>
 
+namespace viennacore {
+
 using namespace viennaps;
 
-template <class NumericType, int D> void vtRunTest() {
+template <class NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
 
   {
@@ -57,5 +59,7 @@ template <class NumericType, int D> void vtRunTest() {
     LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
   }
 }
+
+} // namespace viennacore
 
 int main() { VC_RUN_ALL_TESTS }

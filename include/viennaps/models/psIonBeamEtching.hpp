@@ -6,10 +6,14 @@
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
+#include <functional>
 #include <random>
 
-namespace IBEImplementation {
-template <typename NumericType> struct Parameters {
+namespace viennaps {
+
+using namespace viennacore;
+
+template <typename NumericType> struct IBEParameters {
   NumericType planeWaferRate = 1.;
   NumericType meanEnergy = 250;     // eV
   NumericType sigmaEnergy = 10;     // eV
@@ -23,23 +27,25 @@ template <typename NumericType> struct Parameters {
       [](NumericType cosTheta) { return 1.; };
 };
 
+namespace impl {
+
 template <typename NumericType>
-class SurfaceModel : public psSurfaceModel<NumericType> {
-  const Parameters<NumericType> params_;
-  const std::vector<psMaterial> maskMaterials_;
+class IBESurfaceModel : public SurfaceModel<NumericType> {
+  const IBEParameters<NumericType> params_;
+  const std::vector<Material> maskMaterials_;
 
 public:
-  SurfaceModel(const Parameters<NumericType> &params,
-               const std::vector<psMaterial> &mask)
+  IBESurfaceModel(const IBEParameters<NumericType> &params,
+                  const std::vector<Material> &mask)
       : maskMaterials_(mask), params_(params) {}
 
-  psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> rates,
+  SmartPointer<std::vector<NumericType>> calculateVelocities(
+      SmartPointer<lsPointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
 
     auto velocity =
-        psSmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
+        SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("ionFlux");
 
     const NumericType norm =
@@ -59,7 +65,7 @@ public:
 private:
   bool isMaskMaterial(const NumericType &material) const {
     for (const auto &mat : maskMaterials_) {
-      if (psMaterialMap::isMaterial(material, mat))
+      if (MaterialMap::isMaterial(material, mat))
         return true;
     }
     return false;
@@ -67,39 +73,38 @@ private:
 };
 
 template <typename NumericType, int D>
-class Ion : public rayParticle<Ion<NumericType, D>, NumericType> {
+class IBEIon : public viennaray::Particle<IBEIon<NumericType, D>, NumericType> {
 public:
-  Ion(const Parameters<NumericType> &params)
+  IBEIon(const IBEParameters<NumericType> &params)
       : params_(params), normalDist_(params.meanEnergy, params.sigmaEnergy),
         A_(1. / (1. + params.n * (M_PI_2 / params.inflectAngle - 1.))),
         inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.) {}
 
   void surfaceCollision(NumericType rayWeight,
-                        const rayTriple<NumericType> &rayDir,
-                        const rayTriple<NumericType> &geomNormal,
+                        const Triple<NumericType> &rayDir,
+                        const Triple<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *globalData,
-                        rayRNG &Rng) override final {
-    NumericType cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *globalData,
+                        viennaray::RNG &Rng) override final {
+    NumericType cosTheta = -DotProduct(rayDir, geomNormal);
 
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
         params_.yieldFunction(cosTheta);
   }
 
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Triple<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
+                    const Triple<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
+                    const viennaray::TracingData<NumericType> *globalData,
+                    viennaray::RNG &Rng) override final {
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
-    NumericType incAngle =
-        std::acos(-rayInternal::DotProduct(rayDir, geomNormal));
+    NumericType incAngle = std::acos(-DotProduct(rayDir, geomNormal));
     NumericType Eref_peak;
     if (incAngle >= inflectAngle_) {
       Eref_peak =
@@ -117,16 +122,16 @@ public:
 
     if (newEnergy > params_.thresholdEnergy) {
       energy_ = newEnergy;
-      auto direction = rayReflectionConedCosine<NumericType, D>(
+      auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng, std::max(incAngle, minAngle_));
-      return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
+      return std::pair<NumericType, Triple<NumericType>>{0., direction};
     } else {
-      return std::pair<NumericType, rayTriple<NumericType>>{
-          1., rayTriple<NumericType>{0., 0., 0.}};
+      return std::pair<NumericType, Triple<NumericType>>{
+          1., Triple<NumericType>{0., 0., 0.}};
     }
   }
 
-  void initNew(rayRNG &RNG) override final {
+  void initNew(viennaray::RNG &RNG) override final {
     do {
       energy_ = normalDist_(RNG);
     } while (energy_ < params_.thresholdEnergy);
@@ -143,47 +148,43 @@ public:
 private:
   NumericType energy_;
 
-  const Parameters<NumericType> &params_;
+  const IBEParameters<NumericType> &params_;
   const NumericType inflectAngle_;
   const NumericType minAngle_;
   const NumericType A_;
   std::normal_distribution<NumericType> normalDist_;
 };
-} // namespace IBEImplementation
+} // namespace impl
 
 template <typename NumericType, int D>
 class psIonBeamEtching : public psProcessModel<NumericType, D> {
 public:
   psIonBeamEtching() {
-    std::vector<psMaterial> maskMaterial;
+    std::vector<Material> maskMaterial;
     initialize(std::move(maskMaterial));
   }
 
-  psIonBeamEtching(std::vector<psMaterial> maskMaterial) {
+  psIonBeamEtching(std::vector<Material> maskMaterial) {
     initialize(std::move(maskMaterial));
   }
 
-  IBEImplementation::Parameters<NumericType> &getParameters() {
-    return params_;
-  }
+  IBEParameters<NumericType> &getParameters() { return params_; }
 
-  void setParameters(const IBEImplementation::Parameters<NumericType> &params) {
+  void setParameters(const IBEParameters<NumericType> &params) {
     params_ = params;
   }
 
 private:
-  void initialize(std::vector<psMaterial> &&maskMaterial) {
+  void initialize(std::vector<Material> &&maskMaterial) {
     // particles
-    auto particle =
-        std::make_unique<IBEImplementation::Ion<NumericType, D>>(params_);
+    auto particle = std::make_unique<impl::IBEIon<NumericType, D>>(params_);
 
     // surface model
-    auto surfModel =
-        psSmartPointer<IBEImplementation::SurfaceModel<NumericType>>::New(
-            params_, maskMaterial);
+    auto surfModel = SmartPointer<impl::IBESurfaceModel<NumericType>>::New(
+        params_, maskMaterial);
 
     // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
@@ -192,5 +193,7 @@ private:
   }
 
 private:
-  IBEImplementation::Parameters<NumericType> params_;
+  IBEParameters<NumericType> params_;
 };
+
+} // namespace viennaps

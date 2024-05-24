@@ -3,9 +3,11 @@
 #include <psDomain.hpp>
 #include <vcTestAsserts.hpp>
 
+namespace viennacore {
+
 using namespace viennaps;
 
-template <class NumericType, int D> void vtRunTest() {
+template <class NumericType, int D> void RunTest() {
   auto domain = SmartPointer<Domain<NumericType, D>>::New();
 
   MakeStack<NumericType, D>(domain, 1., 10., 10., 3 /*num layers*/, 3., 2., 0.,
@@ -18,5 +20,7 @@ template <class NumericType, int D> void vtRunTest() {
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
 }
+
+} // namespace viennacore
 
 int main() { VC_RUN_ALL_TESTS }

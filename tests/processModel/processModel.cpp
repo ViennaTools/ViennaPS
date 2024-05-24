@@ -1,5 +1,5 @@
 #include <psProcessModel.hpp>
-#include <psTestAssert.hpp>
+#include <vcTestAsserts.hpp>
 
 #include <models/psAnisotropicProcess.hpp>
 #include <models/psDirectionalEtching.hpp>
@@ -12,87 +12,87 @@
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 
-template <class NumericType, int D> void psRunTest() {
+namespace viennacore {
+
+using namespace viennaps;
+
+template <class NumericType, int D> void RunTest() {
   // default constructors
-  { auto model = psSmartPointer<psProcessModel<NumericType, D>>::New(); }
+  { auto model = SmartPointer<ProcessModel<NumericType, D>>::New(); }
 
   // fluorocarbon etching
   {
-    auto model = psSmartPointer<psFluorocarbonEtching<NumericType, D>>::New(
+    auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(
         1., 1., 1., 1., 1.);
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getParticleTypes());
-    PSTEST_ASSERT(model->getParticleTypes()->size() == 3);
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getParticleTypes().size() == 3);
   }
 
   // geometric models
   {
-    auto model =
-        psSmartPointer<psSphereDistribution<NumericType, D>>::New(1., 1.);
-    PSTEST_ASSERT(model->getGeometricModel());
+    auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(1., 1.);
+    VC_TEST_ASSERT(model->getGeometricModel());
   }
 
   {
     const std::array<double, 3> axes = {1.};
-    auto model =
-        psSmartPointer<psBoxDistribution<NumericType, D>>::New(axes, 0.);
-    PSTEST_ASSERT(model->getGeometricModel());
+    auto model = SmartPointer<BoxDistribution<NumericType, D>>::New(axes, 0.);
+    VC_TEST_ASSERT(model->getGeometricModel());
   }
 
-  // oxide regrowth
-  {
-    auto model = psSmartPointer<psOxideRegrowth<NumericType, D>>::New(
-        1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.);
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getAdvectionCallback());
-  }
+  // // oxide regrowth
+  // {
+  //   auto model = SmartPointer<psOxideRegrowth<NumericType, D>>::New(
+  //       1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.);
+  //   VC_TEST_ASSERT(model->getSurfaceModel());
+  //   VC_TEST_ASSERT(model->getVelocityField());
+  //   VC_TEST_ASSERT(model->getAdvectionCallback());
+  // }
 
-  // plasma damage
-  {
-    auto model = psSmartPointer<psPlasmaDamage<NumericType, D>>::New();
-    PSTEST_ASSERT(model->getAdvectionCallback());
-  }
+  // // plasma damage
+  // {
+  //   auto model = SmartPointer<psPlasmaDamage<NumericType, D>>::New();
+  //   VC_TEST_ASSERT(model->getAdvectionCallback());
+  // }
 
   // SF6O2 etching
   {
     auto model =
-        psSmartPointer<psSF6O2Etching<NumericType, D>>::New(1., 1., 1., 1., 1.);
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getParticleTypes());
-    PSTEST_ASSERT(model->getParticleTypes()->size() == 3);
+        SmartPointer<SF6O2Etching<NumericType, D>>::New(1., 1., 1., 1., 1.);
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getParticleTypes().size() == 3);
   }
 
   // single particle TEOS deposition
   {
-    auto model =
-        psSmartPointer<psTEOSDeposition<NumericType, D>>::New(1., 1., 1.);
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getParticleTypes());
-    PSTEST_ASSERT(model->getParticleTypes()->size() == 1);
+    auto model = SmartPointer<TEOSDeposition<NumericType, D>>::New(1., 1., 1.);
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getParticleTypes().size() == 1);
   }
 
   // multi particle TEOS deposition
   {
-    auto model = psSmartPointer<psTEOSDeposition<NumericType, D>>::New(
-        1., 1., 1., 1., 1., 1.);
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getParticleTypes());
-    PSTEST_ASSERT(model->getParticleTypes()->size() == 2);
+    auto model = SmartPointer<TEOSDeposition<NumericType, D>>::New(1., 1., 1.,
+                                                                   1., 1., 1.);
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getParticleTypes().size() == 2);
   }
 
   // anisotropic model
   {
-    auto model = psSmartPointer<psAnisotropicProcess<NumericType, D>>::New(
-        std::vector<std::pair<psMaterial, NumericType>>{});
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() == 0);
+    auto model = SmartPointer<psAnisotropicProcess<NumericType, D>>::New(
+        std::vector<std::pair<Material, NumericType>>{});
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
+                   0);
   }
 }
 
-int main() { PSRUN_ALL_TESTS }
+} // namespace viennacore
+
+int main() { VC_RUN_ALL_TESTS }

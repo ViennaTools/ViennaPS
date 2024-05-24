@@ -6,14 +6,19 @@
 
 #include <rayUtil.hpp>
 
-namespace PlasmaDamageImplementation {
+namespace viennaps {
+
+using namespace viennacore;
+
+namespace impl {
 template <class T, int D>
-class DamageIon : public csParticle<DamageIon<T, D>, T> {
+class PlasmaDamageIon : public viennacs::Particle<PlasmaDamageIon<T, D>, T> {
 public:
-  DamageIon(const T passedMeanEnergy = 100., const T passedMeanFreePath = 1.)
+  PlasmaDamageIon(const T passedMeanEnergy = 100.,
+                  const T passedMeanFreePath = 1.)
       : meanIonEnergy(passedMeanEnergy), meanFreePath(passedMeanFreePath) {}
 
-  void initNew(rayRNG &RNG) override final {
+  void initNew(viennaray::RNG &RNG) override final {
     std::uniform_real_distribution<T> uniDist;
     do {
       const auto rand1 = uniDist(RNG);
@@ -24,10 +29,9 @@ public:
     } while (E < minEnergy);
   }
 
-  std::pair<T, rayTriple<T>> surfaceHit(const rayTriple<T> &rayDir,
-                                        const rayTriple<T> &geomNormal,
-                                        bool &reflect,
-                                        rayRNG &Rng) override final {
+  std::pair<T, Triple<T>> surfaceHit(const Triple<T> &rayDir,
+                                     const Triple<T> &geomNormal, bool &reflect,
+                                     viennaray::RNG &Rng) override final {
     auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
     const T incAngle = std::acos(std::max(std::min(cosTheta, T(1)), T(0)));
     std::uniform_real_distribution<T> uniDist;
@@ -60,17 +64,17 @@ public:
 
     if (NewEnergy > minEnergy) {
       reflect = true;
-      auto direction = rayReflectionConedCosine<T, D>(
+      auto direction = viennaray::ReflectionConedCosine<T, D>(
           rayDir, geomNormal, Rng, std::min(incAngle, minAngle));
       E = NewEnergy;
-      return std::pair<T, rayTriple<T>>{impactEnergy, direction};
+      return std::pair<T, Triple<T>>{impactEnergy, direction};
     } else {
       reflect = false;
-      return std::pair<T, rayTriple<T>>{impactEnergy, rayTriple<T>{0., 0., 0.}};
+      return std::pair<T, Triple<T>>{impactEnergy, Triple<T>{0., 0., 0.}};
     }
   }
 
-  T collision(csVolumeParticle<T> &particle, rayRNG &RNG,
+  T collision(csVolumeParticle<T> &particle, viennaray::RNG &RNG,
               std::vector<csVolumeParticle<T>> &particleStack) override final {
     T fill = 0.;
 
@@ -180,10 +184,10 @@ private:
 };
 
 template <typename NumericType, int D>
-class DamageModel : public psAdvectionCallback<NumericType, D> {
+class DamageModel : public AdvectionCallback<NumericType, D> {
 protected:
-  using psAdvectionCallback<NumericType, D>::domain;
-  csTracing<NumericType, D> tracer;
+  using AdvectionCallback<NumericType, D>::domain;
+  viennacs::Tracing<NumericType, D> tracer;
 
 public:
   DamageModel(const NumericType energy, const NumericType meanFreePath,
@@ -191,9 +195,9 @@ public:
     tracer.setNumberOfRaysPerPoint(1000);
     tracer.setExcludeMaterialId(maskID);
 
-    auto damageIon =
-        std::make_unique<DamageIon<NumericType, D>>(energy, meanFreePath);
-    tracer.setParticle(damageIon);
+    auto PlasmadamageIon =
+        std::make_unique<PlasmaDamageIon<NumericType, D>>(energy, meanFreePath);
+    tracer.setParticle(PlasmadamageIon);
   }
 
   bool applyPreAdvect(const NumericType processTime) override {
@@ -209,33 +213,32 @@ public:
     return true;
   }
 
-  void
-  setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
+  void setPrimaryDirection(const Triple<NumericType> passedPrimaryDirection) {
     tracer.setPrimaryDirection(passedPrimaryDirection);
   }
 };
-} // namespace PlasmaDamageImplementation
+} // namespace impl
 
 template <typename NumericType, int D>
-class psPlasmaDamage : public psProcessModel<NumericType, D> {
+class PlasmaDamage : public ProcessModel<NumericType, D> {
 public:
-  psPlasmaDamage(const NumericType ionEnergy = 100.,
-                 const NumericType meanFreePath = 1.,
-                 const psMaterial maskMaterial = psMaterial::Mask) {
-    auto volumeModel = psSmartPointer<PlasmaDamageImplementation::DamageModel<
-        NumericType, D>>::New(ionEnergy, meanFreePath,
-                              static_cast<int>(maskMaterial));
+  PlasmaDamage(const NumericType ionEnergy = 100.,
+               const NumericType meanFreePath = 1.,
+               const Material maskMaterial = Material::Mask) {
+    auto volumeModel = SmartPointer<impl::DamageModel<NumericType, D>>::New(
+        ionEnergy, meanFreePath, static_cast<int>(maskMaterial));
 
     this->setProcessName("PlasmaDamage");
     this->setAdvectionCallback(volumeModel);
   }
 
   void setPrimaryDirection(
-      const std::array<NumericType, 3> passedPrimaryDirection) override final {
-    this->primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
-    auto cb = std::dynamic_pointer_cast<
-        PlasmaDamageImplementation::DamageModel<NumericType, D>>(
+      const Triple<NumericType> passedPrimaryDirection) override final {
+    this->primaryDirection = Normalize(passedPrimaryDirection);
+    auto cb = std::dynamic_pointer_cast<impl::DamageModel<NumericType, D>>(
         this->getAdvectionCallback());
     cb->setPrimaryDirection(passedPrimaryDirection);
   }
 };
+
+} // namespace viennaps

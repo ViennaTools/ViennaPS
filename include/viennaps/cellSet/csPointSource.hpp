@@ -1,26 +1,31 @@
 #pragma once
 
-#include "csUtil.hpp"
-
 #include <raySource.hpp>
 
+namespace viennacs {
+
+using namespace viennacore;
+
 template <typename NumericType, int D>
-class csPointSource : public raySource<NumericType> {
+class PointSource : public viennaray::Source<NumericType> {
   const unsigned mNumPoints;
-  const csTriple<NumericType> origin;
-  const csTriple<NumericType> direction;
+  const Triple<NumericType> origin;
+  const Triple<NumericType> direction;
 
 public:
-  csPointSource(csTriple<NumericType> passedOrigin,
-                csTriple<NumericType> passedDirection,
-                std::array<int, 5> &pTraceSettings, const size_t pNumPoints)
+  PointSource(Triple<NumericType> passedOrigin,
+              Triple<NumericType> passedDirection,
+              std::array<int, 5> &pTraceSettings, const size_t pNumPoints)
       : origin(passedOrigin), direction(passedDirection),
         mNumPoints(pNumPoints) {}
 
-  rayPair<rayTriple<NumericType>>
-  getOriginAndDirection(const size_t idx, rayRNG &RngState) const override {
+  Pair<Triple<NumericType>>
+  getOriginAndDirection(const size_t idx,
+                        viennaray::RNG &RngState) const override {
     return {origin, direction};
   }
 
   size_t getNumPoints() const override { return mNumPoints; }
 };
+
+} // namespace viennacs
