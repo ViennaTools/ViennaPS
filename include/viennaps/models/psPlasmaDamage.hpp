@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../cellSet/csTracing.hpp"
-#include "../cellSet/csTracingParticle.hpp"
 #include "../psProcessModel.hpp"
+
+#include <csTracing.hpp>
+#include <csTracingParticle.hpp>
 
 #include <rayUtil.hpp>
 

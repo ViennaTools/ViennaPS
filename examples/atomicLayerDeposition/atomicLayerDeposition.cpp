@@ -1,5 +1,5 @@
-#include <cellSet/csMeanFreePath.hpp>
-#include <cellSet/csSegmentCells.hpp>
+#include <csMeanFreePath.hpp>
+#include <csSegmentCells.hpp>
 #include <geometries/psMakeHole.hpp>
 #include <models/psAtomicLayerProcess.hpp>
 

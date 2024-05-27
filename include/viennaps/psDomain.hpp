@@ -1,11 +1,11 @@
 #pragma once
 
-#include "cellSet/csDenseCellSet.hpp"
-
 #include "psMaterials.hpp"
 #include "psSmartPointer.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
 #include "psVTKWriter.hpp"
+
+#include <csDenseCellSet.hpp>
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
