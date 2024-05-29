@@ -15,7 +15,7 @@ namespace viennaps {
 using namespace viennacore;
 
 template <typename NumericType>
-class TranslationField : public lsVelocityField<NumericType> {
+class TranslationField : public viennals::VelocityField<NumericType> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
 public:
@@ -24,9 +24,9 @@ public:
       : translationMethod_(velocityField->getTranslationFieldOptions()),
         modelVelocityField_(velocityField), materialMap_(materialMap) {}
 
-  NumericType getScalarVelocity(const Triple<NumericType> &coordinate,
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material,
-                                const Triple<NumericType> &normalVector,
+                                const Vec3D<NumericType> &normalVector,
                                 unsigned long pointId) {
     translateLsId(pointId, coordinate);
     if (materialMap_)
@@ -35,10 +35,10 @@ public:
                                                   normalVector, pointId);
   }
 
-  Triple<NumericType> getVectorVelocity(const Triple<NumericType> &coordinate,
-                                        int material,
-                                        const Triple<NumericType> &normalVector,
-                                        unsigned long pointId) {
+  Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
+                                       int material,
+                                       const Vec3D<NumericType> &normalVector,
+                                       unsigned long pointId) {
     translateLsId(pointId, coordinate);
     if (materialMap_)
       material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
@@ -48,7 +48,7 @@ public:
 
   NumericType
   getDissipationAlpha(int direction, int material,
-                      const Triple<NumericType> &centralDifferences) {
+                      const Vec3D<NumericType> &centralDifferences) {
     if (materialMap_)
       material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
     return modelVelocityField_->getDissipationAlpha(direction, material,
@@ -59,13 +59,13 @@ public:
     translator_ = translator;
   }
 
-  void buildKdTree(const std::vector<Triple<NumericType>> &points) {
+  void buildKdTree(const std::vector<Vec3D<NumericType>> &points) {
     kdTree_.setPoints(points);
     kdTree_.build();
   }
 
   void translateLsId(unsigned long &lsId,
-                     const Triple<NumericType> &coordinate) const {
+                     const Vec3D<NumericType> &coordinate) const {
     switch (translationMethod_) {
     case 1: {
       if (auto it = translator_->find(lsId); it != translator_->end()) {
@@ -89,7 +89,7 @@ public:
 
 private:
   SmartPointer<TranslatorType> translator_;
-  KDTree<NumericType, Triple<NumericType>> kdTree_;
+  KDTree<NumericType, Vec3D<NumericType>> kdTree_;
   const SmartPointer<VelocityField<NumericType>> modelVelocityField_;
   const SmartPointer<MaterialMap> materialMap_;
   const int translationMethod_ = 1;

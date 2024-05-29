@@ -18,9 +18,9 @@ using namespace viennacore;
 /// specified extent and height. The plane can have a periodic boundary in the x
 /// and y (only 3D) direction.
 template <class NumericType, int D> class MakePlane {
-  using LSPtrType = SmartPointer<lsDomain<NumericType, D>>;
+  using LSPtrType = SmartPointer<viennals::Domain<NumericType, D>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
 
@@ -93,9 +93,9 @@ public:
 
     if (add_) {
       auto substrate = LSPtrType::New(pDomain_->getGrid());
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
       if (material_ == Material::None) {
         pDomain_->insertNextLevelSet(substrate);
@@ -104,9 +104,9 @@ public:
       }
     } else {
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta_);
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
       if (material_ == Material::None) {
         pDomain_->insertNextLevelSet(substrate);

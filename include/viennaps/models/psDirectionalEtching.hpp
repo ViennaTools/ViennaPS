@@ -12,23 +12,23 @@ using namespace viennacore;
 namespace impl {
 template <class NumericType, int D>
 class DirectionalEtchVelocityField : public VelocityField<NumericType> {
-  const Triple<NumericType> direction_;
+  const Vec3D<NumericType> direction_;
   const NumericType directionalVelocity_;
   const NumericType isotropicVelocity_;
   const std::vector<int> maskMaterials_;
 
 public:
-  DirectionalEtchVelocityField(Triple<NumericType> direction,
+  DirectionalEtchVelocityField(Vec3D<NumericType> direction,
                                const NumericType directionalVelocity,
                                const NumericType isotropicVelocity,
                                const std::vector<int> &mask)
       : direction_(direction), directionalVelocity_(directionalVelocity),
         isotropicVelocity_(isotropicVelocity), maskMaterials_(mask) {}
 
-  Triple<NumericType> getVectorVelocity(const Triple<NumericType> &coordinate,
-                                        int material,
-                                        const Triple<NumericType> &normalVector,
-                                        unsigned long) override {
+  Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
+                                       int material,
+                                       const Vec3D<NumericType> &normalVector,
+                                       unsigned long) override {
     if (isMaskMaterial(material)) {
       return {0.};
     } else {
@@ -63,7 +63,7 @@ private:
 template <typename NumericType, int D>
 class DirectionalEtching : public ProcessModel<NumericType, D> {
 public:
-  DirectionalEtching(const Triple<NumericType> &direction,
+  DirectionalEtching(const Vec3D<NumericType> &direction,
                      const NumericType directionalVelocity = 1.,
                      const NumericType isotropicVelocity = 0.,
                      const Material mask = Material::Mask) {
@@ -82,7 +82,7 @@ public:
     this->setProcessName("DirectionalEtching");
   }
 
-  DirectionalEtching(const Triple<NumericType> &direction,
+  DirectionalEtching(const Vec3D<NumericType> &direction,
                      const NumericType directionalVelocity,
                      const NumericType isotropicVelocity,
                      const std::vector<Material> maskMaterials) {

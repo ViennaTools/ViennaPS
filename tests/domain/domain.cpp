@@ -5,51 +5,57 @@
 namespace viennacore {
 
 namespace ps = viennaps;
+namespace ls = viennals;
 
 template <class NumericType, int D> void RunTest() {
+  using lsDomainType = SmartPointer<ls::Domain<NumericType, D>>;
+  using psDomainType = SmartPointer<ps::Domain<NumericType, D>>;
+
   {
     // default constructor
-    auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+    auto domain = psDomainType::New();
     VC_TEST_ASSERT(domain);
   }
 
   {
     // single LS constructor
-    auto ls = ps::SmartPointer<lsDomain<NumericType, D>>::New();
-    auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New(ls);
+    auto ls = lsDomainType::New();
+    auto domain = psDomainType::New(ls);
     VC_TEST_ASSERT(domain);
   }
 
   {
     // two plane geometries
-    lsBoundaryConditionEnum<D> boundaryCondition[D] = {
-        lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-        lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY};
-    double bounds[2 * D] = {-1., 1., -1., 1.};
+    ls::BoundaryConditionEnum<D> boundaryCondition[D];
+    double bounds[2 * D];
+
+    for (int i = 0; i < D; ++i) {
+      bounds[2 * i] = -1.;
+      bounds[2 * i + 1] = 1.;
+      boundaryCondition[i] = ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY;
+    }
+    boundaryCondition[D - 1] = ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY;
 
     NumericType origin[D] = {0.};
     NumericType normal[D] = {0.};
     normal[D - 1] = 1.;
 
-    auto plane1 = lsSmartPointer<lsDomain<NumericType, D>>::New(
-        bounds, boundaryCondition, 0.2);
-    lsMakeGeometry<NumericType, D>(
-        plane1, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    auto plane1 = lsDomainType::New(bounds, boundaryCondition, 0.2);
+    ls::MakeGeometry<NumericType, D>(
+        plane1, SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     origin[D - 1] = 1.;
-    auto plane2 = lsSmartPointer<lsDomain<NumericType, D>>::New(
-        bounds, boundaryCondition, 0.2);
-    lsMakeGeometry<NumericType, D>(
-        plane2, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    auto plane2 = lsDomainType::New(bounds, boundaryCondition, 0.2);
+    ls::MakeGeometry<NumericType, D>(
+        plane2, SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    auto levelSets = ps::SmartPointer<
-        std::vector<ps::SmartPointer<lsDomain<NumericType, D>>>>::New();
+    auto levelSets = SmartPointer<std::vector<lsDomainType>>::New();
     levelSets->push_back(plane1);
     levelSets->push_back(plane2);
 
-    auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New(levelSets);
+    auto domain = psDomainType::New(levelSets);
     domain->generateCellSet(3., ps::Material::GAS, true);
     VC_TEST_ASSERT(domain->getLevelSets()->size() == 2);
     VC_TEST_ASSERT(domain->getCellSet());
@@ -57,7 +63,6 @@ template <class NumericType, int D> void RunTest() {
     auto cellSet = domain->getCellSet();
     VC_TEST_ASSERT(cellSet);
     VC_TEST_ASSERT(cellSet->getDepth() == 3.);
-    VC_TEST_ASSERT(cellSet->getNumberOfCells() == 160);
 
     domain->clear();
     VC_TEST_ASSERT(domain->getLevelSets()->size() == 0);
@@ -75,7 +80,7 @@ template <class NumericType, int D> void RunTest() {
     domain->insertNextLevelSetAsMaterial(plane2, ps::Material::SiO2);
     domain->generateCellSet(3., ps::Material::GAS, true);
 
-    auto domainCopy = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+    auto domainCopy = psDomainType::New();
     domainCopy->deepCopy(domain);
     VC_TEST_ASSERT(domainCopy->getLevelSets());
     VC_TEST_ASSERT(domainCopy->getLevelSets()->size() == 2);

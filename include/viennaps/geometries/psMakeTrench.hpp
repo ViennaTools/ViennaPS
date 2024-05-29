@@ -19,9 +19,9 @@ using namespace viennacore;
 /// exclusively to the bottom while the remaining portion adopts the mask
 /// material_.
 template <class NumericType, int D> class MakeTrench {
-  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
 
@@ -81,31 +81,34 @@ public:
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
     origin[D - 1] = baseHeight_;
-    lsMakeGeometry<NumericType, D>(
-        substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        substrate,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta_);
     origin[D - 1] = trenchDepth_ + baseHeight_;
-    lsMakeGeometry<NumericType, D>(
-        mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        mask,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta_);
     origin[D - 1] = baseHeight_;
     normal[D - 1] = -1.;
-    lsMakeGeometry<NumericType, D>(
-        maskAdd, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        maskAdd,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(mask, maskAdd,
-                                       lsBooleanOperationEnum::INTERSECT)
+    viennals::BooleanOperation<NumericType, D>(
+        mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
         .apply();
 
     auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta_);
 
     if (taperAngle_) {
-      auto mesh = SmartPointer<lsMesh<NumericType>>::New();
+      auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
       const NumericType offset =
           std::tan(taperAngle_ * M_PI / 180.) * trenchDepth_;
       if constexpr (D == 2) {
@@ -127,7 +130,7 @@ public:
         mesh->insertNextLine(std::array<unsigned, 2>{3, 2});
         mesh->insertNextLine(std::array<unsigned, 2>{2, 1});
         mesh->insertNextLine(std::array<unsigned, 2>{1, 0});
-        lsFromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
+        viennals::FromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
       } else {
         for (int i = 0; i < 8; i++) {
           std::array<NumericType, 3> node = {0., 0., 0.};
@@ -183,7 +186,7 @@ public:
         mesh->insertNextTriangle(std::array<unsigned, 3>{1, 2, 6});
         mesh->insertNextTriangle(std::array<unsigned, 3>{1, 6, 5});
 
-        lsFromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
+        viennals::FromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
       }
     } else {
       NumericType minPoint[D];
@@ -201,19 +204,19 @@ public:
         minPoint[1] = baseHeight_;
         maxPoint[1] = trenchDepth_ + baseHeight_;
       }
-      lsMakeGeometry<NumericType, D> geo(
+      viennals::MakeGeometry<NumericType, D> geo(
           cutout,
-          lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint));
+          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint));
       geo.setIgnoreBoundaryConditions(true);
       geo.apply();
     }
 
-    lsBooleanOperation<NumericType, D>(
-        mask, cutout, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    viennals::BooleanOperation<NumericType, D>(
+        mask, cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
 
-    lsBooleanOperation<NumericType, D>(substrate, mask,
-                                       lsBooleanOperationEnum::UNION)
+    viennals::BooleanOperation<NumericType, D>(
+        substrate, mask, viennals::BooleanOperationEnum::UNION)
         .apply();
 
     if (material_ == Material::None) {

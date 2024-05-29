@@ -1,14 +1,15 @@
 #pragma once
 
 #include "csUtil.hpp"
-#include <lsSmartPointer.hpp>
+
+#include <vcSmartPointer.hpp>
 
 #include <array>
 #include <set>
 
 template <class T, int D> class csBoundingVolume {
 private:
-  using BVPtrType = lsSmartPointer<csBoundingVolume<T, D>>;
+  using BVPtrType = viennacore::SmartPointer<csBoundingVolume<T, D>>;
   using BoundsType = csPair<std::array<T, D>>;
   using CellIdsPtr = std::set<unsigned> *;
 

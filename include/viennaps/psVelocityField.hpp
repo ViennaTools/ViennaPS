@@ -13,23 +13,23 @@ template <typename NumericType> class VelocityField {
 public:
   virtual ~VelocityField() = default;
 
-  virtual NumericType getScalarVelocity(const Triple<NumericType> &coordinate,
+  virtual NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                         int material,
-                                        const Triple<NumericType> &normalVector,
+                                        const Vec3D<NumericType> &normalVector,
                                         unsigned long pointId) {
     return 0;
   }
 
-  virtual Triple<NumericType>
-  getVectorVelocity(const Triple<NumericType> &coordinate, int material,
-                    const Triple<NumericType> &normalVector,
+  virtual Vec3D<NumericType>
+  getVectorVelocity(const Vec3D<NumericType> &coordinate, int material,
+                    const Vec3D<NumericType> &normalVector,
                     unsigned long pointId) {
     return {0., 0., 0.};
   }
 
   virtual NumericType
   getDissipationAlpha(int direction, int material,
-                      const Triple<NumericType> &centralDifferences) {
+                      const Vec3D<NumericType> &centralDifferences) {
     return 0;
   }
 
@@ -49,8 +49,8 @@ public:
   DefaultVelocityField(const int translationFieldOptions = 1)
       : translationFieldOptions_(translationFieldOptions) {}
 
-  virtual NumericType getScalarVelocity(const Triple<NumericType> &, int,
-                                        const Triple<NumericType> &,
+  virtual NumericType getScalarVelocity(const Vec3D<NumericType> &, int,
+                                        const Vec3D<NumericType> &,
                                         unsigned long pointId) override {
     return velocities_->at(pointId);
   }

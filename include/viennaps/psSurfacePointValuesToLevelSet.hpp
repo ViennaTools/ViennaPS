@@ -13,24 +13,25 @@ namespace viennaps {
 using namespace viennacore;
 
 template <class NumericType, int D> class psSurfacePointValuesToLevelSet {
-  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
 
   lsDomainType levelSet;
-  SmartPointer<lsMesh<NumericType>> mesh;
+  SmartPointer<viennals::Mesh<NumericType>> mesh;
   std::vector<std::string> dataNames;
 
 public:
   psSurfacePointValuesToLevelSet() {}
 
-  psSurfacePointValuesToLevelSet(lsDomainType passedLevelSet,
-                                 SmartPointer<lsMesh<NumericType>> passedMesh,
-                                 std::vector<std::string> passedDataNames)
+  psSurfacePointValuesToLevelSet(
+      lsDomainType passedLevelSet,
+      SmartPointer<viennals::Mesh<NumericType>> passedMesh,
+      std::vector<std::string> passedDataNames)
       : levelSet(passedLevelSet), mesh(passedMesh), dataNames(passedDataNames) {
   }
 
   void setLevelSet(lsDomainType passedLevelSet) { levelSet = passedLevelSet; }
 
-  void setMesh(SmartPointer<lsMesh<NumericType>> passedMesh) {
+  void setMesh(SmartPointer<viennals::Mesh<NumericType>> passedMesh) {
     mesh = passedMesh;
   }
 
@@ -58,20 +59,21 @@ public:
       return;
     }
 
-    KDTree<NumericType, std::array<NumericType, 3>> transTree(mesh->getNodes());
+    KDTree<NumericType, Vec3D<NumericType>> transTree(mesh->getNodes());
     transTree.build();
     const auto gridDelta = levelSet->getGrid().getGridDelta();
 
     std::vector<std::size_t> levelSetPointToMeshIds(
         levelSet->getNumberOfPoints());
 
-    for (hrleConstSparseIterator<typename lsDomain<NumericType, D>::DomainType>
+    for (hrleConstSparseIterator<
+             typename viennals::Domain<NumericType, D>::DomainType>
              it(levelSet->getDomain());
          !it.isFinished(); ++it) {
 
       if (it.isDefined()) {
         auto lsIndicies = it.getStartIndices();
-        std::array<NumericType, 3> levelSetPointCoordinate{0., 0., 0.};
+        Vec3D<NumericType> levelSetPointCoordinate{0., 0., 0.};
         for (unsigned i = 0; i < D; i++) {
           levelSetPointCoordinate[i] = lsIndicies[i] * gridDelta;
         }

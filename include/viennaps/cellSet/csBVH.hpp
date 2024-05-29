@@ -1,13 +1,13 @@
 #pragma once
 
 #include "csBoundingVolume.hpp"
-#include <lsSmartPointer.hpp>
+#include <vcSmartPointer.hpp>
 
 /// Helper class to quickly determine the cell in which a given point resides
 /// in. To do so, an octree is built around the cell set structure.
 template <class T, int D> class csBVH {
 private:
-  using BVPtrType = lsSmartPointer<csBoundingVolume<T, D>>;
+  using BVPtrType = viennacore::SmartPointer<csBoundingVolume<T, D>>;
   using BoundsType = csPair<std::array<T, D>>;
   using CellIdsPtr = std::set<unsigned> *;
 

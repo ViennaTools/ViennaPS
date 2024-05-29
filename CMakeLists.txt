@@ -116,6 +116,7 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 3.1.0
+  GIT_TAG viennacore
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

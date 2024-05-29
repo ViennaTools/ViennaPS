@@ -201,22 +201,22 @@ struct Parameters {
 };
 
 template <int D>
-[[nodiscard]] viennaray::BoundaryCondition
-convertBoundaryCondition(lsBoundaryConditionEnum<D> originalBoundaryCondition) {
+[[nodiscard]] viennaray::BoundaryCondition convertBoundaryCondition(
+    viennals::BoundaryConditionEnum<D> originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
-  case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
+  case viennals::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
     return viennaray::BoundaryCondition::REFLECTIVE;
 
-  case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
+  case viennals::BoundaryConditionEnum<D>::INFINITE_BOUNDARY:
     return viennaray::BoundaryCondition::IGNORE;
 
-  case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
+  case viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
     return viennaray::BoundaryCondition::PERIODIC;
 
-  case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
+  case viennals::BoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
     return viennaray::BoundaryCondition::IGNORE;
 
-  case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
+  case viennals::BoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
     return viennaray::BoundaryCondition::IGNORE;
   }
   return viennaray::BoundaryCondition::IGNORE;

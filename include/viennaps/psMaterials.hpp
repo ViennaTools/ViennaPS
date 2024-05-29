@@ -32,14 +32,14 @@ enum class Material : int {
   GAS = 18
 };
 
-/// A class that wraps the lsMaterialMap class and provides a more user
+/// A class that wraps the viennals MaterialMap class and provides a more user
 /// friendly interface. It also provides a mapping from the integer material id
 /// to the Material enum.
 class MaterialMap {
-  SmartPointer<lsMaterialMap> map_;
+  SmartPointer<viennals::MaterialMap> map_;
 
 public:
-  MaterialMap() { map_ = SmartPointer<lsMaterialMap>::New(); };
+  MaterialMap() { map_ = SmartPointer<viennals::MaterialMap>::New(); };
 
   void insertNextMaterial(Material material = Material::None) {
     map_->insertNextMaterial(static_cast<int>(material));
@@ -63,7 +63,7 @@ public:
     map_->setMaterialId(idx, static_cast<int>(material));
   }
 
-  SmartPointer<lsMaterialMap> getMaterialMap() const { return map_; }
+  SmartPointer<viennals::MaterialMap> getMaterialMap() const { return map_; }
 
   inline std::size_t const size() const { return map_->getNumberOfLayers(); }
 

@@ -21,7 +21,7 @@ public:
       : depositionRate(passedRate), reactionOrder(passedOrder) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<lsPointData<NumericType>> rates,
+      SmartPointer<viennals::PointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) override {
     updateCoverages(rates, materialIDs);
@@ -38,7 +38,7 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(velocity);
   }
 
-  void updateCoverages(SmartPointer<lsPointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIDs) override {
     // update coverages based on fluxes
     auto particleFlux = rates->getScalarData("particleFlux");
@@ -52,7 +52,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = SmartPointer<lsPointData<NumericType>>::New();
+      coverages = SmartPointer<viennals::PointData<NumericType>>::New();
     } else {
       coverages->clear();
     }
@@ -77,7 +77,7 @@ public:
         depositionRateP2(passedRateP2), reactionOrderP2(passedOrderP2) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<lsPointData<NumericType>> rates,
+      SmartPointer<viennals::PointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) override {
     // define the surface reaction here
@@ -108,9 +108,9 @@ public:
                      const std::string pDataLabel = "particleFlux")
       : stickingProbability(pStickingProbability),
         reactionOrder(pReactionOrder), dataLabel(pDataLabel) {}
-  std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType, const Triple<NumericType> &,
-                    const Triple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType, const Vec3D<NumericType> &,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &rngState) override final {
@@ -129,10 +129,10 @@ public:
     }
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
-    return std::pair<NumericType, Triple<NumericType>>{sticking, direction};
+    return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
   }
-  void surfaceCollision(NumericType rayWeight, const Triple<NumericType> &,
-                        const Triple<NumericType> &, const unsigned int primID,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
+                        const Vec3D<NumericType> &, const unsigned int primID,
                         const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
@@ -157,20 +157,19 @@ class MultiTEOSParticle
 public:
   MultiTEOSParticle(const NumericType pStickingProbability, std::string pLabel)
       : stickingProbability(pStickingProbability), dataLabel(pLabel) {}
-  std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
-                    const Triple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, Triple<NumericType>>{stickingProbability,
-                                                       direction};
+    return std::pair<NumericType, Vec3D<NumericType>>{stickingProbability,
+                                                      direction};
   }
-  void surfaceCollision(NumericType rayWeight,
-                        const Triple<NumericType> &rayDir,
-                        const Triple<NumericType> &geomNormal,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                        const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,

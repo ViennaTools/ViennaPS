@@ -19,9 +19,9 @@ using namespace viennacore;
 /// with the specified material exclusively applied to the bottom of the fin,
 /// while the upper portion adopts the mask material.
 template <class NumericType, int D> class MakeFin {
-  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
 
@@ -68,9 +68,9 @@ public:
       auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
       NumericType normal[D] = {0., 0., 1.};
       NumericType origin[D] = {0., 0., baseHeight_};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
       auto mask = lsDomainType::New(bounds, boundaryConds, gridDelta_);
@@ -83,9 +83,9 @@ public:
                                    yExtent_ / 2.f + gridDelta_ / 2.f,
                                    baseHeight_ + finHeight_};
 
-        lsMakeGeometry<NumericType, D> geo(
-            mask,
-            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint));
+        viennals::MakeGeometry<NumericType, D> geo(
+            mask, SmartPointer<viennals::Box<NumericType, D>>::New(minPoint,
+                                                                   maxPoint));
         geo.setIgnoreBoundaryConditions(true);
         geo.apply();
 
@@ -98,7 +98,7 @@ public:
           return;
         }
 
-        auto boxMesh = SmartPointer<lsMesh<NumericType>>::New();
+        auto boxMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
         boxMesh->insertNextNode({-finWidth_ / 2, yExtent_ / 2 + gridDelta_,
                                  baseHeight_ - gridDelta_});
         boxMesh->insertNextNode({finWidth_ / 2, yExtent_ / 2 + gridDelta_,
@@ -163,11 +163,11 @@ public:
           boxMesh->insertNextTriangle({3, 7, 2}); // top
           boxMesh->insertNextTriangle({2, 7, 6}); // top
         }
-        lsFromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
+        viennals::FromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
       }
 
-      lsBooleanOperation<NumericType, D>(substrate, mask,
-                                         lsBooleanOperationEnum::UNION)
+      viennals::BooleanOperation<NumericType, D>(
+          substrate, mask, viennals::BooleanOperationEnum::UNION)
           .apply();
 
       if (material_ == Material::None) {
@@ -194,9 +194,9 @@ public:
       auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
       NumericType normal[D] = {0., 1.};
       NumericType origin[D] = {0., baseHeight_};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
       auto mask = lsDomainType::New(bounds, boundaryConds, gridDelta_);
@@ -204,9 +204,9 @@ public:
       if (taperAngle_ == 0.) {
         NumericType minPoint[D] = {-finWidth_ / 2, baseHeight_ - gridDelta_};
         NumericType maxPoint[D] = {finWidth_ / 2, baseHeight_ + finHeight_};
-        lsMakeGeometry<NumericType, D> geo(
-            mask,
-            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint));
+        viennals::MakeGeometry<NumericType, D> geo(
+            mask, SmartPointer<viennals::Box<NumericType, D>>::New(minPoint,
+                                                                   maxPoint));
         geo.setIgnoreBoundaryConditions(true);
         geo.apply();
       } else {
@@ -218,7 +218,7 @@ public:
           return;
         }
 
-        auto boxMesh = SmartPointer<lsMesh<NumericType>>::New();
+        auto boxMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
         boxMesh->insertNextNode({-finWidth_ / 2, baseHeight_ - gridDelta_});
         boxMesh->insertNextNode({finWidth_ / 2, baseHeight_ - gridDelta_});
         boxMesh->insertNextLine({1, 0});
@@ -240,11 +240,11 @@ public:
           boxMesh->insertNextLine({0, 3});
         }
 
-        lsFromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
+        viennals::FromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
       }
 
-      lsBooleanOperation<NumericType, D>(substrate, mask,
-                                         lsBooleanOperationEnum::UNION)
+      viennals::BooleanOperation<NumericType, D>(
+          substrate, mask, viennals::BooleanOperationEnum::UNION)
           .apply();
 
       if (material_ == Material::None) {

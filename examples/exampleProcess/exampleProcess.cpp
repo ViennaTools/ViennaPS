@@ -9,6 +9,7 @@
 #include "velocityField.hpp"
 
 namespace ps = viennaps;
+namespace ls = viennals;
 
 int main() {
   using NumericType = double;
@@ -33,53 +34,55 @@ int main() {
     double bounds[2 * D] = {0};
     for (int i = 0; i < 2 * D; ++i)
       bounds[i] = i % 2 == 0 ? -extent : extent;
-    lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+    ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
     for (int i = 0; i < D - 1; ++i)
       boundaryCons[i] =
-          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+          ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
     boundaryCons[D - 1] =
-        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+        ls::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    auto mask = lsSmartPointer<lsDomain<NumericType, D>>::New(
+    auto mask = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
     NumericType normal[3] = {0.};
     NumericType origin[3] = {0.};
     normal[D - 1] = -1.;
-    lsMakeGeometry<NumericType, D>(
-        mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    ls::MakeGeometry<NumericType, D>(
+        mask, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    auto maskCut = lsSmartPointer<lsDomain<NumericType, D>>::New(
+    auto maskCut = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
     normal[D - 1] = 1.;
     origin[D - 1] = 2.;
-    lsMakeGeometry<NumericType, D>(
-        maskCut, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    ls::MakeGeometry<NumericType, D>(
+        maskCut,
+        ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(mask, maskCut,
-                                       lsBooleanOperationEnum::INTERSECT)
+    ls::BooleanOperation<NumericType, D>(mask, maskCut,
+                                         ls::BooleanOperationEnum::INTERSECT)
         .apply();
 
     origin[D - 1] = 0;
     normal[D - 1] = 1.;
-    lsMakeGeometry<NumericType, D>(
-        maskCut, lsSmartPointer<lsCylinder<NumericType, D>>::New(
+    ls::MakeGeometry<NumericType, D>(
+        maskCut, ps::SmartPointer<ls::Cylinder<NumericType, D>>::New(
                      origin, normal, 2. + gridDelta, 5.))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(
-        mask, maskCut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    ls::BooleanOperation<NumericType, D>(
+        mask, maskCut, ls::BooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
 
     domain->insertNextLevelSetAsMaterial(mask, ps::Material::Mask);
 
-    auto substrate = lsSmartPointer<lsDomain<NumericType, D>>::New(
+    auto substrate = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
-    lsMakeGeometry<NumericType, D>(
-        substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    ls::MakeGeometry<NumericType, D>(
+        substrate,
+        ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     domain->insertNextLevelSetAsMaterial(substrate, ps::Material::Si);

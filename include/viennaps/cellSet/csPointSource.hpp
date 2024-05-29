@@ -9,17 +9,17 @@ using namespace viennacore;
 template <typename NumericType, int D>
 class PointSource : public viennaray::Source<NumericType> {
   const unsigned mNumPoints;
-  const Triple<NumericType> origin;
-  const Triple<NumericType> direction;
+  const csTriple<NumericType> origin;
+  const csTriple<NumericType> direction;
 
 public:
-  PointSource(Triple<NumericType> passedOrigin,
-              Triple<NumericType> passedDirection,
+  PointSource(csTriple<NumericType> passedOrigin,
+              csTriple<NumericType> passedDirection,
               std::array<int, 5> &pTraceSettings, const size_t pNumPoints)
       : origin(passedOrigin), direction(passedDirection),
         mNumPoints(pNumPoints) {}
 
-  Pair<Triple<NumericType>>
+  Pair<csTriple<NumericType>>
   getOriginAndDirection(const size_t idx, RNG &rngState) const override {
     return {origin, direction};
   }

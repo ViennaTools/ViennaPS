@@ -1,8 +1,9 @@
 #pragma once
 
-#include "psLogger.hpp"
+#include "Logger.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
+#include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
@@ -13,17 +14,21 @@
 #include <raySource.hpp>
 #include <rayTrace.hpp>
 
+namespace viennaps {
+
+using namespace viennacore;
+
 template <typename NumericType, int D>
-class DesorptionSource : public raySource<NumericType, D> {
+class DesorptionSource : public viennaray::Source<NumericType, D> {
 public:
-  DesorptionSource(const std::vector<std::array<NumericType, 3>> &points,
-                   const std::vector<std::array<NumericType, 3>> &normals,
+  DesorptionSource(const std::vector<Vec3D<NumericType>> &points,
+                   const std::vector<Vec3D<NumericType>> &normals,
                    const std::vector<NumericType> &desorptionRates,
                    const int numRaysPerPoint)
       : points_(points), normals_(normals), desorptionRates_(desorptionRates),
         numRaysPerPoint_(numRaysPerPoint) {}
 
-  rayPair<rayTriple<NumericType>>
+  Vec2D<Vec3D<NumericType>>
   getOriginAndDirection(const size_t idx, rayRNG &RngState) const override {
     size_t pointIdx = idx / numRaysPerPoint_;
     auto direction =
@@ -40,15 +45,15 @@ public:
   }
 
 private:
-  const std::vector<std::array<NumericType, 3>> &points_;
-  const std::vector<std::array<NumericType, 3>> &normals_;
+  const std::vector<Vec3D<NumericType>> &points_;
+  const std::vector<Vec3D<NumericType>> &normals_;
   const std::vector<NumericType> &desorptionRates_;
   const int numRaysPerPoint_;
 };
 
 template <typename NumericType, int D> class psAtomicLayerProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
 
 public:
   psAtomicLayerProcess() {}
@@ -56,7 +61,7 @@ public:
   // Constructor for a process with a pre-configured process model.
   template <typename ProcessModelType>
   psAtomicLayerProcess(psDomainType domain,
-                       psSmartPointer<ProcessModelType> passedProcessModel)
+                       SmartPointer<ProcessModelType> passedProcessModel)
       : pDomain_(domain) {
     pModel_ = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);
@@ -66,7 +71,7 @@ public:
   // a custom process model. A custom process model must interface the
   // psProcessModel class.
   template <typename ProcessModelType>
-  void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
+  void setProcessModel(SmartPointer<ProcessModelType> passedProcessModel) {
     pModel_ = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
         passedProcessModel);
   }
@@ -75,7 +80,7 @@ public:
   void setDomain(psDomainType domain) { pDomain_ = domain; }
 
   // Set the source direction, where the rays should be traced from.
-  void setSourceDirection(rayTraceDirection passedDirection) {
+  void setSourceDirection(viennaray::TraceDirection passedDirection) {
     sourceDirection_ = passedDirection;
   }
 
@@ -97,8 +102,10 @@ public:
   void setNumberOfRaysPerPoint(unsigned numRays) { raysPerPoint_ = numRays; }
 
   // Set the integration scheme for solving the level-set equation.
-  // Possible integration schemes are specified in lsIntegrationSchemeEnum.
-  void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) {
+  // Possible integration schemes are specified in
+  // viennals::IntegrationSchemeEnum.
+  void setIntegrationScheme(
+      viennals::IntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme_ = passedIntegrationScheme;
   }
 
@@ -115,26 +122,26 @@ public:
     checkInput();
 
     /* ---------- Process Setup --------- */
-    psUtils::Timer processTimer;
+    Timer processTimer;
     processTimer.start();
 
     auto name = pModel_->getProcessName().value_or("default");
 
     const NumericType gridDelta = pDomain_->getGrid().getGridDelta();
-    auto diskMesh = lsSmartPointer<lsMesh<NumericType>>::New();
-    auto translator = lsSmartPointer<translatorType>::New();
-    lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
+    auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto translator = SmartPointer<translatorType>::New();
+    viennals::ToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
     if (pDomain_->getMaterialMap()) {
       meshConverter.setMaterialMap(
           pDomain_->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = psSmartPointer<psTranslationField<NumericType>>::New(
+    auto transField = SmartPointer<TranslationField<NumericType>>::New(
         pModel_->getVelocityField(), pDomain_->getMaterialMap());
     transField->setTranslator(translator);
 
-    lsAdvect<NumericType, D> advectionKernel;
+    viennals::Advect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme_);
     advectionKernel.setAdvectionTime(1.);
@@ -146,12 +153,12 @@ public:
 
     /* --------- Setup for ray tracing ----------- */
 
-    rayBoundaryCondition rayBoundaryCondition[D];
-    rayTrace<NumericType, D> rayTracer;
+    typename viennaray::BoundaryCondition rayBoundaryCondition[D];
+    viennaray::Trace<NumericType, D> rayTracer;
 
     // Map the domain boundary to the ray tracing boundaries
     for (unsigned i = 0; i < D; ++i)
-      rayBoundaryCondition[i] = psUtils::convertBoundaryCondition<D>(
+      rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
           pDomain_->getGrid().getBoundaryConditions(i));
 
     rayTracer.setSourceDirection(sourceDirection_);
@@ -160,7 +167,7 @@ public:
     rayTracer.setUseRandomSeeds(useRandomSeeds_);
     auto primaryDirection = pModel_->getPrimaryDirection();
     if (primaryDirection) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addInfo("Using primary direction: " +
                    psUtils::arrayToString(primaryDirection.value()))
           .print();
@@ -186,12 +193,12 @@ public:
     const bool useProcessParams =
         surfaceModel->getProcessParameters() != nullptr;
     if (useProcessParams)
-      psLogger::getInstance().addInfo("Using process parameters.").print();
+      Logger::getInstance().addInfo("Using process parameters.").print();
 
     size_t counter = 0;
     int numCycles = 0;
     while (numCycles++ < numCycles_) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addInfo("Cycle: " + std::to_string(numCycles) + "/" +
                    std::to_string(numCycles_))
           .print();
@@ -199,7 +206,7 @@ public:
       meshConverter.apply();
       auto numPoints = diskMesh->nodes.size();
       surfaceModel->initializeCoverages(numPoints);
-      auto rates = psSmartPointer<psPointData<NumericType>>::New();
+      auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       auto const materialIds =
           *diskMesh->getCellData().getScalarData("MaterialIds");
       auto const points = diskMesh->getNodes();
@@ -217,7 +224,7 @@ public:
           throw pybind11::error_already_set();
 #endif
 
-        psLogger::getInstance()
+        Logger::getInstance()
             .addInfo("Pulse time: " + std::to_string(time) + "/" +
                      std::to_string(pulseTime_))
             .print();
@@ -274,7 +281,7 @@ public:
         surfaceModel->updateCoverages(rates, materialIds);
 
         // print debug output
-        if (psLogger::getLogLevel() >= 4) {
+        if (Logger::getLogLevel() >= 4) {
           for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
             auto label = rates->getScalarDataLabel(idx);
             diskMesh->getCellData().insertNextScalarData(
@@ -294,16 +301,16 @@ public:
       } // end of gas pulse
 
       if (purgePulseTime_ > 0.) {
-        psLogger::getInstance().addInfo("Purge pulse ...").print();
+        Logger::getInstance().addInfo("Purge pulse ...").print();
         if (desorptionRates_.size() != numParticles) {
-          psLogger::getInstance()
+          Logger::getInstance()
               .addError("Desorption rates not set for all particle types.")
               .print();
         }
 
-        auto purgeRates = psSmartPointer<psPointData<NumericType>>::New();
+        auto purgeRates = SmartPointer<viennals::PointData<NumericType>>::New();
 
-        rayTrace<NumericType, D> purgeTracer;
+        viennaray::Trace<NumericType, D> purgeTracer;
         purgeTracer.setSourceDirection(sourceDirection_);
         purgeTracer.setBoundaryConditions(rayBoundaryCondition);
         purgeTracer.setUseRandomSeeds(useRandomSeeds_);
@@ -355,7 +362,7 @@ public:
         transField->buildKdTree(points);
 
       // print debug output
-      if (psLogger::getLogLevel() >= 4) {
+      if (Logger::getLogLevel() >= 4) {
         diskMesh->getCellData().insertNextScalarData(*velocities, "velocities");
         printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
         counter++;
@@ -366,9 +373,7 @@ public:
 
     processTimer.finish();
 
-    psLogger::getInstance()
-        .addTiming("\nProcess " + name, processTimer)
-        .print();
+    Logger::getInstance().addTiming("\nProcess " + name, processTimer).print();
   }
 
   void writeParticleDataLogs(std::string fileName) {
@@ -388,14 +393,14 @@ public:
   }
 
 private:
-  void printDiskMesh(lsSmartPointer<lsMesh<NumericType>> mesh,
+  void printDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
                      std::string name) const {
     psVTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
-  rayTracingData<NumericType>
-  movePointDataToRayData(psSmartPointer<psPointData<NumericType>> pointData) {
-    rayTracingData<NumericType> rayData;
+  viennaray::TracingData<NumericType>
+  movePointDataToRayData(SmartPointer<psPointData<NumericType>> pointData) {
+    viennaray::TracingData<NumericType> rayData;
     const auto numData = pointData->getScalarDataSize();
     rayData.setNumberOfVectorData(numData);
     for (size_t i = 0; i < numData; ++i) {
@@ -407,9 +412,8 @@ private:
     return std::move(rayData);
   }
 
-  void
-  moveRayDataToPointData(psSmartPointer<psPointData<NumericType>> pointData,
-                         rayTracingData<NumericType> &rayData) {
+  void moveRayDataToPointData(SmartPointer<psPointData<NumericType>> pointData,
+                              rayTracingData<NumericType> &rayData) {
     pointData->clear();
     const auto numData = rayData.getVectorData().size();
     for (size_t i = 0; i < numData; ++i)
@@ -419,50 +423,50 @@ private:
 
   void checkInput() const {
     if (!pDomain_) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("No domain passed to psAtomicLayerProcess.")
           .print();
     }
 
     if (pDomain_->getLevelSets()->size() == 0) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("No level sets in domain passed to psAtomicLayerProcess.")
           .print();
     }
 
     if (!pModel_) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("No process model passed to psAtomicLayerProcess.")
           .print();
     }
 
     if (!pModel_->getSurfaceModel()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("No surface model passed to psAtomicLayerProcess.")
           .print();
     }
 
     if (!pModel_->getVelocityField()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("No velocity field passed to psAtomicLayerProcess.")
           .print();
     }
 
     if (!pModel_->getParticleTypes()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addError("No particle types specified for ray tracing in "
                     "psAtomicLayerProcess.")
           .print();
     }
 
     if (pModel_->getGeometricModel()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Geometric model not supported in psAtomicLayerProcess.")
           .print();
     }
 
     if (pModel_->getAdvectionCallback()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning(
               "Advection callback not supported in psAtomicLayerProcess.")
           .print();
@@ -470,15 +474,16 @@ private:
   }
 
   psDomainType pDomain_;
-  psSmartPointer<psProcessModel<NumericType, D>> pModel_;
+  SmartPointer<ProcessModel<NumericType, D>> pModel_;
 
-  rayTraceDirection sourceDirection_ =
-      D == 3 ? rayTraceDirection::POS_Z : rayTraceDirection::POS_Y;
-  lsIntegrationSchemeEnum integrationScheme_ =
-      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  viennaray::TraceDirection sourceDirection_ =
+      D == 3 ? viennaray::TraceDirection::POS_Z
+             : viennaray::TraceDirection::POS_Y;
+  viennals::IntegrationSchemeEnum integrationScheme_ =
+      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   unsigned raysPerPoint_ = 1000;
   bool useRandomSeeds_ = true;
-  std::vector<rayDataLog<NumericType>> particleDataLogs_;
+  std::vector<viennaray::DataLog<NumericType>> particleDataLogs_;
 
   unsigned int numCycles_ = 0;
   NumericType pulseTime_ = 0.;
@@ -486,3 +491,5 @@ private:
   NumericType coverageTimeStep_ = 1.;
   std::vector<NumericType> desorptionRates_;
 };
+
+} // namespace viennaps

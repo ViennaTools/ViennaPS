@@ -133,7 +133,7 @@ public:
               ray.org_z + ray.dir_z * ray.tfar;
 
           /* -------- Hit from back -------- */
-          const auto rayDir = Triple<T>{ray.dir_x, ray.dir_y, ray.dir_z};
+          const auto rayDir = csTriple<T>{ray.dir_x, ray.dir_y, ray.dir_z};
           const auto geomNormal = mGeometry.getPrimNormal(rayHit.hit.primID);
           if (rayInternal::DotProduct(rayDir, geomNormal) > 0) {
             // If the dot product of the ray direction and the surface normal is

@@ -36,7 +36,7 @@ using namespace viennacore;
 */
 template <class NumericType, int D> class Domain {
 public:
-  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using lsDomainsType = SmartPointer<std::vector<lsDomainType>>;
   using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
   using materialMapType = SmartPointer<MaterialMap>;
@@ -95,8 +95,8 @@ public:
   void insertNextLevelSet(lsDomainType levelSet,
                           bool wrapLowerLevelSet = true) {
     if (!levelSets_->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(levelSet, levelSets_->back(),
-                                         lsBooleanOperationEnum::UNION)
+      viennals::BooleanOperation<NumericType, D>(
+          levelSet, levelSets_->back(), viennals::BooleanOperationEnum::UNION)
           .apply();
     }
     levelSets_->push_back(levelSet);
@@ -113,8 +113,8 @@ public:
                                     const Material material,
                                     bool wrapLowerLevelSet = true) {
     if (!levelSets_->empty() && wrapLowerLevelSet) {
-      lsBooleanOperation<NumericType, D>(levelSet, levelSets_->back(),
-                                         lsBooleanOperationEnum::UNION)
+      viennals::BooleanOperation<NumericType, D>(
+          levelSet, levelSets_->back(), viennals::BooleanOperationEnum::UNION)
           .apply();
     }
     if (!materialMap_) {
@@ -159,13 +159,14 @@ public:
   // Apply a boolean operation with the passed Level-Set to all of the
   // Level-Sets in the domain.
   void applyBooleanOperation(lsDomainType levelSet,
-                             lsBooleanOperationEnum operation) {
+                             viennals::BooleanOperationEnum operation) {
     if (levelSets_->empty()) {
       return;
     }
 
     for (auto &layer : *levelSets_) {
-      lsBooleanOperation<NumericType, D>(layer, levelSet, operation).apply();
+      viennals::BooleanOperation<NumericType, D>(layer, levelSet, operation)
+          .apply();
     }
   }
 
@@ -210,8 +211,8 @@ public:
   // [min, max][x, y, z]
   auto getBoundingBox() const {
     std::array<std::array<NumericType, 3>, 2> boundingBox;
-    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
-    lsToDiskMesh<NumericType, D>(levelSets_->back(), mesh).apply();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    viennals::ToDiskMesh<NumericType, D>(levelSets_->back(), mesh).apply();
     boundingBox[0] = mesh->minimumExtent;
     boundingBox[1] = mesh->maximumExtent;
     return boundingBox;
@@ -229,11 +230,11 @@ public:
   // Save the level set as a VTK file.
   void saveLevelSetMesh(std::string fileName, int width = 1) {
     for (int i = 0; i < levelSets_->size(); i++) {
-      auto mesh = SmartPointer<lsMesh<NumericType>>::New();
-      lsExpand<NumericType, D>(levelSets_->at(i), width).apply();
-      lsToMesh<NumericType, D>(levelSets_->at(i), mesh).apply();
-      lsVTKWriter<NumericType>(mesh,
-                               fileName + "_layer" + std::to_string(i) + ".vtp")
+      auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+      viennals::Expand<NumericType, D>(levelSets_->at(i), width).apply();
+      viennals::ToMesh<NumericType, D>(levelSets_->at(i), mesh).apply();
+      viennals::VTKWriter<NumericType>(mesh, fileName + "_layer" +
+                                                 std::to_string(i) + ".vtp")
           .apply();
     }
   }
@@ -241,10 +242,10 @@ public:
   // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
   void saveSurfaceMesh(std::string fileName, bool addMaterialIds = true) {
 
-    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
 
     if (addMaterialIds) {
-      lsToDiskMesh<NumericType, D> meshConverter;
+      viennals::ToDiskMesh<NumericType, D> meshConverter;
       meshConverter.setMesh(mesh);
       if (materialMap_)
         meshConverter.setMaterialMap(materialMap_->getMaterialMap());
@@ -258,13 +259,13 @@ public:
           .apply();
     }
 
-    lsToSurfaceMesh<NumericType, D>(levelSets_->back(), mesh).apply();
-    lsVTKWriter<NumericType>(mesh, fileName).apply();
+    viennals::ToSurfaceMesh<NumericType, D>(levelSets_->back(), mesh).apply();
+    viennals::VTKWriter<NumericType>(mesh, fileName).apply();
   }
 
   // Save the domain as a volume mesh
   void saveVolumeMesh(std::string fileName) const {
-    lsWriteVisualizationMesh<NumericType, D> visMesh;
+    viennals::WriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(fileName);
     for (auto &ls : *levelSets_) {
       visMesh.insertNextLevelSet(ls);
@@ -277,9 +278,9 @@ public:
   // Write the all Level-Sets in the domain to individual files. The file name
   // serves as the prefix for the individual files and is append by
   // "_layerX.lvst", where X is the number of the Level-Set in the domain.
-  void saveLevelSets(std::string fileName) const {
+  void savexLevelSets(std::string fileName) const {
     for (int i = 0; i < levelSets_->size(); i++) {
-      lsWriter<NumericType, D>(
+      viennals::Writer<NumericType, D>(
           levelSets_->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
           .apply();
     }

@@ -3,6 +3,8 @@
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
 
+#include <vcVectorUtil.hpp>
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -11,12 +13,12 @@ namespace impl {
 
 template <class NumericType, int D>
 class AnisotropicVelocityField : public VelocityField<NumericType> {
-  static Triple<NumericType> ScaleImpl(const NumericType pF,
-                                       const Triple<NumericType> &pT) {
+  static Vec3D<NumericType> ScaleImpl(const NumericType pF,
+                                      const Vec3D<NumericType> &pT) {
     return {pF * pT[0], pF * pT[1], pF * pT[2]};
   }
 
-  Triple<Triple<NumericType>> directions;
+  Vec3D<Vec3D<NumericType>> directions;
   const NumericType r100;
   const NumericType r110;
   const NumericType r111;
@@ -25,33 +27,32 @@ class AnisotropicVelocityField : public VelocityField<NumericType> {
 
 public:
   AnisotropicVelocityField(
-      const Triple<NumericType> &direction100,
-      const Triple<NumericType> &direction010, const NumericType passedR100,
+      const Vec3D<NumericType> &direction100,
+      const Vec3D<NumericType> &direction010, const NumericType passedR100,
       const NumericType passedR110, const NumericType passedR111,
       const NumericType passedR311,
       const std::vector<std::pair<Material, NumericType>> &passedmaterials)
       : r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
         materials(passedmaterials) {
 
-    directions[0] = rayInternal::Normalize(direction100);
-    directions[1] = rayInternal::Normalize(direction010);
+    directions[0] = Normalize(direction100);
+    directions[1] = Normalize(direction010);
 
-    directions[1] = rayInternal::Diff(
-        directions[1],
-        ScaleImpl(rayInternal::DotProduct(directions[0], directions[1]),
-                  directions[0]));
-    directions[2] = rayInternal::CrossProduct(directions[0], directions[1]);
+    directions[1] =
+        directions[1] -
+        ScaleImpl(DotProduct(directions[0], directions[1]), directions[0]);
+    directions[2] = CrossProduct(directions[0], directions[1]);
   }
 
-  NumericType getScalarVelocity(const Triple<NumericType> & /*coordinate*/,
-                                int material, const Triple<NumericType> &nv,
+  NumericType getScalarVelocity(const Vec3D<NumericType> & /*coordinate*/,
+                                int material, const Vec3D<NumericType> &nv,
                                 unsigned long /*pointID*/) override {
     for (auto epitaxyMaterial : materials) {
       if (MaterialMap::isMaterial(material, epitaxyMaterial.first)) {
-        if (std::abs(rayInternal::Norm(nv) - 1.) > 1e-4)
+        if (std::abs(Norm(nv) - 1.) > 1e-4)
           return 0.;
 
-        Triple<NumericType> normalVector;
+        Vec3D<NumericType> normalVector;
         normalVector[0] = nv[0];
         normalVector[1] = nv[1];
         if (D == 3) {
@@ -59,17 +60,16 @@ public:
         } else {
           normalVector[2] = 0;
         }
-        rayInternal::Normalize(normalVector);
+        Normalize(normalVector);
 
-        Triple<NumericType> N;
+        Vec3D<NumericType> N;
         for (int i = 0; i < 3; i++) {
-          N[i] =
-              std::fabs(rayInternal::DotProduct(directions[i], normalVector));
+          N[i] = std::fabs(DotProduct(directions[i], normalVector));
         }
         std::sort(N.begin(), N.end(), std::greater<NumericType>());
 
         NumericType velocity;
-        if (rayInternal::DotProduct(N, Triple<NumericType>{-1., 1., 2.}) < 0) {
+        if (DotProduct(N, Vec3D<NumericType>{-1., 1., 2.}) < 0) {
           velocity = (r100 * (N[0] - N[1] - 2 * N[2]) + r110 * (N[1] - N[2]) +
                       3 * r311 * N[2]) /
                      N[0];
@@ -113,8 +113,8 @@ public:
   }
 
   AnisotropicProcess(
-      const Triple<NumericType> passedDir100,
-      const Triple<NumericType> passedDir010, const NumericType passedR100,
+      const Vec3D<NumericType> passedDir100,
+      const Vec3D<NumericType> passedDir010, const NumericType passedR100,
       const NumericType passedR110, const NumericType passedR111,
       const NumericType passedR311,
       const std::vector<std::pair<Material, NumericType>> pMaterials)
@@ -140,8 +140,8 @@ private:
   }
 
   // crystal surface direction
-  Triple<NumericType> direction100;
-  Triple<NumericType> direction010;
+  Vec3D<NumericType> direction100;
+  Vec3D<NumericType> direction010;
 
   // rates for crystal directions in um / s
   NumericType r100 = 0.0166666666667;

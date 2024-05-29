@@ -41,6 +41,7 @@
 #include "psQueues.hpp"
 
 #include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
 
 namespace viennaps {
 

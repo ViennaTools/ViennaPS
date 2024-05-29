@@ -7,7 +7,6 @@
 #endif
 
 #include <compact/psKDTree.hpp>
-#include <psSmartPointer.hpp>
 
 inline double getTime() {
 #ifdef _OPENMP
@@ -41,6 +40,8 @@ std::vector<std::vector<T>> generatePoints(unsigned N, unsigned D) {
   }
   return data;
 }
+
+namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
@@ -80,10 +81,10 @@ int main(int argc, char *argv[]) {
 
   {
     std::cout << "Growing Tree...\n";
-    psSmartPointer<psKDTree<NumericType>> tree = nullptr;
+    ps::SmartPointer<ps::KDTree<NumericType>> tree = nullptr;
     auto startTime = getTime();
     for (unsigned i = 0; i < repetitions; ++i) {
-      tree = psSmartPointer<psKDTree<NumericType>>::New(points);
+      tree = ps::SmartPointer<ps::KDTree<NumericType>>::New(points);
       tree->build();
     }
     auto endTime = getTime();

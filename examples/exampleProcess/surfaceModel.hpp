@@ -11,7 +11,7 @@ public:
   void initializeCoverages(unsigned numGeometryPoints) override {
     std::vector<NumericType> someCoverages(numGeometryPoints, 0);
 
-    coverages = viennaps::SmartPointer<lsPointData<NumericType>>::New();
+    coverages = viennaps::SmartPointer<viennals::PointData<NumericType>>::New();
     coverages->insertNextScalarData(someCoverages, "coverages");
   }
 
@@ -22,7 +22,7 @@ public:
   }
 
   viennaps::SmartPointer<std::vector<NumericType>> calculateVelocities(
-      viennaps::SmartPointer<lsPointData<NumericType>> rates,
+      viennaps::SmartPointer<viennals::PointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
     // use coverages and rates here to calculate the velocity here
@@ -30,8 +30,9 @@ public:
         *rates->getScalarData("particleRate"));
   }
 
-  void updateCoverages(viennaps::SmartPointer<lsPointData<NumericType>> rates,
-                       const std::vector<NumericType> &materialIds) override {
+  void updateCoverages(
+      viennaps::SmartPointer<viennals::PointData<NumericType>> rates,
+      const std::vector<NumericType> &materialIds) override {
     // update coverages
   }
 };

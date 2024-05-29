@@ -29,9 +29,9 @@ public:
     } while (E < minEnergy);
   }
 
-  std::pair<T, Triple<T>> surfaceHit(const Triple<T> &rayDir,
-                                     const Triple<T> &geomNormal, bool &reflect,
-                                     RNG &rngState) override final {
+  std::pair<T, Vec3D<T>> surfaceHit(const Vec3D<T> &rayDir,
+                                    const Vec3D<T> &geomNormal, bool &reflect,
+                                    RNG &rngState) override final {
     auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
     const T incAngle = std::acos(std::max(std::min(cosTheta, T(1)), T(0)));
     std::uniform_real_distribution<T> uniDist;
@@ -67,10 +67,10 @@ public:
       auto direction = viennaray::ReflectionConedCosine<T, D>(
           rayDir, geomNormal, rngState, std::min(incAngle, minAngle));
       E = NewEnergy;
-      return std::pair<T, Triple<T>>{impactEnergy, direction};
+      return std::pair<T, Vec3D<T>>{impactEnergy, direction};
     } else {
       reflect = false;
-      return std::pair<T, Triple<T>>{impactEnergy, Triple<T>{0., 0., 0.}};
+      return std::pair<T, Vec3D<T>>{impactEnergy, Vec3D<T>{0., 0., 0.}};
     }
   }
 
@@ -96,7 +96,7 @@ public:
 
     for (int i = 0; i < numParticles; i++) {
       T cosTheta, tmp, sinThetaSqr;
-      csTriple<T> direction;
+      csVec3D<T> direction;
       do {
         // random direction
         direction[0] = negUniDist(rngState);
@@ -213,7 +213,7 @@ public:
     return true;
   }
 
-  void setPrimaryDirection(const Triple<NumericType> passedPrimaryDirection) {
+  void setPrimaryDirection(const Vec3D<NumericType> passedPrimaryDirection) {
     tracer.setPrimaryDirection(passedPrimaryDirection);
   }
 };
@@ -233,7 +233,7 @@ public:
   }
 
   void setPrimaryDirection(
-      const Triple<NumericType> passedPrimaryDirection) override final {
+      const Vec3D<NumericType> passedPrimaryDirection) override final {
     this->primaryDirection = Normalize(passedPrimaryDirection);
     auto cb = std::dynamic_pointer_cast<impl::DamageModel<NumericType, D>>(
         this->getAdvectionCallback());

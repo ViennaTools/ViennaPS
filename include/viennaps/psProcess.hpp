@@ -81,8 +81,10 @@ public:
   void disableFluxBoundaries() { ignoreFluxBoundaries = true; }
 
   // Set the integration scheme for solving the level-set equation.
-  // Possible integration schemes are specified in lsIntegrationSchemeEnum.
-  void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) {
+  // Possible integration schemes are specified in
+  // viennals::IntegrationSchemeEnum.
+  void setIntegrationScheme(
+      viennals::IntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme = passedIntegrationScheme;
   }
 
@@ -106,11 +108,11 @@ public:
 
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
-  SmartPointer<lsMesh<NumericType>> calculateFlux() const {
+  SmartPointer<viennals::Mesh<NumericType>> calculateFlux() const {
 
     // Generate disk mesh from domain
-    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
-    lsToDiskMesh<NumericType, D> meshConverter(mesh);
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    viennals::ToDiskMesh<NumericType, D> meshConverter(mesh);
     for (auto dom : *domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
     }
@@ -242,20 +244,20 @@ public:
     assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
     const NumericType gridDelta = domain->getGrid().getGridDelta();
 
-    auto diskMesh = SmartPointer<lsMesh<NumericType>>::New();
+    auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     auto translator = SmartPointer<translatorType>::New();
-    lsToDiskMesh<NumericType, D> meshConverter(diskMesh);
+    viennals::ToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
     if (domain->getMaterialMap() &&
         domain->getMaterialMap()->size() == domain->getLevelSets()->size()) {
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = lsSmartPointer<TranslationField<NumericType>>::New(
+    auto transField = SmartPointer<TranslationField<NumericType>>::New(
         model->getVelocityField(), domain->getMaterialMap());
     transField->setTranslator(translator);
 
-    lsAdvect<NumericType, D> advectionKernel;
+    viennals::Advect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
     advectionKernel.setTimeStepRatio(timeStepRatio);
@@ -374,7 +376,7 @@ public:
           }
           rayTracer.setGlobalData(rayTraceCoverages);
 
-          auto rates = SmartPointer<lsPointData<NumericType>>::New();
+          auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
 
           std::size_t particleIdx = 0;
           for (auto &particle : model->getParticleTypes()) {
@@ -452,7 +454,7 @@ public:
         throw pybind11::error_already_set();
 #endif
 
-      auto rates = SmartPointer<lsPointData<NumericType>>::New();
+      auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
@@ -672,13 +674,13 @@ public:
   }
 
 private:
-  void printDiskMesh(SmartPointer<lsMesh<NumericType>> mesh,
+  void printDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
                      std::string name) const {
-    lsVTKWriter<NumericType>(mesh, std::move(name)).apply();
+    viennals::VTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
   viennaray::TracingData<NumericType> movePointDataToRayData(
-      SmartPointer<lsPointData<NumericType>> pointData) const {
+      SmartPointer<viennals::PointData<NumericType>> pointData) const {
     viennaray::TracingData<NumericType> rayData;
     const auto numData = pointData->getScalarDataSize();
     rayData.setNumberOfVectorData(numData);
@@ -691,9 +693,9 @@ private:
     return std::move(rayData);
   }
 
-  void
-  moveRayDataToPointData(SmartPointer<lsPointData<NumericType>> pointData,
-                         viennaray::TracingData<NumericType> &rayData) const {
+  void moveRayDataToPointData(
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      viennaray::TracingData<NumericType> &rayData) const {
     pointData->clear();
     const auto numData = rayData.getVectorData().size();
     for (size_t i = 0; i < numData; ++i)
@@ -701,8 +703,9 @@ private:
                                       rayData.getVectorDataLabel(i));
   }
 
-  void moveCoveragesToTopLS(SmartPointer<translatorType> translator,
-                            SmartPointer<lsPointData<NumericType>> coverages) {
+  void moveCoveragesToTopLS(
+      SmartPointer<translatorType> translator,
+      SmartPointer<viennals::PointData<NumericType>> coverages) {
     auto topLS = domain->getLevelSets()->back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
@@ -723,7 +726,7 @@ private:
 
   void updateCoveragesFromAdvectedSurface(
       SmartPointer<translatorType> translator,
-      SmartPointer<lsPointData<NumericType>> coverages) const {
+      SmartPointer<viennals::PointData<NumericType>> coverages) const {
     auto topLS = domain->getLevelSets()->back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
@@ -742,8 +745,8 @@ private:
   viennaray::TraceDirection sourceDirection =
       D == 3 ? viennaray::TraceDirection::POS_Z
              : viennaray::TraceDirection::POS_Y;
-  lsIntegrationSchemeEnum integrationScheme =
-      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  viennals::IntegrationSchemeEnum integrationScheme =
+      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   unsigned raysPerPoint = 1000;
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds_ = true;

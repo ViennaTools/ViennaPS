@@ -21,36 +21,38 @@ void makeLShape(psSmartPointer<psDomain<NumericType, D>> domain,
   bounds[2] = -gridDelta;
   bounds[3] = params.get("verticalDepth") + gridDelta;
 
-  typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+  typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
 
   for (int i = 0; i < D - 1; i++) {
     boundaryCons[i] =
-        lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+        ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
   }
   boundaryCons[D - 1] =
-      lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+      ls::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
   {
-    auto substrate = lsSmartPointer<lsDomain<NumericType, D>>::New(
+    auto substrate = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
     origin[D - 1] = params.get("verticalDepth");
-    lsMakeGeometry<NumericType, D>(
-        substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    ls::MakeGeometry<NumericType, D>(
+        substrate,
+        ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
     domain->insertNextLevelSetAsMaterial(substrate, material);
   }
 
   {
     auto vertBox =
-        lsSmartPointer<lsDomain<NumericType, D>>::New(domain->getGrid());
+        ps::SmartPointer<ls::Domain<NumericType, D>>::New(domain->getGrid());
     NumericType minPoint[D] = {-params.get("verticalWidth") / 2.0, 0.};
     NumericType maxPoint[D] = {params.get("verticalWidth") / 2.0,
                                params.get("verticalDepth")};
-    lsMakeGeometry<NumericType, D>(
-        vertBox, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+    ls::MakeGeometry<NumericType, D>(
+        vertBox,
+        ps::SmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
 
     domain->applyBooleanOperation(vertBox,
@@ -59,14 +61,15 @@ void makeLShape(psSmartPointer<psDomain<NumericType, D>> domain,
 
   {
     auto horiBox =
-        lsSmartPointer<lsDomain<NumericType, D>>::New(domain->getGrid());
+        ps::SmartPointer<ls::Domain<NumericType, D>>::New(domain->getGrid());
     NumericType minPoint[D] = {-params.get("verticalWidth") / 2.0, 0.};
     NumericType maxPoint[D] = {-params.get("verticalWidth") / 2.0 +
                                    params.get("horizontalWidth"),
                                params.get("horizontalHeight")};
 
-    lsMakeGeometry<NumericType, D>(
-        horiBox, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+    ls::MakeGeometry<NumericType, D>(
+        horiBox,
+        ps::SmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
 
     domain->applyBooleanOperation(horiBox,

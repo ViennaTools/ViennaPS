@@ -40,7 +40,7 @@ public:
       : maskMaterials_(mask), params_(params) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<lsPointData<NumericType>> rates,
+      SmartPointer<viennals::PointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
 
@@ -81,9 +81,8 @@ public:
         inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.) {}
 
-  void surfaceCollision(NumericType rayWeight,
-                        const Triple<NumericType> &rayDir,
-                        const Triple<NumericType> &geomNormal,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                        const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
@@ -95,9 +94,9 @@ public:
         params_.yieldFunction(cosTheta);
   }
 
-  std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
-                    const Triple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &rngState) override final {
@@ -124,10 +123,10 @@ public:
       energy_ = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, rngState, std::max(incAngle, minAngle_));
-      return std::pair<NumericType, Triple<NumericType>>{0., direction};
+      return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
-      return std::pair<NumericType, Triple<NumericType>>{
-          1., Triple<NumericType>{0., 0., 0.}};
+      return std::pair<NumericType, Vec3D<NumericType>>{
+          1., Vec3D<NumericType>{0., 0., 0.}};
     }
   }
 

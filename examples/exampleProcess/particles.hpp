@@ -11,28 +11,28 @@ public:
   Particle(const NumericType pSticking, const NumericType pPower)
       : stickingProbability(pSticking), sourcePower(pPower) {}
   void surfaceCollision(NumericType rayWeight,
-                        const viennaray::Triple<NumericType> &rayDir,
-                        const viennaray::Triple<NumericType> &geomNormal,
+                        const viennaray::Vec3D<NumericType> &rayDir,
+                        const viennaray::Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        RNG &rngState) override final {
+                        viennaray::RNG &rngState) override final {
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, viennaray::Triple<NumericType>>
+  std::pair<NumericType, viennaray::Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight,
-                    const viennaray::Triple<NumericType> &rayDir,
-                    const viennaray::Triple<NumericType> &geomNormal,
+                    const viennaray::Vec3D<NumericType> &rayDir,
+                    const viennaray::Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
+                    viennaray::RNG &rngState) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
-    return std::pair<NumericType, viennaray::Triple<NumericType>>{
+    return std::pair<NumericType, viennaray::Vec3D<NumericType>>{
         stickingProbability, direction};
   }
-  void initNew(RNG &rngState) override final {}
+  void initNew(viennaray::RNG &rngState) override final {}
   NumericType getSourceDistributionPower() const override final {
     return sourcePower;
   }

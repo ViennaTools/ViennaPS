@@ -18,9 +18,9 @@ using namespace viennacore;
 
 template <class NumericType, int D = 3> class GDSGeometry {
   using StructureLayers =
-      std::unordered_map<int16_t, SmartPointer<lsMesh<NumericType>>>;
-  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
-  using BoundaryType = typename lsDomain<NumericType, D>::BoundaryType;
+      std::unordered_map<int16_t, SmartPointer<viennals::Mesh<NumericType>>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using BoundaryType = typename viennals::Domain<NumericType, D>::BoundaryType;
 
 public:
   GDSGeometry() {
@@ -83,7 +83,7 @@ public:
         }
 
         // add structure references
-        auto strMesh = SmartPointer<lsMesh<NumericType>>::New();
+        auto strMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
         for (auto &sref : str.sRefs) {
           auto refStr = getStructure(sref.strName);
           if (auto contains = refStr->containsLayers.find(layer);
@@ -92,21 +92,22 @@ public:
 
             // copy mesh here
             auto copy = assembledStructures[refStr->name][layer];
-            auto preBuiltStrMesh = SmartPointer<lsMesh<NumericType>>::New();
+            auto preBuiltStrMesh =
+                SmartPointer<viennals::Mesh<NumericType>>::New();
             preBuiltStrMesh->nodes = copy->nodes;
             preBuiltStrMesh->triangles = copy->triangles;
             adjustPreBuiltMeshHeight(preBuiltStrMesh, baseHeight, height);
 
             if (sref.angle > 0.) {
-              lsTransformMesh<NumericType>(
-                  preBuiltStrMesh, lsTransformEnum::ROTATION,
+              viennals::TransformMesh<NumericType>(
+                  preBuiltStrMesh, viennals::TransformEnum::ROTATION,
                   hrleVectorType<double, 3>{0., 0., 1.}, deg2rad(sref.angle))
                   .apply();
             }
 
             if (sref.magnification > 0.) {
-              lsTransformMesh<NumericType>(
-                  preBuiltStrMesh, lsTransformEnum::SCALE,
+              viennals::TransformMesh<NumericType>(
+                  preBuiltStrMesh, viennals::TransformEnum::SCALE,
                   hrleVectorType<double, 3>{sref.magnification,
                                             sref.magnification, 1.})
                   .apply();
@@ -119,8 +120,8 @@ public:
               continue;
             }
 
-            lsTransformMesh<NumericType>(
-                preBuiltStrMesh, lsTransformEnum::TRANSLATION,
+            viennals::TransformMesh<NumericType>(
+                preBuiltStrMesh, viennals::TransformEnum::TRANSLATION,
                 hrleVectorType<double, 3>{sref.refPoint[0], sref.refPoint[1],
                                           0.})
                 .apply();
@@ -130,9 +131,9 @@ public:
         }
         if (strMesh->nodes.size() > 0) {
           auto tmpLS = lsDomainType::New(levelSet->getGrid());
-          lsFromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
-          lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                             lsBooleanOperationEnum::UNION)
+          viennals::FromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
+          viennals::BooleanOperation<NumericType, D>(
+              levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
               .apply();
         }
       }
@@ -142,25 +143,26 @@ public:
       auto topPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       NumericType normal[3] = {0., 0., 1.};
       NumericType origin[3] = {0., 0., baseHeight + height};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           topPlane,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
       auto botPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       normal[D - 1] = -1.;
       origin[D - 1] = baseHeight;
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           botPlane,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      lsBooleanOperation<NumericType, D>(topPlane, botPlane,
-                                         lsBooleanOperationEnum::INTERSECT)
+      viennals::BooleanOperation<NumericType, D>(
+          topPlane, botPlane, viennals::BooleanOperationEnum::INTERSECT)
           .apply();
 
-      lsBooleanOperation<NumericType, D>(
-          topPlane, levelSet, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+      viennals::BooleanOperation<NumericType, D>(
+          topPlane, levelSet,
+          viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
 
       return topPlane;
@@ -222,11 +224,11 @@ private:
 
         for (auto layer : str.containsLayers) {
           strLayerMapping.insert(
-              {layer, SmartPointer<lsMesh<NumericType>>::New()});
+              {layer, SmartPointer<viennals::Mesh<NumericType>>::New()});
         }
 
         for (auto &el : str.elements) {
-          SmartPointer<lsMesh<NumericType>> mesh;
+          SmartPointer<viennals::Mesh<NumericType>> mesh;
           if (el.elementType == GDS::ElementType::elBox) {
             mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
           } else {
@@ -334,12 +336,12 @@ private:
     auto maxPoint = element.pointCloud[3];
     maxPoint[2] = baseHeight + height;
 
-    lsMakeGeometry<NumericType, D>(
-        tmpLS, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint.data(),
-                                                          maxPoint.data()))
+    viennals::MakeGeometry<NumericType, D>(
+        tmpLS, SmartPointer<viennals::Box<NumericType, D>>::New(
+                   minPoint.data(), maxPoint.data()))
         .apply();
-    lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                       lsBooleanOperationEnum::UNION)
+    viennals::BooleanOperation<NumericType, D>(
+        levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
         .apply();
   }
 
@@ -355,17 +357,17 @@ private:
                                   retry);
     }
     auto tmpLS = lsDomainType::New(levelSet->getGrid());
-    lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
-    lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                       lsBooleanOperationEnum::UNION)
+    viennals::FromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
+    viennals::BooleanOperation<NumericType, D>(
+        levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
         .apply();
   }
 
-  SmartPointer<lsMesh<NumericType>>
+  SmartPointer<viennals::Mesh<NumericType>>
   boxToSurfaceMesh(GDS::Element<NumericType> &element,
                    const NumericType baseHeight, const NumericType height,
                    const NumericType xOffset, const NumericType yOffset) {
-    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
 
     for (auto &point : element.pointCloud) {
       point[0] += xOffset;
@@ -394,12 +396,12 @@ private:
     return mesh;
   }
 
-  SmartPointer<lsMesh<NumericType>>
+  SmartPointer<viennals::Mesh<NumericType>>
   polygonToSurfaceMesh(GDS::Element<NumericType> &element,
                        const NumericType baseHeight, const NumericType height,
                        const NumericType xOffset, const NumericType yOffset,
                        bool &retry) {
-    auto mesh = SmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
 
     unsigned numPointsFlat = element.pointCloud.size();
 
@@ -498,7 +500,8 @@ private:
     return mesh;
   }
 
-  bool isEar(int i, int j, int k, SmartPointer<lsMesh<NumericType>> mesh,
+  bool isEar(int i, int j, int k,
+             SmartPointer<viennals::Mesh<NumericType>> mesh,
              unsigned numPoints) const {
     auto &points = mesh->getNodes();
 
@@ -534,7 +537,7 @@ private:
     return true;
   }
 
-  void adjustPreBuiltMeshHeight(SmartPointer<lsMesh<NumericType>> mesh,
+  void adjustPreBuiltMeshHeight(SmartPointer<viennals::Mesh<NumericType>> mesh,
                                 const NumericType baseHeight,
                                 const NumericType height) const {
     auto &nodes = mesh->getNodes();
@@ -548,7 +551,7 @@ private:
     }
   }
 
-  void resetPreBuiltMeshHeight(SmartPointer<lsMesh<NumericType>> mesh,
+  void resetPreBuiltMeshHeight(SmartPointer<viennals::Mesh<NumericType>> mesh,
                                const NumericType baseHeight,
                                const NumericType height) const {
     auto &nodes = mesh->getNodes();

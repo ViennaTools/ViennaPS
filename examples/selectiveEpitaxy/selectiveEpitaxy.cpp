@@ -4,6 +4,7 @@
 #include <psUtils.hpp>
 
 namespace ps = viennaps;
+namespace ls = viennals;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
@@ -27,7 +28,7 @@ int main(int argc, char *argv[]) {
   // create fin on substrate
   {
     auto fin =
-        lsSmartPointer<lsDomain<NumericType, D>>::New(geometry->getGrid());
+        ps::SmartPointer<ls::Domain<NumericType, D>>::New(geometry->getGrid());
     NumericType minPoint[3] = {-params.get("finWidth") / 2.,
                                -params.get("finLength") / 2.,
                                -params.get("gridDelta")};
@@ -38,8 +39,8 @@ int main(int argc, char *argv[]) {
       minPoint[1] = -params.get("gridDelta");
       maxPoint[1] = params.get("finHeight");
     }
-    lsMakeGeometry<NumericType, D>(
-        fin, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+    ls::MakeGeometry<NumericType, D>(
+        fin, ps::SmartPointer<ls::Box<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
     geometry->insertNextLevelSetAsMaterial(fin, ps::Material::Si);
     geometry->saveSurfaceMesh("fin.vtp");
@@ -58,7 +59,7 @@ int main(int argc, char *argv[]) {
   process.setProcessModel(model);
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(
-      lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+      ls::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
   geometry->saveVolumeMesh("initial");
 

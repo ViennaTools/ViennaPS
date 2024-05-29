@@ -20,9 +20,8 @@ public:
                                 const NumericType pOxideRate)
       : rate(pRate), oxide_rate(pOxideRate) {}
 
-  NumericType getScalarVelocity(const Triple<NumericType> &coordinate,
-                                int matId,
-                                const Triple<NumericType> &normalVector,
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate, int matId,
+                                const Vec3D<NumericType> &normalVector,
                                 unsigned long pointId) override {
     auto material = MaterialMap::mapToMaterial(matId);
     if (material == Material::Si3N4) {
@@ -42,18 +41,17 @@ private:
 };
 
 template <class NumericType>
-class RedepositionVelocityField : public lsVelocityField<NumericType> {
+class RedepositionVelocityField : public viennals::VelocityField<NumericType> {
 public:
   RedepositionVelocityField(const std::vector<NumericType> &passedVelocities,
-                            const std::vector<Triple<NumericType>> &points)
+                            const std::vector<Vec3D<NumericType>> &points)
       : velocities(passedVelocities), kdTree(points) {
     assert(points.size() == passedVelocities.size());
     kdTree.build();
   }
 
-  NumericType getScalarVelocity(const Triple<NumericType> &coordinate,
-                                int matId,
-                                const Triple<NumericType> &normalVector,
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate, int matId,
+                                const Vec3D<NumericType> &normalVector,
                                 unsigned long pointId) override {
     auto nearest = kdTree.findNearest(coordinate);
     assert(nearest->first < velocities.size());
@@ -62,7 +60,7 @@ public:
 
 private:
   const std::vector<NumericType> &velocities;
-  KDTree<NumericType, Triple<NumericType>> kdTree;
+  KDTree<NumericType, Vec3D<NumericType>> kdTree;
 };
 
 template <class T, int D>
@@ -104,7 +102,7 @@ public:
     auto &cellSet = domain->getCellSet();
 
     // redeposition
-    auto mesh = SmartPointer<lsMesh<T>>::New();
+    auto mesh = SmartPointer<viennals::Mesh<T>>::New();
     ToDiskMesh<T, D>(domain, mesh).apply();
 
     const auto &points = mesh->nodes;
@@ -168,7 +166,7 @@ public:
       auto redepoVelField =
           SmartPointer<RedepositionVelocityField<T>>::New(depoRate, points);
 
-      lsAdvect<T, D> advectionKernel;
+      viennals::Advect<T, D> advectionKernel;
       advectionKernel.insertNextLevelSet(domain->getLevelSets()->back());
       advectionKernel.setVelocityField(redepoVelField);
       advectionKernel.setAdvectionTime(processTime - prevProcTime);

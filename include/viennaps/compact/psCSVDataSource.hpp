@@ -6,22 +6,26 @@
 #include <unordered_map>
 #include <vector>
 
+#include "../psUtils.hpp"
 #include "psCSVReader.hpp"
 #include "psCSVWriter.hpp"
 #include "psDataSource.hpp"
 
-#include "../psLogger.hpp"
-#include "../psUtils.hpp"
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
 
 template <typename NumericType>
-class psCSVDataSource : public psDataSource<NumericType> {
-  using Parent = psDataSource<NumericType>;
+class CSVDataSource : public DataSource<NumericType> {
+  using Parent = DataSource<NumericType>;
 
   using Parent::namedParameters;
   using Parent::positionalParameters;
 
-  psCSVReader<NumericType> reader;
-  psCSVWriter<NumericType> writer;
+  CSVReader<NumericType> reader;
+  CSVWriter<NumericType> writer;
 
   std::string header;
 
@@ -31,11 +35,11 @@ class psCSVDataSource : public psDataSource<NumericType> {
   processPositionalParam(const std::string &input,
                          std::vector<NumericType> &positionalParameters) {
     // Positional parameter
-    auto v = psUtils::safeConvert<NumericType>(input);
+    auto v = utils::safeConvert<NumericType>(input);
     if (v.has_value())
       positionalParameters.push_back(v.value());
     else {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Error while converting parameter '" + input +
                       "' to numeric type.")
           .print();
@@ -51,17 +55,17 @@ class psCSVDataSource : public psDataSource<NumericType> {
 
     std::smatch smatch;
     if (std::regex_search(input, smatch, rgx) && smatch.size() == 3) {
-      auto v = psUtils::safeConvert<NumericType>(smatch[2]);
+      auto v = utils::safeConvert<NumericType>(smatch[2]);
       if (v.has_value())
         namedParameters.insert({smatch[1], v.value()});
       else {
-        psLogger::getInstance()
+        Logger::getInstance()
             .addWarning("Error while converting value of parameter '" +
                         std::string(smatch[1]) + "'")
             .print();
       }
     } else {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Error while parsing parameter line '" + input + "'")
           .print();
     }
@@ -109,9 +113,9 @@ public:
   using typename Parent::ItemType;
   using typename Parent::VectorType;
 
-  psCSVDataSource() {}
+  CSVDataSource() {}
 
-  psCSVDataSource(std::string passedFilename) {
+  CSVDataSource(std::string passedFilename) {
     reader.setFilename(passedFilename);
     writer.setFilename(passedFilename);
   }
@@ -168,3 +172,5 @@ public:
     return namedParameters;
   }
 };
+
+} // namespace viennaps

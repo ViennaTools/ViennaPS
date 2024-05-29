@@ -15,11 +15,12 @@ using namespace viennacore;
 // Simple geometric model that implements a
 template <typename NumericType, int D, typename DistType>
 class GeometricDistributionModel : public GeometricModel<NumericType, D> {
-  static_assert(std::is_base_of_v<
-                lsGeometricAdvectDistribution<hrleCoordType, D>, DistType>);
+  static_assert(
+      std::is_base_of_v<viennals::GeometricAdvectDistribution<hrleCoordType, D>,
+                        DistType>);
 
-  using GeomDistPtr = lsSmartPointer<DistType>;
-  using LSPtr = lsSmartPointer<lsDomain<NumericType, D>>;
+  using GeomDistPtr = SmartPointer<DistType>;
+  using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
   using GeometricModel<NumericType, D>::domain;
 
@@ -35,11 +36,12 @@ public:
   void apply() {
     if (dist) {
       if (mask) {
-        lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist,
-                                          mask)
+        viennals::GeometricAdvect<NumericType, D>(
+            domain->getLevelSets()->back(), dist, mask)
             .apply();
       } else {
-        lsGeometricAdvect<NumericType, D>(domain->getLevelSets()->back(), dist)
+        viennals::GeometricAdvect<NumericType, D>(
+            domain->getLevelSets()->back(), dist)
             .apply();
       }
     }
@@ -48,17 +50,18 @@ public:
 
 template <typename NumericType, int D>
 class SphereDistribution : public ProcessModel<NumericType, D> {
-  using LSPtr = lsSmartPointer<lsDomain<NumericType, D>>;
+  using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
   SphereDistribution(const NumericType radius, const NumericType gridDelta,
                      LSPtr mask = nullptr) {
-    auto dist = lsSmartPointer<lsSphereDistribution<hrleCoordType, D>>::New(
-        radius, gridDelta);
+    auto dist =
+        SmartPointer<viennals::SphereDistribution<hrleCoordType, D>>::New(
+            radius, gridDelta);
 
-    auto geomModel = lsSmartPointer<GeometricDistributionModel<
-        NumericType, D, lsSphereDistribution<hrleCoordType, D>>>::New(dist,
-                                                                      mask);
+    auto geomModel = SmartPointer<GeometricDistributionModel<
+        NumericType, D,
+        viennals::SphereDistribution<hrleCoordType, D>>>::New(dist, mask);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
@@ -67,16 +70,17 @@ public:
 
 template <typename NumericType, int D>
 class BoxDistribution : public ProcessModel<NumericType, D> {
-  using LSPtr = lsSmartPointer<lsDomain<NumericType, D>>;
+  using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
   BoxDistribution(const std::array<hrleCoordType, 3> &halfAxes,
                   const NumericType gridDelta, LSPtr mask = nullptr) {
-    auto dist = lsSmartPointer<lsBoxDistribution<hrleCoordType, D>>::New(
+    auto dist = SmartPointer<viennals::BoxDistribution<hrleCoordType, D>>::New(
         halfAxes, gridDelta);
 
-    auto geomModel = lsSmartPointer<GeometricDistributionModel<
-        NumericType, D, lsBoxDistribution<hrleCoordType, D>>>::New(dist, mask);
+    auto geomModel = SmartPointer<GeometricDistributionModel<
+        NumericType, D,
+        viennals::BoxDistribution<hrleCoordType, D>>>::New(dist, mask);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");

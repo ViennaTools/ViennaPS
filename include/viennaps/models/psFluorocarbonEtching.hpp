@@ -138,7 +138,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = SmartPointer<lsPointData<NumericType>>::New();
+      coverages = SmartPointer<viennals::PointData<NumericType>>::New();
     } else {
       coverages->clear();
     }
@@ -149,8 +149,8 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<lsPointData<NumericType>> rates,
-                      const std::vector<Triple<NumericType>> &coordinates,
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
     updateCoverages(rates, materialIds);
     const auto numPoints = materialIds.size();
@@ -254,7 +254,7 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(etchRate);
   }
 
-  void updateCoverages(SmartPointer<lsPointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIds) override {
 
     const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
@@ -354,9 +354,8 @@ public:
       : p(parameters),
         A(1. / (1. + p.Ions.n_l * (M_PI_2 / p.Ions.inflectAngle - 1.))),
         minEnergy(std::min({p.Si.Eth_ie, p.SiO2.Eth_ie, p.Si3N4.Eth_ie})) {}
-  void surfaceCollision(NumericType rayWeight,
-                        const Triple<NumericType> &rayDir,
-                        const Triple<NumericType> &geomNormal,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                        const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
@@ -429,9 +428,9 @@ public:
         std::max(sqrtE - std::sqrt(p.Polymer.Eth_ie), (NumericType)0) *
         cosTheta;
   }
-  std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
-                    const Triple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
@@ -457,10 +456,10 @@ public:
       E = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng, std::max(incAngle, p.Ions.minAngle));
-      return std::pair<NumericType, Triple<NumericType>>{0., direction};
+      return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
-      return std::pair<NumericType, Triple<NumericType>>{
-          1., Triple<NumericType>{0., 0., 0.}};
+      return std::pair<NumericType, Vec3D<NumericType>>{
+          1., Vec3D<NumericType>{0., 0., 0.}};
     }
   }
   void initNew(RNG &RNG) override final {
@@ -487,8 +486,8 @@ class FluorocarbonPolymer
 public:
   FluorocarbonPolymer(const FluorocarbonParameters<NumericType> &parameters)
       : p(parameters) {}
-  void surfaceCollision(NumericType rayWeight, const Triple<NumericType> &,
-                        const Triple<NumericType> &, const unsigned int primID,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
+                        const Vec3D<NumericType> &, const unsigned int primID,
                         const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
@@ -496,9 +495,9 @@ public:
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType, const Triple<NumericType> &,
-                    const Triple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType, const Vec3D<NumericType> &,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
@@ -515,7 +514,7 @@ public:
     else
       stick = p.beta_p;
     stick *= std::max(1 - phi_e - phi_p, (NumericType)0);
-    return std::pair<NumericType, Triple<NumericType>>{stick, direction};
+    return std::pair<NumericType, Vec3D<NumericType>>{stick, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
@@ -532,8 +531,8 @@ class FluorocarbonEtchant
 public:
   FluorocarbonEtchant(const FluorocarbonParameters<NumericType> &parameters)
       : p(parameters) {}
-  void surfaceCollision(NumericType rayWeight, const Triple<NumericType> &,
-                        const Triple<NumericType> &, const unsigned int primID,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
+                        const Vec3D<NumericType> &, const unsigned int primID,
                         const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
@@ -541,9 +540,9 @@ public:
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, Triple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Triple<NumericType> &rayDir,
-                    const Triple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
@@ -563,7 +562,7 @@ public:
       Seff = p.beta_e * std::max(1 - phi_e - phi_p, (NumericType)0);
     }
 
-    return std::pair<NumericType, Triple<NumericType>>{Seff, direction};
+    return std::pair<NumericType, Vec3D<NumericType>>{Seff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {

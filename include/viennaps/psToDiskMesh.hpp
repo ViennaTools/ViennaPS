@@ -12,7 +12,7 @@ template <class NumericType, int D> class ToDiskMesh {
   using translatorType =
       SmartPointer<std::unordered_map<unsigned long, unsigned long>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using meshType = SmartPointer<lsMesh<NumericType>>;
+  using meshType = SmartPointer<viennals::Mesh<NumericType>>;
 
   psDomainType domain;
   translatorType translator;
@@ -39,7 +39,7 @@ public:
   translatorType getTranslator() const { return translator; }
 
   void apply() {
-    lsToDiskMesh<NumericType, D> meshConverter;
+    viennals::ToDiskMesh<NumericType, D> meshConverter;
     meshConverter.setMesh(mesh);
     if (domain->getMaterialMap())
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());

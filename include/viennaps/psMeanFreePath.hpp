@@ -242,8 +242,9 @@ private:
   }
 
   void initGeometry() {
-    auto mesh = lsSmartPointer<lsMesh<NumericType>>::New();
-    lsToDiskMesh<NumericType, D>(domain->getLevelSets()->back(), mesh).apply();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    viennals::ToDiskMesh<NumericType, D>(domain->getLevelSets()->back(), mesh)
+        .apply();
     surfacePoints = mesh->getNodes();
     surfaceNormals = *mesh->getCellData().getVectorData("Normals");
     numPoints = surfacePoints.size();
@@ -255,7 +256,7 @@ private:
     numRays = static_cast<long long>(numCells * numRaysPerCell);
   }
 
-  int getStartingCell(const Triple<NumericType> &origin) const {
+  int getStartingCell(const Vec3D<NumericType> &origin) const {
     int cellIdx = cellSet->getIndex(origin);
     if (cellIdx < 0) {
       Logger::getInstance()
@@ -278,12 +279,12 @@ private:
   }
 
   // https://gamedev.stackexchange.com/a/18459
-  static bool intersectLineBox(const Triple<NumericType> &origin,
-                               const Triple<NumericType> &direction,
-                               const Triple<NumericType> &min,
-                               const Triple<NumericType> &max,
+  static bool intersectLineBox(const Vec3D<NumericType> &origin,
+                               const Vec3D<NumericType> &direction,
+                               const Vec3D<NumericType> &min,
+                               const Vec3D<NumericType> &max,
                                NumericType &distance) {
-    Triple<NumericType> t1, t2;
+    Vec3D<NumericType> t1, t2;
     for (int i = 0; i < D; ++i) {
       // direction is inverted
       t1[i] = (min[i] - origin[i]) * direction[i];
@@ -309,7 +310,7 @@ private:
     return false;
   }
 
-  static void randomDirection(Triple<NumericType> &direction, RNG &rngState) {
+  static void randomDirection(Vec3D<NumericType> &direction, RNG &rngState) {
     std::uniform_real_distribution<NumericType> dist(-1, 1);
     for (int i = 0; i < D; ++i) {
       direction[i] = dist(rngState);

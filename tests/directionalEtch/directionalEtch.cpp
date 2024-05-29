@@ -18,7 +18,7 @@ template <class NumericType, int D> void RunTest() {
     MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
                                true, Material::Si)
         .apply();
-    Triple<NumericType> direction{0., 0., 0.};
+    Vec3D<NumericType> direction{0., 0., 0.};
     direction[D - 1] = -1.;
     auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
         direction, 1., 0., Material::Mask);
@@ -43,7 +43,7 @@ template <class NumericType, int D> void RunTest() {
                                true, Material::Si)
         .apply();
     std::vector<Material> maskMaterials(1, Material::Mask);
-    std::array<NumericType, 3> direction{0., 0., 0.};
+    Vec3D<NumericType> direction{0., 0., 0.};
     direction[D - 1] = -1.;
     auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
         direction, 1., 0., maskMaterials);

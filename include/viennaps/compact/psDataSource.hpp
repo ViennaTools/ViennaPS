@@ -4,14 +4,18 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../psLogger.hpp"
-#include "../psSmartPointer.hpp"
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
 
-template <typename NumericType> class psDataSource {
+namespace viennaps {
+
+using namespace viennacore;
+
+template <typename NumericType> class DataSource {
 public:
   using ItemType = std::vector<NumericType>;
   using VectorType = std::vector<ItemType>;
-  using ConstPtr = psSmartPointer<const VectorType>;
+  using ConstPtr = SmartPointer<const VectorType>;
 
   // Returns a smart pointer to the in-memory copy of the data. If the in-memory
   // copy of the data is empty, the read function is called on the data source.
@@ -54,7 +58,7 @@ public:
   // stored alongside the actual data (e.g. depth at which trench diameters were
   // captured)
   virtual std::vector<NumericType> getPositionalParameters() {
-    psLogger::getInstance()
+    Logger::getInstance()
         .addWarning("This data source does not support positional parameters.")
         .print();
     return {};
@@ -66,7 +70,7 @@ public:
 
   // These optional parameters can also be named
   virtual std::unordered_map<std::string, NumericType> getNamedParameters() {
-    psLogger::getInstance()
+    Logger::getInstance()
         .addWarning("This data source does not support named parameters.")
         .print();
     return {};
@@ -98,3 +102,5 @@ private:
   // modified (i.e. whether the append function has been called)
   bool modified = false;
 };
+
+} // namespace viennaps

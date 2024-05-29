@@ -6,6 +6,7 @@
 #include <models/psAnisotropicProcess.hpp>
 
 namespace ps = viennaps;
+namespace ls = viennals;
 
 int main(int argc, char **argv) {
   using NumericType = double;
@@ -35,11 +36,11 @@ int main(int argc, char **argv) {
   const NumericType gridDelta = 5.; // um
 
   // Read GDS file and convert to level set
-  typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+  typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
   for (int i = 0; i < D - 1; i++)
-    boundaryCons[i] = lsDomain<NumericType, D>::BoundaryType::
+    boundaryCons[i] = ls::Domain<NumericType, D>::BoundaryType::
         REFLECTIVE_BOUNDARY; // boundary conditions in x and y direction
-  boundaryCons[D - 1] = lsDomain<NumericType, D>::BoundaryType::
+  boundaryCons[D - 1] = ls::Domain<NumericType, D>::BoundaryType::
       INFINITE_BOUNDARY; // open boundary in z direction
   auto gds_mask =
       ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
@@ -56,10 +57,10 @@ int main(int argc, char **argv) {
   NumericType origin[D] = {0., 0., 0.};   // surface origin
   NumericType normal[D] = {0., 0., 1.};   // surface normal
   double *bounds = gds_mask->getBounds(); // extent of GDS mask
-  auto plane = lsSmartPointer<lsDomain<NumericType, D>>::New(
+  auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
       bounds, boundaryCons, gridDelta);
-  lsMakeGeometry<NumericType, D>(
-      plane, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+  ls::MakeGeometry<NumericType, D>(
+      plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
       .apply();
 
   // Set up domain
@@ -79,7 +80,7 @@ int main(int argc, char **argv) {
   process.setProcessModel(model);
   process.setProcessDuration(5. * 60.); // 5 minutes of etching
   process.setIntegrationScheme(
-      lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+      ls::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
   for (int n = 0; n < minutes; n++) {
     process.apply(); // run process

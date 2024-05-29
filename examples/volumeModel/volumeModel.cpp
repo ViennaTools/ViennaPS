@@ -10,14 +10,12 @@ int main(int argc, char *argv[]) {
   constexpr int D = 3;
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::utils::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
-    }
-    params.fromMap(config);
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
   auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();

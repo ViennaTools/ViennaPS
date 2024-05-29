@@ -28,13 +28,14 @@ using namespace viennacore;
 */
 template <class T, int D> class DenseCellSet {
 private:
-  using gridType = SmartPointer<lsMesh<T>>;
-  using levelSetsType = SmartPointer<std::vector<SmartPointer<lsDomain<T, D>>>>;
+  using gridType = SmartPointer<viennals::Mesh<T>>;
+  using levelSetsType =
+      SmartPointer<std::vector<SmartPointer<viennals::Domain<T, D>>>>;
   using materialMapType = SmartPointer<viennaps::MaterialMap>;
 
   levelSetsType levelSets = nullptr;
   gridType cellGrid = nullptr;
-  SmartPointer<lsDomain<T, D>> surface = nullptr;
+  SmartPointer<viennals::Domain<T, D>> surface = nullptr;
   SmartPointer<csBVH<T, D>> BVH = nullptr;
   materialMapType materialMap = nullptr;
 
@@ -70,25 +71,25 @@ public:
     materialMap = passedMaterialMap;
 
     if (cellGrid == nullptr)
-      cellGrid = SmartPointer<lsMesh<T>>::New();
+      cellGrid = SmartPointer<viennals::Mesh<T>>::New();
 
     if (surface == nullptr)
-      surface = SmartPointer<lsDomain<T, D>>::New(levelSets->back());
+      surface = SmartPointer<viennals::Domain<T, D>>::New(levelSets->back());
     else
       surface->deepCopy(levelSets->back());
 
     gridDelta = surface->getGrid().getGridDelta();
 
     depth = passedDepth;
-    std::vector<lsSmartPointer<lsDomain<T, D>>> levelSetsInOrder;
-    auto plane = SmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    std::vector<SmartPointer<viennals::Domain<T, D>>> levelSetsInOrder;
+    auto plane = SmartPointer<viennals::Domain<T, D>>::New(surface->getGrid());
     {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
-      lsMakeGeometry<T, D>(plane,
-                           lsSmartPointer<lsPlane<T, D>>::New(origin, normal))
+      viennals::MakeGeometry<T, D>(
+          plane, SmartPointer<viennals::Plane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface)
@@ -100,18 +101,19 @@ public:
     }
 
     calculateMinMaxIndex(levelSetsInOrder);
-    lsToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
+    viennals::ToVoxelMesh<T, D>(levelSetsInOrder, cellGrid).apply();
     // lsToVoxelMesh also saves the extent in the cell grid
 
 #ifndef NDEBUG
     int db_ls = 0;
     for (auto &ls : levelSetsInOrder) {
-      auto mesh = SmartPointer<lsMesh<T>>::New();
+      auto mesh = SmartPointer<viennals::Mesh<T>>::New();
       lsToSurfaceMesh<T, D>(ls, mesh).apply();
-      lsVTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) + ".vtp")
+      viennals::VTKWriter<T>(mesh, "cellSet_debug_" + std::to_string(db_ls++) +
+                                       ".vtp")
           .apply();
     }
-    lsVTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
+    viennals::VTKWriter<T>(cellGrid, "cellSet_debug_init.vtu").apply();
 #endif
 
     adjustMaterialIds();
@@ -195,9 +197,9 @@ public:
     return cellGrid->template getElements<(1 << D)>()[idx];
   }
 
-  SmartPointer<lsDomain<T, D>> getSurface() { return surface; }
+  SmartPointer<viennals::Domain<T, D>> getSurface() { return surface; }
 
-  SmartPointer<lsMesh<T>> getCellGrid() { return cellGrid; }
+  SmartPointer<viennals::Mesh<T>> getCellGrid() { return cellGrid; }
 
   levelSetsType getLevelSets() const { return levelSets; }
 
@@ -312,7 +314,7 @@ public:
 
   // Write the cell set as .vtu file
   void writeVTU(std::string fileName) {
-    lsVTKWriter<T>(cellGrid, fileName).apply();
+    viennals::VTKWriter<T>(cellGrid, fileName).apply();
   }
 
   // Save cell set data in simple text format
@@ -406,15 +408,15 @@ public:
     auto materialIds = getScalarData("Material");
 
     // create overlay material
-    std::vector<SmartPointer<lsDomain<T, D>>> levelSetsInOrder;
-    auto plane = SmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+    std::vector<SmartPointer<viennals::Domain<T, D>>> levelSetsInOrder;
+    auto plane = SmartPointer<viennals::Domain<T, D>>::New(surface->getGrid());
     {
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
-      lsMakeGeometry<T, D>(plane,
-                           SmartPointer<lsPlane<T, D>>::New(origin, normal))
+      viennals::MakeGeometry<T, D>(
+          plane, SmartPointer<viennals::Plane<T, D>>::New(origin, normal))
           .apply();
     }
     if (!cellSetAboveSurface)
@@ -425,13 +427,14 @@ public:
       levelSetsInOrder.push_back(plane);
 
     // set up iterators for all materials
-    std::vector<hrleConstDenseCellIterator<typename lsDomain<T, D>::DomainType>>
+    std::vector<
+        hrleConstDenseCellIterator<typename viennals::Domain<T, D>::DomainType>>
         iterators;
     for (auto it = levelSetsInOrder.begin(); it != levelSetsInOrder.end();
          ++it) {
-      iterators.push_back(
-          hrleConstDenseCellIterator<typename lsDomain<T, D>::DomainType>(
-              (*it)->getDomain(), minIndex));
+      iterators.push_back(hrleConstDenseCellIterator<
+                          typename viennals::Domain<T, D>::DomainType>(
+          (*it)->getDomain(), minIndex));
     }
 
     // move iterator for lowest material id and then adjust others if they are
@@ -490,18 +493,19 @@ public:
   // Updates the surface of the cell set. The new surface should be below the
   // old surface as this function can only remove cells from the cell set.
   void updateSurface() {
-    auto updateCellGrid = SmartPointer<lsMesh<T>>::New();
+    auto updateCellGrid = SmartPointer<viennals::Mesh<T>>::New();
 
-    lsToVoxelMesh<T, D> voxelConverter(updateCellGrid);
+    viennals::ToVoxelMesh<T, D> voxelConverter(updateCellGrid);
     {
-      auto plane = SmartPointer<lsDomain<T, D>>::New(surface->getGrid());
+      auto plane =
+          SmartPointer<viennals::Domain<T, D>>::New(surface->getGrid());
       T origin[D] = {0.};
       T normal[D] = {0.};
       origin[D - 1] = depth;
       normal[D - 1] = 1.;
 
-      lsMakeGeometry<T, D>(plane,
-                           SmartPointer<lsPlane<T, D>>::New(origin, normal))
+      viennals::MakeGeometry<T, D>(
+          plane, SmartPointer<viennals::Plane<T, D>>::New(origin, normal))
           .apply();
       voxelConverter.insertNextLevelSet(plane);
     }
@@ -739,8 +743,9 @@ private:
         .print();
   }
 
-  void calculateMinMaxIndex(
-      const std::vector<lsSmartPointer<lsDomain<T, D>>> &levelSetsInOrder) {
+  void
+  calculateMinMaxIndex(const std::vector<SmartPointer<viennals::Domain<T, D>>>
+                           &levelSetsInOrder) {
     // set to zero
     for (unsigned i = 0; i < D; ++i) {
       minIndex[i] = std::numeric_limits<hrleIndexType>::max();

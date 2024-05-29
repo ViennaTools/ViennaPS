@@ -2,6 +2,7 @@
 #include <psGDSReader.hpp>
 
 namespace ps = viennaps;
+namespace ls = viennals;
 
 int main(int argc, char **argv) {
   using NumericType = double;
@@ -9,10 +10,10 @@ int main(int argc, char **argv) {
 
   // read GDS mask file
   const NumericType gridDelta = 0.01;
-  lsBoundaryConditionEnum<D> boundaryConds[D] = {
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY};
+  ls::BoundaryConditionEnum<D> boundaryConds[D] = {
+      ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY};
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
   ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
@@ -24,10 +25,10 @@ int main(int argc, char **argv) {
   // substrate plane
   NumericType origin[D] = {0., 0., 0.};
   NumericType normal[D] = {0., 0., 1.};
-  auto plane = lsSmartPointer<lsDomain<NumericType, D>>::New(
+  auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
       bounds, boundaryConds, gridDelta);
-  lsMakeGeometry<NumericType, D>(
-      plane, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+  ls::MakeGeometry<NumericType, D>(
+      plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
       .apply();
 
   geometry->insertNextLevelSet(plane);

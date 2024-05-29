@@ -13,7 +13,7 @@ using namespace viennacore;
 
 template <typename NumericType> class SurfaceModel {
 protected:
-  SmartPointer<lsPointData<NumericType>> coverages = nullptr;
+  SmartPointer<viennals::PointData<NumericType>> coverages = nullptr;
   SmartPointer<ProcessParams<NumericType>> processParams = nullptr;
 
 public:
@@ -27,15 +27,16 @@ public:
     // if no process parameters get initialized here, they wont be used at all
   }
 
-  virtual SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<lsPointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) {
+  virtual SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIds) {
     return nullptr;
   }
 
-  virtual void updateCoverages(SmartPointer<lsPointData<NumericType>> rates,
-                               const std::vector<NumericType> &materialIds) {}
+  virtual void
+  updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+                  const std::vector<NumericType> &materialIds) {}
 
   // non-virtual functions
   auto getCoverages() const { return coverages; }

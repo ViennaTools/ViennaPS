@@ -21,9 +21,9 @@ using namespace viennacore;
 /// applied to the bottom of the hole, while the remainder adopts the mask
 /// material.
 template <class NumericType, int D> class MakeHole {
-  using lsDomainType = SmartPointer<lsDomain<NumericType, D>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType domain_ = nullptr;
 
@@ -96,26 +96,29 @@ public:
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
     origin[D - 1] = baseHeight_;
-    lsMakeGeometry<NumericType, D>(
-        substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        substrate,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     // mask layer
     auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta_);
     origin[D - 1] = holeDepth_ + baseHeight_;
-    lsMakeGeometry<NumericType, D>(
-        mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        mask,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta_);
     origin[D - 1] = baseHeight_;
     normal[D - 1] = -1.;
-    lsMakeGeometry<NumericType, D>(
-        maskAdd, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        maskAdd,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(mask, maskAdd,
-                                       lsBooleanOperationEnum::INTERSECT)
+    viennals::BooleanOperation<NumericType, D>(
+        mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
         .apply();
 
     // cylinder cutout
@@ -127,18 +130,18 @@ public:
       topRadius += std::tan(taperAngle_ * M_PI / 180.) * holeDepth_;
     }
 
-    lsMakeGeometry<NumericType, D>(
-        maskAdd, lsSmartPointer<lsCylinder<NumericType, D>>::New(
+    viennals::MakeGeometry<NumericType, D>(
+        maskAdd, SmartPointer<viennals::Cylinder<NumericType, D>>::New(
                      origin, normal, holeDepth_ + 2 * gridDelta_, holeRadius_,
                      topRadius))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(
-        mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    viennals::BooleanOperation<NumericType, D>(
+        mask, maskAdd, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
 
-    lsBooleanOperation<NumericType, D>(substrate, mask,
-                                       lsBooleanOperationEnum::UNION)
+    viennals::BooleanOperation<NumericType, D>(
+        substrate, mask, viennals::BooleanOperationEnum::UNION)
         .apply();
 
     if (material_ == Material::None) {
