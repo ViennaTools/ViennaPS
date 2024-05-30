@@ -32,12 +32,12 @@ private:
              : viennaray::TraceDirection::POS_Z;
   bool mUseRandomSeeds = true;
   bool usePrimaryDirection = false;
-  Triple<T> primaryDirection = {0.};
+  Vec3D<T> primaryDirection = {0.};
   size_t mRunNumber = 0;
   int excludeMaterialId = -1;
   bool usePointSource = false;
-  Triple<T> pointSourceOrigin = {0.};
-  Triple<T> pointSourceDirection = {0.};
+  Vec3D<T> pointSourceOrigin = {0.};
+  Vec3D<T> pointSourceDirection = {0.};
 
 public:
   Tracing() : mDevice(rtcNewDevice("hugepages=1")) {
@@ -63,7 +63,7 @@ public:
     auto boundary = viennaray::Boundary<T, D>(
         mDevice, boundingBox, mBoundaryConditions, traceSettings);
 
-    std::array<Triple<T>, 3> orthoBasis;
+    std::array<Vec3D<T>, 3> orthoBasis;
     if (usePrimaryDirection) {
       orthoBasis = rayInternal::getOrthonormalBasis(primaryDirection);
       Logger::getInstance()
@@ -104,8 +104,8 @@ public:
     cellSet = passedCellSet;
   }
 
-  void setPointSource(const Triple<T> &passedOrigin,
-                      const Triple<T> &passedDirection) {
+  void setPointSource(const Vec3D<T> &passedOrigin,
+                      const Vec3D<T> &passedDirection) {
     usePointSource = true;
     pointSourceOrigin = passedOrigin;
     pointSourceDirection = passedDirection;
@@ -128,7 +128,7 @@ public:
     mNumberOfRaysFixed = 0;
   }
 
-  void setPrimaryDirection(const Triple<T> pPrimaryDirection) {
+  void setPrimaryDirection(const Vec3D<T> pPrimaryDirection) {
     primaryDirection = pPrimaryDirection;
     usePrimaryDirection = true;
   }
@@ -248,10 +248,10 @@ private:
     mGeometry.setMaterialIds(materialIds);
   }
 
-  inline Triple<T> calcMidPoint(const Triple<T> &minNode) {
-    return Triple<T>{minNode[0] + mGridDelta / T(2),
-                     minNode[1] + mGridDelta / T(2),
-                     minNode[2] + mGridDelta / T(2)};
+  inline Vec3D<T> calcMidPoint(const Vec3D<T> &minNode) {
+    return Vec3D<T>{minNode[0] + mGridDelta / T(2),
+                    minNode[1] + mGridDelta / T(2),
+                    minNode[2] + mGridDelta / T(2)};
   }
 
   void initMemoryFlags() {

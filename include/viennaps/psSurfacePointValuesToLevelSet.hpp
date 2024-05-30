@@ -1,11 +1,10 @@
 #pragma once
 
-#include "compact/psKDTree.hpp"
-
 #include <hrleSparseIterator.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 
+#include <vcKDTree.hpp>
 #include <vcLogger.hpp>
 
 namespace viennaps {

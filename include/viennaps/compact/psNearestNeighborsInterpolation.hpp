@@ -6,9 +6,9 @@
 #include <type_traits>
 
 #include "psDataScaler.hpp"
-#include "psKDTree.hpp"
 #include "psValueEstimator.hpp"
 
+#include <KDTree.hpp>
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "compact/psKDTree.hpp"
 #include "psMaterials.hpp"
 #include "psVelocityField.hpp"
 
 #include <lsVelocityField.hpp>
 
+#include <vcKDTree.hpp>
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 #include <vcVectorUtil.hpp>

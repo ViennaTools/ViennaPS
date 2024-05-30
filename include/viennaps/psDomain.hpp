@@ -278,7 +278,7 @@ public:
   // Write the all Level-Sets in the domain to individual files. The file name
   // serves as the prefix for the individual files and is append by
   // "_layerX.lvst", where X is the number of the Level-Set in the domain.
-  void savexLevelSets(std::string fileName) const {
+  void saveLevelSets(std::string fileName) const {
     for (int i = 0; i < levelSets_->size(); i++) {
       viennals::Writer<NumericType, D>(
           levelSets_->at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
