@@ -3,8 +3,6 @@
 #include "psMaterials.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
 
-#include "cellSet/csDenseCellSet.hpp"
-
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsExpand.hpp>
@@ -14,6 +12,8 @@
 #include <lsVTKWriter.hpp>
 #include <lsWriteVisualizationMesh.hpp>
 #include <lsWriter.hpp>
+
+#include <csDenseCellSet.hpp>
 
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>

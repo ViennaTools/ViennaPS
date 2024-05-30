@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../cellSet/csDenseCellSet.hpp"
-
 #include "../psAdvectionCallback.hpp"
 #include "../psProcessModel.hpp"
 #include "../psToDiskMesh.hpp"
+
+#include <csDenseCellSet.hpp>
 
 #include <lsAdvect.hpp>
 

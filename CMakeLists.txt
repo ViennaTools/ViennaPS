@@ -80,6 +80,7 @@ enable_language(C)
 
 find_package(ViennaRay QUIET)
 find_package(ViennaLS QUIET)
+find_package(ViennaCS QUIET)
 
 set(VIENNAPS_SYSTEM_VIENNARAY
     ${ViennaRay_FOUND}
@@ -87,6 +88,10 @@ set(VIENNAPS_SYSTEM_VIENNARAY
 
 set(VIENNAPS_SYSTEM_VIENNALS
     ${ViennaLS_FOUND}
+    CACHE INTERNAL "")
+
+set(VIENNAPS_SYSTEM_VIENNACS
+    ${ViennaCS_FOUND}
     CACHE INTERNAL "")
 
 # --------------------------------------------------------------------------------------------------------
@@ -120,7 +125,13 @@ CPMFindPackage(
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaRay ViennaTools::ViennaLS)
+CPMFindPackage(
+  NAME ViennaCS
+  VERSION 1.0.0
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+
+target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCS)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Application
@@ -172,4 +183,4 @@ packageProject(
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaLS;ViennaRay")
+  DEPENDENCIES "ViennaCS;ViennaLS;ViennaRay")
