@@ -31,6 +31,12 @@ jobs:
         with:
           os: ${{ matrix.os }}
 
+      - name: 📋 Install MacOS Dependencies
+        shell: bash
+        if: ${{ inputs.os == 'macos-latest' }}
+        run: |
+          brew install embree tbb
+
       - name: 🦥 Cache Dependencies
         uses: actions/cache@v4
         with:
