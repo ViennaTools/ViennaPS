@@ -2,13 +2,9 @@ name: 🏗️ Setup Environment
 description: Install Dependencies & Deploy Workarounds
 
 inputs:
-  container:
+  os:
     required: true
-    description: Build container used
-
-  install-vtk:
-    required: true
-    description: Wether or not to install VTK as a system dependency
+    description: Operating System used
 
 runs:
   using: "composite"
@@ -16,21 +12,15 @@ runs:
   steps:
     - name: 🩹 Enable Long Paths
       shell: bash
-      if: ${{ inputs.container == 'windows-latest' }}
+      if: ${{ inputs.os == 'windows-latest' }}
       run: git config --system core.longpaths true
 
-    - name: 📋 Install Dependencies
-      shell: bash
-      if: ${{ inputs.container == 'ubuntu-latest' }}
-      run: dnf install -y make automake gcc gcc-c++ kernel-devel cmake git python3 python3-pip python3-devel
+    - name: 🖥️ Enable MSVC Dev Console
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: 📋 Install OpenMP
       shell: bash
-      if: ${{ inputs.container == 'macos-latest' }}
+      if: ${{ inputs.os == 'macos-latest' }}
       run: |
         brew reinstall --build-from-source --formula ./.github/homebrew/libomp.rb
-
-    - name: 📋 Install VTK
-      shell: bash
-      if: ${{ inputs.install-vtk == 'true' }}
-      run: dnf install -y vtk vtk-devel
+        echo "OpenMP_ROOT=$(brew --prefix)/opt/libomp" >> $GITHUB_ENV

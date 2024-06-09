@@ -38,10 +38,15 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 if(VIENNAPS_PACKAGE_PYTHON)
   message(
     STATUS
-      "[ViennaPS] Skipping system dependencies due to 'VIENNALS_PACKAGE_PYTHON', the build will take a long time!"
+      "[ViennaPS] Using remote packages due to 'VIENNAPS_PACKAGE_PYTHON', the build will take a long time!"
   )
 
-  set(CPM_DOWNLOAD_ALL ON)
+  # CIBUILDWHEEL is absolutely cursed and won't work when this is turned on.
+  # I don't know why...
+  if(NOT VIENNAPS_IS_CI)
+    set(CPM_DOWNLOAD_ALL ON)
+  endif()
+
   set(VIENNAPS_BUILD_PYTHON ON)
 endif()
 
@@ -85,12 +90,10 @@ target_include_directories(
 
 # --------------------------------------------------------------------------------------------------------
 # Check whether or not dependencies are installed on the system
-# └ VTK requires C Language support (HDF5)
+# └ VTK/OpenMP require C Language support
 # --------------------------------------------------------------------------------------------------------
 
-if(NOT APPLE)
-  enable_language(C)
-endif()
+enable_language(C)
 
 find_package(ViennaRay QUIET)
 find_package(ViennaLS QUIET)
@@ -108,6 +111,11 @@ set(VIENNAPS_SYSTEM_VIENNALS
 # --------------------------------------------------------------------------------------------------------
 
 include("cmake/cpm.cmake")
+
+CPMAddPackage(
+  NAME Core
+  GIT_TAG main # TODO: Create Tag
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore")
 
 CPMAddPackage(
   NAME PackageProject
