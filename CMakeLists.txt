@@ -101,18 +101,18 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME PackageProject
-  VERSION 1.11.1
+  VERSION 1.11.2
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 2.1.0
+  GIT_TAG vienna-core # TOOD: Create Tag
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 3.1.0
+  VERSION 3.1.2
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
