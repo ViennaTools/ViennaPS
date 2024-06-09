@@ -43,7 +43,7 @@ jobs:
 
       - name: 📋 Install MacOS Dependencies
         shell: bash
-        if: ${{ inputs.os == 'macos-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew install embree tbb
 
