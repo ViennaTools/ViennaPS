@@ -22,10 +22,10 @@ jobs:
         include:
           - os: ubuntu-latest
             config: Release
-            container: ghcr.io/viennatools/vienna-builder:vtk
+            container: ghcr.io/viennatools/vienna-builder:suite
           - os: ubuntu-latest
             config: Debug
-            container: ghcr.io/viennatools/vienna-builder:vtk
+            container: ghcr.io/viennatools/vienna-builder:suite
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}

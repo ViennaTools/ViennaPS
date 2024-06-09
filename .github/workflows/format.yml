@@ -12,7 +12,7 @@ on:
 jobs:
   check-coding-style:
     runs-on: ubuntu-latest
-    container: ghcr.io/viennatools/vienna-builder:vtk-python
+    container: ghcr.io/viennatools/vienna-builder:suite-python
 
     steps:
       - name: 📥 Checkout

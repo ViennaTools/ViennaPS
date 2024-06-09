@@ -13,7 +13,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            container: ghcr.io/viennatools/vienna-builder:vtk-python
+            container: ghcr.io/viennatools/vienna-builder:suite-python
           - os: windows-latest
           - os: macos-latest
 
