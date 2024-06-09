@@ -45,7 +45,7 @@ jobs:
         shell: bash
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          brew install embree tbb
+          brew install embree tbb vtk
 
       - name: 🦥 Cache Dependencies
         uses: actions/cache@v4
