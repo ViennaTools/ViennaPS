@@ -114,7 +114,7 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_SKIP: "cp36-* cp37-* cp38-* cp39-*"
-          CIBW_ARCHS_WINDOWS: auto64
+          CIBW_ARCHS: auto64
 
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v4
