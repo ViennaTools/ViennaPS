@@ -77,5 +77,6 @@ endif()
 # Not required for both targets, one will suffice
 setup_embree_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
 setup_tbb_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+setup_vtk_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
 
 install(DIRECTORY "${VIENNAPS_LIB_FOLDER}" DESTINATION .)
