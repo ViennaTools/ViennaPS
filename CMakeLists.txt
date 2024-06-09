@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
-  LANGUAGES CXX
+  LANGUAGES CXX C
   VERSION 2.0.2)
 
 # --------------------------------------------------------------------------------------------------------
@@ -87,24 +87,6 @@ endif()
 target_include_directories(
   ${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/viennaps>
                             $<INSTALL_INTERFACE:include/viennaps-${PROJECT_VERSION}>)
-
-# --------------------------------------------------------------------------------------------------------
-# Check whether or not dependencies are installed on the system
-# └ VTK/OpenMP require C Language support
-# --------------------------------------------------------------------------------------------------------
-
-enable_language(C)
-
-find_package(ViennaRay QUIET)
-find_package(ViennaLS QUIET)
-
-set(VIENNAPS_SYSTEM_VIENNARAY
-    ${ViennaRay_FOUND}
-    CACHE INTERNAL "")
-
-set(VIENNAPS_SYSTEM_VIENNALS
-    ${ViennaLS_FOUND}
-    CACHE INTERNAL "")
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Dependencies

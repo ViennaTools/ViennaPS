@@ -74,7 +74,8 @@ if(NOT VIENNAPS_PACKAGE_PYTHON)
   return()
 endif()
 
-setup_embree_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-setup_tbb_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+# Not required for both targets, one will suffice
+setup_embree_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+setup_tbb_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
 
 install(DIRECTORY "${VIENNAPS_LIB_FOLDER}" DESTINATION .)
