@@ -1,4 +1,4 @@
-name: 🐍 Build Bindings
+name: 🐍 Bindings
 
 on:
   push:
@@ -6,30 +6,39 @@ on:
   workflow_dispatch:
 
 jobs:
-  bindings:
+  test-bindings:
     strategy:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            container: ghcr.io/viennatools/vienna-builder:suite-python
+          - os: windows-latest
+          - os: macos-latest
 
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.os == 'ubuntu-latest' && 'fedora:38' || null }}
+    container: ${{ matrix.container }}
 
-    name: "🐍 Build Bindings on ${{ matrix.os }}"
+    name: "🐍 Test Bindings on ${{ matrix.os }}"
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🖥️ Setup Environment
         uses: ./.github/actions/setup
         with:
-          install-vtk: false
-          container: ${{ matrix.os }}
+          os: ${{ matrix.os }}
+
+      - name: 📋 Install MacOS Dependencies
+        shell: bash
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install embree tbb vtk
 
       - name: 🦥 Cache Dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: python-${{ matrix.os }}
           path: build
@@ -37,20 +46,78 @@ jobs:
       - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          python3 -m venv venv
-          ./venv/Scripts/pip install .
-          ./venv/Scripts/python -c "import viennaps2d; print(viennaps2d.__doc__)"
+          python -m venv venv
+          ./venv/Scripts/activate.bat
+          pip install .
+          python -c "import viennaps2d; print(viennaps2d.__doc__)"
 
       - name: 🐍 Build and check Python Module (Other)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          python3 -m venv venv
-          ./venv/bin/pip install .
+          python -m venv venv
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . # Alpine does not like LTO
           ./venv/bin/python -c "import viennaps2d; print(viennaps2d.__doc__)"
 
       - name: 📦 Upload Artifact
-        if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Pre-Built (${{ matrix.os }})
           path: venv
+
+  package:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - os: ubuntu-latest
+            container: ghcr.io/viennatools/vienna-builder:python
+          - os: windows-latest
+          - os: macos-latest
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+
+    name: "🐍 Package Bindings on ${{ matrix.os }}"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🖥️ Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          os: ${{ matrix.os }}
+
+      - name: 🛞 CIBuildWheel
+        run: pip install cibuildwheel==2.17.0 --break-system-packages
+
+      - name: 🛠️ Build VTK (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          type pyproject.toml
+
+      - name: 🛠️ Build VTK (MacOs)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          sed -i .bak 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          cat pyproject.toml
+
+      - name: 🛠️ Use VTK-Python Libs
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          cat pyproject.toml
+
+      - name: 🏗️ Build Wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_SKIP: "cp36-* cp37-* cp38-* cp39-*"
+          CIBW_ARCHS: auto64
+
+      - name: 📦 Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Wheels (${{ matrix.os }})
+          path: ./wheelhouse/*.whl

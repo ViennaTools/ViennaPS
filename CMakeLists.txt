@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
-  LANGUAGES CXX
+  LANGUAGES CXX C
   VERSION 2.0.2)
 
 # --------------------------------------------------------------------------------------------------------
@@ -11,7 +11,9 @@ project(
 option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
 
+option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
+
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
@@ -32,6 +34,21 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 #   during build time though, we disable the soname versioning so that we can easily set the rpath to
 #   link against the vtk-python libs
 # --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_PACKAGE_PYTHON)
+  message(
+    STATUS
+      "[ViennaPS] Using remote packages due to 'VIENNAPS_PACKAGE_PYTHON', the build will take a long time!"
+  )
+
+  # CIBUILDWHEEL is absolutely cursed and won't work when this is turned on.
+  # I don't know why...
+  if(NOT VIENNAPS_IS_CI)
+    set(CPM_DOWNLOAD_ALL ON)
+  endif()
+
+  set(VIENNAPS_BUILD_PYTHON ON)
+endif()
 
 if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
@@ -72,6 +89,7 @@ target_include_directories(
                             $<INSTALL_INTERFACE:include/viennaps-${PROJECT_VERSION}>)
 
 # --------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD
 # Check whether or not dependencies are installed on the system
 # └ VTK requires C Language support (HDF5)
 # --------------------------------------------------------------------------------------------------------
@@ -95,14 +113,21 @@ set(VIENNAPS_SYSTEM_VIENNACS
     CACHE INTERNAL "")
 
 # --------------------------------------------------------------------------------------------------------
+=======
+>>>>>>> origin/vienna-core
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
 
 include("cmake/cpm.cmake")
 
 CPMAddPackage(
+  NAME Core
+  GIT_TAG main # TODO: Create Tag
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore")
+
+CPMAddPackage(
   NAME PackageProject
-  VERSION 1.11.1
+  VERSION 1.11.2
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
 CPMFindPackage(
@@ -113,15 +138,23 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaRay
+<<<<<<< HEAD
   VERSION 2.1.2
   GIT_TAG viennacore
+=======
+  GIT_TAG vienna-core # TOOD: Create Tag
+>>>>>>> origin/vienna-core
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaLS
+<<<<<<< HEAD
   VERSION 3.1.0
   GIT_TAG viennacore
+=======
+  VERSION 3.1.2
+>>>>>>> origin/vienna-core
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
