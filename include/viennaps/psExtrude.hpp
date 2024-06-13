@@ -73,9 +73,9 @@ public:
     auto materialMap = inputDomain->getMaterialMap();
     outputDomain->clear();
 
-    for (std::size_t i = 0; i < inputDomain->getLevelSets()->size(); i++) {
+    for (std::size_t i = 0; i < inputDomain->getLevelSets().size(); i++) {
       auto tmpLS = SmartPointer<viennals::Domain<NumericType, 3>>::New();
-      viennals::Extrude<NumericType>(inputDomain->getLevelSets()->at(i), tmpLS,
+      viennals::Extrude<NumericType>(inputDomain->getLevelSets().at(i), tmpLS,
                                      extent, extrudeDim, boundaryConds)
           .apply();
 

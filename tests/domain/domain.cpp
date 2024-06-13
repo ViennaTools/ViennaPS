@@ -51,13 +51,13 @@ template <class NumericType, int D> void RunTest() {
         plane2, SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    auto levelSets = SmartPointer<std::vector<lsDomainType>>::New();
-    levelSets->push_back(plane1);
-    levelSets->push_back(plane2);
+    std::vector<lsDomainType> levelSets;
+    levelSets.push_back(plane1);
+    levelSets.push_back(plane2);
 
     auto domain = psDomainType::New(levelSets);
     domain->generateCellSet(3., ps::Material::GAS, true);
-    VC_TEST_ASSERT(domain->getLevelSets()->size() == 2);
+    VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
     VC_TEST_ASSERT(domain->getCellSet());
 
     auto cellSet = domain->getCellSet();
@@ -65,15 +65,15 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(cellSet->getDepth() == 3.);
 
     domain->clear();
-    VC_TEST_ASSERT(domain->getLevelSets()->size() == 0);
+    VC_TEST_ASSERT(domain->getLevelSets().size() == 0);
 
     // insert level sets
     domain->insertNextLevelSet(plane1);
-    VC_TEST_ASSERT(domain->getLevelSets()->size() == 1);
+    VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
 
     domain->clear();
     domain->insertNextLevelSetAsMaterial(plane1, ps::Material::Si);
-    VC_TEST_ASSERT(domain->getLevelSets()->size() == 1);
+    VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
     VC_TEST_ASSERT(domain->getMaterialMap());
 
     // deep copy
@@ -82,14 +82,11 @@ template <class NumericType, int D> void RunTest() {
 
     auto domainCopy = psDomainType::New();
     domainCopy->deepCopy(domain);
-    VC_TEST_ASSERT(domainCopy->getLevelSets());
-    VC_TEST_ASSERT(domainCopy->getLevelSets()->size() == 2);
+    VC_TEST_ASSERT(domainCopy->getLevelSets().size() == 2);
     VC_TEST_ASSERT(domainCopy->getMaterialMap());
     VC_TEST_ASSERT(domainCopy->getCellSet());
 
     // VC_TEST_ASSERT deep copy
-    VC_TEST_ASSERT(domainCopy->getLevelSets().get() !=
-                   domain->getLevelSets().get());
     VC_TEST_ASSERT(domainCopy->getCellSet().get() !=
                    domain->getCellSet().get());
     VC_TEST_ASSERT(domainCopy->getMaterialMap().get() !=

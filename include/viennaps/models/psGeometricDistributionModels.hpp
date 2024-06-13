@@ -36,12 +36,12 @@ public:
   void apply() {
     if (dist) {
       if (mask) {
-        viennals::GeometricAdvect<NumericType, D>(
-            domain->getLevelSets()->back(), dist, mask)
+        viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),
+                                                  dist, mask)
             .apply();
       } else {
-        viennals::GeometricAdvect<NumericType, D>(
-            domain->getLevelSets()->back(), dist)
+        viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),
+                                                  dist)
             .apply();
       }
     }

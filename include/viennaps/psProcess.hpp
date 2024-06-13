@@ -241,7 +241,7 @@ public:
     processTimer.start();
 
     double remainingTime = processDuration;
-    assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
+    assert(domain->getLevelSets().size() != 0 && "No level sets in domain.");
     const NumericType gridDelta = domain->getGrid().getGridDelta();
 
     auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
@@ -249,7 +249,7 @@ public:
     viennals::ToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
     if (domain->getMaterialMap() &&
-        domain->getMaterialMap()->size() == domain->getLevelSets()->size()) {
+        domain->getMaterialMap()->size() == domain->getLevelSets().size()) {
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     }
 
@@ -262,7 +262,7 @@ public:
     advectionKernel.setIntegrationScheme(integrationScheme);
     advectionKernel.setTimeStepRatio(timeStepRatio);
 
-    for (auto dom : *domain->getLevelSets()) {
+    for (auto dom : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
       advectionKernel.insertNextLevelSet(dom);
     }
@@ -706,7 +706,7 @@ private:
   void moveCoveragesToTopLS(
       SmartPointer<translatorType> translator,
       SmartPointer<viennals::PointData<NumericType>> coverages) {
-    auto topLS = domain->getLevelSets()->back();
+    auto topLS = domain->getLevelSets().back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
@@ -727,7 +727,7 @@ private:
   void updateCoveragesFromAdvectedSurface(
       SmartPointer<translatorType> translator,
       SmartPointer<viennals::PointData<NumericType>> coverages) const {
-    auto topLS = domain->getLevelSets()->back();
+    auto topLS = domain->getLevelSets().back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       auto levelSetData = topLS->getPointData().getScalarData(covName);

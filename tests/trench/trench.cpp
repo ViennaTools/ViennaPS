@@ -14,12 +14,11 @@ template <class NumericType, int D> void RunTest() {
                              Material::Si)
       .apply();
 
-  VC_TEST_ASSERT(domain->getLevelSets());
-  VC_TEST_ASSERT(domain->getLevelSets()->size() == 2);
+  VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
   VC_TEST_ASSERT(domain->getMaterialMap());
   VC_TEST_ASSERT(domain->getMaterialMap()->size() == 2);
 
-  LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
+  LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
 }
 
 } // namespace viennacore

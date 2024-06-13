@@ -89,41 +89,10 @@ target_include_directories(
                             $<INSTALL_INTERFACE:include/viennaps-${PROJECT_VERSION}>)
 
 # --------------------------------------------------------------------------------------------------------
-<<<<<<< HEAD
-# Check whether or not dependencies are installed on the system
-# └ VTK requires C Language support (HDF5)
-# --------------------------------------------------------------------------------------------------------
-
-enable_language(C)
-
-find_package(ViennaRay QUIET)
-find_package(ViennaLS QUIET)
-find_package(ViennaCS QUIET)
-
-set(VIENNAPS_SYSTEM_VIENNARAY
-    ${ViennaRay_FOUND}
-    CACHE INTERNAL "")
-
-set(VIENNAPS_SYSTEM_VIENNALS
-    ${ViennaLS_FOUND}
-    CACHE INTERNAL "")
-
-set(VIENNAPS_SYSTEM_VIENNACS
-    ${ViennaCS_FOUND}
-    CACHE INTERNAL "")
-
-# --------------------------------------------------------------------------------------------------------
-=======
->>>>>>> origin/vienna-core
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
 
 include("cmake/cpm.cmake")
-
-CPMAddPackage(
-  NAME Core
-  GIT_TAG main # TODO: Create Tag
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore")
 
 CPMAddPackage(
   NAME PackageProject
@@ -138,33 +107,23 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-<<<<<<< HEAD
-  VERSION 2.1.2
   GIT_TAG viennacore
-=======
-  GIT_TAG vienna-core # TOOD: Create Tag
->>>>>>> origin/vienna-core
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaLS
-<<<<<<< HEAD
-  VERSION 3.1.0
   GIT_TAG viennacore
-=======
-  VERSION 3.1.2
->>>>>>> origin/vienna-core
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaCS
-  VERSION 1.0.0
+  GIT_TAG main
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCS)
+target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS ViennaTools::ViennaRay ViennaTools::ViennaCS)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Application

@@ -428,7 +428,7 @@ private:
           .print();
     }
 
-    if (pDomain_->getLevelSets()->size() == 0) {
+    if (pDomain_->getLevelSets().size() == 0) {
       Logger::getInstance()
           .addError("No level sets in domain passed to psAtomicLayerProcess.")
           .print();

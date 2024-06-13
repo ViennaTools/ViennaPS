@@ -157,11 +157,8 @@ private:
           SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
           .apply();
 
-      for (auto layer : *pDomain_->getLevelSets()) {
-        viennals::BooleanOperation<NumericType, D>(
-            layer, cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
-      }
+      pDomain_->applyBooleanOperation(
+          cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
     }
   }
 
@@ -256,11 +253,9 @@ private:
               origin_, normal_, (numLayers_ + 1) * layerHeight_, holeRadius_))
           .apply();
 
-      for (auto layer : *pDomain_->getLevelSets()) {
-        viennals::BooleanOperation<NumericType, D>(
-            layer, cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
-      }
+      pDomain_->applyBooleanOperation(
+          cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
+
     } else if (trenchWidth_ > 0. && maskHeight_ == 0.) {
       auto cutOut = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       NumericType minPoint[D] = {
@@ -277,11 +272,8 @@ private:
           SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
           .apply();
 
-      for (auto layer : *pDomain_->getLevelSets()) {
-        viennals::BooleanOperation<NumericType, D>(
-            layer, cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
-      }
+      pDomain_->applyBooleanOperation(
+          cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
     }
   }
 

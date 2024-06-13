@@ -167,7 +167,7 @@ public:
           SmartPointer<RedepositionVelocityField<T>>::New(depoRate, points);
 
       viennals::Advect<T, D> advectionKernel;
-      advectionKernel.insertNextLevelSet(domain->getLevelSets()->back());
+      advectionKernel.insertNextLevelSet(domain->getLevelSets().back());
       advectionKernel.setVelocityField(redepoVelField);
       advectionKernel.setAdvectionTime(processTime - prevProcTime);
       advectionKernel.apply();

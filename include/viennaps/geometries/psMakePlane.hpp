@@ -51,7 +51,7 @@ public:
 
   void apply() {
     if (add_) {
-      if (!pDomain_->getLevelSets()->back()) {
+      if (!pDomain_->getLevelSets().back()) {
         Logger::getInstance()
             .addWarning("MakePlane: Plane can only be added to already "
                         "existing geometry.")
