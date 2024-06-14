@@ -308,16 +308,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // set dimension
   module.attr("D") = D;
 
-  // wrap omp_set_num_threads to control number of threads
-  module.def("setNumThreads", &omp_set_num_threads);
-
   /****************************************************************************
    *                               MODEL FRAMEWORK                            *
    ****************************************************************************/
 
   // psProcessModel
   pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>
-      processModel(module, "ProcessModel");
+      processModel(module, "ProcessModel", pybind11::module_local());
 
   // constructors
   processModel
