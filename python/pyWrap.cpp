@@ -1076,15 +1076,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
-      .def("getLevelSets",
-           [](Domain<T, D> &d)
-               -> std::optional<
-                   std::vector<SmartPointer<viennals::Domain<T, D>>>> {
-             auto levelsets = d.getLevelSets();
-             if (levelsets)
-               return *levelsets;
-             return std::nullopt;
-           })
+      .def("getLevelSets",&Domain<T, D>::getLevelSets)
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, D>::getGrid, "Get the grid")
       .def("print", &Domain<T, D>::print)
@@ -1225,15 +1217,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("generateCellSet", &Domain<T, 3>::generateCellSet,
            pybind11::arg("position"), pybind11::arg("coverMaterial"),
            pybind11::arg("isAboveSurface"), "Generate the cell set.")
-      .def("getLevelSets",
-           [](Domain<T, 3> &d)
-               -> std::optional<
-                   std::vector<SmartPointer<viennals::Domain<T, 3>>>> {
-             auto levelsets = d.getLevelSets();
-             if (levelsets)
-               return *levelsets;
-             return std::nullopt;
-           })
+      .def("getLevelSets", &Domain<T, 3>::getLevelSets)
       .def("getCellSet", &Domain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, 3>::getGrid, "Get the grid")
       .def("print", &Domain<T, 3>::print)

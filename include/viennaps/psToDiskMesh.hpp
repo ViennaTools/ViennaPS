@@ -45,7 +45,7 @@ public:
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     if (translator.get())
       meshConverter.setTranslator(translator);
-    for (const auto ls : *domain->getLevelSets()) {
+    for (const auto ls : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(ls);
     }
     meshConverter.apply();

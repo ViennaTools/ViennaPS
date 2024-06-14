@@ -35,7 +35,7 @@ protected:
 public:
   virtual ~ProcessModel() = default;
 
-  auto const &getParticleTypes() const { return particles; }
+  auto &getParticleTypes() { return particles; }
   auto getSurfaceModel() const { return surfaceModel; }
   auto getAdvectionCallback() const { return advectionCallback; }
   auto getGeometricModel() const { return geometricModel; }

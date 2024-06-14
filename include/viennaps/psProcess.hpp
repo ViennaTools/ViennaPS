@@ -113,7 +113,7 @@ public:
     // Generate disk mesh from domain
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     viennals::ToDiskMesh<NumericType, D> meshConverter(mesh);
-    for (auto dom : *domain->getLevelSets()) {
+    for (auto dom : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
     }
     meshConverter.apply();
