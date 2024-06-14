@@ -123,7 +123,8 @@ CPMFindPackage(
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS ViennaTools::ViennaRay ViennaTools::ViennaCS)
+target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
+                                                ViennaTools::ViennaRay ViennaTools::ViennaCS)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Application
