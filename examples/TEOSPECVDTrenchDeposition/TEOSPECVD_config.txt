@@ -1,0 +1,25 @@
+# Domain
+gridDelta=2.5 # um
+xExtent=110. # um
+yExtent=110. # um (3D mode only)
+
+# Geometry
+trenchWidth=70  # um
+trenchHeight=70 # um
+taperAngle=0.   # degrees
+
+# Process
+processTime=350 # min
+numRaysPerPoint=1000 
+
+# radical
+depositionRateRadical=0.05 # um / min
+stickingProbabilityRadical=1e-4
+reactionOrderRadical=1.0
+
+# ion
+depositionRateIon=0.05 # um / min
+stickingProbabilityIon=1.
+reactionOrderIon=1.0
+exponentIon=100.
+minAngleIon=1.34

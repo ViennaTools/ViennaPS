@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project("TEOSDeposition")
+project("TEOS_PE-CVD")
 
 # set default build type
 SET(DEFAULT_BUILD_TYPE "Release")
@@ -19,6 +19,6 @@ list(APPEND CMAKE_PREFIX_PATH "/home/filipov/Software/ViennaTools/VPS")
 find_package(ViennaPS)
 
 # CMake target
-add_executable(TEOSDeposition multiTEOS.cpp)
-target_link_libraries(TEOSDeposition PUBLIC ViennaTools::ViennaPS)
-configure_file(multiTEOS_config.txt ${CMAKE_CURRENT_BINARY_DIR}/multiTEOS_config.txt COPYONLY)
+add_executable(TEOSPECVD TEOSPECVD.cpp)
+target_link_libraries(TEOSPECVD PUBLIC ViennaTools::ViennaPS)
+configure_file(TEOSPECVD_config.txt ${CMAKE_CURRENT_BINARY_DIR}/TEOSPECVD_config.txt COPYONLY)

@@ -1,0 +1,8 @@
+project(TEOSTrenchDeposition LANGUAGES CXX)
+
+add_executable(TEOSPECVD "TEOSPECVD.cpp")
+target_link_libraries(TEOSPECVD PRIVATE ViennaPS)
+configure_file(TEOSPECVD_config.txt ${CMAKE_CURRENT_BINARY_DIR}/TEOSPECVD_config.txt COPYONLY)
+
+add_dependencies(ViennaPS_Examples TEOSPECVD)
+setup_windows_bat(TEOSPECVD ${VIENNAPS_EXAMPLES_LIB})
