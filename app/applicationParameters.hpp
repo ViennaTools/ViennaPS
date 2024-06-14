@@ -3,9 +3,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <psLogger.hpp>
 #include <psMaterials.hpp>
 #include <psUtils.hpp>
+#include <vcLogger.hpp>
 
 enum class CommandType { NONE, INIT, GEOMETRY, PROCESS, OUTPUT, PLANARIZE };
 
@@ -42,8 +42,8 @@ struct ApplicationParameters {
   NumericType xExtent = 1.0;
   NumericType yExtent = 1.0;
   int periodicBoundary = 0;
-  lsIntegrationSchemeEnum integrationScheme =
-      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  viennals::IntegrationSchemeEnum integrationScheme =
+      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
 
   // Geometry
   int mask = 0;
@@ -67,8 +67,8 @@ struct ApplicationParameters {
   int maskInvert = 0;
   NumericType xPadding = 0.;
   NumericType yPadding = 0.;
-  psMaterial material = psMaterial::Si;
-  psMaterial maskMaterial = psMaterial::Mask;
+  viennaps::Material material = viennaps::Material::Si;
+  viennaps::Material maskMaterial = viennaps::Material::Mask;
 
   // Process
   NumericType processTime = 1;
@@ -164,7 +164,8 @@ struct ApplicationParameters {
       xExtent = 1.0;
       yExtent = 1.0;
       periodicBoundary = 0;
-      integrationScheme = lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+      integrationScheme =
+          viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
     }
   }
 };
