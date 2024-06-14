@@ -177,8 +177,9 @@ public:
       cellSet_ = csDomainType::New();
     cellSet_->setCellSetPosition(isAboveSurface);
     cellSet_->setCoverMaterial(static_cast<int>(coverMaterial));
-    cellSet_->fromLevelSets(levelSets_, materialMap_->getMaterialMap(),
-                            position);
+    cellSet_->fromLevelSets(
+        levelSets_, materialMap_ ? materialMap_->getMaterialMap() : nullptr,
+        position);
   }
 
   void setMaterialMap(materialMapType passedMaterialMap) {
@@ -254,8 +255,8 @@ public:
       }
       meshConverter.apply();
 
-      psSurfacePointValuesToLevelSet<NumericType, D>(levelSets_.back(), mesh,
-                                                     {"MaterialIds"})
+      SurfacePointValuesToLevelSet<NumericType, D>(levelSets_.back(), mesh,
+                                                   {"MaterialIds"})
           .apply();
     }
 

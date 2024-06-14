@@ -9,7 +9,6 @@ readme = "README.md"
 license = {file = "LICENSE"}
 description = "Semiconductor fabrication process simulation library"
 # dependencies = ['vtk >= 9.0.0, < 10']
-dependencies = ['ViennaCore_Python >= 0.0.1']
 
 [project.urls]
 Homepage = "https://viennatools.github.io/ViennaPS/"

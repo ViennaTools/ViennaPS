@@ -11,7 +11,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, int D> class psSurfacePointValuesToLevelSet {
+template <class NumericType, int D> class SurfacePointValuesToLevelSet {
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
 
   lsDomainType levelSet;
@@ -19,9 +19,9 @@ template <class NumericType, int D> class psSurfacePointValuesToLevelSet {
   std::vector<std::string> dataNames;
 
 public:
-  psSurfacePointValuesToLevelSet() {}
+  SurfacePointValuesToLevelSet() {}
 
-  psSurfacePointValuesToLevelSet(
+  SurfacePointValuesToLevelSet(
       lsDomainType passedLevelSet,
       SmartPointer<viennals::Mesh<NumericType>> passedMesh,
       std::vector<std::string> passedDataNames)
@@ -46,14 +46,14 @@ public:
   void apply() {
     if (!levelSet) {
       Logger::getInstance()
-          .addWarning("No level set passed to psSurfacePointValuesToLevelSet.")
+          .addWarning("No level set passed to SurfacePointValuesToLevelSet.")
           .print();
       return;
     }
 
     if (!mesh) {
       Logger::getInstance()
-          .addWarning("No mesh passed to psSurfacePointValuesToLevelSet.")
+          .addWarning("No mesh passed to SurfacePointValuesToLevelSet.")
           .print();
       return;
     }
@@ -84,13 +84,10 @@ public:
 
     for (const auto dataName : dataNames) {
       auto pointData = mesh->getCellData().getScalarData(dataName);
-      if (!pointData) {
-        Logger::getInstance()
-            .addWarning("Could not find " + dataName + " in mesh values.")
-            .print();
+      if (!pointData)
         continue;
-      }
-      auto data = levelSet->getPointData().getScalarData(dataName);
+
+      auto data = levelSet->getPointData().getScalarData(dataName, true);
       if (data != nullptr) {
         data->resize(levelSet->getNumberOfPoints());
       } else {

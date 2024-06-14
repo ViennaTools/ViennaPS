@@ -714,7 +714,7 @@ private:
       for (const auto iter : *translator.get()) {
         levelSetData[iter.first] = cov->at(iter.second);
       }
-      if (auto data = topLS->getPointData().getScalarData(covName);
+      if (auto data = topLS->getPointData().getScalarData(covName, true);
           data != nullptr) {
         *data = std::move(levelSetData);
       } else {

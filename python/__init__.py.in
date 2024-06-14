@@ -28,7 +28,6 @@ if sys.platform == "win32":
     _windows_dll_path()
 
 from .@NAME@ import *
-import viennacore as core
 
 # Config file reader helper function
 def ReadConfigFile(fileName: str):

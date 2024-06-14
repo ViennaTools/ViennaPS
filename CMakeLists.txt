@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 2.0.2)
+  VERSION 3.0.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -95,19 +95,20 @@ target_include_directories(
 include("cmake/cpm.cmake")
 
 CPMAddPackage(
+  NAME ViennaCore
+  GIT_TAG v1.0.0
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+
+CPMAddPackage(
   NAME PackageProject
   VERSION 1.11.2
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
 CPMFindPackage(
-  NAME ViennaCore
-  GIT_TAG main
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
-
-CPMFindPackage(
   NAME ViennaRay
-  GIT_TAG viennacore
+  GIT_TAG v3.0.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -176,4 +177,4 @@ packageProject(
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaCS;ViennaLS;ViennaRay")
+  DEPENDENCIES "ViennaCore;ViennaCS;ViennaLS;ViennaRay")
