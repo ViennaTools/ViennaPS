@@ -19,8 +19,9 @@ class TranslationField : public viennals::VelocityField<NumericType> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
 public:
-  TranslationField(SmartPointer<VelocityField<NumericType>> velocityField,
-                   SmartPointer<MaterialMap> materialMap)
+  TranslationField(
+      SmartPointer<viennaps::VelocityField<NumericType>> velocityField,
+      SmartPointer<MaterialMap> materialMap)
       : translationMethod_(velocityField->getTranslationFieldOptions()),
         modelVelocityField_(velocityField), materialMap_(materialMap) {}
 
@@ -90,7 +91,7 @@ public:
 private:
   SmartPointer<TranslatorType> translator_;
   KDTree<NumericType, Vec3D<NumericType>> kdTree_;
-  const SmartPointer<VelocityField<NumericType>> modelVelocityField_;
+  const SmartPointer<viennaps::VelocityField<NumericType>> modelVelocityField_;
   const SmartPointer<MaterialMap> materialMap_;
   const int translationMethod_ = 1;
 };

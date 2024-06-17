@@ -156,14 +156,14 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class psIonBeamEtching : public psProcessModel<NumericType, D> {
+class IonBeamEtching : public ProcessModel<NumericType, D> {
 public:
-  psIonBeamEtching() {
+  IonBeamEtching() {
     std::vector<Material> maskMaterial;
     initialize(std::move(maskMaterial));
   }
 
-  psIonBeamEtching(std::vector<Material> maskMaterial) {
+  IonBeamEtching(std::vector<Material> maskMaterial) {
     initialize(std::move(maskMaterial));
   }
 
