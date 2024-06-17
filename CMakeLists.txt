@@ -8,14 +8,14 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
-option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
-option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
-
-option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
-option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
-
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
+
+option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
+option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
+
+option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
+option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 
 # --------------------------------------------------------------------------------------------------------
 # Library options
@@ -96,7 +96,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  GIT_TAG v1.0.0
+  VERSION 1.0.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
@@ -108,7 +108,7 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  GIT_TAG v3.0.0
+  VERSION 3.0.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -177,4 +177,4 @@ packageProject(
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaCore;ViennaCS;ViennaLS;ViennaRay")
+  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")
