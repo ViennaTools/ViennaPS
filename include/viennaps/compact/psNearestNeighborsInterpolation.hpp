@@ -8,7 +8,7 @@
 #include "psDataScaler.hpp"
 #include "psValueEstimator.hpp"
 
-#include <KDTree.hpp>
+#include <vcKDTree.hpp>
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 
@@ -17,7 +17,7 @@ namespace viennaps {
 using namespace viennacore;
 
 template <typename VectorType, typename SizeType>
-auto extractInputData(psSmartPointer<const VectorType> data, SizeType InputDim,
+auto extractInputData(SmartPointer<const VectorType> data, SizeType InputDim,
                       SizeType OutputDim) {
   VectorType inputData;
   using ElementType = typename VectorType::value_type;
@@ -35,15 +35,16 @@ auto extractInputData(psSmartPointer<const VectorType> data, SizeType InputDim,
 
 // Class providing nearest neighbors interpolation
 template <typename NumericType,
-          typename DataScaler = psStandardScaler<NumericType>>
+          typename DataScaler = StandardScaler<NumericType>>
 class NearestNeighborsInterpolation
-    : public psValueEstimator<NumericType, NumericType> {
+    : public ValueEstimator<NumericType, NumericType> {
 
-  static_assert(std::is_base_of_v<psDataScaler<NumericType>, DataScaler>,
-                "NearestNeighborsInterpolation: the provided DataScaler "
-                "does not inherit from psDataScaler.");
+  static_assert(
+      std::is_base_of_v<viennaps::DataScaler<NumericType>, DataScaler>,
+      "NearestNeighborsInterpolation: the provided DataScaler "
+      "does not inherit from viennaps::DataScaler.");
 
-  using Parent = psValueEstimator<NumericType, NumericType>;
+  using Parent = ValueEstimator<NumericType, NumericType>;
 
   using typename Parent::ItemType;
   using typename Parent::SizeType;
@@ -71,7 +72,7 @@ public:
 
   bool initialize() override {
     if (!data || (data && data->empty())) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning(
               "NearestNeighborsInterpolation: the provided data is empty.")
           .print();
@@ -79,7 +80,7 @@ public:
     }
 
     if (data->at(0).size() != inputDim + outputDim) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("NearestNeighborsInterpolation: the sum of the provided "
                       "InputDimension and OutputDimension does not match the "
                       "dimension of the provided data.")
@@ -105,7 +106,7 @@ public:
   std::optional<std::tuple<ItemType, NumericType>>
   estimate(const ItemType &input) override {
     if (input.size() != inputDim) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("NearestNeighborsInterpolation: No input data provided.")
           .print();
       return {};
