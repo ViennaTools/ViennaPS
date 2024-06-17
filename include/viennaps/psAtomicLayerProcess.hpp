@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Logger.hpp"
+#include "psDomain.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
 #include "psUtils.hpp"
