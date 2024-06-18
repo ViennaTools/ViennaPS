@@ -2,56 +2,56 @@
 #include <models/psSF6O2Etching.hpp>
 
 #include <psProcess.hpp>
-#include <psToSurfaceMesh.hpp>
 #include <psUtils.hpp>
-#include <psWriteVisualizationMesh.hpp>
 
-#include "parameters.hpp"
+namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
-  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::utils::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
-    }
-    params.fromMap(config);
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
   // geometry setup
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeHole<NumericType, D>(
-      geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
-      params.yExtent /*y extent*/, params.holeRadius /*hole radius*/,
-      params.maskHeight /* mask height*/,
-      params.taperAngle /* tapering angle in degrees */, 0 /* base height */,
-      false /* periodic boundary */, true /*create mask*/, psMaterial::Si)
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  ps::MakeHole<NumericType, D>(
+      geometry, params.get("gridDelta") /* grid delta */,
+      params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
+      params.get("holeRadius") /*hole radius*/,
+      params.get("maskHeight") /* mask height*/,
+      params.get("taperAngle") /* tapering angle in degrees */,
+      0 /* base height */, false /* periodic boundary */, true /*create mask*/,
+      ps::Material::Si)
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  auto model = psSmartPointer<psSF6O2Etching<NumericType, D>>::New(
-      params.ionFlux /*ion flux*/, params.etchantFlux /*etchant flux*/,
-      params.oxygenFlux /*oxygen flux*/, params.meanEnergy /*mean energy*/,
-      params.sigmaEnergy /*energy sigma*/,
-      params.ionExponent /*source power cosine distribution exponent*/,
-      params.A_O /*oxy sputter yield*/,
-      params.etchStopDepth /*max etch depth*/);
+  auto model = ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(
+      params.get("ionFlux") /*ion flux*/,
+      params.get("etchantFlux") /*etchant flux*/,
+      params.get("oxygenFlux") /*oxygen flux*/,
+      params.get("meanEnergy") /*mean energy*/,
+      params.get("sigmaEnergy") /*energy sigma*/,
+      params.get("ionExponent") /*source power cosine distribution exponent*/,
+      params.get("A_O") /*oxy sputter yield*/,
+      params.get("etchStopDepth") /*max etch depth*/);
 
   // process setup
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setMaxCoverageInitIterations(10);
-  process.setNumberOfRaysPerPoint(params.raysPerPoint);
-  process.setProcessDuration(params.processTime);
+  process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
+  process.setProcessDuration(params.get("processTime"));
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

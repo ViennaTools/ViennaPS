@@ -6,8 +6,8 @@
 #include <omp.h>
 #endif
 
-#include <compact/psKDTree.hpp>
-#include <psSmartPointer.hpp>
+#include <vcKDTree.hpp>
+#include <vcSmartPointer.hpp>
 
 inline double getTime() {
 #ifdef _OPENMP
@@ -41,6 +41,8 @@ std::vector<std::vector<T>> generatePoints(unsigned N, unsigned D) {
   }
   return data;
 }
+
+using namespace viennacore;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
@@ -80,10 +82,10 @@ int main(int argc, char *argv[]) {
 
   {
     std::cout << "Growing Tree...\n";
-    psSmartPointer<psKDTree<NumericType>> tree = nullptr;
+    SmartPointer<KDTree<NumericType>> tree = nullptr;
     auto startTime = getTime();
     for (unsigned i = 0; i < repetitions; ++i) {
-      tree = psSmartPointer<psKDTree<NumericType>>::New(points);
+      tree = SmartPointer<KDTree<NumericType>>::New(points);
       tree->build();
     }
     auto endTime = getTime();
@@ -94,8 +96,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Finding Nearest Neighbors...\n";
     startTime = getTime();
     for (unsigned i = 0; i < repetitions; ++i) {
-      for (const auto &pt : testPoints)
-        [[maybe_unused]] auto result = tree->findNearest(pt);
+      for (const auto &pt : testPoints) [[maybe_unused]]
+        auto result = tree->findNearest(pt);
     }
     endTime = getTime();
 

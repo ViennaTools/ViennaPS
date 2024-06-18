@@ -1,64 +1,45 @@
 #pragma once
 
 #include "psGDSUtils.hpp"
-#include "psLogger.hpp"
-#include "psSmartPointer.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometries.hpp>
+#include <lsMakeGeometry.hpp>
 #include <lsTransformMesh.hpp>
-#include <rayUtil.hpp>
 
-template <class NumericType, int D = 3> class psGDSGeometry {
-  using structureLayers =
-      std::unordered_map<int16_t, psSmartPointer<lsMesh<NumericType>>>;
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
 
-  std::vector<psGDSStructure<NumericType>> structures;
-  std::unordered_map<std::string, structureLayers> assembledStructures;
-  std::string libName = "";
-  double units;
-  double userUnits;
-  std::array<NumericType, 2> boundaryPadding = {0., 0.};
-  std::array<NumericType, 2> minBounds;
-  std::array<NumericType, 2> maxBounds;
-  bool pointOrderFlag = true;
-  unsigned triangulationTimeOut = 1000000;
-  static constexpr double eps = 1e-6;
+namespace viennaps {
 
-  double bounds[6];
-  NumericType gridDelta = 1.;
-  typename lsDomain<NumericType, D>::BoundaryType boundaryCons[3] = {
-      lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-      lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY,
-      lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY};
+using namespace viennacore;
+
+template <class NumericType, int D = 3> class GDSGeometry {
+  using StructureLayers =
+      std::unordered_map<int16_t, SmartPointer<viennals::Mesh<NumericType>>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using BoundaryType = typename viennals::Domain<NumericType, D>::BoundaryType;
 
 public:
-  psGDSGeometry() {
+  GDSGeometry() {
     if constexpr (D == 2) {
-      psLogger::getInstance()
-          .addWarning("Cannot import 2D geometry from GDS file.")
+      Logger::getInstance()
+          .addError("Cannot import 2D geometry from GDS file.")
           .print();
-      return;
     }
   }
 
-  psGDSGeometry(const NumericType passedGridDelta)
-      : gridDelta(passedGridDelta) {
+  GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
     if constexpr (D == 2) {
-      psLogger::getInstance()
-          .addWarning("Cannot import 2D geometry from GDS file.")
+      Logger::getInstance()
+          .addError("Cannot import 2D geometry from GDS file.")
           .print();
-      return;
     }
   }
 
-  void setGridDelta(const NumericType passedGridDelta) {
-    gridDelta = passedGridDelta;
-  }
-
-  void setLibName(const char *str) { libName = str; }
+  void setGridDelta(const NumericType gridDelta) { gridDelta_ = gridDelta; }
 
   void setBoundaryPadding(const NumericType xPadding,
                           const NumericType yPadding) {
@@ -66,39 +47,24 @@ public:
     boundaryPadding[1] = yPadding;
   }
 
-  void setBoundaryConditions(
-      typename lsDomain<NumericType, D>::BoundaryType passedBoundaryCons[3]) {
+  void setBoundaryConditions(BoundaryType boundaryConds[3]) {
     for (int i = 0; i < 3; i++)
-      boundaryCons[i] = passedBoundaryCons[i];
+      boundaryConds_[i] = boundaryConds[i];
   }
 
-  void insertNextStructure(psGDSStructure<NumericType> &structure) {
-    structures.push_back(structure);
-  }
-
-  void print() {
-    std::cout << "======= STRUCTURES ========" << std::endl;
+  void print() const {
+    std::cout << "======== STRUCTURES ========" << std::endl;
     for (auto &s : structures) {
       s.print();
     }
     std::cout << "============================" << std::endl;
   }
 
-  psGDSStructure<NumericType> *getStructure(std::string strName) {
-    for (size_t i = 0; i < structures.size(); i++) {
-      if (strName == structures[i].name) {
-        return &structures[i];
-      }
-    }
-    return nullptr;
-  }
+  lsDomainType layerToLevelSet(const int16_t layer,
+                               const NumericType baseHeight,
+                               const NumericType height, bool mask = false) {
 
-  psSmartPointer<lsDomain<NumericType, D>>
-  layerToLevelSet(const int16_t layer, const NumericType baseHeight,
-                  const NumericType height, bool mask = false) {
-
-    auto levelSet = psSmartPointer<lsDomain<NumericType, D>>::New(
-        bounds, boundaryCons, gridDelta);
+    auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
@@ -107,7 +73,7 @@ public:
             contains != str.containsLayers.end()) {
           for (auto &el : str.elements) {
             if (el.layer == layer) {
-              if (el.elementType == elBox) {
+              if (el.elementType == GDS::ElementType::elBox) {
                 addBox(levelSet, el, baseHeight, height, 0., 0.);
               } else {
                 addPolygon(levelSet, el, baseHeight, height, 0, 0);
@@ -117,7 +83,7 @@ public:
         }
 
         // add structure references
-        auto strMesh = psSmartPointer<lsMesh<NumericType>>::New();
+        auto strMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
         for (auto &sref : str.sRefs) {
           auto refStr = getStructure(sref.strName);
           if (auto contains = refStr->containsLayers.find(layer);
@@ -126,35 +92,36 @@ public:
 
             // copy mesh here
             auto copy = assembledStructures[refStr->name][layer];
-            auto preBuiltStrMesh = psSmartPointer<lsMesh<NumericType>>::New();
+            auto preBuiltStrMesh =
+                SmartPointer<viennals::Mesh<NumericType>>::New();
             preBuiltStrMesh->nodes = copy->nodes;
             preBuiltStrMesh->triangles = copy->triangles;
             adjustPreBuiltMeshHeight(preBuiltStrMesh, baseHeight, height);
 
             if (sref.angle > 0.) {
-              lsTransformMesh<NumericType>(
-                  preBuiltStrMesh, lsTransformEnum::ROTATION,
+              viennals::TransformMesh<NumericType>(
+                  preBuiltStrMesh, viennals::TransformEnum::ROTATION,
                   hrleVectorType<double, 3>{0., 0., 1.}, deg2rad(sref.angle))
                   .apply();
             }
 
             if (sref.magnification > 0.) {
-              lsTransformMesh<NumericType>(
-                  preBuiltStrMesh, lsTransformEnum::SCALE,
+              viennals::TransformMesh<NumericType>(
+                  preBuiltStrMesh, viennals::TransformEnum::SCALE,
                   hrleVectorType<double, 3>{sref.magnification,
                                             sref.magnification, 1.})
                   .apply();
             }
 
             if (sref.flipped) {
-              psLogger::getInstance()
+              Logger::getInstance()
                   .addWarning("Flipping x-axis currently not supported.")
                   .print();
               continue;
             }
 
-            lsTransformMesh<NumericType>(
-                preBuiltStrMesh, lsTransformEnum::TRANSLATION,
+            viennals::TransformMesh<NumericType>(
+                preBuiltStrMesh, viennals::TransformEnum::TRANSLATION,
                 hrleVectorType<double, 3>{sref.refPoint[0], sref.refPoint[1],
                                           0.})
                 .apply();
@@ -163,46 +130,76 @@ public:
           }
         }
         if (strMesh->nodes.size() > 0) {
-          auto tmpLS = psSmartPointer<lsDomain<NumericType, D>>::New(
-              levelSet->getGrid());
-          lsFromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
-          lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                             lsBooleanOperationEnum::UNION)
+          auto tmpLS = lsDomainType::New(levelSet->getGrid());
+          viennals::FromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
+          viennals::BooleanOperation<NumericType, D>(
+              levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
               .apply();
         }
       }
     }
 
     if (mask) {
-      auto topPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
-          bounds, boundaryCons, gridDelta);
+      auto topPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       NumericType normal[3] = {0., 0., 1.};
       NumericType origin[3] = {0., 0., baseHeight + height};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           topPlane,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      auto botPlane = psSmartPointer<lsDomain<NumericType, D>>::New(
-          bounds, boundaryCons, gridDelta);
+      auto botPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       normal[D - 1] = -1.;
       origin[D - 1] = baseHeight;
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           botPlane,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      lsBooleanOperation<NumericType, D>(topPlane, botPlane,
-                                         lsBooleanOperationEnum::INTERSECT)
+      viennals::BooleanOperation<NumericType, D>(
+          topPlane, botPlane, viennals::BooleanOperationEnum::INTERSECT)
           .apply();
 
-      lsBooleanOperation<NumericType, D>(
-          topPlane, levelSet, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+      viennals::BooleanOperation<NumericType, D>(
+          topPlane, levelSet,
+          viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
 
       return topPlane;
     }
     return levelSet;
+  }
+
+  void printBound() const {
+    std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
+              << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
+              << std::endl;
+  }
+
+  std::array<std::array<NumericType, 2>, 2> getBoundingBox() const {
+    return {minBounds, maxBounds};
+  }
+
+  auto getBounds() { return bounds_; }
+
+  void insertNextStructure(GDS::Structure<NumericType> const &structure) {
+    structures.push_back(structure);
+  }
+
+  void finalize() {
+    checkReferences();
+    preBuildStructures();
+    calculateBoundingBoxes();
+  }
+
+private:
+  GDS::Structure<NumericType> *getStructure(const std::string &strName) {
+    for (size_t i = 0; i < structures.size(); i++) {
+      if (strName == structures[i].name) {
+        return &structures[i];
+      }
+    }
+    return nullptr;
   }
 
   void checkReferences() {
@@ -223,16 +220,16 @@ public:
           continue;
         }
 
-        structureLayers strLayerMapping;
+        StructureLayers strLayerMapping;
 
         for (auto layer : str.containsLayers) {
           strLayerMapping.insert(
-              {layer, psSmartPointer<lsMesh<NumericType>>::New()});
+              {layer, SmartPointer<viennals::Mesh<NumericType>>::New()});
         }
 
         for (auto &el : str.elements) {
-          psSmartPointer<lsMesh<NumericType>> mesh;
-          if (el.elementType == elBox) {
+          SmartPointer<viennals::Mesh<NumericType>> mesh;
+          if (el.elementType == GDS::ElementType::elBox) {
             mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
           } else {
             bool retry = false;
@@ -248,16 +245,6 @@ public:
         assembledStructures.insert({str.name, strLayerMapping});
       }
     }
-  }
-
-  void printBound() const {
-    std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
-              << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
-              << std::endl;
-  }
-
-  std::array<std::array<NumericType, 2>, 2> getBoundingBox() const {
-    return {minBounds, maxBounds};
   }
 
   void calculateBoundingBoxes() {
@@ -331,40 +318,34 @@ public:
         processed[structures[i].name] = true;
       }
     }
-    bounds[0] = minBounds[0] - boundaryPadding[0];
-    bounds[1] = maxBounds[0] + boundaryPadding[0];
-    bounds[2] = minBounds[1] - boundaryPadding[1];
-    bounds[3] = maxBounds[1] + boundaryPadding[1];
-    bounds[4] = -1.;
-    bounds[5] = 1.;
+    bounds_[0] = minBounds[0] - boundaryPadding[0];
+    bounds_[1] = maxBounds[0] + boundaryPadding[0];
+    bounds_[2] = minBounds[1] - boundaryPadding[1];
+    bounds_[3] = maxBounds[1] + boundaryPadding[1];
+    bounds_[4] = -1.;
+    bounds_[5] = 1.;
   }
 
-  double *getBounds() { return bounds; }
-
-private:
-  void addBox(psSmartPointer<lsDomain<NumericType, D>> levelSet,
-              psGDSElement<NumericType> &element, const NumericType baseHeight,
-              const NumericType height, const NumericType xOffset,
-              const NumericType yOffset) {
-    auto tmpLS =
-        psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
+  void addBox(lsDomainType levelSet, GDS::Element<NumericType> &element,
+              const NumericType baseHeight, const NumericType height,
+              const NumericType xOffset, const NumericType yOffset) const {
+    auto tmpLS = lsDomainType::New(levelSet->getGrid());
 
     auto minPoint = element.pointCloud[1];
     minPoint[2] = baseHeight;
     auto maxPoint = element.pointCloud[3];
     maxPoint[2] = baseHeight + height;
 
-    lsMakeGeometry<NumericType, D>(
-        tmpLS, lsSmartPointer<lsBox<NumericType, D>>::New(minPoint.data(),
-                                                          maxPoint.data()))
+    viennals::MakeGeometry<NumericType, D>(
+        tmpLS, SmartPointer<viennals::Box<NumericType, D>>::New(
+                   minPoint.data(), maxPoint.data()))
         .apply();
-    lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                       lsBooleanOperationEnum::UNION)
+    viennals::BooleanOperation<NumericType, D>(
+        levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
         .apply();
   }
 
-  void addPolygon(psSmartPointer<lsDomain<NumericType, D>> levelSet,
-                  psGDSElement<NumericType> &element,
+  void addPolygon(lsDomainType levelSet, GDS::Element<NumericType> &element,
                   const NumericType baseHeight, const NumericType height,
                   const NumericType xOffset, const NumericType yOffset) {
     bool retry = false;
@@ -375,19 +356,18 @@ private:
       mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset,
                                   retry);
     }
-    auto tmpLS =
-        psSmartPointer<lsDomain<NumericType, D>>::New(levelSet->getGrid());
-    lsFromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
-    lsBooleanOperation<NumericType, D>(levelSet, tmpLS,
-                                       lsBooleanOperationEnum::UNION)
+    auto tmpLS = lsDomainType::New(levelSet->getGrid());
+    viennals::FromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
+    viennals::BooleanOperation<NumericType, D>(
+        levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
         .apply();
   }
 
-  psSmartPointer<lsMesh<NumericType>>
-  boxToSurfaceMesh(psGDSElement<NumericType> &element,
+  SmartPointer<viennals::Mesh<NumericType>>
+  boxToSurfaceMesh(GDS::Element<NumericType> &element,
                    const NumericType baseHeight, const NumericType height,
                    const NumericType xOffset, const NumericType yOffset) {
-    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
 
     for (auto &point : element.pointCloud) {
       point[0] += xOffset;
@@ -416,12 +396,12 @@ private:
     return mesh;
   }
 
-  psSmartPointer<lsMesh<NumericType>>
-  polygonToSurfaceMesh(psGDSElement<NumericType> &element,
+  SmartPointer<viennals::Mesh<NumericType>>
+  polygonToSurfaceMesh(GDS::Element<NumericType> &element,
                        const NumericType baseHeight, const NumericType height,
                        const NumericType xOffset, const NumericType yOffset,
                        bool &retry) {
-    auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
 
     unsigned numPointsFlat = element.pointCloud.size();
 
@@ -498,7 +478,7 @@ private:
           retry = true;
           return mesh;
         } else {
-          psLogger::getInstance()
+          Logger::getInstance()
               .addError("Timeout in surface triangulation.")
               .print();
         }
@@ -520,8 +500,9 @@ private:
     return mesh;
   }
 
-  bool isEar(int i, int j, int k, psSmartPointer<lsMesh<NumericType>> mesh,
-             unsigned numPoints) {
+  bool isEar(int i, int j, int k,
+             SmartPointer<viennals::Mesh<NumericType>> mesh,
+             unsigned numPoints) const {
     auto &points = mesh->getNodes();
 
     // check if triangle is clockwise orientated
@@ -556,9 +537,9 @@ private:
     return true;
   }
 
-  void adjustPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
+  void adjustPreBuiltMeshHeight(SmartPointer<viennals::Mesh<NumericType>> mesh,
                                 const NumericType baseHeight,
-                                const NumericType height) {
+                                const NumericType height) const {
     auto &nodes = mesh->getNodes();
 
     for (auto &n : nodes) {
@@ -570,9 +551,9 @@ private:
     }
   }
 
-  void resetPreBuiltMeshHeight(psSmartPointer<lsMesh<NumericType>> mesh,
+  void resetPreBuiltMeshHeight(SmartPointer<viennals::Mesh<NumericType>> mesh,
                                const NumericType baseHeight,
-                               const NumericType height) {
+                               const NumericType height) const {
     auto &nodes = mesh->getNodes();
 
     for (auto &n : nodes) {
@@ -587,4 +568,25 @@ private:
   static inline NumericType deg2rad(const NumericType angleDeg) {
     return angleDeg * M_PI / 180.;
   }
+
+private:
+  std::vector<GDS::Structure<NumericType>> structures;
+  std::unordered_map<std::string, StructureLayers> assembledStructures;
+  std::array<NumericType, 2> boundaryPadding = {0., 0.};
+  std::array<NumericType, 2> minBounds;
+  std::array<NumericType, 2> maxBounds;
+  static bool pointOrderFlag;
+  unsigned triangulationTimeOut = 1000000;
+  static constexpr double eps = 1e-6;
+
+  double bounds_[6];
+  NumericType gridDelta_ = 1.;
+  BoundaryType boundaryConds_[3] = {BoundaryType::REFLECTIVE_BOUNDARY,
+                                    BoundaryType::REFLECTIVE_BOUNDARY,
+                                    BoundaryType::INFINITE_BOUNDARY};
 };
+
+template <class NumericType, int D>
+bool GDSGeometry<NumericType, D>::pointOrderFlag = true;
+
+} // namespace viennaps

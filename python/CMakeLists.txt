@@ -10,6 +10,8 @@ add_custom_target(${PROJECT_NAME} ALL)
 # --------------------------------------------------------------------------------------------------------
 
 set(CMAKE_MACOSX_RPATH ON)
+
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
 if(NOT APPLE)
@@ -32,7 +34,7 @@ set(PYBIND11_FINDPYTHON ON)
 
 CPMFindPackage(
   NAME pybind11
-  VERSION 2.11.1
+  VERSION 2.12.0
   GIT_REPOSITORY "https://github.com/pybind/pybind11")
 
 # --------------------------------------------------------------------------------------------------------
@@ -48,52 +50,33 @@ if(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
 endif()
 
 # --------------------------------------------------------------------------------------------------------
-# Binding macro
-# --------------------------------------------------------------------------------------------------------
-
-macro(setup_binding NAME FLAGS)
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${VIENNAPS_LIBRARY_OUTPUT_DIR}/${NAME})
-  set(MODULE_NAME "_${NAME}")
-
-  pybind11_add_module("${MODULE_NAME}" "pyWrap.cpp")
-  add_dependencies(${PROJECT_NAME} ${MODULE_NAME})
-
-  target_link_libraries(${MODULE_NAME} PUBLIC ViennaPS)
-  target_compile_definitions(${MODULE_NAME} PRIVATE ${FLAGS} -DVIENNAPS_MODULE_NAME=${MODULE_NAME})
-
-  configure_file(__init__.py.in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/__init__.py)
-
-  install(TARGETS ${MODULE_NAME} LIBRARY DESTINATION ${NAME})
-  install(DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/" DESTINATION ${NAME})
-endmacro()
-
-# --------------------------------------------------------------------------------------------------------
 # Setup Bindings
 # --------------------------------------------------------------------------------------------------------
 
-setup_binding(viennaps2d -DVIENNAPS_PYTHON_DIMENSION=2)
-setup_binding(viennaps3d -DVIENNAPS_PYTHON_DIMENSION=3)
+viennacore_setup_binding(viennaps2d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
+viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
+
+target_link_libraries(viennaps2d PRIVATE ViennaPS)
+target_link_libraries(viennaps3d PRIVATE ViennaPS)
+
+target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2
+                                              -DVIENNAPS_MODULE_NAME=viennaps2d)
+target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3
+                                              -DVIENNAPS_MODULE_NAME=viennaps3d)
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Lib-Folder
+# --------------------------------------------------------------------------------------------------------
 
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs")
-set(VIENNAPS_USE_LIB_FOLDER OFF)
 
-if(NOT VIENNAPS_SYSTEM_VIENNARAY AND NOT VIENNARAY_SYSTEM_EMBREE)
-  set(VIENNAPS_USE_LIB_FOLDER ON)
-  setup_embree_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-endif()
+# Not required for both targets, one will suffice
+# NOTE: This fails if ViennaLS or ViennaRay from a local installation are used
+setup_embree_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+setup_vtk_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+setup_tbb_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
 
-if(NOT VIENNAPS_SYSTEM_VIENNARAY AND NOT VIENNARAY_SYSTEM_TBB)
-  set(VIENNAPS_USE_LIB_FOLDER ON)
-  setup_tbb_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-endif()
-
-if(NOT VIENNAPS_SYSTEM_VIENNALS
-   AND (APPLE OR WIN32)
-   AND NOT VIENNALS_SYSTEM_VTK)
-  set(VIENNAPS_USE_LIB_FOLDER ON)
-  setup_vtk_env(${MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-endif()
-
-if(VIENNAPS_USE_LIB_FOLDER)
-  install(DIRECTORY "${VIENNAPS_LIB_FOLDER}" DESTINATION .)
-endif()
+install(
+  DIRECTORY "${VIENNAPS_LIB_FOLDER}"
+  DESTINATION .
+  OPTIONAL)

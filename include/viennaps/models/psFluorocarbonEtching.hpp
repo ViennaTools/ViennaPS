@@ -2,7 +2,6 @@
 
 #include <cmath>
 
-#include "../psLogger.hpp"
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
 
@@ -10,14 +9,19 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
-namespace FluorocarbonImplementation {
+#include <vcLogger.hpp>
+#include <vcVectorUtil.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
 
 // Parameters from:
 // A. LaMagna and G. Garozzo "Factors affecting profile evolution in plasma
 // etching of SiO2: Modeling and experimental verification" Journal of the
 // Electrochemical Society 150(10) 2003 pp. 1896-1902
 
-template <typename NumericType> struct Parameters {
+template <typename NumericType> struct FluorocarbonParameters {
   // fluxes in (1e15 /cm² /s)
   NumericType ionFlux = 56.;
   NumericType etchantFlux = 500.;
@@ -119,18 +123,22 @@ template <typename NumericType> struct Parameters {
   static constexpr double kB = 8.617333262 * 1e-5; // eV / K
 };
 
+namespace impl {
+
 template <typename NumericType, int D>
-class SurfaceModel : public psSurfaceModel<NumericType> {
-  using psSurfaceModel<NumericType>::coverages;
+class FluorocarbonSurfaceModel : public SurfaceModel<NumericType> {
+  using SurfaceModel<NumericType>::coverages;
   static constexpr double eps = 1e-6;
-  const Parameters<NumericType> &p;
+  const FluorocarbonParameters<NumericType> &p;
 
 public:
-  SurfaceModel(const Parameters<NumericType> &pParams) : p(pParams) {}
+  FluorocarbonSurfaceModel(
+      const FluorocarbonParameters<NumericType> &parameters)
+      : p(parameters) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = psSmartPointer<psPointData<NumericType>>::New();
+      coverages = SmartPointer<viennals::PointData<NumericType>>::New();
     } else {
       coverages->clear();
     }
@@ -140,10 +148,10 @@ public:
     coverages->insertNextScalarData(cov, "peCoverage");
   }
 
-  psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) override {
+  SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIds) override {
     updateCoverages(rates, materialIds);
     const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
@@ -168,8 +176,8 @@ public:
         break;
       }
 
-      auto matId = psMaterialMap::mapToMaterial(materialIds[i]);
-      if (matId == psMaterial::Mask) {
+      auto matId = MaterialMap::mapToMaterial(materialIds[i]);
+      if (matId == Material::Mask) {
         etchRate[i] = (-1. / p.Mask.rho) * ionSputteringRate->at(i) * p.ionFlux;
       } else if (pCoverage->at(i) >= 1.) {
         // Deposition
@@ -179,7 +187,7 @@ public:
                       ionpeRate->at(i) * p.ionFlux * peCoverage->at(i)),
                      (NumericType)0);
         assert(etchRate[i] >= 0 && "Negative deposition");
-      } else if (matId == psMaterial::Polymer) {
+      } else if (matId == Material::Polymer) {
         // Etching depo layer
         etchRate[i] =
             std::min((1 / p.Polymer.rho) *
@@ -190,26 +198,34 @@ public:
         NumericType density = 1.;
         NumericType F_ev = 0.;
         switch (matId) {
-        case psMaterial::Si:
+        case Material::Si: {
+
           density = -p.Si.rho;
           F_ev = p.Si.K * p.etchantFlux *
-                 std::exp(-p.Si.E_a /
-                          (Parameters<NumericType>::kB * p.temperature));
+                 std::exp(-p.Si.E_a / (FluorocarbonParameters<NumericType>::kB *
+                                       p.temperature));
           break;
-        case psMaterial::SiO2:
-          F_ev = p.SiO2.K * p.etchantFlux *
-                 std::exp(-p.SiO2.E_a /
-                          (Parameters<NumericType>::kB * p.temperature));
+        }
+        case Material::SiO2: {
+
+          F_ev =
+              p.SiO2.K * p.etchantFlux *
+              std::exp(-p.SiO2.E_a / (FluorocarbonParameters<NumericType>::kB *
+                                      p.temperature));
           density = -p.SiO2.rho;
           break;
-        case psMaterial::Si3N4:
-          F_ev = p.Si3N4.K * p.etchantFlux *
-                 std::exp(-p.Si3N4.E_a /
-                          (Parameters<NumericType>::kB * p.temperature));
+        }
+        case Material::Si3N4: {
+
+          F_ev =
+              p.Si3N4.K * p.etchantFlux *
+              std::exp(-p.Si3N4.E_a / (FluorocarbonParameters<NumericType>::kB *
+                                       p.temperature));
           density = -p.Si3N4.rho;
           break;
+        }
         default:
-          assert(false && "Unknown material");
+          break;
         }
 
         etchRate[i] =
@@ -232,13 +248,13 @@ public:
 
     if (etchStop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
-      psLogger::getInstance().addInfo("Etch stop depth reached.").print();
+      Logger::getInstance().addInfo("Etch stop depth reached.").print();
     }
 
-    return psSmartPointer<std::vector<NumericType>>::New(etchRate);
+    return SmartPointer<std::vector<NumericType>>::New(etchRate);
   }
 
-  void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIds) override {
 
     const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
@@ -289,24 +305,27 @@ public:
           eCoverage->at(i) = 0;
         } else {
           NumericType F_ev = 0.;
-          switch (psMaterialMap::mapToMaterial(materialIds[i])) {
-          case psMaterial::Si:
-            F_ev = p.Si.K * p.etchantFlux *
-                   std::exp(-p.Si.E_a /
-                            (Parameters<NumericType>::kB * p.temperature));
+          switch (MaterialMap::mapToMaterial(materialIds[i])) {
+          case Material::Si:
+            F_ev =
+                p.Si.K * p.etchantFlux *
+                std::exp(-p.Si.E_a / (FluorocarbonParameters<NumericType>::kB *
+                                      p.temperature));
             break;
-          case psMaterial::SiO2:
+          case Material::SiO2:
             F_ev = p.SiO2.K * p.etchantFlux *
                    std::exp(-p.SiO2.E_a /
-                            (Parameters<NumericType>::kB * p.temperature));
+                            (FluorocarbonParameters<NumericType>::kB *
+                             p.temperature));
             break;
-          case psMaterial::Si3N4:
+          case Material::Si3N4:
             F_ev = p.Si3N4.K * p.etchantFlux *
                    std::exp(-p.Si3N4.E_a /
-                            (Parameters<NumericType>::kB * p.temperature));
+                            (FluorocarbonParameters<NumericType>::kB *
+                             p.temperature));
             break;
           default:
-            assert(false && "Unknown material");
+            F_ev = 0.;
           }
           eCoverage->at(i) =
               (etchantRate->at(i) * p.etchantFlux * p.beta_e *
@@ -323,24 +342,24 @@ public:
 };
 
 template <typename NumericType, int D>
-class Ion : public rayParticle<Ion<NumericType, D>, NumericType> {
-  const Parameters<NumericType> &p;
+class FluorocarbonIon
+    : public viennaray::Particle<FluorocarbonIon<NumericType, D>, NumericType> {
+  const FluorocarbonParameters<NumericType> &p;
   const NumericType A;
   const NumericType minEnergy;
   NumericType E;
 
 public:
-  Ion(const Parameters<NumericType> &pParams)
-      : p(pParams),
+  FluorocarbonIon(const FluorocarbonParameters<NumericType> &parameters)
+      : p(parameters),
         A(1. / (1. + p.Ions.n_l * (M_PI_2 / p.Ions.inflectAngle - 1.))),
         minEnergy(std::min({p.Si.Eth_ie, p.SiO2.Eth_ie, p.Si3N4.Eth_ie})) {}
-  void surfaceCollision(NumericType rayWeight,
-                        const rayTriple<NumericType> &rayDir,
-                        const rayTriple<NumericType> &geomNormal,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                        const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *globalData,
-                        rayRNG &) override final {
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *globalData,
+                        RNG &) override final {
     // collect data for this hit
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
     assert(E >= 0 && "Negative energy ion");
@@ -355,30 +374,41 @@ public:
     NumericType A_ie = 0.;
     NumericType Eth_sp = 1.;
     NumericType Eth_ie = 1.;
-    switch (psMaterialMap::mapToMaterial(materialId)) {
-    case psMaterial::Si:
+    switch (MaterialMap::mapToMaterial(materialId)) {
+    case Material::Si:
       A_sp = p.Si.A_sp;
       B_sp = p.Si.B_sp;
       A_ie = p.Si.A_ie;
       Eth_sp = p.Si.Eth_sp;
       Eth_ie = p.Si.Eth_ie;
       break;
-    case psMaterial::SiO2:
+    case Material::SiO2:
       A_sp = p.SiO2.A_sp;
       B_sp = p.SiO2.B_sp;
       A_ie = p.SiO2.A_ie;
       Eth_sp = p.SiO2.Eth_sp;
       Eth_ie = p.SiO2.Eth_ie;
       break;
-    case psMaterial::Si3N4:
+    case Material::Si3N4:
       A_sp = p.Si3N4.A_sp;
       B_sp = p.Si3N4.B_sp;
       A_ie = p.Si3N4.A_ie;
       Eth_sp = p.Si3N4.Eth_sp;
       Eth_ie = p.Si3N4.Eth_ie;
       break;
+    case Material::Polymer:
+      A_sp = p.Polymer.A_ie;
+      B_sp = 1.;
+      A_ie = p.Polymer.A_ie;
+      Eth_sp = p.Polymer.Eth_ie;
+      Eth_ie = p.Polymer.Eth_ie;
+      break;
     default:
-      assert(false && "Unknown material");
+      A_sp = 0.;
+      B_sp = 0.;
+      A_ie = 0.;
+      Eth_sp = 0.;
+      Eth_ie = 0.;
     }
 
     const auto sqrtE = std::sqrt(E);
@@ -398,17 +428,16 @@ public:
         std::max(sqrtE - std::sqrt(p.Polymer.Eth_ie), (NumericType)0) *
         cosTheta;
   }
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
+                    const viennaray::TracingData<NumericType> *globalData,
+                    RNG &Rng) override final {
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
-    NumericType incAngle =
-        std::acos(-rayInternal::DotProduct(rayDir, geomNormal));
+    NumericType incAngle = std::acos(-DotProduct(rayDir, geomNormal));
     NumericType Eref_peak;
     if (incAngle >= p.Ions.inflectAngle) {
       Eref_peak =
@@ -425,15 +454,15 @@ public:
 
     if (newEnergy > minEnergy) {
       E = newEnergy;
-      auto direction = rayReflectionConedCosine<NumericType, D>(
+      auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng, std::max(incAngle, p.Ions.minAngle));
-      return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
+      return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
-      return std::pair<NumericType, rayTriple<NumericType>>{
-          1., rayTriple<NumericType>{0., 0., 0.}};
+      return std::pair<NumericType, Vec3D<NumericType>>{
+          1., Vec3D<NumericType>{0., 0., 0.}};
     }
   }
-  void initNew(rayRNG &RNG) override final {
+  void initNew(RNG &RNG) override final {
     std::normal_distribution<NumericType> normalDist{p.Ions.meanEnergy,
                                                      p.Ions.sigmaEnergy};
     do {
@@ -449,39 +478,43 @@ public:
 };
 
 template <typename NumericType, int D>
-class Polymer : public rayParticle<Polymer<NumericType, D>, NumericType> {
-  const Parameters<NumericType> &p;
+class FluorocarbonPolymer
+    : public viennaray::Particle<FluorocarbonPolymer<NumericType, D>,
+                                 NumericType> {
+  const FluorocarbonParameters<NumericType> &p;
 
 public:
-  Polymer(const Parameters<NumericType> &pParams) : p(pParams) {}
-  void surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &,
-                        const rayTriple<NumericType> &,
-                        const unsigned int primID, const int,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *,
-                        rayRNG &) override final {
+  FluorocarbonPolymer(const FluorocarbonParameters<NumericType> &parameters)
+      : p(parameters) {}
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
+                        const Vec3D<NumericType> &, const unsigned int primID,
+                        const int,
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType, const rayTriple<NumericType> &,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType, const Vec3D<NumericType> &,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
-    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+                    const viennaray::TracingData<NumericType> *globalData,
+                    RNG &Rng) override final {
+    auto direction =
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
 
     const auto &phi_e = globalData->getVectorData(0)[primID];
     const auto &phi_p = globalData->getVectorData(1)[primID];
     const auto &phi_pe = globalData->getVectorData(2)[primID];
 
     NumericType stick = 1.;
-    if (psMaterialMap::isMaterial(materialId, psMaterial::Mask))
+    if (MaterialMap::isMaterial(materialId, Material::Mask))
       stick = p.Mask.beta_p;
     else
       stick = p.beta_p;
     stick *= std::max(1 - phi_e - phi_p, (NumericType)0);
-    return std::pair<NumericType, rayTriple<NumericType>>{stick, direction};
+    return std::pair<NumericType, Vec3D<NumericType>>{stick, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
@@ -490,106 +523,103 @@ public:
 };
 
 template <typename NumericType, int D>
-class Etchant : public rayParticle<Etchant<NumericType, D>, NumericType> {
-  const Parameters<NumericType> &p;
+class FluorocarbonEtchant
+    : public viennaray::Particle<FluorocarbonEtchant<NumericType, D>,
+                                 NumericType> {
+  const FluorocarbonParameters<NumericType> &p;
 
 public:
-  Etchant(const Parameters<NumericType> &pParams) : p(pParams) {}
-  void surfaceCollision(NumericType rayWeight, const rayTriple<NumericType> &,
-                        const rayTriple<NumericType> &,
-                        const unsigned int primID, const int,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *,
-                        rayRNG &) override final {
+  FluorocarbonEtchant(const FluorocarbonParameters<NumericType> &parameters)
+      : p(parameters) {}
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
+                        const Vec3D<NumericType> &, const unsigned int primID,
+                        const int,
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
-    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
+                    const viennaray::TracingData<NumericType> *globalData,
+                    RNG &Rng) override final {
+    auto direction =
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
 
     const auto &phi_e = globalData->getVectorData(0)[primID];
     const auto &phi_p = globalData->getVectorData(1)[primID];
     const auto &phi_pe = globalData->getVectorData(2)[primID];
 
     NumericType Seff;
-    if (psMaterialMap::isMaterial(materialId, psMaterial::Mask)) {
+    if (MaterialMap::isMaterial(materialId, Material::Mask)) {
       Seff = p.Mask.beta_p * std::max(1 - phi_e - phi_p, (NumericType)0);
-    } else if (psMaterialMap::isMaterial(materialId, psMaterial::Polymer)) {
+    } else if (MaterialMap::isMaterial(materialId, Material::Polymer)) {
       Seff = p.beta_pe * std::max(1 - phi_pe, (NumericType)0);
     } else {
       Seff = p.beta_e * std::max(1 - phi_e - phi_p, (NumericType)0);
     }
 
-    return std::pair<NumericType, rayTriple<NumericType>>{Seff, direction};
+    return std::pair<NumericType, Vec3D<NumericType>>{Seff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"etchantRate"};
   }
 };
-} // namespace FluorocarbonImplementation
+} // namespace impl
 
 template <typename NumericType, int D>
-class psFluorocarbonEtching : public psProcessModel<NumericType, D> {
+class FluorocarbonEtching : public ProcessModel<NumericType, D> {
 public:
-  psFluorocarbonEtching() { initialize(); }
-  psFluorocarbonEtching(const double ionFlux, const double etchantFlux,
-                        const double polyFlux, const NumericType meanEnergy,
-                        const NumericType sigmaEnergy,
-                        const NumericType exponent = 100.,
-                        const NumericType deltaP = 0.,
-                        const NumericType etchStopDepth =
-                            std::numeric_limits<NumericType>::lowest()) {
-    params.ionFlux = ionFlux;
-    params.etchantFlux = etchantFlux;
-    params.polyFlux = polyFlux;
-    params.Ions.meanEnergy = meanEnergy;
-    params.Ions.sigmaEnergy = sigmaEnergy;
-    params.Ions.exponent = exponent;
-    params.delta_p = deltaP;
-    params.etchStopDepth = etchStopDepth;
+  FluorocarbonEtching() { initialize(); }
+  FluorocarbonEtching(const double ionFlux, const double etchantFlux,
+                      const double polyFlux, const NumericType meanEnergy,
+                      const NumericType sigmaEnergy,
+                      const NumericType exponent = 100.,
+                      const NumericType deltaP = 0.,
+                      const NumericType etchStopDepth =
+                          std::numeric_limits<NumericType>::lowest()) {
+    params_.ionFlux = ionFlux;
+    params_.etchantFlux = etchantFlux;
+    params_.polyFlux = polyFlux;
+    params_.Ions.meanEnergy = meanEnergy;
+    params_.Ions.sigmaEnergy = sigmaEnergy;
+    params_.Ions.exponent = exponent;
+    params_.delta_p = deltaP;
+    params_.etchStopDepth = etchStopDepth;
     initialize();
   }
-  psFluorocarbonEtching(
-      const FluorocarbonImplementation::Parameters<NumericType> &pParams)
-      : params(pParams) {
+  FluorocarbonEtching(const FluorocarbonParameters<NumericType> &parameters)
+      : params_(parameters) {
     initialize();
   }
 
-  FluorocarbonImplementation::Parameters<NumericType> &getParameters() {
-    return params;
-  }
-  void setParameters(
-      const FluorocarbonImplementation::Parameters<NumericType> &pParams) {
-    params = pParams;
+  FluorocarbonParameters<NumericType> &getParameters() { return params_; }
+  void setParameters(const FluorocarbonParameters<NumericType> &parameters) {
+    params_ = parameters;
   }
 
 private:
-  FluorocarbonImplementation::Parameters<NumericType> params;
+  FluorocarbonParameters<NumericType> params_;
 
   void initialize() {
     // particles
-    auto ion =
-        std::make_unique<FluorocarbonImplementation::Ion<NumericType, D>>(
-            params);
+    auto ion = std::make_unique<impl::FluorocarbonIon<NumericType, D>>(params_);
     auto etchant =
-        std::make_unique<FluorocarbonImplementation::Etchant<NumericType, D>>(
-            params);
+        std::make_unique<impl::FluorocarbonEtchant<NumericType, D>>(params_);
     auto poly =
-        std::make_unique<FluorocarbonImplementation::Polymer<NumericType, D>>(
-            params);
+        std::make_unique<impl::FluorocarbonPolymer<NumericType, D>>(params_);
 
     // surface model
-    auto surfModel = psSmartPointer<
-        FluorocarbonImplementation::SurfaceModel<NumericType, D>>::New(params);
+    auto surfModel =
+        SmartPointer<impl::FluorocarbonSurfaceModel<NumericType, D>>::New(
+            params_);
 
     // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
@@ -599,3 +629,5 @@ private:
     this->insertNextParticleType(poly);
   }
 };
+
+} // namespace viennaps

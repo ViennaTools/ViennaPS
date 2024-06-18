@@ -5,30 +5,42 @@
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
 
-template <class NumericType, int D> class psPlanarize {
-  psSmartPointer<psDomain<NumericType, D>> domain;
-  NumericType cutoffPosition = 0.;
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType, int D> class Planarize {
+  SmartPointer<Domain<NumericType, D>> pDomain_;
+  NumericType cutoffPosition_ = 0.;
 
 public:
-  psPlanarize() {}
-  psPlanarize(psSmartPointer<psDomain<NumericType, D>> passedDomain,
-              const NumericType passedCutoff)
-      : domain(passedDomain), cutoffPosition(passedCutoff) {}
+  Planarize() {}
+  Planarize(SmartPointer<Domain<NumericType, D>> domain,
+            const NumericType passedCutoff)
+      : pDomain_(domain), cutoffPosition_(passedCutoff) {}
+
+  void setDomain(SmartPointer<Domain<NumericType, D>> domain) {
+    pDomain_ = domain;
+  }
+
+  void setCutoffPosition(const NumericType passedCutoff) {
+    cutoffPosition_ = passedCutoff;
+  }
 
   void apply() {
     NumericType origin[D] = {0.};
-    origin[D - 1] = cutoffPosition;
+    origin[D - 1] = cutoffPosition_;
     NumericType normal[D] = {0.};
     normal[D - 1] = -1.;
-    auto plane = lsSmartPointer<lsDomain<NumericType, D>>::New(
-        domain->getLevelSets()->back()->getGrid());
-    lsMakeGeometry<NumericType, D>(
-        plane, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    auto plane = SmartPointer<viennals::Domain<NumericType, D>>::New(
+        pDomain_->getGrid());
+    viennals::MakeGeometry<NumericType, D>(
+        plane,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
-    for (auto &ls : *domain->getLevelSets()) {
-      lsBooleanOperation<NumericType, D>(
-          ls, plane, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-          .apply();
-    }
+    pDomain_->applyBooleanOperation(
+        plane, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
   }
 };
+
+} // namespace viennaps

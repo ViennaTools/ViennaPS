@@ -1,16 +1,25 @@
 #pragma once
 
 #include "psDomain.hpp"
-#include "psSmartPointer.hpp"
 
-template <typename NumericType, int D> class psGeometricModel {
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+template <typename NumericType, int D> class GeometricModel {
 protected:
-  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  SmartPointer<Domain<NumericType, D>> domain = nullptr;
 
 public:
-  void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
+  virtual ~GeometricModel() = default;
+
+  void setDomain(SmartPointer<Domain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }
 
-  virtual void apply(){};
+  virtual void apply() {}
 };
+
+} // namespace viennaps

@@ -7,11 +7,14 @@
 #include <string>
 #include <vector>
 
-#include "../psLogger.hpp"
 #include "../psUtils.hpp"
 
+namespace viennaps {
+
+using namespace viennacore;
+
 // Simple class for reading CSV files
-template <class NumericType> class psCSVReader {
+template <class NumericType> class CSVReader {
   // Regex to find trailing and leading whitespaces
   const std::regex wsRegex = std::regex("^ +| +$|( ) +");
 
@@ -20,8 +23,8 @@ template <class NumericType> class psCSVReader {
   int numCols = 0;
 
 public:
-  psCSVReader() {}
-  psCSVReader(std::string passedFilename, char passedDelimiter = ',')
+  CSVReader() {}
+  CSVReader(std::string passedFilename, char passedDelimiter = ',')
       : filename(passedFilename), delimiter(passedDelimiter) {}
 
   void setFilename(std::string passedFilename) { filename = passedFilename; }
@@ -53,7 +56,7 @@ public:
         }
       }
     } else {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Couldn't open file '" + filename + "'")
           .print();
       return {};
@@ -84,11 +87,11 @@ public:
         std::vector<NumericType> a;
         int i = 0;
         while (std::getline(iss, tmp, delimiter)) {
-          auto valueOpt = psUtils::safeConvert<NumericType>(tmp);
+          auto valueOpt = utils::safeConvert<NumericType>(tmp);
           if (valueOpt)
             a.push_back(valueOpt.value());
           else {
-            psLogger::getInstance()
+            Logger::getInstance()
                 .addWarning("Error while reading line " +
                             std::to_string(lineCount - 1) + " in '" + filename +
                             "'")
@@ -103,7 +106,7 @@ public:
           numCols = i;
 
         if (i != numCols) {
-          psLogger::getInstance()
+          Logger::getInstance()
               .addWarning("Invalid number of columns in line " +
                           std::to_string(lineCount - 1) + " in '" + filename +
                           "'")
@@ -115,10 +118,12 @@ public:
       file.close();
       return data;
     } else {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Couldn't open file '" + filename + "'")
           .print();
       return {};
     }
   }
 };
+
+} // namespace viennaps

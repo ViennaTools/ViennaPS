@@ -1,8 +1,9 @@
 name: 🧪 Run Tests
 
 on:
-  push:
   pull_request:
+    branches:
+      - master
   workflow_dispatch:
 
 jobs:
@@ -12,41 +13,45 @@ jobs:
 
       matrix:
         config:
-          - Debug
           - Release
+          - Debug
+
         os:
           - macos-latest
-          - ubuntu-latest
           - windows-latest
 
-        vtk-system: [true, false]
-
-        exclude:
-          - os: macos-latest
-            vtk-system: true
-
-          - os: windows-latest
-            vtk-system: true
+        include:
+          - os: ubuntu-latest
+            config: Release
+            container: ghcr.io/viennatools/vienna-builder:suite
+          - os: ubuntu-latest
+            config: Debug
+            container: ghcr.io/viennatools/vienna-builder:suite
 
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.os == 'ubuntu-latest' && 'fedora:38' || null }}
+    container: ${{ matrix.container }}
 
-    name: '🧪 Test on ${{ matrix.os }} ["${{ matrix.config }}", VTK: "${{ matrix.vtk-system }}"]'
+    name: "🧪 Test on ${{ matrix.os }} (⚙️: ${{ matrix.config }}, 💿: ${{ matrix.container || matrix.os }})"
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🖥️ Setup Environment
         uses: ./.github/actions/setup
         with:
-          container: ${{ matrix.os }}
-          install-vtk: ${{ matrix.vtk-system }}
+          os: ${{ matrix.os }}
+
+      - name: 📋 Install MacOS Dependencies
+        shell: bash
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install embree tbb vtk
 
       - name: 🦥 Cache Dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          key: test-${{ matrix.os }}-${{ matrix.config }}-${{ matrix.vtk-system }}
+          key: test-${{ matrix.os }}-${{ matrix.config }}
           path: build
 
       - name: 🏗️ Compile

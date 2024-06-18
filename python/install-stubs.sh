@@ -6,6 +6,7 @@
 # install stubs for all packages in the current environment
 # this is useful for IDEs that support type hinting
 
-path=$(python3 -m site --user-site)
+# which python3
+path=$(python3 -c 'import site; print(site.getsitepackages()[0])')
 echo "Installing stubs in $path"
 cp -r stubs/* $path

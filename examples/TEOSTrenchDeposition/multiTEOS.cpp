@@ -3,57 +3,55 @@
 
 #include <psDomain.hpp>
 #include <psProcess.hpp>
+#include <psUtils.hpp>
 
-#include "parameters.hpp"
+namespace ps = viennaps;
 
 int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 2;
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::utils::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
-    }
-    params.fromMap(config);
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeTrench<NumericType, D>(
-      geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
-      params.yExtent /*y extent*/, params.trenchWidth /*trench width*/,
-      params.trenchHeight /*trench height*/,
-      params.taperAngle /* tapering angle */, 0 /*base height*/,
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  ps::MakeTrench<NumericType, D>(
+      geometry, params.get("gridDelta") /* grid delta */,
+      params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
+      params.get("trenchWidth") /*trench width*/,
+      params.get("trenchHeight") /*trench height*/,
+      params.get("taperAngle") /* tapering angle */, 0 /*base height*/,
       false /*periodic boundary*/, false /*create mask*/,
-      psMaterial::Si /*material*/)
+      ps::Material::Si /*material*/)
       .apply();
 
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet(psMaterial::SiO2);
+  geometry->duplicateTopLevelSet(ps::Material::SiO2);
 
   // process model encompasses surface model and particle types
-  auto model = psSmartPointer<psTEOSDeposition<NumericType, D>>::New(
-      params.stickingProbabilityP1 /*particle sticking probability*/,
-      params.depositionRateP1 /*process deposition rate*/,
-      params.reactionOrderP1 /*process reaction order*/,
-      params.stickingProbabilityP2, params.depositionRateP2,
-      params.reactionOrderP2);
+  auto model = ps::SmartPointer<ps::TEOSDeposition<NumericType, D>>::New(
+      params.get("stickingProbabilityP1") /*particle sticking probability*/,
+      params.get("depositionRateP1") /*process deposition rate*/,
+      params.get("reactionOrderP1") /*process reaction order*/,
+      params.get("stickingProbabilityP2"), params.get("depositionRateP2"),
+      params.get("reactionOrderP2"));
 
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setNumberOfRaysPerPoint(params.numRaysPerPoint);
-  process.setProcessDuration(params.processTime);
+  process.setNumberOfRaysPerPoint(params.get("numRaysPerPoint"));
+  process.setProcessDuration(params.get("processTime"));
 
   geometry->saveSurfaceMesh("MulitTEOS_initial.vtp");
 
   process.apply();
 
   geometry->saveSurfaceMesh("MulitTEOS_final.vtp");
-
-  if constexpr (D == 2)
-    geometry->saveVolumeMesh("MulitTEOS_final");
+  geometry->saveVolumeMesh("MulitTEOS_final");
 }

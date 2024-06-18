@@ -1,14 +1,21 @@
 #pragma once
 
 #include "psDomain.hpp"
-#include "psSmartPointer.hpp"
 
-template <typename NumericType, int D> class psAdvectionCallback {
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+template <typename NumericType, int D> class AdvectionCallback {
 protected:
-  psSmartPointer<psDomain<NumericType, D>> domain = nullptr;
+  SmartPointer<Domain<NumericType, D>> domain = nullptr;
 
 public:
-  void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain) {
+  virtual ~AdvectionCallback() = default;
+
+  void setDomain(SmartPointer<Domain<NumericType, D>> passedDomain) {
     domain = passedDomain;
   }
 
@@ -16,3 +23,5 @@ public:
 
   virtual bool applyPostAdvect(const NumericType advectionTime) { return true; }
 };
+
+} // namespace viennaps

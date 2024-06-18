@@ -1,17 +1,24 @@
 #pragma once
 
-#include "psPointData.hpp"
 #include "psProcessParams.hpp"
-#include "psSmartPointer.hpp"
+
+#include <lsPointData.hpp>
+#include <vcSmartPointer.hpp>
 
 #include <vector>
 
-template <typename NumericType> class psSurfaceModel {
+namespace viennaps {
+
+using namespace viennacore;
+
+template <typename NumericType> class SurfaceModel {
 protected:
-  psSmartPointer<psPointData<NumericType>> coverages = nullptr;
-  psSmartPointer<psProcessParams<NumericType>> processParams = nullptr;
+  SmartPointer<viennals::PointData<NumericType>> coverages = nullptr;
+  SmartPointer<ProcessParams<NumericType>> processParams = nullptr;
 
 public:
+  virtual ~SurfaceModel() = default;
+
   virtual void initializeCoverages(unsigned numGeometryPoints) {
     // if no coverages get initialized here, they wont be used at all
   }
@@ -20,19 +27,21 @@ public:
     // if no process parameters get initialized here, they wont be used at all
   }
 
-  psSmartPointer<psPointData<NumericType>> getCoverages() { return coverages; }
-
-  psSmartPointer<psProcessParams<NumericType>> getProcessParameters() {
-    return processParams;
-  }
-
-  virtual psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) {
+  virtual SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIds) {
     return nullptr;
   }
 
-  virtual void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
-                               const std::vector<NumericType> &materialIds) {}
+  virtual void
+  updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+                  const std::vector<NumericType> &materialIds) {}
+
+  // non-virtual functions
+  auto getCoverages() const { return coverages; }
+
+  auto getProcessParameters() const { return processParams; }
 };
+
+} // namespace viennaps

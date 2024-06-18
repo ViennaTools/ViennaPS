@@ -1,118 +1,120 @@
 #pragma once
 
-#include <lsDomain.hpp>
+#include "../psDomain.hpp"
+
 #include <lsMakeGeometry.hpp>
 
-#include "../psDomain.hpp"
-#include "../psLogger.hpp"
-#include "../psMaterials.hpp"
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
 
 /// This class provides a simple way to create a plane in a level set. It can be
-/// used to create a substrate of any material. The plane can be added to an
+/// used to create a substrate of any material_. The plane can be added to an
 /// already existing geometry or a new geometry can be created. The plane is
 /// created with normal direction in the positive z direction in 3D and positive
 /// y direction in 2D. The plane is centered around the origin with the total
 /// specified extent and height. The plane can have a periodic boundary in the x
 /// and y (only 3D) direction.
-template <class NumericType, int D> class psMakePlane {
-  using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
+template <class NumericType, int D> class MakePlane {
+  using LSPtrType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
-  psDomainType domain = nullptr;
+  psDomainType pDomain_ = nullptr;
 
-  const NumericType gridDelta = 0.;
-  const NumericType xExtent = 0.;
-  const NumericType yExtent = 0.;
-  const NumericType height = 0.;
+  const NumericType gridDelta_ = 0.;
+  const NumericType xExtent_ = 0.;
+  const NumericType yExtent_ = 0.;
+  const NumericType baseHeight_;
 
-  const bool periodicBoundary = false;
-  const bool add = false;
+  const bool periodicBoundary_ = false;
+  const Material material_;
 
-  const psMaterial material = psMaterial::None;
+  const bool add_;
 
 public:
-  psMakePlane(psDomainType passedDomain, NumericType passedHeight = 0.,
-              const psMaterial passedMaterial = psMaterial::None)
-      : domain(passedDomain), height(passedHeight), add(true),
-        material(passedMaterial) {}
+  // Adds a plane to an already existing geometry.
+  MakePlane(psDomainType domain, NumericType baseHeight = 0.,
+            Material material = Material::None)
+      : pDomain_(domain), baseHeight_(baseHeight), material_(material),
+        add_(true) {}
 
-  psMakePlane(psDomainType passedDomain, const NumericType passedGridDelta,
-              const NumericType passedXExtent, const NumericType passedYExtent,
-              const NumericType passedHeight, const bool passedPeriodic = false,
-              const psMaterial passedMaterial = psMaterial::None)
-      : domain(passedDomain), gridDelta(passedGridDelta),
-        xExtent(passedXExtent), yExtent(passedYExtent), height(passedHeight),
-        periodicBoundary(passedPeriodic), material(passedMaterial) {}
+  // Creates a new geometry with a plane.
+  MakePlane(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+            NumericType yExtent, NumericType baseHeight,
+            bool periodicBoundary = false, Material material = Material::None)
+      : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
+        yExtent_(yExtent), baseHeight_(baseHeight),
+        periodicBoundary_(periodicBoundary), material_(material), add_(false) {}
 
   void apply() {
-    if (add) {
-      if (!domain->getLevelSets()->back()) {
-        psLogger::getInstance()
-            .addWarning("psMakePlane: Plane can only be added to already "
+    if (add_) {
+      if (!pDomain_->getLevelSets().back()) {
+        Logger::getInstance()
+            .addWarning("MakePlane: Plane can only be added to already "
                         "existing geometry.")
             .print();
         return;
       }
     } else {
-      domain->clear();
+      pDomain_->clear();
     }
 
     double bounds[2 * D];
-    bounds[0] = -xExtent / 2.;
-    bounds[1] = xExtent / 2.;
+    bounds[0] = -xExtent_ / 2.;
+    bounds[1] = xExtent_ / 2.;
 
     if constexpr (D == 3) {
-      bounds[2] = -yExtent / 2.;
-      bounds[3] = yExtent / 2.;
-      bounds[4] = -gridDelta;
-      bounds[5] = gridDelta;
+      bounds[2] = -yExtent_ / 2.;
+      bounds[3] = yExtent_ / 2.;
+      bounds[4] = -gridDelta_;
+      bounds[5] = gridDelta_;
     } else {
-      bounds[2] = -gridDelta;
-      bounds[3] = gridDelta;
+      bounds[2] = -gridDelta_;
+      bounds[3] = gridDelta_;
     }
 
-    typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
-
+    BoundaryEnum boundaryCons[D];
     for (int i = 0; i < D - 1; i++) {
-      if (periodicBoundary) {
-        boundaryCons[i] =
-            lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
+      if (periodicBoundary_) {
+        boundaryCons[i] = BoundaryEnum::PERIODIC_BOUNDARY;
       } else {
-        boundaryCons[i] =
-            lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+        boundaryCons[i] = BoundaryEnum::REFLECTIVE_BOUNDARY;
       }
     }
-    boundaryCons[D - 1] =
-        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+    boundaryCons[D - 1] = BoundaryEnum::INFINITE_BOUNDARY;
 
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
-    origin[D - 1] = height;
+    origin[D - 1] = baseHeight_;
 
-    if (add) {
-      auto substrate =
-          LSPtrType::New(domain->getLevelSets()->back()->getGrid());
-      lsMakeGeometry<NumericType, D>(
+    if (add_) {
+      auto substrate = LSPtrType::New(pDomain_->getGrid());
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material == psMaterial::None) {
-        domain->insertNextLevelSet(substrate);
+      if (material_ == Material::None) {
+        pDomain_->insertNextLevelSet(substrate);
       } else {
-        domain->insertNextLevelSetAsMaterial(substrate, material);
+        pDomain_->insertNextLevelSetAsMaterial(substrate, material_);
       }
     } else {
-      auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta);
-      lsMakeGeometry<NumericType, D>(
+      auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta_);
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material == psMaterial::None) {
-        domain->insertNextLevelSet(substrate);
+      if (material_ == Material::None) {
+        pDomain_->insertNextLevelSet(substrate);
       } else {
-        domain->insertNextLevelSetAsMaterial(substrate, material);
+        pDomain_->insertNextLevelSetAsMaterial(substrate, material_);
       }
     }
   }
 };
+
+} // namespace viennaps

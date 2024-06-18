@@ -4,47 +4,48 @@
 #include <psExtrude.hpp>
 #include <psProcess.hpp>
 
-#include "parameters.hpp"
+namespace ps = viennaps;
+namespace ls = viennals;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
   // set process verbosity
-  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::utils::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
-    }
-    params.fromMap(config);
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
   // geometry setup
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeStack<NumericType, D>(geometry, params.gridDelta, params.xExtent,
-                              params.yExtent, params.numLayers,
-                              params.layerHeight, params.substrateHeight, 0.0,
-                              params.trenchWidth, params.maskHeight, false)
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  ps::MakeStack<NumericType, D>(
+      geometry, params.get("gridDelta"), params.get("xExtent"),
+      params.get("yExtent"), params.get<int>("numLayers"),
+      params.get("layerHeight"), params.get("substrateHeight"), 0.0,
+      params.get("trenchWidth"), params.get("maskHeight"), false)
       .apply();
 
   // copy top layer for deposition
-  geometry->duplicateTopLevelSet(psMaterial::Polymer);
+  geometry->duplicateTopLevelSet(ps::Material::Polymer);
 
   // use pre-defined model Fluorocarbon etching model
-  auto model = psSmartPointer<psFluorocarbonEtching<NumericType, D>>::New(
-      params.ionFlux, params.etchantFlux, params.polymerFlux, params.energyMean,
-      params.energySigma);
+  auto model = ps::SmartPointer<ps::FluorocarbonEtching<NumericType, D>>::New(
+      params.get("ionFlux"), params.get("etchantFlux"),
+      params.get("polymerFlux"), params.get("energyMean"),
+      params.get("energySigma"));
 
   // process setup
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setProcessDuration(params.processTime);
+  process.setProcessDuration(params.get("processTime"));
   process.setMaxCoverageInitIterations(10);
   process.setTimeStepRatio(0.25);
 
@@ -57,12 +58,12 @@ int main(int argc, char *argv[]) {
   geometry->saveVolumeMesh("final");
 
   std::cout << "Extruding to 3D ..." << std::endl;
-  auto extruded = psSmartPointer<psDomain<NumericType, 3>>::New();
+  auto extruded = ps::SmartPointer<ps::Domain<NumericType, 3>>::New();
   std::array<NumericType, 2> extrudeExtent = {-20., 20.};
-  psExtrude<NumericType>(geometry, extruded, extrudeExtent, 0,
-                         {lsBoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                          lsBoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                          lsBoundaryConditionEnum<3>::INFINITE_BOUNDARY})
+  ps::Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
+                           {ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
+                            ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
+                            ls::BoundaryConditionEnum<3>::INFINITE_BOUNDARY})
       .apply();
 
   extruded->saveSurfaceMesh("surface.vtp");

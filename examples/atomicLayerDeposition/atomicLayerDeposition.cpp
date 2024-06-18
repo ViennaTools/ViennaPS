@@ -1,84 +1,107 @@
-#include <cellSet/csMeanFreePath.hpp>
-#include <cellSet/csSegmentCells.hpp>
-#include <geometries/psMakeHole.hpp>
-#include <models/psAtomicLayerProcess.hpp>
-
+#include <geometries/psMakeTrench.hpp>
+#include <models/psSingleParticleALD.hpp>
+#include <psAtomicLayerProcess.hpp>
+#include <psConstants.hpp>
 #include <psDomain.hpp>
-#include <psMeanFreePath.hpp>
+#include <psPlanarize.hpp>
+#include <psToDiskMesh.hpp>
 
+// #include "constants.hpp"
 #include "geometry.hpp"
 
-int main(int argc, char *argv[]) {
+namespace ps = viennaps;
+
+template <typename T, int D> class MeasureProfile {
+  using ResultType = std::pair<std::vector<T>, std::vector<T>>;
+
+  ps::SmartPointer<ps::Domain<T, D>> domain_;
+  T cutoffHeight_;
+
+public:
+  MeasureProfile(ps::SmartPointer<ps::Domain<T, D>> domain, T cutoffHeight)
+      : cutoffHeight_(cutoffHeight) {
+    domain_ = ps::SmartPointer<ps::Domain<T, D>>::New();
+    domain_->deepCopy(domain);
+  }
+
+  ResultType get() {
+    ps::Planarize<T, D>(domain_, cutoffHeight_).apply();
+    auto mesh = ps::SmartPointer<viennals::Mesh<T>>::New();
+    ps::ToDiskMesh<T, D>(domain_, mesh).apply();
+
+    std::vector<T> height, position;
+    height.reserve(mesh->nodes.size());
+    position.reserve(mesh->nodes.size());
+    for (const auto &node : mesh->nodes) {
+      position.push_back(node[0]);
+      height.push_back(node[1]);
+    }
+
+    return {position, height};
+  }
+
+  void save(std::string filename) {
+    auto result = get();
+    std::ofstream file(filename);
+    for (size_t i = 0; i < result.first.size(); ++i) {
+      file << result.first[i] << " " << result.second[i] << "\n";
+    }
+    file.close();
+  }
+};
+
+int main(int argc, char **argv) {
   constexpr int D = 2;
   using NumericType = double;
 
-  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+  omp_set_num_threads(16);
+#ifndef NDEBUG
+  omp_set_num_threads(1);
+#endif
 
-  // Parse the parameters
-  psUtils::Parameters params;
+  ps::utils::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
     std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
     return 1;
   }
-  omp_set_num_threads(params.get<int>("numThreads"));
 
-  // Create a domain
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  if (params.get<int>("trench") > 0) {
-    psMakeHole<NumericType, D>(
-        domain, params.get("gridDelta"),
-        2 * params.get("verticalWidth") + 2. * params.get("xPad"),
-        2 * params.get("verticalWidth") + 2. * params.get("xPad"),
-        params.get("verticalWidth"), params.get("verticalDepth"), 0., 0., false,
-        false, psMaterial::TiN)
-        .apply();
-  } else {
-    makeLShape(domain, params, psMaterial::TiN);
-  }
-  // Generate the cell set from the domain
-  domain->generateCellSet(params.get("verticalDepth") + params.get("topSpace"),
-                          psMaterial::GAS, true);
-  auto &cellSet = domain->getCellSet();
-  // Segment the cells into surface, material, and gas cells
-  csSegmentCells<NumericType, D>(cellSet).apply();
+  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
 
-  cellSet->writeVTU("initial.vtu");
+  auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  makeT(domain, params.get("gridDelta"), params.get("openingDepth"),
+        params.get("openingWidth"), params.get("gapLength"),
+        params.get("gapHeight"), params.get("xPad"), ps::Material::Si,
+        params.get("gapWidth"));
 
-  psUtils::Timer timer;
-  timer.start();
+  domain->saveVolumeMesh("SingleParticleALD_initial");
 
-  // Calculate the mean free path for the gas cells
-  psMeanFreePath<NumericType, D> mfpCalc;
-  mfpCalc.setDomain(domain);
-  mfpCalc.setNumRaysPerCell(params.get("raysPerCell"));
-  mfpCalc.setReflectionLimit(params.get<int>("reflectionLimit"));
-  mfpCalc.setRngSeed(params.get<int>("seed"));
-  mfpCalc.setMaterial(psMaterial::GAS);
-  mfpCalc.setBulkLambda(params.get("bulkLambda"));
-  mfpCalc.apply();
+  domain->duplicateTopLevelSet(ps::Material::Al2O3);
 
-  timer.finish();
-  std::cout << "Mean free path calculation took " << timer.totalDuration * 1e-9
-            << " seconds." << std::endl;
+  auto gasMFP = ps::constants::gasMeanFreePath(params.get("pressure"),
+                                               params.get("temperature"),
+                                               params.get("diameter"));
+  std::cout << "Mean free path: " << gasMFP << " um" << std::endl;
 
-  psAtomicLayerProcess<NumericType, D> model(domain);
-  model.setMaxLambda(params.get("bulkLambda"));
-  model.setPrintInterval(params.get("printInterval"));
-  model.setStabilityFactor(params.get("stabilityFactor"));
-  model.setFirstPrecursor("H2O", params.get("H2O_meanThermalVelocity"),
-                          params.get("H2O_adsorptionRate"),
-                          params.get("H2O_desorptionRate"),
-                          params.get("p1_time"), params.get("inFlux"));
-  model.setSecondPrecursor("TMA", params.get("TMA_meanThermalVelocity"),
-                           params.get("TMA_adsorptionRate"),
-                           params.get("TMA_desorptionRate"),
-                           params.get("p2_time"), params.get("inFlux"));
-  model.setPurgeParameters(params.get("purge_meanThermalVelocity"),
-                           params.get("purge_time"));
-  // The deposition probability is (H2O_cov * TMA_cov)^order
-  model.setReactionOrder(params.get("reactionOrder"));
+  auto model = ps::SmartPointer<ps::SingleParticleALD<NumericType, D>>::New(
+      params.get("stickingProbability"), params.get("numCycles"),
+      params.get("growthPerCycle"), params.get("totalCycles"),
+      params.get("coverageTimeStep"), params.get("evFlux"),
+      params.get("inFlux"), params.get("s0"), gasMFP);
 
-  model.apply();
+  ps::AtomicLayerProcess<NumericType, D> ALP(domain, model);
+  ALP.setCoverageTimeStep(params.get("coverageTimeStep"));
+  ALP.setPulseTime(params.get("pulseTime"));
+  ALP.setNumCycles(params.get("numCycles"));
+  ALP.setNumberOfRaysPerPoint(params.get("numRaysPerPoint"));
+  ALP.disableRandomSeeds();
+  ALP.apply();
+
+  MeasureProfile<NumericType, D>(domain, params.get("gapHeight") / 2.)
+      .save(params.get<std::string>("outputFile"));
+
+  domain->saveVolumeMesh("SingleParticleALD_final");
+
+  return 0;
 }

@@ -5,25 +5,31 @@
 #include "../psSurfaceModel.hpp"
 #include "../psVelocityField.hpp"
 
-namespace IsotropicImplementation {
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+namespace impl {
+
 template <class NumericType, int D>
-class IsotropicVelocityField : public psVelocityField<NumericType> {
-  const NumericType vel = 1.;
-  const std::vector<int> maskMaterials;
+class IsotropicVelocityField : public VelocityField<NumericType> {
+  const NumericType rate_ = 1.;
+  const std::vector<int> maskMaterials_;
 
 public:
-  IsotropicVelocityField(const NumericType rate, const std::vector<int> &mask)
-      : vel(rate), maskMaterials(mask) {}
+  IsotropicVelocityField(NumericType rate, std::vector<int> &&mask)
+      : rate_{rate}, maskMaterials_{std::move(mask)} {}
 
-  NumericType
-  getScalarVelocity(const std::array<NumericType, 3> & /*coordinate*/,
-                    int material,
-                    const std::array<NumericType, 3> & /* normalVector */,
-                    unsigned long /*pointID*/) override {
+  NumericType getScalarVelocity(const std::array<NumericType, 3> &,
+                                int material,
+                                const std::array<NumericType, 3> &,
+                                unsigned long) override {
     if (isMaskMaterial(material)) {
       return 0.;
     } else {
-      return vel;
+      return rate_;
     }
   }
 
@@ -33,39 +39,39 @@ public:
 
 private:
   bool isMaskMaterial(const int material) const {
-    for (const auto &mat : maskMaterials) {
+    for (const auto &mat : maskMaterials_) {
       if (material == mat)
         return true;
     }
     return false;
   }
 };
-} // namespace IsotropicImplementation
+} // namespace impl
 
 /// Isotropic etching with one masking material.
 template <typename NumericType, int D>
-class psIsotropicProcess : public psProcessModel<NumericType, D> {
+class IsotropicProcess : public ProcessModel<NumericType, D> {
 public:
-  psIsotropicProcess(const NumericType isotropicRate,
-                     const psMaterial maskMaterial = psMaterial::None) {
+  IsotropicProcess(const NumericType isotropicRate,
+                   const Material maskMaterial = Material::None) {
     // default surface model
-    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
     std::vector<int> maskMaterialsInt = {static_cast<int>(maskMaterial)};
     auto velField =
-        psSmartPointer<IsotropicImplementation::IsotropicVelocityField<
-            NumericType, D>>::New(isotropicRate, maskMaterialsInt);
+        SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
+            isotropicRate, std::move(maskMaterialsInt));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("IsotropicProcess");
   }
 
-  psIsotropicProcess(const NumericType isotropicRate,
-                     const std::vector<psMaterial> maskMaterials) {
+  IsotropicProcess(const NumericType isotropicRate,
+                   const std::vector<Material> maskMaterials) {
     // default surface model
-    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
     std::vector<int> maskMaterialsInt;
@@ -73,11 +79,13 @@ public:
       maskMaterialsInt.push_back(static_cast<int>(mat));
     }
     auto velField =
-        psSmartPointer<IsotropicImplementation::IsotropicVelocityField<
-            NumericType, D>>::New(isotropicRate, maskMaterialsInt);
+        SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
+            isotropicRate, std::move(maskMaterialsInt));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("IsotropicProcess");
   }
 };
+
+} // namespace viennaps

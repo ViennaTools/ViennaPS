@@ -1,12 +1,10 @@
 #pragma once
 
-#include <iostream>
 #include <psMaterials.hpp>
-#include <psSmartPointer.hpp>
 #include <psVelocityField.hpp>
 #include <vector>
 
-template <class T> class VelocityField : public psVelocityField<T> {
+template <class T> class VelocityField : public viennaps::VelocityField<T> {
 public:
   VelocityField() {}
 
@@ -15,17 +13,19 @@ public:
                       unsigned long pointID) override {
     // implement material specific etching/deposition here
     T velocity = 0.;
-    if (psMaterialMap::mapToMaterial(material) != psMaterial::Mask) {
+    if (viennaps::MaterialMap::mapToMaterial(material) !=
+        viennaps::Material::Mask) {
       velocity = -velocities->at(pointID);
     }
     return velocity;
   }
 
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
+  void setVelocities(
+      viennaps::SmartPointer<std::vector<T>> passedVelocities) override {
     // additional alterations can be made to the velocities here
     velocities = passedVelocities;
   }
 
 private:
-  psSmartPointer<std::vector<T>> velocities = nullptr;
+  viennaps::SmartPointer<std::vector<T>> velocities = nullptr;
 };

@@ -5,6 +5,9 @@
 
 #include <models/psAnisotropicProcess.hpp>
 
+namespace ps = viennaps;
+namespace ls = viennals;
+
 int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
@@ -33,16 +36,18 @@ int main(int argc, char **argv) {
   const NumericType gridDelta = 5.; // um
 
   // Read GDS file and convert to level set
-  typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+  typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
   for (int i = 0; i < D - 1; i++)
-    boundaryCons[i] = lsDomain<NumericType, D>::BoundaryType::
+    boundaryCons[i] = ls::Domain<NumericType, D>::BoundaryType::
         REFLECTIVE_BOUNDARY; // boundary conditions in x and y direction
-  boundaryCons[D - 1] = lsDomain<NumericType, D>::BoundaryType::
+  boundaryCons[D - 1] = ls::Domain<NumericType, D>::BoundaryType::
       INFINITE_BOUNDARY; // open boundary in z direction
-  auto gds_mask = psSmartPointer<psGDSGeometry<NumericType, D>>::New(gridDelta);
+  auto gds_mask =
+      ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   gds_mask->setBoundaryConditions(boundaryCons);
   gds_mask->setBoundaryPadding(x_add, y_add);
-  psGDSReader<NumericType, D>(gds_mask, maskFileName).apply(); // read GDS file
+  ps::GDSReader<NumericType, D>(gds_mask, maskFileName)
+      .apply(); // read GDS file
 
   auto mask = gds_mask->layerToLevelSet(
       1 /*layer in GDS file*/, 0 /*base z position*/,
@@ -52,29 +57,30 @@ int main(int argc, char **argv) {
   NumericType origin[D] = {0., 0., 0.};   // surface origin
   NumericType normal[D] = {0., 0., 1.};   // surface normal
   double *bounds = gds_mask->getBounds(); // extent of GDS mask
-  auto plane = psSmartPointer<lsDomain<NumericType, D>>::New(
+  auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
       bounds, boundaryCons, gridDelta);
-  lsMakeGeometry<NumericType, D>(
-      plane, psSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+  ls::MakeGeometry<NumericType, D>(
+      plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
       .apply();
 
   // Set up domain
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  geometry->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
-  geometry->insertNextLevelSetAsMaterial(plane, psMaterial::Si);
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  geometry->insertNextLevelSetAsMaterial(mask, ps::Material::Mask);
+  geometry->insertNextLevelSetAsMaterial(plane, ps::Material::Si);
   geometry->saveSurfaceMesh("initialGeometry.vtp");
 
   // Anisotropic wet etching process model
-  auto model = psSmartPointer<psAnisotropicProcess<NumericType, D>>::New(
+  auto model = ps::SmartPointer<ps::AnisotropicProcess<NumericType, D>>::New(
       direction100, direction010, r100, r110, r111, r311,
-      std::vector<std::pair<psMaterial, NumericType>>{{psMaterial::Si, -1.}});
+      std::vector<std::pair<ps::Material, NumericType>>{
+          {ps::Material::Si, -1.}});
 
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(5. * 60.); // 5 minutes of etching
   process.setIntegrationScheme(
-      lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+      ls::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
   for (int n = 0; n < minutes; n++) {
     process.apply(); // run process

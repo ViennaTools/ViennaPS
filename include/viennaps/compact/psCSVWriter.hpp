@@ -6,7 +6,11 @@
 #include <string>
 #include <vector>
 
-#include "../psLogger.hpp"
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
 
 template <class Iterator>
 std::string join(Iterator begin, Iterator end,
@@ -20,7 +24,7 @@ std::string join(Iterator begin, Iterator end,
 }
 
 // A simple CSV writer class
-template <class NumericType> class psCSVWriter {
+template <class NumericType> class CSVWriter {
 
   std::string filename;
   std::ofstream file;
@@ -29,8 +33,8 @@ template <class NumericType> class psCSVWriter {
   int numCols = 0;
 
 public:
-  psCSVWriter() {}
-  psCSVWriter(std::string passedFilename, std::string passedHeader = "")
+  CSVWriter() {}
+  CSVWriter(std::string passedFilename, std::string passedHeader = "")
       : filename(passedFilename), header(passedHeader) {}
 
   void setFilename(std::string passedFilename) { filename = passedFilename; }
@@ -38,8 +42,8 @@ public:
 
   bool initialize() {
     if (filename.empty()) {
-      psLogger::getInstance()
-          .addWarning("psCSVWriter: No filename provided!")
+      Logger::getInstance()
+          .addWarning("CSVWriter: No filename provided!")
           .print();
       return false;
     }
@@ -61,8 +65,8 @@ public:
         }
       }
     } else {
-      psLogger::getInstance()
-          .addWarning("psCSVWriter: Error opening file '" + filename + "'")
+      Logger::getInstance()
+          .addWarning("CSVWriter: Error opening file '" + filename + "'")
           .print();
       return false;
     }
@@ -80,14 +84,14 @@ public:
       numCols = data.size();
 
     if (data.size() != numCols) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Unexpected number of items in the provided row!")
           .print();
       return false;
     }
 
     if (!file.is_open()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Couldn't open file `" + filename + "`")
           .print();
       return false;
@@ -107,7 +111,7 @@ public:
       numCols = data.size();
 
     if (data.size() != numCols) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Unexpected number of items in the provided row! (" +
                       std::to_string(data.size()) + " instead of " +
                       std::to_string(numCols) + ")")
@@ -115,7 +119,7 @@ public:
       return false;
     }
     if (!file.is_open()) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Couldn't open file `" + filename + "`")
           .print();
       return false;
@@ -129,8 +133,10 @@ public:
       file.flush();
   }
 
-  ~psCSVWriter() {
+  ~CSVWriter() {
     if (file.is_open())
       file.close();
   }
 };
+
+} // namespace viennaps

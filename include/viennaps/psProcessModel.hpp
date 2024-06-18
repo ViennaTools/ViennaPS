@@ -2,48 +2,45 @@
 
 #include "psAdvectionCallback.hpp"
 #include "psGeometricModel.hpp"
-#include "psSmartPointer.hpp"
 #include "psSurfaceModel.hpp"
 #include "psVelocityField.hpp"
 
+#include <lsConcepts.hpp>
+#include <lsPointData.hpp>
+
 #include <rayParticle.hpp>
+#include <raySource.hpp>
+
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
 
 /// The process model combines all models (particle types, surface model,
 /// geometric model, advection callback)
-template <typename NumericType, int D> class psProcessModel {
+template <typename NumericType, int D> class ProcessModel {
 protected:
-  using ParticleTypeList =
-      std::vector<std::unique_ptr<rayAbstractParticle<NumericType>>>;
-
-  psSmartPointer<ParticleTypeList> particles = nullptr;
+  std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
+      particles;
+  SmartPointer<viennaray::Source<NumericType>> source = nullptr;
   std::vector<int> particleLogSize;
-  psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psAdvectionCallback<NumericType, D>> advectionCallback =
-      nullptr;
-  psSmartPointer<psGeometricModel<NumericType, D>> geometricModel = nullptr;
-  psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
+  SmartPointer<SurfaceModel<NumericType>> surfaceModel = nullptr;
+  SmartPointer<AdvectionCallback<NumericType, D>> advectionCallback = nullptr;
+  SmartPointer<GeometricModel<NumericType, D>> geometricModel = nullptr;
+  SmartPointer<VelocityField<NumericType>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
 
 public:
-  virtual psSmartPointer<ParticleTypeList> getParticleTypes() const {
-    return particles;
-  }
-  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() const {
-    return surfaceModel;
-  }
-  virtual psSmartPointer<psAdvectionCallback<NumericType, D>>
-  getAdvectionCallback() const {
-    return advectionCallback;
-  }
-  virtual psSmartPointer<psGeometricModel<NumericType, D>>
-  getGeometricModel() const {
-    return geometricModel;
-  }
-  virtual psSmartPointer<psVelocityField<NumericType>>
-  getVelocityField() const {
-    return velocityField;
-  }
+  virtual ~ProcessModel() = default;
+
+  auto &getParticleTypes() { return particles; }
+  auto getSurfaceModel() const { return surfaceModel; }
+  auto getAdvectionCallback() const { return advectionCallback; }
+  auto getGeometricModel() const { return geometricModel; }
+  auto getVelocityField() const { return velocityField; }
+  auto getSource() { return source; }
 
   /// Set a primary direction for the source distribution (tilted distribution).
   virtual std::optional<std::array<NumericType, 3>>
@@ -51,54 +48,51 @@ public:
     return primaryDirection;
   }
 
-  std::optional<std::string> getProcessName() const { return processName; }
+  auto getProcessName() const { return processName; }
 
   int getParticleLogSize(std::size_t particleIdx) const {
     return particleLogSize[particleIdx];
   }
 
-  void setProcessName(std::string name) { processName = name; }
+  void setProcessName(std::string name) { processName = std::move(name); }
 
   virtual void
   setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
     primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
   }
 
-  template <typename ParticleType>
+  template <typename ParticleType,
+            lsConcepts::IsBaseOf<viennaray::Particle<ParticleType, NumericType>,
+                                 ParticleType> = lsConcepts::assignable>
   void insertNextParticleType(std::unique_ptr<ParticleType> &passedParticle,
                               const int dataLogSize = 0) {
-    if (particles == nullptr) {
-      particles = psSmartPointer<ParticleTypeList>::New();
-    }
-    particles->push_back(passedParticle->clone());
+    particles.push_back(passedParticle->clone());
     particleLogSize.push_back(dataLogSize);
   }
 
-  template <typename SurfaceModelType>
-  void setSurfaceModel(psSmartPointer<SurfaceModelType> passedSurfaceModel) {
-    surfaceModel = std::dynamic_pointer_cast<psSurfaceModel<NumericType>>(
-        passedSurfaceModel);
+  void setSource(SmartPointer<viennaray::Source<NumericType>> passedSource) {
+    source = passedSource;
   }
 
-  template <typename AdvectionCallbackType>
-  void setAdvectionCallback(
-      psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
-    advectionCallback =
-        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, D>>(
-            passedAdvectionCallback);
-  }
-
-  template <typename GeometricModelType>
   void
-  setGeometricModel(psSmartPointer<GeometricModelType> passedGeometricModel) {
-    geometricModel =
-        std::dynamic_pointer_cast<psGeometricModel<NumericType, D>>(
-            passedGeometricModel);
+  setSurfaceModel(SmartPointer<SurfaceModel<NumericType>> passedSurfaceModel) {
+    surfaceModel = passedSurfaceModel;
   }
 
-  template <typename VelocityFieldType>
-  void setVelocityField(psSmartPointer<VelocityFieldType> passedVelocityField) {
-    velocityField = std::dynamic_pointer_cast<psVelocityField<NumericType>>(
-        passedVelocityField);
+  void setAdvectionCallback(
+      SmartPointer<AdvectionCallback<NumericType, D>> passedAdvectionCallback) {
+    advectionCallback = passedAdvectionCallback;
+  }
+
+  void setGeometricModel(
+      SmartPointer<GeometricModel<NumericType, D>> passedGeometricModel) {
+    geometricModel = passedGeometricModel;
+  }
+
+  void setVelocityField(
+      SmartPointer<VelocityField<NumericType>> passedVelocityField) {
+    velocityField = passedVelocityField;
   }
 };
+
+} // namespace viennaps
