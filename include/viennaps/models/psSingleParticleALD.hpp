@@ -129,10 +129,9 @@ class SingleParticleALD : public ProcessModel<NumericType, D> {
 public:
   SingleParticleALD(
       const NumericType stickingProbability, // particle sticking probability
-      const NumericType
-          numCycles, // number of cycles to simulate in one advection step
+      const int numCycles, // number of cycles to simulate in one advection step
       const NumericType growthPerCycle, // growth per cycle
-      const NumericType totalCycles,    // total number of cycles
+      const int totalCycles,            // total number of cycles
       const NumericType
           coverageTimeStep,     // time step for solving the coverage equation
       const NumericType evFlux, // evaporation flux

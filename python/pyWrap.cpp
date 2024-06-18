@@ -115,7 +115,7 @@ PYBIND11_DECLARE_HOLDER_TYPE(Types, SmartPointer<Types>)
 //   }
 // };
 
-// psAdvectionCallback
+// AdvectionCallback
 class PyAdvectionCallback : public AdvectionCallback<T, D> {
 protected:
   using ClassName = AdvectionCallback<T, D>;
@@ -243,7 +243,7 @@ public:
 //   const T cosineExponent = 1.;
 //   const std::string dataLabel = "flux";
 // };
-// psVelocityField
+// VelocityField
 // class PyVelocityField : public VelocityField<T> {
 //   using VelocityField<T>::psVelocityField;
 // public:
@@ -346,7 +346,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
    *                               MODEL FRAMEWORK                            *
    ****************************************************************************/
 
-  // psProcessModel
+  // ProcessModel
   pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>
       processModel(module, "ProcessModel", pybind11::module_local());
 
@@ -412,7 +412,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setPrimaryDirection", &ProcessModel<T, D>::setPrimaryDirection)
       .def("getPrimaryDirection", &ProcessModel<T, D>::getPrimaryDirection);
 
-  // psAdvectionCallback
+  // AdvectionCallback
   pybind11::class_<AdvectionCallback<T, D>,
                    SmartPointer<AdvectionCallback<T, D>>, PyAdvectionCallback>(
       module, "AdvectionCallback")
@@ -423,7 +423,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("applyPostAdvect", &AdvectionCallback<T, D>::applyPostAdvect)
       .def_readwrite("domain", &PyAdvectionCallback::domain);
 
-  // psProcessParams
+  // ProcessParams
   pybind11::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(
       module, "ProcessParams")
       .def(pybind11::init<>())
@@ -442,7 +442,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                ProcessParams<T>::getScalarData)
       .def("getScalarDataLabel", &ProcessParams<T>::getScalarDataLabel);
 
-  // psSurfaceModel
+  // SurfaceModel
   //   pybind11::class_<SurfaceModel<T>, SmartPointer<SurfaceModel<T>>,
   //                    PypsSurfaceModel>(module, "SurfaceModel")
   //       .def(pybind11::init<>())
@@ -454,7 +454,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //       &SurfaceModel<T>::getProcessParameters) .def("calculateVelocities",
   //       &SurfaceModel<T>::calculateVelocities) .def("updateCoverages",
   //       &SurfaceModel<T>::updateCoverages);
-  // psVelocityField
+  // VelocityField
   //   pybind11::class_<VelocityField<T>, SmartPointer<VelocityField<T>>,
   //                    PyVelocityField>
   //       velocityField(module, "VelocityField");
@@ -877,7 +877,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //                               GEOMETRIES
   // ***************************************************************************
 
-  // psMakePlane
+  // MakePlane
   pybind11::class_<MakePlane<T, D>, SmartPointer<MakePlane<T, D>>>(module,
                                                                    "MakePlane")
       .def(pybind11::init([](DomainType Domain, const T GridDelta,
@@ -902,7 +902,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &MakePlane<T, D>::apply,
            "Create a plane geometry or add plane to existing geometry.");
 
-  // psMakeTrench
+  // MakeTrench
   pybind11::class_<MakeTrench<T, D>, SmartPointer<MakeTrench<T, D>>>(
       module, "MakeTrench")
       .def(pybind11::init([](DomainType Domain, const T GridDelta,
@@ -926,7 +926,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("material") = Material::None)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
-  // psMakeHole
+  // MakeHole
   pybind11::class_<MakeHole<T, D>, SmartPointer<MakeHole<T, D>>>(module,
                                                                  "MakeHole")
       .def(pybind11::init([](DomainType domain, const T GridDelta,
@@ -950,7 +950,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("material") = Material::None)
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
-  // psMakeFin
+  // MakeFin
   pybind11::class_<MakeFin<T, D>, SmartPointer<MakeFin<T, D>>>(module,
                                                                "MakeFin")
       .def(pybind11::init([](DomainType domain, const T gridDelta,
@@ -971,7 +971,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("material") = Material::None)
       .def("apply", &MakeFin<T, D>::apply, "Create a fin geometry.");
 
-  // psMakeStack
+  // MakeStack
   pybind11::class_<MakeStack<T, D>, SmartPointer<MakeStack<T, D>>>(module,
                                                                    "MakeStack")
       .def(pybind11::init(&SmartPointer<MakeStack<T, D>>::New<
@@ -1058,7 +1058,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           "Disable random seeds for the ray tracer. This will make the process "
           "results deterministic.");
 
-  // psProcess
+  // Process
   pybind11::class_<Process<T, D>>(module, "Process")
       // constructors
       .def(pybind11::init())
@@ -1114,7 +1114,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "can sometimes slightly vary from the set process duration, due to "
            "the maximum time step according to the CFL condition.");
 
-  // psDomain
+  // Domain
   pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
       // constructors
       .def(pybind11::init(&DomainType::New<>))
@@ -1206,7 +1206,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   m_constants.def("gasMeanThermalVelocity", &constants::gasMeanThermalVelocity,
                   "Calculate the mean thermal velocity of a gas molecule.");
 
-  // psPlanarize
+  // Planarize
   pybind11::class_<Planarize<T, D>, SmartPointer<Planarize<T, D>>>(module,
                                                                    "Planarize")
       .def(pybind11::init(&SmartPointer<Planarize<T, D>>::New<>))
@@ -1270,7 +1270,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &GDSReader<T, D>::apply, "Parse the GDS file.");
 #else
   // wrap a 3D domain in 2D mode to be used with psExtrude
-  // psDomain
+  // Domain
   pybind11::class_<Domain<T, 3>, SmartPointer<Domain<T, 3>>>(module, "Domain3D")
       // constructors
       .def(pybind11::init(&SmartPointer<Domain<T, 3>>::New<>))

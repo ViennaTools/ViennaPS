@@ -1,6 +1,7 @@
 import viennaps2d as vps
 import viennals2d as vls  
 
+
 params = vps.ReadConfigFile("config.txt")
 geometry = vps.Domain()
 
