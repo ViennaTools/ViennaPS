@@ -19,7 +19,7 @@ namespace viennaps {
 using namespace viennacore;
 
 template <typename NumericType, int D>
-class DesorptionSource : public viennaray::Source<NumericType, D> {
+class DesorptionSource : public viennaray::Source<NumericType> {
 public:
   DesorptionSource(const std::vector<Vec3D<NumericType>> &points,
                    const std::vector<Vec3D<NumericType>> &normals,
@@ -29,10 +29,10 @@ public:
         numRaysPerPoint_(numRaysPerPoint) {}
 
   Vec2D<Vec3D<NumericType>>
-  getOriginAndDirection(const size_t idx, rayRNG &RngState) const override {
+  getOriginAndDirection(const size_t idx, RNG &RngState) const override {
     size_t pointIdx = idx / numRaysPerPoint_;
-    auto direction =
-        rayReflectionDiffuse<NumericType, D>(normals_[pointIdx], RngState);
+    auto direction = viennaray::ReflectionDiffuse<NumericType, D>(
+        normals_[pointIdx], RngState);
     return {points_[pointIdx], direction};
   }
 
@@ -44,6 +44,8 @@ public:
     return desorptionRates_[idx / numRaysPerPoint_] / numRaysPerPoint_;
   }
 
+  NumericType getSourceArea() const override { return 1.; }
+
 private:
   const std::vector<Vec3D<NumericType>> &points_;
   const std::vector<Vec3D<NumericType>> &normals_;
@@ -51,29 +53,25 @@ private:
   const int numRaysPerPoint_;
 };
 
-template <typename NumericType, int D> class psAtomicLayerProcess {
+template <typename NumericType, int D> class AtomicLayerProcess {
   using translatorType = std::unordered_map<unsigned long, unsigned long>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
 
 public:
-  psAtomicLayerProcess() {}
-  psAtomicLayerProcess(psDomainType domain) : pDomain_(domain) {}
+  AtomicLayerProcess() {}
+  AtomicLayerProcess(psDomainType domain) : pDomain_(domain) {}
   // Constructor for a process with a pre-configured process model.
-  template <typename ProcessModelType>
-  psAtomicLayerProcess(psDomainType domain,
-                       SmartPointer<ProcessModelType> passedProcessModel)
-      : pDomain_(domain) {
-    pModel_ = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
-        passedProcessModel);
-  }
+  AtomicLayerProcess(
+      psDomainType domain,
+      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel)
+      : pDomain_(domain), pModel_(passedProcessModel) {}
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
-  // psProcessModel class.
-  template <typename ProcessModelType>
-  void setProcessModel(SmartPointer<ProcessModelType> passedProcessModel) {
-    pModel_ = std::dynamic_pointer_cast<psProcessModel<NumericType, D>>(
-        passedProcessModel);
+  // ProcessModel class.
+  void setProcessModel(
+      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
+    pModel_ = passedProcessModel;
   }
 
   // Set the process domain.
@@ -146,7 +144,7 @@ public:
     advectionKernel.setIntegrationScheme(integrationScheme_);
     advectionKernel.setAdvectionTime(1.);
 
-    for (auto dom : *pDomain_->getLevelSets()) {
+    for (auto dom : pDomain_->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
       advectionKernel.insertNextLevelSet(dom);
     }
@@ -169,14 +167,14 @@ public:
     if (primaryDirection) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
-                   psUtils::arrayToString(primaryDirection.value()))
+                   utils::arrayToString(primaryDirection.value()))
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }
     rayTracer.setCalculateFlux(false);
 
     // initialize particle data logs
-    auto const numParticles = pModel_->getParticleTypes()->size();
+    auto const numParticles = pModel_->getParticleTypes().size();
     particleDataLogs_.resize(numParticles);
     for (std::size_t i = 0; i < numParticles; i++) {
       int logSize = pModel_->getParticleLogSize(i);
@@ -248,7 +246,7 @@ public:
 
         rates->clear();
         std::size_t particleIdx = 0;
-        for (auto &particle : *pModel_->getParticleTypes()) {
+        for (auto &particle : pModel_->getParticleTypes()) {
           int dataLogSize = pModel_->getParticleLogSize(particleIdx);
           if (dataLogSize > 0) {
             rayTracer.getDataLog().data.resize(1);
@@ -326,13 +324,13 @@ public:
         purgeTracer.setGlobalData(rayTraceCoverages);
 
         std::size_t particleIdx = 0;
-        for (auto &particle : *pModel_->getParticleTypes()) {
+        for (auto &particle : pModel_->getParticleTypes()) {
           auto desorb = rayTraceCoverages.getVectorData(particleIdx);
           for (auto &c : desorb)
             c = c * desorptionRates_[particleIdx] * purgePulseTime_;
-          auto source = std::make_unique<DesorptionSource<NumericType, D>>(
+          auto source = std::make_shared<DesorptionSource<NumericType, D>>(
               points, normals, desorb, 100);
-          purgeTracer.setSource(std::move(source));
+          purgeTracer.setSource(source);
 
           purgeTracer.setParticleType(particle);
           purgeTracer.apply();
@@ -395,11 +393,11 @@ public:
 private:
   void printDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
                      std::string name) const {
-    psVTKWriter<NumericType>(mesh, std::move(name)).apply();
+    viennals::VTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
-  viennaray::TracingData<NumericType>
-  movePointDataToRayData(SmartPointer<psPointData<NumericType>> pointData) {
+  viennaray::TracingData<NumericType> movePointDataToRayData(
+      SmartPointer<viennals::PointData<NumericType>> pointData) {
     viennaray::TracingData<NumericType> rayData;
     const auto numData = pointData->getScalarDataSize();
     rayData.setNumberOfVectorData(numData);
@@ -412,8 +410,9 @@ private:
     return std::move(rayData);
   }
 
-  void moveRayDataToPointData(SmartPointer<psPointData<NumericType>> pointData,
-                              rayTracingData<NumericType> &rayData) {
+  void moveRayDataToPointData(
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      viennaray::TracingData<NumericType> &rayData) {
     pointData->clear();
     const auto numData = rayData.getVectorData().size();
     for (size_t i = 0; i < numData; ++i)
@@ -424,51 +423,50 @@ private:
   void checkInput() const {
     if (!pDomain_) {
       Logger::getInstance()
-          .addError("No domain passed to psAtomicLayerProcess.")
+          .addError("No domain passed to AtomicLayerProcess.")
           .print();
     }
 
     if (pDomain_->getLevelSets().size() == 0) {
       Logger::getInstance()
-          .addError("No level sets in domain passed to psAtomicLayerProcess.")
+          .addError("No level sets in domain passed to AtomicLayerProcess.")
           .print();
     }
 
     if (!pModel_) {
       Logger::getInstance()
-          .addError("No process model passed to psAtomicLayerProcess.")
+          .addError("No process model passed to AtomicLayerProcess.")
           .print();
     }
 
     if (!pModel_->getSurfaceModel()) {
       Logger::getInstance()
-          .addError("No surface model passed to psAtomicLayerProcess.")
+          .addError("No surface model passed to AtomicLayerProcess.")
           .print();
     }
 
     if (!pModel_->getVelocityField()) {
       Logger::getInstance()
-          .addError("No velocity field passed to psAtomicLayerProcess.")
+          .addError("No velocity field passed to AtomicLayerProcess.")
           .print();
     }
 
-    if (!pModel_->getParticleTypes()) {
+    if (pModel_->getParticleTypes().empty()) {
       Logger::getInstance()
           .addError("No particle types specified for ray tracing in "
-                    "psAtomicLayerProcess.")
+                    "AtomicLayerProcess.")
           .print();
     }
 
     if (pModel_->getGeometricModel()) {
       Logger::getInstance()
-          .addWarning("Geometric model not supported in psAtomicLayerProcess.")
+          .addWarning("Geometric model not supported in AtomicLayerProcess.")
           .print();
     }
 
     if (pModel_->getAdvectionCallback()) {
       Logger::getInstance()
-          .addWarning(
-              "Advection callback not supported in psAtomicLayerProcess.")
+          .addWarning("Advection callback not supported in AtomicLayerProcess.")
           .print();
     }
   }

@@ -23,6 +23,8 @@
 #include <pybind11/stl_bind.h>
 
 // all header files which define API functions
+#include <psAtomicLayerProcess.hpp>
+#include <psConstants.hpp>
 #include <psDomain.hpp>
 #include <psExtrude.hpp>
 #include <psGDSGeometry.hpp>
@@ -52,6 +54,7 @@
 #include <models/psIsotropicProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 
@@ -308,6 +311,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // set dimension
   module.attr("D") = D;
+
+  // wrap omp_set_num_threads to control number of threads
+  module.def("setNumThreads", &omp_set_num_threads);
 
   // Logger
   pybind11::enum_<LogLevel>(module, "LogLevel", pybind11::module_local())
@@ -854,6 +860,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate111"), pybind11::arg("rate311"),
            pybind11::arg("materials"));
 
+  // Single Particle ALD
+  pybind11::class_<SingleParticleALD<T, D>,
+                   SmartPointer<SingleParticleALD<T, D>>>(
+      module, "SingleParticleALD", processModel)
+      .def(pybind11::init(&SmartPointer<SingleParticleALD<T, D>>::New<
+                          const T, const T, const T, const T, const T, const T,
+                          const T, const T, const T>),
+           pybind11::arg("stickingProbability"), pybind11::arg("numCycles"),
+           pybind11::arg("growthPerCycle"), pybind11::arg("totalCycles"),
+           pybind11::arg("coverageTimeStep"), pybind11::arg("evFlux"),
+           pybind11::arg("inFlux"), pybind11::arg("s0"),
+           pybind11::arg("gasMFP"));
+
   // ***************************************************************************
   //                               GEOMETRIES
   // ***************************************************************************
@@ -997,6 +1016,48 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("NEG_Z", viennaray::TraceDirection::NEG_Z)
       .export_values();
 
+  // AtomicLayerProcess
+  pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
+      // constructors
+      .def(pybind11::init())
+      .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
+      .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>>(),
+           pybind11::arg("domain"), pybind11::arg("model"))
+      // methods
+      .def("apply", &AtomicLayerProcess<T, D>::apply, "Run the process.")
+      .def("setDomain", &AtomicLayerProcess<T, D>::setDomain,
+           "Set the process domain.")
+      .def("setProcessModel", &AtomicLayerProcess<T, D>::setProcessModel,
+           "Set the process model. This has to be a pre-configured process "
+           "model.")
+      .def("setPulseTime", &AtomicLayerProcess<T, D>::setPulseTime,
+           "Set the pulse time.")
+      .def("setSourceDirection", &AtomicLayerProcess<T, D>::setSourceDirection,
+           "Set source direction of the process.")
+      .def("setNumberOfRaysPerPoint",
+           &AtomicLayerProcess<T, D>::setNumberOfRaysPerPoint,
+           "Set the number of rays to traced for each particle in the process. "
+           "The number is per point in the process geometry.")
+      .def("setDesorptionRates", &AtomicLayerProcess<T, D>::setDesorptionRates,
+           "Set the desorption rate for each surface point.")
+      .def("setCoverageTimeStep",
+           &AtomicLayerProcess<T, D>::setCoverageTimeStep,
+           "Set the time step for the coverage calculation.")
+      .def("setIntegrationScheme",
+           &AtomicLayerProcess<T, D>::setIntegrationScheme,
+           "Set the integration scheme for solving the level-set equation. "
+           "Possible integration schemes are specified in "
+           "lsIntegrationSchemeEnum.")
+      .def("setNumCycles", &AtomicLayerProcess<T, D>::setNumCycles,
+           "Set the number of cycles for the process.")
+      .def("enableRandomSeeds", &AtomicLayerProcess<T, D>::enableRandomSeeds,
+           "Enable random seeds for the ray tracer. This will make the process "
+           "results non-deterministic.")
+      .def(
+          "disableRandomSeeds", &AtomicLayerProcess<T, D>::disableRandomSeeds,
+          "Disable random seeds for the ray tracer. This will make the process "
+          "results deterministic.");
+
   // psProcess
   pybind11::class_<Process<T, D>>(module, "Process")
       // constructors
@@ -1128,6 +1189,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //   ***************************************************************************
   //                                  OTHER
   //   ***************************************************************************
+
+  // Constants
+  auto m_constants =
+      module.def_submodule("constants", "Physical and material constants.");
+  m_constants.attr("kB") = constants::kB;
+  m_constants.attr("roomTemperature") = constants::roomTemperature;
+  m_constants.attr("N_A") = constants::N_A;
+  m_constants.attr("R") = constants::R;
+  m_constants.def("torrToPascal", &constants::torrToPascal,
+                  "Convert pressure from torr to pascal.");
+  m_constants.def("celsiusToKelvin", &constants::celsiusToKelvin,
+                  "Convert temperature from Celsius to Kelvin.");
+  m_constants.def("gasMeanFreePath", &constants::gasMeanFreePath,
+                  "Calculate the mean free path of a gas molecule.");
+  m_constants.def("gasMeanThermalVelocity", &constants::gasMeanThermalVelocity,
+                  "Calculate the mean thermal velocity of a gas molecule.");
 
   // psPlanarize
   pybind11::class_<Planarize<T, D>, SmartPointer<Planarize<T, D>>>(module,
