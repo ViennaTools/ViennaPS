@@ -6,7 +6,6 @@
 #include <psPlanarize.hpp>
 #include <psToDiskMesh.hpp>
 
-// #include "constants.hpp"
 #include "geometry.hpp"
 
 namespace ps = viennaps;

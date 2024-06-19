@@ -315,8 +315,6 @@ public:
         purgeTracer.setCalculateFlux(false);
         purgeTracer.setGeometry(points, normals, gridDelta);
         purgeTracer.setMaterialIds(materialIds);
-        if (primaryDirection)
-          purgeTracer.setPrimaryDirection(primaryDirection.value());
 
         // move coverages to ray tracer
         auto rayTraceCoverages =

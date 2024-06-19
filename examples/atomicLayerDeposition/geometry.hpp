@@ -9,6 +9,48 @@
 using namespace viennacore;
 
 template <class NumericType, int D>
+class CustomSource : public viennaray::Source<NumericType, D> {
+  const NumericType openingWidth2_;
+  const NumericType height_;
+  const NumericType gapWidth_;
+
+public:
+  CustomSource(NumericType openingWidth, NumericType height,
+               NumericType gapWidth = 0.)
+      : openingWidth2_(openingWidth / 2), height_(height), gapWidth_(gapWidth) {
+  }
+
+  Vec2D<Vec3D<NumericType>>
+  getOriginAndDirection(const size_t idx, RNG &rngState) const override {
+    std::uniform_real_distribution<NumericType> uniDist;
+
+    NumericType x = uniDist(rngState) * openingWidth2_;
+    Vec3D<NumericType> origin = {x., 0., 0.};
+    origin[D - 1] = height_;
+    if constexpr (D == 3) {
+      origin[1] = uniDist(rngState) * gapWidth_ - gapWidth_ / 2.;
+    }
+
+    Vec3D<NumericType> direction;
+    const NumericType tt = uniDist(rngState);
+    const NumericType r1 = uniDist(rngState);
+    direction[D - 1] = -std::sqrt(tt);
+    direction[0] = std::cos(M_PI * 2. * r1) * std::sqrt(1 - tt);
+
+    if constexpr (D == 2) {
+      direction[2] = 0.;
+      Normalize(direction);
+    } else {
+      direction[1] = std::sin(M_PI * 2. * r1) * std::sqrt(1 - tt);
+    }
+
+    return {origin, direction};
+  }
+  size_t getNumPoints() const override { return 1000; }
+  NumericType getSourceArea() const override { return openingWidth2_; }
+};
+
+template <class NumericType, int D>
 void makeHAR(SmartPointer<viennaps::Domain<NumericType, D>> domain,
              NumericType gridDelta, NumericType openingDepth,
              NumericType openingWidth, NumericType gapLength,

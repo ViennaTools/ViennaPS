@@ -1,20 +1,20 @@
-# all length units in micrometers
+# All length units in micrometers
+# Structure is W90 L1020 from PillarHall LHAR4
 
 # Geometry
 gridDelta = 0.2
 openingDepth = 0.5
 openingWidth = 90
-gapLength = 800
+gapLength = 1000
 gapHeight = 0.5
-gapWidth = 10000
+gapWidth = 100  # 3D extent
 xPad = 0.5
-topSpace = 0.
 
 # Cycles
-pulseTime = 0.1
-coverageTimeStep=0.01
-growthPerCycle = 0.000112
-numCycles=4
+pulseTime = 0.1             # seconds
+coverageTimeStep=0.01       # seconds
+growthPerCycle = 0.000112   # um / cycle
+numCycles=4                 # 
 totalCycles=400
 
 # Reactor and gas 
