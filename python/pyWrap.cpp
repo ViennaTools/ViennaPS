@@ -23,12 +23,12 @@
 #include <pybind11/stl_bind.h>
 
 // all header files which define API functions
+#include <psAtomicLayerProcess.hpp>
+#include <psConstants.hpp>
 #include <psDomain.hpp>
 #include <psExtrude.hpp>
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
-#include <psLogger.hpp>
-#include <psMeanFreePath.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
@@ -53,37 +53,30 @@
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
-#include <models/psPlasmaDamage.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 
 // visualization
 #include <psToDiskMesh.hpp>
-#include <psToSurfaceMesh.hpp>
-#include <psWriteVisualizationMesh.hpp>
-
-// CellSet
-#include <cellSet/csAtomicLayerProcess.hpp>
-#include <cellSet/csDenseCellSet.hpp>
-#include <cellSet/csSegmentCells.hpp>
-
-// Compact
-#include <compact/psKDTree.hpp>
 
 // other
 #include <psUtils.hpp>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
+#include <vcLogger.hpp>
+
+using namespace viennaps;
 
 // always use double for python export
 typedef double T;
 // get dimension from cmake define
 constexpr int D = VIENNAPS_PYTHON_DIMENSION;
-typedef psSmartPointer<psDomain<T, D>> DomainType;
+typedef SmartPointer<Domain<T, D>> DomainType;
 
-PYBIND11_DECLARE_HOLDER_TYPE(Types, psSmartPointer<Types>)
+PYBIND11_DECLARE_HOLDER_TYPE(Types, SmartPointer<Types>)
 
 // NOTES:
 // PYBIND11_MAKE_OPAQUE(std::vector<T, std::allocator<T>>) can not be used
@@ -93,39 +86,39 @@ PYBIND11_DECLARE_HOLDER_TYPE(Types, psSmartPointer<Types>)
 // define trampoline classes for interface functions
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
-// class PypsSurfaceModel : public psSurfaceModel<T> {
-//   using psSurfaceModel<T>::coverages;
-//   using psSurfaceModel<T>::processParams;
-//   using psSurfaceModel<T>::getCoverages;
-//   using psSurfaceModel<T>::getProcessParameters;
+// class PypsSurfaceModel : public SurfaceModel<T> {
+//   using SurfaceModel<T>::coverages;
+//   using SurfaceModel<T>::processParams;
+//   using SurfaceModel<T>::getCoverages;
+//   using SurfaceModel<T>::getProcessParameters;
 //   typedef std::vector<T> vect_type;
 // public:
 //   void initializeCoverages(unsigned numGeometryPoints) override {
-//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeCoverages,
+//     PYBIND11_OVERRIDE(void, SurfaceModel<T>, initializeCoverages,
 //                       numGeometryPoints);
 //   }
 //   void initializeProcessParameters() override {
-//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, initializeProcessParameters,
+//     PYBIND11_OVERRIDE(void, SurfaceModel<T>, initializeProcessParameters,
 //     );
 //   }
-//   psSmartPointer<std::vector<T>>
-//   calculateVelocities(psSmartPointer<psPointData<T>> rates,
+//   SmartPointer<std::vector<T>>
+//   calculateVelocities(SmartPointer<psPointData<T>> rates,
 //                       const std::vector<std::array<T, 3>> &coordinates,
 //                       const std::vector<T> &materialIds) override {
-//     PYBIND11_OVERRIDE(psSmartPointer<std::vector<T>>, psSurfaceModel<T>,
+//     PYBIND11_OVERRIDE(SmartPointer<std::vector<T>>, SurfaceModel<T>,
 //                       calculateVelocities, rates, coordinates, materialIds);
 //   }
-//   void updateCoverages(psSmartPointer<psPointData<T>> rates,
+//   void updateCoverages(SmartPointer<psPointData<T>> rates,
 //                        const std::vector<T> &materialIds) override {
-//     PYBIND11_OVERRIDE(void, psSurfaceModel<T>, updateCoverages, rates,
+//     PYBIND11_OVERRIDE(void, SurfaceModel<T>, updateCoverages, rates,
 //                       materialIds);
 //   }
 // };
 
-// psAdvectionCallback
-class PyAdvectionCallback : public psAdvectionCallback<T, D> {
+// AdvectionCallback
+class PyAdvectionCallback : public AdvectionCallback<T, D> {
 protected:
-  using ClassName = psAdvectionCallback<T, D>;
+  using ClassName = AdvectionCallback<T, D>;
 
 public:
   using ClassName::domain;
@@ -140,32 +133,32 @@ public:
 };
 
 // Particle Class
-template <int D> class psParticle : public rayParticle<psParticle<D>, T> {
-  using ClassName = rayParticle<psParticle<D>, T>;
+template <int D>
+class psParticle : public viennaray::Particle<psParticle<D>, T> {
+  using ClassName = viennaray::Particle<psParticle<D>, T>;
 
 public:
-  void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-                        const rayTriple<T> &geomNormal,
-                        const unsigned int primID, const int materialID,
-                        rayTracingData<T> &localData,
-                        const rayTracingData<T> *globalData,
-                        rayRNG &Rng) override final {
+  void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
+                        const Vec3D<T> &geomNormal, const unsigned int primID,
+                        const int materialID,
+                        viennaray::TracingData<T> &localData,
+                        const viennaray::TracingData<T> *globalData,
+                        RNG &Rng) override final {
     PYBIND11_OVERRIDE(void, ClassName, surfaceCollision, rayWeight, rayDir,
                       geomNormal, primID, materialID, localData, globalData,
                       Rng);
   }
 
-  std::pair<T, rayTriple<T>>
-  surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-                    const rayTriple<T> &geomNormal, const unsigned int primID,
-                    const int materialID, const rayTracingData<T> *globalData,
-                    rayRNG &Rng) override final {
-    using Pair = std::pair<T, rayTriple<T>>;
+  std::pair<T, Vec3D<T>> surfaceReflection(
+      T rayWeight, const Vec3D<T> &rayDir, const Vec3D<T> &geomNormal,
+      const unsigned int primID, const int materialID,
+      const viennaray::TracingData<T> *globalData, RNG &Rng) override final {
+    using Pair = std::pair<T, Vec3D<T>>;
     PYBIND11_OVERRIDE(Pair, ClassName, surfaceReflection, rayWeight, rayDir,
                       geomNormal, primID, materialID, globalData, Rng);
   }
 
-  void initNew(rayRNG &RNG) override final {
+  void initNew(RNG &RNG) override final {
     PYBIND11_OVERRIDE(void, ClassName, initNew, RNG);
   }
 
@@ -187,23 +180,24 @@ public:
 //                     const std::string &pDataLabel)
 //       : stickingProbability(pStickingProbability),
 //         cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
-//   void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-//                         const rayTriple<T> &geomNormal,
+//   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
+//                         const Vec3D<T> &geomNormal,
 //                         const unsigned int primID, const int materialID,
-//                         rayTracingData<T> &localData,
-//                         const rayTracingData<T> *globalData,
-//                         rayRNG &Rng) override final {
+//                         viennaray::TracingData<T> &localData,
+//                         const viennaray::TracingData<T> *globalData,
+//                         RNG &Rng) override final {
 //     localData.getVectorData(0)[primID] += rayWeight;
 //   }
-//   std::pair<T, rayTriple<T>>
-//   surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-//                     const rayTriple<T> &geomNormal, const unsigned int
-//                     primID, const int materialID, const rayTracingData<T>
-//                     *globalData, rayRNG &Rng) override final {
+//   std::pair<T, Vec3D<T>>
+//   surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
+//                     const Vec3D<T> &geomNormal, const unsigned int
+//                     primID, const int materialID, const
+//                     viennaray::TracingData<T> *globalData, RNG &Rng)
+//                     override final {
 //     auto direction = rayReflectionDiffuse<T, D>(geomNormal, Rng);
 //     return {stickingProbability, direction};
 //   }
-//   void initNew(rayRNG &RNG) override final {}
+//   void initNew(RNG &RNG) override final {}
 //   T getSourceDistributionPower() const override final { return
 //   cosineExponent; }
 //   std::vector<std::string> getLocalDataLabels() const override final {
@@ -221,23 +215,24 @@ public:
 //                      const std::string &pDataLabel)
 //       : stickingProbability(pStickingProbability),
 //         cosineExponent(pCosineExponent), dataLabel(pDataLabel) {}
-//   void surfaceCollision(T rayWeight, const rayTriple<T> &rayDir,
-//                         const rayTriple<T> &geomNormal,
+//   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
+//                         const Vec3D<T> &geomNormal,
 //                         const unsigned int primID, const int materialID,
-//                         rayTracingData<T> &localData,
-//                         const rayTracingData<T> *globalData,
-//                         rayRNG &Rng) override final {
+//                         viennaray::TracingData<T> &localData,
+//                         const viennaray::TracingData<T> *globalData,
+//                         RNG &Rng) override final {
 //     localData.getVectorData(0)[primID] += rayWeight;
 //   }
-//   std::pair<T, rayTriple<T>>
-//   surfaceReflection(T rayWeight, const rayTriple<T> &rayDir,
-//                     const rayTriple<T> &geomNormal, const unsigned int
-//                     primID, const int materialID, const rayTracingData<T>
-//                     *globalData, rayRNG &Rng) override final {
+//   std::pair<T, Vec3D<T>>
+//   surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
+//                     const Vec3D<T> &geomNormal, const unsigned int
+//                     primID, const int materialID, const
+//                     viennaray::TracingData<T> *globalData, RNG &Rng)
+//                     override final {
 //     auto direction = rayReflectionSpecular<T>(rayDir, geomNormal);
 //     return {stickingProbability, direction};
 //   }
-//   void initNew(rayRNG &RNG) override final {}
+//   void initNew(RNG &RNG) override final {}
 //   T getSourceDistributionPower() const override final { return
 //   cosineExponent; }
 //   std::vector<std::string> getLocalDataLabels() const override final {
@@ -248,14 +243,14 @@ public:
 //   const T cosineExponent = 1.;
 //   const std::string dataLabel = "flux";
 // };
-// psVelocityField
-// class PyVelocityField : public psVelocityField<T> {
-//   using psVelocityField<T>::psVelocityField;
+// VelocityField
+// class PyVelocityField : public VelocityField<T> {
+//   using VelocityField<T>::psVelocityField;
 // public:
 //   T getScalarVelocity(const std::array<T, 3> &coordinate, int material,
 //                       const std::array<T, 3> &normalVector,
 //                       unsigned long pointId) override {
-//     PYBIND11_OVERRIDE(T, psVelocityField<T>, getScalarVelocity, coordinate,
+//     PYBIND11_OVERRIDE(T, VelocityField<T>, getScalarVelocity, coordinate,
 //                       material, normalVector, pointId);
 //   }
 //   // if we declare a typedef for std::array<T,3>, we will no longer get this
@@ -272,22 +267,22 @@ public:
 //     PYBIND11_OVERRIDE(
 //         arrayType, // add template argument here, as the preprocessor becomes
 //                    // confused with the comma in std::array<T, 3>
-//         psVelocityField<T>, getVectorVelocity, coordinate, material,
+//         VelocityField<T>, getVectorVelocity, coordinate, material,
 //         normalVector, pointId);
 //   }
 //   T getDissipationAlpha(int direction, int material,
 //                         const std::array<T, 3> &centralDifferences) override
 //                         {
-//     PYBIND11_OVERRIDE(T, psVelocityField<T>, getDissipationAlpha, direction,
+//     PYBIND11_OVERRIDE(T, VelocityField<T>, getDissipationAlpha, direction,
 //                       material, centralDifferences);
 //   }
-//   void setVelocities(psSmartPointer<std::vector<T>> passedVelocities)
+//   void setVelocities(SmartPointer<std::vector<T>> passedVelocities)
 //   override {
-//     PYBIND11_OVERRIDE(void, psVelocityField<T>, setVelocities,
+//     PYBIND11_OVERRIDE(void, VelocityField<T>, setVelocities,
 //                       passedVelocities);
 //   }
 //   int getTranslationFieldOptions() const override {
-//     PYBIND11_OVERRIDE(int, psVelocityField<T>, getTranslationFieldOptions, );
+//     PYBIND11_OVERRIDE(int, VelocityField<T>, getTranslationFieldOptions, );
 //   }
 // };
 // a function to declare GeometricDistributionModel of type DistType
@@ -295,10 +290,10 @@ public:
 // void declare_GeometricDistributionModel(pybind11::module &m,
 //                                         const std::string &typestr) {
 //   using Class = psGeometricDistributionModel<NumericType, D, DistType>;
-//   pybind11::class_<Class, psSmartPointer<Class>>(m, typestr.c_str())
-//       .def(pybind11::init<psSmartPointer<DistType>>(), pybind11::arg("dist"))
-//       .def(pybind11::init<psSmartPointer<DistType>,
-//                           psSmartPointer<lsDomain<NumericType, D>>>(),
+//   pybind11::class_<Class, SmartPointer<Class>>(m, typestr.c_str())
+//       .def(pybind11::init<SmartPointer<DistType>>(), pybind11::arg("dist"))
+//       .def(pybind11::init<SmartPointer<DistType>,
+//                           SmartPointer<viennals::Domain<NumericType, D>>>(),
 //            pybind11::arg("dist"), pybind11::arg("mask"))
 //       .def("apply", &Class::apply);
 // }
@@ -320,58 +315,84 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // wrap omp_set_num_threads to control number of threads
   module.def("setNumThreads", &omp_set_num_threads);
 
+  // Logger
+  pybind11::enum_<LogLevel>(module, "LogLevel", pybind11::module_local())
+      .value("ERROR", LogLevel::ERROR)
+      .value("WARNING", LogLevel::WARNING)
+      .value("INFO", LogLevel::INFO)
+      .value("TIMING", LogLevel::TIMING)
+      .value("INTERMEDIATE", LogLevel::INTERMEDIATE)
+      .value("DEBUG", LogLevel::DEBUG)
+      .export_values();
+
+  pybind11::class_<Logger, SmartPointer<Logger>>(module, "Logger",
+                                                 pybind11::module_local())
+      .def_static("setLogLevel", &Logger::setLogLevel)
+      .def_static("getLogLevel", &Logger::getLogLevel)
+      .def_static("getInstance", &Logger::getInstance,
+                  pybind11::return_value_policy::reference)
+      .def("addDebug", &Logger::addDebug)
+      .def("addTiming",
+           (Logger & (Logger::*)(std::string, double)) & Logger::addTiming)
+      .def("addTiming", (Logger & (Logger::*)(std::string, double, double)) &
+                            Logger::addTiming)
+      .def("addInfo", &Logger::addInfo)
+      .def("addWarning", &Logger::addWarning)
+      .def("addError", &Logger::addError, pybind11::arg("s"),
+           pybind11::arg("shouldAbort") = true)
+      .def("print", [](Logger &instance) { instance.print(std::cout); });
+
   /****************************************************************************
    *                               MODEL FRAMEWORK                            *
    ****************************************************************************/
 
-  // psProcessModel
-  pybind11::class_<psProcessModel<T, D>, psSmartPointer<psProcessModel<T, D>>>
-      processModel(module, "ProcessModel");
+  // ProcessModel
+  pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>
+      processModel(module, "ProcessModel", pybind11::module_local());
 
   // constructors
   processModel
       .def(pybind11::init<>())
       // methods
-      .def("setProcessName", &psProcessModel<T, D>::setProcessName)
-      .def("getProcessName", &psProcessModel<T, D>::getProcessName)
-      .def("getSurfaceModel", &psProcessModel<T, D>::getSurfaceModel)
-      .def("getAdvectionCallback", &psProcessModel<T, D>::getAdvectionCallback)
-      .def("getGeometricModel", &psProcessModel<T, D>::getGeometricModel)
-      .def("getVelocityField", &psProcessModel<T, D>::getVelocityField)
-      .def("getParticleLogSize", &psProcessModel<T, D>::getParticleLogSize)
+      .def("setProcessName", &ProcessModel<T, D>::setProcessName)
+      .def("getProcessName", &ProcessModel<T, D>::getProcessName)
+      .def("getSurfaceModel", &ProcessModel<T, D>::getSurfaceModel)
+      .def("getAdvectionCallback", &ProcessModel<T, D>::getAdvectionCallback)
+      .def("getGeometricModel", &ProcessModel<T, D>::getGeometricModel)
+      .def("getVelocityField", &ProcessModel<T, D>::getVelocityField)
+      .def("getParticleLogSize", &ProcessModel<T, D>::getParticleLogSize)
       .def("getParticleTypes",
-           [](psProcessModel<T, D> &pm) {
+           [](ProcessModel<T, D> &pm) {
              // Get smart pointer to vector of unique_ptr from the process
              // model
-             auto unique_ptrs_sp = pm.getParticleTypes();
-
-             // Dereference the smart pointer to access the vector
-             auto &unique_ptrs = *unique_ptrs_sp;
+             auto &unique_ptrs = pm.getParticleTypes();
 
              // Create vector to hold shared_ptr
-             std::vector<std::shared_ptr<rayAbstractParticle<T>>> shared_ptrs;
+             std::vector<std::shared_ptr<viennaray::AbstractParticle<T>>>
+                 shared_ptrs;
 
              // Loop over unique_ptrs and create shared_ptrs from them
              for (auto &uptr : unique_ptrs) {
                shared_ptrs.push_back(
-                   std::shared_ptr<rayAbstractParticle<T>>(uptr.release()));
+                   std::shared_ptr<viennaray::AbstractParticle<T>>(
+                       uptr.release()));
              }
 
              // Return the new vector of shared_ptr
              return shared_ptrs;
            })
       .def("setSurfaceModel",
-           [](psProcessModel<T, D> &pm, psSmartPointer<psSurfaceModel<T>> &sm) {
+           [](ProcessModel<T, D> &pm, SmartPointer<SurfaceModel<T>> &sm) {
              pm.setSurfaceModel(sm);
            })
       .def("setAdvectionCallback",
-           [](psProcessModel<T, D> &pm,
-              psSmartPointer<psAdvectionCallback<T, D>> &ac) {
+           [](ProcessModel<T, D> &pm,
+              SmartPointer<AdvectionCallback<T, D>> &ac) {
              pm.setAdvectionCallback(ac);
            })
       .def("insertNextParticleType",
-           [](psProcessModel<T, D> &pm,
-              psSmartPointer<psParticle<D>> &passedParticle) {
+           [](ProcessModel<T, D> &pm,
+              SmartPointer<psParticle<D>> &passedParticle) {
              if (passedParticle) {
                auto particle =
                    std::make_unique<psParticle<D>>(*passedParticle.get());
@@ -381,76 +402,74 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // IMPORTANT: here it may be needed to write this function for any
       // type of passed Particle
       .def("setGeometricModel",
-           [](psProcessModel<T, D> &pm,
-              psSmartPointer<psGeometricModel<T, D>> &gm) {
+           [](ProcessModel<T, D> &pm, SmartPointer<GeometricModel<T, D>> &gm) {
              pm.setGeometricModel(gm);
            })
-      .def(
-          "setVelocityField",
-          [](psProcessModel<T, D> &pm, psSmartPointer<psVelocityField<T>> &vf) {
-            pm.setVelocityField<psVelocityField<T>>(vf);
-          })
-      .def("setPrimaryDirection", &psProcessModel<T, D>::setPrimaryDirection)
-      .def("getPrimaryDirection", &psProcessModel<T, D>::getPrimaryDirection);
+      .def("setVelocityField",
+           [](ProcessModel<T, D> &pm, SmartPointer<VelocityField<T>> &vf) {
+             pm.setVelocityField(vf);
+           })
+      .def("setPrimaryDirection", &ProcessModel<T, D>::setPrimaryDirection)
+      .def("getPrimaryDirection", &ProcessModel<T, D>::getPrimaryDirection);
 
-  // psAdvectionCallback
-  pybind11::class_<psAdvectionCallback<T, D>,
-                   psSmartPointer<psAdvectionCallback<T, D>>,
-                   PyAdvectionCallback>(module, "AdvectionCallback")
+  // AdvectionCallback
+  pybind11::class_<AdvectionCallback<T, D>,
+                   SmartPointer<AdvectionCallback<T, D>>, PyAdvectionCallback>(
+      module, "AdvectionCallback")
       // constructors
       .def(pybind11::init<>())
       // methods
-      .def("applyPreAdvect", &psAdvectionCallback<T, D>::applyPreAdvect)
-      .def("applyPostAdvect", &psAdvectionCallback<T, D>::applyPostAdvect)
+      .def("applyPreAdvect", &AdvectionCallback<T, D>::applyPreAdvect)
+      .def("applyPostAdvect", &AdvectionCallback<T, D>::applyPostAdvect)
       .def_readwrite("domain", &PyAdvectionCallback::domain);
 
-  // psProcessParams
-  pybind11::class_<psProcessParams<T>, psSmartPointer<psProcessParams<T>>>(
+  // ProcessParams
+  pybind11::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(
       module, "ProcessParams")
       .def(pybind11::init<>())
-      .def("insertNextScalar", &psProcessParams<T>::insertNextScalar)
-      .def("getScalarData", (T & (psProcessParams<T>::*)(int)) &
-                                psProcessParams<T>::getScalarData)
-      .def("getScalarData", (const T &(psProcessParams<T>::*)(int) const) &
-                                psProcessParams<T>::getScalarData)
-      .def("getScalarData", (T & (psProcessParams<T>::*)(std::string)) &
-                                psProcessParams<T>::getScalarData)
-      .def("getScalarDataIndex", &psProcessParams<T>::getScalarDataIndex)
-      .def("getScalarData", (std::vector<T> & (psProcessParams<T>::*)()) &
-                                psProcessParams<T>::getScalarData)
+      .def("insertNextScalar", &ProcessParams<T>::insertNextScalar)
       .def("getScalarData",
-           (const std::vector<T> &(psProcessParams<T>::*)() const) &
-               psProcessParams<T>::getScalarData)
-      .def("getScalarDataLabel", &psProcessParams<T>::getScalarDataLabel);
+           (T & (ProcessParams<T>::*)(int)) & ProcessParams<T>::getScalarData)
+      .def("getScalarData", (const T &(ProcessParams<T>::*)(int) const) &
+                                ProcessParams<T>::getScalarData)
+      .def("getScalarData", (T & (ProcessParams<T>::*)(std::string)) &
+                                ProcessParams<T>::getScalarData)
+      .def("getScalarDataIndex", &ProcessParams<T>::getScalarDataIndex)
+      .def("getScalarData", (std::vector<T> & (ProcessParams<T>::*)()) &
+                                ProcessParams<T>::getScalarData)
+      .def("getScalarData",
+           (const std::vector<T> &(ProcessParams<T>::*)() const) &
+               ProcessParams<T>::getScalarData)
+      .def("getScalarDataLabel", &ProcessParams<T>::getScalarDataLabel);
 
-  // psSurfaceModel
-  //   pybind11::class_<psSurfaceModel<T>, psSmartPointer<psSurfaceModel<T>>,
+  // SurfaceModel
+  //   pybind11::class_<SurfaceModel<T>, SmartPointer<SurfaceModel<T>>,
   //                    PypsSurfaceModel>(module, "SurfaceModel")
   //       .def(pybind11::init<>())
-  //       .def("initializeCoverages", &psSurfaceModel<T>::initializeCoverages)
+  //       .def("initializeCoverages", &SurfaceModel<T>::initializeCoverages)
   //       .def("initializeProcessParameters",
-  //            &psSurfaceModel<T>::initializeProcessParameters)
-  //       .def("getCoverages", &psSurfaceModel<T>::getCoverages)
+  //            &SurfaceModel<T>::initializeProcessParameters)
+  //       .def("getCoverages", &SurfaceModel<T>::getCoverages)
   //       .def("getProcessParameters",
-  //       &psSurfaceModel<T>::getProcessParameters) .def("calculateVelocities",
-  //       &psSurfaceModel<T>::calculateVelocities) .def("updateCoverages",
-  //       &psSurfaceModel<T>::updateCoverages);
-  // psVelocityField
-  //   pybind11::class_<psVelocityField<T>, psSmartPointer<psVelocityField<T>>,
+  //       &SurfaceModel<T>::getProcessParameters) .def("calculateVelocities",
+  //       &SurfaceModel<T>::calculateVelocities) .def("updateCoverages",
+  //       &SurfaceModel<T>::updateCoverages);
+  // VelocityField
+  //   pybind11::class_<VelocityField<T>, SmartPointer<VelocityField<T>>,
   //                    PyVelocityField>
   //       velocityField(module, "VelocityField");
   //   // constructors
   //   velocityField
   //       .def(pybind11::init<>())
   //       // methods
-  //       .def("getScalarVelocity", &psVelocityField<T>::getScalarVelocity)
-  //       .def("getVectorVelocity", &psVelocityField<T>::getVectorVelocity)
-  //       .def("getDissipationAlpha", &psVelocityField<T>::getDissipationAlpha)
+  //       .def("getScalarVelocity", &VelocityField<T>::getScalarVelocity)
+  //       .def("getVectorVelocity", &VelocityField<T>::getVectorVelocity)
+  //       .def("getDissipationAlpha", &VelocityField<T>::getDissipationAlpha)
   //       .def("getTranslationFieldOptions",
-  //            &psVelocityField<T>::getTranslationFieldOptions)
-  //       .def("setVelocities", &psVelocityField<T>::setVelocities);
+  //            &VelocityField<T>::getTranslationFieldOptions)
+  //       .def("setVelocities", &VelocityField<T>::setVelocities);
   //   pybind11::class_<psDefaultVelocityField<T>,
-  //                    psSmartPointer<psDefaultVelocityField<T>>>(
+  //                    SmartPointer<psDefaultVelocityField<T>>>(
   //       module, "DefaultVelocityField", velocityField)
   //       // constructors
   //       .def(pybind11::init<>())
@@ -466,7 +485,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //       .def("setVelocities", &psDefaultVelocityField<T>::setVelocities);
 
   // Shim to instantiate the particle class
-  pybind11::class_<psParticle<D>, psSmartPointer<psParticle<D>>> particle(
+  pybind11::class_<psParticle<D>, SmartPointer<psParticle<D>>> particle(
       module, "Particle");
   particle.def("surfaceCollision", &psParticle<D>::surfaceCollision)
       .def("surfaceReflection", &psParticle<D>::surfaceReflection)
@@ -477,10 +496,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // predefined particles
   //   pybind11::class_<psDiffuseParticle<D>,
-  //   psSmartPointer<psDiffuseParticle<D>>>(
+  //   SmartPointer<psDiffuseParticle<D>>>(
   //       module, "DiffuseParticle", particle)
   //       .def(pybind11::init(
-  //                &psSmartPointer<psDiffuseParticle<D>>::New<const T, const T,
+  //                &SmartPointer<psDiffuseParticle<D>>::New<const T, const T,
   //                                                           const std::string
   //                                                           &>),
   //            pybind11::arg("stickingProbability") = 1.0,
@@ -492,10 +511,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //       .def("getLocalDataLabels", &psDiffuseParticle<D>::getLocalDataLabels)
   //       .def("getSourceDistributionPower",
   //            &psDiffuseParticle<D>::getSourceDistributionPower);
-  //   pybind11::class_<psSpecularParticle, psSmartPointer<psSpecularParticle>>(
+  //   pybind11::class_<psSpecularParticle, SmartPointer<psSpecularParticle>>(
   //       module, "SpecularParticle", particle)
   //       .def(pybind11::init(
-  //                &psSmartPointer<psSpecularParticle>::New<const T, const T,
+  //                &SmartPointer<psSpecularParticle>::New<const T, const T,
   //                                                         const std::string
   //                                                         &>),
   //            pybind11::arg("stickingProbability") = 1.0,
@@ -512,57 +531,56 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //                                  MODELS
   // ***************************************************************************
 
-  // Enum psMaterial
-  pybind11::enum_<psMaterial>(module, "Material")
-      .value("Undefined", psMaterial::None) // 1
-      .value("Mask", psMaterial::Mask)
-      .value("Si", psMaterial::Si)
-      .value("SiO2", psMaterial::SiO2)
-      .value("Si3N4", psMaterial::Si3N4) // 5
-      .value("SiN", psMaterial::SiN)
-      .value("SiON", psMaterial::SiON)
-      .value("SiC", psMaterial::SiC)
-      .value("SiGe", psMaterial::SiGe)
-      .value("PolySi", psMaterial::PolySi) // 10
-      .value("GaN", psMaterial::GaN)
-      .value("W", psMaterial::W)
-      .value("Al2O3", psMaterial::Al2O3)
-      .value("TiN", psMaterial::TiN)
-      .value("Cu", psMaterial::Cu) // 15
-      .value("Polymer", psMaterial::Polymer)
-      .value("Dielectric", psMaterial::Dielectric)
-      .value("Metal", psMaterial::Metal)
-      .value("Air", psMaterial::Air)
-      .value("GAS", psMaterial::GAS) // 20
+  // Enum Material
+  pybind11::enum_<Material>(module, "Material")
+      .value("Undefined", Material::None) // 1
+      .value("Mask", Material::Mask)
+      .value("Si", Material::Si)
+      .value("SiO2", Material::SiO2)
+      .value("Si3N4", Material::Si3N4) // 5
+      .value("SiN", Material::SiN)
+      .value("SiON", Material::SiON)
+      .value("SiC", Material::SiC)
+      .value("SiGe", Material::SiGe)
+      .value("PolySi", Material::PolySi) // 10
+      .value("GaN", Material::GaN)
+      .value("W", Material::W)
+      .value("Al2O3", Material::Al2O3)
+      .value("TiN", Material::TiN)
+      .value("Cu", Material::Cu) // 15
+      .value("Polymer", Material::Polymer)
+      .value("Dielectric", Material::Dielectric)
+      .value("Metal", Material::Metal)
+      .value("Air", Material::Air)
+      .value("GAS", Material::GAS) // 20
       .export_values();
 
   // Single Particle Process
-  pybind11::class_<psSingleParticleProcess<T, D>,
-                   psSmartPointer<psSingleParticleProcess<T, D>>>(
+  pybind11::class_<SingleParticleProcess<T, D>,
+                   SmartPointer<SingleParticleProcess<T, D>>>(
       module, "SingleParticleProcess", processModel)
       .def(pybind11::init([](const T rate, const T sticking, const T power,
-                             const psMaterial mask) {
-             return psSmartPointer<psSingleParticleProcess<T, D>>::New(
+                             const Material mask) {
+             return SmartPointer<SingleParticleProcess<T, D>>::New(
                  rate, sticking, power, mask);
            }),
            pybind11::arg("rate") = 1.,
            pybind11::arg("stickingProbability") = 1.,
            pybind11::arg("sourceExponent") = 1.,
-           pybind11::arg("maskMaterial") = psMaterial::None)
+           pybind11::arg("maskMaterial") = Material::None)
       .def(pybind11::init([](const T rate, const T sticking, const T power,
-                             const std::vector<psMaterial> mask) {
-             return psSmartPointer<psSingleParticleProcess<T, D>>::New(
+                             const std::vector<Material> mask) {
+             return SmartPointer<SingleParticleProcess<T, D>>::New(
                  rate, sticking, power, mask);
            }),
            pybind11::arg("rate"), pybind11::arg("stickingProbability"),
            pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"));
 
   // TEOS Deposition
-  pybind11::class_<psTEOSDeposition<T, D>,
-                   psSmartPointer<psTEOSDeposition<T, D>>>(
+  pybind11::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
       module, "TEOSDeposition", processModel)
       .def(pybind11::init(
-               &psSmartPointer<psTEOSDeposition<T, D>>::New<
+               &SmartPointer<TEOSDeposition<T, D>>::New<
                    const T /*st1*/, const T /*rate1*/, const T /*order1*/,
                    const T /*st2*/, const T /*rate2*/, const T /*order2*/>),
            pybind11::arg("stickingProbabilityP1"), pybind11::arg("rateP1"),
@@ -571,85 +589,60 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rateP2") = 0., pybind11::arg("orderP2") = 0.);
 
   // SF6O2 Parameters
-  pybind11::class_<SF6O2Implementation::Parameters<T>::MaskType>(
-      module, "SF6O2ParametersMask")
+  pybind11::class_<SF6O2Parameters<T>::MaskType>(module, "SF6O2ParametersMask")
       .def(pybind11::init<>())
-      .def_readwrite("rho", &SF6O2Implementation::Parameters<T>::MaskType::rho)
-      .def_readwrite("beta_F",
-                     &SF6O2Implementation::Parameters<T>::MaskType::beta_F)
-      .def_readwrite("beta_O",
-                     &SF6O2Implementation::Parameters<T>::MaskType::beta_O)
-      .def_readwrite("A_sp",
-                     &SF6O2Implementation::Parameters<T>::MaskType::A_sp)
-      .def_readwrite("B_sp",
-                     &SF6O2Implementation::Parameters<T>::MaskType::B_sp)
-      .def_readwrite("Eth_sp",
-                     &SF6O2Implementation::Parameters<T>::MaskType::Eth_sp);
+      .def_readwrite("rho", &SF6O2Parameters<T>::MaskType::rho)
+      .def_readwrite("beta_F", &SF6O2Parameters<T>::MaskType::beta_F)
+      .def_readwrite("beta_O", &SF6O2Parameters<T>::MaskType::beta_O)
+      .def_readwrite("A_sp", &SF6O2Parameters<T>::MaskType::A_sp)
+      .def_readwrite("B_sp", &SF6O2Parameters<T>::MaskType::B_sp)
+      .def_readwrite("Eth_sp", &SF6O2Parameters<T>::MaskType::Eth_sp);
 
-  pybind11::class_<SF6O2Implementation::Parameters<T>::SiType>(
-      module, "SF6O2ParametersSi")
+  pybind11::class_<SF6O2Parameters<T>::SiType>(module, "SF6O2ParametersSi")
       .def(pybind11::init<>())
-      .def_readwrite("rho", &SF6O2Implementation::Parameters<T>::SiType::rho)
-      .def_readwrite("k_sigma",
-                     &SF6O2Implementation::Parameters<T>::SiType::k_sigma)
-      .def_readwrite("beta_sigma",
-                     &SF6O2Implementation::Parameters<T>::SiType::beta_sigma)
-      .def_readwrite("A_sp", &SF6O2Implementation::Parameters<T>::SiType::A_sp)
-      .def_readwrite("B_sp", &SF6O2Implementation::Parameters<T>::SiType::B_sp)
-      .def_readwrite("Eth_ie",
-                     &SF6O2Implementation::Parameters<T>::SiType::Eth_ie)
-      .def_readwrite("Eth_sp",
-                     &SF6O2Implementation::Parameters<T>::SiType::Eth_sp)
-      .def_readwrite("A_ie", &SF6O2Implementation::Parameters<T>::SiType::A_ie);
+      .def_readwrite("rho", &SF6O2Parameters<T>::SiType::rho)
+      .def_readwrite("k_sigma", &SF6O2Parameters<T>::SiType::k_sigma)
+      .def_readwrite("beta_sigma", &SF6O2Parameters<T>::SiType::beta_sigma)
+      .def_readwrite("A_sp", &SF6O2Parameters<T>::SiType::A_sp)
+      .def_readwrite("B_sp", &SF6O2Parameters<T>::SiType::B_sp)
+      .def_readwrite("Eth_ie", &SF6O2Parameters<T>::SiType::Eth_ie)
+      .def_readwrite("Eth_sp", &SF6O2Parameters<T>::SiType::Eth_sp)
+      .def_readwrite("A_ie", &SF6O2Parameters<T>::SiType::A_ie);
 
-  pybind11::class_<SF6O2Implementation::Parameters<T>::PassivationType>(
+  pybind11::class_<SF6O2Parameters<T>::PassivationType>(
       module, "SF6O2ParametersPassivation")
       .def(pybind11::init<>())
-      .def_readwrite(
-          "Eth_ie",
-          &SF6O2Implementation::Parameters<T>::PassivationType::Eth_ie)
-      .def_readwrite(
-          "A_ie", &SF6O2Implementation::Parameters<T>::PassivationType::A_ie);
+      .def_readwrite("Eth_ie", &SF6O2Parameters<T>::PassivationType::Eth_ie)
+      .def_readwrite("A_ie", &SF6O2Parameters<T>::PassivationType::A_ie);
 
-  pybind11::class_<SF6O2Implementation::Parameters<T>::IonType>(
-      module, "SF6O2ParametersIons")
+  pybind11::class_<SF6O2Parameters<T>::IonType>(module, "SF6O2ParametersIons")
       .def(pybind11::init<>())
-      .def_readwrite("meanEnergy",
-                     &SF6O2Implementation::Parameters<T>::IonType::meanEnergy)
-      .def_readwrite("sigmaEnergy",
-                     &SF6O2Implementation::Parameters<T>::IonType::sigmaEnergy)
-      .def_readwrite("exponent",
-                     &SF6O2Implementation::Parameters<T>::IonType::exponent)
-      .def_readwrite("inflectAngle",
-                     &SF6O2Implementation::Parameters<T>::IonType::inflectAngle)
-      .def_readwrite("n_l", &SF6O2Implementation::Parameters<T>::IonType::n_l)
-      .def_readwrite("minAngle",
-                     &SF6O2Implementation::Parameters<T>::IonType::minAngle);
+      .def_readwrite("meanEnergy", &SF6O2Parameters<T>::IonType::meanEnergy)
+      .def_readwrite("sigmaEnergy", &SF6O2Parameters<T>::IonType::sigmaEnergy)
+      .def_readwrite("exponent", &SF6O2Parameters<T>::IonType::exponent)
+      .def_readwrite("inflectAngle", &SF6O2Parameters<T>::IonType::inflectAngle)
+      .def_readwrite("n_l", &SF6O2Parameters<T>::IonType::n_l)
+      .def_readwrite("minAngle", &SF6O2Parameters<T>::IonType::minAngle);
 
-  pybind11::class_<SF6O2Implementation::Parameters<T>>(module,
-                                                       "SF6O2Parameters")
+  pybind11::class_<SF6O2Parameters<T>>(module, "SF6O2Parameters")
       .def(pybind11::init<>())
-      .def_readwrite("ionFlux", &SF6O2Implementation::Parameters<T>::ionFlux)
-      .def_readwrite("etchantFlux",
-                     &SF6O2Implementation::Parameters<T>::etchantFlux)
-      .def_readwrite("oxygenFlux",
-                     &SF6O2Implementation::Parameters<T>::oxygenFlux)
-      .def_readwrite("etchStopDepth",
-                     &SF6O2Implementation::Parameters<T>::etchStopDepth)
-      .def_readwrite("beta_F", &SF6O2Implementation::Parameters<T>::beta_F)
-      .def_readwrite("beta_O", &SF6O2Implementation::Parameters<T>::beta_O)
-      .def_readwrite("Mask", &SF6O2Implementation::Parameters<T>::Mask)
-      .def_readwrite("Si", &SF6O2Implementation::Parameters<T>::Si)
-      .def_readwrite("Polymer",
-                     &SF6O2Implementation::Parameters<T>::Passivation)
-      .def_readwrite("Ions", &SF6O2Implementation::Parameters<T>::Ions);
+      .def_readwrite("ionFlux", &SF6O2Parameters<T>::ionFlux)
+      .def_readwrite("etchantFlux", &SF6O2Parameters<T>::etchantFlux)
+      .def_readwrite("oxygenFlux", &SF6O2Parameters<T>::oxygenFlux)
+      .def_readwrite("etchStopDepth", &SF6O2Parameters<T>::etchStopDepth)
+      .def_readwrite("beta_F", &SF6O2Parameters<T>::beta_F)
+      .def_readwrite("beta_O", &SF6O2Parameters<T>::beta_O)
+      .def_readwrite("Mask", &SF6O2Parameters<T>::Mask)
+      .def_readwrite("Si", &SF6O2Parameters<T>::Si)
+      .def_readwrite("Polymer", &SF6O2Parameters<T>::Passivation)
+      .def_readwrite("Ions", &SF6O2Parameters<T>::Ions);
 
   // SF6O2 Etching
-  pybind11::class_<psSF6O2Etching<T, D>, psSmartPointer<psSF6O2Etching<T, D>>>(
+  pybind11::class_<SF6O2Etching<T, D>, SmartPointer<SF6O2Etching<T, D>>>(
       module, "SF6O2Etching", processModel)
       .def(pybind11::init<>())
       .def(pybind11::init(
-               &psSmartPointer<psSF6O2Etching<T, D>>::New<
+               &SmartPointer<SF6O2Etching<T, D>>::New<
                    const double /*ionFlux*/, const double /*etchantFlux*/,
                    const double /*oxygenFlux*/, const T /*meanIonEnergy*/,
                    const T /*sigmaIonEnergy*/, const T /*ionExponent*/,
@@ -660,157 +653,101 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("ionExponent") = 100.,
            pybind11::arg("oxySputterYield") = 3.,
            pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
-      .def(pybind11::init(&psSmartPointer<psSF6O2Etching<T, D>>::New<
-                          const SF6O2Implementation::Parameters<T> &>),
+      .def(pybind11::init(&SmartPointer<SF6O2Etching<T, D>>::New<
+                          const SF6O2Parameters<T> &>),
            pybind11::arg("parameters"))
-      .def("setParameters", &psSF6O2Etching<T, D>::setParameters)
-      .def("getParameters", &psSF6O2Etching<T, D>::getParameters,
+      .def("setParameters", &SF6O2Etching<T, D>::setParameters)
+      .def("getParameters", &SF6O2Etching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
   // Fluorocarbon Parameters
-  pybind11::class_<FluorocarbonImplementation::Parameters<T>::MaskType>(
+  pybind11::class_<FluorocarbonParameters<T>::MaskType>(
       module, "FluorocarbonParametersMask")
       .def(pybind11::init<>())
-      .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters<T>::MaskType::rho)
-      .def_readwrite(
-          "beta_p",
-          &FluorocarbonImplementation::Parameters<T>::MaskType::beta_p)
-      .def_readwrite(
-          "beta_e",
-          &FluorocarbonImplementation::Parameters<T>::MaskType::beta_e)
-      .def_readwrite("A_sp",
-                     &FluorocarbonImplementation::Parameters<T>::MaskType::A_sp)
-      .def_readwrite("B_sp",
-                     &FluorocarbonImplementation::Parameters<T>::MaskType::B_sp)
-      .def_readwrite(
-          "Eth_sp",
-          &FluorocarbonImplementation::Parameters<T>::MaskType::Eth_sp);
+      .def_readwrite("rho", &FluorocarbonParameters<T>::MaskType::rho)
+      .def_readwrite("beta_p", &FluorocarbonParameters<T>::MaskType::beta_p)
+      .def_readwrite("beta_e", &FluorocarbonParameters<T>::MaskType::beta_e)
+      .def_readwrite("A_sp", &FluorocarbonParameters<T>::MaskType::A_sp)
+      .def_readwrite("B_sp", &FluorocarbonParameters<T>::MaskType::B_sp)
+      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::MaskType::Eth_sp);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters<T>::SiO2Type>(
+  pybind11::class_<FluorocarbonParameters<T>::SiO2Type>(
       module, "FluorocarbonParametersSiO2")
       .def(pybind11::init<>())
-      .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::rho)
-      .def_readwrite("E_a",
-                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::E_a)
-      .def_readwrite("K",
-                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::K)
-      .def_readwrite("A_sp",
-                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::A_sp)
-      .def_readwrite("B_sp",
-                     &FluorocarbonImplementation::Parameters<T>::SiO2Type::B_sp)
-      .def_readwrite(
-          "Eth_ie",
-          &FluorocarbonImplementation::Parameters<T>::SiO2Type::Eth_ie)
-      .def_readwrite(
-          "Eth_sp",
-          &FluorocarbonImplementation::Parameters<T>::SiO2Type::Eth_sp)
-      .def_readwrite(
-          "A_ie", &FluorocarbonImplementation::Parameters<T>::SiO2Type::A_ie);
+      .def_readwrite("rho", &FluorocarbonParameters<T>::SiO2Type::rho)
+      .def_readwrite("E_a", &FluorocarbonParameters<T>::SiO2Type::E_a)
+      .def_readwrite("K", &FluorocarbonParameters<T>::SiO2Type::K)
+      .def_readwrite("A_sp", &FluorocarbonParameters<T>::SiO2Type::A_sp)
+      .def_readwrite("B_sp", &FluorocarbonParameters<T>::SiO2Type::B_sp)
+      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::SiO2Type::Eth_ie)
+      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::SiO2Type::Eth_sp)
+      .def_readwrite("A_ie", &FluorocarbonParameters<T>::SiO2Type::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters<T>::Si3N4Type>(
+  pybind11::class_<FluorocarbonParameters<T>::Si3N4Type>(
       module, "FluorocarbonParametersSi3N4")
       .def(pybind11::init<>())
-      .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::rho)
-      .def_readwrite("E_a",
-                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::E_a)
-      .def_readwrite("K",
-                     &FluorocarbonImplementation::Parameters<T>::Si3N4Type::K)
-      .def_readwrite(
-          "A_sp", &FluorocarbonImplementation::Parameters<T>::Si3N4Type::A_sp)
-      .def_readwrite(
-          "B_sp", &FluorocarbonImplementation::Parameters<T>::Si3N4Type::B_sp)
-      .def_readwrite(
-          "Eth_ie",
-          &FluorocarbonImplementation::Parameters<T>::Si3N4Type::Eth_ie)
-      .def_readwrite(
-          "Eth_sp",
-          &FluorocarbonImplementation::Parameters<T>::Si3N4Type::Eth_sp)
-      .def_readwrite(
-          "A_ie", &FluorocarbonImplementation::Parameters<T>::Si3N4Type::A_ie);
+      .def_readwrite("rho", &FluorocarbonParameters<T>::Si3N4Type::rho)
+      .def_readwrite("E_a", &FluorocarbonParameters<T>::Si3N4Type::E_a)
+      .def_readwrite("K", &FluorocarbonParameters<T>::Si3N4Type::K)
+      .def_readwrite("A_sp", &FluorocarbonParameters<T>::Si3N4Type::A_sp)
+      .def_readwrite("B_sp", &FluorocarbonParameters<T>::Si3N4Type::B_sp)
+      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::Si3N4Type::Eth_ie)
+      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::Si3N4Type::Eth_sp)
+      .def_readwrite("A_ie", &FluorocarbonParameters<T>::Si3N4Type::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters<T>::SiType>(
+  pybind11::class_<FluorocarbonParameters<T>::SiType>(
       module, "FluorocarbonParametersSi")
       .def(pybind11::init<>())
-      .def_readwrite("rho",
-                     &FluorocarbonImplementation::Parameters<T>::SiType::rho)
-      .def_readwrite("E_a",
-                     &FluorocarbonImplementation::Parameters<T>::SiType::E_a)
-      .def_readwrite("K", &FluorocarbonImplementation::Parameters<T>::SiType::K)
-      .def_readwrite("A_sp",
-                     &FluorocarbonImplementation::Parameters<T>::SiType::A_sp)
-      .def_readwrite("B_sp",
-                     &FluorocarbonImplementation::Parameters<T>::SiType::B_sp)
-      .def_readwrite("Eth_ie",
-                     &FluorocarbonImplementation::Parameters<T>::SiType::Eth_ie)
-      .def_readwrite("Eth_sp",
-                     &FluorocarbonImplementation::Parameters<T>::SiType::Eth_sp)
-      .def_readwrite("A_ie",
-                     &FluorocarbonImplementation::Parameters<T>::SiType::A_ie);
+      .def_readwrite("rho", &FluorocarbonParameters<T>::SiType::rho)
+      .def_readwrite("E_a", &FluorocarbonParameters<T>::SiType::E_a)
+      .def_readwrite("K", &FluorocarbonParameters<T>::SiType::K)
+      .def_readwrite("A_sp", &FluorocarbonParameters<T>::SiType::A_sp)
+      .def_readwrite("B_sp", &FluorocarbonParameters<T>::SiType::B_sp)
+      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::SiType::Eth_ie)
+      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::SiType::Eth_sp)
+      .def_readwrite("A_ie", &FluorocarbonParameters<T>::SiType::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters<T>::PolymerType>(
+  pybind11::class_<FluorocarbonParameters<T>::PolymerType>(
       module, "FluorocarbonParametersPolymer")
       .def(pybind11::init<>())
-      .def_readwrite(
-          "rho", &FluorocarbonImplementation::Parameters<T>::PolymerType::rho)
-      .def_readwrite(
-          "Eth_ie",
-          &FluorocarbonImplementation::Parameters<T>::PolymerType::Eth_ie)
-      .def_readwrite(
-          "A_ie",
-          &FluorocarbonImplementation::Parameters<T>::PolymerType::A_ie);
+      .def_readwrite("rho", &FluorocarbonParameters<T>::PolymerType::rho)
+      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::PolymerType::Eth_ie)
+      .def_readwrite("A_ie", &FluorocarbonParameters<T>::PolymerType::A_ie);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters<T>::IonType>(
+  pybind11::class_<FluorocarbonParameters<T>::IonType>(
       module, "FluorocarbonParametersIons")
       .def(pybind11::init<>())
-      .def_readwrite(
-          "meanEnergy",
-          &FluorocarbonImplementation::Parameters<T>::IonType::meanEnergy)
-      .def_readwrite(
-          "sigmaEnergy",
-          &FluorocarbonImplementation::Parameters<T>::IonType::sigmaEnergy)
-      .def_readwrite(
-          "exponent",
-          &FluorocarbonImplementation::Parameters<T>::IonType::exponent)
-      .def_readwrite(
-          "inflectAngle",
-          &FluorocarbonImplementation::Parameters<T>::IonType::inflectAngle)
-      .def_readwrite("n_l",
-                     &FluorocarbonImplementation::Parameters<T>::IonType::n_l)
-      .def_readwrite(
-          "minAngle",
-          &FluorocarbonImplementation::Parameters<T>::IonType::minAngle);
+      .def_readwrite("meanEnergy",
+                     &FluorocarbonParameters<T>::IonType::meanEnergy)
+      .def_readwrite("sigmaEnergy",
+                     &FluorocarbonParameters<T>::IonType::sigmaEnergy)
+      .def_readwrite("exponent", &FluorocarbonParameters<T>::IonType::exponent)
+      .def_readwrite("inflectAngle",
+                     &FluorocarbonParameters<T>::IonType::inflectAngle)
+      .def_readwrite("n_l", &FluorocarbonParameters<T>::IonType::n_l)
+      .def_readwrite("minAngle", &FluorocarbonParameters<T>::IonType::minAngle);
 
-  pybind11::class_<FluorocarbonImplementation::Parameters<T>>(
-      module, "FluorocarbonParameters")
+  pybind11::class_<FluorocarbonParameters<T>>(module, "FluorocarbonParameters")
       .def(pybind11::init<>())
-      .def_readwrite("ionFlux",
-                     &FluorocarbonImplementation::Parameters<T>::ionFlux)
-      .def_readwrite("etchantFlux",
-                     &FluorocarbonImplementation::Parameters<T>::etchantFlux)
-      .def_readwrite("polyFlux",
-                     &FluorocarbonImplementation::Parameters<T>::polyFlux)
-      .def_readwrite("delta_p",
-                     &FluorocarbonImplementation::Parameters<T>::delta_p)
-      .def_readwrite("etchStopDepth",
-                     &FluorocarbonImplementation::Parameters<T>::etchStopDepth)
-      .def_readwrite("Mask", &FluorocarbonImplementation::Parameters<T>::Mask)
-      .def_readwrite("SiO2", &FluorocarbonImplementation::Parameters<T>::SiO2)
-      .def_readwrite("Si3N4", &FluorocarbonImplementation::Parameters<T>::Si3N4)
-      .def_readwrite("Si", &FluorocarbonImplementation::Parameters<T>::Si)
-      .def_readwrite("Polymer",
-                     &FluorocarbonImplementation::Parameters<T>::Polymer)
-      .def_readwrite("Ions", &FluorocarbonImplementation::Parameters<T>::Ions);
+      .def_readwrite("ionFlux", &FluorocarbonParameters<T>::ionFlux)
+      .def_readwrite("etchantFlux", &FluorocarbonParameters<T>::etchantFlux)
+      .def_readwrite("polyFlux", &FluorocarbonParameters<T>::polyFlux)
+      .def_readwrite("delta_p", &FluorocarbonParameters<T>::delta_p)
+      .def_readwrite("etchStopDepth", &FluorocarbonParameters<T>::etchStopDepth)
+      .def_readwrite("Mask", &FluorocarbonParameters<T>::Mask)
+      .def_readwrite("SiO2", &FluorocarbonParameters<T>::SiO2)
+      .def_readwrite("Si3N4", &FluorocarbonParameters<T>::Si3N4)
+      .def_readwrite("Si", &FluorocarbonParameters<T>::Si)
+      .def_readwrite("Polymer", &FluorocarbonParameters<T>::Polymer)
+      .def_readwrite("Ions", &FluorocarbonParameters<T>::Ions);
 
   // Fluorocarbon Etching
-  pybind11::class_<psFluorocarbonEtching<T, D>,
-                   psSmartPointer<psFluorocarbonEtching<T, D>>>(
+  pybind11::class_<FluorocarbonEtching<T, D>,
+                   SmartPointer<FluorocarbonEtching<T, D>>>(
       module, "FluorocarbonEtching", processModel)
       .def(pybind11::init<>())
       .def(
-          pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
+          pybind11::init(&SmartPointer<FluorocarbonEtching<T, D>>::New<
                          const double /*ionFlux*/, const double /*etchantFlux*/,
                          const double /*polyFlux*/, T /*meanEnergy*/,
                          const T /*sigmaEnergy*/, const T /*ionExponent*/,
@@ -820,96 +757,82 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("sigmaIonEnergy") = 10.,
           pybind11::arg("ionExponent") = 100., pybind11::arg("deltaP") = 0.,
           pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
-      .def(pybind11::init(&psSmartPointer<psFluorocarbonEtching<T, D>>::New<
-                          const FluorocarbonImplementation::Parameters<T> &>),
+      .def(pybind11::init(&SmartPointer<FluorocarbonEtching<T, D>>::New<
+                          const FluorocarbonParameters<T> &>),
            pybind11::arg("parameters"))
-      .def("setParameters", &psFluorocarbonEtching<T, D>::setParameters)
-      .def("getParameters", &psFluorocarbonEtching<T, D>::getParameters,
+      .def("setParameters", &FluorocarbonEtching<T, D>::setParameters)
+      .def("getParameters", &FluorocarbonEtching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
   // Isotropic Process
-  pybind11::class_<psIsotropicProcess<T, D>,
-                   psSmartPointer<psIsotropicProcess<T, D>>>(
+  pybind11::class_<IsotropicProcess<T, D>,
+                   SmartPointer<IsotropicProcess<T, D>>>(
       module, "IsotropicProcess", processModel)
-      .def(pybind11::init([](const T rate, const psMaterial mask) {
-             return psSmartPointer<psIsotropicProcess<T, D>>::New(rate, mask);
+      .def(pybind11::init([](const T rate, const Material mask) {
+             return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
            pybind11::arg("rate") = 1.,
-           pybind11::arg("maskMaterial") = psMaterial::Mask)
-      .def(pybind11::init([](const T rate, const std::vector<psMaterial> mask) {
-             return psSmartPointer<psIsotropicProcess<T, D>>::New(rate, mask);
+           pybind11::arg("maskMaterial") = Material::Mask)
+      .def(pybind11::init([](const T rate, const std::vector<Material> mask) {
+             return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
            pybind11::arg("rate"), pybind11::arg("maskMaterial"));
 
   // Directional Etching
-  pybind11::class_<psDirectionalEtching<T, D>,
-                   psSmartPointer<psDirectionalEtching<T, D>>>(
+  pybind11::class_<DirectionalEtching<T, D>,
+                   SmartPointer<DirectionalEtching<T, D>>>(
       module, "DirectionalEtching", processModel)
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const psMaterial>(),
+                          const Material>(),
            pybind11::arg("direction"),
            pybind11::arg("directionalVelocity") = 1.,
            pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") = psMaterial::Mask)
+           pybind11::arg("maskMaterial") = Material::Mask)
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const std::vector<psMaterial>>(),
+                          const std::vector<Material>>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
            pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"));
 
   // Sphere Distribution
-  pybind11::class_<psSphereDistribution<T, D>,
-                   psSmartPointer<psSphereDistribution<T, D>>>(
+  pybind11::class_<SphereDistribution<T, D>,
+                   SmartPointer<SphereDistribution<T, D>>>(
       module, "SphereDistribution", processModel)
       .def(pybind11::init([](const T radius, const T gridDelta,
-                             psSmartPointer<lsDomain<T, D>> mask) {
-             return psSmartPointer<psSphereDistribution<T, D>>::New(
+                             SmartPointer<viennals::Domain<T, D>> mask) {
+             return SmartPointer<SphereDistribution<T, D>>::New(
                  radius, gridDelta, mask);
            }),
            pybind11::arg("radius"), pybind11::arg("gridDelta"),
            pybind11::arg("mask"))
       .def(pybind11::init([](const T radius, const T gridDelta) {
-             return psSmartPointer<psSphereDistribution<T, D>>::New(
+             return SmartPointer<SphereDistribution<T, D>>::New(
                  radius, gridDelta, nullptr);
            }),
            pybind11::arg("radius"), pybind11::arg("gridDelta"));
 
   // Box Distribution
-  pybind11::class_<psBoxDistribution<T, D>,
-                   psSmartPointer<psBoxDistribution<T, D>>>(
+  pybind11::class_<BoxDistribution<T, D>, SmartPointer<BoxDistribution<T, D>>>(
       module, "BoxDistribution", processModel)
       .def(
           pybind11::init([](const std::array<T, 3> &halfAxes, const T gridDelta,
-                            psSmartPointer<lsDomain<T, D>> mask) {
-            return psSmartPointer<psBoxDistribution<T, D>>::New(
-                halfAxes, gridDelta, mask);
+                            SmartPointer<viennals::Domain<T, D>> mask) {
+            return SmartPointer<BoxDistribution<T, D>>::New(halfAxes, gridDelta,
+                                                            mask);
           }),
           pybind11::arg("halfAxes"), pybind11::arg("gridDelta"),
           pybind11::arg("mask"))
       .def(pybind11::init(
                [](const std::array<T, 3> &halfAxes, const T gridDelta) {
-                 return psSmartPointer<psBoxDistribution<T, D>>::New(
+                 return SmartPointer<BoxDistribution<T, D>>::New(
                      halfAxes, gridDelta, nullptr);
                }),
            pybind11::arg("halfAxes"), pybind11::arg("gridDelta"));
 
-  // Plasma Damage
-  pybind11::class_<psPlasmaDamage<T, D>, psSmartPointer<psPlasmaDamage<T, D>>>(
-      module, "PlasmaDamage", processModel)
-      .def(pybind11::init([](const T ionEnergy, const T meanFreePath,
-                             const psMaterial mask) {
-             return psSmartPointer<psPlasmaDamage<T, D>>::New(
-                 ionEnergy, meanFreePath, mask);
-           }),
-           pybind11::arg("ionEnergy") = 100.,
-           pybind11::arg("meanFreePath") = 1.,
-           pybind11::arg("maskMaterial") = psMaterial::None);
-
   // Oxide Regrowth
-  pybind11::class_<psOxideRegrowth<T, D>,
-                   psSmartPointer<psOxideRegrowth<T, D>>>(
+  pybind11::class_<OxideRegrowth<T, D>, SmartPointer<OxideRegrowth<T, D>>>(
       module, "OxideRegrowth", processModel)
       .def(
-          pybind11::init(&psSmartPointer<psOxideRegrowth<T, D>>::New<
+          pybind11::init(&SmartPointer<OxideRegrowth<T, D>>::New<
                          const T, const T, const T, const T, const T, const T,
                          const T, const T, const T, const T, const T, const T>),
           pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),
@@ -922,104 +845,73 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("stabilityFactor"));
 
   // Anisotropic Process
-  pybind11::class_<psAnisotropicProcess<T, D>,
-                   psSmartPointer<psAnisotropicProcess<T, D>>>(
+  pybind11::class_<AnisotropicProcess<T, D>,
+                   SmartPointer<AnisotropicProcess<T, D>>>(
       module, "AnisotropicProcess", processModel)
-      .def(pybind11::init(&psSmartPointer<psAnisotropicProcess<T, D>>::New<
-                          const std::vector<std::pair<psMaterial, T>>>),
+      .def(pybind11::init(&SmartPointer<AnisotropicProcess<T, D>>::New<
+                          const std::vector<std::pair<Material, T>>>),
            pybind11::arg("materials"))
-      .def(pybind11::init(&psSmartPointer<psAnisotropicProcess<T, D>>::New<
+      .def(pybind11::init(&SmartPointer<AnisotropicProcess<T, D>>::New<
                           const std::array<T, 3> &, const std::array<T, 3> &,
                           const T, const T, const T, const T,
-                          const std::vector<std::pair<psMaterial, T>>>),
+                          const std::vector<std::pair<Material, T>>>),
            pybind11::arg("direction100"), pybind11::arg("direction010"),
            pybind11::arg("rate100"), pybind11::arg("rate110"),
            pybind11::arg("rate111"), pybind11::arg("rate311"),
            pybind11::arg("materials"));
 
-  // Atomic Layer Process
-  pybind11::class_<csAtomicLayerProcess<T, D>,
-                   psSmartPointer<csAtomicLayerProcess<T, D>>>(
-      module, "csAtomicLayerProcess")
-      .def(pybind11::init<DomainType, const bool>(), pybind11::arg("domain"),
-           pybind11::arg("etch") = false)
-      .def("setFirstPrecursor",
-           pybind11::overload_cast<std::string, T, T, T, T, T>(
-               &csAtomicLayerProcess<T, D>::setFirstPrecursor))
-      .def("setFirstPrecursor",
-           pybind11::overload_cast<
-               const csAtomicLayerProcess<T, D>::Precursor &>(
-               &csAtomicLayerProcess<T, D>::setFirstPrecursor))
-      .def("setSecondPrecursor",
-           pybind11::overload_cast<std::string, T, T, T, T, T>(
-               &csAtomicLayerProcess<T, D>::setSecondPrecursor))
-      .def("setSecondPrecursor",
-           pybind11::overload_cast<
-               const csAtomicLayerProcess<T, D>::Precursor &>(
-               &csAtomicLayerProcess<T, D>::setSecondPrecursor))
-      .def("setPurgeParameters",
-           &csAtomicLayerProcess<T, D>::setPurgeParameters)
-      .def("setReactionOrder", &csAtomicLayerProcess<T, D>::setReactionOrder)
-      .def("setMaxLambda", &csAtomicLayerProcess<T, D>::setMaxLambda)
-      .def("setStabilityFactor",
-           &csAtomicLayerProcess<T, D>::setStabilityFactor)
-      .def("setMaxTimeStep", &csAtomicLayerProcess<T, D>::setMaxTimeStep)
-      .def("setPrintInterval", &csAtomicLayerProcess<T, D>::setPrintInterval)
-      .def("apply", &csAtomicLayerProcess<T, D>::apply);
-
-  pybind11::class_<csAtomicLayerProcess<T, D>::Precursor>(module, "Precursor")
-      .def(pybind11::init<>())
-      .def_readwrite("name", &csAtomicLayerProcess<T, D>::Precursor::name)
-      .def_readwrite(
-          "meanThermalVelocity",
-          &csAtomicLayerProcess<T, D>::Precursor::meanThermalVelocity)
-      .def_readwrite("adsorptionRate",
-                     &csAtomicLayerProcess<T, D>::Precursor::adsorptionRate)
-      .def_readwrite("desorptionRate",
-                     &csAtomicLayerProcess<T, D>::Precursor::desorptionRate)
-      .def_readwrite("duration",
-                     &csAtomicLayerProcess<T, D>::Precursor::duration)
-      .def_readwrite("inFlux", &csAtomicLayerProcess<T, D>::Precursor::inFlux);
+  // Single Particle ALD
+  pybind11::class_<SingleParticleALD<T, D>,
+                   SmartPointer<SingleParticleALD<T, D>>>(
+      module, "SingleParticleALD", processModel)
+      .def(pybind11::init(&SmartPointer<SingleParticleALD<T, D>>::New<
+                          const T, const T, const T, const T, const T, const T,
+                          const T, const T, const T>),
+           pybind11::arg("stickingProbability"), pybind11::arg("numCycles"),
+           pybind11::arg("growthPerCycle"), pybind11::arg("totalCycles"),
+           pybind11::arg("coverageTimeStep"), pybind11::arg("evFlux"),
+           pybind11::arg("inFlux"), pybind11::arg("s0"),
+           pybind11::arg("gasMFP"));
 
   // ***************************************************************************
   //                               GEOMETRIES
   // ***************************************************************************
 
-  // psMakePlane
-  pybind11::class_<psMakePlane<T, D>, psSmartPointer<psMakePlane<T, D>>>(
-      module, "MakePlane")
+  // MakePlane
+  pybind11::class_<MakePlane<T, D>, SmartPointer<MakePlane<T, D>>>(module,
+                                                                   "MakePlane")
       .def(pybind11::init([](DomainType Domain, const T GridDelta,
                              const T XExtent, const T YExtent, const T Height,
-                             const bool Periodic, const psMaterial Material) {
-             return psSmartPointer<psMakePlane<T, D>>::New(
-                 Domain, GridDelta, XExtent, YExtent, Height, Periodic,
-                 Material);
+                             const bool Periodic, const Material Material) {
+             return SmartPointer<MakePlane<T, D>>::New(Domain, GridDelta,
+                                                       XExtent, YExtent, Height,
+                                                       Periodic, Material);
            }),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("height") = 0.,
            pybind11::arg("periodicBoundary") = false,
-           pybind11::arg("material") = psMaterial::None)
+           pybind11::arg("material") = Material::None)
       .def(pybind11::init(
-               [](DomainType Domain, T Height, const psMaterial Material) {
-                 return psSmartPointer<psMakePlane<T, D>>::New(Domain, Height,
-                                                               Material);
+               [](DomainType Domain, T Height, const Material Material) {
+                 return SmartPointer<MakePlane<T, D>>::New(Domain, Height,
+                                                           Material);
                }),
            pybind11::arg("domain"), pybind11::arg("height") = 0.,
-           pybind11::arg("material") = psMaterial::None)
-      .def("apply", &psMakePlane<T, D>::apply,
+           pybind11::arg("material") = Material::None)
+      .def("apply", &MakePlane<T, D>::apply,
            "Create a plane geometry or add plane to existing geometry.");
 
-  // psMakeTrench
-  pybind11::class_<psMakeTrench<T, D>, psSmartPointer<psMakeTrench<T, D>>>(
+  // MakeTrench
+  pybind11::class_<MakeTrench<T, D>, SmartPointer<MakeTrench<T, D>>>(
       module, "MakeTrench")
       .def(pybind11::init([](DomainType Domain, const T GridDelta,
                              const T XExtent, const T YExtent,
                              const T TrenchWidth, const T TrenchDepth,
                              const T TaperingAngle, const T BaseHeight,
                              const bool PeriodicBoundary, const bool MakeMask,
-                             const psMaterial Material) {
-             return psSmartPointer<psMakeTrench<T, D>>::New(
+                             const Material Material) {
+             return SmartPointer<MakeTrench<T, D>>::New(
                  Domain, GridDelta, XExtent, YExtent, TrenchWidth, TrenchDepth,
                  TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
                  Material);
@@ -1031,19 +923,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = psMaterial::None)
-      .def("apply", &psMakeTrench<T, D>::apply, "Create a trench geometry.");
+           pybind11::arg("material") = Material::None)
+      .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
-  // psMakeHole
-  pybind11::class_<psMakeHole<T, D>, psSmartPointer<psMakeHole<T, D>>>(
-      module, "MakeHole")
+  // MakeHole
+  pybind11::class_<MakeHole<T, D>, SmartPointer<MakeHole<T, D>>>(module,
+                                                                 "MakeHole")
       .def(pybind11::init([](DomainType domain, const T GridDelta,
                              const T xExtent, const T yExtent,
                              const T HoleRadius, const T HoleDepth,
                              const T TaperingAngle, const T BaseHeight,
                              const bool PeriodicBoundary, const bool MakeMask,
-                             const psMaterial material) {
-             return psSmartPointer<psMakeHole<T, D>>::New(
+                             const Material material) {
+             return SmartPointer<MakeHole<T, D>>::New(
                  domain, GridDelta, xExtent, yExtent, HoleRadius, HoleDepth,
                  TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
                  material);
@@ -1055,18 +947,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = psMaterial::None)
-      .def("apply", &psMakeHole<T, D>::apply, "Create a hole geometry.");
+           pybind11::arg("material") = Material::None)
+      .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
-  // psMakeFin
-  pybind11::class_<psMakeFin<T, D>, psSmartPointer<psMakeFin<T, D>>>(module,
-                                                                     "MakeFin")
+  // MakeFin
+  pybind11::class_<MakeFin<T, D>, SmartPointer<MakeFin<T, D>>>(module,
+                                                               "MakeFin")
       .def(pybind11::init([](DomainType domain, const T gridDelta,
                              const T xExtent, const T yExtent, const T finWidth,
                              const T finHeight, const T taperAngle,
                              const T baseHeight, const bool periodicBoundary,
-                             const bool makeMask, const psMaterial material) {
-             return psSmartPointer<psMakeFin<T, D>>::New(
+                             const bool makeMask, const Material material) {
+             return SmartPointer<MakeFin<T, D>>::New(
                  domain, gridDelta, xExtent, yExtent, finWidth, finHeight,
                  taperAngle, baseHeight, periodicBoundary, makeMask, material);
            }),
@@ -1076,13 +968,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("taperAngle") = 0., pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = psMaterial::None)
-      .def("apply", &psMakeFin<T, D>::apply, "Create a fin geometry.");
+           pybind11::arg("material") = Material::None)
+      .def("apply", &MakeFin<T, D>::apply, "Create a fin geometry.");
 
-  // psMakeStack
-  pybind11::class_<psMakeStack<T, D>, psSmartPointer<psMakeStack<T, D>>>(
-      module, "MakeStack")
-      .def(pybind11::init(&psSmartPointer<psMakeStack<T, D>>::New<
+  // MakeStack
+  pybind11::class_<MakeStack<T, D>, SmartPointer<MakeStack<T, D>>>(module,
+                                                                   "MakeStack")
+      .def(pybind11::init(&SmartPointer<MakeStack<T, D>>::New<
                           DomainType &, const T /*gridDelta*/,
                           const T
                           /*xExtent*/,
@@ -1103,11 +995,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("substrateHeight"), pybind11::arg("holeRadius"),
            pybind11::arg("trenchWidth"), pybind11::arg("maskHeight"),
            pybind11::arg("periodicBoundary") = false)
-      .def("apply", &psMakeStack<T, D>::apply,
+      .def("apply", &MakeStack<T, D>::apply,
            "Create a stack of alternating SiO2 and Si3N4 layers.")
-      .def("getTopLayer", &psMakeStack<T, D>::getTopLayer,
+      .def("getTopLayer", &MakeStack<T, D>::getTopLayer,
            "Returns the number of layers included in the stack")
-      .def("getHeight", &psMakeStack<T, D>::getHeight,
+      .def("getHeight", &MakeStack<T, D>::getHeight,
            "Returns the total height of the stack.");
 
   // ***************************************************************************
@@ -1115,278 +1007,162 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // ***************************************************************************
 
   // rayTraceDirection Enum
-  pybind11::enum_<rayTraceDirection>(module, "rayTraceDirection")
-      .value("POS_X", rayTraceDirection::POS_X)
-      .value("POS_Y", rayTraceDirection::POS_Y)
-      .value("POS_Z", rayTraceDirection::POS_Z)
-      .value("NEG_X", rayTraceDirection::NEG_X)
-      .value("NEG_Y", rayTraceDirection::NEG_Y)
-      .value("NEG_Z", rayTraceDirection::NEG_Z)
+  pybind11::enum_<viennaray::TraceDirection>(module, "rayTraceDirection")
+      .value("POS_X", viennaray::TraceDirection::POS_X)
+      .value("POS_Y", viennaray::TraceDirection::POS_Y)
+      .value("POS_Z", viennaray::TraceDirection::POS_Z)
+      .value("NEG_X", viennaray::TraceDirection::NEG_X)
+      .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
+      .value("NEG_Z", viennaray::TraceDirection::NEG_Z)
       .export_values();
 
-  // psProcess
-  pybind11::class_<psProcess<T, D>>(module, "Process")
+  // AtomicLayerProcess
+  pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
       // constructors
       .def(pybind11::init())
       .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
-      .def(
-          pybind11::init<DomainType, psSmartPointer<psProcessModel<T, D>>, T>(),
-          pybind11::arg("domain"), pybind11::arg("model"),
-          pybind11::arg("duration"))
+      .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>>(),
+           pybind11::arg("domain"), pybind11::arg("model"))
       // methods
-      .def("apply", &psProcess<T, D>::apply, "Run the process.")
-      .def("calculateFlux", &psProcess<T, D>::calculateFlux,
-           "Perform a single-pass flux calculation.")
-      .def("setDomain", &psProcess<T, D>::setDomain, "Set the process domain.")
-      .def("setProcessModel",
-           &psProcess<T, D>::setProcessModel<psProcessModel<T, D>>,
+      .def("apply", &AtomicLayerProcess<T, D>::apply, "Run the process.")
+      .def("setDomain", &AtomicLayerProcess<T, D>::setDomain,
+           "Set the process domain.")
+      .def("setProcessModel", &AtomicLayerProcess<T, D>::setProcessModel,
            "Set the process model. This has to be a pre-configured process "
            "model.")
-      .def("setProcessDuration", &psProcess<T, D>::setProcessDuration,
-           "Set the process duration.")
-      .def("setSourceDirection", &psProcess<T, D>::setSourceDirection,
+      .def("setPulseTime", &AtomicLayerProcess<T, D>::setPulseTime,
+           "Set the pulse time.")
+      .def("setSourceDirection", &AtomicLayerProcess<T, D>::setSourceDirection,
            "Set source direction of the process.")
-      .def("setNumberOfRaysPerPoint", &psProcess<T, D>::setNumberOfRaysPerPoint,
+      .def("setNumberOfRaysPerPoint",
+           &AtomicLayerProcess<T, D>::setNumberOfRaysPerPoint,
            "Set the number of rays to traced for each particle in the process. "
            "The number is per point in the process geometry.")
-      .def("setMaxCoverageInitIterations",
-           &psProcess<T, D>::setMaxCoverageInitIterations,
-           "Set the number of iterations to initialize the coverages.")
-      .def("setPrintTimeInterval", &psProcess<T, D>::setPrintTimeInterval,
-           "Sets the minimum time between printing intermediate results during "
-           "the process. If this is set to a non-positive value, no "
-           "intermediate results are printed.")
-      .def("setIntegrationScheme", &psProcess<T, D>::setIntegrationScheme,
+      .def("setDesorptionRates", &AtomicLayerProcess<T, D>::setDesorptionRates,
+           "Set the desorption rate for each surface point.")
+      .def("setCoverageTimeStep",
+           &AtomicLayerProcess<T, D>::setCoverageTimeStep,
+           "Set the time step for the coverage calculation.")
+      .def("setIntegrationScheme",
+           &AtomicLayerProcess<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
            "lsIntegrationSchemeEnum.")
-      .def("setTimeStepRatio", &psProcess<T, D>::setTimeStepRatio,
+      .def("setNumCycles", &AtomicLayerProcess<T, D>::setNumCycles,
+           "Set the number of cycles for the process.")
+      .def("enableRandomSeeds", &AtomicLayerProcess<T, D>::enableRandomSeeds,
+           "Enable random seeds for the ray tracer. This will make the process "
+           "results non-deterministic.")
+      .def(
+          "disableRandomSeeds", &AtomicLayerProcess<T, D>::disableRandomSeeds,
+          "Disable random seeds for the ray tracer. This will make the process "
+          "results deterministic.");
+
+  // Process
+  pybind11::class_<Process<T, D>>(module, "Process")
+      // constructors
+      .def(pybind11::init())
+      .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
+      .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>, T>(),
+           pybind11::arg("domain"), pybind11::arg("model"),
+           pybind11::arg("duration"))
+      // methods
+      .def("apply", &Process<T, D>::apply, "Run the process.")
+      .def("calculateFlux", &Process<T, D>::calculateFlux,
+           "Perform a single-pass flux calculation.")
+      .def("setDomain", &Process<T, D>::setDomain, "Set the process domain.")
+      .def("setProcessModel", &Process<T, D>::setProcessModel,
+           "Set the process model. This has to be a pre-configured process "
+           "model.")
+      .def("setProcessDuration", &Process<T, D>::setProcessDuration,
+           "Set the process duration.")
+      .def("setSourceDirection", &Process<T, D>::setSourceDirection,
+           "Set source direction of the process.")
+      .def("setNumberOfRaysPerPoint", &Process<T, D>::setNumberOfRaysPerPoint,
+           "Set the number of rays to traced for each particle in the process. "
+           "The number is per point in the process geometry.")
+      .def("setMaxCoverageInitIterations",
+           &Process<T, D>::setMaxCoverageInitIterations,
+           "Set the number of iterations to initialize the coverages.")
+      .def("setPrintTimeInterval", &Process<T, D>::setPrintTimeInterval,
+           "Sets the minimum time between printing intermediate results during "
+           "the process. If this is set to a non-positive value, no "
+           "intermediate results are printed.")
+      .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
+           "Set the integration scheme for solving the level-set equation. "
+           "Possible integration schemes are specified in "
+           "lsIntegrationSchemeEnum.")
+      .def("setTimeStepRatio", &Process<T, D>::setTimeStepRatio,
            "Set the CFL condition to use during advection. The CFL condition "
            "sets the maximum distance a surface can be moved during one "
            "advection step. It MUST be below 0.5 to guarantee numerical "
            "stability. Defaults to 0.4999.")
-      .def("enableFluxSmoothing", &psProcess<T, D>::enableFluxSmoothing,
+      .def("enableFluxSmoothing", &Process<T, D>::enableFluxSmoothing,
            "Enable flux smoothing. The flux at each surface point, calculated "
            "by the ray tracer, is averaged over the surface point neighbors.")
-      .def("disableFluxSmoothing", &psProcess<T, D>::disableFluxSmoothing,
+      .def("disableFluxSmoothing", &Process<T, D>::disableFluxSmoothing,
            "Disable flux smoothing")
-      .def("enableRandomSeeds", &psProcess<T, D>::enableRandomSeeds,
+      .def("enableRandomSeeds", &Process<T, D>::enableRandomSeeds,
            "Enable random seeds for the ray tracer. This will make the process "
            "results non-deterministic.")
       .def(
-          "disableRandomSeeds", &psProcess<T, D>::disableRandomSeeds,
+          "disableRandomSeeds", &Process<T, D>::disableRandomSeeds,
           "Disable random seeds for the ray tracer. This will make the process "
           "results deterministic.")
-      .def("getProcessDuration", &psProcess<T, D>::getProcessDuration,
+      .def("getProcessDuration", &Process<T, D>::getProcessDuration,
            "Returns the duration of the recently run process. This duration "
            "can sometimes slightly vary from the set process duration, due to "
            "the maximum time step according to the CFL condition.");
 
-  pybind11::enum_<psLogLevel>(module, "LogLevel")
-      .value("ERROR", psLogLevel::ERROR)
-      .value("WARNING", psLogLevel::WARNING)
-      .value("INFO", psLogLevel::INFO)
-      .value("TIMING", psLogLevel::TIMING)
-      .value("INTERMEDIATE", psLogLevel::INTERMEDIATE)
-      .value("DEBUG", psLogLevel::DEBUG)
-      .export_values();
-
-  // some unexpected behaviour can happen as it is working with
-  //  multithreading
-  pybind11::class_<psLogger, psSmartPointer<psLogger>>(module, "Logger")
-      .def_static("setLogLevel", &psLogger::setLogLevel)
-      .def_static("getLogLevel", &psLogger::getLogLevel)
-      .def_static("getInstance", &psLogger::getInstance,
-                  pybind11::return_value_policy::reference)
-      .def("addDebug", &psLogger::addDebug)
-      .def("addTiming", (psLogger & (psLogger::*)(std::string, double)) &
-                            psLogger::addTiming)
-      .def("addTiming",
-           (psLogger & (psLogger::*)(std::string, double, double)) &
-               psLogger::addTiming)
-      .def("addInfo", &psLogger::addInfo)
-      .def("addWarning", &psLogger::addWarning)
-      .def("addError", &psLogger::addError, pybind11::arg("s"),
-           pybind11::arg("shouldAbort") = true)
-      .def("print", [](psLogger &instance) { instance.print(std::cout); });
-
-  // psDomain
-  pybind11::class_<psDomain<T, D>, DomainType>(module, "Domain")
+  // Domain
+  pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
       // constructors
       .def(pybind11::init(&DomainType::New<>))
       // methods
-      .def("deepCopy", &psDomain<T, D>::deepCopy)
-      .def("insertNextLevelSet", &psDomain<T, D>::insertNextLevelSet,
+      .def("deepCopy", &Domain<T, D>::deepCopy)
+      .def("insertNextLevelSet", &Domain<T, D>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
       .def("insertNextLevelSetAsMaterial",
-           &psDomain<T, D>::insertNextLevelSetAsMaterial,
+           &Domain<T, D>::insertNextLevelSetAsMaterial,
            pybind11::arg("levelSet"), pybind11::arg("material"),
            pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
-      .def("duplicateTopLevelSet", &psDomain<T, D>::duplicateTopLevelSet)
-      .def("removeTopLevelSet", &psDomain<T, D>::removeTopLevelSet)
-      .def("applyBooleanOperation", &psDomain<T, D>::applyBooleanOperation)
-      .def("setMaterialMap", &psDomain<T, D>::setMaterialMap)
-      .def("getMaterialMap", &psDomain<T, D>::getMaterialMap)
-      .def("generateCellSet", &psDomain<T, D>::generateCellSet,
+      .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet)
+      .def("removeTopLevelSet", &Domain<T, D>::removeTopLevelSet)
+      .def("applyBooleanOperation", &Domain<T, D>::applyBooleanOperation)
+      .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
+      .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
+      .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
-      .def("getLevelSets",
-           [](psDomain<T, D> &d)
-               -> std::optional<std::vector<psSmartPointer<lsDomain<T, D>>>> {
-             auto levelsets = d.getLevelSets();
-             if (levelsets)
-               return *levelsets;
-             return std::nullopt;
-           })
-      .def("getCellSet", &psDomain<T, D>::getCellSet, "Get the cell set.")
-      .def("getGrid", &psDomain<T, D>::getGrid, "Get the grid")
-      .def("print", &psDomain<T, D>::print)
-      .def("saveLevelSetMesh", &psDomain<T, D>::saveLevelSetMesh,
+      .def("getLevelSets", &Domain<T, D>::getLevelSets)
+      .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
+      .def("getGrid", &Domain<T, D>::getGrid, "Get the grid")
+      .def("print", &Domain<T, D>::print)
+      .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
-      .def("saveSurfaceMesh", &psDomain<T, D>::saveSurfaceMesh,
+      .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
            "Save the surface of the domain.")
-      .def("saveVolumeMesh", &psDomain<T, D>::saveVolumeMesh,
+      .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh,
            pybind11::arg("filename"),
            "Save the volume representation of the domain.")
-      .def("saveLevelSets", &psDomain<T, D>::saveLevelSets)
-      .def("clear", &psDomain<T, D>::clear);
+      .def("saveLevelSets", &Domain<T, D>::saveLevelSets)
+      .def("clear", &Domain<T, D>::clear);
 
-  // psMaterialMap
-  pybind11::class_<psMaterialMap, psSmartPointer<psMaterialMap>>(module,
-                                                                 "MaterialMap")
+  // MaterialMap
+  pybind11::class_<MaterialMap, SmartPointer<MaterialMap>>(module,
+                                                           "MaterialMap")
       .def(pybind11::init<>())
-      .def("insertNextMaterial", &psMaterialMap::insertNextMaterial,
-           pybind11::arg("material") = psMaterial::None)
-      .def("getMaterialAtIdx", &psMaterialMap::getMaterialAtIdx)
-      .def("getMaterialMap", &psMaterialMap::getMaterialMap)
-      .def("size", &psMaterialMap::size)
-      .def_static("mapToMaterial", &psMaterialMap::mapToMaterial<T>,
+      .def("insertNextMaterial", &MaterialMap::insertNextMaterial,
+           pybind11::arg("material") = Material::None)
+      .def("getMaterialAtIdx", &MaterialMap::getMaterialAtIdx)
+      .def("getMaterialMap", &MaterialMap::getMaterialMap)
+      .def("size", &MaterialMap::size)
+      .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
-      .def_static("isMaterial", &psMaterialMap::isMaterial<T>);
-
-  //   ***************************************************************************
-  //                                  CELL SET
-  //  ***************************************************************************
-
-  // csDenseCellSet
-  pybind11::class_<csDenseCellSet<T, D>, psSmartPointer<csDenseCellSet<T, D>>>(
-      module, "DenseCellSet")
-      .def(pybind11::init())
-      .def("getBoundingBox", &csDenseCellSet<T, D>::getBoundingBox)
-      .def(
-          "addScalarData",
-          [](csDenseCellSet<T, D> &cellSet, std::string name, T initValue) {
-            cellSet.addScalarData(name, initValue);
-            // discard return value
-          },
-          "Add a scalar value to be stored and modified in each cell.")
-      .def("getDepth", &csDenseCellSet<T, D>::getDepth,
-           "Get the depth of the cell set.")
-      .def("getGridDelta", &csDenseCellSet<T, D>::getGridDelta,
-           "Get the cell size.")
-      .def("getNodes", &csDenseCellSet<T, D>::getNodes,
-           "Get the nodes of the cell set which correspond to the corner "
-           "points of the cells.")
-      .def("getNode", &csDenseCellSet<T, D>::getNode,
-           "Get the node at the given index.")
-      .def("getElements", &csDenseCellSet<T, D>::getElements,
-           "Get elements (cells). The indicies in the elements correspond to "
-           "the corner nodes.")
-      .def("getElement", &csDenseCellSet<T, D>::getElement,
-           "Get the element at the given index.")
-      .def("getSurface", &csDenseCellSet<T, D>::getSurface,
-           "Get the surface level-set.")
-      .def("getCellGrid", &csDenseCellSet<T, D>::getCellGrid,
-           "Get the underlying mesh of the cell set.")
-      .def("getNumberOfCells", &csDenseCellSet<T, D>::getNumberOfCells,
-           "Get the number of cells.")
-      .def("getFillingFraction", &csDenseCellSet<T, D>::getFillingFraction,
-           "Get the filling fraction of the cell containing the point.")
-      .def("getFillingFractions", &csDenseCellSet<T, D>::getFillingFractions,
-           "Get the filling fractions of all cells.")
-      .def("getAverageFillingFraction",
-           &csDenseCellSet<T, D>::getAverageFillingFraction,
-           "Get the average filling at a point in some radius.")
-      .def("getCellCenter", &csDenseCellSet<T, D>::getCellCenter,
-           "Get the center of a cell with given index")
-      .def("getScalarData", &csDenseCellSet<T, D>::getScalarData,
-           "Get the data stored at each cell. WARNING: This function only "
-           "returns a copy of the data")
-      .def("getScalarDataLabels", &csDenseCellSet<T, D>::getScalarDataLabels,
-           "Get the labels of the scalar data stored in the cell set.")
-      .def("getIndex", &csDenseCellSet<T, D>::getIndex,
-           "Get the index of the cell containing the given point.")
-      .def("getCellSetPosition", &csDenseCellSet<T, D>::getCellSetPosition)
-      .def("setCellSetPosition", &csDenseCellSet<T, D>::setCellSetPosition,
-           "Set whether the cell set should be created below (false) or above "
-           "(true) the surface.")
-      .def(
-          "setCoverMaterial", &csDenseCellSet<T, D>::setCoverMaterial,
-          "Set the material of the cells which are above or below the surface.")
-      .def("setPeriodicBoundary", &csDenseCellSet<T, D>::setPeriodicBoundary,
-           "Enable periodic boundary conditions in specified dimensions.")
-      .def("setFillingFraction",
-           pybind11::overload_cast<const int, const T>(
-               &csDenseCellSet<T, D>::setFillingFraction),
-           "Sets the filling fraction at given cell index.")
-      .def("setFillingFraction",
-           pybind11::overload_cast<const std::array<T, 3> &, const T>(
-               &csDenseCellSet<T, D>::setFillingFraction),
-           "Sets the filling fraction for cell which contains given point.")
-      .def("addFillingFraction",
-           pybind11::overload_cast<const int, const T>(
-               &csDenseCellSet<T, D>::addFillingFraction),
-           "Add to the filling fraction at given cell index.")
-      .def("addFillingFraction",
-           pybind11::overload_cast<const std::array<T, 3> &, const T>(
-               &csDenseCellSet<T, D>::addFillingFraction),
-           "Add to the filling fraction for cell which contains given point.")
-      .def("addFillingFractionInMaterial",
-           &csDenseCellSet<T, D>::addFillingFractionInMaterial,
-           "Add to the filling fraction for cell which contains given point "
-           "only if the cell has the specified material ID.")
-      .def("writeVTU", &csDenseCellSet<T, D>::writeVTU,
-           "Write the cell set as .vtu file")
-      .def("writeCellSetData", &csDenseCellSet<T, D>::writeCellSetData,
-           "Save cell set data in simple text format.")
-      .def("readCellSetData", &csDenseCellSet<T, D>::readCellSetData,
-           "Read cell set data from text.")
-      .def("clear", &csDenseCellSet<T, D>::clear,
-           "Clear the filling fractions.")
-      .def("updateMaterials", &csDenseCellSet<T, D>::updateMaterials,
-           "Update the material IDs of the cell set. This function should be "
-           "called if the level sets, the cell set is made out of, have "
-           "changed. This does not work if the surface of the volume has "
-           "changed. In this case, call the function 'updateSurface' first.")
-      .def("updateSurface", &csDenseCellSet<T, D>::updateSurface,
-           "Updates the surface of the cell set. The new surface should be "
-           "below the old surface as this function can only remove cells from "
-           "the cell set.")
-      .def("buildNeighborhood", &csDenseCellSet<T, D>::buildNeighborhood,
-           "Generate fast neighbor access for each cell.")
-      .def("getNeighbors", &csDenseCellSet<T, D>::getNeighbors,
-           "Get the neighbor indices for a cell.");
-
-  // csSegmentCells
-  pybind11::class_<csSegmentCells<T, D>, psSmartPointer<csSegmentCells<T, D>>>(
-      module, "SegmentCells")
-      .def(pybind11::init<psSmartPointer<csDenseCellSet<T, D>>>())
-      .def(pybind11::init<psSmartPointer<csDenseCellSet<T, D>>, std::string,
-                          psMaterial>(),
-           pybind11::arg("cellSet"),
-           pybind11::arg("cellTypeString") = "CellType",
-           pybind11::arg("bulkMaterial") = psMaterial::GAS)
-      .def("setCellSet", &csSegmentCells<T, D>::setCellSet,
-           "Set the cell set in the segmenter.")
-      .def("setCellTypeString", &csSegmentCells<T, D>::setCellTypeString,
-           "Set the cell type string in the segmenter.")
-      .def("setBulkMaterial", &csSegmentCells<T, D>::setBulkMaterial,
-           "Set the bulk material in the segmenter.")
-      .def("apply", &csSegmentCells<T, D>::apply,
-           "Segment the cells into surface, material, and gas cells.");
+      .def_static("isMaterial", &MaterialMap::isMaterial<T>);
 
   // ***************************************************************************
   //                                   VISUALIZATION
@@ -1394,93 +1170,83 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // visualization classes are not bound with smart pointer holder types
   // since they should not be passed to other classes
-  pybind11::class_<psToDiskMesh<T, D>>(module, "ToDiskMesh")
-      .def(pybind11::init<DomainType, psSmartPointer<lsMesh<T>>>(),
+  pybind11::class_<ToDiskMesh<T, D>>(module, "ToDiskMesh")
+      .def(pybind11::init<DomainType, SmartPointer<viennals::Mesh<T>>>(),
            pybind11::arg("domain"), pybind11::arg("mesh"))
       .def(pybind11::init())
-      .def("setDomain", &psToDiskMesh<T, D>::setDomain,
+      .def("setDomain", &ToDiskMesh<T, D>::setDomain,
            "Set the domain in the mesh converter.")
-      .def("setMesh", &psToDiskMesh<T, D>::setMesh,
+      .def("setMesh", &ToDiskMesh<T, D>::setMesh,
            "Set the mesh in the mesh converter");
   // static assertion failed: Holder classes are only supported for
   //  custom types
-  // .def("setTranslator", &psToDiskMesh<T, D>::setTranslator,
+  // .def("setTranslator", &ToDiskMesh<T, D>::setTranslator,
   //      "Set the translator in the mesh converter. It used to convert "
   //      "level-set point IDs to mesh point IDs.")
-  // .def("getTranslator", &psToDiskMesh<T, D>::getTranslator,
+  // .def("getTranslator", &ToDiskMesh<T, D>::getTranslator,
   //      "Retrieve the translator from the mesh converter.");
-
-  pybind11::class_<psWriteVisualizationMesh<T, D>>(module,
-                                                   "WriteVisualizationMesh")
-      .def(pybind11::init())
-      .def(pybind11::init<DomainType, std::string>(), pybind11::arg("domain"),
-           pybind11::arg("fileName"))
-      .def("apply", &psWriteVisualizationMesh<T, D>::apply)
-      .def("setFileName", &psWriteVisualizationMesh<T, D>::setFileName,
-           "Set the output file name. The file name will be appended by"
-           "'_volume.vtu'.")
-      .def("setDomain", &psWriteVisualizationMesh<T, D>::setDomain,
-           "Set the domain in the mesh converter.");
 
   //   ***************************************************************************
   //                                  OTHER
   //   ***************************************************************************
 
-  // psPlanarize
-  pybind11::class_<psPlanarize<T, D>, psSmartPointer<psPlanarize<T, D>>>(
-      module, "Planarize")
-      .def(pybind11::init(&psSmartPointer<psPlanarize<T, D>>::New<>))
-      .def(pybind11::init(
-               &psSmartPointer<psPlanarize<T, D>>::New<DomainType &, const T>),
-           pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
-      .def("setDomain", &psPlanarize<T, D>::setDomain,
-           "Set the domain in the planarization.")
-      .def("setCutoffPosition", &psPlanarize<T, D>::setCutoffPosition,
-           "Set the cutoff height for the planarization.")
-      .def("apply", &psPlanarize<T, D>::apply, "Apply the planarization.");
+  // Constants
+  auto m_constants =
+      module.def_submodule("constants", "Physical and material constants.");
+  m_constants.attr("kB") = constants::kB;
+  m_constants.attr("roomTemperature") = constants::roomTemperature;
+  m_constants.attr("N_A") = constants::N_A;
+  m_constants.attr("R") = constants::R;
+  m_constants.def("torrToPascal", &constants::torrToPascal,
+                  "Convert pressure from torr to pascal.");
+  m_constants.def("celsiusToKelvin", &constants::celsiusToKelvin,
+                  "Convert temperature from Celsius to Kelvin.");
+  m_constants.def("gasMeanFreePath", &constants::gasMeanFreePath,
+                  "Calculate the mean free path of a gas molecule.");
+  m_constants.def("gasMeanThermalVelocity", &constants::gasMeanThermalVelocity,
+                  "Calculate the mean thermal velocity of a gas molecule.");
 
-  // psMeanFreePath
-  pybind11::class_<psMeanFreePath<T, D>, psSmartPointer<psMeanFreePath<T, D>>>(
-      module, "MeanFreePath")
-      .def(pybind11::init<>())
-      .def("setDomain", &psMeanFreePath<T, D>::setDomain)
-      .def("setBulkLambda", &psMeanFreePath<T, D>::setBulkLambda)
-      .def("setMaterial", &psMeanFreePath<T, D>::setMaterial)
-      .def("setNumRaysPerCell", &psMeanFreePath<T, D>::setNumRaysPerCell)
-      .def("setReflectionLimit", &psMeanFreePath<T, D>::setReflectionLimit)
-      .def("setRngSeed", &psMeanFreePath<T, D>::setRngSeed)
-      .def("disableSmoothing", &psMeanFreePath<T, D>::disableSmoothing)
-      .def("enableSmoothing", &psMeanFreePath<T, D>::enableSmoothing)
-      .def("apply", &psMeanFreePath<T, D>::apply);
+  // Planarize
+  pybind11::class_<Planarize<T, D>, SmartPointer<Planarize<T, D>>>(module,
+                                                                   "Planarize")
+      .def(pybind11::init(&SmartPointer<Planarize<T, D>>::New<>))
+      .def(pybind11::init(
+               &SmartPointer<Planarize<T, D>>::New<DomainType &, const T>),
+           pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
+      .def("setDomain", &Planarize<T, D>::setDomain,
+           "Set the domain in the planarization.")
+      .def("setCutoffPosition", &Planarize<T, D>::setCutoffPosition,
+           "Set the cutoff height for the planarization.")
+      .def("apply", &Planarize<T, D>::apply, "Apply the planarization.");
 
 #if VIENNAPS_PYTHON_DIMENSION > 2
   // GDS file parsing
-  pybind11::class_<psGDSGeometry<T, D>, psSmartPointer<psGDSGeometry<T, D>>>(
+  pybind11::class_<GDSGeometry<T, D>, SmartPointer<GDSGeometry<T, D>>>(
       module, "GDSGeometry")
       // constructors
-      .def(pybind11::init(&psSmartPointer<psGDSGeometry<T, D>>::New<>))
-      .def(pybind11::init(&psSmartPointer<psGDSGeometry<T, D>>::New<const T>),
+      .def(pybind11::init(&SmartPointer<GDSGeometry<T, D>>::New<>))
+      .def(pybind11::init(&SmartPointer<GDSGeometry<T, D>>::New<const T>),
            pybind11::arg("gridDelta"))
       // methods
-      .def("setGridDelta", &psGDSGeometry<T, D>::setGridDelta,
+      .def("setGridDelta", &GDSGeometry<T, D>::setGridDelta,
            "Set the grid spacing.")
       .def(
           "setBoundaryConditions",
-          [](psGDSGeometry<T, D> &gds,
-             std::vector<typename lsDomain<T, D>::BoundaryType> &bcs) {
+          [](GDSGeometry<T, D> &gds,
+             std::vector<typename viennals::Domain<T, D>::BoundaryType> &bcs) {
             if (bcs.size() == D)
               gds.setBoundaryConditions(bcs.data());
           },
           "Set the boundary conditions")
-      .def("setBoundaryPadding", &psGDSGeometry<T, D>::setBoundaryPadding,
+      .def("setBoundaryPadding", &GDSGeometry<T, D>::setBoundaryPadding,
            "Set padding between the largest point of the geometry and the "
            "boundary of the domain.")
-      .def("print", &psGDSGeometry<T, D>::print, "Print the geometry contents.")
-      .def("layerToLevelSet", &psGDSGeometry<T, D>::layerToLevelSet,
+      .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
+      .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
            "Convert a layer of the GDS geometry to a level set domain.")
       .def(
           "getBounds",
-          [](psGDSGeometry<T, D> &gds) -> std::array<double, 6> {
+          [](GDSGeometry<T, D> &gds) -> std::array<double, 6> {
             auto b = gds.getBounds();
             std::array<double, 6> bounds;
             for (unsigned i = 0; i < 6; ++i)
@@ -1489,116 +1255,90 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           },
           "Get the bounds of the geometry.");
 
-  pybind11::class_<psGDSReader<T, D>, psSmartPointer<psGDSReader<T, D>>>(
-      module, "GDSReader")
+  pybind11::class_<GDSReader<T, D>, SmartPointer<GDSReader<T, D>>>(module,
+                                                                   "GDSReader")
       // constructors
-      .def(pybind11::init(&psSmartPointer<psGDSReader<T, D>>::New<>))
-      .def(pybind11::init(&psSmartPointer<psGDSReader<T, D>>::New<
-                          psSmartPointer<psGDSGeometry<T, D>> &, std::string>))
+      .def(pybind11::init(&SmartPointer<GDSReader<T, D>>::New<>))
+      .def(pybind11::init(
+          &SmartPointer<GDSReader<T, D>>::New<SmartPointer<GDSGeometry<T, D>> &,
+                                              std::string>))
       // methods
-      .def("setGeometry", &psGDSReader<T, D>::setGeometry,
+      .def("setGeometry", &GDSReader<T, D>::setGeometry,
            "Set the domain to be parsed in.")
-      .def("setFileName", &psGDSReader<T, D>::setFileName,
+      .def("setFileName", &GDSReader<T, D>::setFileName,
            "Set name of the GDS file.")
-      .def("apply", &psGDSReader<T, D>::apply, "Parse the GDS file.");
+      .def("apply", &GDSReader<T, D>::apply, "Parse the GDS file.");
 #else
   // wrap a 3D domain in 2D mode to be used with psExtrude
-  // psDomain
-  pybind11::class_<psDomain<T, 3>, psSmartPointer<psDomain<T, 3>>>(module,
-                                                                   "Domain3D")
+  // Domain
+  pybind11::class_<Domain<T, 3>, SmartPointer<Domain<T, 3>>>(module, "Domain3D")
       // constructors
-      .def(pybind11::init(&psSmartPointer<psDomain<T, 3>>::New<>))
+      .def(pybind11::init(&SmartPointer<Domain<T, 3>>::New<>))
       // methods
-      .def("deepCopy", &psDomain<T, 3>::deepCopy)
-      .def("insertNextLevelSet", &psDomain<T, 3>::insertNextLevelSet,
+      .def("deepCopy", &Domain<T, 3>::deepCopy)
+      .def("insertNextLevelSet", &Domain<T, 3>::insertNextLevelSet,
            pybind11::arg("levelSet"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
       .def("insertNextLevelSetAsMaterial",
-           &psDomain<T, 3>::insertNextLevelSetAsMaterial,
+           &Domain<T, 3>::insertNextLevelSetAsMaterial,
            pybind11::arg("levelSet"), pybind11::arg("material"),
            pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
-      .def("duplicateTopLevelSet", &psDomain<T, 3>::duplicateTopLevelSet)
-      .def("applyBooleanOperation", &psDomain<T, 3>::applyBooleanOperation)
-      .def("removeTopLevelSet", &psDomain<T, 3>::removeTopLevelSet)
-      .def("setMaterialMap", &psDomain<T, 3>::setMaterialMap)
-      .def("getMaterialMap", &psDomain<T, 3>::getMaterialMap)
-      .def("generateCellSet", &psDomain<T, 3>::generateCellSet,
+      .def("duplicateTopLevelSet", &Domain<T, 3>::duplicateTopLevelSet)
+      .def("applyBooleanOperation", &Domain<T, 3>::applyBooleanOperation)
+      .def("removeTopLevelSet", &Domain<T, 3>::removeTopLevelSet)
+      .def("setMaterialMap", &Domain<T, 3>::setMaterialMap)
+      .def("getMaterialMap", &Domain<T, 3>::getMaterialMap)
+      .def("generateCellSet", &Domain<T, 3>::generateCellSet,
            pybind11::arg("position"), pybind11::arg("coverMaterial"),
            pybind11::arg("isAboveSurface"), "Generate the cell set.")
-      .def("getLevelSets",
-           [](psDomain<T, 3> &d)
-               -> std::optional<std::vector<psSmartPointer<lsDomain<T, 3>>>> {
-             auto levelsets = d.getLevelSets();
-             if (levelsets)
-               return *levelsets;
-             return std::nullopt;
-           })
-      .def("getCellSet", &psDomain<T, 3>::getCellSet, "Get the cell set.")
-      .def("getGrid", &psDomain<T, 3>::getGrid, "Get the grid")
-      .def("print", &psDomain<T, 3>::print)
-      .def("saveLevelSetMesh", &psDomain<T, 3>::saveLevelSetMesh,
+      .def("getLevelSets", &Domain<T, 3>::getLevelSets)
+      .def("getCellSet", &Domain<T, 3>::getCellSet, "Get the cell set.")
+      .def("getGrid", &Domain<T, 3>::getGrid, "Get the grid")
+      .def("print", &Domain<T, 3>::print)
+      .def("saveLevelSetMesh", &Domain<T, 3>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
-      .def("saveSurfaceMesh", &psDomain<T, 3>::saveSurfaceMesh,
+      .def("saveSurfaceMesh", &Domain<T, 3>::saveSurfaceMesh,
            pybind11::arg("filename"), pybind11::arg("addMaterialIds") = true,
            "Save the surface of the domain.")
-      .def("saveVolumeMesh", &psDomain<T, 3>::saveVolumeMesh,
+      .def("saveVolumeMesh", &Domain<T, 3>::saveVolumeMesh,
            pybind11::arg("filename"),
            "Save the volume representation of the domain.")
-      .def("saveLevelSets", &psDomain<T, 3>::saveLevelSets)
-      .def("clear", &psDomain<T, 3>::clear);
+      .def("saveLevelSets", &Domain<T, 3>::saveLevelSets)
+      .def("clear", &Domain<T, 3>::clear);
 
-  pybind11::class_<psExtrude<T>>(module, "Extrude")
+  pybind11::class_<Extrude<T>>(module, "Extrude")
       .def(pybind11::init())
-      .def(pybind11::init<psSmartPointer<psDomain<T, 2>> &,
-                          psSmartPointer<psDomain<T, 3>> &, std::array<T, 2>,
+      .def(pybind11::init<SmartPointer<Domain<T, 2>> &,
+                          SmartPointer<Domain<T, 3>> &, std::array<T, 2>,
                           const int,
-                          std::array<lsBoundaryConditionEnum<3>, 3>>(),
+                          std::array<viennals::BoundaryConditionEnum<3>, 3>>(),
            pybind11::arg("inputDomain"), pybind11::arg("outputDomain"),
            pybind11::arg("extent"), pybind11::arg("extrudeDimension"),
            pybind11::arg("boundaryConditions"))
-      .def("setInputDomain", &psExtrude<T>::setInputDomain,
+      .def("setInputDomain", &Extrude<T>::setInputDomain,
            "Set the input domain to be extruded.")
-      .def("setOutputDomain", &psExtrude<T>::setOutputDomain,
+      .def("setOutputDomain", &Extrude<T>::setOutputDomain,
            "Set the output domain. The 3D output domain will be overwritten by "
            "the extruded domain.")
-      .def("setExtent", &psExtrude<T>::setExtent,
+      .def("setExtent", &Extrude<T>::setExtent,
            "Set the min and max extent in the extruded dimension.")
-      .def("setExtrudeDimension", &psExtrude<T>::setExtrudeDimension,
+      .def("setExtrudeDimension", &Extrude<T>::setExtrudeDimension,
            "Set which index of the added dimension (x: 0, y: 1, z: 2).")
       .def("setBoundaryConditions",
-           pybind11::overload_cast<std::array<lsBoundaryConditionEnum<3>, 3>>(
-               &psExtrude<T>::setBoundaryConditions),
+           pybind11::overload_cast<
+               std::array<viennals::BoundaryConditionEnum<3>, 3>>(
+               &Extrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
-      .def("apply", &psExtrude<T>::apply, "Run the extrusion.");
+      .def("apply", &Extrude<T>::apply, "Run the extrusion.");
 #endif
 
-  // rayReflection.hpp
-  module.def("rayReflectionSpecular", &rayReflectionSpecular<T>,
-             "Specular reflection,");
-  module.def("rayReflectionDiffuse", &rayReflectionDiffuse<T, D>,
-             "Diffuse reflection.");
-  module.def("rayReflectionConedCosine", &rayReflectionConedCosine<T, D>,
-             "Coned cosine reflection.");
-
-  // psUtils::Timer
-  pybind11::class_<psUtils::Timer<std::chrono::high_resolution_clock>>(module,
-                                                                       "Timer")
-      .def(pybind11::init<>())
-      .def("start", &psUtils::Timer<std::chrono::high_resolution_clock>::start,
-           "Start the timer.")
-      .def("finish",
-           &psUtils::Timer<std::chrono::high_resolution_clock>::finish,
-           "Stop the timer.")
-      .def("reset", &psUtils::Timer<std::chrono::high_resolution_clock>::reset,
-           "Reset the timer.")
-      .def_readonly(
-          "currentDuration",
-          &psUtils::Timer<std::chrono::high_resolution_clock>::currentDuration,
-          "Get the current duration of the timer in nanoseconds.")
-      .def_readonly(
-          "totalDuration",
-          &psUtils::Timer<std::chrono::high_resolution_clock>::totalDuration,
-          "Get the total duration of the timer in nanoseconds.");
+  //   // rayReflection.hpp
+  //   module.def("rayReflectionSpecular", &rayReflectionSpecular<T>,
+  //              "Specular reflection,");
+  //   module.def("rayReflectionDiffuse", &rayReflectionDiffuse<T, D>,
+  //              "Diffuse reflection.");
+  //   module.def("rayReflectionConedCosine", &rayReflectionConedCosine<T, D>,
+  //              "Coned cosine reflection.");
 }

@@ -7,4 +7,4 @@ configure_file(cantileverWetEtching.py ${CMAKE_CURRENT_BINARY_DIR}/cantileverWet
 configure_file(cantilever_mask.gds ${CMAKE_CURRENT_BINARY_DIR}/cantilever_mask.gds COPYONLY)
 
 add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
-setup_windows_bat(${PROJECT_NAME} ${VIENNAPS_EXAMPLES_LIB})
+viennacore_setup_bat(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR})

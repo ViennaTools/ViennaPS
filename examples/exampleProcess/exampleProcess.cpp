@@ -1,7 +1,6 @@
 #include <geometries/psMakeHole.hpp>
 #include <lsMakeGeometry.hpp>
 
-#include <psPointData.hpp>
 #include <psProcess.hpp>
 #include <psProcessModel.hpp>
 
@@ -9,90 +8,95 @@
 #include "surfaceModel.hpp"
 #include "velocityField.hpp"
 
+namespace ps = viennaps;
+namespace ls = viennals;
+
 int main() {
   using NumericType = double;
   constexpr int D = 3;
 
-  psLogger::setLogLevel(psLogLevel::INFO);
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   // particles
   auto particle = std::make_unique<Particle<NumericType, D>>(0.2, 10.);
 
   // surface model
-  auto surfModel = psSmartPointer<SurfaceModel<NumericType>>::New();
+  auto surfModel = ps::SmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = psSmartPointer<VelocityField<NumericType>>::New();
+  auto velField = ps::SmartPointer<VelocityField<NumericType>>::New();
 
   /* ------------- Geometry setup (ViennaLS) ------------ */
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   {
     NumericType extent = 8;
     NumericType gridDelta = 0.5;
     double bounds[2 * D] = {0};
     for (int i = 0; i < 2 * D; ++i)
       bounds[i] = i % 2 == 0 ? -extent : extent;
-    lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+    ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
     for (int i = 0; i < D - 1; ++i)
       boundaryCons[i] =
-          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+          ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
     boundaryCons[D - 1] =
-        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+        ls::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    auto mask = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto mask = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
     NumericType normal[3] = {0.};
     NumericType origin[3] = {0.};
     normal[D - 1] = -1.;
-    lsMakeGeometry<NumericType, D>(
-        mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    ls::MakeGeometry<NumericType, D>(
+        mask, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    auto maskCut = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto maskCut = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
     normal[D - 1] = 1.;
     origin[D - 1] = 2.;
-    lsMakeGeometry<NumericType, D>(
-        maskCut, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    ls::MakeGeometry<NumericType, D>(
+        maskCut,
+        ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(mask, maskCut,
-                                       lsBooleanOperationEnum::INTERSECT)
+    ls::BooleanOperation<NumericType, D>(mask, maskCut,
+                                         ls::BooleanOperationEnum::INTERSECT)
         .apply();
 
     origin[D - 1] = 0;
     normal[D - 1] = 1.;
-    lsMakeGeometry<NumericType, D>(
-        maskCut, lsSmartPointer<lsCylinder<NumericType, D>>::New(
+    ls::MakeGeometry<NumericType, D>(
+        maskCut, ps::SmartPointer<ls::Cylinder<NumericType, D>>::New(
                      origin, normal, 2. + gridDelta, 5.))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(
-        mask, maskCut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    ls::BooleanOperation<NumericType, D>(
+        mask, maskCut, ls::BooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
 
-    domain->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+    domain->insertNextLevelSetAsMaterial(mask, ps::Material::Mask);
 
-    auto substrate = psSmartPointer<lsDomain<NumericType, D>>::New(
+    auto substrate = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
         bounds, boundaryCons, gridDelta);
 
-    lsMakeGeometry<NumericType, D>(
-        substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    ls::MakeGeometry<NumericType, D>(
+        substrate,
+        ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    domain->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
+    domain->insertNextLevelSetAsMaterial(substrate, ps::Material::Si);
   }
 
   domain->saveSurfaceMesh("initial.vtp");
 
-  auto model = psSmartPointer<psProcessModel<NumericType, D>>::New();
+  auto model = ps::SmartPointer<ps::ProcessModel<NumericType, D>>::New();
   model->insertNextParticleType(particle);
   model->setSurfaceModel(surfModel);
   model->setVelocityField(velField);
   model->setProcessName("ExampleProcess");
 
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
   process.setProcessDuration(5);

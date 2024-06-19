@@ -2,23 +2,24 @@
 
 #include <sstream>
 
-#include <psSmartPointer.hpp>
+#include <vcSmartPointer.hpp>
 
 #include "applicationParameters.hpp"
 
+using namespace viennaps;
+
 class ApplicationParser {
 private:
-  psSmartPointer<ApplicationParameters> params;
+  SmartPointer<ApplicationParameters> params;
 
 public:
   ApplicationParser() {}
 
-  ApplicationParser(
-      const psSmartPointer<ApplicationParameters> passedParameters)
+  ApplicationParser(const SmartPointer<ApplicationParameters> passedParameters)
       : params(passedParameters) {}
 
   void
-  setParameters(const psSmartPointer<ApplicationParameters> passedParameters) {
+  setParameters(const SmartPointer<ApplicationParameters> passedParameters) {
     params = passedParameters;
   }
 
@@ -53,67 +54,66 @@ public:
   }
 
 private:
-  void parseMaterial(const std::string materialString, psMaterial &material) {
+  void parseMaterial(const std::string materialString, Material &material) {
     if (materialString == "Undefined") {
-      material = psMaterial::None;
+      material = Material::None;
     } else if (materialString == "Si") {
-      material = psMaterial::Si;
+      material = Material::Si;
     } else if (materialString == "SiO2") {
-      material = psMaterial::SiO2;
+      material = Material::SiO2;
     } else if (materialString == "Si3N4") {
-      material = psMaterial::Si3N4;
+      material = Material::Si3N4;
     } else if (materialString == "PolySi") {
-      material = psMaterial::PolySi;
+      material = Material::PolySi;
     } else if (materialString == "Polymer") {
-      material = psMaterial::Polymer;
+      material = Material::Polymer;
     } else if (materialString == "Al2O3") {
-      material = psMaterial::Al2O3;
+      material = Material::Al2O3;
     } else if (materialString == "SiC") {
-      material = psMaterial::SiC;
+      material = Material::SiC;
     } else if (materialString == "Metal") {
-      material = psMaterial::Metal;
+      material = Material::Metal;
     } else if (materialString == "W") {
-      material = psMaterial::W;
+      material = Material::W;
     } else if (materialString == "Dielectric") {
-      material = psMaterial::Dielectric;
+      material = Material::Dielectric;
     } else if (materialString == "SiON") {
-      material = psMaterial::SiON;
+      material = Material::SiON;
     } else if (materialString == "SiN") {
-      material = psMaterial::SiN;
+      material = Material::SiN;
     } else if (materialString == "TiN") {
-      material = psMaterial::TiN;
+      material = Material::TiN;
     } else if (materialString == "Cu") {
-      material = psMaterial::Cu;
+      material = Material::Cu;
     } else if (materialString == "Air") {
-      material = psMaterial::Air;
+      material = Material::Air;
     } else if (materialString == "GAS") {
-      material = psMaterial::GAS;
+      material = Material::GAS;
     } else if (materialString == "GaN") {
-      material = psMaterial::GaN;
+      material = Material::GaN;
     } else {
       std::cout << "Unknown material: " << materialString << std::endl;
-      material = psMaterial::None;
+      material = Material::None;
     }
   }
 
   void parseInit(std::istringstream &stream) {
     unsigned integrationSchemeNum = 0;
     auto config = parseLineStream(stream);
-    psUtils::AssignItems(
-        config, psUtils::Item{"xExtent", params->xExtent},
-        psUtils::Item{"yExtent", params->yExtent},
-        psUtils::Item{"resolution", params->gridDelta},
-        psUtils::Item{"logLevel", params->logLevel},
-        psUtils::Item{"periodic", params->periodicBoundary},
-        psUtils::Item{"integrationScheme", integrationSchemeNum});
+    utils::AssignItems(config, utils::Item{"xExtent", params->xExtent},
+                       utils::Item{"yExtent", params->yExtent},
+                       utils::Item{"resolution", params->gridDelta},
+                       utils::Item{"logLevel", params->logLevel},
+                       utils::Item{"periodic", params->periodicBoundary},
+                       utils::Item{"integrationScheme", integrationSchemeNum});
     if (integrationSchemeNum > 9) {
       std::cout << "Invalid integration scheme number. Using default."
                 << std::endl;
       integrationSchemeNum = 0;
     }
     params->integrationScheme =
-        static_cast<lsIntegrationSchemeEnum>(integrationSchemeNum);
-    psLogger::setLogLevel(static_cast<psLogLevel>(params->logLevel));
+        static_cast<viennals::IntegrationSchemeEnum>(integrationSchemeNum);
+    Logger::setLogLevel(static_cast<LogLevel>(params->logLevel));
   }
 
   void parseGeometry(std::istringstream &stream) {
@@ -123,49 +123,49 @@ private:
     std::string material;
     if (type == "Trench") {
       params->geometryType = GeometryType::TRENCH;
-      psUtils::AssignItems(config, psUtils::Item{"width", params->trenchWidth},
-                           psUtils::Item{"depth", params->trenchHeight},
-                           psUtils::Item{"zPos", params->maskZPos},
-                           psUtils::Item{"tapering", params->taperAngle},
-                           psUtils::Item{"mask", params->mask},
-                           psUtils::Item{"material", material});
+      utils::AssignItems(config, utils::Item{"width", params->trenchWidth},
+                         utils::Item{"depth", params->trenchHeight},
+                         utils::Item{"zPos", params->maskZPos},
+                         utils::Item{"tapering", params->taperAngle},
+                         utils::Item{"mask", params->mask},
+                         utils::Item{"material", material});
       parseMaterial(material, params->material);
     } else if (type == "Hole") {
       params->geometryType = GeometryType::HOLE;
-      psUtils::AssignItems(config, psUtils::Item{"radius", params->holeRadius},
-                           psUtils::Item{"depth", params->holeDepth},
-                           psUtils::Item{"zPos", params->maskZPos},
-                           psUtils::Item{"tapering", params->taperAngle},
-                           psUtils::Item{"mask", params->mask},
-                           psUtils::Item{"material", material});
+      utils::AssignItems(config, utils::Item{"radius", params->holeRadius},
+                         utils::Item{"depth", params->holeDepth},
+                         utils::Item{"zPos", params->maskZPos},
+                         utils::Item{"tapering", params->taperAngle},
+                         utils::Item{"mask", params->mask},
+                         utils::Item{"material", material});
       parseMaterial(material, params->material);
     } else if (type == "Plane") {
       params->geometryType = GeometryType::PLANE;
-      psUtils::AssignItems(config, psUtils::Item{"zPos", params->maskZPos});
+      utils::AssignItems(config, utils::Item{"zPos", params->maskZPos});
       parseMaterial(material, params->material);
     } else if (type == "Stack") {
       params->geometryType = GeometryType::STACK;
-      psUtils::AssignItems(
-          config, psUtils::Item{"numLayers", params->numLayers},
-          psUtils::Item{"layerHeight", params->layerHeight},
-          psUtils::Item{"maskHeight", params->maskHeight},
-          psUtils::Item{"substrateHeight", params->substrateHeight},
-          psUtils::Item{"holeRadius", params->holeRadius});
+      utils::AssignItems(
+          config, utils::Item{"numLayers", params->numLayers},
+          utils::Item{"layerHeight", params->layerHeight},
+          utils::Item{"maskHeight", params->maskHeight},
+          utils::Item{"substrateHeight", params->substrateHeight},
+          utils::Item{"holeRadius", params->holeRadius});
     } else if (type == "GDS") {
       params->geometryType = GeometryType::GDS;
-      psUtils::AssignItems(config, psUtils::Item{"file", params->fileName},
-                           psUtils::Item{"layer", params->layers},
-                           psUtils::Item{"zPos", params->maskZPos},
-                           psUtils::Item{"maskHeight", params->maskHeight},
-                           psUtils::Item{"invert", params->maskInvert},
-                           psUtils::Item{"xPadding", params->xPadding},
-                           psUtils::Item{"yPadding", params->yPadding},
-                           psUtils::Item{"material", material});
+      utils::AssignItems(config, utils::Item{"file", params->fileName},
+                         utils::Item{"layer", params->layers},
+                         utils::Item{"zPos", params->maskZPos},
+                         utils::Item{"maskHeight", params->maskHeight},
+                         utils::Item{"invert", params->maskInvert},
+                         utils::Item{"xPadding", params->xPadding},
+                         utils::Item{"yPadding", params->yPadding},
+                         utils::Item{"material", material});
       parseMaterial(material, params->material);
     } else if (type == "Import") {
       params->geometryType = GeometryType::IMPORT;
-      psUtils::AssignItems(config, psUtils::Item{"file", params->fileName},
-                           psUtils::Item{"layers", params->layers});
+      utils::AssignItems(config, utils::Item{"file", params->fileName},
+                         utils::Item{"layers", params->layers});
     } else {
       params->geometryType = GeometryType::NONE;
       std::cout << "Invalid geometry type." << std::endl;
@@ -180,67 +180,64 @@ private:
     if (model == "SingleParticleProcess") {
       std::string material;
       params->processType = ProcessType::SINGLEPARTICLEPROCESS;
-      psUtils::AssignItems(config, psUtils::Item{"rate", params->rate},
-                           psUtils::Item{"time", params->processTime},
-                           psUtils::Item{"sticking", params->sticking},
-                           psUtils::Item{"cosineExponent", params->cosinePower},
-                           psUtils::Item{"smoothFlux", params->smoothFlux},
-                           psUtils::Item{"raysPerPoint", params->raysPerPoint},
-                           psUtils::Item{"material", material});
+      utils::AssignItems(config, utils::Item{"rate", params->rate},
+                         utils::Item{"time", params->processTime},
+                         utils::Item{"sticking", params->sticking},
+                         utils::Item{"cosineExponent", params->cosinePower},
+                         utils::Item{"smoothFlux", params->smoothFlux},
+                         utils::Item{"raysPerPoint", params->raysPerPoint},
+                         utils::Item{"material", material});
       parseMaterial(material, params->material);
     } else if (model == "SF6O2Etching") {
       params->processType = ProcessType::SF6O2ETCHING;
-      psUtils::AssignItems(
-          config, psUtils::Item{"time", params->processTime},
-          psUtils::Item{"ionFlux", params->ionFlux},
-          psUtils::Item{"meanIonEnergy", params->ionEnergy},
-          psUtils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
-          psUtils::Item{"etchantFlux", params->etchantFlux},
-          psUtils::Item{"oxygenFlux", params->oxygenFlux},
-          psUtils::Item{"A_O", params->A_O},
-          psUtils::Item{"smoothFlux", params->smoothFlux},
-          psUtils::Item{"ionExponent", params->ionExponent},
-          psUtils::Item{"raysPerPoint", params->raysPerPoint});
+      utils::AssignItems(config, utils::Item{"time", params->processTime},
+                         utils::Item{"ionFlux", params->ionFlux},
+                         utils::Item{"meanIonEnergy", params->ionEnergy},
+                         utils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
+                         utils::Item{"etchantFlux", params->etchantFlux},
+                         utils::Item{"oxygenFlux", params->oxygenFlux},
+                         utils::Item{"A_O", params->A_O},
+                         utils::Item{"smoothFlux", params->smoothFlux},
+                         utils::Item{"ionExponent", params->ionExponent},
+                         utils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "FluorocarbonEtching") {
       params->processType = ProcessType::FLUOROCARBONETCHING;
-      psUtils::AssignItems(
-          config, psUtils::Item{"time", params->processTime},
-          psUtils::Item{"ionFlux", params->ionFlux},
-          psUtils::Item{"meanIonEnergy", params->ionEnergy},
-          psUtils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
-          psUtils::Item{"etchantFlux", params->etchantFlux},
-          psUtils::Item{"polyFlux", params->oxygenFlux},
-          psUtils::Item{"deltaP", params->deltaP},
-          psUtils::Item{"smoothFlux", params->smoothFlux},
-          psUtils::Item{"raysPerPoint", params->raysPerPoint});
+      utils::AssignItems(config, utils::Item{"time", params->processTime},
+                         utils::Item{"ionFlux", params->ionFlux},
+                         utils::Item{"meanIonEnergy", params->ionEnergy},
+                         utils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
+                         utils::Item{"etchantFlux", params->etchantFlux},
+                         utils::Item{"polyFlux", params->oxygenFlux},
+                         utils::Item{"deltaP", params->deltaP},
+                         utils::Item{"smoothFlux", params->smoothFlux},
+                         utils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "SphereDistribution") {
       params->processType = ProcessType::SPHEREDISTRIBUTION;
-      psUtils::AssignItems(config, psUtils::Item{"radius", params->radius});
+      utils::AssignItems(config, utils::Item{"radius", params->radius});
     } else if (model == "BoxDistribution") {
       params->processType = ProcessType::BOXDISTRIBUTION;
-      psUtils::AssignItems(config,
-                           psUtils::Item{"halfAxisX", params->halfAxes[0]},
-                           psUtils::Item{"halfAxisY", params->halfAxes[1]},
-                           psUtils::Item{"halfAxisZ", params->halfAxes[2]});
+      utils::AssignItems(config, utils::Item{"halfAxisX", params->halfAxes[0]},
+                         utils::Item{"halfAxisY", params->halfAxes[1]},
+                         utils::Item{"halfAxisZ", params->halfAxes[2]});
     } else if (model == "DirectionalEtching") {
       params->processType = ProcessType::DIRECTIONALETCHING;
       std::string material = "Undefined";
-      psUtils::AssignItems(
-          config, psUtils::Item{"direction", params->direction},
-          psUtils::Item{"directionalRate", params->directionalRate},
-          psUtils::Item{"isotropicRate", params->isotropicRate},
-          psUtils::Item{"time", params->processTime},
-          psUtils::Item{"maskMaterial", material});
+      utils::AssignItems(
+          config, utils::Item{"direction", params->direction},
+          utils::Item{"directionalRate", params->directionalRate},
+          utils::Item{"isotropicRate", params->isotropicRate},
+          utils::Item{"time", params->processTime},
+          utils::Item{"maskMaterial", material});
       parseMaterial(material, params->maskMaterial);
     } else if (model == "Isotropic") {
       params->processType = ProcessType::ISOTROPIC;
       std::string material = "Undefined";
       std::string maskMaterial = "Mask";
-      psUtils::AssignItems(config, psUtils::Item{"rate", params->rate},
-                           psUtils::Item{"time", params->processTime},
-                           psUtils::Item{"time", params->processTime},
-                           psUtils::Item{"material", material},
-                           psUtils::Item{"maskMaterial", maskMaterial});
+      utils::AssignItems(config, utils::Item{"rate", params->rate},
+                         utils::Item{"time", params->processTime},
+                         utils::Item{"time", params->processTime},
+                         utils::Item{"material", material},
+                         utils::Item{"maskMaterial", maskMaterial});
       parseMaterial(material, params->material);
       parseMaterial(maskMaterial, params->maskMaterial);
     } else if (model == "Anisotropic") {
@@ -253,7 +250,7 @@ private:
 
   void parsePlanarize(std::istringstream &stream) {
     auto config = parseLineStream(stream);
-    psUtils::AssignItems(config, psUtils::Item{"height", params->maskZPos});
+    utils::AssignItems(config, utils::Item{"height", params->maskZPos});
   }
 
   void parseOutput(std::istringstream &stream) {

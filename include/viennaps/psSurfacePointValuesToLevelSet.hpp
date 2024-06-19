@@ -1,31 +1,36 @@
 #pragma once
 
-#include "compact/psKDTree.hpp"
-#include "psSmartPointer.hpp"
-
 #include <hrleSparseIterator.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 
-template <class NumericType, int D> class psSurfacePointValuesToLevelSet {
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
+#include <vcKDTree.hpp>
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType, int D> class SurfacePointValuesToLevelSet {
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
 
   lsDomainType levelSet;
-  psSmartPointer<lsMesh<NumericType>> mesh;
+  SmartPointer<viennals::Mesh<NumericType>> mesh;
   std::vector<std::string> dataNames;
 
 public:
-  psSurfacePointValuesToLevelSet() {}
+  SurfacePointValuesToLevelSet() {}
 
-  psSurfacePointValuesToLevelSet(lsDomainType passedLevelSet,
-                                 psSmartPointer<lsMesh<NumericType>> passedMesh,
-                                 std::vector<std::string> passedDataNames)
+  SurfacePointValuesToLevelSet(
+      lsDomainType passedLevelSet,
+      SmartPointer<viennals::Mesh<NumericType>> passedMesh,
+      std::vector<std::string> passedDataNames)
       : levelSet(passedLevelSet), mesh(passedMesh), dataNames(passedDataNames) {
   }
 
   void setLevelSet(lsDomainType passedLevelSet) { levelSet = passedLevelSet; }
 
-  void setMesh(psSmartPointer<lsMesh<NumericType>> passedMesh) {
+  void setMesh(SmartPointer<viennals::Mesh<NumericType>> passedMesh) {
     mesh = passedMesh;
   }
 
@@ -40,34 +45,34 @@ public:
 
   void apply() {
     if (!levelSet) {
-      psLogger::getInstance()
-          .addWarning("No level set passed to psSurfacePointValuesToLevelSet.")
+      Logger::getInstance()
+          .addWarning("No level set passed to SurfacePointValuesToLevelSet.")
           .print();
       return;
     }
 
     if (!mesh) {
-      psLogger::getInstance()
-          .addWarning("No mesh passed to psSurfacePointValuesToLevelSet.")
+      Logger::getInstance()
+          .addWarning("No mesh passed to SurfacePointValuesToLevelSet.")
           .print();
       return;
     }
 
-    psKDTree<NumericType, std::array<NumericType, 3>> transTree(
-        mesh->getNodes());
+    KDTree<NumericType, Vec3D<NumericType>> transTree(mesh->getNodes());
     transTree.build();
     const auto gridDelta = levelSet->getGrid().getGridDelta();
 
     std::vector<std::size_t> levelSetPointToMeshIds(
         levelSet->getNumberOfPoints());
 
-    for (hrleConstSparseIterator<typename lsDomain<NumericType, D>::DomainType>
+    for (hrleConstSparseIterator<
+             typename viennals::Domain<NumericType, D>::DomainType>
              it(levelSet->getDomain());
          !it.isFinished(); ++it) {
 
       if (it.isDefined()) {
         auto lsIndicies = it.getStartIndices();
-        std::array<NumericType, 3> levelSetPointCoordinate{0., 0., 0.};
+        Vec3D<NumericType> levelSetPointCoordinate{0., 0., 0.};
         for (unsigned i = 0; i < D; i++) {
           levelSetPointCoordinate[i] = lsIndicies[i] * gridDelta;
         }
@@ -79,13 +84,10 @@ public:
 
     for (const auto dataName : dataNames) {
       auto pointData = mesh->getCellData().getScalarData(dataName);
-      if (!pointData) {
-        psLogger::getInstance()
-            .addWarning("Could not find " + dataName + " in mesh values.")
-            .print();
+      if (!pointData)
         continue;
-      }
-      auto data = levelSet->getPointData().getScalarData(dataName);
+
+      auto data = levelSet->getPointData().getScalarData(dataName, true);
       if (data != nullptr) {
         data->resize(levelSet->getNumberOfPoints());
       } else {
@@ -100,3 +102,5 @@ public:
     }
   }
 };
+
+} // namespace viennaps

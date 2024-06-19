@@ -3,26 +3,32 @@
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
 
-namespace DirectionalEtchingImplementation {
+#include <vcVectorUtil.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
+namespace impl {
 template <class NumericType, int D>
-class DirectionalEtchVelocityField : public psVelocityField<NumericType> {
-  const std::array<NumericType, 3> direction_;
+class DirectionalEtchVelocityField : public VelocityField<NumericType> {
+  const Vec3D<NumericType> direction_;
   const NumericType directionalVelocity_;
   const NumericType isotropicVelocity_;
   const std::vector<int> maskMaterials_;
 
 public:
-  DirectionalEtchVelocityField(std::array<NumericType, 3> direction,
+  DirectionalEtchVelocityField(Vec3D<NumericType> direction,
                                const NumericType directionalVelocity,
                                const NumericType isotropicVelocity,
                                const std::vector<int> &mask)
       : direction_(direction), directionalVelocity_(directionalVelocity),
         isotropicVelocity_(isotropicVelocity), maskMaterials_(mask) {}
 
-  std::array<NumericType, 3>
-  getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
-                    const std::array<NumericType, 3> &normalVector,
-                    unsigned long) override {
+  Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
+                                       int material,
+                                       const Vec3D<NumericType> &normalVector,
+                                       unsigned long) override {
     if (isMaskMaterial(material)) {
       return {0.};
     } else {
@@ -51,50 +57,52 @@ private:
     return false;
   }
 };
-} // namespace DirectionalEtchingImplementation
+} // namespace impl
 
 /// Directional etching with one masking material.
 template <typename NumericType, int D>
-class psDirectionalEtching : public psProcessModel<NumericType, D> {
+class DirectionalEtching : public ProcessModel<NumericType, D> {
 public:
-  psDirectionalEtching(const std::array<NumericType, 3> &direction,
-                       const NumericType directionalVelocity = 1.,
-                       const NumericType isotropicVelocity = 0.,
-                       const psMaterial mask = psMaterial::Mask) {
+  DirectionalEtching(const Vec3D<NumericType> &direction,
+                     const NumericType directionalVelocity = 1.,
+                     const NumericType isotropicVelocity = 0.,
+                     const Material mask = Material::Mask) {
     // default surface model
-    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
     std::vector<int> maskMaterialsInt = {static_cast<int>(mask)};
-    auto velField = psSmartPointer<
-        DirectionalEtchingImplementation::DirectionalEtchVelocityField<
-            NumericType, D>>::New(direction, directionalVelocity,
-                                  isotropicVelocity, maskMaterialsInt);
+    auto velField =
+        SmartPointer<impl::DirectionalEtchVelocityField<NumericType, D>>::New(
+            direction, directionalVelocity, isotropicVelocity,
+            maskMaterialsInt);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("DirectionalEtching");
   }
 
-  psDirectionalEtching(const std::array<NumericType, 3> &direction,
-                       const NumericType directionalVelocity,
-                       const NumericType isotropicVelocity,
-                       const std::vector<psMaterial> maskMaterials) {
+  DirectionalEtching(const Vec3D<NumericType> &direction,
+                     const NumericType directionalVelocity,
+                     const NumericType isotropicVelocity,
+                     const std::vector<Material> maskMaterials) {
     // default surface model
-    auto surfModel = psSmartPointer<psSurfaceModel<NumericType>>::New();
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     std::vector<int> maskMaterialsInt;
     for (const auto &mat : maskMaterials) {
       maskMaterialsInt.push_back(static_cast<int>(mat));
     }
     // velocity field
-    auto velField = psSmartPointer<
-        DirectionalEtchingImplementation::DirectionalEtchVelocityField<
-            NumericType, D>>::New(direction, directionalVelocity,
-                                  isotropicVelocity, maskMaterialsInt);
+    auto velField =
+        SmartPointer<impl::DirectionalEtchVelocityField<NumericType, D>>::New(
+            direction, directionalVelocity, isotropicVelocity,
+            maskMaterialsInt);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("DirectionalEtching");
   }
 };
+
+} // namespace viennaps

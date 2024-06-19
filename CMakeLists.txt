@@ -1,19 +1,21 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
-  LANGUAGES CXX
-  VERSION 2.0.2)
+  LANGUAGES CXX C
+  VERSION 3.0.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
-option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
-option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
-
-option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
+
+option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
+option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
+
+option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
+option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 
 # --------------------------------------------------------------------------------------------------------
 # Library options
@@ -32,6 +34,21 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 #   during build time though, we disable the soname versioning so that we can easily set the rpath to
 #   link against the vtk-python libs
 # --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_PACKAGE_PYTHON)
+  message(
+    STATUS
+      "[ViennaPS] Using remote packages due to 'VIENNAPS_PACKAGE_PYTHON', the build will take a long time!"
+  )
+
+  # CIBUILDWHEEL is absolutely cursed and won't work when this is turned on.
+  # I don't know why...
+  if(NOT VIENNAPS_IS_CI)
+    set(CPM_DOWNLOAD_ALL ON)
+  endif()
+
+  set(VIENNAPS_BUILD_PYTHON ON)
+endif()
 
 if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
@@ -78,23 +95,37 @@ target_include_directories(
 include("cmake/cpm.cmake")
 
 CPMAddPackage(
+  NAME ViennaCore
+  VERSION 1.0.0
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+
+CPMAddPackage(
   NAME PackageProject
-  VERSION 1.11.1
+  VERSION 1.11.2
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 2.1.0
+  VERSION 3.0.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 3.1.0
+  VERSION 4.0.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaRay ViennaTools::ViennaLS)
+CPMFindPackage(
+  NAME ViennaCS
+  VERSION 1.0.0
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+
+target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
+                                                ViennaTools::ViennaRay ViennaTools::ViennaCS)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Application
@@ -146,4 +177,4 @@ packageProject(
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaLS;ViennaRay")
+  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")

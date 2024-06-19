@@ -4,24 +4,28 @@
 
 #include <lsToDiskMesh.hpp>
 
-template <class NumericType, int D> class psToDiskMesh {
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType, int D> class ToDiskMesh {
   using translatorType =
-      psSmartPointer<std::unordered_map<unsigned long, unsigned long>>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
-  using meshType = psSmartPointer<lsMesh<NumericType>>;
+      SmartPointer<std::unordered_map<unsigned long, unsigned long>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+  using meshType = SmartPointer<viennals::Mesh<NumericType>>;
 
   psDomainType domain;
   translatorType translator;
   meshType mesh;
 
 public:
-  psToDiskMesh() {}
+  ToDiskMesh() {}
 
-  psToDiskMesh(psDomainType passedDomain, meshType passedMesh)
+  ToDiskMesh(psDomainType passedDomain, meshType passedMesh)
       : domain(passedDomain), mesh(passedMesh) {}
 
-  psToDiskMesh(psDomainType passedDomain, meshType passedMesh,
-               translatorType passedTranslator)
+  ToDiskMesh(psDomainType passedDomain, meshType passedMesh,
+             translatorType passedTranslator)
       : domain(passedDomain), mesh(passedMesh), translator(passedTranslator) {}
 
   void setDomain(psDomainType passedDomain) { domain = passedDomain; }
@@ -35,15 +39,17 @@ public:
   translatorType getTranslator() const { return translator; }
 
   void apply() {
-    lsToDiskMesh<NumericType, D> meshConverter;
+    viennals::ToDiskMesh<NumericType, D> meshConverter;
     meshConverter.setMesh(mesh);
     if (domain->getMaterialMap())
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     if (translator.get())
       meshConverter.setTranslator(translator);
-    for (const auto ls : *domain->getLevelSets()) {
+    for (const auto ls : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(ls);
     }
     meshConverter.apply();
   }
 };
+
+} // namespace viennaps

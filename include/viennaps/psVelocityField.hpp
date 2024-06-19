@@ -1,35 +1,40 @@
 #pragma once
 
-#include "psSmartPointer.hpp"
+#include <vcSmartPointer.hpp>
+#include <vcVectorUtil.hpp>
 
 #include <vector>
 
-template <typename NumericType> class psVelocityField {
-public:
-  virtual ~psVelocityField() = default;
+namespace viennaps {
 
-  virtual NumericType
-  getScalarVelocity(const std::array<NumericType, 3> &coordinate, int material,
-                    const std::array<NumericType, 3> &normalVector,
-                    unsigned long pointId) {
+using namespace viennacore;
+
+template <typename NumericType> class VelocityField {
+public:
+  virtual ~VelocityField() = default;
+
+  virtual NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
+                                        int material,
+                                        const Vec3D<NumericType> &normalVector,
+                                        unsigned long pointId) {
     return 0;
   }
 
-  virtual std::array<NumericType, 3>
-  getVectorVelocity(const std::array<NumericType, 3> &coordinate, int material,
-                    const std::array<NumericType, 3> &normalVector,
+  virtual Vec3D<NumericType>
+  getVectorVelocity(const Vec3D<NumericType> &coordinate, int material,
+                    const Vec3D<NumericType> &normalVector,
                     unsigned long pointId) {
     return {0., 0., 0.};
   }
 
   virtual NumericType
   getDissipationAlpha(int direction, int material,
-                      const std::array<NumericType, 3> &centralDifferences) {
+                      const Vec3D<NumericType> &centralDifferences) {
     return 0;
   }
 
   virtual void
-  setVelocities(psSmartPointer<std::vector<NumericType>> velocities) {}
+  setVelocities(SmartPointer<std::vector<NumericType>> velocities) {}
 
   // translation field options
   // 0: do not translate level set ID to surface ID
@@ -39,19 +44,19 @@ public:
 };
 
 template <typename NumericType>
-class psDefaultVelocityField : public psVelocityField<NumericType> {
+class DefaultVelocityField : public VelocityField<NumericType> {
 public:
-  psDefaultVelocityField(const int translationFieldOptions = 1)
+  DefaultVelocityField(const int translationFieldOptions = 1)
       : translationFieldOptions_(translationFieldOptions) {}
 
-  virtual NumericType getScalarVelocity(const std::array<NumericType, 3> &, int,
-                                        const std::array<NumericType, 3> &,
+  virtual NumericType getScalarVelocity(const Vec3D<NumericType> &, int,
+                                        const Vec3D<NumericType> &,
                                         unsigned long pointId) override {
     return velocities_->at(pointId);
   }
 
   void
-  setVelocities(psSmartPointer<std::vector<NumericType>> velocities) override {
+  setVelocities(SmartPointer<std::vector<NumericType>> velocities) override {
     velocities_ = velocities;
   }
 
@@ -60,6 +65,8 @@ public:
   }
 
 private:
-  psSmartPointer<std::vector<NumericType>> velocities_;
+  SmartPointer<std::vector<NumericType>> velocities_;
   const int translationFieldOptions_ = 1; // default: use map translator
 };
+
+} // namespace viennaps

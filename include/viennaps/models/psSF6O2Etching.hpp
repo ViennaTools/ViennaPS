@@ -4,14 +4,15 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
-#include "../psLogger.hpp"
 #include "../psProcessModel.hpp"
 #include "../psSurfaceModel.hpp"
 #include "../psVelocityField.hpp"
 
-namespace SF6O2Implementation {
+namespace viennaps {
 
-template <typename NumericType> struct Parameters {
+using namespace viennacore;
+
+template <typename NumericType> struct SF6O2Parameters {
   // fluxes in (1e15 /cm² /s)
   NumericType ionFlux = 12.;
   NumericType etchantFlux = 1.8e3;
@@ -69,17 +70,20 @@ template <typename NumericType> struct Parameters {
   } Ions;
 };
 
+namespace impl {
+
 template <typename NumericType, int D>
-class SurfaceModel : public psSurfaceModel<NumericType> {
-  using psSurfaceModel<NumericType>::coverages;
-  const Parameters<NumericType> &params;
+class SF6O2SurfaceModel : public SurfaceModel<NumericType> {
+  using SurfaceModel<NumericType>::coverages;
+  const SF6O2Parameters<NumericType> &params;
 
 public:
-  SurfaceModel(const Parameters<NumericType> &pParams) : params(pParams) {}
+  SF6O2SurfaceModel(const SF6O2Parameters<NumericType> &pParams)
+      : params(pParams) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = psSmartPointer<psPointData<NumericType>>::New();
+      coverages = SmartPointer<viennals::PointData<NumericType>>::New();
     } else {
       coverages->clear();
     }
@@ -88,10 +92,10 @@ public:
     coverages->insertNextScalarData(cov, "oCoverage");
   }
 
-  psSmartPointer<std::vector<NumericType>> calculateVelocities(
-      psSmartPointer<psPointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) override {
+  SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIds) override {
     updateCoverages(rates, materialIds);
     const auto numPoints = rates->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
@@ -110,7 +114,7 @@ public:
         break;
       }
 
-      if (psMaterialMap::isMaterial(materialIds[i], psMaterial::Mask)) {
+      if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
         etchRate[i] =
             -(1 / params.Mask.rho) * ionSputteringRate->at(i) * params.ionFlux;
       } else {
@@ -124,13 +128,13 @@ public:
 
     if (stop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
-      psLogger::getInstance().addInfo("Etch stop depth reached.").print();
+      Logger::getInstance().addInfo("Etch stop depth reached.").print();
     }
 
-    return psSmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
+    return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void updateCoverages(psSmartPointer<psPointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
     const auto numPoints = rates->getScalarData(0)->size();
@@ -178,25 +182,25 @@ public:
 };
 
 template <typename NumericType, int D>
-class Ion : public rayParticle<Ion<NumericType, D>, NumericType> {
+class SF6O2Ion
+    : public viennaray::Particle<SF6O2Ion<NumericType, D>, NumericType> {
 public:
-  Ion(const Parameters<NumericType> &pParams)
+  SF6O2Ion(const SF6O2Parameters<NumericType> &pParams)
       : params(pParams),
         A(1. /
           (1. + params.Ions.n_l * (M_PI_2 / params.Ions.inflectAngle - 1.))) {}
 
-  void surfaceCollision(NumericType rayWeight,
-                        const rayTriple<NumericType> &rayDir,
-                        const rayTriple<NumericType> &geomNormal,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                        const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *globalData,
-                        rayRNG &Rng) override final {
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *globalData,
+                        RNG &) override final {
 
     // collect data for this hit
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
 
-    const double cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
+    const double cosTheta = -DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
@@ -213,7 +217,7 @@ public:
     NumericType A_sp = params.Si.A_sp;
     NumericType B_sp = params.Si.B_sp;
     NumericType Eth_sp = params.Si.Eth_sp;
-    if (psMaterialMap::isMaterial(materialId, psMaterial::Mask)) {
+    if (MaterialMap::isMaterial(materialId, Material::Mask)) {
       A_sp = params.Mask.A_sp;
       B_sp = params.Mask.B_sp;
       Eth_sp = params.Mask.Eth_sp;
@@ -245,13 +249,13 @@ public:
     localData.getVectorData(2)[primID] += Y_O;
   }
 
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
-    auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
+                    const viennaray::TracingData<NumericType> *globalData,
+                    RNG &Rng) override final {
+    auto cosTheta = -DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
@@ -280,19 +284,19 @@ public:
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > params.Si.Eth_ie) {
       E = NewEnergy;
-      auto direction = rayReflectionConedCosine<NumericType, D>(
+      auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng, std::max(incAngle, params.Ions.minAngle));
-      return std::pair<NumericType, rayTriple<NumericType>>{0., direction};
+      return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
-      return std::pair<NumericType, rayTriple<NumericType>>{
-          1., rayTriple<NumericType>{0., 0., 0.}};
+      return std::pair<NumericType, Vec3D<NumericType>>{
+          1., Vec3D<NumericType>{0., 0., 0.}};
     }
   }
-  void initNew(rayRNG &RNG) override final {
+  void initNew(RNG &rngState) override final {
     std::normal_distribution<NumericType> normalDist{params.Ions.meanEnergy,
                                                      params.Ions.sigmaEnergy};
     do {
-      E = normalDist(RNG);
+      E = normalDist(rngState);
     } while (E <= 0.);
   }
   NumericType getSourceDistributionPower() const override final {
@@ -303,33 +307,33 @@ public:
   }
 
 private:
-  const Parameters<NumericType> &params;
+  const SF6O2Parameters<NumericType> &params;
   const NumericType A;
   NumericType E;
 };
 
 template <typename NumericType, int D>
-class Etchant : public rayParticle<Etchant<NumericType, D>, NumericType> {
-  const Parameters<NumericType> &params;
+class SF6O2Etchant
+    : public viennaray::Particle<SF6O2Etchant<NumericType, D>, NumericType> {
+  const SF6O2Parameters<NumericType> &params;
 
 public:
-  Etchant(const Parameters<NumericType> &pParams) : params(pParams) {}
+  SF6O2Etchant(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {}
 
-  void surfaceCollision(NumericType rayWeight,
-                        const rayTriple<NumericType> &rayDir,
-                        const rayTriple<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *globalData,
-                        rayRNG &Rng) override final {
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
+                        const Vec3D<NumericType> &, const unsigned int primID,
+                        const int,
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
+                    const viennaray::TracingData<NumericType> *globalData,
+                    RNG &rngState) override final {
 
     // F surface coverage
     const auto &phi_F = globalData->getVectorData(0)[primID];
@@ -337,12 +341,13 @@ public:
     const auto &phi_O = globalData->getVectorData(1)[primID];
     // Obtain the sticking probability
     NumericType beta = params.beta_F;
-    if (psMaterialMap::isMaterial(materialId, psMaterial::Mask))
+    if (MaterialMap::isMaterial(materialId, Material::Mask))
       beta = params.Mask.beta_F;
     NumericType S_eff = beta * std::max(1. - phi_F - phi_O, 0.);
 
-    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, rayTriple<NumericType>>{S_eff, direction};
+    auto direction =
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
+    return std::pair<NumericType, Vec3D<NumericType>>{S_eff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
@@ -351,64 +356,65 @@ public:
 };
 
 template <typename NumericType, int D>
-class Oxygen : public rayParticle<Oxygen<NumericType, D>, NumericType> {
-  const Parameters<NumericType> &params;
+class SF6O2Oxygen
+    : public viennaray::Particle<SF6O2Oxygen<NumericType, D>, NumericType> {
+  const SF6O2Parameters<NumericType> &params;
 
 public:
-  Oxygen(const Parameters<NumericType> &pParams) : params(pParams) {}
+  SF6O2Oxygen(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {}
 
-  void surfaceCollision(NumericType rayWeight,
-                        const rayTriple<NumericType> &rayDir,
-                        const rayTriple<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
-                        rayTracingData<NumericType> &localData,
-                        const rayTracingData<NumericType> *globalData,
-                        rayRNG &Rng) override final {
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
+                        const Vec3D<NumericType> &, const unsigned int primID,
+                        const int,
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
     // Rate is normalized by dividing with the local sticking coefficient
     localData.getVectorData(0)[primID] += rayWeight;
   }
-  std::pair<NumericType, rayTriple<NumericType>>
-  surfaceReflection(NumericType rayWeight, const rayTriple<NumericType> &rayDir,
-                    const rayTriple<NumericType> &geomNormal,
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const rayTracingData<NumericType> *globalData,
-                    rayRNG &Rng) override final {
+                    const viennaray::TracingData<NumericType> *globalData,
+                    RNG &rngState) override final {
 
     NumericType S_eff;
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
     NumericType beta = params.beta_O;
-    if (psMaterialMap::isMaterial(materialId, psMaterial::Mask))
+    if (MaterialMap::isMaterial(materialId, Material::Mask))
       beta = params.Mask.beta_O;
     S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
 
-    auto direction = rayReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, rayTriple<NumericType>>{S_eff, direction};
+    auto direction =
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
+    return std::pair<NumericType, Vec3D<NumericType>>{S_eff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"oxygenRate"};
   }
 };
-} // namespace SF6O2Implementation
+} // namespace impl
 
 /// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
 /// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
 /// DOI: https://doi.org/10.1116/1.1830495
 /// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
-class psSF6O2Etching : public psProcessModel<NumericType, D> {
+class SF6O2Etching : public ProcessModel<NumericType, D> {
 public:
-  psSF6O2Etching() { initializeModel(); }
+  SF6O2Etching() { initializeModel(); }
 
   // All flux values are in units 1e16 / cm²
-  psSF6O2Etching(const double ionFlux, const double etchantFlux,
-                 const double oxygenFlux, const NumericType meanEnergy /* eV */,
-                 const NumericType sigmaEnergy /* eV */, // 5 parameters
-                 const NumericType ionExponent = 300.,
-                 const NumericType oxySputterYield = 2.,
-                 const NumericType etchStopDepth =
-                     std::numeric_limits<NumericType>::lowest()) {
+  SF6O2Etching(const double ionFlux, const double etchantFlux,
+               const double oxygenFlux, const NumericType meanEnergy /* eV */,
+               const NumericType sigmaEnergy /* eV */, // 5 parameters
+               const NumericType ionExponent = 300.,
+               const NumericType oxySputterYield = 2.,
+               const NumericType etchStopDepth =
+                   std::numeric_limits<NumericType>::lowest()) {
     params.ionFlux = ionFlux;
     params.etchantFlux = etchantFlux;
     params.oxygenFlux = oxygenFlux;
@@ -420,37 +426,29 @@ public:
     initializeModel();
   }
 
-  psSF6O2Etching(const SF6O2Implementation::Parameters<NumericType> &pParams)
-      : params(pParams) {
+  SF6O2Etching(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {
     initializeModel();
   }
 
-  void
-  setParameters(const SF6O2Implementation::Parameters<NumericType> &pParams) {
+  void setParameters(const SF6O2Parameters<NumericType> &pParams) {
     params = pParams;
   }
 
-  SF6O2Implementation::Parameters<NumericType> &getParameters() {
-    return params;
-  }
+  SF6O2Parameters<NumericType> &getParameters() { return params; }
 
 private:
   void initializeModel() {
     // particles
-    auto ion =
-        std::make_unique<SF6O2Implementation::Ion<NumericType, D>>(params);
-    auto etchant =
-        std::make_unique<SF6O2Implementation::Etchant<NumericType, D>>(params);
-    auto oxygen =
-        std::make_unique<SF6O2Implementation::Oxygen<NumericType, D>>(params);
+    auto ion = std::make_unique<impl::SF6O2Ion<NumericType, D>>(params);
+    auto etchant = std::make_unique<impl::SF6O2Etchant<NumericType, D>>(params);
+    auto oxygen = std::make_unique<impl::SF6O2Oxygen<NumericType, D>>(params);
 
     // surface model
     auto surfModel =
-        psSmartPointer<SF6O2Implementation::SurfaceModel<NumericType, D>>::New(
-            params);
+        SmartPointer<impl::SF6O2SurfaceModel<NumericType, D>>::New(params);
 
     // velocity field
-    auto velField = psSmartPointer<psDefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
@@ -460,5 +458,7 @@ private:
     this->insertNextParticleType(oxygen);
   }
 
-  SF6O2Implementation::Parameters<NumericType> params;
+  SF6O2Parameters<NumericType> params;
 };
+
+} // namespace viennaps

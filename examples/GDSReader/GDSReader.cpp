@@ -1,8 +1,8 @@
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
-#include <psProcess.hpp>
-#include <psToDiskMesh.hpp>
-#include <psVTKWriter.hpp>
+
+namespace ps = viennaps;
+namespace ls = viennals;
 
 int main(int argc, char **argv) {
   using NumericType = double;
@@ -10,25 +10,25 @@ int main(int argc, char **argv) {
 
   // read GDS mask file
   const NumericType gridDelta = 0.01;
-  lsBoundaryConditionEnum<D> boundaryConds[D] = {
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY};
-  auto mask = psSmartPointer<psGDSGeometry<NumericType, D>>::New(gridDelta);
+  ls::BoundaryConditionEnum<D> boundaryConds[D] = {
+      ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY};
+  auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
-  psGDSReader<NumericType, D>(mask, "mask.gds").apply();
+  ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
 
   // geometry setup
   auto bounds = mask->getBounds();
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
 
   // substrate plane
   NumericType origin[D] = {0., 0., 0.};
   NumericType normal[D] = {0., 0., 1.};
-  auto plane = psSmartPointer<lsDomain<NumericType, D>>::New(
+  auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
       bounds, boundaryConds, gridDelta);
-  lsMakeGeometry<NumericType, D>(
-      plane, psSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+  ls::MakeGeometry<NumericType, D>(
+      plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
       .apply();
 
   geometry->insertNextLevelSet(plane);

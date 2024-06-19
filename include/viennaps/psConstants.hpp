@@ -2,10 +2,38 @@
 
 #include <cmath>
 
-namespace psParameters {
+namespace viennaps {
+
+namespace constants {
 
 static constexpr double kB = 8.617333262 * 1e-5; // eV / K
 static constexpr double roomTemperature = 300.;  // K
+static constexpr double N_A = 6.0221367e3; //  Avogadro's number in 10^20 mol^-1
+static constexpr double R = 8.314;         // Ideal gas constant in J/(mol K)
+
+inline double torrToPascal(double torr) { return torr * 133.322; }
+
+inline double celsiusToKelvin(double celsius) { return celsius + 273.15; }
+
+// p: pressure in torr
+// T: temperature in Celsius
+// d: diameter of the gas molecule in angstroms
+// Result: mean free path in um
+inline double gasMeanFreePath(double p, double T, double d) {
+  T = constants::celsiusToKelvin(T);
+  p = constants::torrToPascal(p);
+  return constants::R * T /
+         (std::sqrt(2.) * M_PI * d * d * constants::N_A * p) * 1e6; // in um
+}
+
+// T: temperature in Celsius
+// m: molar mass in amu
+// Result: mean velocity in um/s
+inline double gasMeanThermalVelocity(double T, double m) {
+  T = constants::celsiusToKelvin(T);
+  m = m * 1e-3;                                               // amu to kg / mol
+  return std::sqrt(8. * constants::R * T / (M_PI * m)) * 1e6; // in um/s
+}
 
 namespace Si {
 
@@ -72,4 +100,5 @@ static constexpr double A = 1. / (1. + n_l * (M_PI_2 / inflectAngle - 1.));
 static constexpr double minAngle = 1.3962634;
 } // namespace Ion
 
-} // namespace psParameters
+} // namespace constants
+} // namespace viennaps

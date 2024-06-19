@@ -1,122 +1,60 @@
 import viennaps2d as vps
+import viennals2d as vls  
 
 
-def makeLShape(params: dict, material: vps.Material) -> vps.Domain:
-    try:
-        import viennals2d as vls
-    except ImportError:
-        print(
-            "The ViennaLS Python library is required to run this example. "
-            "Please install it and try again."
-        )
-        return
-
-    domain = vps.Domain()
-    gridDelta = params["gridDelta"]
-    bounds = [0] * vps.D * 2
-    bounds[0] = -params["verticalWidth"] / 2.0 - params["xPad"]
-    bounds[1] = params["verticalWidth"] / 2.0 + params["xPad"]
-    if vps.D == 3:
-        bounds[2] = -params["verticalWidth"] / 2.0 - params["xPad"]
-        bounds[3] = (
-            -params["verticalWidth"] / 2.0 + params["xPad"] + params["horizontalWidth"]
-        )
-    else:
-        bounds[1] = (
-            -params["verticalWidth"] / 2.0 + params["xPad"] + params["horizontalWidth"]
-        )
-
-    boundaryCons = [vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY] * (vps.D - 1)
-    boundaryCons.append(vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY)
-
-    substrate = vls.lsDomain(bounds, boundaryCons, gridDelta)
-    normal = [0.0] * vps.D
-    origin = [0.0] * vps.D
-    normal[vps.D - 1] = 1.0
-    origin[vps.D - 1] = params["verticalDepth"]
-    vls.lsMakeGeometry(substrate, vls.lsPlane(origin, normal)).apply()
-    domain.insertNextLevelSetAsMaterial(substrate, material)
-
-    # Create the vertical trench
-    vertBox = vls.lsDomain(domain.getLevelSets()[0])
-    minPoint = [0] * vps.D
-    maxPoint = [0] * vps.D
-    for i in range(vps.D - 1):
-        minPoint[i] = -params["verticalWidth"] / 2.0
-        maxPoint[i] = params["verticalWidth"] / 2.0
-    maxPoint[vps.D - 1] = params["verticalDepth"]
-    vls.lsMakeGeometry(vertBox, vls.lsBox(minPoint, maxPoint)).apply()
-    domain.applyBooleanOperation(
-        vertBox, vls.lsBooleanOperationEnum.RELATIVE_COMPLEMENT
-    )
-
-    # Create the horizontal trench
-    horiBox = vls.lsDomain(domain.getLevelSets()[0])
-    minPoint = [0] * vps.D
-    maxPoint = [params["verticalWidth"] / 2.0] * vps.D
-    for i in range(vps.D - 1):
-        minPoint[i] = -params["verticalWidth"] / 2.0
-    maxPoint[vps.D - 1] = params["horizontalHeight"]
-    maxPoint[vps.D - 2] = -params["verticalWidth"] / 2.0 + params["horizontalWidth"]
-    vls.lsMakeGeometry(horiBox, vls.lsBox(minPoint, maxPoint)).apply()
-    domain.applyBooleanOperation(
-        horiBox, vls.lsBooleanOperationEnum.RELATIVE_COMPLEMENT
-    )
-    return domain
-
-
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 params = vps.ReadConfigFile("config.txt")
-vps.setNumThreads(int(params["numThreads"]))
+geometry = vps.Domain()
 
-# Create a domain
-domain = makeLShape(params, vps.Material.TiN)
-domain.generateCellSet(
-    params["verticalDepth"] + params["topSpace"], vps.Material.GAS, True
-)
-cellSet = domain.getCellSet()
+# Create the geometry
+boundaryCons = [vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY, vls.BoundaryConditionEnum.INFINITE_BOUNDARY]
+gridDelta = params["gridDelta"]
+bounds = [0., 
+          params["openingWidth"] / 2. + params["xPad"] + params["gapLength"], 
+          -gridDelta,
+          params["openingDepth"] + params["gapHeight"] + gridDelta]
 
-# Segment the cells into surface, material, and gas cells
-vps.SegmentCells(cellSet).apply()
-cellSet.writeVTU("initial.vtu")
+substrate = vls.Domain(bounds, boundaryCons, gridDelta)
+normal = [0., 1.]
+origin = [0., params["openingDepth"] + params["gapHeight"]]
+vls.MakeGeometry(substrate, vls.Plane(origin, normal)).apply()
 
-timer = vps.Timer()
-timer.start()
+geometry.insertNextLevelSetAsMaterial(substrate, vps.Material.Si)
 
-# Calculate the mean free path for the gas cells
-mfpCalc = vps.MeanFreePath()
-mfpCalc.setDomain(domain)
-mfpCalc.setNumRaysPerCell(params["raysPerCell"])
-mfpCalc.setReflectionLimit(int(params["reflectionLimit"]))
-mfpCalc.setRngSeed(int(params["seed"]))
-mfpCalc.setMaterial(vps.Material.GAS)
-mfpCalc.setBulkLambda(params["bulkLambda"])
-mfpCalc.apply()
+vertBox = vls.Domain(bounds, boundaryCons, gridDelta)
+minPoint = [-gridDelta, 0.]
+maxPoint = [params["openingWidth"] / 2., params["gapHeight"] + params["openingDepth"] + gridDelta]
+vls.MakeGeometry(vertBox, vls.Box(minPoint, maxPoint)).apply()
 
-timer.finish()
-print(f"Mean free path calculation took {timer.totalDuration * 1e-9} seconds.")
+geometry.applyBooleanOperation(vertBox, vls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
-# Run the atomic layer deposition model
-model = vps.csAtomicLayerProcess(domain)
-model.setMaxLambda(params["bulkLambda"])
-model.setPrintInterval(params["printInterval"])
-model.setStabilityFactor(params["stabilityFactor"])
-model.setFirstPrecursor(
-    "H2O",
-    params["H2O_meanThermalVelocity"],
-    params["H2O_adsorptionRate"],
-    params["H2O_desorptionRate"],
-    params["p1_time"],
-    params["inFlux"],
-)
-model.setSecondPrecursor(
-    "TMA",
-    params["TMA_meanThermalVelocity"],
-    params["TMA_adsorptionRate"],
-    params["TMA_desorptionRate"],
-    params["p2_time"],
-    params["inFlux"],
-)
-model.setPurgeParameters(params["purge_meanThermalVelocity"], params["purge_time"])
-model.setReactionOrder(params["reactionOrder"])
-model.apply()
+horiBox = vls.Domain(bounds, boundaryCons, gridDelta)
+minPoint = [params["openingWidth"] / 2. - gridDelta, 0.]
+maxPoint = [params["openingWidth"] / 2. + params["gapLength"], params["gapHeight"]]
+vls.MakeGeometry(horiBox, vls.Box(minPoint, maxPoint)).apply()
+geometry.applyBooleanOperation(horiBox, vls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
+
+geometry.saveVolumeMesh("SingleParticleALD_initial.vtu")
+
+geometry.duplicateTopLevelSet(vps.Material.Al2O3)
+
+gasMFP = vps.constants.gasMeanFreePath(params["pressure"], params["temperature"], params["diameter"])
+print("Mean free path: ", gasMFP, " um")
+
+model = vps.SingleParticleALD(params["stickingProbability"], params["numCycles"],
+                                params["growthPerCycle"], params["totalCycles"],
+                                params["coverageTimeStep"], params["evFlux"],
+                                params["inFlux"], params["s0"], gasMFP)
+
+ALP = vps.AtomicLayerProcess(geometry, model)
+ALP.setCoverageTimeStep(params["coverageTimeStep"])
+ALP.setPulseTime(params["pulseTime"])
+ALP.setNumCycles(int(params["numCycles"]))
+ALP.setNumberOfRaysPerPoint(int(params["numRaysPerPoint"]))
+ALP.disableRandomSeeds()
+ALP.apply()
+
+## TODO: Implement MeasureProfile in Python
+#   MeasureProfile<NumericType, D>(domain, params.get("gapHeight") / 2.)
+#       .save(params.get<std::string>("outputFile"));
+
+geometry.saveVolumeMesh("SingleParticleALD_final.vtu")

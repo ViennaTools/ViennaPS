@@ -1,15 +1,21 @@
 #include <psGDSReader.hpp>
-#include <psTestAssert.hpp>
+#include <vcTestAsserts.hpp>
 
-template <class NumericType, int D> void psRunTest() {
+namespace viennacore {
+
+using namespace viennaps;
+
+template <class NumericType, int D> void RunTest() {
   const NumericType gridDelta = 0.01;
-  lsBoundaryConditionEnum<D> boundaryConditions[D] = {
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY};
-  auto mask = psSmartPointer<psGDSGeometry<NumericType, D>>::New(gridDelta);
+  viennals::BoundaryConditionEnum<D> boundaryConditions[D] = {
+      viennals::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      viennals::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
+      viennals::BoundaryConditionEnum<D>::INFINITE_BOUNDARY};
+  auto mask = SmartPointer<GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConditions);
-  psGDSReader<NumericType, D> reader(mask, "mask.gds");
+  GDSReader<NumericType, D> reader(mask, "mask.gds");
 }
 
-int main() { PSRUN_3D_TESTS }
+} // namespace viennacore
+
+int main() { VC_RUN_3D_TESTS }

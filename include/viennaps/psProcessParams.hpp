@@ -1,10 +1,14 @@
 #pragma once
 
-#include "psLogger.hpp"
+#include <vcLogger.hpp>
 
 #include <vector>
 
-template <typename NumericType> class psProcessParams {
+namespace viennaps {
+
+using namespace viennacore;
+
+template <typename NumericType> class ProcessParams {
 private:
   std::vector<NumericType> scalarData;
   std::vector<std::string> scalarDataLabels;
@@ -30,8 +34,8 @@ public:
         return i;
       }
     }
-    psLogger::getInstance()
-        .addError("Can not find scalar data label in psProcessParams.")
+    Logger::getInstance()
+        .addError("Can not find scalar data label in ProcessParams.")
         .print();
     return -1;
   }
@@ -41,10 +45,11 @@ public:
   const std::vector<NumericType> &getScalarData() const { return scalarData; }
   std::string getScalarDataLabel(int i) const {
     if (i >= scalarDataLabels.size())
-      psLogger::getInstance()
-          .addError(
-              "Getting scalar data label in psProcessParams out of range.")
+      Logger::getInstance()
+          .addError("Getting scalar data label in ProcessParams out of range.")
           .print();
     return scalarDataLabels[i];
   }
 };
+
+} // namespace viennaps

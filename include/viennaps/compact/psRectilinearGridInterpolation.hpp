@@ -4,15 +4,19 @@
 #include <set>
 #include <vector>
 
-#include "../psLogger.hpp"
 #include "psValueEstimator.hpp"
+
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
 
 // Class providing linear interpolation on rectilinear data grids
 template <typename NumericType>
-class psRectilinearGridInterpolation
-    : public psValueEstimator<NumericType, bool> {
+class RectilinearGridInterpolation : public ValueEstimator<NumericType, bool> {
 
-  using Parent = psValueEstimator<NumericType, bool>;
+  using Parent = ValueEstimator<NumericType, bool>;
 
   using typename Parent::ItemType;
   using typename Parent::SizeType;
@@ -62,7 +66,7 @@ class psRectilinearGridInterpolation
           uniqueValues[axis].insert((start + i)->at(axis));
 
           if (rangeSize != i - tmp) {
-            psLogger::getInstance()
+            Logger::getInstance()
                 .addWarning("Data is not arranged in a rectilinear grid!")
                 .print();
             equalSize = false;
@@ -85,19 +89,19 @@ class psRectilinearGridInterpolation
   }
 
 public:
-  psRectilinearGridInterpolation() {}
+  RectilinearGridInterpolation() {}
 
   bool initialize() override {
     if (!data || (data && data->empty())) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning(
-              "psRectilinearGridInterpolation: the provided data is empty.")
+              "RectilinearGridInterpolation: the provided data is empty.")
           .print();
       return false;
     }
 
     if (data->at(0).size() != inputDim + outputDim) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning(
               "psNearestNeighborsInterpolation: the sum of the provided "
               "InputDimension and OutputDimension does not match the "
@@ -115,7 +119,7 @@ public:
     auto equalSize = rearrange(localData.begin(), localData.end(), 0, true);
 
     if (!equalSize) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("Data is not arranged in a rectilinear grid!")
           .print();
       return false;
@@ -123,7 +127,7 @@ public:
 
     for (int i = 0; i < inputDim; ++i)
       if (uniqueValues[i].empty()) {
-        psLogger::getInstance()
+        Logger::getInstance()
             .addWarning("The grid has no values along dimension " +
                         std::to_string(i))
             .print();
@@ -235,3 +239,5 @@ public:
     return {{result, isInside}};
   }
 };
+
+} // namespace viennaps

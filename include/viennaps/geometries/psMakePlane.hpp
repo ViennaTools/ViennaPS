@@ -4,6 +4,12 @@
 
 #include <lsMakeGeometry.hpp>
 
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
 /// This class provides a simple way to create a plane in a level set. It can be
 /// used to create a substrate of any material_. The plane can be added to an
 /// already existing geometry or a new geometry can be created. The plane is
@@ -11,10 +17,10 @@
 /// y direction in 2D. The plane is centered around the origin with the total
 /// specified extent and height. The plane can have a periodic boundary in the x
 /// and y (only 3D) direction.
-template <class NumericType, int D> class psMakePlane {
-  using LSPtrType = psSmartPointer<lsDomain<NumericType, D>>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+template <class NumericType, int D> class MakePlane {
+  using LSPtrType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
 
@@ -24,31 +30,30 @@ template <class NumericType, int D> class psMakePlane {
   const NumericType baseHeight_;
 
   const bool periodicBoundary_ = false;
-  const psMaterial material_;
+  const Material material_;
 
   const bool add_;
 
 public:
   // Adds a plane to an already existing geometry.
-  psMakePlane(psDomainType domain, NumericType baseHeight = 0.,
-              psMaterial material = psMaterial::None)
+  MakePlane(psDomainType domain, NumericType baseHeight = 0.,
+            Material material = Material::None)
       : pDomain_(domain), baseHeight_(baseHeight), material_(material),
         add_(true) {}
 
   // Creates a new geometry with a plane.
-  psMakePlane(psDomainType domain, NumericType gridDelta, NumericType xExtent,
-              NumericType yExtent, NumericType baseHeight,
-              bool periodicBoundary = false,
-              psMaterial material = psMaterial::None)
+  MakePlane(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+            NumericType yExtent, NumericType baseHeight,
+            bool periodicBoundary = false, Material material = Material::None)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), baseHeight_(baseHeight),
         periodicBoundary_(periodicBoundary), material_(material), add_(false) {}
 
   void apply() {
     if (add_) {
-      if (!pDomain_->getLevelSets()->back()) {
-        psLogger::getInstance()
-            .addWarning("psMakePlane: Plane can only be added to already "
+      if (!pDomain_->getLevelSets().back()) {
+        Logger::getInstance()
+            .addWarning("MakePlane: Plane can only be added to already "
                         "existing geometry.")
             .print();
         return;
@@ -88,22 +93,22 @@ public:
 
     if (add_) {
       auto substrate = LSPtrType::New(pDomain_->getGrid());
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material_ == psMaterial::None) {
+      if (material_ == Material::None) {
         pDomain_->insertNextLevelSet(substrate);
       } else {
         pDomain_->insertNextLevelSetAsMaterial(substrate, material_);
       }
     } else {
       auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta_);
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material_ == psMaterial::None) {
+      if (material_ == Material::None) {
         pDomain_->insertNextLevelSet(substrate);
       } else {
         pDomain_->insertNextLevelSetAsMaterial(substrate, material_);
@@ -111,3 +116,5 @@ public:
     }
   }
 };
+
+} // namespace viennaps

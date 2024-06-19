@@ -5,31 +5,34 @@
 #include <lsExtrude.hpp>
 #include <lsToMesh.hpp>
 
-template <class NumericType> class psExtrude {
-  psSmartPointer<psDomain<NumericType, 2>> inputDomain;
-  psSmartPointer<psDomain<NumericType, 3>> outputDomain;
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType> class Extrude {
+  SmartPointer<Domain<NumericType, 2>> inputDomain;
+  SmartPointer<Domain<NumericType, 3>> outputDomain;
   std::array<NumericType, 2> extent = {0., 0.};
   int extrudeDim = 0;
-  std::array<lsBoundaryConditionEnum<3>, 3> boundaryConds;
+  std::array<viennals::BoundaryConditionEnum<3>, 3> boundaryConds;
 
 public:
-  psExtrude() {}
-  psExtrude(psSmartPointer<psDomain<NumericType, 2>> &passedInputDomain,
-            psSmartPointer<psDomain<NumericType, 3>> &passedOutputDomain,
-            std::array<NumericType, 2> passedExtent, const int passedExtrudeDim,
-            std::array<lsBoundaryConditionEnum<3>, 3> passedBoundaryConds)
+  Extrude() {}
+  Extrude(SmartPointer<Domain<NumericType, 2>> &passedInputDomain,
+          SmartPointer<Domain<NumericType, 3>> &passedOutputDomain,
+          std::array<NumericType, 2> passedExtent, const int passedExtrudeDim,
+          std::array<viennals::BoundaryConditionEnum<3>, 3> passedBoundaryConds)
       : inputDomain(passedInputDomain), outputDomain(passedOutputDomain),
         extent(passedExtent), extrudeDim(passedExtrudeDim),
         boundaryConds(passedBoundaryConds) {}
 
-  void
-  setInputDomain(lsSmartPointer<psDomain<NumericType, 2>> passedInputDomain) {
+  void setInputDomain(SmartPointer<Domain<NumericType, 2>> passedInputDomain) {
     inputDomain = passedInputDomain;
   }
 
   // The 3D output domain will be overwritten by the extruded domain
-  void setOutputDomain(
-      lsSmartPointer<psDomain<NumericType, 3>> &passedOutputDomain) {
+  void
+  setOutputDomain(SmartPointer<Domain<NumericType, 3>> &passedOutputDomain) {
     outputDomain = passedOutputDomain;
   }
 
@@ -44,25 +47,25 @@ public:
   }
 
   void setBoundaryConditions(
-      std::array<lsBoundaryConditionEnum<3>, 3> passedBoundaryConds) {
+      std::array<viennals::BoundaryConditionEnum<3>, 3> passedBoundaryConds) {
     boundaryConds = passedBoundaryConds;
   }
 
-  void
-  setBoundaryConditions(lsBoundaryConditionEnum<3> passedBoundaryConds[3]) {
+  void setBoundaryConditions(
+      viennals::BoundaryConditionEnum<3> passedBoundaryConds[3]) {
     for (int i = 0; i < 3; i++)
       boundaryConds[i] = passedBoundaryConds[i];
   }
 
   void apply() {
     if (inputDomain == nullptr) {
-      lsMessage::getInstance()
-          .addWarning("No input domain supplied to psExtrude! Not converting.")
+      Logger::getInstance()
+          .addWarning("No input domain supplied to Extrude! Not converting.")
           .print();
     }
     if (outputDomain == nullptr) {
-      lsMessage::getInstance()
-          .addWarning("No output domain supplied to psExtrude! Not converting.")
+      Logger::getInstance()
+          .addWarning("No output domain supplied to Extrude! Not converting.")
           .print();
       return;
     }
@@ -70,17 +73,17 @@ public:
     auto materialMap = inputDomain->getMaterialMap();
     outputDomain->clear();
 
-    for (std::size_t i = 0; i < inputDomain->getLevelSets()->size(); i++) {
-      auto tmpLS = psSmartPointer<lsDomain<NumericType, 3>>::New();
-      lsExtrude<NumericType>(inputDomain->getLevelSets()->at(i), tmpLS, extent,
-                             extrudeDim, boundaryConds)
+    for (std::size_t i = 0; i < inputDomain->getLevelSets().size(); i++) {
+      auto tmpLS = SmartPointer<viennals::Domain<NumericType, 3>>::New();
+      viennals::Extrude<NumericType>(inputDomain->getLevelSets().at(i), tmpLS,
+                                     extent, extrudeDim, boundaryConds)
           .apply();
 
-      if (psLogger::getLogLevel() >= 5) {
-        auto mesh = psSmartPointer<lsMesh<NumericType>>::New();
-        lsToMesh<NumericType, 3>(tmpLS, mesh).apply();
-        psVTKWriter<NumericType>(mesh,
-                                 "extrude_layer_" + std::to_string(i) + ".vtp")
+      if (Logger::getLogLevel() >= 5) {
+        auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+        viennals::ToMesh<NumericType, 3>(tmpLS, mesh).apply();
+        viennals::VTKWriter<NumericType>(mesh, "extrude_layer_" +
+                                                   std::to_string(i) + ".vtp")
             .apply();
       }
 
@@ -93,3 +96,5 @@ public:
     }
   }
 };
+
+} // namespace viennaps

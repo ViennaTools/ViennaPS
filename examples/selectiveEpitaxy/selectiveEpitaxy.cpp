@@ -3,61 +3,63 @@
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
-#include "parameters.hpp"
+namespace ps = viennaps;
+namespace ls = viennals;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::utils::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
-    }
-    params.fromMap(config);
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   // substrate
-  psMakePlane<NumericType, D>(geometry, params.gridDelta, params.xExtent,
-                              params.yExtent, 0., false, psMaterial::Mask)
+  ps::MakePlane<NumericType, D>(geometry, params.get("gridDelta"),
+                                params.get("xExtent"), params.get("yExtent"),
+                                0., false, ps::Material::Mask)
       .apply();
   // create fin on substrate
   {
     auto fin =
-        psSmartPointer<lsDomain<NumericType, D>>::New(geometry->getGrid());
-    NumericType minPoint[3] = {-params.finWidth / 2., -params.finLength / 2.,
-                               -params.gridDelta};
-    NumericType maxPoint[3] = {params.finWidth / 2., params.finLength / 2.,
-                               params.finHeight};
+        ps::SmartPointer<ls::Domain<NumericType, D>>::New(geometry->getGrid());
+    NumericType minPoint[3] = {-params.get("finWidth") / 2.,
+                               -params.get("finLength") / 2.,
+                               -params.get("gridDelta")};
+    NumericType maxPoint[3] = {params.get("finWidth") / 2.,
+                               params.get("finLength") / 2.,
+                               params.get("finHeight")};
     if constexpr (D == 2) {
-      minPoint[1] = -params.gridDelta;
-      maxPoint[1] = params.finHeight;
+      minPoint[1] = -params.get("gridDelta");
+      maxPoint[1] = params.get("finHeight");
     }
-    lsMakeGeometry<NumericType, D>(
-        fin, psSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+    ls::MakeGeometry<NumericType, D>(
+        fin, ps::SmartPointer<ls::Box<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
-    geometry->insertNextLevelSetAsMaterial(fin, psMaterial::Si);
+    geometry->insertNextLevelSetAsMaterial(fin, ps::Material::Si);
     geometry->saveSurfaceMesh("fin.vtp");
   }
 
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet(psMaterial::SiGe);
+  geometry->duplicateTopLevelSet(ps::Material::SiGe);
 
-  auto model = psSmartPointer<psAnisotropicProcess<NumericType, D>>::New(
-      std::vector<std::pair<psMaterial, NumericType>>{
-          {psMaterial::Si, params.epitaxyRate},
-          {psMaterial::SiGe, params.epitaxyRate}});
+  auto model = ps::SmartPointer<ps::AnisotropicProcess<NumericType, D>>::New(
+      std::vector<std::pair<ps::Material, NumericType>>{
+          {ps::Material::Si, params.get("epitaxyRate")},
+          {ps::Material::SiGe, params.get("epitaxyRate")}});
 
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setProcessDuration(params.processTime);
+  process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(
-      lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+      ls::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
   geometry->saveVolumeMesh("initial");
 

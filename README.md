@@ -9,7 +9,6 @@
 
 </div>
 
-
 ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems.
 
 > [!NOTE]  
@@ -22,11 +21,11 @@ Releases are tagged on the master branch and available in the [releases section]
 
 ### Supported Operating Systems
 
-* Windows (Visual Studio)
-
 * Linux (g++ / clang)
 
 * macOS (XCode)
+
+* Windows (Visual Studio)
 
 ### System Requirements
 
@@ -34,15 +33,28 @@ Releases are tagged on the master branch and available in the [releases section]
 
 ### Dependencies (installed automatically)
 
-* [ViennaLS](https://github.com/ViennaTools/viennals)
+* [ViennaCore](https://github.com/ViennaTools/viennacore) >= 1.0.0
 
-* [ViennaRay](https://github.com/ViennaTools/viennaray)
+* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.0.0
+  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.4.0
+  * [VTK](https://vtk.org/) >= 9.0.0
 
-* [pybind11](https://github.com/pybind/pybind11) (only for building Python libs)
+* [ViennaRay](https://github.com/ViennaTools/viennaray) >= 3.0.0
+  * [Embree](https://www.embree.org/) >= 4.0.0
+
+* [ViennaCS](https://github.com/ViennaTools/viennacs) >= 1.0.0
+
+* [pybind11](https://github.com/pybind/pybind11) >= 2.12.0 (only for building Python libs)
+
+The CMake configuration automatically checks if the dependencies are installed.
+If the dependencies are not found on the system, they will be built from source. To use local installations of the dependencies, the `VIENNAPS_LOOKUP_DIRS` variable can be set to the installation path of the dependencies.
 
 ## Installing
 
-The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the _buildDependencies_ target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory:
+> [!NOTE]  
+> __For more detailed installation instructions and troubleshooting tips, please refer to the ViennaPS [documentation](https://viennatools.github.io/ViennaPS/inst/).__
+
+ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the procedure to neatly organize and relocate all header files to a designated directory:
 
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
@@ -62,7 +74,7 @@ The Python package can be built and installed using the `pip` command:
 git clone https://github.com/ViennaTools/ViennaPS.git
 cd ViennaPS
 
-pip install --user .
+pip install .
 ```
 
 > Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
@@ -86,7 +98,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@2.0.0")
+  CPMAddPackage("gh:viennatools/viennaps@3.0.0")
   ```
 
 * With a local installation
@@ -196,7 +208,13 @@ The configuration file must obey a certain structure in order to be parsed corre
 
 ## Contributing
 
-If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html). Before creating a pull request, make sure ALL files have been formatted by clang-format, which can be done using the format-project.sh script in the root directory.
+If you want to contribute to ViennaCS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html).
+
+Make sure to format all files before creating a pull request:
+```bash
+cmake -B build
+cmake --build build --target format
+```
 
 ## Authors
 

@@ -5,8 +5,12 @@
 #include <numeric>
 #include <vector>
 
+namespace viennaps {
+
+using namespace viennacore;
+
 // Base class for data scalers
-template <typename NumericType> class psDataScaler {
+template <typename NumericType> class DataScaler {
 protected:
   using ItemType = std::vector<NumericType>;
   using ItemVectorType = std::vector<ItemType>;
@@ -21,8 +25,8 @@ public:
 
 // Class that calculates scaling factors based on standard deviation
 template <typename NumericType>
-class psStandardScaler : public psDataScaler<NumericType> {
-  using Parent = psDataScaler<NumericType>;
+class StandardScaler : public DataScaler<NumericType> {
+  using Parent = DataScaler<NumericType>;
 
   using typename Parent::ItemType;
   using typename Parent::ItemVectorType;
@@ -32,7 +36,7 @@ class psStandardScaler : public psDataScaler<NumericType> {
   const ItemVectorType &data;
 
 public:
-  psStandardScaler(const ItemVectorType &passedData) : data(passedData) {}
+  StandardScaler(const ItemVectorType &passedData) : data(passedData) {}
 
   void apply() override {
     if (data.empty())
@@ -75,8 +79,8 @@ public:
 
 // Class that calculates scaling factors based on median distances
 template <typename NumericType>
-class psMedianDistanceScaler : public psDataScaler<NumericType> {
-  using Parent = psDataScaler<NumericType>;
+class MedianDistanceScaler : public DataScaler<NumericType> {
+  using Parent = DataScaler<NumericType>;
 
   using typename Parent::ItemType;
   using typename Parent::ItemVectorType;
@@ -86,7 +90,7 @@ class psMedianDistanceScaler : public psDataScaler<NumericType> {
   const ItemVectorType &data;
 
 public:
-  psMedianDistanceScaler(const ItemVectorType &passedData) : data(passedData) {}
+  MedianDistanceScaler(const ItemVectorType &passedData) : data(passedData) {}
 
   void apply() override {
     if (data.empty())
@@ -122,3 +126,5 @@ public:
     }
   }
 };
+
+} // namespace viennaps

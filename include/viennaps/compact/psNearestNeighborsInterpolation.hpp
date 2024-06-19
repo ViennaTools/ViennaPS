@@ -6,13 +6,18 @@
 #include <type_traits>
 
 #include "psDataScaler.hpp"
-#include "psKDTree.hpp"
-
-#include "../psSmartPointer.hpp"
 #include "psValueEstimator.hpp"
 
+#include <vcKDTree.hpp>
+#include <vcLogger.hpp>
+#include <vcSmartPointer.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
 template <typename VectorType, typename SizeType>
-auto extractInputData(psSmartPointer<const VectorType> data, SizeType InputDim,
+auto extractInputData(SmartPointer<const VectorType> data, SizeType InputDim,
                       SizeType OutputDim) {
   VectorType inputData;
   using ElementType = typename VectorType::value_type;
@@ -30,15 +35,16 @@ auto extractInputData(psSmartPointer<const VectorType> data, SizeType InputDim,
 
 // Class providing nearest neighbors interpolation
 template <typename NumericType,
-          typename DataScaler = psStandardScaler<NumericType>>
-class psNearestNeighborsInterpolation
-    : public psValueEstimator<NumericType, NumericType> {
+          typename DataScaler = StandardScaler<NumericType>>
+class NearestNeighborsInterpolation
+    : public ValueEstimator<NumericType, NumericType> {
 
-  static_assert(std::is_base_of_v<psDataScaler<NumericType>, DataScaler>,
-                "psNearestNeighborsInterpolation: the provided DataScaler "
-                "does not inherit from psDataScaler.");
+  static_assert(
+      std::is_base_of_v<viennaps::DataScaler<NumericType>, DataScaler>,
+      "NearestNeighborsInterpolation: the provided DataScaler "
+      "does not inherit from viennaps::DataScaler.");
 
-  using Parent = psValueEstimator<NumericType, NumericType>;
+  using Parent = ValueEstimator<NumericType, NumericType>;
 
   using typename Parent::ItemType;
   using typename Parent::SizeType;
@@ -48,13 +54,13 @@ class psNearestNeighborsInterpolation
   using Parent::inputDim;
   using Parent::outputDim;
 
-  psKDTree<NumericType> kdtree;
+  KDTree<NumericType> kdtree;
 
   int numberOfNeighbors = 3.;
   NumericType distanceExponent = 2.;
 
 public:
-  psNearestNeighborsInterpolation() {}
+  NearestNeighborsInterpolation() {}
 
   void setNumberOfNeighbors(int passedNumberOfNeighbors) {
     numberOfNeighbors = passedNumberOfNeighbors;
@@ -66,19 +72,18 @@ public:
 
   bool initialize() override {
     if (!data || (data && data->empty())) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning(
-              "psNearestNeighborsInterpolation: the provided data is empty.")
+              "NearestNeighborsInterpolation: the provided data is empty.")
           .print();
       return false;
     }
 
     if (data->at(0).size() != inputDim + outputDim) {
-      psLogger::getInstance()
-          .addWarning(
-              "psNearestNeighborsInterpolation: the sum of the provided "
-              "InputDimension and OutputDimension does not match the "
-              "dimension of the provided data.")
+      Logger::getInstance()
+          .addWarning("NearestNeighborsInterpolation: the sum of the provided "
+                      "InputDimension and OutputDimension does not match the "
+                      "dimension of the provided data.")
           .print();
       return false;
     }
@@ -101,9 +106,8 @@ public:
   std::optional<std::tuple<ItemType, NumericType>>
   estimate(const ItemType &input) override {
     if (input.size() != inputDim) {
-      psLogger::getInstance()
-          .addWarning(
-              "psNearestNeighborsInterpolation: No input data provided.")
+      Logger::getInstance()
+          .addWarning("NearestNeighborsInterpolation: No input data provided.")
           .print();
       return {};
     }
@@ -149,3 +153,5 @@ public:
     return {{result, minDistance}};
   }
 };
+
+} // namespace viennaps

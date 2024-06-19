@@ -11,26 +11,23 @@ microelectronic fabrication processes.
 import sys
 
 def _windows_dll_path():
-    
     import os
-    import vtk
-
-    vtk_path = vtk.__path__[0]
 
     additional_paths = [
-        vtk_path,
-        os.path.join(os.path.dirname(vtk_path), 'vtk.libs'),
         os.path.join(os.path.dirname(os.path.dirname(__file__)), 'viennaps.libs')
     ]
 
     for path in additional_paths:
+        if not os.path.exists(path):
+            continue
+
         os.add_dll_directory(path)
         os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
 
 if sys.platform == "win32":
     _windows_dll_path()
 
-from .@MODULE_NAME@ import *
+from .@NAME@ import *
 
 # Config file reader helper function
 def ReadConfigFile(fileName: str):

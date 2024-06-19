@@ -7,4 +7,4 @@ configure_file(holeEtching.py ${CMAKE_CURRENT_BINARY_DIR}/holeEtching.py COPYONL
 configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 
 add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
-setup_windows_bat(${PROJECT_NAME} ${VIENNAPS_EXAMPLES_LIB})
+viennacore_setup_bat(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR})

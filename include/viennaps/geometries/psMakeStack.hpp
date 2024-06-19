@@ -5,6 +5,10 @@
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
 
+namespace viennaps {
+
+using namespace viennacore;
+
 /// Generates a stack of alternating SiO2/Si3N4 layers featuring an optionally
 /// etched hole (3D) or trench (2D) at the center. The stack emerges in the
 /// positive z direction (3D) or y direction (2D) and is centered around the
@@ -13,10 +17,10 @@
 /// stack can incorporate a top mask with a central hole of a specified radius
 /// or a trench with a designated width. This versatile functionality enables
 /// users to create diverse and customized structures for simulation scenarios.
-template <class NumericType, int D> class psMakeStack {
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+template <class NumericType, int D> class MakeStack {
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
 
@@ -38,11 +42,11 @@ template <class NumericType, int D> class psMakeStack {
   BoundaryEnum boundaryConds_[D];
 
 public:
-  psMakeStack(psDomainType domain, NumericType gridDelta, NumericType xExtent,
-              NumericType yExtent, int numLayers, NumericType layerHeight,
-              NumericType substrateHeight, NumericType holeRadius,
-              NumericType trenchWidth, NumericType maskHeight,
-              bool periodicBoundary = false)
+  MakeStack(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+            NumericType yExtent, int numLayers, NumericType layerHeight,
+            NumericType substrateHeight, NumericType holeRadius,
+            NumericType trenchWidth, NumericType maskHeight,
+            bool periodicBoundary = false)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), numLayers_(numLayers), layerHeight_(layerHeight),
         substrateHeight_(substrateHeight), holeRadius_(holeRadius),
@@ -74,21 +78,22 @@ private:
       auto mask = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       origin_[D - 1] =
           substrateHeight_ + layerHeight_ * numLayers_ + maskHeight_;
-      lsMakeGeometry<NumericType, D>(
-          mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+      viennals::MakeGeometry<NumericType, D>(
+          mask,
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
           .apply();
 
       auto maskAdd = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       origin_[D - 1] = substrateHeight_ + layerHeight_ * numLayers_;
       normal_[D - 1] = -1;
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           maskAdd,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
           .apply();
       normal_[D - 1] = 1.;
 
-      lsBooleanOperation<NumericType, D>(mask, maskAdd,
-                                         lsBooleanOperationEnum::INTERSECT)
+      viennals::BooleanOperation<NumericType, D>(
+          mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
           .apply();
 
       if (holeRadius_ == 0.) {
@@ -100,39 +105,40 @@ private:
       NumericType maxPoint[D] = {holeRadius_, substrateHeight_ +
                                                   layerHeight_ * numLayers_ +
                                                   maskHeight_ + gridDelta_};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           maskAdd,
-          lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
           .apply();
 
-      lsBooleanOperation<NumericType, D>(
-          mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+      viennals::BooleanOperation<NumericType, D>(
+          mask, maskAdd, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
 
-      pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+      pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
     }
 
     // Silicon substrate
     auto substrate = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
     origin_[D - 1] = substrateHeight_;
-    lsMakeGeometry<NumericType, D>(
+    viennals::MakeGeometry<NumericType, D>(
         substrate,
-        lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
         .apply();
-    pDomain_->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
+    pDomain_->insertNextLevelSetAsMaterial(substrate, Material::Si);
 
     // Si3N4/SiO2 layers
     NumericType current = substrateHeight_ + layerHeight_;
     for (int i = 0; i < numLayers_; ++i) {
       auto ls = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       origin_[D - 1] = substrateHeight_ + layerHeight_ * (i + 1);
-      lsMakeGeometry<NumericType, D>(
-          ls, lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+      viennals::MakeGeometry<NumericType, D>(
+          ls,
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
           .apply();
       if (i % 2 == 0) {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::SiO2);
       } else {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::Si3N4);
       }
     }
 
@@ -146,16 +152,13 @@ private:
       NumericType maxPoint[D] = {holeRadius_, substrateHeight_ +
                                                   layerHeight_ * numLayers_ +
                                                   maskHeight_ + gridDelta_};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           cutOut,
-          lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
           .apply();
 
-      for (auto layer : *pDomain_->getLevelSets()) {
-        lsBooleanOperation<NumericType, D>(
-            layer, cutOut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
-      }
+      pDomain_->applyBooleanOperation(
+          cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
     }
   }
 
@@ -166,32 +169,33 @@ private:
       auto mask = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       origin_[D - 1] =
           substrateHeight_ + layerHeight_ * numLayers_ + maskHeight_;
-      lsMakeGeometry<NumericType, D>(
-          mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+      viennals::MakeGeometry<NumericType, D>(
+          mask,
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
           .apply();
 
       auto maskAdd = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       origin_[D - 1] = substrateHeight_ + layerHeight_ * numLayers_;
       normal_[D - 1] = -1;
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           maskAdd,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
           .apply();
 
-      lsBooleanOperation<NumericType, D>(mask, maskAdd,
-                                         lsBooleanOperationEnum::INTERSECT)
+      viennals::BooleanOperation<NumericType, D>(
+          mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
           .apply();
 
       if (holeRadius_ > 0.) {
         normal_[D - 1] = 1.;
-        lsMakeGeometry<NumericType, D>(
+        viennals::MakeGeometry<NumericType, D>(
             maskAdd,
-            lsSmartPointer<lsCylinder<NumericType, D>>::New(
+            SmartPointer<viennals::Cylinder<NumericType, D>>::New(
                 origin_, normal_, maskHeight_ + gridDelta_, holeRadius_))
             .apply();
 
-        lsBooleanOperation<NumericType, D>(
-            mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+        viennals::BooleanOperation<NumericType, D>(
+            mask, maskAdd, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
             .apply();
       } else if (trenchWidth_ > 0.) {
         NumericType minPoint[D] = {
@@ -202,39 +206,40 @@ private:
             static_cast<NumericType>(trenchWidth_ / 2.),
             static_cast<NumericType>(yExtent_ / 2. + gridDelta_),
             origin_[D - 1] + maskHeight_ + gridDelta_};
-        lsMakeGeometry<NumericType, D>(
-            maskAdd,
-            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+        viennals::MakeGeometry<NumericType, D>(
+            maskAdd, SmartPointer<viennals::Box<NumericType, D>>::New(minPoint,
+                                                                      maxPoint))
             .apply();
 
-        lsBooleanOperation<NumericType, D>(
-            mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+        viennals::BooleanOperation<NumericType, D>(
+            mask, maskAdd, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
             .apply();
       }
 
-      pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+      pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
     }
 
     // Silicon substrate
     auto substrate = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
     origin_[D - 1] = substrateHeight_;
-    lsMakeGeometry<NumericType, D>(
+    viennals::MakeGeometry<NumericType, D>(
         substrate,
-        lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
         .apply();
-    pDomain_->insertNextLevelSetAsMaterial(substrate, psMaterial::Si);
+    pDomain_->insertNextLevelSetAsMaterial(substrate, Material::Si);
 
     // Si3N4/SiO2 layers
     for (int i = 0; i < numLayers_; ++i) {
       auto ls = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       origin_[D - 1] = substrateHeight_ + layerHeight_ * (i + 1);
-      lsMakeGeometry<NumericType, D>(
-          ls, lsSmartPointer<lsPlane<NumericType, D>>::New(origin_, normal_))
+      viennals::MakeGeometry<NumericType, D>(
+          ls,
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin_, normal_))
           .apply();
       if (i % 2 == 0) {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::SiO2);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::SiO2);
       } else {
-        pDomain_->insertNextLevelSetAsMaterial(ls, psMaterial::Si3N4);
+        pDomain_->insertNextLevelSetAsMaterial(ls, Material::Si3N4);
       }
     }
 
@@ -242,17 +247,15 @@ private:
       // cut out middle
       auto cutOut = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       origin_[D - 1] = 0.;
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           cutOut,
-          lsSmartPointer<lsCylinder<NumericType, D>>::New(
+          SmartPointer<viennals::Cylinder<NumericType, D>>::New(
               origin_, normal_, (numLayers_ + 1) * layerHeight_, holeRadius_))
           .apply();
 
-      for (auto layer : *pDomain_->getLevelSets()) {
-        lsBooleanOperation<NumericType, D>(
-            layer, cutOut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
-      }
+      pDomain_->applyBooleanOperation(
+          cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
+
     } else if (trenchWidth_ > 0. && maskHeight_ == 0.) {
       auto cutOut = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
       NumericType minPoint[D] = {
@@ -264,16 +267,13 @@ private:
           static_cast<NumericType>(yExtent_ / 2. + gridDelta_),
           substrateHeight_ + layerHeight_ * numLayers_ + maskHeight_ +
               gridDelta_};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           cutOut,
-          lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
+          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
           .apply();
 
-      for (auto layer : *pDomain_->getLevelSets()) {
-        lsBooleanOperation<NumericType, D>(
-            layer, cutOut, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
-      }
+      pDomain_->applyBooleanOperation(
+          cutOut, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
     }
   }
 
@@ -306,3 +306,5 @@ private:
     }
   }
 };
+
+} // namespace viennaps

@@ -6,6 +6,10 @@
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
 
+namespace viennaps {
+
+using namespace viennacore;
+
 /// Generates new a hole geometry in the z direction, which, in 2D mode,
 /// corresponds to a trench geometry. Positioned at the origin, the hole is
 /// centered, with the total extent defined in the x and y directions. The
@@ -16,10 +20,10 @@
 /// Additionally, the hole can serve as a mask, with the specified material only
 /// applied to the bottom of the hole, while the remainder adopts the mask
 /// material.
-template <class NumericType, int D> class psMakeHole {
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+template <class NumericType, int D> class MakeHole {
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType domain_ = nullptr;
 
@@ -34,14 +38,14 @@ template <class NumericType, int D> class psMakeHole {
 
   const bool makeMask_;
   const bool periodicBoundary_;
-  const psMaterial material_;
+  const Material material_;
 
 public:
-  psMakeHole(psDomainType domain, NumericType gridDelta, NumericType xExtent,
-             NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
-             NumericType taperAngle = 0., NumericType baseHeight = 0.,
-             bool periodicBoundary = false, bool makeMask = false,
-             psMaterial material = psMaterial::None)
+  MakeHole(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+           NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
+           NumericType taperAngle = 0., NumericType baseHeight = 0.,
+           bool periodicBoundary = false, bool makeMask = false,
+           Material material = Material::None)
       : domain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), holeRadius_(holeRadius), holeDepth_(holeDepth),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
@@ -50,11 +54,11 @@ public:
 
   void apply() {
     if constexpr (D != 3) {
-      psLogger::getInstance()
-          .addWarning("psMakeHole: Hole geometry can only be created in 3D! "
+      Logger::getInstance()
+          .addWarning("MakeHole: Hole geometry can only be created in 3D! "
                       "Falling back to trench geometry.")
           .print();
-      psMakeTrench<NumericType, D>(
+      MakeTrench<NumericType, D>(
           domain_, gridDelta_, xExtent_, yExtent_, 2 * holeRadius_, holeDepth_,
           taperAngle_, baseHeight_, periodicBoundary_, makeMask_, material_)
           .apply();
@@ -92,26 +96,29 @@ public:
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
     origin[D - 1] = baseHeight_;
-    lsMakeGeometry<NumericType, D>(
-        substrate, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        substrate,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     // mask layer
     auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta_);
     origin[D - 1] = holeDepth_ + baseHeight_;
-    lsMakeGeometry<NumericType, D>(
-        mask, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        mask,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
     auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta_);
     origin[D - 1] = baseHeight_;
     normal[D - 1] = -1.;
-    lsMakeGeometry<NumericType, D>(
-        maskAdd, lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+    viennals::MakeGeometry<NumericType, D>(
+        maskAdd,
+        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(mask, maskAdd,
-                                       lsBooleanOperationEnum::INTERSECT)
+    viennals::BooleanOperation<NumericType, D>(
+        mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
         .apply();
 
     // cylinder cutout
@@ -123,28 +130,30 @@ public:
       topRadius += std::tan(taperAngle_ * M_PI / 180.) * holeDepth_;
     }
 
-    lsMakeGeometry<NumericType, D>(
-        maskAdd, lsSmartPointer<lsCylinder<NumericType, D>>::New(
+    viennals::MakeGeometry<NumericType, D>(
+        maskAdd, SmartPointer<viennals::Cylinder<NumericType, D>>::New(
                      origin, normal, holeDepth_ + 2 * gridDelta_, holeRadius_,
                      topRadius))
         .apply();
 
-    lsBooleanOperation<NumericType, D>(
-        mask, maskAdd, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    viennals::BooleanOperation<NumericType, D>(
+        mask, maskAdd, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
 
-    lsBooleanOperation<NumericType, D>(substrate, mask,
-                                       lsBooleanOperationEnum::UNION)
+    viennals::BooleanOperation<NumericType, D>(
+        substrate, mask, viennals::BooleanOperationEnum::UNION)
         .apply();
 
-    if (material_ == psMaterial::None) {
+    if (material_ == Material::None) {
       if (makeMask_)
         domain_->insertNextLevelSet(mask);
       domain_->insertNextLevelSet(substrate, false);
     } else {
       if (makeMask_)
-        domain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+        domain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
       domain_->insertNextLevelSetAsMaterial(substrate, material_, false);
     }
   }
 };
+
+} // namespace viennaps

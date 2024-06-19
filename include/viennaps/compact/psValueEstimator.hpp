@@ -4,16 +4,17 @@
 #include <tuple>
 #include <vector>
 
-#include "../psSmartPointer.hpp"
+namespace viennaps {
 
-template <typename NumericType, typename... FeedbackType>
-class psValueEstimator {
+using namespace viennacore;
+
+template <typename NumericType, typename... FeedbackType> class ValueEstimator {
 public:
   using SizeType = size_t;
   using ItemType = std::vector<NumericType>;
   using VectorType = std::vector<ItemType>;
-  using VectorPtr = psSmartPointer<std::vector<ItemType>>;
-  using ConstPtr = psSmartPointer<const std::vector<ItemType>>;
+  using VectorPtr = SmartPointer<std::vector<ItemType>>;
+  using ConstPtr = SmartPointer<const std::vector<ItemType>>;
 
 protected:
   SizeType inputDim{0};
@@ -39,3 +40,5 @@ public:
   virtual std::optional<std::tuple<ItemType, FeedbackType...>>
   estimate(const ItemType &input) = 0;
 };
+
+} // namespace viennaps

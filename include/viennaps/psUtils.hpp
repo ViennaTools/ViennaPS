@@ -13,46 +13,9 @@
 #include <type_traits>
 #include <unordered_map>
 
-namespace psUtils {
+namespace viennaps {
 
-template <class Clock = std::chrono::high_resolution_clock> struct Timer {
-  using TimePoint = typename Clock::time_point;
-
-  TimePoint mStart;
-  typename Clock::duration::rep totalDuration = 0.; // in ns
-  typename Clock::duration::rep currentDuration;    // in ns
-
-  void start() { mStart = Clock::now(); }
-  void finish() {
-    TimePoint end = Clock::now();
-    typename Clock::duration dur(end - mStart);
-    currentDuration = dur.count();
-    totalDuration += currentDuration;
-  }
-  void reset() {
-    currentDuration = 0.;
-    totalDuration = 0.;
-  }
-};
-
-// Small function to print a progress bar ()
-inline void printProgress(size_t i, size_t finalCount = 100) {
-  float progress = static_cast<float>(i) / static_cast<float>(finalCount);
-  int barWidth = 70;
-
-  std::cout << "[";
-  int pos = static_cast<int>(static_cast<float>(barWidth) * progress);
-  for (int i = 0; i < barWidth; ++i) {
-    if (i < pos)
-      std::cout << "=";
-    else if (i == pos)
-      std::cout << ">";
-    else
-      std::cout << " ";
-  }
-  std::cout << "] " << static_cast<int>(progress * 100.0) << " %\r";
-  std::cout.flush();
-}
+namespace utils {
 
 // Checks if a string starts with a - or not
 [[nodiscard]] inline bool isSigned(const std::string &s) {
@@ -154,7 +117,7 @@ parseConfigStream(std::istream &input) {
 
 // Opens a file and forwards its stream to the config stream parser.
 inline std::unordered_map<std::string, std::string>
-readConfigFile(const std::string &filename) {
+readFile(const std::string &filename) {
   std::ifstream f(filename);
   if (!f.is_open()) {
     std::cout << "Failed to open config file '" << filename << "'\n";
@@ -224,9 +187,7 @@ std::string arrayToString(const std::array<NumericType, D> arr) {
 struct Parameters {
   std::unordered_map<std::string, std::string> m;
 
-  void readConfigFile(const std::string &fileName) {
-    m = psUtils::readConfigFile(fileName);
-  }
+  void readConfigFile(const std::string &fileName) { m = readFile(fileName); }
 
   template <typename T = double>
   [[nodiscard]] T get(const std::string &key) const {
@@ -240,25 +201,26 @@ struct Parameters {
 };
 
 template <int D>
-[[nodiscard]] rayBoundaryCondition
-convertBoundaryCondition(lsBoundaryConditionEnum<D> originalBoundaryCondition) {
+[[nodiscard]] viennaray::BoundaryCondition convertBoundaryCondition(
+    viennals::BoundaryConditionEnum<D> originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
-  case lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
-    return rayBoundaryCondition::REFLECTIVE;
+  case viennals::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY:
+    return viennaray::BoundaryCondition::REFLECTIVE;
 
-  case lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY:
-    return rayBoundaryCondition::IGNORE;
+  case viennals::BoundaryConditionEnum<D>::INFINITE_BOUNDARY:
+    return viennaray::BoundaryCondition::IGNORE;
 
-  case lsBoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
-    return rayBoundaryCondition::PERIODIC;
+  case viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY:
+    return viennaray::BoundaryCondition::PERIODIC;
 
-  case lsBoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
-    return rayBoundaryCondition::IGNORE;
+  case viennals::BoundaryConditionEnum<D>::POS_INFINITE_BOUNDARY:
+    return viennaray::BoundaryCondition::IGNORE;
 
-  case lsBoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
-    return rayBoundaryCondition::IGNORE;
+  case viennals::BoundaryConditionEnum<D>::NEG_INFINITE_BOUNDARY:
+    return viennaray::BoundaryCondition::IGNORE;
   }
-  return rayBoundaryCondition::IGNORE;
+  return viennaray::BoundaryCondition::IGNORE;
 }
 
-}; // namespace psUtils
+}; // namespace utils
+} // namespace viennaps

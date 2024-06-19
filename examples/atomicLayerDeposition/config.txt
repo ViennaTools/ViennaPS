@@ -1,41 +1,36 @@
-# Domain
-gridDelta = 2. # nm
-xPad = 10.   # nm
+# all length units in micrometers
 
 # Geometry
-trench = 0
-verticalWidth = 20.  # nm
-verticalDepth = 100. # nm
-horizontalWidth = 150.  # nm
-horizontalHeight = 20. # nm
-topSpace = 20.
+gridDelta = 0.2
+openingDepth = 0.5
+openingWidth = 90
+gapLength = 800
+gapHeight = 0.5
+gapWidth = 10000
+xPad = 0.5
+topSpace = 0.
 
-# Mean free path calculation
-seed = 918
-reflectionLimit = 100
-raysPerCell = 100
+# Cycles
+pulseTime = 0.1
+coverageTimeStep=0.01
+growthPerCycle = 0.000112
+numCycles=4
+totalCycles=400
 
-bulkLambda = 125. # (nm) mean free path in gas-phase
+# Reactor and gas 
+pressure = 0.1 # torr
+temperature = 220 # °C
+diameter = 2.75 # angstroms
+mass = 28.02
 
-# ALD Process 
-inFlux = 1.
+# Atomistic
+inFlux = 2e6 # 1e19
+stickingProbability = 5e-5
+evFlux = 0 # 6.5 # 1e19
+s0 = 3.36
 
-p1_time = 60.
-H2O_meanThermalVelocity = 75.
-H2O_adsorptionRate = 0.075
-H2O_desorptionRate = 0.001
+# Simulation
+numRaysPerPoint = 1000
+rngSeed = 15123512
 
-purge_time = 60.
-purge_meanThermalVelocity = 100.
-
-p2_time = 60.
-TMA_meanThermalVelocity = 75.
-TMA_adsorptionRate = 0.075
-TMA_desorptionRate = 0.01
-
-reactionOrder = 4.
-
-stabilityFactor = 0.245
-printInterval = 0.5
-
-numThreads=16
+outputFile = arts_220_c8.txt

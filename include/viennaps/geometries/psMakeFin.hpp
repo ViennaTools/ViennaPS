@@ -6,16 +6,22 @@
 #include <lsFromSurfaceMesh.hpp>
 #include <lsMakeGeometry.hpp>
 
+#include <vcLogger.hpp>
+
+namespace viennaps {
+
+using namespace viennacore;
+
 /// Generates a new fin geometry extending in the z (3D) or y (2D) direction,
 /// centered at the origin with specified dimensions in the x and y directions.
 /// The fin may incorporate periodic boundaries in the x and y directions. Users
 /// can define the width and height of the fin, and it can function as a mask,
 /// with the specified material exclusively applied to the bottom of the fin,
 /// while the upper portion adopts the mask material.
-template <class NumericType, int D> class psMakeFin {
-  using lsDomainType = psSmartPointer<lsDomain<NumericType, D>>;
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
-  using BoundaryEnum = typename lsDomain<NumericType, D>::BoundaryType;
+template <class NumericType, int D> class MakeFin {
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
   psDomainType pDomain_ = nullptr;
 
@@ -30,14 +36,14 @@ template <class NumericType, int D> class psMakeFin {
 
   const bool periodicBoundary_;
   const bool makeMask_;
-  const psMaterial material_;
+  const Material material_;
 
 public:
-  psMakeFin(psDomainType domain, NumericType gridDelta, NumericType xExtent,
-            NumericType yExtent, NumericType finWidth, NumericType finHeight,
-            NumericType taperAngle = 0., NumericType baseHeight = 0.,
-            bool periodicBoundary = false, bool makeMask = false,
-            psMaterial material = psMaterial::None)
+  MakeFin(psDomainType domain, NumericType gridDelta, NumericType xExtent,
+          NumericType yExtent, NumericType finWidth, NumericType finHeight,
+          NumericType taperAngle = 0., NumericType baseHeight = 0.,
+          bool periodicBoundary = false, bool makeMask = false,
+          Material material = Material::None)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), finWidth_(finWidth), finHeight_(finHeight),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
@@ -62,33 +68,37 @@ public:
       auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
       NumericType normal[D] = {0., 0., 1.};
       NumericType origin[D] = {0., 0., baseHeight_};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
       auto mask = lsDomainType::New(bounds, boundaryConds, gridDelta_);
 
       if (taperAngle_ == 0.) {
-        NumericType minPoint[D] = {-finWidth_ / 2, -yExtent_ / 2,
+        NumericType minPoint[D] = {-finWidth_ / 2.f,
+                                   -yExtent_ / 2.f - gridDelta_ / 2.f,
                                    baseHeight_ - gridDelta_};
-        NumericType maxPoint[D] = {finWidth_ / 2, yExtent_ / 2,
+        NumericType maxPoint[D] = {finWidth_ / 2.f,
+                                   yExtent_ / 2.f + gridDelta_ / 2.f,
                                    baseHeight_ + finHeight_};
 
-        lsMakeGeometry<NumericType, D>(
-            mask,
-            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-            .apply();
+        viennals::MakeGeometry<NumericType, D> geo(
+            mask, SmartPointer<viennals::Box<NumericType, D>>::New(minPoint,
+                                                                   maxPoint));
+        geo.setIgnoreBoundaryConditions(true);
+        geo.apply();
+
       } else {
         if (taperAngle_ >= 90 || taperAngle_ <= -90) {
-          psLogger::getInstance()
-              .addError("psMakeFin: Taper angle must be between -90 and 90 "
+          Logger::getInstance()
+              .addError("MakeFin: Taper angle must be between -90 and 90 "
                         "degrees!")
               .print();
           return;
         }
 
-        auto boxMesh = psSmartPointer<lsMesh<NumericType>>::New();
+        auto boxMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
         boxMesh->insertNextNode({-finWidth_ / 2, yExtent_ / 2 + gridDelta_,
                                  baseHeight_ - gridDelta_});
         boxMesh->insertNextNode({finWidth_ / 2, yExtent_ / 2 + gridDelta_,
@@ -153,20 +163,20 @@ public:
           boxMesh->insertNextTriangle({3, 7, 2}); // top
           boxMesh->insertNextTriangle({2, 7, 6}); // top
         }
-        lsFromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
+        viennals::FromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
       }
 
-      lsBooleanOperation<NumericType, D>(substrate, mask,
-                                         lsBooleanOperationEnum::UNION)
+      viennals::BooleanOperation<NumericType, D>(
+          substrate, mask, viennals::BooleanOperationEnum::UNION)
           .apply();
 
-      if (material_ == psMaterial::None) {
+      if (material_ == Material::None) {
         if (makeMask_)
           pDomain_->insertNextLevelSet(mask);
         pDomain_->insertNextLevelSet(substrate, false);
       } else {
         if (makeMask_)
-          pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+          pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
         pDomain_->insertNextLevelSetAsMaterial(substrate, material_, false);
       }
     } else if constexpr (D == 2) {
@@ -184,9 +194,9 @@ public:
       auto substrate = lsDomainType::New(bounds, boundaryConds, gridDelta_);
       NumericType normal[D] = {0., 1.};
       NumericType origin[D] = {0., baseHeight_};
-      lsMakeGeometry<NumericType, D>(
+      viennals::MakeGeometry<NumericType, D>(
           substrate,
-          lsSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
       auto mask = lsDomainType::New(bounds, boundaryConds, gridDelta_);
@@ -194,20 +204,21 @@ public:
       if (taperAngle_ == 0.) {
         NumericType minPoint[D] = {-finWidth_ / 2, baseHeight_ - gridDelta_};
         NumericType maxPoint[D] = {finWidth_ / 2, baseHeight_ + finHeight_};
-        lsMakeGeometry<NumericType, D>(
-            mask,
-            lsSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-            .apply();
+        viennals::MakeGeometry<NumericType, D> geo(
+            mask, SmartPointer<viennals::Box<NumericType, D>>::New(minPoint,
+                                                                   maxPoint));
+        geo.setIgnoreBoundaryConditions(true);
+        geo.apply();
       } else {
         if (taperAngle_ >= 90 || taperAngle_ <= -90) {
-          psLogger::getInstance()
-              .addError("psMakeFin: Taper angle must be between -90 and 90 "
+          Logger::getInstance()
+              .addError("MakeFin: Taper angle must be between -90 and 90 "
                         "degrees!")
               .print();
           return;
         }
 
-        auto boxMesh = psSmartPointer<lsMesh<NumericType>>::New();
+        auto boxMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
         boxMesh->insertNextNode({-finWidth_ / 2, baseHeight_ - gridDelta_});
         boxMesh->insertNextNode({finWidth_ / 2, baseHeight_ - gridDelta_});
         boxMesh->insertNextLine({1, 0});
@@ -229,22 +240,24 @@ public:
           boxMesh->insertNextLine({0, 3});
         }
 
-        lsFromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
+        viennals::FromSurfaceMesh<NumericType, D>(mask, boxMesh).apply();
       }
 
-      lsBooleanOperation<NumericType, D>(substrate, mask,
-                                         lsBooleanOperationEnum::UNION)
+      viennals::BooleanOperation<NumericType, D>(
+          substrate, mask, viennals::BooleanOperationEnum::UNION)
           .apply();
 
-      if (material_ == psMaterial::None) {
+      if (material_ == Material::None) {
         if (makeMask_)
           pDomain_->insertNextLevelSet(mask);
         pDomain_->insertNextLevelSet(substrate, false);
       } else {
         if (makeMask_)
-          pDomain_->insertNextLevelSetAsMaterial(mask, psMaterial::Mask);
+          pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
         pDomain_->insertNextLevelSetAsMaterial(substrate, material_, false);
       }
     }
   }
 };
+
+} // namespace viennaps

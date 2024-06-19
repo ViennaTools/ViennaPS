@@ -1,59 +1,65 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psDirectionalEtching.hpp>
 
+#include <lsTestAsserts.hpp>
 #include <psDomain.hpp>
 #include <psProcess.hpp>
-#include <psTestAssert.hpp>
+#include <vcTestAsserts.hpp>
 
-template <class NumericType, int D> void psRunTest() {
-  psLogger::setLogLevel(psLogLevel::WARNING);
+namespace viennacore {
+
+using namespace viennaps;
+
+template <class NumericType, int D> void RunTest() {
+  Logger::setLogLevel(LogLevel::WARNING);
 
   {
-    auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-    psMakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
-                                 true, psMaterial::Si)
+    auto domain = SmartPointer<Domain<NumericType, D>>::New();
+    MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
+                               true, Material::Si)
         .apply();
-    std::array<NumericType, 3> direction{0., 0., 0.};
+    Vec3D<NumericType> direction{0., 0., 0.};
     direction[D - 1] = -1.;
-    auto model = psSmartPointer<psDirectionalEtching<NumericType, D>>::New(
-        direction, 1., 0., psMaterial::Mask);
+    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
+        direction, 1., 0., Material::Mask);
 
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() == 0);
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
+                   0);
 
-    psProcess<NumericType, D>(domain, model, 2.).apply();
+    Process<NumericType, D>(domain, model, 2.).apply();
 
-    PSTEST_ASSERT(domain->getLevelSets());
-    PSTEST_ASSERT(domain->getLevelSets()->size() == 2);
-    PSTEST_ASSERT(domain->getMaterialMap());
-    PSTEST_ASSERT(domain->getMaterialMap()->size() == 2);
-    LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
+    VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
+    VC_TEST_ASSERT(domain->getMaterialMap());
+    VC_TEST_ASSERT(domain->getMaterialMap()->size() == 2);
+    LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
   }
 
   {
-    auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-    psMakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
-                                 true, psMaterial::Si)
+    auto domain = SmartPointer<Domain<NumericType, D>>::New();
+    MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
+                               true, Material::Si)
         .apply();
-    std::vector<psMaterial> maskMaterials(1, psMaterial::Mask);
-    std::array<NumericType, 3> direction{0., 0., 0.};
+    std::vector<Material> maskMaterials(1, Material::Mask);
+    Vec3D<NumericType> direction{0., 0., 0.};
     direction[D - 1] = -1.;
-    auto model = psSmartPointer<psDirectionalEtching<NumericType, D>>::New(
+    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
         direction, 1., 0., maskMaterials);
 
-    PSTEST_ASSERT(model->getSurfaceModel());
-    PSTEST_ASSERT(model->getVelocityField());
-    PSTEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() == 0);
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
+                   0);
 
-    psProcess<NumericType, D>(domain, model, 2.).apply();
+    Process<NumericType, D>(domain, model, 2.).apply();
 
-    PSTEST_ASSERT(domain->getLevelSets());
-    PSTEST_ASSERT(domain->getLevelSets()->size() == 2);
-    PSTEST_ASSERT(domain->getMaterialMap());
-    PSTEST_ASSERT(domain->getMaterialMap()->size() == 2);
-    LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
+    VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
+    VC_TEST_ASSERT(domain->getMaterialMap());
+    VC_TEST_ASSERT(domain->getMaterialMap()->size() == 2);
+    LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
   }
 }
+} // namespace viennacore
 
-int main() { PSRUN_ALL_TESTS }
+int main() { VC_RUN_ALL_TESTS }

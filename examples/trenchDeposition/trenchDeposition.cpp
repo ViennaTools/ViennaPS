@@ -4,44 +4,43 @@
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
-#include "parameters.hpp"
+namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::utils::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
-    }
-    params.fromMap(config);
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeTrench<NumericType, D>(
-      geometry, params.gridDelta /* grid delta */, params.xExtent /*x extent*/,
-      params.yExtent /*y extent*/, params.trenchWidth /*trench width*/,
-      params.trenchHeight /*trench height*/,
-      params.taperAngle /* tapering angle */)
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  ps::MakeTrench<NumericType, D>(
+      geometry, params.get("gridDelta") /* grid delta */,
+      params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
+      params.get("trenchWidth") /*trench width*/,
+      params.get("trenchHeight") /*trench height*/,
+      params.get("taperAngle") /* tapering angle */)
       .apply();
 
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet();
 
-  auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New(
-      params.rate /*deposition rate*/,
-      params.stickingProbability /*particle sticking probability*/,
-      params.sourcePower /*particle source power*/);
+  auto model = ps::SmartPointer<ps::SingleParticleProcess<NumericType, D>>::New(
+      params.get("rate") /*deposition rate*/,
+      params.get("stickingProbability") /*particle sticking probability*/,
+      params.get("sourcePower") /*particle source power*/);
 
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setNumberOfRaysPerPoint(1000);
-  process.setProcessDuration(params.processTime);
+  process.setProcessDuration(params.get("processTime"));
 
   geometry->saveSurfaceMesh("initial.vtp");
 
