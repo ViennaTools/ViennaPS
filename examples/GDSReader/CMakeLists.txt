@@ -7,4 +7,4 @@ configure_file(GDSReader.py ${CMAKE_CURRENT_BINARY_DIR}/GDSReader.py COPYONLY)
 configure_file(mask.gds ${CMAKE_CURRENT_BINARY_DIR}/mask.gds COPYONLY)
 
 add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
-viennacore_setup_bat(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR})
+viennacore_setup_bat(${PROJECT_NAME} ${VIENNAPS_EXAMPLES_LIB})

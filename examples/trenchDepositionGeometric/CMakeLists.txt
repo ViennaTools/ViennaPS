@@ -8,4 +8,4 @@ configure_file(trenchDepositionGeometric.py
 configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 
 add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
-viennacore_setup_bat(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR})
+viennacore_setup_bat(${PROJECT_NAME} ${VIENNAPS_EXAMPLES_LIB})
