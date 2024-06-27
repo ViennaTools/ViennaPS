@@ -8,4 +8,4 @@ configure_file(scatterdata.csv ${CMAKE_CURRENT_BINARY_DIR}/scatterdata.csv COPYO
 configure_file(plot.py ${CMAKE_CURRENT_BINARY_DIR}/plot.py COPYONLY)
 
 add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
-viennacore_setup_bat(${PROJECT_NAME} ${VIENNAPS_EXAMPLES_LIB})
+viennacore_setup_bat(${PROJECT_NAME} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
