@@ -155,15 +155,18 @@ private:
 };
 } // namespace impl
 
-template <typename NumericType, int D>
-class IonBeamEtching : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class IonBeamEtching {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   IonBeamEtching() {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     std::vector<Material> maskMaterial;
     initialize(std::move(maskMaterial));
   }
 
   IonBeamEtching(std::vector<Material> maskMaterial) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     initialize(std::move(maskMaterial));
   }
 
@@ -172,6 +175,8 @@ public:
   void setParameters(const IBEParameters<NumericType> &params) {
     params_ = params;
   }
+
+  auto getProcessModel() const { return processModel; }
 
 private:
   void initialize(std::vector<Material> &&maskMaterial) {
@@ -185,10 +190,10 @@ private:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->insertNextParticleType(particle);
-    this->setProcessName("IonBeamEtching");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->insertNextParticleType(particle);
+    processModel->setProcessName("IonBeamEtching");
   }
 
 private:

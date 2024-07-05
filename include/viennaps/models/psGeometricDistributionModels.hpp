@@ -48,13 +48,15 @@ public:
   }
 };
 
-template <typename NumericType, int D>
-class SphereDistribution : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class SphereDistribution {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
 
 public:
   SphereDistribution(const NumericType radius, const NumericType gridDelta,
                      LSPtr mask = nullptr) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     auto dist =
         SmartPointer<viennals::SphereDistribution<hrleCoordType, D>>::New(
             radius, gridDelta);
@@ -63,18 +65,22 @@ public:
         NumericType, D,
         viennals::SphereDistribution<hrleCoordType, D>>>::New(dist, mask);
 
-    this->setGeometricModel(geomModel);
-    this->setProcessName("SphereDistribution");
+    processModel->setGeometricModel(geomModel);
+    processModel->setProcessName("SphereDistribution");
   }
+
+  auto getProcessModel() const { return processModel; }
 };
 
-template <typename NumericType, int D>
-class BoxDistribution : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class BoxDistribution {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
 
 public:
   BoxDistribution(const std::array<hrleCoordType, 3> &halfAxes,
                   const NumericType gridDelta, LSPtr mask = nullptr) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     auto dist = SmartPointer<viennals::BoxDistribution<hrleCoordType, D>>::New(
         halfAxes, gridDelta);
 
@@ -82,9 +88,11 @@ public:
         NumericType, D,
         viennals::BoxDistribution<hrleCoordType, D>>>::New(dist, mask);
 
-    this->setGeometricModel(geomModel);
-    this->setProcessName("BoxDistribution");
+    processModel->setGeometricModel(geomModel);
+    processModel->setProcessName("BoxDistribution");
   }
+
+  auto getProcessModel() const { return processModel; }
 };
 
 } // namespace viennaps

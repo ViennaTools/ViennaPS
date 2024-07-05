@@ -347,11 +347,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
    ****************************************************************************/
 
   // ProcessModel
-  pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>
-      processModel(module, "ProcessModel", pybind11::module_local());
-
-  // constructors
-  processModel
+  pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>(
+      module, "ProcessModel")
       .def(pybind11::init<>())
       // methods
       .def("setProcessName", &ProcessModel<T, D>::setProcessName)
@@ -558,7 +555,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // Single Particle Process
   pybind11::class_<SingleParticleProcess<T, D>,
                    SmartPointer<SingleParticleProcess<T, D>>>(
-      module, "SingleParticleProcess", processModel)
+      module, "SingleParticleProcess")
       .def(pybind11::init([](const T rate, const T sticking, const T power,
                              const Material mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
@@ -574,11 +571,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  rate, sticking, power, mask);
            }),
            pybind11::arg("rate"), pybind11::arg("stickingProbability"),
-           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"));
+           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"))
+      .def("getProcessModel", &SingleParticleProcess<T, D>::getProcessModel);
 
   // TEOS Deposition
   pybind11::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
-      module, "TEOSDeposition", processModel)
+      module, "TEOSDeposition")
       .def(pybind11::init(
                &SmartPointer<TEOSDeposition<T, D>>::New<
                    const T /*st1*/, const T /*rate1*/, const T /*order1*/,
@@ -586,7 +584,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("stickingProbabilityP1"), pybind11::arg("rateP1"),
            pybind11::arg("orderP1"),
            pybind11::arg("stickingProbabilityP2") = 0.,
-           pybind11::arg("rateP2") = 0., pybind11::arg("orderP2") = 0.);
+           pybind11::arg("rateP2") = 0., pybind11::arg("orderP2") = 0.)
+      .def("getProcessModel", &TEOSDeposition<T, D>::getProcessModel);
 
   // SF6O2 Parameters
   pybind11::class_<SF6O2Parameters<T>::MaskType>(module, "SF6O2ParametersMask")
@@ -639,7 +638,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // SF6O2 Etching
   pybind11::class_<SF6O2Etching<T, D>, SmartPointer<SF6O2Etching<T, D>>>(
-      module, "SF6O2Etching", processModel)
+      module, "SF6O2Etching")
       .def(pybind11::init<>())
       .def(pybind11::init(
                &SmartPointer<SF6O2Etching<T, D>>::New<
@@ -658,7 +657,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("parameters"))
       .def("setParameters", &SF6O2Etching<T, D>::setParameters)
       .def("getParameters", &SF6O2Etching<T, D>::getParameters,
-           pybind11::return_value_policy::reference);
+           pybind11::return_value_policy::reference)
+      .def("getProcessModel", &SF6O2Etching<T, D>::getProcessModel);
 
   // Fluorocarbon Parameters
   pybind11::class_<FluorocarbonParameters<T>::MaskType>(
@@ -744,7 +744,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // Fluorocarbon Etching
   pybind11::class_<FluorocarbonEtching<T, D>,
                    SmartPointer<FluorocarbonEtching<T, D>>>(
-      module, "FluorocarbonEtching", processModel)
+      module, "FluorocarbonEtching")
       .def(pybind11::init<>())
       .def(
           pybind11::init(&SmartPointer<FluorocarbonEtching<T, D>>::New<
@@ -762,12 +762,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("parameters"))
       .def("setParameters", &FluorocarbonEtching<T, D>::setParameters)
       .def("getParameters", &FluorocarbonEtching<T, D>::getParameters,
-           pybind11::return_value_policy::reference);
+           pybind11::return_value_policy::reference)
+      .def("getProcessModel", &FluorocarbonEtching<T, D>::getProcessModel);
 
   // Isotropic Process
   pybind11::class_<IsotropicProcess<T, D>,
-                   SmartPointer<IsotropicProcess<T, D>>>(
-      module, "IsotropicProcess", processModel)
+                   SmartPointer<IsotropicProcess<T, D>>>(module,
+                                                         "IsotropicProcess")
       .def(pybind11::init([](const T rate, const Material mask) {
              return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
@@ -776,12 +777,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init([](const T rate, const std::vector<Material> mask) {
              return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
-           pybind11::arg("rate"), pybind11::arg("maskMaterial"));
+           pybind11::arg("rate"), pybind11::arg("maskMaterial"))
+      .def("getProcessModel", &IsotropicProcess<T, D>::getProcessModel);
 
   // Directional Etching
   pybind11::class_<DirectionalEtching<T, D>,
-                   SmartPointer<DirectionalEtching<T, D>>>(
-      module, "DirectionalEtching", processModel)
+                   SmartPointer<DirectionalEtching<T, D>>>(module,
+                                                           "DirectionalEtching")
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
                           const Material>(),
            pybind11::arg("direction"),
@@ -791,12 +793,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
                           const std::vector<Material>>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
-           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"));
+           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"))
+      .def("getProcessModel", &DirectionalEtching<T, D>::getProcessModel);
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,
-                   SmartPointer<SphereDistribution<T, D>>>(
-      module, "SphereDistribution", processModel)
+                   SmartPointer<SphereDistribution<T, D>>>(module,
+                                                           "SphereDistribution")
       .def(pybind11::init([](const T radius, const T gridDelta,
                              SmartPointer<viennals::Domain<T, D>> mask) {
              return SmartPointer<SphereDistribution<T, D>>::New(
@@ -808,11 +811,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
              return SmartPointer<SphereDistribution<T, D>>::New(
                  radius, gridDelta, nullptr);
            }),
-           pybind11::arg("radius"), pybind11::arg("gridDelta"));
+           pybind11::arg("radius"), pybind11::arg("gridDelta"))
+      .def("getProcessModel", &SphereDistribution<T, D>::getProcessModel);
 
   // Box Distribution
   pybind11::class_<BoxDistribution<T, D>, SmartPointer<BoxDistribution<T, D>>>(
-      module, "BoxDistribution", processModel)
+      module, "BoxDistribution")
       .def(
           pybind11::init([](const std::array<T, 3> &halfAxes, const T gridDelta,
                             SmartPointer<viennals::Domain<T, D>> mask) {
@@ -826,11 +830,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  return SmartPointer<BoxDistribution<T, D>>::New(
                      halfAxes, gridDelta, nullptr);
                }),
-           pybind11::arg("halfAxes"), pybind11::arg("gridDelta"));
+           pybind11::arg("halfAxes"), pybind11::arg("gridDelta"))
+      .def("getProcessModel", &BoxDistribution<T, D>::getProcessModel);
 
   // Oxide Regrowth
   pybind11::class_<OxideRegrowth<T, D>, SmartPointer<OxideRegrowth<T, D>>>(
-      module, "OxideRegrowth", processModel)
+      module, "OxideRegrowth")
       .def(
           pybind11::init(&SmartPointer<OxideRegrowth<T, D>>::New<
                          const T, const T, const T, const T, const T, const T,
@@ -842,12 +847,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("diffusionCoefficient"), pybind11::arg("sinkStrength"),
           pybind11::arg("scallopVelocity"), pybind11::arg("centerVelocity"),
           pybind11::arg("topHeight"), pybind11::arg("centerWidth"),
-          pybind11::arg("stabilityFactor"));
+          pybind11::arg("stabilityFactor"))
+      .def("getProcessModel", &OxideRegrowth<T, D>::getProcessModel);
 
   // Anisotropic Process
   pybind11::class_<AnisotropicProcess<T, D>,
-                   SmartPointer<AnisotropicProcess<T, D>>>(
-      module, "AnisotropicProcess", processModel)
+                   SmartPointer<AnisotropicProcess<T, D>>>(module,
+                                                           "AnisotropicProcess")
       .def(pybind11::init(&SmartPointer<AnisotropicProcess<T, D>>::New<
                           const std::vector<std::pair<Material, T>>>),
            pybind11::arg("materials"))
@@ -858,12 +864,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("direction100"), pybind11::arg("direction010"),
            pybind11::arg("rate100"), pybind11::arg("rate110"),
            pybind11::arg("rate111"), pybind11::arg("rate311"),
-           pybind11::arg("materials"));
+           pybind11::arg("materials"))
+      .def("getProcessModel", &AnisotropicProcess<T, D>::getProcessModel);
 
   // Single Particle ALD
   pybind11::class_<SingleParticleALD<T, D>,
-                   SmartPointer<SingleParticleALD<T, D>>>(
-      module, "SingleParticleALD", processModel)
+                   SmartPointer<SingleParticleALD<T, D>>>(module,
+                                                          "SingleParticleALD")
       .def(pybind11::init(&SmartPointer<SingleParticleALD<T, D>>::New<
                           const T, const T, const T, const T, const T, const T,
                           const T, const T, const T>),
@@ -871,7 +878,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("growthPerCycle"), pybind11::arg("totalCycles"),
            pybind11::arg("coverageTimeStep"), pybind11::arg("evFlux"),
            pybind11::arg("inFlux"), pybind11::arg("s0"),
-           pybind11::arg("gasMFP"));
+           pybind11::arg("gasMFP"))
+      .def("getProcessModel", &SingleParticleALD<T, D>::getProcessModel);
 
   // ***************************************************************************
   //                               GEOMETRIES
@@ -1021,15 +1029,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // constructors
       .def(pybind11::init())
       .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
-      .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>>(),
-           pybind11::arg("domain"), pybind11::arg("model"))
+      //  .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>>(),
+      //       pybind11::arg("domain"), pybind11::arg("model"))
       // methods
       .def("apply", &AtomicLayerProcess<T, D>::apply, "Run the process.")
       .def("setDomain", &AtomicLayerProcess<T, D>::setDomain,
            "Set the process domain.")
       .def("setProcessModel", &AtomicLayerProcess<T, D>::setProcessModel,
-           "Set the process model. This has to be a pre-configured process "
-           "model.")
+           "Set the process model.")
       .def("setPulseTime", &AtomicLayerProcess<T, D>::setPulseTime,
            "Set the pulse time.")
       .def("setSourceDirection", &AtomicLayerProcess<T, D>::setSourceDirection,
@@ -1063,17 +1070,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // constructors
       .def(pybind11::init())
       .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
-      .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>, T>(),
-           pybind11::arg("domain"), pybind11::arg("model"),
-           pybind11::arg("duration"))
+      //  .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>,
+      //  T>(),
+      //       pybind11::arg("domain"), pybind11::arg("model"),
+      //       pybind11::arg("duration"))
       // methods
       .def("apply", &Process<T, D>::apply, "Run the process.")
       .def("calculateFlux", &Process<T, D>::calculateFlux,
            "Perform a single-pass flux calculation.")
       .def("setDomain", &Process<T, D>::setDomain, "Set the process domain.")
       .def("setProcessModel", &Process<T, D>::setProcessModel,
-           "Set the process model. This has to be a pre-configured process "
-           "model.")
+           "Set the process model.")
       .def("setProcessDuration", &Process<T, D>::setProcessDuration,
            "Set the process duration.")
       .def("setSourceDirection", &Process<T, D>::setSourceDirection,

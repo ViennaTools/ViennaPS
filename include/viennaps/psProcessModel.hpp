@@ -33,8 +33,6 @@ protected:
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
 
 public:
-  virtual ~ProcessModel() = default;
-
   auto &getParticleTypes() { return particles; }
   auto getSurfaceModel() const { return surfaceModel; }
   auto getAdvectionCallback() const { return advectionCallback; }
@@ -43,8 +41,7 @@ public:
   auto getSource() { return source; }
 
   /// Set a primary direction for the source distribution (tilted distribution).
-  virtual std::optional<std::array<NumericType, 3>>
-  getPrimaryDirection() const {
+  std::optional<std::array<NumericType, 3>> getPrimaryDirection() const {
     return primaryDirection;
   }
 
@@ -56,7 +53,7 @@ public:
 
   void setProcessName(std::string name) { processName = std::move(name); }
 
-  virtual void
+  void
   setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
     primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
   }

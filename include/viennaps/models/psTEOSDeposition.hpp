@@ -187,16 +187,19 @@ private:
 };
 } // namespace impl
 
-template <class NumericType, int D>
-class TEOSDeposition : public ProcessModel<NumericType, D> {
+template <class NumericType, int D> class TEOSDeposition {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   TEOSDeposition(const NumericType pStickingP1, const NumericType pRateP1,
                  const NumericType pOrderP1, const NumericType pStickingP2 = 0.,
                  const NumericType pRateP2 = 0.,
                  const NumericType pOrderP2 = 0.) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New();
-    this->setVelocityField(velField);
+    processModel->setVelocityField(velField);
 
     if (pRateP2 == 0.) {
       // use single particle model
@@ -211,9 +214,9 @@ public:
           SmartPointer<impl::SingleTEOSSurfaceModel<NumericType>>::New(
               pRateP1, pOrderP1);
 
-      this->setSurfaceModel(surfModel);
-      this->insertNextParticleType(particle);
-      this->setProcessName("SingleTEOSParticleTEOS");
+      processModel->setSurfaceModel(surfModel);
+      processModel->insertNextParticleType(particle);
+      processModel->setProcessName("SingleTEOSParticleTEOS");
     } else {
       // use multi (two) particle model
 
@@ -230,12 +233,14 @@ public:
           SmartPointer<impl::MultiTEOSSurfaceModel<NumericType>>::New(
               pRateP1, pOrderP1, pRateP2, pOrderP2);
 
-      this->setSurfaceModel(surfModel);
-      this->insertNextParticleType(particle1);
-      this->insertNextParticleType(particle2);
-      this->setProcessName("MultiTEOSParticleTEOS");
+      processModel->setSurfaceModel(surfModel);
+      processModel->insertNextParticleType(particle1);
+      processModel->insertNextParticleType(particle2);
+      processModel->setProcessName("MultiTEOSParticleTEOS");
     }
   }
+
+  auto getProcessModel() const { return processModel; }
 };
 
 } // namespace viennaps

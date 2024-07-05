@@ -90,13 +90,15 @@ private:
 
 // Etching or deposition based on a single particle model with diffuse
 // reflections.
-template <typename NumericType, int D>
-class SingleParticleProcess : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class SingleParticleProcess {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   SingleParticleProcess(NumericType rate = 1.,
                         NumericType stickingProbability = 1.,
                         NumericType sourceDistributionPower = 1.,
                         Material maskMaterial = Material::None) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     std::vector<Material> maskMaterialVec = {maskMaterial};
     initialize(rate, stickingProbability, sourceDistributionPower,
                std::move(maskMaterialVec));
@@ -105,9 +107,12 @@ public:
   SingleParticleProcess(NumericType rate, NumericType stickingProbability,
                         NumericType sourceDistributionPower,
                         std::vector<Material> maskMaterial) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     initialize(rate, stickingProbability, sourceDistributionPower,
                std::move(maskMaterial));
   }
+
+  auto getProcessModel() { return processModel; }
 
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
@@ -125,10 +130,10 @@ private:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->insertNextParticleType(particle);
-    this->setProcessName("SingleParticleProcess");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->insertNextParticleType(particle);
+    processModel->setProcessName("SingleParticleProcess");
   }
 };
 

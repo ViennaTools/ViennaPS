@@ -571,10 +571,14 @@ public:
 };
 } // namespace impl
 
-template <typename NumericType, int D>
-class FluorocarbonEtching : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class FluorocarbonEtching {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
-  FluorocarbonEtching() { initialize(); }
+  FluorocarbonEtching() {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+    initialize();
+  }
   FluorocarbonEtching(const double ionFlux, const double etchantFlux,
                       const double polyFlux, const NumericType meanEnergy,
                       const NumericType sigmaEnergy,
@@ -582,6 +586,7 @@ public:
                       const NumericType deltaP = 0.,
                       const NumericType etchStopDepth =
                           std::numeric_limits<NumericType>::lowest()) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     params_.ionFlux = ionFlux;
     params_.etchantFlux = etchantFlux;
     params_.polyFlux = polyFlux;
@@ -602,6 +607,8 @@ public:
     params_ = parameters;
   }
 
+  auto getProcessModel() const { return processModel; }
+
 private:
   FluorocarbonParameters<NumericType> params_;
 
@@ -621,12 +628,12 @@ private:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("FluorocarbonEtching");
-    this->insertNextParticleType(ion);
-    this->insertNextParticleType(etchant);
-    this->insertNextParticleType(poly);
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("FluorocarbonEtching");
+    processModel->insertNextParticleType(ion);
+    processModel->insertNextParticleType(etchant);
+    processModel->insertNextParticleType(poly);
   }
 };
 

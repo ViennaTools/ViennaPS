@@ -49,11 +49,14 @@ private:
 } // namespace impl
 
 /// Isotropic etching with one masking material.
-template <typename NumericType, int D>
-class IsotropicProcess : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class IsotropicProcess {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   IsotropicProcess(const NumericType isotropicRate,
                    const Material maskMaterial = Material::None) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
@@ -63,13 +66,15 @@ public:
         SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
             isotropicRate, std::move(maskMaterialsInt));
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("IsotropicProcess");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("IsotropicProcess");
   }
 
   IsotropicProcess(const NumericType isotropicRate,
                    const std::vector<Material> maskMaterials) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
@@ -82,10 +87,12 @@ public:
         SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
             isotropicRate, std::move(maskMaterialsInt));
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("IsotropicProcess");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("IsotropicProcess");
   }
+
+  auto getProcessModel() const { return processModel; }
 };
 
 } // namespace viennaps

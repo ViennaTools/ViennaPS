@@ -22,10 +22,11 @@ template <class NumericType, int D> void RunTest() {
     auto model =
         SmartPointer<IsotropicProcess<NumericType, D>>::New(1., Material::Mask);
 
-    VC_TEST_ASSERT(model->getSurfaceModel());
-    VC_TEST_ASSERT(model->getVelocityField());
-    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
-                   0);
+    VC_TEST_ASSERT(model->getProcessModel()->getSurfaceModel());
+    VC_TEST_ASSERT(model->getProcessModel()->getVelocityField());
+    VC_TEST_ASSERT(model->getProcessModel()
+                       ->getVelocityField()
+                       ->getTranslationFieldOptions() == 0);
 
     Process<NumericType, D>(domain, model, 2.).apply();
 
@@ -44,10 +45,11 @@ template <class NumericType, int D> void RunTest() {
     auto model =
         SmartPointer<IsotropicProcess<NumericType, D>>::New(1., maskMaterials);
 
-    VC_TEST_ASSERT(model->getSurfaceModel());
-    VC_TEST_ASSERT(model->getVelocityField());
-    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
-                   0);
+    VC_TEST_ASSERT(model->getProcessModel()->getSurfaceModel());
+    VC_TEST_ASSERT(model->getProcessModel()->getVelocityField());
+    VC_TEST_ASSERT(model->getProcessModel()
+                       ->getVelocityField()
+                       ->getTranslationFieldOptions() == 0);
 
     Process<NumericType, D>(domain, model, 2.).apply();
 

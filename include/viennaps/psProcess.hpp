@@ -28,15 +28,24 @@ public:
   Process() {}
   Process(psDomainType passedDomain) : domain(passedDomain) {}
   // Constructor for a process with a pre-configured process model.
+  template <typename ProcessModelType>
   Process(psDomainType passedDomain,
-          SmartPointer<ProcessModel<NumericType, D>> passedProcessModel,
+          SmartPointer<ProcessModelType> &passedProcessModel,
           const NumericType passedDuration = 0.)
-      : domain(passedDomain), model(passedProcessModel),
-        processDuration(passedDuration) {}
+      : domain(passedDomain) {
+    setProcessModel(passedProcessModel);
+    processDuration = passedDuration;
+  }
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
   // psProcessModel class.
+#ifndef VIENNAPS_PYTHON_BUILD
+  template <typename ProcessModelType>
+  void setProcessModel(SmartPointer<ProcessModelType> &passedProcessModel) {
+    model = passedProcessModel->getProcessModel();
+  }
+#endif
   void setProcessModel(
       SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
     model = passedProcessModel;

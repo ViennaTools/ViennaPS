@@ -301,8 +301,9 @@ private:
 
 // The selective etching model works in accordance with the geometry generated
 // by psMakeStack
-template <class NumericType, int D>
-class OxideRegrowth : public ProcessModel<NumericType, D> {
+template <class NumericType, int D> class OxideRegrowth {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   OxideRegrowth(const NumericType nitrideEtchRate,
                 const NumericType oxideEtchRate,
@@ -315,6 +316,7 @@ public:
                 const NumericType centerVelocity, const NumericType topHeight,
                 const NumericType centerWidth, // 11 parameters
                 const NumericType timeStabilityFactor = 0.245) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
 
     auto velocityField =
         SmartPointer<impl::SelectiveEtchingVelocityField<NumericType>>::New(
@@ -327,11 +329,13 @@ public:
         topHeight, centerWidth / 2., nitrideEtchRate, redepositionRate,
         reDepositionThreshold, redepositionTimeInt, timeStabilityFactor);
 
-    this->setVelocityField(velocityField);
-    this->setSurfaceModel(surfModel);
-    this->setAdvectionCallback(dynamics);
-    this->setProcessName("OxideRegrowth");
+    processModel->setVelocityField(velocityField);
+    processModel->setSurfaceModel(surfModel);
+    processModel->setAdvectionCallback(dynamics);
+    processModel->setProcessName("OxideRegrowth");
   }
+
+  auto getProcessModel() const { return processModel; }
 };
 
 } // namespace viennaps

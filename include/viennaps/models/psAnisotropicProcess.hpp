@@ -94,8 +94,10 @@ public:
 } // namespace impl
 
 // Model for an anisotropic process, like selective epitaxy or wet etching.
-template <typename NumericType, int D>
-class AnisotropicProcess : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class AnisotropicProcess {
+private:
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   // The constructor expects the materials where epitaxy is allowed including
   // the corresponding rates.
@@ -124,8 +126,11 @@ public:
     initialize();
   }
 
+  auto getProcessModel() const { return processModel; }
+
 private:
   void initialize() {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
@@ -134,9 +139,9 @@ private:
         SmartPointer<impl::AnisotropicVelocityField<NumericType, D>>::New(
             direction100, direction010, r100, r110, r111, r311, materials);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("AnisotropicProcess");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("AnisotropicProcess");
   }
 
   // crystal surface direction

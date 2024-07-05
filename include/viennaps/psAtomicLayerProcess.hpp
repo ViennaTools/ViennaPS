@@ -61,14 +61,22 @@ public:
   AtomicLayerProcess() {}
   AtomicLayerProcess(psDomainType domain) : pDomain_(domain) {}
   // Constructor for a process with a pre-configured process model.
-  AtomicLayerProcess(
-      psDomainType domain,
-      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel)
-      : pDomain_(domain), pModel_(passedProcessModel) {}
+  template <typename ProcessModelType>
+  AtomicLayerProcess(psDomainType domain,
+                     SmartPointer<ProcessModelType> passedProcessModel)
+      : pDomain_(domain) {
+    setProcessModel(passedProcessModel);
+  }
 
-  // Set the process model. This can be either a pre-configured process model or
-  // a custom process model. A custom process model must interface the
-  // ProcessModel class.
+// Set the process model. This can be either a pre-configured process model or
+// a custom process model. A custom process model must interface the
+// ProcessModel class.
+#ifndef VIENNAPS_PYTHON_BUILD
+  template <typename ProcessModelType>
+  void setProcessModel(SmartPointer<ProcessModelType> passedProcessModel) {
+    pModel_ = passedProcessModel->getProcessModel();
+  }
+#endif
   void setProcessModel(
       SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
     pModel_ = passedProcessModel;

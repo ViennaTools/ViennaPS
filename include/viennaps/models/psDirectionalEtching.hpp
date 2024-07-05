@@ -60,13 +60,16 @@ private:
 } // namespace impl
 
 /// Directional etching with one masking material.
-template <typename NumericType, int D>
-class DirectionalEtching : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class DirectionalEtching {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   DirectionalEtching(const Vec3D<NumericType> &direction,
                      const NumericType directionalVelocity = 1.,
                      const NumericType isotropicVelocity = 0.,
                      const Material mask = Material::Mask) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
@@ -77,15 +80,17 @@ public:
             direction, directionalVelocity, isotropicVelocity,
             maskMaterialsInt);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("DirectionalEtching");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("DirectionalEtching");
   }
 
   DirectionalEtching(const Vec3D<NumericType> &direction,
                      const NumericType directionalVelocity,
                      const NumericType isotropicVelocity,
                      const std::vector<Material> maskMaterials) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
@@ -99,10 +104,12 @@ public:
             direction, directionalVelocity, isotropicVelocity,
             maskMaterialsInt);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("DirectionalEtching");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("DirectionalEtching");
   }
+
+  auto getProcessModel() const { return processModel; }
 };
 
 } // namespace viennaps

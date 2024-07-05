@@ -404,8 +404,13 @@ public:
 /// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
 class SF6O2Etching : public ProcessModel<NumericType, D> {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
-  SF6O2Etching() { initializeModel(); }
+  SF6O2Etching() {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+    initializeModel();
+  }
 
   // All flux values are in units 1e16 / cm²
   SF6O2Etching(const double ionFlux, const double etchantFlux,
@@ -415,6 +420,7 @@ public:
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth =
                    std::numeric_limits<NumericType>::lowest()) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     params.ionFlux = ionFlux;
     params.etchantFlux = etchantFlux;
     params.oxygenFlux = oxygenFlux;
@@ -427,6 +433,7 @@ public:
   }
 
   SF6O2Etching(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
     initializeModel();
   }
 
@@ -435,6 +442,8 @@ public:
   }
 
   SF6O2Parameters<NumericType> &getParameters() { return params; }
+
+  auto getProcessModel() const { return processModel; }
 
 private:
   void initializeModel() {
@@ -450,12 +459,12 @@ private:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("SF6O2Etching");
-    this->insertNextParticleType(ion);
-    this->insertNextParticleType(etchant);
-    this->insertNextParticleType(oxygen);
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->setProcessName("SF6O2Etching");
+    processModel->insertNextParticleType(ion);
+    processModel->insertNextParticleType(etchant);
+    processModel->insertNextParticleType(oxygen);
   }
 
   SF6O2Parameters<NumericType> params;

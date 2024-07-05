@@ -124,8 +124,9 @@ public:
 };
 } // namespace impl
 
-template <typename NumericType, int D>
-class SingleParticleALD : public ProcessModel<NumericType, D> {
+template <typename NumericType, int D> class SingleParticleALD {
+  SmartPointer<ProcessModel<NumericType, D>> processModel;
+
 public:
   SingleParticleALD(
       const NumericType stickingProbability, // particle sticking probability
@@ -139,6 +140,8 @@ public:
       const NumericType s0,     // saturation coverage
       const NumericType gasMFP  // mean free path of the particles in the gas
   ) {
+    processModel = SmartPointer<ProcessModel<NumericType, D>>::New();
+
     auto particle =
         std::make_unique<impl::SingleParticleALDParticle<NumericType, D>>(
             stickingProbability, gasMFP);
@@ -153,11 +156,13 @@ public:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->insertNextParticleType(particle);
-    this->setProcessName("SingleParticleALD");
+    processModel->setSurfaceModel(surfModel);
+    processModel->setVelocityField(velField);
+    processModel->insertNextParticleType(particle);
+    processModel->setProcessName("SingleParticleALD");
   }
+
+  auto getProcessModel() const { return processModel; }
 };
 
 } // namespace viennaps
