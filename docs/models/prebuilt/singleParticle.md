@@ -23,15 +23,15 @@ Additionally, mask materials can be specified, where the rate is assumed to be z
 ## Implementation
 
 ```c++
-psSingleParticleProcess(const NumericType rate = 1.,
-                        const NumericType stickingProbability = 1.,
-                        const NumericType sourceDistributionPower = 1.,
-                        const psMaterial maskMaterial = psMaterial::None)
+SingleParticleProcess(const NumericType rate = 1.,
+                      const NumericType stickingProbability = 1.,
+                      const NumericType sourceDistributionPower = 1.,
+                      const Material maskMaterial = Material::None)
 
-psSingleParticleProcess(const NumericType rate,
-                        const NumericType stickingProbability,
-                        const NumericType sourceDistributionPower,
-                        const std::vector<psMaterial> maskMaterials) 
+SingleParticleProcess(const NumericType rate,
+                      const NumericType stickingProbability,
+                      const NumericType sourceDistributionPower,
+                      const std::vector<Material> maskMaterials) 
 
 ```
 
@@ -40,7 +40,7 @@ psSingleParticleProcess(const NumericType rate,
 | `rate`                      | Rate of the single particle process                    | 1.0                    |
 | `stickingProbability`       | Sticking probability of particles                      | 1.0                    |
 | `sourceDistributionPower`   | Power of the power cosine source distribution          | 1.0                    |
-| `maskMaterial`              | Mask material                       | `psMaterial::None`       |
+| `maskMaterial`              | Mask material                       | `Material::None`       |
 
 __Example usage__:
 
@@ -52,10 +52,10 @@ C++
 ```c++
 ...
 // for a single mask material
-auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New(1., 0.1, 1., maskMaterial);
+auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(1., 0.1, 1., maskMaterial);
 ...
 // for multiple mask materials
-auto model = psSmartPointer<psSingleParticleProcess<NumericType, D>>::New(1., 0.1, 1., {mask1, mask2});
+auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(1., 0.1, 1., {mask1, mask2});
 ...
 ```
 </details>

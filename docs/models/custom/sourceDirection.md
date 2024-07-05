@@ -19,7 +19,7 @@ The primary source direction is an optional parameter that allows users to tailo
 __Example usage:__
 
 ```c++
-auto myModel = psSmartPointer<psProcessModel<NumericType, D>>::New();
+auto myModel = ps::SmartPointer<ps::ProcessModel<NumericType, D>>::New();
 double tiltingAngle = 30. * M_PI / 180.; // tilting angle of 30 degree
 double x = -std::sin(tiltingAngle);
 double y = -std::cos(tiltingAngle);

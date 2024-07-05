@@ -10,7 +10,7 @@ nav_order: 8
 #include <psProcess.hpp>
 ```
 ---
-The `psProcess` class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also encompasses the necessary methods for configuring these attributes. Upon setting these parameters, the `apply()` method is employed to execute the process, initiating and conducting the simulation.
+The `Process` class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also encompasses the necessary methods for configuring these attributes. Upon setting these parameters, the `apply()` method is employed to execute the process, initiating and conducting the simulation.
 
 __Example usage:__
 
@@ -20,8 +20,9 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
+// namespace viennaps
 ...
-psProcess<NumericType, D> process;
+Process<NumericType, D> process;
 process.setDomain(myDomain);
 process.setProcessModel(myModel);
 process.setProcessDuration(10.);
@@ -54,45 +55,44 @@ process.apply()
 ### Constructors
 ```c++
 // Default constructor
-psProcess()
+Process()
 // Constructor from domain
-psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain)
+Process(SmartPointer<Domain<NumericType, D>> passedDomain)
 // Constructor from domain, process model, and duration, 
 // to apply simple processes
 template <typename ProcessModelType>
-psProcess(psSmartPointer<psDomain<NumericType, D>> passedDomain,
-        psSmartPointer<ProcessModelType> passedProcessModel,
+Process(SmartPointer<Domain<NumericType, D>> passedDomain,
+        SmartPointer<ProcessModelType> passedProcessModel,
         const NumericType passedDuration = 0.)
 ```
-In summary, these constructors provide different ways to create a `psProcess` object, allowing for flexibility depending on what data is available at the time of object creation.
-1. The first constructor is a default constructor. It's defined as `psProcess()` and it doesn't take any arguments. This constructor allows for the creation of a `psProcess` object without any initial values.
-2. The second constructor takes a single argument: a smart pointer to a `psDomain` object. This constructor initializes the domain member variable of the `psProcess` class with the passed `psDomain` object.
-3. The third constructor is a template constructor that takes three arguments: a smart pointer to a `psDomain` object, a smart pointer to a `ProcessModelType` object, and a `NumericType` representing the process duration. This constructor initializes the domain and processDuration member variables with the passed values and also sets the model member variable to the dynamically cast ProcessModelType object. This allows the user to run a process from an anonymous object. For example:
+In summary, these constructors provide different ways to create a `Process` object, allowing for flexibility depending on what data is available at the time of object creation.
+1. The first constructor is a default constructor. It's defined as `Process()` and it doesn't take any arguments. This constructor allows for the creation of a `Process` object without any initial values.
+2. The second constructor takes a single argument: a smart pointer to a `Domain` object. This constructor initializes the domain member variable of the `Process` class with the passed `Domain` object.
+3. The third constructor is a template constructor that takes three arguments: a smart pointer to a `Domain` object, a smart pointer to a `ProcessModelType` object, and a `NumericType` representing the process duration. This constructor initializes the domain and processDuration member variables with the passed values and also sets the model member variable to the dynamically cast ProcessModelType object. This allows the user to run a process from an anonymous object. For example:
 ```cpp
-psProcess<NumericType, D>(myDomain, myModel, processDuration).apply()
+Process<NumericType, D>(myDomain, myModel, processDuration).apply()
 ```
 
 ---
 ### Set the domain
 ```cpp
-void setDomain(psSmartPointer<psDomain<NumericType, D>> passedDomain)
+void setDomain(SmartPointer<Domain<NumericType, D>> passedDomain)
 ```
 Sets the process domain. 
 
 ---
 ### Set the process model
 ```c++
-template <typename ProcessModelType>
-void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel)
+void setProcessModel(SmartPointer<ProcessModel<NumericType, D>> passedProcessModel)
 ```
-Sets the process model. This can be either a pre-configured process model or a custom process model. A custom process model must interface the `psProcessModel` class.
+Sets the process model. This can be either a pre-configured process model or a custom process model. 
 
 ---
 ### Set the source direction
 ```c++
-void setSourceDirection(const rayTraceDirection passedDirection)
+void setSourceDirection(const viennaray::TraceDirection passedDirection)
 ```
-Set the source direction, where the rays should be traced from. The passed direction parameter is using the enum `rayTraceDirection` which contains the following values:
+Set the source direction, where the rays should be traced from. The passed direction parameter is using the enum `viennaray::TraceDirection` which contains the following values:
 `POS_X`, `NEG_X`, `POS_Y`, `NEG_Y`, `POS_Z`, `NEG_Z`.
 
 ---

@@ -109,8 +109,9 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
+// namespace viennaps
 ...
-auto model = psSmartPointer<psFluorocarbonEtching<NumericType, D>>::New();
+auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New();
 auto &parameters = model->getParameters();
 parameters.ionFlux = 10.; 
 parameters.Mask.rho = 500.;

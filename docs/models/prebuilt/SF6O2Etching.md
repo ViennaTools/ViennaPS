@@ -110,13 +110,13 @@ The ray's reflected direction is randomly chosen from a cone around the specular
 ## Implementation
 
 ```c++
-psSF6O2Etching(const double ionFlux, const double etchantFlux,
-                const double oxygenFlux, const NumericType meanEnergy /* eV */,
-                const NumericType sigmaEnergy /* eV */, 
-                const NumericType ionExponent = 100.,
-                const NumericType oxySputterYield = 2.,
-                const NumericType etchStopDepth =
-                    std::numeric_limits<NumericType>::lowest())
+SF6O2Etching(const double ionFlux, const double etchantFlux,
+             const double oxygenFlux, const NumericType meanEnergy /* eV */,
+             const NumericType sigmaEnergy /* eV */, 
+             const NumericType ionExponent = 100.,
+             const NumericType oxySputterYield = 2.,
+             const NumericType etchStopDepth =
+                   std::numeric_limits<NumericType>::lowest())
 ```
 
 | Parameter           | Description                                                               | Type           |
@@ -174,8 +174,9 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
+// namespace viennaps
 ...
-auto model = psSmartPointer<psSF6O2Etching<NumericType, D>>::New();
+auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New();
 auto &parameters = model->getParameters();
 parameters.ionFlux = 10.; 
 parameters.Mask.rho = 500.;

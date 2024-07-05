@@ -14,7 +14,7 @@ nav_order: 2
 ```
 ---
 
-The `psMakeTrench` class is used to generate a new trench geometry extending in the z (3D) or y (2D) direction, centrally
+The `MakeTrench` class is used to generate a new trench geometry extending in the z (3D) or y (2D) direction, centrally
 positioned at the origin with the total extent specified in the x and y directions. The
 trench configuration may include periodic boundaries in both the x and y directions.
 Users have the flexibility to define the trench’s width, depth, and incorporate tapering
@@ -23,22 +23,23 @@ specified material exclusively to the bottom while the remaining portion adopts 
 mask material.
 
 ```c++
-psMakeTrench(psDomainType domain, 
-             const NumericType gridDelta,
-             const NumericType xExtent, 
-             const NumericType yExtent,
-             const NumericType trenchWidth,
-             const NumericType trenchDepth,
-             const NumericType taperingAngle = 0., // in degrees
-             const NumericType baseHeight = 0.,
-             const bool periodicBoundary = false,
-             const bool makeMask = false,
-             const psMaterial material = psMaterial::None)
-```
+// namespace viennaps
+MakeTrench(DomainType domain, 
+           const NumericType gridDelta,
+           const NumericType xExtent, 
+           const NumericType yExtent,
+           const NumericType trenchWidth,
+           const NumericType trenchDepth,
+           const NumericType taperingAngle = 0., // in degrees
+           const NumericType baseHeight = 0.,
+           const bool periodicBoundary = false,
+           const bool makeMask = false,
+           const Material material = Material::None)
+``` 
 
 | Parameter              | Description                                                         | Type                           |
 |------------------------|---------------------------------------|--------------------------------|
-| `domain`               | Specifies the type of domain for the trench geometry.                   |   `psSmartPointer<psDomain<NumericType, D>>` |
+| `domain`               | Specifies the type of domain for the trench geometry.                   |   `SmartPointer<Domain<NumericType, D>>` |
 | `gridDelta`            | Represents the grid spacing or resolution used in the simulation.                                          | `NumericType`    |
 | `xExtent`              | Defines the extent of the trench geometry in the x-direction.                                               | `NumericType`    |
 | `yExtent`              | Specifies the extent of the trench geometry in the y-direction.                                             | `NumericType`    |
@@ -48,7 +49,7 @@ psMakeTrench(psDomainType domain,
 | `baseHeight`           | (Optional) Sets the base height of the trench. Default is set to 0.                                         | `NumericType`    |
 | `periodicBoundary`     | (Optional) If set to true, enables periodic boundaries in both x and y directions (only applicable in 3D). Default is set to false. | `bool`   |
 | `makeMask`             | (Optional) If set to true, allows the trench to function as a mask, with specified material applied only to the bottom. Default is set to false. | `bool`                  |
-| `material`             | (Optional) Specifies the material used for the trench. Default is set to `psMaterial_None`.                |    `psMaterial`               |
+| `material`             | (Optional) Specifies the material used for the trench. Default is set to `Material_None`.                |    `Material`               |
 
 __Example usage__:
 
@@ -58,9 +59,10 @@ C++
 {: .label .label-blue }
 </summary>
 ```c++
-auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-psMakeTrench<NumericType, D>(domain, 0.5, 10.0, 10.0, 5.0, 5.0, 10., 0.,
-                            false, false, psMaterial::Si)
+// namespace viennaps
+auto domain = SmartPointer<Domain<NumericType, D>>::New();
+MakeTrench<NumericType, D>(domain, 0.5, 10.0, 10.0, 5.0, 5.0, 10., 0.,
+                            false, false, Material::Si)
     .apply();
 ```
 </details>

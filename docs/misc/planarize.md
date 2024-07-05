@@ -25,8 +25,8 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
-psPlanarize<double, 3>(domain, 
-                       0. /*cut off height in z-direction*/).apply();
+ps::Planarize<double, 3>(domain, 
+                         0. /*cut off height in z-direction*/).apply();
 ```
 </details>
 

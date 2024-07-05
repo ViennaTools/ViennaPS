@@ -12,7 +12,7 @@ nav_order: 3
 
 Singleton class for thread-safe logging.
 
-The `psLogger` class can be used to set the verbosity of the program. The verbosity levels are:
+The `Logger` class can be used to set the verbosity of the program. The verbosity levels are:
 
 | Code           | Description                                     |
 |----------------|-------------------------------------------------|
@@ -31,7 +31,7 @@ C++
 {: .label .label-blue}
 </summary>
 ```cpp
-psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
 ```
 </details>
 

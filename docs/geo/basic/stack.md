@@ -14,25 +14,26 @@ nav_order: 5
 ```
 ---
 
-The `psMakeStack` generates a stack of alternating SiO<sub>2</sub>/Si<sub>3</sub>N<sub>4</sub> layers featuring an optionally etched hole (3D) or trench (2D) at the center. The stack emerges in the positive z direction (3D) or y direction (2D) and is centered around the origin, with its x/y extent specified. Users have the flexibility to introduce periodic boundaries in the x and y directions. Additionally, the stack can incorporate a top mask with a central hole of a specified radius or a trench with a designated width. This versatile functionality enables users to create diverse and customized structures for simulation scenarios.
+The `MakeStack` generates a stack of alternating SiO<sub>2</sub>/Si<sub>3</sub>N<sub>4</sub> layers featuring an optionally etched hole (3D) or trench (2D) at the center. The stack emerges in the positive z direction (3D) or y direction (2D) and is centered around the origin, with its x/y extent specified. Users have the flexibility to introduce periodic boundaries in the x and y directions. Additionally, the stack can incorporate a top mask with a central hole of a specified radius or a trench with a designated width. This versatile functionality enables users to create diverse and customized structures for simulation scenarios.
 
 ```c++
-psMakeStack(psDomainType domain, 
-            const NumericType gridDelta,
-            const NumericType xExtent, 
-            const NumericType yExtent,
-            const int numLayers, 
-            const NumericType layerHeight,
-            const NumericType substrateHeight,
-            const NumericType holeRadius,
-            const NumericType trenchWidth,
-            const NumericType maskHeight, 
-            const bool periodicBoundary = false)
+// namespace viennaps
+MakeStack(DomainType domain, 
+          const NumericType gridDelta,
+          const NumericType xExtent, 
+          const NumericType yExtent,
+          const int numLayers, 
+          const NumericType layerHeight,
+          const NumericType substrateHeight,
+          const NumericType holeRadius,
+          const NumericType trenchWidth,
+          const NumericType maskHeight, 
+          const bool periodicBoundary = false)
 ```
 
 | Parameter              | Description                                                       | Type                           |
 |------------------------|-------------------------------------------------------------------|--------------------------------|
-| `domain`               | Specifies the domain type for the stack geometry.                   | `psSmartPointer<psDomain<NumericType, D>>` |
+| `domain`               | Specifies the domain type for the stack geometry.                   | `SmartPointer<Domain<NumericType, D>>` |
 | `gridDelta`            | Represents the grid spacing or resolution used in the simulation.             | `NumericType` |
 | `xExtent`              | Defines the extent of the stack geometry in the x-direction.                   | `NumericType` |
 | `yExtent`              | Specifies the extent of the stack geometry in the y-direction.                 | `NumericType` |
@@ -55,8 +56,9 @@ C++
 {: .label .label-blue }
 </summary>
 ```c++
-auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-psMakeStack<NumericType, D>(domain, 0.5, 10.0, 10.0, 5, 5.0, 10., 0.0, 5.0,
+// namespace viennaps
+auto domain = SmartPointer<Domain<NumericType, D>>::New();
+MakeStack<NumericType, D>(domain, 0.5, 10.0, 10.0, 5, 5.0, 10., 0.0, 5.0,
                             0.0, false)
     .apply();
 ```

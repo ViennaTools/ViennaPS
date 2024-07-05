@@ -14,17 +14,17 @@ nav_order: 1
 ```
 ---
 
-An isotropic etching or deposition process initiates across all materials in the domain, excluding the masking material, which is by default set to `psMaterial::None`. The default setting means, that the process unfolds uniformly across all materials within the domain. When the rate is less than 0, the material undergoes etching. Conversely, when the rate exceeds 0, material deposition occurs in accordance with the material of the top level set. If you want to deposit a new material, make sure to call the function `duplicateTopLevelSet` in your domain instance.
+An isotropic etching or deposition process initiates across all materials in the domain, excluding the masking material, which is by default set to `Material::None`. The default setting means, that the process unfolds uniformly across all materials within the domain. When the rate is less than 0, the material undergoes etching. Conversely, when the rate exceeds 0, material deposition occurs in accordance with the material of the top level set. If you want to deposit a new material, make sure to call the function `duplicateTopLevelSet` in your domain instance.
 
 ```c++
 psIsotropicProcess(const NumericType rate,
-                   const psMaterial maskMaterial = psMaterial::None)
+                   const Material maskMaterial = Material::None)
 ```
 
 | Parameter | Description | Type |
 |-----------|-------------|------|
 | `rate` | Rate of the process. | `NumericType` |
-| `maskMaterial` | Material that does not participate in the process. | `psMaterial` |
+| `maskMaterial` | Material that does not participate in the process. | `Material` |
 
 __Deposition example:__
 
@@ -38,24 +38,26 @@ C++
 #include <psMakeTrench.hpp>
 #include <psProcess.hpp>
 
+using namespace viennaps;
+
 int main() {
   using NumericType = double;
   constexpr int D = 2;
 
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeTrench<NumericType, D>(domain, 0.1 /*gridDelta*/, 20. /*xExtent*/,
-                               20. /*yExtent*/, 10. /*trenchWidth*/,
-                               10. /*trenchDepth*/, 0., 0., false, false,
-                               psMaterial::Si)
+  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  MakeTrench<NumericType, D>(domain, 0.1 /*gridDelta*/, 20. /*xExtent*/,
+                             20. /*yExtent*/, 10. /*trenchWidth*/,
+                             10. /*trenchDepth*/, 0., 0., false, false,
+                             Material::Si)
       .apply();
   // duplicate top layer to capture deposition
-  domain->duplicateTopLevelSet(psMaterial::SiO2);
+  domain->duplicateTopLevelSet(Material::SiO2);
 
-  auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(
-      0.1 /*rate*/, psMaterial::None);
+  auto model = SmartPointer<IsotropicProcess<NumericType, D>>::New(
+      0.1 /*rate*/, Material::None);
 
   domain->saveVolumeMesh("trench_initial");
-  psProcess<NumericType, D>(domain, model, 20.).apply(); // run process for 20s
+  Process<NumericType, D>(domain, model, 20.).apply(); // run process for 20s
   domain->saveVolumeMesh("trench_final");
 }
 ```
@@ -107,22 +109,24 @@ C++
 #include <psMakeTrench.hpp>
 #include <psProcess.hpp>
 
+using namespace viennaps;
+
 int main() {
   using NumericType = double;
   constexpr int D = 2;
 
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeTrench<NumericType, D>(domain, 0.1 /*gridDelta*/, 20. /*xExtent*/,
-                               20. /*yExtent*/, 5. /*trenchWidth*/,
-                               5. /*trenchDepth*/, 0., 0., false, true /*makeMask*/,
-                               psMaterial::Si)
+  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  MakeTrench<NumericType, D>(domain, 0.1 /*gridDelta*/, 20. /*xExtent*/,
+                             20. /*yExtent*/, 5. /*trenchWidth*/,
+                             5. /*trenchDepth*/, 0., 0., false, true /*makeMask*/,
+                             Material::Si)
       .apply();
 
-  auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(
-      -0.1 /*rate*/, psMaterial::Mask);
+  auto model = SmartPointer<IsotropicProcess<NumericType, D>>::New(
+      -0.1 /*rate*/, Material::Mask);
 
   domain->saveVolumeMesh("trench_initial");
-  psProcess<NumericType, D>(domain, model, 50.).apply(); // run process for 20s
+  Process<NumericType, D>(domain, model, 50.).apply(); // run process for 20s
   domain->saveVolumeMesh("trench_final");
 }
 ```

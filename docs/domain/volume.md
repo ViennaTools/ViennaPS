@@ -24,11 +24,11 @@ To find a cell in which an arbitrary point in space resides, a bounding volume h
 To generate the CS from your domain, use the function:
 
 ```c++
-auto domain = psSmartPointer<psDomain<NumericType, D>>::New()
+auto domain = SmartPointer<Domain<NumericType, D>>::New()
 ...
 // Add level-sets to domain
 ...
-domain->generateCellSet(position, isCellSetAboveSurface)
+domain->generateCellSet(position, material, isCellSetAboveSurface)
 ```
 The `position` parameter describes the location of the cell set surface. With the parameter `isCellSetAboveSurface` one can specify whether the Cell-Set should be placed above or below the surface. If the Cell-Set is above the surface it covers all material in the domain and the `position` parameter should be set higher than the highest surface point in the domain. 
 

@@ -30,7 +30,7 @@ Throughout this documentation, you will find detailed explanations, practical ex
 
 ViennaPS was developed under the aegis of the [Institute for Microelectronics](http://www.iue.tuwien.ac.at/) at the __TU Wien__.
 
-Current contributors: Tobias Reiter, Julius Piso
+Current contributors: Tobias Reiter, Noah Karnel, Julius Piso
 
 Contact us via: [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.at)
 

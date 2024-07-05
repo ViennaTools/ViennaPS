@@ -20,13 +20,13 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
-psExtrude<double>(domain2D, domain3D, 
-                  {0., 1.}, // min and max extent in the extruded dim
-                  2, // extrude in z-direction
-                  {lsBoundaryConditionEnum::REFLECTIVE,
-                   lsBoundaryConditionEnum::REFLECTIVE,
-                   lsBoundaryConditionEnum::INFINITE_BOUNDARY}).apply();
-```
+ps::Extrude<double>(domain2D, domain3D, 
+                    {0., 1.}, // min and max extent in the extruded dim
+                    2, // extrude in z-direction
+                    {viennals::BoundaryConditionEnum::REFLECTIVE,
+                     viennals::BoundaryConditionEnum::REFLECTIVE,
+                     viennals::BoundaryConditionEnum::INFINITE_BOUNDARY}).apply();
+``` 
 </details>
 
 {: .note}

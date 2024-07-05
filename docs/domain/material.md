@@ -10,8 +10,8 @@ nav_order: 2
 
 ---
 
-If specified, each Level-Set in the `psDomain` class is assigned a specific material, which can be used in a process to implement material-specific rates or similar.
-The following materials are currently available in the `psMaterial` enum:
+If specified, each Level-Set in the `Domain` class is assigned a specific material, which can be used in a process to implement material-specific rates or similar.
+The following materials are currently available in the `Material` enum:
 
 | Material  | Numeric Value | Description  |
 |-----------|-------|--------------|
@@ -44,7 +44,7 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
-auto material = psMaterial::Si;
+auto material = Material::Si;
 ```
 </details>
 

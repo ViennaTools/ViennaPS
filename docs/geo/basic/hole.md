@@ -14,26 +14,27 @@ nav_order: 3
 ```
 ---
 
-The `psMakeHole` class generates a hole geometry in the z direction, which, in 2D mode, corresponds to a trench geometry. Positioned at the origin, the hole is centered, with the total extent defined in the x and y directions. The normal direction for the hole creation is in the positive z direction in 3D and the positive y direction in 2D. Users can specify the hole's radius, depth, and opt for tapering with a designated angle. The hole configuration may include periodic boundaries in both the x and y directions. 
+The `MakeHole` class generates a hole geometry in the z direction, which, in 2D mode, corresponds to a trench geometry. Positioned at the origin, the hole is centered, with the total extent defined in the x and y directions. The normal direction for the hole creation is in the positive z direction in 3D and the positive y direction in 2D. Users can specify the hole's radius, depth, and opt for tapering with a designated angle. The hole configuration may include periodic boundaries in both the x and y directions. 
 Additionally, the hole can serve as a mask, with the specified material only applied to the bottom of the hole, while the remainder adopts the mask material.
 
 ```c++
-psMakeHole(psDomainType domain,
-           const NumericType gridDelta,
-           const NumericType xExtent, 
-           const NumericType yExtent,
-           const NumericType holeRadius,
-           const NumericType holeDepth,
-           const NumericType taperAngle = 0., // in degrees
-           const NumericType baseHeight = 0.,
-           const bool periodicBoundary = false,
-           const bool makeMask = false,
-           const psMaterial material = psMaterial::None)
+// namespace viennaps
+MakeHole(DomainType domain,
+        const NumericType gridDelta,
+        const NumericType xExtent, 
+        const NumericType yExtent,
+        const NumericType holeRadius,
+        const NumericType holeDepth,
+        const NumericType taperAngle = 0., // in degrees
+        const NumericType baseHeight = 0.,
+        const bool periodicBoundary = false,
+        const bool makeMask = false,
+        const Material material = Material::None)
 ```
 
 | Parameter              | Description                                                           | Type                           |
 |------------------------|-----------------------------------------------------------------------|--------------------------------|
-| `domain`               | Specifies the type of domain for the hole geometry.                |  `psSmartPointer<psDomain<NumericType, D>>`  |
+| `domain`               | Specifies the type of domain for the hole geometry.                |  `SmartPointer<Domain<NumericType, D>>`  |
 | `gridDelta`            | Represents the grid spacing or resolution used in the simulation.                   | `NumericType`                  |
 | `xExtent`              | Defines the extent of the hole geometry in the x-direction.                         | `NumericType`                  |
 | `yExtent`              | Specifies the extent of the hole geometry in the y-direction.                  | `NumericType`                  |
@@ -43,7 +44,7 @@ psMakeHole(psDomainType domain,
 | `baseHeight`           | (Optional) Sets the base height of the hole. Default is set to 0.             | `NumericType`                  |
 | `periodicBoundary`     | (Optional) If set to true, enables periodic boundaries in both x and y directions. Default is set to false. | `bool`  |
 | `makeMask`             | (Optional) If set to true, allows the hole to function as a mask, with specified material applied only to the bottom. Default is set to false. | `bool`  |
-| `material`             | (Optional) Specifies the material used for the hole. Default is set to `psMaterial::None`.    |   `psMaterial`  |
+| `material`             | (Optional) Specifies the material used for the hole. Default is set to `Material::None`.    |   `Material`  |
 
 __Example usage:__
 
@@ -53,9 +54,10 @@ C++
 {: .label .label-blue }
 </summary>
 ```c++
-auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-psMakeHole<NumericType, D>(domain, 0.5, 10.0, 10.0, 2.5, 5.0, 10., 0., false,
-                            false, psMaterial::Si)
+// namespace viennaps
+auto domain = SmartPointer<Domain<NumericType, D>>::New();
+MakeHole<NumericType, D>(domain, 0.5, 10.0, 10.0, 2.5, 5.0, 10., 0., false,
+                         false, Material::Si)
     .apply();
 ```
 </details>

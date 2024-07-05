@@ -10,7 +10,7 @@ nav_order: 5
 
 ---
 
-The psPointData class is designed to hold data associated with points in space. It's a generic class that can work with any data type `T` that satisfies the `lsConcepts::IsFloatingPoint` concept. By default, it uses `double` as the data type.
+The `viennals::PointData` class is designed to hold data associated with points in space. It's a generic class that can work with any data type `T` that satisfies the `lsConcepts::IsFloatingPoint` concept. By default, it uses `double` as the data type.
 
 __Member Types:__
 

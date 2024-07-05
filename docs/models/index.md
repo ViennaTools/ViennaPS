@@ -14,6 +14,6 @@ has_children: true
 ```
 ---
 
-All the information about the process is encompassed in the class `psProcessModel`, as it includes all the particle type information required for ray tracing, the surface model, as well as advection callbacks, for generating volume models describing chemical processes inside the material.
+All the information about the process is encompassed in the class `ProcessModel`, as it includes all the particle type information required for ray tracing, the surface model, as well as advection callbacks, for generating volume models describing chemical processes inside the material.
 
 Users have the flexibility to configure their own custom process model or opt for pre-defined models encompassing frequently used processes.

@@ -11,7 +11,7 @@ nav_order: 2
 
 ---
 
-Coming soon
+Details coming soon
 {: .label .label-yellow}
 
 ## Surface Velocity Extension
