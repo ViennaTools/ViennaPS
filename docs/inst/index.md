@@ -44,6 +44,16 @@ This will install the necessary headers and CMake files to the specified path. I
 
 The `-G Ninja` option can be omitted if you prefer to use _Unix Makefiles_ as the build system. However, this can potentially lead to conflicts when later installing the Python package using the pip installer, as pip always employs _Ninja_ as the build system.
 
+## Python package
+
+Pre-built python packages are now available in the TestPyPi index for most common operating systems. To download the package, run the following command:
+
+```bash
+pip install -i https://test.pypi.org/simple/ ViennaPS-Python
+```
+
+If there is no pre-built package available for your operating system, you can build the package yourself using the instructions below.
+
 ## Building the Python package
 
 In order to build the Python bindings, the [pybind11](https://github.com/pybind/pybind11) library is required. On Linux based system (Ubuntu/Debian), pybind11 can be installed via the package manager: `sudo apt install pybind11-dev`. For macOS, the installation via Homebrew is recommended: `brew install pybind11`. 
@@ -53,7 +63,7 @@ The ViennaPS Python package can be built and installed using the `pip` command:
 git clone https://github.com/ViennaTools/ViennaPS.git
 cd ViennaPS
 
-pip install --user .
+pip install .
 ```
 
 {: .note}
@@ -78,7 +88,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@2.0.0")
+  CPMAddPackage("gh:viennatools/viennaps@3.0.1")
   ```
 
 * With a local installation
