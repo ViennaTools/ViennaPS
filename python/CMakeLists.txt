@@ -72,9 +72,9 @@ set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs")
 
 # Not required for both targets, one will suffice
 # NOTE: This fails if ViennaLS or ViennaRay from a local installation are used
-setup_embree_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
-setup_vtk_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
-setup_tbb_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_embree_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_vtk_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_tbb_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
 
 install(
   DIRECTORY "${VIENNAPS_LIB_FOLDER}"

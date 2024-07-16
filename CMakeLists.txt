@@ -96,7 +96,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.0.0
+  VERSION 1.1.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
