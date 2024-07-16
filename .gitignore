@@ -4,6 +4,7 @@ venv/
 .vscode
 .vs
 
+dist/
 *.ipynb
 old_*
 *a.out

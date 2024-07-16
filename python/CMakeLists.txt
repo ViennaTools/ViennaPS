@@ -71,10 +71,9 @@ target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs")
 
 # Not required for both targets, one will suffice
-
-setup_embree_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
-setup_vtk_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
-setup_tbb_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_embree_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_vtk_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_tbb_env(viennaps2d "${VIENNAPS_LIB_FOLDER}")
 
 install(
   DIRECTORY "${VIENNAPS_LIB_FOLDER}"

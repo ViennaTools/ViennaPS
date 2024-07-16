@@ -3,7 +3,7 @@ requires = ["scikit-build-core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-version = "3.0.0"
+version = "3.0.1"
 name = "ViennaPS_Python"
 readme = "README.md"
 license = {file = "LICENSE"}

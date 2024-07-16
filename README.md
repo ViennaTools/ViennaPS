@@ -39,7 +39,7 @@ Releases are tagged on the master branch and available in the [releases section]
   * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.4.0
   * [VTK](https://vtk.org/) >= 9.0.0
 
-* [ViennaRay](https://github.com/ViennaTools/viennaray) >= 3.0.0
+* [ViennaRay](https://github.com/ViennaTools/viennaray) >= 3.0.1
   * [Embree](https://www.embree.org/) >= 4.0.0
 
 * [ViennaCS](https://github.com/ViennaTools/viennacs) >= 1.0.0
@@ -98,7 +98,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.0.0")
+  CPMAddPackage("gh:viennatools/viennaps@3.0.1")
   ```
 
 * With a local installation
