@@ -576,9 +576,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            }),
            pybind11::arg("rate"), pybind11::arg("stickingProbability"),
            pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"))
-      .def(pybind11::init<T, T, std::unordered_map<Material, T>>(),
-           pybind11::arg("stickingProbability"),
-           pybind11::arg("sourceExponent"), pybind11::arg("materiaRates"));
+      .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
+           pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"));
 
   // TEOS Deposition
   pybind11::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(

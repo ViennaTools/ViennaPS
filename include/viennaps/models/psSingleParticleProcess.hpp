@@ -110,9 +110,9 @@ public:
                std::move(maskMaterialMap));
   }
 
-  SingleParticleProcess(
-      NumericType stickingProbability, NumericType sourceDistributionPower,
-      std::unordered_map<Material, NumericType> materialRates) {
+  SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
+                        NumericType stickingProbability,
+                        NumericType sourceDistributionPower) {
     initialize(0., stickingProbability, sourceDistributionPower,
                std::move(materialRates));
   }
