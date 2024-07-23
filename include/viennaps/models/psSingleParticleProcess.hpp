@@ -13,13 +13,14 @@ using namespace viennacore;
 namespace impl {
 template <typename NumericType, int D>
 class SingleParticleSurfaceModel : public viennaps::SurfaceModel<NumericType> {
-  const NumericType rateFactor_;
-  const std::vector<Material> maskMaterials_;
+  const NumericType rate_;
+  const std::unordered_map<Material, NumericType> materialRates_;
 
 public:
-  SingleParticleSurfaceModel(NumericType rate,
-                             const std::vector<Material> &mask)
-      : rateFactor_(rate), maskMaterials_(mask) {}
+  SingleParticleSurfaceModel(
+      const NumericType rate,
+      const std::unordered_map<Material, NumericType> &mask)
+      : rate_(rate), materialRates_(mask) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
       SmartPointer<viennals::PointData<NumericType>> rates,
@@ -31,21 +32,16 @@ public:
     auto flux = rates->getScalarData("particleFlux");
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
-      if (!isMaskMaterial(materialIds[i])) {
-        velocity->at(i) = flux->at(i) * rateFactor_;
+      if (auto matRate =
+              materialRates_.find(MaterialMap::mapToMaterial(materialIds[i]));
+          matRate == materialRates_.end()) {
+        velocity->at(i) = flux->at(i) * rate_;
+      } else {
+        velocity->at(i) = flux->at(i) * matRate->second;
       }
     }
 
     return velocity;
-  }
-
-private:
-  bool isMaskMaterial(const NumericType &material) const {
-    for (const auto &mat : maskMaterials_) {
-      if (MaterialMap::isMaterial(material, mat))
-        return true;
-    }
-    return false;
   }
 };
 
@@ -97,22 +93,34 @@ public:
                         NumericType stickingProbability = 1.,
                         NumericType sourceDistributionPower = 1.,
                         Material maskMaterial = Material::None) {
-    std::vector<Material> maskMaterialVec = {maskMaterial};
+    std::unordered_map<Material, NumericType> maskMaterialMap = {
+        {maskMaterial, 0.}};
     initialize(rate, stickingProbability, sourceDistributionPower,
-               std::move(maskMaterialVec));
+               std::move(maskMaterialMap));
   }
 
   SingleParticleProcess(NumericType rate, NumericType stickingProbability,
                         NumericType sourceDistributionPower,
                         std::vector<Material> maskMaterial) {
+    std::unordered_map<Material, NumericType> maskMaterialMap;
+    for (auto &mat : maskMaterial) {
+      maskMaterialMap[mat] = 0.;
+    }
     initialize(rate, stickingProbability, sourceDistributionPower,
-               std::move(maskMaterial));
+               std::move(maskMaterialMap));
+  }
+
+  SingleParticleProcess(
+      NumericType stickingProbability, NumericType sourceDistributionPower,
+      std::unordered_map<Material, NumericType> materialRates) {
+    initialize(0., stickingProbability, sourceDistributionPower,
+               std::move(materialRates));
   }
 
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
                   NumericType sourceDistributionPower,
-                  std::vector<Material> &&maskMaterial) {
+                  std::unordered_map<Material, NumericType> &&maskMaterial) {
     // particles
     auto particle = std::make_unique<impl::SingleParticle<NumericType, D>>(
         stickingProbability, sourceDistributionPower);
