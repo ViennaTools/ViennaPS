@@ -4,11 +4,11 @@ build-backend = "scikit_build_core.build"
 
 [project]
 version = "3.0.1"
-name = "ViennaPS_Python"
+name = "ViennaPS"
 readme = "README.md"
 license = {file = "LICENSE"}
 description = "Semiconductor fabrication process simulation library"
-# dependencies = ['vtk >= 9.0.0, < 10']
+dependencies = ['ViennaLS']
 
 [project.urls]
 Homepage = "https://viennatools.github.io/ViennaPS/"
