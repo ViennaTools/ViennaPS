@@ -1,11 +1,16 @@
 name: 🐍 Bindings
 
 on:
+  release:
+    types:
+      - published
   push:
   pull_request:
-    branches:
-      - master
   workflow_dispatch:
+    inputs:
+      publish:
+        type: boolean
+        description: Publish on PyPi
 
 jobs:
   test-bindings:
@@ -94,13 +99,13 @@ jobs:
       - name: 🛞 CIBuildWheel
         run: pip install cibuildwheel==2.17.0 --break-system-packages
 
-      - name: 🛠️ Build VTK (Windows)
+      - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
           type pyproject.toml
 
-      - name: 🛠️ Build VTK (MacOs)
+      - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           sed -i .bak 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
@@ -121,5 +126,26 @@ jobs:
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Wheels (${{ matrix.os }})
+          name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
+
+  deploy:
+    if: ${{ github.event_name == 'release' }} || ${{ github.event.inputs.publish == 'true' }}
+    needs: [package]
+
+    permissions:
+      id-token: write
+
+    runs-on: ubuntu-latest
+    name: "🐍 Publish Bindings"
+
+    steps:
+      - name: 📦 Download Wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: 🚀 Publish Wheels
+        uses: pypa/gh-action-pypi-publish@release/v1
