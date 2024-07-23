@@ -53,7 +53,10 @@ endif()
 # Setup Bindings
 # --------------------------------------------------------------------------------------------------------
 
+set(LSNAME "viennals2d")
 viennacore_setup_binding(viennaps2d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
+
+set(LSNAME "viennals3d")
 viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 
 target_link_libraries(viennaps2d PRIVATE ViennaPS)
