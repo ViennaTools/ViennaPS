@@ -1,0 +1,21 @@
+# Geometry
+gridDelta = 1.0
+xExtent = 50.0
+yExtent = 50.0
+holeRadius = 10.0
+maskHeight = 10.0
+
+# all flux values are units 1e16 / cm²
+ionFlux=10.
+etchantFlux=50.
+
+ionExponent=200
+meanEnergy=100 # eV
+sigmaEnergy=10 # eV
+
+etchTime = 10.0
+
+depositionRate = 0.2
+depositionTime = 10.0
+
+numCycles = 5

@@ -1,7 +1,7 @@
 add_custom_target(ViennaPS_Examples ALL)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${PROJECT_BINARY_DIR}/examples>)
 if(WIN32)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${PROJECT_BINARY_DIR}/examples>)
   viennacore_setup_embree_env(ViennaPS_Examples ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   viennacore_setup_vtk_env(ViennaPS_Examples ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   viennacore_setup_tbb_env(ViennaPS_Examples ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
