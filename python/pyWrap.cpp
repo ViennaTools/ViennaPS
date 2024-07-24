@@ -57,6 +57,7 @@
 #include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
+#include <models/psTEOSPECVD.hpp>
 
 // visualization
 #include <psToDiskMesh.hpp>
@@ -574,7 +575,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                  rate, sticking, power, mask);
            }),
            pybind11::arg("rate"), pybind11::arg("stickingProbability"),
-           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"));
+           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"))
+      .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
+           pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"));
 
   // TEOS Deposition
   pybind11::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
@@ -587,6 +591,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("orderP1"),
            pybind11::arg("stickingProbabilityP2") = 0.,
            pybind11::arg("rateP2") = 0., pybind11::arg("orderP2") = 0.);
+
+  // TEOS PE-CVD
+  pybind11::class_<TEOSPECVD<T, D>, SmartPointer<TEOSPECVD<T, D>>>(
+      module, "TEOSPECVD", processModel)
+      .def(
+          pybind11::init(&SmartPointer<TEOSPECVD<T, D>>::New<
+                         const T /*stR*/, const T /*rateR*/, const T /*orderR*/,
+                         const T /*stI*/, const T /*rateI*/, const T /*orderI*/,
+                         const T /*exponentI*/, const T /*minAngleIon*/>),
+          pybind11::arg("stickingProbabilityRadical"),
+          pybind11::arg("depositionRateRadical"),
+          pybind11::arg("depositionRateIon"), pybind11::arg("exponentIon"),
+          pybind11::arg("stickingProbabilityIon") = 1.,
+          pybind11::arg("reactionOrderRadical") = 1.,
+          pybind11::arg("reactionOrderIon") = 1.,
+          pybind11::arg("minAngleIon") = 0.);
 
   // SF6O2 Parameters
   pybind11::class_<SF6O2Parameters<T>::MaskType>(module, "SF6O2ParametersMask")
