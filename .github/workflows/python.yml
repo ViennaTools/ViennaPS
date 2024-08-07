@@ -50,6 +50,12 @@ jobs:
           key: python-${{ matrix.os }}
           path: build
 
+      - name: 🛠️ Disable IPO (Alpine)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DUSE_IPO=off"/g' pyproject.toml
+          cat pyproject.toml
+
       - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
