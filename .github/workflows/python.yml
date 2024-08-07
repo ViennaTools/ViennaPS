@@ -136,7 +136,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   deploy:
-    if: ${{ github.event_name == 'release' }} || ${{ github.event.inputs.publish == 'true' }}
+    if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' }}
     needs: [package]
 
     permissions:
