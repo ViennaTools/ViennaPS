@@ -4,6 +4,7 @@ build/
 .vs
 
 dist/
+dependencies/
 *.ipynb
 old_*
 *a.out
