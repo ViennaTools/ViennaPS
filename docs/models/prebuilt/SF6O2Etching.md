@@ -201,6 +201,34 @@ parameters.Mask.rho = 500.
 ```
 </details>
 
+## SF<sub>6</sub> Etching
+
+The SF<sub>6</sub> etching model is a simplified version of the SF<sub>6</sub>O<sub>2</sub> etching model. The model only considers the etching of silicon by fluorine ions. The model is based on the same principles as the SF<sub>6</sub>O<sub>2</sub> etching model, but without the presence of oxygen. The model is implemented in the same way as the SF<sub>6</sub>O<sub>2</sub> etching model, but with the following parameters:
+
+```c++
+
+SF6Etching(const double ionFlux, const double etchantFlux,
+           const NumericType meanEnergy /* eV */,
+           const NumericType sigmaEnergy /* eV */, // 5 parameters
+           const NumericType ionExponent = 300.,
+           const NumericType etchStopDepth =
+                std::numeric_limits<NumericType>::lowest()) 
+```
+
+| Parameter           | Description                                                               | Type           |
+|----------------------|--------------------------------------------------------------------------|----------------|
+| `ionFlux`           | Ion flux for the SF<sub>6</sub> etching process.                          | `double`       |
+| `etchantFlux`       | Etchant flux for the SF<sub>6</sub> etching process.                      | `double`       |
+| `meanEnergy`        | Mean energy of ions (eV).                                                 | `NumericType`  |
+| `sigmaEnergy`       | Energy distribution standard deviation (eV).                              | `NumericType`  |
+| `ionExponent`       | (Optional) Exponent in the power cosine source distribution of ions for initial directions. Default is set to 300.       | `NumericType`  |
+| `etchStopDepth`     | (Optional) Depth at which etching should stop. Default is negative infinity.| `NumericType`  |
+
+{: .note}
+> All flux values are units 10<sup>15</sup> / cm<sup>2</sup> /s<sup>2</sup> .
+
+The detailed parameters can be accessed and modified in the same way as for the SF<sub>6</sub>O<sub>2</sub> etching model.
+
 ## Related Examples
 
 * [Hole Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching)

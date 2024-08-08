@@ -49,7 +49,7 @@ The `-G Ninja` option can be omitted if you prefer to use _Unix Makefiles_ as th
 Pre-built python packages are now available in the TestPyPi index for most common operating systems. To download the package, run the following command:
 
 ```bash
-pip install -i https://test.pypi.org/simple/ ViennaPS-Python
+pip install ViennaPS
 ```
 
 If there is no pre-built package available for your operating system, you can build the package yourself using the instructions below.
@@ -67,7 +67,7 @@ pip install .
 ```
 
 {: .note}
-> Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
+> Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore necessary to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
 
 ## Using the Python package
 
@@ -88,7 +88,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.0.1")
+  CPMAddPackage("gh:viennatools/viennaps@3.1.0")
   ```
 
 * With a local installation

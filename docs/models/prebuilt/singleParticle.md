@@ -18,7 +18,7 @@ The single particle process is a simple process model that simulates either etch
 
 The rate can be either negative or positive, corresponding to etching or deposition, respectively. The sticking coefficient is the probability that a particle will stick to the surface upon impact, thus controlling the number of diffusive reflections from the surface. The exponent in the power cosine distribution of the initial particle directions is a measure of the angular spread of the initial particle directions. A higher exponent corresponds to a more focused beam of particles.
 
-Additionally, mask materials can be specified, where the rate is assumed to be zero. 
+Additionally, mask materials can be specified, where the rate is assumed to be zero, or map between material and rate can be defined. 
 
 ## Implementation
 
@@ -33,14 +33,18 @@ SingleParticleProcess(const NumericType rate,
                       const NumericType sourceDistributionPower,
                       const std::vector<Material> maskMaterials) 
 
+SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
+                      NumericType stickingProbability,
+                      NumericType sourceDistributionPower)
+
 ```
 
 | Parameter                  | Description                                            | Default Value          |
 |----------------------------|--------------------------------------------------------|------------------------|
-| `rate`                      | Rate of the single particle process                    | 1.0                    |
-| `stickingProbability`       | Sticking probability of particles                      | 1.0                    |
-| `sourceDistributionPower`   | Power of the power cosine source distribution          | 1.0                    |
-| `maskMaterial`              | Mask material                       | `Material::None`       |
+| `rate`                     | Default rate of the single particle process, if no material specific rates are defined     | 1.0                    |
+| `stickingProbability`      | Sticking probability of particles                      | 1.0                    |
+| `sourceDistributionPower`  | Power of the power cosine source distribution          | 1.0                    |
+| `maskMaterial`             | Mask material                       | `Material::None`       |
 
 __Example usage__:
 
@@ -56,6 +60,10 @@ auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(1., 0.1, 1
 ...
 // for multiple mask materials
 auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(1., 0.1, 1., {mask1, mask2});
+
+// for material specific rates
+std::unordered_map<Material, NumericType> materialRates = {{Material::Si, 1.}, {Material::SiO2, 0.5}};
+auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(materialRates, 0.1, 1.);
 ...
 ```
 </details>
@@ -68,6 +76,10 @@ Python
 ```python
 ...
 model = vps.SingleParticleProcess(rate=1., stickingProbability=0.1, sourceExponent=1., maskMaterials=[maskMaterial])
+
+# using material specific rates
+rates = {vps.Material.Si: 1., vps.Material.SiO2: 0.5}
+model = vps.SingleParticleProcess(materialRates=rates, stickingProbability=0.1, sourceExponent=1.)
 ...
 ```
 </details>
