@@ -125,6 +125,22 @@ void disableFluxSmoothing()
 Toggle the option to enable or disable flux smoothing. When flux smoothing is activated, the flux at each surface point, computed by the ray tracer, undergoes averaging across the neighboring surface points. Per default, flux smoothing is enabled.
 
 ---
+### Enable or disable flux boundary conditions
+```c++
+void enableFluxBoundaries()
+void disableFluxBoundaries()
+```
+Toggle the option to enable or disable flux boundary conditions. When flux boundary conditions are disabled, particles are allowed to leave the domain without being reflected back into the domain. Per default, flux boundary conditions are enabled.
+
+---
+### Enable or disable random seeds
+```c++
+void enableRandomSeeds()
+void disableRandomSeeds()
+```
+Toggle the option to enable or disable random seeds. When random seeds are enabled, the random number generator is seeded with a random value, making the results generally not perectly reproducible. Per default, random seeds are enabled.
+
+---
 ### Set the integration scheme
 ```c++
 void
@@ -146,3 +162,4 @@ Set the CFL (Courant-Friedrichs-Levy) condition to use during surface advection 
 void setPrintTimeInterval(NumericType passedTime)
 ```
 Sets the minimum time between printing intermediate results during the process. If this is set to a non-positive value, no intermediate results are printed.
+

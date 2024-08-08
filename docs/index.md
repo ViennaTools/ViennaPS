@@ -24,21 +24,25 @@ This documentation serves as your comprehensive guide to understanding, implemen
 
 Throughout this documentation, you will find detailed explanations, practical examples, and best practices to effectively utilize the library. We aim to empower users with the knowledge and tools necessary to simulate a wide range of processes accurately and efficiently, making informed decisions and driving innovation in the field.
 
+## Contributing
 
+If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html).
+
+Make sure to format all files before creating a pull request:
+```bash
+cmake -B build
+cmake --build build --target format
+```
 
 ## About the project
 
-ViennaPS was developed under the aegis of the [Institute for Microelectronics](http://www.iue.tuwien.ac.at/) at the __TU Wien__.
+ViennaPS was developed under the aegis of the [Institute for Microelectronics](http://www.iue.tuwien.ac.at/) at the __TU Wien__. 
 
-Current contributors: Tobias Reiter, Noah Karnel, Julius Piso
+Current contributors: Tobias Reiter, Noah Karnel, Julius Piso, Lado Filipovic
 
 Contact us via: [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.at)
 
-### Contributing
-
-If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html). Before creating a pull request, make sure ALL files have been formatted by clang-format, which can be done using the `format-project.sh` script in the root directory.
-
-### License 
+## License 
 
 See file [LICENSE](https://github.com/ViennaTools/ViennaPS/blob/master/LICENSE) in the base directory.
 
