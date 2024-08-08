@@ -53,6 +53,7 @@ __Example usage__:
 C++
 {: .label .label-blue}
 </summary>
+{% raw %}
 ```c++
 ...
 // for a single mask material
@@ -66,6 +67,7 @@ std::unordered_map<Material, NumericType> materialRates = {{Material::Si, 1.}, {
 auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(materialRates, 0.1, 1.);
 ...
 ```
+{% endraw %}
 </details>
 
 <details markdown="1">
@@ -73,6 +75,7 @@ auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(materialRa
 Python
 {: .label .label-green}
 </summary>
+{% raw %}
 ```python
 ...
 model = vps.SingleParticleProcess(rate=1., stickingProbability=0.1, sourceExponent=1., maskMaterials=[maskMaterial])
@@ -82,6 +85,7 @@ rates = {vps.Material.Si: 1., vps.Material.SiO2: 0.5}
 model = vps.SingleParticleProcess(materialRates=rates, stickingProbability=0.1, sourceExponent=1.)
 ...
 ```
+{% endraw %}
 </details>
 
 ## Related Examples

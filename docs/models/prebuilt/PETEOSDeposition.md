@@ -16,7 +16,7 @@ MathJax = {
   src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
 </script>
 
-#  TEOS Plasma-Enhanced (PE) Chemical Vapr Deposition (CVD)
+#  TEOS Plasma-Enhanced (PE) Chemical Vapor Deposition (CVD)
 {: .fs-9 .fw-500}
 
 ```c++
