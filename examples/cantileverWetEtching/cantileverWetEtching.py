@@ -22,9 +22,9 @@ gridDelta = 5.0  # um
 
 # read GDS mask file
 boundaryConditions = [
-    vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY,
+    vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
+    vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
+    vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
 
 gds_mask = vps.GDSGeometry(gridDelta)
@@ -37,8 +37,8 @@ mask = gds_mask.layerToLevelSet(1, 0.0, 4 * gridDelta, True)
 
 # create plane geometry as substrate
 bounds = gds_mask.getBounds()
-plane = vls.lsDomain(bounds, boundaryConditions, gridDelta)
-vls.lsMakeGeometry(plane, vls.lsPlane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0])).apply()
+plane = vls.Domain(bounds, boundaryConditions, gridDelta)
+vls.MakeGeometry(plane, vls.Plane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0])).apply()
 
 # set up domain
 geometry = vps.Domain()
@@ -62,7 +62,7 @@ process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(5.0 * 60.0)  # 5 minutes of etching
 process.setIntegrationScheme(
-    vls.lsIntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+    vls.IntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
 for n in range(minutes):

@@ -32,12 +32,12 @@ vps.MakePlane(
     material=vps.Material.Mask,
 ).apply()
 
-fin = vls.lsDomain(geometry.getLevelSets()[-1])
+fin = vls.Domain(geometry.getLevelSets()[-1])
 
 if args.dim == 3:
-    vls.lsMakeGeometry(
+    vls.MakeGeometry(
         fin,
-        vls.lsBox(
+        vls.Box(
             [
                 -params["finWidth"] / 2.0,
                 -params["finLength"] / 2.0,
@@ -47,9 +47,9 @@ if args.dim == 3:
         ),
     ).apply()
 else:
-    vls.lsMakeGeometry(
+    vls.MakeGeometry(
         fin,
-        vls.lsBox(
+        vls.Box(
             [
                 -params["finWidth"] / 2.0,
                 -params["gridDelta"],
@@ -75,7 +75,7 @@ process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
 process.setIntegrationScheme(
-    vls.lsIntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+    vls.IntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
 geometry.saveVolumeMesh("initial")
