@@ -9,9 +9,9 @@ except ModuleNotFoundError:
 
 gridDelta = 0.01
 boundaryConds = [
-    vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY,
+    vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
+    vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
+    vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
 
 mask = vps.GDSGeometry(gridDelta)
@@ -24,8 +24,8 @@ geometry = vps.Domain()
 # substrate plane
 origin = [0.0, 0.0, 0.0]
 normal = [0.0, 0.0, 1.0]
-plane = vls.lsDomain(bounds, boundaryConds, gridDelta)
-vls.lsMakeGeometry(plane, vls.lsPlane(origin, normal)).apply()
+plane = vls.Domain(bounds, boundaryConds, gridDelta)
+vls.MakeGeometry(plane, vls.Plane(origin, normal)).apply()
 
 geometry.insertNextLevelSet(plane)
 
