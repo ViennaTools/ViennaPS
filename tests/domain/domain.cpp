@@ -92,6 +92,71 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(domainCopy->getMaterialMap().get() !=
                    domain->getMaterialMap().get());
   }
+
+  // remove level sets
+  {
+    // two plane geometries
+    ls::BoundaryConditionEnum<D> boundaryCondition[D];
+    double bounds[2 * D];
+
+    for (int i = 0; i < D; ++i) {
+      bounds[2 * i] = -1.;
+      bounds[2 * i + 1] = 1.;
+      boundaryCondition[i] = ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY;
+    }
+    boundaryCondition[D - 1] = ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY;
+
+    NumericType origin[D] = {0.};
+    NumericType normal[D] = {0.};
+    normal[D - 1] = 1.;
+
+    auto plane1 = lsDomainType::New(bounds, boundaryCondition, 0.2);
+    ls::MakeGeometry<NumericType, D>(
+        plane1, SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
+        .apply();
+
+    origin[D - 1] = 1.;
+    auto plane2 = lsDomainType::New(bounds, boundaryCondition, 0.2);
+    ls::MakeGeometry<NumericType, D>(
+        plane2, SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
+        .apply();
+
+    {
+      auto domain = psDomainType::New();
+      domain->insertNextLevelSetAsMaterial(plane1, ps::Material::Si);
+      domain->insertNextLevelSetAsMaterial(plane2, ps::Material::SiO2);
+
+      domain->removeTopLevelSet();
+      VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
+    }
+
+    {
+      auto domain = psDomainType::New();
+      domain->insertNextLevelSetAsMaterial(plane1, ps::Material::Si);
+      domain->insertNextLevelSetAsMaterial(plane2, ps::Material::SiO2);
+
+      domain->removeLevelSet(1);
+      VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
+    }
+
+    {
+      auto domain = psDomainType::New();
+      domain->insertNextLevelSetAsMaterial(plane1, ps::Material::Si);
+      domain->insertNextLevelSetAsMaterial(plane2, ps::Material::SiO2);
+
+      domain->removeMaterial(ps::Material::Si);
+      VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
+    }
+
+    {
+      auto domain = psDomainType::New();
+      domain->insertNextLevelSetAsMaterial(plane1, ps::Material::Si);
+      domain->insertNextLevelSetAsMaterial(plane2, ps::Material::Si);
+
+      domain->removeMaterial(ps::Material::Si);
+      VC_TEST_ASSERT(domain->getLevelSets().empty());
+    }
+  }
 }
 
 } // namespace viennacore

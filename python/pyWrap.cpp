@@ -829,7 +829,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("direction"),
            pybind11::arg("directionalVelocity") = 1.,
            pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") = Material::Mask)
+           pybind11::arg("maskMaterial") = Material::None)
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
                           const std::vector<Material>>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
@@ -1144,6 +1144,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "by the ray tracer, is averaged over the surface point neighbors.")
       .def("disableFluxSmoothing", &Process<T, D>::disableFluxSmoothing,
            "Disable flux smoothing")
+      .def("setRayTracingDiskRadius", &Process<T, D>::setRayTracingDiskRadius,
+           "Set the radius of the disk used for ray tracing. This disk is used "
+           "for the intersection calculations at each surface point.")
       .def("enableRandomSeeds", &Process<T, D>::enableRandomSeeds,
            "Enable random seeds for the ray tracer. This will make the process "
            "results non-deterministic.")
@@ -1170,9 +1173,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("levelSet"), pybind11::arg("material"),
            pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
-      .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet)
+      .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet,
+           "Duplicate the top level set. Should be used before a deposition "
+           "process.")
       .def("removeTopLevelSet", &Domain<T, D>::removeTopLevelSet)
       .def("applyBooleanOperation", &Domain<T, D>::applyBooleanOperation)
+      .def("removeLevelSet", &Domain<T, D>::removeLevelSet)
+      .def("removeMaterial", &Domain<T, D>::removeMaterial)
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
