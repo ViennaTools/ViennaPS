@@ -75,6 +75,16 @@ public:
   // Disable flux smoothing.
   void disableFluxSmoothing() { smoothFlux = false; }
 
+  void setRayTracingDiskRadius(NumericType radius) {
+    diskRadius = radius;
+    if (diskRadius < 0.) {
+      Logger::getInstance()
+          .addWarning("Disk radius must be positive. Using default value.")
+          .print();
+      diskRadius = 0.;
+    }
+  }
+
   void enableFluxBoundaries() { ignoreFluxBoundaries = false; }
 
   // Ignore boundary conditions during the flux calculation.
@@ -160,7 +170,12 @@ public:
     auto points = mesh->getNodes();
     auto normals = *mesh->getCellData().getVectorData("Normals");
     auto materialIds = *mesh->getCellData().getScalarData("MaterialIds");
-    rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
+    if (diskRadius == 0.) {
+      rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
+    } else {
+      rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta(),
+                            diskRadius);
+    }
     rayTracer.setMaterialIds(materialIds);
 
     for (auto &particle : model->getParticleTypes()) {
@@ -751,6 +766,7 @@ private:
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
   bool useRandomSeeds_ = true;
   bool smoothFlux = true;
+  NumericType diskRadius = 0.;
   bool ignoreFluxBoundaries = false;
   unsigned maxIterations = 20;
   bool coveragesInitialized_ = false;
