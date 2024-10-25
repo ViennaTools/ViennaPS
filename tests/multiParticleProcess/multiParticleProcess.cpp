@@ -25,15 +25,21 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
                    2);
 
-    model->addNeutralParticle(1., 1., "particleFlux");
+    model->addNeutralParticle(1.);
     VC_TEST_ASSERT(model->getParticleTypes().size() == 1);
 
-    // Process<NumericType, D>(domain, model, 2.).apply();
+    model->addIonParticle(1000.);
+    VC_TEST_ASSERT(model->getParticleTypes().size() == 2);
 
-    // VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
-    // VC_TEST_ASSERT(domain->getMaterialMap());
-    // VC_TEST_ASSERT(domain->getMaterialMap()->size() == 2);
-    // LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
+    model->setRateFunction(
+        [](const std::vector<NumericType> &fluxes, const Material &material) {
+          VC_TEST_ASSERT(fluxes.size() == 2);
+          return material == Material::Si ? -(fluxes[0] + fluxes[1]) : 0;
+        });
+
+    Process<NumericType, D>(domain, model, 1.).apply();
+
+    LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
   }
 }
 
