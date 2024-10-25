@@ -147,10 +147,10 @@ public:
     this->setVelocityField(velField);
 
     // particles
-    auto radical = std::make_unique<impl::Radical<NumericType, D>>(
-        radicalSticking, "radicalFlux");
+    auto radical =
+        std::make_unique<impl::Radical<NumericType, D>>(radicalSticking);
     auto ion = std::make_unique<impl::Ion<NumericType, D>>(
-        ionSticking, ionExponent, ionMinAngle, "ionFlux");
+        ionSticking, ionExponent, ionMinAngle);
 
     // surface model
     auto surfModel = SmartPointer<impl::PECVDSurfaceModel<NumericType>>::New(
