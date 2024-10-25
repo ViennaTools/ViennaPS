@@ -25,7 +25,7 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
                    2);
 
-    model->addParticle(1., 1., false, "particleFlux");
+    model->addNeutralParticle(1., 1., "particleFlux");
     VC_TEST_ASSERT(model->getParticleTypes().size() == 1);
 
     // Process<NumericType, D>(domain, model, 2.).apply();
