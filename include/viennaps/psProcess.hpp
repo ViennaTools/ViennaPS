@@ -641,6 +641,7 @@ public:
             .addInfo("Process halted: Surface velocities are zero across the "
                      "entire surface.")
             .print();
+        remainingTime = 0.;
         break;
       }
       remainingTime -= previousTimeStep;
