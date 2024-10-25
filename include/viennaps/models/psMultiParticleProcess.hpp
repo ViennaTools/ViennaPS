@@ -47,23 +47,34 @@ template <typename NumericType, int D>
 class IonParticle
     : public viennaray::Particle<IonParticle<NumericType, D>, NumericType> {
 public:
-  IonParticle() {}
+  IonParticle(NumericType sourcePower, NumericType meanEnergy,
+              NumericType sigmaEnergy, NumericType thresholdEnergy,
+              NumericType B_sp, NumericType thetaRMin, NumericType thetaRMax,
+              NumericType inflectAngle, NumericType minAngle, NumericType n,
+              std::string dataLabel)
+      : sourcePower_(sourcePower), meanEnergy_(meanEnergy),
+        sigmaEnergy_(sigmaEnergy), thresholdEnergy_(thresholdEnergy),
+        B_sp_(B_sp), thetaRMin_(thetaRMin), thetaRMax_(thetaRMax),
+        inflectAngle_(inflectAngle), minAngle_(minAngle), n_(n),
+        dataLabel_(dataLabel),
+        A_(1. / (1. + n * (M_PI_2 / inflectAngle - 1.))) {}
 
-  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
-                        const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                        const Vec3D<NumericType> &geomNormal,
+                        const unsigned int primID, const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
                         RNG &) override final {
     NumericType flux = rayWeight;
 
-    if (B_sp >= 0.) {
+    if (B_sp_ >= 0.) {
       NumericType cosTheta = -DotProduct(rayDir, geomNormal);
       flux *= (1 + B_sp_ * (1 - cosTheta * cosTheta)) * cosTheta;
     }
 
     if (energy_ > 0.)
-      flux *= std::max(std::sqrt(energy_) - std::sqrt(thresholdEnergy_), 0.);
+      flux *= std::max(std::sqrt(energy_) - std::sqrt(thresholdEnergy_),
+                       NumericType(0.));
 
     localData.getVectorData(0)[primID] += flux;
   }
@@ -103,10 +114,10 @@ public:
     }
 
     NumericType sticking = 1.;
-    if (incomingAngle > thetaRMin)
-      sticking =
-          1. -
-          std::min((incomingAngle - thetaRMin) / (thetaRMax - thetaRMin), 1.);
+    if (incomingAngle > thetaRMin_)
+      sticking = 1. - std::min((incomingAngle - thetaRMin_) /
+                                   (thetaRMax_ - thetaRMin_),
+                               NumericType(1.));
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
         rayDir, geomNormal, rngState, std::max(incomingAngle, minAngle_));
@@ -132,6 +143,8 @@ public:
 
 private:
   NumericType energy_;
+
+  const NumericType sourcePower_;
 
   const NumericType meanEnergy_;
   const NumericType sigmaEnergy_;
@@ -210,12 +223,28 @@ public:
     this->setProcessName("MultiParticleProcess");
   }
 
-  void addNeutralParticle(NumericType sticking, NumericType sourcePower,
-                          std::string dataLabel) {
-    auto particle = std::make_unique<impl::NeutralParticle<NumericType, D>>(
-        sticking, sourcePower, dataLabel);
-    this->insertNextParticleType(particle);
+  void addNeutralParticle(NumericType stickingProbability) {
+    std::string dataLabel =
+        "neutralFlux" + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
+    auto particle = std::make_unique<impl::NeutralParticle<NumericType, D>>(
+        stickingProbability, 1., dataLabel);
+    this->insertNextParticleType(particle);
+  }
+
+  void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
+                      NumericType thetaRMax = 90., NumericType meanEnergy = 0.,
+                      NumericType sigmaEnergy = 0.,
+                      NumericType thresholdEnergy = 0., NumericType B_sp = -1.,
+                      NumericType inflectAngle = 0., NumericType minAngle = 0.,
+                      NumericType n = 1) {
+    std::string dataLabel = "ionFlux" + std::to_string(fluxDataLabels_.size());
+    fluxDataLabels_.push_back(dataLabel);
+    auto particle = std::make_unique<impl::IonParticle<NumericType, D>>(
+        sourcePower, meanEnergy, sigmaEnergy, thresholdEnergy, B_sp,
+        thetaRMin * M_PI / 180., thetaRMax * M_PI / 180.,
+        inflectAngle * M_PI / 180., minAngle * M_PI / 180., n, dataLabel);
+    this->insertNextParticleType(particle);
   }
 
   void

@@ -16,6 +16,7 @@
 #include <optional>
 #include <vector>
 
+#include <pybind11/functional.h>
 #include <pybind11/iostream.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -52,6 +53,7 @@
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
+#include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
 #include <models/psSingleParticleALD.hpp>
@@ -579,6 +581,23 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
            pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
            pybind11::arg("sourceExponent"));
+
+  // Multi Particle Process
+  pybind11::class_<MultiParticleProcess<T, D>,
+                   SmartPointer<MultiParticleProcess<T, D>>>(
+      module, "MultiParticleProcess", processModel)
+      .def(pybind11::init())
+      .def("addNeutralParticle",
+           &MultiParticleProcess<T, D>::addNeutralParticle,
+           pybind11::arg("stickingProbability"))
+      .def("addIonParticle", &MultiParticleProcess<T, D>::addIonParticle,
+           pybind11::arg("sourcePower"), pybind11::arg("thetaRMin") = 0.,
+           pybind11::arg("thetaRMax") = 90., pybind11::arg("meanEnergy") = 0.,
+           pybind11::arg("sigmaEnergy") = 0.,
+           pybind11::arg("thresholdEnergy") = 0., pybind11::arg("B_sp") = -1.,
+           pybind11::arg("inflectAngle") = 0., pybind11::arg("minAngle") = 0.,
+           pybind11::arg("n") = 1)
+      .def("setRateFunction", &MultiParticleProcess<T, D>::setRateFunction);
 
   // TEOS Deposition
   pybind11::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
