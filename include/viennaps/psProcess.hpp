@@ -636,6 +636,13 @@ public:
       }
 
       previousTimeStep = advectionKernel.getAdvectedTime();
+      if (previousTimeStep == std::numeric_limits<NumericType>::max()) {
+        Logger::getInstance()
+            .addInfo("Process halted: Surface velocities are zero across the "
+                     "entire surface.")
+            .print();
+        break;
+      }
       remainingTime -= previousTimeStep;
 
       if (Logger::getLogLevel() >= 2) {
