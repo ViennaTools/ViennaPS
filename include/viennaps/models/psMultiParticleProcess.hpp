@@ -35,10 +35,15 @@ public:
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
 
+    std::vector<std::vector<NumericType> *> fluxPtrs;
+    for (const auto &label : fluxDataLabels_) {
+      fluxPtrs.push_back(rates->getScalarData(label));
+    }
+
+    std::vector<NumericType> fluxes(fluxPtrs.size());
     for (std::size_t i = 0; i < velocity->size(); i++) {
-      std::vector<NumericType> fluxes;
-      for (auto &fluxDataLabel : fluxDataLabels_) {
-        fluxes.push_back(rates->getScalarData(fluxDataLabel)->at(i));
+      for (std::size_t j = 0; j < fluxPtrs.size(); j++) {
+        fluxes[j] = fluxPtrs[j]->at(i);
       }
       velocity->at(i) =
           rateFunction_(fluxes, MaterialMap::mapToMaterial(materialIds[i]));
