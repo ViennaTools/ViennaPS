@@ -592,11 +592,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("stickingProbability"))
       .def("addIonParticle", &MultiParticleProcess<T, D>::addIonParticle,
            pybind11::arg("sourcePower"), pybind11::arg("thetaRMin") = 0.,
-           pybind11::arg("thetaRMax") = 90., pybind11::arg("meanEnergy") = 0.,
+           pybind11::arg("thetaRMax") = 90., pybind11::arg("minAngle") = 0.,
+           pybind11::arg("B_sp") = -1., pybind11::arg("meanEnergy") = 0.,
            pybind11::arg("sigmaEnergy") = 0.,
-           pybind11::arg("thresholdEnergy") = 0., pybind11::arg("B_sp") = -1.,
-           pybind11::arg("inflectAngle") = 0., pybind11::arg("minAngle") = 0.,
-           pybind11::arg("n") = 1)
+           pybind11::arg("thresholdEnergy") = 0.,
+           pybind11::arg("inflectAngle") = 0., pybind11::arg("n") = 1)
       .def("setRateFunction", &MultiParticleProcess<T, D>::setRateFunction);
 
   // TEOS Deposition

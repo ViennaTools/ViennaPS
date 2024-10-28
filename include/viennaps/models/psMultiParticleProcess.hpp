@@ -233,11 +233,11 @@ public:
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
-                      NumericType thetaRMax = 90., NumericType meanEnergy = 0.,
+                      NumericType thetaRMax = 90., NumericType minAngle = 0.,
+                      NumericType B_sp = -1., NumericType meanEnergy = 0.,
                       NumericType sigmaEnergy = 0.,
-                      NumericType thresholdEnergy = 0., NumericType B_sp = -1.,
-                      NumericType inflectAngle = 0., NumericType minAngle = 0.,
-                      NumericType n = 1) {
+                      NumericType thresholdEnergy = 0.,
+                      NumericType inflectAngle = 0., NumericType n = 1) {
     std::string dataLabel = "ionFlux" + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
     auto particle = std::make_unique<impl::IonParticle<NumericType, D>>(
