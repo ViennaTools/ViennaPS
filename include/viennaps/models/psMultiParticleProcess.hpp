@@ -6,6 +6,8 @@
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
+#include <numeric>
+
 namespace viennaps {
 
 using namespace viennacore;
