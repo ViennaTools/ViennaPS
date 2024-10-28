@@ -18,7 +18,7 @@ else:
     import viennaps3d as vps
 
 params = vps.ReadConfigFile(args.filename)
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
+vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 geometry = vps.Domain()
 vps.MakeTrench(
@@ -43,6 +43,7 @@ etchModel.addNeutralParticle(params["neutralStickingProbability"])
 etchModel.addIonParticle(params["ionSourceExponent"])
 
 
+# Custom rate function for the etch model
 def rateFunction(fluxes, material):
     if material == vps.Material.Mask:
         return 0.0

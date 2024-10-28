@@ -20,7 +20,12 @@ public:
 
 public:
   MultiParticleSurfaceModel(std::vector<std::string> &fluxDataLabels)
-      : fluxDataLabels_(fluxDataLabels) {}
+      : fluxDataLabels_(fluxDataLabels) {
+    rateFunction_ = [](const std::vector<NumericType> &fluxes,
+                       const Material &material) {
+      return std::accumulate(fluxes.begin(), fluxes.end(), 0.);
+    };
+  }
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
       SmartPointer<viennals::PointData<NumericType>> rates,
@@ -163,47 +168,6 @@ private:
 
   const std::string dataLabel_;
 };
-
-template <typename NumericType, int D>
-class NeutralParticle
-    : public viennaray::Particle<NeutralParticle<NumericType, D>, NumericType> {
-public:
-  NeutralParticle(NumericType sticking, NumericType sourcePower,
-                  std::string dataLabel)
-      : stickingProbability_(sticking), sourcePower_(sourcePower),
-        dataLabel_(dataLabel) {}
-
-  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
-                        const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
-  std::pair<NumericType, Vec3D<NumericType>>
-  surfaceReflection(NumericType, const Vec3D<NumericType> &rayDir,
-                    const Vec3D<NumericType> &geomNormal, const unsigned int,
-                    const int, const viennaray::TracingData<NumericType> *,
-                    RNG &rngState) override final {
-    auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
-    return std::pair<NumericType, Vec3D<NumericType>>{stickingProbability_,
-                                                      direction};
-  }
-  void initNew(RNG &) override final {}
-  NumericType getSourceDistributionPower() const override final {
-    return sourcePower_;
-  }
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {dataLabel_};
-  }
-
-private:
-  const NumericType stickingProbability_;
-  const NumericType sourcePower_;
-  const std::string dataLabel_;
-};
 } // namespace impl
 
 template <typename NumericType, int D>
@@ -227,8 +191,9 @@ public:
     std::string dataLabel =
         "neutralFlux" + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
-    auto particle = std::make_unique<impl::NeutralParticle<NumericType, D>>(
-        stickingProbability, 1., dataLabel);
+    auto particle =
+        std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(
+            stickingProbability, dataLabel);
     this->insertNextParticleType(particle);
   }
 

@@ -46,41 +46,6 @@ public:
   }
 };
 
-// Particle type (modify at you own risk)
-template <class NumericType, int D>
-class Radical
-    : public viennaray::Particle<Radical<NumericType, D>, NumericType> {
-public:
-  Radical(const NumericType stickingProbability)
-      : stickingProbability_(stickingProbability) {}
-  std::pair<NumericType, Vec3D<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
-                    const Vec3D<NumericType> &geomNormal,
-                    const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
-                    RNG &Rng) override final {
-    auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, Vec3D<NumericType>>{stickingProbability_,
-                                                      direction};
-  }
-  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
-                        const Vec3D<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        RNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
-  NumericType getSourceDistributionPower() const override final { return 1; }
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {"radicalFlux"};
-  }
-
-private:
-  const NumericType stickingProbability_;
-};
-
 template <typename NumericType, int D>
 class Ion : public viennaray::Particle<Ion<NumericType, D>, NumericType> {
 public:
@@ -147,8 +112,8 @@ public:
     this->setVelocityField(velField);
 
     // particles
-    auto radical =
-        std::make_unique<impl::Radical<NumericType, D>>(radicalSticking);
+    auto radical = std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(
+        radicalSticking, "radicalFlux");
     auto ion = std::make_unique<impl::Ion<NumericType, D>>(
         ionSticking, ionExponent, ionMinAngle);
 
