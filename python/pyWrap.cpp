@@ -939,44 +939,25 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // ***************************************************************************
 
   // MakePlane
-  pybind11::class_<MakePlane<T, D>, SmartPointer<MakePlane<T, D>>>(module,
-                                                                   "MakePlane")
-      .def(pybind11::init([](DomainType Domain, const T GridDelta,
-                             const T XExtent, const T YExtent, const T Height,
-                             const bool Periodic, const Material Material) {
-             return SmartPointer<MakePlane<T, D>>::New(Domain, GridDelta,
-                                                       XExtent, YExtent, Height,
-                                                       Periodic, Material);
-           }),
+  pybind11::class_<MakePlane<T, D>>(module, "MakePlane")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const bool, const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("height") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("material") = Material::None)
-      .def(pybind11::init(
-               [](DomainType Domain, T Height, const Material Material) {
-                 return SmartPointer<MakePlane<T, D>>::New(Domain, Height,
-                                                           Material);
-               }),
+      .def(pybind11::init<DomainType, T, const Material>(),
            pybind11::arg("domain"), pybind11::arg("height") = 0.,
            pybind11::arg("material") = Material::None)
       .def("apply", &MakePlane<T, D>::apply,
            "Create a plane geometry or add plane to existing geometry.");
 
   // MakeTrench
-  pybind11::class_<MakeTrench<T, D>, SmartPointer<MakeTrench<T, D>>>(
-      module, "MakeTrench")
-      .def(pybind11::init([](DomainType Domain, const T GridDelta,
-                             const T XExtent, const T YExtent,
-                             const T TrenchWidth, const T TrenchDepth,
-                             const T TaperingAngle, const T BaseHeight,
-                             const bool PeriodicBoundary, const bool MakeMask,
-                             const Material Material) {
-             return SmartPointer<MakeTrench<T, D>>::New(
-                 Domain, GridDelta, XExtent, YExtent, TrenchWidth, TrenchDepth,
-                 TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
-                 Material);
-           }),
+  pybind11::class_<MakeTrench<T, D>>(module, "MakeTrench")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const T, const T, const T, const bool, const bool,
+                          const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("trenchWidth"), pybind11::arg("trenchDepth"),
@@ -988,19 +969,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
   // MakeHole
-  pybind11::class_<MakeHole<T, D>, SmartPointer<MakeHole<T, D>>>(module,
-                                                                 "MakeHole")
-      .def(pybind11::init([](DomainType domain, const T GridDelta,
-                             const T xExtent, const T yExtent,
-                             const T HoleRadius, const T HoleDepth,
-                             const T TaperingAngle, const T BaseHeight,
-                             const bool PeriodicBoundary, const bool MakeMask,
-                             const Material material) {
-             return SmartPointer<MakeHole<T, D>>::New(
-                 domain, GridDelta, xExtent, yExtent, HoleRadius, HoleDepth,
-                 TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
-                 material);
-           }),
+  pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const T, const T, const T, const bool, const bool,
+                          const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("holeRadius"), pybind11::arg("holeDepth"),
@@ -1012,17 +984,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
   // MakeFin
-  pybind11::class_<MakeFin<T, D>, SmartPointer<MakeFin<T, D>>>(module,
-                                                               "MakeFin")
-      .def(pybind11::init([](DomainType domain, const T gridDelta,
-                             const T xExtent, const T yExtent, const T finWidth,
-                             const T finHeight, const T taperAngle,
-                             const T baseHeight, const bool periodicBoundary,
-                             const bool makeMask, const Material material) {
-             return SmartPointer<MakeFin<T, D>>::New(
-                 domain, gridDelta, xExtent, yExtent, finWidth, finHeight,
-                 taperAngle, baseHeight, periodicBoundary, makeMask, material);
-           }),
+  pybind11::class_<MakeFin<T, D>>(module, "MakeFin")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const T, const T, const T, const bool, const bool,
+                          const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("finWidth"), pybind11::arg("finHeight"),
@@ -1033,23 +998,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &MakeFin<T, D>::apply, "Create a fin geometry.");
 
   // MakeStack
-  pybind11::class_<MakeStack<T, D>, SmartPointer<MakeStack<T, D>>>(module,
-                                                                   "MakeStack")
-      .def(pybind11::init(&SmartPointer<MakeStack<T, D>>::New<
-                          DomainType &, const T /*gridDelta*/,
-                          const T
-                          /*xExtent*/,
-                          const T /*yExtent*/,
-                          const int
-                          /*numLayers*/,
-                          const T /*layerHeight*/,
-                          const T
-                          /*substrateHeight*/,
-                          const T /*holeRadius*/,
-                          const T
-                          /*trenchWidth*/,
-                          const T /*maskHeight*/, const bool
-                          /*PeriodicBoundary*/>),
+  pybind11::class_<MakeStack<T, D>>(module, "MakeStack")
+      .def(pybind11::init<DomainType &, const T, const T, const T, const int,
+                          const T, const T, const T, const T, const T,
+                          const bool>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("numLayers"), pybind11::arg("layerHeight"),
