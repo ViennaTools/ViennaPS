@@ -1,0 +1,157 @@
+name: 🐍 Bindings
+
+on:
+  release:
+    types:
+      - published
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        type: boolean
+        description: Publish on PyPi
+
+jobs:
+  test-bindings:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - os: ubuntu-latest
+            container: ghcr.io/viennatools/vienna-builder:suite-python
+          - os: windows-latest
+          - os: macos-latest
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+
+    name: "🐍 Test Bindings on ${{ matrix.os }}"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🖥️ Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          os: ${{ matrix.os }}
+
+      - name: 📋 Install MacOS Dependencies
+        shell: bash
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install embree tbb vtk
+
+      - name: 🦥 Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          key: python-${{ matrix.os }}
+          path: build
+
+      - name: 🛠️ Disable IPO (Alpine)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DUSE_IPO=off"/g' pyproject.toml
+          cat pyproject.toml
+
+      - name: 🐍 Build and check Python Module (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          python -m venv venv
+          ./venv/Scripts/activate.bat
+          pip install .
+          python -c "import viennaps2d; print(viennaps2d.__doc__)"
+
+      - name: 🐍 Build and check Python Module (Other)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          python -m venv venv
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . # Alpine does not like LTO
+          ./venv/bin/python -c "import viennaps2d; print(viennaps2d.__doc__)"
+
+      - name: 📦 Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pre-Built (${{ matrix.os }})
+          path: venv
+
+  package:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - os: ubuntu-latest
+            container: ghcr.io/viennatools/vienna-builder:python
+          - os: windows-latest
+          - os: macos-latest
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+
+    name: "🐍 Package Bindings on ${{ matrix.os }}"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🖥️ Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          os: ${{ matrix.os }}
+
+      - name: 🛞 CIBuildWheel
+        run: pip install cibuildwheel==2.17.0 --break-system-packages
+
+      - name: 🛠️ Use VTK-Python Libs
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          type pyproject.toml
+
+      - name: 🛠️ Use VTK-Python Libs
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          sed -i .bak 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          cat pyproject.toml
+
+      - name: 🛠️ Use VTK-Python Libs
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          cat pyproject.toml
+
+      - name: 🏗️ Build Wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_SKIP: "cp36-* cp37-* cp38-* cp39-*"
+          CIBW_ARCHS: auto64
+
+      - name: 📦 Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  deploy:
+    if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' }}
+    needs: [package]
+
+    permissions:
+      id-token: write
+
+    runs-on: ubuntu-latest
+    name: "🐍 Publish Bindings"
+
+    steps:
+      - name: 📦 Download Wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: 🚀 Publish Wheels
+        uses: pypa/gh-action-pypi-publish@release/v1

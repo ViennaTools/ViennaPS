@@ -1,0 +1,32 @@
+name: 🏗️ Setup Environment
+description: Install Dependencies & Deploy Workarounds
+
+inputs:
+  os:
+    required: true
+    description: Operating System used
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: 🩹 Enable Long Paths
+      shell: bash
+      if: ${{ inputs.os == 'windows-latest' }}
+      run: git config --system core.longpaths true
+
+    - name: 🖥️ Enable MSVC Dev Console
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: 📋 Install OpenMP
+      shell: bash
+      if: ${{ inputs.os == 'macos-latest' }}
+      run: |
+        brew reinstall --build-from-source --formula ./.github/homebrew/libomp.rb
+        echo "OpenMP_ROOT=$(brew --prefix)/opt/libomp" >> $GITHUB_ENV
+
+    - name: 🐍 Install Python
+      if: ${{ inputs.os == 'windows-latest' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"

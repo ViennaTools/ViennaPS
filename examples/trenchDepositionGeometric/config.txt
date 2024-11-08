@@ -1,0 +1,13 @@
+# Config file for a geometric trench depostion example process
+# Domain
+gridDelta=0.2
+xExtent=10
+yExtent=10
+
+# Geometry
+trenchWidth=4
+trenchHeight=8
+taperAngle=0
+
+# Process
+layerThickness=1.5

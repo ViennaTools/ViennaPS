@@ -1,0 +1,18 @@
+# Geometry
+gridDelta = 1.0
+xExtent = 150.0
+yExtent = 50.0
+trenchWidth = 40.0
+maskHeight = 20.0
+
+
+neutralStickingProbability = 0.1
+neutralRate = 0.5
+ionSourceExponent = 200
+ionRate = 1.0
+
+etchTime = 10.0
+
+depositionThickness = 2.0
+
+numCycles = 4

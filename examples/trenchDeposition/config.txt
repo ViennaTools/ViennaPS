@@ -1,0 +1,16 @@
+# Config file for a trench deposition example process
+# Domain
+gridDelta=0.25
+xExtent=10
+yExtent=10
+
+# Geometry
+trenchWidth=4
+trenchHeight=8
+taperAngle=0
+
+# Process
+rate=1.
+stickingProbability=0.1
+sourcePower=1
+processTime=5

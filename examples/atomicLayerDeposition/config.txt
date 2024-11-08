@@ -1,0 +1,36 @@
+# all length units in micrometers
+
+# Geometry
+gridDelta = 0.2
+openingDepth = 0.5
+openingWidth = 90
+gapLength = 800
+gapHeight = 0.5
+gapWidth = 10000
+xPad = 0.5
+topSpace = 0.
+
+# Cycles
+pulseTime = 0.1
+coverageTimeStep=0.01
+growthPerCycle = 0.000112
+numCycles=4
+totalCycles=400
+
+# Reactor and gas 
+pressure = 0.1 # torr
+temperature = 220 # °C
+diameter = 2.75 # angstroms
+mass = 28.02
+
+# Atomistic
+inFlux = 2e6 # 1e19
+stickingProbability = 5e-5
+evFlux = 0 # 6.5 # 1e19
+s0 = 3.36
+
+# Simulation
+numRaysPerPoint = 1000
+rngSeed = 15123512
+
+outputFile = arts_220_c8.txt
