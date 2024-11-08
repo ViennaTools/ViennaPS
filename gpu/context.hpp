@@ -15,16 +15,18 @@
 // global definitions
 constexpr int DIM = 3;
 
-struct pscuContext_t {
+namespace viennaps {
+
+struct gpuContext_t {
   CUmodule getModule(const std::string &moduleName);
 
   std::vector<std::string> moduleNames;
   std::vector<CUmodule> modules;
 };
 
-using pscuContext = pscuContext_t *;
+using gpuContext = gpuContext_t *;
 
-CUmodule pscuContext_t::getModule(const std::string &moduleName) {
+CUmodule gpuContext_t::getModule(const std::string &moduleName) {
   int idx = -1;
   for (int i = 0; i < modules.size(); i++) {
     if (this->moduleNames[i] == moduleName) {
@@ -42,7 +44,7 @@ CUmodule pscuContext_t::getModule(const std::string &moduleName) {
   return modules[idx];
 }
 
-void pscuCreateContext(pscuContext &context) {
+void CreateContext(gpuContext &context) {
   // initialize cuda
   cudaFree(0);
   int numDevices;
@@ -54,7 +56,7 @@ void pscuCreateContext(pscuContext &context) {
   // init optix
   optixInit();
 
-  context = new pscuContext_t;
+  context = new gpuContext_t;
 
   CUmodule normModule;
   // CUmodule transModule;
@@ -105,9 +107,9 @@ void pscuCreateContext(pscuContext &context) {
   // context->modules.push_back(FluorocarbonProcessModule);
 }
 
-void pscuReleaseContext(pscuContext context) { delete context; }
+void ReleaseContext(gpuContext context) { delete context; }
 
-void pscuAddModule(const std::string &moduleName, pscuContext context) {
+void AddModule(const std::string &moduleName, gpuContext context) {
   if (context == nullptr) {
     utLog::getInstance()
         .addError("Context not initialized. Use 'psCreateContext' to "
@@ -126,3 +128,5 @@ void pscuAddModule(const std::string &moduleName, pscuContext context) {
   context->modules.push_back(module);
   context->moduleNames.push_back(moduleName);
 }
+
+} // namespace viennaps

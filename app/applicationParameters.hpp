@@ -3,7 +3,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <psLogger.hpp>
 #include <psMaterials.hpp>
 #include <psUtils.hpp>
 #include <vcLogger.hpp>

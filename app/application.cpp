@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "interrupt.hpp"
 
 int main(int argc, char **argv) {
 

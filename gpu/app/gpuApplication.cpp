@@ -1,4 +1,5 @@
 #include "gpuApplication.hpp"
+#include "interrupt.hpp"
 
 int main(int argc, char **argv) {
 

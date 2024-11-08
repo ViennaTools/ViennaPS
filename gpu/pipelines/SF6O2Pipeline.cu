@@ -9,7 +9,7 @@
 #include <curtUtilities.hpp>
 #include <utGDT.hpp>
 
-#include <ModelParameters.hpp>
+#include <psConstants.hpp>
 
 #include <context.hpp>
 

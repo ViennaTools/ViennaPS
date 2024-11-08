@@ -6,39 +6,42 @@
 
 #include <psAdvectionCallback.hpp>
 #include <psGeometricModel.hpp>
-#include <psSmartPointer.hpp>
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
-template <typename NumericType> class pscuProcessModel {
+namespace viennaps {
+
+namespace gpu {
+
+using namespace viennacore;
+
+template <typename NumericType> class ProcessModel {
 private:
   using ParticleTypeList = std::vector<curtParticle<NumericType>>;
 
-  psSmartPointer<ParticleTypeList> particles = nullptr;
-  psSmartPointer<psSurfaceModel<NumericType>> surfaceModel = nullptr;
-  psSmartPointer<psAdvectionCallback<NumericType, DIM>> advectionCallback =
-      nullptr;
-  psSmartPointer<psGeometricModel<NumericType, DIM>> geometricModel = nullptr;
-  psSmartPointer<psVelocityField<NumericType>> velocityField = nullptr;
+  SmartPointer<ParticleTypeList> particles = nullptr;
+  SmartPointer<SurfaceModel<NumericType>> surfaceModel = nullptr;
+  SmartPointer<AdvectionCallback<NumericType, DIM>> advectionCallback = nullptr;
+  SmartPointer<GeometricModel<NumericType, DIM>> geometricModel = nullptr;
+  SmartPointer<VelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
   char *embbededPtxCode = nullptr;
 
 public:
-  virtual psSmartPointer<ParticleTypeList> getParticleTypes() {
+  virtual SmartPointer<ParticleTypeList> getParticleTypes() {
     return particles;
   }
-  virtual psSmartPointer<psSurfaceModel<NumericType>> getSurfaceModel() {
+  virtual SmartPointer<SurfaceModel<NumericType>> getSurfaceModel() {
     return surfaceModel;
   }
-  virtual psSmartPointer<psAdvectionCallback<NumericType, DIM>>
+  virtual SmartPointer<AdvectionCallback<NumericType, DIM>>
   getAdvectionCallback() {
     return advectionCallback;
   }
-  virtual psSmartPointer<psGeometricModel<NumericType, DIM>>
-  getGeometricModel() {
+  virtual SmartPointer<GeometricModel<NumericType, DIM>> getGeometricModel() {
     return geometricModel;
   }
-  virtual psSmartPointer<psVelocityField<NumericType>> getVelocityField() {
+  virtual SmartPointer<VelocityField<NumericType>> getVelocityField() {
     return velocityField;
   }
 
@@ -51,37 +54,41 @@ public:
 
   void insertNextParticleType(const curtParticle<NumericType> &passedParticle) {
     if (particles == nullptr) {
-      particles = psSmartPointer<ParticleTypeList>::New();
+      particles = SmartPointer<ParticleTypeList>::New();
     }
 
     particles->push_back(passedParticle);
   }
 
   template <typename SurfaceModelType>
-  void setSurfaceModel(psSmartPointer<SurfaceModelType> passedSurfaceModel) {
-    surfaceModel = std::dynamic_pointer_cast<psSurfaceModel<NumericType>>(
+  void setSurfaceModel(SmartPointer<SurfaceModelType> passedSurfaceModel) {
+    surfaceModel = std::dynamic_pointer_cast<SurfaceModel<NumericType>>(
         passedSurfaceModel);
   }
 
   template <typename AdvectionCallbackType>
   void setAdvectionCallback(
-      psSmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
+      SmartPointer<AdvectionCallbackType> passedAdvectionCallback) {
     advectionCallback =
-        std::dynamic_pointer_cast<psAdvectionCallback<NumericType, DIM>>(
+        std::dynamic_pointer_cast<AdvectionCallback<NumericType, DIM>>(
             passedAdvectionCallback);
   }
 
   template <typename GeometricModelType>
   void
-  setGeometricModel(psSmartPointer<GeometricModelType> passedGeometricModel) {
+  setGeometricModel(SmartPointer<GeometricModelType> passedGeometricModel) {
     geometricModel =
-        std::dynamic_pointer_cast<psGeometricModel<NumericType, DIM>>(
+        std::dynamic_pointer_cast<GeometricModel<NumericType, DIM>>(
             passedGeometricModel);
   }
 
   template <typename VelocityFieldType>
-  void setVelocityField(psSmartPointer<VelocityFieldType> passedVelocityField) {
-    velocityField = std::dynamic_pointer_cast<psVelocityField<NumericType>>(
+  void setVelocityField(SmartPointer<VelocityFieldType> passedVelocityField) {
+    velocityField = std::dynamic_pointer_cast<VelocityField<NumericType>>(
         passedVelocityField);
   }
 };
+
+} // namespace gpu
+
+} // namespace viennaps

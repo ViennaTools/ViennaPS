@@ -140,7 +140,7 @@ endif()
 # GPU
 if(VIENNAPS_BUILD_GPU_APPLICATION)
   message(STATUS "[ViennaPS] Building GPU Application")
-  add_subdirectory(GPU)
+  add_subdirectory(gpu)
 endif(VIENNAPS_BUILD_GPU_APPLICATION)
 
 # --------------------------------------------------------------------------------------------------------
