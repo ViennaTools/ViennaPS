@@ -16,6 +16,7 @@
 #include <optional>
 #include <vector>
 
+#include <pybind11/functional.h>
 #include <pybind11/iostream.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -52,6 +53,7 @@
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
+#include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
 #include <models/psSingleParticleALD.hpp>
@@ -580,6 +582,23 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
            pybind11::arg("sourceExponent"));
 
+  // Multi Particle Process
+  pybind11::class_<MultiParticleProcess<T, D>,
+                   SmartPointer<MultiParticleProcess<T, D>>>(
+      module, "MultiParticleProcess", processModel)
+      .def(pybind11::init())
+      .def("addNeutralParticle",
+           &MultiParticleProcess<T, D>::addNeutralParticle,
+           pybind11::arg("stickingProbability"))
+      .def("addIonParticle", &MultiParticleProcess<T, D>::addIonParticle,
+           pybind11::arg("sourcePower"), pybind11::arg("thetaRMin") = 0.,
+           pybind11::arg("thetaRMax") = 90., pybind11::arg("minAngle") = 0.,
+           pybind11::arg("B_sp") = -1., pybind11::arg("meanEnergy") = 0.,
+           pybind11::arg("sigmaEnergy") = 0.,
+           pybind11::arg("thresholdEnergy") = 0.,
+           pybind11::arg("inflectAngle") = 0., pybind11::arg("n") = 1)
+      .def("setRateFunction", &MultiParticleProcess<T, D>::setRateFunction);
+
   // TEOS Deposition
   pybind11::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
       module, "TEOSDeposition", processModel)
@@ -829,7 +848,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("direction"),
            pybind11::arg("directionalVelocity") = 1.,
            pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") = Material::Mask)
+           pybind11::arg("maskMaterial") = Material::None)
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
                           const std::vector<Material>>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
@@ -919,45 +938,26 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //                               GEOMETRIES
   // ***************************************************************************
 
-  // MakePlane
-  pybind11::class_<MakePlane<T, D>, SmartPointer<MakePlane<T, D>>>(module,
-                                                                   "MakePlane")
-      .def(pybind11::init([](DomainType Domain, const T GridDelta,
-                             const T XExtent, const T YExtent, const T Height,
-                             const bool Periodic, const Material Material) {
-             return SmartPointer<MakePlane<T, D>>::New(Domain, GridDelta,
-                                                       XExtent, YExtent, Height,
-                                                       Periodic, Material);
-           }),
+  // Plane
+  pybind11::class_<MakePlane<T, D>>(module, "MakePlane")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const bool, const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("height") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("material") = Material::None)
-      .def(pybind11::init(
-               [](DomainType Domain, T Height, const Material Material) {
-                 return SmartPointer<MakePlane<T, D>>::New(Domain, Height,
-                                                           Material);
-               }),
+      .def(pybind11::init<DomainType, T, const Material>(),
            pybind11::arg("domain"), pybind11::arg("height") = 0.,
            pybind11::arg("material") = Material::None)
       .def("apply", &MakePlane<T, D>::apply,
            "Create a plane geometry or add plane to existing geometry.");
 
-  // MakeTrench
-  pybind11::class_<MakeTrench<T, D>, SmartPointer<MakeTrench<T, D>>>(
-      module, "MakeTrench")
-      .def(pybind11::init([](DomainType Domain, const T GridDelta,
-                             const T XExtent, const T YExtent,
-                             const T TrenchWidth, const T TrenchDepth,
-                             const T TaperingAngle, const T BaseHeight,
-                             const bool PeriodicBoundary, const bool MakeMask,
-                             const Material Material) {
-             return SmartPointer<MakeTrench<T, D>>::New(
-                 Domain, GridDelta, XExtent, YExtent, TrenchWidth, TrenchDepth,
-                 TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
-                 Material);
-           }),
+  // Trench
+  pybind11::class_<MakeTrench<T, D>>(module, "MakeTrench")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const T, const T, const T, const bool, const bool,
+                          const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("trenchWidth"), pybind11::arg("trenchDepth"),
@@ -968,20 +968,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("material") = Material::None)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
-  // MakeHole
-  pybind11::class_<MakeHole<T, D>, SmartPointer<MakeHole<T, D>>>(module,
-                                                                 "MakeHole")
-      .def(pybind11::init([](DomainType domain, const T GridDelta,
-                             const T xExtent, const T yExtent,
-                             const T HoleRadius, const T HoleDepth,
-                             const T TaperingAngle, const T BaseHeight,
-                             const bool PeriodicBoundary, const bool MakeMask,
-                             const Material material) {
-             return SmartPointer<MakeHole<T, D>>::New(
-                 domain, GridDelta, xExtent, yExtent, HoleRadius, HoleDepth,
-                 TaperingAngle, BaseHeight, PeriodicBoundary, MakeMask,
-                 material);
-           }),
+  // Hole
+  pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const T, const T, const T, const bool, const bool,
+                          const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("holeRadius"), pybind11::arg("holeDepth"),
@@ -992,18 +983,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("material") = Material::None)
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
-  // MakeFin
-  pybind11::class_<MakeFin<T, D>, SmartPointer<MakeFin<T, D>>>(module,
-                                                               "MakeFin")
-      .def(pybind11::init([](DomainType domain, const T gridDelta,
-                             const T xExtent, const T yExtent, const T finWidth,
-                             const T finHeight, const T taperAngle,
-                             const T baseHeight, const bool periodicBoundary,
-                             const bool makeMask, const Material material) {
-             return SmartPointer<MakeFin<T, D>>::New(
-                 domain, gridDelta, xExtent, yExtent, finWidth, finHeight,
-                 taperAngle, baseHeight, periodicBoundary, makeMask, material);
-           }),
+  // Fin
+  pybind11::class_<MakeFin<T, D>>(module, "MakeFin")
+      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+                          const T, const T, const T, const bool, const bool,
+                          const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("finWidth"), pybind11::arg("finHeight"),
@@ -1013,24 +997,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("material") = Material::None)
       .def("apply", &MakeFin<T, D>::apply, "Create a fin geometry.");
 
-  // MakeStack
-  pybind11::class_<MakeStack<T, D>, SmartPointer<MakeStack<T, D>>>(module,
-                                                                   "MakeStack")
-      .def(pybind11::init(&SmartPointer<MakeStack<T, D>>::New<
-                          DomainType &, const T /*gridDelta*/,
-                          const T
-                          /*xExtent*/,
-                          const T /*yExtent*/,
-                          const int
-                          /*numLayers*/,
-                          const T /*layerHeight*/,
-                          const T
-                          /*substrateHeight*/,
-                          const T /*holeRadius*/,
-                          const T
-                          /*trenchWidth*/,
-                          const T /*maskHeight*/, const bool
-                          /*PeriodicBoundary*/>),
+  // Stack
+  pybind11::class_<MakeStack<T, D>>(module, "MakeStack")
+      .def(pybind11::init<DomainType &, const T, const T, const T, const int,
+                          const T, const T, const T, const T, const T,
+                          const bool>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("numLayers"), pybind11::arg("layerHeight"),
@@ -1133,7 +1104,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
-           "lsIntegrationSchemeEnum.")
+           "viennals::IntegrationSchemeEnum.")
       .def("setTimeStepRatio", &Process<T, D>::setTimeStepRatio,
            "Set the CFL condition to use during advection. The CFL condition "
            "sets the maximum distance a surface can be moved during one "
@@ -1144,6 +1115,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "by the ray tracer, is averaged over the surface point neighbors.")
       .def("disableFluxSmoothing", &Process<T, D>::disableFluxSmoothing,
            "Disable flux smoothing")
+      .def("setRayTracingDiskRadius", &Process<T, D>::setRayTracingDiskRadius,
+           "Set the radius of the disk used for ray tracing. This disk is used "
+           "for the intersection calculations at each surface point.")
       .def("enableRandomSeeds", &Process<T, D>::enableRandomSeeds,
            "Enable random seeds for the ray tracer. This will make the process "
            "results non-deterministic.")
@@ -1170,9 +1144,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("levelSet"), pybind11::arg("material"),
            pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
-      .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet)
+      .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet,
+           "Duplicate the top level set. Should be used before a deposition "
+           "process.")
       .def("removeTopLevelSet", &Domain<T, D>::removeTopLevelSet)
       .def("applyBooleanOperation", &Domain<T, D>::applyBooleanOperation)
+      .def("removeLevelSet", &Domain<T, D>::removeLevelSet)
+      .def("removeMaterial", &Domain<T, D>::removeMaterial)
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
@@ -1190,7 +1168,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh,
            pybind11::arg("filename"),
            "Save the volume representation of the domain.")
-      .def("saveLevelSets", &Domain<T, D>::saveLevelSets)
+      .def("saveLevelSets", &Domain<T, D>::saveLevelSets,
+           pybind11::arg("filename"))
       .def("clear", &Domain<T, D>::clear);
 
   // MaterialMap
@@ -1249,12 +1228,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Calculate the mean thermal velocity of a gas molecule.");
 
   // Planarize
-  pybind11::class_<Planarize<T, D>, SmartPointer<Planarize<T, D>>>(module,
-                                                                   "Planarize")
-      .def(pybind11::init(&SmartPointer<Planarize<T, D>>::New<>))
-      .def(pybind11::init(
-               &SmartPointer<Planarize<T, D>>::New<DomainType &, const T>),
-           pybind11::arg("geometry"), pybind11::arg("cutoffHeight") = 0.)
+  pybind11::class_<Planarize<T, D>>(module, "Planarize")
+      .def(pybind11::init())
+      .def(pybind11::init<DomainType &, const T>(), pybind11::arg("geometry"),
+           pybind11::arg("cutoffHeight") = 0.)
       .def("setDomain", &Planarize<T, D>::setDomain,
            "Set the domain in the planarization.")
       .def("setCutoffPosition", &Planarize<T, D>::setCutoffPosition,
@@ -1297,13 +1274,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           },
           "Get the bounds of the geometry.");
 
-  pybind11::class_<GDSReader<T, D>, SmartPointer<GDSReader<T, D>>>(module,
-                                                                   "GDSReader")
+  pybind11::class_<GDSReader<T, D>>(module, "GDSReader")
       // constructors
-      .def(pybind11::init(&SmartPointer<GDSReader<T, D>>::New<>))
-      .def(pybind11::init(
-          &SmartPointer<GDSReader<T, D>>::New<SmartPointer<GDSGeometry<T, D>> &,
-                                              std::string>))
+      .def(pybind11::init())
+      .def(pybind11::init<SmartPointer<GDSGeometry<T, D>> &, std::string>())
       // methods
       .def("setGeometry", &GDSReader<T, D>::setGeometry,
            "Set the domain to be parsed in.")
@@ -1319,21 +1293,24 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // methods
       .def("deepCopy", &Domain<T, 3>::deepCopy)
       .def("insertNextLevelSet", &Domain<T, 3>::insertNextLevelSet,
-           pybind11::arg("levelSet"), pybind11::arg("wrapLowerLevelSet") = true,
+           pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain.")
       .def("insertNextLevelSetAsMaterial",
            &Domain<T, 3>::insertNextLevelSetAsMaterial,
            pybind11::arg("levelSet"), pybind11::arg("material"),
            pybind11::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
-      .def("duplicateTopLevelSet", &Domain<T, 3>::duplicateTopLevelSet)
-      .def("applyBooleanOperation", &Domain<T, 3>::applyBooleanOperation)
+      .def("duplicateTopLevelSet", &Domain<T, 3>::duplicateTopLevelSet,
+           "Duplicate the top level set. Should be used before a deposition "
+           "process.")
       .def("removeTopLevelSet", &Domain<T, 3>::removeTopLevelSet)
+      .def("applyBooleanOperation", &Domain<T, 3>::applyBooleanOperation)
+      .def("removeLevelSet", &Domain<T, 3>::removeLevelSet)
+      .def("removeMaterial", &Domain<T, 3>::removeMaterial)
       .def("setMaterialMap", &Domain<T, 3>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, 3>::getMaterialMap)
       .def("generateCellSet", &Domain<T, 3>::generateCellSet,
-           pybind11::arg("position"), pybind11::arg("coverMaterial"),
-           pybind11::arg("isAboveSurface"), "Generate the cell set.")
+           "Generate the cell set.")
       .def("getLevelSets", &Domain<T, 3>::getLevelSets)
       .def("getCellSet", &Domain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, 3>::getGrid, "Get the grid")
@@ -1342,7 +1319,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("filename"), pybind11::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
       .def("saveSurfaceMesh", &Domain<T, 3>::saveSurfaceMesh,
-           pybind11::arg("filename"), pybind11::arg("addMaterialIds") = true,
+           pybind11::arg("filename"), pybind11::arg("addMaterialIds") = false,
            "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, 3>::saveVolumeMesh,
            pybind11::arg("filename"),

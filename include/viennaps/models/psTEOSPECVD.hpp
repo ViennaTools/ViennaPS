@@ -11,19 +11,18 @@ namespace viennaps {
 namespace impl {
 template <class NumericType>
 class PECVDSurfaceModel : public SurfaceModel<NumericType> {
-  const NumericType radicalRate;
-  const NumericType radicalReactionOrder;
-  const NumericType ionRate;
-  const NumericType ionReactionOrder;
+  const NumericType radicalRate_;
+  const NumericType radicalReactionOrder_;
+  const NumericType ionRate_;
+  const NumericType ionReactionOrder_;
 
 public:
-  PECVDSurfaceModel(const NumericType passedRadicalRate,
-                    const NumericType passedRadicalReactionOrder,
-                    const NumericType passedIonRate,
-                    const NumericType passedIonReactionOrder)
-      : radicalRate(passedRadicalRate),
-        radicalReactionOrder(passedRadicalReactionOrder),
-        ionRate(passedIonRate), ionReactionOrder(passedIonReactionOrder) {}
+  PECVDSurfaceModel(const NumericType radicalRate,
+                    const NumericType radicalReactionOrder,
+                    const NumericType ionRate,
+                    const NumericType ionReactionOrder)
+      : radicalRate_(radicalRate), radicalReactionOrder_(radicalReactionOrder),
+        ionRate_(ionRate), ionReactionOrder_(ionReactionOrder) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
       SmartPointer<viennals::PointData<NumericType>> rates,
@@ -38,59 +37,22 @@ public:
     for (std::size_t i = 0; i < velocity.size(); i++) {
       // calculate surface velocity based on particle fluxes
       velocity[i] =
-          radicalRate *
-              std::pow(particleFluxRadical->at(i), radicalReactionOrder) +
-          ionRate * std::pow(particleFluxIon->at(i), ionReactionOrder);
+          radicalRate_ *
+              std::pow(particleFluxRadical->at(i), radicalReactionOrder_) +
+          ionRate_ * std::pow(particleFluxIon->at(i), ionReactionOrder_);
     }
 
     return SmartPointer<std::vector<NumericType>>::New(velocity);
   }
 };
 
-// Particle type (modify at you own risk)
-template <class NumericType, int D>
-class Radical
-    : public viennaray::Particle<Radical<NumericType, D>, NumericType> {
-public:
-  Radical(const NumericType pStickingProbability,
-          const std::string pDataLabel = "radicalFlux")
-      : stickingProbability(pStickingProbability), dataLabel(pDataLabel) {}
-  std::pair<NumericType, Vec3D<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
-                    const Vec3D<NumericType> &geomNormal,
-                    const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
-                    RNG &Rng) override final {
-    auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-    return std::pair<NumericType, Vec3D<NumericType>>{stickingProbability,
-                                                      direction};
-  }
-  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
-                        const Vec3D<NumericType> &geomNormal,
-                        const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        RNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
-  NumericType getSourceDistributionPower() const override final { return 1; }
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {dataLabel};
-  }
-
-private:
-  const NumericType stickingProbability;
-  const std::string dataLabel = "radicalFlux";
-};
-
 template <typename NumericType, int D>
 class Ion : public viennaray::Particle<Ion<NumericType, D>, NumericType> {
 public:
-  Ion(const NumericType pStickingProbability, const NumericType pExponent,
-      const NumericType pMinAngle, const std::string pDataLabel = "ionFlux")
-      : stickingProbability(pStickingProbability), exponent(pExponent),
-        minAngle(pMinAngle), dataLabel(pDataLabel) {}
+  Ion(const NumericType stickingProbability, const NumericType exponent,
+      const NumericType minAngle)
+      : stickingProbability_(stickingProbability), exponent_(exponent),
+        minAngle_(minAngle) {}
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -108,8 +70,8 @@ public:
                            static_cast<NumericType>(0.)));
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-        rayDir, geomNormal, Rng, std::max(incAngle, minAngle));
-    return std::pair<NumericType, Vec3D<NumericType>>{stickingProbability,
+        rayDir, geomNormal, Rng, std::max(incAngle, minAngle_));
+    return std::pair<NumericType, Vec3D<NumericType>>{stickingProbability_,
                                                       direction};
   }
 
@@ -123,42 +85,41 @@ public:
   }
 
   NumericType getSourceDistributionPower() const override final {
-    return exponent;
+    return exponent_;
   }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {dataLabel};
+    return {"ionFlux"};
   }
 
 private:
-  const NumericType stickingProbability;
-  const NumericType exponent;
-  const NumericType minAngle;
-  const std::string dataLabel = "ionFlux";
+  const NumericType stickingProbability_;
+  const NumericType exponent_;
+  const NumericType minAngle_;
 };
 } // namespace impl
 
 template <class NumericType, int D>
 class TEOSPECVD : public ProcessModel<NumericType, D> {
 public:
-  TEOSPECVD(const NumericType pRadicalSticking, const NumericType pRadicalRate,
-            const NumericType pIonRate, const NumericType pIonExponent,
-            const NumericType pIonSticking = 1.,
-            const NumericType pRadicalOrder = 1.,
-            const NumericType pIonOrder = 1.,
-            const NumericType pIonMinAngle = 0.) {
+  TEOSPECVD(const NumericType radicalSticking, const NumericType radicalRate,
+            const NumericType ionRate, const NumericType ionExponent,
+            const NumericType ionSticking = 1.,
+            const NumericType radicalOrder = 1.,
+            const NumericType ionOrder = 1.,
+            const NumericType ionMinAngle = 0.) {
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
     this->setVelocityField(velField);
 
     // particles
-    auto radical = std::make_unique<impl::Radical<NumericType, D>>(
-        pRadicalSticking, "radicalFlux");
+    auto radical = std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(
+        radicalSticking, "radicalFlux");
     auto ion = std::make_unique<impl::Ion<NumericType, D>>(
-        pIonSticking, pIonExponent, pIonMinAngle, "ionFlux");
+        ionSticking, ionExponent, ionMinAngle);
 
     // surface model
     auto surfModel = SmartPointer<impl::PECVDSurfaceModel<NumericType>>::New(
-        pRadicalRate, pRadicalOrder, pIonRate, pIonOrder);
+        radicalRate, radicalOrder, ionRate, ionOrder);
 
     this->setSurfaceModel(surfModel);
     this->insertNextParticleType(radical);

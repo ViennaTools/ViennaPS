@@ -169,6 +169,60 @@ public:
     }
   }
 
+  void removeLevelSet(unsigned int idx, bool removeWrapped = true) {
+    if (idx >= levelSets_.size()) {
+      Logger::getInstance()
+          .addWarning("Trying to remove non-existing Level-Set from domain.")
+          .print();
+      return;
+    }
+
+    if (materialMap_) {
+      auto newMatMap = materialMapType::New();
+      for (std::size_t i = 0; i < levelSets_.size(); i++) {
+        if (i == idx)
+          continue;
+
+        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
+      }
+      materialMap_ = newMatMap;
+    }
+
+    if (removeWrapped) {
+      auto remove = levelSets_.at(idx);
+
+      for (int i = idx - 1; i >= 0; i--) {
+        viennals::BooleanOperation<NumericType, D>(
+            remove, levelSets_.at(i),
+            viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+      }
+
+      for (int i = idx + 1; i < levelSets_.size(); i++) {
+        viennals::BooleanOperation<NumericType, D>(
+            levelSets_.at(i), remove,
+            viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+      }
+    }
+
+    levelSets_.erase(levelSets_.begin() + idx);
+    materialMapCheck();
+  }
+
+  void removeMaterial(const Material material) {
+    if (!materialMap_) {
+      return;
+    }
+
+    for (int i = 0; i < materialMap_->size(); i++) {
+      if (materialMap_->getMaterialAtIdx(i) == material) {
+        removeLevelSet(i);
+        i -= 1;
+      }
+    }
+  }
+
   // Generate the Cell-Set from the Level-Sets in the domain. The Cell-Set can
   // be used to store and track volume data.
   void generateCellSet(const NumericType position, const Material coverMaterial,
