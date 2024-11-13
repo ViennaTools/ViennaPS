@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
   sigIntHandler.sa_flags = 0;
   sigaction(SIGINT, &sigIntHandler, NULL);
 
-  gpuApplication app(argc, argv);
+  viennaps::gpu::Application app(argc, argv);
   try {
     app.run();
   } catch (InterruptException &e) {

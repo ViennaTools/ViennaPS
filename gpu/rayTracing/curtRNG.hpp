@@ -20,18 +20,18 @@ static __device__ __inline__ unsigned int tea(unsigned int val0,
   return v0;
 }
 
-static __device__ void initializeRNGState(PerRayData *prd,
+static __device__ void initializeRNGState(viennaps::gpu::PerRayData *prd,
                                           unsigned int linearLaunchIndex,
                                           unsigned int seed) {
   auto rngSeed = tea<4>(linearLaunchIndex, seed);
   curand_init(rngSeed, 0, 0, &prd->RNGstate);
 }
 
-__device__ float getNextRand(curtRNGState *state) {
+__device__ float getNextRand(viennaps::gpu::RNGState *state) {
   return (float)(curand_uniform(state));
 }
 
-__device__ float getNormalDistRand(curtRNGState *state) {
+__device__ float getNormalDistRand(viennaps::gpu::RNGState *state) {
   float u0 = curand_uniform(state);
   float u1 = curand_uniform(state);
   float r = sqrtf(-2.f * logf(u0));

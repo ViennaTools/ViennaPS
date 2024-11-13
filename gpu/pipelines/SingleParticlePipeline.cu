@@ -10,10 +10,12 @@
 
 #include "context.hpp"
 
+using namespace viennaps::gpu;
+
 /*  launch parameters in constant memory, filled in by optix upon
     optixLaunch (this gets filled in from the buffer we pass to
     optixLaunch) */
-extern "C" __constant__ curtLaunchParams<float> params;
+extern "C" __constant__ LaunchParams<float> params;
 
 // for this simple example, we have a single ray type
 enum
@@ -22,11 +24,10 @@ enum
     RAY_TYPE_COUNT
 };
 
-extern "C" __global__ void __closesthit__depoParticle()
+extern "C" __global__ void __closesthit__SingleParticle()
 {
     const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-    PerRayData *prd =
-        (PerRayData *)getPRD<PerRayData>();
+    PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
     if (sbtData->isBoundary)
     {
@@ -52,7 +53,7 @@ extern "C" __global__ void __closesthit__depoParticle()
 // miss program that gets called for any ray that did not have a
 // valid intersection
 // ------------------------------------------------------------------------------
-extern "C" __global__ void __miss__depoParticle()
+extern "C" __global__ void __miss__SingleParticle()
 {
     getPRD<PerRayData>()->rayWeight = 0.f;
 }
@@ -60,7 +61,7 @@ extern "C" __global__ void __miss__depoParticle()
 //------------------------------------------------------------------------------
 // ray gen program - entry point
 //------------------------------------------------------------------------------
-extern "C" __global__ void __raygen__depoParticle()
+extern "C" __global__ void __raygen__SingleParticle()
 {
     const uint3 idx = optixGetLaunchIndex();
     const uint3 dims = optixGetLaunchDimensions();
@@ -83,8 +84,8 @@ extern "C" __global__ void __raygen__depoParticle()
     while (prd.rayWeight > params.rayWeightThreshold)
     {
         optixTrace(params.traversable, // traversable GAS
-                   prd.pos,            // origin
-                   prd.dir,            // direction
+                   make_float3(prd.pos[0], prd.pos[1], prd.pos[2]),   // origin
+                   make_float3(prd.dir[0], prd.dir[1], prd.dir[2]),   // direction
                    1e-4f,              // tmin
                    1e20f,              // tmax
                    0.0f,               // rayTime

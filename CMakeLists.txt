@@ -15,7 +15,7 @@ option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
 
 option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
-option(VIENNAPS_BUILD_GPU_APPLICATION "Build ViennaPS GPU application." OFF)
+option(VIENNAPS_BUILD_GPU_APPLICATION "Build ViennaPS GPU application." ON)
 option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 
 # --------------------------------------------------------------------------------------------------------
@@ -97,7 +97,8 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.1.0
+  # VERSION 1.1.0
+  GIT_TAG gpu-process
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})

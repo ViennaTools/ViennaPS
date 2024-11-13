@@ -3,51 +3,58 @@
 #include <curtLaunchParams.hpp>
 #include <curtMesh.hpp>
 
-#include <psKDTree.hpp>
-#include <psSmartPointer.hpp>
+#include <vcKDTree.hpp>
 
 #include <utCudaBuffer.hpp>
-#include <utLog.hpp>
 
 #include <culsToSurfaceMesh.hpp>
 
 #include <psDomain.hpp>
 
-template <typename T, int D> struct curtGeometry {
+namespace viennaps {
+
+namespace gpu {
+
+using namespace viennacore;
+
+template <typename T, int D> struct Geometry {
   // geometry
-  utCudaBuffer geometryVertexBuffer;
-  utCudaBuffer geometryIndexBuffer;
+  CudaBuffer geometryVertexBuffer;
+  CudaBuffer geometryIndexBuffer;
 
   // boundary
-  utCudaBuffer boundaryVertexBuffer;
-  utCudaBuffer boundaryIndexBuffer;
+  CudaBuffer boundaryVertexBuffer;
+  CudaBuffer boundaryIndexBuffer;
 
   // buffer that keeps the (final, compacted) accel structure
-  utCudaBuffer asBuffer;
+  CudaBuffer asBuffer;
   OptixDeviceContext optixContext;
 
   /// build acceleration structure from level set domain
   template <class LaunchParams>
-  void buildAccelFromDomain(
-      psSmartPointer<psDomain<T, D>> domain, LaunchParams &launchParams,
-      psSmartPointer<lsMesh<float>> mesh,
-      psSmartPointer<psKDTree<T, std::array<T, 3>>> kdTree = nullptr) {
+  void
+  buildAccelFromDomain(SmartPointer<::viennaps::Domain<T, D>> domain,
+                       LaunchParams &launchParams,
+                       SmartPointer<::viennals::Mesh<float>> mesh,
+                       SmartPointer<KDTree<T, Vec3D<T>>> kdTree = nullptr) {
     if (domain == nullptr) {
-      utLog::getInstance()
-          .addError("No level sets passed to curtGeometry.")
+      Logger::getInstance()
+          .addError("No level sets passed to Geometry.")
           .print();
     }
 
     if (kdTree) {
-      culsToSurfaceMesh<float>(domain, mesh, kdTree).apply();
+      ToSurfaceMesh<float>(domain, mesh, kdTree).apply();
     } else {
-      culsToSurfaceMesh<float>(domain, mesh).apply();
+      ToSurfaceMesh<float>(domain, mesh).apply();
     }
 
     const auto gridDelta = domain->getGrid().getGridDelta();
     launchParams.source.gridDelta = gridDelta;
-    launchParams.source.minPoint = mesh->minimumExtent;
-    launchParams.source.maxPoint = mesh->maximumExtent;
+    launchParams.source.minPoint[0] = mesh->minimumExtent[0];
+    launchParams.source.minPoint[1] = mesh->minimumExtent[1];
+    launchParams.source.maxPoint[0] = mesh->maximumExtent[0];
+    launchParams.source.maxPoint[1] = mesh->maximumExtent[1];
     launchParams.source.planeHeight = mesh->maximumExtent[2] + gridDelta;
     launchParams.numElements = mesh->triangles.size();
 
@@ -107,14 +114,14 @@ template <typename T, int D> struct curtGeometry {
     CUdeviceptr d_boundIndices = boundaryIndexBuffer.d_pointer();
 
     triangleInput[1].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
-    triangleInput[1].triangleArray.vertexStrideInBytes = sizeof(gdt::vec3f);
+    triangleInput[1].triangleArray.vertexStrideInBytes = sizeof(Vec3Df);
     triangleInput[1].triangleArray.numVertices =
         (int)boundaryMesh.vertex.size();
     triangleInput[1].triangleArray.vertexBuffers = &d_boundVertices;
 
     triangleInput[1].triangleArray.indexFormat =
         OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
-    triangleInput[1].triangleArray.indexStrideInBytes = sizeof(gdt::vec3i);
+    triangleInput[1].triangleArray.indexStrideInBytes = sizeof(Vec3D<int>);
     triangleInput[1].triangleArray.numIndexTriplets =
         (int)boundaryMesh.index.size();
     triangleInput[1].triangleArray.indexBuffer = d_boundIndices;
@@ -144,7 +151,7 @@ template <typename T, int D> struct curtGeometry {
                                  &blasBufferSizes);
 
     // prepare compaction
-    utCudaBuffer compactedSizeBuffer;
+    CudaBuffer compactedSizeBuffer;
     compactedSizeBuffer.alloc(sizeof(uint64_t));
 
     OptixAccelEmitDesc emitDesc;
@@ -152,10 +159,10 @@ template <typename T, int D> struct curtGeometry {
     emitDesc.result = compactedSizeBuffer.d_pointer();
 
     // execute build
-    utCudaBuffer tempBuffer;
+    CudaBuffer tempBuffer;
     tempBuffer.alloc(blasBufferSizes.tempSizeInBytes);
 
-    utCudaBuffer outputBuffer;
+    CudaBuffer outputBuffer;
     outputBuffer.alloc(blasBufferSizes.outputSizeInBytes);
 
     optixAccelBuild(optixContext, 0, &accelOptions, triangleInput.data(), 2,
@@ -181,39 +188,40 @@ template <typename T, int D> struct curtGeometry {
     launchParams.traversable = asHandle;
   }
 
-  static TriangleMesh makeBoundary(psSmartPointer<lsMesh<float>> passedMesh,
-                                   const float gridDelta) {
+  static TriangleMesh
+  makeBoundary(SmartPointer<viennals::Mesh<float>> passedMesh,
+               const float gridDelta) {
     TriangleMesh boundaryMesh;
 
-    gdt::vec3f bbMin = passedMesh->minimumExtent;
-    gdt::vec3f bbMax = passedMesh->maximumExtent;
+    Vec3Df bbMin = passedMesh->minimumExtent;
+    Vec3Df bbMax = passedMesh->maximumExtent;
     // adjust bounding box to include source plane
-    bbMax.z += gridDelta;
+    bbMax[2] += gridDelta;
 
     boundaryMesh.index.reserve(8);
     boundaryMesh.vertex.reserve(8);
 
     // bottom
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMin.y, bbMin.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMin.y, bbMin.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMax.y, bbMin.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMax.y, bbMin.z));
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMin[1], bbMin[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMin[1], bbMin[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMax[1], bbMin[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMax[1], bbMin[2]});
     // top
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMin.y, bbMax.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMin.y, bbMax.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMax.y, bbMax.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMax.y, bbMax.z));
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMin[1], bbMax[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMin[1], bbMax[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMax[1], bbMax[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMax[1], bbMax[2]});
 
     // x min max
-    boundaryMesh.index.push_back(gdt::vec3i(0, 3, 7));
-    boundaryMesh.index.push_back(gdt::vec3i(0, 7, 4));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 2, 1));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 1, 5));
+    boundaryMesh.index.push_back(Vec3D<int>{0, 3, 7});
+    boundaryMesh.index.push_back(Vec3D<int>{0, 7, 4});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 2, 1});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 1, 5});
     // y min max
-    boundaryMesh.index.push_back(gdt::vec3i(0, 4, 5));
-    boundaryMesh.index.push_back(gdt::vec3i(0, 5, 1));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 7, 3));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 3, 2));
+    boundaryMesh.index.push_back(Vec3D<int>{0, 4, 5});
+    boundaryMesh.index.push_back(Vec3D<int>{0, 5, 1});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 7, 3});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 3, 2});
 
     boundaryMesh.minCoords = bbMin;
     boundaryMesh.maxCoords = bbMax;
@@ -224,35 +232,35 @@ template <typename T, int D> struct curtGeometry {
   static TriangleMesh makeBoundary(const TriangleMesh &model) {
     TriangleMesh boundaryMesh;
 
-    gdt::vec3f bbMin = model.minCoords;
-    gdt::vec3f bbMax = model.maxCoords;
+    Vec3Df bbMin = model.minCoords;
+    Vec3Df bbMax = model.maxCoords;
     // adjust bounding box to include source plane
-    bbMax.z += model.gridDelta;
+    bbMax[2] += model.gridDelta;
 
     boundaryMesh.index.reserve(8);
     boundaryMesh.vertex.reserve(8);
 
     // bottom
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMin.y, bbMin.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMin.y, bbMin.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMax.y, bbMin.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMax.y, bbMin.z));
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMin[1], bbMin[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMin[1], bbMin[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMax[1], bbMin[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMax[1], bbMin[2]});
     // top
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMin.y, bbMax.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMin.y, bbMax.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMax.x, bbMax.y, bbMax.z));
-    boundaryMesh.vertex.push_back(gdt::vec3f(bbMin.x, bbMax.y, bbMax.z));
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMin[1], bbMax[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMin[1], bbMax[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMax[0], bbMax[1], bbMax[2]});
+    boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMax[1], bbMax[2]});
 
     // x min max
-    boundaryMesh.index.push_back(gdt::vec3i(0, 3, 7));
-    boundaryMesh.index.push_back(gdt::vec3i(0, 7, 4));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 2, 1));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 1, 5));
+    boundaryMesh.index.push_back(Vec3D<int>{0, 3, 7});
+    boundaryMesh.index.push_back(Vec3D<int>{0, 7, 4});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 2, 1});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 1, 5});
     // y min max
-    boundaryMesh.index.push_back(gdt::vec3i(0, 4, 5));
-    boundaryMesh.index.push_back(gdt::vec3i(0, 5, 1));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 7, 3));
-    boundaryMesh.index.push_back(gdt::vec3i(6, 3, 2));
+    boundaryMesh.index.push_back(Vec3D<int>{0, 4, 5});
+    boundaryMesh.index.push_back(Vec3D<int>{0, 5, 1});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 7, 3});
+    boundaryMesh.index.push_back(Vec3D<int>{6, 3, 2});
 
     boundaryMesh.minCoords = bbMin;
     boundaryMesh.maxCoords = bbMax;
@@ -268,3 +276,6 @@ template <typename T, int D> struct curtGeometry {
     asBuffer.free();
   }
 };
+
+} // namespace gpu
+} // namespace viennaps

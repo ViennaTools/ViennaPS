@@ -27,8 +27,8 @@ public:
       : levelSet(passedLevelSet), surfaceMesh(passedMesh) {}
   culsDelaunayMesh(psSmartPointer<psDomain<NumericType, 3>> passedDomain,
                    psSmartPointer<lsMesh<NumericType>> passedMesh)
-      : levelSet(passedDomain->getLevelSets()->back()),
-        surfaceMesh(passedMesh) {}
+      : levelSet(passedDomain->getLevelSets().back()), surfaceMesh(passedMesh) {
+  }
 
   void setLevelSet(psSmartPointer<lsDomain<NumericType, 3>> passedLevelSet) {
     levelSet = passedLevelSet;

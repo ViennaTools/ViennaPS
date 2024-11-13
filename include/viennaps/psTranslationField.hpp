@@ -65,6 +65,10 @@ public:
     kdTree_.build();
   }
 
+  auto getClosestPoint(const Vec3D<NumericType> &point) {
+    return kdTree_.findNearest(point);
+  }
+
   void translateLsId(unsigned long &lsId,
                      const Vec3D<NumericType> &coordinate) const {
     switch (translationMethod_) {

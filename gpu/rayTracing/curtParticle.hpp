@@ -3,7 +3,11 @@
 #include <string>
 #include <vector>
 
-template <typename T> struct curtParticle {
+namespace viennaps {
+
+namespace gpu {
+
+template <typename T> struct Particle {
   std::string name;
   int numberOfData = 1;
   std::vector<std::string> dataLabels;
@@ -13,3 +17,6 @@ template <typename T> struct curtParticle {
   float sigmaIonEnergy = 0.f; // eV
   float A_O = 0.f;
 };
+
+} // namespace gpu
+} // namespace viennaps

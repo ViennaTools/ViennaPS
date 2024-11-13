@@ -3,15 +3,18 @@
 #include <cuda.h>
 #include <string>
 
-#include <context.hpp>
-#include <utLog.hpp>
+#include "context.hpp"
+
+namespace viennaps {
+
+namespace gpu {
 
 // wrapper for launching kernel from a ptx file
-class utLaunchKernel {
+class LaunchKernel {
 public:
   static void launch(const std::string &moduleName,
                      const std::string &kernelName, void **kernel_args,
-                     pscuContext_t *context,
+                     Context_t *context,
                      unsigned long sharedMemoryInBytes = 0) {
 
     CUmodule module = context->getModule(moduleName);
@@ -20,7 +23,7 @@ public:
 
     err = cuModuleGetFunction(&function, module, kernelName.data());
     if (err != CUDA_SUCCESS)
-      utLog::getInstance()
+      viennacore::Logger::getInstance()
           .addFunctionError(std::string(kernelName), err)
           .print();
 
@@ -32,12 +35,14 @@ public:
                          kernel_args, // kernel parameters
                          NULL);
     if (err != CUDA_SUCCESS)
-      utLog::getInstance().addLaunchError(std::string(kernelName), err).print();
+      viennacore::Logger::getInstance()
+          .addLaunchError(std::string(kernelName), err)
+          .print();
   }
 
   static void launchSingle(const std::string &moduleName,
                            const std::string &kernelName, void **kernel_args,
-                           pscuContext_t *context,
+                           Context_t *context,
                            unsigned long sharedMemoryInBytes = 0) {
 
     CUmodule module = context->getModule(moduleName);
@@ -46,7 +51,9 @@ public:
 
     err = cuModuleGetFunction(&function, module, kernelName.data());
     if (err != CUDA_SUCCESS)
-      utLog::getInstance().addFunctionError(kernelName, err).print();
+      viennacore::Logger::getInstance()
+          .addFunctionError(kernelName, err)
+          .print();
 
     err = cuLaunchKernel(function,            // function to call
                          1, 1, 1,             /* grid dims */
@@ -56,9 +63,12 @@ public:
                          kernel_args,         // kernel parameters
                          NULL);
     if (err != CUDA_SUCCESS)
-      utLog::getInstance().addLaunchError(kernelName, err).print();
+      viennacore::Logger::getInstance().addLaunchError(kernelName, err).print();
   }
 
   static constexpr int blocks = 512;
   static constexpr int threadsPerBlock = 512;
 };
+
+} // namespace gpu
+} // namespace viennaps

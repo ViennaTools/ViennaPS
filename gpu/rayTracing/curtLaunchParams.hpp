@@ -1,9 +1,13 @@
 #pragma once
 
 #include <optix_types.h>
-#include <utGDT.hpp>
+#include <vcVectorUtil.hpp>
 
-template <typename T> struct curtLaunchParams {
+namespace viennaps {
+
+namespace gpu {
+
+template <typename T> struct LaunchParams {
   T *resultBuffer;
   T rayWeightThreshold = 0.01f;
   unsigned int seed = 0;
@@ -18,11 +22,14 @@ template <typename T> struct curtLaunchParams {
 
   // source plane params
   struct {
-    gdt::vec_t<T, 2> minPoint;
-    gdt::vec_t<T, 2> maxPoint;
+    viennacore::Vec2D<T> minPoint;
+    viennacore::Vec2D<T> maxPoint;
     T gridDelta;
     T planeHeight;
   } source;
 
   OptixTraversableHandle traversable;
 };
+
+} // namespace gpu
+} // namespace viennaps

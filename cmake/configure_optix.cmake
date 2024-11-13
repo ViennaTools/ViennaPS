@@ -11,12 +11,10 @@
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-message(STATUS "OptiX_INSTALL_DIR: ${OptiX_INSTALL_DIR}")
-
 find_package(CUDA REQUIRED)
 # find_package(OptiX REQUIRED)
 
-message(STATUS "Found OptiX at: " ${OptiX_INSTALL_DIR})
+message(STATUS "OptiX include: " ${OptiX_INCLUDE})
 
 if(CUDA_TOOLKIT_ROOT_DIR)
   include_directories(${CUDA_TOOLKIT_ROOT_DIR}/include)

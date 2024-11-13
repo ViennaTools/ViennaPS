@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vcLogger.hpp>
+
 #include <cassert>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -10,23 +12,23 @@
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
-#include <utLog.hpp>
-
 // global definitions
 constexpr int DIM = 3;
 
 namespace viennaps {
 
-struct gpuContext_t {
+namespace gpu {
+
+struct Context_t {
   CUmodule getModule(const std::string &moduleName);
 
   std::vector<std::string> moduleNames;
   std::vector<CUmodule> modules;
 };
 
-using gpuContext = gpuContext_t *;
+using Context = Context_t *;
 
-CUmodule gpuContext_t::getModule(const std::string &moduleName) {
+CUmodule Context_t::getModule(const std::string &moduleName) {
   int idx = -1;
   for (int i = 0; i < modules.size(); i++) {
     if (this->moduleNames[i] == moduleName) {
@@ -36,7 +38,7 @@ CUmodule gpuContext_t::getModule(const std::string &moduleName) {
   }
   if (idx < 0) {
     std::string modName = moduleName.data();
-    utLog::getInstance()
+    viennacore::Logger::getInstance()
         .addError("Module " + modName + " not in context.")
         .print();
   }
@@ -44,19 +46,21 @@ CUmodule gpuContext_t::getModule(const std::string &moduleName) {
   return modules[idx];
 }
 
-void CreateContext(gpuContext &context) {
+void CreateContext(Context &context) {
   // initialize cuda
   cudaFree(0);
   int numDevices;
   cudaGetDeviceCount(&numDevices);
   if (numDevices == 0) {
-    utLog::getInstance().addError("No CUDA capable devices found!").print();
+    viennacore::Logger::getInstance()
+        .addError("No CUDA capable devices found!")
+        .print();
   }
 
   // init optix
   optixInit();
 
-  context = new gpuContext_t;
+  context = new Context_t;
 
   CUmodule normModule;
   // CUmodule transModule;
@@ -67,12 +71,14 @@ void CreateContext(gpuContext &context) {
 
   err = cuInit(0);
   if (err != CUDA_SUCCESS)
-    utLog::getInstance().addModuleError("cuInit", err).print();
+    viennacore::Logger::getInstance().addModuleError("cuInit", err).print();
 
   std::string normModuleName = "normKernels.ptx";
   err = cuModuleLoad(&normModule, normModuleName.c_str());
   if (err != CUDA_SUCCESS)
-    utLog::getInstance().addModuleError(normModuleName, err).print();
+    viennacore::Logger::getInstance()
+        .addModuleError(normModuleName, err)
+        .print();
 
   context->moduleNames.push_back(normModuleName);
   context->modules.push_back(normModule);
@@ -80,7 +86,8 @@ void CreateContext(gpuContext &context) {
   // std::string transModuleName = "translateKernels.ptx";
   // err = cuModuleLoad(&transModule, transModuleName.c_str());
   // if (err != CUDA_SUCCESS)
-  //   utLog::getInstance().addModuleError(transModuleName, err).print();
+  //   viennacore::Logger::getInstance().addModuleError(transModuleName,
+  //   err).print();
 
   // context->moduleNames.push_back(transModuleName);
   // context->modules.push_back(transModule);
@@ -88,7 +95,7 @@ void CreateContext(gpuContext &context) {
   // std::string SF6O2ProcessKernelsName = "SF6O2ProcessKernels.ptx";
   // err = cuModuleLoad(&SF6O2ProcessModule, SF6O2ProcessKernelsName.c_str());
   // if (err != CUDA_SUCCESS)
-  //   utLog::getInstance().addModuleError(SF6O2ProcessKernelsName,
+  //   viennacore::Logger::getInstance().addModuleError(SF6O2ProcessKernelsName,
   //   err).print();
 
   // context->moduleNames.push_back(SF6O2ProcessKernelsName);
@@ -99,7 +106,7 @@ void CreateContext(gpuContext &context) {
   // cuModuleLoad(&FluorocarbonProcessModule,
   //                    FluorocarbonProcessKernelsName.c_str());
   // if (err != CUDA_SUCCESS)
-  //   utLog::getInstance()
+  //   viennacore::Logger::getInstance()
   //       .addModuleError(FluorocarbonProcessKernelsName, err)
   //       .print();
 
@@ -107,11 +114,11 @@ void CreateContext(gpuContext &context) {
   // context->modules.push_back(FluorocarbonProcessModule);
 }
 
-void ReleaseContext(gpuContext context) { delete context; }
+void ReleaseContext(Context context) { delete context; }
 
-void AddModule(const std::string &moduleName, gpuContext context) {
+void AddModule(const std::string &moduleName, Context context) {
   if (context == nullptr) {
-    utLog::getInstance()
+    viennacore::Logger::getInstance()
         .addError("Context not initialized. Use 'psCreateContext' to "
                   "initialize context.")
         .print();
@@ -122,11 +129,12 @@ void AddModule(const std::string &moduleName, gpuContext context) {
 
   err = cuModuleLoad(&module, moduleName.c_str());
   if (err != CUDA_SUCCESS) {
-    utLog::getInstance().addModuleError(moduleName, err).print();
+    viennacore::Logger::getInstance().addModuleError(moduleName, err).print();
   }
 
   context->modules.push_back(module);
   context->moduleNames.push_back(moduleName);
 }
 
+} // namespace gpu
 } // namespace viennaps

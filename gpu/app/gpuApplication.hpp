@@ -4,18 +4,21 @@
 
 #include "application.hpp"
 
-// #include <SF6O2Etching.hpp>
-
 #include <pscuProcess.hpp>
+#include <pscuProcessModel.hpp>
 #include <pscuProcessPipelines.hpp>
+
+#include <models/psSingleParticleProcess.hpp>
 
 namespace viennaps {
 
-class gpuApplication : public Application<DIM> {
-  gpuContext context;
+namespace gpu {
+
+class Application : public ::Application<DIM> {
+  Context context;
 
 public:
-  gpuApplication(int argc, char **argv) : Application(argc, argv) {
+  Application(int argc, char **argv) : ::Application<DIM>(argc, argv) {
     std::cout << "Initializing CUDA and OptiX ... ";
     CreateContext(context);
     std::cout << "success" << std::endl;
@@ -30,24 +33,25 @@ protected:
     processGeometry->duplicateTopLevelSet(processParams->material);
 
     // particle
-    curtParticle<NumericType> depoParticle{.name = "depoParticle",
-                                           .sticking = processParams->sticking,
-                                           .cosineExponent =
-                                               processParams->cosinePower};
-    depoParticle.dataLabels.push_back("depoRate");
+    viennaps::gpu::Particle<NumericType> particle{
+        .name = "SingleParticle",
+        .sticking = processParams->sticking,
+        .cosineExponent = processParams->cosinePower};
+    particle.dataLabels.push_back("flux");
 
-    auto surfModel = SmartPointer<SimpleDepositionImplementation::SurfaceModel<
-        NumericType, DIM>>::New(processParams->rate);
+    std::unordered_map<viennaps::Material, NumericType> materialRates_;
+    auto surfModel = SmartPointer<viennaps::impl::SingleParticleSurfaceModel<
+        NumericType, DIM>>::New(processParams->rate, materialRates_);
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
-    auto model = SmartPointer<pscuProcessModel<NumericType>>::New();
+    auto model = SmartPointer<viennaps::gpu::ProcessModel<NumericType>>::New();
 
-    model->insertNextParticleType(depoParticle);
+    model->insertNextParticleType(particle);
     model->setSurfaceModel(surfModel);
     model->setVelocityField(velField);
-    model->setProcessName("SimpleDeposition");
-    model->setPtxCode(embedded_deposition_pipeline);
+    model->setProcessName("SingleParticleProcess");
+    model->setPtxCode(embedded_SingleParticle_pipeline);
 
-    pscuProcess<NumericType, DIM> process(context);
+    viennaps::gpu::Process<NumericType, DIM> process(context);
     process.setDomain(processGeometry);
     process.setProcessModel(model);
     process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
@@ -159,5 +163,5 @@ protected:
   //   process.apply();
   // }
 };
-
+} // namespace gpu
 } // namespace viennaps

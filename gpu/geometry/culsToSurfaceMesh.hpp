@@ -11,74 +11,79 @@
 #include <lsDomain.hpp>
 #include <lsMarchingCubes.hpp>
 #include <lsMesh.hpp>
-#include <utLog.hpp>
 
 #include <psDomain.hpp>
-#include <psKDTree.hpp>
+#include <vcKDTree.hpp>
 
-/// Extract an explicit lsMesh<> instance from an lsDomain.
+namespace viennaps {
+
+namespace gpu {
+
+using namespace viennacore;
+
+/// Extract an explicit viennals::Mesh<> instance from an viennals Domain.
 /// The interface is then described by explicit surface elements:
 /// Lines in 2D, Triangles in 3D.
 template <class LsNumType, class MeshNumType = LsNumType, int D = 3>
-class culsToSurfaceMesh {
-  typedef lsDomain<LsNumType, D> lsDomainType;
-  typedef typename lsDomain<LsNumType, D>::DomainType hrleDomainType;
-  typedef psKDTree<LsNumType, std::array<LsNumType, 3>> kdTreeType;
+class ToSurfaceMesh {
+  typedef viennals::Domain<LsNumType, D> lsDomainType;
+  typedef typename viennals::Domain<LsNumType, D>::DomainType hrleDomainType;
+  typedef KDTree<LsNumType, std::array<LsNumType, 3>> kdTreeType;
 
-  std::vector<psSmartPointer<lsDomainType>> levelSets;
-  psSmartPointer<lsMesh<MeshNumType>> mesh{nullptr};
-  psSmartPointer<kdTreeType> kdTree{nullptr};
+  std::vector<SmartPointer<lsDomainType>> levelSets;
+  SmartPointer<viennals::Mesh<MeshNumType>> mesh{nullptr};
+  SmartPointer<kdTreeType> kdTree{nullptr};
 
   const MeshNumType epsilon;
 
 public:
-  culsToSurfaceMesh(double eps = 1e-12) : epsilon(eps) {}
+  ToSurfaceMesh(double eps = 1e-12) : epsilon(eps) {}
 
-  culsToSurfaceMesh(psSmartPointer<lsDomainType> passedLevelSet,
-                    psSmartPointer<lsMesh<MeshNumType>> passedMesh,
-                    psSmartPointer<kdTreeType> passedKdTree = nullptr,
-                    double eps = 1e-12)
+  ToSurfaceMesh(SmartPointer<lsDomainType> passedLevelSet,
+                SmartPointer<viennals::Mesh<MeshNumType>> passedMesh,
+                SmartPointer<kdTreeType> passedKdTree = nullptr,
+                double eps = 1e-12)
       : mesh(passedMesh), epsilon(eps), kdTree(passedKdTree) {
     levelSets.push_back(passedLevelSet);
   }
 
-  culsToSurfaceMesh(psSmartPointer<psDomain<LsNumType, D>> passedDomain,
-                    psSmartPointer<lsMesh<MeshNumType>> passedMesh,
-                    psSmartPointer<kdTreeType> passedKdTree = nullptr,
-                    double eps = 1e-12)
+  ToSurfaceMesh(SmartPointer<::viennaps::Domain<LsNumType, D>> passedDomain,
+                SmartPointer<viennals::Mesh<MeshNumType>> passedMesh,
+                SmartPointer<kdTreeType> passedKdTree = nullptr,
+                double eps = 1e-12)
       : mesh(passedMesh), epsilon(eps), kdTree(passedKdTree) {
-    for (auto &ls : *passedDomain->getLevelSets()) {
+    for (auto &ls : passedDomain->getLevelSets()) {
       levelSets.push_back(ls);
     }
   }
 
-  culsToSurfaceMesh(psSmartPointer<lsMesh<MeshNumType>> passedMesh,
-                    psSmartPointer<kdTreeType> passedKdTree = nullptr,
-                    double eps = 1e-12)
+  ToSurfaceMesh(SmartPointer<viennals::Mesh<MeshNumType>> passedMesh,
+                SmartPointer<kdTreeType> passedKdTree = nullptr,
+                double eps = 1e-12)
       : mesh(passedMesh), epsilon(eps), kdTree(passedKdTree) {}
 
-  void insertNextLevelSet(psSmartPointer<lsDomainType> passedLevelSet) {
+  void insertNextLevelSet(SmartPointer<lsDomainType> passedLevelSet) {
     levelSets.push_back(passedLevelSet);
   }
 
-  void setMesh(psSmartPointer<lsMesh<MeshNumType>> passedMesh) {
+  void setMesh(SmartPointer<viennals::Mesh<MeshNumType>> passedMesh) {
     mesh = passedMesh;
   }
 
-  void setKdTree(psSmartPointer<kdTreeType> passedKdTree) {
+  void setKdTree(SmartPointer<kdTreeType> passedKdTree) {
     kdTree = passedKdTree;
   }
 
   void apply() {
     if (levelSets.empty()) {
-      utLog::getInstance()
-          .addWarning("No level sets were passed to culsToSurfaceMesh.")
+      Logger::getInstance()
+          .addWarning("No level sets were passed to ToSurfaceMesh.")
           .print();
       return;
     }
     if (mesh == nullptr) {
-      utLog::getInstance()
-          .addWarning("No mesh was passed to culsToSurfaceMesh.")
+      Logger::getInstance()
+          .addWarning("No mesh was passed to ToSurfaceMesh.")
           .print();
       return;
     }
@@ -102,7 +107,7 @@ public:
     // test if level set function consists of at least 2 layers of
     // defined grid points
     if (levelSets.back()->getLevelSetWidth() < 2) {
-      utLog::getInstance()
+      Logger::getInstance()
           .addWarning("Levelset is less than 2 layers wide. Export might fail!")
           .print();
     }
@@ -113,7 +118,7 @@ public:
     nodeContainerType nodes[D];
 
     typename nodeContainerType::iterator nodeIt;
-    lsInternal::lsMarchingCubes marchingCubes;
+    lsInternal::MarchingCubes marchingCubes;
 
     std::vector<std::array<MeshNumType, 3>> triangleCenters;
     std::vector<std::array<MeshNumType, 3>> normals;
@@ -333,3 +338,6 @@ public:
             U[0] * V[1] - U[1] * V[0]};
   }
 };
+
+} // namespace gpu
+} // namespace viennaps

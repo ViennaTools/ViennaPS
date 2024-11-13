@@ -5,17 +5,24 @@
 #include <curtRNGState.hpp>
 #include <curtUtilities.hpp>
 
-#include <utGDT.hpp>
+#include <vcVectorUtil.hpp>
+
+namespace viennaps {
+
+namespace gpu {
 
 struct PerRayData {
   float rayWeight = 1.f;
-  gdt::vec3f pos;
-  gdt::vec3f dir;
+  viennacore::Vec3Df pos;
+  viennacore::Vec3Df dir;
 
-  curtRNGState RNGstate;
+  RNGState RNGstate;
 
   float energy;
 };
+
+} // namespace gpu
+} // namespace viennaps
 
 // this can only get compiled if included in a cuda kernel
 #ifdef __CUDACC__

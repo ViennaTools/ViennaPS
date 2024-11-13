@@ -4,34 +4,37 @@
 
 #include <lsMesh.hpp>
 
-#include <psSmartPointer.hpp>
+namespace viennaps {
 
-template <class NumericType, int D> class curtSmoothing {
+namespace gpu {
+
+using namespace viennacore;
+
+template <class NumericType, int D> class Smoothing {
 
   typedef std::vector<std::vector<unsigned int>> pointNeighborhoodType;
 
-  psSmartPointer<lsMesh<NumericType>> pointCloud;
-  psSmartPointer<std::vector<NumericType>> mData = nullptr;
+  SmartPointer<viennals::Mesh<NumericType>> pointCloud;
+  SmartPointer<std::vector<NumericType>> mData = nullptr;
   std::string mDataName;
   NumericType mSmoothingSize;
   pointNeighborhoodType mPointNeighborhood;
 
 public:
-  curtSmoothing() {}
-  curtSmoothing(psSmartPointer<lsMesh<NumericType>> passedPointCloud)
+  Smoothing() {}
+  Smoothing(SmartPointer<viennals::Mesh<NumericType>> passedPointCloud)
       : pointCloud(passedPointCloud) {
     initPointNeighborhood();
   }
-  curtSmoothing(psSmartPointer<lsMesh<NumericType>> passedPointCloud,
-                const std::string passedDataName,
-                const NumericType passedGridDelta)
+  Smoothing(SmartPointer<viennals::Mesh<NumericType>> passedPointCloud,
+            const std::string passedDataName, const NumericType passedGridDelta)
       : pointCloud(passedPointCloud), mDataName(passedDataName),
         mSmoothingSize(passedGridDelta * 1.5) {
     initPointNeighborhood();
   }
-  curtSmoothing(psSmartPointer<lsMesh<NumericType>> passedPointCloud,
-                const psSmartPointer<std::vector<NumericType>> passedData,
-                const NumericType passedGridDelta)
+  Smoothing(SmartPointer<viennals::Mesh<NumericType>> passedPointCloud,
+            const SmartPointer<std::vector<NumericType>> passedData,
+            const NumericType passedGridDelta)
       : pointCloud(passedPointCloud), mData(passedData),
         mSmoothingSize(passedGridDelta * 1.5) {
     initPointNeighborhood();
@@ -207,9 +210,12 @@ private:
       if (std::abs(p1[i] - p2[i]) >= dist)
         return false;
     }
-    if (rayInternal::Distance<NumericType>(p1, p2) < dist)
+    if (Distance<NumericType>(p1, p2) < dist)
       return true;
 
     return false;
   }
 };
+
+} // namespace gpu
+} // namespace viennaps

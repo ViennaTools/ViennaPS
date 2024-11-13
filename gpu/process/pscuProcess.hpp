@@ -12,12 +12,10 @@
 
 #include <pscuProcessModel.hpp>
 #include <pscuSurfaceModel.hpp>
-#include <pscuTranslationField.hpp>
 
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
-#include <psLogger.hpp>
-#include <psSmartPointer.hpp>
+#include <psTranslationField.hpp>
 #include <psVelocityField.hpp>
 
 #include <curtIndexMap.hpp>
@@ -27,18 +25,21 @@
 
 #include <culsToSurfaceMesh.hpp>
 
-#include <utArrayOps.hpp>
+namespace viennaps {
 
-template <typename NumericType, int D> class pscuProcess {
-  using psDomainType = psSmartPointer<psDomain<NumericType, D>>;
+namespace gpu {
+
+using namespace viennacore;
+
+template <typename NumericType, int D> class Process {
+  using psDomainType = SmartPointer<::viennaps::Domain<NumericType, D>>;
 
 public:
-  pscuProcess(pscuContext passedContext) : context(passedContext) {}
+  Process(Context passedContext) : context(passedContext) {}
 
-  template <typename ProcessModelType>
-  void setProcessModel(psSmartPointer<ProcessModelType> passedProcessModel) {
-    model = std::dynamic_pointer_cast<pscuProcessModel<NumericType>>(
-        passedProcessModel);
+  void
+  setProcessModel(SmartPointer<ProcessModel<NumericType>> passedProcessModel) {
+    model = passedProcessModel;
   }
 
   void setDomain(psDomainType passedDomain) { domain = passedDomain; }
@@ -58,7 +59,7 @@ public:
   void apply() {
     /* ---------- Process Setup --------- */
     if (!model) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No process model passed to psProcess.")
           .print();
       return;
@@ -66,70 +67,40 @@ public:
     const auto name = model->getProcessName();
 
     if (!domain) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("No domain passed to psProcess.")
           .print();
       return;
     }
 
-    if (model->getGeometricModel()) {
-      model->getGeometricModel()->setDomain(domain);
-      psLogger::getInstance().addInfo("Applying geometric model...").print();
-      model->getGeometricModel()->apply();
-      return;
-    }
-
-    if (processDuration == 0.) {
-      // apply only advection callback
-      if (model->getAdvectionCallback()) {
-        model->getAdvectionCallback()->setDomain(domain);
-        model->getAdvectionCallback()->applyPreAdvect(0);
-      } else {
-        psLogger::getInstance()
-            .addWarning("No advection callback passed to psProcess.")
-            .print();
-      }
-      return;
-    }
-
     if (!model->getSurfaceModel()) {
-      psLogger::getInstance()
-          .addWarning("No surface model passed to psProcess.")
+      Logger::getInstance()
+          .addWarning("No surface model passed to Process.")
           .print();
       return;
     }
 
-    psUtils::Timer processTimer;
+    Timer processTimer;
     processTimer.start();
 
     double remainingTime = processDuration;
-    assert(domain->getLevelSets()->size() != 0 && "No level sets in domain.");
+    assert(domain->getLevelSets().size() != 0 && "No level sets in domain.");
     const NumericType gridDelta =
-        domain->getLevelSets()->back()->getGrid().getGridDelta();
+        domain->getLevelSets().back()->getGrid().getGridDelta();
 
-    auto diskMesh = psSmartPointer<lsMesh<NumericType>>::New();
-    lsToDiskMesh<NumericType, D> diskMeshConv(diskMesh);
+    auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    viennals::ToDiskMesh<NumericType, D> diskMeshConv(diskMesh);
 
     /* --------- Setup advection kernel ----------- */
-    lsAdvect<NumericType, D> advectionKernel;
+    viennals::Advect<NumericType, D> advectionKernel;
     advectionKernel.setIntegrationScheme(integrationScheme);
     // advectionKernel.setIgnoreVoids(true);
 
-    auto pointKdTree = psSmartPointer<
-        psKDTree<NumericType, std::array<NumericType, 3>>>::New();
-    if (model->getVelocityField()->getTranslationFieldOptions() > 0) {
-      auto transField =
-          psSmartPointer<pscuTranslationField<NumericType, true>>::New(
-              model->getVelocityField(), pointKdTree, domain->getMaterialMap());
-      advectionKernel.setVelocityField(transField);
-    } else {
-      auto transField =
-          psSmartPointer<pscuTranslationField<NumericType, false>>::New(
-              model->getVelocityField(), pointKdTree, domain->getMaterialMap());
-      advectionKernel.setVelocityField(transField);
-    }
+    auto transField = SmartPointer<TranslationField<NumericType>>::New(
+        model->getVelocityField(), domain->getMaterialMap());
+    advectionKernel.setVelocityField(transField);
 
-    for (auto dom : *domain->getLevelSets()) {
+    for (auto dom : domain->getLevelSets()) {
       advectionKernel.insertNextLevelSet(dom);
       diskMeshConv.insertNextLevelSet(dom);
     }
@@ -137,25 +108,24 @@ public:
     /* --------- Setup element-point translation ----------- */
 
     auto mesh = rayTrace.getSurfaceMesh();
-    auto elementKdTree = psSmartPointer<
-        psKDTree<NumericType, std::array<NumericType, 3>>>::New();
+    auto elementKdTree =
+        SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
     rayTrace.setKdTree(elementKdTree);
 
     diskMeshConv.apply();
     assert(diskMesh->nodes.size());
 
-    pointKdTree->setPoints(diskMesh->nodes);
-    pointKdTree->build();
+    transField->buildKdTree(diskMesh->nodes);
 
     /* --------- Setup for ray tracing ----------- */
-    const bool useRayTracing = model->getParticleTypes() != nullptr;
+    const bool useRayTracing = model->getParticleTypes().empty() ? false : true;
     unsigned int numRates = 0;
     unsigned int numCov = 0;
-    curtIndexMap fluxesIndexMap;
+    IndexMap fluxesIndexMap;
 
     if (useRayTracing && !rayTracerInitialized) {
       if (!model->getPtxCode()) {
-        psLogger::getInstance()
+        Logger::getInstance()
             .addWarning("No pipeline in process model. Aborting.")
             .print();
         return;
@@ -165,17 +135,11 @@ public:
       rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
       rayTrace.setUseRandomSeed(useRandomSeeds);
       rayTrace.setPeriodicBoundary(periodicBoundary);
-      for (auto &particle : *model->getParticleTypes()) {
+      for (auto &particle : model->getParticleTypes()) {
         rayTrace.insertNextParticle(particle);
       }
       numRates = rayTrace.prepareParticlePrograms();
-      fluxesIndexMap = curtIndexMap(rayTrace.getParticles());
-    }
-
-    // Determine whether advection callback is used
-    const bool useAdvectionCallback = model->getAdvectionCallback() != nullptr;
-    if (useAdvectionCallback) {
-      model->getAdvectionCallback()->setDomain(domain);
+      fluxesIndexMap = IndexMap(rayTrace.getParticles());
     }
 
     // Determine whether there are process parameters used in ray tracing
@@ -184,9 +148,7 @@ public:
         model->getSurfaceModel()->getProcessParameters() != nullptr;
 
     if (useProcessParams)
-      psLogger::getInstance().addInfo("Using process parameters.").print();
-    if (useAdvectionCallback)
-      psLogger::getInstance().addInfo("Using advection callback.").print();
+      Logger::getInstance().addInfo("Using process parameters.").print();
 
     unsigned int numElements = 0;
     if (useRayTracing) {
@@ -204,10 +166,10 @@ public:
       numCov = coverages->getScalarDataSize();
       rayTrace.setUseCellData(numCov + 1); // + material IDs
 
-      psLogger::getInstance().addInfo("Using coverages.").print();
+      Logger::getInstance().addInfo("Using coverages.").print();
 
-      psUtils::Timer timer;
-      psLogger::getInstance().addInfo("Initializing coverages ... ").print();
+      Timer timer;
+      Logger::getInstance().addInfo("Initializing coverages ... ").print();
 
       timer.start();
       for (size_t iterations = 1; iterations <= maxIterations; iterations++) {
@@ -215,16 +177,16 @@ public:
         // get coverages and material ids in ray tracer
         const auto &materialIds =
             *diskMesh->getCellData().getScalarData("MaterialIds");
-        utCudaBuffer d_coverages; // device buffer
+        CudaBuffer d_coverages; // device buffer
         translatePointToElementData(materialIds, coverages, d_coverages,
-                                    pointKdTree, mesh);
+                                    transField, mesh);
         rayTrace.setCellData(d_coverages, numCov + 1); // + material ids
 
         // run the ray tracer
         rayTrace.apply();
 
         // extract fluxes on points
-        auto fluxes = psSmartPointer<psPointData<NumericType>>::New();
+        auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
         translateElementToPointData(rayTrace.getResults(), fluxes,
                                     fluxesIndexMap, elementKdTree, diskMesh,
                                     mesh, gridDelta);
@@ -232,57 +194,55 @@ public:
         // calculate coverages
         model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
 
-        if (psLogger::getLogLevel() >= 3) {
+        if (Logger::getLogLevel() >= 3) {
           assert(numElements == mesh->triangles.size());
 
           downloadCoverages(d_coverages, mesh->getCellData(), coverages,
                             numElements);
 
           rayTrace.downloadResultsToPointData(mesh->getCellData());
-          lsVTKWriter<NumericType>(mesh, name + "_covIinit_mesh_" +
-                                             std::to_string(iterations) +
-                                             ".vtp")
+          viennals::VTKWriter<NumericType>(
+              mesh,
+              name + "_covIinit_mesh_" + std::to_string(iterations) + ".vtp")
               .apply();
 
           insertReplaceScalarData(diskMesh->getCellData(), fluxes);
           insertReplaceScalarData(diskMesh->getCellData(), coverages);
-          lsVTKWriter<NumericType>(diskMesh, name + "_covIinit_" +
-                                                 std::to_string(iterations) +
-                                                 ".vtp")
+          viennals::VTKWriter<NumericType>(
+              diskMesh,
+              name + "_covIinit_" + std::to_string(iterations) + ".vtp")
               .apply();
         }
 
         d_coverages.free();
-        psLogger::getInstance()
+        Logger::getInstance()
             .addInfo("Iteration: " + std::to_string(iterations))
             .print();
       }
 
       timer.finish();
-      psLogger::getInstance()
-          .addTiming("Coverage initialization", timer)
-          .print();
+      Logger::getInstance().addTiming("Coverage initialization", timer).print();
     }
 
     double previousTimeStep = 0.;
     size_t counter = 0;
-    psUtils::Timer rtTimer;
-    psUtils::Timer callbackTimer;
-    psUtils::Timer advTimer;
+    Timer rtTimer;
+    Timer callbackTimer;
+    Timer advTimer;
     while (remainingTime > 0.) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addInfo("Remaining time: " + std::to_string(remainingTime))
           .print();
 
       const auto &materialIds =
           *diskMesh->getCellData().getScalarData("MaterialIds");
 
-      auto fluxes = psSmartPointer<psPointData<NumericType>>::New();
-      utCudaBuffer d_coverages; // device buffer for material ids and coverages
+      auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+      CudaBuffer d_coverages; // device buffer for material ids and coverages
       if (useRayTracing) {
         rayTrace.updateSurface();
         translatePointToElementData(materialIds, coverages, d_coverages,
-                                    pointKdTree, mesh);
+                                    transField, mesh);
         rayTrace.setCellData(d_coverages, numCov + 1); // +1 material ids
 
         rtTimer.start();
@@ -294,7 +254,7 @@ public:
                                     fluxesIndexMap, elementKdTree, diskMesh,
                                     mesh, gridDelta);
 
-        psLogger::getInstance()
+        Logger::getInstance()
             .addTiming("Top-down flux calculation", rtTimer)
             .print();
       }
@@ -304,7 +264,7 @@ public:
       model->getVelocityField()->setVelocities(velocities);
       assert(velocities->size() == pointKdTree->getNumberOfPoints());
 
-      if (psLogger::getLogLevel() >= 4) {
+      if (Logger::getLogLevel() >= 4) {
         if (useCoverages) {
           insertReplaceScalarData(diskMesh->getCellData(), coverages);
           downloadCoverages(d_coverages, mesh->getCellData(), coverages,
@@ -315,8 +275,8 @@ public:
           insertReplaceScalarData(diskMesh->getCellData(), fluxes);
           rayTrace.downloadResultsToPointData(mesh->getCellData());
 
-          lsVTKWriter<NumericType>(mesh, name + "_mesh_" +
-                                             std::to_string(counter) + ".vtp")
+          viennals::VTKWriter<NumericType>(
+              mesh, name + "_mesh_" + std::to_string(counter) + ".vtp")
               .apply();
         }
 
@@ -324,39 +284,15 @@ public:
           insertReplaceScalarData(diskMesh->getCellData(), velocities,
                                   "velocities");
 
-        lsVTKWriter<NumericType>(diskMesh,
-                                 name + "_" + std::to_string(counter) + ".vtp")
+        viennals::VTKWriter<NumericType>(
+            diskMesh, name + "_" + std::to_string(counter) + ".vtp")
             .apply();
-
-        if (domain->getUseCellSet()) {
-          domain->getCellSet()->writeVTU(name + "_cellSet_" +
-                                         std::to_string(counter) + ".vtu");
-        }
 
         counter++;
       }
 
       if (useRayTracing)
         d_coverages.free();
-
-      // apply advection callback
-      if (useAdvectionCallback) {
-        callbackTimer.start();
-        bool continueProcess = model->getAdvectionCallback()->applyPreAdvect(
-            processDuration - remainingTime);
-        callbackTimer.finish();
-        psLogger::getInstance()
-            .addTiming("Advection callback pre-advect", callbackTimer)
-            .print();
-
-        if (!continueProcess) {
-          psLogger::getInstance()
-              .addInfo("Process stopped early by AdvectionCallback during "
-                       "`preAdvect`.")
-              .print();
-          break;
-        }
-      }
 
       // adjust time step near end
       if (remainingTime - previousTimeStep < 0.) {
@@ -367,34 +303,15 @@ public:
       advectionKernel.apply();
       advTimer.finish();
 
-      psLogger::getInstance().addTiming("Surface advection", advTimer).print();
+      Logger::getInstance().addTiming("Surface advection", advTimer).print();
 
       // update surface and move coverages to new surface
       diskMeshConv.apply();
 
       if (useCoverages)
-        moveCoverages(pointKdTree, diskMesh, coverages);
+        moveCoverages(transField, diskMesh, coverages);
 
-      pointKdTree->setPoints(diskMesh->nodes);
-      pointKdTree->build();
-
-      // apply advection callback
-      if (useAdvectionCallback) {
-        callbackTimer.start();
-        bool continueProcess = model->getAdvectionCallback()->applyPostAdvect(
-            advectionKernel.getAdvectedTime());
-        callbackTimer.finish();
-        psLogger::getInstance()
-            .addTiming("Advection callback post-advect", callbackTimer)
-            .print();
-        if (!continueProcess) {
-          psLogger::getInstance()
-              .addInfo("Process stopped early by AdvectionCallback during "
-                       "`postAdvect`.")
-              .print();
-          break;
-        }
-      }
+      transField->buildKdTree(diskMesh->nodes);
 
       previousTimeStep = advectionKernel.getAdvectedTime();
       remainingTime -= previousTimeStep;
@@ -403,35 +320,28 @@ public:
     processTime = processDuration - remainingTime;
     processTimer.finish();
 
-    psLogger::getInstance()
+    Logger::getInstance()
         .addTiming("\nProcess " + name, processTimer)
         .addTiming("Surface advection total time",
                    advTimer.totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
         .print();
     if (useRayTracing) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addTiming("Top-down flux calculation total time",
                      rtTimer.totalDuration * 1e-9,
-                     processTimer.totalDuration * 1e-9)
-          .print();
-    }
-    if (useAdvectionCallback) {
-      psLogger::getInstance()
-          .addTiming("Advection callback total time",
-                     callbackTimer.totalDuration * 1e-9,
                      processTimer.totalDuration * 1e-9)
           .print();
     }
   }
 
 private:
-  static void moveCoverages(
-      psSmartPointer<psKDTree<NumericType, std::array<NumericType, 3>>> kdTree,
-      psSmartPointer<lsMesh<NumericType>> points,
-      psSmartPointer<psPointData<NumericType>> oldCoverages) {
+  static void
+  moveCoverages(SmartPointer<TranslationField<NumericType>> transField,
+                SmartPointer<viennals::Mesh<NumericType>> points,
+                SmartPointer<viennals::PointData<NumericType>> oldCoverages) {
 
-    psPointData<NumericType> newCoverages;
+    viennals::PointData<NumericType> newCoverages;
 
     // prepare new coverages
     for (unsigned i = 0; i < oldCoverages->getScalarDataSize(); i++) {
@@ -444,7 +354,7 @@ private:
 #pragma omp parallel for
     for (std::size_t i = 0; i < points->nodes.size(); i++) {
       auto &point = points->nodes[i];
-      auto nearest = kdTree->findNearest(point);
+      auto nearest = transField->getClosestPoint(point);
 
       for (unsigned j = 0; j < oldCoverages->getScalarDataSize(); j++) {
         assert(nearest->first < oldCoverages->getScalarData(j)->size());
@@ -461,8 +371,8 @@ private:
   }
 
   //   void smoothVelocities(
-  //       psSmartPointer<std::vector<NumericType>> velocities,
-  //       psSmartPointer<psKDTree<NumericType, std::array<float, 3>>> kdTree,
+  //       SmartPointer<std::vector<NumericType>> velocities,
+  //       SmartPointer<psKDTree<NumericType, std::array<float, 3>>> kdTree,
   //       const NumericType gridDelta) {
   //     const auto numPoints = velocities->size();
   //     std::cout << numPoints << " " << kdTree->getNumberOfPoints() <<
@@ -490,10 +400,11 @@ private:
   //     *velocities = std::move(smoothed);
   //   }
 
-  void downloadCoverages(utCudaBuffer &d_coverages,
-                         psPointData<NumericType> &elementData,
-                         psSmartPointer<psPointData<NumericType>> &coverages,
-                         unsigned int numElements) {
+  void
+  downloadCoverages(CudaBuffer &d_coverages,
+                    viennals::PointData<NumericType> &elementData,
+                    SmartPointer<viennals::PointData<NumericType>> &coverages,
+                    unsigned int numElements) {
 
     auto numCov = coverages->getScalarDataSize() + 1; // + material ids
     NumericType *temp = new NumericType[numElements * numCov];
@@ -530,12 +441,13 @@ private:
   }
 
   void translateElementToPointData(
-      utCudaBuffer &d_elementData,
-      psSmartPointer<psPointData<NumericType>> pointData,
-      const curtIndexMap &indexMap,
-      psSmartPointer<psKDTree<float, std::array<float, 3>>> elementKdTree,
-      psSmartPointer<lsMesh<NumericType>> pointMesh,
-      psSmartPointer<lsMesh<float>> surfMesh, const NumericType gridDelta) {
+      CudaBuffer &d_elementData,
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      const IndexMap &indexMap,
+      SmartPointer<KDTree<float, std::array<float, 3>>> elementKdTree,
+      SmartPointer<viennals::Mesh<NumericType>> pointMesh,
+      SmartPointer<viennals::Mesh<float>> surfMesh,
+      const NumericType gridDelta) {
 
     auto numData = indexMap.getNumberOfData();
     const auto &points = pointMesh->nodes;
@@ -568,7 +480,7 @@ private:
       for (auto p : closePoints.value()) {
         assert(p.first < elementNormals->size());
         weights.push_back(
-            aops::dot(normals->at(i), elementNormals->at(p.first)));
+            DotProduct(normals->at(i), elementNormals->at(p.first)));
         if (weights.back() > 1e-6 && !std::isnan(weights.back()))
           sum += weights.back();
       }
@@ -602,8 +514,9 @@ private:
   }
 
   template <class T>
-  static void insertReplaceScalarData(psPointData<T> &insertHere,
-                                      psSmartPointer<psPointData<T>> addData) {
+  static void
+  insertReplaceScalarData(viennals::PointData<T> &insertHere,
+                          SmartPointer<viennals::PointData<T>> addData) {
     for (unsigned i = 0; i < addData->getScalarDataSize(); i++) {
       auto dataName = addData->getScalarDataLabel(i);
       auto data = insertHere.getScalarData(dataName);
@@ -618,8 +531,8 @@ private:
   }
 
   template <class T>
-  static void insertReplaceScalarData(psPointData<T> &insertHere,
-                                      psSmartPointer<std::vector<T>> addData,
+  static void insertReplaceScalarData(viennals::PointData<T> &insertHere,
+                                      SmartPointer<std::vector<T>> addData,
                                       std::string dataName) {
     auto data = insertHere.getScalarData(dataName);
     auto numElements = addData->size();
@@ -633,11 +546,10 @@ private:
 
   static void translatePointToElementData(
       const std::vector<NumericType> &materialIds,
-      psSmartPointer<psPointData<NumericType>> pointData,
-      utCudaBuffer &d_elementData,
-      psSmartPointer<psKDTree<NumericType, std::array<NumericType, 3>>>
-          pointKdTree,
-      psSmartPointer<lsMesh<float>> elementMesh) {
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      CudaBuffer &d_elementData,
+      SmartPointer<TranslationField<NumericType>> translationField,
+      SmartPointer<viennals::Mesh<float>> elementMesh) {
 
     auto numData = pointData ? pointData->getScalarDataSize() : 0;
     const auto &elements = elementMesh->template getElements<D>();
@@ -646,7 +558,7 @@ private:
     assert(materialIds.size() == pointData->getScalarData(0)->size());
 
     auto closestPoints =
-        psSmartPointer<std::vector<NumericType>>::New(numElements);
+        SmartPointer<std::vector<NumericType>>::New(numElements);
 
 #pragma omp parallel for
     for (unsigned i = 0; i < numElements; i++) {
@@ -662,7 +574,7 @@ private:
            elementMesh->nodes[elIdx[2]][2]) /
               3.f};
 
-      auto closestPoint = pointKdTree->findNearest(elementCenter);
+      auto closestPoint = translationField->getClosestPoint(elementCenter);
       assert(closestPoint->first < materialIds.size());
       closestPoints->at(i) = closestPoint->first;
 
@@ -678,14 +590,14 @@ private:
 
     insertReplaceScalarData(elementMesh->cellData, closestPoints, "pointIds");
     // for (int i = 0; i < numData; i++) {
-    //   auto tmp = psSmartPointer<std::vector<NumericType>>::New(
+    //   auto tmp = SmartPointer<std::vector<NumericType>>::New(
     //       elementData.begin() + (i + 1) * numElements,
     //       elementData.begin() + (i + 2) * numElements);
     //   insertReplaceScalarData(elementMesh->cellData, tmp,
     //                           pointData->getScalarDataLabel(i));
     // }
     // static int insert = 0;
-    // lsVTKWriter<NumericType>(elementMesh, "insertElement_" +
+    // viennals::VTKWriter<NumericType>(elementMesh, "insertElement_" +
     //                                           std::to_string(insert++) +
     //                                           ".vtp")
     //     .apply();
@@ -693,13 +605,13 @@ private:
     d_elementData.alloc_and_upload(elementData);
   }
 
-  pscuContext_t *context;
+  Context_t *context;
   curtTracer<NumericType, D> rayTrace = curtTracer<NumericType, D>(context);
 
   psDomainType domain = nullptr;
-  psSmartPointer<pscuProcessModel<NumericType>> model = nullptr;
-  lsIntegrationSchemeEnum integrationScheme =
-      lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  SmartPointer<ProcessModel<NumericType>> model = nullptr;
+  viennals::IntegrationSchemeEnum integrationScheme =
+      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   NumericType processDuration;
   long raysPerPoint = 1000;
   bool useRandomSeeds = true;
@@ -711,3 +623,6 @@ private:
   NumericType printTime = 0.;
   NumericType processTime = 0;
 };
+
+} // namespace gpu
+} // namespace viennaps

@@ -15,22 +15,25 @@ set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 #       $ENV{OptiX_INSTALL_DIR}
 #       CACHE PATH "Path to OptiX installation.")
 # endif()
-set(OptiX_INSTALL_DIR "/home/tobias/OptiX" CACHE PATH "Path to OptiX installed location.")
+set(OptiX_INSTALL_DIR "/home/reiter/OptiX" CACHE PATH "Path to OptiX installed location.")
 set(OptiX_INCLUDE "${OptiX_INSTALL_DIR}/include")
-message(STATUS "OptiX_INSTALL_DIR: ${OptiX_INSTALL_DIR}")
-message(STATUS "OptiX_INCLUDE: ${OptiX_INCLUDE}")
+
 include(${CMAKE_SOURCE_DIR}/cmake/configure_optix.cmake)
 
 set(VIENNAPS_GPU_INCLUDE_DIRS #
     ${CMAKE_SOURCE_DIR}/app
     ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/geometry ${PROJECT_SOURCE_DIR}/process
-    ${PROJECT_SOURCE_DIR}/rayTracing ${PROJECT_SOURCE_DIR}/utils ${PROJECT_SOURCE_DIR}/app)
+    ${PROJECT_SOURCE_DIR}/rayTracing ${PROJECT_SOURCE_DIR}/utils ${PROJECT_SOURCE_DIR}/app
+    ${ViennaCore_SOURCE_DIR}/include/viennacore
+    )
 
 add_custom_target(buildGPUApplication)
 
 include_directories(${VIENNAPS_GPU_INCLUDE_DIRS})
+add_compile_definitions(VIENNACORE_COMPILE_GPU)
 file(GLOB kernels "${PROJECT_SOURCE_DIR}/deviceKernels/*.cu")
 foreach(kernel ${kernels})
+
   cuda_compile_ptx(
     cuda_ptx_files
     ${kernel}
@@ -59,15 +62,16 @@ endforeach()
 # cuda_compile_and_embed(embedded_Fluorocarbon_pipeline
 #                        ${PROJECT_SOURCE_DIR}/pipelines/FluorocarbonPipeline.cu)
 
-cuda_compile_and_embed(embedded_deposition_pipeline
-                       ${PROJECT_SOURCE_DIR}/pipelines/DepositionPipeline.cu)
+cuda_compile_and_embed(embedded_SingleParticle_pipeline
+                       ${PROJECT_SOURCE_DIR}/pipelines/SingleParticlePipeline.cu)
 add_compile_definitions(GPU_SUPPORT)
 
 add_executable(
-  ViennaPS_GPU ${embedded_SF6O2_pipeline} ${embedded_deposition_pipeline}
+  ViennaPS_GPU ${embedded_SF6O2_pipeline} ${embedded_SingleParticle_pipeline}
                ${embedded_Fluorocarbon_pipeline} ${PROJECT_SOURCE_DIR}/app/gpuApplication.cpp)
 target_include_directories(ViennaPS_GPU PUBLIC ${OptiX_INCLUDE} ${VIENNAPS_GPU_INCLUDE_DIRS})
 target_link_libraries(ViennaPS_GPU  ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ViennaPS)
+target_compile_definitions(ViennaPS_GPU PUBLIC VIENNACORE_COMPILE_GPU)
 
 add_dependencies(buildGPUApplication ViennaPS_GPU)
 

@@ -6,13 +6,17 @@
 
 #include <curtParticle.hpp>
 
-class curtIndexMap {
+namespace viennaps {
+
+namespace gpu {
+
+class IndexMap {
   std::vector<std::string> dataLabels;
 
 public:
-  curtIndexMap() {}
+  IndexMap() {}
 
-  template <class T> curtIndexMap(std::vector<curtParticle<T>> &particles) {
+  template <class T> IndexMap(std::vector<Particle<T>> &particles) {
     for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
       assert(particles[pIdx].numberOfData == particles[pIdx].dataLabels.size());
       for (size_t dIdx = 0; dIdx < particles[pIdx].numberOfData; dIdx++) {
@@ -46,3 +50,6 @@ public:
     return dataLabels.cend();
   }
 };
+
+} // namespace gpu
+} // namespace viennaps

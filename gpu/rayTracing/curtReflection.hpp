@@ -6,31 +6,34 @@
 #include <curtPerRayData.hpp>
 #include <curtSBTRecords.hpp>
 
-#include <utGDT.hpp>
+#include <vcVectorUtil.hpp>
 
 #ifdef __CUDACC__
-static __device__ __forceinline__ void specularReflection(PerRayData *prd) {
+static __device__ __forceinline__ void specularReflection(viennaps::gpu::PerRayData *prd) {
+  using namespace viennacore;
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  const gdt::vec3f geoNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
+  const Vec3Df geoNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
   prd->pos = prd->pos + optixGetRayTmax() * prd->dir;
-  prd->dir = prd->dir - (2 * gdt::dot(prd->dir, geoNormal)) * geoNormal;
+  prd->dir = prd->dir - (2 * DotProduct(prd->dir, geoNormal)) * geoNormal;
 }
 
 static __device__ __forceinline__ void
-specularReflection(PerRayData *prd, const gdt::vec3f &geoNormal) {
+specularReflection(viennaps::gpu::PerRayData *prd, const viennacore::Vec3Df &geoNormal) {
+  using namespace viennacore;
   prd->pos = prd->pos + optixGetRayTmax() * prd->dir;
-  prd->dir = prd->dir - (2 * gdt::dot(prd->dir, geoNormal)) * geoNormal;
+  prd->dir = prd->dir - (2 * DotProduct(prd->dir, geoNormal)) * geoNormal;
 }
 
-static __device__ void conedCosineReflection(PerRayData *prd,
+static __device__ void conedCosineReflection(viennaps::gpu::PerRayData *prd,
                                              const float avgReflAngle,
-                                             const gdt::vec3f &geomNormal) {
+                                             const viennacore::Vec3Df &geomNormal) {
+  using namespace viennacore;
   // Calculate specular direction
   specularReflection(prd, geomNormal);
 
   float u, sqrt_1m_u;
   float angle;
-  gdt::vec3f randomDir;
+  Vec3Df randomDir;
 
   //  loop until ray is reflected away from the surface normal
   //  this loop takes care of the case where part of the cone points
@@ -80,12 +83,12 @@ static __device__ void conedCosineReflection(PerRayData *prd,
       randomDir[0] = randomDir[1];
       randomDir[1] = temp;
     }
-  } while (gdt::dot(randomDir, geomNormal) <= 0.);
+  } while (DotProduct(randomDir, geomNormal) <= 0.);
 
   prd->dir = randomDir;
 }
 
-static __device__ gdt::vec3f PickRandomPointOnUnitSphere(curtRNGState *state) {
+static __device__ viennacore::Vec3Df PickRandomPointOnUnitSphere(viennaps::gpu::RNGState *state) {
   float x, y, z, x2py2;
   do {
     x = 2.f * curand_uniform(state) - 1.f;
@@ -96,18 +99,19 @@ static __device__ gdt::vec3f PickRandomPointOnUnitSphere(curtRNGState *state) {
   x *= tmp;
   y *= tmp;
   z = 1.f - 2.f * x2py2;
-  return gdt::vec3f(x, y, z);
+  return viennacore::Vec3Df{x, y, z};
 }
 
-static __device__ void diffuseReflection(PerRayData *prd) {
-  const gdt::vec3f randomDirection =
+static __device__ void diffuseReflection(viennaps::gpu::PerRayData *prd) {
+  using namespace viennacore;
+  const Vec3Df randomDirection =
       PickRandomPointOnUnitSphere(&prd->RNGstate);
 
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
-  const gdt::vec3f geoNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
+  const Vec3Df geoNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
   prd->pos = prd->pos + optixGetRayTmax() * prd->dir;
 
   prd->dir = geoNormal + randomDirection;
-  prd->dir = gdt::normalize(prd->dir);
+  Normalize(prd->dir);
 }
 #endif

@@ -4,20 +4,24 @@
 #include <unordered_map>
 #include <vector>
 
-#include "psPointData.hpp"
-#include "psProcessParams.hpp"
-#include "psSmartPointer.hpp"
-#include "utCudaBuffer.hpp"
+#include <psProcessParams.hpp>
+#include <utCudaBuffer.hpp>
 
-template <typename NumericType> class pscuSurfaceModel {
+namespace viennaps {
+
+namespace gpu {
+
+using namespace viennacore;
+
+template <typename NumericType> class SurfaceModel {
 protected:
-  utCudaBuffer d_coverages;
-  utCudaBuffer d_processParams;
+  CudaBuffer d_coverages;
+  CudaBuffer d_processParams;
   std::unordered_map<std::string, unsigned int> ratesIndexMap;
   std::unordered_map<std::string, unsigned int> coveragesIndexMap;
 
 public:
-  virtual ~pscuSurfaceModel() {}
+  virtual ~SurfaceModel() {}
 
   virtual void initializeCoverages(unsigned numPoints) {
     // if no coverages get initialized here, they wont be used at all
@@ -27,18 +31,18 @@ public:
     // if no process parameters get initialized here, they wont be used at all
   }
 
-  virtual psSmartPointer<std::vector<NumericType>>
-  calculateVelocities(utCudaBuffer &d_rates,
+  virtual SmartPointer<std::vector<NumericType>>
+  calculateVelocities(CudaBuffer &d_rates,
                       const std::vector<NumericType> &materialIDs) {
-    return psSmartPointer<std::vector<NumericType>>::New();
+    return SmartPointer<std::vector<NumericType>>::New();
   }
 
-  virtual void updateCoverages(utCudaBuffer &d_rates,
+  virtual void updateCoverages(CudaBuffer &d_rates,
                                const std::vector<NumericType> &materialIDs) {}
 
-  utCudaBuffer &getCoverages() { return d_coverages; }
+  CudaBuffer &getCoverages() { return d_coverages; }
 
-  utCudaBuffer &getProcessParameters() { return d_processParams; }
+  CudaBuffer &getProcessParameters() { return d_processParams; }
 
   std::unordered_map<std::string, unsigned int> &getCoverageIndexMap() {
     return coveragesIndexMap;
@@ -49,3 +53,6 @@ public:
     ratesIndexMap = passedIndexMap;
   }
 };
+
+} // namespace gpu
+} // namespace viennaps

@@ -9,8 +9,6 @@
 #include <lsPointData.hpp>
 
 #include <psDomain.hpp>
-#include <psKDTree.hpp>
-#include <psLogger.hpp>
 
 #include <curtBoundary.hpp>
 #include <curtChecks.hpp>
@@ -24,35 +22,40 @@
 #include <utGDT.hpp>
 #include <utLaunchKernel.hpp>
 
+namespace viennaps {
+
+namespace gpu {
+
+using namespace viennacore;
+
 template <class T, int D> class curtTracer {
+  using psDomainType = SmartPointer<::viennaps::Domain<T, D>>;
+
 public:
   /// constructor - performs all setup, including initializing
   /// optix, creates module, pipeline, programs, SBT, etc.
-  curtTracer(pscuContext passedContext,
-             psSmartPointer<psDomain<T, D>> passedDomain)
+  curtTracer(Context passedContext, psDomainType passedDomain)
       : context(passedContext), domain(passedDomain) {
     initRayTracer();
-    mesh = psSmartPointer<lsMesh<float>>::New();
+    mesh = SmartPointer<viennals::Mesh<float>>::New();
   }
 
-  curtTracer(pscuContext passedContext) : context(passedContext) {
+  curtTracer(Context passedContext) : context(passedContext) {
     initRayTracer();
-    mesh = psSmartPointer<lsMesh<float>>::New();
+    mesh = SmartPointer<viennals::Mesh<float>>::New();
   }
 
-  void setKdTree(psSmartPointer<psKDTree<T, std::array<T, 3>>> passedKdTree) {
+  void setKdTree(SmartPointer<KDTree<T, std::array<T, 3>>> passedKdTree) {
     kdTree = passedKdTree;
   }
 
   void setPipeline(char embeddedPtxCode[]) { ptxCode = embeddedPtxCode; }
 
-  void setLevelSet(psSmartPointer<psDomain<T, D>> passedDomain) {
-    domain = passedDomain;
-  }
+  void setLevelSet(psDomainType passedDomain) { domain = passedDomain; }
 
   void invalidateGeometry() { geometryValid = false; }
 
-  void insertNextParticle(const curtParticle<T> &particle) {
+  void insertNextParticle(const Particle<T> &particle) {
     particles.push_back(particle);
   }
 
@@ -89,10 +92,9 @@ public:
 
     numRays = numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint;
     if (numRays > (1 << 29)) {
-
-      utLog::getInstance()
+      Logger::getInstance()
           .addError("Too many rays for single launch: " +
-                    gdt::prettyDouble(numRays))
+                    util::prettyDouble(numRays))
           .print();
     }
 
@@ -136,8 +138,8 @@ public:
     normalize();
   }
 
-  void translateToPointData(psSmartPointer<lsMesh<T>> mesh,
-                            utCudaBuffer &pointDataBuffer, T radius = 0.,
+  void translateToPointData(SmartPointer<viennals::Mesh<T>> mesh,
+                            CudaBuffer &pointDataBuffer, T radius = 0.,
                             const bool download = false) {
     // upload oriented pointcloud data to device
     assert(mesh->nodes.size() != 0 &&
@@ -145,7 +147,7 @@ public:
     if (radius == 0.)
       radius = launchParams.source.gridDelta;
     size_t numValues = mesh->nodes.size();
-    utCudaBuffer pointBuffer;
+    CudaBuffer pointBuffer;
     pointBuffer.alloc_and_upload(mesh->nodes);
     pointDataBuffer.alloc_and_init(numValues * numRates, T(0));
 
@@ -160,8 +162,8 @@ public:
         &d_pointValues, &radius,  &numValues, &launchParams.numElements,
         &numRates};
 
-    utLaunchKernel::launch(translateModuleName, translateToPointDataKernelName,
-                           kernel_args, context, sizeof(int));
+    LaunchKernel::launch(translateModuleName, translateToPointDataKernelName,
+                         kernel_args, context, sizeof(int));
 
     if (download) {
       downloadResultsToPointData(mesh->getCellData(), pointDataBuffer,
@@ -171,21 +173,21 @@ public:
     pointBuffer.free();
   }
 
-  void setCellData(utCudaBuffer &passedCellDataBuffer, unsigned numData) {
+  void setCellData(CudaBuffer &passedCellDataBuffer, unsigned numData) {
     assert(passedCellDataBuffer.sizeInBytes / sizeof(T) / numData ==
            launchParams.numElements);
     cellDataBuffer = passedCellDataBuffer;
   }
 
-  void translateFromPointData(psSmartPointer<lsMesh<T>> mesh,
-                              utCudaBuffer &pointDataBuffer, unsigned numData) {
+  void translateFromPointData(SmartPointer<viennals::Mesh<T>> mesh,
+                              CudaBuffer &pointDataBuffer, unsigned numData) {
     // upload oriented pointcloud data to device
     size_t numPoints = mesh->nodes.size();
     assert(mesh->nodes.size() > 0);
     assert(pointDataBuffer.sizeInBytes / sizeof(T) / numData == numPoints);
     assert(numData > 0);
 
-    utCudaBuffer pointBuffer;
+    CudaBuffer pointBuffer;
     pointBuffer.alloc_and_upload(mesh->nodes);
 
     cellDataBuffer.alloc(launchParams.numElements * numData * sizeof(T));
@@ -205,9 +207,8 @@ public:
                            &launchParams.numElements,
                            &numData};
 
-    utLaunchKernel::launch(translateModuleName,
-                           translateFromPointDataKernelName, kernel_args,
-                           context, sizeof(int));
+    LaunchKernel::launch(translateModuleName, translateFromPointDataKernelName,
+                         kernel_args, context, sizeof(int));
 
     pointBuffer.free();
   }
@@ -279,8 +280,8 @@ public:
     return numRates;
   }
 
-  void downloadResultsToPointData(lsPointData<T> &pointData,
-                                  utCudaBuffer &valueBuffer,
+  void downloadResultsToPointData(viennals::PointData<T> &pointData,
+                                  CudaBuffer &valueBuffer,
                                   unsigned int numPoints) {
     T *temp = new T[numPoints * numRates];
     valueBuffer.download(temp, numPoints * numRates);
@@ -309,7 +310,7 @@ public:
     delete temp;
   }
 
-  void downloadResultsToPointData(lsPointData<T> &pointData) {
+  void downloadResultsToPointData(viennals::PointData<T> &pointData) {
     unsigned int numPoints = launchParams.numElements;
     T *temp = new T[numPoints * numRates];
     resultBuffer.download(temp, numPoints * numRates);
@@ -338,29 +339,29 @@ public:
     delete temp;
   }
 
-  utCudaBuffer &getData() { return cellDataBuffer; }
+  CudaBuffer &getData() { return cellDataBuffer; }
 
-  utCudaBuffer &getResults() { return resultBuffer; }
+  CudaBuffer &getResults() { return resultBuffer; }
 
   std::size_t getNumberOfRays() const { return numRays; }
 
-  std::vector<curtParticle<T>> &getParticles() { return particles; }
+  std::vector<Particle<T>> &getParticles() { return particles; }
 
   unsigned int getNumberOfRates() const { return numRates; }
 
   unsigned int getNumberOfElements() const { return launchParams.numElements; }
 
-  psSmartPointer<lsMesh<float>> getSurfaceMesh() const { return mesh; }
+  SmartPointer<viennals::Mesh<float>> getSurfaceMesh() const { return mesh; }
 
-  psSmartPointer<psKDTree<T, std::array<float, 3>>> getKDTree() const {
+  SmartPointer<KDTree<T, std::array<float, 3>>> getKDTree() const {
     return kdTree;
   }
 
 protected:
   void normalize() {
     T sourceArea =
-        (launchParams.source.maxPoint.x - launchParams.source.minPoint.x) *
-        (launchParams.source.maxPoint.y - launchParams.source.minPoint.y);
+        (launchParams.source.maxPoint[0] - launchParams.source.minPoint[0]) *
+        (launchParams.source.maxPoint[1] - launchParams.source.minPoint[1]);
     assert(resultBuffer.sizeInBytes != 0 &&
            "Normalization: Result buffer not initiliazed.");
     CUdeviceptr d_data = resultBuffer.d_pointer();
@@ -370,8 +371,7 @@ protected:
         &d_data,     &d_vertex, &d_index, &launchParams.numElements,
         &sourceArea, &numRays,  &numRates};
 
-    utLaunchKernel::launch(normModuleName, normKernelName, kernel_args,
-                           context);
+    LaunchKernel::launch(normModuleName, normKernelName, kernel_args, context);
   }
 
   void initRayTracer() {
@@ -400,13 +400,13 @@ protected:
 
     cudaGetDeviceProperties(&deviceProps, deviceID);
 
-    utLog::getInstance()
+    Logger::getInstance()
         .addDebug("Running on device: " + std::string(deviceProps.name))
         .print();
 
     CUresult cuRes = cuCtxGetCurrent(&cudaContext);
     if (cuRes != CUDA_SUCCESS) {
-      utLog::getInstance()
+      Logger::getInstance()
           .addError("Error querying current context: error code " +
                     std::to_string(cuRes))
           .print();
@@ -564,9 +564,9 @@ protected:
     HitgroupRecord geometryHitgroupRecord;
     optixSbtRecordPackHeader(hitgroupPGs[i], &geometryHitgroupRecord);
     geometryHitgroupRecord.data.vertex =
-        (gdt::vec3f *)geometry.geometryVertexBuffer.d_pointer();
+        (Vec3Df *)geometry.geometryVertexBuffer.d_pointer();
     geometryHitgroupRecord.data.index =
-        (gdt::vec3i *)geometry.geometryIndexBuffer.d_pointer();
+        (Vec3D<int> *)geometry.geometryIndexBuffer.d_pointer();
     geometryHitgroupRecord.data.isBoundary = false;
     geometryHitgroupRecord.data.cellData = (void *)cellDataBuffer.d_pointer();
     hitgroupRecords.push_back(geometryHitgroupRecord);
@@ -575,9 +575,9 @@ protected:
     HitgroupRecord boundaryHitgroupRecord;
     optixSbtRecordPackHeader(hitgroupPGs[i], &boundaryHitgroupRecord);
     boundaryHitgroupRecord.data.vertex =
-        (gdt::vec3f *)geometry.boundaryVertexBuffer.d_pointer();
+        (Vec3Df *)geometry.boundaryVertexBuffer.d_pointer();
     boundaryHitgroupRecord.data.index =
-        (gdt::vec3i *)geometry.boundaryIndexBuffer.d_pointer();
+        (Vec3D<int> *)geometry.boundaryIndexBuffer.d_pointer();
     boundaryHitgroupRecord.data.isBoundary = true;
     hitgroupRecords.push_back(boundaryHitgroupRecord);
 
@@ -589,23 +589,23 @@ protected:
 
 protected:
   // context for cuda kernels
-  pscuContext_t *context;
+  Context_t *context;
   std::string ptxCode;
 
   // geometry
-  psSmartPointer<psDomain<T, D>> domain{nullptr};
-  psSmartPointer<psKDTree<T, std::array<float, 3>>> kdTree{nullptr};
-  psSmartPointer<lsMesh<float>> mesh{nullptr};
+  psDomainType domain{nullptr};
+  SmartPointer<KDTree<T, std::array<float, 3>>> kdTree{nullptr};
+  SmartPointer<viennals::Mesh<float>> mesh{nullptr};
 
-  curtGeometry<T, D> geometry;
+  Geometry<T, D> geometry;
 
   // particles
-  std::vector<curtParticle<T>> particles;
-  utCudaBuffer dataPerParticleBuffer;
+  std::vector<Particle<T>> particles;
+  CudaBuffer dataPerParticleBuffer;
   unsigned int numRates = 0;
 
   // sbt data
-  utCudaBuffer cellDataBuffer;
+  CudaBuffer cellDataBuffer;
 
   // cuda and optix stuff
   CUcontext cudaContext;
@@ -621,19 +621,19 @@ protected:
 
   // program groups, and the SBT built around
   std::vector<OptixProgramGroup> raygenPGs;
-  utCudaBuffer raygenRecordBuffer;
+  CudaBuffer raygenRecordBuffer;
   std::vector<OptixProgramGroup> missPGs;
-  utCudaBuffer missRecordBuffer;
+  CudaBuffer missRecordBuffer;
   std::vector<OptixProgramGroup> hitgroupPGs;
-  utCudaBuffer hitgroupRecordBuffer;
+  CudaBuffer hitgroupRecordBuffer;
   std::vector<OptixShaderBindingTable> sbts;
 
   // launch parameters, on the host, constant for all particles
-  curtLaunchParams<T> launchParams;
-  utCudaBuffer launchParamsBuffer;
+  LaunchParams<T> launchParams;
+  CudaBuffer launchParamsBuffer;
 
   // results Buffer
-  utCudaBuffer resultBuffer;
+  CudaBuffer resultBuffer;
 
   bool geometryValid = false;
   bool useRandomSeed = false;
@@ -655,3 +655,6 @@ protected:
   static constexpr bool useFloat = std::is_same_v<T, float>;
   static constexpr char NumericType = useFloat ? 'f' : 'd';
 };
+
+} // namespace gpu
+} // namespace viennaps

@@ -1,18 +1,18 @@
 #pragma once
 
 #include <optix_types.h>
-#include <utGDT.hpp>
+#include <vcVectorUtil.hpp>
 
 struct HitSBTData {
-  gdt::vec3f *vertex;
-  gdt::vec3i *index;
+  viennacore::Vec3Df *vertex;
+  viennacore::Vec3D<int> *index;
   bool isBoundary;
   void *cellData;
 };
 
 struct HitSBTDiskData {
-  gdt::vec3f *vertex;
-  gdt::vec3i *index;
+  viennacore::Vec3Df *vertex;
+  viennacore::Vec3D<int> *index;
   bool isBoundary;
   void *cellData;
 };

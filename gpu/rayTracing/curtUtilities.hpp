@@ -43,7 +43,8 @@
 #ifdef __CUDACC__
 template <typename T>
 __device__ __forceinline__ unsigned int
-getIdx(int particleIdx, int dataIdx, curtLaunchParams<T> *launchParams) {
+getIdx(int particleIdx, int dataIdx,
+       viennaps::gpu::LaunchParams<T> *launchParams) {
   unsigned int offset = 0;
   for (unsigned int i = 0; i < particleIdx; i++)
     offset += launchParams->dataPerParticle[i];

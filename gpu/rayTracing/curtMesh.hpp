@@ -1,26 +1,37 @@
 #pragma once
 
-#include <utGDT.hpp>
+#include <vcVectorUtil.hpp>
+
+#include <vector>
+
+namespace viennaps {
+
+namespace gpu {
+
+using namespace viennacore;
 
 struct TriangleMesh {
-  std::vector<gdt::vec3f> vertex;
-  std::vector<gdt::vec3i> index;
+  std::vector<Vec3Df> vertex;
+  std::vector<Vec3D<int>> index;
 
-  gdt::vec3f minCoords;
-  gdt::vec3f maxCoords;
+  Vec3Df minCoords;
+  Vec3Df maxCoords;
   float gridDelta;
 };
 
 struct SphereMesh {
-  std::vector<gdt::vec3f> vertex;
+  std::vector<Vec3Df> vertex;
   std::vector<float> radius;
 
-  gdt::vec3f minCoords;
-  gdt::vec3f maxCoords;
+  Vec3Df minCoords;
+  Vec3Df maxCoords;
   float gridDelta;
 };
 
 struct OrientedPointCloud {
-  std::vector<gdt::vec3f> vertex;
-  std::vector<gdt::vec3f> normal;
+  std::vector<Vec3Df> vertex;
+  std::vector<Vec3Df> normal;
 };
+
+} // namespace gpu
+} // namespace viennaps

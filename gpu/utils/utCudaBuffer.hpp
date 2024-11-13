@@ -1,13 +1,18 @@
 #pragma once
 
 #include <assert.h>
+#include <cstddef>
 #include <cuda_runtime.h>
 #include <vector>
 
 #include <curtChecks.hpp>
 
+namespace viennaps {
+
+namespace gpu {
+
 /// simple wrapper for creating, and managing a device-side CUDA buffer
-struct utCudaBuffer {
+struct CudaBuffer {
   inline CUdeviceptr d_pointer() const { return (CUdeviceptr)d_ptr; }
 
   // re-size buffer to given number of bytes
@@ -73,3 +78,6 @@ struct utCudaBuffer {
   size_t sizeInBytes{0};
   void *d_ptr{nullptr};
 };
+
+} // namespace gpu
+} // namespace viennaps
