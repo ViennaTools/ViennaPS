@@ -131,7 +131,7 @@ public:
         return;
       }
       rayTrace.setPipeline(model->getPtxCode());
-      rayTrace.setLevelSet(domain);
+      rayTrace.setDomain(domain);
       rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
       rayTrace.setUseRandomSeed(useRandomSeeds);
       rayTrace.setPeriodicBoundary(periodicBoundary);
@@ -163,10 +163,7 @@ public:
     const bool useCoverages = coverages != nullptr;
 
     if (useCoverages) {
-      numCov = coverages->getScalarDataSize();
-      rayTrace.setUseCellData(numCov + 1); // + material IDs
-
-      Logger::getInstance().addInfo("Using coverages.").print();
+      meshddInfo("Using coverages.").print();
 
       Timer timer;
       Logger::getInstance().addInfo("Initializing coverages ... ").print();
@@ -606,7 +603,7 @@ private:
   }
 
   Context_t *context;
-  curtTracer<NumericType, D> rayTrace = curtTracer<NumericType, D>(context);
+  Tracer<NumericType, D> rayTrace = Tracer<NumericType, D>(context);
 
   psDomainType domain = nullptr;
   SmartPointer<ProcessModel<NumericType>> model = nullptr;

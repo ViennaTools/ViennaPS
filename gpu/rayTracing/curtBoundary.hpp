@@ -4,7 +4,6 @@
 #include <curtSBTRecords.hpp>
 #include <curtUtilities.hpp>
 
-#include <utGDT.hpp>
 #include <vcVectorUtil.hpp>
 
 // this can only get compiled if included in a cuda kernel

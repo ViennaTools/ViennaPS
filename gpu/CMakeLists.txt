@@ -87,7 +87,7 @@ add_dependencies(buildGPUApplication ViennaPS_GPU)
 
 ### EXAMPLES ###
 
-# add_custom_target(buildGPUExamples)
+add_custom_target(buildGPUExamples)
 
 # add_executable(GPU_Trench ${embedded_SF6O2_pipeline}
 #                                       ${PROJECT_SOURCE_DIR}/examples/trench.cpp)
@@ -104,3 +104,10 @@ add_dependencies(buildGPUApplication ViennaPS_GPU)
 #                                 ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
 # target_link_libraries(GPU_Hole ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${VIENNAPS_LIBRARIES})
 # add_dependencies(buildGPUExamples GPU_Hole)
+
+add_executable(GPU_Custom ${embedded_SingleParticle_pipeline}
+                          ${PROJECT_SOURCE_DIR}/examples/custom.cpp)
+target_include_directories(GPU_Custom PUBLIC ${OptiX_INCLUDE}
+                                             ${VIENNAPS_GPU_INCLUDE_DIRS})
+target_link_libraries(GPU_Custom ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ViennaPS)
+add_dependencies(buildGPUExamples GPU_Custom)

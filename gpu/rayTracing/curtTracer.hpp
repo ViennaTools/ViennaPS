@@ -19,7 +19,6 @@
 #include <curtUtilities.hpp>
 
 #include <utCudaBuffer.hpp>
-#include <utGDT.hpp>
 #include <utLaunchKernel.hpp>
 
 namespace viennaps {
@@ -28,19 +27,19 @@ namespace gpu {
 
 using namespace viennacore;
 
-template <class T, int D> class curtTracer {
+template <class T, int D> class Tracer {
   using psDomainType = SmartPointer<::viennaps::Domain<T, D>>;
 
 public:
   /// constructor - performs all setup, including initializing
   /// optix, creates module, pipeline, programs, SBT, etc.
-  curtTracer(Context passedContext, psDomainType passedDomain)
+  Tracer(Context passedContext, psDomainType passedDomain)
       : context(passedContext), domain(passedDomain) {
     initRayTracer();
     mesh = SmartPointer<viennals::Mesh<float>>::New();
   }
 
-  curtTracer(Context passedContext) : context(passedContext) {
+  Tracer(Context passedContext) : context(passedContext) {
     initRayTracer();
     mesh = SmartPointer<viennals::Mesh<float>>::New();
   }
@@ -51,7 +50,7 @@ public:
 
   void setPipeline(char embeddedPtxCode[]) { ptxCode = embeddedPtxCode; }
 
-  void setLevelSet(psDomainType passedDomain) { domain = passedDomain; }
+  void setDomain(psDomainType passedDomain) { domain = passedDomain; }
 
   void invalidateGeometry() { geometryValid = false; }
 
@@ -80,6 +79,9 @@ public:
       std::random_device rd;
       std::uniform_int_distribution<unsigned int> gen;
       launchParams.seed = gen(rd);
+    } else {
+      static int runNumber = 0;
+      launchParams.seed = runNumber++;
     }
 
     int numPointsPerDim =
@@ -130,7 +132,7 @@ public:
     // }
     // delete temp;
     // std::cout << "Time: " << diff.count() * 100 << " ms\n";
-    // std::cout << gdt::prettyDouble(numRays * particles.size()) << std::endl;
+    // std::cout << util::prettyDouble(numRays * particles.size()) << std::endl;
     // std::cout << numRays << std::endl;
 
     // sync - maybe remove in future
