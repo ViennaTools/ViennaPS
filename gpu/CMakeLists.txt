@@ -65,6 +65,8 @@ endforeach()
 
 cuda_compile_and_embed(embedded_SingleParticle_pipeline
                        ${PROJECT_SOURCE_DIR}/pipelines/SingleParticlePipeline.cu)
+cuda_compile_and_embed(embedded_FaradayCage_pipeline
+                       ${PROJECT_SOURCE_DIR}/pipelines/FaradayCagePipeline.cu)
 add_compile_definitions(GPU_SUPPORT)
 
 add_executable(
@@ -95,6 +97,12 @@ add_executable(GPU_Trench ${embedded_SingleParticle_pipeline}
 target_include_directories(GPU_Trench PUBLIC ${OptiX_INCLUDE} ${VIENNAPS_GPU_INCLUDE_DIRS})
 target_link_libraries(GPU_Trench ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ViennaPS)
 add_dependencies(buildGPUExamples GPU_Trench)
+
+add_executable(GPU_Waveguide ${embedded_FaradayCage_pipeline}
+                             ${PROJECT_SOURCE_DIR}/examples/waveguide.cpp)
+target_include_directories(GPU_Waveguide PUBLIC ${OptiX_INCLUDE} ${VIENNAPS_GPU_INCLUDE_DIRS})
+target_link_libraries(GPU_Waveguide ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ViennaPS)
+add_dependencies(buildGPUExamples GPU_Waveguide)
 
 # add_executable(GPU_Hole ${embedded_SF6O2_pipeline}
 #                                       ${PROJECT_SOURCE_DIR}/examples/hole.cpp)

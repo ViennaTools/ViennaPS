@@ -10,6 +10,8 @@
 
 #include <psDomain.hpp>
 
+#include <rayUtil.hpp>
+
 #include <curtBoundary.hpp>
 #include <curtChecks.hpp>
 #include <curtGeometry.hpp>
@@ -99,6 +101,9 @@ public:
                     util::prettyDouble(numRays))
           .print();
     }
+    Logger::getInstance()
+        .addDebug("Number of rays: " + util::prettyDouble(numRays))
+        .print();
 
     // auto start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < particles.size(); i++) {
@@ -107,8 +112,17 @@ public:
       launchParams.sticking = particles[i].sticking;
       launchParams.meanIonEnergy = particles[i].meanIonEnergy;
       launchParams.sigmaIonEnergy = particles[i].sigmaIonEnergy;
-      launchParams.A_O = particles[i].A_O;
+      launchParams.source.directionBasis =
+          rayInternal::getOrthonormalBasis<float>(particles[i].direction);
       launchParamsBuffer.upload(&launchParams, 1);
+
+      Logger::getInstance()
+          .addDebug("Running ray tracer for particle: " + particles[i].name +
+                    "\nCosine exponent: " +
+                    std::to_string(particles[i].cosineExponent) +
+                    "\nSticking: " + std::to_string(particles[i].sticking))
+          .print();
+      std::cout << launchParams.periodicBoundary << std::endl;
 
       CUstream stream;
       CUDA_CHECK(StreamCreate(&stream));

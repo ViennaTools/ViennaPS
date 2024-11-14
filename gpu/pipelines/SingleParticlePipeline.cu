@@ -73,9 +73,9 @@ extern "C" __global__ void __raygen__SingleParticle()
     // each ray has its own RNG state
     initializeRNGState(&prd, linearLaunchIndex, params.seed);
 
-    // generate ray direction
-    const float sourcePower = params.cosineExponent;
-    initializeRayRandom(&prd, &params, sourcePower, idx);
+    // initialize ray position and direction
+    initializeRayPosition(&prd, &params);
+    initializeRayDirection(&prd, params.cosineExponent);
 
     // the values we store the PRD pointer in:
     uint32_t u0, u1;
@@ -83,12 +83,12 @@ extern "C" __global__ void __raygen__SingleParticle()
 
     while (prd.rayWeight > params.rayWeightThreshold)
     {
-        optixTrace(params.traversable, // traversable GAS
-                   make_float3(prd.pos[0], prd.pos[1], prd.pos[2]),   // origin
-                   make_float3(prd.dir[0], prd.dir[1], prd.dir[2]),   // direction
-                   1e-4f,              // tmin
-                   1e20f,              // tmax
-                   0.0f,               // rayTime
+        optixTrace(params.traversable,                              // traversable GAS
+                   make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
+                   make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
+                   1e-4f,                                           // tmin
+                   1e20f,                                           // tmax
+                   0.0f,                                            // rayTime
                    OptixVisibilityMask(255),
                    OPTIX_RAY_FLAG_DISABLE_ANYHIT, // OPTIX_RAY_FLAG_NONE,
                    SURFACE_RAY_TYPE,              // SBT offset

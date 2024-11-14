@@ -47,7 +47,7 @@ conedCosineReflection(viennaps::gpu::PerRayData *prd, const float avgReflAngle,
       sqrt_1m_u = sqrtf(1. - u);
       angle = avgReflAngle * sqrt_1m_u;
     } while (getNextRand(&prd->RNGstate) * angle * u >
-             cosf(PI_F / 2. * sqrt_1m_u) * sinf(angle));
+             cosf(M_PIf / 2. * sqrt_1m_u) * sinf(angle));
 
     // Random Azimuthal Rotation
     float costheta = max(min(cos(angle), 1.), 0.);

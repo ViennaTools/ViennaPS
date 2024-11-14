@@ -15,7 +15,7 @@ template <typename T> struct Particle {
   float cosineExponent = 1.f;
   float meanIonEnergy = 0.f;  // eV
   float sigmaIonEnergy = 0.f; // eV
-  float A_O = 0.f;
+  Vec3Df direction = {0.f, 0.f, -1.f};
 };
 
 } // namespace gpu

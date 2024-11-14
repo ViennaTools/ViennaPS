@@ -198,6 +198,9 @@ template <typename T, int D> struct Geometry {
     // adjust bounding box to include source plane
     bbMax[2] += gridDelta;
 
+    std::cout << "bbMin: " << bbMin << std::endl;
+    std::cout << "bbMax: " << bbMax << std::endl;
+
     boundaryMesh.index.reserve(8);
     boundaryMesh.vertex.reserve(8);
 

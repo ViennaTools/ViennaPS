@@ -25,21 +25,6 @@
 #endif
 #endif
 
-#if defined(_MSC_VER)
-#define GDT_DLL_EXPORT __declspec(dllexport)
-#define GDT_DLL_IMPORT __declspec(dllimport)
-#elif defined(__clang__) || defined(__GNUC__)
-#define GDT_DLL_EXPORT __attribute__((visibility("default")))
-#define GDT_DLL_IMPORT __attribute__((visibility("default")))
-#else
-#define GDT_DLL_EXPORT
-#define GDT_DLL_IMPORT
-#endif
-
-#ifndef PI_F
-#define PI_F 3.14159265
-#endif
-
 #ifdef __CUDACC__
 template <typename T>
 __device__ __forceinline__ unsigned int

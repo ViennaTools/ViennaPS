@@ -57,8 +57,8 @@ public:
     coverateIterations_ = iterations;
   }
 
-  void setPeriodicBoundary(const int passedPeriodic) {
-    periodicBoundary_ = static_cast<bool>(passedPeriodic);
+  void setPeriodicBoundary(const bool periodic) {
+    periodicBoundary_ = periodic;
   }
 
   void setSmoothFlux(NumericType pSmoothFlux) { smoothFlux_ = pSmoothFlux; }
@@ -208,22 +208,31 @@ public:
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
       CudaBuffer d_coverages; // device buffer for material ids and coverages
       rayTrace_.updateSurface();
+      Logger::getInstance()
+          .addDebug("Translating point to element data. Number of data: " +
+                    std::to_string(numCov + 1))
+          .print();
       translatePointToElementData(materialIds, coverages, d_coverages,
                                   transField, mesh);
       rayTrace_.setElementData(d_coverages, numCov + 1); // +1 material ids
 
+      Logger::getInstance().addDebug("Running ray tracer ...").print();
       rtTimer.start();
       rayTrace_.apply();
       rtTimer.finish();
 
-      // extract fluxes on points
-      translateElementToPointData(rayTrace_.getResults(), fluxes,
-                                  fluxesIndexMap, elementKdTree, diskMesh,
-                                  mesh);
-
       Logger::getInstance()
           .addTiming("Top-down flux calculation", rtTimer)
           .print();
+
+      // extract fluxes on points
+      Logger::getInstance()
+          .addDebug("Translating element to point data. Number of data: " +
+                    std::to_string(numRates))
+          .print();
+      translateElementToPointData(rayTrace_.getResults(), fluxes,
+                                  fluxesIndexMap, elementKdTree, diskMesh,
+                                  mesh);
 
       auto velocities = surfaceModel->calculateVelocities(
           fluxes, diskMesh->nodes, materialIds);

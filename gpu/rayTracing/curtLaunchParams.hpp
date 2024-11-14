@@ -16,9 +16,10 @@ template <typename T> struct LaunchParams {
   float sticking = 1.f;
   float cosineExponent = 1.f;
   bool periodicBoundary = true;
+
   float meanIonEnergy = 100.f; // eV
   float sigmaIonEnergy = 10.f; // eV
-  float A_O = 3.f;
+  float cageAngle = 0.f;
 
   // source plane params
   struct {
@@ -26,6 +27,7 @@ template <typename T> struct LaunchParams {
     viennacore::Vec2D<T> maxPoint;
     T gridDelta;
     T planeHeight;
+    std::array<viennacore::Vec3Df, 3> directionBasis;
   } source;
 
   OptixTraversableHandle traversable;
