@@ -9,8 +9,6 @@
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
 
-// #include <pscuSurfaceModel.hpp>
-
 namespace viennaps {
 
 namespace gpu {

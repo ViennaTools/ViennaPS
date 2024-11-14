@@ -175,7 +175,7 @@ public:
     pointBuffer.free();
   }
 
-  void setCellData(CudaBuffer &passedCellDataBuffer, unsigned numData) {
+  void setElementData(CudaBuffer &passedCellDataBuffer, unsigned numData) {
     assert(passedCellDataBuffer.sizeInBytes / sizeof(T) / numData ==
            launchParams.numElements);
     cellDataBuffer = passedCellDataBuffer;
@@ -294,7 +294,7 @@ public:
         int tmpOffset = offset + dIdx;
         auto name = particles[pIdx].dataLabels[dIdx];
 
-        std::vector<T> *values = pointData.getScalarData(name);
+        std::vector<T> *values = pointData.getScalarData(name, true);
         if (values == nullptr) {
           std::vector<T> val(numPoints);
           pointData.insertNextScalarData(std::move(val), name);
@@ -323,7 +323,7 @@ public:
         int tmpOffset = offset + dIdx;
         auto name = particles[pIdx].dataLabels[dIdx];
 
-        std::vector<T> *values = pointData.getScalarData(name);
+        std::vector<T> *values = pointData.getScalarData(name, true);
         if (values == nullptr) {
           std::vector<T> val(numPoints);
           pointData.insertNextScalarData(std::move(val), name);

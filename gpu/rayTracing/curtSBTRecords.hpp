@@ -3,6 +3,10 @@
 #include <optix_types.h>
 #include <vcVectorUtil.hpp>
 
+namespace viennaps {
+
+namespace gpu {
+
 struct HitSBTData {
   viennacore::Vec3Df *vertex;
   viennacore::Vec3D<int> *index;
@@ -44,3 +48,6 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) HitgroupRecordDisk {
       OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
   HitSBTDiskData data;
 };
+
+} // namespace gpu
+} // namespace viennaps

@@ -9,7 +9,7 @@
 // this can only get compiled if included in a cuda kernel
 #ifdef __CUDACC__
 __device__ __inline__ viennacore::Vec3Df
-computeNormal(const HitSBTData *sbt, const unsigned int primID) {
+computeNormal(const viennaps::gpu::HitSBTData *sbt, const unsigned int primID) {
   using namespace viennacore;
   const Vec3D<int> index = sbt->index[primID];
   const Vec3Df &A = sbt->vertex[index[0]];
@@ -30,8 +30,9 @@ __device__ __inline__ void reflectFromBoundary(viennaps::gpu::PerRayData *prd) {
   }
 }
 
-__device__ __inline__ void applyPeriodicBoundary(viennaps::gpu::PerRayData *prd,
-                                                 const HitSBTData *hsd) {
+__device__ __inline__ void
+applyPeriodicBoundary(viennaps::gpu::PerRayData *prd,
+                      const viennaps::gpu::HitSBTData *hsd) {
   const unsigned int primID = optixGetPrimitiveIndex();
 
   // printf("Hit %u at [%f, %f, %f].", primID, prd->pos[0], prd->pos[1],

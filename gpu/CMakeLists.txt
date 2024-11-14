@@ -24,6 +24,7 @@ set(VIENNAPS_GPU_INCLUDE_DIRS #
     ${CMAKE_SOURCE_DIR}/app
     ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/geometry ${PROJECT_SOURCE_DIR}/process
     ${PROJECT_SOURCE_DIR}/rayTracing ${PROJECT_SOURCE_DIR}/utils ${PROJECT_SOURCE_DIR}/app
+    ${PROJECT_SOURCE_DIR}/models
     ${ViennaCore_SOURCE_DIR}/include/viennacore
     )
 
@@ -89,13 +90,11 @@ add_dependencies(buildGPUApplication ViennaPS_GPU)
 
 add_custom_target(buildGPUExamples)
 
-# add_executable(GPU_Trench ${embedded_SF6O2_pipeline}
-#                                       ${PROJECT_SOURCE_DIR}/examples/trench.cpp)
-# target_include_directories(
-#   GPU_Trench PUBLIC ${VIENNAPS_INCLUDE_DIRS} ${OptiX_INCLUDE}
-#                                 ${VIENNAPS_GPU_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/app)
-# target_link_libraries(GPU_Trench ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ViennaPS)
-# add_dependencies(buildGPUExamples GPU_Trench)
+add_executable(GPU_Trench ${embedded_SingleParticle_pipeline}
+                          ${PROJECT_SOURCE_DIR}/examples/trench.cpp)
+target_include_directories(GPU_Trench PUBLIC ${OptiX_INCLUDE} ${VIENNAPS_GPU_INCLUDE_DIRS})
+target_link_libraries(GPU_Trench ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ViennaPS)
+add_dependencies(buildGPUExamples GPU_Trench)
 
 # add_executable(GPU_Hole ${embedded_SF6O2_pipeline}
 #                                       ${PROJECT_SOURCE_DIR}/examples/hole.cpp)

@@ -32,172 +32,147 @@ namespace gpu {
 using namespace viennacore;
 
 template <typename NumericType, int D> class Process {
-  using psDomainType = SmartPointer<::viennaps::Domain<NumericType, D>>;
+  using DomainType = SmartPointer<::viennaps::Domain<NumericType, D>>;
+  using ModelType = SmartPointer<ProcessModel<NumericType>>;
 
 public:
-  Process(Context passedContext) : context(passedContext) {}
+  Process(Context context) : context_(context) {}
 
-  void
-  setProcessModel(SmartPointer<ProcessModel<NumericType>> passedProcessModel) {
-    model = passedProcessModel;
+  Process(Context context, DomainType domain, ModelType model,
+          NumericType duration = 0.0)
+      : context_(context), domain_(domain), model_(model),
+        processDuration_(duration) {}
+
+  void setProcessModel(ModelType processModel) { model_ = processModel; }
+
+  void setDomain(DomainType domain) { domain_ = domain; }
+
+  void setProcessDuration(double duration) { processDuration_ = duration; }
+
+  void setNumberOfRaysPerPoint(long raysPerPoint) {
+    raysPerPoint_ = raysPerPoint;
   }
 
-  void setDomain(psDomainType passedDomain) { domain = passedDomain; }
-
-  void setProcessDuration(double duration) { processDuration = duration; }
-
-  void setNumberOfRaysPerPoint(long numRays) { raysPerPoint = numRays; }
-
-  void setMaxCoverageInitIterations(long maxIt) { maxIterations = maxIt; }
+  void setMaxCoverageInitIterations(long iterations) {
+    coverateIterations_ = iterations;
+  }
 
   void setPeriodicBoundary(const int passedPeriodic) {
-    periodicBoundary = static_cast<bool>(passedPeriodic);
+    periodicBoundary_ = static_cast<bool>(passedPeriodic);
   }
 
-  void setSmoothFlux(NumericType pSmoothFlux) { smoothFlux = pSmoothFlux; }
+  void setSmoothFlux(NumericType pSmoothFlux) { smoothFlux_ = pSmoothFlux; }
 
   void apply() {
+    if (checkInput())
+      return;
+
     /* ---------- Process Setup --------- */
-    if (!model) {
-      Logger::getInstance()
-          .addWarning("No process model passed to psProcess.")
-          .print();
-      return;
-    }
-    const auto name = model->getProcessName();
-
-    if (!domain) {
-      Logger::getInstance()
-          .addWarning("No domain passed to psProcess.")
-          .print();
-      return;
-    }
-
-    if (!model->getSurfaceModel()) {
-      Logger::getInstance()
-          .addWarning("No surface model passed to Process.")
-          .print();
-      return;
-    }
-
     Timer processTimer;
     processTimer.start();
 
-    double remainingTime = processDuration;
-    assert(domain->getLevelSets().size() != 0 && "No level sets in domain.");
-    const NumericType gridDelta =
-        domain->getLevelSets().back()->getGrid().getGridDelta();
+    auto const name = model_->getProcessName();
+    auto surfaceModel = model_->getSurfaceModel();
+    double remainingTime = processDuration_;
+    const NumericType gridDelta = domain_->getGrid().getGridDelta();
 
     auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     viennals::ToDiskMesh<NumericType, D> diskMeshConv(diskMesh);
 
     /* --------- Setup advection kernel ----------- */
     viennals::Advect<NumericType, D> advectionKernel;
-    advectionKernel.setIntegrationScheme(integrationScheme);
-    // advectionKernel.setIgnoreVoids(true);
+    advectionKernel.setIntegrationScheme(integrationScheme_);
 
     auto transField = SmartPointer<TranslationField<NumericType>>::New(
-        model->getVelocityField(), domain->getMaterialMap());
+        model_->getVelocityField(), domain_->getMaterialMap());
     advectionKernel.setVelocityField(transField);
 
-    for (auto dom : domain->getLevelSets()) {
+    for (auto dom : domain_->getLevelSets()) {
       advectionKernel.insertNextLevelSet(dom);
       diskMeshConv.insertNextLevelSet(dom);
     }
 
     /* --------- Setup element-point translation ----------- */
-
-    auto mesh = rayTrace.getSurfaceMesh();
+    auto mesh = rayTrace_.getSurfaceMesh(); // empty mesh
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
-    rayTrace.setKdTree(elementKdTree);
+    rayTrace_.setKdTree(elementKdTree);
 
-    diskMeshConv.apply();
+    diskMeshConv.apply(); // creates disk mesh
     assert(diskMesh->nodes.size());
 
     transField->buildKdTree(diskMesh->nodes);
 
     /* --------- Setup for ray tracing ----------- */
-    const bool useRayTracing = model->getParticleTypes().empty() ? false : true;
     unsigned int numRates = 0;
     unsigned int numCov = 0;
     IndexMap fluxesIndexMap;
 
-    if (useRayTracing && !rayTracerInitialized) {
-      if (!model->getPtxCode()) {
-        Logger::getInstance()
-            .addWarning("No pipeline in process model. Aborting.")
-            .print();
-        return;
+    if (!rayTracerInitialized_) {
+      rayTrace_.setPipeline(model_->getPtxCode());
+      rayTrace_.setDomain(domain_);
+      rayTrace_.setNumberOfRaysPerPoint(raysPerPoint_);
+      rayTrace_.setUseRandomSeed(useRandomSeeds_);
+      rayTrace_.setPeriodicBoundary(periodicBoundary_);
+      for (auto &particle : model_->getParticleTypes()) {
+        rayTrace_.insertNextParticle(particle);
       }
-      rayTrace.setPipeline(model->getPtxCode());
-      rayTrace.setDomain(domain);
-      rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
-      rayTrace.setUseRandomSeed(useRandomSeeds);
-      rayTrace.setPeriodicBoundary(periodicBoundary);
-      for (auto &particle : model->getParticleTypes()) {
-        rayTrace.insertNextParticle(particle);
-      }
-      numRates = rayTrace.prepareParticlePrograms();
-      fluxesIndexMap = IndexMap(rayTrace.getParticles());
+      numRates = rayTrace_.prepareParticlePrograms();
+      fluxesIndexMap = IndexMap(rayTrace_.getParticles());
     }
 
-    // Determine whether there are process parameters used in ray tracing
-    model->getSurfaceModel()->initializeProcessParameters();
-    const bool useProcessParams =
-        model->getSurfaceModel()->getProcessParameters() != nullptr;
-
-    if (useProcessParams)
-      Logger::getInstance().addInfo("Using process parameters.").print();
-
-    unsigned int numElements = 0;
-    if (useRayTracing) {
-      rayTrace.updateSurface(); // also creates mesh
-      numElements = rayTrace.getNumberOfElements();
-    }
+    rayTrace_.updateSurface(); //  creates mesh
+    auto numElements = rayTrace_.getNumberOfElements();
 
     // Initialize coverages
-    if (!coveragesInitialized)
-      model->getSurfaceModel()->initializeCoverages(diskMesh->nodes.size());
-    auto coverages = model->getSurfaceModel()->getCoverages(); // might be null
+    if (!coveragesInitialized_)
+      surfaceModel->initializeCoverages(diskMesh->nodes.size());
+    auto coverages = surfaceModel->getCoverages(); // might be null
     const bool useCoverages = coverages != nullptr;
 
     if (useCoverages) {
-      meshddInfo("Using coverages.").print();
+      Logger::getInstance().addInfo("Using coverages.").print();
 
       Timer timer;
       Logger::getInstance().addInfo("Initializing coverages ... ").print();
 
       timer.start();
-      for (size_t iterations = 1; iterations <= maxIterations; iterations++) {
+      for (size_t iterations = 1; iterations <= coverateIterations_;
+           iterations++) {
 
         // get coverages and material ids in ray tracer
         const auto &materialIds =
             *diskMesh->getCellData().getScalarData("MaterialIds");
-        CudaBuffer d_coverages; // device buffer
-        translatePointToElementData(materialIds, coverages, d_coverages,
-                                    transField, mesh);
-        rayTrace.setCellData(d_coverages, numCov + 1); // + material ids
+
+        CudaBuffer d_coverages; // device buffer for coverages and material ids
+        translatePointToElementData(
+            materialIds, coverages, d_coverages, transField,
+            mesh); // transform point data to triangle mesh element data
+        rayTrace_.setElementData(d_coverages,
+                                 numCov + 1); // numCov + material ids
 
         // run the ray tracer
-        rayTrace.apply();
+        rayTrace_.apply();
 
         // extract fluxes on points
-        auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-        translateElementToPointData(rayTrace.getResults(), fluxes,
-                                    fluxesIndexMap, elementKdTree, diskMesh,
-                                    mesh, gridDelta);
+        auto fluxes =
+            SmartPointer<viennals::PointData<NumericType>>::New(); // flux on
+                                                                   // point data
+        translateElementToPointData(
+            rayTrace_.getResults(), fluxes, fluxesIndexMap, elementKdTree,
+            diskMesh, mesh); // transform element fluxes to point data
 
         // calculate coverages
-        model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
+        surfaceModel->updateCoverages(fluxes, materialIds);
 
+        // output
         if (Logger::getLogLevel() >= 3) {
           assert(numElements == mesh->triangles.size());
 
           downloadCoverages(d_coverages, mesh->getCellData(), coverages,
                             numElements);
 
-          rayTrace.downloadResultsToPointData(mesh->getCellData());
+          rayTrace_.downloadResultsToPointData(mesh->getCellData());
           viennals::VTKWriter<NumericType>(
               mesh,
               name + "_covIinit_mesh_" + std::to_string(iterations) + ".vtp")
@@ -224,58 +199,50 @@ public:
     double previousTimeStep = 0.;
     size_t counter = 0;
     Timer rtTimer;
-    Timer callbackTimer;
     Timer advTimer;
     while (remainingTime > 0.) {
-      Logger::getInstance()
-          .addInfo("Remaining time: " + std::to_string(remainingTime))
-          .print();
 
       const auto &materialIds =
           *diskMesh->getCellData().getScalarData("MaterialIds");
 
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
       CudaBuffer d_coverages; // device buffer for material ids and coverages
-      if (useRayTracing) {
-        rayTrace.updateSurface();
-        translatePointToElementData(materialIds, coverages, d_coverages,
-                                    transField, mesh);
-        rayTrace.setCellData(d_coverages, numCov + 1); // +1 material ids
+      rayTrace_.updateSurface();
+      translatePointToElementData(materialIds, coverages, d_coverages,
+                                  transField, mesh);
+      rayTrace_.setElementData(d_coverages, numCov + 1); // +1 material ids
 
-        rtTimer.start();
-        rayTrace.apply();
-        rtTimer.finish();
+      rtTimer.start();
+      rayTrace_.apply();
+      rtTimer.finish();
 
-        // extract fluxes on points
-        translateElementToPointData(rayTrace.getResults(), fluxes,
-                                    fluxesIndexMap, elementKdTree, diskMesh,
-                                    mesh, gridDelta);
+      // extract fluxes on points
+      translateElementToPointData(rayTrace_.getResults(), fluxes,
+                                  fluxesIndexMap, elementKdTree, diskMesh,
+                                  mesh);
 
-        Logger::getInstance()
-            .addTiming("Top-down flux calculation", rtTimer)
-            .print();
-      }
+      Logger::getInstance()
+          .addTiming("Top-down flux calculation", rtTimer)
+          .print();
 
-      auto velocities = model->getSurfaceModel()->calculateVelocities(
+      auto velocities = surfaceModel->calculateVelocities(
           fluxes, diskMesh->nodes, materialIds);
-      model->getVelocityField()->setVelocities(velocities);
+      model_->getVelocityField()->setVelocities(velocities);
       assert(velocities->size() == pointKdTree->getNumberOfPoints());
 
       if (Logger::getLogLevel() >= 4) {
         if (useCoverages) {
           insertReplaceScalarData(diskMesh->getCellData(), coverages);
           downloadCoverages(d_coverages, mesh->getCellData(), coverages,
-                            rayTrace.getNumberOfElements());
+                            rayTrace_.getNumberOfElements());
         }
 
-        if (useRayTracing) {
-          insertReplaceScalarData(diskMesh->getCellData(), fluxes);
-          rayTrace.downloadResultsToPointData(mesh->getCellData());
+        insertReplaceScalarData(diskMesh->getCellData(), fluxes);
+        rayTrace_.downloadResultsToPointData(mesh->getCellData());
 
-          viennals::VTKWriter<NumericType>(
-              mesh, name + "_mesh_" + std::to_string(counter) + ".vtp")
-              .apply();
-        }
+        viennals::VTKWriter<NumericType>(
+            mesh, name + "_mesh_" + std::to_string(counter) + ".vtp")
+            .apply();
 
         if (velocities)
           insertReplaceScalarData(diskMesh->getCellData(), velocities,
@@ -288,8 +255,7 @@ public:
         counter++;
       }
 
-      if (useRayTracing)
-        d_coverages.free();
+      d_coverages.free();
 
       // adjust time step near end
       if (remainingTime - previousTimeStep < 0.) {
@@ -312,9 +278,17 @@ public:
 
       previousTimeStep = advectionKernel.getAdvectedTime();
       remainingTime -= previousTimeStep;
+
+      if (Logger::getLogLevel() >= 2) {
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(4)
+               << "Process time: " << processDuration_ - remainingTime << " / "
+               << processDuration_;
+        Logger::getInstance().addInfo(stream.str()).print();
+      }
     }
 
-    processTime = processDuration - remainingTime;
+    processTime_ = processDuration_ - remainingTime;
     processTimer.finish();
 
     Logger::getInstance()
@@ -323,13 +297,11 @@ public:
                    advTimer.totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
         .print();
-    if (useRayTracing) {
-      Logger::getInstance()
-          .addTiming("Top-down flux calculation total time",
-                     rtTimer.totalDuration * 1e-9,
-                     processTimer.totalDuration * 1e-9)
-          .print();
-    }
+    Logger::getInstance()
+        .addTiming("Top-down flux calculation total time",
+                   rtTimer.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .print();
   }
 
 private:
@@ -443,9 +415,9 @@ private:
       const IndexMap &indexMap,
       SmartPointer<KDTree<float, std::array<float, 3>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> pointMesh,
-      SmartPointer<viennals::Mesh<float>> surfMesh,
-      const NumericType gridDelta) {
+      SmartPointer<viennals::Mesh<float>> surfMesh) {
 
+    const auto gridDelta = domain_->getGrid().getGridDelta();
     auto numData = indexMap.getNumberOfData();
     const auto &points = pointMesh->nodes;
     auto numPoints = points.size();
@@ -469,7 +441,7 @@ private:
     for (unsigned i = 0; i < numPoints; i++) {
 
       auto closePoints = elementKdTree->findNearestWithinRadius(
-          points[i], smoothFlux * gridDelta);
+          points[i], smoothFlux_ * gridDelta);
 
       std::vector<NumericType> weights;
       weights.reserve(closePoints.value().size());
@@ -516,7 +488,7 @@ private:
                           SmartPointer<viennals::PointData<T>> addData) {
     for (unsigned i = 0; i < addData->getScalarDataSize(); i++) {
       auto dataName = addData->getScalarDataLabel(i);
-      auto data = insertHere.getScalarData(dataName);
+      auto data = insertHere.getScalarData(dataName, true);
       auto numElements = addData->getScalarData(i)->size();
       if (data == nullptr) {
         std::vector<NumericType> tmp(numElements);
@@ -531,7 +503,7 @@ private:
   static void insertReplaceScalarData(viennals::PointData<T> &insertHere,
                                       SmartPointer<std::vector<T>> addData,
                                       std::string dataName) {
-    auto data = insertHere.getScalarData(dataName);
+    auto data = insertHere.getScalarData(dataName, true);
     auto numElements = addData->size();
     if (data == nullptr) {
       std::vector<NumericType> tmp(numElements);
@@ -602,23 +574,76 @@ private:
     d_elementData.alloc_and_upload(elementData);
   }
 
-  Context_t *context;
-  Tracer<NumericType, D> rayTrace = Tracer<NumericType, D>(context);
+  bool checkInput() {
+    if (!model_) {
+      Logger::getInstance()
+          .addWarning("No process model passed to Process.")
+          .print();
+      return true;
+    }
+    const auto name = model_->getProcessName();
 
-  psDomainType domain = nullptr;
-  SmartPointer<ProcessModel<NumericType>> model = nullptr;
-  viennals::IntegrationSchemeEnum integrationScheme =
+    if (!domain_) {
+      Logger::getInstance().addWarning("No domain passed to Process.").print();
+      return true;
+    }
+
+    if (domain_->getLevelSets().empty()) {
+      Logger::getInstance().addWarning("No level sets in domain.").print();
+      return true;
+    }
+
+    if (!model_->getVelocityField()) {
+      Logger::getInstance()
+          .addWarning("No velocity field in process model: " + name)
+          .print();
+      return true;
+    }
+
+    if (!model_->getSurfaceModel()) {
+      Logger::getInstance()
+          .addWarning("No surface model in process model: " + name)
+          .print();
+      return true;
+    }
+
+    if (model_->getParticleTypes().empty()) {
+      Logger::getInstance()
+          .addWarning("No particle types in process model: " + name)
+          .print();
+      return true;
+    }
+
+    if (!model_->getPtxCode()) {
+      Logger::getInstance()
+          .addWarning("No pipeline in process model: " + name)
+          .print();
+      return true;
+    }
+
+    return false;
+  }
+
+  Context_t *context_;
+  Tracer<NumericType, D> rayTrace_ = Tracer<NumericType, D>(context_);
+
+  DomainType domain_;
+  SmartPointer<ProcessModel<NumericType>> model_;
+
+  NumericType processDuration_;
+  long raysPerPoint_ = 1000;
+  viennals::IntegrationSchemeEnum integrationScheme_ =
       viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
-  NumericType processDuration;
-  long raysPerPoint = 1000;
-  bool useRandomSeeds = true;
-  size_t maxIterations = 20;
-  bool periodicBoundary = false;
-  bool coveragesInitialized = false;
-  bool rayTracerInitialized = false;
-  NumericType smoothFlux = 1.;
-  NumericType printTime = 0.;
-  NumericType processTime = 0;
+  size_t coverateIterations_ = 20;
+
+  NumericType smoothFlux_ = 1.;
+  NumericType printTime_ = 0.;
+  NumericType processTime_ = 0;
+
+  bool useRandomSeeds_ = true;
+  bool periodicBoundary_ = false;
+  bool coveragesInitialized_ = false;
+  bool rayTracerInitialized_ = false;
 };
 
 } // namespace gpu

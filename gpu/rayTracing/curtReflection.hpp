@@ -9,24 +9,27 @@
 #include <vcVectorUtil.hpp>
 
 #ifdef __CUDACC__
-static __device__ __forceinline__ void specularReflection(viennaps::gpu::PerRayData *prd) {
+static __device__ __forceinline__ void
+specularReflection(viennaps::gpu::PerRayData *prd) {
   using namespace viennacore;
-  const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
+  const viennaps::gpu::HitSBTData *sbtData =
+      (const viennaps::gpu::HitSBTData *)optixGetSbtDataPointer();
   const Vec3Df geoNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
   prd->pos = prd->pos + optixGetRayTmax() * prd->dir;
   prd->dir = prd->dir - (2 * DotProduct(prd->dir, geoNormal)) * geoNormal;
 }
 
 static __device__ __forceinline__ void
-specularReflection(viennaps::gpu::PerRayData *prd, const viennacore::Vec3Df &geoNormal) {
+specularReflection(viennaps::gpu::PerRayData *prd,
+                   const viennacore::Vec3Df &geoNormal) {
   using namespace viennacore;
   prd->pos = prd->pos + optixGetRayTmax() * prd->dir;
   prd->dir = prd->dir - (2 * DotProduct(prd->dir, geoNormal)) * geoNormal;
 }
 
-static __device__ void conedCosineReflection(viennaps::gpu::PerRayData *prd,
-                                             const float avgReflAngle,
-                                             const viennacore::Vec3Df &geomNormal) {
+static __device__ void
+conedCosineReflection(viennaps::gpu::PerRayData *prd, const float avgReflAngle,
+                      const viennacore::Vec3Df &geomNormal) {
   using namespace viennacore;
   // Calculate specular direction
   specularReflection(prd, geomNormal);
@@ -88,7 +91,8 @@ static __device__ void conedCosineReflection(viennaps::gpu::PerRayData *prd,
   prd->dir = randomDir;
 }
 
-static __device__ viennacore::Vec3Df PickRandomPointOnUnitSphere(viennaps::gpu::RNGState *state) {
+static __device__ viennacore::Vec3Df
+PickRandomPointOnUnitSphere(viennaps::gpu::RNGState *state) {
   float x, y, z, x2py2;
   do {
     x = 2.f * curand_uniform(state) - 1.f;
@@ -104,10 +108,10 @@ static __device__ viennacore::Vec3Df PickRandomPointOnUnitSphere(viennaps::gpu::
 
 static __device__ void diffuseReflection(viennaps::gpu::PerRayData *prd) {
   using namespace viennacore;
-  const Vec3Df randomDirection =
-      PickRandomPointOnUnitSphere(&prd->RNGstate);
+  const Vec3Df randomDirection = PickRandomPointOnUnitSphere(&prd->RNGstate);
 
-  const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
+  const viennaps::gpu::HitSBTData *sbtData =
+      (const viennaps::gpu::HitSBTData *)optixGetSbtDataPointer();
   const Vec3Df geoNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
   prd->pos = prd->pos + optixGetRayTmax() * prd->dir;
 
