@@ -9,14 +9,14 @@ namespace gpu {
 
 struct HitSBTData {
   viennacore::Vec3Df *vertex;
-  viennacore::Vec3D<int> *index;
+  viennacore::Vec3D<unsigned> *index;
   bool isBoundary;
   void *cellData;
 };
 
 struct HitSBTDiskData {
   viennacore::Vec3Df *vertex;
-  viennacore::Vec3D<int> *index;
+  viennacore::Vec3D<unsigned> *index;
   bool isBoundary;
   void *cellData;
 };

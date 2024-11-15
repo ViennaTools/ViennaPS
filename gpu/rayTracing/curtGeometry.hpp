@@ -76,16 +76,14 @@ template <typename T, int D> struct Geometry {
     CUdeviceptr d_geoIndices = geometryIndexBuffer.d_pointer();
 
     triangleInput[0].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
-    triangleInput[0].triangleArray.vertexStrideInBytes =
-        sizeof(std::array<float, D>);
+    triangleInput[0].triangleArray.vertexStrideInBytes = sizeof(Vec3Df);
     triangleInput[0].triangleArray.numVertices =
         (unsigned int)mesh->nodes.size();
     triangleInput[0].triangleArray.vertexBuffers = &d_geoVertices;
 
     triangleInput[0].triangleArray.indexFormat =
         OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
-    triangleInput[0].triangleArray.indexStrideInBytes =
-        sizeof(std::array<unsigned, 3>);
+    triangleInput[0].triangleArray.indexStrideInBytes = sizeof(Vec3D<unsigned>);
     triangleInput[0].triangleArray.numIndexTriplets =
         (unsigned int)mesh->triangles.size();
     triangleInput[0].triangleArray.indexBuffer = d_geoIndices;
@@ -121,7 +119,7 @@ template <typename T, int D> struct Geometry {
 
     triangleInput[1].triangleArray.indexFormat =
         OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
-    triangleInput[1].triangleArray.indexStrideInBytes = sizeof(Vec3D<int>);
+    triangleInput[1].triangleArray.indexStrideInBytes = sizeof(Vec3D<unsigned>);
     triangleInput[1].triangleArray.numIndexTriplets =
         (int)boundaryMesh.index.size();
     triangleInput[1].triangleArray.indexBuffer = d_boundIndices;
@@ -216,15 +214,15 @@ template <typename T, int D> struct Geometry {
     boundaryMesh.vertex.push_back(Vec3Df{bbMin[0], bbMax[1], bbMax[2]});
 
     // x min max
-    boundaryMesh.index.push_back(Vec3D<int>{0, 3, 7});
-    boundaryMesh.index.push_back(Vec3D<int>{0, 7, 4});
-    boundaryMesh.index.push_back(Vec3D<int>{6, 2, 1});
-    boundaryMesh.index.push_back(Vec3D<int>{6, 1, 5});
+    boundaryMesh.index.push_back(Vec3D<int>{0, 3, 7}); // 0
+    boundaryMesh.index.push_back(Vec3D<int>{0, 7, 4}); // 1
+    boundaryMesh.index.push_back(Vec3D<int>{6, 2, 1}); // 2
+    boundaryMesh.index.push_back(Vec3D<int>{6, 1, 5}); // 3
     // y min max
-    boundaryMesh.index.push_back(Vec3D<int>{0, 4, 5});
-    boundaryMesh.index.push_back(Vec3D<int>{0, 5, 1});
-    boundaryMesh.index.push_back(Vec3D<int>{6, 7, 3});
-    boundaryMesh.index.push_back(Vec3D<int>{6, 3, 2});
+    boundaryMesh.index.push_back(Vec3D<int>{0, 4, 5}); // 4
+    boundaryMesh.index.push_back(Vec3D<int>{0, 5, 1}); // 5
+    boundaryMesh.index.push_back(Vec3D<int>{6, 7, 3}); // 6
+    boundaryMesh.index.push_back(Vec3D<int>{6, 3, 2}); // 7
 
     boundaryMesh.minCoords = bbMin;
     boundaryMesh.maxCoords = bbMax;

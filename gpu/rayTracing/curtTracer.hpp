@@ -582,7 +582,7 @@ protected:
     geometryHitgroupRecord.data.vertex =
         (Vec3Df *)geometry.geometryVertexBuffer.d_pointer();
     geometryHitgroupRecord.data.index =
-        (Vec3D<int> *)geometry.geometryIndexBuffer.d_pointer();
+        (Vec3D<unsigned> *)geometry.geometryIndexBuffer.d_pointer();
     geometryHitgroupRecord.data.isBoundary = false;
     geometryHitgroupRecord.data.cellData = (void *)cellDataBuffer.d_pointer();
     hitgroupRecords.push_back(geometryHitgroupRecord);
@@ -593,7 +593,7 @@ protected:
     boundaryHitgroupRecord.data.vertex =
         (Vec3Df *)geometry.boundaryVertexBuffer.d_pointer();
     boundaryHitgroupRecord.data.index =
-        (Vec3D<int> *)geometry.boundaryIndexBuffer.d_pointer();
+        (Vec3D<unsigned> *)geometry.boundaryIndexBuffer.d_pointer();
     boundaryHitgroupRecord.data.isBoundary = true;
     hitgroupRecords.push_back(boundaryHitgroupRecord);
 

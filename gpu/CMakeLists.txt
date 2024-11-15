@@ -15,7 +15,7 @@ set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
 #       $ENV{OptiX_INSTALL_DIR}
 #       CACHE PATH "Path to OptiX installation.")
 # endif()
-set(OptiX_INSTALL_DIR "/home/reiter/OptiX" CACHE PATH "Path to OptiX installed location.")
+set(OptiX_INSTALL_DIR "/home/tobias/OptiX" CACHE PATH "Path to OptiX installed location.")
 set(OptiX_INCLUDE "${OptiX_INSTALL_DIR}/include")
 
 include(${CMAKE_SOURCE_DIR}/cmake/configure_optix.cmake)

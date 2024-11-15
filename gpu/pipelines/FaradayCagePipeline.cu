@@ -27,7 +27,6 @@ extern "C" __global__ void __closesthit__ion()
 {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
-  // printf("Direction: %f %f %f\n", prd->dir[0], prd->dir[1], prd->dir[2]);
 
   if (sbtData->isBoundary)
   {
@@ -58,7 +57,7 @@ extern "C" __global__ void __closesthit__ion()
     // ---------- REFLECTION ------------ //
     // prd->rayWeight -= prd->rayWeight * params.sticking;
     // conedCosineReflection(prd, (float)(M_PIf / 2.f - min(incAngle, minAngle)), geomNormal);
-    // specularReflection(prd);
+    specularReflection(prd);
   }
 }
 
