@@ -64,15 +64,14 @@ public:
     particle1.dataLabels.push_back("particleFlux");
     this->insertNextParticleType(particle1);
 
-    // Particle<NumericType> particle2{
-    //     .name = "ion",
-    //     .numberOfData = 0,
-    //     .sticking = stickingProbability,
-    //     .cosineExponent = sourceDistributionPower
-    //     // .direction = Vec3Df{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}
-    // };
-    // particle2.dataLabels.push_back("particleFlux_2");
-    // this->insertNextParticleType(particle2);
+    Particle<NumericType> particle2{
+        .name = "ion",
+        .numberOfData = 0,
+        .sticking = stickingProbability,
+        .cosineExponent = sourceDistributionPower,
+        .direction = Vec3Df{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}};
+    // particle2.dataLabels.push_back("particleFlux2");
+    this->insertNextParticleType(particle2);
 
     // surface model
     auto surfModel =

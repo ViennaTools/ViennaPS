@@ -32,22 +32,21 @@ template <typename T, int D> struct Geometry {
 
   /// build acceleration structure from level set domain
   template <class LaunchParams>
-  void
-  buildAccelFromDomain(SmartPointer<::viennaps::Domain<T, D>> domain,
-                       LaunchParams &launchParams,
-                       SmartPointer<::viennals::Mesh<float>> mesh,
-                       SmartPointer<KDTree<T, Vec3D<T>>> kdTree = nullptr) {
+  void buildAccelFromDomain(SmartPointer<::viennaps::Domain<T, D>> domain,
+                            LaunchParams &launchParams,
+                            SmartPointer<::viennals::Mesh<float>> mesh,
+                            SmartPointer<KDTree<T, Vec3D<T>>> kdTree) {
     if (domain == nullptr) {
       Logger::getInstance()
           .addError("No level sets passed to Geometry.")
           .print();
     }
 
-    if (kdTree) {
-      ToSurfaceMesh<float>(domain, mesh, kdTree).apply();
-    } else {
-      ToSurfaceMesh<float>(domain, mesh).apply();
+    if (kdTree == nullptr) {
+      Logger::getInstance().addWarning("No KDTree passed to Geometry.").print();
     }
+
+    ToSurfaceMesh<float>(domain, mesh, kdTree).apply();
 
     const auto gridDelta = domain->getGrid().getGridDelta();
     launchParams.source.gridDelta = gridDelta;
@@ -195,9 +194,6 @@ template <typename T, int D> struct Geometry {
     Vec3Df bbMax = passedMesh->maximumExtent;
     // adjust bounding box to include source plane
     bbMax[2] += gridDelta;
-
-    std::cout << "bbMin: " << bbMin << std::endl;
-    std::cout << "bbMax: " << bbMax << std::endl;
 
     boundaryMesh.index.reserve(8);
     boundaryMesh.vertex.reserve(8);

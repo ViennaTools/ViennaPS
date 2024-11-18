@@ -235,6 +235,7 @@ int main(int argc, char *argv[]) {
                                              timePerAngle);
     process.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
     process.setPeriodicBoundary(true);
+    process.setSmoothFlux(params.get("smoothFlux"));
     // process.setTimeStepRatio(params.get("timeStepRatio"));
 
     // run the process

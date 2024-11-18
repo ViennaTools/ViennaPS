@@ -11,6 +11,7 @@
 #include <context.hpp>
 
 using namespace viennaps::gpu;
+using namespace viennacore;
 
 extern "C" __constant__ LaunchParams<float> params;
 enum
@@ -38,24 +39,22 @@ extern "C" __global__ void __closesthit__ion()
     {
       reflectFromBoundary(prd);
     }
-    prd->rayWeight -= 0.2f;
   }
   else
   {
     const unsigned int primID = optixGetPrimitiveIndex();
-    viennacore::Vec3Df geomNormal = computeNormal(sbtData, primID);
-    float cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
+    Vec3Df geomNormal = computeNormal(sbtData, primID);
+    float cosTheta = -DotProduct(prd->dir, geomNormal);
+    cosTheta = max(min(cosTheta, 1.f), 0.f);
     // float incAngle = acosf(max(min(cosTheta, 1.f), 0.f));
     float yield = (yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
                    0.65 * cosTheta * cosTheta * cosTheta) /
                   (yieldFac - 0.9);
 
-    atomicAdd(&params.resultBuffer[primID], yield);
-    prd->rayWeight = -1.f;
-    // atomicAdd(&params.resultBuffer[primID], prd->rayWeight * yield);
+    atomicAdd(&params.resultBuffer[primID], prd->rayWeight * yield);
 
     // ---------- REFLECTION ------------ //
-    // prd->rayWeight -= prd->rayWeight * params.sticking;
+    prd->rayWeight -= prd->rayWeight * params.sticking;
     // conedCosineReflection(prd, (float)(M_PIf / 2.f - min(incAngle, minAngle)), geomNormal);
     specularReflection(prd);
   }

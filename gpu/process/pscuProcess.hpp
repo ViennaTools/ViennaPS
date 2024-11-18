@@ -422,7 +422,7 @@ private:
       CudaBuffer &d_elementData,
       SmartPointer<viennals::PointData<NumericType>> pointData,
       const IndexMap &indexMap,
-      SmartPointer<KDTree<float, std::array<float, 3>>> elementKdTree,
+      SmartPointer<KDTree<float, Vec3Df>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> pointMesh,
       SmartPointer<viennals::Mesh<float>> surfMesh) {
 
@@ -450,7 +450,8 @@ private:
     for (unsigned i = 0; i < numPoints; i++) {
 
       auto closePoints = elementKdTree->findNearestWithinRadius(
-          points[i], smoothFlux_ * gridDelta);
+          points[i], smoothFlux_ * smoothFlux_ * gridDelta *
+                         gridDelta); // we have to use the squared distance here
 
       std::vector<NumericType> weights;
       weights.reserve(closePoints.value().size());
@@ -470,9 +471,7 @@ private:
       }
 
       for (unsigned j = 0; j < numData; j++) {
-
         NumericType value = 0.;
-
         if (sum > 1e-6) {
           unsigned n = 0;
           for (auto p : closePoints.value()) {
@@ -485,7 +484,6 @@ private:
         } else {
           value = elementData[nearestIdx + j * numElements];
         }
-
         pointData->getScalarData(j)->at(i) = value;
       }
     }

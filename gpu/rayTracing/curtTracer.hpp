@@ -116,14 +116,6 @@ public:
           rayInternal::getOrthonormalBasis<float>(particles[i].direction);
       launchParamsBuffer.upload(&launchParams, 1);
 
-      Logger::getInstance()
-          .addDebug("Running ray tracer for particle: " + particles[i].name +
-                    "\nCosine exponent: " +
-                    std::to_string(particles[i].cosineExponent) +
-                    "\nSticking: " + std::to_string(particles[i].sticking))
-          .print();
-      std::cout << launchParams.periodicBoundary << std::endl;
-
       CUstream stream;
       CUDA_CHECK(StreamCreate(&stream));
       buildSBT(i);
