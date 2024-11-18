@@ -70,7 +70,6 @@ public:
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
         .direction = Vec3Df{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}};
-    // particle2.dataLabels.push_back("particleFlux2");
     this->insertNextParticleType(particle2);
 
     // surface model

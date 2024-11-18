@@ -2,6 +2,9 @@
 
 #include <lsDomain.hpp>
 #include <lsToDiskMesh.hpp>
+
+#include <psDomain.hpp>
+
 #include <vtkCellArray.h>
 #include <vtkCellLocator.h>
 #include <vtkDelaunay2D.h>
@@ -12,29 +15,30 @@
 #include <vtkPolyData.h>
 #include <vtkTriangle.h>
 
-#include <psDomain.hpp>
-#include <psSmartPointer.hpp>
+namespace viennaps {
 
-// WARNING: THIS ONLY WORK FOR GEOMETRIES WHICH PROJECT NICELY ON THE XY PLANE.
-template <class NumericType> class culsDelaunayMesh {
-  psSmartPointer<lsDomain<NumericType, 3>> levelSet = nullptr;
-  psSmartPointer<lsMesh<NumericType>> surfaceMesh = nullptr;
+using namespace viennacore;
+
+// WARNING: THIS ONLY WORKS FOR GEOMETRIES WHICH PROJECT NICELY ON THE XY PLANE.
+template <class NumericType> class DelaunaySurfaceMesh {
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, 3>>;
+  using psDomainType = SmartPointer<::viennaps::Domain<NumericType, 3>>;
+  using MeshType = SmartPointer<viennals::Mesh<NumericType>>;
+
+  lsDomainType levelSet = nullptr;
+  MeshType surfaceMesh = nullptr;
 
 public:
-  culsDelaunayMesh() {}
-  culsDelaunayMesh(psSmartPointer<lsDomain<NumericType, 3>> passedLevelSet,
-                   psSmartPointer<lsMesh<NumericType>> passedMesh)
+  DelaunaySurfaceMesh() {}
+  DelaunaySurfaceMesh(lsDomainType passedLevelSet, MeshType passedMesh)
       : levelSet(passedLevelSet), surfaceMesh(passedMesh) {}
-  culsDelaunayMesh(psSmartPointer<psDomain<NumericType, 3>> passedDomain,
-                   psSmartPointer<lsMesh<NumericType>> passedMesh)
+  DelaunaySurfaceMesh(psDomainType passedDomain, MeshType passedMesh)
       : levelSet(passedDomain->getLevelSets().back()), surfaceMesh(passedMesh) {
   }
 
-  void setLevelSet(psSmartPointer<lsDomain<NumericType, 3>> passedLevelSet) {
-    levelSet = passedLevelSet;
-  }
+  void setLevelSet(lsDomainType passedLevelSet) { levelSet = passedLevelSet; }
 
-  void setLevelSet(psSmartPointer<psDomain<NumericType, 3>> passedDomain) {
+  void setLevelSet(psDomainType passedDomain) {
     levelSet = passedDomain->getLevelSets()->back();
   }
 
@@ -42,10 +46,10 @@ public:
     surfaceMesh->clear();
     const double gridDelta = levelSet->getGrid().getGridDelta();
 
-    auto pointCloud = psSmartPointer<lsMesh<NumericType>>::New();
-    lsToDiskMesh<NumericType, 3>(levelSet, pointCloud).apply();
+    auto pointCloud = MeshType::New();
+    viennals::ToDiskMesh<NumericType, 3>(levelSet, pointCloud).apply();
 
-    lsVTKWriter<NumericType>(pointCloud, "pointCloud.vtp").apply();
+    // lsVTKWriter<NumericType>(pointCloud, "pointCloud.vtp").apply();
 
     vtkNew<vtkPoints> points;
     for (auto it = pointCloud->getNodes().begin();
@@ -89,3 +93,4 @@ public:
     }
   }
 };
+} // namespace viennaps

@@ -8,10 +8,12 @@
 #include <CGAL/Surface_mesh.h>
 
 #include <psDomain.hpp>
-#include <psSmartPointer.hpp>
 
-// WARNING: THIS ONLY WORK FOR GEOMETRIES WHICH PROJECT NICELY ON THE XY PLANE.
-template <class NumericType> class culsRefineMesh {
+namespace viennaps {
+
+using namespace viennacore;
+
+template <class NumericType> class RefineMesh {
   typedef CGAL::Simple_cartesian<double> K;
   typedef CGAL::Surface_mesh<K::Point_3> SM;
   typedef boost::property_map<SM, CGAL::vertex_point_t>::type VPMap;
@@ -21,14 +23,14 @@ template <class NumericType> class culsRefineMesh {
   typedef boost::graph_traits<SM>::face_descriptor face_descriptor;
   typedef boost::graph_traits<SM>::halfedge_descriptor halfedge_descriptor;
 
-  psSmartPointer<lsMesh<NumericType>> mesh = nullptr;
+  SmartPointer<viennals::Mesh<NumericType>> mesh = nullptr;
   double length = 1.;
   unsigned iterations = 100;
 
 public:
-  culsRefineMesh() {}
-  culsRefineMesh(psSmartPointer<lsMesh<NumericType>> passedMesh,
-                 const NumericType passedLength)
+  RefineMesh() {}
+  RefineMesh(SmartPointer<viennals::Mesh<NumericType>> passedMesh,
+             const NumericType passedLength)
       : mesh(passedMesh), length(passedLength) {}
 
   void apply() {
@@ -73,7 +75,7 @@ public:
       sm.remove_vertex(isolated_vertices[i]);
 
     if (!is_triangle_mesh(sm)) {
-      psLogger::getInstance()
+      Logger::getInstance()
           .addWarning("The surface mesh must be triangulated.")
           .print();
       return;
@@ -115,3 +117,4 @@ public:
     }
   }
 };
+} // namespace viennaps

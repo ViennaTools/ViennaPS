@@ -23,8 +23,6 @@
 #include <curtSmoothing.hpp>
 #include <curtTracer.hpp>
 
-#include <culsToSurfaceMesh.hpp>
-
 namespace viennaps {
 
 namespace gpu {

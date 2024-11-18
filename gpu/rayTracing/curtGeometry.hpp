@@ -7,7 +7,7 @@
 
 #include <utCudaBuffer.hpp>
 
-#include <culsToSurfaceMesh.hpp>
+#include <lsToSurfaceMeshRefined.hpp>
 
 #include <psDomain.hpp>
 
@@ -46,7 +46,10 @@ template <typename T, int D> struct Geometry {
       Logger::getInstance().addWarning("No KDTree passed to Geometry.").print();
     }
 
-    ToSurfaceMesh<float>(domain, mesh, kdTree).apply();
+    // create surface mesh
+    viennals::ToSurfaceMeshRefined<T, float, D>(domain->getLevelSets().back(),
+                                                mesh, kdTree)
+        .apply();
 
     const auto gridDelta = domain->getGrid().getGridDelta();
     launchParams.source.gridDelta = gridDelta;

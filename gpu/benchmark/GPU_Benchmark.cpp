@@ -1,7 +1,7 @@
 #include <context.hpp>
 
-#include <culsToSurfaceMesh.hpp>
 #include <curtTracer.hpp>
+#include <lsToSurfaceMeshRefined.hpp>
 #include <pscuDeposition.hpp>
 
 #include <psMakeTrench.hpp>
@@ -32,7 +32,8 @@ int main() {
 
   {
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-    viennaps::gpu::ToSurfaceMesh<NumericType, D> mesher(domain, mesh, tree);
+    viennals::ToSurfaceMeshRefined<NumericType, NumericType, D> mesher(
+        domain, mesh, tree);
 
     Timer timer;
     timer.start();
