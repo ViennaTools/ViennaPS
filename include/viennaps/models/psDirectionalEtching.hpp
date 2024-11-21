@@ -28,6 +28,17 @@ public:
         isotropicVelocity_(isotropicVelocity), maskMaterials_(mask),
         useVisibilities_(useVisibilities) {}
 
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
+                                int material,
+                                const Vec3D<NumericType> &normalVector,
+                                unsigned long pointId) override {
+    if (isMaskMaterial(material)) {
+      return 0.;
+    } else {
+      return -isotropicVelocity_;
+    }
+  }
+
   Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
                                        int material,
                                        const Vec3D<NumericType> &normalVector,
@@ -37,15 +48,7 @@ public:
     } else if (useVisibilities_ && this->visibilities_->at(pointId) == 0.) {
       return {0.};
     } else {
-      auto rate = direction_;
-      for (int i = 0; i < D; ++i) {
-        if (rate[i] == 0.) {
-          rate[i] -= isotropicVelocity_ * (normalVector[i] < 0 ? -1 : 1);
-        } else {
-          rate[i] *= directionalVelocity_;
-        }
-      }
-      return rate;
+      return direction_ * directionalVelocity_;
     }
   }
 
