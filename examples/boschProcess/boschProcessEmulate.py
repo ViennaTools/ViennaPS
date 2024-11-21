@@ -42,7 +42,7 @@ direction[vps.D - 1] = -1.0
 depoModel = vps.IsotropicProcess(params["depositionThickness"])
 depoRemoval = vps.DirectionalEtching(
     direction,
-    params["depositionThickness"] + params["gridDelta"],
+    params["depositionThickness"] + params["gridDelta"] / 2.0,
     0.0,
     True,
     vps.Material.Mask,
@@ -55,22 +55,27 @@ etchModel = vps.DirectionalEtching(
     [vps.Material.Mask, vps.Material.Polymer],
 )
 
-
-geometry.saveSurfaceMesh("initial.vtp")
-
-proc = vps.Process(geometry, etchModel, params["etchTime"])
-proc.disableRandomSeeds()
-proc.apply()
-
 numCycles = int(params["numCycles"])
+n = 0
+
+geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+n += 1
+vps.Process(geometry, etchModel, params["etchTime"]).apply()
+geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+n += 1
 for i in range(numCycles):
     geometry.duplicateTopLevelSet(vps.Material.Polymer)
     vps.Process(geometry, depoModel, 1).apply()
+    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    n += 1
     vps.Process(geometry, depoRemoval, 1).apply()
+    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    n += 1
     vps.Process(geometry, etchModel, params["etchTime"]).apply()
+    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    n += 1
     geometry.removeTopLevelSet()
+    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    n += 1
 
-geometry.saveSurfaceMesh("final.vtp")
-
-if args.dim == 2:
-    geometry.saveVolumeMesh("final")
+geometry.saveVolumeMesh("final")
