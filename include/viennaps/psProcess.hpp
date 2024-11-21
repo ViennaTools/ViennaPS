@@ -475,9 +475,10 @@ public:
         viennals::CalculateVisibilities<NumericType, D>(
             domain->getLevelSets().back())
             .apply();
-        model->getVelocityField()->setVisibilities(
-            domain->getLevelSets().back()->getPointData().getScalarData(
+        auto visibilities = SmartPointer<std::vector<NumericType>>::New(
+            *domain->getLevelSets().back()->getPointData().getScalarData(
                 "Visibilities"));
+        model->getVelocityField()->setVisibilities(visibilities);
       }
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();

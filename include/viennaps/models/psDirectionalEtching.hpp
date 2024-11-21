@@ -93,7 +93,7 @@ public:
   DirectionalEtching(const Vec3D<NumericType> &direction,
                      const NumericType directionalVelocity,
                      const NumericType isotropicVelocity,
-                     const bool useVisibilities = false,
+                     const bool useVisibilities,
                      const std::vector<Material> maskMaterials) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();

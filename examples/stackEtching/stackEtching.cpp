@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 
   ps::Vec3D<NumericType> direction = {0., -1., 0.};
   auto model = ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(
-      direction, 1., 0.);
+      direction, 1., 0., true, ps::Material::Mask);
 
   // process setup
   ps::Process<NumericType, D> process;
