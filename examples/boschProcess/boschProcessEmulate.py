@@ -60,20 +60,29 @@ n = 0
 
 geometry.saveSurfaceMesh("boschProcess_{}".format(n))
 n += 1
+
 vps.Process(geometry, etchModel, params["etchTime"]).apply()
 geometry.saveSurfaceMesh("boschProcess_{}".format(n))
 n += 1
+
 for i in range(numCycles):
+    # Deposit a layer of polymer
     geometry.duplicateTopLevelSet(vps.Material.Polymer)
     vps.Process(geometry, depoModel, 1).apply()
     geometry.saveSurfaceMesh("boschProcess_{}".format(n))
     n += 1
+
+    # Remove the polymer layer
     vps.Process(geometry, depoRemoval, 1).apply()
     geometry.saveSurfaceMesh("boschProcess_{}".format(n))
     n += 1
+
+    # Etch the trench
     vps.Process(geometry, etchModel, params["etchTime"]).apply()
     geometry.saveSurfaceMesh("boschProcess_{}".format(n))
     n += 1
+
+    # Ash the polymer
     geometry.removeTopLevelSet()
     geometry.saveSurfaceMesh("boschProcess_{}".format(n))
     n += 1
