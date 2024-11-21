@@ -1,8 +1,13 @@
+#include <geometries/psMakeFin.hpp>
 #include <geometries/psMakeStack.hpp>
+#include <models/psDirectionalEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
+#include <models/psIsotropicProcess.hpp>
 
 #include <psExtrude.hpp>
 #include <psProcess.hpp>
+
+#include <lsCalculateVisibilities.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;
@@ -32,14 +37,26 @@ int main(int argc, char *argv[]) {
       params.get("trenchWidth"), params.get("maskHeight"), false)
       .apply();
 
-  // copy top layer for deposition
-  geometry->duplicateTopLevelSet(ps::Material::Polymer);
+  auto isoModel = ps::SmartPointer<ps::IsotropicProcess<NumericType, D>>::New(
+      -1.0, ps::Material::Mask);
+  ps::Process<NumericType, D>(geometry, isoModel, 20.).apply();
 
-  // use pre-defined model Fluorocarbon etching model
-  auto model = ps::SmartPointer<ps::FluorocarbonEtching<NumericType, D>>::New(
-      params.get("ionFlux"), params.get("etchantFlux"),
-      params.get("polymerFlux"), params.get("energyMean"),
-      params.get("energySigma"));
+  // // copy top layer for deposition
+  // geometry->duplicateTopLevelSet(ps::Material::Polymer);
+
+  // // use pre-defined model Fluorocarbon etching model
+  // auto model = ps::SmartPointer<ps::FluorocarbonEtching<NumericType,
+  // D>>::New(
+  //     params.get("ionFlux"), params.get("etchantFlux"),
+  //     params.get("polymerFlux"), params.get("energyMean"),
+  //     params.get("energySigma"));#
+
+  // print initial surface
+  geometry->saveSurfaceMesh("initial");
+
+  ps::Vec3D<NumericType> direction = {0., -1., 0.};
+  auto model = ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(
+      direction, 1., 0.);
 
   // process setup
   ps::Process<NumericType, D> process;
@@ -50,22 +67,22 @@ int main(int argc, char *argv[]) {
   process.setTimeStepRatio(0.25);
 
   // print initial surface
-  geometry->saveVolumeMesh("initial");
+  // geometry->saveVolumeMesh("initial");
 
   process.apply();
 
   // print final surface
   geometry->saveVolumeMesh("final");
 
-  std::cout << "Extruding to 3D ..." << std::endl;
-  auto extruded = ps::SmartPointer<ps::Domain<NumericType, 3>>::New();
-  std::array<NumericType, 2> extrudeExtent = {-20., 20.};
-  ps::Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
-                           {ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                            ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                            ls::BoundaryConditionEnum<3>::INFINITE_BOUNDARY})
-      .apply();
+  // std::cout << "Extruding to 3D ..." << std::endl;
+  // auto extruded = ps::SmartPointer<ps::Domain<NumericType, 3>>::New();
+  // std::array<NumericType, 2> extrudeExtent = {-20., 20.};
+  // ps::Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
+  //                          {ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
+  //                           ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
+  //                           ls::BoundaryConditionEnum<3>::INFINITE_BOUNDARY})
+  //     .apply();
 
-  extruded->saveSurfaceMesh("surface.vtp");
-  geometry->saveVolumeMesh("final_extruded");
+  // extruded->saveSurfaceMesh("surface.vtp");
+  // extruded->saveVolumeMesh("final_extruded");
 }

@@ -5,6 +5,7 @@
 #include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
+#include <lsCalculateVisibilities.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
@@ -468,6 +469,16 @@ public:
       if (PyErr_CheckSignals() != 0)
         throw pybind11::error_already_set();
 #endif
+
+      // check if visibilities are used
+      if (model->getVelocityField()->useVisibilities()) {
+        viennals::CalculateVisibilities<NumericType, D>(
+            domain->getLevelSets().back())
+            .apply();
+        model->getVelocityField()->setVisibilities(
+            domain->getLevelSets().back()->getPointData().getScalarData(
+                "Visibilities"));
+      }
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();

@@ -36,11 +36,20 @@ public:
   virtual void
   setVelocities(SmartPointer<std::vector<NumericType>> velocities) {}
 
+  void setVisibilities(SmartPointer<std::vector<NumericType>> visibilities) {
+    visibilities_ = visibilities;
+  }
+
   // translation field options
   // 0: do not translate level set ID to surface ID
   // 1: use unordered map to translate level set ID to surface ID
   // 2: use kd-tree to translate level set ID to surface ID
   virtual int getTranslationFieldOptions() const { return 1; }
+
+  virtual bool useVisibilities() const { return false; }
+
+public:
+  SmartPointer<std::vector<NumericType>> visibilities_;
 };
 
 template <typename NumericType>

@@ -16,20 +16,25 @@ class DirectionalEtchVelocityField : public VelocityField<NumericType> {
   const NumericType directionalVelocity_;
   const NumericType isotropicVelocity_;
   const std::vector<int> maskMaterials_;
+  const bool useVisibilities_;
 
 public:
   DirectionalEtchVelocityField(Vec3D<NumericType> direction,
                                const NumericType directionalVelocity,
                                const NumericType isotropicVelocity,
-                               const std::vector<int> &mask)
+                               const std::vector<int> &mask,
+                               const bool useVisibilities = false)
       : direction_(direction), directionalVelocity_(directionalVelocity),
-        isotropicVelocity_(isotropicVelocity), maskMaterials_(mask) {}
+        isotropicVelocity_(isotropicVelocity), maskMaterials_(mask),
+        useVisibilities_(useVisibilities) {}
 
   Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
                                        int material,
                                        const Vec3D<NumericType> &normalVector,
-                                       unsigned long) override {
+                                       unsigned long pointId) override {
     if (isMaskMaterial(material)) {
+      return {0.};
+    } else if (useVisibilities_ && this->visibilities_->at(pointId) == 0.) {
       return {0.};
     } else {
       auto rate = direction_;
@@ -47,6 +52,8 @@ public:
   // the translation field should be disabled when using a surface model
   // which only depends on an analytic velocity field
   int getTranslationFieldOptions() const override { return 0; }
+
+  bool useVisibilities() const override { return useVisibilities_; }
 
 private:
   bool isMaskMaterial(const int material) const {
@@ -66,6 +73,7 @@ public:
   DirectionalEtching(const Vec3D<NumericType> &direction,
                      const NumericType directionalVelocity = 1.,
                      const NumericType isotropicVelocity = 0.,
+                     const bool useVisibilities = false,
                      const Material mask = Material::Mask) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
@@ -74,8 +82,8 @@ public:
     std::vector<int> maskMaterialsInt = {static_cast<int>(mask)};
     auto velField =
         SmartPointer<impl::DirectionalEtchVelocityField<NumericType, D>>::New(
-            direction, directionalVelocity, isotropicVelocity,
-            maskMaterialsInt);
+            direction, directionalVelocity, isotropicVelocity, maskMaterialsInt,
+            useVisibilities);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
@@ -85,6 +93,7 @@ public:
   DirectionalEtching(const Vec3D<NumericType> &direction,
                      const NumericType directionalVelocity,
                      const NumericType isotropicVelocity,
+                     const bool useVisibilities = false,
                      const std::vector<Material> maskMaterials) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
@@ -96,8 +105,8 @@ public:
     // velocity field
     auto velField =
         SmartPointer<impl::DirectionalEtchVelocityField<NumericType, D>>::New(
-            direction, directionalVelocity, isotropicVelocity,
-            maskMaterialsInt);
+            direction, directionalVelocity, isotropicVelocity, maskMaterialsInt,
+            useVisibilities);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
