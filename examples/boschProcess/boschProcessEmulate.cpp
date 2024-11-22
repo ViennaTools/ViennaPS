@@ -13,7 +13,7 @@ void etch(ps::SmartPointer<ps::Domain<NumericType, D>> domain,
   direction[D - 1] = -1.;
   auto etchModel =
       ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(
-          direction, params.get("ionRate"), params.get("neutralRate"), false,
+          direction, params.get("ionRate"), params.get("neutralRate"),
           std::vector<ps::Material>{ps::Material::Mask, ps::Material::Polymer});
   ps::Process<NumericType, D>(domain, etchModel, params.get("etchTime"))
       .apply();
@@ -30,7 +30,7 @@ void punchThrough(ps::SmartPointer<ps::Domain<NumericType, D>> domain,
       ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(
           direction,
           params.get("depositionThickness") + params.get("gridDelta") / 2., 0.0,
-          true, ps::Material::Mask);
+          ps::Material::Mask);
   ps::Process<NumericType, D>(domain, depoRemoval, 1.).apply();
 }
 

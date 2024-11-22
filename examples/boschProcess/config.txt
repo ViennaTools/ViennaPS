@@ -7,11 +7,11 @@ maskHeight = 20.0
 
 
 neutralStickingProbability = 0.1
-neutralRate = 0.8
+neutralRate = 1.0
 ionSourceExponent = 200
 ionRate = 1.0
 
-etchTime = 6.0
+etchTime = 5.0
 
 depositionThickness = 1.0
 

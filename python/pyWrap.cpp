@@ -844,17 +844,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    SmartPointer<DirectionalEtching<T, D>>>(
       module, "DirectionalEtching", processModel)
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const bool, const Material>(),
+                          const Material>(),
            pybind11::arg("direction"),
            pybind11::arg("directionalVelocity") = 1.,
            pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("useVisibilities") = false,
            pybind11::arg("maskMaterial") = Material::None)
       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const bool, const std::vector<Material>>(),
+                          const std::vector<Material>>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
-           pybind11::arg("isotropicVelocity"), pybind11::arg("useVisibilities"),
-           pybind11::arg("maskMaterial"));
+           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"))
+      .def("disableVisibilityCheck",
+           &DirectionalEtching<T, D>::disableVisibilityCheck);
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,
@@ -1107,6 +1107,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
            "viennals::IntegrationSchemeEnum.")
+      .def("enableAdvectionVelocityOutput",
+           &Process<T, D>::enableAdvectionVelocityOutput,
+           "Enable the output of the advection velocity field on the ls-mesh.")
+      .def("disableAdvectionVelocityOutput",
+           &Process<T, D>::disableAdvectionVelocityOutput,
+           "Disable the output of the advection velocity field on the ls-mesh.")
       .def("setTimeStepRatio", &Process<T, D>::setTimeStepRatio,
            "Set the CFL condition to use during advection. The CFL condition "
            "sets the maximum distance a surface can be moved during one "

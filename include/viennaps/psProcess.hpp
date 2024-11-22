@@ -99,6 +99,12 @@ public:
     integrationScheme = passedIntegrationScheme;
   }
 
+  // Enable the output of the advection velocities on the level-set mesh.
+  void enableAdvectionVelocityOutput() { lsVelocityOutput = true; }
+
+  // Disable the output of the advection velocities on the level-set mesh.
+  void disableAdvectionVelocityOutput() { lsVelocityOutput = false; }
+
   // Enable the use of random seeds for ray tracing. This is useful to
   // prevent the formation of artifacts in the flux calculation.
   void enableRandomSeeds() { useRandomSeeds_ = true; }
@@ -277,6 +283,7 @@ public:
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
     advectionKernel.setTimeStepRatio(timeStepRatio);
+    advectionKernel.setSaveAdvectionVelocities(lsVelocityOutput);
 
     for (auto dom : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -459,6 +466,7 @@ public:
 
     double previousTimeStep = 0.;
     size_t counter = 0;
+    unsigned lsVelCounter = 0;
     Timer rtTimer;
     Timer callbackTimer;
     Timer advTimer;
@@ -622,6 +630,15 @@ public:
       advectionKernel.apply();
       advTimer.finish();
       Logger::getInstance().addTiming("Surface advection", advTimer).print();
+
+      if (lsVelocityOutput) {
+        auto lsMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+        viennals::ToMesh<NumericType, D>(domain->getLevelSets().back(), lsMesh)
+            .apply();
+        viennals::VTKWriter<NumericType>(
+            lsMesh, "ls_velocities_" + std::to_string(lsVelCounter++) + ".vtp")
+            .apply();
+      }
 
       // update the translator to retrieve the correct coverages from the LS
       meshConverter.apply();
@@ -788,6 +805,7 @@ private:
   bool smoothFlux = true;
   NumericType diskRadius = 0.;
   bool ignoreFluxBoundaries = false;
+  bool lsVelocityOutput = false;
   unsigned maxIterations = 20;
   bool coveragesInitialized_ = false;
   NumericType printTime = 0.;

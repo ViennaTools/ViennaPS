@@ -21,7 +21,8 @@ template <class NumericType, int D> void RunTest() {
     Vec3D<NumericType> direction{0., 0., 0.};
     direction[D - 1] = -1.;
     auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
-        direction, 1., 0., false, Material::Mask);
+        direction, 1., 0., Material::Mask);
+    model->disableVisibilityCheck();
 
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
@@ -45,7 +46,7 @@ template <class NumericType, int D> void RunTest() {
     Vec3D<NumericType> direction{0., 0., 0.};
     direction[D - 1] = -1.;
     auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
-        direction, 1., 0., true, maskMaterials);
+        direction, 1., 0., maskMaterials);
 
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());

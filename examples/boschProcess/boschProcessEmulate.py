@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
-    prog="boschProcess",
+    prog="boschProcessEmulate",
     description="Run a Bosch process on a trench geometry.",
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
@@ -44,14 +44,12 @@ depoRemoval = vps.DirectionalEtching(
     direction,
     params["depositionThickness"] + params["gridDelta"] / 2.0,
     0.0,
-    True,
     vps.Material.Mask,
 )
 etchModel = vps.DirectionalEtching(
     direction,
     params["ionRate"],
     params["neutralRate"],
-    False,
     [vps.Material.Mask, vps.Material.Polymer],
 )
 
