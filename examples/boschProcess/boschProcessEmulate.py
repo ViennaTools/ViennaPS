@@ -40,18 +40,26 @@ direction = [0.0, 0.0, 0.0]
 direction[vps.D - 1] = -1.0
 
 depoModel = vps.IsotropicProcess(params["depositionThickness"])
-depoRemoval = vps.DirectionalEtching(
-    direction,
-    params["depositionThickness"] + params["gridDelta"] / 2.0,
-    0.0,
-    vps.Material.Mask,
+
+# Define directional rate
+etchDir = vps.RateSet(
+    direction=direction,
+    directionalVelocity=params["depositionThickness"] + params["gridDelta"] / 2.0,
+    isotropicVelocity=0.0,
+    maskMaterials=[vps.Material.Mask]
 )
-etchModel = vps.DirectionalEtching(
-    direction,
-    params["ionRate"],
-    params["neutralRate"],
-    [vps.Material.Mask, vps.Material.Polymer],
+
+# Define isotropic rate
+etchIso = vps.RateSet(
+    direction=direction,
+    directionalVelocity=params["ionRate"],
+    isotropicVelocity=params["neutralRate"],
+    maskMaterials=[vps.Material.Mask, vps.Material.Polymer]
 )
+
+depoRemoval = vps.DirectionalEtching(rateSets=[etchDir])
+
+etchModel = vps.DirectionalEtching(rateSets=[etchIso])
 
 numCycles = int(params["numCycles"])
 n = 0

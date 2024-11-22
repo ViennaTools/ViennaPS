@@ -839,22 +839,59 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            }),
            pybind11::arg("rate"), pybind11::arg("maskMaterial"));
 
-  // Directional Etching
-  pybind11::class_<DirectionalEtching<T, D>,
-                   SmartPointer<DirectionalEtching<T, D>>>(
-      module, "DirectionalEtching", processModel)
-      .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const Material>(),
-           pybind11::arg("direction"),
-           pybind11::arg("directionalVelocity") = 1.,
-           pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") = Material::None)
-      .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const std::vector<Material>>(),
-           pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
-           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"))
-      .def("disableVisibilityCheck",
-           &DirectionalEtching<T, D>::disableVisibilityCheck);
+// Expose RateSet struct to Python
+pybind11::class_<DirectionalEtching<T, D>::RateSet>(module, "RateSet")
+    .def(pybind11::init<const std::array<T, 3>&, const T, const T, const std::vector<Material>&>(),
+         pybind11::arg("direction"),
+         pybind11::arg("directionalVelocity"),
+         pybind11::arg("isotropicVelocity"),
+         pybind11::arg("maskMaterials") = std::vector<Material>{Material::Mask})
+    .def_readwrite("direction", &DirectionalEtching<T, D>::RateSet::direction)
+    .def_readwrite("directionalVelocity", &DirectionalEtching<T, D>::RateSet::directionalVelocity)
+    .def_readwrite("isotropicVelocity", &DirectionalEtching<T, D>::RateSet::isotropicVelocity)
+    .def_readwrite("maskMaterials", &DirectionalEtching<T, D>::RateSet::maskMaterials);
+
+// Expose DirectionalEtching class to Python
+pybind11::class_<DirectionalEtching<T, D>,
+                 SmartPointer<DirectionalEtching<T, D>>>(
+    module, "DirectionalEtching", processModel)
+    .def(pybind11::init<const std::vector<typename DirectionalEtching<T, D>::RateSet>&,
+                        const bool>(),
+         pybind11::arg("rateSets"),
+         pybind11::arg("useVisibilities") = true)
+    .def("disableVisibilityCheck",
+         &DirectionalEtching<T, D>::disableVisibilityCheck);
+
+// // Directional Etching
+// pybind11::class_<DirectionalEtching<T, D>,
+//                  SmartPointer<DirectionalEtching<T, D>>>(
+//     module, "DirectionalEtching", processModel)
+//     .def(pybind11::init<const std::array<T, 3> &, const T, const T,
+//                         const std::vector<Material> &>(),
+//          pybind11::arg("direction"),
+//          pybind11::arg("directionalVelocity") = 1.,
+//          pybind11::arg("isotropicVelocity") = 0.,
+//          pybind11::arg("maskMaterials") = std::vector<Material>{Material::Mask})
+//     .def("disableVisibilityCheck",
+//          &DirectionalEtching<T, D>::disableVisibilityCheck);
+
+
+//   // Directional Etching
+//   pybind11::class_<DirectionalEtching<T, D>,
+//                    SmartPointer<DirectionalEtching<T, D>>>(
+//       module, "DirectionalEtching", processModel)
+//       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
+//                           const Material>(),
+//            pybind11::arg("direction"),
+//            pybind11::arg("directionalVelocity") = 1.,
+//            pybind11::arg("isotropicVelocity") = 0.,
+//            pybind11::arg("maskMaterial") = Material::None)
+//       .def(pybind11::init<const std::array<T, 3> &, const T, const T,
+//                           const std::vector<Material>>(),
+//            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
+//            pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"))
+//       .def("disableVisibilityCheck",
+//            &DirectionalEtching<T, D>::disableVisibilityCheck);
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,
