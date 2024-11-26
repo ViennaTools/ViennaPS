@@ -19,13 +19,17 @@ struct RateSet {
     NumericType directionalVelocity;
     NumericType isotropicVelocity;
     std::vector<int> maskMaterials;
+    bool calculateVisibility;
 
-    RateSet(const Vec3D<NumericType>& dir,
-            NumericType dirVel,
-            NumericType isoVel,
-            const std::vector<int>& masks)
+    RateSet(const Vec3D<NumericType>& dir = Vec3D<NumericType>{0., 0., 0.},
+            NumericType dirVel = 0.,
+            NumericType isoVel = 0.,
+            const std::vector<int>& masks = std::vector<int>{Material::Mask}, // Default to Material::Mask
+            // const std::vector<int>& masks = {},
+            bool calcVis = true)
         : direction(dir), directionalVelocity(dirVel),
-          isotropicVelocity(isoVel), maskMaterials(masks) {}
+          isotropicVelocity(isoVel), maskMaterials(masks),
+          calculateVisibility(calcVis && (dir[0] != 0. || dir[1] != 0. || dir[2] != 0.) && dirVel != 0) { }
 };
 
 template <class NumericType, int D>
@@ -49,7 +53,7 @@ public:
                 continue; // Skip this rate set if material is masked
             }
             // Accumulate isotropic velocities
-            scalarVelocity -= rateSet.isotropicVelocity;
+            scalarVelocity += std::min(0., rateSet.isotropicVelocity);
         }
 
         return scalarVelocity;
@@ -61,15 +65,32 @@ public:
                                          unsigned long pointId) override {
         Vec3D<NumericType> vectorVelocity = {0.0, 0.0, 0.0};
 
-        for (const auto& rateSet : rateSets_) {
+        // for (const auto& rateSet : rateSets_) {
+        for (int rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
+            const auto& rateSet = rateSets_[rateSetID];
             if (isMaskMaterial(material, rateSet.maskMaterials)) {
                 continue; // Skip this rate set if material is masked
             }
-            if (useVisibilities_ && this->visibilities_->at(pointId) == 0.) {
+            // if (useVisibilities_ && this->visibilities_[rateSetID]->at(pointId) == 0.) {
+            if (rateSet.calculateVisibility && this->visibilities_[rateSetID]->at(pointId) == 0.) {
                 continue; // Skip if visibility check fails
             }
-            // Accumulate directional velocities
-            vectorVelocity = vectorVelocity + rateSet.direction * rateSet.directionalVelocity;
+
+            // Calculate the potential velocity vector for this rate set
+            Vec3D<NumericType> potentialVelocity = rateSet.direction * rateSet.directionalVelocity;
+
+            // Compute dot product manually for std::array
+            NumericType dotProduct = 0.0;
+            for (int i = 0; i < 3; ++i) {
+                dotProduct += potentialVelocity[i] * normalVector[i];
+            }
+            
+            if (dotProduct > 0) { // Only include positive dot products (etching)
+                vectorVelocity = vectorVelocity - potentialVelocity;
+            }
+
+            // // Accumulate directional velocities
+            // vectorVelocity = vectorVelocity - rateSet.direction * rateSet.directionalVelocity;
         }
 
         return vectorVelocity;
@@ -79,7 +100,17 @@ public:
     // which only depends on an analytic velocity field
     int getTranslationFieldOptions() const override { return 0; }
 
+    // Return direction vector for a specific rateSet
+    Vec3D<NumericType> getDirection(const int rateSetId) const override {
+        const auto& rateSet = rateSets_[rateSetId];
+        return rateSet.direction;
+    }
+
+    bool useVisibilities(const int rateSetId) const override { return rateSets_[rateSetId].calculateVisibility; }
+    
     bool useVisibilities() const override { return useVisibilities_; }
+
+    int numRates() const override { return rateSets_.size(); }
 
 private:
     bool isMaskMaterial(const int material, const std::vector<int>& maskMaterials) const {
@@ -98,19 +129,24 @@ public:
         NumericType directionalVelocity;
         NumericType isotropicVelocity;
         std::vector<Material> maskMaterials;
+        bool calculateVisibility;
 
         RateSet(const Vec3D<NumericType>& dir,
                 NumericType dirVel,
                 NumericType isoVel,
-                const std::vector<Material>& masks)
+                const std::vector<Material>& masks,
+                bool calcVis)
             : direction(dir), directionalVelocity(dirVel),
-              isotropicVelocity(isoVel), maskMaterials(masks) {}
+              isotropicVelocity(isoVel), maskMaterials(masks),
+              calculateVisibility(calcVis) {}
     };
 
-    /// Constructor accepting multiple rate sets
-    DirectionalEtching(const std::vector<RateSet>& rateSets,
-                      const bool useVisibilities = true)
-        : useVisibilities_(useVisibilities) {
+    // Constructor accepting single rate set
+    DirectionalEtching(const RateSet& rateSet) : DirectionalEtching(std::vector<RateSet>{rateSet}) { }
+
+    // Constructor accepting multiple rate sets
+    DirectionalEtching(const std::vector<RateSet>& rateSets) {
+        useVisibilities_ = false;
         // Convert RateSet materials from Material enum to int
         for (const auto& rs : rateSets) {
             std::vector<int> maskInts;
@@ -121,8 +157,10 @@ public:
                 rs.direction,
                 rs.directionalVelocity,
                 rs.isotropicVelocity,
-                maskInts
+                maskInts,
+                rs.calculateVisibility
             );
+            useVisibilities_ = useVisibilities_ || rs.calculateVisibility;
             rateSets_.push_back(internalRateSet);
         }
         initialize();

@@ -36,8 +36,8 @@ public:
   virtual void
   setVelocities(SmartPointer<std::vector<NumericType>> velocities) {}
 
-  void setVisibilities(SmartPointer<std::vector<NumericType>> visibilities) {
-    visibilities_ = visibilities;
+  void setVisibilities(SmartPointer<std::vector<NumericType>> visibilities, int rateSetId = 0) {
+    visibilities_[rateSetId] = visibilities;
   }
 
   // translation field options
@@ -46,10 +46,19 @@ public:
   // 2: use kd-tree to translate level set ID to surface ID
   virtual int getTranslationFieldOptions() const { return 1; }
 
+  // Return direction vector for a specific rateSet
+  virtual Vec3D<NumericType> getDirection(const int rateSetId) const { return Vec3D<NumericType>{0., 0., 0.}; }
+
+  // Check if visibilities are defined for a specific rateSet
+  virtual bool useVisibilities(const int rateSetId) const { return false; }
+
   virtual bool useVisibilities() const { return false; }
 
+  virtual int numRates() const { return 0; }
+
 public:
-  SmartPointer<std::vector<NumericType>> visibilities_;
+  std::map<int, SmartPointer<std::vector<NumericType>>> visibilities_;
+  // SmartPointer<std::vector<NumericType>> visibilities_;
 };
 
 template <typename NumericType>

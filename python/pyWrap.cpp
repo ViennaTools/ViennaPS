@@ -841,24 +841,27 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
 // Expose RateSet struct to Python
 pybind11::class_<DirectionalEtching<T, D>::RateSet>(module, "RateSet")
-    .def(pybind11::init<const std::array<T, 3>&, const T, const T, const std::vector<Material>&>(),
-         pybind11::arg("direction"),
-         pybind11::arg("directionalVelocity"),
-         pybind11::arg("isotropicVelocity"),
-         pybind11::arg("maskMaterials") = std::vector<Material>{Material::Mask})
+    .def(pybind11::init<const std::array<T, 3>&, const T, const T, const std::vector<Material>&, const bool>(),
+         pybind11::arg("direction") = std::array<T, 3>{0., 0., 0.},
+         pybind11::arg("directionalVelocity") = 0.,
+         pybind11::arg("isotropicVelocity") = 0.,
+         pybind11::arg("maskMaterials") = std::vector<Material>{Material::Mask},
+         pybind11::arg("calculateVisibility") = true)
     .def_readwrite("direction", &DirectionalEtching<T, D>::RateSet::direction)
     .def_readwrite("directionalVelocity", &DirectionalEtching<T, D>::RateSet::directionalVelocity)
     .def_readwrite("isotropicVelocity", &DirectionalEtching<T, D>::RateSet::isotropicVelocity)
-    .def_readwrite("maskMaterials", &DirectionalEtching<T, D>::RateSet::maskMaterials);
+    .def_readwrite("maskMaterials", &DirectionalEtching<T, D>::RateSet::maskMaterials)
+    .def_readwrite("calculateVisibility", &DirectionalEtching<T, D>::RateSet::calculateVisibility);
 
 // Expose DirectionalEtching class to Python
 pybind11::class_<DirectionalEtching<T, D>,
                  SmartPointer<DirectionalEtching<T, D>>>(
     module, "DirectionalEtching", processModel)
-    .def(pybind11::init<const std::vector<typename DirectionalEtching<T, D>::RateSet>&,
-                        const bool>(),
-         pybind11::arg("rateSets"),
-         pybind11::arg("useVisibilities") = true)
+    .def(pybind11::init<const std::vector<typename DirectionalEtching<T, D>::RateSet>&>(),
+         pybind11::arg("rateSets"))
+    // Constructor accepting a single rate set
+    .def(pybind11::init<const typename DirectionalEtching<T, D>::RateSet&>(),
+         pybind11::arg("rateSet"))
     .def("disableVisibilityCheck",
          &DirectionalEtching<T, D>::disableVisibilityCheck);
 

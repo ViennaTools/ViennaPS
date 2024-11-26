@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import time
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -42,25 +43,29 @@ depoModel = vps.IsotropicProcess(params["depositionThickness"])
 
 # Define directional rate
 etchDir = vps.RateSet(
-    direction=direction,
+    direction=[-1., -1., 0.],
     directionalVelocity=params["ionRate"],
-    isotropicVelocity=0.0,
-    maskMaterials=[vps.Material.Mask]
+)
+
+# Define directional rate
+etchDir2 = vps.RateSet(
+    direction=[0.25, -1., 0.],
+    directionalVelocity=params["ionRate"],
 )
 
 # Define isotropic rate
 etchIso = vps.RateSet(
     direction=direction,
-    directionalVelocity=0.0,
     isotropicVelocity=params["neutralRate"],
-    maskMaterials=[vps.Material.Mask, vps.Material.Polymer]
+    maskMaterials=[vps.Material.Mask, vps.Material.Polymer],
 )
 
 # List of rate sets
-etchRatesSet = [etchDir, etchIso]
+etchRatesSet = [etchDir, etchDir2]
 
 # Create the DirectionalEtching process with multiple rate sets
 etchModel = vps.DirectionalEtching(rateSets=etchRatesSet)
+# etchModel = vps.DirectionalEtching(rateSet=etchDir2)
 
 numCycles = 4 #int(params["numCycles"])
 n = 0
@@ -69,29 +74,36 @@ geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
 geometry.saveVolumeMesh(f"boschProcessC_{n}")
 n += 1
 
-vps.Process(geometry, etchModel, params["etchTime"]).apply()
-geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
-geometry.saveVolumeMesh(f"boschProcessC_{n}")
-n += 1
-
-for i in range(numCycles):
-    # Deposit a layer of polymer
-    geometry.duplicateTopLevelSet(vps.Material.Polymer)
-    vps.Process(geometry, depoModel, 1.).apply()
+start_time = time.perf_counter()
+tot = 0
+while tot < params["etchTime"]:
+    vps.Process(geometry, etchModel, 1).apply()
     geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
     geometry.saveVolumeMesh(f"boschProcessC_{n}")
     n += 1
+    tot += 1
+end_time = time.perf_counter()
+elapsed_time = end_time - start_time
+print(f"Checking visited cells - execution time: {elapsed_time} seconds")
 
-    # Etch the trench
-    vps.Process(geometry, etchModel, params["etchTime"]).apply()
-    geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
-    geometry.saveVolumeMesh(f"boschProcessC_{n}")
-    n += 1
+# for i in range(numCycles):
+#     # Deposit a layer of polymer
+#     geometry.duplicateTopLevelSet(vps.Material.Polymer)
+#     vps.Process(geometry, depoModel, 1.).apply()
+#     geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
+#     geometry.saveVolumeMesh(f"boschProcessC_{n}")
+#     n += 1
 
-    # Ash the polymer
-    geometry.removeTopLevelSet()
-    geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
-    geometry.saveVolumeMesh(f"boschProcessC_{n}")
-    n += 1
+#     # Etch the trench
+#     vps.Process(geometry, etchModel, params["etchTime"]).apply()
+#     geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
+#     geometry.saveVolumeMesh(f"boschProcessC_{n}")
+#     n += 1
+
+#     # Ash the polymer
+#     geometry.removeTopLevelSet()
+#     geometry.saveSurfaceMesh("boschProcessC_{}".format(n))
+#     geometry.saveVolumeMesh(f"boschProcessC_{n}")
+#     n += 1
 
 geometry.saveVolumeMesh("finalC")

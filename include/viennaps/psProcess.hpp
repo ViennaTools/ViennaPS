@@ -480,13 +480,17 @@ public:
 
       // check if visibilities are used
       if (model->getVelocityField()->useVisibilities()) {
-        viennals::CalculateVisibilities<NumericType, D>(
-            domain->getLevelSets().back())
-            .apply();
-        auto visibilities = SmartPointer<std::vector<NumericType>>::New(
-            *domain->getLevelSets().back()->getPointData().getScalarData(
-                "Visibilities"));
-        model->getVelocityField()->setVisibilities(visibilities);
+        for (int rateSetID = 0; rateSetID < model->getVelocityField()->numRates(); ++rateSetID) {
+          if (model->getVelocityField()->useVisibilities(rateSetID)) {
+            viennals::CalculateVisibilities<NumericType, D>(
+                domain->getLevelSets().back(), model->getVelocityField()->getDirection(rateSetID))
+                .apply();
+            auto visibilities = SmartPointer<std::vector<NumericType>>::New(
+                *domain->getLevelSets().back()->getPointData().getScalarData(
+                    "Visibilities"));
+            model->getVelocityField()->setVisibilities(visibilities, rateSetID);
+          }
+        }
       }
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
