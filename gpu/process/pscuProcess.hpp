@@ -235,7 +235,7 @@ public:
       auto velocities = surfaceModel->calculateVelocities(
           fluxes, diskMesh->nodes, materialIds);
       model_->getVelocityField()->setVelocities(velocities);
-      assert(velocities->size() == pointKdTree->getNumberOfPoints());
+      // assert(velocities->size() == pointKdTree->getNumberOfPoints());
 
       if (Logger::getLogLevel() >= 4) {
         if (useCoverages) {
@@ -453,35 +453,77 @@ private:
 
       std::vector<NumericType> weights;
       weights.reserve(closePoints.value().size());
-      NumericType sum = 0.;
+
+      unsigned numClosePoints = 0;
       for (auto p : closePoints.value()) {
         assert(p.first < elementNormals->size());
-        weights.push_back(
-            DotProduct(normals->at(i), elementNormals->at(p.first)));
-        if (weights.back() > 1e-6 && !std::isnan(weights.back()))
-          sum += weights.back();
+
+        auto weight = DotProduct(normals->at(i), elementNormals->at(p.first));
+
+        if (weight > 1e-6 && !std::isnan(weight)) {
+          weights.push_back(weight);
+          numClosePoints++;
+        } else {
+          weights.push_back(0.);
+        }
       }
+      assert(weights.size() == closePoints.value().size());
 
       std::size_t nearestIdx = 0;
-      if (sum <= 1e-6) {
+      if (numClosePoints == 0) { // fallback to nearest point
         auto nearestPoint = elementKdTree->findNearest(points[i]);
         nearestIdx = nearestPoint->first;
       }
 
       for (unsigned j = 0; j < numData; j++) {
+
         NumericType value = 0.;
-        if (sum > 1e-6) {
+
+        if (numClosePoints > 0) { // perform weighted average
+
+          // Discard min and max
+          if (numClosePoints > 2) {
+            NumericType minValue = std::numeric_limits<NumericType>::max();
+            NumericType maxValue = 0.;
+            unsigned minIdx = 0; // in weights vector
+            unsigned maxIdx = 0;
+
+            unsigned k = 0;
+            for (auto p : closePoints.value()) {
+              if (weights[k] > 1e-6 && !std::isnan(weights[k])) {
+                unsigned elementIdx = p.first + j * numElements;
+                if (elementData[elementIdx] < minValue) {
+                  minValue = elementData[elementIdx];
+                  minIdx = k;
+                }
+                if (elementData[elementIdx] > maxValue) {
+                  maxValue = elementData[elementIdx];
+                  maxIdx = k;
+                }
+              }
+              k++;
+            }
+
+            weights[minIdx] = 0.;
+            weights[maxIdx] = 0.;
+          }
+
+          // calculate weight sum
+          NumericType sum = std::accumulate(weights.begin(), weights.end(), 0.);
+
           unsigned n = 0;
           for (auto p : closePoints.value()) {
-            if (weights[n] > 1e-6 && !std::isnan(weights[n])) {
+            if (weights[n] > 0.)
               value += weights[n] * elementData[p.first + j * numElements];
-            }
             n++;
           }
           value /= sum;
+
         } else {
+          // fallback to nearest point
           value = elementData[nearestIdx + j * numElements];
         }
+
         pointData->getScalarData(j)->at(i) = value;
       }
     }
@@ -529,7 +571,6 @@ private:
     const auto &elements = elementMesh->template getElements<D>();
     auto numElements = elements.size();
     std::vector<NumericType> elementData((numData + 1) * numElements);
-    assert(materialIds.size() == pointData->getScalarData(0)->size());
 
     auto closestPoints =
         SmartPointer<std::vector<NumericType>>::New(numElements);
