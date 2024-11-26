@@ -151,7 +151,7 @@ public:
             coverageTimeStep, gpc, evFlux, inFlux, stickingProbability, s0);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

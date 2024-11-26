@@ -195,7 +195,7 @@ public:
                  const NumericType pRateP2 = 0.,
                  const NumericType pOrderP2 = 0.) {
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New();
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
     this->setVelocityField(velField);
 
     if (pRateP2 == 0.) {

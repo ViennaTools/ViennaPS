@@ -14,7 +14,7 @@ using namespace viennacore;
 namespace impl {
 
 template <class NumericType, int D>
-class IsotropicVelocityField : public VelocityField<NumericType> {
+class IsotropicVelocityField : public VelocityField<NumericType, D> {
   const NumericType rate_ = 1.;
   const std::vector<int> maskMaterials_;
 

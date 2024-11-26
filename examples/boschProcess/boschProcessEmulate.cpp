@@ -9,12 +9,16 @@ namespace ps = viennaps;
 template <class NumericType, int D>
 void etch(ps::SmartPointer<ps::Domain<NumericType, D>> domain,
           ps::utils::Parameters &params) {
-  ps::Vec3D<NumericType> direction = {0.};
-  direction[D - 1] = -1.;
+  typename ps::DirectionalEtching<NumericType, D>::RateSet rateSet;
+  rateSet.direction = {0.};
+  rateSet.direction[D - 1] = -1.;
+  rateSet.directionalVelocity = params.get("ionRate");
+  rateSet.isotropicVelocity = params.get("neutralRate");
+  rateSet.maskMaterials =
+      std::vector<ps::Material>{ps::Material::Mask, ps::Material::Polymer};
+
   auto etchModel =
-      ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(
-          direction, params.get("ionRate"), params.get("neutralRate"),
-          std::vector<ps::Material>{ps::Material::Mask, ps::Material::Polymer});
+      ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(rateSet);
   ps::Process<NumericType, D>(domain, etchModel, params.get("etchTime"))
       .apply();
 }
@@ -22,15 +26,17 @@ void etch(ps::SmartPointer<ps::Domain<NumericType, D>> domain,
 template <class NumericType, int D>
 void punchThrough(ps::SmartPointer<ps::Domain<NumericType, D>> domain,
                   ps::utils::Parameters &params) {
-  ps::Vec3D<NumericType> direction = {0.};
-  direction[D - 1] = -1.;
+  typename ps::DirectionalEtching<NumericType, D>::RateSet rateSet;
+  rateSet.direction = {0.};
+  rateSet.direction[D - 1] = -1.;
+  rateSet.directionalVelocity =
+      params.get("depositionThickness") + params.get("gridDelta") / 2.;
+  rateSet.isotropicVelocity = 0.;
+  rateSet.maskMaterials = std::vector<ps::Material>{ps::Material::Mask};
 
   // punch through step
   auto depoRemoval =
-      ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(
-          direction,
-          params.get("depositionThickness") + params.get("gridDelta") / 2., 0.0,
-          ps::Material::Mask);
+      ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(rateSet);
   ps::Process<NumericType, D>(domain, depoRemoval, 1.).apply();
 }
 

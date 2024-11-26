@@ -12,7 +12,7 @@ using namespace viennacore;
 namespace impl {
 
 template <class NumericType, int D>
-class AnisotropicVelocityField : public VelocityField<NumericType> {
+class AnisotropicVelocityField : public VelocityField<NumericType, D> {
   static Vec3D<NumericType> ScaleImpl(const NumericType pF,
                                       const Vec3D<NumericType> &pT) {
     return {pF * pT[0], pF * pT[1], pF * pT[2]};

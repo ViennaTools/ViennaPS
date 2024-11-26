@@ -275,7 +275,7 @@ public:
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = SmartPointer<TranslationField<NumericType>>::New(
+    auto transField = SmartPointer<TranslationField<NumericType, D>>::New(
         model->getVelocityField(), domain->getMaterialMap());
     transField->setTranslator(translator);
 
@@ -478,21 +478,6 @@ public:
         throw pybind11::error_already_set();
 #endif
 
-      // check if visibilities are used
-      if (model->getVelocityField()->useVisibilities()) {
-        for (int rateSetID = 0; rateSetID < model->getVelocityField()->numRates(); ++rateSetID) {
-          if (model->getVelocityField()->useVisibilities(rateSetID)) {
-            viennals::CalculateVisibilities<NumericType, D>(
-                domain->getLevelSets().back(), model->getVelocityField()->getDirection(rateSetID))
-                .apply();
-            auto visibilities = SmartPointer<std::vector<NumericType>>::New(
-                *domain->getLevelSets().back()->getPointData().getScalarData(
-                    "Visibilities"));
-            model->getVelocityField()->setVisibilities(visibilities, rateSetID);
-          }
-        }
-      }
-
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
@@ -568,7 +553,10 @@ public:
       // get velocities from rates
       auto velocities = model->getSurfaceModel()->calculateVelocities(
           rates, points, materialIds);
-      model->getVelocityField()->setVelocities(velocities);
+
+      // prepare velocity field
+      model->getVelocityField()->prepare(domain, velocities,
+                                         processDuration - remainingTime);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 
@@ -626,7 +614,7 @@ public:
         advectionKernel.setAdvectionTime(remainingTime);
       }
 
-      // move coverages to LS, so they get are moved with the advection step
+      // move coverages to LS, so they are moved with the advection step
       if (useCoverages)
         moveCoveragesToTopLS(translator,
                              model->getSurfaceModel()->getCoverages());
