@@ -477,6 +477,8 @@ public:
       if (PyErr_CheckSignals() != 0)
         throw pybind11::error_already_set();
 #endif
+      // Expand LS based on the integration scheme
+      advectionKernel.prepareLS();
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();
