@@ -447,9 +447,9 @@ protected:
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
-    OPTIX_CHECK(optixModuleCreateFromPTX(
-        optixContext, &moduleCompileOptions, &pipelineCompileOptions,
-        ptxCode.c_str(), ptxCode.size(), log, &sizeof_log, &module));
+    OPTIX_CHECK(optixModuleCreate(optixContext, &moduleCompileOptions,
+                                  &pipelineCompileOptions, ptxCode.c_str(),
+                                  ptxCode.size(), log, &sizeof_log, &module));
     // if (sizeof_log > 1)
     //   PRINT(log);
   }
