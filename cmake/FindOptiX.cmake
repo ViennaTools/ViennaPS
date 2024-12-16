@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: Copyright (c) 2010 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
@@ -45,17 +45,15 @@ else()
 endif()
 
 # Include
-find_path(OptiX_INCLUDE
+find_path(
+  OptiX_INCLUDE
   NAMES optix.h
   PATHS "${OptiX_INSTALL_DIR}/include"
-  NO_DEFAULT_PATH
-  )
-find_path(OptiX_INCLUDE
-  NAMES optix.h
-  )
+  NO_DEFAULT_PATH)
+find_path(OptiX_INCLUDE NAMES optix.h)
 
 # Check to make sure we found what we were looking for
-function(OptiX_report_error error_message required component )
+function(OptiX_report_error error_message required component)
   if(DEFINED OptiX_FIND_REQUIRED_${component} AND NOT OptiX_FIND_REQUIRED_${component})
     set(required FALSE)
   endif()
@@ -69,8 +67,7 @@ function(OptiX_report_error error_message required component )
 endfunction()
 
 if(NOT OptiX_INCLUDE)
-  OptiX_report_error("OptiX headers (optix.h and friends) not found." TRUE headers )
+  optix_report_error("OptiX headers (optix.h and friends) not found." TRUE headers)
 else()
   message(STATUS "Found OptiX headers: ${OptiX_INCLUDE}")
 endif()
-

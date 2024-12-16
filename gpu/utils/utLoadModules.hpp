@@ -1,19 +1,35 @@
+#pragma once
+
 #include <fstream>
 #include <map>
 #include <string>
 #include <vector>
 
+namespace viennaps {
+
+namespace gpu {
+
 struct SourceCache {
-  std::map<std::string, std::string *> map;
+  using CacheType = std::map<std::string, std::string *>;
+  CacheType map;
+
   ~SourceCache() {
-    for (std::map<std::string, std::string *>::const_iterator it = map.begin();
-         it != map.end(); ++it)
+    for (CacheType::const_iterator it = map.begin(); it != map.end(); ++it)
       delete it->second;
   }
 };
 static SourceCache g_sourceCache;
 
-static bool readSourceFile(std::string &str, const std::string &filename) {
+inline bool fileExists(const char *path) {
+  std::ifstream str(path);
+  return static_cast<bool>(str);
+}
+
+inline bool fileExists(const std::string &path) {
+  return fileExists(path.c_str());
+}
+
+inline bool readSourceFile(std::string &str, const std::string &filename) {
   // Try to open file
   std::ifstream file(filename.c_str(), std::ios::binary);
   if (file.good()) {
@@ -26,7 +42,7 @@ static bool readSourceFile(std::string &str, const std::string &filename) {
   return false;
 }
 
-static void getInputDataFromFile(std::string &inputData, const char *filename) {
+inline void getInputDataFromFile(std::string &inputData, const char *filename) {
 
   const std::string sourceFilePath = filename;
 
@@ -37,16 +53,11 @@ static void getInputDataFromFile(std::string &inputData, const char *filename) {
   }
 }
 
-const char *getInputData(const char *filename, size_t &dataSize,
-                         const char **log,
-                         const std::vector<const char *> &compilerOptions) {
-  if (log)
-    *log = NULL;
+const char *getInputData(const char *filename, size_t &dataSize) {
 
-  std::string *inputData, cu;
+  std::string *inputData;
   std::string key = std::string(filename);
-  std::map<std::string, std::string *>::iterator elem =
-      g_sourceCache.map.find(key);
+  typename SourceCache::CacheType::iterator elem = g_sourceCache.map.find(key);
 
   if (elem == g_sourceCache.map.end()) {
     inputData = new std::string();
@@ -56,6 +67,10 @@ const char *getInputData(const char *filename, size_t &dataSize,
   } else {
     inputData = elem->second;
   }
+
   dataSize = inputData->size();
   return inputData->c_str();
 }
+
+} // namespace gpu
+} // namespace viennaps

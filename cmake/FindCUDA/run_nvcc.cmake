@@ -85,7 +85,8 @@ set(CUDA_NVCC_EXECUTABLE "@CUDA_NVCC_EXECUTABLE@") # path
 set(CUDA_NVCC_FLAGS @CUDA_NVCC_FLAGS@ ;; @CUDA_WRAP_OPTION_NVCC_FLAGS@) # list
 @CUDA_NVCC_FLAGS_CONFIG@
 set(nvcc_flags @nvcc_flags@) # list
-set(CUDA_NVCC_INCLUDE_ARGS "@CUDA_NVCC_INCLUDE_ARGS@") # list (needs to be in quotes to handle spaces properly).
+set(CUDA_NVCC_INCLUDE_ARGS "@CUDA_NVCC_INCLUDE_ARGS@"
+)# list (needs to be in quotes to handle spaces properly).
 set(format_flag "@format_flag@") # string
 set(cuda_language_flag @cuda_language_flag@) # list
 
@@ -107,27 +108,27 @@ string(TOUPPER "${build_configuration}" build_configuration)
 #message("CUDA_NVCC_HOST_COMPILER_FLAGS = ${CUDA_NVCC_HOST_COMPILER_FLAGS}")
 foreach(flag ${CMAKE_HOST_FLAGS} ${CMAKE_HOST_FLAGS_${build_configuration}})
   # Extra quotes are added around each flag to help nvcc parse out flags with spaces.
-  if ("${nvcc_host_compiler_flags}" STREQUAL "")
+  if("${nvcc_host_compiler_flags}" STREQUAL "")
     set(nvcc_host_compiler_flags "\"${flag}\"")
   else()
     set(nvcc_host_compiler_flags "${nvcc_host_compiler_flags},\"${flag}\"")
   endif()
 endforeach()
-if (nvcc_host_compiler_flags)
+if(nvcc_host_compiler_flags)
   set(nvcc_host_compiler_flags "-Xcompiler" ${nvcc_host_compiler_flags})
 endif()
 #message("nvcc_host_compiler_flags = \"${nvcc_host_compiler_flags}\"")
 
 set(depends_nvcc_host_compiler_flags "")
-foreach(flag ${CMAKE_HOST_FLAGS} )
+foreach(flag ${CMAKE_HOST_FLAGS})
   # Extra quotes are added around each flag to help nvcc parse out flags with spaces.
-  if ("${depends_nvcc_host_compiler_flags}" STREQUAL "")
+  if("${depends_nvcc_host_compiler_flags}" STREQUAL "")
     set(depends_nvcc_host_compiler_flags "\"${flag}\"")
   else()
     set(depends_nvcc_host_compiler_flags "${depends_nvcc_host_compiler_flags},\"${flag}\"")
   endif()
 endforeach()
-if (depends_nvcc_host_compiler_flags)
+if(depends_nvcc_host_compiler_flags)
   set(depends_nvcc_host_compiler_flags "-Xcompiler" ${depends_nvcc_host_compiler_flags})
 endif()
 
@@ -136,10 +137,12 @@ list(APPEND depends_CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
 list(APPEND CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS_${build_configuration}})
 
 # Any -ccbin existing in CUDA_NVCC_FLAGS gets highest priority
-list( FIND CUDA_NVCC_FLAGS "-ccbin" ccbin_found0 )
-list( FIND CUDA_NVCC_FLAGS "--compiler-bindir" ccbin_found1 )
-if( ccbin_found0 LESS 0 AND ccbin_found1 LESS 0 AND CUDA_HOST_COMPILER )
-  if (CUDA_HOST_COMPILER STREQUAL "@_CUDA_MSVC_HOST_COMPILER@" AND DEFINED CCBIN)
+list(FIND CUDA_NVCC_FLAGS "-ccbin" ccbin_found0)
+list(FIND CUDA_NVCC_FLAGS "--compiler-bindir" ccbin_found1)
+if(ccbin_found0 LESS 0
+   AND ccbin_found1 LESS 0
+   AND CUDA_HOST_COMPILER)
+  if(CUDA_HOST_COMPILER STREQUAL "@_CUDA_MSVC_HOST_COMPILER@" AND DEFINED CCBIN)
     set(CCBIN -ccbin "${CCBIN}")
   else()
     set(CCBIN -ccbin "${CUDA_HOST_COMPILER}")
@@ -159,7 +162,10 @@ endif()
 macro(cuda_execute_process status command)
   set(_command ${command})
   if(NOT "x${_command}" STREQUAL "xCOMMAND")
-    message(FATAL_ERROR "Malformed call to cuda_execute_process.  Missing COMMAND as second argument. (command = ${command})")
+    message(
+      FATAL_ERROR
+        "Malformed call to cuda_execute_process.  Missing COMMAND as second argument. (command = ${command})"
+    )
   endif()
   # ARGN isn't like a normal variable in macros, so use a proxy variable that we can use instead.
   set(_arguments ${ARGN})
@@ -188,7 +194,7 @@ macro(cuda_execute_process status command)
     execute_process(COMMAND ${CMAKE_COMMAND} -E echo ${cuda_execute_process_string})
   endif()
   # Run the command
-  execute_process(COMMAND ${_arguments} RESULT_VARIABLE CUDA_result )
+  execute_process(COMMAND ${_arguments} RESULT_VARIABLE CUDA_result)
 endmacro()
 
 # For CUDA 2.3 and below, -G -M doesn't work, so remove the -G flag
@@ -215,14 +221,13 @@ list(REMOVE_ITEM depends_CUDA_NVCC_FLAGS "--device-c")
 # define this for now until a future version fixes this bug.
 set(CUDACC_DEFINE -D__CUDACC__)
 
-
-if (check_dependencies)
+if(check_dependencies)
   set(rebuild FALSE)
   include(${cmake_dependency_file})
   if(NOT CUDA_NVCC_DEPEND)
     # CUDA_NVCC_DEPEND should have something useful in it by now.  If not we
     # should force the rebuild.
-    if (verbose)
+    if(verbose)
       message(WARNING "CUDA_NVCC_DEPEND not found for ${generated_file}")
     endif()
     set(rebuild TRUE)
@@ -240,32 +245,30 @@ if (check_dependencies)
       set(rebuild TRUE)
     endif()
   endforeach()
-  if (NOT rebuild)
+  if(NOT rebuild)
     #message("Not rebuilding ${generated_file}")
-    cuda_execute_process(
-      "Dependencies up to date.  Not rebuilding ${generated_file}"
-      COMMAND "${CMAKE_COMMAND}" -E touch "${generated_file}"
-      )
+    cuda_execute_process("Dependencies up to date.  Not rebuilding ${generated_file}" COMMAND
+                         "${CMAKE_COMMAND}" -E touch "${generated_file}")
     return()
   endif()
 endif()
 
-
 # Generate the dependency file
 cuda_execute_process(
   "Generating dependency file: ${NVCC_generated_dependency_file}"
-  COMMAND "${CUDA_NVCC_EXECUTABLE}"
+  COMMAND
+  "${CUDA_NVCC_EXECUTABLE}"
   -M
   ${CUDACC_DEFINE}
   "${source_file}"
-  -o "${NVCC_generated_dependency_file}"
+  -o
+  "${NVCC_generated_dependency_file}"
   ${CCBIN}
   ${nvcc_flags}
   ${depends_nvcc_host_compiler_flags}
   ${depends_CUDA_NVCC_FLAGS}
   -DNVCC
-  ${CUDA_NVCC_INCLUDE_ARGS}
-  )
+  ${CUDA_NVCC_INCLUDE_ARGS})
 
 if(CUDA_result)
   message(FATAL_ERROR "Error generating ${generated_file}")
@@ -276,11 +279,14 @@ endif()
 # CMake will pass the quotes through and not be able to find the file.
 cuda_execute_process(
   "Generating temporary cmake readable file: ${cmake_dependency_file}.tmp"
-  COMMAND "${CMAKE_COMMAND}"
-  -D "input_file:FILEPATH=${NVCC_generated_dependency_file}"
-  -D "output_file:FILEPATH=${cmake_dependency_file}.tmp"
-  -P "${CUDA_make2cmake}"
-  )
+  COMMAND
+  "${CMAKE_COMMAND}"
+  -D
+  "input_file:FILEPATH=${NVCC_generated_dependency_file}"
+  -D
+  "output_file:FILEPATH=${cmake_dependency_file}.tmp"
+  -P
+  "${CUDA_make2cmake}")
 
 if(CUDA_result)
   message(FATAL_ERROR "Error generating ${generated_file}")
@@ -289,66 +295,91 @@ endif()
 # Copy the file if it is different
 cuda_execute_process(
   "Copy if different ${cmake_dependency_file}.tmp to ${cmake_dependency_file}"
-  COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${cmake_dependency_file}.tmp" "${cmake_dependency_file}"
-  )
+  COMMAND
+  "${CMAKE_COMMAND}"
+  -E
+  copy_if_different
+  "${cmake_dependency_file}.tmp"
+  "${cmake_dependency_file}")
 
 if(CUDA_result)
   message(FATAL_ERROR "Error generating ${generated_file}")
 endif()
 
 # Delete the temporary file
-cuda_execute_process(
-  "Removing ${cmake_dependency_file}.tmp"
-  COMMAND "${CMAKE_COMMAND}" -E remove "${cmake_dependency_file}.tmp"
-  )
+cuda_execute_process("Removing ${cmake_dependency_file}.tmp" COMMAND "${CMAKE_COMMAND}" -E remove
+                     "${cmake_dependency_file}.tmp")
 
 if(CUDA_result)
   message(FATAL_ERROR "Error generating ${generated_file}")
 endif()
 
-if (generate_dependency_only)
+if(generate_dependency_only)
   return()
 endif()
-
 
 if(CUDA_REMOVE_GLOBAL_MEMORY_SPACE_WARNING)
   set(get_error ERROR_VARIABLE stderr)
 endif()
 
 # Delete the target file
-cuda_execute_process(
-  "Removing ${generated_file}"
-  COMMAND "${CMAKE_COMMAND}" -E remove "${generated_file}"
-  )
+cuda_execute_process("Removing ${generated_file}" COMMAND "${CMAKE_COMMAND}" -E remove
+                     "${generated_file}")
 
 # Generate the code
 cuda_execute_process(
   "Generating ${generated_file}"
-  COMMAND "${CUDA_NVCC_EXECUTABLE}"
+  COMMAND
+  "${CUDA_NVCC_EXECUTABLE}"
   "${source_file}"
   ${cuda_language_flag}
-  ${format_flag} -o "${generated_file}"
+  ${format_flag}
+  -o
+  "${generated_file}"
   ${CCBIN}
   ${nvcc_flags}
   ${nvcc_host_compiler_flags}
   ${CUDA_NVCC_FLAGS}
   -DNVCC
   ${CUDA_NVCC_INCLUDE_ARGS}
-  ${get_error}
-  )
+  ${get_error})
 
 if(get_error)
   if(stderr)
     # Filter out the annoying Advisory about pointer stuff.
     # Advisory: Cannot tell what pointer points to, assuming global memory space
-    string(REGEX REPLACE "(^|\n)[^\n]*\(Advisory|Warning\): Cannot tell what pointer points to, assuming global memory space\n\n" "\\1" stderr "${stderr}")
+    string(
+      REGEX
+      REPLACE
+        "(^|\n)[^\n]*\(Advisory|Warning\): Cannot tell what pointer points to, assuming global memory space\n\n"
+        "\\1"
+        stderr
+        "${stderr}")
 
     # Filter out warning we do not care about
-    string(REGEX REPLACE "(^|\n)[^\n]*: Warning: Function [^\n]* has a large return size, so overriding noinline attribute. The function may be inlined when called.\n\n" "\\1" stderr "${stderr}")
+    string(
+      REGEX
+      REPLACE
+        "(^|\n)[^\n]*: Warning: Function [^\n]* has a large return size, so overriding noinline attribute. The function may be inlined when called.\n\n"
+        "\\1"
+        stderr
+        "${stderr}")
 
     # To be investigated (OP-1999)
-    string(REGEX REPLACE "(^|\n)[^\n]*: warning: function [^\n]*\n[^\n]*: here was declared deprecated \(.[^\n]* is not valid on compute_70 and above, and should be replaced with [^\n]*.To continue using [^\n]*, specify virtual architecture compute_60 when targeting sm_70 and above, for example, using the pair of compiler options.[^\n]*..\)\n( *detected during instantiation of [^\n]*\n[^\n]*: here\n)?( *detected during:\n( *instantiation of [^\n]*\n[^\n]*: here\n([^\n]*instantiation contexts not shown[^\n]*\n)?)+)?\n" "\\1" stderr "${stderr}")
-    string(REGEX REPLACE "(^|\n)[^\n]*: warning: function [^\n]*\n[^\n]*: here was declared deprecated \(.[^\n]* is deprecated in favor of [^\n]* and may be removed in a future release [^\n]*\)\n( *detected during instantiation of [^\n]*\n[^\n]*: here\n)?( *detected during:\n( *instantiation of [^\n]*\n[^\n]*: here\n([^\n]*instantiation contexts not shown[^\n]*\n)?)+)?\n" "\\1" stderr "${stderr}")
+    string(
+      REGEX
+      REPLACE
+        "(^|\n)[^\n]*: warning: function [^\n]*\n[^\n]*: here was declared deprecated \(.[^\n]* is not valid on compute_70 and above, and should be replaced with [^\n]*.To continue using [^\n]*, specify virtual architecture compute_60 when targeting sm_70 and above, for example, using the pair of compiler options.[^\n]*..\)\n( *detected during instantiation of [^\n]*\n[^\n]*: here\n)?( *detected during:\n( *instantiation of [^\n]*\n[^\n]*: here\n([^\n]*instantiation contexts not shown[^\n]*\n)?)+)?\n"
+        "\\1"
+        stderr
+        "${stderr}")
+    string(
+      REGEX
+      REPLACE
+        "(^|\n)[^\n]*: warning: function [^\n]*\n[^\n]*: here was declared deprecated \(.[^\n]* is deprecated in favor of [^\n]* and may be removed in a future release [^\n]*\)\n( *detected during instantiation of [^\n]*\n[^\n]*: here\n)?( *detected during:\n( *instantiation of [^\n]*\n[^\n]*: here\n([^\n]*instantiation contexts not shown[^\n]*\n)?)+)?\n"
+        "\\1"
+        stderr
+        "${stderr}")
 
     # If there is error output, there is usually a stray newline at the end. Eliminate it if it is the only content of ${stderr}.
     string(REGEX REPLACE "^\n$" "" stderr "${stderr}")
@@ -361,10 +392,8 @@ endif()
 
 if(CUDA_result)
   # Since nvcc can sometimes leave half done files make sure that we delete the output file.
-  cuda_execute_process(
-    "Removing ${generated_file}"
-    COMMAND "${CMAKE_COMMAND}" -E remove "${generated_file}"
-    )
+  cuda_execute_process("Removing ${generated_file}" COMMAND "${CMAKE_COMMAND}" -E remove
+                       "${generated_file}")
   message(FATAL_ERROR "Error generating file ${generated_file}")
 else()
   if(verbose)
@@ -373,11 +402,12 @@ else()
 endif()
 
 # Cubin resource report commands.
-if( build_cubin )
+if(build_cubin)
   # Run with -cubin to produce resource usage report.
   cuda_execute_process(
     "Generating ${generated_cubin_file}"
-    COMMAND "${CUDA_NVCC_EXECUTABLE}"
+    COMMAND
+    "${CUDA_NVCC_EXECUTABLE}"
     "${source_file}"
     ${CUDA_NVCC_FLAGS}
     ${nvcc_flags}
@@ -385,16 +415,18 @@ if( build_cubin )
     ${nvcc_host_compiler_flags}
     -DNVCC
     -cubin
-    -o "${generated_cubin_file}"
-    ${CUDA_NVCC_INCLUDE_ARGS}
-    )
+    -o
+    "${generated_cubin_file}"
+    ${CUDA_NVCC_INCLUDE_ARGS})
 
   # Execute the parser script.
   cuda_execute_process(
     "Executing the parser script"
-    COMMAND  "${CMAKE_COMMAND}"
-    -D "input_file:STRING=${generated_cubin_file}"
-    -P "${CUDA_parse_cubin}"
-    )
+    COMMAND
+    "${CMAKE_COMMAND}"
+    -D
+    "input_file:STRING=${generated_cubin_file}"
+    -P
+    "${CUDA_parse_cubin}")
 
 endif()

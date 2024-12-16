@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include <curtChecks.hpp>
+
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
@@ -22,6 +24,7 @@ namespace gpu {
 struct Context_t {
   CUmodule getModule(const std::string &moduleName);
 
+  const std::string modulePath;
   std::vector<std::string> moduleNames;
   std::vector<CUmodule> modules;
 };
@@ -46,9 +49,9 @@ CUmodule Context_t::getModule(const std::string &moduleName) {
   return modules[idx];
 }
 
-void CreateContext(Context &context) {
+void CreateContext(Context &context, std::string modulePath = "lib/ptx/") {
   // initialize cuda
-  cudaFree(0);
+  CUDA_CHECK(Free(0));
   int numDevices;
   cudaGetDeviceCount(&numDevices);
   if (numDevices == 0) {
@@ -58,9 +61,9 @@ void CreateContext(Context &context) {
   }
 
   // init optix
-  optixInit();
+  OPTIX_CHECK(optixInit());
 
-  context = new Context_t;
+  context = new Context_t{.modulePath = modulePath};
 
   CUmodule normModule;
   // CUmodule transModule;
@@ -73,15 +76,17 @@ void CreateContext(Context &context) {
   if (err != CUDA_SUCCESS)
     viennacore::Logger::getInstance().addModuleError("cuInit", err).print();
 
-  std::string normModuleName = "normKernels.ptx";
-  err = cuModuleLoad(&normModule, normModuleName.c_str());
+  std::string normModuleName = "normKernels";
+  err = cuModuleLoad(&normModule, (context->modulePath + "custom_generated_" +
+                                   normModuleName + ".cu.ptx")
+                                      .c_str());
   if (err != CUDA_SUCCESS)
     viennacore::Logger::getInstance()
         .addModuleError(normModuleName, err)
         .print();
 
-  context->moduleNames.push_back(normModuleName);
-  context->modules.push_back(normModule);
+  // context->moduleNames.push_back(normModuleName);
+  // context->modules.push_back(normModule);
 
   // std::string transModuleName = "translateKernels.ptx";
   // err = cuModuleLoad(&transModule, transModuleName.c_str());

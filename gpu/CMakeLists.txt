@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: Copyright (c) 2019 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
@@ -60,22 +60,25 @@ find_package(OptiX REQUIRED)
 
 if(CUDA_VERSION VERSION_LESS 11.7)
   if(VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT)
-    message(SEND_ERROR "VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT is not supported in CUDA versions less than 11.7" )
+    message(
+      SEND_ERROR
+        "VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT is not supported in CUDA versions less than 11.7")
   else()
-    option(VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT "Enable support for generating OptiX-IR targeted input files" OFF )
+    option(VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT
+           "Enable support for generating OptiX-IR targeted input files" OFF)
   endif()
 else()
-  option(VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT "Enable support for generating OptiX-IR targeted input files" ON )
+  option(VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT
+         "Enable support for generating OptiX-IR targeted input files" ON)
 endif()
 
-if( VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT )
-  option( VIENNAPS_INPUT_GENERATE_OPTIXIR "Generate Optix-IR OptiX shaders" ON )
-  option( VIENNAPS_INPUT_GENERATE_PTX "Generate PTX OptiX shaders" OFF )
+if(VIENNAPS_INPUT_ENABLE_OPTIXIR_SUPPORT)
+  option(VIENNAPS_INPUT_GENERATE_OPTIXIR "Generate Optix-IR OptiX shaders" ON)
+  option(VIENNAPS_INPUT_GENERATE_PTX "Generate PTX OptiX shaders" OFF)
 else()
-  option( VIENNAPS_INPUT_GENERATE_OPTIXIR "Generate Optix-IR OptiX shaders" OFF )
-  option( VIENNAPS_INPUT_GENERATE_PTX "Generate PTX OptiX shaders" ON )
+  option(VIENNAPS_INPUT_GENERATE_OPTIXIR "Generate Optix-IR OptiX shaders" OFF)
+  option(VIENNAPS_INPUT_GENERATE_PTX "Generate PTX OptiX shaders" ON)
 endif()
-
 
 # Add the path to the OptiX headers to our include paths.
 include_directories("${OptiX_INCLUDE}")
@@ -83,11 +86,14 @@ include_directories("${OptiX_INCLUDE}")
 # Also ViennaPS headers
 set(VIENNAPS_GPU_INCLUDE_DIRS #
     ${CMAKE_SOURCE_DIR}/app
-    ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/geometry ${PROJECT_SOURCE_DIR}/process
-    ${PROJECT_SOURCE_DIR}/rayTracing ${PROJECT_SOURCE_DIR}/utils ${PROJECT_SOURCE_DIR}/app
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/geometry
+    ${PROJECT_SOURCE_DIR}/process
+    ${PROJECT_SOURCE_DIR}/rayTracing
+    ${PROJECT_SOURCE_DIR}/utils
+    ${PROJECT_SOURCE_DIR}/app
     ${PROJECT_SOURCE_DIR}/models
-    ${ViennaCore_SOURCE_DIR}/include/viennacore
-    )
+    ${ViennaCore_SOURCE_DIR}/include/viennacore)
 include_directories(${VIENNAPS_GPU_INCLUDE_DIRS})
 
 ####
@@ -95,37 +101,41 @@ include_directories(${VIENNAPS_GPU_INCLUDE_DIRS})
 set(VIENNAPS_PTX_DIR "${CMAKE_BINARY_DIR}/lib/ptx")
 set(CUDA_GENERATED_OUTPUT_DIR ${VIENNAPS_PTX_DIR})
 
-if( WIN32 )
+if(WIN32)
   string(REPLACE "/" "\\\\" VIENNAPS_PTX_DIR ${VIENNAPS_PTX_DIR})
-else( WIN32 )
-  if( USING_GNU_C AND NOT APPLE )
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DM_PI=3.14159265358979323846" )
+else(WIN32)
+  if(USING_GNU_C AND NOT APPLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DM_PI=3.14159265358979323846")
   endif()
-endif( WIN32 )
+endif(WIN32)
 
 # Present the CUDA_64_BIT_DEVICE_CODE on the default set of options.
 mark_as_advanced(CLEAR CUDA_64_BIT_DEVICE_CODE)
 
-set(CUDA_MIN_SM_TARGET sm_50 CACHE STRING "Minimum CUDA SM architecture to use for compilation.")
+set(CUDA_MIN_SM_TARGET
+    sm_50
+    CACHE STRING "Minimum CUDA SM architecture to use for compilation.")
 
 macro(optix_add_cuda_flag_config config flag)
   string(TOUPPER "${config}" config)
   list(FIND CUDA_NVCC_FLAGS${config} ${flag} index)
   if(index EQUAL -1)
     list(APPEND CUDA_NVCC_FLAGS${config} ${flag})
-    set(CUDA_NVCC_FLAGS${config} ${CUDA_NVCC_FLAGS${config}} CACHE STRING ${CUDA_NVCC_FLAGS_DESCRIPTION} FORCE)
+    set(CUDA_NVCC_FLAGS${config}
+        ${CUDA_NVCC_FLAGS${config}}
+        CACHE STRING ${CUDA_NVCC_FLAGS_DESCRIPTION} FORCE)
   endif()
 endmacro()
 
 macro(optix_add_cuda_flag flag)
-  optix_add_cuda_flag_config( "" ${flag} )
+  optix_add_cuda_flag_config("" ${flag})
 endmacro()
 
 # Add some useful default arguments to the NVCC and NVRTC flags.  This is an example of
 # how we use PASSED_FIRST_CONFIGURE.  Once you have configured, this variable is TRUE
 # and following block of code will not be executed leaving you free to edit the values
 # as much as you wish from the GUI or from ccmake.
-if( NOT PASSED_FIRST_CONFIGURE )
+if(NOT PASSED_FIRST_CONFIGURE)
   message(STATUS "Setting default NVCC flags for first time configuration.")
 
   set(CUDA_NVCC_FLAGS_DESCRIPTION "Semi-colon delimit multiple arguments.")
@@ -134,7 +144,9 @@ if( NOT PASSED_FIRST_CONFIGURE )
   list(FIND CUDA_NVCC_FLAGS "-arch" index)
   if(index EQUAL -1)
     list(APPEND CUDA_NVCC_FLAGS -arch ${CUDA_MIN_SM_TARGET})
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
+    set(CUDA_NVCC_FLAGS
+        ${CUDA_NVCC_FLAGS}
+        CACHE STRING "Semi-colon delimit multiple arguments." FORCE)
   endif()
 
   optix_add_cuda_flag("--use_fast_math")
@@ -144,20 +156,20 @@ if( NOT PASSED_FIRST_CONFIGURE )
   # CMAKE_CONFIGURATION_TYPES is only defined for multi-config build systems like
   # MSVC and Ninja, but we need to generate flags for each configuration
   # regardless.
-  if( DEFINED CMAKE_CONFIGURATION_TYPES )
-    set( OPTIX_CONFIGURATION_TYPES ${CMAKE_CONFIGURATION_TYPES} )
+  if(DEFINED CMAKE_CONFIGURATION_TYPES)
+    set(OPTIX_CONFIGURATION_TYPES ${CMAKE_CONFIGURATION_TYPES})
   else()
-    set( OPTIX_CONFIGURATION_TYPES "Debug" "Release" "RelWithDebInfo" "MinSizeRel" )
+    set(OPTIX_CONFIGURATION_TYPES "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
   endif()
 
-  foreach( config ${OPTIX_CONFIGURATION_TYPES} )
-    if( ${config} STREQUAL "Debug" )
-      optix_add_cuda_flag_config( _${config} "-G" )
-      optix_add_cuda_flag_config( _${config} "-O0" )
+  foreach(config ${OPTIX_CONFIGURATION_TYPES})
+    if(${config} STREQUAL "Debug")
+      optix_add_cuda_flag_config(_${config} "-G")
+      optix_add_cuda_flag_config(_${config} "-O0")
     endif()
   endforeach()
 
-  if( CUDA_VERSION VERSION_LESS "3.0" )
+  if(CUDA_VERSION VERSION_LESS "3.0")
     optix_add_cuda_flag("--keep")
   endif()
 
@@ -175,62 +187,92 @@ message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
 set(VIENNAPS_CUDA_KERNELS ${PROJECT_SOURCE_DIR}/deviceKernels/normKernels.cu)
 
+# Mark all pipeline files as Optix files
+file(GLOB OPTIX_FILES "pipelines/*.cu")
+foreach(FILE ${OPTIX_FILES})
+  set_source_files_properties(${FILE} PROPERTIES LABELS "OPTIX")
+endforeach()
+
 # In CMake, functions have their own scope, whereas macros use the scope of the caller.
 macro(add_GPU_executable target_name_base target_name_var)
 
-  set( target_name ${target_name_base} )
-  set( ${target_name_var} ${target_name} PARENT_SCOPE )
+  set(target_name ${target_name_base})
+  set(${target_name_var}
+      ${target_name}
+      PARENT_SCOPE)
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the
   # code here, so that we can use our own name for the target.  target_name is used in the
   # creation of the output file names, and we want this to be unique for each target in
   # the SDK.
-  CUDA_GET_SOURCES_AND_OPTIONS(source_files cmake_options options ${ARGN})
+  cuda_get_sources_and_options(source_files cmake_options options ${ARGN})
 
   # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
   set(cu_obj_source_files)
   set(cu_optix_source_files)
   foreach(file ${source_files})
-    get_source_file_property(_cuda_source_format ${file} CUDA_SOURCE_PROPERTY_FORMAT)
-    if(${_cuda_source_format} MATCHES "CU")
-      list(APPEND cu_obj_source_files ${file})
-    else()
+    get_filename_component(_file_extension ${file} EXT)
+    if(${_file_extension} MATCHES "cu")
       list(APPEND cu_optix_source_files ${file})
     endif()
   endforeach()
 
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
-  CUDA_WRAP_SRCS( ${target_name} PTX generated_files ${VIENNAPS_CUDA_KERNELS} ${cmake_options} OPTIONS ${options} )
+  cuda_wrap_srcs(
+    ${target_name}
+    PTX
+    generated_files
+    ${VIENNAPS_CUDA_KERNELS}
+    ${cmake_options}
+    OPTIONS
+    ${options})
 
   # Create the rules to build the PTX and/or OPTIX files.
-  if( VIENNAPS_INPUT_GENERATE_OPTIXIR )
-    CUDA_WRAP_SRCS( ${target_name} OPTIXIR generated_files2 ${cu_optix_source_files} ${cmake_options} OPTIONS ${options} )
+  if(VIENNAPS_INPUT_GENERATE_OPTIXIR)
+    cuda_wrap_srcs(
+      ${target_name}
+      OPTIXIR
+      generated_files2
+      ${cu_optix_source_files}
+      ${cmake_options}
+      OPTIONS
+      ${options})
     list(APPEND generated_files ${generated_files2})
   endif()
-  if( VIENNAPS_INPUT_GENERATE_PTX)
-    CUDA_WRAP_SRCS( ${target_name} PTX generated_files3 ${cu_optix_source_files} ${cmake_options} OPTIONS ${options} )
+  if(VIENNAPS_INPUT_GENERATE_PTX)
+    cuda_wrap_srcs(
+      ${target_name}
+      PTX
+      generated_files3
+      ${cu_optix_source_files}
+      ${cmake_options}
+      OPTIONS
+      ${options})
     list(APPEND generated_files ${generated_files3})
   endif()
 
   # Here is where we create the rule to make the executable.  We define a target name and
   # list all the source files used to create the target.  In addition we also pass along
   # the cmake_options parsed out of the arguments.
-  add_executable(${target_name}
-    ${source_files}
-    ${generated_files}
-    ${cmake_options}
-    )
-  target_link_libraries( ${target_name} ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} )
+  add_executable(${target_name} ${source_files} ${generated_files} ${cmake_options})
+  target_link_libraries(${target_name} ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
 
+  message(STATUS "Adding target: ${target_name}")
 
-  if( UNIX AND NOT APPLE )
+  set_target_properties(
+    ${target_name}
+    PROPERTIES COMPILE_DEFINITIONS
+               "OPTIX_SAMPLE_NAME_DEFINE=${target_name};OPTIX_SAMPLE_DIR_DEFINE=${target_name}")
+
+  if(UNIX AND NOT APPLE)
     # Force using RPATH instead of RUNPATH on Debian
-    target_link_libraries( ${target_name} "-Wl,--disable-new-dtags" )
+    target_link_libraries(${target_name} "-Wl,--disable-new-dtags")
   endif()
 
   if(USING_GNU_CXX)
-    target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)
+    # Explicitly link against math library (C samples don't do that by default)
+    target_link_libraries(${target_name} m)
   endif()
 endmacro()
 
@@ -330,4 +372,6 @@ add_subdirectory(examples)
 # Now that everything is done, indicate that we have finished configuring at least once.
 # We use this variable to set certain defaults only on the first pass, so that we don't
 # continually set them over and over again.
-set(PASSED_FIRST_CONFIGURE ON CACHE INTERNAL "Already Configured once?")
+set(PASSED_FIRST_CONFIGURE
+    ON
+    CACHE INTERNAL "Already Configured once?")

@@ -22,6 +22,7 @@
 
 #include <utCudaBuffer.hpp>
 #include <utLaunchKernel.hpp>
+#include <utLoadModules.hpp>
 
 namespace viennaps {
 
@@ -50,7 +51,22 @@ public:
     kdTree = passedKdTree;
   }
 
-  void setPipeline(char embeddedPtxCode[]) { ptxCode = embeddedPtxCode; }
+  void setPipeline(std::string fileName,
+                   std::string relativePath = "lib/ptx/") {
+    // check if filename ends in .optixir
+    if (fileName.find(".optixir") == std::string::npos) {
+      fileName += ".optixir";
+    }
+
+    if (!fileExists(relativePath + fileName)) {
+      Logger::getInstance()
+          .addError("Pipeline file " + fileName + " not found.")
+          .print();
+    }
+
+    pipelineName = fileName;
+    pipelinePath = relativePath;
+  }
 
   void setDomain(psDomainType passedDomain) { domain = passedDomain; }
 
@@ -447,9 +463,14 @@ protected:
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
+
+    size_t inputSize = 0;
+    auto pipelineInput =
+        getInputData((pipelinePath + pipelineName).c_str(), inputSize);
+
     OPTIX_CHECK(optixModuleCreate(optixContext, &moduleCompileOptions,
-                                  &pipelineCompileOptions, ptxCode.c_str(),
-                                  ptxCode.size(), log, &sizeof_log, &module));
+                                  &pipelineCompileOptions, pipelineInput,
+                                  inputSize, log, &sizeof_log, &module));
     // if (sizeof_log > 1)
     //   PRINT(log);
   }
@@ -597,8 +618,9 @@ protected:
 
 protected:
   // context for cuda kernels
-  Context_t *context;
-  std::string ptxCode;
+  Context context;
+  std::string pipelineName;
+  std::string pipelinePath = "lib/ptx/";
 
   // geometry
   psDomainType domain{nullptr};

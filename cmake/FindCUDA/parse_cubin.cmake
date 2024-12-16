@@ -36,10 +36,9 @@
 #######################################################################
 # Parses a .cubin file produced by nvcc and reports statistics about the file.
 
-
 file(READ ${input_file} file_text)
 
-if (NOT "${file_text}" STREQUAL "")
+if(NOT "${file_text}" STREQUAL "")
 
   string(REPLACE ";" "\\;" file_text ${file_text})
   string(REPLACE "\ncode" ";code" file_text ${file_text})
@@ -57,17 +56,17 @@ if (NOT "${file_text}" STREQUAL "")
       foreach(entry ${line})
 
         # Extract kernel names.
-        if (${entry} MATCHES "[^g]name = ([^ ]+)")
+        if(${entry} MATCHES "[^g]name = ([^ ]+)")
           set(entry "${CMAKE_MATCH_1}")
 
           # Check to see if the kernel name starts with "_"
           set(skip FALSE)
           # if (${entry} MATCHES "^_")
-            # Skip the rest of this block.
-            # message("Skipping ${entry}")
-            # set(skip TRUE)
+          # Skip the rest of this block.
+          # message("Skipping ${entry}")
+          # set(skip TRUE)
           # else ()
-            message("Kernel:    ${entry}")
+          message("Kernel:    ${entry}")
           # endif ()
 
         endif()
@@ -76,29 +75,28 @@ if (NOT "${file_text}" STREQUAL "")
         if(NOT skip)
 
           # Registers
-          if (${entry} MATCHES "reg([ ]+)=([ ]+)([^ ]+)")
+          if(${entry} MATCHES "reg([ ]+)=([ ]+)([^ ]+)")
             set(entry "${CMAKE_MATCH_3}")
             message("Registers: ${entry}")
           endif()
 
           # Local memory
-          if (${entry} MATCHES "lmem([ ]+)=([ ]+)([^ ]+)")
+          if(${entry} MATCHES "lmem([ ]+)=([ ]+)([^ ]+)")
             set(entry "${CMAKE_MATCH_3}")
             message("Local:     ${entry}")
           endif()
 
           # Shared memory
-          if (${entry} MATCHES "smem([ ]+)=([ ]+)([^ ]+)")
+          if(${entry} MATCHES "smem([ ]+)=([ ]+)([^ ]+)")
             set(entry "${CMAKE_MATCH_3}")
             message("Shared:    ${entry}")
           endif()
 
-          if (${entry} MATCHES "^}")
+          if(${entry} MATCHES "^}")
             message("")
           endif()
 
         endif()
-
 
       endforeach()
 
@@ -109,5 +107,3 @@ if (NOT "${file_text}" STREQUAL "")
 else()
   # message("FOUND NO DEPENDS")
 endif()
-
-

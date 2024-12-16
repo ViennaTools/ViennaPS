@@ -18,24 +18,22 @@
 #
 
 # This list will be used for CUDA_ARCH_NAME = All option
-set(CUDA_KNOWN_GPU_ARCHITECTURES  "Fermi" "Kepler" "Maxwell")
+set(CUDA_KNOWN_GPU_ARCHITECTURES "Fermi" "Kepler" "Maxwell")
 
 # This list will be used for CUDA_ARCH_NAME = Common option (enabled by default)
 set(CUDA_COMMON_GPU_ARCHITECTURES "3.0" "3.5" "5.0")
 
-if (CUDA_VERSION VERSION_GREATER "6.5")
+if(CUDA_VERSION VERSION_GREATER "6.5")
   list(APPEND CUDA_KNOWN_GPU_ARCHITECTURES "Kepler+Tegra" "Kepler+Tesla" "Maxwell+Tegra")
   list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "5.2")
-endif ()
+endif()
 
-if (CUDA_VERSION VERSION_GREATER "7.5")
+if(CUDA_VERSION VERSION_GREATER "7.5")
   list(APPEND CUDA_KNOWN_GPU_ARCHITECTURES "Pascal")
   list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "6.0" "6.1" "6.1+PTX")
 else()
   list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "5.2+PTX")
-endif ()
-
-
+endif()
 
 ################################################################################################
 # A function for automatic detection of GPUs installed  (if autodetection is enabled)
@@ -46,7 +44,9 @@ function(CUDA_DETECT_INSTALLED_GPUS OUT_VARIABLE)
   if(NOT CUDA_GPU_DETECT_OUTPUT)
     set(cufile ${PROJECT_BINARY_DIR}/detect_cuda_archs.cu)
 
-    file(WRITE ${cufile} ""
+    file(
+      WRITE ${cufile}
+      ""
       "#include <cstdio>\n"
       "int main()\n"
       "{\n"
@@ -62,25 +62,32 @@ function(CUDA_DETECT_INSTALLED_GPUS OUT_VARIABLE)
       "  return 0;\n"
       "}\n")
 
-    execute_process(COMMAND "${CUDA_NVCC_EXECUTABLE}" "--run" "${cufile}"
-                    WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/CMakeFiles/"
-                    RESULT_VARIABLE nvcc_res OUTPUT_VARIABLE nvcc_out
-                    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(
+      COMMAND "${CUDA_NVCC_EXECUTABLE}" "--run" "${cufile}"
+      WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/CMakeFiles/"
+      RESULT_VARIABLE nvcc_res
+      OUTPUT_VARIABLE nvcc_out
+      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     if(nvcc_res EQUAL 0)
       string(REPLACE "2.1" "2.1(2.0)" nvcc_out "${nvcc_out}")
-      set(CUDA_GPU_DETECT_OUTPUT ${nvcc_out} CACHE INTERNAL "Returned GPU architetures from detect_gpus tool" FORCE)
+      set(CUDA_GPU_DETECT_OUTPUT
+          ${nvcc_out}
+          CACHE INTERNAL "Returned GPU architetures from detect_gpus tool" FORCE)
     endif()
   endif()
 
   if(NOT CUDA_GPU_DETECT_OUTPUT)
     message(STATUS "Automatic GPU detection failed. Building for common architectures.")
-    set(${OUT_VARIABLE} ${CUDA_COMMON_GPU_ARCHITECTURES} PARENT_SCOPE)
+    set(${OUT_VARIABLE}
+        ${CUDA_COMMON_GPU_ARCHITECTURES}
+        PARENT_SCOPE)
   else()
-    set(${OUT_VARIABLE} ${CUDA_GPU_DETECT_OUTPUT} PARENT_SCOPE)
+    set(${OUT_VARIABLE}
+        ${CUDA_GPU_DETECT_OUTPUT}
+        PARENT_SCOPE)
   endif()
 endfunction()
-
 
 ################################################################################################
 # Function for selecting GPU arch flags for nvcc based on CUDA architectures from parameter list
@@ -89,7 +96,7 @@ endfunction()
 function(CUDA_SELECT_NVCC_ARCH_FLAGS out_variable)
   set(CUDA_ARCH_LIST "${ARGN}")
 
-  if("X${CUDA_ARCH_LIST}" STREQUAL "X" )
+  if("X${CUDA_ARCH_LIST}" STREQUAL "X")
     set(CUDA_ARCH_LIST "Auto")
   endif()
 
@@ -101,7 +108,7 @@ function(CUDA_SELECT_NVCC_ARCH_FLAGS out_variable)
   elseif("${CUDA_ARCH_LIST}" STREQUAL "Common")
     set(CUDA_ARCH_LIST ${CUDA_COMMON_GPU_ARCHITECTURES})
   elseif("${CUDA_ARCH_LIST}" STREQUAL "Auto")
-    CUDA_DETECT_INSTALLED_GPUS(CUDA_ARCH_LIST)
+    cuda_detect_installed_gpus(CUDA_ARCH_LIST)
     message(STATUS "Autodetected CUDA architecture(s): ${CUDA_ARCH_LIST}")
   endif()
 
@@ -139,7 +146,8 @@ function(CUDA_SELECT_NVCC_ARCH_FLAGS out_variable)
         set(arch_bin 6.0 6.1)
         set(arch_ptx 6.1)
       else()
-        message(SEND_ERROR "Unknown CUDA Architecture Name ${arch_name} in CUDA_SELECT_NVCC_ARCH_FLAGS")
+        message(
+          SEND_ERROR "Unknown CUDA Architecture Name ${arch_name} in CUDA_SELECT_NVCC_ARCH_FLAGS")
       endif()
     endif()
     if(NOT arch_bin)
@@ -147,7 +155,7 @@ function(CUDA_SELECT_NVCC_ARCH_FLAGS out_variable)
     endif()
     list(APPEND cuda_arch_bin ${arch_bin})
     if(add_ptx)
-      if (NOT arch_ptx)
+      if(NOT arch_ptx)
         set(arch_ptx ${arch_bin})
       endif()
       list(APPEND cuda_arch_ptx ${arch_ptx})
@@ -158,7 +166,7 @@ function(CUDA_SELECT_NVCC_ARCH_FLAGS out_variable)
   string(REGEX REPLACE "\\." "" cuda_arch_bin "${cuda_arch_bin}")
   string(REGEX REPLACE "\\." "" cuda_arch_ptx "${cuda_arch_ptx}")
   string(REGEX MATCHALL "[0-9()]+" cuda_arch_bin "${cuda_arch_bin}")
-  string(REGEX MATCHALL "[0-9]+"   cuda_arch_ptx "${cuda_arch_ptx}")
+  string(REGEX MATCHALL "[0-9]+" cuda_arch_ptx "${cuda_arch_ptx}")
 
   if(cuda_arch_bin)
     list(REMOVE_DUPLICATES cuda_arch_bin)
@@ -190,6 +198,10 @@ function(CUDA_SELECT_NVCC_ARCH_FLAGS out_variable)
   endforeach()
 
   string(REPLACE ";" " " nvcc_archs_readable "${nvcc_archs_readable}")
-  set(${out_variable}          ${nvcc_flags}          PARENT_SCOPE)
-  set(${out_variable}_readable ${nvcc_archs_readable} PARENT_SCOPE)
+  set(${out_variable}
+      ${nvcc_flags}
+      PARENT_SCOPE)
+  set(${out_variable}_readable
+      ${nvcc_archs_readable}
+      PARENT_SCOPE)
 endfunction()

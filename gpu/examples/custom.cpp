@@ -42,25 +42,25 @@ int main(int argc, char **argv) {
   particle.dataLabels.push_back("flux");
 
   gpu::Tracer<NumericType, D> rayTrace(context, domain);
-  rayTrace.setPipeline(embedded_SingleParticle_pipeline);
-  rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
-  rayTrace.setUseRandomSeed(false);
-  rayTrace.setPeriodicBoundary(false);
-  rayTrace.insertNextParticle(particle);
-  auto numRates = rayTrace.prepareParticlePrograms();
-  auto fluxesIndexMap = gpu::IndexMap(rayTrace.getParticles());
+  rayTrace.setPipeline("custom_generated_SingleParticlePipeline.cu");
+  // rayTrace.setNumberOfRaysPerPoint(raysPerPoint);
+  // rayTrace.setUseRandomSeed(false);
+  // rayTrace.setPeriodicBoundary(false);
+  // rayTrace.insertNextParticle(particle);
+  // auto numRates = rayTrace.prepareParticlePrograms();
+  // auto fluxesIndexMap = gpu::IndexMap(rayTrace.getParticles());
 
-  rayTrace.updateSurface(); // also creates mesh
-  auto numElements = rayTrace.getNumberOfElements();
+  // rayTrace.updateSurface(); // also creates mesh
+  // auto numElements = rayTrace.getNumberOfElements();
 
-  rayTrace.apply();
+  // rayTrace.apply();
 
-  auto mesh = rayTrace.getSurfaceMesh();
-  std::vector<NumericType> flux(numElements);
-  rayTrace.getFlux(flux.data(), 0, 0);
+  // auto mesh = rayTrace.getSurfaceMesh();
+  // std::vector<NumericType> flux(numElements);
+  // rayTrace.getFlux(flux.data(), 0, 0);
 
-  mesh->getCellData().insertNextScalarData(flux, "flux");
+  // mesh->getCellData().insertNextScalarData(flux, "flux");
 
-  viennals::VTKWriter<NumericType>(mesh, "trench_flux.vtp").apply();
+  // viennals::VTKWriter<NumericType>(mesh, "trench_flux.vtp").apply();
   return 0;
 }
