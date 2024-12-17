@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <vector>
 
-#include <curtChecks.hpp>
+#include <utChecks.hpp>
 
 namespace viennaps {
 
@@ -13,7 +13,7 @@ namespace gpu {
 
 /// simple wrapper for creating, and managing a device-side CUDA buffer
 struct CudaBuffer {
-  inline CUdeviceptr d_pointer() const { return (CUdeviceptr)d_ptr; }
+  inline CUdeviceptr dPointer() const { return (CUdeviceptr)d_ptr; }
 
   // re-size buffer to given number of bytes
   void resize(size_t size) {
@@ -22,7 +22,7 @@ struct CudaBuffer {
     alloc(size);
   }
 
-  template <typename T> void alloc_and_init(size_t size, const T init) {
+  template <typename T> void allocInit(size_t size, const T init) {
     if (d_ptr)
       free();
     sizeInBytes = size * sizeof(T);
@@ -51,12 +51,12 @@ struct CudaBuffer {
     sizeInBytes = 0;
   }
 
-  template <typename T> void alloc_and_upload(const std::vector<T> &vt) {
+  template <typename T> void allocUpload(const std::vector<T> &vt) {
     alloc(vt.size() * sizeof(T));
     upload((const T *)vt.data(), vt.size());
   }
 
-  template <typename T> void alloc_and_upload_single(const T &vt) {
+  template <typename T> void allocUploadSingle(const T &vt) {
     alloc(sizeof(T));
     upload(&vt, 1);
   }

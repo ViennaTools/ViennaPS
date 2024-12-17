@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <curtChecks.hpp>
+#include <utChecks.hpp>
 
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>

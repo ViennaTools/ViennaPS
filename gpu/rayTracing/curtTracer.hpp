@@ -13,13 +13,13 @@
 #include <rayUtil.hpp>
 
 #include <curtBoundary.hpp>
-#include <curtChecks.hpp>
 #include <curtGeometry.hpp>
 #include <curtLaunchParams.hpp>
 #include <curtParticle.hpp>
 #include <curtSBTRecords.hpp>
 #include <curtUtilities.hpp>
 
+#include <utChecks.hpp>
 #include <utCudaBuffer.hpp>
 #include <utLaunchKernel.hpp>
 #include <utLoadModules.hpp>
@@ -83,15 +83,14 @@ public:
     }
 
     if (numCellData != 0 && cellDataBuffer.sizeInBytes == 0) {
-      cellDataBuffer.alloc_and_init(numCellData * launchParams.numElements,
-                                    T(0));
+      cellDataBuffer.allocInit(numCellData * launchParams.numElements, T(0));
     }
     assert(cellDataBuffer.sizeInBytes / sizeof(T) ==
            numCellData * launchParams.numElements);
 
     // resize our cuda result buffer
-    resultBuffer.alloc_and_init(launchParams.numElements * numRates, T(0));
-    launchParams.resultBuffer = (T *)resultBuffer.d_pointer();
+    resultBuffer.allocInit(launchParams.numElements * numRates, T(0));
+    launchParams.resultBuffer = (T *)resultBuffer.dPointer();
 
     if (useRandomSeed) {
       std::random_device rd;
@@ -137,7 +136,7 @@ public:
       buildSBT(i);
       OPTIX_CHECK(optixLaunch(pipelines[i], stream,
                               /*! parameters and SBT */
-                              launchParamsBuffer.d_pointer(),
+                              launchParamsBuffer.dPointer(),
                               launchParamsBuffer.sizeInBytes, &sbts[i],
                               /*! dimensions of the launch: */
                               numPointsPerDim, numPointsPerDim,
@@ -172,14 +171,14 @@ public:
       radius = launchParams.source.gridDelta;
     size_t numValues = mesh->nodes.size();
     CudaBuffer pointBuffer;
-    pointBuffer.alloc_and_upload(mesh->nodes);
-    pointDataBuffer.alloc_and_init(numValues * numRates, T(0));
+    pointBuffer.allocUpload(mesh->nodes);
+    pointDataBuffer.allocInit(numValues * numRates, T(0));
 
-    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.d_pointer();
-    CUdeviceptr d_index = geometry.geometryIndexBuffer.d_pointer();
-    CUdeviceptr d_values = resultBuffer.d_pointer();
-    CUdeviceptr d_point = pointBuffer.d_pointer();
-    CUdeviceptr d_pointValues = pointDataBuffer.d_pointer();
+    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.dPointer();
+    CUdeviceptr d_index = geometry.geometryIndexBuffer.dPointer();
+    CUdeviceptr d_values = resultBuffer.dPointer();
+    CUdeviceptr d_point = pointBuffer.dPointer();
+    CUdeviceptr d_pointValues = pointDataBuffer.dPointer();
 
     void *kernel_args[] = {
         &d_vertex,      &d_index, &d_values,  &d_point,
@@ -212,15 +211,15 @@ public:
     assert(numData > 0);
 
     CudaBuffer pointBuffer;
-    pointBuffer.alloc_and_upload(mesh->nodes);
+    pointBuffer.allocUpload(mesh->nodes);
 
     cellDataBuffer.alloc(launchParams.numElements * numData * sizeof(T));
 
-    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.d_pointer();
-    CUdeviceptr d_index = geometry.geometryIndexBuffer.d_pointer();
-    CUdeviceptr d_values = cellDataBuffer.d_pointer();
-    CUdeviceptr d_point = pointBuffer.d_pointer();
-    CUdeviceptr d_pointValues = pointDataBuffer.d_pointer();
+    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.dPointer();
+    CUdeviceptr d_index = geometry.geometryIndexBuffer.dPointer();
+    CUdeviceptr d_values = cellDataBuffer.dPointer();
+    CUdeviceptr d_point = pointBuffer.dPointer();
+    CUdeviceptr d_pointValues = pointDataBuffer.dPointer();
 
     void *kernel_args[] = {&d_vertex,
                            &d_index,
@@ -298,9 +297,9 @@ public:
       dataPerParticle.push_back(p.numberOfData);
       numRates += p.numberOfData;
     }
-    dataPerParticleBuffer.alloc_and_upload(dataPerParticle);
+    dataPerParticleBuffer.allocUpload(dataPerParticle);
     launchParams.dataPerParticle =
-        (unsigned int *)dataPerParticleBuffer.d_pointer();
+        (unsigned int *)dataPerParticleBuffer.dPointer();
     return numRates;
   }
 
@@ -388,9 +387,9 @@ protected:
         (launchParams.source.maxPoint[1] - launchParams.source.minPoint[1]);
     assert(resultBuffer.sizeInBytes != 0 &&
            "Normalization: Result buffer not initiliazed.");
-    CUdeviceptr d_data = resultBuffer.d_pointer();
-    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.d_pointer();
-    CUdeviceptr d_index = geometry.geometryIndexBuffer.d_pointer();
+    CUdeviceptr d_data = resultBuffer.dPointer();
+    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.dPointer();
+    CUdeviceptr d_index = geometry.geometryIndexBuffer.dPointer();
     void *kernel_args[] = {
         &d_data,     &d_vertex, &d_index, &launchParams.numElements,
         &sourceArea, &numRays,  &numRates};
@@ -574,15 +573,15 @@ protected:
     RaygenRecord raygenRecord;
     optixSbtRecordPackHeader(raygenPGs[i], &raygenRecord);
     raygenRecord.data = nullptr;
-    raygenRecordBuffer.alloc_and_upload_single(raygenRecord);
-    sbts[i].raygenRecord = raygenRecordBuffer.d_pointer();
+    raygenRecordBuffer.allocUploadSingle(raygenRecord);
+    sbts[i].raygenRecord = raygenRecordBuffer.dPointer();
 
     // build miss record
     MissRecord missRecord;
     optixSbtRecordPackHeader(missPGs[i], &missRecord);
     missRecord.data = nullptr;
-    missRecordBuffer.alloc_and_upload_single(missRecord);
-    sbts[i].missRecordBase = missRecordBuffer.d_pointer();
+    missRecordBuffer.allocUploadSingle(missRecord);
+    sbts[i].missRecordBase = missRecordBuffer.dPointer();
     sbts[i].missRecordStrideInBytes = sizeof(MissRecord);
     sbts[i].missRecordCount = 1;
 
@@ -593,25 +592,25 @@ protected:
     HitgroupRecord geometryHitgroupRecord;
     optixSbtRecordPackHeader(hitgroupPGs[i], &geometryHitgroupRecord);
     geometryHitgroupRecord.data.vertex =
-        (Vec3Df *)geometry.geometryVertexBuffer.d_pointer();
+        (Vec3Df *)geometry.geometryVertexBuffer.dPointer();
     geometryHitgroupRecord.data.index =
-        (Vec3D<unsigned> *)geometry.geometryIndexBuffer.d_pointer();
+        (Vec3D<unsigned> *)geometry.geometryIndexBuffer.dPointer();
     geometryHitgroupRecord.data.isBoundary = false;
-    geometryHitgroupRecord.data.cellData = (void *)cellDataBuffer.d_pointer();
+    geometryHitgroupRecord.data.cellData = (void *)cellDataBuffer.dPointer();
     hitgroupRecords.push_back(geometryHitgroupRecord);
 
     // boundary hitgroup
     HitgroupRecord boundaryHitgroupRecord;
     optixSbtRecordPackHeader(hitgroupPGs[i], &boundaryHitgroupRecord);
     boundaryHitgroupRecord.data.vertex =
-        (Vec3Df *)geometry.boundaryVertexBuffer.d_pointer();
+        (Vec3Df *)geometry.boundaryVertexBuffer.dPointer();
     boundaryHitgroupRecord.data.index =
-        (Vec3D<unsigned> *)geometry.boundaryIndexBuffer.d_pointer();
+        (Vec3D<unsigned> *)geometry.boundaryIndexBuffer.dPointer();
     boundaryHitgroupRecord.data.isBoundary = true;
     hitgroupRecords.push_back(boundaryHitgroupRecord);
 
-    hitgroupRecordBuffer.alloc_and_upload(hitgroupRecords);
-    sbts[i].hitgroupRecordBase = hitgroupRecordBuffer.d_pointer();
+    hitgroupRecordBuffer.allocUpload(hitgroupRecords);
+    sbts[i].hitgroupRecordBase = hitgroupRecordBuffer.dPointer();
     sbts[i].hitgroupRecordStrideInBytes = sizeof(HitgroupRecord);
     sbts[i].hitgroupRecordCount = 2;
   }

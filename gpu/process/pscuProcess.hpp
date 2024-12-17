@@ -617,7 +617,7 @@ private:
     //                                           ".vtp")
     //     .apply();
 
-    d_elementData.alloc_and_upload(elementData);
+    d_elementData.allocUpload(elementData);
   }
 
   bool checkInput() {

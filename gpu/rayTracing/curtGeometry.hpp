@@ -65,8 +65,8 @@ template <typename T, int D> struct Geometry {
 
     // ------------------- geometry input -------------------
     // upload the model to the device: the builder
-    geometryVertexBuffer.alloc_and_upload(mesh->nodes);
-    geometryIndexBuffer.alloc_and_upload(mesh->triangles);
+    geometryVertexBuffer.allocUpload(mesh->nodes);
+    geometryIndexBuffer.allocUpload(mesh->triangles);
 
     // triangle inputs
     triangleInput[0] = {};
@@ -74,8 +74,8 @@ template <typename T, int D> struct Geometry {
 
     // create local variables, because we need a *pointer* to the
     // device pointers
-    CUdeviceptr d_geoVertices = geometryVertexBuffer.d_pointer();
-    CUdeviceptr d_geoIndices = geometryIndexBuffer.d_pointer();
+    CUdeviceptr d_geoVertices = geometryVertexBuffer.dPointer();
+    CUdeviceptr d_geoIndices = geometryIndexBuffer.dPointer();
 
     triangleInput[0].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     triangleInput[0].triangleArray.vertexStrideInBytes = sizeof(Vec3Df);
@@ -101,8 +101,8 @@ template <typename T, int D> struct Geometry {
     // ------------------------- boundary input -------------------------
     TriangleMesh boundaryMesh = makeBoundary(mesh, gridDelta);
     // upload the model to the device: the builder
-    boundaryVertexBuffer.alloc_and_upload(boundaryMesh.vertex);
-    boundaryIndexBuffer.alloc_and_upload(boundaryMesh.index);
+    boundaryVertexBuffer.allocUpload(boundaryMesh.vertex);
+    boundaryIndexBuffer.allocUpload(boundaryMesh.index);
 
     // triangle inputs
     triangleInput[1] = {};
@@ -110,8 +110,8 @@ template <typename T, int D> struct Geometry {
 
     // create local variables, because we need a *pointer* to the
     // device pointers
-    CUdeviceptr d_boundVertices = boundaryVertexBuffer.d_pointer();
-    CUdeviceptr d_boundIndices = boundaryIndexBuffer.d_pointer();
+    CUdeviceptr d_boundVertices = boundaryVertexBuffer.dPointer();
+    CUdeviceptr d_boundIndices = boundaryIndexBuffer.dPointer();
 
     triangleInput[1].triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
     triangleInput[1].triangleArray.vertexStrideInBytes = sizeof(Vec3Df);
@@ -156,7 +156,7 @@ template <typename T, int D> struct Geometry {
 
     OptixAccelEmitDesc emitDesc;
     emitDesc.type = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
-    emitDesc.result = compactedSizeBuffer.d_pointer();
+    emitDesc.result = compactedSizeBuffer.dPointer();
 
     // execute build
     CudaBuffer tempBuffer;
@@ -166,8 +166,8 @@ template <typename T, int D> struct Geometry {
     outputBuffer.alloc(blasBufferSizes.outputSizeInBytes);
 
     optixAccelBuild(optixContext, 0, &accelOptions, triangleInput.data(), 2,
-                    tempBuffer.d_pointer(), tempBuffer.sizeInBytes,
-                    outputBuffer.d_pointer(), outputBuffer.sizeInBytes,
+                    tempBuffer.dPointer(), tempBuffer.sizeInBytes,
+                    outputBuffer.dPointer(), outputBuffer.sizeInBytes,
                     &asHandle, &emitDesc, 1);
     cudaDeviceSynchronize();
 
@@ -176,7 +176,7 @@ template <typename T, int D> struct Geometry {
     compactedSizeBuffer.download(&compactedSize, 1);
 
     asBuffer.alloc(compactedSize);
-    optixAccelCompact(optixContext, 0, asHandle, asBuffer.d_pointer(),
+    optixAccelCompact(optixContext, 0, asHandle, asBuffer.dPointer(),
                       asBuffer.sizeInBytes, &asHandle);
     cudaDeviceSynchronize();
 
