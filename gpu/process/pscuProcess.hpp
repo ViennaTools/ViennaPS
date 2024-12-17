@@ -107,7 +107,7 @@ public:
     IndexMap fluxesIndexMap;
 
     if (!rayTracerInitialized_) {
-      rayTrace_.setPipeline(model_->getPtxCode());
+      rayTrace_.setPipeline(model_->getPipelineFileName());
       rayTrace_.setDomain(domain_);
       rayTrace_.setNumberOfRaysPerPoint(raysPerPoint_);
       rayTrace_.setUseRandomSeed(useRandomSeeds_);
@@ -660,7 +660,7 @@ private:
       return true;
     }
 
-    if (!model_->getPtxCode()) {
+    if (!model_->getPipelineFileName().empty()) {
       Logger::getInstance()
           .addWarning("No pipeline in process model: " + name)
           .print();

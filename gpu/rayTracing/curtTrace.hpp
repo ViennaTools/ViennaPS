@@ -8,8 +8,6 @@
 
 #include <lsPointData.hpp>
 
-#include <psDomain.hpp>
-
 #include <rayUtil.hpp>
 
 #include <curtBoundary.hpp>
@@ -30,19 +28,11 @@ namespace gpu {
 
 using namespace viennacore;
 
-template <class T, int D> class Tracer {
-  using psDomainType = SmartPointer<::viennaps::Domain<T, D>>;
-
+template <class T, int D> class Trace {
 public:
   /// constructor - performs all setup, including initializing
   /// optix, creates module, pipeline, programs, SBT, etc.
-  Tracer(Context passedContext, psDomainType passedDomain)
-      : context(passedContext), domain(passedDomain) {
-    initRayTracer();
-    mesh = SmartPointer<viennals::Mesh<float>>::New();
-  }
-
-  Tracer(Context passedContext) : context(passedContext) {
+  Trace(Context passedContext) : context(passedContext) {
     initRayTracer();
     mesh = SmartPointer<viennals::Mesh<float>>::New();
   }
@@ -52,35 +42,28 @@ public:
   }
 
   void setPipeline(std::string fileName,
-                   std::string relativePath = "lib/ptx/") {
+                   std::string path = VIENNAPS_KERNELS_PATH) {
     // check if filename ends in .optixir
     if (fileName.find(".optixir") == std::string::npos) {
-      fileName += ".optixir";
+      if (fileName.find(".ptx") != std::string::npos)
+        fileName += ".optixir";
     }
 
-    if (!fileExists(relativePath + fileName)) {
+    if (!fileExists(path + fileName)) {
       Logger::getInstance()
           .addError("Pipeline file " + fileName + " not found.")
           .print();
     }
 
     pipelineName = fileName;
-    pipelinePath = relativePath;
+    pipelinePath = path;
   }
-
-  void setDomain(psDomainType passedDomain) { domain = passedDomain; }
-
-  void invalidateGeometry() { geometryValid = false; }
 
   void insertNextParticle(const Particle<T> &particle) {
     particles.push_back(particle);
   }
 
   void apply() {
-    if (!geometryValid) {
-      geometry.buildAccelFromDomain(domain, launchParams, mesh, kdTree);
-      geometryValid = true;
-    }
 
     if (numCellData != 0 && cellDataBuffer.sizeInBytes == 0) {
       cellDataBuffer.allocInit(numCellData * launchParams.numElements, T(0));
@@ -97,7 +80,6 @@ public:
       std::uniform_int_distribution<unsigned int> gen;
       launchParams.seed = gen(rd);
     } else {
-      static int runNumber = 0;
       launchParams.seed = runNumber++;
     }
 
@@ -120,7 +102,6 @@ public:
         .addDebug("Number of rays: " + util::prettyDouble(numRays))
         .print();
 
-    // auto start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < particles.size(); i++) {
 
       launchParams.cosineExponent = particles[i].cosineExponent;
@@ -143,58 +124,53 @@ public:
                               numberOfRaysPerPoint));
     }
 
-    // record end time
-    // auto end = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double> diff = end - start;
     // T *temp = new T[launchParams.numElements];
     // resultBuffer.download(temp, launchParams.numElements);
     // for (int i = 0; i < launchParams.numElements; i++) {
     //   std::cout << temp[i] << std::endl;
     // }
     // delete temp;
-    // std::cout << "Time: " << diff.count() * 100 << " ms\n";
     // std::cout << util::prettyDouble(numRays * particles.size()) << std::endl;
-    // std::cout << numRays << std::endl;
 
     // sync - maybe remove in future
     cudaDeviceSynchronize();
     normalize();
   }
 
-  void translateToPointData(SmartPointer<viennals::Mesh<T>> mesh,
-                            CudaBuffer &pointDataBuffer, T radius = 0.,
-                            const bool download = false) {
-    // upload oriented pointcloud data to device
-    assert(mesh->nodes.size() != 0 &&
-           "Passing empty mesh in translateToPointValuesSphere.");
-    if (radius == 0.)
-      radius = launchParams.source.gridDelta;
-    size_t numValues = mesh->nodes.size();
-    CudaBuffer pointBuffer;
-    pointBuffer.allocUpload(mesh->nodes);
-    pointDataBuffer.allocInit(numValues * numRates, T(0));
+  // void translateToPointData(SmartPointer<viennals::Mesh<T>> mesh,
+  //                           CudaBuffer &pointDataBuffer, T radius = 0.,
+  //                           const bool download = false) {
+  //   // upload oriented pointcloud data to device
+  //   assert(mesh->nodes.size() != 0 &&
+  //          "Passing empty mesh in translateToPointValuesSphere.");
+  //   if (radius == 0.)
+  //     radius = launchParams.source.gridDelta;
+  //   size_t numValues = mesh->nodes.size();
+  //   CudaBuffer pointBuffer;
+  //   pointBuffer.allocUpload(mesh->nodes);
+  //   pointDataBuffer.allocInit(numValues * numRates, T(0));
 
-    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.dPointer();
-    CUdeviceptr d_index = geometry.geometryIndexBuffer.dPointer();
-    CUdeviceptr d_values = resultBuffer.dPointer();
-    CUdeviceptr d_point = pointBuffer.dPointer();
-    CUdeviceptr d_pointValues = pointDataBuffer.dPointer();
+  //   CUdeviceptr d_vertex = geometry.geometryVertexBuffer.dPointer();
+  //   CUdeviceptr d_index = geometry.geometryIndexBuffer.dPointer();
+  //   CUdeviceptr d_values = resultBuffer.dPointer();
+  //   CUdeviceptr d_point = pointBuffer.dPointer();
+  //   CUdeviceptr d_pointValues = pointDataBuffer.dPointer();
 
-    void *kernel_args[] = {
-        &d_vertex,      &d_index, &d_values,  &d_point,
-        &d_pointValues, &radius,  &numValues, &launchParams.numElements,
-        &numRates};
+  //   void *kernel_args[] = {
+  //       &d_vertex,      &d_index, &d_values,  &d_point,
+  //       &d_pointValues, &radius,  &numValues, &launchParams.numElements,
+  //       &numRates};
 
-    LaunchKernel::launch(translateModuleName, translateToPointDataKernelName,
-                         kernel_args, context, sizeof(int));
+  //   LaunchKernel::launch(translateModuleName, translateToPointDataKernelName,
+  //                        kernel_args, context, sizeof(int));
 
-    if (download) {
-      downloadResultsToPointData(mesh->getCellData(), pointDataBuffer,
-                                 mesh->nodes.size());
-    }
+  //   if (download) {
+  //     downloadResultsToPointData(mesh->getCellData(), pointDataBuffer,
+  //                                mesh->nodes.size());
+  //   }
 
-    pointBuffer.free();
-  }
+  //   pointBuffer.free();
+  // }
 
   void setElementData(CudaBuffer &passedCellDataBuffer, unsigned numData) {
     assert(passedCellDataBuffer.sizeInBytes / sizeof(T) / numData ==
@@ -202,39 +178,41 @@ public:
     cellDataBuffer = passedCellDataBuffer;
   }
 
-  void translateFromPointData(SmartPointer<viennals::Mesh<T>> mesh,
-                              CudaBuffer &pointDataBuffer, unsigned numData) {
-    // upload oriented pointcloud data to device
-    size_t numPoints = mesh->nodes.size();
-    assert(mesh->nodes.size() > 0);
-    assert(pointDataBuffer.sizeInBytes / sizeof(T) / numData == numPoints);
-    assert(numData > 0);
+  // void translateFromPointData(SmartPointer<viennals::Mesh<T>> mesh,
+  //                             CudaBuffer &pointDataBuffer, unsigned numData)
+  //                             {
+  //   // upload oriented pointcloud data to device
+  //   size_t numPoints = mesh->nodes.size();
+  //   assert(mesh->nodes.size() > 0);
+  //   assert(pointDataBuffer.sizeInBytes / sizeof(T) / numData == numPoints);
+  //   assert(numData > 0);
 
-    CudaBuffer pointBuffer;
-    pointBuffer.allocUpload(mesh->nodes);
+  //   CudaBuffer pointBuffer;
+  //   pointBuffer.allocUpload(mesh->nodes);
 
-    cellDataBuffer.alloc(launchParams.numElements * numData * sizeof(T));
+  //   cellDataBuffer.alloc(launchParams.numElements * numData * sizeof(T));
 
-    CUdeviceptr d_vertex = geometry.geometryVertexBuffer.dPointer();
-    CUdeviceptr d_index = geometry.geometryIndexBuffer.dPointer();
-    CUdeviceptr d_values = cellDataBuffer.dPointer();
-    CUdeviceptr d_point = pointBuffer.dPointer();
-    CUdeviceptr d_pointValues = pointDataBuffer.dPointer();
+  //   CUdeviceptr d_vertex = geometry.geometryVertexBuffer.dPointer();
+  //   CUdeviceptr d_index = geometry.geometryIndexBuffer.dPointer();
+  //   CUdeviceptr d_values = cellDataBuffer.dPointer();
+  //   CUdeviceptr d_point = pointBuffer.dPointer();
+  //   CUdeviceptr d_pointValues = pointDataBuffer.dPointer();
 
-    void *kernel_args[] = {&d_vertex,
-                           &d_index,
-                           &d_values,
-                           &d_point,
-                           &d_pointValues,
-                           &numPoints,
-                           &launchParams.numElements,
-                           &numData};
+  //   void *kernel_args[] = {&d_vertex,
+  //                          &d_index,
+  //                          &d_values,
+  //                          &d_point,
+  //                          &d_pointValues,
+  //                          &numPoints,
+  //                          &launchParams.numElements,
+  //                          &numData};
 
-    LaunchKernel::launch(translateModuleName, translateFromPointDataKernelName,
-                         kernel_args, context, sizeof(int));
+  //   LaunchKernel::launch(translateModuleName,
+  //   translateFromPointDataKernelName,
+  //                        kernel_args, context, sizeof(int));
 
-    pointBuffer.free();
-  }
+  //   pointBuffer.free();
+  // }
 
   void updateSurface() {
     geometry.buildAccelFromDomain(domain, launchParams, mesh, kdTree);
@@ -398,7 +376,6 @@ protected:
   }
 
   void initRayTracer() {
-    createContext();
 
     geometry.optixContext = optixContext;
 
@@ -406,37 +383,6 @@ protected:
     normKernelName.push_back(NumericType);
     translateFromPointDataKernelName.push_back(NumericType);
     translateToPointDataKernelName.push_back(NumericType);
-  }
-
-  static void context_log_cb(unsigned int level, const char *tag,
-                             const char *message, void *) {
-#ifndef NDEBUG
-    fprintf(stderr, "[%2d][%12s]: %s\n", (int)level, tag, message);
-#endif
-  }
-
-  /// creates and configures a optix device context (only for the primary GPU
-  /// device)
-  void createContext() {
-    const int deviceID = 0;
-    cudaSetDevice(deviceID);
-
-    cudaGetDeviceProperties(&deviceProps, deviceID);
-
-    Logger::getInstance()
-        .addDebug("Running on device: " + std::string(deviceProps.name))
-        .print();
-
-    CUresult cuRes = cuCtxGetCurrent(&cudaContext);
-    if (cuRes != CUDA_SUCCESS) {
-      Logger::getInstance()
-          .addError("Error querying current context: error code " +
-                    std::to_string(cuRes))
-          .print();
-    }
-
-    optixDeviceContextCreate(cudaContext, 0, &optixContext);
-    optixDeviceContextSetLogCallback(optixContext, context_log_cb, nullptr, 4);
   }
 
   /// creates the module that contains all the programs we are going to use. We
@@ -619,7 +565,7 @@ protected:
   // context for cuda kernels
   Context context;
   std::string pipelineName;
-  std::string pipelinePath = "lib/ptx/";
+  std::string pipelinePath = VIENNAPS_KERNELS_PATH;
 
   // geometry
   psDomainType domain{nullptr};
@@ -637,9 +583,6 @@ protected:
   CudaBuffer cellDataBuffer;
 
   // cuda and optix stuff
-  CUcontext cudaContext;
-  cudaDeviceProp deviceProps;
-  OptixDeviceContext optixContext;
 
   std::vector<OptixPipeline> pipelines;
   OptixPipelineCompileOptions pipelineCompileOptions = {};
@@ -669,6 +612,7 @@ protected:
   unsigned numCellData = 0;
   int numberOfRaysPerPoint = 3000;
   int numberOfRaysFixed = 0;
+  int runNumber = 0;
 
   size_t numRays = 0;
   std::string globalParamsName = "params";

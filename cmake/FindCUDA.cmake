@@ -1746,6 +1746,9 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
         endif()
       endif()
 
+      get_filename_component(basename_we ${basename} NAME_WE)
+      set(generated_file_wotarget "${generated_file_path}/${basename_we}.${cuda_compile_to_external_module_type}")
+
       # Set all of our file names.  Make sure that whatever filenames that have
       # generated_file_path in them get passed in through as a command line
       # argument, so that the ${CMAKE_CFG_INTDIR} gets expanded at run time
@@ -1930,7 +1933,7 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
           ${CMAKE_COMMAND} -D verbose:BOOL=${verbose_output} -D
           check_dependencies:BOOL=${CUDA_CHECK_DEPENDENCIES_DURING_COMPILE} ${ccbin_flags} -D
           build_configuration:STRING=${CUDA_build_configuration} -D
-          "generated_file:STRING=${generated_file}" -D
+          "generated_file:STRING=${generated_file_wotarget}" -D
           "generated_cubin_file:STRING=${generated_cubin_file}" -D
           "generated_fatbin_file:STRING=${generated_fatbin_file}" -P "${custom_target_script}"
           WORKING_DIRECTORY "${cuda_compile_intermediate_directory}" COMMENT

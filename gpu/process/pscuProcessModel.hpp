@@ -23,7 +23,7 @@ private:
   SmartPointer<::viennaps::SurfaceModel<NumericType>> surfaceModel = nullptr;
   SmartPointer<VelocityField<NumericType>> velocityField = nullptr;
   std::string processName = "default";
-  char *embbededPtxCode = nullptr;
+  std::string pipelineFileName = "";
 
 public:
   auto getParticleTypes() { return particles; }
@@ -31,11 +31,12 @@ public:
   auto getVelocityField() { return velocityField; }
 
   void setProcessName(std::string name) { processName = name; }
+  auto getProcessName() const { return processName; }
 
-  std::string getProcessName() { return processName; }
-
-  void setPtxCode(char *ptxCode) { embbededPtxCode = ptxCode; }
-  char *getPtxCode() { return embbededPtxCode; }
+  void setPipelineFileName(std::string fileName) {
+    pipelineFileName = fileName;
+  }
+  auto getPipelineFileName() const { return pipelineFileName; }
 
   void insertNextParticleType(const Particle<NumericType> &passedParticle) {
     particles.push_back(passedParticle);

@@ -6,7 +6,8 @@
 #include <psDomain.hpp>
 #include <psProcess.hpp>
 
-#include <curtTracer.hpp>
+// #include <curtTrace.hpp>
+#include <context.hpp>
 
 using namespace viennaps;
 
@@ -14,6 +15,8 @@ int main() {
   omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = 3;
+
+  Logger::setLogLevel(LogLevel::DEBUG);
 
   //   const std::array<NumericType, 10> sticking = {0.1f, 0.2f, 0.3f, 0.4f,
   //   0.5f,
@@ -30,16 +33,15 @@ int main() {
 
   // for (int i = 0; i < sticking.size(); i++) {
 
-  //   auto domain = SmartPointer<Domain<NumericType, D>>::New();
-  //   MakeTrench<NumericType, D>(domain, gridDelta, 10, 5, 5, 5, 0., 0.5,
-  //   false,
-  //                              true, Material::Si)
-  //       .apply();
+  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  MakeTrench<NumericType, D>(domain, gridDelta, 10, 5, 5, 5, 0., 0.5, false,
+                             true, Material::Si)
+      .apply();
 
-  //   auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-  //   viennals::ToDiskMesh<NumericType, D> mesher(mesh);
+  auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+  viennals::ToDiskMesh<NumericType, D> diskMesher(diskMesh);
 
-  //   viennaray::Trace<NumericType, D> tracer;
+  // gpu::Tracer<NumericType, D> tracer(context);
   //   tracer.setNumberOfRaysFixed(20000000); // 20 million rays
   //   tracer.setUseRandomSeeds(false);
 
@@ -52,7 +54,7 @@ int main() {
   //   advectionKernel.setVelocityField(translationField);
 
   //   for (const auto ls : domain->getLevelSets()) {
-  //     mesher.insertNextLevelSet(ls);
+  //     diskMesher.insertNextLevelSet(ls);
   //     advectionKernel.insertNextLevelSet(ls);
   //   }
 
@@ -66,7 +68,7 @@ int main() {
 
   //     Timer timer;
   //     timer.start();
-  //     mesher.apply();
+  //     diskMesher.apply();
   //     translationField->buildKdTree(mesh->nodes);
   //     timer.finish();
   //     file << timer.currentDuration << ";";

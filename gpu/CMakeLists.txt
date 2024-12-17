@@ -228,6 +228,8 @@ macro(add_GPU_executable target_name_base target_name_var)
     OPTIONS
     ${options})
 
+
+
   # Create the rules to build the PTX and/or OPTIX files.
   if(VIENNAPS_INPUT_GENERATE_OPTIXIR)
     cuda_wrap_srcs(
@@ -263,7 +265,7 @@ macro(add_GPU_executable target_name_base target_name_var)
   set_target_properties(
     ${target_name}
     PROPERTIES COMPILE_DEFINITIONS
-               "OPTIX_SAMPLE_NAME_DEFINE=${target_name};OPTIX_SAMPLE_DIR_DEFINE=${target_name}")
+               "VIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR}")
 
   if(UNIX AND NOT APPLE)
     # Force using RPATH instead of RUNPATH on Debian
