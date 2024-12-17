@@ -1,111 +1,102 @@
-#include <context.hpp>
+#include <lsAdvect.hpp>
+#include <lsToDiskMesh.hpp>
+#include <lsToSurfaceMeshRefined.hpp>
+
+#include <geometries/psMakeTrench.hpp>
+#include <psDomain.hpp>
+#include <psProcess.hpp>
 
 #include <curtTracer.hpp>
-#include <lsToSurfaceMeshRefined.hpp>
-#include <pscuDeposition.hpp>
-
-#include <psMakeTrench.hpp>
-#include <psUtils.hpp>
 
 using namespace viennaps;
 
 int main() {
+  omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = 3;
 
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
-  MakeTrench<NumericType, D>(domain, .1, 10, 5, 5, 5, 0., 0.5, false, true,
-                             Material::Metal)
-      .apply();
+  //   const std::array<NumericType, 10> sticking = {0.1f, 0.2f, 0.3f, 0.4f,
+  //   0.5f,
+  //                                                 0.6f, 0.7f, 0.8f,
+  //                                                 0.9f, 1.f};
+  const std::array<NumericType, 1> sticking = {1.f};
+  const int processSteps = 10;
+  const NumericType gridDelta = .1;
+  std::ofstream file("GPU_Benchmark.txt");
+  file << "Sticking;Meshing;Tracing;Postprocessing;Advection\n";
 
-  auto tree =
-      SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
+  gpu::Context context;
+  gpu::CreateContext(context);
 
-  {
-    int i = 0;
-    for (auto ls : domain->getLevelSets()) {
-      domain->saveLevelSetMesh("mesh_" + std::to_string(i) + ".vtp");
-      domain->saveSurfaceMesh("surfmesh_" + std::to_string(i) + ".vtp");
-      ++i;
-    }
-  }
+  // for (int i = 0; i < sticking.size(); i++) {
 
-  {
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-    viennals::ToSurfaceMeshRefined<NumericType, NumericType, D> mesher(
-        domain, mesh, tree);
+  //   auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  //   MakeTrench<NumericType, D>(domain, gridDelta, 10, 5, 5, 5, 0., 0.5,
+  //   false,
+  //                              true, Material::Si)
+  //       .apply();
 
-    Timer timer;
-    timer.start();
-    mesher.apply();
-    timer.finish();
+  //   auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+  //   viennals::ToDiskMesh<NumericType, D> mesher(mesh);
 
-    std::cout << "Culs time: " << timer.currentDuration * 1e-6 << " ms"
-              << std::endl;
+  //   viennaray::Trace<NumericType, D> tracer;
+  //   tracer.setNumberOfRaysFixed(20000000); // 20 million rays
+  //   tracer.setUseRandomSeeds(false);
 
-    viennals::VTKWriter<NumericType>(mesh, "culs_surface.vtp").apply();
-  }
+  //   viennals::Advect<NumericType, D> advectionKernel;
 
-  {
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-    psUtils::Timer timer;
-    timer.start();
-    viennals::ToSurfaceMesh<NumericType, D>(domain->getLevelSets()->back(),
-                                            mesh)
-        .apply();
-    timer.finish();
+  //   auto velocityField =
+  //       SmartPointer<DefaultVelocityField<NumericType>>::New(2);
+  //   auto translationField = SmartPointer<TranslationField<NumericType>>::New(
+  //       velocityField, domain->getMaterialMap());
+  //   advectionKernel.setVelocityField(translationField);
 
-    std::cout << "LS time: " << timer.currentDuration * 1e-6 << " ms"
-              << std::endl;
+  //   for (const auto ls : domain->getLevelSets()) {
+  //     mesher.insertNextLevelSet(ls);
+  //     advectionKernel.insertNextLevelSet(ls);
+  //   }
 
-    viennals::VTKWriter<NumericType>(mesh, "surface.vtp").apply();
-  }
+  //   auto particle =
+  //       std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(
+  //           sticking[i], "flux");
+  //   tracer.setParticleType(particle);
 
-  auto vmesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-  viennals::ToVoxelMesh<NumericType, D> voxelMesh;
-  voxelMesh.setMesh(vmesh);
-  for (auto ls : domain->getLevelSets()) {
-    voxelMesh.insertNextLevelSet(ls);
-  }
-  voxelMesh.apply();
-  viennals::VTKWriter<NumericType>(vmesh, "voxel.vtu").apply();
+  //   for (int j = 0; j < processSteps; j++) {
+  //     file << sticking[i] << ";";
 
-  // pscuContext context;
-  // pscuCreateContext(context);
+  //     Timer timer;
+  //     timer.start();
+  //     mesher.apply();
+  //     translationField->buildKdTree(mesh->nodes);
+  //     timer.finish();
+  //     file << timer.currentDuration << ";";
 
-  // auto geometry = SmartPointer<Domain<NumericType, DIM>>::New();
-  // MakeTrench<NumericType, DIM>(geometry, 1., 150., 200., 50., 300., 0., 0.)
-  //     .apply();
-  // geometry->printSurface("initial.vtp");
+  //     const auto &materialIds =
+  //         *mesh->getCellData().getScalarData("MaterialIds");
+  //     const auto &normals = *mesh->getCellData().getVectorData("Normals");
+  //     tracer.setGeometry(mesh->nodes, normals, gridDelta);
+  //     tracer.setMaterialIds(materialIds);
 
-  // curtTracer<NumericType, DIM> tracer(context);
-  // tracer.setLevelSet(geometry->getLevelSets().back());
-  // tracer.setNumberOfRaysPerPoint(10000);
-  // tracer.setPipeline(embedded_deposition_pipeline);
-
-  // std::array<NumericType, 10> sticking = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f,
-  //                                         0.6f, 0.7f, 0.8f, 0.9f, 1.f};
-  // curtParticle<NumericType> particle{
-  //     .name = "depoParticle", .sticking = 1.f, .cosineExponent = 1};
-  // tracer.insertNextParticle(particle);
-  // tracer.prepareParticlePrograms();
-
-  // std::ofstream file("BenchmarkResults.txt");
-
-  // psUtils::Timer timer;
-  // for (int i = 0; i < 10; i++) {
-  //   auto &particle = tracer.getParticles()[0];
-  //   particle.sticking = sticking[i];
-
-  //   file << sticking[i] << " ";
-  //   for (int j = 0; j < 10; j++) {
   //     timer.start();
   //     tracer.apply();
   //     timer.finish();
-  //     file << timer.currentDuration << " ";
-  //   }
+  //     file << timer.currentDuration << ";";
 
-  //   file << "\n";
+  //     timer.start();
+  //     auto &flux = tracer.getLocalData().getVectorData("flux");
+  //     tracer.normalizeFlux(flux);
+  //     tracer.smoothFlux(flux);
+  //     auto velocities =
+  //         SmartPointer<std::vector<NumericType>>::New(std::move(flux));
+  //     velocityField->setVelocities(velocities);
+  //     timer.finish();
+  //     file << timer.currentDuration << ";";
+
+  //     timer.start();
+  //     advectionKernel.apply();
+  //     timer.finish();
+  //     file << timer.currentDuration << "\n";
+  //   }
   // }
 
   // file.close();

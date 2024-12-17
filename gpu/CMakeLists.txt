@@ -183,15 +183,15 @@ if(NOT PASSED_FIRST_CONFIGURE)
   endif()
 endif()
 
-message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+# message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
 set(VIENNAPS_CUDA_KERNELS ${PROJECT_SOURCE_DIR}/deviceKernels/normKernels.cu)
 
-# Mark all pipeline files as Optix files
-file(GLOB OPTIX_FILES "pipelines/*.cu")
-foreach(FILE ${OPTIX_FILES})
-  set_source_files_properties(${FILE} PROPERTIES LABELS "OPTIX")
-endforeach()
+# Mark all pipeline files as Optix files (DOES NOT WORK)
+# file(GLOB OPTIX_FILES "pipelines/*.cu")
+# foreach(FILE ${OPTIX_FILES})
+#   set_source_files_properties(${FILE} PROPERTIES LABELS "OPTIX")
+# endforeach()
 
 # In CMake, functions have their own scope, whereas macros use the scope of the caller.
 macro(add_GPU_executable target_name_base target_name_var)
@@ -277,6 +277,7 @@ macro(add_GPU_executable target_name_base target_name_var)
 endmacro()
 
 add_subdirectory(examples)
+add_subdirectory(benchmark)
 
 # add_custom_target(buildGPUApplication)
 

@@ -63,8 +63,6 @@ void CreateContext(Context &context, std::string modulePath = "lib/ptx/") {
   // init optix
   OPTIX_CHECK(optixInit());
 
-  context = new Context_t{.modulePath = modulePath};
-
   CUmodule normModule;
   // CUmodule transModule;
   // CUmodule SF6O2ProcessModule;
@@ -76,6 +74,8 @@ void CreateContext(Context &context, std::string modulePath = "lib/ptx/") {
   if (err != CUDA_SUCCESS)
     viennacore::Logger::getInstance().addModuleError("cuInit", err).print();
 
+  context = new Context_t{.modulePath = modulePath};
+
   std::string normModuleName = "normKernels";
   err = cuModuleLoad(&normModule, (context->modulePath + "custom_generated_" +
                                    normModuleName + ".cu.ptx")
@@ -85,8 +85,8 @@ void CreateContext(Context &context, std::string modulePath = "lib/ptx/") {
         .addModuleError(normModuleName, err)
         .print();
 
-  // context->moduleNames.push_back(normModuleName);
-  // context->modules.push_back(normModule);
+  context->moduleNames.push_back(normModuleName);
+  context->modules.push_back(normModule);
 
   // std::string transModuleName = "translateKernels.ptx";
   // err = cuModuleLoad(&transModule, transModuleName.c_str());
