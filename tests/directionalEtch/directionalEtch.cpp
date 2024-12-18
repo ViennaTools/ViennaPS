@@ -41,11 +41,16 @@ template <class NumericType, int D> void RunTest() {
     MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
                                true, Material::Si)
         .apply();
-    std::vector<Material> maskMaterials(1, Material::Mask);
-    Vec3D<NumericType> direction{0., 0., 0.};
-    direction[D - 1] = -1.;
-    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
-        direction, 1., 0., maskMaterials);
+
+    typename DirectionalEtching<NumericType, D>::RateSet rateSet;
+    rateSet.direction = {0.};
+    rateSet.direction[D - 1] = -1.;
+    rateSet.directionalVelocity = -1.;
+    rateSet.isotropicVelocity = 0.;
+    rateSet.maskMaterials = std::vector<Material>{Material::Mask};
+    rateSet.calculateVisibility = false;
+
+    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(rateSet);
 
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());

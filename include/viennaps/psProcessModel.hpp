@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psAdvectionCallback.hpp"
+#include "psDomain.hpp"
 #include "psGeometricModel.hpp"
 #include "psSurfaceModel.hpp"
 #include "psVelocityField.hpp"
@@ -28,12 +29,15 @@ protected:
   SmartPointer<SurfaceModel<NumericType>> surfaceModel = nullptr;
   SmartPointer<AdvectionCallback<NumericType, D>> advectionCallback = nullptr;
   SmartPointer<GeometricModel<NumericType, D>> geometricModel = nullptr;
-  SmartPointer<VelocityField<NumericType>> velocityField = nullptr;
+  SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
 
 public:
   virtual ~ProcessModel() = default;
+
+  virtual void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                          const NumericType processDuration) {}
 
   auto &getParticleTypes() { return particles; }
   auto getSurfaceModel() const { return surfaceModel; }
@@ -41,14 +45,13 @@ public:
   auto getGeometricModel() const { return geometricModel; }
   auto getVelocityField() const { return velocityField; }
   auto getSource() { return source; }
+  auto getProcessName() const { return processName; }
 
   /// Set a primary direction for the source distribution (tilted distribution).
   virtual std::optional<std::array<NumericType, 3>>
   getPrimaryDirection() const {
     return primaryDirection;
   }
-
-  auto getProcessName() const { return processName; }
 
   int getParticleLogSize(std::size_t particleIdx) const {
     return particleLogSize[particleIdx];
@@ -90,7 +93,7 @@ public:
   }
 
   void setVelocityField(
-      SmartPointer<VelocityField<NumericType>> passedVelocityField) {
+      SmartPointer<VelocityField<NumericType, D>> passedVelocityField) {
     velocityField = passedVelocityField;
   }
 };

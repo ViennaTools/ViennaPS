@@ -5,6 +5,7 @@
 #include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
+#include <lsCalculateVisibilities.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
@@ -97,6 +98,12 @@ public:
       viennals::IntegrationSchemeEnum passedIntegrationScheme) {
     integrationScheme = passedIntegrationScheme;
   }
+
+  // Enable the output of the advection velocities on the level-set mesh.
+  void enableAdvectionVelocityOutput() { lsVelocityOutput = true; }
+
+  // Disable the output of the advection velocities on the level-set mesh.
+  void disableAdvectionVelocityOutput() { lsVelocityOutput = false; }
 
   // Enable the use of random seeds for ray tracing. This is useful to
   // prevent the formation of artifacts in the flux calculation.
@@ -268,7 +275,7 @@ public:
       meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = SmartPointer<TranslationField<NumericType>>::New(
+    auto transField = SmartPointer<TranslationField<NumericType, D>>::New(
         model->getVelocityField(), domain->getMaterialMap());
     transField->setTranslator(translator);
 
@@ -276,6 +283,7 @@ public:
     advectionKernel.setVelocityField(transField);
     advectionKernel.setIntegrationScheme(integrationScheme);
     advectionKernel.setTimeStepRatio(timeStepRatio);
+    advectionKernel.setSaveAdvectionVelocities(lsVelocityOutput);
 
     for (auto dom : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -458,6 +466,7 @@ public:
 
     double previousTimeStep = 0.;
     size_t counter = 0;
+    unsigned lsVelCounter = 0;
     Timer rtTimer;
     Timer callbackTimer;
     Timer advTimer;
@@ -468,6 +477,8 @@ public:
       if (PyErr_CheckSignals() != 0)
         throw pybind11::error_already_set();
 #endif
+      // Expand LS based on the integration scheme
+      advectionKernel.prepareLS();
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();
@@ -544,7 +555,10 @@ public:
       // get velocities from rates
       auto velocities = model->getSurfaceModel()->calculateVelocities(
           rates, points, materialIds);
-      model->getVelocityField()->setVelocities(velocities);
+
+      // prepare velocity field
+      model->getVelocityField()->prepare(domain, velocities,
+                                         processDuration - remainingTime);
       if (model->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 
@@ -602,7 +616,7 @@ public:
         advectionKernel.setAdvectionTime(remainingTime);
       }
 
-      // move coverages to LS, so they get are moved with the advection step
+      // move coverages to LS, so they are moved with the advection step
       if (useCoverages)
         moveCoveragesToTopLS(translator,
                              model->getSurfaceModel()->getCoverages());
@@ -610,6 +624,15 @@ public:
       advectionKernel.apply();
       advTimer.finish();
       Logger::getInstance().addTiming("Surface advection", advTimer).print();
+
+      if (lsVelocityOutput) {
+        auto lsMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+        viennals::ToMesh<NumericType, D>(domain->getLevelSets().back(), lsMesh)
+            .apply();
+        viennals::VTKWriter<NumericType>(
+            lsMesh, "ls_velocities_" + std::to_string(lsVelCounter++) + ".vtp")
+            .apply();
+      }
 
       // update the translator to retrieve the correct coverages from the LS
       meshConverter.apply();
@@ -776,6 +799,7 @@ private:
   bool smoothFlux = true;
   NumericType diskRadius = 0.;
   bool ignoreFluxBoundaries = false;
+  bool lsVelocityOutput = false;
   unsigned maxIterations = 20;
   bool coveragesInitialized_ = false;
   NumericType printTime = 0.;

@@ -108,7 +108,7 @@ public:
             const NumericType ionOrder = 1.,
             const NumericType ionMinAngle = 0.) {
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
     this->setVelocityField(velField);
 
     // particles

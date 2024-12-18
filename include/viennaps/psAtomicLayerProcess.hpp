@@ -135,7 +135,7 @@ public:
           pDomain_->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = SmartPointer<TranslationField<NumericType>>::New(
+    auto transField = SmartPointer<TranslationField<NumericType, D>>::New(
         pModel_->getVelocityField(), pDomain_->getMaterialMap());
     transField->setTranslator(translator);
 
@@ -355,7 +355,7 @@ public:
       // get velocities
       auto velocities =
           surfaceModel->calculateVelocities(rates, points, materialIds);
-      pModel_->getVelocityField()->setVelocities(velocities);
+      pModel_->getVelocityField()->prepare(pDomain_, velocities, 0.);
       if (pModel_->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 

@@ -409,7 +409,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
              pm.setGeometricModel(gm);
            })
       .def("setVelocityField",
-           [](ProcessModel<T, D> &pm, SmartPointer<VelocityField<T>> &vf) {
+           [](ProcessModel<T, D> &pm, SmartPointer<VelocityField<T, D>> &vf) {
              pm.setVelocityField(vf);
            })
       .def("setPrimaryDirection", &ProcessModel<T, D>::setPrimaryDirection)
@@ -839,20 +839,48 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            }),
            pybind11::arg("rate"), pybind11::arg("maskMaterial"));
 
-  // Directional Etching
+  // Expose RateSet struct to Python
+  pybind11::class_<DirectionalEtching<T, D>::RateSet>(module, "RateSet")
+      .def(pybind11::init<const Vec3D<T> &, const T, const T,
+                          const std::vector<Material> &, const bool>(),
+           pybind11::arg("direction") = Vec3D<T>{0., 0., 0.},
+           pybind11::arg("directionalVelocity") = 0.,
+           pybind11::arg("isotropicVelocity") = 0.,
+           pybind11::arg("maskMaterials") =
+               std::vector<Material>{Material::Mask},
+           pybind11::arg("calculateVisibility") = true)
+      .def_readwrite("direction", &DirectionalEtching<T, D>::RateSet::direction)
+      .def_readwrite("directionalVelocity",
+                     &DirectionalEtching<T, D>::RateSet::directionalVelocity)
+      .def_readwrite("isotropicVelocity",
+                     &DirectionalEtching<T, D>::RateSet::isotropicVelocity)
+      .def_readwrite("maskMaterials",
+                     &DirectionalEtching<T, D>::RateSet::maskMaterials)
+      .def_readwrite("calculateVisibility",
+                     &DirectionalEtching<T, D>::RateSet::calculateVisibility);
+
+  // Expose DirectionalEtching class to Python
   pybind11::class_<DirectionalEtching<T, D>,
                    SmartPointer<DirectionalEtching<T, D>>>(
       module, "DirectionalEtching", processModel)
-      .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const Material>(),
-           pybind11::arg("direction"),
-           pybind11::arg("directionalVelocity") = 1.,
-           pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") = Material::None)
-      .def(pybind11::init<const std::array<T, 3> &, const T, const T,
-                          const std::vector<Material>>(),
+      .def(pybind11::init<const Vec3D<T> &, T, T, const Material, bool>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
-           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"));
+           pybind11::arg("isotropicVelocity") = 0.,
+           pybind11::arg("maskMaterial") = Material::Mask,
+           pybind11::arg("calculateVisibility") = true)
+      .def(pybind11::init<const Vec3D<T> &, T, T, const std::vector<Material> &,
+                          bool>(),
+           pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
+           pybind11::arg("isotropicVelocity") = 0.,
+           pybind11::arg("maskMaterial") =
+               std::vector<Material>{Material::Mask},
+           pybind11::arg("calculateVisibility") = true)
+      .def(pybind11::init<
+               std::vector<typename DirectionalEtching<T, D>::RateSet>>(),
+           pybind11::arg("rateSets"))
+      // Constructor accepting a single rate set
+      .def(pybind11::init<const typename DirectionalEtching<T, D>::RateSet &>(),
+           pybind11::arg("rateSet"));
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,
@@ -1105,6 +1133,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
            "viennals::IntegrationSchemeEnum.")
+      .def("enableAdvectionVelocityOutput",
+           &Process<T, D>::enableAdvectionVelocityOutput,
+           "Enable the output of the advection velocity field on the ls-mesh.")
+      .def("disableAdvectionVelocityOutput",
+           &Process<T, D>::disableAdvectionVelocityOutput,
+           "Disable the output of the advection velocity field on the ls-mesh.")
       .def("setTimeStepRatio", &Process<T, D>::setTimeStepRatio,
            "Set the CFL condition to use during advection. The CFL condition "
            "sets the maximum distance a surface can be moved during one "

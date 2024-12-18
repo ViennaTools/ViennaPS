@@ -24,7 +24,7 @@ int main() {
   auto surfModel = ps::SmartPointer<SurfaceModel<NumericType>>::New();
 
   // velocity field
-  auto velField = ps::SmartPointer<VelocityField<NumericType>>::New();
+  auto velField = ps::SmartPointer<VelocityField<NumericType, D>>::New();
 
   /* ------------- Geometry setup (ViennaLS) ------------ */
   auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();

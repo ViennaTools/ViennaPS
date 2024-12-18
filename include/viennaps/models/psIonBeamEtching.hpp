@@ -183,7 +183,7 @@ private:
         params_, maskMaterial);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
