@@ -33,5 +33,17 @@ template <typename T> struct LaunchParams {
   OptixTraversableHandle traversable;
 };
 
+#ifdef __CUDACC__
+template <typename T>
+__device__ __forceinline__ unsigned int getIdx(int particleIdx, int dataIdx,
+                                               LaunchParams<T> *launchParams) {
+  unsigned int offset = 0;
+  for (unsigned int i = 0; i < particleIdx; i++)
+    offset += launchParams->dataPerParticle[i];
+  offset = (offset + dataIdx) * launchParams->numElements;
+  return offset + optixGetPrimitiveIndex();
+}
+#endif
+
 } // namespace gpu
 } // namespace viennaps

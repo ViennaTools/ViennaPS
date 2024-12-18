@@ -11,26 +11,30 @@ namespace gpu {
 using namespace viennacore;
 
 struct TriangleMesh {
-  std::vector<Vec3Df> vertex;
-  std::vector<Vec3D<int>> index;
+  std::vector<Vec3Df> vertices;
+  std::vector<Vec3D<unsigned>> triangles;
 
-  Vec3Df minCoords;
-  Vec3Df maxCoords;
+  Vec3Df minimumExtent;
+  Vec3Df maximumExtent;
   float gridDelta;
 };
 
 struct SphereMesh {
-  std::vector<Vec3Df> vertex;
-  std::vector<float> radius;
+  std::vector<Vec3Df> vertices;
+  std::vector<float> radii;
 
-  Vec3Df minCoords;
-  Vec3Df maxCoords;
+  Vec3Df minimumExtent;
+  Vec3Df maximumExtent;
   float gridDelta;
 };
 
 struct OrientedPointCloud {
-  std::vector<Vec3Df> vertex;
-  std::vector<Vec3Df> normal;
+  std::vector<Vec3Df> vertices;
+  std::vector<Vec3Df> normals;
+
+  Vec3Df minimumExtent;
+  Vec3Df maximumExtent;
+  float gridDelta;
 };
 
 } // namespace gpu

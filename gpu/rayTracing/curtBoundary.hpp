@@ -2,7 +2,6 @@
 
 #include <curtPerRayData.hpp>
 #include <curtSBTRecords.hpp>
-#include <curtUtilities.hpp>
 
 #include <vcVectorUtil.hpp>
 

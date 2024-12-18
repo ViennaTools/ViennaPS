@@ -8,7 +8,7 @@
 #include <curtSBTRecords.hpp>
 #include <curtSource.hpp>
 
-#include "context.hpp"
+#include <gpu/vcContext.hpp>
 
 using namespace viennaps::gpu;
 

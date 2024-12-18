@@ -37,8 +37,8 @@ public:
     mesh = SmartPointer<viennals::Mesh<float>>::New();
   }
 
-  void setKdTree(SmartPointer<KDTree<T, std::array<T, 3>>> passedKdTree) {
-    kdTree = passedKdTree;
+  void setGeometry(const TriangleMesh &passedMesh) {
+    geometry.buildAccel(context, passedMesh, launchParams);
   }
 
   void setPipeline(std::string fileName,
@@ -214,11 +214,6 @@ public:
   //   pointBuffer.free();
   // }
 
-  void updateSurface() {
-    geometry.buildAccelFromDomain(domain, launchParams, mesh, kdTree);
-    geometryValid = true;
-  }
-
   void setNumberOfRaysPerPoint(const size_t pNumRays) {
     numberOfRaysPerPoint = pNumRays;
   }
@@ -352,12 +347,6 @@ public:
 
   unsigned int getNumberOfElements() const { return launchParams.numElements; }
 
-  SmartPointer<viennals::Mesh<float>> getSurfaceMesh() const { return mesh; }
-
-  SmartPointer<KDTree<T, std::array<float, 3>>> getKDTree() const {
-    return kdTree;
-  }
-
 protected:
   void normalize() {
     T sourceArea =
@@ -376,9 +365,6 @@ protected:
   }
 
   void initRayTracer() {
-
-    geometry.optixContext = optixContext;
-
     launchParamsBuffer.alloc(sizeof(launchParams));
     normKernelName.push_back(NumericType);
     translateFromPointDataKernelName.push_back(NumericType);
@@ -386,8 +372,7 @@ protected:
   }
 
   /// creates the module that contains all the programs we are going to use. We
-  /// use a single module from a single .cu file, using a single embedded ptx
-  /// string
+  /// use a single module from a single .cu file
   void createModule() {
     moduleCompileOptions.maxRegisterCount =
         OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
@@ -568,11 +553,7 @@ protected:
   std::string pipelinePath = VIENNAPS_KERNELS_PATH;
 
   // geometry
-  psDomainType domain{nullptr};
-  SmartPointer<KDTree<T, std::array<float, 3>>> kdTree{nullptr};
-  SmartPointer<viennals::Mesh<float>> mesh{nullptr};
-
-  Geometry<T, D> geometry;
+  TriangleGeometry<T> geometry;
 
   // particles
   std::vector<Particle<T>> particles;
@@ -581,8 +562,6 @@ protected:
 
   // sbt data
   CudaBuffer cellDataBuffer;
-
-  // cuda and optix stuff
 
   std::vector<OptixPipeline> pipelines;
   OptixPipelineCompileOptions pipelineCompileOptions = {};
@@ -607,7 +586,6 @@ protected:
   // results Buffer
   CudaBuffer resultBuffer;
 
-  bool geometryValid = false;
   bool useRandomSeed = false;
   unsigned numCellData = 0;
   int numberOfRaysPerPoint = 3000;

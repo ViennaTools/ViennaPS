@@ -7,7 +7,7 @@
 #include <psProcess.hpp>
 
 // #include <curtTrace.hpp>
-#include <context.hpp>
+#include <gpu/vcContext.hpp>
 
 using namespace viennaps;
 

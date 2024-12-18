@@ -3,9 +3,10 @@
 #include <optix.h>
 
 #include <curtRNGState.hpp>
-#include <curtUtilities.hpp>
 
 #include <vcVectorUtil.hpp>
+
+#include <stdint.h>
 
 namespace viennaps {
 
