@@ -14,7 +14,7 @@ computeNormal(const viennaps::gpu::HitSBTData *sbt, const unsigned int primID) {
   const Vec3Df &A = sbt->vertex[index[0]];
   const Vec3Df &B = sbt->vertex[index[1]];
   const Vec3Df &C = sbt->vertex[index[2]];
-  return Normalize(CrossProduct(B - A, C - A));
+  return Normalize<float, 3>(CrossProduct<float>(B - A, C - A));
 }
 
 __device__ __inline__ void reflectFromBoundary(viennaps::gpu::PerRayData *prd) {

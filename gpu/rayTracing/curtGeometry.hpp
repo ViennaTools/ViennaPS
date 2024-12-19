@@ -198,8 +198,8 @@ template <typename NumericType> struct TriangleGeometry {
     boundaryMesh.triangles.push_back(Vec3D<unsigned>{6, 7, 3}); // 6
     boundaryMesh.triangles.push_back(Vec3D<unsigned>{6, 3, 2}); // 7
 
-    boundaryMesh.minCoords = bbMin;
-    boundaryMesh.maxCoords = bbMax;
+    boundaryMesh.minimumExtent = bbMin;
+    boundaryMesh.maximumExtent = bbMax;
 
     return boundaryMesh;
   }

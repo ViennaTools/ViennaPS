@@ -9,7 +9,7 @@ namespace gpu {
 
 template <typename T> struct Particle {
   std::string name;
-  int numberOfData = 1;
+  int numberOfData = 0;
   std::vector<std::string> dataLabels;
   float sticking = 1.f;
   float cosineExponent = 1.f;

@@ -3,7 +3,7 @@
 #include <cuda.h>
 #include <string>
 
-#include "context.hpp"
+#include <gpu/vcContext.hpp>
 
 namespace viennaps {
 
@@ -14,8 +14,7 @@ class LaunchKernel {
 public:
   static void launch(const std::string &moduleName,
                      const std::string &kernelName, void **kernel_args,
-                     Context_t *context,
-                     unsigned long sharedMemoryInBytes = 0) {
+                     Context context, unsigned long sharedMemoryInBytes = 0) {
 
     CUmodule module = context->getModule(moduleName);
     CUfunction function;
@@ -42,7 +41,7 @@ public:
 
   static void launchSingle(const std::string &moduleName,
                            const std::string &kernelName, void **kernel_args,
-                           Context_t *context,
+                           Context context,
                            unsigned long sharedMemoryInBytes = 0) {
 
     CUmodule module = context->getModule(moduleName);

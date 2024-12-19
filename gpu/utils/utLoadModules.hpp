@@ -22,7 +22,7 @@ static SourceCache g_sourceCache;
 
 inline bool fileExists(const char *path) {
   std::ifstream str(path);
-  return static_cast<bool>(str);
+  return str.good();
 }
 
 inline bool fileExists(const std::string &path) {

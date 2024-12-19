@@ -1,6 +1,5 @@
 #pragma once
 
-#include "context.hpp"
 #include <cuda.h>
 #include <optix_stubs.h>
 
@@ -15,12 +14,13 @@
 #include <curtLaunchParams.hpp>
 #include <curtParticle.hpp>
 #include <curtSBTRecords.hpp>
-#include <curtUtilities.hpp>
 
-#include <utChecks.hpp>
-#include <utCudaBuffer.hpp>
 #include <utLaunchKernel.hpp>
 #include <utLoadModules.hpp>
+
+#include <gpu/vcChecks.hpp>
+#include <gpu/vcContext.hpp>
+#include <gpu/vcCudaBuffer.hpp>
 
 namespace viennaps {
 
@@ -32,10 +32,7 @@ template <class T, int D> class Trace {
 public:
   /// constructor - performs all setup, including initializing
   /// optix, creates module, pipeline, programs, SBT, etc.
-  Trace(Context passedContext) : context(passedContext) {
-    initRayTracer();
-    mesh = SmartPointer<viennals::Mesh<float>>::New();
-  }
+  Trace(Context passedContext) : context(passedContext) { initRayTracer(); }
 
   void setGeometry(const TriangleMesh &passedMesh) {
     geometry.buildAccel(context, passedMesh, launchParams);
@@ -45,9 +42,12 @@ public:
                    std::string path = VIENNAPS_KERNELS_PATH) {
     // check if filename ends in .optixir
     if (fileName.find(".optixir") == std::string::npos) {
-      if (fileName.find(".ptx") != std::string::npos)
+      if (fileName.find(".ptx") == std::string::npos)
         fileName += ".optixir";
     }
+
+    if (path.back() != '/')
+      path += "/";
 
     if (!fileExists(path + fileName)) {
       Logger::getInstance()
@@ -218,17 +218,17 @@ public:
     numberOfRaysPerPoint = pNumRays;
   }
 
-  void setFixedNumberOfRays(const size_t pNumRays) {
+  void setNumberOfRaysFixed(const size_t pNumRays) {
     numberOfRaysFixed = pNumRays;
   }
 
-  void setUseRandomSeed(const bool set) { useRandomSeed = set; }
+  void setUseRandomSeeds(const bool set) { useRandomSeed = set; }
 
   void getFlux(T *flux, int particleIdx, int dataIdx) {
     unsigned int offset = 0;
     for (size_t i = 0; i < particles.size(); i++) {
       if (particleIdx > i)
-        offset += particles[i].numberOfData;
+        offset += particles[i].dataLabels.size();
     }
     auto temp = new T[numRates * launchParams.numElements];
     resultBuffer.download(temp, launchParams.numElements * numRates);
@@ -267,8 +267,8 @@ public:
     numRates = 0;
     std::vector<unsigned int> dataPerParticle;
     for (const auto &p : particles) {
-      dataPerParticle.push_back(p.numberOfData);
-      numRates += p.numberOfData;
+      dataPerParticle.push_back(p.dataLabels.size());
+      numRates += p.dataLabels.size();
     }
     dataPerParticleBuffer.allocUpload(dataPerParticle);
     launchParams.dataPerParticle =
@@ -284,7 +284,7 @@ public:
 
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
-      for (int dIdx = 0; dIdx < particles[pIdx].numberOfData; dIdx++) {
+      for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
         int tmpOffset = offset + dIdx;
         auto name = particles[pIdx].dataLabels[dIdx];
 
@@ -300,7 +300,7 @@ public:
         std::memcpy(values->data(), &temp[tmpOffset * numPoints],
                     numPoints * sizeof(T));
       }
-      offset += particles[pIdx].numberOfData;
+      offset += particles[pIdx].dataLabels.size();
     }
 
     delete temp;
@@ -313,7 +313,7 @@ public:
 
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
-      for (int dIdx = 0; dIdx < particles[pIdx].numberOfData; dIdx++) {
+      for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
         int tmpOffset = offset + dIdx;
         auto name = particles[pIdx].dataLabels[dIdx];
 
@@ -329,7 +329,7 @@ public:
         std::memcpy(values->data(), &temp[tmpOffset * numPoints],
                     numPoints * sizeof(T));
       }
-      offset += particles[pIdx].numberOfData;
+      offset += particles[pIdx].dataLabels.size();
     }
 
     delete temp;
@@ -398,7 +398,7 @@ protected:
     auto pipelineInput =
         getInputData((pipelinePath + pipelineName).c_str(), inputSize);
 
-    OPTIX_CHECK(optixModuleCreate(optixContext, &moduleCompileOptions,
+    OPTIX_CHECK(optixModuleCreate(context->optix, &moduleCompileOptions,
                                   &pipelineCompileOptions, pipelineInput,
                                   inputSize, log, &sizeof_log, &module));
     // if (sizeof_log > 1)
@@ -419,8 +419,9 @@ protected:
       // OptixProgramGroup raypg;
       char log[2048];
       size_t sizeof_log = sizeof(log);
-      OPTIX_CHECK(optixProgramGroupCreate(optixContext, &pgDesc, 1, &pgOptions,
-                                          log, &sizeof_log, &raygenPGs[i]));
+      OPTIX_CHECK(optixProgramGroupCreate(context->optix, &pgDesc, 1,
+                                          &pgOptions, log, &sizeof_log,
+                                          &raygenPGs[i]));
       // if (sizeof_log > 1)
       //   PRINT(log);
     }
@@ -440,8 +441,9 @@ protected:
       // OptixProgramGroup raypg;
       char log[2048];
       size_t sizeof_log = sizeof(log);
-      OPTIX_CHECK(optixProgramGroupCreate(optixContext, &pgDesc, 1, &pgOptions,
-                                          log, &sizeof_log, &missPGs[i]));
+      OPTIX_CHECK(optixProgramGroupCreate(context->optix, &pgDesc, 1,
+                                          &pgOptions, log, &sizeof_log,
+                                          &missPGs[i]));
       // if (sizeof_log > 1)
       //   PRINT(log);
     }
@@ -460,8 +462,9 @@ protected:
 
       char log[2048];
       size_t sizeof_log = sizeof(log);
-      OPTIX_CHECK(optixProgramGroupCreate(optixContext, &pgDesc, 1, &pgOptions,
-                                          log, &sizeof_log, &hitgroupPGs[i]));
+      OPTIX_CHECK(optixProgramGroupCreate(context->optix, &pgDesc, 1,
+                                          &pgOptions, log, &sizeof_log,
+                                          &hitgroupPGs[i]));
       // if (sizeof_log > 1)
       //   PRINT(log);
     }
@@ -479,7 +482,7 @@ protected:
       char log[2048];
       size_t sizeof_log = sizeof(log);
       OPTIX_CHECK(optixPipelineCreate(
-          optixContext, &pipelineCompileOptions, &pipelineLinkOptions,
+          context->optix, &pipelineCompileOptions, &pipelineLinkOptions,
           programGroups.data(), (int)programGroups.size(), log, &sizeof_log,
           &pipelines[i]));
       // if (sizeof_log > 1)
@@ -603,8 +606,7 @@ protected:
   std::string translateFromPointDataKernelName =
       "translate_from_point_cloud_mesh_";
 
-  static constexpr bool useFloat = std::is_same_v<T, float>;
-  static constexpr char NumericType = useFloat ? 'f' : 'd';
+  static constexpr char NumericType = std::is_same_v<T, float> ? 'f' : 'd';
 };
 
 } // namespace gpu
