@@ -45,7 +45,8 @@ extern "C" __global__ void __closesthit__SingleParticle()
         const unsigned int primID = optixGetPrimitiveIndex();
         atomicAdd(&params.resultBuffer[primID], prd->rayWeight);
         prd->rayWeight -= prd->rayWeight * params.sticking;
-        diffuseReflection(prd);
+        if (prd->rayWeight > params.rayWeightThreshold)
+            diffuseReflection(prd);
     }
 }
 

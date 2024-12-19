@@ -16,10 +16,9 @@ class IndexMap {
 public:
   IndexMap() {}
 
-  template <class T> IndexMap(std::vector<Particle<T>> &particles) {
+  template <class T> IndexMap(const std::vector<Particle<T>> &particles) {
     for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
-      assert(particles[pIdx].numberOfData == particles[pIdx].dataLabels.size());
-      for (size_t dIdx = 0; dIdx < particles[pIdx].numberOfData; dIdx++) {
+      for (size_t dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
         dataLabels.push_back(particles[pIdx].dataLabels[dIdx]);
       }
     }

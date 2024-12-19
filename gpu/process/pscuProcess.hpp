@@ -119,7 +119,6 @@ public:
       fluxesIndexMap = IndexMap(rayTrace_.getParticles());
     }
 
-    rayTrace_.updateSurface(); //  creates mesh
     auto numElements = rayTrace_.getNumberOfElements();
 
     // Initialize coverages
@@ -414,119 +413,6 @@ private:
     }
 
     delete temp;
-  }
-
-  void translateElementToPointData(
-      CudaBuffer &d_elementData,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      const IndexMap &indexMap,
-      SmartPointer<KDTree<float, Vec3Df>> elementKdTree,
-      SmartPointer<viennals::Mesh<NumericType>> pointMesh,
-      SmartPointer<viennals::Mesh<float>> surfMesh) {
-
-    const auto gridDelta = domain_->getGrid().getGridDelta();
-    auto numData = indexMap.getNumberOfData();
-    const auto &points = pointMesh->nodes;
-    auto numPoints = points.size();
-    auto numElements = elementKdTree->getNumberOfPoints();
-    auto normals = pointMesh->cellData.getVectorData("Normals");
-    auto elementNormals = surfMesh->cellData.getVectorData("Normals");
-
-    // retrieve data from device
-    std::vector<NumericType> elementData(numData * numElements);
-    d_elementData.download(elementData.data(), numData * numElements);
-
-    // prepare point data
-    pointData->clear();
-    for (const auto &label : indexMap) {
-      std::vector<NumericType> data(numPoints, 0.);
-      pointData->insertNextScalarData(std::move(data), label);
-    }
-    assert(pointData->getScalarDataSize() == numData); // assert number of data
-
-#pragma omp parallel for
-    for (unsigned i = 0; i < numPoints; i++) {
-
-      auto closePoints = elementKdTree->findNearestWithinRadius(
-          points[i], smoothFlux_ * smoothFlux_ * gridDelta *
-                         gridDelta); // we have to use the squared distance here
-
-      std::vector<NumericType> weights;
-      weights.reserve(closePoints.value().size());
-
-      unsigned numClosePoints = 0;
-      for (auto p : closePoints.value()) {
-        assert(p.first < elementNormals->size());
-
-        auto weight = DotProduct(normals->at(i), elementNormals->at(p.first));
-
-        if (weight > 1e-6 && !std::isnan(weight)) {
-          weights.push_back(weight);
-          numClosePoints++;
-        } else {
-          weights.push_back(0.);
-        }
-      }
-      assert(weights.size() == closePoints.value().size());
-
-      std::size_t nearestIdx = 0;
-      if (numClosePoints == 0) { // fallback to nearest point
-        auto nearestPoint = elementKdTree->findNearest(points[i]);
-        nearestIdx = nearestPoint->first;
-      }
-
-      for (unsigned j = 0; j < numData; j++) {
-
-        NumericType value = 0.;
-
-        if (numClosePoints > 0) { // perform weighted average
-
-          // Discard min and max
-          if (numClosePoints > 2) {
-            NumericType minValue = std::numeric_limits<NumericType>::max();
-            NumericType maxValue = 0.;
-            unsigned minIdx = 0; // in weights vector
-            unsigned maxIdx = 0;
-
-            unsigned k = 0;
-            for (auto p : closePoints.value()) {
-              if (weights[k] > 1e-6 && !std::isnan(weights[k])) {
-                unsigned elementIdx = p.first + j * numElements;
-                if (elementData[elementIdx] < minValue) {
-                  minValue = elementData[elementIdx];
-                  minIdx = k;
-                }
-                if (elementData[elementIdx] > maxValue) {
-                  maxValue = elementData[elementIdx];
-                  maxIdx = k;
-                }
-              }
-              k++;
-            }
-
-            weights[minIdx] = 0.;
-            weights[maxIdx] = 0.;
-          }
-
-          // calculate weight sum
-          NumericType sum = std::accumulate(weights.begin(), weights.end(), 0.);
-
-          unsigned n = 0;
-          for (auto p : closePoints.value()) {
-            if (weights[n] > 0.)
-              value += weights[n] * elementData[p.first + j * numElements];
-            n++;
-          }
-          value /= sum;
-
-        } else {
-          // fallback to nearest point
-          value = elementData[nearestIdx + j * numElements];
-        }
-
-        pointData->getScalarData(j)->at(i) = value;
-      }
-    }
   }
 
   template <class T>
