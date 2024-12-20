@@ -59,7 +59,7 @@ private:
     auto velField =
         SmartPointer<::viennaps::DefaultVelocityField<NumericType>>::New(2);
 
-    this->setPtxCode(embedded_SingleParticle_pipeline);
+    this->setPipelineFileName("SingleParticlePipeline");
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);

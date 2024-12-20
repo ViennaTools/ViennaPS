@@ -1,41 +1,34 @@
 #include <lsAdvect.hpp>
 #include <lsToDiskMesh.hpp>
 
-#include <geometries/psMakeTrench.hpp>
-#include <psDomain.hpp>
 #include <psProcess.hpp>
-
 #include <rayTrace.hpp>
+
+#include "BenchmarkGeometry.hpp"
 
 using namespace viennaps;
 
 int main() {
   omp_set_num_threads(16);
   using NumericType = float;
-  constexpr int D = 3;
+  constexpr int D = DIM;
 
-  //   const std::array<NumericType, 10> sticking = {0.1f, 0.2f, 0.3f, 0.4f,
-  //   0.5f,
-  //                                                 0.6f, 0.7f, 0.8f,
-  //                                                 0.9f, 1.f};
-  const std::array<NumericType, 1> sticking = {1.f};
+  const std::array<NumericType, 10> sticking = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f,
+                                                0.6f, 0.7f, 0.8f, 0.9f, 1.f};
+  // const std::array<NumericType, 1> sticking = {1.f};
   const int processSteps = 10;
-  const NumericType gridDelta = .1;
   std::ofstream file("CPU_Benchmark.txt");
   file << "Sticking;Meshing;Tracing;Postprocessing;Advection\n";
 
   for (int i = 0; i < sticking.size(); i++) {
 
-    auto domain = SmartPointer<Domain<NumericType, D>>::New();
-    MakeTrench<NumericType, D>(domain, gridDelta, 10, 5, 5, 5, 0., 0.5, false,
-                               true, Material::Si)
-        .apply();
+    auto domain = MAKE_GEO<NumericType>();
 
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     viennals::ToDiskMesh<NumericType, D> mesher(mesh);
 
     viennaray::Trace<NumericType, D> tracer;
-    tracer.setNumberOfRaysFixed(20000000); // 20 million rays
+    tracer.setNumberOfRaysPerPoint(3000);
     tracer.setUseRandomSeeds(false);
 
     viennals::Advect<NumericType, D> advectionKernel;
@@ -69,7 +62,7 @@ int main() {
       const auto &materialIds =
           *mesh->getCellData().getScalarData("MaterialIds");
       const auto &normals = *mesh->getCellData().getVectorData("Normals");
-      tracer.setGeometry(mesh->nodes, normals, gridDelta);
+      tracer.setGeometry(mesh->nodes, normals, GRID_DELTA);
       tracer.setMaterialIds(materialIds);
 
       timer.start();

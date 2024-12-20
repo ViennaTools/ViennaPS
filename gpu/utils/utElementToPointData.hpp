@@ -13,54 +13,64 @@ namespace gpu {
 using namespace viennacore;
 
 template <typename NumericType> class ElementToPointData {
-  CudaBuffer d_elementData;
-  SmartPointer<viennals::PointData<NumericType>> pointData;
-  const IndexMap indexMap;
-  SmartPointer<KDTree<float, Vec3Df>> elementKdTree;
-  SmartPointer<viennals::Mesh<NumericType>> pointMesh;
-  SmartPointer<viennals::Mesh<float>> surfMesh;
-  const NumericType gridDelta;
-  const NumericType smoothFlux_ = 1.;
+  CudaBuffer &d_elementData_;
+  SmartPointer<viennals::PointData<NumericType>> pointData_;
+  const IndexMap indexMap_;
+  SmartPointer<KDTree<float, Vec3Df>> elementKdTree_;
+  SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
+  SmartPointer<viennals::Mesh<float>> surfaceMesh_;
+  const NumericType conversionRadius_;
 
 public:
-  ElementToPointData(CudaBuffer d_elementData,
+  ElementToPointData(CudaBuffer &d_elementData,
                      SmartPointer<viennals::PointData<NumericType>> pointData,
                      const std::vector<Particle<NumericType>> &particles,
                      SmartPointer<KDTree<float, Vec3Df>> elementKdTree,
-                     SmartPointer<viennals::Mesh<NumericType>> pointMesh,
+                     SmartPointer<viennals::Mesh<NumericType>> diskMesh,
                      SmartPointer<viennals::Mesh<float>> surfMesh,
-                     const NumericType gridDelta,
-                     const NumericType smoothFlux = 1.)
-      : d_elementData(d_elementData), pointData(pointData), indexMap(particles),
-        elementKdTree(elementKdTree), pointMesh(pointMesh), surfMesh(surfMesh),
-        gridDelta(gridDelta), smoothFlux_(smoothFlux) {}
+                     const NumericType conversionRadius)
+      : d_elementData_(d_elementData), pointData_(pointData),
+        indexMap_(particles), elementKdTree_(elementKdTree),
+        diskMesh_(diskMesh), surfaceMesh_(surfMesh),
+        conversionRadius_(conversionRadius) {}
+
+  ElementToPointData(CudaBuffer &d_elementData,
+                     SmartPointer<viennals::PointData<NumericType>> pointData,
+                     const IndexMap &indexMap,
+                     SmartPointer<KDTree<float, Vec3Df>> elementKdTree,
+                     SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+                     SmartPointer<viennals::Mesh<float>> surfMesh,
+                     const NumericType conversionRadius)
+      : d_elementData_(d_elementData), pointData_(pointData),
+        indexMap_(indexMap), elementKdTree_(elementKdTree), diskMesh_(diskMesh),
+        surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
 
   void apply() {
 
-    auto numData = indexMap.getNumberOfData();
-    const auto &points = pointMesh->nodes;
+    auto numData = indexMap_.getNumberOfData();
+    const auto &points = diskMesh_->nodes;
     auto numPoints = points.size();
-    auto numElements = elementKdTree->getNumberOfPoints();
-    auto normals = pointMesh->cellData.getVectorData("Normals");
-    auto elementNormals = surfMesh->cellData.getVectorData("Normals");
-    const float sqrdDist = smoothFlux_ * smoothFlux_ * gridDelta * gridDelta;
+    auto numElements = elementKdTree_->getNumberOfPoints();
+    auto normals = diskMesh_->cellData.getVectorData("Normals");
+    auto elementNormals = surfaceMesh_->cellData.getVectorData("Normals");
+    const float sqrdDist = conversionRadius_ * conversionRadius_;
 
     // retrieve data from device
     std::vector<NumericType> elementData(numData * numElements);
-    d_elementData.download(elementData.data(), numData * numElements);
+    d_elementData_.download(elementData.data(), numData * numElements);
 
     // prepare point data container
-    pointData->clear();
-    for (const auto &label : indexMap) {
+    pointData_->clear();
+    for (const auto &label : indexMap_) {
       std::vector<NumericType> data(numPoints, 0.);
-      pointData->insertNextScalarData(std::move(data), label);
+      pointData_->insertNextScalarData(std::move(data), label);
     }
-    assert(pointData->getScalarDataSize() == numData); // assert number of data
+    assert(pointData_->getScalarDataSize() == numData); // assert number of data
 
 #pragma omp parallel for
     for (unsigned i = 0; i < numPoints; i++) {
 
-      auto closePoints = elementKdTree->findNearestWithinRadius(
+      auto closePoints = elementKdTree_->findNearestWithinRadius(
           points[i], sqrdDist); // we have to use the squared distance here
 
       std::vector<NumericType> weights;
@@ -83,13 +93,14 @@ public:
 
       std::size_t nearestIdx = 0;
       if (numClosePoints == 0) { // fallback to nearest point
-        auto nearestPoint = elementKdTree->findNearest(points[i]);
+        auto nearestPoint = elementKdTree_->findNearest(points[i]);
         nearestIdx = nearestPoint->first;
       }
 
       for (unsigned j = 0; j < numData; j++) {
 
         NumericType value = 0.;
+        auto weightsCopy = weights;
 
         if (numClosePoints > 0) { // perform weighted average
 
@@ -116,17 +127,19 @@ public:
               k++;
             }
 
-            weights[minIdx] = 0.;
-            weights[maxIdx] = 0.;
+            // discard values by setting their weight to 0
+            weightsCopy[minIdx] = 0.;
+            weightsCopy[maxIdx] = 0.;
           }
 
           // calculate weight sum
-          NumericType sum = std::accumulate(weights.begin(), weights.end(), 0.);
+          NumericType sum =
+              std::accumulate(weightsCopy.begin(), weightsCopy.end(), 0.);
+          assert(sum != 0.);
 
           unsigned n = 0;
           for (auto p : closePoints.value()) {
-            if (weights[n] > 0.)
-              value += weights[n] * elementData[p.first + j * numElements];
+            value += weightsCopy[n] * elementData[p.first + j * numElements];
             n++;
           }
           value /= sum;
@@ -136,7 +149,7 @@ public:
           value = elementData[nearestIdx + j * numElements];
         }
 
-        pointData->getScalarData(j)->at(i) = value;
+        pointData_->getScalarData(j)->at(i) = value;
       }
     }
   }

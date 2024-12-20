@@ -24,6 +24,10 @@ public:
     }
   }
 
+  void insertNextDataLabel(std::string dataLabel) {
+    dataLabels.push_back(std::move(dataLabel));
+  }
+
   std::size_t getIndex(const std::string label) const {
     for (std::size_t idx = 0; idx < dataLabels.size(); idx++) {
       if (dataLabels[idx] == label) {

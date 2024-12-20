@@ -152,6 +152,7 @@ if(NOT PASSED_FIRST_CONFIGURE)
   optix_add_cuda_flag("--use_fast_math")
   optix_add_cuda_flag("-lineinfo")
   optix_add_cuda_flag("--expt-relaxed-constexpr")
+  optix_add_cuda_flag("--generate-line-info")
 
   # CMAKE_CONFIGURATION_TYPES is only defined for multi-config build systems like
   # MSVC and Ninja, but we need to generate flags for each configuration

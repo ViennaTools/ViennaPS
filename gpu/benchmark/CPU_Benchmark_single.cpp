@@ -1,29 +1,24 @@
 #include <lsAdvect.hpp>
 #include <lsToDiskMesh.hpp>
 
-#include <geometries/psMakeTrench.hpp>
-#include <psDomain.hpp>
 #include <psProcess.hpp>
-
 #include <rayTrace.hpp>
+
+#include "BenchmarkGeometry.hpp"
 
 using namespace viennaps;
 
 int main() {
   omp_set_num_threads(16);
   using NumericType = float;
-  constexpr int D = 3;
+  constexpr int D = DIM;
 
   const NumericType sticking = 1.f;
-  const NumericType gridDelta = .1;
   std::ofstream file("CPU_Benchmark_single.txt");
   file << "Sticking;Meshing;Tracing;Postprocessing\n";
   file << sticking << ";";
 
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
-  MakeTrench<NumericType, D>(domain, gridDelta, 10, 5, 5, 5, 0.05, 0.5, false,
-                             true, Material::Si)
-      .apply();
+  auto domain = MAKE_GEO<NumericType>();
 
   auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
   viennals::ToDiskMesh<NumericType, D> mesher(mesh);
@@ -50,7 +45,7 @@ int main() {
 
   const auto &materialIds = *mesh->getCellData().getScalarData("MaterialIds");
   const auto &normals = *mesh->getCellData().getVectorData("Normals");
-  tracer.setGeometry(mesh->nodes, normals, gridDelta);
+  tracer.setGeometry(mesh->nodes, normals, GRID_DELTA);
   tracer.setMaterialIds(materialIds);
 
   timer.start();

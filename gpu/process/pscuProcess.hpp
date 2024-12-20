@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cstring>
 
-#include <context.hpp>
+#include <gpu/vcContext.hpp>
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
@@ -413,97 +413,6 @@ private:
     }
 
     delete temp;
-  }
-
-  template <class T>
-  static void
-  insertReplaceScalarData(viennals::PointData<T> &insertHere,
-                          SmartPointer<viennals::PointData<T>> addData) {
-    for (unsigned i = 0; i < addData->getScalarDataSize(); i++) {
-      auto dataName = addData->getScalarDataLabel(i);
-      auto data = insertHere.getScalarData(dataName, true);
-      auto numElements = addData->getScalarData(i)->size();
-      if (data == nullptr) {
-        std::vector<NumericType> tmp(numElements);
-        insertHere.insertNextScalarData(std::move(tmp), dataName);
-        data = insertHere.getScalarData(dataName);
-      }
-      *data = *addData->getScalarData(i);
-    }
-  }
-
-  template <class T>
-  static void insertReplaceScalarData(viennals::PointData<T> &insertHere,
-                                      SmartPointer<std::vector<T>> addData,
-                                      std::string dataName) {
-    auto data = insertHere.getScalarData(dataName, true);
-    auto numElements = addData->size();
-    if (data == nullptr) {
-      std::vector<NumericType> tmp(numElements);
-      insertHere.insertNextScalarData(std::move(tmp), dataName);
-      data = insertHere.getScalarData(dataName);
-    }
-    *data = *addData;
-  }
-
-  static void translatePointToElementData(
-      const std::vector<NumericType> &materialIds,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      CudaBuffer &d_elementData,
-      SmartPointer<TranslationField<NumericType>> translationField,
-      SmartPointer<viennals::Mesh<float>> elementMesh) {
-
-    auto numData = pointData ? pointData->getScalarDataSize() : 0;
-    const auto &elements = elementMesh->template getElements<D>();
-    auto numElements = elements.size();
-    std::vector<NumericType> elementData((numData + 1) * numElements);
-
-    auto closestPoints =
-        SmartPointer<std::vector<NumericType>>::New(numElements);
-
-#pragma omp parallel for
-    for (unsigned i = 0; i < numElements; i++) {
-      auto &elIdx = elements[i];
-      std::array<NumericType, 3> elementCenter{
-          (elementMesh->nodes[elIdx[0]][0] + elementMesh->nodes[elIdx[1]][0] +
-           elementMesh->nodes[elIdx[2]][0]) /
-              3.f,
-          (elementMesh->nodes[elIdx[0]][1] + elementMesh->nodes[elIdx[1]][1] +
-           elementMesh->nodes[elIdx[2]][1]) /
-              3.f,
-          (elementMesh->nodes[elIdx[0]][2] + elementMesh->nodes[elIdx[1]][2] +
-           elementMesh->nodes[elIdx[2]][2]) /
-              3.f};
-
-      auto closestPoint = translationField->getClosestPoint(elementCenter);
-      assert(closestPoint->first < materialIds.size());
-      closestPoints->at(i) = closestPoint->first;
-
-      // fill in material ids at front
-      elementData[i] = materialIds[closestPoint->first];
-
-      // scalar data with offset
-      for (unsigned j = 0; j < numData; j++) {
-        elementData[i + (j + 1) * numElements] =
-            pointData->getScalarData(j)->at(closestPoint->first);
-      }
-    }
-
-    insertReplaceScalarData(elementMesh->cellData, closestPoints, "pointIds");
-    // for (int i = 0; i < numData; i++) {
-    //   auto tmp = SmartPointer<std::vector<NumericType>>::New(
-    //       elementData.begin() + (i + 1) * numElements,
-    //       elementData.begin() + (i + 2) * numElements);
-    //   insertReplaceScalarData(elementMesh->cellData, tmp,
-    //                           pointData->getScalarDataLabel(i));
-    // }
-    // static int insert = 0;
-    // viennals::VTKWriter<NumericType>(elementMesh, "insertElement_" +
-    //                                           std::to_string(insert++) +
-    //                                           ".vtp")
-    //     .apply();
-
-    d_elementData.allocUpload(elementData);
   }
 
   bool checkInput() {

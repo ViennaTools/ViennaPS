@@ -15,7 +15,7 @@ using namespace viennaps::gpu;
 /*  launch parameters in constant memory, filled in by optix upon
     optixLaunch (this gets filled in from the buffer we pass to
     optixLaunch) */
-extern "C" __constant__ LaunchParams<float> params;
+extern "C" __constant__ LaunchParams<float> launchParams;
 
 // for this simple example, we have a single ray type
 enum
@@ -31,7 +31,7 @@ extern "C" __global__ void __closesthit__SingleParticle()
 
     if (sbtData->isBoundary)
     {
-        if (params.periodicBoundary)
+        if (launchParams.periodicBoundary)
         {
             applyPeriodicBoundary(prd, sbtData);
         }
@@ -43,9 +43,9 @@ extern "C" __global__ void __closesthit__SingleParticle()
     else
     {
         const unsigned int primID = optixGetPrimitiveIndex();
-        atomicAdd(&params.resultBuffer[primID], prd->rayWeight);
-        prd->rayWeight -= prd->rayWeight * params.sticking;
-        if (prd->rayWeight > params.rayWeightThreshold)
+        atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight);
+        prd->rayWeight -= prd->rayWeight * launchParams.sticking;
+        if (prd->rayWeight > launchParams.rayWeightThreshold)
             diffuseReflection(prd);
     }
 }
@@ -72,19 +72,19 @@ extern "C" __global__ void __raygen__SingleParticle()
     // per-ray data
     PerRayData prd;
     // each ray has its own RNG state
-    initializeRNGState(&prd, linearLaunchIndex, params.seed);
+    initializeRNGState(&prd, linearLaunchIndex, launchParams.seed);
 
     // initialize ray position and direction
-    initializeRayPosition(&prd, &params);
-    initializeRayDirection(&prd, params.cosineExponent);
+    initializeRayPosition(&prd, &launchParams);
+    initializeRayDirection(&prd, launchParams.cosineExponent);
 
     // the values we store the PRD pointer in:
     uint32_t u0, u1;
     packPointer((void *)&prd, u0, u1);
 
-    while (prd.rayWeight > params.rayWeightThreshold)
+    while (prd.rayWeight > launchParams.rayWeightThreshold)
     {
-        optixTrace(params.traversable,                              // traversable GAS
+        optixTrace(launchParams.traversable,                        // traversable GAS
                    make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                    make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
                    1e-4f,                                           // tmin

@@ -12,14 +12,11 @@ template <typename T> struct LaunchParams {
   T rayWeightThreshold = 0.01f;
   unsigned int seed = 0;
   unsigned int numElements;
-  unsigned int *dataPerParticle;
+  unsigned int *dataPerParticle; // to determine result buffer index
   float sticking = 1.f;
   float cosineExponent = 1.f;
   bool periodicBoundary = true;
-
-  float meanIonEnergy = 100.f; // eV
-  float sigmaIonEnergy = 10.f; // eV
-  float cageAngle = 0.f;
+  void *customData;
 
   // source plane params
   struct {

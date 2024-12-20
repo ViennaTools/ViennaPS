@@ -21,6 +21,7 @@
 #include <gpu/vcChecks.hpp>
 #include <gpu/vcContext.hpp>
 #include <gpu/vcCudaBuffer.hpp>
+#include <vcUtil.hpp>
 
 namespace viennaps {
 
@@ -106,15 +107,13 @@ public:
 
       launchParams.cosineExponent = particles[i].cosineExponent;
       launchParams.sticking = particles[i].sticking;
-      launchParams.meanIonEnergy = particles[i].meanIonEnergy;
-      launchParams.sigmaIonEnergy = particles[i].sigmaIonEnergy;
       launchParams.source.directionBasis =
           rayInternal::getOrthonormalBasis<float>(particles[i].direction);
       launchParamsBuffer.upload(&launchParams, 1);
 
       CUstream stream;
       CUDA_CHECK(StreamCreate(&stream));
-      buildSBT(i);
+      generateSBT(i);
       OPTIX_CHECK(optixLaunch(pipelines[i], stream,
                               /*! parameters and SBT */
                               launchParamsBuffer.dPointer(),
@@ -176,6 +175,7 @@ public:
     assert(passedCellDataBuffer.sizeInBytes / sizeof(T) / numData ==
            launchParams.numElements);
     cellDataBuffer = passedCellDataBuffer;
+    numCellData = numData;
   }
 
   // void translateFromPointData(SmartPointer<viennals::Mesh<T>> mesh,
@@ -273,6 +273,10 @@ public:
     dataPerParticleBuffer.allocUpload(dataPerParticle);
     launchParams.dataPerParticle =
         (unsigned int *)dataPerParticleBuffer.dPointer();
+    Logger::getInstance()
+        .addDebug("Number of flux arrays: " + std::to_string(numRates))
+        .print();
+
     return numRates;
   }
 
@@ -346,6 +350,12 @@ public:
   unsigned int getNumberOfRates() const { return numRates; }
 
   unsigned int getNumberOfElements() const { return launchParams.numElements; }
+
+  template <class ParamType> void setParameters(const ParamType &params) {
+    parameterBuffer.alloc(sizeof(ParamType));
+    parameterBuffer.upload(&params, 1);
+    launchParams.customData = (void *)parameterBuffer.dPointer();
+  }
 
 protected:
   void normalize() {
@@ -485,8 +495,10 @@ protected:
           context->optix, &pipelineCompileOptions, &pipelineLinkOptions,
           programGroups.data(), (int)programGroups.size(), log, &sizeof_log,
           &pipelines[i]));
-      // if (sizeof_log > 1)
-      //   PRINT(log);
+      // #ifndef NDEBUG
+      //       if (sizeof_log > 1)
+      //         PRINT(log);
+      // #endif
     }
     // probably not needed in current implementation but maybe something to
     // think about in future OPTIX_CHECK(optixPipelineSetStackSize(
@@ -502,7 +514,7 @@ protected:
   }
 
   /// constructs the shader binding table
-  void buildSBT(const size_t i) {
+  void generateSBT(const size_t i) {
     // build raygen record
     RaygenRecord raygenRecord;
     optixSbtRecordPackHeader(raygenPGs[i], &raygenRecord);
@@ -562,6 +574,7 @@ protected:
   std::vector<Particle<T>> particles;
   CudaBuffer dataPerParticleBuffer;
   unsigned int numRates = 0;
+  CudaBuffer parameterBuffer;
 
   // sbt data
   CudaBuffer cellDataBuffer;
@@ -596,7 +609,7 @@ protected:
   int runNumber = 0;
 
   size_t numRays = 0;
-  std::string globalParamsName = "params";
+  std::string globalParamsName = "launchParams";
 
   const std::string normModuleName = "normKernels.ptx";
   std::string normKernelName = "normalize_surface_";
