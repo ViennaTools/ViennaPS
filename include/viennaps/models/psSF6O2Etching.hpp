@@ -151,30 +151,25 @@ public:
     auto oCoverage = coverages->getScalarData("oCoverage");
     oCoverage->resize(numPoints);
     for (size_t i = 0; i < numPoints; ++i) {
+      auto Gb_F = etchantRate->at(i) * params.etchantFlux * params.beta_F;
+      auto Gb_O = oxygenRate->at(i) * params.oxygenFlux * params.beta_O;
+      auto GY_ie = ionEnhancedRate->at(i) * params.ionFlux;
+      auto GY_o = oxygenSputteringRate->at(i) * params.ionFlux;
+
       if (etchantRate->at(i) < 1e-6) {
         eCoverage->at(i) = 0;
       } else {
-        eCoverage->at(i) =
-            etchantRate->at(i) * params.etchantFlux * params.beta_F /
-            (etchantRate->at(i) * params.etchantFlux * params.beta_F +
-             (params.Si.k_sigma + 2 * ionEnhancedRate->at(i) * params.ionFlux) *
-                 (1 + (oxygenRate->at(i) * params.oxygenFlux * params.beta_O) /
-                          (params.Si.beta_sigma +
-                           oxygenSputteringRate->at(i) * params.ionFlux)));
+        double tmp = 1 + ((params.Si.k_sigma + 2 * GY_ie) / Gb_F) *
+                             (1 + Gb_O / (params.Si.beta_sigma + GY_o));
+        eCoverage->at(i) = 1 / tmp;
       }
 
       if (oxygenRate->at(i) < 1e-6) {
         oCoverage->at(i) = 0;
       } else {
-        oCoverage->at(i) =
-            oxygenRate->at(i) * params.oxygenFlux * params.beta_O /
-            (oxygenRate->at(i) * params.oxygenFlux * params.beta_O +
-             (params.Si.beta_sigma +
-              oxygenSputteringRate->at(i) * params.ionFlux) *
-                 (1 +
-                  (etchantRate->at(i) * params.etchantFlux * params.beta_F) /
-                      (params.Si.k_sigma +
-                       2 * ionEnhancedRate->at(i) * params.ionFlux)));
+        double tmp = 1 + ((params.Si.beta_sigma + GY_ie) / Gb_O) *
+                             (1 + Gb_F / (params.Si.k_sigma + 2 * GY_ie));
+        oCoverage->at(i) = 1 / tmp;
       }
     }
   }
@@ -207,7 +202,7 @@ public:
         eCoverage->at(i) =
             etchantRate->at(i) * params.etchantFlux * params.beta_F /
             (etchantRate->at(i) * params.etchantFlux * params.beta_F +
-             (params.Si.k_sigma + 2 * ionEnhancedRate->at(i) * params.ionFlux));
+             params.Si.k_sigma + 2 * ionEnhancedRate->at(i) * params.ionFlux);
       }
     }
   }
