@@ -90,6 +90,9 @@ public:
     std::vector<NumericType> cov(numGeometryPoints, 0.);
     coverages->insertNextScalarData(cov, "eCoverage");
     coverages->insertNextScalarData(cov, "oCoverage");
+    coverages->insertNextScalarData(cov, "ieComponent");
+    coverages->insertNextScalarData(cov, "spComponent");
+    coverages->insertNextScalarData(cov, "thComponent");
   }
 
   SmartPointer<std::vector<NumericType>>
@@ -105,6 +108,10 @@ public:
     const auto etchantRate = rates->getScalarData("etchantRate");
     const auto eCoverage = coverages->getScalarData("eCoverage");
 
+    const auto ieComponent = coverages->getScalarData("ieComponent");
+    const auto spComponent = coverages->getScalarData("spComponent");
+    const auto thComponent = coverages->getScalarData("thComponent");
+
     bool stop = false;
 
     for (size_t i = 0; i < numPoints; ++i) {
@@ -116,12 +123,19 @@ public:
       if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
         etchRate[i] =
             -(1 / params.Mask.rho) * ionSputteringRate->at(i) * params.ionFlux;
+        spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
+        ieComponent->at(i) = 0.;
+        thComponent->at(i) = 0.;
       } else {
         etchRate[i] =
             -(1 / params.Si.rho) * (params.Si.k_sigma * eCoverage->at(i) / 4. +
                                     ionSputteringRate->at(i) * params.ionFlux +
                                     eCoverage->at(i) * ionEnhancedRate->at(i) *
                                         params.ionFlux); // in um / s
+        spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
+        ieComponent->at(i) =
+            eCoverage->at(i) * ionEnhancedRate->at(i) * params.ionFlux;
+        thComponent->at(i) = params.Si.k_sigma * eCoverage->at(i) / 4.;
       }
     }
 
@@ -235,12 +249,12 @@ public:
 
     const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
-    NumericType f_ie_theta;
-    if (cosTheta > 0.5) {
-      f_ie_theta = 1.;
-    } else {
-      f_ie_theta = 3. - 6. * angle / M_PI;
-    }
+    NumericType f_ie_theta = cosTheta;
+    // if (cosTheta > 0.5) {
+    //   f_ie_theta = 1.;
+    // } else {
+    //   f_ie_theta = 3. - 6. * angle / M_PI;
+    // }
     NumericType A_sp = params.Si.A_sp;
     NumericType B_sp = params.Si.B_sp;
     NumericType Eth_sp = params.Si.Eth_sp;
