@@ -4,8 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <psProcessParams.hpp>
-#include <utCudaBuffer.hpp>
+#include <gpu/vcCudaBuffer.hpp>
 
 namespace viennaps {
 

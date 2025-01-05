@@ -92,7 +92,8 @@ public:
 
 private:
   SmartPointer<TranslatorType> translator_;
-  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_;
+  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ =
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
   const SmartPointer<viennaps::VelocityField<NumericType>> modelVelocityField_;
   const SmartPointer<MaterialMap> materialMap_;
   const int translationMethod_ = 1;

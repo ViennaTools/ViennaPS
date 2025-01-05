@@ -1,6 +1,6 @@
 #pragma once
 
-#include <context.hpp>
+#include <gpu/vcContext.hpp>
 
 #include <curtParticle.hpp>
 
@@ -15,25 +15,26 @@ namespace gpu {
 
 using namespace viennacore;
 
-template <typename NumericType> class ProcessModel {
+template <class NumericType, int D> class ProcessModel {
 private:
   using ParticleTypeList = std::vector<Particle<NumericType>>;
 
   ParticleTypeList particles;
   SmartPointer<::viennaps::SurfaceModel<NumericType>> surfaceModel = nullptr;
   SmartPointer<VelocityField<NumericType>> velocityField = nullptr;
-  std::string processName = "default";
-  std::string pipelineFileName = "";
+  std::optional<std::string> processName = std::nullopt;
+  std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
+  std::string pipelineFileName;
 
 public:
   auto getParticleTypes() { return particles; }
   auto getSurfaceModel() { return surfaceModel; }
   auto getVelocityField() { return velocityField; }
 
-  void setProcessName(std::string name) { processName = name; }
+  void setProcessName(const std::string &name) { processName = name; }
   auto getProcessName() const { return processName; }
 
-  void setPipelineFileName(std::string fileName) {
+  void setPipelineFileName(const std::string &fileName) {
     pipelineFileName = fileName;
   }
   auto getPipelineFileName() const { return pipelineFileName; }
@@ -54,5 +55,4 @@ public:
 };
 
 } // namespace gpu
-
 } // namespace viennaps

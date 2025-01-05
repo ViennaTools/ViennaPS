@@ -10,7 +10,7 @@
 using namespace viennaps;
 
 int main() {
-  omp_set_num_threads(16);
+  omp_set_num_threads(1);
   using NumericType = float;
   constexpr int D = DIM;
 
@@ -57,7 +57,7 @@ int main() {
             << std::endl;
 
   tracer.setGeometry(mesh);
-  tracer.setPipeline("SingleParticlePipeline");
+  tracer.setPipeline("SingleParticlePipeline", context->modulePath);
 
   auto particle = gpu::Particle<NumericType>();
   particle.sticking = sticking;

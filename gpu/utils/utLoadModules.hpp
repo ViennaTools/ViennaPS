@@ -20,15 +20,6 @@ struct SourceCache {
 };
 static SourceCache g_sourceCache;
 
-inline bool fileExists(const char *path) {
-  std::ifstream str(path);
-  return str.good();
-}
-
-inline bool fileExists(const std::string &path) {
-  return fileExists(path.c_str());
-}
-
 inline bool readSourceFile(std::string &str, const std::string &filename) {
   // Try to open file
   std::ifstream file(filename.c_str(), std::ios::binary);

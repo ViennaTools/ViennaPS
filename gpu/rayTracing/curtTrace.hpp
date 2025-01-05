@@ -39,25 +39,20 @@ public:
     geometry.buildAccel(context, passedMesh, launchParams);
   }
 
-  void setPipeline(std::string fileName,
-                   std::string path = VIENNAPS_KERNELS_PATH) {
+  void setPipeline(std::string fileName, std::filesystem::path path) {
     // check if filename ends in .optixir
     if (fileName.find(".optixir") == std::string::npos) {
       if (fileName.find(".ptx") == std::string::npos)
         fileName += ".optixir";
     }
 
-    if (path.back() != '/')
-      path += "/";
+    pipelineFile = path / fileName;
 
-    if (!fileExists(path + fileName)) {
+    if (!std::filesystem::exists(pipelineFile)) {
       Logger::getInstance()
           .addError("Pipeline file " + fileName + " not found.")
           .print();
     }
-
-    pipelineName = fileName;
-    pipelinePath = path;
   }
 
   void insertNextParticle(const Particle<T> &particle) {
@@ -405,8 +400,7 @@ protected:
     size_t sizeof_log = sizeof(log);
 
     size_t inputSize = 0;
-    auto pipelineInput =
-        getInputData((pipelinePath + pipelineName).c_str(), inputSize);
+    auto pipelineInput = getInputData(pipelineFile.c_str(), inputSize);
 
     OPTIX_CHECK(optixModuleCreate(context->optix, &moduleCompileOptions,
                                   &pipelineCompileOptions, pipelineInput,
@@ -564,8 +558,7 @@ protected:
 protected:
   // context for cuda kernels
   Context context;
-  std::string pipelineName;
-  std::string pipelinePath = VIENNAPS_KERNELS_PATH;
+  std::filesystem::path pipelineFile;
 
   // geometry
   TriangleGeometry<T> geometry;

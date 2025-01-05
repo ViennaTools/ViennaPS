@@ -25,7 +25,7 @@ public:
   void apply() {
 
     auto numData = pointData_->getScalarDataSize();
-    const auto &elements = surfaceMesh_->getTriangles();
+    const auto &elements = surfaceMesh_->triangles;
     auto numElements = elements.size();
     std::vector<NumericType> elementData(numData * numElements);
 
@@ -48,7 +48,9 @@ public:
               3.f};
 
       auto closestPoint = pointKdTree_->findNearest(elementCenter);
+#ifndef NDEBUG
       closestPoints[i] = closestPoint->first;
+#endif
 
       for (unsigned j = 0; j < numData; j++) {
         elementData[i + j * numElements] =
@@ -57,12 +59,12 @@ public:
     }
 
 #ifndef NDEBUG
-    surfaceMesh_->cellData().insertReplaceScalarData(closestPoints, "pointIds");
+    surfaceMesh_->getCellData().insertReplaceScalarData(closestPoints,
+                                                        "pointIds");
     for (int i = 0; i < numData; i++) {
-      auto tmp = SmartPointer<std::vector<NumericType>>::New(
-          elementData.begin() + i * numElements,
-          elementData.begin() + (i + 1) * numElements);
-      surfaceMesh_->cellData().insertReplaceScalarData(
+      std::vector<NumericType> tmp(elementData.begin() + i * numElements,
+                                   elementData.begin() + (i + 1) * numElements);
+      surfaceMesh_->getCellData().insertReplaceScalarData(
           std::move(tmp), pointData_->getScalarDataLabel(i));
     }
 #endif

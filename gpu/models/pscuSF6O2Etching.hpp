@@ -52,12 +52,12 @@ public:
     params = pParams;
   }
 
-  SF6O2Parameters<NumericType> &getParameters() { return params; }
+  auto &getParameters() { return params; }
 
 private:
   void initializeModel() {
     // particles
-    Particle<NumericType> ion;
+    gpu::Particle<NumericType> ion;
     ion.name = "ion";
     ion.dataLabels.push_back("ionSputteringRate");
     ion.dataLabels.push_back("ionEnhancedRate");
@@ -65,23 +65,22 @@ private:
     ion.sticking = 1.f;
     ion.cosineExponent = params.Ions.exponent;
 
-    Particle<NumericType> etchant;
+    gpu::Particle<NumericType> etchant;
     etchant.name = "etchant";
     etchant.dataLabels.push_back("etchantRate");
-    etchant.dataLabels.push_back("eSticking");
     etchant.sticking = params.beta_F;
     etchant.cosineExponent = 1.f;
 
-    Particle<NumericType> oxygen;
+    gpu::Particle<NumericType> oxygen;
     oxygen.name = "oxygen";
     oxygen.dataLabels.push_back("oxygenRate");
-    oxygen.dataLabels.push_back("oSticking");
     oxygen.sticking = params.beta_O;
     oxygen.cosineExponent = 1.f;
 
     // surface model
     auto surfModel =
-        SmartPointer<viennaps::impl::SF6O2SurfaceModel<NumericType, D>>::New(params);
+        SmartPointer<viennaps::impl::SF6O2SurfaceModel<NumericType, D>>::New(
+            params);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
@@ -92,7 +91,7 @@ private:
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);
-    this->setPipelineFileName("SF6O2Pipeline")
+    this->setPipelineFileName("SF6O2Pipeline");
   }
 
   SF6O2Parameters<NumericType> params;

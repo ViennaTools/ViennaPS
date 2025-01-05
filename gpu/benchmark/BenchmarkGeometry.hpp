@@ -5,7 +5,7 @@
 #include <psDomain.hpp>
 
 #define MAKE_GEO Trench
-#define GRID_DELTA 0.1
+#define GRID_DELTA 0.5
 #define DIM 3
 
 template <class NumericType> auto Trench() {
