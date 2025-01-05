@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
-  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -60,5 +60,5 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   // print final surface
-  geometry->saveSurfaceMesh("final.vtp");
+  geometry->saveSurfaceMesh(params.get<std::string>("outputFile"));
 }

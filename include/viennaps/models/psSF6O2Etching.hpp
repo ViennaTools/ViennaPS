@@ -4,6 +4,7 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
+#include "../psConstants.hpp"
 #include "../psProcessModel.hpp"
 #include "../psSurfaceModel.hpp"
 #include "../psVelocityField.hpp"
@@ -42,21 +43,25 @@ template <typename NumericType> struct SF6O2Parameters {
 
     // sputtering coefficients
     NumericType Eth_sp = 20.; // eV
-    NumericType Eth_ie = 4.;  // eV
+    NumericType Eth_ie = 15.; // eV
     NumericType A_sp = 0.0337;
     NumericType B_sp = 9.3;
-    NumericType A_ie = 0.0361;
+    NumericType theta_g_sp = M_PI_2; // angle where yield is zero in rad
+    NumericType A_ie = 7.;
+    NumericType B_ie = 0.8;
+    NumericType theta_g_ie =
+        constants::degToRad(78); // angle where yield is zero in rad
 
     // chemical etching
     NumericType k_sigma = 3.0e2;     // in (1e15 cm⁻²s⁻¹)
-    NumericType beta_sigma = 5.0e-2; // in (1e15 cm⁻²s⁻¹)
+    NumericType beta_sigma = 4.0e-2; // in (1e15 cm⁻²s⁻¹)
   } Si;
 
   // Passivation
   struct PassivationType {
     // sputtering coefficients
-    NumericType Eth_ie = 4.; // eV
-    NumericType A_ie = 0.0361;
+    NumericType Eth_ie = 10.; // eV
+    NumericType A_ie = 3;
   } Passivation;
 
   struct IonType {
@@ -90,9 +95,11 @@ public:
     std::vector<NumericType> cov(numGeometryPoints, 0.);
     coverages->insertNextScalarData(cov, "eCoverage");
     coverages->insertNextScalarData(cov, "oCoverage");
-    coverages->insertNextScalarData(cov, "ieComponent");
-    coverages->insertNextScalarData(cov, "spComponent");
-    coverages->insertNextScalarData(cov, "thComponent");
+    if (Logger::getLogLevel() > 3) {
+      coverages->insertNextScalarData(cov, "ieComponent");
+      coverages->insertNextScalarData(cov, "spComponent");
+      coverages->insertNextScalarData(cov, "thComponent");
+    }
   }
 
   SmartPointer<std::vector<NumericType>>
@@ -108,10 +115,14 @@ public:
     const auto etchantRate = rates->getScalarData("etchantRate");
     const auto eCoverage = coverages->getScalarData("eCoverage");
 
-    const auto ieComponent = coverages->getScalarData("ieComponent");
-    const auto spComponent = coverages->getScalarData("spComponent");
-    const auto thComponent = coverages->getScalarData("thComponent");
-
+    // save the etch rate components for visualization
+    std::vector<NumericType> *ieComponent = nullptr, *spComponent = nullptr,
+                             *thComponent = nullptr;
+    if (Logger::getLogLevel() > 3) {
+      ieComponent = coverages->getScalarData("ieComponent");
+      spComponent = coverages->getScalarData("spComponent");
+      thComponent = coverages->getScalarData("thComponent");
+    }
     bool stop = false;
 
     for (size_t i = 0; i < numPoints; ++i) {
@@ -123,19 +134,23 @@ public:
       if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
         etchRate[i] =
             -(1 / params.Mask.rho) * ionSputteringRate->at(i) * params.ionFlux;
-        spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
-        ieComponent->at(i) = 0.;
-        thComponent->at(i) = 0.;
+        if (Logger::getLogLevel() > 3) {
+          spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
+          ieComponent->at(i) = 0.;
+          thComponent->at(i) = 0.;
+        }
       } else {
         etchRate[i] =
             -(1 / params.Si.rho) * (params.Si.k_sigma * eCoverage->at(i) / 4. +
                                     ionSputteringRate->at(i) * params.ionFlux +
                                     eCoverage->at(i) * ionEnhancedRate->at(i) *
                                         params.ionFlux); // in um / s
-        spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
-        ieComponent->at(i) =
-            eCoverage->at(i) * ionEnhancedRate->at(i) * params.ionFlux;
-        thComponent->at(i) = params.Si.k_sigma * eCoverage->at(i) / 4.;
+        if (Logger::getLogLevel() > 3) {
+          spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
+          ieComponent->at(i) =
+              eCoverage->at(i) * ionEnhancedRate->at(i) * params.ionFlux;
+          thComponent->at(i) = params.Si.k_sigma * eCoverage->at(i) / 4.;
+        }
       }
     }
 
@@ -164,26 +179,26 @@ public:
     // oxygen coverage
     auto oCoverage = coverages->getScalarData("oCoverage");
     oCoverage->resize(numPoints);
+
     for (size_t i = 0; i < numPoints; ++i) {
       auto Gb_F = etchantRate->at(i) * params.etchantFlux * params.beta_F;
       auto Gb_O = oxygenRate->at(i) * params.oxygenFlux * params.beta_O;
       auto GY_ie = ionEnhancedRate->at(i) * params.ionFlux;
       auto GY_o = oxygenSputteringRate->at(i) * params.ionFlux;
 
-      if (etchantRate->at(i) < 1e-6) {
+      auto a = (params.Si.k_sigma + 2 * GY_ie) / Gb_F;
+      auto b = (params.Si.beta_sigma + GY_o) / Gb_O;
+
+      if (Gb_F < 1e-6) {
         eCoverage->at(i) = 0;
       } else {
-        double tmp = 1 + ((params.Si.k_sigma + 2 * GY_ie) / Gb_F) *
-                             (1 + Gb_O / (params.Si.beta_sigma + GY_o));
-        eCoverage->at(i) = 1 / tmp;
+        eCoverage->at(i) = 1 / (1 + (a * (1 + 1 / b)));
       }
 
-      if (oxygenRate->at(i) < 1e-6) {
+      if (Gb_O < 1e-6) {
         oCoverage->at(i) = 0;
       } else {
-        double tmp = 1 + ((params.Si.beta_sigma + GY_ie) / Gb_O) *
-                             (1 + Gb_F / (params.Si.k_sigma + 2 * GY_ie));
-        oCoverage->at(i) = 1 / tmp;
+        oCoverage->at(i) = 1 / (1 + (b * (1 + 1 / a)));
       }
     }
   }
@@ -242,19 +257,14 @@ public:
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
 
     const double cosTheta = -DotProduct(rayDir, geomNormal);
+    NumericType angle =
+        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
+                           static_cast<NumericType>(0.)));
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
     assert(rayWeight > 0. && "Invalid ray weight");
 
-    const double angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
-
-    NumericType f_ie_theta = cosTheta;
-    // if (cosTheta > 0.5) {
-    //   f_ie_theta = 1.;
-    // } else {
-    //   f_ie_theta = 3. - 6. * angle / M_PI;
-    // }
     NumericType A_sp = params.Si.A_sp;
     NumericType B_sp = params.Si.B_sp;
     NumericType Eth_sp = params.Si.Eth_sp;
@@ -264,7 +274,14 @@ public:
       Eth_sp = params.Mask.Eth_sp;
     }
 
-    NumericType f_sp_theta = (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+    NumericType f_sp_theta =
+        std::max((1 + B_sp * (1 - cosTheta * cosTheta)) *
+                     std::cos(angle / params.Si.theta_g_sp * M_PI_2),
+                 0.);
+    NumericType f_ie_theta =
+        std::max((1 + params.Si.B_ie * (1 - cosTheta * cosTheta)) *
+                     std::cos(angle / params.Si.theta_g_ie * M_PI_2),
+                 0.);
 
     double sqrtE = std::sqrt(E);
     NumericType Y_sp =
