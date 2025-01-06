@@ -189,17 +189,8 @@ public:
       auto a = (params.Si.k_sigma + 2 * GY_ie) / Gb_F;
       auto b = (params.Si.beta_sigma + GY_o) / Gb_O;
 
-      if (Gb_F < 1e-6) {
-        eCoverage->at(i) = 0;
-      } else {
-        eCoverage->at(i) = 1 / (1 + (a * (1 + 1 / b)));
-      }
-
-      if (Gb_O < 1e-6) {
-        oCoverage->at(i) = 0;
-      } else {
-        oCoverage->at(i) = 1 / (1 + (b * (1 + 1 / a)));
-      }
+      eCoverage->at(i) = Gb_F < 1e-6 ? 0. : 1 / (1 + (a * (1 + 1 / b)));
+      oCoverage->at(i) = Gb_O < 1e-6 ? 0. : 1 / (1 + (b * (1 + 1 / a)));
     }
   }
 };
@@ -244,7 +235,9 @@ public:
   SF6O2Ion(const SF6O2Parameters<NumericType> &pParams)
       : params(pParams),
         A(1. /
-          (1. + params.Ions.n_l * (M_PI_2 / params.Ions.inflectAngle - 1.))) {}
+          (1. + params.Ions.n_l * (M_PI_2 / params.Ions.inflectAngle - 1.))),
+        sqrt_E_th_ie_O(std::sqrt(params.Passivation.Eth_ie)),
+        sqrt_E_th_ie_Si(std::sqrt(params.Si.Eth_ie)) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -286,12 +279,10 @@ public:
     double sqrtE = std::sqrt(E);
     NumericType Y_sp =
         params.Si.A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
-    NumericType Y_Si = params.Si.A_ie *
-                       std::max(sqrtE - std::sqrt(params.Si.Eth_ie), 0.) *
-                       f_ie_theta;
-    NumericType Y_O =
-        params.Passivation.A_ie *
-        std::max(sqrtE - std::sqrt(params.Passivation.Eth_ie), 0.) * f_ie_theta;
+    NumericType Y_Si =
+        params.Si.A_ie * std::max(sqrtE - sqrt_E_th_ie_Si, 0.) * f_ie_theta;
+    NumericType Y_O = params.Passivation.A_ie *
+                      std::max(sqrtE - sqrt_E_th_ie_O, 0.) * f_ie_theta;
 
     assert(Y_sp >= 0. && "Invalid yield");
     assert(Y_Si >= 0. && "Invalid yield");
@@ -367,6 +358,10 @@ public:
 private:
   const SF6O2Parameters<NumericType> &params;
   const NumericType A;
+  // save precomputed square roots
+  const NumericType sqrt_E_th_ie_O;
+  const NumericType sqrt_E_th_ie_Si;
+
   NumericType E;
 };
 

@@ -25,5 +25,6 @@ sigmaEnergy=10 # eV
 A_O=3 # passivation layer sputtering coefficient
 
 etchStopDepth=-1000 # maximum etching depth
+integrationScheme=EO_1
 
 raysPerPoint=1000

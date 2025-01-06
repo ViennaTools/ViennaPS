@@ -642,11 +642,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("rho", &SF6O2Parameters<T>::SiType::rho)
       .def_readwrite("k_sigma", &SF6O2Parameters<T>::SiType::k_sigma)
       .def_readwrite("beta_sigma", &SF6O2Parameters<T>::SiType::beta_sigma)
+      .def_readwrite("Eth_sp", &SF6O2Parameters<T>::SiType::Eth_sp)
       .def_readwrite("A_sp", &SF6O2Parameters<T>::SiType::A_sp)
       .def_readwrite("B_sp", &SF6O2Parameters<T>::SiType::B_sp)
+      .def_readwrite("theta_g_sp", &SF6O2Parameters<T>::SiType::theta_g_sp)
       .def_readwrite("Eth_ie", &SF6O2Parameters<T>::SiType::Eth_ie)
-      .def_readwrite("Eth_sp", &SF6O2Parameters<T>::SiType::Eth_sp)
-      .def_readwrite("A_ie", &SF6O2Parameters<T>::SiType::A_ie);
+      .def_readwrite("A_ie", &SF6O2Parameters<T>::SiType::A_ie)
+      .def_readwrite("B_ie", &SF6O2Parameters<T>::SiType::B_ie)
+      .def_readwrite("theta_g_ie", &SF6O2Parameters<T>::SiType::theta_g_ie);
 
   pybind11::class_<SF6O2Parameters<T>::PassivationType>(
       module, "SF6O2ParametersPassivation")
@@ -1260,6 +1263,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Calculate the mean free path of a gas molecule.");
   m_constants.def("gasMeanThermalVelocity", &constants::gasMeanThermalVelocity,
                   "Calculate the mean thermal velocity of a gas molecule.");
+
+  // Utility functions
+  auto m_util = module.def_submodule("util", "Utility functions.");
+  m_util.def("convertIntegrationScheme", &utils::convertIntegrationScheme,
+             "Convert a string to an integration scheme.");
 
   // Planarize
   pybind11::class_<Planarize<T, D>>(module, "Planarize")

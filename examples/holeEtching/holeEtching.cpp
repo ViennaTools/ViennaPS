@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
+  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -52,6 +52,8 @@ int main(int argc, char *argv[]) {
   process.setMaxCoverageInitIterations(10);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
+  process.setIntegrationScheme(
+      params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");
