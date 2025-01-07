@@ -250,9 +250,7 @@ public:
     assert(primID < localData.getVectorData(0).size() && "id out of bounds");
 
     const double cosTheta = -DotProduct(rayDir, geomNormal);
-    NumericType angle =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    NumericType angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
