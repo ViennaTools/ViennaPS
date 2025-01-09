@@ -7,7 +7,6 @@
 
 #include <curtParticle.hpp>
 #include <pscuProcessModel.hpp>
-#include <pscuProcessPipelines.hpp>
 
 namespace viennaps {
 
@@ -44,8 +43,9 @@ public:
 // Etching or deposition based on a single particle model with diffuse
 // reflections.
 template <typename NumericType, int D>
-class FaradayCageEtching : public ProcessModel<NumericType> {
+class FaradayCageEtching : public ProcessModel<NumericType, D> {
 public:
+  // Angles in degrees
   FaradayCageEtching(NumericType stickingProbability,
                      NumericType sourceDistributionPower, NumericType cageAngle,
                      NumericType tiltAngle) {
@@ -57,7 +57,6 @@ public:
 
     Particle<NumericType> particle1{
         .name = "ion",
-        .numberOfData = 1,
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
         .direction = Vec3Df{-cage_y * cosTilt, cage_x * cosTilt, -sinTilt}};
@@ -66,7 +65,6 @@ public:
 
     Particle<NumericType> particle2{
         .name = "ion",
-        .numberOfData = 0,
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
         .direction = Vec3Df{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}};
@@ -79,10 +77,10 @@ public:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
 
-    this->setPtxCode(embedded_FaradayCage_pipeline);
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FaradayCageEtching");
+    this->setPipelineFileName("FaradayCagePipeline");
   }
 };
 

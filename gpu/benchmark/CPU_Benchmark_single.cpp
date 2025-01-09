@@ -13,7 +13,7 @@ int main() {
   using NumericType = float;
   constexpr int D = DIM;
 
-  const NumericType sticking = 1.f;
+  const NumericType sticking = 0.2f;
   std::ofstream file("CPU_Benchmark_single.txt");
   file << "Sticking;Meshing;Tracing;Postprocessing\n";
   file << sticking << ";";

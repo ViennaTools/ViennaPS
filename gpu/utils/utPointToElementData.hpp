@@ -8,26 +8,50 @@ namespace gpu {
 
 template <class NumericType> class PointToElementData {
 
-  SmartPointer<viennals::PointData<NumericType>> pointData_;
+  viennals::PointData<NumericType> &pointData_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> pointKdTree_;
   SmartPointer<viennals::Mesh<float>> surfaceMesh_;
   CudaBuffer &d_elementData_;
+
+  const bool insertToMesh_ = false;
+  const bool upload_ = true;
 
 public:
   PointToElementData(
       CudaBuffer &d_elementData,
       SmartPointer<viennals::PointData<NumericType>> pointData,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> pointKdTree,
-      SmartPointer<viennals::Mesh<float>> surfaceMesh)
+      SmartPointer<viennals::Mesh<float>> surfaceMesh,
+      bool insertToMesh = false, bool upload = true)
+      : d_elementData_(d_elementData), pointData_(*pointData),
+        pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),
+        insertToMesh_(insertToMesh), upload_(upload) {}
+
+  PointToElementData(
+      CudaBuffer &d_elementData, viennals::PointData<NumericType> &pointData,
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> pointKdTree,
+      SmartPointer<viennals::Mesh<float>> surfaceMesh,
+      bool insertToMesh = false, bool upload = true)
       : d_elementData_(d_elementData), pointData_(pointData),
-        pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh) {}
+        pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),
+        insertToMesh_(insertToMesh), upload_(upload) {}
 
   void apply() {
 
-    auto numData = pointData_->getScalarDataSize();
+    auto numData = pointData_.getScalarDataSize();
     const auto &elements = surfaceMesh_->triangles;
     auto numElements = elements.size();
     std::vector<NumericType> elementData(numData * numElements);
+    std::vector<unsigned> dataIdx(numData);
+
+    if (insertToMesh_) {
+      std::vector<NumericType> data(numElements);
+      for (unsigned i = 0; i < numData; i++) {
+        auto label = pointData_.getScalarDataLabel(i);
+        surfaceMesh_->getCellData().insertReplaceScalarData(data, label);
+        dataIdx[i] = surfaceMesh_->getCellData().getScalarDataIndex(label);
+      }
+    }
 
 #ifndef NDEBUG
     std::vector<NumericType> closestPoints(numElements);
@@ -53,8 +77,11 @@ public:
 #endif
 
       for (unsigned j = 0; j < numData; j++) {
-        elementData[i + j * numElements] =
-            pointData_->getScalarData(j)->at(closestPoint->first);
+        const auto value = pointData_.getScalarData(j)->at(closestPoint->first);
+        if (upload_)
+          elementData[i + j * numElements] = value;
+        if (insertToMesh_)
+          surfaceMesh_->getCellData().getScalarData(dataIdx[j])->at(i) = value;
       }
     }
 
@@ -65,11 +92,12 @@ public:
       std::vector<NumericType> tmp(elementData.begin() + i * numElements,
                                    elementData.begin() + (i + 1) * numElements);
       surfaceMesh_->getCellData().insertReplaceScalarData(
-          std::move(tmp), pointData_->getScalarDataLabel(i));
+          std::move(tmp), pointData_.getScalarDataLabel(i));
     }
 #endif
 
-    d_elementData_.allocUpload(elementData);
+    if (upload_)
+      d_elementData_.allocUpload(elementData);
   }
 };
 

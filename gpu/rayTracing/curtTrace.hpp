@@ -4,6 +4,7 @@
 #include <optix_stubs.h>
 
 #include <cstring>
+#include <filesystem>
 
 #include <lsPointData.hpp>
 

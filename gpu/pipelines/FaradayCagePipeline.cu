@@ -6,19 +6,13 @@
 #include <curtReflection.hpp>
 #include <curtSBTRecords.hpp>
 #include <curtSource.hpp>
-#include <curtUtilities.hpp>
 
-#include <context.hpp>
+#include <gpu/vcContext.hpp>
 
 using namespace viennaps::gpu;
 using namespace viennacore;
 
-extern "C" __constant__ LaunchParams<float> params;
-enum
-{
-  SURFACE_RAY_TYPE = 0,
-  RAY_TYPE_COUNT
-};
+extern "C" __constant__ LaunchParams<float> launchParams;
 
 __constant__ float minAngle = 5 * M_PIf / 180.;
 __constant__ float yieldFac = 1.075;
@@ -31,14 +25,15 @@ extern "C" __global__ void __closesthit__ion()
 
   if (sbtData->isBoundary)
   {
-    if (params.periodicBoundary)
-    {
-      applyPeriodicBoundary(prd, sbtData);
-    }
-    else
-    {
-      reflectFromBoundary(prd);
-    }
+    applyPeriodicBoundary(prd, sbtData);
+    // if (launchParams.periodicBoundary)
+    // {
+    //   applyPeriodicBoundary(prd, sbtData);
+    // }
+    // else
+    // {
+    //   reflectFromBoundary(prd);
+    // }
   }
   else
   {
@@ -51,10 +46,10 @@ extern "C" __global__ void __closesthit__ion()
                    0.65 * cosTheta * cosTheta * cosTheta) /
                   (yieldFac - 0.9);
 
-    atomicAdd(&params.resultBuffer[primID], prd->rayWeight * yield);
+    atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight * yield);
 
     // ---------- REFLECTION ------------ //
-    prd->rayWeight -= prd->rayWeight * params.sticking;
+    prd->rayWeight -= prd->rayWeight * launchParams.sticking;
     // conedCosineReflection(prd, (float)(M_PIf / 2.f - min(incAngle, minAngle)), geomNormal);
     specularReflection(prd);
   }
@@ -76,19 +71,20 @@ extern "C" __global__ void __raygen__ion()
   PerRayData prd;
   prd.rayWeight = 1.f;
   // each ray has its own RNG state
-  initializeRNGState(&prd, linearLaunchIndex, params.seed);
+  initializeRNGState(&prd, linearLaunchIndex, launchParams.seed);
 
   // initialize ray position and direction
-  initializeRayPosition(&prd, &params);
-  initializeRayDirection(&prd, params.cosineExponent, params.source.directionBasis);
+  initializeRayPosition(&prd, &launchParams);
+  initializeRayDirection(&prd, launchParams.cosineExponent, launchParams.source.directionBasis);
 
   // the values we store the PRD pointer in:
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
+  unsigned refCount = 0;
 
-  while (prd.rayWeight > params.rayWeightThreshold)
+  while (prd.rayWeight > launchParams.rayWeightThreshold)
   {
-    optixTrace(params.traversable,                              // traversable GAS
+    optixTrace(launchParams.traversable,                        // traversable GAS
                make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
                1e-4f,                                           // tmin
@@ -96,9 +92,16 @@ extern "C" __global__ void __raygen__ion()
                0.0f,                                            // rayTime
                OptixVisibilityMask(255),
                OPTIX_RAY_FLAG_DISABLE_ANYHIT, // OPTIX_RAY_FLAG_NONE,
-               SURFACE_RAY_TYPE,              // SBT offset
-               RAY_TYPE_COUNT,                // SBT stride
-               SURFACE_RAY_TYPE,              // missSBTIndex
+               0,                             // SBT offset
+               1,                             // SBT stride
+               0,                             // missSBTIndex
                u0, u1);
+
+    refCount++;
+
+    if (refCount > launchParams.maxRayDepth)
+    {
+      break;
+    }
   }
 }

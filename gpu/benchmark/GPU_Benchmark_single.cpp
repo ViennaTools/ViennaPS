@@ -16,7 +16,7 @@ int main() {
 
   viennacore::Logger::setLogLevel(viennacore::LogLevel::DEBUG);
 
-  const NumericType sticking = 0.1f;
+  const NumericType sticking = 0.2f;
   std::ofstream file("GPU_Benchmark_single.txt");
   file << "Sticking;Meshing;Tracing;Postprocessing\n";
   file << sticking << ";";
@@ -38,7 +38,7 @@ int main() {
       domain->getLevelSets().back(), surfMesh, elementKdTree);
 
   gpu::Trace<NumericType, D> tracer(context);
-  tracer.setNumberOfRaysPerPoint(5000);
+  tracer.setNumberOfRaysPerPoint(3000);
   tracer.setUseRandomSeeds(false);
 
   Timer timer;

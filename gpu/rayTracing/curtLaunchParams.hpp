@@ -16,6 +16,7 @@ template <typename T> struct LaunchParams {
   float sticking = 1.f;
   float cosineExponent = 1.f;
   bool periodicBoundary = true;
+  unsigned int maxRayDepth = 1000;
   void *customData;
 
   // source plane params

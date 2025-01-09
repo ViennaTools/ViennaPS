@@ -149,11 +149,11 @@ void clean(ps::SmartPointer<ps::Domain<NumericType, D>> geometry,
 int main(int argc, char *argv[]) {
   using NumericType = float;
   constexpr int D = 3;
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   ps::gpu::Context context;
   ps::gpu::CreateContext(context);
-  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
-  // omp_set_num_threads(16);
+  omp_set_num_threads(16);
   std::cout << "Using " << omp_get_max_threads() << " threads" << std::endl;
 
   // Parse the parameters
@@ -188,6 +188,23 @@ int main(int argc, char *argv[]) {
       geometry, params.get("gridDelta"), W1, W2, W3, W4, params.get("L1"),
       params.get("L2"), params.get("boundaryPadding_x"),
       params.get("boundaryPadding_y"), params.get("maskHeight"));
+  geometry->saveSurfaceMesh("mask.vtp");
+
+  if (params.get("scalingSize") > 0.) {
+    auto scalingModel =
+        ps::SmartPointer<ps::IsotropicProcess<NumericType, D>>::New(
+            params.get("scalingSize") * 1.5);
+    ps::Process<NumericType, D>(geometry, scalingModel, 1).apply();
+
+    auto scalingModelRed =
+        ps::SmartPointer<ps::IsotropicProcess<NumericType, D>>::New(
+            -params.get("scalingSize") * 0.5);
+    ps::Process<NumericType, D>(geometry, scalingModelRed, 1).apply();
+
+    ps::Planarize<NumericType, D>(geometry, params.get("maskHeight")).apply();
+    geometry->saveSurfaceMesh("scaled_mask.vtp");
+  }
+
   ps::MakePlane<NumericType, D>(geometry, 0., ps::Material::Si)
       .apply(); // add Si as the base material
   geometry->saveSurfaceMesh("initial.vtp");
@@ -203,19 +220,7 @@ int main(int argc, char *argv[]) {
   }
   geometry->saveSurfaceMesh("vertical_etch.vtp");
 
-  // auto model = ps::SmartPointer<ps::SingleParticleProcess<NumericType,
-  // D>>::New( -1., .99, 1., ps::Material::Mask);
-  // auto model = ps::SmartPointer<ps::IonBeamEtching<NumericType, D>>::New(
-  //     std::vector<ps::Material>{ps::Material::Mask});
-  // auto &modelParams = model->getParameters();
-  // modelParams.meanEnergy = params.get("meanEnergy");
-  // modelParams.sigmaEnergy = params.get("sigmaEnergy");
-  // const NumericType yieldFac = params.get("yieldFac");
-  // modelParams.yieldFunction = [yieldFac](NumericType cosTheta) {
-  //   return (yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
-  //           0.65 * cosTheta * cosTheta * cosTheta) /
-  //          (yieldFac - 1.55 + 0.65);
-  // };
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   NumericType time = 0.;
   NumericType duration = params.get("processTime");
@@ -235,7 +240,9 @@ int main(int argc, char *argv[]) {
                                              timePerAngle);
     process.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
     process.setPeriodicBoundary(true);
-    process.setSmoothFlux(params.get("smoothFlux"));
+    process.setIntegrationScheme(
+        viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER);
+    // process.setSmoothFlux(params.get("smoothFlux"));
     // process.setTimeStepRatio(params.get("timeStepRatio"));
 
     // run the process
@@ -244,8 +251,32 @@ int main(int argc, char *argv[]) {
     // save the surface mesh
     auto copy = ps::SmartPointer<ps::Domain<NumericType, D>>::New(geometry);
     clean<NumericType, D>(copy, params.get("smoothingSize"));
-    copy->saveSurfaceMesh(params.get<std::string>("outputFile") + "_T" +
-                          std::to_string(counter++) + ".vtk");
+    {
+      ps::gpu::Process<NumericType, D> visProcess(context, copy, model, 0.);
+      visProcess.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
+      visProcess.setPeriodicBoundary(true);
+
+      auto fluxMesh = visProcess.calculateFlux();
+
+      auto surfMesh = ps::SmartPointer<ls::Mesh<float>>::New();
+      viennals::ToSurfaceMeshRefined<NumericType, float, D>(
+          copy->getLevelSets().back(), surfMesh)
+          .apply();
+
+      auto pointKdTree = ps::SmartPointer<
+          ps::KDTree<NumericType, ps::Vec3D<NumericType>>>::New();
+      pointKdTree->setPoints(fluxMesh->nodes);
+      pointKdTree->build();
+
+      ps::gpu::CudaBuffer dummy;
+      ps::gpu::PointToElementData<NumericType>(
+          dummy, fluxMesh->getCellData(), pointKdTree, surfMesh, true, false)
+          .apply();
+      viennals::VTKWriter<float>(surfMesh,
+                                 params.get<std::string>("outputFile") + "_T" +
+                                     std::to_string(counter++) + ".vtp")
+          .apply();
+    }
 
     time += timePerAngle;
     cageAngle += 45.;
@@ -255,21 +286,6 @@ int main(int argc, char *argv[]) {
   }
 
   clean<NumericType, D>(geometry, params.get("smoothingSize"));
-  // {
-  //   auto plane = ps::SmartPointer<viennals::Domain<NumericType, D>>::New(
-  //       geometry->getGrid());
-  //   double origin[D] = {0.};
-  //   origin[D - 1] = -2.;
-  //   double normal[D] = {0.};
-  //   normal[D - 1] = -1.;
-
-  //   viennals::MakeGeometry<NumericType, D>(
-  //       plane,
-  //       ps::SmartPointer<viennals::Plane<NumericType, D>>::New(origin,
-  //       normal)) .apply();
-  //   geometry->applyBooleanOperation(plane,
-  //                                   viennals::BooleanOperationEnum::INTERSECT);
-  // }
 
   // print final surface
   geometry->saveSurfaceMesh(params.get<std::string>("outputFile") + ".vtk");
