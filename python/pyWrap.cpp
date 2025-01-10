@@ -588,15 +588,25 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       module, "MultiParticleProcess", processModel)
       .def(pybind11::init())
       .def("addNeutralParticle",
-           &MultiParticleProcess<T, D>::addNeutralParticle,
-           pybind11::arg("stickingProbability"))
+           pybind11::overload_cast<T, std::string>(
+               &MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("stickingProbability"),
+           pybind11::arg("label") = "neutralFlux")
+      .def("addNeutralParticle",
+           pybind11::overload_cast<std::unordered_map<Material, T>, T,
+                                   std::string>(
+               &MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("materialSticking"),
+           pybind11::arg("defaultStickingProbability") = 1.,
+           pybind11::arg("label") = "neutralFlux")
       .def("addIonParticle", &MultiParticleProcess<T, D>::addIonParticle,
            pybind11::arg("sourcePower"), pybind11::arg("thetaRMin") = 0.,
            pybind11::arg("thetaRMax") = 90., pybind11::arg("minAngle") = 0.,
            pybind11::arg("B_sp") = -1., pybind11::arg("meanEnergy") = 0.,
            pybind11::arg("sigmaEnergy") = 0.,
            pybind11::arg("thresholdEnergy") = 0.,
-           pybind11::arg("inflectAngle") = 0., pybind11::arg("n") = 1)
+           pybind11::arg("inflectAngle") = 0., pybind11::arg("n") = 1,
+           pybind11::arg("label") = "ionFlux")
       .def("setRateFunction", &MultiParticleProcess<T, D>::setRateFunction);
 
   // TEOS Deposition
