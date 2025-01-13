@@ -23,13 +23,12 @@ void etch(ps::SmartPointer<ps::Domain<NumericType, D>> domain,
         NumericType rate = fluxes[1] * ionRate;
         if (material == ps::Material::Si)
           rate += fluxes[0] * neutralRate;
-        return -rate;
+        return rate;
       });
   ps::Process<NumericType, D> process(domain, etchModel,
                                       params.get("etchTime"));
   process.disableRandomSeeds();
   process.apply();
-  // .apply();
 }
 
 template <class NumericType, int D>
