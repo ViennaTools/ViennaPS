@@ -28,3 +28,5 @@ etchStopDepth=-1000 # maximum etching depth
 integrationScheme=EO_1
 
 raysPerPoint=1000
+
+outputFile=final
