@@ -72,6 +72,9 @@ template <typename NumericType> struct SF6O2Parameters {
     NumericType inflectAngle = 1.55334303;
     NumericType n_l = 10.;
     NumericType minAngle = 1.3962634;
+
+    NumericType thetaRMin = constants::degToRad(70.);
+    NumericType thetaRMax = constants::degToRad(90.);
   } Ions;
 };
 
@@ -287,13 +290,13 @@ public:
     assert(Y_O >= 0. && "Invalid yield");
 
     // sputtering yield Y_sp ionSputteringRate
-    localData.getVectorData(0)[primID] += Y_sp;
+    localData.getVectorData(0)[primID] += Y_sp * rayWeight;
 
     // ion enhanced etching yield Y_Si ionEnhancedRate
-    localData.getVectorData(1)[primID] += Y_Si;
+    localData.getVectorData(1)[primID] += Y_Si * rayWeight;
 
     // ion enhanced O sputtering yield Y_O oxygenSputteringRate
-    localData.getVectorData(2)[primID] += Y_O;
+    localData.getVectorData(2)[primID] += Y_O * rayWeight;
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
@@ -328,12 +331,19 @@ public:
       NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);
 
+    NumericType sticking = 1.;
+    if (incAngle > params.Ions.thetaRMin)
+      sticking =
+          1. - std::min((incAngle - params.Ions.thetaRMin) /
+                            (params.Ions.thetaRMax - params.Ions.thetaRMin),
+                        NumericType(1.));
+
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > params.Si.Eth_ie) {
       E = NewEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng, std::max(incAngle, params.Ions.minAngle));
-      return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
+      return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
     } else {
       return std::pair<NumericType, Vec3D<NumericType>>{
           1., Vec3D<NumericType>{0., 0., 0.}};
