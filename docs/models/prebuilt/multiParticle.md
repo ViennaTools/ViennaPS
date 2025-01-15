@@ -29,7 +29,11 @@ The multi particle process is a simple process model that simulates either etchi
 
 ## Neutral Particles
 
-Neutral particles are defined by their sticking probability, which is the probability that a neutral particle will stick to the surface upon impact. The sticking probability is a value between 0 and 1. The sticking probability defines the reflection behavior of the neutral particles. A sticking probability of 1 means that the neutral particle will always stick to the surface, while a sticking probability of 0 means that the neutral particle will always be reflected.
+Neutral particles are characterized by their sticking probability, which quantifies the likelihood that a neutral particle will adhere to a surface upon impact. This probability ranges between 0 and 1, where:
+- A sticking probability of 1 indicates that the particle will always stick to the surface.
+- A sticking probability of 0 indicates that the particle will always be reflected.
+  
+The sticking probability determines the reflection behavior of neutral particles and can be defined specifically for each material within the domain.
 
 ## Ion Particles
 
@@ -88,7 +92,13 @@ The angle-dependent sputtering yield is defined as:
 // default empty constructor
 MultiParticleProcess()
 
-void addNeutralParticle(NumericType stickingProbability)
+// member functions
+void addNeutralParticle(NumericType stickingProbability,
+                        std::string label = "neutralFlux")
+
+void addNeutralParticle(std::unordered_map<Material, NumericType> materialSticking,
+                        NumericType defaultStickingProbability = 1.,
+                        std::string label = "neutralFlux")
 
 void addIonParticle(NumericType sourceExponent, 
                     NumericType thetaRMin = 0.,
@@ -99,7 +109,8 @@ void addIonParticle(NumericType sourceExponent,
                     NumericType sigmaEnergy = 0.,
                     NumericType thresholdEnergy = 0., 
                     NumericType inflectAngle = 0., 
-                    NumericType n = 1)
+                    NumericType n = 1,
+                    std::string label = "ionFlux")
 
 void setRateFunction(std::function<NumericType(std::vector<NumericType> &, 
                                                const Material &)> rateFunction)
@@ -132,7 +143,8 @@ C++
 ```c++
 ...
 auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
-model->addNeutralParticle(0.1);
+std::unordered_map<Material, NumericType> materialSticking{{Material::Si, 0.1}, {Material::Mask, 0.5}};
+model->addNeutralParticle(materialSticking, 1.0); // default sticking probability of 1 on all other materials
 model->addIonParticle(1000.);
 
 // for material specific rates
@@ -156,7 +168,8 @@ Python
 ```python
 ...
 model = vps.MultiParticleProcess()
-model.addNeutralParticle(0.1)
+materialSticking = {vps.Material.Si: 0.1, vps.Material.Mask: 0.5}
+model.addNeutralParticle(materialSticking, defaultStickingProbability=1.0)
 model.addIonParticle(1000.)
 
 # for material specific rates

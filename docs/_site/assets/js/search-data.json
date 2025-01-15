@@ -216,250 +216,250 @@
     
     "relUrl": "/geo/basic/hole.html"
   },"31": {
-    "doc": "Custom Models",
-    "title": "Custom Models",
-    "content": ". Users can create a custom process model by interfacing one or more of the classes described below and then inserting them into their custom process model. | The SurfaceModel class is used to describe surface reactions, combining particle fluxes with the surface chemical reactions. | The VelocityField provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step. | ViennaPS seamlessly integrates ViennaRay functionality through the viennaray::Particle class, providing users with a versatile interface to define the key characteristics of the simulated particle species. | . ",
-    "url": "/models/custom/",
-    
-    "relUrl": "/models/custom/"
-  },"32": {
-    "doc": "Home",
-    "title": "ViennaPS",
-    "content": "Process Simulation Library . Get started now View it on GitHub . ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems. ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know on GitHub or contact us directly at viennatools@iue.tuwien.ac.at! . This documentation serves as your comprehensive guide to understanding, implementing, and harnessing the capabilities of our process simulation library. Whether you are a seasoned researcher seeking to refine your simulations or an engineer aiming to optimize real-world processes, this library provides a versatile and robust platform to meet your diverse needs. Throughout this documentation, you will find detailed explanations, practical examples, and best practices to effectively utilize the library. We aim to empower users with the knowledge and tools necessary to simulate a wide range of processes accurately and efficiently, making informed decisions and driving innovation in the field. ",
-    "url": "/#viennaps",
-    
-    "relUrl": "/#viennaps"
-  },"33": {
-    "doc": "Home",
-    "title": "Contributing",
-    "content": "If you want to contribute to ViennaPS, make sure to follow the LLVM Coding guidelines. Make sure to format all files before creating a pull request: . cmake -B build cmake --build build --target format . ",
-    "url": "/#contributing",
-    
-    "relUrl": "/#contributing"
-  },"34": {
-    "doc": "Home",
-    "title": "About the project",
-    "content": "ViennaPS was developed under the aegis of the Institute for Microelectronics at the TU Wien. Current contributors: Tobias Reiter, Noah Karnel, Julius Piso, Lado Filipovic . Contact us via: viennatools@iue.tuwien.ac.at . ",
-    "url": "/#about-the-project",
-    
-    "relUrl": "/#about-the-project"
-  },"35": {
-    "doc": "Home",
-    "title": "License",
-    "content": "See file LICENSE in the base directory. ",
-    "url": "/#license",
-    
-    "relUrl": "/#license"
-  },"36": {
-    "doc": "Home",
-    "title": "Home",
-    "content": " ",
-    "url": "/",
-    
-    "relUrl": "/"
-  },"37": {
-    "doc": "Miscellaneous",
-    "title": "Miscellaneous",
-    "content": " ",
-    "url": "/misc/",
-    
-    "relUrl": "/misc/"
-  },"38": {
     "doc": "General Notes",
     "title": "General Notes",
     "content": ". ",
     "url": "/general/",
     
     "relUrl": "/general/"
-  },"39": {
+  },"32": {
     "doc": "General Notes",
     "title": "Namespace",
     "content": "ViennaPS is encapsulated within the viennaps namespace. This design choice ensures that all classes, functions, and utilities within the library are organized under a single namespace, providing a clean and structured interface for users. When working with ViennaPS, it is essential to include the viennaps namespace in your code to access the library’s functionality. In this documentation, the namespace is omitted for brevity, but it should be included in your code. ",
     "url": "/general/#namespace",
     
     "relUrl": "/general/#namespace"
-  },"40": {
+  },"33": {
     "doc": "General Notes",
     "title": "Numeric Types",
     "content": "ViennaPS supports the utilization of either float or double as the underlying numeric type. While float might offer slightly higher performance in some cases, it is generally recommended to use double in your simulation due to its enhanced precision. It’s essential to note that the choice of numeric type is a static (compile-time) parameter in every ViennaPS class and function. Once a numeric type is selected for a particular simulation, it is not possible to switch to a different numeric type within the program. Additionally, for users working with Python bindings, it’s important to be aware that the Python interface always uses double as the numeric type. ",
     "url": "/general/#numeric-types",
     
     "relUrl": "/general/#numeric-types"
-  },"41": {
+  },"34": {
     "doc": "General Notes",
     "title": "Switching between 2D and 3D mode",
     "content": "ViennaPS provides the flexibility for users to choose between 2D and 3D modes during compile time. The dimensionality is specified as a second template (static) parameter, and most classes and functions in ViennaPS adhere to this structure. It’s important to note that 2D and 3D classes cannot be mixed within the same simulation, and the choice of dimensionality is fixed at compile time. For users who need to transition from a 2D to a 3D simulation, ViennaPS offers the Extrude utility. This utility enables the extrusion of a 2D domain to 3D, providing a seamless way to extend simulations across different dimensions. ",
     "url": "/general/#switching-between-2d-and-3d-mode",
     
     "relUrl": "/general/#switching-between-2d-and-3d-mode"
-  },"42": {
+  },"35": {
     "doc": "General Notes",
     "title": "Using Smart Pointers",
     "content": "In ViennaPS, smart pointers are utilized to pass domains, models, and other essential objects to processes and utility functions. To facilitate this, the library includes a custom class named SmartPointer, serving as a shared pointer implementation. This design choice ensures efficient memory management and enables seamless interaction between different components within the simulation framework. Example: . // Creating a new domain auto domain = psSmartPointer&lt;psDomain&lt;NumericType, D&gt;&gt;::New(); // Using a pre-built model auto model = psSmartPointer&lt;psIsotropicProcess&lt;NumericType, D&gt;&gt;::New(/*pass constructor arguments*/); . ",
     "url": "/general/#using-smart-pointers",
     
     "relUrl": "/general/#using-smart-pointers"
-  },"43": {
-    "doc": "Running a Process",
-    "title": "Running a Process",
-    "content": "#include &lt;psProcess.hpp&gt; . The Process class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also encompasses the necessary methods for configuring these attributes. Upon setting these parameters, the apply() method is employed to execute the process, initiating and conducting the simulation. Example usage: . C++ . // namespace viennaps ... Process&lt;NumericType, D&gt; process; process.setDomain(myDomain); process.setProcessModel(myModel); process.setProcessDuration(10.); process.setNumberOfRaysPerPoint(1000); process.enableFluxSmoothing(); process.apply(); ... Python ... process = vps.Process() process.setDomain(myDomain) process.setProcessModel(myModel) process.setProcessDuration(10.) process.setNumberOfRaysPerPoint(1000) process.enableFluxSmoothing() process.apply() ... ",
-    "url": "/process/",
-    
-    "relUrl": "/process/"
-  },"44": {
-    "doc": "Running a Process",
-    "title": "Member Functions",
-    "content": "Constructors . // Default constructor Process() // Constructor from domain Process(SmartPointer&lt;Domain&lt;NumericType, D&gt;&gt; passedDomain) // Constructor from domain, process model, and duration, // to apply simple processes template &lt;typename ProcessModelType&gt; Process(SmartPointer&lt;Domain&lt;NumericType, D&gt;&gt; passedDomain, SmartPointer&lt;ProcessModelType&gt; passedProcessModel, const NumericType passedDuration = 0.) . In summary, these constructors provide different ways to create a Process object, allowing for flexibility depending on what data is available at the time of object creation. | The first constructor is a default constructor. It’s defined as Process() and it doesn’t take any arguments. This constructor allows for the creation of a Process object without any initial values. | The second constructor takes a single argument: a smart pointer to a Domain object. This constructor initializes the domain member variable of the Process class with the passed Domain object. | The third constructor is a template constructor that takes three arguments: a smart pointer to a Domain object, a smart pointer to a ProcessModelType object, and a NumericType representing the process duration. This constructor initializes the domain and processDuration member variables with the passed values and also sets the model member variable to the dynamically cast ProcessModelType object. This allows the user to run a process from an anonymous object. For example: Process&lt;NumericType, D&gt;(myDomain, myModel, processDuration).apply() . | . Set the domain . void setDomain(SmartPointer&lt;Domain&lt;NumericType, D&gt;&gt; passedDomain) . Sets the process domain. Set the process model . void setProcessModel(SmartPointer&lt;ProcessModel&lt;NumericType, D&gt;&gt; passedProcessModel) . Sets the process model. This can be either a pre-configured process model or a custom process model. Set the source direction . void setSourceDirection(const viennaray::TraceDirection passedDirection) . Set the source direction, where the rays should be traced from. The passed direction parameter is using the enum viennaray::TraceDirection which contains the following values: POS_X, NEG_X, POS_Y, NEG_Y, POS_Z, NEG_Z. Set the process duration . void setProcessDuration(NumericType passedDuration) . Specifies the duration of the process. If the process duration is set to 0, exclusively the advection callback applyPreAdvect() is executed on the domain. This feature is particularly useful for applying only a volume model without engaging in further simulation steps. Set the number of rays to be traced . void setNumberOfRaysPerPoint(unsigned raysPerPoint) . Specify the number of rays to be traced for each particle throughout the process. The total count of rays is the product of this number and the number of points in the process geometry. Set the number of coverage initialization iterations . void setMaxCoverageInitIterations(unsigned numIter) . Set the number of iterations to initialize the coverages. Enable or disable flux smoothing . void enableFluxSmoothing() void disableFluxSmoothing() . Toggle the option to enable or disable flux smoothing. When flux smoothing is activated, the flux at each surface point, computed by the ray tracer, undergoes averaging across the neighboring surface points. Per default, flux smoothing is enabled. Enable or disable flux boundary conditions . void enableFluxBoundaries() void disableFluxBoundaries() . Toggle the option to enable or disable flux boundary conditions. When flux boundary conditions are disabled, particles are allowed to leave the domain without being reflected back into the domain. Per default, flux boundary conditions are enabled. Enable or disable random seeds . void enableRandomSeeds() void disableRandomSeeds() . Toggle the option to enable or disable random seeds. When random seeds are enabled, the random number generator is seeded with a random value, making the results generally not perectly reproducible. Per default, random seeds are enabled. Set the integration scheme . void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) . Set the integration scheme for solving the level-set equation. Possible integration schemes are specified in lsIntegrationSchemeEnum. Set the time step ratio . void setTimeStepRatio(NumericType cfl) . Set the CFL (Courant-Friedrichs-Levy) condition to use during surface advection in the level-set. The CFL condition defines the maximum distance a surface is allowed to move in a single advection step. It MUST be below 0.5 to guarantee numerical stability. Defaults to 0.4999. Set time interval to save intermediate results . void setPrintTimeInterval(NumericType passedTime) . Sets the minimum time between printing intermediate results during the process. If this is set to a non-positive value, no intermediate results are printed. ",
-    "url": "/process/#member-functions",
-    
-    "relUrl": "/process/#member-functions"
-  },"45": {
-    "doc": "Basic Geometries",
-    "title": "Basic Geometries",
-    "content": ". ViennaPS provides a set of functions to effortlessly create basic geometries, facilitating quick testing of models or serving as the groundwork for your process simulation configuration. The various available geometries are outlined below: . ",
-    "url": "/geo/basic/",
-    
-    "relUrl": "/geo/basic/"
-  },"46": {
-    "doc": "Creating a Geometry",
-    "title": "Creating a Geometry",
-    "content": ". Create intricate geometries using the versatile tools offered by ViennaLS or generate a basic geometry using of the provided geometry builders. Alternatively, you can import a geometry from a GDSII mask file. ",
-    "url": "/geo/",
-    
-    "relUrl": "/geo/"
-  },"47": {
-    "doc": "Simulation Domain",
-    "title": "Simulation Domain",
-    "content": "#include &lt;psDomain.hpp&gt; . In our simulation framework, the essential hub for all geometry details is the Domain class. This class is like a smart keeper of information, holding everything about the materials in the simulation domain. It uses level sets to show surfaces and material interfaces with great detail and organizes data in a cell-based structure for the underlying volumes. Depending on the specific process, it can use one or both of these methods. This flexibility ensures that the simulation can handle different processes accurately and efficiently. ",
-    "url": "/domain/",
-    
-    "relUrl": "/domain/"
-  },"48": {
-    "doc": "Installing the Library",
-    "title": "Installing the Library",
-    "content": ". ",
-    "url": "/inst/",
-    
-    "relUrl": "/inst/"
-  },"49": {
-    "doc": "Installing the Library",
-    "title": "Supported Operating Systems",
-    "content": ". | Windows (Visual Studio) . | Linux (g++ / clang) . | macOS (XCode) . | . ",
-    "url": "/inst/#supported-operating-systems",
-    
-    "relUrl": "/inst/#supported-operating-systems"
-  },"50": {
-    "doc": "Installing the Library",
-    "title": "System Requirements",
-    "content": ". | C++17 Compiler with OpenMP support | . ",
-    "url": "/inst/#system-requirements",
-    
-    "relUrl": "/inst/#system-requirements"
-  },"51": {
-    "doc": "Installing the Library",
-    "title": "Installing",
-    "content": "ViennaLS uses VTK as dependency which can be installed beforehand to save some time when building the dependencies. On Linux based systems, it can be installed using the package manager: sudo apt install libvtk9.1 libvtk9-dev. On macOS, one can use Homebrew to install it: brew install vtk. ViennaRay uses Embree as dependency which can be installed beforehand to save some time when building the dependencies. On Linux based systems, it can be installed using the package manager: sudo apt install libembree-dev. If you are using an Ubuntu version older than 24, the installed package will be Embree version 3, and you must additionally pass VIENNARAY_EMBREE_VERSION=3 to the CMake options, e.g., cmake -B build -G Ninja -D VIENNARAY_EMBREE_VERSION=3 On macOS, you can install Embree using Homebrew with the command: brew install embree. The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the buildDependencies target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS cmake -B build -G Ninja &amp;&amp; cmake --build build cmake --install build --prefix \"/path/to/your/custom/install/\" . This will install the necessary headers and CMake files to the specified path. If --prefix is not specified, it will be installed to the standard path for your system, usually /usr/local/ . The -G Ninja option can be omitted if you prefer to use Unix Makefiles as the build system. However, this can potentially lead to conflicts when later installing the Python package using the pip installer, as pip always employs Ninja as the build system. ",
-    "url": "/inst/#installing",
-    
-    "relUrl": "/inst/#installing"
-  },"52": {
-    "doc": "Installing the Library",
-    "title": "Python package",
-    "content": "Pre-built python packages are now available in the TestPyPi index for most common operating systems. To download the package, run the following command: . pip install ViennaPS . If there is no pre-built package available for your operating system, you can build the package yourself using the instructions below. ",
-    "url": "/inst/#python-package",
-    
-    "relUrl": "/inst/#python-package"
-  },"53": {
-    "doc": "Installing the Library",
-    "title": "Building the Python package",
-    "content": "In order to build the Python bindings, the pybind11 library is required. On Linux based system (Ubuntu/Debian), pybind11 can be installed via the package manager: sudo apt install pybind11-dev. For macOS, the installation via Homebrew is recommended: brew install pybind11. The ViennaPS Python package can be built and installed using the pip command: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS pip install . Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore necessary to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the ViennaLS Git Repository. ",
-    "url": "/inst/#building-the-python-package",
-    
-    "relUrl": "/inst/#building-the-python-package"
-  },"54": {
-    "doc": "Installing the Library",
-    "title": "Using the Python package",
-    "content": "The 2D version of the library can be imported as follows: . import viennaps2d as vps . In order to switch to 3D mode, only the import needs to be changed: . import viennaps3d as vps . ",
-    "url": "/inst/#using-the-python-package",
-    
-    "relUrl": "/inst/#using-the-python-package"
-  },"55": {
-    "doc": "Installing the Library",
-    "title": "Integration in CMake projects",
-    "content": "We recommend using CPM.cmake to consume this library. | Installation with CPM CPMAddPackage(\"gh:viennatools/viennaps@3.1.0\") . | With a local installation In case you have ViennaPS installed in a custom directory, make sure to properly specify the CMAKE_PREFIX_PATH. list(APPEND CMAKE_PREFIX_PATH \"/your/local/installation\") find_package(ViennaPS) target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS) . | . ",
-    "url": "/inst/#integration-in-cmake-projects",
-    
-    "relUrl": "/inst/#integration-in-cmake-projects"
-  },"56": {
-    "doc": "Installing the Library",
-    "title": "Troubleshooting",
-    "content": "Failed Python package build . The following error can occur while building the Python package using pip: . Building wheels for collected packages: ViennaPS_Python Building wheel for ViennaPS_Python (pyproject.toml) ... error error: subprocess-exited-with-error × Building wheel for ViennaPS_Python (pyproject.toml) did not run successfully. │ exit code: 1 ╰─&gt; [21 lines of output] *** scikit-build-core 0.9.3 using CMake 3.27.4 (wheel) *** Configuring CMake... loading initial cache file build/CMakeInit.txt -- CPM: Adding package PackageProject@1.11.1 (v1.11.1) ninja: error: Makefile:5: expected '=', got ':' default_target: all ^ near here CMake Error at /usr/share/cmake-3.27/Modules/FetchContent.cmake:1662 (message): Build step for packageproject failed: 1 Call Stack (most recent call first): /usr/share/cmake-3.27/Modules/FetchContent.cmake:1802:EVAL:2 (__FetchContent_directPopulate) /usr/share/cmake-3.27/Modules/FetchContent.cmake:1802 (cmake_language) build/cmake/CPM_0.38.6.cmake:1004 (FetchContent_Populate) build/cmake/CPM_0.38.6.cmake:798 (cpm_fetch_package) CMakeLists.txt:98 (CPMAddPackage) -- Configuring incomplete, errors occurred! *** CMake configuration failed [end of output] note: This error originates from a subprocess, and is likely not a problem with pip. ERROR: Failed building wheel for ViennaPS_Python Failed to build ViennaPS_Python ERROR: Could not build wheels for ViennaPS_Python, which is required to install pyproject.toml-based projects . This error is due to a conflict with the Ninja build system and Unix Makefiles. To resolve this error, you can remove the build folder and then rerun pip. However, please note that this action will also remove all dependencies if they were installed alongside ViennaPS. ",
-    "url": "/inst/#troubleshooting",
-    
-    "relUrl": "/inst/#troubleshooting"
-  },"57": {
-    "doc": "Geometry Output",
-    "title": "Geometry Output",
-    "content": ". ViennaPS provides various methods for outputting the surface or volume of the processed domain. The data is typically saved in the VTK file format, with surfaces stored in .vtp files and volumes in .vtu files. For visualization, we recommend using ParaView, a powerful open-source visualization tool. Below, you’ll find further details on the available geometry outputs. In addition to VTK file formats, ViennaPS provides the flexibility to store level sets directly in the proprietary .lvst format. This feature enables users to save intermediate states during the process, allowing for more detailed analysis and the ability to revisit specific simulation stages. ",
-    "url": "/output/",
-    
-    "relUrl": "/output/"
-  },"58": {
+  },"36": {
     "doc": "Dependencies",
     "title": "Dependencies",
     "content": ". ",
     "url": "/deps/",
     
     "relUrl": "/deps/"
-  },"59": {
+  },"37": {
     "doc": "Dependencies",
     "title": "ViennaLS",
     "content": "ViennaLS forms the foundation of the process simulator, applying the level-set surface representation concepts for topography simulations. This module not only stores the level-set surface but also encompasses essential algorithms for geometry initialization, level-set value manipulation based on a velocity field, surface feature analysis, and seamless conversion of the level-set representation to other commonly employed material representations in device simulators. ",
     "url": "/deps/#viennals",
     
     "relUrl": "/deps/#viennals"
-  },"60": {
+  },"38": {
     "doc": "Dependencies",
     "title": "ViennaRay",
     "content": "ViennaPS relies on ViennaRay, a top-down Monte Carlo flux calculation library, to carry out essential flux calculations. This library is built upon Intel®’s ray tracing kernel, Embree. Crafted with a focus on efficiency and high-performance ray tracing, ViennaRay ensures a seamless user experience through its straightforward and user-friendly interface. In the top-down Monte Carlo approach, a large number of pseudo-particles are launched from a source plane situated above the surface, and their points of impact on the surface are determined. These pseudo-particles are initialized with a uniform initial position on the source plane and an initial direction that follows a power-cosine distribution. Each pseudo-particle carries a specific payload, representing a fraction of the total source flux. Upon reaching the surface, the current payload of the pseudo-particle contributes to the flux at that particular surface location. Furthermore, pseudo-particles have the capability to undergo reflection from the surface. The payload of a pseudo-particle undergoes reduction by the sticking coefficient during reflection. As a result, a pseudo-particle is tracked until its payload falls below a certain threshold or until it exits the simulation domain. This tracking mechanism provides a comprehensive understanding of the particle dynamics during its interaction with the sample surface. ",
     "url": "/deps/#viennaray",
     
     "relUrl": "/deps/#viennaray"
-  },"61": {
-    "doc": "Examples",
-    "title": "Examples",
+  },"39": {
+    "doc": "Miscellaneous",
+    "title": "Miscellaneous",
+    "content": " ",
+    "url": "/misc/",
+    
+    "relUrl": "/misc/"
+  },"40": {
+    "doc": "Geometry Output",
+    "title": "Geometry Output",
+    "content": ". ViennaPS provides various methods for outputting the surface or volume of the processed domain. The data is typically saved in the VTK file format, with surfaces stored in .vtp files and volumes in .vtu files. For visualization, we recommend using ParaView, a powerful open-source visualization tool. Below, you’ll find further details on the available geometry outputs. In addition to VTK file formats, ViennaPS provides the flexibility to store level sets directly in the proprietary .lvst format. This feature enables users to save intermediate states during the process, allowing for more detailed analysis and the ability to revisit specific simulation stages. ",
+    "url": "/output/",
+    
+    "relUrl": "/output/"
+  },"41": {
+    "doc": "Installing the Library",
+    "title": "Installing the Library",
     "content": ". ",
-    "url": "/examples/",
+    "url": "/inst/",
     
-    "relUrl": "/examples/"
-  },"62": {
-    "doc": "Examples",
-    "title": "Building",
-    "content": "The examples can be built using CMake: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON cmake --build build . The examples can then be executed in their respective build folders with the config files, e.g.: . cd examples/exampleName ./ExampleName.bat config.txt # (Windows) ./ExampleName config.txt # (Other) . Individual examples can also be build by calling make in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. ",
-    "url": "/examples/#building",
+    "relUrl": "/inst/"
+  },"42": {
+    "doc": "Installing the Library",
+    "title": "Supported Operating Systems",
+    "content": ". | Windows (Visual Studio) . | Linux (g++ / clang) . | macOS (XCode) . | . ",
+    "url": "/inst/#supported-operating-systems",
     
-    "relUrl": "/examples/#building"
-  },"63": {
-    "doc": "Examples",
-    "title": "Examples List",
-    "content": ". | Custom Example Process | GDS Reader | Cantilever Wet Etching | Selective Epitaxy | Trench Deposition | Trench Deposition Geometric | TEOS Trench Deposition | Hole Etching | Stack Etching | Oxide Regrowth | Volume Model | KD Tree Benchmark | Interpolation Demo | . ",
-    "url": "/examples/#examples-list",
+    "relUrl": "/inst/#supported-operating-systems"
+  },"43": {
+    "doc": "Installing the Library",
+    "title": "System Requirements",
+    "content": ". | C++17 Compiler with OpenMP support | . ",
+    "url": "/inst/#system-requirements",
     
-    "relUrl": "/examples/#examples-list"
-  },"64": {
+    "relUrl": "/inst/#system-requirements"
+  },"44": {
+    "doc": "Installing the Library",
+    "title": "Installing",
+    "content": "ViennaLS uses VTK as dependency which can be installed beforehand to save some time when building the dependencies. On Linux based systems, it can be installed using the package manager: sudo apt install libvtk9.1 libvtk9-dev. On macOS, one can use Homebrew to install it: brew install vtk. ViennaRay uses Embree as dependency which can be installed beforehand to save some time when building the dependencies. On Linux based systems, it can be installed using the package manager: sudo apt install libembree-dev. If you are using an Ubuntu version older than 24, the installed package will be Embree version 3, and you must additionally pass VIENNARAY_EMBREE_VERSION=3 to the CMake options, e.g., cmake -B build -G Ninja -D VIENNARAY_EMBREE_VERSION=3 On macOS, you can install Embree using Homebrew with the command: brew install embree. The CMake configuration automatically checks if the dependencies are installed. If CMake is unable to find them, the dependencies will be built from source with the buildDependencies target. Notably, ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the outlined procedure to neatly organize and relocate all header files to a designated directory: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS cmake -B build -G Ninja &amp;&amp; cmake --build build cmake --install build --prefix \"/path/to/your/custom/install/\" . This will install the necessary headers and CMake files to the specified path. If --prefix is not specified, it will be installed to the standard path for your system, usually /usr/local/ . The -G Ninja option can be omitted if you prefer to use Unix Makefiles as the build system. However, this can potentially lead to conflicts when later installing the Python package using the pip installer, as pip always employs Ninja as the build system. ",
+    "url": "/inst/#installing",
+    
+    "relUrl": "/inst/#installing"
+  },"45": {
+    "doc": "Installing the Library",
+    "title": "Python package",
+    "content": "Pre-built python packages are now available in the TestPyPi index for most common operating systems. To download the package, run the following command: . pip install ViennaPS . If there is no pre-built package available for your operating system, you can build the package yourself using the instructions below. ",
+    "url": "/inst/#python-package",
+    
+    "relUrl": "/inst/#python-package"
+  },"46": {
+    "doc": "Installing the Library",
+    "title": "Building the Python package",
+    "content": "In order to build the Python bindings, the pybind11 library is required. On Linux based system (Ubuntu/Debian), pybind11 can be installed via the package manager: sudo apt install pybind11-dev. For macOS, the installation via Homebrew is recommended: brew install pybind11. The ViennaPS Python package can be built and installed using the pip command: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS pip install . Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore necessary to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the ViennaLS Git Repository. ",
+    "url": "/inst/#building-the-python-package",
+    
+    "relUrl": "/inst/#building-the-python-package"
+  },"47": {
+    "doc": "Installing the Library",
+    "title": "Using the Python package",
+    "content": "The 2D version of the library can be imported as follows: . import viennaps2d as vps . In order to switch to 3D mode, only the import needs to be changed: . import viennaps3d as vps . ",
+    "url": "/inst/#using-the-python-package",
+    
+    "relUrl": "/inst/#using-the-python-package"
+  },"48": {
+    "doc": "Installing the Library",
+    "title": "Integration in CMake projects",
+    "content": "We recommend using CPM.cmake to consume this library. | Installation with CPM CPMAddPackage(\"gh:viennatools/viennaps@3.1.0\") . | With a local installation In case you have ViennaPS installed in a custom directory, make sure to properly specify the CMAKE_PREFIX_PATH. list(APPEND CMAKE_PREFIX_PATH \"/your/local/installation\") find_package(ViennaPS) target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS) . | . ",
+    "url": "/inst/#integration-in-cmake-projects",
+    
+    "relUrl": "/inst/#integration-in-cmake-projects"
+  },"49": {
+    "doc": "Installing the Library",
+    "title": "Troubleshooting",
+    "content": "Failed Python package build . The following error can occur while building the Python package using pip: . Building wheels for collected packages: ViennaPS_Python Building wheel for ViennaPS_Python (pyproject.toml) ... error error: subprocess-exited-with-error × Building wheel for ViennaPS_Python (pyproject.toml) did not run successfully. │ exit code: 1 ╰─&gt; [21 lines of output] *** scikit-build-core 0.9.3 using CMake 3.27.4 (wheel) *** Configuring CMake... loading initial cache file build/CMakeInit.txt -- CPM: Adding package PackageProject@1.11.1 (v1.11.1) ninja: error: Makefile:5: expected '=', got ':' default_target: all ^ near here CMake Error at /usr/share/cmake-3.27/Modules/FetchContent.cmake:1662 (message): Build step for packageproject failed: 1 Call Stack (most recent call first): /usr/share/cmake-3.27/Modules/FetchContent.cmake:1802:EVAL:2 (__FetchContent_directPopulate) /usr/share/cmake-3.27/Modules/FetchContent.cmake:1802 (cmake_language) build/cmake/CPM_0.38.6.cmake:1004 (FetchContent_Populate) build/cmake/CPM_0.38.6.cmake:798 (cpm_fetch_package) CMakeLists.txt:98 (CPMAddPackage) -- Configuring incomplete, errors occurred! *** CMake configuration failed [end of output] note: This error originates from a subprocess, and is likely not a problem with pip. ERROR: Failed building wheel for ViennaPS_Python Failed to build ViennaPS_Python ERROR: Could not build wheels for ViennaPS_Python, which is required to install pyproject.toml-based projects . This error is due to a conflict with the Ninja build system and Unix Makefiles. To resolve this error, you can remove the build folder and then rerun pip. However, please note that this action will also remove all dependencies if they were installed alongside ViennaPS. ",
+    "url": "/inst/#troubleshooting",
+    
+    "relUrl": "/inst/#troubleshooting"
+  },"50": {
     "doc": "Pre-Built Models",
     "title": "Pre-Built Models",
     "content": " ",
     "url": "/models/prebuilt/",
     
     "relUrl": "/models/prebuilt/"
-  },"65": {
+  },"51": {
+    "doc": "Custom Models",
+    "title": "Custom Models",
+    "content": ". Users can create a custom process model by interfacing one or more of the classes described below and then inserting them into their custom process model. | The SurfaceModel class is used to describe surface reactions, combining particle fluxes with the surface chemical reactions. | The VelocityField provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step. | ViennaPS seamlessly integrates ViennaRay functionality through the viennaray::Particle class, providing users with a versatile interface to define the key characteristics of the simulated particle species. | . ",
+    "url": "/models/custom/",
+    
+    "relUrl": "/models/custom/"
+  },"52": {
     "doc": "Process Models",
     "title": "Process Models",
     "content": "#include &lt;psProcessModel.hpp&gt; . All the information about the process is encompassed in the class ProcessModel, as it includes all the particle type information required for ray tracing, the surface model, as well as advection callbacks, for generating volume models describing chemical processes inside the material. Users have the flexibility to configure their own custom process model or opt for pre-defined models encompassing frequently used processes. ",
     "url": "/models/",
     
     "relUrl": "/models/"
+  },"53": {
+    "doc": "Running a Process",
+    "title": "Running a Process",
+    "content": "#include &lt;psProcess.hpp&gt; . The Process class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also encompasses the necessary methods for configuring these attributes. Upon setting these parameters, the apply() method is employed to execute the process, initiating and conducting the simulation. Example usage: . C++ . // namespace viennaps ... Process&lt;NumericType, D&gt; process; process.setDomain(myDomain); process.setProcessModel(myModel); process.setProcessDuration(10.); process.setNumberOfRaysPerPoint(1000); process.enableFluxSmoothing(); process.apply(); ... Python ... process = vps.Process() process.setDomain(myDomain) process.setProcessModel(myModel) process.setProcessDuration(10.) process.setNumberOfRaysPerPoint(1000) process.enableFluxSmoothing() process.apply() ... ",
+    "url": "/process/",
+    
+    "relUrl": "/process/"
+  },"54": {
+    "doc": "Running a Process",
+    "title": "Member Functions",
+    "content": "Constructors . // Default constructor Process() // Constructor from domain Process(SmartPointer&lt;Domain&lt;NumericType, D&gt;&gt; passedDomain) // Constructor from domain, process model, and duration, // to apply simple processes template &lt;typename ProcessModelType&gt; Process(SmartPointer&lt;Domain&lt;NumericType, D&gt;&gt; passedDomain, SmartPointer&lt;ProcessModelType&gt; passedProcessModel, const NumericType passedDuration = 0.) . In summary, these constructors provide different ways to create a Process object, allowing for flexibility depending on what data is available at the time of object creation. | The first constructor is a default constructor. It’s defined as Process() and it doesn’t take any arguments. This constructor allows for the creation of a Process object without any initial values. | The second constructor takes a single argument: a smart pointer to a Domain object. This constructor initializes the domain member variable of the Process class with the passed Domain object. | The third constructor is a template constructor that takes three arguments: a smart pointer to a Domain object, a smart pointer to a ProcessModelType object, and a NumericType representing the process duration. This constructor initializes the domain and processDuration member variables with the passed values and also sets the model member variable to the dynamically cast ProcessModelType object. This allows the user to run a process from an anonymous object. For example: Process&lt;NumericType, D&gt;(myDomain, myModel, processDuration).apply() . | . Set the domain . void setDomain(SmartPointer&lt;Domain&lt;NumericType, D&gt;&gt; passedDomain) . Sets the process domain. Set the process model . void setProcessModel(SmartPointer&lt;ProcessModel&lt;NumericType, D&gt;&gt; passedProcessModel) . Sets the process model. This can be either a pre-configured process model or a custom process model. Set the source direction . void setSourceDirection(const viennaray::TraceDirection passedDirection) . Set the source direction, where the rays should be traced from. The passed direction parameter is using the enum viennaray::TraceDirection which contains the following values: POS_X, NEG_X, POS_Y, NEG_Y, POS_Z, NEG_Z. Set the process duration . void setProcessDuration(NumericType passedDuration) . Specifies the duration of the process. If the process duration is set to 0, exclusively the advection callback applyPreAdvect() is executed on the domain. This feature is particularly useful for applying only a volume model without engaging in further simulation steps. Set the number of rays to be traced . void setNumberOfRaysPerPoint(unsigned raysPerPoint) . Specify the number of rays to be traced for each particle throughout the process. The total count of rays is the product of this number and the number of points in the process geometry. Set the number of coverage initialization iterations . void setMaxCoverageInitIterations(unsigned numIter) . Set the number of iterations to initialize the coverages. Enable or disable flux smoothing . void enableFluxSmoothing() void disableFluxSmoothing() . Toggle the option to enable or disable flux smoothing. When flux smoothing is activated, the flux at each surface point, computed by the ray tracer, undergoes averaging across the neighboring surface points. Per default, flux smoothing is enabled. Enable or disable flux boundary conditions . void enableFluxBoundaries() void disableFluxBoundaries() . Toggle the option to enable or disable flux boundary conditions. When flux boundary conditions are disabled, particles are allowed to leave the domain without being reflected back into the domain. Per default, flux boundary conditions are enabled. Enable or disable random seeds . void enableRandomSeeds() void disableRandomSeeds() . Toggle the option to enable or disable random seeds. When random seeds are enabled, the random number generator is seeded with a random value, making the results generally not perectly reproducible. Per default, random seeds are enabled. Set the integration scheme . void setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme) . Set the integration scheme for solving the level-set equation. Possible integration schemes are specified in lsIntegrationSchemeEnum. Set the time step ratio . void setTimeStepRatio(NumericType cfl) . Set the CFL (Courant-Friedrichs-Levy) condition to use during surface advection in the level-set. The CFL condition defines the maximum distance a surface is allowed to move in a single advection step. It MUST be below 0.5 to guarantee numerical stability. Defaults to 0.4999. Set time interval to save intermediate results . void setPrintTimeInterval(NumericType passedTime) . Sets the minimum time between printing intermediate results during the process. If this is set to a non-positive value, no intermediate results are printed. ",
+    "url": "/process/#member-functions",
+    
+    "relUrl": "/process/#member-functions"
+  },"55": {
+    "doc": "Simulation Domain",
+    "title": "Simulation Domain",
+    "content": "#include &lt;psDomain.hpp&gt; . In our simulation framework, the essential hub for all geometry details is the Domain class. This class is like a smart keeper of information, holding everything about the materials in the simulation domain. It uses level sets to show surfaces and material interfaces with great detail and organizes data in a cell-based structure for the underlying volumes. Depending on the specific process, it can use one or both of these methods. This flexibility ensures that the simulation can handle different processes accurately and efficiently. ",
+    "url": "/domain/",
+    
+    "relUrl": "/domain/"
+  },"56": {
+    "doc": "Basic Geometries",
+    "title": "Basic Geometries",
+    "content": ". ViennaPS provides a set of functions to effortlessly create basic geometries, facilitating quick testing of models or serving as the groundwork for your process simulation configuration. The various available geometries are outlined below: . ",
+    "url": "/geo/basic/",
+    
+    "relUrl": "/geo/basic/"
+  },"57": {
+    "doc": "Creating a Geometry",
+    "title": "Creating a Geometry",
+    "content": ". Create intricate geometries using the versatile tools offered by ViennaLS or generate a basic geometry using of the provided geometry builders. Alternatively, you can import a geometry from a GDSII mask file. ",
+    "url": "/geo/",
+    
+    "relUrl": "/geo/"
+  },"58": {
+    "doc": "Examples",
+    "title": "Examples",
+    "content": ". ",
+    "url": "/examples/",
+    
+    "relUrl": "/examples/"
+  },"59": {
+    "doc": "Examples",
+    "title": "Building",
+    "content": "The examples can be built using CMake: . git clone https://github.com/ViennaTools/ViennaPS.git cd ViennaPS cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON cmake --build build . The examples can then be executed in their respective build folders with the config files, e.g.: . cd examples/exampleName ./ExampleName.bat config.txt # (Windows) ./ExampleName config.txt # (Other) . Individual examples can also be build by calling make in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. ",
+    "url": "/examples/#building",
+    
+    "relUrl": "/examples/#building"
+  },"60": {
+    "doc": "Examples",
+    "title": "Examples List",
+    "content": ". | Atomic Layer Deposition | Bosch Process | Custom Example Process | GDS Reader | Cantilever Wet Etching | Selective Epitaxy | Trench Deposition | Trench Deposition Geometric | TEOS Trench Deposition | Hole Etching | Stack Etching | Oxide Regrowth | Interpolation Demo | . ",
+    "url": "/examples/#examples-list",
+    
+    "relUrl": "/examples/#examples-list"
+  },"61": {
+    "doc": "Home",
+    "title": "ViennaPS",
+    "content": "Process Simulation Library . Get started now View it on GitHub . ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems. ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know on GitHub or contact us directly at viennatools@iue.tuwien.ac.at! . This documentation serves as your comprehensive guide to understanding, implementing, and harnessing the capabilities of our process simulation library. Whether you are a seasoned researcher seeking to refine your simulations or an engineer aiming to optimize real-world processes, this library provides a versatile and robust platform to meet your diverse needs. Throughout this documentation, you will find detailed explanations, practical examples, and best practices to effectively utilize the library. We aim to empower users with the knowledge and tools necessary to simulate a wide range of processes accurately and efficiently, making informed decisions and driving innovation in the field. ",
+    "url": "/#viennaps",
+    
+    "relUrl": "/#viennaps"
+  },"62": {
+    "doc": "Home",
+    "title": "Contributing",
+    "content": "If you want to contribute to ViennaPS, make sure to follow the LLVM Coding guidelines. Make sure to format all files before creating a pull request: . cmake -B build cmake --build build --target format . ",
+    "url": "/#contributing",
+    
+    "relUrl": "/#contributing"
+  },"63": {
+    "doc": "Home",
+    "title": "About the project",
+    "content": "ViennaPS was developed under the aegis of the Institute for Microelectronics at the TU Wien. Current contributors: Tobias Reiter, Noah Karnel, Julius Piso, Lado Filipovic . Contact us via: viennatools@iue.tuwien.ac.at . ",
+    "url": "/#about-the-project",
+    
+    "relUrl": "/#about-the-project"
+  },"64": {
+    "doc": "Home",
+    "title": "License",
+    "content": "See file LICENSE in the base directory. ",
+    "url": "/#license",
+    
+    "relUrl": "/#license"
+  },"65": {
+    "doc": "Home",
+    "title": "Home",
+    "content": " ",
+    "url": "/",
+    
+    "relUrl": "/"
   },"66": {
     "doc": "Isotropic Process",
     "title": "Isotropic Process",
@@ -512,7 +512,7 @@
   },"73": {
     "doc": "Multi Particle Process",
     "title": "Neutral Particles",
-    "content": "Neutral particles are defined by their sticking probability, which is the probability that a neutral particle will stick to the surface upon impact. The sticking probability is a value between 0 and 1. The sticking probability defines the reflection behavior of the neutral particles. A sticking probability of 1 means that the neutral particle will always stick to the surface, while a sticking probability of 0 means that the neutral particle will always be reflected. ",
+    "content": "Neutral particles are characterized by their sticking probability, which quantifies the likelihood that a neutral particle will adhere to a surface upon impact. This probability ranges between 0 and 1, where: . | A sticking probability of 1 indicates that the particle will always stick to the surface. | A sticking probability of 0 indicates that the particle will always be reflected. | . The sticking probability determines the reflection behavior of neutral particles and can be defined specifically for each material within the domain. ",
     "url": "/models/prebuilt/multiParticle.html#neutral-particles",
     
     "relUrl": "/models/prebuilt/multiParticle.html#neutral-particles"
@@ -526,7 +526,7 @@
   },"75": {
     "doc": "Multi Particle Process",
     "title": "Implementation",
-    "content": "// default empty constructor MultiParticleProcess() void addNeutralParticle(NumericType stickingProbability) void addIonParticle(NumericType sourceExponent, NumericType thetaRMin = 0., NumericType thetaRMax = 90., NumericType minAngle = 0., NumericType B_sp = -1., NumericType meanEnergy = 0., NumericType sigmaEnergy = 0., NumericType thresholdEnergy = 0., NumericType inflectAngle = 0., NumericType n = 1) void setRateFunction(std::function&lt;NumericType(std::vector&lt;NumericType&gt; &amp;, const Material &amp;)&gt; rateFunction) . | Parameter | Description | Default Value | . | stickingProbability | Sticking probability of the neutral particle | - | . | sourceExponent | Exponent of the power cosine distribution for the initial directions of ions | - | . | thetaRMin | $\\theta_{min}$ in the ion sticking function | 0.0 | . | thetaRMax | $\\theta_{max}$ in the ion sticking function | 90.0 | . | minAngle | Minimum angle for the ion reflection | 0.0 | . | B_sp | Sputtering yield parameter | -1.0 | . | meanEnergy | Mean initial energy of the ions | 0.0 | . | sigmaEnergy | Standard deviation of the initial energy of the ions | 0.0 | . | thresholdEnergy | Threshold energy for ion sputtering | 0.0 | . | inflectAngle | Inflection angle of the ion energy reduction function | 0.0 | . | n | Exponent of the ion energy reduction function | 1.0 | . Example usage: . C++ ... auto model = SmartPointer&lt;MultiParticleProcess&lt;NumericType, D&gt;&gt;::New(); model-&gt;addNeutralParticle(0.1); model-&gt;addIonParticle(1000.); // for material specific rates auto rateFunction = [](std::vector&lt;NumericType&gt; &amp;fluxes, const Material &amp;material) { // fluxes contains the neutral flux at first index and ion flux at second index return material == Material::Si ? -(fluxes[0] + fluxes[1]) : 0.; }; model-&gt;setRateFunction(rateFunction); ... Python ... model = vps.MultiParticleProcess() model.addNeutralParticle(0.1) model.addIonParticle(1000.) # for material specific rates def rateFunction(fluxes, material): if material == vps.Material.Si: # fluxes contains the neutral flux at first index and ion flux at second index return -sum(fluxes) else: return 0. model.setRateFunction(rateFunction) ... ",
+    "content": "// default empty constructor MultiParticleProcess() // member functions void addNeutralParticle(NumericType stickingProbability, std::string label = \"neutralFlux\") void addNeutralParticle(std::unordered_map&lt;Material, NumericType&gt; materialSticking, NumericType defaultStickingProbability = 1., std::string label = \"neutralFlux\") void addIonParticle(NumericType sourceExponent, NumericType thetaRMin = 0., NumericType thetaRMax = 90., NumericType minAngle = 0., NumericType B_sp = -1., NumericType meanEnergy = 0., NumericType sigmaEnergy = 0., NumericType thresholdEnergy = 0., NumericType inflectAngle = 0., NumericType n = 1, std::string label = \"ionFlux\") void setRateFunction(std::function&lt;NumericType(std::vector&lt;NumericType&gt; &amp;, const Material &amp;)&gt; rateFunction) . | Parameter | Description | Default Value | . | stickingProbability | Sticking probability of the neutral particle | - | . | sourceExponent | Exponent of the power cosine distribution for the initial directions of ions | - | . | thetaRMin | $\\theta_{min}$ in the ion sticking function | 0.0 | . | thetaRMax | $\\theta_{max}$ in the ion sticking function | 90.0 | . | minAngle | Minimum angle for the ion reflection | 0.0 | . | B_sp | Sputtering yield parameter | -1.0 | . | meanEnergy | Mean initial energy of the ions | 0.0 | . | sigmaEnergy | Standard deviation of the initial energy of the ions | 0.0 | . | thresholdEnergy | Threshold energy for ion sputtering | 0.0 | . | inflectAngle | Inflection angle of the ion energy reduction function | 0.0 | . | n | Exponent of the ion energy reduction function | 1.0 | . Example usage: . C++ ... auto model = SmartPointer&lt;MultiParticleProcess&lt;NumericType, D&gt;&gt;::New(); std::unordered_map&lt;Material, NumericType&gt; materialSticking{{Material::Si, 0.1}, {Material::Mask, 0.5}}; model-&gt;addNeutralParticle(materialSticking, 1.0); // default sticking probability of 1 on all other materials model-&gt;addIonParticle(1000.); // for material specific rates auto rateFunction = [](std::vector&lt;NumericType&gt; &amp;fluxes, const Material &amp;material) { // fluxes contains the neutral flux at first index and ion flux at second index return material == Material::Si ? -(fluxes[0] + fluxes[1]) : 0.; }; model-&gt;setRateFunction(rateFunction); ... Python ... model = vps.MultiParticleProcess() materialSticking = {vps.Material.Si: 0.1, vps.Material.Mask: 0.5} model.addNeutralParticle(materialSticking, defaultStickingProbability=1.0) model.addIonParticle(1000.) # for material specific rates def rateFunction(fluxes, material): if material == vps.Material.Si: # fluxes contains the neutral flux at first index and ion flux at second index return -sum(fluxes) else: return 0. model.setRateFunction(rateFunction) ... ",
     "url": "/models/prebuilt/multiParticle.html#implementation",
     
     "relUrl": "/models/prebuilt/multiParticle.html#implementation"

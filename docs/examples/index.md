@@ -32,6 +32,8 @@ Individual examples can also be build by calling `make` in their respective buil
 
 ## Examples List
 
+* [Atomic Layer Deposition](https://github.com/ViennaTools/ViennaPS/tree/master/examples/atomicLayerDeposition)
+* [Bosch Process](https://github.com/ViennaTools/ViennaPS/tree/master/examples/boschProcess)
 * [Custom Example Process](https://github.com/ViennaTools/ViennaPS/tree/master/examples/exampleProcess)
 * [GDS Reader](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSReader)
 * [Cantilever Wet Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching)
@@ -42,6 +44,4 @@ Individual examples can also be build by calling `make` in their respective buil
 * [Hole Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching)
 * [Stack Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/stackEtching)
 * [Oxide Regrowth](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxideRegrowth)
-* [Volume Model](https://github.com/ViennaTools/ViennaPS/tree/master/examples/volumeModel)
-* [KD Tree Benchmark](https://github.com/ViennaTools/ViennaPS/tree/master/examples/KDTreeBenchmark)
 * [Interpolation Demo](https://github.com/ViennaTools/ViennaPS/tree/master/examples/interpolationDemo)
