@@ -19,11 +19,11 @@ template <typename NumericType> struct SF6O2Parameters {
   NumericType etchantFlux = 1.8e3;
   NumericType oxygenFlux = 1.0e2;
 
-  NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
-
   // sticking probabilities
   NumericType beta_F = 0.7;
   NumericType beta_O = 1.;
+
+  NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
   // Mask
   struct MaskType {
@@ -44,13 +44,15 @@ template <typename NumericType> struct SF6O2Parameters {
     // sputtering coefficients
     NumericType Eth_sp = 20.; // eV
     NumericType Eth_ie = 15.; // eV
+
     NumericType A_sp = 0.0337;
     NumericType B_sp = 9.3;
-    NumericType theta_g_sp = M_PI_2; // angle where yield is zero in rad
+    NumericType theta_g_sp = M_PI_2; // angle where yield is zero [rad]
+
     NumericType A_ie = 7.;
     NumericType B_ie = 0.8;
     NumericType theta_g_ie =
-        constants::degToRad(78); // angle where yield is zero in rad
+        constants::degToRad(78); // angle where yield is zero [rad]
 
     // chemical etching
     NumericType k_sigma = 3.0e2;     // in (1e15 cm⁻²s⁻¹)
@@ -99,9 +101,9 @@ public:
     coverages->insertNextScalarData(cov, "eCoverage");
     coverages->insertNextScalarData(cov, "oCoverage");
     if (Logger::getLogLevel() > 3) {
-      coverages->insertNextScalarData(cov, "ieComponent");
-      coverages->insertNextScalarData(cov, "spComponent");
-      coverages->insertNextScalarData(cov, "thComponent");
+      coverages->insertNextScalarData(cov, "ionEnhancedRate");
+      coverages->insertNextScalarData(cov, "sputterRate");
+      coverages->insertNextScalarData(cov, "chemicalRate");
     }
   }
 
@@ -113,18 +115,20 @@ public:
     const auto numPoints = rates->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
-    const auto ionSputteringRate = rates->getScalarData("ionSputteringRate");
-    const auto etchantRate = rates->getScalarData("etchantRate");
+    const auto ionEnhancedYield = rates->getScalarData("ionEnhancedYield");
+    const auto ionSputterYield = rates->getScalarData("ionSputterYield");
+    const auto ionFlux = rates->getScalarData("ionFlux");
+
+    const auto etchantFlux = rates->getScalarData("etchantFlux");
     const auto eCoverage = coverages->getScalarData("eCoverage");
 
     // save the etch rate components for visualization
-    std::vector<NumericType> *ieComponent = nullptr, *spComponent = nullptr,
-                             *thComponent = nullptr;
+    std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
+                             *chRate = nullptr;
     if (Logger::getLogLevel() > 3) {
-      ieComponent = coverages->getScalarData("ieComponent");
-      spComponent = coverages->getScalarData("spComponent");
-      thComponent = coverages->getScalarData("thComponent");
+      ieRate = coverages->getScalarData("ionEnhancedRate");
+      spRate = coverages->getScalarData("sputterRate");
+      chRate = coverages->getScalarData("chemicalRate");
     }
     bool stop = false;
 
@@ -134,25 +138,26 @@ public:
         break;
       }
 
+      const auto sputterRate =
+          ionSputterYield->at(i) * ionFlux->at(i) * params.ionFlux;
+      const auto ionEnhancedRate = eCoverage->at(i) * ionEnhancedYield->at(i) *
+                                   ionFlux->at(i) * params.ionFlux;
+      const auto chemicalRate = params.Si.k_sigma * eCoverage->at(i) / 4.;
+
       if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
-        etchRate[i] =
-            -(1 / params.Mask.rho) * ionSputteringRate->at(i) * params.ionFlux;
+        etchRate[i] = -(1 / params.Mask.rho) * sputterRate;
         if (Logger::getLogLevel() > 3) {
-          spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
-          ieComponent->at(i) = 0.;
-          thComponent->at(i) = 0.;
+          spRate->at(i) = sputterRate;
+          ieRate->at(i) = 0.;
+          chRate->at(i) = 0.;
         }
       } else {
-        etchRate[i] =
-            -(1 / params.Si.rho) * (params.Si.k_sigma * eCoverage->at(i) / 4. +
-                                    ionSputteringRate->at(i) * params.ionFlux +
-                                    eCoverage->at(i) * ionEnhancedRate->at(i) *
-                                        params.ionFlux); // in um / s
+        etchRate[i] = -(1 / params.Si.rho) * (chemicalRate + sputterRate +
+                                              ionEnhancedRate); // in um / s
         if (Logger::getLogLevel() > 3) {
-          spComponent->at(i) = ionSputteringRate->at(i) * params.ionFlux;
-          ieComponent->at(i) =
-              eCoverage->at(i) * ionEnhancedRate->at(i) * params.ionFlux;
-          thComponent->at(i) = params.Si.k_sigma * eCoverage->at(i) / 4.;
+          spRate->at(i) = sputterRate;
+          ieRate->at(i) = ionEnhancedRate;
+          chRate->at(i) = chemicalRate;
         }
       }
     }
@@ -170,11 +175,13 @@ public:
     // update coverages based on fluxes
     const auto numPoints = rates->getScalarData(0)->size();
 
-    const auto etchantRate = rates->getScalarData("etchantRate");
-    const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
-    const auto oxygenRate = rates->getScalarData("oxygenRate");
-    const auto oxygenSputteringRate =
-        rates->getScalarData("oxygenSputteringRate");
+    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    const auto oxygenFlux = rates->getScalarData("oxygenFlux");
+
+    const auto ionEnhancedYield = rates->getScalarData("ionEnhancedYield");
+    const auto ionEnhancedPassivationYield =
+        rates->getScalarData("ionEnhancedPassivationYield");
+    const auto ionFlux = rates->getScalarData("ionFlux");
 
     // etchant fluorine coverage
     auto eCoverage = coverages->getScalarData("eCoverage");
@@ -184,10 +191,11 @@ public:
     oCoverage->resize(numPoints);
 
     for (size_t i = 0; i < numPoints; ++i) {
-      auto Gb_F = etchantRate->at(i) * params.etchantFlux * params.beta_F;
-      auto Gb_O = oxygenRate->at(i) * params.oxygenFlux * params.beta_O;
-      auto GY_ie = ionEnhancedRate->at(i) * params.ionFlux;
-      auto GY_o = oxygenSputteringRate->at(i) * params.ionFlux;
+      auto Gb_F = etchantFlux->at(i) * params.etchantFlux * params.beta_F;
+      auto Gb_O = oxygenFlux->at(i) * params.oxygenFlux * params.beta_O;
+      auto GY_ie = ionEnhancedYield->at(i) * ionFlux->at(i) * params.ionFlux;
+      auto GY_o =
+          ionEnhancedPassivationYield->at(i) * ionFlux->at(i) * params.ionFlux;
 
       auto a = (params.Si.k_sigma + 2 * GY_ie) / Gb_F;
       auto b = (params.Si.beta_sigma + GY_o) / Gb_O;
@@ -212,20 +220,23 @@ public:
     // update coverages based on fluxes
     const auto numPoints = rates->getScalarData(0)->size();
 
-    const auto etchantRate = rates->getScalarData("etchantRate");
-    const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
+    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    const auto ionEnhancedYield = rates->getScalarData("ionEnhancedYield");
+    const auto ionFlux = rates->getScalarData("ionFlux");
 
     // etchant fluorine coverage
     auto eCoverage = coverages->getScalarData("eCoverage");
     eCoverage->resize(numPoints);
+
     for (size_t i = 0; i < numPoints; ++i) {
-      if (etchantRate->at(i) < 1e-6) {
+      if (etchantFlux->at(i) < 1e-6) {
         eCoverage->at(i) = 0;
       } else {
-        eCoverage->at(i) =
-            etchantRate->at(i) * params.etchantFlux * params.beta_F /
-            (etchantRate->at(i) * params.etchantFlux * params.beta_F +
-             params.Si.k_sigma + 2 * ionEnhancedRate->at(i) * params.ionFlux);
+        double tmp =
+            1 + (params.Si.k_sigma + 2 * ionEnhancedYield->at(i) *
+                                         ionFlux->at(i) * params.ionFlux) /
+                    (etchantFlux->at(i) * params.etchantFlux * params.beta_F);
+        eCoverage->at(i) = 1 / tmp;
       }
     }
   }
@@ -237,8 +248,8 @@ class SF6O2Ion
 public:
   SF6O2Ion(const SF6O2Parameters<NumericType> &pParams)
       : params(pParams),
-        A(1. /
-          (1. + params.Ions.n_l * (M_PI_2 / params.Ions.inflectAngle - 1.))),
+        A_energy(1. / (1. + params.Ions.n_l *
+                                (M_PI_2 / params.Ions.inflectAngle - 1.))),
         sqrt_E_th_ie_O(std::sqrt(params.Passivation.Eth_ie)),
         sqrt_E_th_ie_Si(std::sqrt(params.Si.Eth_ie)) {}
 
@@ -248,10 +259,7 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
-
     // collect data for this hit
-    assert(primID < localData.getVectorData(0).size() && "id out of bounds");
-
     const double cosTheta = -DotProduct(rayDir, geomNormal);
     NumericType angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
 
@@ -277,7 +285,7 @@ public:
                      std::cos(angle / params.Si.theta_g_ie * M_PI_2),
                  0.);
 
-    double sqrtE = std::sqrt(E);
+    const double sqrtE = std::sqrt(E);
     NumericType Y_sp =
         params.Si.A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
     NumericType Y_Si =
@@ -290,13 +298,16 @@ public:
     assert(Y_O >= 0. && "Invalid yield");
 
     // sputtering yield Y_sp ionSputteringRate
-    localData.getVectorData(0)[primID] += Y_sp * rayWeight;
+    localData.getVectorData(0)[primID] += Y_sp;
 
     // ion enhanced etching yield Y_Si ionEnhancedRate
-    localData.getVectorData(1)[primID] += Y_Si * rayWeight;
+    localData.getVectorData(1)[primID] += Y_Si;
 
-    // ion enhanced O sputtering yield Y_O oxygenSputteringRate
-    localData.getVectorData(2)[primID] += Y_O * rayWeight;
+    // ion enhanced O sputtering yield Y_O ionEnhancedPassivationYield
+    localData.getVectorData(2)[primID] += Y_O;
+
+    // ion flux
+    localData.getVectorData(3)[primID] += rayWeight;
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
@@ -318,11 +329,11 @@ public:
     // 0
     NumericType Eref_peak;
     if (incAngle >= params.Ions.inflectAngle) {
-      Eref_peak = (1 - (1 - A) * (M_PI_2 - incAngle) /
+      Eref_peak = (1 - (1 - A_energy) * (M_PI_2 - incAngle) /
                            (M_PI_2 - params.Ions.inflectAngle));
     } else {
-      Eref_peak =
-          A * std::pow(incAngle / params.Ions.inflectAngle, params.Ions.n_l);
+      Eref_peak = A_energy * std::pow(incAngle / params.Ions.inflectAngle,
+                                      params.Ions.n_l);
     }
     // Gaussian distribution around the Eref_peak scaled by the particle energy
     NumericType NewEnergy;
@@ -332,11 +343,12 @@ public:
     } while (NewEnergy > E || NewEnergy < 0.);
 
     NumericType sticking = 1.;
-    if (incAngle > params.Ions.thetaRMin)
+    if (incAngle > params.Ions.thetaRMin) {
       sticking =
           1. - std::min((incAngle - params.Ions.thetaRMin) /
                             (params.Ions.thetaRMax - params.Ions.thetaRMin),
                         NumericType(1.));
+    }
 
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > params.Si.Eth_ie) {
@@ -360,12 +372,13 @@ public:
     return params.Ions.exponent;
   }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"ionSputteringRate", "ionEnhancedRate", "oxygenSputteringRate"};
+    return {"ionSputterYield", "ionEnhancedYield",
+            "ionEnhancedPassivationYield", "ionFlux"};
   }
 
 private:
   const SF6O2Parameters<NumericType> &params;
-  const NumericType A;
+  const NumericType A_energy;
   // save precomputed square roots
   const NumericType sqrt_E_th_ie_O;
   const NumericType sqrt_E_th_ie_Si;
@@ -412,7 +425,7 @@ public:
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"etchantRate"};
+    return {"etchantFlux"};
   }
 };
 
@@ -453,7 +466,7 @@ public:
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"etchantRate"};
+    return {"etchantFlux"};
   }
 };
 
@@ -495,7 +508,7 @@ public:
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"oxygenRate"};
+    return {"oxygenFlux"};
   }
 };
 } // namespace impl
@@ -509,7 +522,7 @@ class SF6O2Etching : public ProcessModel<NumericType, D> {
 public:
   SF6O2Etching() { initializeModel(); }
 
-  // All flux values are in units 1e16 / cm²
+  // All flux values are in units 1e15 / cm²
   SF6O2Etching(const double ionFlux, const double etchantFlux,
                const double oxygenFlux, const NumericType meanEnergy /* eV */,
                const NumericType sigmaEnergy /* eV */, // 5 parameters

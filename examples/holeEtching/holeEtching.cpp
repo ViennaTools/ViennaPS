@@ -35,15 +35,17 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  auto model = ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(
-      params.get("ionFlux") /*ion flux*/,
-      params.get("etchantFlux") /*etchant flux*/,
-      params.get("oxygenFlux") /*oxygen flux*/,
-      params.get("meanEnergy") /*mean energy*/,
-      params.get("sigmaEnergy") /*energy sigma*/,
-      params.get("ionExponent") /*source power cosine distribution exponent*/,
-      params.get("A_O") /*oxy sputter yield*/,
-      params.get("etchStopDepth") /*max etch depth*/);
+  auto model = ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New();
+  auto &modelParams = model->getParameters();
+  modelParams.ionFlux = params.get("ionFlux");
+  modelParams.etchantFlux = params.get("etchantFlux");
+  modelParams.oxygenFlux = params.get("oxygenFlux");
+  modelParams.Ions.meanEnergy = params.get("meanEnergy");
+  modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
+  modelParams.Ions.exponent = params.get("ionExponent");
+  modelParams.Passivation.A_ie = params.get("A_O");
+  modelParams.Si.A_ie = params.get("A_Si");
+  modelParams.etchStopDepth = params.get("etchStopDepth");
 
   // process setup
   ps::Process<NumericType, D> process;

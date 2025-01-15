@@ -8,21 +8,22 @@ yExtent=100.0 # um
 
 # Geometry
 holeRadius=20.0 # um
-maskHeight=20.0 # um
-taperAngle=0.0  # degree
+maskHeight=65.0 # um
+taperAngle=1.5  # degree
 
 # Process parameters
-processTime=150 # seconds 
+processTime=50 # seconds 
 
 # all flux values are units 1e16 / cm²
-ionFlux=1.
-etchantFlux=180.
+ionFlux=10.
+etchantFlux=500.
 oxygenFlux=30.
 
 ionExponent=200
 meanEnergy=100 # eV
 sigmaEnergy=10 # eV
-A_O=3 # passivation layer sputtering coefficient
+A_O=3 # passivation layer yield constant
+A_Si=7 # Si yield constant
 
 etchStopDepth=-1000 # maximum etching depth
 integrationScheme=EO_1
