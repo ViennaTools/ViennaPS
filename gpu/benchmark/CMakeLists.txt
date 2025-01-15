@@ -11,3 +11,6 @@ target_link_libraries(CPU_Benchmark ViennaPS)
 
 add_executable(CPU_Benchmark_single ${CMAKE_CURRENT_SOURCE_DIR}/CPU_Benchmark_single.cpp)
 target_link_libraries(CPU_Benchmark_single ViennaPS)
+
+add_gpu_executable(compare_flux target_name ${CMAKE_CURRENT_SOURCE_DIR}/compare_flux.cpp
+                   ${CMAKE_SOURCE_DIR}/gpu/pipelines/SingleParticlePipeline.cu)

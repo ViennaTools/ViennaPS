@@ -1,6 +1,9 @@
 #include <lsToDiskMesh.hpp>
 #include <lsToSurfaceMeshRefined.hpp>
 
+#include <models/psSingleParticleProcess.hpp>
+#include <psProcess.hpp>
+
 #include <curtTrace.hpp>
 #include <gpu/vcContext.hpp>
 #include <utElementToPointData.hpp>
@@ -10,16 +13,13 @@
 using namespace viennaps;
 
 int main() {
-  omp_set_num_threads(1);
+  omp_set_num_threads(16);
   using NumericType = float;
-  constexpr int D = DIM;
+  constexpr int D = 3;
 
   viennacore::Logger::setLogLevel(viennacore::LogLevel::DEBUG);
 
   const NumericType sticking = 0.1f;
-  std::ofstream file("GPU_Benchmark_single.txt");
-  file << "Sticking;Meshing;Tracing;Postprocessing\n";
-  file << sticking << ";";
 
   Context context;
   CreateContext(context);
@@ -41,8 +41,6 @@ int main() {
   tracer.setNumberOfRaysPerPoint(3000);
   tracer.setUseRandomSeeds(false);
 
-  Timer timer;
-  timer.start();
   diskMesher.apply();
   surfMesher.apply();
   gpu::TriangleMesh mesh;
@@ -51,10 +49,6 @@ int main() {
   mesh.triangles = surfMesh->triangles;
   mesh.minimumExtent = surfMesh->minimumExtent;
   mesh.maximumExtent = surfMesh->maximumExtent;
-  timer.finish();
-  file << timer.currentDuration << ";";
-  std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
 
   tracer.setGeometry(mesh);
   tracer.setPipeline("SingleParticlePipeline", context->modulePath);
@@ -66,28 +60,13 @@ int main() {
 
   tracer.insertNextParticle(particle);
   tracer.prepareParticlePrograms();
-
-  timer.start();
   tracer.apply();
-  timer.finish();
-  file << timer.currentDuration << ";";
-  std::cout << "Trace time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
 
-  timer.start();
-  std::vector<NumericType> flux;
-  flux.resize(surfMesh->triangles.size());
-  tracer.getFlux(flux.data(), 0, 0);
-  surfMesh->getCellData().insertNextScalarData(flux, "flux");
   auto pointData = SmartPointer<viennals::PointData<NumericType>>::New();
   gpu::ElementToPointData<NumericType>(tracer.getResults(), pointData,
                                        tracer.getParticles(), elementKdTree,
                                        diskMesh, surfMesh, GRID_DELTA)
       .apply();
-  timer.finish();
-  file << timer.currentDuration << "\n";
-  std::cout << "Postprocessing time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
 
   viennals::VTKWriter<NumericType>(surfMesh, "GPU_SingleParticleFlux_tri.vtp")
       .apply();
@@ -95,5 +74,54 @@ int main() {
   viennals::VTKWriter<NumericType>(diskMesh, "GPU_SingleParticleFlux_disk.vtp")
       .apply();
 
-  file.close();
+  // CPU
+  auto model =
+      SmartPointer<SingleParticleProcess<NumericType, D>>::New(1., sticking);
+  Process<NumericType, D> process(domain, model);
+
+  auto flux = process.calculateFlux();
+
+  viennals::VTKWriter<NumericType>(flux, "CPU_SingleParticleFlux_disk.vtp")
+      .apply();
+
+  std::ofstream file_top("compare_flux_top.txt");
+  std::ofstream file_bottom("compare_flux_bottom.txt");
+  std::ofstream file_side_1("compare_flux_side_1.txt");
+  std::ofstream file_side_2("compare_flux_side_2.txt");
+  file_top << "x;y;CPU;GPU\n";
+  file_bottom << "x;y;CPU;GPU\n";
+  file_side_1 << "x;y;CPU;GPU\n";
+  file_side_2 << "x;y;CPU;GPU\n";
+
+  const auto numNodes = flux->nodes.size();
+
+  auto cpu_flxu = flux->getCellData().getScalarData("particleFlux");
+  auto gpu_flxu = diskMesh->getCellData().getScalarData("flux");
+
+  // top points
+  const float top = 25.1f;
+  const float bottom = 0.1f;
+
+  for (std::size_t i = 0; i < numNodes; i++) {
+    auto &node = flux->nodes[i];
+    if (std::abs(node[2] - top) < 0.1 && std::abs(node[1]) < 0.01) {
+      file_top << node[0] << ";" << node[1] << ";" << cpu_flxu->at(i) << ";"
+               << gpu_flxu->at(i) << "\n";
+    }
+
+    if (std::abs(node[2] - bottom) < 0.1 && std::abs(node[1]) < 0.01) {
+      file_bottom << node[0] << ";" << node[1] << ";" << cpu_flxu->at(i) << ";"
+                  << gpu_flxu->at(i) << "\n";
+    }
+
+    if (std::abs(node[0] - 2.5) < 0.025 && std::abs(node[1]) < 0.01) {
+      file_side_1 << node[1] << ";" << node[2] << ";" << cpu_flxu->at(i) << ";"
+                  << gpu_flxu->at(i) << "\n";
+    }
+
+    if (std::abs(node[0] + 2.498) < 0.025 && std::abs(node[1]) < 0.01) {
+      file_side_2 << node[1] << ";" << node[2] << ";" << cpu_flxu->at(i) << ";"
+                  << gpu_flxu->at(i) << "\n";
+    }
+  }
 }

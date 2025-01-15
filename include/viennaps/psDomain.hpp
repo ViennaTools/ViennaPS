@@ -250,6 +250,9 @@ public:
     materialMapCheck();
   }
 
+  // Returns the top Level-Set (surface) in the domain.
+  auto &getSurface() const { return levelSets_.back(); }
+
   // Returns a vector with all Level-Sets in the domain.
   auto &getLevelSets() const { return levelSets_; }
 
