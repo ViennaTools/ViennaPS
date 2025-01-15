@@ -14,10 +14,10 @@ taperAngle=1.5  # degree
 # Process parameters
 processTime=50 # seconds 
 
-# all flux values are units 1e16 / cm²
+# all flux values are units 1e15 / cm²
 ionFlux=10.
 etchantFlux=500.
-oxygenFlux=30.
+oxygenFlux=200.
 
 ionExponent=200
 meanEnergy=100 # eV
