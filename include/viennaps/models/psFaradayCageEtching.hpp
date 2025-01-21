@@ -181,6 +181,18 @@ public:
 
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
                   const NumericType processDuration) override final {
+
+    auto gridDelta = domain->getGrid().getGridDelta();
+    auto boundingBox = domain->getBoundingBox();
+    auto source = SmartPointer<impl::PeriodicSource<NumericType, D>>::New(
+        boundingBox, gridDelta, boundingBox[1][2] + 2 * gridDelta,
+        params_.ibeParams.tiltAngle, params_.cageAngle,
+        params_.ibeParams.sourcePower);
+    this->setSource(source);
+
+    if (firstInit)
+      return;
+
     // particles
     auto particle =
         std::make_unique<impl::IBEIon<NumericType, D>>(params_.ibeParams);
@@ -192,13 +204,6 @@ public:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
 
-    auto gridDelta = domain->getGrid().getGridDelta();
-    auto boundingBox = domain->getBoundingBox();
-    auto source = SmartPointer<impl::PeriodicSource<NumericType, D>>::New(
-        boundingBox, gridDelta, boundingBox[1][2] + 2 * gridDelta,
-        params_.ibeParams.tiltAngle, params_.cageAngle,
-        params_.ibeParams.sourcePower);
-
     if (Logger::getLogLevel() >= 5)
       source->saveSourcePlane();
 
@@ -206,11 +211,15 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
-    this->setSource(source);
     this->setProcessName("FaradayCageEtching");
+
+    firstInit = true;
   }
 
+  void reset() override final { firstInit = false; }
+
 private:
+  bool firstInit = false;
   std::vector<Material> maskMaterials_;
   FaradayCageParameters<NumericType> params_;
 };

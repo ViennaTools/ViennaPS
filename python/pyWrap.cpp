@@ -50,8 +50,10 @@
 // models
 #include <models/psAnisotropicProcess.hpp>
 #include <models/psDirectionalEtching.hpp>
+#include <models/psFaradayCageEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
+#include <models/psIonBeamEtching.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
@@ -833,6 +835,34 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("parameters"))
       .def("setParameters", &FluorocarbonEtching<T, D>::setParameters)
       .def("getParameters", &FluorocarbonEtching<T, D>::getParameters,
+           pybind11::return_value_policy::reference);
+
+  // Ion Beam Etching
+  pybind11::class_<IBEParameters<T>>(module, "IBEParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("planeWaferRate", &IBEParameters<T>::planeWaferRate)
+      .def_readwrite("meanEnergy", &IBEParameters<T>::meanEnergy)
+      .def_readwrite("sigmaEnergy", &IBEParameters<T>::sigmaEnergy)
+      .def_readwrite("thresholdEnergy", &IBEParameters<T>::thresholdEnergy)
+      .def_readwrite("sourcePower", &IBEParameters<T>::sourcePower)
+      .def_readwrite("n_l", &IBEParameters<T>::n_l)
+      .def_readwrite("inflectAngle", &IBEParameters<T>::inflectAngle)
+      .def_readwrite("minAngle", &IBEParameters<T>::minAngle)
+      .def_readwrite("tiltAngle", &IBEParameters<T>::tiltAngle)
+      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction);
+
+  pybind11::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
+      module, "IonBeamEtching", processModel)
+      .def(pybind11::init<>())
+      .def(pybind11::init(&SmartPointer<IonBeamEtching<T, D>>::New<
+                          const std::vector<Material> &>),
+           pybind11::arg("maskMaterials"))
+      .def(pybind11::init(
+               &SmartPointer<IonBeamEtching<T, D>>::New<
+                   const std::vector<Material> &, const IBEParameters<T> &>),
+           pybind11::arg("maskMaterials"), pybind11::arg("parameters"))
+      .def("setParameters", &IonBeamEtching<T, D>::setParameters)
+      .def("getParameters", &IonBeamEtching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
   // Isotropic Process

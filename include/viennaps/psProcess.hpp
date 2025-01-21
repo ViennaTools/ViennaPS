@@ -704,6 +704,7 @@ public:
                      processTimer.totalDuration * 1e-9)
           .print();
     }
+    model->reset();
   }
 
   void writeParticleDataLogs(std::string fileName) {
