@@ -1253,6 +1253,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, D>::getGrid, "Get the grid")
+      .def("getGridDelta", &Domain<T, D>::getGridDelta, "Get the grid delta.")
+      .def("getBoundingBox", &Domain<T, D>::getBoundingBox,
+           "Get the bounding box of the domain.")
+      .def("getBoundaryConditions", &Domain<T, D>::getBoundaryConditions,
+           "Get the boundary conditions of the domain.")
       .def("print", &Domain<T, D>::print)
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
@@ -1409,6 +1414,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getLevelSets", &Domain<T, 3>::getLevelSets)
       .def("getCellSet", &Domain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, 3>::getGrid, "Get the grid")
+      .def("getGridDelta", &Domain<T, 3>::getGridDelta, "Get the grid delta.")
+      .def("getBoundingBox", &Domain<T, 3>::getBoundingBox,
+           "Get the bounding box of the domain.")
+      .def("getBoundaryConditions", &Domain<T, 3>::getBoundaryConditions,
+           "Get the boundary conditions of the domain.")
       .def("print", &Domain<T, 3>::print)
       .def("saveLevelSetMesh", &Domain<T, 3>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,

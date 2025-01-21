@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
+  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
 
   // Parse the parameters

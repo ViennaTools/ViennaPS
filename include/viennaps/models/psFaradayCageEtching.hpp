@@ -215,6 +215,20 @@ public:
     if (firstInit)
       return;
 
+    auto boundaryConditions = domain->getBoundaryConditions();
+    if ((D == 3 &&
+         (boundaryConditions[0] !=
+              viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY ||
+          boundaryConditions[1] !=
+              viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY)) ||
+        (D == 2 && boundaryConditions[0] !=
+                       viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY)) {
+      Logger::getInstance()
+          .addWarning("FaradayCageEtching: Periodic boundary conditions are "
+                      "required for the Faraday Cage Etching process.")
+          .print();
+    }
+
     // particles
     auto particle =
         std::make_unique<impl::IBEIon<NumericType, D>>(params_.ibeParams);
