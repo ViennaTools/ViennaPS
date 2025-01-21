@@ -471,7 +471,7 @@ class SF6O2Etching(ProcessModel):
 class SF6O2Parameters:
     Ions: SF6O2ParametersIons
     Mask: SF6O2ParametersMask
-    Polymer: SF6O2ParametersPassivation
+    Passivation: SF6O2ParametersPassivation
     Si: SF6O2ParametersSi
     beta_F: float
     beta_O: float

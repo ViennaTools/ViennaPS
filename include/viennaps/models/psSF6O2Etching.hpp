@@ -279,6 +279,11 @@ public:
         std::max((1 + params.Si.B_ie * (1 - cosTheta * cosTheta)) *
                      std::cos(angle / params.Si.theta_g_ie * M_PI_2),
                  0.);
+    // NumericType f_sp_theta = 1.;
+    // NumericType f_ie_theta = 1.;
+    // if (cosTheta < 0.5) {
+    //   f_ie_theta = std::max(3 - 6 * angle / M_PI, 0.);
+    // }
 
     const double sqrtE = std::sqrt(E);
     NumericType Y_sp =
@@ -334,6 +339,7 @@ public:
       NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);
 
+    // NumericType sticking = 0.;
     NumericType sticking = 1.;
     if (incAngle > params.Ions.thetaRMin) {
       sticking =

@@ -676,7 +676,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("beta_O", &SF6O2Parameters<T>::beta_O)
       .def_readwrite("Mask", &SF6O2Parameters<T>::Mask)
       .def_readwrite("Si", &SF6O2Parameters<T>::Si)
-      .def_readwrite("Polymer", &SF6O2Parameters<T>::Passivation)
+      .def_readwrite("Passivation", &SF6O2Parameters<T>::Passivation)
       .def_readwrite("Ions", &SF6O2Parameters<T>::Ions);
 
   // SF6O2 Etching
