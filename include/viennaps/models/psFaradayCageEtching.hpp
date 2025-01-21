@@ -27,14 +27,13 @@ template <typename NumericType, int D>
 class PeriodicSource : public viennaray::Source<NumericType> {
 public:
   PeriodicSource(const std::array<std::array<NumericType, 3>, 2> &boundingBox,
-                 const NumericType gridDelta, const NumericType zPos,
-                 const NumericType tiltAngle, const NumericType cageAngle,
-                 const NumericType cosinePower)
-      : sourceExtent_{boundingBox[1][0] - boundingBox[0][0] + gridDelta,
-                      boundingBox[1][1] - boundingBox[0][1] + gridDelta},
-        minPoint_{boundingBox[0][0] - gridDelta / 2,
-                  boundingBox[0][1] - gridDelta / 2},
-        zPos_(zPos), gridDelta_(gridDelta), ee_{2 / (cosinePower + 1)} {
+                 const NumericType gridDelta, const NumericType tiltAngle,
+                 const NumericType cageAngle, const NumericType cosinePower)
+      : sourceExtent_{boundingBox[1][0] - boundingBox[0][0],
+                      boundingBox[1][1] - boundingBox[0][1]},
+        minPoint_{boundingBox[0][0], boundingBox[0][1]},
+        zPos_(boundingBox[1][D - 1] + 2 * gridDelta), gridDelta_(gridDelta),
+        ee_{2 / (cosinePower + 1)} {
 
     NumericType cage_x = std::cos(cageAngle * M_PI / 180.);
     NumericType cage_y = std::sin(cageAngle * M_PI / 180.);
@@ -45,6 +44,9 @@ public:
     direction[0] = -cosTilt * cage_y;
     direction[1] = cosTilt * cage_x;
     direction[2] = -sinTilt;
+    if constexpr (D == 2)
+      std::swap(direction[1], direction[2]);
+
     if (Logger::getLogLevel() >= 5) {
       Logger::getInstance()
           .addDebug("FaradayCageEtching: Source direction 1: " +
@@ -58,6 +60,9 @@ public:
     direction[0] = cosTilt * cage_y;
     direction[1] = -cosTilt * cage_x;
     direction[2] = -sinTilt;
+    if constexpr (D == 2)
+      std::swap(direction[1], direction[2]);
+
     if (Logger::getLogLevel() >= 5) {
       Logger::getInstance()
           .addDebug("FaradayCageEtching: Source direction 2: " +
@@ -76,8 +81,9 @@ public:
 
     viennaray::Vec3D<NumericType> origin;
     origin[0] = minPoint_[0] + sourceExtent_[0] * dist(RngState);
-    origin[1] = minPoint_[1] + sourceExtent_[1] * dist(RngState);
-    origin[2] = zPos_;
+    if constexpr (D == 3)
+      origin[1] = minPoint_[1] + sourceExtent_[1] * dist(RngState);
+    origin[D - 1] = zPos_;
 
     viennaray::Vec3D<NumericType> direction;
     if (idx % 2 == 0) {
@@ -91,27 +97,39 @@ public:
   }
 
   size_t getNumPoints() const override {
-    return sourceExtent_[0] * sourceExtent_[1] / (gridDelta_ * gridDelta_);
+    if constexpr (D == 3)
+      return sourceExtent_[0] * sourceExtent_[1] / (gridDelta_ * gridDelta_);
+    else
+      return sourceExtent_[0] / gridDelta_;
   }
 
   NumericType getSourceArea() const override {
-    return sourceExtent_[0] * sourceExtent_[1];
+    if constexpr (D == 3)
+      return sourceExtent_[0] * sourceExtent_[1];
+    else
+      return sourceExtent_[0];
   }
 
   void saveSourcePlane() const {
     auto mesh = viennals::SmartPointer<viennals::Mesh<NumericType>>::New();
-    std::array<NumericType, 3> point = {minPoint_[0], minPoint_[1], zPos_};
-    mesh->insertNextNode(point);
-    point[0] += sourceExtent_[0];
-    mesh->insertNextNode(point);
-    point[1] += sourceExtent_[1];
-    mesh->insertNextNode(point);
-    point[0] -= sourceExtent_[0];
-    mesh->insertNextNode(point);
-
-    mesh->insertNextTriangle({0, 1, 2});
-    mesh->insertNextTriangle({0, 2, 3});
-
+    if constexpr (D == 3) {
+      std::array<NumericType, 3> point = {minPoint_[0], minPoint_[1], zPos_};
+      mesh->insertNextNode(point);
+      point[0] += sourceExtent_[0];
+      mesh->insertNextNode(point);
+      point[1] += sourceExtent_[1];
+      mesh->insertNextNode(point);
+      point[0] -= sourceExtent_[0];
+      mesh->insertNextNode(point);
+      mesh->insertNextTriangle({0, 1, 2});
+      mesh->insertNextTriangle({0, 2, 3});
+    } else {
+      std::array<NumericType, 3> point = {minPoint_[0], zPos_, NumericType(0)};
+      mesh->insertNextNode(point);
+      point[0] += sourceExtent_[0];
+      mesh->insertNextNode(point);
+      mesh->insertNextLine({0, 1});
+    }
     viennals::VTKWriter<NumericType>(mesh, "sourcePlane_periodic.vtp").apply();
   }
 
@@ -137,9 +155,14 @@ private:
     direction[1] = basis[0][1] * rndDirection[0] +
                    basis[1][1] * rndDirection[1] +
                    basis[2][1] * rndDirection[2];
-    direction[2] = basis[0][2] * rndDirection[0] +
-                   basis[1][2] * rndDirection[1] +
-                   basis[2][2] * rndDirection[2];
+    if constexpr (D == 3) {
+      direction[2] = basis[0][2] * rndDirection[0] +
+                     basis[1][2] * rndDirection[1] +
+                     basis[2][2] * rndDirection[2];
+    } else {
+      direction[2] = 0.;
+      Normalize(direction);
+    }
 
     return direction;
   }
@@ -185,8 +208,7 @@ public:
     auto gridDelta = domain->getGrid().getGridDelta();
     auto boundingBox = domain->getBoundingBox();
     auto source = SmartPointer<impl::PeriodicSource<NumericType, D>>::New(
-        boundingBox, gridDelta, boundingBox[1][2] + 2 * gridDelta,
-        params_.ibeParams.tiltAngle, params_.cageAngle,
+        boundingBox, gridDelta, params_.ibeParams.tiltAngle, params_.cageAngle,
         params_.ibeParams.exponent);
     this->setSource(source);
 

@@ -482,6 +482,7 @@ public:
 #endif
       // Expand LS based on the integration scheme
       advectionKernel.prepareLS();
+      model->initialize(domain, remainingTime);
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();
