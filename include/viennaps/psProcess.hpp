@@ -135,6 +135,7 @@ public:
     }
     meshConverter.apply();
 
+    model->initialize(domain, 0.);
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
       Logger::getInstance()
           .addWarning(
@@ -216,7 +217,6 @@ public:
           .print();
       return;
     }
-    const auto name = model->getProcessName().value_or("default");
 
     if (!domain) {
       Logger::getInstance()
@@ -224,6 +224,9 @@ public:
           .print();
       return;
     }
+
+    model->initialize(domain, processDuration);
+    const auto name = model->getProcessName().value_or("default");
 
     if (model->getGeometricModel()) {
       model->getGeometricModel()->setDomain(domain);

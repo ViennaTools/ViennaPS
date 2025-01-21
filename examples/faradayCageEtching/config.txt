@@ -1,0 +1,14 @@
+# Geometry 
+gridDelta = 0.1
+xExtent = 10.0
+yExtent = 10.0
+
+finWidth = 2.0
+maskHeight = 0.5
+
+# Cage Setup
+tiltAngle = 60.0
+cageAngle = 90.0
+
+etchTime = 7.0
+raysPerPoint = 1000
