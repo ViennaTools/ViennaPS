@@ -187,7 +187,7 @@ public:
     auto source = SmartPointer<impl::PeriodicSource<NumericType, D>>::New(
         boundingBox, gridDelta, boundingBox[1][2] + 2 * gridDelta,
         params_.ibeParams.tiltAngle, params_.cageAngle,
-        params_.ibeParams.sourcePower);
+        params_.ibeParams.exponent);
     this->setSource(source);
 
     if (firstInit)

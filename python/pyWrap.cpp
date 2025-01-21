@@ -844,7 +844,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("meanEnergy", &IBEParameters<T>::meanEnergy)
       .def_readwrite("sigmaEnergy", &IBEParameters<T>::sigmaEnergy)
       .def_readwrite("thresholdEnergy", &IBEParameters<T>::thresholdEnergy)
-      .def_readwrite("sourcePower", &IBEParameters<T>::sourcePower)
+      .def_readwrite("exponent", &IBEParameters<T>::exponent)
       .def_readwrite("n_l", &IBEParameters<T>::n_l)
       .def_readwrite("inflectAngle", &IBEParameters<T>::inflectAngle)
       .def_readwrite("minAngle", &IBEParameters<T>::minAngle)
@@ -863,6 +863,27 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("maskMaterials"), pybind11::arg("parameters"))
       .def("setParameters", &IonBeamEtching<T, D>::setParameters)
       .def("getParameters", &IonBeamEtching<T, D>::getParameters,
+           pybind11::return_value_policy::reference);
+
+  // Faraday Cage Etching
+  pybind11::class_<FaradayCageParameters<T>>(module, "FaradayCageParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("ibeParams", &FaradayCageParameters<T>::ibeParams)
+      .def_readwrite("cageAngle", &FaradayCageParameters<T>::cageAngle);
+
+  pybind11::class_<FaradayCageEtching<T, D>,
+                   SmartPointer<FaradayCageEtching<T, D>>>(
+      module, "FaradayCageEtching", processModel)
+      .def(pybind11::init<>())
+      .def(pybind11::init(&SmartPointer<FaradayCageEtching<T, D>>::New<
+                          const std::vector<Material> &>),
+           pybind11::arg("maskMaterials"))
+      .def(pybind11::init(&SmartPointer<FaradayCageEtching<T, D>>::New<
+                          const std::vector<Material> &,
+                          const FaradayCageParameters<T> &>),
+           pybind11::arg("maskMaterials"), pybind11::arg("parameters"))
+      .def("setParameters", &FaradayCageEtching<T, D>::setParameters)
+      .def("getParameters", &FaradayCageEtching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
   // Isotropic Process
