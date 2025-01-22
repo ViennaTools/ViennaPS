@@ -3,14 +3,13 @@
 #include <models/psSingleParticleProcess.hpp>
 
 #include <pscuProcessModel.hpp>
-#include <pscuProcessPipelines.hpp>
 
 namespace viennaps {
 
 namespace gpu {
 
 template <typename NumericType, int D>
-class SingleParticleProcess : public ProcessModel<NumericType> {
+class SingleParticleProcess : public ProcessModel<NumericType, D> {
 public:
   SingleParticleProcess(NumericType rate = 1.,
                         NumericType stickingProbability = 1.,

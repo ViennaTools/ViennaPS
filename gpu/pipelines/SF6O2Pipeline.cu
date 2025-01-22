@@ -7,7 +7,7 @@
 #include <curtSBTRecords.hpp>
 #include <curtSource.hpp>
 
-#include <psSF6O2Parameters.hpp>
+#include <psSF6O2_params_old.hpp>
 
 #include <gpu/vcContext.hpp>
 #include <vcVectorUtil.hpp>
@@ -57,27 +57,29 @@ extern "C" __global__ void __closesthit__ion()
     {
       f_ie_theta = max(3.f - 6.f * angle / M_PIf, 0.f);
     }
-    float f_sp_theta =
-        (1.f + params->Si.B_sp * (1.f - cosTheta * cosTheta)) * cosTheta;
 
     float sqrtE = sqrtf(prd->energy);
     float Y_sp = params->Si.A_sp *
-                 max(sqrtE - sqrtf(params->Si.Eth_sp), 0.f) *
-                 f_sp_theta;
+                 max(sqrtE - sqrtf(params->Si.Eth_sp), 0.f);
     float Y_Si = params->Si.A_ie * max(sqrtE - sqrtf(params->Si.Eth_ie), 0.f) * f_ie_theta;
     float Y_O = params->Passivation.A_ie * max(sqrtE - sqrtf(params->Passivation.Eth_ie), 0.f) * f_ie_theta;
+    float Y_SiO2 = params->Mask.A_ie * max(sqrtE - sqrtf(params->Mask.Eth_ie), 0.f);
 
     // // sputtering yield Y_sp ionSputteringRate
     atomicAdd(&launchParams.resultBuffer[getIdx(0, 0, &launchParams)],
-              Y_sp * prd->rayWeight);
+              Y_sp);
 
     // ion enhanced etching yield Y_Si ionEnhancedRate
     atomicAdd(&launchParams.resultBuffer[getIdx(0, 1, &launchParams)],
-              Y_Si * prd->rayWeight);
+              Y_Si);
 
     // ion enhanced O sputtering yield Y_O oxygenSputteringRate
     atomicAdd(&launchParams.resultBuffer[getIdx(0, 2, &launchParams)],
-              Y_O * prd->rayWeight);
+              Y_O);
+
+    // ion enhanced SiO2 yield Y_SiO2
+    atomicAdd(&launchParams.resultBuffer[getIdx(0, 3, &launchParams)],
+              Y_SiO2);
 
     // ------------- REFLECTION --------------- //
 
@@ -99,18 +101,22 @@ extern "C" __global__ void __closesthit__ion()
 
     // Gaussian distribution around the Eref_peak scaled by the particle energy
     float NewEnergy;
+    float tempEnergy = Eref_peak * prd->energy;
+
     do
     {
-      NewEnergy = getNormalDistRand(&prd->RNGstate) * prd->energy * 0.1f +
-                  Eref_peak * prd->energy;
-    } while (NewEnergy > prd->energy || NewEnergy <= 0.f);
+      float rand1 = getNextRand(&prd->RNGstate);
+      float rand2 = getNextRand(&prd->RNGstate);
+      NewEnergy = tempEnergy +
+                  (min((prd->energy - tempEnergy), tempEnergy) + prd->energy * 0.05) *
+                      (1 - 2. * rand1) * sqrtf(abs(logf(rand2)));
+
+    } while (NewEnergy > prd->energy || NewEnergy < 0.);
 
     // Set the flag to stop tracing if the energy is below the threshold
-    float minEnergy = min(params->Si.Eth_ie, params->Si.Eth_sp);
-    if (NewEnergy > minEnergy)
+    if (NewEnergy > 1.)
     {
       prd->energy = NewEnergy;
-      prd->rayWeight -= prd->rayWeight * (1 - Eref_peak);
       specularReflection(prd, geomNormal);
     }
     else
@@ -146,14 +152,15 @@ extern "C" __global__ void __raygen__ion()
   float minEnergy = min(params->Si.Eth_ie, params->Si.Eth_sp);
   do
   {
-    prd.energy = getNormalDistRand(&prd.RNGstate) * params->Ions.sigmaEnergy +
-                 params->Ions.meanEnergy;
+    prd.energy = getNextRand(&prd.RNGstate) * params->Ions.deltaEnergy +
+                 params->Ions.minEnergy;
   } while (prd.energy < minEnergy);
 
   // the values we store the PRD pointer in:
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
 
+  unsigned int numReflections = 0;
   while (prd.rayWeight > launchParams.rayWeightThreshold && prd.energy > minEnergy)
   {
     optixTrace(launchParams.traversable,                        // traversable GAS
@@ -168,6 +175,11 @@ extern "C" __global__ void __raygen__ion()
                RAY_TYPE_COUNT,                // SBT stride
                SURFACE_RAY_TYPE,              // missSBTIndex
                u0, u1);
+
+    if (numReflections > launchParams.maxRayDepth)
+    {
+      break;
+    }
   }
 }
 

@@ -368,8 +368,7 @@ public:
 
         for (size_t iterations = 0; iterations < maxIterations; iterations++) {
           // We need additional signal handling when running the C++ code from
-          // the
-          // Python bindings to allow interrupts in the Python scripts
+          // the Python bindings to allow interrupts in the Python scripts
 #ifdef VIENNAPS_PYTHON_BUILD
           if (PyErr_CheckSignals() != 0)
             throw pybind11::error_already_set();

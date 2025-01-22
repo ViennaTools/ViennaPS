@@ -432,10 +432,11 @@ public:
 
       if (Logger::getLogLevel() >= 4) {
         {
-          CudaBuffer dummy;
-          PointToElementData<NumericType>(
-              dummy, fluxes, transField->getKdTree(), surfMesh, true, false)
-              .apply();
+          // CudaBuffer dummy;
+          // PointToElementData<NumericType>(
+          //     dummy, fluxes, transField->getKdTree(), surfMesh, true, false)
+          //     .apply();
+          rayTrace_.downloadResultsToPointData(surfMesh->getCellData());
           viennals::VTKWriter<float>(
               surfMesh, name + "_flux_" + std::to_string(counter) + ".vtp")
               .apply();
@@ -456,7 +457,6 @@ public:
 
         counter++;
       }
-
       d_coverages.free();
 
       // adjust time step near end

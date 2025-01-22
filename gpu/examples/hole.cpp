@@ -1,10 +1,11 @@
 #include <geometries/psMakeHole.hpp>
-#include <models/psSF6O2Etching.hpp>
 
 #include <gpu/vcContext.hpp>
 
 #include <pscuProcess.hpp>
 #include <pscuSF6O2Etching.hpp>
+
+#include <psUtils.hpp>
 
 using namespace viennaps;
 
@@ -16,37 +17,48 @@ int main(int argc, char **argv) {
 
   Logger::setLogLevel(LogLevel::DEBUG);
 
+  // Parse the parameters
+  utils::Parameters params;
+  if (argc > 1) {
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
+  }
+
   Context context;
   CreateContext(context);
 
-  const NumericType gridDelta = 1.9;
-  const NumericType extent = 100.;
-  const NumericType holeRadius = 15.;
-  const NumericType maskHeight = 100.;
-
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
-  MakeHole<NumericType, D>(domain, gridDelta, extent, extent, holeRadius,
-                           maskHeight, 0.f, 0.f, false, true, Material::Si)
+  // geometry setup
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
+  MakeHole<NumericType, D>(
+      geometry, params.get("gridDelta"), params.get("xExtent"),
+      params.get("yExtent"), params.get("holeRadius"), params.get("maskHeight"),
+      params.get("taperAngle"), 0, false, true, Material::Si)
       .apply();
 
-  viennaps::SF6O2Parameters<NumericType> params;
+  // use pre-defined model SF6O2 etching model
+  SF6O2Parameters<NumericType> modelParams;
+  modelParams.ionFlux = params.get("ionFlux");
+  modelParams.etchantFlux = params.get("etchantFlux");
+  modelParams.oxygenFlux = params.get("oxygenFlux");
+  modelParams.Ions.minEnergy = params.get("meanEnergy");
+  modelParams.Ions.deltaEnergy = params.get("sigmaEnergy");
+  modelParams.Ions.exponent = params.get("ionExponent");
+  modelParams.Passivation.A_ie = params.get("A_O");
+  modelParams.print();
 
-  params.oxygenFlux = 5.;
-  params.etchantFlux = 2000.;
-  params.ionFlux = 15.;
+  auto model =
+      SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(modelParams);
 
-  params.Ions.meanEnergy = 100.;
-  params.Ions.sigmaEnergy = 10.;
-  params.Ions.exponent = 1000.;
-
-  auto model = SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(params);
-
-  gpu::Process<NumericType, D> process(context, domain, model);
+  gpu::Process<NumericType, D> process(context, geometry, model);
   process.setNumberOfRaysPerPoint(3000);
-  process.setProcessParams(params);
+  process.setProcessParams(modelParams);
   process.setMaxCoverageInitIterations(10);
-  process.setProcessDuration(50.);
+  process.setProcessDuration(100.);
+  process.setIntegrationScheme(
+      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER);
   process.apply();
 
-  domain->saveSurfaceMesh("final.vtp");
+  geometry->saveSurfaceMesh("final.vtp");
 }

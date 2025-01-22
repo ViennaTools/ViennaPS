@@ -8,7 +8,7 @@
 #include <curtParticle.hpp>
 #include <pscuProcessModel.hpp>
 
-#include <models/psSF6O2Etching.hpp>
+#include <models/psSF6O2_old.hpp>
 
 namespace viennaps {
 
@@ -25,25 +25,6 @@ class SF6O2Etching : public ProcessModel<NumericType, D> {
 public:
   SF6O2Etching() { initializeModel(); }
 
-  // All flux values are in units 1e16 / cm²
-  SF6O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType meanEnergy /* eV */,
-               const NumericType sigmaEnergy /* eV */, // 5 parameters
-               const NumericType ionExponent = 300.,
-               const NumericType oxySputterYield = 2.,
-               const NumericType etchStopDepth =
-                   std::numeric_limits<NumericType>::lowest()) {
-    params.ionFlux = ionFlux;
-    params.etchantFlux = etchantFlux;
-    params.oxygenFlux = oxygenFlux;
-    params.Ions.meanEnergy = meanEnergy;
-    params.Ions.sigmaEnergy = sigmaEnergy;
-    params.Ions.exponent = ionExponent;
-    params.Passivation.A_ie = oxySputterYield;
-    params.etchStopDepth = etchStopDepth;
-    initializeModel();
-  }
-
   SF6O2Etching(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {
     initializeModel();
   }
@@ -59,21 +40,22 @@ private:
     // particles
     gpu::Particle<NumericType> ion;
     ion.name = "ion";
-    ion.dataLabels.push_back("ionSputteringRate");
-    ion.dataLabels.push_back("ionEnhancedRate");
-    ion.dataLabels.push_back("oxygenSputteringRate");
-    ion.sticking = 1.f;
+    ion.dataLabels.push_back("ionSputterFlux");
+    ion.dataLabels.push_back("ionEnhancedFlux");
+    ion.dataLabels.push_back("ionEnhancedPassivationFlux");
+    ion.dataLabels.push_back("ionEnhancedOxideFlux");
+    ion.sticking = 0.f;
     ion.cosineExponent = params.Ions.exponent;
 
     gpu::Particle<NumericType> etchant;
     etchant.name = "etchant";
-    etchant.dataLabels.push_back("etchantRate");
+    etchant.dataLabels.push_back("etchantFlux");
     etchant.sticking = params.beta_F;
     etchant.cosineExponent = 1.f;
 
     gpu::Particle<NumericType> oxygen;
     oxygen.name = "oxygen";
-    oxygen.dataLabels.push_back("oxygenRate");
+    oxygen.dataLabels.push_back("oxygenFlux");
     oxygen.sticking = params.beta_O;
     oxygen.cosineExponent = 1.f;
 

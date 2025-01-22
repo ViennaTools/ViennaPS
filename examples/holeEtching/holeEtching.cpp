@@ -1,5 +1,5 @@
 #include <geometries/psMakeHole.hpp>
-#include <models/psSF6O2Etching.hpp>
+#include <models/psSF6O2_old.hpp>
 
 #include <psProcess.hpp>
 #include <psUtils.hpp>
@@ -8,7 +8,7 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
   ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
@@ -35,15 +35,18 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  auto model = ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(
-      params.get("ionFlux") /*ion flux*/,
-      params.get("etchantFlux") /*etchant flux*/,
-      params.get("oxygenFlux") /*oxygen flux*/,
-      params.get("meanEnergy") /*mean energy*/,
-      params.get("sigmaEnergy") /*energy sigma*/,
-      params.get("ionExponent") /*source power cosine distribution exponent*/,
-      params.get("A_O") /*oxy sputter yield*/,
-      params.get("etchStopDepth") /*max etch depth*/);
+  ps::SF6O2Parameters<NumericType> modelParams;
+  modelParams.ionFlux = params.get("ionFlux");
+  modelParams.etchantFlux = params.get("etchantFlux");
+  modelParams.oxygenFlux = params.get("oxygenFlux");
+  modelParams.Ions.minEnergy = params.get("meanEnergy");
+  modelParams.Ions.deltaEnergy = params.get("sigmaEnergy");
+  modelParams.Ions.exponent = params.get("ionExponent");
+  modelParams.Passivation.A_ie = params.get("A_O");
+  modelParams.print();
+
+  auto model =
+      ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(modelParams);
 
   // process setup
   ps::Process<NumericType, D> process;
@@ -52,6 +55,8 @@ int main(int argc, char *argv[]) {
   process.setMaxCoverageInitIterations(10);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
+  process.setIntegrationScheme(
+      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER);
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");
@@ -60,5 +65,5 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   // print final surface
-  geometry->saveSurfaceMesh("final.vtp");
+  geometry->saveSurfaceMesh(params.get<std::string>("outputFile"));
 }
