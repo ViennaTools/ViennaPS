@@ -8,4 +8,4 @@ configure_file(stackEtching.py ${CMAKE_CURRENT_BINARY_DIR}/stackEtching.py COPYO
 configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 
 add_dependencies(ViennaPS_Examples ${PROGRAM_NAME})
-viennacore_setup_bat(${PROGRAM_NAME} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+viennacore_setup_bat(${PROGRAM_NAME} ${VIENNAPS_ARTIFACTS_DIRECTORY})
