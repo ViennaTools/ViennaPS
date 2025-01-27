@@ -1015,7 +1015,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
       .def(pybind11::init<DomainType, const T, const T, const T, const T,
-                          const T, const T, const T, , const bool, const bool,
+                          const T, const T, const T, const bool, const bool,
                           const Material, HoleShape>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
