@@ -68,6 +68,7 @@ int main() {
                                        diskMesh, surfMesh, GRID_DELTA)
       .apply();
 
+  tracer.downloadResultsToPointData(surfMesh->getCellData());
   viennals::VTKWriter<NumericType>(surfMesh, "GPU_SingleParticleFlux_tri.vtp")
       .apply();
   diskMesh->cellData = *pointData;
@@ -99,8 +100,8 @@ int main() {
   auto gpu_flxu = diskMesh->getCellData().getScalarData("flux");
 
   // top points
-  const float top = 25.1f;
-  const float bottom = 0.1f;
+  const float top = 25.2f;
+  const float bottom = 0.25f;
 
   for (std::size_t i = 0; i < numNodes; i++) {
     auto &node = flux->nodes[i];
@@ -114,12 +115,12 @@ int main() {
                   << gpu_flxu->at(i) << "\n";
     }
 
-    if (std::abs(node[0] - 2.5) < 0.025 && std::abs(node[1]) < 0.01) {
+    if (std::abs(node[0] - 2.44) < 0.025 && std::abs(node[1]) < 0.01) {
       file_side_1 << node[1] << ";" << node[2] << ";" << cpu_flxu->at(i) << ";"
                   << gpu_flxu->at(i) << "\n";
     }
 
-    if (std::abs(node[0] + 2.498) < 0.025 && std::abs(node[1]) < 0.01) {
+    if (std::abs(node[0] + 2.5) < 0.025 && std::abs(node[1]) < 0.01) {
       file_side_2 << node[1] << ";" << node[2] << ";" << cpu_flxu->at(i) << ";"
                   << gpu_flxu->at(i) << "\n";
     }

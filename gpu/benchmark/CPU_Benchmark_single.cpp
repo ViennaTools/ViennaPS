@@ -13,10 +13,10 @@ int main() {
   using NumericType = float;
   constexpr int D = DIM;
 
-  const NumericType sticking = 0.2f;
+  int numRuns = 10;
+  const NumericType sticking = 0.1f;
   std::ofstream file("CPU_Benchmark_single.txt");
-  file << "Sticking;Meshing;Tracing;Postprocessing\n";
-  file << sticking << ";";
+  file << "Sticking;Meshing;Tracing;Postprocessing;NumberOfTraces\n";
 
   auto domain = MAKE_GEO<NumericType>();
 
@@ -35,38 +35,46 @@ int main() {
       sticking, "flux");
   tracer.setParticleType(particle);
 
-  Timer timer;
-  timer.start();
-  mesher.apply();
-  timer.finish();
-  file << timer.currentDuration << ";";
-  std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
+  for (int i = 0; i < numRuns; i++) {
+    file << sticking << ";";
 
-  const auto &materialIds = *mesh->getCellData().getScalarData("MaterialIds");
-  const auto &normals = *mesh->getCellData().getVectorData("Normals");
-  tracer.setGeometry(mesh->nodes, normals, GRID_DELTA);
-  tracer.setMaterialIds(materialIds);
+    Timer timer;
+    timer.start();
+    mesher.apply();
+    timer.finish();
+    file << timer.currentDuration << ";";
+    std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
+              << std::endl;
 
-  timer.start();
-  tracer.apply();
-  timer.finish();
-  file << timer.currentDuration << ";";
-  std::cout << "Trace time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
+    const auto &materialIds = *mesh->getCellData().getScalarData("MaterialIds");
+    const auto &normals = *mesh->getCellData().getVectorData("Normals");
+    tracer.setGeometry(mesh->nodes, normals, GRID_DELTA);
+    tracer.setMaterialIds(materialIds);
 
-  timer.start();
-  auto &flux = tracer.getLocalData().getVectorData("flux");
-  tracer.normalizeFlux(flux);
-  // tracer.smoothFlux(flux);
-  timer.finish();
-  file << timer.currentDuration << "\n";
-  std::cout << "Postprocessing time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
+    timer.start();
+    tracer.apply();
+    timer.finish();
+    file << timer.currentDuration << ";";
+    std::cout << "Trace time: " << timer.currentDuration * 1e-6 << " ms"
+              << std::endl;
 
-  mesh->getCellData().insertNextScalarData(flux, "flux");
-  viennals::VTKWriter<NumericType>(mesh, "CPU_SingleParticleFlux_disk.vtp")
-      .apply();
+    auto info = tracer.getRayTraceInfo();
+
+    timer.start();
+    auto &flux = tracer.getLocalData().getVectorData("flux");
+    tracer.normalizeFlux(flux);
+    // tracer.smoothFlux(flux);
+    timer.finish();
+    file << timer.currentDuration << ";";
+    std::cout << "Postprocessing time: " << timer.currentDuration * 1e-6
+              << " ms" << std::endl;
+
+    file << info.totalRaysTraced << "\n";
+
+    mesh->getCellData().insertNextScalarData(flux, "flux");
+    viennals::VTKWriter<NumericType>(mesh, "CPU_SingleParticleFlux_disk.vtp")
+        .apply();
+  }
 
   file.close();
 }

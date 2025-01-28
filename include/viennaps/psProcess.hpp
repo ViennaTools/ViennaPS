@@ -252,6 +252,10 @@ public:
       return;
     }
 
+    Timer rtTimer;
+    Timer callbackTimer;
+    Timer advTimer;
+    Timer meshConverterTimer;
     Timer processTimer;
     processTimer.start();
 
@@ -348,7 +352,10 @@ public:
     bool useCoverages = false;
 
     // Initialize coverages
+    meshConverterTimer.start();
     meshConverter.apply();
+    meshConverterTimer.finish();
+
     auto numPoints = diskMesh->getNodes().size();
     if (!coveragesInitialized_)
       model->getSurfaceModel()->initializeCoverages(numPoints);
@@ -393,6 +400,7 @@ public:
           auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
 
           std::size_t particleIdx = 0;
+          rtTimer.start();
           for (auto &particle : model->getParticleTypes()) {
             int dataLogSize = model->getParticleLogSize(particleIdx);
             if (dataLogSize > 0) {
@@ -421,6 +429,7 @@ public:
             }
             ++particleIdx;
           }
+          rtTimer.finish();
 
           // move coverages back in the model
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
@@ -439,7 +448,7 @@ public:
               diskMesh->getCellData().insertNextScalarData(
                   *rates->getScalarData(idx), label);
             }
-            printDiskMesh(diskMesh, name + "_covIinit_" +
+            printDiskMesh(diskMesh, name + "_covInit_" +
                                         std::to_string(iterations) + ".vtp");
             Logger::getInstance()
                 .addInfo("Iteration: " + std::to_string(iterations))
@@ -457,9 +466,7 @@ public:
 
     double previousTimeStep = 0.;
     size_t counter = 0;
-    Timer rtTimer;
-    Timer callbackTimer;
-    Timer advTimer;
+
     while (remainingTime > 0.) {
       // We need additional signal handling when running the C++ code from the
       // Python bindings to allow interrupts in the Python scripts
@@ -469,13 +476,14 @@ public:
 #endif
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
+      meshConverterTimer.start();
       meshConverter.apply();
+      meshConverterTimer.finish();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
 
       // rate calculation by top-down ray tracing
       if (useRayTracing) {
-        rtTimer.start();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         rayTracer.setGeometry(points, normals, gridDelta);
         rayTracer.setMaterialIds(materialIds);
@@ -501,6 +509,7 @@ public:
         }
 
         std::size_t particleIdx = 0;
+        rtTimer.start();
         for (auto &particle : model->getParticleTypes()) {
           int dataLogSize = model->getParticleLogSize(particleIdx);
           if (dataLogSize > 0) {
@@ -529,15 +538,15 @@ public:
           }
           ++particleIdx;
         }
+        rtTimer.finish();
+        Logger::getInstance()
+            .addTiming("Top-down flux calculation", rtTimer)
+            .print();
 
         // move coverages back to model
         if (useCoverages)
           moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
                                  rayTraceCoverages);
-        rtTimer.finish();
-        Logger::getInstance()
-            .addTiming("Top-down flux calculation", rtTimer)
-            .print();
       }
 
       // get velocities from rates
@@ -667,6 +676,11 @@ public:
       Logger::getInstance()
           .addTiming("Top-down flux calculation total time",
                      rtTimer.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
+      Logger::getInstance()
+          .addTiming("Mesh generation total time",
+                     meshConverterTimer.totalDuration * 1e-9,
                      processTimer.totalDuration * 1e-9)
           .print();
     }

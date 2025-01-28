@@ -212,6 +212,11 @@ public:
 
     /* ---------- Process Setup --------- */
     Timer processTimer;
+    Timer rtTimer;
+    Timer advTimer;
+    Timer transTimer;
+    Timer meshTimer;
+    Timer surfMeshTimer;
     processTimer.start();
 
     const auto name = model_->getProcessName().value_or("default");
@@ -246,7 +251,6 @@ public:
     advectionKernel.prepareLS();
 
     /* --------- Setup triangulated surface mesh ----------- */
-    Timer transTimer;
     auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
@@ -258,7 +262,6 @@ public:
     unsigned int numRates = 0;
     unsigned int numCov = 0;
     IndexMap fluxesIndexMap;
-    Timer rtTimer;
 
     if (!rayTracerInitialized_) {
       rayTrace_.setPipeline(model_->getPipelineFileName(),
@@ -275,8 +278,7 @@ public:
     rayTracerInitialized_ = true;
 
     /* --------- Meshing ----------- */
-    Timer meshTimer;
-    Timer surfMeshTimer;
+
     meshTimer.start();
     surfMeshTimer.start();
     surfMeshConverter.apply(); // also build elementKdTree
@@ -357,7 +359,7 @@ public:
           // rayTrace_.downloadResultsToPointData(mesh->getCellData());
           // viennals::VTKWriter<NumericType>(
           //     mesh,
-          //     name + "_covIinit_mesh_" + std::to_string(iterations) + ".vtp")
+          //     name + "_covInit_mesh_" + std::to_string(iterations) + ".vtp")
           //     .apply();
           mergeScalarData(diskMesh->getCellData(), fluxes);
           mergeScalarData(diskMesh->getCellData(), coverages);
@@ -379,7 +381,6 @@ public:
 
     double previousTimeStep = 0.;
     size_t counter = 0;
-    Timer advTimer;
     while (remainingTime > 0.) {
 
       meshTimer.start();
@@ -512,6 +513,10 @@ public:
     Logger::getInstance()
         .addTiming("Top-down flux calculation total time",
                    rtTimer.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .print();
+    Logger::getInstance()
+        .addTiming("Mesh generation total time", meshTimer.totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
         .print();
     Logger::getInstance()

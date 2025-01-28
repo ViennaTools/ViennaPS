@@ -10,6 +10,8 @@
 
 #include <gpu/vcContext.hpp>
 
+// #define COUNT_RAYS
+
 using namespace viennaps::gpu;
 
 /*  launch parameters in constant memory, filled in by optix upon
@@ -96,5 +98,10 @@ extern "C" __global__ void __raygen__SingleParticle()
                    RAY_TYPE_COUNT,                // SBT stride
                    SURFACE_RAY_TYPE,              // missSBTIndex
                    u0, u1);
+
+#ifdef COUNT_RAYS
+        int *counter = reinterpret_cast<int *>(launchParams.customData);
+        atomicAdd(counter, 1);
+#endif
     }
 }

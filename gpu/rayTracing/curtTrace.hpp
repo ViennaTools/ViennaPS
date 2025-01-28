@@ -353,6 +353,8 @@ public:
     launchParams.customData = (void *)parameterBuffer.dPointer();
   }
 
+  auto &getParameterBuffer() { return parameterBuffer; }
+
 protected:
   void normalize() {
     T sourceArea =

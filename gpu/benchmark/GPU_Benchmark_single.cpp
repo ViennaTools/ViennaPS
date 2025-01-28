@@ -4,10 +4,13 @@
 #include <curtTrace.hpp>
 #include <gpu/vcContext.hpp>
 #include <utElementToPointData.hpp>
+#include <utPointToElementData.hpp>
 
 #include "BenchmarkGeometry.hpp"
 
 using namespace viennaps;
+
+// #define COUNT_RAYS
 
 int main() {
   omp_set_num_threads(1);
@@ -16,10 +19,19 @@ int main() {
 
   viennacore::Logger::setLogLevel(viennacore::LogLevel::DEBUG);
 
+  const int numRuns = 10;
   const NumericType sticking = 0.1f;
-  std::ofstream file("GPU_Benchmark_single.txt");
-  file << "Sticking;Meshing;Tracing;Postprocessing\n";
-  file << sticking << ";";
+#ifdef COUNT_RAYS
+  std::ofstream file("GPU_Benchmark_single_with_ray_count.txt");
+#else
+  std::ofstream file("GPU_Benchmark_single_no_ray_count.txt");
+#endif
+  file << "Sticking;Meshing;Tracing;Postprocessing";
+#ifdef COUNT_RAYS
+  file << ";NumberOfTraces\n";
+#else
+  file << "\n";
+#endif
 
   Context context;
   CreateContext(context);
@@ -37,63 +49,91 @@ int main() {
   viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMesher(
       domain->getSurface(), surfMesh, elementKdTree);
 
-  gpu::Trace<NumericType, D> tracer(context);
-  tracer.setNumberOfRaysPerPoint(3000);
-  tracer.setUseRandomSeeds(false);
+  for (int i = 0; i < numRuns; i++) {
+    file << sticking << ";";
 
-  Timer timer;
-  timer.start();
-  diskMesher.apply();
-  surfMesher.apply();
-  gpu::TriangleMesh mesh;
-  mesh.gridDelta = GRID_DELTA;
-  mesh.vertices = surfMesh->nodes;
-  mesh.triangles = surfMesh->triangles;
-  mesh.minimumExtent = surfMesh->minimumExtent;
-  mesh.maximumExtent = surfMesh->maximumExtent;
-  timer.finish();
-  file << timer.currentDuration << ";";
-  std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
+    gpu::Trace<NumericType, D> tracer(context);
+    tracer.setNumberOfRaysPerPoint(3000);
+    tracer.setUseRandomSeeds(false);
 
-  tracer.setGeometry(mesh);
-  tracer.setPipeline("SingleParticlePipeline", context->modulePath);
+    Timer timer;
+    timer.start();
+    diskMesher.apply();
+    surfMesher.apply();
+    gpu::TriangleMesh mesh;
+    mesh.gridDelta = GRID_DELTA;
+    mesh.vertices = surfMesh->nodes;
+    mesh.triangles = surfMesh->triangles;
+    mesh.minimumExtent = surfMesh->minimumExtent;
+    mesh.maximumExtent = surfMesh->maximumExtent;
+    timer.finish();
+    file << timer.currentDuration << ";";
+    std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
+              << std::endl;
 
-  auto particle = gpu::Particle<NumericType>();
-  particle.sticking = sticking;
-  particle.name = "SingleParticle";
-  particle.dataLabels.push_back("flux");
+    tracer.setPipeline("SingleParticlePipeline", context->modulePath);
+#ifdef COUNT_RAYS
+    int rayCount = 0;
+    tracer.setParameters(rayCount);
+#endif
 
-  tracer.insertNextParticle(particle);
-  tracer.prepareParticlePrograms();
+    auto particle = gpu::Particle<NumericType>();
+    particle.sticking = sticking;
+    particle.name = "SingleParticle";
+    particle.dataLabels.push_back("flux");
 
-  timer.start();
-  tracer.apply();
-  timer.finish();
-  file << timer.currentDuration << ";";
-  std::cout << "Trace time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
+    tracer.insertNextParticle(particle);
+    tracer.prepareParticlePrograms();
 
-  timer.start();
-  std::vector<NumericType> flux;
-  flux.resize(surfMesh->triangles.size());
-  tracer.getFlux(flux.data(), 0, 0);
-  surfMesh->getCellData().insertNextScalarData(flux, "flux");
-  auto pointData = SmartPointer<viennals::PointData<NumericType>>::New();
-  gpu::ElementToPointData<NumericType>(tracer.getResults(), pointData,
-                                       tracer.getParticles(), elementKdTree,
-                                       diskMesh, surfMesh, GRID_DELTA)
-      .apply();
-  timer.finish();
-  file << timer.currentDuration << "\n";
-  std::cout << "Postprocessing time: " << timer.currentDuration * 1e-6 << " ms"
-            << std::endl;
+    timer.start();
+    tracer.setGeometry(mesh); // include GAS build
+    tracer.apply();
+    timer.finish();
+    file << timer.currentDuration << ";";
+    std::cout << "Trace time: " << timer.currentDuration * 1e-6 << " ms"
+              << std::endl;
 
-  viennals::VTKWriter<NumericType>(surfMesh, "GPU_SingleParticleFlux_tri.vtp")
-      .apply();
-  diskMesh->cellData = *pointData;
-  viennals::VTKWriter<NumericType>(diskMesh, "GPU_SingleParticleFlux_disk.vtp")
-      .apply();
+    timer.start();
+    std::vector<NumericType> flux;
+    flux.resize(surfMesh->triangles.size());
+    tracer.getFlux(flux.data(), 0, 0);
+    surfMesh->getCellData().insertNextScalarData(flux, "flux");
+    auto pointData = SmartPointer<viennals::PointData<NumericType>>::New();
+    gpu::ElementToPointData<NumericType>(tracer.getResults(), pointData,
+                                         tracer.getParticles(), elementKdTree,
+                                         diskMesh, surfMesh, GRID_DELTA)
+        .apply();
+    timer.finish();
+    file << timer.currentDuration;
+    std::cout << "Postprocessing time: " << timer.currentDuration * 1e-6
+              << " ms" << std::endl;
+
+    if (i == numRuns - 1) {
+      auto pointKdTree = SmartPointer<KDTree<NumericType, Vec3Df>>::New();
+      pointKdTree->setPoints(diskMesh->nodes);
+      pointKdTree->build();
+      gpu::CudaBuffer dummy;
+      gpu::PointToElementData<NumericType>(dummy, pointData, pointKdTree,
+                                           surfMesh, true, false)
+          .apply();
+      viennals::VTKWriter<NumericType>(surfMesh,
+                                       "GPU_SingleParticleFlux_tri.vtp")
+          .apply();
+      diskMesh->cellData = *pointData;
+      viennals::VTKWriter<NumericType>(diskMesh,
+                                       "GPU_SingleParticleFlux_disk.vtp")
+          .apply();
+    }
+
+#ifdef COUNT_RAYS
+    auto &buffer = tracer.getParameterBuffer();
+    buffer.download(&rayCount, 1);
+    std::cout << "Number of rays: " << rayCount << std::endl;
+    file << ";" << rayCount << "\n";
+#else
+    file << "\n";
+#endif
+  }
 
   file.close();
 }

@@ -1,4 +1,5 @@
 build/
+build*
 
 .vscode
 .vs
@@ -7,6 +8,7 @@ dist/
 dependencies/
 *.ipynb
 old_*
+*_old*
 *a.out
 install*
 *.vtk

@@ -41,26 +41,20 @@ extern "C" __global__ void __closesthit__ion()
   }
   else
   {
-    auto geomNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
-    auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
     viennaps::SF6O2Parameters<float> *params =
         reinterpret_cast<viennaps::SF6O2Parameters<float> *>(launchParams.customData);
-
+    auto geomNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
+    auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
     float angle = acosf(max(min(cosTheta, 1.f), 0.f));
 
     float f_ie_theta;
-    if (cosTheta > 0.5f)
-    {
-      f_ie_theta = 1.f;
-    }
-    else
+    if (cosTheta <= 0.5f)
     {
       f_ie_theta = max(3.f - 6.f * angle / M_PIf, 0.f);
     }
 
     float sqrtE = sqrtf(prd->energy);
-    float Y_sp = params->Si.A_sp *
-                 max(sqrtE - sqrtf(params->Si.Eth_sp), 0.f);
+    float Y_sp = params->Si.A_sp * max(sqrtE - sqrtf(params->Si.Eth_sp), 0.f);
     float Y_Si = params->Si.A_ie * max(sqrtE - sqrtf(params->Si.Eth_ie), 0.f) * f_ie_theta;
     float Y_O = params->Passivation.A_ie * max(sqrtE - sqrtf(params->Passivation.Eth_ie), 0.f) * f_ie_theta;
     float Y_SiO2 = params->Mask.A_ie * max(sqrtE - sqrtf(params->Mask.Eth_ie), 0.f);
@@ -85,7 +79,7 @@ extern "C" __global__ void __closesthit__ion()
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
-    float Eref_peak = 0.f;
+    float Eref_peak;
     float A = 1. /
               (1. + params->Ions.n_l * (M_PI_2f / params->Ions.inflectAngle - 1.));
     if (angle >= params->Ions.inflectAngle)
