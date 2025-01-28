@@ -8,6 +8,8 @@
 
 namespace viennaps {
 
+enum class HoleShape { Full, Half, Quarter };
+
 using namespace viennacore;
 
 /// Generates new a hole geometry in the z direction, which, in 2D mode,
@@ -40,19 +42,33 @@ template <class NumericType, int D> class MakeHole {
   const bool periodicBoundary_;
   const Material material_;
 
+  const HoleShape shape_;
+
 public:
   MakeHole(psDomainType domain, NumericType gridDelta, NumericType xExtent,
            NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
            NumericType taperAngle = 0., NumericType baseHeight = 0.,
            bool periodicBoundary = false, bool makeMask = false,
-           Material material = Material::None)
+           Material material = Material::None,
+           HoleShape shape = HoleShape::Full)
       : domain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), holeRadius_(holeRadius), holeDepth_(holeDepth),
-        taperAngle_(taperAngle), baseHeight_(baseHeight),
-        periodicBoundary_(periodicBoundary), makeMask_(makeMask),
-        material_(material) {}
+        shape_(shape), taperAngle_(taperAngle), baseHeight_(baseHeight),
+        periodicBoundary_(periodicBoundary && (shape != HoleShape::Half &&
+                                               shape != HoleShape::Quarter)),
+        makeMask_(makeMask), material_(material) {
+    if (periodicBoundary &&
+        (shape == HoleShape::Half || shape == HoleShape::Quarter)) {
+      Logger::getInstance()
+          .addWarning("MakeHole: 'Half' or 'Quarter' shapes do not support "
+                      "periodic boundaries! "
+                      "Defaulting to reflective boundaries!")
+          .print();
+    }
+  }
 
   void apply() {
+
     if constexpr (D != 3) {
       Logger::getInstance()
           .addWarning("MakeHole: Hole geometry can only be created in 3D! "
@@ -65,13 +81,14 @@ public:
 
       return;
     }
+
     domain_->clear();
     double bounds[2 * D];
-    bounds[0] = -xExtent_ / 2.;
+    bounds[0] = (shape_ != HoleShape::Full) ? 0. : -xExtent_ / 2.;
     bounds[1] = xExtent_ / 2.;
 
     if constexpr (D == 3) {
-      bounds[2] = -yExtent_ / 2.;
+      bounds[2] = (shape_ == HoleShape::Quarter) ? 0. : -yExtent_ / 2.;
       bounds[3] = yExtent_ / 2.;
       bounds[4] = baseHeight_ - gridDelta_;
       bounds[5] = baseHeight_ + holeDepth_ + gridDelta_;

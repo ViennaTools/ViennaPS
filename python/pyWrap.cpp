@@ -1007,10 +1007,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
   // Hole
+  pybind11::enum_<HoleShape>(module, "HoleShape")
+      .value("Full", HoleShape::Full)
+      .value("Half", HoleShape::Half)
+      .value("Quarter", HoleShape::Quarter)
+      .export_values();
+
   pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
       .def(pybind11::init<DomainType, const T, const T, const T, const T,
                           const T, const T, const T, const bool, const bool,
-                          const Material>(),
+                          const Material, HoleShape>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("holeRadius"), pybind11::arg("holeDepth"),
@@ -1018,8 +1024,23 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::None,
+           pybind11::arg("holeShape") = HoleShape::Full) // New argument
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
+
+  //  pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
+  //      .def(pybind11::init<DomainType, const T, const T, const T, const T,
+  //                          const T, const T, const T, const bool, const bool,
+  //                          const Material>(),
+  //           pybind11::arg("domain"), pybind11::arg("gridDelta"),
+  //           pybind11::arg("xExtent"), pybind11::arg("yExtent"),
+  //           pybind11::arg("holeRadius"), pybind11::arg("holeDepth"),
+  //           pybind11::arg("taperingAngle") = 0.,
+  //           pybind11::arg("baseHeight") = 0.,
+  //           pybind11::arg("periodicBoundary") = false,
+  //           pybind11::arg("makeMask") = false,
+  //           pybind11::arg("material") = Material::None)
+  //      .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
   // Fin
   pybind11::class_<MakeFin<T, D>>(module, "MakeFin")
