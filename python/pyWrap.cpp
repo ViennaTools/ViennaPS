@@ -50,8 +50,10 @@
 // models
 #include <models/psAnisotropicProcess.hpp>
 #include <models/psDirectionalEtching.hpp>
+#include <models/psFaradayCageEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
+#include <models/psIonBeamEtching.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
@@ -835,6 +837,55 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getParameters", &FluorocarbonEtching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
+  // Ion Beam Etching
+  pybind11::class_<IBEParameters<T>>(module, "IBEParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("planeWaferRate", &IBEParameters<T>::planeWaferRate)
+      .def_readwrite("meanEnergy", &IBEParameters<T>::meanEnergy)
+      .def_readwrite("sigmaEnergy", &IBEParameters<T>::sigmaEnergy)
+      .def_readwrite("thresholdEnergy", &IBEParameters<T>::thresholdEnergy)
+      .def_readwrite("exponent", &IBEParameters<T>::exponent)
+      .def_readwrite("n_l", &IBEParameters<T>::n_l)
+      .def_readwrite("inflectAngle", &IBEParameters<T>::inflectAngle)
+      .def_readwrite("minAngle", &IBEParameters<T>::minAngle)
+      .def_readwrite("tiltAngle", &IBEParameters<T>::tiltAngle)
+      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction);
+
+  pybind11::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
+      module, "IonBeamEtching", processModel)
+      .def(pybind11::init<>())
+      .def(pybind11::init(&SmartPointer<IonBeamEtching<T, D>>::New<
+                          const std::vector<Material> &>),
+           pybind11::arg("maskMaterials"))
+      .def(pybind11::init(
+               &SmartPointer<IonBeamEtching<T, D>>::New<
+                   const std::vector<Material> &, const IBEParameters<T> &>),
+           pybind11::arg("maskMaterials"), pybind11::arg("parameters"))
+      .def("setParameters", &IonBeamEtching<T, D>::setParameters)
+      .def("getParameters", &IonBeamEtching<T, D>::getParameters,
+           pybind11::return_value_policy::reference);
+
+  // Faraday Cage Etching
+  pybind11::class_<FaradayCageParameters<T>>(module, "FaradayCageParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("ibeParams", &FaradayCageParameters<T>::ibeParams)
+      .def_readwrite("cageAngle", &FaradayCageParameters<T>::cageAngle);
+
+  pybind11::class_<FaradayCageEtching<T, D>,
+                   SmartPointer<FaradayCageEtching<T, D>>>(
+      module, "FaradayCageEtching", processModel)
+      .def(pybind11::init<>())
+      .def(pybind11::init(&SmartPointer<FaradayCageEtching<T, D>>::New<
+                          const std::vector<Material> &>),
+           pybind11::arg("maskMaterials"))
+      .def(pybind11::init(&SmartPointer<FaradayCageEtching<T, D>>::New<
+                          const std::vector<Material> &,
+                          const FaradayCageParameters<T> &>),
+           pybind11::arg("maskMaterials"), pybind11::arg("parameters"))
+      .def("setParameters", &FaradayCageEtching<T, D>::setParameters)
+      .def("getParameters", &FaradayCageEtching<T, D>::getParameters,
+           pybind11::return_value_policy::reference);
+
   // Isotropic Process
   pybind11::class_<IsotropicProcess<T, D>,
                    SmartPointer<IsotropicProcess<T, D>>>(
@@ -1223,6 +1274,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, D>::getGrid, "Get the grid")
+      .def("getGridDelta", &Domain<T, D>::getGridDelta, "Get the grid delta.")
+      .def("getBoundingBox", &Domain<T, D>::getBoundingBox,
+           "Get the bounding box of the domain.")
+      .def("getBoundaryConditions", &Domain<T, D>::getBoundaryConditions,
+           "Get the boundary conditions of the domain.")
       .def("print", &Domain<T, D>::print)
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
@@ -1379,6 +1435,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getLevelSets", &Domain<T, 3>::getLevelSets)
       .def("getCellSet", &Domain<T, 3>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, 3>::getGrid, "Get the grid")
+      .def("getGridDelta", &Domain<T, 3>::getGridDelta, "Get the grid delta.")
+      .def("getBoundingBox", &Domain<T, 3>::getBoundingBox,
+           "Get the bounding box of the domain.")
+      .def("getBoundaryConditions", &Domain<T, 3>::getBoundaryConditions,
+           "Get the boundary conditions of the domain.")
       .def("print", &Domain<T, 3>::print)
       .def("saveLevelSetMesh", &Domain<T, 3>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
