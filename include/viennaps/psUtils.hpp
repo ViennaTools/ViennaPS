@@ -58,12 +58,12 @@ convertIntegrationScheme(const std::string &s) {
       "The value must be one of the following: "
       "ENGQUIST_OSHER_1ST_ORDER, ENGQUIST_OSHER_2ND_ORDER, "
       "LAX_FRIEDRICHS_1ST_ORDER, LAX_FRIEDRICHS_2ND_ORDER, "
-      "LOCAL LAX_FRIEDRICHS ANALYTICAL 1ST ORDER, "
-      "LOCAL LOCAL LAX FRIEDRICHS 1ST ORDER, "
-      "LOCAL LOCAL LAX FRIEDRICHS 2ND ORDER, "
-      "LOCAL LAX FRIEDRICHS 1ST ORDER, "
-      "LOCAL LAX FRIEDRICHS 2ND ORDER, "
-      "STENCIL LOCAL LAX FRIEDRICHS 1ST ORDER");
+      "LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER, "
+      "LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
+      "LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER, "
+      "LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
+      "LOCAL_LAX_FRIEDRICHS_2ND_ORDER, "
+      "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER");
 }
 
 // Converts string to the given numeric datatype
@@ -236,9 +236,11 @@ struct Parameters {
 
   void readConfigFile(const std::string &fileName) { m = readFile(fileName); }
 
+  bool exists(const std::string &key) const { return m.find(key) != m.end(); }
+
   template <typename T = double>
   [[nodiscard]] T get(const std::string &key) const {
-    if (m.find(key) == m.end()) {
+    if (!exists(key)) {
       std::cout << "Key not found in parameters: " << key << std::endl;
       exit(1);
       return T();

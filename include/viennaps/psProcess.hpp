@@ -2,6 +2,7 @@
 
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
+#include "psUnits.hpp"
 #include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
@@ -677,7 +678,8 @@ public:
         std::stringstream stream;
         stream << std::fixed << std::setprecision(4)
                << "Process time: " << processDuration - remainingTime << " / "
-               << processDuration;
+               << processDuration << " "
+               << units::Time::getInstance().toStringShort();
         Logger::getInstance().addInfo(stream.str()).print();
       }
     }

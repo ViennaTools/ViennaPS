@@ -7,6 +7,7 @@
 #include "../psConstants.hpp"
 #include "../psProcessModel.hpp"
 #include "../psSurfaceModel.hpp"
+#include "../psUnits.hpp"
 #include "../psVelocityField.hpp"
 
 namespace viennaps {
@@ -142,16 +143,22 @@ public:
           eCoverage->at(i) * ionEnhancedFlux->at(i) * params.ionFlux;
       const auto chemicalRate = params.Si.k_sigma * eCoverage->at(i) / 4.;
 
+      // The etch rate is calculated in nm/s
+      const double unitConversion =
+          units::Time::getInstance().convertSecond() /
+          units::Length::getInstance().convertNanometer();
+
       if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
-        etchRate[i] = -(1 / params.Mask.rho) * sputterRate;
+        etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
       } else {
-        etchRate[i] = -(1 / params.Si.rho) * (chemicalRate + sputterRate +
-                                              ionEnhancedRate); // in um / s
+        etchRate[i] = -(1 / params.Si.rho) *
+                      (chemicalRate + sputterRate + ionEnhancedRate) *
+                      unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
@@ -271,19 +278,19 @@ public:
       Eth_sp = params.Mask.Eth_sp;
     }
 
-    NumericType f_sp_theta =
-        std::max((1 + B_sp * (1 - cosTheta * cosTheta)) *
-                     std::cos(angle / params.Si.theta_g_sp * M_PI_2),
-                 0.);
-    NumericType f_ie_theta =
-        std::max((1 + params.Si.B_ie * (1 - cosTheta * cosTheta)) *
-                     std::cos(angle / params.Si.theta_g_ie * M_PI_2),
-                 0.);
-    // NumericType f_sp_theta = 1.;
-    // NumericType f_ie_theta = 1.;
-    // if (cosTheta < 0.5) {
-    //   f_ie_theta = std::max(3 - 6 * angle / M_PI, 0.);
-    // }
+    // NumericType f_sp_theta =
+    //     std::max((1 + B_sp * (1 - cosTheta * cosTheta)) *
+    //                  std::cos(angle / params.Si.theta_g_sp * M_PI_2),
+    //              0.);
+    // NumericType f_ie_theta =
+    //     std::max((1 + params.Si.B_ie * (1 - cosTheta * cosTheta)) *
+    //                  std::cos(angle / params.Si.theta_g_ie * M_PI_2),
+    //              0.);
+    NumericType f_sp_theta = 1.;
+    NumericType f_ie_theta = 1.;
+    if (cosTheta < 0.5) {
+      f_ie_theta = std::max(3 - 6 * angle / M_PI, 0.);
+    }
 
     const double sqrtE = std::sqrt(E);
     NumericType Y_sp =
@@ -339,14 +346,14 @@ public:
       NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);
 
-    // NumericType sticking = 0.;
-    NumericType sticking = 1.;
-    if (incAngle > params.Ions.thetaRMin) {
-      sticking =
-          1. - std::min((incAngle - params.Ions.thetaRMin) /
-                            (params.Ions.thetaRMax - params.Ions.thetaRMin),
-                        NumericType(1.));
-    }
+    NumericType sticking = 0.;
+    // NumericType sticking = 1.;
+    // if (incAngle > params.Ions.thetaRMin) {
+    //   sticking =
+    //       1. - std::min((incAngle - params.Ions.thetaRMin) /
+    //                         (params.Ions.thetaRMax - params.Ions.thetaRMin),
+    //                     NumericType(1.));
+    // }
 
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > params.Si.Eth_ie) {

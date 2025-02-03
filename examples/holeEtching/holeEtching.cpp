@@ -8,9 +8,9 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
-  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -35,8 +35,7 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  auto model = ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New();
-  auto &modelParams = model->getParameters();
+  ps::SF6O2Parameters<NumericType> modelParams;
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
   modelParams.oxygenFlux = params.get("oxygenFlux");
@@ -46,6 +45,11 @@ int main(int argc, char *argv[]) {
   modelParams.Passivation.A_ie = params.get("A_O");
   modelParams.Si.A_ie = params.get("A_Si");
   modelParams.etchStopDepth = params.get("etchStopDepth");
+  auto model =
+      ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(modelParams);
+
+  ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
+  ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // process setup
   ps::Process<NumericType, D> process;
