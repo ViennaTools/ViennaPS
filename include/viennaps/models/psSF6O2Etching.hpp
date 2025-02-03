@@ -352,7 +352,8 @@ public:
     if (NewEnergy > params.Si.Eth_ie) {
       E = NewEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, Rng, std::max(incAngle, params.Ions.minAngle));
+          rayDir, geomNormal, Rng,
+          M_PI_2 - std::min(incAngle, params.Ions.minAngle));
       return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
     } else {
       return std::pair<NumericType, Vec3D<NumericType>>{
@@ -565,6 +566,7 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SF6O2Etching");
+    this->particles.clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);

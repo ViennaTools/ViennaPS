@@ -50,7 +50,7 @@ def rateFunction(fluxes, material):
     rate = fluxes[1] * params["ionRate"]
     if material == vps.Material.Si:
         rate += fluxes[0] * params["neutralRate"]
-    return -rate
+    return rate
 
 
 etchModel.setRateFunction(rateFunction)
