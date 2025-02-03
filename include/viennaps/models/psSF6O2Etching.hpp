@@ -552,12 +552,19 @@ public:
 
   void setParameters(const SF6O2Parameters<NumericType> &pParams) {
     params = pParams;
+    initializeModel();
   }
 
   SF6O2Parameters<NumericType> &getParameters() { return params; }
 
 private:
   void initializeModel() {
+    // check if units have been set
+    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
+        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+      Logger::getInstance().addError("Units have not been set.").print();
+    }
+
     // particles
     auto ion = std::make_unique<impl::SF6O2Ion<NumericType, D>>(params);
     auto etchant = std::make_unique<impl::SF6O2Etchant<NumericType, D>>(params);
@@ -587,7 +594,7 @@ class SF6Etching : public ProcessModel<NumericType, D> {
 public:
   SF6Etching() { initializeModel(); }
 
-  // All flux values are in units 1e16 / cm²
+  // All flux values are in units 1e15 / cm²
   SF6Etching(const double ionFlux, const double etchantFlux,
              const NumericType meanEnergy /* eV */,
              const NumericType sigmaEnergy /* eV */, // 5 parameters
@@ -609,12 +616,19 @@ public:
 
   void setParameters(const SF6O2Parameters<NumericType> &pParams) {
     params = pParams;
+    initializeModel();
   }
 
   SF6O2Parameters<NumericType> &getParameters() { return params; }
 
 private:
   void initializeModel() {
+    // check if units have been set
+    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
+        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+      Logger::getInstance().addError("Units have not been set.").print();
+    }
+
     // particles
     auto ion = std::make_unique<impl::SF6O2Ion<NumericType, D>>(params);
     auto etchant = std::make_unique<impl::SF6Etchant<NumericType, D>>(params);
@@ -629,6 +643,7 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SF6Etching");
+    this->particles.clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
   }
