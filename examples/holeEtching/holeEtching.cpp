@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
   auto model =
       ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(modelParams);
 
+  // set parameter units
   ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
   ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
 
