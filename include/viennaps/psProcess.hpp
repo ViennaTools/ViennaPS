@@ -679,7 +679,7 @@ public:
         stream << std::fixed << std::setprecision(4)
                << "Process time: " << processDuration - remainingTime << " / "
                << processDuration << " "
-               << units::Time::getInstance().toStringShort();
+               << units::Time::getInstance().toShortString();
         Logger::getInstance().addInfo(stream.str()).print();
       }
     }

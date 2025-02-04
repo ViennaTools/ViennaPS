@@ -32,6 +32,7 @@
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
+#include <psUnits.hpp>
 
 // geometries
 #include <geometries/psMakeFin.hpp>
@@ -350,6 +351,52 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   /****************************************************************************
    *                               MODEL FRAMEWORK                            *
    ****************************************************************************/
+
+  // Units
+  // Length
+  // enum not necessary, as we can use a string to set the unit
+  //   pybind11::enum_<decltype(units::Length::METER)>(module, "LengthUnit")
+  //       .value("METER", units::Length::METER)
+  //       .value("CENTIMETER", units::Length::CENTIMETER)
+  //       .value("MILLIMETER", units::Length::MILLIMETER)
+  //       .value("MICROMETER", units::Length::MICROMETER)
+  //       .value("NANOMETER", units::Length::NANOMETER)
+  //       .value("ANGSTROM", units::Length::ANGSTROM)
+  //       .value("UNDEFINED", units::Length::UNDEFINED)
+  //       .export_values();
+
+  pybind11::class_<units::Length>(module, "Length")
+      .def_static("setUnit", pybind11::overload_cast<const std::string &>(
+                                 &units::Length::setUnit))
+      .def_static("getInstance", &units::Length::getInstance,
+                  pybind11::return_value_policy::reference)
+      .def("convertMeter", &units::Length::convertMeter)
+      .def("convertCentimeter", &units::Length::convertCentimeter)
+      .def("convertMillimeter", &units::Length::convertMillimeter)
+      .def("convertMicrometer", &units::Length::convertMicrometer)
+      .def("convertNanometer", &units::Length::convertNanometer)
+      .def("convertAngstrom", &units::Length::convertAngstrom)
+      .def("toString", &units::Length::toString)
+      .def("toShortString", &units::Length::toShortString);
+
+  // Time
+  //   pybind11::enum_<decltype(units::Time::MINUTE)>(module, "TimeUnit")
+  //       .value("MINUTE", units::Time::MINUTE)
+  //       .value("SECOND", units::Time::SECOND)
+  //       .value("MILLISECOND", units::Time::MILLISECOND)
+  //       .value("UNDEFINED", units::Time::UNDEFINED)
+  //       .export_values();
+
+  pybind11::class_<units::Time>(module, "Time")
+      .def_static("setUnit", pybind11::overload_cast<const std::string &>(
+                                 &units::Time::setUnit))
+      .def_static("getInstance", &units::Time::getInstance,
+                  pybind11::return_value_policy::reference)
+      .def("convertMinute", &units::Time::convertMinute)
+      .def("convertSecond", &units::Time::convertSecond)
+      .def("convertMillisecond", &units::Time::convertMillisecond)
+      .def("toString", &units::Time::toString)
+      .def("toShortString", &units::Time::toShortString);
 
   // ProcessModel
   pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>

@@ -173,6 +173,30 @@ public:
     return 0.;
   }
 
+  double convertAngstrom() const {
+    switch (unit_) {
+    case METER:
+      return 1e10;
+    case CENTIMETER:
+      return 1e8;
+    case MILLIMETER:
+      return 1e7;
+    case MICROMETER:
+      return 1e4;
+    case NANOMETER:
+      return 1e1;
+    case ANGSTROM:
+      return 1.;
+    case UNDEFINED: {
+      Logger::getInstance().addWarning("Length unit is not defined.").print();
+      return 1.;
+    }
+    }
+
+    Logger::getInstance().addError("Invalid length unit.").print();
+    return 0.;
+  }
+
   std::string toString() const {
     switch (unit_) {
     case METER:
@@ -195,7 +219,7 @@ public:
     return "error-length-unit";
   }
 
-  std::string toStringShort() const {
+  std::string toShortString() const {
     switch (unit_) {
     case METER:
       return "m";
@@ -324,7 +348,7 @@ public:
     return "error-time-unit";
   }
 
-  std::string toStringShort() const {
+  std::string toShortString() const {
     switch (unit_) {
     case MINUTE:
       return "min";

@@ -174,7 +174,6 @@ public:
 
   void setParameters(const IBEParameters<NumericType> &params) {
     params_ = params;
-    initialize(maskMaterials_);
   }
 
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
@@ -207,7 +206,6 @@ private:
   bool firstInit = false;
   std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
-  std::vector<Material> maskMaterials_;
 };
 
 } // namespace viennaps
