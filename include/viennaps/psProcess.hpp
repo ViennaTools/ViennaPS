@@ -2,6 +2,7 @@
 
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
+#include "psUnits.hpp"
 #include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
@@ -135,6 +136,7 @@ public:
     }
     meshConverter.apply();
 
+    model->initialize(domain, 0.);
     if (model->getSurfaceModel()->getCoverages() != nullptr) {
       Logger::getInstance()
           .addWarning(
@@ -216,7 +218,6 @@ public:
           .print();
       return;
     }
-    const auto name = model->getProcessName().value_or("default");
 
     if (!domain) {
       Logger::getInstance()
@@ -224,6 +225,9 @@ public:
           .print();
       return;
     }
+
+    model->initialize(domain, processDuration);
+    const auto name = model->getProcessName().value_or("default");
 
     if (model->getGeometricModel()) {
       model->getGeometricModel()->setDomain(domain);
@@ -479,6 +483,7 @@ public:
 #endif
       // Expand LS based on the integration scheme
       advectionKernel.prepareLS();
+      model->initialize(domain, remainingTime);
 
       auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();
@@ -673,7 +678,8 @@ public:
         std::stringstream stream;
         stream << std::fixed << std::setprecision(4)
                << "Process time: " << processDuration - remainingTime << " / "
-               << processDuration;
+               << processDuration << " "
+               << units::Time::getInstance().toStringShort();
         Logger::getInstance().addInfo(stream.str()).print();
       }
     }
@@ -701,6 +707,7 @@ public:
                      processTimer.totalDuration * 1e-9)
           .print();
     }
+    model->reset();
   }
 
   void writeParticleDataLogs(std::string fileName) {

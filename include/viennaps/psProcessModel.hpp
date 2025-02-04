@@ -38,6 +38,7 @@ public:
 
   virtual void initialize(SmartPointer<Domain<NumericType, D>> domain,
                           const NumericType processDuration) {}
+  virtual void reset() {}
 
   auto &getParticleTypes() { return particles; }
   auto getSurfaceModel() const { return surfaceModel; }

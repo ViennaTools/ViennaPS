@@ -7,6 +7,7 @@
 #include "../psConstants.hpp"
 #include "../psProcessModel.hpp"
 #include "../psSurfaceModel.hpp"
+#include "../psUnits.hpp"
 #include "../psVelocityField.hpp"
 
 namespace viennaps {
@@ -142,16 +143,22 @@ public:
           eCoverage->at(i) * ionEnhancedFlux->at(i) * params.ionFlux;
       const auto chemicalRate = params.Si.k_sigma * eCoverage->at(i) / 4.;
 
+      // The etch rate is calculated in nm/s
+      const double unitConversion =
+          units::Time::getInstance().convertSecond() /
+          units::Length::getInstance().convertNanometer();
+
       if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
-        etchRate[i] = -(1 / params.Mask.rho) * sputterRate;
+        etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
       } else {
-        etchRate[i] = -(1 / params.Si.rho) * (chemicalRate + sputterRate +
-                                              ionEnhancedRate); // in um / s
+        etchRate[i] = -(1 / params.Si.rho) *
+                      (chemicalRate + sputterRate + ionEnhancedRate) *
+                      unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
@@ -271,14 +278,19 @@ public:
       Eth_sp = params.Mask.Eth_sp;
     }
 
-    NumericType f_sp_theta =
-        std::max((1 + B_sp * (1 - cosTheta * cosTheta)) *
-                     std::cos(angle / params.Si.theta_g_sp * M_PI_2),
-                 0.);
-    NumericType f_ie_theta =
-        std::max((1 + params.Si.B_ie * (1 - cosTheta * cosTheta)) *
-                     std::cos(angle / params.Si.theta_g_ie * M_PI_2),
-                 0.);
+    // NumericType f_sp_theta =
+    //     std::max((1 + B_sp * (1 - cosTheta * cosTheta)) *
+    //                  std::cos(angle / params.Si.theta_g_sp * M_PI_2),
+    //              0.);
+    // NumericType f_ie_theta =
+    //     std::max((1 + params.Si.B_ie * (1 - cosTheta * cosTheta)) *
+    //                  std::cos(angle / params.Si.theta_g_ie * M_PI_2),
+    //              0.);
+    NumericType f_sp_theta = 1.;
+    NumericType f_ie_theta = 1.;
+    if (cosTheta < 0.5) {
+      f_ie_theta = std::max(3 - 6 * angle / M_PI, 0.);
+    }
 
     const double sqrtE = std::sqrt(E);
     NumericType Y_sp =
@@ -334,19 +346,21 @@ public:
       NewEnergy = normalDist(Rng);
     } while (NewEnergy > E || NewEnergy < 0.);
 
-    NumericType sticking = 1.;
-    if (incAngle > params.Ions.thetaRMin) {
-      sticking =
-          1. - std::min((incAngle - params.Ions.thetaRMin) /
-                            (params.Ions.thetaRMax - params.Ions.thetaRMin),
-                        NumericType(1.));
-    }
+    NumericType sticking = 0.;
+    // NumericType sticking = 1.;
+    // if (incAngle > params.Ions.thetaRMin) {
+    //   sticking =
+    //       1. - std::min((incAngle - params.Ions.thetaRMin) /
+    //                         (params.Ions.thetaRMax - params.Ions.thetaRMin),
+    //                     NumericType(1.));
+    // }
 
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > params.Si.Eth_ie) {
       E = NewEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, Rng, std::max(incAngle, params.Ions.minAngle));
+          rayDir, geomNormal, Rng,
+          M_PI_2 - std::min(incAngle, params.Ions.minAngle));
       return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
     } else {
       return std::pair<NumericType, Vec3D<NumericType>>{
@@ -538,12 +552,19 @@ public:
 
   void setParameters(const SF6O2Parameters<NumericType> &pParams) {
     params = pParams;
+    initializeModel();
   }
 
   SF6O2Parameters<NumericType> &getParameters() { return params; }
 
 private:
   void initializeModel() {
+    // check if units have been set
+    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
+        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+      Logger::getInstance().addError("Units have not been set.").print();
+    }
+
     // particles
     auto ion = std::make_unique<impl::SF6O2Ion<NumericType, D>>(params);
     auto etchant = std::make_unique<impl::SF6O2Etchant<NumericType, D>>(params);
@@ -559,6 +580,7 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SF6O2Etching");
+    this->particles.clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);
@@ -572,7 +594,7 @@ class SF6Etching : public ProcessModel<NumericType, D> {
 public:
   SF6Etching() { initializeModel(); }
 
-  // All flux values are in units 1e16 / cm²
+  // All flux values are in units 1e15 / cm²
   SF6Etching(const double ionFlux, const double etchantFlux,
              const NumericType meanEnergy /* eV */,
              const NumericType sigmaEnergy /* eV */, // 5 parameters
@@ -594,12 +616,19 @@ public:
 
   void setParameters(const SF6O2Parameters<NumericType> &pParams) {
     params = pParams;
+    initializeModel();
   }
 
   SF6O2Parameters<NumericType> &getParameters() { return params; }
 
 private:
   void initializeModel() {
+    // check if units have been set
+    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
+        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+      Logger::getInstance().addError("Units have not been set.").print();
+    }
+
     // particles
     auto ion = std::make_unique<impl::SF6O2Ion<NumericType, D>>(params);
     auto etchant = std::make_unique<impl::SF6Etchant<NumericType, D>>(params);
@@ -614,6 +643,7 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SF6Etching");
+    this->particles.clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
   }
