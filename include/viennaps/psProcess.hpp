@@ -838,7 +838,7 @@ private:
     std::vector<NumericType> delta(updated->getScalarDataSize(), 0.);
 
 #pragma omp parallel for
-    for (size_t i = 0; i < updated->getScalarDataSize(); i++) {
+    for (int i = 0; i < updated->getScalarDataSize(); i++) {
       auto label = updated->getScalarDataLabel(i);
       auto updatedData = updated->getScalarData(label);
       auto previousData = previous->getScalarData(label);

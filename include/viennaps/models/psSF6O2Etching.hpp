@@ -51,7 +51,6 @@ public:
       surfaceData->insertNextScalarData(data, "ionEnhancedRate");
       surfaceData->insertNextScalarData(data, "sputterRate");
       surfaceData->insertNextScalarData(data, "chemicalRate");
-      surfaceData->insertNextScalarData(data, "covSum");
     }
   }
 
@@ -144,14 +143,6 @@ public:
     auto oCoverage = coverages->getScalarData("oCoverage");
     oCoverage->resize(numPoints);
 
-    std::vector<NumericType> *covSum = nullptr;
-    const auto logLevel = Logger::getLogLevel();
-    if (logLevel > 3) {
-      covSum = surfaceData->getScalarData("covSum");
-      covSum->resize(numPoints);
-    }
-
-    NumericType meanCoverage = 0.;
     for (size_t i = 0; i < numPoints; ++i) {
       auto Gb_F = etchantFlux->at(i) * params.etchantFlux;
       auto Gb_O = oxygenFlux->at(i) * params.oxygenFlux;
@@ -163,16 +154,6 @@ public:
 
       eCoverage->at(i) = Gb_F < 1e-6 ? 0. : 1 / (1 + (a * (1 + 1 / b)));
       oCoverage->at(i) = Gb_O < 1e-6 ? 0. : 1 / (1 + (b * (1 + 1 / a)));
-      if (logLevel > 3) {
-        covSum->at(i) = eCoverage->at(i) + oCoverage->at(i);
-        meanCoverage += covSum->at(i);
-      }
-    }
-    if (logLevel > 3) {
-      meanCoverage /= numPoints;
-      Logger::getInstance()
-          .addInfo("Mean coverage: " + std::to_string(meanCoverage))
-          .print();
     }
   }
 };
