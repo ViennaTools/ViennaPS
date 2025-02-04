@@ -1,42 +1,7 @@
 from _typeshed import Incomplete
 from typing import Callable, ClassVar, overload
 
-Air: Material
-Al2O3: Material
-Cu: Material
 D: int
-DEBUG: LogLevel
-Dielectric: Material
-ERROR: LogLevel
-Full: HoleShape
-GAS: Material
-GaN: Material
-Half: HoleShape
-INFO: LogLevel
-INTERMEDIATE: LogLevel
-Mask: Material
-Metal: Material
-NEG_X: rayTraceDirection
-NEG_Y: rayTraceDirection
-NEG_Z: rayTraceDirection
-POS_X: rayTraceDirection
-POS_Y: rayTraceDirection
-POS_Z: rayTraceDirection
-PolySi: Material
-Polymer: Material
-Quarter: HoleShape
-Si: Material
-Si3N4: Material
-SiC: Material
-SiGe: Material
-SiN: Material
-SiO2: Material
-SiON: Material
-TIMING: LogLevel
-TiN: Material
-Undefined: Material
-W: Material
-WARNING: LogLevel
 __version__: str
 
 class AdvectionCallback:

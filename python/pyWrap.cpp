@@ -328,8 +328,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("INFO", LogLevel::INFO)
       .value("TIMING", LogLevel::TIMING)
       .value("INTERMEDIATE", LogLevel::INTERMEDIATE)
-      .value("DEBUG", LogLevel::DEBUG)
-      .export_values();
+      .value("DEBUG", LogLevel::DEBUG);
 
   pybind11::class_<Logger, SmartPointer<Logger>>(module, "Logger",
                                                  pybind11::module_local())
@@ -604,8 +603,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("Dielectric", Material::Dielectric)
       .value("Metal", Material::Metal)
       .value("Air", Material::Air)
-      .value("GAS", Material::GAS) // 20
-      .export_values();
+      .value("GAS", Material::GAS); // 20
 
   // Single Particle Process
   pybind11::class_<SingleParticleProcess<T, D>,
@@ -1111,8 +1109,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::enum_<HoleShape>(module, "HoleShape")
       .value("Full", HoleShape::Full)
       .value("Half", HoleShape::Half)
-      .value("Quarter", HoleShape::Quarter)
-      .export_values();
+      .value("Quarter", HoleShape::Quarter);
 
   pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
       .def(pybind11::init<DomainType, const T, const T, const T, const T,
@@ -1186,8 +1183,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("POS_Z", viennaray::TraceDirection::POS_Z)
       .value("NEG_X", viennaray::TraceDirection::NEG_X)
       .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
-      .value("NEG_Z", viennaray::TraceDirection::NEG_Z)
-      .export_values();
+      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
 
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
