@@ -119,11 +119,6 @@ public:
   // 0.5 to guarantee numerical stability. Defaults to 0.4999.
   void setTimeStepRatio(NumericType cfl) { timeStepRatio = cfl; }
 
-  // Sets the minimum time between printing intermediate results during the
-  // process. If this is set to a non-positive value, no intermediate results
-  // are printed.
-  void setPrintTimeInterval(NumericType passedTime) { printTime = passedTime; }
-
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() const {
@@ -569,32 +564,28 @@ public:
 
       // print debug output
       if (Logger::getLogLevel() >= 4) {
-        if (printTime >= 0. &&
-            ((processDuration - remainingTime) - printTime * counter) > 0.) {
-          if (velocities)
-            diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                         "velocities");
-          if (useCoverages) {
-            auto coverages = model->getSurfaceModel()->getCoverages();
-            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-              auto label = coverages->getScalarDataLabel(idx);
-              diskMesh->getCellData().insertNextScalarData(
-                  *coverages->getScalarData(idx), label);
-            }
-          }
-          for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
-            auto label = rates->getScalarDataLabel(idx);
+        if (velocities)
+          diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                       "velocities");
+        if (useCoverages) {
+          auto coverages = model->getSurfaceModel()->getCoverages();
+          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+            auto label = coverages->getScalarDataLabel(idx);
             diskMesh->getCellData().insertNextScalarData(
-                *rates->getScalarData(idx), label);
+                *coverages->getScalarData(idx), label);
           }
-          printDiskMesh(diskMesh,
-                        name + "_" + std::to_string(counter) + ".vtp");
-          if (domain->getCellSet()) {
-            domain->getCellSet()->writeVTU(name + "_cellSet_" +
-                                           std::to_string(counter) + ".vtu");
-          }
-          counter++;
         }
+        for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
+          auto label = rates->getScalarDataLabel(idx);
+          diskMesh->getCellData().insertNextScalarData(
+              *rates->getScalarData(idx), label);
+        }
+        printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
+        if (domain->getCellSet()) {
+          domain->getCellSet()->writeVTU(name + "_cellSet_" +
+                                         std::to_string(counter) + ".vtu");
+        }
+        counter++;
       }
 
       // apply advection callback
@@ -809,7 +800,6 @@ private:
   bool lsVelocityOutput = false;
   unsigned maxIterations = 20;
   bool coveragesInitialized_ = false;
-  NumericType printTime = 0.;
   NumericType processTime = 0.;
   NumericType timeStepRatio = 0.4999;
 };

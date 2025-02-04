@@ -1253,10 +1253,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaxCoverageInitIterations",
            &Process<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
-      .def("setPrintTimeInterval", &Process<T, D>::setPrintTimeInterval,
-           "Sets the minimum time between printing intermediate results during "
-           "the process. If this is set to a non-positive value, no "
-           "intermediate results are printed.")
       .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "

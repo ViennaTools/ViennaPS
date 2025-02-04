@@ -122,9 +122,11 @@ public:
     // Set the flag to stop tracing if the energy is below the threshold
     if (NewEnergy > params.Si.Eth_ie) {
       E = NewEnergy;
-      auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, Rng,
-          M_PI_2 - std::min(incAngle, params.Ions.minAngle));
+      // auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
+      //     rayDir, geomNormal, Rng,
+      //     M_PI_2 - std::min(incAngle, params.Ions.minAngle));
+      auto direction =
+          viennaray::ReflectionSpecular<NumericType>(rayDir, geomNormal);
       return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
     } else {
       return std::pair<NumericType, Vec3D<NumericType>>{
