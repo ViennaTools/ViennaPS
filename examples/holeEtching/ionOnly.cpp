@@ -1,6 +1,7 @@
 #include <geometries/psMakeHole.hpp>
 #include <models/ion_only.hpp>
 
+#include <psConstants.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
@@ -15,7 +16,7 @@ int main(int argc, char *argv[]) {
 
   // geometry setup
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  ps::MakeHole<NumericType, D>(geometry, 0.02, 1.0, 1.0, 0.175, 1.2, 1.193, 0,
+  ps::MakeHole<NumericType, D>(geometry, 0.02, 2.0, 2.0, 0.175, 1.2, 1.193, 0,
                                false /* periodic boundary */,
                                true /*create mask*/, ps::Material::Si)
       .apply();
@@ -25,6 +26,9 @@ int main(int argc, char *argv[]) {
   modelParams.Ions.meanEnergy = 100.0;
   modelParams.Ions.sigmaEnergy = 10.0;
   modelParams.Ions.exponent = 500;
+  modelParams.Ions.inflectAngle = ps::constants::degToRad(89.);
+  modelParams.Ions.minAngle = ps::constants::degToRad(85.);
+  modelParams.Ions.n_l = 10.;
   modelParams.Si.A_ie = 7.0;
 
   modelParams.Si.rho = 0.1;
@@ -37,10 +41,10 @@ int main(int argc, char *argv[]) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(10);
   process.setProcessDuration(10.0 / 60.0);
+  process.setTimeStepRatio(0.25);
   process.setIntegrationScheme(
-      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
+      viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER);
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

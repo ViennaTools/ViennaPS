@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
+  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -25,14 +25,15 @@ int main(int argc, char *argv[]) {
   // geometry setup
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   ps::MakeHole<NumericType, D>(
-      geometry, params.get("gridDelta") /* grid delta */,
-      params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
-      params.get("holeRadius") /*hole radius*/,
-      params.get("maskHeight") /* mask height*/,
-      params.get("taperAngle") /* tapering angle in degrees */,
-      0 /* base height */, false /* periodic boundary */, true /*create mask*/,
-      ps::Material::Si)
+      geometry, params.get("gridDelta"), params.get("xExtent"),
+      params.get("yExtent"), params.get("holeRadius"), params.get("maskHeight"),
+      params.get("taperAngle"), 0 /* base height */,
+      false /* periodic boundary */, true /*create mask*/, ps::Material::Si)
       .apply();
+
+  // set parameter units
+  ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
+  ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // use pre-defined model SF6O2 etching model
   ps::SF6O2Parameters<NumericType> modelParams;
@@ -48,15 +49,11 @@ int main(int argc, char *argv[]) {
   auto model =
       ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(modelParams);
 
-  // set parameter units
-  ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
-  ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
-
   // process setup
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(10);
+  process.setMaxCoverageInitIterations(50);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(

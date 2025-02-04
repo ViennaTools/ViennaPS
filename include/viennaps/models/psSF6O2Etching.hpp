@@ -22,6 +22,7 @@ template <typename NumericType, int D>
 class SF6O2SurfaceModel : public SurfaceModel<NumericType> {
 public:
   using SurfaceModel<NumericType>::coverages;
+  using SurfaceModel<NumericType>::surfaceData;
   const SF6O2Parameters<NumericType> &params;
 
   SF6O2SurfaceModel(const SF6O2Parameters<NumericType> &pParams)
@@ -36,10 +37,21 @@ public:
     std::vector<NumericType> cov(numGeometryPoints, 0.);
     coverages->insertNextScalarData(cov, "eCoverage");
     coverages->insertNextScalarData(cov, "oCoverage");
+  }
+
+  void initializeSurfaceData(unsigned numGeometryPoints) override {
     if (Logger::getLogLevel() > 3) {
-      coverages->insertNextScalarData(cov, "ionEnhancedRate");
-      coverages->insertNextScalarData(cov, "sputterRate");
-      coverages->insertNextScalarData(cov, "chemicalRate");
+      if (surfaceData == nullptr) {
+        surfaceData = SmartPointer<viennals::PointData<NumericType>>::New();
+      } else {
+        surfaceData->clear();
+      }
+
+      std::vector<NumericType> data(numGeometryPoints, 0.);
+      surfaceData->insertNextScalarData(data, "ionEnhancedRate");
+      surfaceData->insertNextScalarData(data, "sputterRate");
+      surfaceData->insertNextScalarData(data, "chemicalRate");
+      surfaceData->insertNextScalarData(data, "covSum");
     }
   }
 
@@ -61,9 +73,12 @@ public:
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
                              *chRate = nullptr;
     if (Logger::getLogLevel() > 3) {
-      ieRate = coverages->getScalarData("ionEnhancedRate");
-      spRate = coverages->getScalarData("sputterRate");
-      chRate = coverages->getScalarData("chemicalRate");
+      ieRate = surfaceData->getScalarData("ionEnhancedRate");
+      spRate = surfaceData->getScalarData("sputterRate");
+      chRate = surfaceData->getScalarData("chemicalRate");
+      ieRate->resize(numPoints);
+      spRate->resize(numPoints);
+      chRate->resize(numPoints);
     }
     bool stop = false;
 
@@ -129,9 +144,17 @@ public:
     auto oCoverage = coverages->getScalarData("oCoverage");
     oCoverage->resize(numPoints);
 
+    std::vector<NumericType> *covSum = nullptr;
+    const auto logLevel = Logger::getLogLevel();
+    if (logLevel > 3) {
+      covSum = surfaceData->getScalarData("covSum");
+      covSum->resize(numPoints);
+    }
+
+    NumericType meanCoverage = 0.;
     for (size_t i = 0; i < numPoints; ++i) {
-      auto Gb_F = etchantFlux->at(i) * params.etchantFlux * params.beta_F;
-      auto Gb_O = oxygenFlux->at(i) * params.oxygenFlux * params.beta_O;
+      auto Gb_F = etchantFlux->at(i) * params.etchantFlux;
+      auto Gb_O = oxygenFlux->at(i) * params.oxygenFlux;
       auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
       auto GY_o = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
 
@@ -140,6 +163,16 @@ public:
 
       eCoverage->at(i) = Gb_F < 1e-6 ? 0. : 1 / (1 + (a * (1 + 1 / b)));
       oCoverage->at(i) = Gb_O < 1e-6 ? 0. : 1 / (1 + (b * (1 + 1 / a)));
+      if (logLevel > 3) {
+        covSum->at(i) = eCoverage->at(i) + oCoverage->at(i);
+        meanCoverage += covSum->at(i);
+      }
+    }
+    if (logLevel > 3) {
+      meanCoverage /= numPoints;
+      Logger::getInstance()
+          .addInfo("Mean coverage: " + std::to_string(meanCoverage))
+          .print();
     }
   }
 };
@@ -169,10 +202,9 @@ public:
       if (etchantFlux->at(i) < 1e-6) {
         eCoverage->at(i) = 0;
       } else {
-        double tmp =
-            1 +
-            (params.Si.k_sigma + 2 * ionEnhancedYield->at(i) * params.ionFlux) /
-                (etchantFlux->at(i) * params.etchantFlux * params.beta_F);
+        double tmp = 1 + (params.Si.k_sigma +
+                          2 * ionEnhancedYield->at(i) * params.ionFlux) /
+                             (etchantFlux->at(i) * params.etchantFlux);
         eCoverage->at(i) = 1 / tmp;
       }
     }
@@ -336,11 +368,21 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
+                        const int materialId,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
+                        const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+    // F surface coverage
+    const auto &phi_F = globalData->getVectorData(0)[primID];
+    // O surface coverage
+    const auto &phi_O = globalData->getVectorData(1)[primID];
+    // Obtain the sticking probability
+    NumericType beta = params.beta_F;
+    if (MaterialMap::isMaterial(materialId, Material::Mask))
+      beta = params.Mask.beta_F;
+    NumericType S_eff = beta * std::max(1. - phi_F - phi_O, 0.);
+
+    localData.getVectorData(0)[primID] += rayWeight * S_eff;
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -379,11 +421,20 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
+                        const int materialId,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
+                        const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+
+    // F surface coverage
+    const auto &phi_F = globalData->getVectorData(0)[primID];
+    // Obtain the sticking probability
+    NumericType beta = params.beta_F;
+    if (MaterialMap::isMaterial(materialId, Material::Mask))
+      beta = params.Mask.beta_F;
+    NumericType S_eff = beta * std::max(1. - phi_F, 0.);
+
+    localData.getVectorData(0)[primID] += rayWeight * S_eff;
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -420,12 +471,18 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
+                        const int materialId,
                         viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
+                        const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
-    // Rate is normalized by dividing with the local sticking coefficient
-    localData.getVectorData(0)[primID] += rayWeight;
+    NumericType S_eff;
+    const auto &phi_F = globalData->getVectorData(0)[primID];
+    const auto &phi_O = globalData->getVectorData(1)[primID];
+    NumericType beta = params.beta_O;
+    if (MaterialMap::isMaterial(materialId, Material::Mask))
+      beta = params.Mask.beta_O;
+    S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
+    localData.getVectorData(0)[primID] += rayWeight * S_eff;
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,

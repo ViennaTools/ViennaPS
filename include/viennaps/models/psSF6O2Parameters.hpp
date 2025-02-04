@@ -21,8 +21,8 @@ template <typename NumericType> struct SF6O2Parameters {
   // Mask
   struct MaskType {
     NumericType rho = 500.; // 1e22 atoms/cm³
-    NumericType beta_F = 0.01;
-    NumericType beta_O = 0.1;
+    NumericType beta_F = 0.7;
+    NumericType beta_O = 1.0;
 
     NumericType Eth_sp = 20.; // eV
     NumericType A_sp = 0.0139;
