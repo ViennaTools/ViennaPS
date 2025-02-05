@@ -61,11 +61,11 @@ public:
   }
 
   void buildKdTree(const std::vector<Vec3D<NumericType>> &points) {
-    kdTree_->setPoints(points);
-    kdTree_->build();
+    kdTree_.setPoints(points);
+    kdTree_.build();
   }
 
-  auto getKdTree() const { return kdTree_; }
+  auto &getKdTree() { return kdTree_; }
 
   void translateLsId(unsigned long &lsId,
                      const Vec3D<NumericType> &coordinate) const {
@@ -81,7 +81,7 @@ public:
       break;
     }
     case 2: {
-      auto nearest = kdTree_->findNearest(coordinate);
+      auto nearest = kdTree_.findNearest(coordinate);
       lsId = nearest->first;
       break;
     }

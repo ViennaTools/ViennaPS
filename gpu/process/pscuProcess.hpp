@@ -234,7 +234,7 @@ public:
           domain_->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = SmartPointer<TranslationField<NumericType>>::New(
+    auto transField = SmartPointer<TranslationField<NumericType, D>>::New(
         model_->getVelocityField(), domain_->getMaterialMap());
     transField->setTranslator(translator);
 
@@ -428,7 +428,8 @@ public:
           *diskMesh->getCellData().getScalarData("MaterialIds");
       auto velocities = surfaceModel->calculateVelocities(
           fluxes, diskMesh->nodes, materialIds);
-      model_->getVelocityField()->setVelocities(velocities);
+      model_->getVelocityField()->prepare(domain_, velocities,
+                                          processDuration_ - remainingTime);
       assert(velocities->size() == materialIds.size());
 
       if (Logger::getLogLevel() >= 4) {

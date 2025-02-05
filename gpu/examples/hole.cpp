@@ -43,11 +43,10 @@ int main(int argc, char **argv) {
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
   modelParams.oxygenFlux = params.get("oxygenFlux");
-  modelParams.Ions.minEnergy = params.get("meanEnergy");
-  modelParams.Ions.deltaEnergy = params.get("sigmaEnergy");
+  modelParams.Ions.meanEnergy = params.get("meanEnergy");
+  modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Passivation.A_ie = params.get("A_O");
-  modelParams.print();
 
   auto model =
       SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(modelParams);

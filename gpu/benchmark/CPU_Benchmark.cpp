@@ -34,8 +34,8 @@ int main() {
     viennals::Advect<NumericType, D> advectionKernel;
 
     auto velocityField =
-        SmartPointer<DefaultVelocityField<NumericType>>::New(2);
-    auto translationField = SmartPointer<TranslationField<NumericType>>::New(
+        SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+    auto translationField = SmartPointer<TranslationField<NumericType, D>>::New(
         velocityField, domain->getMaterialMap());
     advectionKernel.setVelocityField(translationField);
 
@@ -76,7 +76,7 @@ int main() {
       tracer.smoothFlux(flux);
       auto velocities =
           SmartPointer<std::vector<NumericType>>::New(std::move(flux));
-      velocityField->setVelocities(velocities);
+      velocityField->prepare(domain, velocities, 0.);
       timer.finish();
       file << timer.currentDuration << ";";
 

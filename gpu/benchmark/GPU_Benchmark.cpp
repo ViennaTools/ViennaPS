@@ -30,7 +30,7 @@ int main() {
   gpu::Trace<NumericType, D> tracer(context);
   tracer.setNumberOfRaysPerPoint(3000);
   tracer.setUseRandomSeeds(false);
-  tracer.setPipeline("SingleParticlePipeline");
+  tracer.setPipeline("SingleParticlePipeline", context->modulePath);
 
   auto particle = gpu::Particle<NumericType>();
   particle.name = "SingleParticle";
@@ -52,8 +52,8 @@ int main() {
     viennals::Advect<NumericType, D> advectionKernel;
 
     auto velocityField =
-        SmartPointer<DefaultVelocityField<NumericType>>::New(2);
-    auto translationField = SmartPointer<TranslationField<NumericType>>::New(
+        SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+    auto translationField = SmartPointer<TranslationField<NumericType, D>>::New(
         velocityField, domain->getMaterialMap());
     advectionKernel.setVelocityField(translationField);
 
@@ -97,7 +97,7 @@ int main() {
           .apply();
       auto velocities = SmartPointer<std::vector<NumericType>>::New(
           std::move(*pointData->getScalarData("flux")));
-      velocityField->setVelocities(velocities);
+      velocityField->prepare(domain, velocities, 0.);
       timer.finish();
       file << timer.currentDuration << ";";
 

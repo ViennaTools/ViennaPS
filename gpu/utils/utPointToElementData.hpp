@@ -9,7 +9,7 @@ namespace gpu {
 template <class NumericType> class PointToElementData {
 
   viennals::PointData<NumericType> &pointData_;
-  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> pointKdTree_;
+  KDTree<NumericType, Vec3D<NumericType>> &pointKdTree_;
   SmartPointer<viennals::Mesh<float>> surfaceMesh_;
   CudaBuffer &d_elementData_;
 
@@ -17,21 +17,20 @@ template <class NumericType> class PointToElementData {
   const bool upload_ = true;
 
 public:
-  PointToElementData(
-      CudaBuffer &d_elementData,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> pointKdTree,
-      SmartPointer<viennals::Mesh<float>> surfaceMesh,
-      bool insertToMesh = false, bool upload = true)
+  PointToElementData(CudaBuffer &d_elementData,
+                     SmartPointer<viennals::PointData<NumericType>> pointData,
+                     KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
+                     SmartPointer<viennals::Mesh<float>> surfaceMesh,
+                     bool insertToMesh = false, bool upload = true)
       : d_elementData_(d_elementData), pointData_(*pointData),
         pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),
         insertToMesh_(insertToMesh), upload_(upload) {}
 
-  PointToElementData(
-      CudaBuffer &d_elementData, viennals::PointData<NumericType> &pointData,
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> pointKdTree,
-      SmartPointer<viennals::Mesh<float>> surfaceMesh,
-      bool insertToMesh = false, bool upload = true)
+  PointToElementData(CudaBuffer &d_elementData,
+                     viennals::PointData<NumericType> &pointData,
+                     KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
+                     SmartPointer<viennals::Mesh<float>> surfaceMesh,
+                     bool insertToMesh = false, bool upload = true)
       : d_elementData_(d_elementData), pointData_(pointData),
         pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),
         insertToMesh_(insertToMesh), upload_(upload) {}
@@ -71,7 +70,7 @@ public:
            surfaceMesh_->nodes[elIdx[2]][2]) /
               3.f};
 
-      auto closestPoint = pointKdTree_->findNearest(elementCenter);
+      auto closestPoint = pointKdTree_.findNearest(elementCenter);
 #ifndef NDEBUG
       closestPoints[i] = closestPoint->first;
 #endif

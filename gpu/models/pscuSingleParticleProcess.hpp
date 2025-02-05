@@ -56,7 +56,7 @@ private:
 
     // velocity field
     auto velField =
-        SmartPointer<::viennaps::DefaultVelocityField<NumericType>>::New(2);
+        SmartPointer<::viennaps::DefaultVelocityField<NumericType, D>>::New(2);
 
     this->setPipelineFileName("SingleParticlePipeline");
     this->setSurfaceModel(surfModel);

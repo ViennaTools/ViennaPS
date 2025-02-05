@@ -263,10 +263,9 @@ int main(int argc, char *argv[]) {
           copy->getLevelSets().back(), surfMesh)
           .apply();
 
-      auto pointKdTree = ps::SmartPointer<
-          ps::KDTree<NumericType, ps::Vec3D<NumericType>>>::New();
-      pointKdTree->setPoints(fluxMesh->nodes);
-      pointKdTree->build();
+      ps::KDTree<NumericType, ps::Vec3D<NumericType>> pointKdTree;
+      pointKdTree.setPoints(fluxMesh->nodes);
+      pointKdTree.build();
 
       ps::gpu::CudaBuffer dummy;
       ps::gpu::PointToElementData<NumericType>(

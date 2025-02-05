@@ -8,7 +8,7 @@
 #include <curtParticle.hpp>
 #include <pscuProcessModel.hpp>
 
-#include <models/psSF6O2_old.hpp>
+#include <models/psSF6O2Etching.hpp>
 
 namespace viennaps {
 
@@ -50,13 +50,13 @@ private:
     gpu::Particle<NumericType> etchant;
     etchant.name = "etchant";
     etchant.dataLabels.push_back("etchantFlux");
-    etchant.sticking = params.beta_F;
+    etchant.sticking = params.beta_F[Material::Si];
     etchant.cosineExponent = 1.f;
 
     gpu::Particle<NumericType> oxygen;
     oxygen.name = "oxygen";
     oxygen.dataLabels.push_back("oxygenFlux");
-    oxygen.sticking = params.beta_O;
+    oxygen.sticking = params.beta_O[Material::Si];
     oxygen.cosineExponent = 1.f;
 
     // surface model
@@ -65,7 +65,7 @@ private:
             params);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

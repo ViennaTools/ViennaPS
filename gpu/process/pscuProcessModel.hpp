@@ -21,7 +21,7 @@ private:
 
   ParticleTypeList particles;
   SmartPointer<::viennaps::SurfaceModel<NumericType>> surfaceModel = nullptr;
-  SmartPointer<VelocityField<NumericType>> velocityField = nullptr;
+  SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
   std::string pipelineFileName;
@@ -49,7 +49,7 @@ public:
   }
 
   void setVelocityField(
-      SmartPointer<VelocityField<NumericType>> passedVelocityField) {
+      SmartPointer<VelocityField<NumericType, D>> passedVelocityField) {
     velocityField = passedVelocityField;
   }
 };

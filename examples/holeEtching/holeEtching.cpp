@@ -1,5 +1,5 @@
 #include <geometries/psMakeHole.hpp>
-#include <models/psSF6O2_old.hpp>
+#include <models/psSF6O2Etching.hpp>
 
 #include <psProcess.hpp>
 #include <psUtils.hpp>
