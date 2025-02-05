@@ -15,6 +15,10 @@ inline double torrToPascal(double torr) { return torr * 133.322; }
 
 inline double celsiusToKelvin(double celsius) { return celsius + 273.15; }
 
+inline double radToDeg(double rad) { return rad * 180. / M_PI; }
+
+inline double degToRad(double deg) { return deg * M_PI / 180.; }
+
 // p: pressure in torr
 // T: temperature in Celsius
 // d: diameter of the gas molecule in angstroms

@@ -32,6 +32,7 @@
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
+#include <psUnits.hpp>
 
 // geometries
 #include <geometries/psMakeFin.hpp>
@@ -327,8 +328,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("INFO", LogLevel::INFO)
       .value("TIMING", LogLevel::TIMING)
       .value("INTERMEDIATE", LogLevel::INTERMEDIATE)
-      .value("DEBUG", LogLevel::DEBUG)
-      .export_values();
+      .value("DEBUG", LogLevel::DEBUG);
 
   pybind11::class_<Logger, SmartPointer<Logger>>(module, "Logger",
                                                  pybind11::module_local())
@@ -350,6 +350,52 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   /****************************************************************************
    *                               MODEL FRAMEWORK                            *
    ****************************************************************************/
+
+  // Units
+  // Length
+  // enum not necessary, as we can use a string to set the unit
+  //   pybind11::enum_<decltype(units::Length::METER)>(module, "LengthUnit")
+  //       .value("METER", units::Length::METER)
+  //       .value("CENTIMETER", units::Length::CENTIMETER)
+  //       .value("MILLIMETER", units::Length::MILLIMETER)
+  //       .value("MICROMETER", units::Length::MICROMETER)
+  //       .value("NANOMETER", units::Length::NANOMETER)
+  //       .value("ANGSTROM", units::Length::ANGSTROM)
+  //       .value("UNDEFINED", units::Length::UNDEFINED)
+  //       .export_values();
+
+  pybind11::class_<units::Length>(module, "Length")
+      .def_static("setUnit", pybind11::overload_cast<const std::string &>(
+                                 &units::Length::setUnit))
+      .def_static("getInstance", &units::Length::getInstance,
+                  pybind11::return_value_policy::reference)
+      .def("convertMeter", &units::Length::convertMeter)
+      .def("convertCentimeter", &units::Length::convertCentimeter)
+      .def("convertMillimeter", &units::Length::convertMillimeter)
+      .def("convertMicrometer", &units::Length::convertMicrometer)
+      .def("convertNanometer", &units::Length::convertNanometer)
+      .def("convertAngstrom", &units::Length::convertAngstrom)
+      .def("toString", &units::Length::toString)
+      .def("toShortString", &units::Length::toShortString);
+
+  // Time
+  //   pybind11::enum_<decltype(units::Time::MINUTE)>(module, "TimeUnit")
+  //       .value("MINUTE", units::Time::MINUTE)
+  //       .value("SECOND", units::Time::SECOND)
+  //       .value("MILLISECOND", units::Time::MILLISECOND)
+  //       .value("UNDEFINED", units::Time::UNDEFINED)
+  //       .export_values();
+
+  pybind11::class_<units::Time>(module, "Time")
+      .def_static("setUnit", pybind11::overload_cast<const std::string &>(
+                                 &units::Time::setUnit))
+      .def_static("getInstance", &units::Time::getInstance,
+                  pybind11::return_value_policy::reference)
+      .def("convertMinute", &units::Time::convertMinute)
+      .def("convertSecond", &units::Time::convertSecond)
+      .def("convertMillisecond", &units::Time::convertMillisecond)
+      .def("toString", &units::Time::toString)
+      .def("toShortString", &units::Time::toShortString);
 
   // ProcessModel
   pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>
@@ -557,8 +603,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("Dielectric", Material::Dielectric)
       .value("Metal", Material::Metal)
       .value("Air", Material::Air)
-      .value("GAS", Material::GAS) // 20
-      .export_values();
+      .value("GAS", Material::GAS); // 20
 
   // Single Particle Process
   pybind11::class_<SingleParticleProcess<T, D>,
@@ -643,8 +688,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<SF6O2Parameters<T>::MaskType>(module, "SF6O2ParametersMask")
       .def(pybind11::init<>())
       .def_readwrite("rho", &SF6O2Parameters<T>::MaskType::rho)
-      .def_readwrite("beta_F", &SF6O2Parameters<T>::MaskType::beta_F)
-      .def_readwrite("beta_O", &SF6O2Parameters<T>::MaskType::beta_O)
       .def_readwrite("A_sp", &SF6O2Parameters<T>::MaskType::A_sp)
       .def_readwrite("B_sp", &SF6O2Parameters<T>::MaskType::B_sp)
       .def_readwrite("Eth_sp", &SF6O2Parameters<T>::MaskType::Eth_sp);
@@ -654,11 +697,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("rho", &SF6O2Parameters<T>::SiType::rho)
       .def_readwrite("k_sigma", &SF6O2Parameters<T>::SiType::k_sigma)
       .def_readwrite("beta_sigma", &SF6O2Parameters<T>::SiType::beta_sigma)
+      .def_readwrite("Eth_sp", &SF6O2Parameters<T>::SiType::Eth_sp)
       .def_readwrite("A_sp", &SF6O2Parameters<T>::SiType::A_sp)
       .def_readwrite("B_sp", &SF6O2Parameters<T>::SiType::B_sp)
+      .def_readwrite("theta_g_sp", &SF6O2Parameters<T>::SiType::theta_g_sp)
       .def_readwrite("Eth_ie", &SF6O2Parameters<T>::SiType::Eth_ie)
-      .def_readwrite("Eth_sp", &SF6O2Parameters<T>::SiType::Eth_sp)
-      .def_readwrite("A_ie", &SF6O2Parameters<T>::SiType::A_ie);
+      .def_readwrite("A_ie", &SF6O2Parameters<T>::SiType::A_ie)
+      .def_readwrite("B_ie", &SF6O2Parameters<T>::SiType::B_ie)
+      .def_readwrite("theta_g_ie", &SF6O2Parameters<T>::SiType::theta_g_ie);
 
   pybind11::class_<SF6O2Parameters<T>::PassivationType>(
       module, "SF6O2ParametersPassivation")
@@ -681,11 +727,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("etchantFlux", &SF6O2Parameters<T>::etchantFlux)
       .def_readwrite("oxygenFlux", &SF6O2Parameters<T>::oxygenFlux)
       .def_readwrite("etchStopDepth", &SF6O2Parameters<T>::etchStopDepth)
+      .def_readwrite("fluxIncludeSticking",
+                     &SF6O2Parameters<T>::fluxIncludeSticking)
       .def_readwrite("beta_F", &SF6O2Parameters<T>::beta_F)
       .def_readwrite("beta_O", &SF6O2Parameters<T>::beta_O)
       .def_readwrite("Mask", &SF6O2Parameters<T>::Mask)
       .def_readwrite("Si", &SF6O2Parameters<T>::Si)
-      .def_readwrite("Polymer", &SF6O2Parameters<T>::Passivation)
+      .def_readwrite("Passivation", &SF6O2Parameters<T>::Passivation)
       .def_readwrite("Ions", &SF6O2Parameters<T>::Ions);
 
   // SF6O2 Etching
@@ -1061,8 +1109,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::enum_<HoleShape>(module, "HoleShape")
       .value("Full", HoleShape::Full)
       .value("Half", HoleShape::Half)
-      .value("Quarter", HoleShape::Quarter)
-      .export_values();
+      .value("Quarter", HoleShape::Quarter);
 
   pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
       .def(pybind11::init<DomainType, const T, const T, const T, const T,
@@ -1136,8 +1183,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("POS_Z", viennaray::TraceDirection::POS_Z)
       .value("NEG_X", viennaray::TraceDirection::NEG_X)
       .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
-      .value("NEG_Z", viennaray::TraceDirection::NEG_Z)
-      .export_values();
+      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
 
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
@@ -1207,10 +1253,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaxCoverageInitIterations",
            &Process<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
-      .def("setPrintTimeInterval", &Process<T, D>::setPrintTimeInterval,
-           "Sets the minimum time between printing intermediate results during "
-           "the process. If this is set to a non-positive value, no "
-           "intermediate results are printed.")
       .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
@@ -1347,6 +1389,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Calculate the mean free path of a gas molecule.");
   m_constants.def("gasMeanThermalVelocity", &constants::gasMeanThermalVelocity,
                   "Calculate the mean thermal velocity of a gas molecule.");
+
+  // Utility functions
+  auto m_util = module.def_submodule("util", "Utility functions.");
+  m_util.def("convertIntegrationScheme", &utils::convertIntegrationScheme,
+             "Convert a string to an integration scheme.");
 
   // Planarize
   pybind11::class_<Planarize<T, D>>(module, "Planarize")

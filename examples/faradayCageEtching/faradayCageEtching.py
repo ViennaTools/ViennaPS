@@ -1,7 +1,9 @@
 from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
-parser = ArgumentParser(prog="faradayCageEtching", description="Run a faraday cage etching process.")
+parser = ArgumentParser(
+    prog="faradayCageEtching", description="Run a faraday cage etching process."
+)
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
@@ -33,7 +35,7 @@ vps.MakeFin(
     material=vps.Material.Si,
 ).apply()
 
-# use pre-defined model SF6O2 etching model
+# use pre-defined etching model
 parameters = vps.FaradayCageParameters()
 parameters.cageAngle = params["cageAngle"]
 parameters.ibeParams.tiltAngle = params["tiltAngle"]

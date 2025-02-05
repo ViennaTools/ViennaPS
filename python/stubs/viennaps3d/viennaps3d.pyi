@@ -1,39 +1,7 @@
 from _typeshed import Incomplete
 from typing import Callable, ClassVar, overload
 
-Air: Material
-Al2O3: Material
-Cu: Material
 D: int
-DEBUG: LogLevel
-Dielectric: Material
-ERROR: LogLevel
-GAS: Material
-GaN: Material
-INFO: LogLevel
-INTERMEDIATE: LogLevel
-Mask: Material
-Metal: Material
-NEG_X: rayTraceDirection
-NEG_Y: rayTraceDirection
-NEG_Z: rayTraceDirection
-POS_X: rayTraceDirection
-POS_Y: rayTraceDirection
-POS_Z: rayTraceDirection
-PolySi: Material
-Polymer: Material
-Si: Material
-Si3N4: Material
-SiC: Material
-SiGe: Material
-SiN: Material
-SiO2: Material
-SiON: Material
-TIMING: LogLevel
-TiN: Material
-Undefined: Material
-W: Material
-WARNING: LogLevel
 __version__: str
 
 class AdvectionCallback:
@@ -46,7 +14,16 @@ class AnisotropicProcess(ProcessModel):
     @overload
     def __init__(self, materials: list[tuple[Material, float]]) -> None: ...
     @overload
-    def __init__(self, direction100, direction010, rate100: float, rate110: float, rate111: float, rate311: float, materials: list[tuple[Material, float]]) -> None: ...
+    def __init__(
+        self,
+        direction100,
+        direction010,
+        rate100: float,
+        rate110: float,
+        rate111: float,
+        rate311: float,
+        materials: list[tuple[Material, float]],
+    ) -> None: ...
 
 class AtomicLayerProcess:
     def __init__(self) -> None: ...
@@ -68,9 +45,23 @@ class BoxDistribution(ProcessModel):
 
 class DirectionalEtching(ProcessModel):
     @overload
-    def __init__(self, direction, directionalVelocity: float, isotropicVelocity: float = ..., maskMaterial: Material = ..., calculateVisibility: bool = ...) -> None: ...
+    def __init__(
+        self,
+        direction,
+        directionalVelocity: float,
+        isotropicVelocity: float = ...,
+        maskMaterial: Material = ...,
+        calculateVisibility: bool = ...,
+    ) -> None: ...
     @overload
-    def __init__(self, direction, directionalVelocity: float, isotropicVelocity: float = ..., maskMaterial: list[Material] = ..., calculateVisibility: bool = ...) -> None: ...
+    def __init__(
+        self,
+        direction,
+        directionalVelocity: float,
+        isotropicVelocity: float = ...,
+        maskMaterial: list[Material] = ...,
+        calculateVisibility: bool = ...,
+    ) -> None: ...
     @overload
     def __init__(self, rateSets: list[RateSet]) -> None: ...
     @overload
@@ -83,8 +74,11 @@ class Domain:
     def deepCopy(self, arg0: Domain) -> None: ...
     def duplicateTopLevelSet(self, arg0: Material) -> None: ...
     def generateCellSet(self, arg0: float, arg1: Material, arg2: bool) -> None: ...
+    def getBoundaryConditions(self, *args, **kwargs): ...
+    def getBoundingBox(self, *args, **kwargs): ...
     def getCellSet(self, *args, **kwargs): ...
     def getGrid(self, *args, **kwargs): ...
+    def getGridDelta(self) -> float: ...
     def getLevelSets(self, *args, **kwargs): ...
     def getMaterialMap(self, *args, **kwargs): ...
     def insertNextLevelSet(self, *args, **kwargs): ...
@@ -105,7 +99,9 @@ class FaradayCageEtching(ProcessModel):
     @overload
     def __init__(self, maskMaterials: list[Material]) -> None: ...
     @overload
-    def __init__(self, maskMaterials: list[Material], parameters: FaradayCageParameters) -> None: ...
+    def __init__(
+        self, maskMaterials: list[Material], parameters: FaradayCageParameters
+    ) -> None: ...
     def getParameters(self) -> FaradayCageParameters: ...
     def setParameters(self, arg0: FaradayCageParameters) -> None: ...
 
@@ -118,7 +114,17 @@ class FluorocarbonEtching(ProcessModel):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, ionFlux: float, etchantFlux: float, polyFlux: float, meanIonEnergy: float = ..., sigmaIonEnergy: float = ..., ionExponent: float = ..., deltaP: float = ..., etchStopDepth: float = ...) -> None: ...
+    def __init__(
+        self,
+        ionFlux: float,
+        etchantFlux: float,
+        polyFlux: float,
+        meanIonEnergy: float = ...,
+        sigmaIonEnergy: float = ...,
+        ionExponent: float = ...,
+        deltaP: float = ...,
+        etchStopDepth: float = ...,
+    ) -> None: ...
     @overload
     def __init__(self, parameters: FluorocarbonParameters) -> None: ...
     def getParameters(self) -> FluorocarbonParameters: ...
@@ -216,6 +222,23 @@ class GDSReader:
     def setFileName(self, arg0: str) -> None: ...
     def setGeometry(self, arg0: GDSGeometry) -> None: ...
 
+class HoleShape:
+    __members__: ClassVar[dict] = ...  # read-only
+    Full: ClassVar[HoleShape] = ...
+    Half: ClassVar[HoleShape] = ...
+    Quarter: ClassVar[HoleShape] = ...
+    __entries: ClassVar[dict] = ...
+    def __init__(self, value: int) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def __index__(self) -> int: ...
+    def __int__(self) -> int: ...
+    def __ne__(self, other: object) -> bool: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def value(self) -> int: ...
+
 class IBEParameters:
     exponent: float
     inflectAngle: float
@@ -235,7 +258,9 @@ class IonBeamEtching(ProcessModel):
     @overload
     def __init__(self, maskMaterials: list[Material]) -> None: ...
     @overload
-    def __init__(self, maskMaterials: list[Material], parameters: IBEParameters) -> None: ...
+    def __init__(
+        self, maskMaterials: list[Material], parameters: IBEParameters
+    ) -> None: ...
     def getParameters(self) -> IBEParameters: ...
     def setParameters(self, arg0: IBEParameters) -> None: ...
 
@@ -244,6 +269,21 @@ class IsotropicProcess(ProcessModel):
     def __init__(self, rate: float = ..., maskMaterial: Material = ...) -> None: ...
     @overload
     def __init__(self, rate: float, maskMaterial: list[Material]) -> None: ...
+
+class Length:
+    def __init__(self, *args, **kwargs) -> None: ...
+    def convertAngstrom(self) -> float: ...
+    def convertCentimeter(self) -> float: ...
+    def convertMeter(self) -> float: ...
+    def convertMicrometer(self) -> float: ...
+    def convertMillimeter(self) -> float: ...
+    def convertNanometer(self) -> float: ...
+    @staticmethod
+    def getInstance() -> Length: ...
+    @staticmethod
+    def setUnit(arg0: str) -> None: ...
+    def toShortString(self) -> str: ...
+    def toString(self) -> str: ...
 
 class LogLevel:
     __members__: ClassVar[dict] = ...  # read-only
@@ -284,30 +324,92 @@ class Logger:
     def setLogLevel(arg0: LogLevel) -> None: ...
 
 class MakeFin:
-    def __init__(self, domain: Domain, gridDelta: float, xExtent: float, yExtent: float, finWidth: float, finHeight: float, taperAngle: float = 0.0, baseHeight: float = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: Material = Undefined) -> None: ...
+    def __init__(
+        self,
+        domain: Domain,
+        gridDelta: float,
+        xExtent: float,
+        yExtent: float,
+        finWidth: float,
+        finHeight: float,
+        taperAngle: float = 0.0,
+        baseHeight: float = 0.0,
+        periodicBoundary: bool = False,
+        makeMask: bool = False,
+        material: Material = Undefined,
+    ) -> None: ...
     def apply(self) -> None: ...
 
 class MakeHole:
-    def __init__(self, domain: Domain, gridDelta: float, xExtent: float, yExtent: float, holeRadius: float, holeDepth: float, taperingAngle: float = 0.0, baseHeight: float = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: Material = Undefined) -> None: ...
+    def __init__(
+        self,
+        domain: Domain,
+        gridDelta: float,
+        xExtent: float,
+        yExtent: float,
+        holeRadius: float,
+        holeDepth: float,
+        taperingAngle: float = 0.0,
+        baseHeight: float = 0.0,
+        periodicBoundary: bool = False,
+        makeMask: bool = False,
+        material: Material = Undefined,
+    ) -> None: ...
     def apply(self) -> None: ...
 
 class MakePlane:
     @overload
-    def __init__(self, domain: Domain, gridDelta: float, xExtent: float, yExtent: float, height: float = 0.0, periodicBoundary: bool = False, material: Material = Undefined) -> None: ...
+    def __init__(
+        self,
+        domain: Domain,
+        gridDelta: float,
+        xExtent: float,
+        yExtent: float,
+        height: float = 0.0,
+        periodicBoundary: bool = False,
+        material: Material = Undefined,
+    ) -> None: ...
     @overload
-    def __init__(self, domain: Domain, height: float = 0.0, material: Material = Undefined) -> None: ...
+    def __init__(
+        self, domain: Domain, height: float = 0.0, material: Material = Undefined
+    ) -> None: ...
     def apply(self) -> None: ...
 
 class MakeStack:
-    def __init__(self, domain: Domain, gridDelta: float, xExtent: float, yExtent: float, numLayers: int, layerHeight: float, substrateHeight: float, holeRadius: float, trenchWidth: float, maskHeight: float, periodicBoundary: bool = False) -> None: ...
+    def __init__(
+        self,
+        domain: Domain,
+        gridDelta: float,
+        xExtent: float,
+        yExtent: float,
+        numLayers: int,
+        layerHeight: float,
+        substrateHeight: float,
+        holeRadius: float,
+        trenchWidth: float,
+        maskHeight: float,
+        periodicBoundary: bool = False,
+    ) -> None: ...
     def apply(self) -> None: ...
     def getHeight(self) -> float: ...
     def getTopLayer(self) -> int: ...
 
 class MakeTrench:
-    def __init__(self, domain: Domain, gridDelta: float, xExtent: float, yExtent: float, trenchWidth: float, trenchDepth: float, taperingAngle: float = 0.0, baseHeight: float = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: Material = Undefined) -> None: ...
+    def __init__(
+        self,
+        domain: Domain,
+        gridDelta: float,
+        xExtent: float,
+        yExtent: float,
+        trenchWidth: float,
+        trenchDepth: float,
+        taperingAngle: float = 0.0,
+        baseHeight: float = 0.0,
+        periodicBoundary: bool = False,
+        makeMask: bool = False,
+        material: Material = Undefined,
+    ) -> None: ...
     def apply(self) -> None: ...
-
 
 class Material:
     __members__: ClassVar[dict] = ...  # read-only
@@ -356,15 +458,51 @@ class MaterialMap:
 
 class MultiParticleProcess(ProcessModel):
     def __init__(self) -> None: ...
-    def addIonParticle(self, sourcePower: float, thetaRMin: float = ..., thetaRMax: float = ..., minAngle: float = ..., B_sp: float = ..., meanEnergy: float = ..., sigmaEnergy: float = ..., thresholdEnergy: float = ..., inflectAngle: float = ..., n: float = ..., label: str = ...) -> None: ...
+    def addIonParticle(
+        self,
+        sourcePower: float,
+        thetaRMin: float = ...,
+        thetaRMax: float = ...,
+        minAngle: float = ...,
+        B_sp: float = ...,
+        meanEnergy: float = ...,
+        sigmaEnergy: float = ...,
+        thresholdEnergy: float = ...,
+        inflectAngle: float = ...,
+        n: float = ...,
+        label: str = ...,
+    ) -> None: ...
     @overload
-    def addNeutralParticle(self, stickingProbability: float, label: str = ...) -> None: ...
+    def addNeutralParticle(
+        self, stickingProbability: float, label: str = ...
+    ) -> None: ...
     @overload
-    def addNeutralParticle(self, materialSticking: dict[Material, float], defaultStickingProbability: float = ..., label: str = ...) -> None: ...
-    def setRateFunction(self, arg0: Callable[[list[float], Material], float]) -> None: ...
+    def addNeutralParticle(
+        self,
+        materialSticking: dict[Material, float],
+        defaultStickingProbability: float = ...,
+        label: str = ...,
+    ) -> None: ...
+    def setRateFunction(
+        self, arg0: Callable[[list[float], Material], float]
+    ) -> None: ...
 
 class OxideRegrowth(ProcessModel):
-    def __init__(self, nitrideEtchRate: float, oxideEtchRate: float, redepositionRate: float, redepositionThreshold: float, redepositionTimeInt: float, diffusionCoefficient: float, sinkStrength: float, scallopVelocity: float, centerVelocity: float, topHeight: float, centerWidth: float, stabilityFactor: float) -> None: ...
+    def __init__(
+        self,
+        nitrideEtchRate: float,
+        oxideEtchRate: float,
+        redepositionRate: float,
+        redepositionThreshold: float,
+        redepositionTimeInt: float,
+        diffusionCoefficient: float,
+        sinkStrength: float,
+        scallopVelocity: float,
+        centerVelocity: float,
+        topHeight: float,
+        centerWidth: float,
+        stabilityFactor: float,
+    ) -> None: ...
 
 class Particle:
     def __init__(self, *args, **kwargs) -> None: ...
@@ -398,7 +536,6 @@ class Process:
     def setIntegrationScheme(self, arg0) -> None: ...
     def setMaxCoverageInitIterations(self, arg0: int) -> None: ...
     def setNumberOfRaysPerPoint(self, arg0: int) -> None: ...
-    def setPrintTimeInterval(self, arg0: float) -> None: ...
     def setProcessDuration(self, arg0: float) -> None: ...
     def setProcessModel(self, arg0: ProcessModel) -> None: ...
     def setRayTracingDiskRadius(self, arg0: float) -> None: ...
@@ -445,13 +582,28 @@ class RateSet:
     directionalVelocity: float
     isotropicVelocity: float
     maskMaterials: list[Material]
-    def __init__(self, direction=..., directionalVelocity: float = ..., isotropicVelocity: float = ..., maskMaterials: list[Material] = ..., calculateVisibility: bool = ...) -> None: ...
+    def __init__(
+        self,
+        direction=...,
+        directionalVelocity: float = ...,
+        isotropicVelocity: float = ...,
+        maskMaterials: list[Material] = ...,
+        calculateVisibility: bool = ...,
+    ) -> None: ...
 
 class SF6Etching(ProcessModel):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, ionFlux: float, etchantFlux: float, meanIonEnergy: float = ..., sigmaIonEnergy: float = ..., ionExponent: float = ..., etchStopDepth: float = ...) -> None: ...
+    def __init__(
+        self,
+        ionFlux: float,
+        etchantFlux: float,
+        meanIonEnergy: float = ...,
+        sigmaIonEnergy: float = ...,
+        ionExponent: float = ...,
+        etchStopDepth: float = ...,
+    ) -> None: ...
     @overload
     def __init__(self, parameters: SF6O2Parameters) -> None: ...
     def getParameters(self) -> SF6O2Parameters: ...
@@ -461,7 +613,17 @@ class SF6O2Etching(ProcessModel):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, ionFlux: float, etchantFlux: float, oxygenFlux: float, meanIonEnergy: float = ..., sigmaIonEnergy: float = ..., ionExponent: float = ..., oxySputterYield: float = ..., etchStopDepth: float = ...) -> None: ...
+    def __init__(
+        self,
+        ionFlux: float,
+        etchantFlux: float,
+        oxygenFlux: float,
+        meanIonEnergy: float = ...,
+        sigmaIonEnergy: float = ...,
+        ionExponent: float = ...,
+        oxySputterYield: float = ...,
+        etchStopDepth: float = ...,
+    ) -> None: ...
     @overload
     def __init__(self, parameters: SF6O2Parameters) -> None: ...
     def getParameters(self) -> SF6O2Parameters: ...
@@ -470,11 +632,12 @@ class SF6O2Etching(ProcessModel):
 class SF6O2Parameters:
     Ions: SF6O2ParametersIons
     Mask: SF6O2ParametersMask
-    Polymer: SF6O2ParametersPassivation
+    Passivation: SF6O2ParametersPassivation
     Si: SF6O2ParametersSi
-    beta_F: float
-    beta_O: float
+    beta_F: float[Material, float]
+    beta_O: float[Material, float]
     etchStopDepth: float
+    fluxIncludeSticking: bool
     etchantFlux: float
     ionFlux: float
     oxygenFlux: float
@@ -506,33 +669,94 @@ class SF6O2ParametersPassivation:
 class SF6O2ParametersSi:
     A_ie: float
     A_sp: float
+    B_ie: float
     B_sp: float
     Eth_ie: float
     Eth_sp: float
     beta_sigma: float
     k_sigma: float
     rho: float
+    theta_g_ie: float
+    theta_g_sp: float
     def __init__(self) -> None: ...
 
 class SingleParticleALD(ProcessModel):
-    def __init__(self, stickingProbability: float, numCycles: float, growthPerCycle: float, totalCycles: float, coverageTimeStep: float, evFlux: float, inFlux: float, s0: float, gasMFP: float) -> None: ...
+    def __init__(
+        self,
+        stickingProbability: float,
+        numCycles: float,
+        growthPerCycle: float,
+        totalCycles: float,
+        coverageTimeStep: float,
+        evFlux: float,
+        inFlux: float,
+        s0: float,
+        gasMFP: float,
+    ) -> None: ...
 
 class SingleParticleProcess(ProcessModel):
     @overload
-    def __init__(self, rate: float = ..., stickingProbability: float = ..., sourceExponent: float = ..., maskMaterial: Material = ...) -> None: ...
+    def __init__(
+        self,
+        rate: float = ...,
+        stickingProbability: float = ...,
+        sourceExponent: float = ...,
+        maskMaterial: Material = ...,
+    ) -> None: ...
     @overload
-    def __init__(self, rate: float, stickingProbability: float, sourceExponent: float, maskMaterials: list[Material]) -> None: ...
+    def __init__(
+        self,
+        rate: float,
+        stickingProbability: float,
+        sourceExponent: float,
+        maskMaterials: list[Material],
+    ) -> None: ...
     @overload
-    def __init__(self, materialRates: dict[Material, float], stickingProbability: float, sourceExponent: float) -> None: ...
+    def __init__(
+        self,
+        materialRates: dict[Material, float],
+        stickingProbability: float,
+        sourceExponent: float,
+    ) -> None: ...
 
 class SphereDistribution(ProcessModel):
     def __init__(self, radius: float, gridDelta: float) -> None: ...
 
 class TEOSDeposition(ProcessModel):
-    def __init__(self, stickingProbabilityP1: float, rateP1: float, orderP1: float, stickingProbabilityP2: float = ..., rateP2: float = ..., orderP2: float = ...) -> None: ...
+    def __init__(
+        self,
+        stickingProbabilityP1: float,
+        rateP1: float,
+        orderP1: float,
+        stickingProbabilityP2: float = ...,
+        rateP2: float = ...,
+        orderP2: float = ...,
+    ) -> None: ...
 
 class TEOSPECVD(ProcessModel):
-    def __init__(self, stickingProbabilityRadical: float, depositionRateRadical: float, depositionRateIon: float, exponentIon: float, stickingProbabilityIon: float = ..., reactionOrderRadical: float = ..., reactionOrderIon: float = ..., minAngleIon: float = ...) -> None: ...
+    def __init__(
+        self,
+        stickingProbabilityRadical: float,
+        depositionRateRadical: float,
+        depositionRateIon: float,
+        exponentIon: float,
+        stickingProbabilityIon: float = ...,
+        reactionOrderRadical: float = ...,
+        reactionOrderIon: float = ...,
+        minAngleIon: float = ...,
+    ) -> None: ...
+
+class Time:
+    def __init__(self, *args, **kwargs) -> None: ...
+    def convertMillisecond(self) -> float: ...
+    def convertMinute(self) -> float: ...
+    def convertSecond(self) -> float: ...
+    @staticmethod
+    def getInstance() -> Time: ...
+    @staticmethod
+    def setUnit(arg0: str) -> None: ...
+    def toShortString(self) -> str: ...
+    def toString(self) -> str: ...
 
 class ToDiskMesh:
     @overload

@@ -1,6 +1,6 @@
 project(stackEtching LANGUAGES CXX)
 
-set(PROGRAM_NAME stackEtching.exe)
+set(PROGRAM_NAME stackEtching)
 add_executable(${PROGRAM_NAME} "${PROJECT_NAME}.cpp")
 target_link_libraries(${PROGRAM_NAME} PRIVATE ViennaPS)
 

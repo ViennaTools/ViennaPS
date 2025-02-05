@@ -24,7 +24,7 @@ template <typename NumericType> struct IBEParameters {
   NumericType minAngle = 5;      // degree
   NumericType tiltAngle = 0;     // degree
   std::function<NumericType(NumericType)> yieldFunction =
-      [](NumericType cosTheta) { return 1.; };
+      [](NumericType theta) { return 1.; };
 };
 
 namespace impl {
@@ -87,11 +87,14 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
                         RNG &) override final {
-    NumericType cosTheta = -DotProduct(rayDir, geomNormal);
+    auto cosTheta = -DotProduct(rayDir, geomNormal);
+    NumericType theta =
+        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
+                           static_cast<NumericType>(0.)));
 
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
-        params_.yieldFunction(cosTheta);
+        params_.yieldFunction(theta);
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
@@ -191,6 +194,7 @@ public:
     this->particles.clear();
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
+    this->particles.clear();
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
     firstInit = true;

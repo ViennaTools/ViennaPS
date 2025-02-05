@@ -2,6 +2,7 @@
 
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
+#include "psUnits.hpp"
 #include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
@@ -118,11 +119,6 @@ public:
   // 0.5 to guarantee numerical stability. Defaults to 0.4999.
   void setTimeStepRatio(NumericType cfl) { timeStepRatio = cfl; }
 
-  // Sets the minimum time between printing intermediate results during the
-  // process. If this is set to a non-positive value, no intermediate results
-  // are printed.
-  void setPrintTimeInterval(NumericType passedTime) { printTime = passedTime; }
-
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() const {
@@ -210,7 +206,7 @@ public:
 
   // Run the process.
   void apply() {
-    /* ---------- Process Setup --------- */
+    /* ---------- Check input --------- */
     if (!model) {
       Logger::getInstance()
           .addWarning("No process model passed to psProcess.")
@@ -222,6 +218,11 @@ public:
       Logger::getInstance()
           .addWarning("No domain passed to psProcess.")
           .print();
+      return;
+    }
+
+    if (domain->getLevelSets().empty()) {
+      Logger::getInstance().addWarning("No level sets in domain.").print();
       return;
     }
 
@@ -262,11 +263,12 @@ public:
       return;
     }
 
+    /* ------ Process Setup ------ */
+    const unsigned int logLevel = Logger::getLogLevel();
     Timer processTimer;
     processTimer.start();
 
     double remainingTime = processDuration;
-    assert(domain->getLevelSets().size() != 0 && "No level sets in domain.");
     const NumericType gridDelta = domain->getGrid().getGridDelta();
 
     auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
@@ -361,12 +363,19 @@ public:
     // Initialize coverages
     meshConverter.apply();
     auto numPoints = diskMesh->getNodes().size();
+    model->getSurfaceModel()->initializeSurfaceData(numPoints);
     if (!coveragesInitialized_)
       model->getSurfaceModel()->initializeCoverages(numPoints);
-    if (model->getSurfaceModel()->getCoverages() != nullptr) {
+    auto coverages = model->getSurfaceModel()->getCoverages();
+    std::ofstream covMetricFile;
+    if (coverages != nullptr) {
       Timer timer;
       useCoverages = true;
       Logger::getInstance().addInfo("Using coverages.").print();
+      // debug output
+      if (logLevel >= 5)
+        covMetricFile.open(name + "_covMetric.txt");
+
       if (!coveragesInitialized_) {
         timer.start();
         Logger::getInstance().addInfo("Initializing coverages ... ").print();
@@ -385,9 +394,12 @@ public:
           if (PyErr_CheckSignals() != 0)
             throw pybind11::error_already_set();
 #endif
+          // save current coverages to compare with the new ones
+          auto prevStepCoverages =
+              SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
           // move coverages to the ray tracer
           viennaray::TracingData<NumericType> rayTraceCoverages =
-              movePointDataToRayData(model->getSurfaceModel()->getCoverages());
+              movePointDataToRayData(coverages);
           if (useProcessParams) {
             // store scalars in addition to coverages
             auto processParams =
@@ -439,7 +451,18 @@ public:
                                  rayTraceCoverages);
           model->getSurfaceModel()->updateCoverages(rates, materialIds);
 
-          if (Logger::getLogLevel() >= 3) {
+          // check for convergence
+          if (logLevel >= 5) {
+            coverages = model->getSurfaceModel()->getCoverages();
+            auto metric =
+                calculateCoverageDeltaMetric(coverages, prevStepCoverages);
+            for (auto val : metric) {
+              covMetricFile << val << ";";
+            }
+            covMetricFile << "\n";
+          }
+
+          if (logLevel >= 3) {
             auto coverages = model->getSurfaceModel()->getCoverages();
             for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
               auto label = coverages->getScalarDataLabel(idx);
@@ -556,9 +579,27 @@ public:
             .print();
       }
 
+      // save coverages for comparison
+      SmartPointer<viennals::PointData<NumericType>> prevStepCoverages;
+      if (useCoverages && logLevel >= 5) {
+        coverages = model->getSurfaceModel()->getCoverages();
+        prevStepCoverages =
+            SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
+      }
+
       // get velocities from rates
       auto velocities = model->getSurfaceModel()->calculateVelocities(
           rates, points, materialIds);
+
+      // calculate coverage metric
+      if (useCoverages && logLevel >= 5) {
+        auto metric =
+            calculateCoverageDeltaMetric(coverages, prevStepCoverages);
+        for (auto val : metric) {
+          covMetricFile << val << ";";
+        }
+        covMetricFile << "\n";
+      }
 
       // prepare velocity field
       model->getVelocityField()->prepare(domain, velocities,
@@ -567,33 +608,29 @@ public:
         transField->buildKdTree(points);
 
       // print debug output
-      if (Logger::getLogLevel() >= 4) {
-        if (printTime >= 0. &&
-            ((processDuration - remainingTime) - printTime * counter) > 0.) {
-          if (velocities)
-            diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                         "velocities");
-          if (useCoverages) {
-            auto coverages = model->getSurfaceModel()->getCoverages();
-            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-              auto label = coverages->getScalarDataLabel(idx);
-              diskMesh->getCellData().insertNextScalarData(
-                  *coverages->getScalarData(idx), label);
-            }
-          }
-          for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
-            auto label = rates->getScalarDataLabel(idx);
+      if (logLevel >= 4) {
+        if (velocities)
+          diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                       "velocities");
+        if (useCoverages) {
+          auto coverages = model->getSurfaceModel()->getCoverages();
+          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
+            auto label = coverages->getScalarDataLabel(idx);
             diskMesh->getCellData().insertNextScalarData(
-                *rates->getScalarData(idx), label);
+                *coverages->getScalarData(idx), label);
           }
-          printDiskMesh(diskMesh,
-                        name + "_" + std::to_string(counter) + ".vtp");
-          if (domain->getCellSet()) {
-            domain->getCellSet()->writeVTU(name + "_cellSet_" +
-                                           std::to_string(counter) + ".vtu");
-          }
-          counter++;
         }
+        for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
+          auto label = rates->getScalarDataLabel(idx);
+          diskMesh->getCellData().insertNextScalarData(
+              *rates->getScalarData(idx), label);
+        }
+        printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
+        if (domain->getCellSet()) {
+          domain->getCellSet()->writeVTU(name + "_cellSet_" +
+                                         std::to_string(counter) + ".vtu");
+        }
+        counter++;
       }
 
       // apply advection callback
@@ -677,7 +714,8 @@ public:
         std::stringstream stream;
         stream << std::fixed << std::setprecision(4)
                << "Process time: " << processDuration - remainingTime << " / "
-               << processDuration;
+               << processDuration << " "
+               << units::Time::getInstance().toShortString();
         Logger::getInstance().addInfo(stream.str()).print();
       }
     }
@@ -706,6 +744,8 @@ public:
           .print();
     }
     model->reset();
+    if (logLevel >= 5)
+      covMetricFile.close();
   }
 
   void writeParticleDataLogs(std::string fileName) {
@@ -790,6 +830,29 @@ private:
     }
   }
 
+  std::vector<NumericType> calculateCoverageDeltaMetric(
+      SmartPointer<viennals::PointData<NumericType>> updated,
+      SmartPointer<viennals::PointData<NumericType>> previous) const {
+
+    assert(updated->getScalarDataSize() == previous->getScalarDataSize());
+    std::vector<NumericType> delta(updated->getScalarDataSize(), 0.);
+
+#pragma omp parallel for
+    for (int i = 0; i < updated->getScalarDataSize(); i++) {
+      auto label = updated->getScalarDataLabel(i);
+      auto updatedData = updated->getScalarData(label);
+      auto previousData = previous->getScalarData(label);
+      for (size_t j = 0; j < updatedData->size(); j++) {
+        auto diff = updatedData->at(j) - previousData->at(j);
+        delta[i] += diff * diff;
+      }
+
+      delta[i] /= updatedData->size();
+    }
+
+    return delta;
+  }
+
   psDomainType domain;
   SmartPointer<ProcessModel<NumericType, D>> model;
   NumericType processDuration;
@@ -807,7 +870,6 @@ private:
   bool lsVelocityOutput = false;
   unsigned maxIterations = 20;
   bool coveragesInitialized_ = false;
-  NumericType printTime = 0.;
   NumericType processTime = 0.;
   NumericType timeStepRatio = 0.4999;
 };

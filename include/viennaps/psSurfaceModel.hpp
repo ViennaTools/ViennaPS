@@ -14,6 +14,7 @@ using namespace viennacore;
 template <typename NumericType> class SurfaceModel {
 protected:
   SmartPointer<viennals::PointData<NumericType>> coverages = nullptr;
+  SmartPointer<viennals::PointData<NumericType>> surfaceData = nullptr;
   SmartPointer<ProcessParams<NumericType>> processParams = nullptr;
 
 public:
@@ -25,6 +26,10 @@ public:
 
   virtual void initializeProcessParameters() {
     // if no process parameters get initialized here, they wont be used at all
+  }
+
+  virtual void initializeSurfaceData(unsigned numGeometryPoints) {
+    // if no surface data get initialized here, they wont be used at all
   }
 
   virtual SmartPointer<std::vector<NumericType>>

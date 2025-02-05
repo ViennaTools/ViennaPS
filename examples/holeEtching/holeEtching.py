@@ -53,6 +53,7 @@ process.setProcessModel(model)
 process.setMaxCoverageInitIterations(10)
 process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
+process.setIntegrationScheme(vps.util.convertIntegrationScheme(params["integrationScheme"]))
 
 # print initial surface
 geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)

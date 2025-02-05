@@ -1,5 +1,6 @@
 #pragma once
 
+#include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <rayBoundary.hpp>
 
@@ -25,6 +26,44 @@ namespace utils {
   if (s[pos] == '-')
     return true;
   return false;
+}
+
+[[nodiscard]] viennals::IntegrationSchemeEnum
+convertIntegrationScheme(const std::string &s) {
+  if (s == "ENGQUIST_OSHER_1ST_ORDER" || s == "EO_1")
+    return viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  if (s == "ENGQUIST_OSHER_2ND_ORDER" || s == "EO_2")
+    return viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER;
+  if (s == "LAX_FRIEDRICHS_1ST_ORDER" || s == "LF_1")
+    return viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER;
+  if (s == "LAX_FRIEDRICHS_2ND_ORDER" || s == "LF_2")
+    return viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+  if (s == "LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER" || s == "LLFA_1")
+    return viennals::IntegrationSchemeEnum::
+        LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER;
+  if (s == "LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "LLLF_1")
+    return viennals::IntegrationSchemeEnum::
+        LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  if (s == "LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER" || s == "LLLF_2")
+    return viennals::IntegrationSchemeEnum::
+        LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER;
+  if (s == "LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "LLF_1")
+    return viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  if (s == "LOCAL_LAX_FRIEDRICHS_2ND_ORDER" || s == "LLF_2")
+    return viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER;
+  if (s == "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "SLLF_1")
+    return viennals::IntegrationSchemeEnum::
+        STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  throw std::invalid_argument(
+      "The value must be one of the following: "
+      "ENGQUIST_OSHER_1ST_ORDER, ENGQUIST_OSHER_2ND_ORDER, "
+      "LAX_FRIEDRICHS_1ST_ORDER, LAX_FRIEDRICHS_2ND_ORDER, "
+      "LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER, "
+      "LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
+      "LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER, "
+      "LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
+      "LOCAL_LAX_FRIEDRICHS_2ND_ORDER, "
+      "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER");
 }
 
 // Converts string to the given numeric datatype
@@ -60,6 +99,14 @@ template <typename T> [[nodiscard]] T convert(const std::string &s) {
     return std::stold(s);
   } else if constexpr (std::is_same_v<T, std::string>) {
     return s;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    if (s == "true")
+      return true;
+    if (s == "false")
+      return false;
+    throw std::invalid_argument("The value must be either 'true' or 'false'");
+  } else if constexpr (std::is_same_v<T, viennals::IntegrationSchemeEnum>) {
+    return convertIntegrationScheme(s);
   } else {
     // Throws a compile time error for all types but void
     return;
@@ -189,9 +236,11 @@ struct Parameters {
 
   void readConfigFile(const std::string &fileName) { m = readFile(fileName); }
 
+  bool exists(const std::string &key) const { return m.find(key) != m.end(); }
+
   template <typename T = double>
   [[nodiscard]] T get(const std::string &key) const {
-    if (m.find(key) == m.end()) {
+    if (!exists(key)) {
       std::cout << "Key not found in parameters: " << key << std::endl;
       exit(1);
       return T();
