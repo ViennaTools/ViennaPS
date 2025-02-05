@@ -13,8 +13,8 @@ namespace viennaps {
 using namespace viennacore;
 
 namespace impl {
-template <class NumericType>
-class SelectiveEtchingVelocityField : public VelocityField<NumericType> {
+template <class NumericType, int D>
+class SelectiveEtchingVelocityField : public VelocityField<NumericType, D> {
 public:
   SelectiveEtchingVelocityField(const NumericType pRate,
                                 const NumericType pOxideRate)
@@ -317,7 +317,7 @@ public:
                 const NumericType timeStabilityFactor = 0.245) {
 
     auto velocityField =
-        SmartPointer<impl::SelectiveEtchingVelocityField<NumericType>>::New(
+        SmartPointer<impl::SelectiveEtchingVelocityField<NumericType, D>>::New(
             nitrideEtchRate, oxideEtchRate);
 
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();

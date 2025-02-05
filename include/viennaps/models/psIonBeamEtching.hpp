@@ -18,13 +18,13 @@ template <typename NumericType> struct IBEParameters {
   NumericType meanEnergy = 250;     // eV
   NumericType sigmaEnergy = 10;     // eV
   NumericType thresholdEnergy = 20; // eV
-  NumericType sourcePower = 100;
-  NumericType n = 10;
+  NumericType exponent = 100;
+  NumericType n_l = 10;
   NumericType inflectAngle = 89; // degree
   NumericType minAngle = 5;      // degree
   NumericType tiltAngle = 0;     // degree
   std::function<NumericType(NumericType)> yieldFunction =
-      [](NumericType cosTheta) { return 1.; };
+      [](NumericType theta) { return 1.; };
 };
 
 namespace impl {
@@ -77,7 +77,7 @@ class IBEIon : public viennaray::Particle<IBEIon<NumericType, D>, NumericType> {
 public:
   IBEIon(const IBEParameters<NumericType> &params)
       : params_(params), normalDist_(params.meanEnergy, params.sigmaEnergy),
-        A_(1. / (1. + params.n * (M_PI_2 / params.inflectAngle - 1.))),
+        A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
         inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.) {}
 
@@ -87,11 +87,14 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
                         RNG &) override final {
-    NumericType cosTheta = -DotProduct(rayDir, geomNormal);
+    auto cosTheta = -DotProduct(rayDir, geomNormal);
+    NumericType theta =
+        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
+                           static_cast<NumericType>(0.)));
 
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
-        params_.yieldFunction(cosTheta);
+        params_.yieldFunction(theta);
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
@@ -109,7 +112,7 @@ public:
       Eref_peak =
           1. - (1. - A_) * (M_PI_2 - incAngle) / (M_PI_2 - inflectAngle_);
     } else {
-      Eref_peak = A_ * std::pow(incAngle / inflectAngle_, params_.n);
+      Eref_peak = A_ * std::pow(incAngle / inflectAngle_, params_.n_l);
     }
     // Gaussian distribution around the Eref_peak scaled by the particle energy
     NumericType newEnergy;
@@ -137,7 +140,7 @@ public:
   }
 
   NumericType getSourceDistributionPower() const override final {
-    return params_.sourcePower;
+    return params_.exponent;
   }
 
   std::vector<std::string> getLocalDataLabels() const override final {
@@ -158,14 +161,14 @@ private:
 template <typename NumericType, int D>
 class IonBeamEtching : public ProcessModel<NumericType, D> {
 public:
-  IonBeamEtching() {
-    std::vector<Material> maskMaterial;
-    initialize(std::move(maskMaterial));
-  }
+  IonBeamEtching() = default;
 
-  IonBeamEtching(std::vector<Material> maskMaterial) {
-    initialize(std::move(maskMaterial));
-  }
+  IonBeamEtching(const std::vector<Material> &maskMaterial)
+      : maskMaterials_(maskMaterial) {}
+
+  IonBeamEtching(const std::vector<Material> &maskMaterial,
+                 const IBEParameters<NumericType> &params)
+      : maskMaterials_(maskMaterial), params_(params) {}
 
   IBEParameters<NumericType> &getParameters() { return params_; }
 
@@ -173,25 +176,35 @@ public:
     params_ = params;
   }
 
-private:
-  void initialize(std::vector<Material> &&maskMaterial) {
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override final {
+    if (firstInit)
+      return;
+
     // particles
     auto particle = std::make_unique<impl::IBEIon<NumericType, D>>(params_);
 
     // surface model
     auto surfModel = SmartPointer<impl::IBESurfaceModel<NumericType>>::New(
-        params_, maskMaterial);
+        params_, maskMaterials_);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
 
+    this->particles.clear();
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
+    this->particles.clear();
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
+    firstInit = true;
   }
 
+  void reset() override final { firstInit = false; }
+
 private:
+  bool firstInit = false;
+  std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };
 

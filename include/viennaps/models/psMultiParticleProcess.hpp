@@ -175,6 +175,54 @@ private:
 
   const std::string dataLabel_;
 };
+
+template <typename NumericType, int D>
+class DiffuseParticle
+    : public viennaray::Particle<DiffuseParticle<NumericType, D>, NumericType> {
+public:
+  DiffuseParticle(NumericType stickingProbability, std::string dataLabel)
+      : stickingProbability_(stickingProbability), dataLabel_(dataLabel) {}
+
+  DiffuseParticle(NumericType stickingProbability,
+                  std::unordered_map<Material, NumericType> materialSticking,
+                  std::string dataLabel)
+      : stickingProbability_(stickingProbability),
+        materialSticking_(materialSticking), dataLabel_(dataLabel) {}
+
+  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
+                        const Vec3D<NumericType> &geomNormal,
+                        const unsigned int primID, const int,
+                        viennaray::TracingData<NumericType> &localData,
+                        const viennaray::TracingData<NumericType> *,
+                        RNG &) override final {
+    localData.getVectorData(0)[primID] += rayWeight;
+  }
+  std::pair<NumericType, Vec3D<NumericType>>
+  surfaceReflection(NumericType, const Vec3D<NumericType> &rayDir,
+                    const Vec3D<NumericType> &geomNormal, const unsigned int,
+                    const int materialId,
+                    const viennaray::TracingData<NumericType> *,
+                    RNG &rngState) override final {
+    NumericType sticking = stickingProbability_;
+    if (auto mat =
+            materialSticking_.find(MaterialMap::mapToMaterial(materialId));
+        mat != materialSticking_.end()) {
+      sticking = mat->second;
+    }
+
+    auto direction =
+        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
+    return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
+  }
+  std::vector<std::string> getLocalDataLabels() const override final {
+    return {dataLabel_};
+  }
+
+private:
+  const std::unordered_map<Material, NumericType> materialSticking_;
+  const NumericType stickingProbability_;
+  const std::string dataLabel_;
+};
 } // namespace impl
 
 template <typename NumericType, int D>
@@ -187,20 +235,30 @@ public:
             fluxDataLabels_);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
   }
 
-  void addNeutralParticle(NumericType stickingProbability) {
-    std::string dataLabel =
-        "neutralFlux" + std::to_string(fluxDataLabels_.size());
+  void addNeutralParticle(NumericType stickingProbability,
+                          std::string label = "neutralFlux") {
+    std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
-    auto particle =
-        std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(
-            stickingProbability, dataLabel);
+    auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
+        stickingProbability, dataLabel);
+    this->insertNextParticleType(particle);
+  }
+
+  void
+  addNeutralParticle(std::unordered_map<Material, NumericType> materialSticking,
+                     NumericType defaultStickingProbability = 1.,
+                     std::string label = "neutralFlux") {
+    std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
+    fluxDataLabels_.push_back(dataLabel);
+    auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
+        defaultStickingProbability, materialSticking, dataLabel);
     this->insertNextParticleType(particle);
   }
 
@@ -209,8 +267,9 @@ public:
                       NumericType B_sp = -1., NumericType meanEnergy = 0.,
                       NumericType sigmaEnergy = 0.,
                       NumericType thresholdEnergy = 0.,
-                      NumericType inflectAngle = 0., NumericType n = 1) {
-    std::string dataLabel = "ionFlux" + std::to_string(fluxDataLabels_.size());
+                      NumericType inflectAngle = 0., NumericType n = 1,
+                      std::string label = "ionFlux") {
+    std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
     auto particle = std::make_unique<impl::IonParticle<NumericType, D>>(
         sourcePower, meanEnergy, sigmaEnergy, thresholdEnergy, B_sp,

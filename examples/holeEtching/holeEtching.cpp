@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
+  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -25,26 +25,27 @@ int main(int argc, char *argv[]) {
   // geometry setup
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   ps::MakeHole<NumericType, D>(
-      geometry, params.get("gridDelta") /* grid delta */,
-      params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
-      params.get("holeRadius") /*hole radius*/,
-      params.get("maskHeight") /* mask height*/,
-      params.get("taperAngle") /* tapering angle in degrees */,
-      0 /* base height */, false /* periodic boundary */, true /*create mask*/,
-      ps::Material::Si)
+      geometry, params.get("gridDelta"), params.get("xExtent"),
+      params.get("yExtent"), params.get("holeRadius"), params.get("maskHeight"),
+      params.get("taperAngle"), 0 /* base height */,
+      false /* periodic boundary */, true /*create mask*/, ps::Material::Si)
       .apply();
+
+  // set parameter units
+  ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
+  ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // use pre-defined model SF6O2 etching model
   ps::SF6O2Parameters<NumericType> modelParams;
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
   modelParams.oxygenFlux = params.get("oxygenFlux");
-  modelParams.Ions.minEnergy = params.get("meanEnergy");
-  modelParams.Ions.deltaEnergy = params.get("sigmaEnergy");
+  modelParams.Ions.meanEnergy = params.get("meanEnergy");
+  modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Passivation.A_ie = params.get("A_O");
-  modelParams.print();
-
+  modelParams.Si.A_ie = params.get("A_Si");
+  modelParams.etchStopDepth = params.get("etchStopDepth");
   auto model =
       ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(modelParams);
 
@@ -52,11 +53,11 @@ int main(int argc, char *argv[]) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(10);
+  process.setMaxCoverageInitIterations(50);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(
-      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER);
+      params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

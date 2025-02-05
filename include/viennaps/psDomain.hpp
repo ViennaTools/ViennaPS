@@ -265,6 +265,10 @@ public:
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
   auto &getGrid() const { return levelSets_.back()->getGrid(); }
 
+  auto getGridDelta() const {
+    return levelSets_.back()->getGrid().getGridDelta();
+  }
+
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
   auto getBoundingBox() const {
@@ -274,6 +278,11 @@ public:
     boundingBox[0] = mesh->minimumExtent;
     boundingBox[1] = mesh->maximumExtent;
     return boundingBox;
+  }
+
+  // Returns the boundary conditions of the domain.
+  auto getBoundaryConditions() const {
+    return levelSets_.back()->getGrid().getBoundaryConditions();
   }
 
   void print() const {

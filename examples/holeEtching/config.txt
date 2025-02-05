@@ -2,30 +2,34 @@
 
 # all length units are in micrometers (um)
 # Domain
-gridDelta=0.04 
-xExtent=1.0 
-yExtent=1.0 
+lengthUnit=um
+gridDelta=0.03  # um
+xExtent=1.0     # um
+yExtent=1.0     # um
 
 # Geometry
-holeRadius=0.175 
-maskHeight=1.2
+holeRadius=0.175  # um
+maskHeight=1.2    # um
 taperAngle=1.193  # degree
 
 # Process parameters
-processTime=100 # seconds 
+processTime=3
+timeUnit=min
 
-# all flux values are units 1e16 / cm²
-ionFlux=1.2e+16
-etchantFlux=1.3200000000000005e+18
-oxygenFlux=3.8888888888888864e+17
+# all flux values are units 1e15 / cm²
+ionFlux=10.
+etchantFlux=3000.
+oxygenFlux=1500.
 
 ionExponent=1000
 meanEnergy=100 # eV
 sigmaEnergy=10 # eV
-A_O=3 
+A_O=2          # passivation layer yield constant
+A_Si=7         # Si yield constant
 
-etchStopDepth=-1000 # maximum etching depth
+etchStopDepth=-10   # maximum etching depth
+integrationScheme=EO_1 
 
 raysPerPoint=1000
 
-outputFile=final_2D
+outputFile=final_y0p62

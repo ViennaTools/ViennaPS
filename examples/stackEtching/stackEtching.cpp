@@ -66,6 +66,5 @@ int main(int argc, char *argv[]) {
                             ls::BoundaryConditionEnum<3>::INFINITE_BOUNDARY})
       .apply();
 
-  extruded->saveSurfaceMesh("surface.vtp");
-  geometry->saveVolumeMesh("final_extruded");
+  extruded->saveVolumeMesh("final_extruded");
 }

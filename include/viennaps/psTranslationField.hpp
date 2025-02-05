@@ -14,13 +14,13 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType>
+template <typename NumericType, int D>
 class TranslationField : public viennals::VelocityField<NumericType> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
 public:
   TranslationField(
-      SmartPointer<viennaps::VelocityField<NumericType>> velocityField,
+      SmartPointer<viennaps::VelocityField<NumericType, D>> velocityField,
       SmartPointer<MaterialMap> materialMap)
       : translationMethod_(velocityField->getTranslationFieldOptions()),
         modelVelocityField_(velocityField), materialMap_(materialMap) {}
@@ -92,9 +92,9 @@ public:
 
 private:
   SmartPointer<TranslatorType> translator_;
-  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ =
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
-  const SmartPointer<viennaps::VelocityField<NumericType>> modelVelocityField_;
+  KDTree<NumericType, Vec3D<NumericType>> kdTree_;
+  const SmartPointer<viennaps::VelocityField<NumericType, D>>
+      modelVelocityField_;
   const SmartPointer<MaterialMap> materialMap_;
   const int translationMethod_ = 1;
 };

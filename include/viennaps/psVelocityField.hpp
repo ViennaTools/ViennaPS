@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vcSmartPointer.hpp>
-#include <vcVectorUtil.hpp>
+#include "psDomain.hpp"
 
 #include <vector>
 
@@ -9,7 +8,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType> class VelocityField {
+template <typename NumericType, int D> class VelocityField {
 public:
   virtual ~VelocityField() = default;
 
@@ -33,35 +32,40 @@ public:
     return 0;
   }
 
-  virtual void
-  setVelocities(SmartPointer<std::vector<NumericType>> velocities) {}
-
   // translation field options
   // 0: do not translate level set ID to surface ID
   // 1: use unordered map to translate level set ID to surface ID
   // 2: use kd-tree to translate level set ID to surface ID
   virtual int getTranslationFieldOptions() const { return 1; }
+
+  // Function to override for process-specific preparation
+  virtual void
+  prepare(SmartPointer<Domain<NumericType, D>> domain, // process domain
+          SmartPointer<std::vector<NumericType>>
+              velocities, // velocities from SurfaceModel
+          const NumericType processTime) {}
 };
 
-template <typename NumericType>
-class DefaultVelocityField : public VelocityField<NumericType> {
+template <typename NumericType, int D>
+class DefaultVelocityField : public VelocityField<NumericType, D> {
 public:
   DefaultVelocityField(const int translationFieldOptions = 1)
       : translationFieldOptions_(translationFieldOptions) {}
 
-  virtual NumericType getScalarVelocity(const Vec3D<NumericType> &, int,
-                                        const Vec3D<NumericType> &,
-                                        unsigned long pointId) override {
+  NumericType getScalarVelocity(const Vec3D<NumericType> &, int,
+                                const Vec3D<NumericType> &,
+                                unsigned long pointId) override {
     return velocities_->at(pointId);
-  }
-
-  void
-  setVelocities(SmartPointer<std::vector<NumericType>> velocities) override {
-    velocities_ = velocities;
   }
 
   int getTranslationFieldOptions() const override {
     return translationFieldOptions_;
+  }
+
+  void prepare(SmartPointer<Domain<NumericType, D>> domain,
+               SmartPointer<std::vector<NumericType>> velocities,
+               const NumericType) override {
+    velocities_ = velocities;
   }
 
 private:
