@@ -634,9 +634,10 @@ class SF6O2Parameters:
     Mask: SF6O2ParametersMask
     Passivation: SF6O2ParametersPassivation
     Si: SF6O2ParametersSi
-    beta_F: float
-    beta_O: float
+    beta_F: float[Material, float]
+    beta_O: float[Material, float]
     etchStopDepth: float
+    fluxIncludeSticking: bool
     etchantFlux: float
     ionFlux: float
     oxygenFlux: float

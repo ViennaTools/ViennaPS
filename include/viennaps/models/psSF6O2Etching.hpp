@@ -353,15 +353,13 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
-    // F surface coverage
-    const auto &phi_F = globalData->getVectorData(0)[primID];
-    // O surface coverage
-    const auto &phi_O = globalData->getVectorData(1)[primID];
-    // Obtain the sticking probability
-    NumericType beta = params.beta_F;
-    if (MaterialMap::isMaterial(materialId, Material::Mask))
-      beta = params.Mask.beta_F;
-    NumericType S_eff = beta * std::max(1. - phi_F - phi_O, 0.);
+    NumericType S_eff = 1.;
+    if (params.fluxIncludeSticking) {
+      const auto &phi_F = globalData->getVectorData(0)[primID];
+      const auto &phi_O = globalData->getVectorData(1)[primID];
+      NumericType beta = sticking(materialId);
+      S_eff = beta * std::max(1. - phi_F - phi_O, 0.);
+    }
 
     localData.getVectorData(0)[primID] += rayWeight * S_eff;
   }
@@ -377,9 +375,7 @@ public:
     // O surface coverage
     const auto &phi_O = globalData->getVectorData(1)[primID];
     // Obtain the sticking probability
-    NumericType beta = params.beta_F;
-    if (MaterialMap::isMaterial(materialId, Material::Mask))
-      beta = params.Mask.beta_F;
+    NumericType beta = sticking(materialId);
     NumericType S_eff = beta * std::max(1. - phi_F - phi_O, 0.);
 
     auto direction =
@@ -389,6 +385,16 @@ public:
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"etchantFlux"};
+  }
+
+private:
+  NumericType sticking(const int matieralId) const {
+    auto beta = params.beta_F.find(MaterialMap::mapToMaterial(matieralId));
+    if (beta != params.beta_F.end())
+      return beta->second;
+
+    // default value
+    return 1.0;
   }
 };
 
@@ -406,14 +412,12 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
-
-    // F surface coverage
-    const auto &phi_F = globalData->getVectorData(0)[primID];
-    // Obtain the sticking probability
-    NumericType beta = params.beta_F;
-    if (MaterialMap::isMaterial(materialId, Material::Mask))
-      beta = params.Mask.beta_F;
-    NumericType S_eff = beta * std::max(1. - phi_F, 0.);
+    NumericType S_eff = 1.;
+    if (params.fluxIncludeSticking) {
+      const auto &phi_F = globalData->getVectorData(0)[primID];
+      NumericType beta = sticking(materialId);
+      S_eff = beta * std::max(1. - phi_F, 0.);
+    }
 
     localData.getVectorData(0)[primID] += rayWeight * S_eff;
   }
@@ -427,9 +431,7 @@ public:
     // F surface coverage
     const auto &phi_F = globalData->getVectorData(0)[primID];
     // Obtain the sticking probability
-    NumericType beta = params.beta_F;
-    if (MaterialMap::isMaterial(materialId, Material::Mask))
-      beta = params.Mask.beta_F;
+    NumericType beta = sticking(materialId);
     NumericType S_eff = beta * std::max(1. - phi_F, 0.);
 
     auto direction =
@@ -439,6 +441,16 @@ public:
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"etchantFlux"};
+  }
+
+private:
+  NumericType sticking(const int matieralId) const {
+    auto beta = params.beta_F.find(MaterialMap::mapToMaterial(matieralId));
+    if (beta != params.beta_F.end())
+      return beta->second;
+
+    // default value
+    return 1.0;
   }
 };
 
@@ -456,13 +468,14 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
-    NumericType S_eff;
-    const auto &phi_F = globalData->getVectorData(0)[primID];
-    const auto &phi_O = globalData->getVectorData(1)[primID];
-    NumericType beta = params.beta_O;
-    if (MaterialMap::isMaterial(materialId, Material::Mask))
-      beta = params.Mask.beta_O;
-    S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
+    NumericType S_eff = 1.;
+    if (params.fluxIncludeSticking) {
+      const auto &phi_F = globalData->getVectorData(0)[primID];
+      const auto &phi_O = globalData->getVectorData(1)[primID];
+      NumericType beta = sticking(materialId);
+      S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
+    }
+
     localData.getVectorData(0)[primID] += rayWeight * S_eff;
   }
   std::pair<NumericType, Vec3D<NumericType>>
@@ -475,9 +488,7 @@ public:
     NumericType S_eff;
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
-    NumericType beta = params.beta_O;
-    if (MaterialMap::isMaterial(materialId, Material::Mask))
-      beta = params.Mask.beta_O;
+    NumericType beta = sticking(materialId);
     S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
 
     auto direction =
@@ -487,6 +498,16 @@ public:
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {"oxygenFlux"};
+  }
+
+private:
+  NumericType sticking(const int matieralId) const {
+    auto beta = params.beta_O.find(MaterialMap::mapToMaterial(matieralId));
+    if (beta != params.beta_O.end())
+      return beta->second;
+
+    // default value
+    return 1.0;
   }
 };
 } // namespace impl

@@ -688,8 +688,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<SF6O2Parameters<T>::MaskType>(module, "SF6O2ParametersMask")
       .def(pybind11::init<>())
       .def_readwrite("rho", &SF6O2Parameters<T>::MaskType::rho)
-      .def_readwrite("beta_F", &SF6O2Parameters<T>::MaskType::beta_F)
-      .def_readwrite("beta_O", &SF6O2Parameters<T>::MaskType::beta_O)
       .def_readwrite("A_sp", &SF6O2Parameters<T>::MaskType::A_sp)
       .def_readwrite("B_sp", &SF6O2Parameters<T>::MaskType::B_sp)
       .def_readwrite("Eth_sp", &SF6O2Parameters<T>::MaskType::Eth_sp);
@@ -729,6 +727,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("etchantFlux", &SF6O2Parameters<T>::etchantFlux)
       .def_readwrite("oxygenFlux", &SF6O2Parameters<T>::oxygenFlux)
       .def_readwrite("etchStopDepth", &SF6O2Parameters<T>::etchStopDepth)
+      .def_readwrite("fluxIncludeSticking",
+                     &SF6O2Parameters<T>::fluxIncludeSticking)
       .def_readwrite("beta_F", &SF6O2Parameters<T>::beta_F)
       .def_readwrite("beta_O", &SF6O2Parameters<T>::beta_O)
       .def_readwrite("Mask", &SF6O2Parameters<T>::Mask)

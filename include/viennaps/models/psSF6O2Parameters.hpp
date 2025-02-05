@@ -13,16 +13,18 @@ template <typename NumericType> struct SF6O2Parameters {
   NumericType oxygenFlux = 1.0e2;
 
   // sticking probabilities
-  NumericType beta_F = 0.7;
-  NumericType beta_O = 1.;
+  std::unordered_map<Material, NumericType> beta_F = {{Material::Si, 0.7},
+                                                      {Material::Mask, 0.7}};
+  std::unordered_map<Material, NumericType> beta_O = {{Material::Si, 1.},
+                                                      {Material::Mask, 1.}};
 
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
+  bool fluxIncludeSticking = false;
 
   // Mask
   struct MaskType {
+    // density
     NumericType rho = 500.; // 1e22 atoms/cm³
-    NumericType beta_F = 0.7;
-    NumericType beta_O = 1.0;
 
     NumericType Eth_sp = 20.; // eV
     NumericType A_sp = 0.0139;

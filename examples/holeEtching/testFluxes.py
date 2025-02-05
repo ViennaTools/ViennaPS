@@ -2,7 +2,9 @@ from argparse import ArgumentParser
 import numpy as np
 
 # parse config file name and simulation dimension
-parser = ArgumentParser(prog="holeEtching", description="Run a hole etching process.")
+parser = ArgumentParser(
+    prog="testFluxes", description="Test different flux configurations."
+)
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 args = parser.parse_args()
 
@@ -16,6 +18,7 @@ else:
 
 vps.setNumThreads(16)
 vps.Logger.setLogLevel(vps.LogLevel.INFO)
+
 vps.Length.setUnit("um")
 vps.Time.setUnit("min")
 
@@ -29,9 +32,9 @@ taperAngle = 1.193
 
 # fluxes
 ionFlux = [10.0, 10.0, 10.0, 10.0, 10.0]
-etchantFlux = [4.8e3, 4.5e3, 4e3, 3.5e3, 2e3]
+etchantFlux = [4.8e3, 4.5e3, 4e3, 3.5e3, 4e3]
 oxygenFlux = [3e2, 8e2, 2e3, 2.5e3, 0.0]
-A_O = [4, 3, 2, 1, 1]
+A_O = [2, 2, 2, 1, 1]
 yo2 = [0.44, 0.5, 0.56, 0.62, 0]
 
 # etching model parameters
@@ -87,4 +90,4 @@ for i in range(len(yo2)):
     process.setProcessModel(model)
     process.apply()
 
-    geometry.saveSurfaceMesh("hole_y{:.2f}_EO2.vtp".format(yo2[i]))
+    geometry.saveSurfaceMesh("hole_y{:.2f}_EO2.vtp".format(yo2[i]), True)
