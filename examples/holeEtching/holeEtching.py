@@ -19,6 +19,9 @@ params = vps.ReadConfigFile(args.filename)
 # print intermediate output surfaces during the process
 vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
+vps.Length.setUnit(params["lengthUnit"])
+vps.Time.setUnit(params["timeUnit"])
+
 # geometry setup, all units in um
 geometry = vps.Domain()
 vps.MakeHole(
@@ -31,20 +34,20 @@ vps.MakeHole(
     taperingAngle=params["taperAngle"],
     makeMask=True,
     material=vps.Material.Si,
+    holeShape=vps.HoleShape.Half,
 ).apply()
 
 # use pre-defined model SF6O2 etching model
-model = vps.SF6O2Etching(
-    ionFlux=params["ionFlux"],
-    etchantFlux=params["etchantFlux"],
-    oxygenFlux=params["oxygenFlux"],
-    meanIonEnergy=params["meanEnergy"],
-    sigmaIonEnergy=params["sigmaEnergy"],
-    oxySputterYield=params["A_O"],
-    etchStopDepth=params["etchStopDepth"],
-)
-parameters = model.getParameters()
-parameters.Mask.rho = 100.
+modelParams = vps.SF6O2Parameters()
+modelParams.ionFlux = params["ionFlux"]
+modelParams.etchantFlux = params["etchantFlux"]
+modelParams.oxygenFlux = params["oxygenFlux"]
+modelParams.Ions.meanEnergy = params["meanEnergy"]
+modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
+modelParams.Passivation.A_ie = params["A_O"]
+modelParams.etchStopDepth = params["etchStopDepth"]
+
+model = vps.SF6O2Etching(modelParams)
 
 # process setup
 process = vps.Process()
@@ -53,7 +56,9 @@ process.setProcessModel(model)
 process.setMaxCoverageInitIterations(10)
 process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
-process.setIntegrationScheme(vps.util.convertIntegrationScheme(params["integrationScheme"]))
+process.setIntegrationScheme(
+    vps.util.convertIntegrationScheme(params["integrationScheme"])
+)
 
 # print initial surface
 geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)
