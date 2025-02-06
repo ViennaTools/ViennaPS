@@ -23,7 +23,7 @@ vps.Length.setUnit("um")
 vps.Time.setUnit("min")
 
 # hole geometry parameters
-gridDelta = 0.03  # um
+gridDelta = 0.025  # um
 xExtent = 1.0
 yExtent = 1.0
 holeRadius = 0.175
@@ -51,6 +51,8 @@ params.Ions.sigmaEnergy = 10.0
 params.Ions.minAngle = np.deg2rad(85.0)
 params.Ions.inflectAngle = np.deg2rad(89.0)
 
+params.Mask.rho = params.Si.rho * 10.0
+
 # simulation parameters
 processDuration = 3  # min
 integrationScheme = vps.ls.IntegrationSchemeEnum.ENGQUIST_OSHER_2ND_ORDER
@@ -75,7 +77,7 @@ for i in range(len(yo2)):
 
     process = vps.Process()
     process.setDomain(geometry)
-    process.setMaxCoverageInitIterations(40)
+    process.setMaxCoverageInitIterations(20)
     process.setProcessDuration(processDuration)
     process.setIntegrationScheme(integrationScheme)
     process.setNumberOfRaysPerPoint(numberOfRaysPerPoint)
