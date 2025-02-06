@@ -389,7 +389,7 @@ public:
 
 private:
   NumericType sticking(const int matieralId) const {
-    auto beta = params.beta_F.find(MaterialMap::mapToMaterial(matieralId));
+    auto beta = params.beta_F.find(matieralId);
     if (beta != params.beta_F.end())
       return beta->second;
 
@@ -502,7 +502,7 @@ public:
 
 private:
   NumericType sticking(const int matieralId) const {
-    auto beta = params.beta_O.find(MaterialMap::mapToMaterial(matieralId));
+    auto beta = params.beta_O.find(matieralId);
     if (beta != params.beta_O.end())
       return beta->second;
 

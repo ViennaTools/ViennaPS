@@ -82,7 +82,6 @@ process = vps.Process()
 process.setDomain(domain)
 process.setProcessModel(model)
 process.setProcessDuration(params["targetEtchDepth"] / params["nitrideEtchRate"] * 60.0)
-process.setPrintTimeInterval(30.0)
 
 process.apply()
 

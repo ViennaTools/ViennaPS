@@ -81,7 +81,10 @@ public:
 
     if (B_sp_ >= 0.) {
       NumericType cosTheta = -DotProduct(rayDir, geomNormal);
-      flux *= (1 + B_sp_ * (1 - cosTheta * cosTheta)) * cosTheta;
+      NumericType angle = std::acos(cosTheta);
+      if (cosTheta)
+        flux *= std::max(3. - 6. * angle / M_PI, 0.);
+      // flux *= (1 + B_sp_ * (1 - cosTheta * cosTheta)) * cosTheta;
     }
 
     if (energy_ > 0.)
@@ -132,7 +135,8 @@ public:
                                NumericType(1.));
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-        rayDir, geomNormal, rngState, std::max(incomingAngle, minAngle_));
+        rayDir, geomNormal, rngState,
+        M_PI_2 - std::min(incomingAngle, minAngle_));
 
     return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
   }

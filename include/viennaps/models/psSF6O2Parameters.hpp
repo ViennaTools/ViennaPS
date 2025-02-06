@@ -2,6 +2,8 @@
 
 #include "../psConstants.hpp"
 
+#include <unordered_map>
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -13,10 +15,8 @@ template <typename NumericType> struct SF6O2Parameters {
   NumericType oxygenFlux = 1.0e2;
 
   // sticking probabilities
-  std::unordered_map<Material, NumericType> beta_F = {{Material::Si, 0.7},
-                                                      {Material::Mask, 0.7}};
-  std::unordered_map<Material, NumericType> beta_O = {{Material::Si, 1.},
-                                                      {Material::Mask, 1.}};
+  std::unordered_map<int, NumericType> beta_F = {{1, 0.7}, {0, 0.7}};
+  std::unordered_map<int, NumericType> beta_O = {{1, 1.}, {0, 1.}};
 
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
   bool fluxIncludeSticking = false;

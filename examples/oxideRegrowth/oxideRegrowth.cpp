@@ -76,8 +76,6 @@ int main(int argc, char **argv) {
   process.setProcessModel(model);
   process.setProcessDuration(params.get("targetEtchDepth") /
                              params.get("nitrideEtchRate") * 60.);
-  process.setPrintTimeInterval(30);
-
   process.apply();
 
   domain->saveVolumeMesh("finalStack");
