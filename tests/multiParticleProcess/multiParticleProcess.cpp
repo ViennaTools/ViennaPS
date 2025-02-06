@@ -37,7 +37,9 @@ template <class NumericType, int D> void RunTest() {
           return material == Material::Si ? -(fluxes[0] + fluxes[1]) : 0;
         });
 
-    Process<NumericType, D>(domain, model, 1.).apply();
+    Process<NumericType, D> process(domain, model, 1.);
+    process.setNumberOfRaysPerPoint(100);
+    process.apply();
 
     LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
   }

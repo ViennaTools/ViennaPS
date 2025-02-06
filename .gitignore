@@ -7,7 +7,7 @@ dist/
 dependencies/
 *.ipynb
 old_*
-*_old.*
+*_old*
 *a.out
 install*
 *.vtk

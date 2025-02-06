@@ -13,13 +13,13 @@ maskHeight=1.2    # um
 taperAngle=1.193  # degree
 
 # Process parameters
-processTime=3
+processTime=1
 timeUnit=min
 
 # all flux values are units 1e15 / cm²
 ionFlux=10.
-etchantFlux=3000.
-oxygenFlux=1500.
+etchantFlux=4.5e3
+oxygenFlux=8e2
 
 ionExponent=200
 meanEnergy=100 # eV
@@ -28,7 +28,7 @@ A_O=2          # passivation layer yield constant
 A_Si=7         # Si yield constant
 
 etchStopDepth=-10   # maximum etching depth
-integrationScheme=EO_1 
+integrationScheme=EO_2
 
 raysPerPoint=1000
 

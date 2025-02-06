@@ -4,17 +4,17 @@
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
-namespace ps = viennaps;
+using namespace viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
-  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
+  Logger::setLogLevel(LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
 
   // Parse the parameters
-  ps::utils::Parameters params;
+  utils::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
@@ -22,21 +22,21 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // set parameter units
+  units::Length::setUnit(params.get<std::string>("lengthUnit"));
+  units::Time::setUnit(params.get<std::string>("timeUnit"));
+
   // geometry setup
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  ps::MakeHole<NumericType, D>(
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
+  MakeHole<NumericType, D>(
       geometry, params.get("gridDelta"), params.get("xExtent"),
       params.get("yExtent"), params.get("holeRadius"), params.get("maskHeight"),
       params.get("taperAngle"), 0 /* base height */,
-      false /* periodic boundary */, true /*create mask*/, ps::Material::Si)
+      false /* periodic boundary */, true /*create mask*/, Material::Si)
       .apply();
 
-  // set parameter units
-  ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
-  ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
-
   // use pre-defined model SF6O2 etching model
-  ps::SF6O2Parameters<NumericType> modelParams;
+  SF6O2Parameters<NumericType> modelParams;
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
   modelParams.oxygenFlux = params.get("oxygenFlux");
@@ -46,14 +46,13 @@ int main(int argc, char *argv[]) {
   modelParams.Passivation.A_ie = params.get("A_O");
   modelParams.Si.A_ie = params.get("A_Si");
   modelParams.etchStopDepth = params.get("etchStopDepth");
-  auto model =
-      ps::SmartPointer<ps::SF6O2Etching<NumericType, D>>::New(modelParams);
+  auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
   // process setup
-  ps::Process<NumericType, D> process;
+  Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(50);
+  process.setMaxCoverageInitIterations(20);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(
