@@ -17,7 +17,7 @@ else:
 params = vps.ReadConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
+vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])

@@ -129,8 +129,8 @@ cmake --build build
 The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
 cd examples/exampleName
-./ExampleName.bat config.txt # (Windows)
-./ExampleName config.txt # (Other)
+./exampleName.bat config.txt # (Windows)
+./exampleName config.txt # (Other)
 ```
 
 Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. 
@@ -146,17 +146,15 @@ This example focuses on a particle deposition process within a trench geometry. 
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
 This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process and geometry parameters can be varied in the __config.txt__ file. 
-Below the results for varies flux configurations are shown.
+Below the results for varied flux configurations, as tested in _testFluxes.py_, are shown.
 
 <div align="center">
   <img src="assets/sf6o2_results.png" width=700 style="background-color:white;">
 </div>
 
-By changing the dimension of the hole etching example (_D = 2_), we can easily simulate the profile of a trench etching process with the same plasma chemistry. Here we can, for example, vary the mask tapering angle to observe increased micro-trenching, as shown below.
+### Bosch Process
 
-<div align="center">
-  <img src="assets/sidewall_tapering.svg" width=700 style="background-color:white;">
-</div>
+
 
 ### Anisotropic Processes
 

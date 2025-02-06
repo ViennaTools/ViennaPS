@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 # parse config file name and simulation dimension
 parser = ArgumentParser(
     prog="boschProcessEmulate",
-    description="Run a Bosch process on a trench geometry.",
+    description="Run a Bosch process emulation on a trench geometry.",
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
@@ -39,9 +39,10 @@ vps.MakeTrench(
 direction = [0.0, 0.0, 0.0]
 direction[vps.D - 1] = -1.0
 
+#
 depoModel = vps.IsotropicProcess(params["depositionThickness"])
 
-# Define directional rate
+# Define puerly directional rate for depo removal
 etchDir = vps.RateSet(
     direction=direction,
     directionalVelocity=-(params["depositionThickness"] + params["gridDelta"] / 2.0),
@@ -49,7 +50,7 @@ etchDir = vps.RateSet(
     maskMaterials=[vps.Material.Mask],
 )
 
-# Define isotropic rate
+# Define isotropic + direction rate for etching of substrate
 etchIso = vps.RateSet(
     direction=direction,
     directionalVelocity=params["ionRate"],
@@ -64,33 +65,33 @@ etchModel = vps.DirectionalEtching(rateSets=[etchIso])
 numCycles = int(params["numCycles"])
 n = 0
 
-geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
 n += 1
 
 vps.Process(geometry, etchModel, params["etchTime"]).apply()
-geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
 n += 1
 
 for i in range(numCycles):
     # Deposit a layer of polymer
     geometry.duplicateTopLevelSet(vps.Material.Polymer)
     vps.Process(geometry, depoModel, 1).apply()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 
     # Remove the polymer layer
     vps.Process(geometry, depoRemoval, 1).apply()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 
     # Etch the trench
     vps.Process(geometry, etchModel, params["etchTime"]).apply()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 
     # Ash the polymer
     geometry.removeTopLevelSet()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 
 geometry.saveVolumeMesh("final_emulate")
