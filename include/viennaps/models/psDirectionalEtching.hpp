@@ -33,6 +33,19 @@ template <class NumericType> struct RateSet {
         calculateVisibility(calcVis &&
                             (dir[0] != 0. || dir[1] != 0. || dir[2] != 0.) &&
                             dirVel != 0) {}
+
+  void print() const {
+    std::cout << "RateSet: " << std::endl;
+    std::cout << "Direction: " << direction << std::endl;
+    std::cout << "Directional Velocity: " << directionalVelocity << std::endl;
+    std::cout << "Isotropic Velocity: " << isotropicVelocity << std::endl;
+    std::cout << "Mask Materials: ";
+    for (const auto &mask : maskMaterials) {
+      std::cout << MaterialMap::getMaterialName(mask) << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Calculate Visibility: " << calculateVisibility << std::endl;
+  }
 };
 
 template <class NumericType, int D>

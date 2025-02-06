@@ -966,7 +966,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("maskMaterials",
                      &DirectionalEtching<T, D>::RateSet::maskMaterials)
       .def_readwrite("calculateVisibility",
-                     &DirectionalEtching<T, D>::RateSet::calculateVisibility);
+                     &DirectionalEtching<T, D>::RateSet::calculateVisibility)
+      .def("print", &DirectionalEtching<T, D>::RateSet::print);
 
   // Expose DirectionalEtching class to Python
   pybind11::class_<DirectionalEtching<T, D>,
@@ -1346,7 +1347,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("size", &MaterialMap::size)
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
-      .def_static("isMaterial", &MaterialMap::isMaterial<T>);
+      .def_static("isMaterial", &MaterialMap::isMaterial<T>)
+      .def_static("getMaterialName", &MaterialMap::getMaterialName<Material>,
+                  "Get the name of a material.");
 
   // ***************************************************************************
   //                                   VISUALIZATION

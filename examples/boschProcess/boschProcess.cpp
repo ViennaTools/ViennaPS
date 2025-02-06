@@ -86,4 +86,5 @@ int main(int argc, char **argv) {
   }
 
   geometry->saveSurfaceMesh("boschProcess_final.vtp");
+  geometry->saveVolumeMesh("boschProcess_final");
 }

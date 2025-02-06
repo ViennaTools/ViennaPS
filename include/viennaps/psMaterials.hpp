@@ -5,6 +5,8 @@
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 
+#include <string>
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -80,6 +82,54 @@ public:
   template <class T>
   static inline bool isMaterial(const T matId, const Material material) {
     return mapToMaterial(matId) == material;
+  }
+
+  template <class T> static inline std::string getMaterialName(const T matId) {
+    auto material = mapToMaterial(matId);
+    switch (material) {
+    case Material::None:
+      return "None";
+    case Material::Mask:
+      return "Mask";
+    case Material::Si:
+      return "Si";
+    case Material::SiO2:
+      return "SiO2";
+    case Material::Si3N4:
+      return "Si3N4";
+    case Material::SiN:
+      return "SiN";
+    case Material::SiON:
+      return "SiON";
+    case Material::SiC:
+      return "SiC";
+    case Material::SiGe:
+      return "SiGe";
+    case Material::PolySi:
+      return "PolySi";
+    case Material::GaN:
+      return "GaN";
+    case Material::W:
+      return "W";
+    case Material::Al2O3:
+      return "Al2O3";
+    case Material::TiN:
+      return "TiN";
+    case Material::Cu:
+      return "Cu";
+    case Material::Polymer:
+      return "Polymer";
+    case Material::Dielectric:
+      return "Dielectric";
+    case Material::Metal:
+      return "Metal";
+    case Material::Air:
+      return "Air";
+    case Material::GAS:
+      return "GAS";
+    default:
+      return "Unknown";
+    }
   }
 };
 
