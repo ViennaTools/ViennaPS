@@ -35,6 +35,7 @@ template <class NumericType, int D> class MakeTrench {
   const NumericType baseHeight_;
 
   const bool periodicBoundary_;
+  const bool halfTrench2D_;
   const bool makeMask_;
   Material material_;
 
@@ -43,18 +44,37 @@ public:
              NumericType yExtent, NumericType trenchWidth,
              NumericType trenchDepth, NumericType taperAngle = 0.,
              NumericType baseHeight = 0., bool periodicBoundary = false,
+             bool halfTrench2D = false,
              bool makeMask = false, Material material = Material::None)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
-        periodicBoundary_(periodicBoundary), makeMask_(makeMask),
-        material_(material) {}
+        periodicBoundary_(periodicBoundary), halfTrench2D_(halfTrench2D),
+        makeMask_(makeMask), material_(material) {}
 
   void apply() {
     pDomain_->clear();
+
+    if (halfTrench2D_ && D == 3) {
+      Logger::getInstance()
+          .addWarning("Half trench is only supported in 2D.")
+          .print();
+      return;
+    }
+    if (halfTrench2D_ && periodicBoundary_) {
+      Logger::getInstance()
+          .addWarning("Half trench is not supported with periodic boundaries.")
+          .print();
+      return;
+    }
+
     double bounds[2 * D];
     bounds[0] = -xExtent_ / 2.;
-    bounds[1] = xExtent_ / 2.;
+    if (halfTrench2D_) { 
+      bounds[1] = 0; 
+    } else { 
+      bounds[1] = xExtent_ / 2.; 
+    }
 
     if constexpr (D == 3) {
       bounds[2] = -yExtent_ / 2.;
@@ -117,8 +137,13 @@ public:
           mesh->insertNextNode(node);
         }
         mesh->nodes[0][0] = -trenchWidth_ / 2.;
-        mesh->nodes[1][0] = trenchWidth_ / 2.;
-        mesh->nodes[2][0] = trenchWidth_ / 2. + offset;
+        if (halfTrench2D_) { 
+          mesh->nodes[1][0] = 0; 
+          mesh->nodes[2][0] = 0 + offset;
+        } else { 
+          mesh->nodes[1][0] = trenchWidth_ / 2.; 
+          mesh->nodes[2][0] = trenchWidth_ / 2. + offset;
+        }
         mesh->nodes[3][0] = -trenchWidth_ / 2. - offset;
 
         mesh->nodes[0][1] = baseHeight_;
@@ -193,7 +218,11 @@ public:
       NumericType maxPoint[D];
 
       minPoint[0] = -trenchWidth_ / 2;
-      maxPoint[0] = trenchWidth_ / 2;
+      if (halfTrench2D_) { 
+        maxPoint[0] = 0; 
+      } else { 
+        maxPoint[0] = trenchWidth_ / 2; 
+      }
 
       if constexpr (D == 3) {
         minPoint[1] = -yExtent_ / 2. - gridDelta_ / 2.;

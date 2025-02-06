@@ -1094,13 +1094,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<MakeTrench<T, D>>(module, "MakeTrench")
       .def(pybind11::init<DomainType, const T, const T, const T, const T,
                           const T, const T, const T, const bool, const bool,
-                          const Material>(),
+                          const bool, const Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("trenchWidth"), pybind11::arg("trenchDepth"),
            pybind11::arg("taperingAngle") = 0.,
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
+           pybind11::arg("halfTrench2D") = false,
            pybind11::arg("makeMask") = false,
            pybind11::arg("material") = Material::None)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
