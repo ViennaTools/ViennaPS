@@ -25,7 +25,7 @@ template <typename NumericType> struct TriangleGeometry {
   CudaBuffer asBuffer;
 
   /// build acceleration structure from triangle mesh
-  void buildAccel(Context context, const TriangleMesh &mesh,
+  void buildAccel(Context context, const TriangleMesh<NumericType> &mesh,
                   LaunchParams<NumericType> &launchParams) {
 
     launchParams.source.gridDelta = mesh.gridDelta;
@@ -165,8 +165,9 @@ template <typename NumericType> struct TriangleGeometry {
     launchParams.traversable = asHandle;
   }
 
-  static TriangleMesh makeBoundary(const TriangleMesh &passedMesh) {
-    TriangleMesh boundaryMesh;
+  static TriangleMesh<NumericType>
+  makeBoundary(const TriangleMesh<NumericType> &passedMesh) {
+    TriangleMesh<NumericType> boundaryMesh;
 
     Vec3Df bbMin = passedMesh.minimumExtent;
     Vec3Df bbMax = passedMesh.maximumExtent;

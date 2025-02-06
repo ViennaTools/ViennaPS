@@ -16,34 +16,36 @@ template <typename NumericType> class ElementToPointData {
   CudaBuffer &d_elementData_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;
   const IndexMap indexMap_;
-  SmartPointer<KDTree<float, Vec3Df>> elementKdTree_;
+  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
-  SmartPointer<viennals::Mesh<float>> surfaceMesh_;
+  SmartPointer<viennals::Mesh<NumericType>> surfaceMesh_;
   const NumericType conversionRadius_;
 
   static constexpr bool discard2 = true;
   static constexpr bool discard4 = true;
 
 public:
-  ElementToPointData(CudaBuffer &d_elementData,
-                     SmartPointer<viennals::PointData<NumericType>> pointData,
-                     const std::vector<Particle<NumericType>> &particles,
-                     SmartPointer<KDTree<float, Vec3Df>> elementKdTree,
-                     SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-                     SmartPointer<viennals::Mesh<float>> surfMesh,
-                     const NumericType conversionRadius)
+  ElementToPointData(
+      CudaBuffer &d_elementData,
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      const std::vector<Particle<NumericType>> &particles,
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
+      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+      SmartPointer<viennals::Mesh<NumericType>> surfMesh,
+      const NumericType conversionRadius)
       : d_elementData_(d_elementData), pointData_(pointData),
         indexMap_(particles), elementKdTree_(elementKdTree),
         diskMesh_(diskMesh), surfaceMesh_(surfMesh),
         conversionRadius_(conversionRadius) {}
 
-  ElementToPointData(CudaBuffer &d_elementData,
-                     SmartPointer<viennals::PointData<NumericType>> pointData,
-                     const IndexMap &indexMap,
-                     SmartPointer<KDTree<float, Vec3Df>> elementKdTree,
-                     SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-                     SmartPointer<viennals::Mesh<float>> surfMesh,
-                     const NumericType conversionRadius)
+  ElementToPointData(
+      CudaBuffer &d_elementData,
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      const IndexMap &indexMap,
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
+      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+      SmartPointer<viennals::Mesh<NumericType>> surfMesh,
+      const NumericType conversionRadius)
       : d_elementData_(d_elementData), pointData_(pointData),
         indexMap_(indexMap), elementKdTree_(elementKdTree), diskMesh_(diskMesh),
         surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
@@ -74,7 +76,8 @@ public:
     for (unsigned i = 0; i < numPoints; i++) {
 
       auto closePoints =
-          elementKdTree_->findNearestWithinRadius(points[i], sqrdDist)
+          elementKdTree_->findNearestWithinRadius(points[i],
+                                                  sqrdDist)
               .value(); // we have to use the squared distance here
 
       std::vector<NumericType> weights(closePoints.size(), 0.);

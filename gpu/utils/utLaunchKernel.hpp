@@ -9,6 +9,8 @@ namespace viennaps {
 
 namespace gpu {
 
+using namespace viennacore;
+
 // wrapper for launching kernel from a ptx file
 class LaunchKernel {
 public:

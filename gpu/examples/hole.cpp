@@ -10,12 +10,11 @@
 using namespace viennaps;
 
 int main(int argc, char **argv) {
-
-  omp_set_num_threads(16);
-  constexpr int D = 3;
   using NumericType = float;
+  constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::TIMING);
+  Logger::setLogLevel(LogLevel::INTERMEDIATE);
+  omp_set_num_threads(16);
 
   // Parse the parameters
   utils::Parameters params;
@@ -28,6 +27,10 @@ int main(int argc, char **argv) {
 
   Context context;
   CreateContext(context);
+
+  // set parameter units
+  units::Length::setUnit(params.get<std::string>("lengthUnit"));
+  units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // geometry setup
   auto geometry = SmartPointer<Domain<NumericType, D>>::New();
@@ -47,17 +50,19 @@ int main(int argc, char **argv) {
   modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Passivation.A_ie = params.get("A_O");
-
+  modelParams.Si.A_ie = params.get("A_Si");
+  modelParams.etchStopDepth = params.get("etchStopDepth");
   auto model =
       SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(modelParams);
 
+  // process setup
   gpu::Process<NumericType, D> process(context, geometry, model);
   process.setProcessParams(modelParams);
-  process.setMaxCoverageInitIterations(10);
+  process.setMaxCoverageInitIterations(20);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(
-      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER);
+      params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

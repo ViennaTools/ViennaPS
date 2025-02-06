@@ -10,7 +10,7 @@ template <class NumericType> class PointToElementData {
 
   viennals::PointData<NumericType> &pointData_;
   KDTree<NumericType, Vec3D<NumericType>> &pointKdTree_;
-  SmartPointer<viennals::Mesh<float>> surfaceMesh_;
+  SmartPointer<viennals::Mesh<NumericType>> surfaceMesh_;
   CudaBuffer &d_elementData_;
 
   const bool insertToMesh_ = false;
@@ -20,7 +20,7 @@ public:
   PointToElementData(CudaBuffer &d_elementData,
                      SmartPointer<viennals::PointData<NumericType>> pointData,
                      KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
-                     SmartPointer<viennals::Mesh<float>> surfaceMesh,
+                     SmartPointer<viennals::Mesh<NumericType>> surfaceMesh,
                      bool insertToMesh = false, bool upload = true)
       : d_elementData_(d_elementData), pointData_(*pointData),
         pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),
@@ -29,7 +29,7 @@ public:
   PointToElementData(CudaBuffer &d_elementData,
                      viennals::PointData<NumericType> &pointData,
                      KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
-                     SmartPointer<viennals::Mesh<float>> surfaceMesh,
+                     SmartPointer<viennals::Mesh<NumericType>> surfaceMesh,
                      bool insertToMesh = false, bool upload = true)
       : d_elementData_(d_elementData), pointData_(pointData),
         pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),

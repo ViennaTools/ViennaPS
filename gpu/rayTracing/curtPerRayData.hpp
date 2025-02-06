@@ -16,6 +16,7 @@ struct PerRayData {
   float rayWeight = 1.f;
   viennacore::Vec3Df pos;
   viennacore::Vec3Df dir;
+  float tmax;
 
   RNGState RNGstate;
 

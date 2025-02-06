@@ -263,10 +263,7 @@ macro(add_GPU_executable target_name_base target_name_var)
 
   message(STATUS "Adding target: ${target_name}")
 
-  set_target_properties(
-    ${target_name}
-    PROPERTIES COMPILE_DEFINITIONS
-               "VIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR}")
+  target_compile_definitions(${target_name} PRIVATE VIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR})
 
   if(UNIX AND NOT APPLE)
     # Force using RPATH instead of RUNPATH on Debian
@@ -281,6 +278,7 @@ endmacro()
 
 add_subdirectory(examples)
 add_subdirectory(benchmark)
+add_subdirectory(tests)
 
 # add_custom_target(buildGPUApplication)
 

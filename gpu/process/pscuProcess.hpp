@@ -135,11 +135,12 @@ public:
 
     /* --------- Setup triangulated surface mesh ----------- */
     Timer transTimer;
-    auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
+    auto surfMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
-    viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMeshConverter(
-        domain_->getLevelSets().back(), surfMesh, elementKdTree);
+    viennals::ToSurfaceMeshRefined<NumericType, NumericType, D>
+        surfMeshConverter(domain_->getLevelSets().back(), surfMesh,
+                          elementKdTree);
     // surfMeshConverter.setCheckNodeForDouble(false);
 
     /* --------- Setup for ray tracing ----------- */
@@ -172,12 +173,7 @@ public:
     assert(diskMesh->nodes.size() > 0);
     assert(surfMesh->nodes.size() > 0);
 
-    TriangleMesh mesh;
-    mesh.gridDelta = gridDelta;
-    mesh.vertices = surfMesh->nodes;
-    mesh.triangles = surfMesh->triangles;
-    mesh.minimumExtent = surfMesh->minimumExtent;
-    mesh.maximumExtent = surfMesh->maximumExtent;
+    TriangleMesh mesh(gridDelta, surfMesh);
     rayTrace_.setGeometry(mesh);
     meshTimer.finish();
     Logger::getInstance().addTiming("Geometry generation", meshTimer).print();
@@ -251,11 +247,12 @@ public:
     advectionKernel.prepareLS();
 
     /* --------- Setup triangulated surface mesh ----------- */
-    auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
+    auto surfMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
-    viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMeshConverter(
-        domain_->getLevelSets().back(), surfMesh, elementKdTree);
+    viennals::ToSurfaceMeshRefined<NumericType, NumericType, D>
+        surfMeshConverter(domain_->getLevelSets().back(), surfMesh,
+                          elementKdTree);
     // surfMeshConverter.setCheckNodeForDouble(false);
 
     /* --------- Setup for ray tracing ----------- */
@@ -287,12 +284,7 @@ public:
     assert(diskMesh->nodes.size() > 0);
     assert(surfMesh->nodes.size() > 0);
     transField->buildKdTree(diskMesh->nodes);
-    TriangleMesh mesh;
-    mesh.gridDelta = gridDelta;
-    mesh.vertices = surfMesh->nodes;
-    mesh.triangles = surfMesh->triangles;
-    mesh.minimumExtent = surfMesh->minimumExtent;
-    mesh.maximumExtent = surfMesh->maximumExtent;
+    TriangleMesh mesh(gridDelta, surfMesh);
     rayTrace_.setGeometry(mesh);
     meshTimer.finish();
     Logger::getInstance().addTiming("Geometry generation", meshTimer).print();
@@ -301,6 +293,7 @@ public:
         .print();
 
     /* --------- Initialize coverages ----------- */
+    surfaceModel->initializeSurfaceData(diskMesh->nodes.size());
     if (!coveragesInitialized_)
       surfaceModel->initializeCoverages(diskMesh->nodes.size());
     auto coverages = surfaceModel->getCoverages(); // might be null
@@ -386,10 +379,7 @@ public:
       meshTimer.start();
       surfMeshConverter.apply();                // build element KD tree
       transField->buildKdTree(diskMesh->nodes); // build point KD tree
-      mesh.vertices = surfMesh->nodes;
-      mesh.triangles = surfMesh->triangles;
-      mesh.minimumExtent = surfMesh->minimumExtent;
-      mesh.maximumExtent = surfMesh->maximumExtent;
+      mesh = TriangleMesh(gridDelta, surfMesh);
       rayTrace_.setGeometry(mesh);
       meshTimer.finish();
 
@@ -439,7 +429,7 @@ public:
           //     dummy, fluxes, transField->getKdTree(), surfMesh, true, false)
           //     .apply();
           rayTrace_.downloadResultsToPointData(surfMesh->getCellData());
-          viennals::VTKWriter<float>(
+          viennals::VTKWriter<NumericType>(
               surfMesh, name + "_flux_" + std::to_string(counter) + ".vtp")
               .apply();
         }

@@ -8,3 +8,6 @@ add_gpu_executable(waveguide target_name ${CMAKE_CURRENT_SOURCE_DIR}/waveguide.c
 
 add_gpu_executable(trench target_name ${CMAKE_CURRENT_SOURCE_DIR}/trench.cpp
                    ${CMAKE_SOURCE_DIR}/gpu/pipelines/SingleParticlePipeline.cu)
+
+add_gpu_executable(holeCompare target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp
+                   ${CMAKE_SOURCE_DIR}/gpu/pipelines/IonBeamEtching.cu)

@@ -43,20 +43,19 @@ private:
     ion.dataLabels.push_back("ionSputterFlux");
     ion.dataLabels.push_back("ionEnhancedFlux");
     ion.dataLabels.push_back("ionEnhancedPassivationFlux");
-    ion.dataLabels.push_back("ionEnhancedOxideFlux");
     ion.sticking = 0.f;
     ion.cosineExponent = params.Ions.exponent;
 
     gpu::Particle<NumericType> etchant;
     etchant.name = "etchant";
     etchant.dataLabels.push_back("etchantFlux");
-    etchant.sticking = params.beta_F[Material::Si];
+    etchant.sticking = params.beta_F[int(Material::Si)];
     etchant.cosineExponent = 1.f;
 
     gpu::Particle<NumericType> oxygen;
     oxygen.name = "oxygen";
     oxygen.dataLabels.push_back("oxygenFlux");
-    oxygen.sticking = params.beta_O[Material::Si];
+    oxygen.sticking = params.beta_O[int(Material::Si)];
     oxygen.cosineExponent = 1.f;
 
     // surface model

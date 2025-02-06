@@ -36,7 +36,7 @@ public:
   /// optix, creates module, pipeline, programs, SBT, etc.
   Trace(Context passedContext) : context(passedContext) { initRayTracer(); }
 
-  void setGeometry(const TriangleMesh &passedMesh) {
+  void setGeometry(const TriangleMesh<T> &passedMesh) {
     geometry.buildAccel(context, passedMesh, launchParams);
   }
 
@@ -373,6 +373,7 @@ protected:
   }
 
   void initRayTracer() {
+    AddModule(normModuleName, context);
     launchParamsBuffer.alloc(sizeof(launchParams));
     normKernelName.push_back(NumericType);
     translateFromPointDataKernelName.push_back(NumericType);
