@@ -68,7 +68,7 @@ public:
         continue; // Skip this rate set if material is masked
       }
       // Accumulate isotropic velocities
-      scalarVelocity += std::min(NumericType(0), rateSet.isotropicVelocity);
+      scalarVelocity += rateSet.isotropicVelocity;
     }
 
     return scalarVelocity;

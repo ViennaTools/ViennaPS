@@ -25,13 +25,14 @@ enum class Material : int {
   GaN = 9,
   W = 10,
   Al2O3 = 11,
-  TiN = 12,
-  Cu = 13,
-  Polymer = 14,
-  Dielectric = 15,
-  Metal = 16,
-  Air = 17,
-  GAS = 18
+  HfO2 = 12,
+  TiN = 13,
+  Cu = 14,
+  Polymer = 15,
+  Dielectric = 16,
+  Metal = 17,
+  Air = 18,
+  GAS = 19
 };
 
 /// A class that wraps the viennals MaterialMap class and provides a more user
@@ -113,6 +114,8 @@ public:
       return "W";
     case Material::Al2O3:
       return "Al2O3";
+    case Material::HfO2:
+      return "HfO2";
     case Material::TiN:
       return "TiN";
     case Material::Cu:

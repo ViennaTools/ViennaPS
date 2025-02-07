@@ -28,6 +28,8 @@ template <class NumericType, int D> class MakePlane {
   const NumericType xExtent_ = 0.;
   const NumericType yExtent_ = 0.;
   const NumericType baseHeight_;
+  double bounds_[2 * D] = {0.};
+  bool useBounds_ = false;
 
   const bool periodicBoundary_ = false;
   const Material material_;
@@ -49,6 +51,18 @@ public:
         yExtent_(yExtent), baseHeight_(baseHeight),
         periodicBoundary_(periodicBoundary), material_(material), add_(false) {}
 
+  // Creates a new geometry with a plane and custom bounds.
+  MakePlane(psDomainType domain, NumericType gridDelta, double bounds[2 * D],
+            NumericType baseHeight, bool periodicBoundary = false,
+            Material material = Material::None)
+      : pDomain_(domain), gridDelta_(gridDelta), useBounds_(true),
+        baseHeight_(baseHeight), periodicBoundary_(periodicBoundary),
+        material_(material), add_(false) {
+    for (int i = 0; i < 2 * D; ++i) {
+      bounds_[i] = bounds[i];
+    }
+  }
+
   void apply() {
     if (add_) {
       if (!pDomain_->getLevelSets().back()) {
@@ -62,18 +76,18 @@ public:
       pDomain_->clear();
     }
 
-    double bounds[2 * D];
-    bounds[0] = -xExtent_ / 2.;
-    bounds[1] = xExtent_ / 2.;
-
-    if constexpr (D == 3) {
-      bounds[2] = -yExtent_ / 2.;
-      bounds[3] = yExtent_ / 2.;
-      bounds[4] = -gridDelta_;
-      bounds[5] = gridDelta_;
-    } else {
-      bounds[2] = -gridDelta_;
-      bounds[3] = gridDelta_;
+    if (!useBounds_) {
+      bounds_[0] = -xExtent_ / 2.;
+      bounds_[1] = xExtent_ / 2.;
+      if constexpr (D == 3) {
+        bounds_[2] = -yExtent_ / 2.;
+        bounds_[3] = yExtent_ / 2.;
+        bounds_[4] = -gridDelta_;
+        bounds_[5] = gridDelta_;
+      } else {
+        bounds_[2] = -gridDelta_;
+        bounds_[3] = gridDelta_;
+      }
     }
 
     BoundaryEnum boundaryCons[D];
@@ -103,7 +117,7 @@ public:
         pDomain_->insertNextLevelSetAsMaterial(substrate, material_);
       }
     } else {
-      auto substrate = LSPtrType::New(bounds, boundaryCons, gridDelta_);
+      auto substrate = LSPtrType::New(bounds_, boundaryCons, gridDelta_);
       viennals::MakeGeometry<NumericType, D>(
           substrate,
           SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
