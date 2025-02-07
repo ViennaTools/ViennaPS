@@ -7,6 +7,8 @@
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
+#include <lsReader.hpp>
+
 using namespace viennaps;
 
 constexpr int D = 3;
@@ -66,160 +68,178 @@ int main() {
 
   NumericType bounds[2 * D] = {0, 90, 0, 100, 0, 70}; // in nanometres
   auto domain = DomainType::New();
-  // Initialise domain with a single silicon plane (at z=70 because it is 70
-  // nm high)
-  MakePlane<NumericType, D>(domain, gridDelta, bounds, 70, true, Material::Si)
-      .apply();
-  writeSurfaces(domain);
 
-  // Add double patterning mask
-  {
-    auto ls = LevelSetType::New(domain->getGrid());
-    hrleVectorType<double, D> min(30, -10, 69.9);
-    hrleVectorType<double, D> max(60, 110, 90);
-    viennals::MakeGeometry<NumericType, D> geometryFactory(
-        ls, SmartPointer<viennals::Box<NumericType, D>>::New(min, max));
-    geometryFactory.setIgnoreBoundaryConditions(
-        true); // so that the mask is not mirrored inside domain at bounds
-    geometryFactory.apply();
+  if constexpr (false) {
+    // Initialise domain with a single silicon plane (at z=70 because it is 70
+    // nm high)
+    MakePlane<NumericType, D>(domain, gridDelta, bounds, 70, true, Material::Si)
+        .apply();
+    writeSurfaces(domain);
 
-    domain->insertNextLevelSetAsMaterial(ls, Material::Mask);
+    // Add double patterning mask
+    {
+      auto ls = LevelSetType::New(domain->getGrid());
+      hrleVectorType<double, D> min(30, -10, 69.9);
+      hrleVectorType<double, D> max(60, 110, 90);
+      viennals::MakeGeometry<NumericType, D> geometryFactory(
+          ls, SmartPointer<viennals::Box<NumericType, D>>::New(min, max));
+      geometryFactory.setIgnoreBoundaryConditions(
+          true); // so that the mask is not mirrored inside domain at bounds
+      geometryFactory.apply();
+
+      domain->insertNextLevelSetAsMaterial(ls, Material::Mask);
+    }
+    writeSurfaces(domain);
+
+    // Double patterning processes
+    { // DP-Depo
+      domain->duplicateTopLevelSet(Material::SiO2);
+      auto dist =
+          SmartPointer<SphereDistribution<NumericType, D>>::New(4, gridDelta);
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeSurfaces(domain);
+
+    { // DP-Patterning
+      auto dist = SmartPointer<BoxDistribution<NumericType, D>>::New(
+          std::array<NumericType, D>{-gridDelta, -gridDelta, -6}, gridDelta);
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeSurfaces(domain);
+
+    // Remove mask with boolean op
+    domain->removeMaterial(Material::Mask);
+    writeSurfaces(domain);
+    writeVolume(domain);
+
+    // pattern si/sige/si stack
+    {
+      Vec3D<NumericType> direction = {0, 0, -1};
+      auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
+          direction, -1.0, 0.1, Material::SiO2, false);
+      Process<NumericType, D>(domain, model, 90.).apply();
+    }
+    writeVolume(domain);
+
+    // Remove DP mask
+    domain->removeTopLevelSet();
+    writeSurfaces(domain);
+
+    // deposit STI material
+    {
+      domain->duplicateTopLevelSet(Material::SiO2);
+      auto dist =
+          SmartPointer<SphereDistribution<NumericType, D>>::New(35, gridDelta);
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeSurfaces(domain);
+
+    // CMP at 80
+    Planarize<NumericType, D>(domain, 80.0).apply();
+    writeVolume(domain);
+
+    // pattern STI material
+    {
+      auto dist = SmartPointer<SphereDistribution<NumericType, D>>::New(
+          -35, gridDelta, domain->getLevelSets().front());
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeSurfaces(domain);
+    writeVolume(domain);
+
+    // deposit gate material
+    {
+      domain->duplicateTopLevelSet(Material::HfO2);
+      auto dist =
+          SmartPointer<SphereDistribution<NumericType, D>>::New(2, gridDelta);
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeSurfaces(domain);
+
+    {
+      domain->duplicateTopLevelSet(Material::PolySi);
+      auto dist =
+          SmartPointer<SphereDistribution<NumericType, D>>::New(104, gridDelta);
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeSurfaces(domain);
+
+    // CMP at 150
+    Planarize<NumericType, D>(domain, 150.0).apply();
+
+    // dummy gate mask addition
+    {
+      auto ls = LevelSetType::New(domain->getGrid());
+      hrleVectorType<double, D> min(-10, 30, 145);
+      hrleVectorType<double, D> max(100, 70, 175);
+      viennals::MakeGeometry<NumericType, D> geometryFactory(
+          ls, SmartPointer<viennals::Box<NumericType, D>>::New(min, max));
+      geometryFactory.setIgnoreBoundaryConditions(
+          true); // so that the mask is not mirrored inside domain at bounds
+      geometryFactory.apply();
+
+      domain->insertNextLevelSetAsMaterial(ls, Material::Mask);
+    }
+    writeSurfaces(domain);
+
+    // gate patterning
+    {
+      Vec3D<NumericType> direction = {0, 0, -1};
+      std::vector<Material> masks = {Material::Mask, Material::Si};
+      auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
+          direction, -1.0, 0., masks, false);
+      Process<NumericType, D>(domain, model, 110.).apply();
+    }
+
+    // Remove mask
+    domain->removeTopLevelSet();
+    writeSurfaces(domain);
+    writeVolume(domain);
+
+    // Spacer Deposition and Etch
+    { // spacer depo
+      domain->duplicateTopLevelSet(Material::Mask);
+      auto dist =
+          SmartPointer<SphereDistribution<NumericType, D>>::New(10, gridDelta);
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeSurfaces(domain);
+
+    { // spacer etch
+      auto ls = domain->getLevelSets()[domain->getLevelSets().size() - 2];
+      auto dist = SmartPointer<BoxDistribution<NumericType, D>>::New(
+          std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, gridDelta,
+          ls);
+      Process<NumericType, D>(domain, dist).apply();
+    }
+    writeVolume(domain);
+
+    // isotropic etch (fin-release)
+    {
+      std::vector<Material> masks = {Material::Mask, Material::SiGe,
+                                     Material::PolySi, Material::HfO2,
+                                     Material::SiO2};
+      auto model =
+          SmartPointer<IsotropicProcess<NumericType, D>>::New(-1., masks);
+      Process<NumericType, D>(domain, model, 5.).apply();
+    }
+    writeSurfaces(domain);
+    writeVolume(domain);
+
+    domain->saveLevelSets("FinFET_finrelease");
+  } else {
+
+    std::vector<Material> materials = {Material::Si, Material::SiO2,
+                                       Material::HfO2, Material::PolySi,
+                                       Material::Mask};
+    for (int i = 0; i <= 4; i++) {
+      auto ls = LevelSetType::New();
+      viennals::Reader<NumericType, D>(ls, "FinFET_finrelease_layer" +
+                                               std::to_string(i) + ".lvst")
+          .apply();
+      domain->insertNextLevelSetAsMaterial(ls, materials[i]);
+    }
   }
-  writeSurfaces(domain);
-
-  // Double patterning processes
-  { // DP-Depo
-    domain->duplicateTopLevelSet(Material::SiO2);
-    auto dist =
-        SmartPointer<SphereDistribution<NumericType, D>>::New(4, gridDelta);
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeSurfaces(domain);
-
-  { // DP-Patterning
-    auto dist = SmartPointer<BoxDistribution<NumericType, D>>::New(
-        std::array<NumericType, D>{-gridDelta, -gridDelta, -6}, gridDelta);
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeSurfaces(domain);
-
-  // Remove mask with boolean op
-  domain->removeMaterial(Material::Mask);
-  writeSurfaces(domain);
-  writeVolume(domain);
-
-  // pattern si/sige/si stack
-  {
-    Vec3D<NumericType> direction = {0, 0, -1};
-    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
-        direction, -1.0, 0.1, Material::SiO2, false);
-    Process<NumericType, D>(domain, model, 90.).apply();
-  }
-  writeVolume(domain);
-
-  // Remove DP mask
-  domain->removeTopLevelSet();
-  writeSurfaces(domain);
-
-  // deposit STI material
-  {
-    domain->duplicateTopLevelSet(Material::SiO2);
-    auto dist =
-        SmartPointer<SphereDistribution<NumericType, D>>::New(35, gridDelta);
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeSurfaces(domain);
-
-  // CMP at 80
-  Planarize<NumericType, D>(domain, 80.0).apply();
-  writeVolume(domain);
-
-  // pattern STI material
-  {
-    auto dist = SmartPointer<SphereDistribution<NumericType, D>>::New(
-        -35, gridDelta, domain->getLevelSets().front());
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeSurfaces(domain);
-  writeVolume(domain);
-
-  // deposit gate material
-  {
-    domain->duplicateTopLevelSet(Material::HfO2);
-    auto dist =
-        SmartPointer<SphereDistribution<NumericType, D>>::New(2, gridDelta);
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeSurfaces(domain);
-
-  {
-    domain->duplicateTopLevelSet(Material::PolySi);
-    auto dist =
-        SmartPointer<SphereDistribution<NumericType, D>>::New(104, gridDelta);
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeSurfaces(domain);
-
-  // CMP at 150
-  Planarize<NumericType, D>(domain, 150.0).apply();
-
-  // dummy gate mask addition
-  {
-    auto ls = LevelSetType::New(domain->getGrid());
-    hrleVectorType<double, D> min(-10, 30, 145);
-    hrleVectorType<double, D> max(100, 70, 175);
-    viennals::MakeGeometry<NumericType, D> geometryFactory(
-        ls, SmartPointer<viennals::Box<NumericType, D>>::New(min, max));
-    geometryFactory.setIgnoreBoundaryConditions(
-        true); // so that the mask is not mirrored inside domain at bounds
-    geometryFactory.apply();
-
-    domain->insertNextLevelSetAsMaterial(ls, Material::Mask);
-  }
-  writeSurfaces(domain);
-
-  // gate patterning
-  {
-    Vec3D<NumericType> direction = {0, 0, -1};
-    std::vector<Material> masks = {Material::Mask, Material::Si};
-    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
-        direction, -1.0, 0., masks, false);
-    Process<NumericType, D>(domain, model, 110.).apply();
-  }
-
-  // Remove mask
-  domain->removeTopLevelSet();
-  writeSurfaces(domain);
-  writeVolume(domain);
-
-  // Spacer Deposition and Etch
-  { // spacer depo
-    domain->duplicateTopLevelSet(Material::Mask);
-    auto dist =
-        SmartPointer<SphereDistribution<NumericType, D>>::New(10, gridDelta);
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeSurfaces(domain);
-
-  { // spacer etch
-    auto ls = domain->getLevelSets()[domain->getLevelSets().size() - 2];
-    auto dist = SmartPointer<BoxDistribution<NumericType, D>>::New(
-        std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, gridDelta, ls);
-    Process<NumericType, D>(domain, dist).apply();
-  }
-  writeVolume(domain);
-
-  // isotropic etch (fin-release)
-  {
-    std::vector<Material> masks = {Material::Mask, Material::SiGe,
-                                   Material::PolySi, Material::HfO2,
-                                   Material::SiO2};
-    auto model =
-        SmartPointer<IsotropicProcess<NumericType, D>>::New(-1., masks);
-    Process<NumericType, D>(domain, model, 5.).apply();
-  }
-  writeSurfaces(domain);
-  writeVolume(domain);
 
   // source/drain epitaxy
   {
@@ -236,83 +256,58 @@ int main() {
   writeSurfaces(domain);
   writeVolume(domain);
 
-  // // {
-  // //   processes.clear();
-  // //   auto epiVel = SmartPointer<epitaxy>::New(
-  // //       std::vector<double>({1, 0, 0, 0, 0, 0, 1}));
-  // //   auto isoVel = SmartPointer<isotropic>::New(
-  // //       std::vector<double>({1, 0, 0, 0, 0, 0, 1}));
-  // //   processes.push_back(Process("S/D-Epitaxy", 15, epiVel, true));
-  // // }
-  // // execute(domains, processes);
-  // // writeVolume(domains);
+  return 0.;
 
-  // // deposit dielectric
-  // if constexpr (isEmulation) {
-  //   domains.push_back(LevelSetType::New(domains.back()));
-  //   auto dist =
-  //       SmartPointer<lsSphereDistribution<NumericType, D>>::New(50,
-  //       gridDelta);
-  //   emulate("Dielectric-Depo", domains.back(), dist);
-  //   writeSurfaces(domains);
-  // } else {
-  //   processes.clear();
-  //   processes.push_back(Process("Dielectric-Deposit", 50, isoVelocity,
-  //   true)); execute(domains, processes);
-  // }
+  // deposit dielectric
+  {
+    auto dist =
+        SmartPointer<SphereDistribution<NumericType, D>>::New(50, gridDelta);
+    Process<NumericType, D>(domain, dist).apply();
+  }
+  writeSurfaces(domain);
 
-  // // CMP at 90
-  // planarise(domains, 90.0);
+  // CMP at 90
+  Planarize<NumericType, D>(domain, 90.0).apply();
+  writeVolume(domain);
 
-  // writeVolume(domains);
+  // now remove gate and add new gate materials
+  {
+    //   // bool dummy gate from all higher layers
+    //   // but keep union with layer below for correct wrapping
+    //   unsigned dummyGateID = 3;
+    //   for (unsigned i = dummyGateID + 1; i < domains.size(); ++i) {
+    //     lsBooleanOperation(domains[i], domains[dummyGateID],
+    //                        lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+    //         .apply();
 
-  // // now remove gate and add new gate materials
-  // {
-  //   // bool dummy gate from all higher layers
-  //   // but keep union with layer below for correct wrapping
-  //   unsigned dummyGateID = 3;
-  //   for (unsigned i = dummyGateID + 1; i < domains.size(); ++i) {
-  //     lsBooleanOperation(domains[i], domains[dummyGateID],
-  //                        lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-  //         .apply();
+    //     lsBooleanOperation(domains[i], domains[dummyGateID - 1],
+    //                        lsBooleanOperationEnum::UNION)
+    //         .apply();
+    //   }
+    //   domains.erase(domains.begin() + dummyGateID);
+  }
+  writeSurfaces(domain);
+  writeVolume(domain);
 
-  //     lsBooleanOperation(domains[i], domains[dummyGateID - 1],
-  //                        lsBooleanOperationEnum::UNION)
-  //         .apply();
-  //   }
-  //   domains.erase(domains.begin() + dummyGateID);
-  //   writeSurfaces(domains);
-  //   writeVolume(domains);
-  // }
+  // now deposit TiN and PolySi as replacement gate
+  {
+    domain->duplicateTopLevelSet(Material::TiN);
+    auto dist =
+        SmartPointer<SphereDistribution<NumericType, D>>::New(4, gridDelta);
+    Process<NumericType, D>(domain, dist).apply();
+  }
+  writeSurfaces(domain);
 
-  // // now deposit TiN and PolySi as replacement gate
-  // if constexpr (isEmulation) {
-  //   {
-  //     domains.push_back(LevelSetType::New(domains.back()));
-  //     auto dist =
-  //         SmartPointer<lsSphereDistribution<NumericType, D>>::New(4,
-  //         gridDelta);
-  //     emulate("TiN-Deposit", domains.back(), dist);
-  //     writeSurfaces(domains);
-  //   }
-  //   {
-  //     domains.push_back(LevelSetType::New(domains.back()));
-  //     auto dist = SmartPointer<lsSphereDistribution<NumericType, D>>::New(
-  //         40, gridDelta);
-  //     emulate("PolySi-Deposit", domains.back(), dist);
-  //     writeSurfaces(domains);
-  //   }
-  // } else {
-  //   processes.clear();
-  //   processes.push_back(Process("TiN-Deposit", 4, isoVelocity, true));
-  //   processes.push_back(Process("PolySi-Deposit", 40, isoVelocity, true));
-  //   execute(domains, processes);
-  // }
+  {
+    domain->duplicateTopLevelSet(Material::PolySi);
+    auto dist =
+        SmartPointer<SphereDistribution<NumericType, D>>::New(40, gridDelta);
+    Process<NumericType, D>(domain, dist).apply();
+  }
 
-  // // CMP at 90
-  // planarise(domains, 89.0);
-
-  // writeVolume(domains);
+  // CMP at 90
+  Planarize<NumericType, D>(domain, 90.0).apply();
+  writeVolume(domain);
 
   return 0;
 }
