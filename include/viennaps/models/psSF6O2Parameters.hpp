@@ -6,8 +6,6 @@
 
 namespace viennaps {
 
-using namespace viennacore;
-
 template <typename NumericType> struct SF6O2Parameters {
   // fluxes in (1e15 /cm² /s)
   NumericType ionFlux = 12.;

@@ -39,10 +39,10 @@ vps.MakeTrench(
 direction = [0.0, 0.0, 0.0]
 direction[vps.D - 1] = -1.0
 
-#
-depoModel = vps.IsotropicProcess(params["depositionThickness"])
+# Geometric advection model for deposition
+depoModel = vps.SphereDistribution(params["depositionThickness"], params["gridDelta"])
 
-# Define puerly directional rate for depo removal
+# Define purely directional rate for depo removal
 etchDir = vps.RateSet(
     direction=direction,
     directionalVelocity=-(params["depositionThickness"] + params["gridDelta"] / 2.0),
@@ -75,7 +75,7 @@ n += 1
 for i in range(numCycles):
     # Deposit a layer of polymer
     geometry.duplicateTopLevelSet(vps.Material.Polymer)
-    vps.Process(geometry, depoModel, 1).apply()
+    vps.Process(geometry, depoModel).apply()
     geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 

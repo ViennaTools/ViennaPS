@@ -1,12 +1,13 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psDirectionalEtching.hpp>
-#include <models/psIsotropicProcess.hpp>
+#include <models/psGeometricDistributionModels.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
 using namespace viennaps;
+constexpr int D = 2;
+using NumericType = double;
 
-template <class NumericType, int D>
 void etch(SmartPointer<Domain<NumericType, D>> domain,
           utils::Parameters &params) {
   typename DirectionalEtching<NumericType, D>::RateSet rateSet;
@@ -23,7 +24,6 @@ void etch(SmartPointer<Domain<NumericType, D>> domain,
   Process<NumericType, D>(domain, etchModel, params.get("etchTime")).apply();
 }
 
-template <class NumericType, int D>
 void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
                   utils::Parameters &params) {
   typename DirectionalEtching<NumericType, D>::RateSet rateSet;
@@ -41,23 +41,19 @@ void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
   Process<NumericType, D>(domain, depoRemoval, 1.).apply();
 }
 
-template <class NumericType, int D>
 void deposit(SmartPointer<Domain<NumericType, D>> domain,
              NumericType depositionThickness) {
   domain->duplicateTopLevelSet(Material::Polymer);
-  auto model =
-      SmartPointer<IsotropicProcess<NumericType, D>>::New(depositionThickness);
-  Process<NumericType, D>(domain, model, 1.).apply();
+  auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(
+      depositionThickness, domain->getGridDelta());
+  Process<NumericType, D>(domain, model).apply();
 }
 
-template <class NumericType, int D>
 void ash(SmartPointer<Domain<NumericType, D>> domain) {
   domain->removeTopLevelSet();
 }
 
 int main(int argc, char **argv) {
-  constexpr int D = 2;
-  using NumericType = double;
 
   Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
@@ -76,8 +72,8 @@ int main(int argc, char **argv) {
   MakeTrench<NumericType, D>(
       geometry, params.get("gridDelta"), params.get("xExtent"),
       params.get("yExtent"), params.get("trenchWidth"),
-      params.get("maskHeight"), 0., 0 /* base height */,
-      false /* periodic boundary */, true /*create mask*/, Material::Si)
+      params.get("maskHeight"), 0. /* taper angle */, 0. /* base height */,
+      false /* periodic boundary */, true /* create mask */, Material::Si)
       .apply();
 
   const NumericType depositionThickness = params.get("depositionThickness");
@@ -105,5 +101,5 @@ int main(int argc, char **argv) {
                               ".vtp");
   }
 
-  geometry->saveVolumeMesh("boschProcessEmulate_final_cpp");
+  geometry->saveVolumeMesh("boschProcessEmulate_final");
 }
