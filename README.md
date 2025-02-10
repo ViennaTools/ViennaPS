@@ -35,7 +35,7 @@ Releases are tagged on the master branch and available in the [releases section]
 
 * [ViennaCore](https://github.com/ViennaTools/viennacore) >= 1.1.0
 
-* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.0.1
+* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.1.1
   * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.4.0
   * [VTK](https://vtk.org/) >= 9.0.0
 
@@ -145,8 +145,9 @@ This example focuses on a particle deposition process within a trench geometry. 
 
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
-This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process and geometry parameters can be varied in the __config.txt__ file. 
-Below the results for varied flux configurations, as tested in _testFluxes.py_, are shown.
+This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
+
+The image presents the results of different flux configurations, as tested in _testFluxes.py_. Each structure represents a variation in flux conditions, leading to differences in hole shape, depth, and profile characteristics. The variations highlight the influence of ion and neutral fluxes on the etching process. The files to create these examples can be found in _examples/holeEtching_.
 
 <div align="center">
   <img src="assets/sf6o2_results.png" width=700 style="background-color:white;">
@@ -154,6 +155,17 @@ Below the results for varied flux configurations, as tested in _testFluxes.py_, 
 
 ### Bosch Process
 
+This example compares different approaches to simulating the Bosch process, a deep reactive ion etching (DRIE) technique. The three structures illustrate how different modeling methods influence the predicted etch profile.
+
+- Left: The structure generated through process emulation, which captures the characteristic scalloping effect of the Bosch process in a simplified yet effective way.
+- Middle: The result of a simple simulation model, which approximates the etching dynamics but may lack finer physical details.
+- Right: The outcome of a more physical simulation model, leading to a more realistic etch profile.
+  
+This comparison highlights the trade-offs between computational efficiency and physical accuracy in DRIE simulations. The files to create these examples can be found in _examples/boschProcess_.
+
+<div align="center">
+  <img src="assets/bosch_process.png" width=700 style="background-color:white;">
+</div>
 
 
 ### Anisotropic Processes
