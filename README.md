@@ -200,7 +200,7 @@ ctest -E "Benchmark|Performance" --test-dir build
 ## Application
 
 > [!WARNING] 
-> The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.2.0. Please use the Python bindings instead.
+> The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.2.0. Please use the __Python bindings__ instead.
 
 It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake:
 
