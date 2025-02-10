@@ -137,7 +137,7 @@ Individual examples can also be build by calling `make` in their respective buil
 
 ### Trench Deposition
 
-This example focuses on a particle deposition process within a trench geometry. By default, the simulation presents a 2D representation of the trench. Nevertheless, users have the flexibility to conduct 3D simulations by adjusting the value of the constant _D_ in __trenchDeposition.cpp__ to 3. Customization of process and geometry parameters is achieved through the __config.txt__ file. The accompanying image illustrates instances of the trench deposition process, showcasing variations in the particle sticking probability _s_.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDeposition) focuses on a particle deposition process within a trench geometry. By default, the simulation presents a 2D representation of the trench. Nevertheless, users have the flexibility to conduct 3D simulations by adjusting the value of the constant _D_ in __trenchDeposition.cpp__ to 3. Customization of process and geometry parameters is achieved through the __config.txt__ file. The accompanying image illustrates instances of the trench deposition process, showcasing variations in the particle sticking probability _s_.
 
 <div align="center">
   <img src="assets/deposition.svg" width=700 style="background-color:white;">
@@ -145,9 +145,9 @@ This example focuses on a particle deposition process within a trench geometry. 
 
 ### SF<sub>6</sub>O<sub>2</sub> Hole Etching
 
-This example demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching) demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
 
-The image presents the results of different flux configurations, as tested in _testFluxes.py_. Each structure represents a variation in flux conditions, leading to differences in hole shape, depth, and profile characteristics. The variations highlight the influence of ion and neutral fluxes on the etching process. The files to create these examples can be found in _examples/holeEtching_.
+The image presents the results of different flux configurations, as tested in _testFluxes.py_. Each structure represents a variation in flux conditions, leading to differences in hole shape, depth, and profile characteristics. The variations highlight the influence of ion and neutral fluxes on the etching process.
 
 <div align="center">
   <img src="assets/sf6o2_results.png" width=700 style="background-color:white;">
@@ -155,13 +155,13 @@ The image presents the results of different flux configurations, as tested in _t
 
 ### Bosch Process
 
-This example compares different approaches to simulating the Bosch process, a deep reactive ion etching (DRIE) technique. The three structures illustrate how different modeling methods influence the predicted etch profile.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/boschProcess) compares different approaches to simulating the Bosch process, a deep reactive ion etching (DRIE) technique. The three structures illustrate how different modeling methods influence the predicted etch profile.
 
 - Left: The structure generated through process emulation, which captures the characteristic scalloping effect of the Bosch process in a simplified yet effective way.
 - Middle: The result of a simple simulation model, which approximates the etching dynamics but may lack finer physical details.
 - Right: The outcome of a more physical simulation model, leading to a more realistic etch profile.
   
-This comparison highlights the trade-offs between computational efficiency and physical accuracy in DRIE simulations. The files to create these examples can be found in _examples/boschProcess_.
+This comparison highlights the trade-offs between computational efficiency and physical accuracy in DRIE simulations.
 
 <div align="center">
   <img src="assets/bosch_process.png" width=700 style="background-color:white;">
@@ -170,7 +170,7 @@ This comparison highlights the trade-offs between computational efficiency and p
 
 ### Anisotropic Processes
 
-In the anisotropic process model, the etch or deposition rates are dependent on the crystallographic directions of the surface. This enables the accurate modeling of intricate processes like epitaxial growth or anisotropic wet etching. Basic examples, illustrating these processes are provided with the library and shown below.
+In the anisotropic process model, the etch or deposition rates are dependent on the crystallographic directions of the surface. This enables the accurate modeling of intricate processes like [epitaxial growth](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) or [anisotropic wet etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching). Basic examples, illustrating these processes are provided with the library and shown below.
 
 <div align="center">
   <img src="assets/anisotropic_process.svg" width=700 style="background-color:white;">
@@ -178,7 +178,7 @@ In the anisotropic process model, the etch or deposition rates are dependent on 
 
 ### Redeposition During Selective Etching
 
-This example demonstrates capturing etching byproducts and the subsequent redeposition during a selective etching process in a Si<sub>3</sub>N<sub>4</sub>/SiO<sub>2</sub> stack. The etching byproducts are captured in a cell set description of the etching plasma. To model the dynamics of these etching byproducts, a convection-diffusion equation is solved on the cell set using finite differences. The redeposition is then captured by adding up the byproducts in every step and using this information to generate a velocity field on the etched surface. 
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxideRegrowth) demonstrates capturing etching byproducts and the subsequent redeposition during a selective etching process in a Si<sub>3</sub>N<sub>4</sub>/SiO<sub>2</sub> stack. The etching byproducts are captured in a cell set description of the etching plasma. To model the dynamics of these etching byproducts, a convection-diffusion equation is solved on the cell set using finite differences. The redeposition is then captured by adding up the byproducts in every step and using this information to generate a velocity field on the etched surface. 
 
 <div align="center">
   <img src="assets/redeposition.gif" width=700 style="background-color:white;">
