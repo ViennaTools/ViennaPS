@@ -1,19 +1,20 @@
 # Geometry
-gridDelta = 0.5
-xExtent = 100.0
-yExtent = 50.0
-trenchWidth = 40.0
-maskHeight = 20.0
+gridDelta = 0.025
+xExtent = 3.5
+yExtent = 3.5
+
+trenchWidth = 2.0
+maskHeight = 0.6
 
 # Process
+depositionStickingProbability = 0.01
+depositionThickness = 0.075
+
 neutralStickingProbability = 0.1
-neutralRate = -0.6
+neutralRate = -0.2
 
 ionSourceExponent = 200
-ionRate = -1.0
+ionRate = -0.1
 
-etchTime = 6.0
-
-depositionThickness = 1.0
-
-numCycles = 5
+etchTime = 1.5
+numCycles = 10

@@ -64,7 +64,7 @@ void cleanup(SmartPointer<Domain<NumericType, D>> domain,
 
 int main(int argc, char **argv) {
 
-  Logger::setLogLevel(LogLevel::INFO);
+  Logger::setLogLevel(LogLevel::ERROR);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -87,27 +87,22 @@ int main(int argc, char **argv) {
 
   const NumericType depositionThickness = params.get("depositionThickness");
   const int numCycles = params.get<int>("numCycles");
+  const std::string name = "boschProcessEmulate_";
 
   int n = 0;
-  geometry->saveSurfaceMesh("boschProcessEmulate_" + std::to_string(n++) +
-                            ".vtp");
+  geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
   etch(geometry, params);
-  geometry->saveSurfaceMesh("boschProcessEmulate_" + std::to_string(n++) +
-                            ".vtp");
+  geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
 
   for (int i = 0; i < numCycles; ++i) {
     deposit(geometry, depositionThickness);
-    geometry->saveSurfaceMesh("boschProcessEmulate_" + std::to_string(n++) +
-                              ".vtp");
+    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
     punchThrough(geometry, params);
-    geometry->saveSurfaceMesh("boschProcessEmulate_" + std::to_string(n++) +
-                              ".vtp");
+    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
     etch(geometry, params);
-    geometry->saveSurfaceMesh("boschProcessEmulate_" + std::to_string(n++) +
-                              ".vtp");
+    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
     ash(geometry);
-    geometry->saveSurfaceMesh("boschProcessEmulate_" + std::to_string(n++) +
-                              ".vtp");
+    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
   }
 
   cleanup(geometry, params.get("gridDelta"));

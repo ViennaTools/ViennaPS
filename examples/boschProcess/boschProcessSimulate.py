@@ -18,7 +18,8 @@ else:
     import viennaps3d as vps
 
 params = vps.ReadConfigFile(args.filename)
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
+vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+vps.setNumThreads(16)
 
 geometry = vps.Domain()
 vps.MakeTrench(
@@ -35,19 +36,24 @@ vps.MakeTrench(
     material=vps.Material.Si,
 ).apply()
 
-# Isoptropic deposition model (emulation of the deposition process)
-depoModel = vps.IsotropicProcess(params["depositionThickness"])
-
-depoRemoval = vps.SingleParticleProcess(
-    -(params["depositionThickness"] + params["gridDelta"] / 2.0),  # rate
-    1.0,  # sticking probability
-    params["ionSourceExponent"],  # source exponent
-    vps.Material.Mask,  # mask material
+# Isoptropic deposition model
+depoModel = vps.SingleParticleProcess(
+    rate=params["depositionThickness"],
+    stickingProbability=params["depositionStickingProbability"],
 )
 
+# Deposition removal model
+depoRemoval = vps.SingleParticleProcess(
+    rate=-params["depositionThickness"],
+    stickingProbability=1.0,
+    sourceExponent=params["ionSourceExponent"],
+    maskMaterial=vps.Material.Mask,
+)
+
+# Etch model
 etchModel = vps.MultiParticleProcess()
 etchModel.addNeutralParticle(params["neutralStickingProbability"])
-etchModel.addIonParticle(params["ionSourceExponent"])
+etchModel.addIonParticle(sourcePower=params["ionSourceExponent"], thetaRMin=60.0)
 
 
 # Custom rate function for the etch model
@@ -61,44 +67,52 @@ def rateFunction(fluxes, material):
 
 
 etchModel.setRateFunction(rateFunction)
+etchTime = params["etchTime"]
 
-numCycles = int(params["numCycles"])
 n = 0
 
-geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+
+def runProcess(model, name, time=1.0):
+    global n
+    print("  - {} - ".format(name))
+    vps.Process(geometry, model, time).apply()
+    geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
+    n += 1
+
+
+def cleanup(threshold=1.0):
+    expand = vps.IsotropicProcess(threshold)
+    vps.Process(geometry, expand, 1).apply()
+    shrink = vps.IsotropicProcess(-threshold)
+    vps.Process(geometry, shrink, 1).apply()
+
+
+numCycles = int(params["numCycles"])
+
+# Initial geometry
+geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
 n += 1
 
-vps.Process(geometry, etchModel, params["etchTime"]).apply()
-geometry.saveSurfaceMesh("boschProcess_{}".format(n))
-n += 1
+runProcess(etchModel, "Etching", etchTime)
 
 for i in range(numCycles):
+    print("Cycle {}".format(i + 1))
+
     # Deposit a layer of polymer
     geometry.duplicateTopLevelSet(vps.Material.Polymer)
-    vps.Process(geometry, depoModel, 1).apply()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
-    n += 1
+    runProcess(depoModel, "Deposition")
 
     # Remove the polymer layer
-    vps.Process(geometry, depoRemoval, 1).apply()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
-    n += 1
+    runProcess(depoRemoval, "Punching through")
 
     # Etch the trench
-    vps.Process(geometry, etchModel, params["etchTime"]).apply()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
-    n += 1
+    runProcess(etchModel, "Etching", etchTime)
 
-    # Ash the polymer
+    # Ash (remove) the polymer
     geometry.removeTopLevelSet()
-    geometry.saveSurfaceMesh("boschProcess_{}".format(n))
+    cleanup(params["gridDelta"])
+    geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
     n += 1
-
-# clean up step
-expand = vps.IsotropicProcess(params["gridDelta"])
-vps.Process(geometry, expand, 1).apply()
-shrink = vps.IsotropicProcess(-params["gridDelta"])
-vps.Process(geometry, shrink, 1).apply()
 
 # save the final geometry
-geometry.saveVolumeMesh("final")
+geometry.saveVolumeMesh("boschProcessSimulate_final")
