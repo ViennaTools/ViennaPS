@@ -94,4 +94,11 @@ for i in range(numCycles):
     geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 
+# clean up step
+expand = vps.IsotropicProcess(params["gridDelta"])
+vps.Process(geometry, expand, 1).apply()
+shrink = vps.IsotropicProcess(-params["gridDelta"])
+vps.Process(geometry, shrink, 1).apply()
+
+# save the final geometry
 geometry.saveVolumeMesh("final_emulate")

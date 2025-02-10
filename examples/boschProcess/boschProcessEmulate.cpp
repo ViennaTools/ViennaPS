@@ -1,6 +1,7 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psDirectionalEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
+#include <models/psIsotropicProcess.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
@@ -53,6 +54,14 @@ void ash(SmartPointer<Domain<NumericType, D>> domain) {
   domain->removeTopLevelSet();
 }
 
+void cleanup(SmartPointer<Domain<NumericType, D>> domain,
+             NumericType threshold) {
+  auto expand = SmartPointer<IsotropicProcess<NumericType, D>>::New(threshold);
+  Process<NumericType, D>(domain, expand, 1.).apply();
+  auto shrink = SmartPointer<IsotropicProcess<NumericType, D>>::New(-threshold);
+  Process<NumericType, D>(domain, shrink, 1.).apply();
+}
+
 int main(int argc, char **argv) {
 
   Logger::setLogLevel(LogLevel::INFO);
@@ -101,5 +110,6 @@ int main(int argc, char **argv) {
                               ".vtp");
   }
 
+  cleanup(geometry, params.get("gridDelta"));
   geometry->saveVolumeMesh("boschProcessEmulate_final");
 }

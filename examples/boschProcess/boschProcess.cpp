@@ -13,7 +13,8 @@ void etch(SmartPointer<Domain<NumericType, D>> domain,
           utils::Parameters &params) {
   auto etchModel = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
   etchModel->addNeutralParticle(params.get("neutralStickingProbability"));
-  etchModel->addIonParticle(params.get("ionSourceExponent"));
+  etchModel->addIonParticle(params.get("ionSourceExponent"),
+                            90. /*no reflections*/);
   const NumericType neutralRate = params.get("neutralRate");
   const NumericType ionRate = params.get("ionRate");
   etchModel->setRateFunction(
@@ -51,6 +52,14 @@ void deposit(SmartPointer<Domain<NumericType, D>> domain,
 
 void ash(SmartPointer<Domain<NumericType, D>> domain) {
   domain->removeTopLevelSet();
+}
+
+void cleanup(SmartPointer<Domain<NumericType, D>> domain,
+             NumericType threshold) {
+  auto expand = SmartPointer<IsotropicProcess<NumericType, D>>::New(threshold);
+  Process<NumericType, D>(domain, expand, 1.).apply();
+  auto shrink = SmartPointer<IsotropicProcess<NumericType, D>>::New(-threshold);
+  Process<NumericType, D>(domain, shrink, 1.).apply();
 }
 
 int main(int argc, char **argv) {
@@ -95,5 +104,6 @@ int main(int argc, char **argv) {
     geometry->saveSurfaceMesh("boschProcess_" + std::to_string(n++) + ".vtp");
   }
 
+  cleanup(geometry, params.get("gridDelta"));
   geometry->saveVolumeMesh("boschProcess_final");
 }
