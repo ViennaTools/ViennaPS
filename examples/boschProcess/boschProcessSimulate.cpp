@@ -1,7 +1,7 @@
 #include <geometries/psMakeTrench.hpp>
-#include <models/psDirectionalEtching.hpp>
-#include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
+#include <models/psMultiParticleProcess.hpp>
+#include <models/psSingleParticleProcess.hpp>
 #include <psProcess.hpp>
 #include <psUtils.hpp>
 
@@ -11,43 +11,47 @@ using NumericType = double;
 
 void etch(SmartPointer<Domain<NumericType, D>> domain,
           utils::Parameters &params) {
-  typename DirectionalEtching<NumericType, D>::RateSet rateSet;
-  rateSet.direction = {0.};
-  rateSet.direction[D - 1] = -1.;
-  rateSet.directionalVelocity = params.get("ionRate");
-  rateSet.isotropicVelocity = params.get("neutralRate");
-  rateSet.maskMaterials =
-      std::vector<Material>{Material::Mask, Material::Polymer};
-  rateSet.calculateVisibility = true;
-
-  auto etchModel =
-      SmartPointer<DirectionalEtching<NumericType, D>>::New(rateSet);
+  std::cout << "  - Etching - " << std::endl;
+  auto etchModel = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
+  etchModel->addNeutralParticle(params.get("neutralStickingProbability"));
+  etchModel->addIonParticle(params.get("ionSourceExponent"),
+                            90. /*no reflections*/);
+  const NumericType neutralRate = params.get("neutralRate");
+  const NumericType ionRate = params.get("ionRate");
+  etchModel->setRateFunction(
+      [neutralRate, ionRate](const std::vector<NumericType> &fluxes,
+                             const Material &material) {
+        if (material == Material::Mask)
+          return 0.;
+        NumericType rate = fluxes[1] * ionRate;
+        if (material == Material::Si)
+          rate += fluxes[0] * neutralRate;
+        return rate;
+      });
   Process<NumericType, D>(domain, etchModel, params.get("etchTime")).apply();
 }
 
 void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
                   utils::Parameters &params) {
-  typename DirectionalEtching<NumericType, D>::RateSet rateSet;
-  rateSet.direction = {0.};
-  rateSet.direction[D - 1] = -1.;
-  rateSet.directionalVelocity =
-      -(params.get("depositionThickness") + params.get("gridDelta") / 2.);
-  rateSet.isotropicVelocity = 0.;
-  rateSet.maskMaterials = std::vector<Material>{Material::Mask};
-  rateSet.calculateVisibility = true;
+  std::cout << "  - Punching through - " << std::endl;
+  NumericType depositionThickness = params.get("depositionThickness");
 
   // punch through step
-  auto depoRemoval =
-      SmartPointer<DirectionalEtching<NumericType, D>>::New(rateSet);
+  auto depoRemoval = SmartPointer<SingleParticleProcess<NumericType, D>>::New(
+      -depositionThickness, 1. /* sticking */, params.get("ionSourceExponent"),
+      Material::Mask);
   Process<NumericType, D>(domain, depoRemoval, 1.).apply();
 }
 
 void deposit(SmartPointer<Domain<NumericType, D>> domain,
-             NumericType depositionThickness) {
+             utils::Parameters &params) {
+  std::cout << "  - Deposition - " << std::endl;
+  NumericType depositionThickness = params.get("depositionThickness");
+  NumericType depositionSticking = params.get("depositionStickingProbability");
   domain->duplicateTopLevelSet(Material::Polymer);
-  auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(
-      depositionThickness, domain->getGridDelta());
-  Process<NumericType, D>(domain, model).apply();
+  auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(
+      depositionThickness, depositionSticking);
+  Process<NumericType, D>(domain, model, 1.).apply();
 }
 
 void ash(SmartPointer<Domain<NumericType, D>> domain) {
@@ -87,7 +91,7 @@ int main(int argc, char **argv) {
 
   const NumericType depositionThickness = params.get("depositionThickness");
   const int numCycles = params.get<int>("numCycles");
-  const std::string name = "boschProcessEmulate_";
+  const std::string name = "boschProcessSimulate_";
 
   int n = 0;
   geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
@@ -95,7 +99,8 @@ int main(int argc, char **argv) {
   geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
 
   for (int i = 0; i < numCycles; ++i) {
-    deposit(geometry, depositionThickness);
+    std::cout << "Cycle " << i + 1 << std::endl;
+    deposit(geometry, params);
     geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
     punchThrough(geometry, params);
     geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
@@ -106,5 +111,5 @@ int main(int argc, char **argv) {
   }
 
   cleanup(geometry, params.get("gridDelta"));
-  geometry->saveVolumeMesh("boschProcessEmulate_final");
+  geometry->saveVolumeMesh(name + "final");
 }

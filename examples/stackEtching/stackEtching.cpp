@@ -37,9 +37,9 @@ int main(int argc, char *argv[]) {
 
   // use pre-defined model Fluorocarbon etching model
   auto model = ps::SmartPointer<ps::FluorocarbonEtching<NumericType, D>>::New(
-      params.get("ionFlux"), params.get("etchantFlux"),
-      params.get("polymerFlux"), params.get("energyMean"),
-      params.get("energySigma"));
+      params.get("ionFlux"), params.get("etchantFlux"), params.get("polyFlux"),
+      params.get("meanIonEnergy"), params.get("sigmaIonEnergy"),
+      params.get("ionExponent"));
 
   // process setup
   ps::Process<NumericType, D> process;

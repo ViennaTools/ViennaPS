@@ -5,6 +5,8 @@
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 
+#include <string>
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -23,13 +25,14 @@ enum class Material : int {
   GaN = 9,
   W = 10,
   Al2O3 = 11,
-  TiN = 12,
-  Cu = 13,
-  Polymer = 14,
-  Dielectric = 15,
-  Metal = 16,
-  Air = 17,
-  GAS = 18
+  HfO2 = 12,
+  TiN = 13,
+  Cu = 14,
+  Polymer = 15,
+  Dielectric = 16,
+  Metal = 17,
+  Air = 18,
+  GAS = 19
 };
 
 /// A class that wraps the viennals MaterialMap class and provides a more user
@@ -68,7 +71,7 @@ public:
   inline std::size_t const size() const { return map_->getNumberOfLayers(); }
 
   static inline Material mapToMaterial(const int matId) {
-    if (matId > 18 || matId < -1)
+    if (matId > 19 || matId < -1)
       return Material::None;
     return static_cast<Material>(matId);
   }
@@ -80,6 +83,56 @@ public:
   template <class T>
   static inline bool isMaterial(const T matId, const Material material) {
     return mapToMaterial(matId) == material;
+  }
+
+  template <class T> static inline std::string getMaterialName(const T matId) {
+    auto material = mapToMaterial(matId);
+    switch (material) {
+    case Material::None:
+      return "None";
+    case Material::Mask:
+      return "Mask";
+    case Material::Si:
+      return "Si";
+    case Material::SiO2:
+      return "SiO2";
+    case Material::Si3N4:
+      return "Si3N4";
+    case Material::SiN:
+      return "SiN";
+    case Material::SiON:
+      return "SiON";
+    case Material::SiC:
+      return "SiC";
+    case Material::SiGe:
+      return "SiGe";
+    case Material::PolySi:
+      return "PolySi";
+    case Material::GaN:
+      return "GaN";
+    case Material::W:
+      return "W";
+    case Material::Al2O3:
+      return "Al2O3";
+    case Material::HfO2:
+      return "HfO2";
+    case Material::TiN:
+      return "TiN";
+    case Material::Cu:
+      return "Cu";
+    case Material::Polymer:
+      return "Polymer";
+    case Material::Dielectric:
+      return "Dielectric";
+    case Material::Metal:
+      return "Metal";
+    case Material::Air:
+      return "Air";
+    case Material::GAS:
+      return "GAS";
+    default:
+      return "Unknown";
+    }
   }
 };
 

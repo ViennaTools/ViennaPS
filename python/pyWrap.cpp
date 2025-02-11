@@ -759,28 +759,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getParameters", &SF6O2Etching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
-  // SF6 Etching
-  pybind11::class_<SF6Etching<T, D>, SmartPointer<SF6Etching<T, D>>>(
-      module, "SF6Etching", processModel)
-      .def(pybind11::init<>())
-      .def(
-          pybind11::init(&SmartPointer<SF6Etching<T, D>>::New<
-                         const double /*ionFlux*/, const double /*etchantFlux*/,
-                         const T /*meanIonEnergy*/, const T /*sigmaIonEnergy*/,
-                         const T /*ionExponent*/, const T /*etchStopDepth*/>),
-          pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
-          pybind11::arg("meanIonEnergy") = 100.,
-          pybind11::arg("sigmaIonEnergy") = 10.,
-          pybind11::arg("ionExponent") = 100.,
-          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
-      .def(
-          pybind11::init(
-              &SmartPointer<SF6Etching<T, D>>::New<const SF6O2Parameters<T> &>),
-          pybind11::arg("parameters"))
-      .def("setParameters", &SF6Etching<T, D>::setParameters)
-      .def("getParameters", &SF6Etching<T, D>::getParameters,
-           pybind11::return_value_policy::reference);
-
   // Fluorocarbon Parameters
   pybind11::class_<FluorocarbonParameters<T>::MaskType>(
       module, "FluorocarbonParametersMask")
@@ -966,7 +944,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("maskMaterials",
                      &DirectionalEtching<T, D>::RateSet::maskMaterials)
       .def_readwrite("calculateVisibility",
-                     &DirectionalEtching<T, D>::RateSet::calculateVisibility);
+                     &DirectionalEtching<T, D>::RateSet::calculateVisibility)
+      .def("print", &DirectionalEtching<T, D>::RateSet::print);
 
   // Expose DirectionalEtching class to Python
   pybind11::class_<DirectionalEtching<T, D>,
@@ -1346,7 +1325,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("size", &MaterialMap::size)
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
-      .def_static("isMaterial", &MaterialMap::isMaterial<T>);
+      .def_static("isMaterial", &MaterialMap::isMaterial<T>)
+      .def_static("getMaterialName", &MaterialMap::getMaterialName<Material>,
+                  "Get the name of a material.");
 
   // ***************************************************************************
   //                                   VISUALIZATION

@@ -26,7 +26,7 @@ int main() {
   // MapToMaterial test
   assert(MaterialMap::mapToMaterial(1) == Material::Si);
   assert(MaterialMap::mapToMaterial(2) == Material::SiO2);
-  assert(MaterialMap::mapToMaterial(19) == Material::None);
+  assert(MaterialMap::mapToMaterial(20) == Material::None);
 
   // IsMaterial test
   assert(MaterialMap::isMaterial(1, Material::Si));
