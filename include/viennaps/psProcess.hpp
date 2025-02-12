@@ -838,7 +838,7 @@ private:
     return delta;
   }
 
-  void initializeRayTracer(viennaray::Trace<NumericType, D> &tracer) {
+  void initializeRayTracer(viennaray::Trace<NumericType, D> &tracer) const {
     // Map the domain boundary to the ray tracing boundaries
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     if (rayTracingParams.ignoreFluxBoundaries) {
