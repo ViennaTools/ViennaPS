@@ -15,7 +15,7 @@ option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
 
 option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
-option(VIENNAPS_BUILD_GPU_APPLICATION "Build ViennaPS GPU application." ON)
+option(VIENNAPS_DISABLE_GPU "Disable ViennaPS for checking for a GPU." OFF)
 option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 
 # --------------------------------------------------------------------------------------------------------
@@ -97,8 +97,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.1.0
-  GIT_TAG gpu-process
+  VERSION 1.2.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
@@ -140,10 +139,20 @@ if(VIENNAPS_BUILD_APPLICATION)
 endif()
 
 # GPU
-if(VIENNAPS_BUILD_GPU_APPLICATION)
-  message(STATUS "[ViennaPS] Building GPU Application")
-  add_subdirectory(gpu)
-endif(VIENNAPS_BUILD_GPU_APPLICATION)
+if(NOT VIENNAPS_DISABLE_GPU)
+  # Add paths to our CMake code to the module path, so they can be found automatically by
+  # CMake (i.e. FindCUDA and FindOptiX).
+  set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+  find_package(CUDA QUIET)
+  if (CUDA_FOUND)
+    set(VIENNAPS_USE_GPU ON CACHE BOOL "Use GPU for ViennaPS")
+    message(STATUS "Found CUDA Toolkit: ${CUDA_TOOLKIT_ROOT_DIR}")
+    add_subdirectory(gpu)
+  else()
+    set(VIENNAPS_USE_GPU OFF CACHE BOOL "Use GPU for ViennaPS")
+    message(WARNING "CUDA Toolkit not found. Skipping GPU build.")
+  endif()
+  endif(NOT VIENNAPS_DISABLE_GPU)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Examples

@@ -67,6 +67,11 @@ target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2
 target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3
                                               -DVIENNAPS_MODULE_NAME=viennaps3d)
 
+if (VIENNAPS_USE_GPU)
+  target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_USE_GPU)
+  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU)                                      
+endif()
+
 # --------------------------------------------------------------------------------------------------------
 # Setup Lib-Folder
 # --------------------------------------------------------------------------------------------------------
