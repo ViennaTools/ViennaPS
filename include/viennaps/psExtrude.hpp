@@ -14,14 +14,14 @@ template <class NumericType> class Extrude {
   SmartPointer<Domain<NumericType, 3>> outputDomain;
   std::array<NumericType, 2> extent = {0., 0.};
   int extrudeDim = 0;
-  std::array<viennals::BoundaryConditionEnum<3>, 3> boundaryConds;
+  std::array<viennals::BoundaryConditionEnum, 3> boundaryConds;
 
 public:
   Extrude() {}
   Extrude(SmartPointer<Domain<NumericType, 2>> &passedInputDomain,
           SmartPointer<Domain<NumericType, 3>> &passedOutputDomain,
           std::array<NumericType, 2> passedExtent, const int passedExtrudeDim,
-          std::array<viennals::BoundaryConditionEnum<3>, 3> passedBoundaryConds)
+          std::array<viennals::BoundaryConditionEnum, 3> passedBoundaryConds)
       : inputDomain(passedInputDomain), outputDomain(passedOutputDomain),
         extent(passedExtent), extrudeDim(passedExtrudeDim),
         boundaryConds(passedBoundaryConds) {}
@@ -47,12 +47,12 @@ public:
   }
 
   void setBoundaryConditions(
-      std::array<viennals::BoundaryConditionEnum<3>, 3> passedBoundaryConds) {
+      std::array<viennals::BoundaryConditionEnum, 3> passedBoundaryConds) {
     boundaryConds = passedBoundaryConds;
   }
 
   void setBoundaryConditions(
-      viennals::BoundaryConditionEnum<3> passedBoundaryConds[3]) {
+      viennals::BoundaryConditionEnum passedBoundaryConds[3]) {
     for (int i = 0; i < 3; i++)
       boundaryConds[i] = passedBoundaryConds[i];
   }

@@ -7,10 +7,10 @@ using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
   const NumericType gridDelta = 0.01;
-  viennals::BoundaryConditionEnum<D> boundaryConditions[D] = {
-      viennals::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      viennals::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      viennals::BoundaryConditionEnum<D>::INFINITE_BOUNDARY};
+  viennals::BoundaryConditionEnum boundaryConditions[D] = {
+      viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+      viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+      viennals::BoundaryConditionEnum::INFINITE_BOUNDARY};
   auto mask = SmartPointer<GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConditions);
   GDSReader<NumericType, D> reader(mask, "mask.gds");

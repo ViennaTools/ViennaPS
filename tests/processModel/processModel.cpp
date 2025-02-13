@@ -16,6 +16,9 @@ namespace viennacore {
 using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
+  units::Time::getInstance().setUnit("s");
+  units::Length::getInstance().setUnit("nm");
+
   // default constructors
   { auto model = SmartPointer<ProcessModel<NumericType, D>>::New(); }
 
@@ -57,8 +60,6 @@ template <class NumericType, int D> void RunTest() {
 
   // SF6O2 etching
   {
-    units::Time::getInstance().setUnit("s");
-    units::Length::getInstance().setUnit("nm");
     auto model =
         SmartPointer<SF6O2Etching<NumericType, D>>::New(1., 1., 1., 1., 1.);
     VC_TEST_ASSERT(model->getSurfaceModel());
