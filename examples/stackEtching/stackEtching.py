@@ -9,16 +9,9 @@ parser = ArgumentParser(
 parser.add_argument("filename")
 args = parser.parse_args()
 
-extrude = True
-try:
-    # ViennaLS Python bindings are needed for the extrusion tool
-    import viennals3d as vls
-except ModuleNotFoundError:
-    print("ViennaLS Python module not found. Can not extrude.")
-    extrude = False
 
 # Set process verbosity
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
+vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 # Parse process parameters
 params = vps.ReadConfigFile(args.filename)
@@ -65,17 +58,16 @@ process.apply()
 # print final surface
 geometry.saveVolumeMesh("final")
 
-if extrude:
-    print("Extruding to 3D ...")
-    extruded = vps.Domain3D()
-    extrudeExtent = [-20.0, 20.0]
-    boundaryConds = [
-        vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-        vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-        vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY,
-    ]
+print("Extruding to 3D ...")
+extruded = vps.Domain3D()
+extrudeExtent = [-20.0, 20.0]
+boundaryConds = [
+    vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
+    vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
+    vps.ls.BoundaryConditionEnum.INFINITE_BOUNDARY,
+]
 
-    vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
+vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
 
-    extruded.saveSurfaceMesh("extruded_surface.vtp", True)
-    extruded.saveVolumeMesh("extruded_volume")
+extruded.saveSurfaceMesh("extruded_surface.vtp", True)
+extruded.saveVolumeMesh("extruded")

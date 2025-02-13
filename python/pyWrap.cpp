@@ -1528,7 +1528,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<SmartPointer<Domain<T, 2>> &,
                           SmartPointer<Domain<T, 3>> &, std::array<T, 2>,
                           const int,
-                          std::array<viennals::BoundaryConditionEnum<3>, 3>>(),
+                          std::array<viennals::BoundaryConditionEnum, 3>>(),
            pybind11::arg("inputDomain"), pybind11::arg("outputDomain"),
            pybind11::arg("extent"), pybind11::arg("extrudeDimension"),
            pybind11::arg("boundaryConditions"))
@@ -1543,7 +1543,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set which index of the added dimension (x: 0, y: 1, z: 2).")
       .def("setBoundaryConditions",
            pybind11::overload_cast<
-               std::array<viennals::BoundaryConditionEnum<3>, 3>>(
+               std::array<viennals::BoundaryConditionEnum, 3>>(
                &Extrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &Extrude<T>::apply, "Run the extrusion.");
