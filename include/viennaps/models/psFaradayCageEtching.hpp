@@ -216,13 +216,12 @@ public:
       return;
 
     auto boundaryConditions = domain->getBoundaryConditions();
-    if ((D == 3 &&
-         (boundaryConditions[0] !=
-              viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY ||
-          boundaryConditions[1] !=
-              viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY)) ||
+    if ((D == 3 && (boundaryConditions[0] !=
+                        viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY ||
+                    boundaryConditions[1] !=
+                        viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY)) ||
         (D == 2 && boundaryConditions[0] !=
-                       viennals::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY)) {
+                       viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY)) {
       Logger::getInstance()
           .addWarning("FaradayCageEtching: Periodic boundary conditions are "
                       "required for the Faraday Cage Etching process.")

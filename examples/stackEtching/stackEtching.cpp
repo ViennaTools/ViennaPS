@@ -61,9 +61,9 @@ int main(int argc, char *argv[]) {
   auto extruded = ps::SmartPointer<ps::Domain<NumericType, 3>>::New();
   std::array<NumericType, 2> extrudeExtent = {-20., 20.};
   ps::Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
-                           {ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                            ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                            ls::BoundaryConditionEnum<3>::INFINITE_BOUNDARY})
+                           {ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+                            ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+                            ls::BoundaryConditionEnum::INFINITE_BOUNDARY})
       .apply();
 
   extruded->saveVolumeMesh("final_extruded");

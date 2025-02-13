@@ -10,10 +10,10 @@ int main(int argc, char **argv) {
 
   // read GDS mask file
   const NumericType gridDelta = 0.01;
-  ls::BoundaryConditionEnum<D> boundaryConds[D] = {
-      ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY};
+  ls::BoundaryConditionEnum boundaryConds[D] = {
+      ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum::INFINITE_BOUNDARY};
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
   ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
