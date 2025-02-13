@@ -55,17 +55,17 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
-    updateCoverages(rates, materialIds);
-    const auto numPoints = rates->getScalarData(0)->size();
+    updateCoverages(fluxes, materialIds);
+    const auto numPoints = fluxes->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
-    const auto ionSputterFlux = rates->getScalarData("ionSputterFlux");
+    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
+    const auto ionSputterFlux = fluxes->getScalarData("ionSputterFlux");
 
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
     const auto eCoverage = coverages->getScalarData("eCoverage");
 
     // save the etch rate components for visualization
@@ -124,19 +124,19 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
-    const auto numPoints = rates->getScalarData(0)->size();
+    const auto numPoints = fluxes->getScalarData(0)->size();
 
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
     std::vector<NumericType> oxygenFlux(numPoints, 0.);
     if (params.oxygenFlux > 0)
-      oxygenFlux = *rates->getScalarData("oxygenFlux");
+      oxygenFlux = *fluxes->getScalarData("oxygenFlux");
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
+    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
     const auto ionEnhancedPassivationFlux =
-        rates->getScalarData("ionEnhancedPassivationFlux");
+        fluxes->getScalarData("ionEnhancedPassivationFlux");
 
     // etchant fluorine coverage
     auto eCoverage = coverages->getScalarData("eCoverage");

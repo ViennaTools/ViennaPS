@@ -1,4 +1,7 @@
+# Config file for a trench etching in a stack example process
+
 # Domain
+lengthUnit=nm
 gridDelta = 2.  # nm
 xExtent = 120.0 # nm
 yExtent = 120.0 # nm 
@@ -11,12 +14,14 @@ trenchWidth = 75      # nm
 maskHeight = 50       # nm
 
 # Process
-processTime = 20 # seconds
+processTime = 30 # seconds
+timeUnit=s
 
 # fluxes in 1e15 atoms/cm3
 etchantFlux = 150
-polyFlux = 10
+polyFlux = 5
 ionFlux = 56
+
 meanIonEnergy = 100.
 sigmaIonEnergy = 10.
 ionExponent = 100.
