@@ -81,7 +81,10 @@ public:
 
     if (B_sp_ >= 0.) {
       NumericType cosTheta = -DotProduct(rayDir, geomNormal);
-      flux *= (1 + B_sp_ * (1 - cosTheta * cosTheta)) * cosTheta;
+      NumericType angle = std::acos(cosTheta);
+      if (cosTheta)
+        flux *= std::max(3. - 6. * angle / M_PI, 0.);
+      // flux *= (1 + B_sp_ * (1 - cosTheta * cosTheta)) * cosTheta;
     }
 
     if (energy_ > 0.)
@@ -97,12 +100,13 @@ public:
                     RNG &rngState) override final {
 
     auto cosTheta = -DotProduct(rayDir, geomNormal);
+    cosTheta = std::min(cosTheta, NumericType(1.));
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
 
-    NumericType incomingAngle =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    NumericType incomingAngle = std::acos(cosTheta);
+    assert(incomingAngle <= M_PI_2 + 1e-6 && "Error in calculating angle");
+    assert(incomingAngle >= 0 && "Error in calculating angle");
 
     if (energy_ > 0.) {
       // Small incident angles are reflected with the energy fraction centered
@@ -132,7 +136,8 @@ public:
                                NumericType(1.));
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-        rayDir, geomNormal, rngState, std::max(incomingAngle, minAngle_));
+        rayDir, geomNormal, rngState,
+        M_PI_2 - std::min(incomingAngle, minAngle_));
 
     return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
   }
@@ -263,7 +268,7 @@ public:
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
-                      NumericType thetaRMax = 90., NumericType minAngle = 0.,
+                      NumericType thetaRMax = 90., NumericType minAngle = 80.,
                       NumericType B_sp = -1., NumericType meanEnergy = 0.,
                       NumericType sigmaEnergy = 0.,
                       NumericType thresholdEnergy = 0.,

@@ -2,8 +2,8 @@ from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
-    prog="boschProcessEmulate",
-    description="Run a Bosch process emulation on a trench geometry.",
+    prog="boschProcess",
+    description="Run a Bosch process simulation on a trench geometry.",
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
@@ -16,7 +16,6 @@ if args.dim == 2:
 else:
     print("Running 3D simulation.")
     import viennaps3d as vps
-
 
 params = vps.ReadConfigFile(args.filename)
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
@@ -37,32 +36,37 @@ vps.MakeTrench(
     material=vps.Material.Si,
 ).apply()
 
-
-direction = [0.0, 0.0, 0.0]
-direction[vps.D - 1] = -1.0
-
-# Geometric advection model for deposition
-depoModel = vps.SphereDistribution(
-    radius=params["depositionThickness"], gridDelta=params["gridDelta"]
+# Isoptropic deposition model
+depoModel = vps.SingleParticleProcess(
+    rate=params["depositionThickness"],
+    stickingProbability=params["depositionStickingProbability"],
 )
 
-# Define purely directional rate for depo removal
-etchDir = vps.RateSet(
-    direction=direction,
-    directionalVelocity=-(params["depositionThickness"] + params["gridDelta"] / 2.0),
-    isotropicVelocity=0.0,
-    maskMaterials=[vps.Material.Mask],
+# Deposition removal model
+depoRemoval = vps.SingleParticleProcess(
+    rate=-params["depositionThickness"],
+    stickingProbability=1.0,
+    sourceExponent=params["ionSourceExponent"],
+    maskMaterial=vps.Material.Mask,
 )
-depoRemoval = vps.DirectionalEtching(rateSets=[etchDir])
 
-# Define isotropic + direction rate for etching of substrate
-etchIso = vps.RateSet(
-    direction=direction,
-    directionalVelocity=params["ionRate"],
-    isotropicVelocity=params["neutralRate"],
-    maskMaterials=[vps.Material.Mask, vps.Material.Polymer],
-)
-etchModel = vps.DirectionalEtching(rateSets=[etchIso])
+# Etch model
+etchModel = vps.MultiParticleProcess()
+etchModel.addNeutralParticle(params["neutralStickingProbability"])
+etchModel.addIonParticle(sourcePower=params["ionSourceExponent"], thetaRMin=60.0)
+
+
+# Custom rate function for the etch model
+def rateFunction(fluxes, material):
+    if material == vps.Material.Mask:
+        return 0.0
+    rate = fluxes[1] * params["ionRate"]
+    if material == vps.Material.Si:
+        rate += fluxes[0] * params["neutralRate"]
+    return rate
+
+
+etchModel.setRateFunction(rateFunction)
 etchTime = params["etchTime"]
 
 n = 0
@@ -72,7 +76,7 @@ def runProcess(model, name, time=1.0):
     global n
     print("  - {} - ".format(name))
     vps.Process(geometry, model, time).apply()
-    geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
+    geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
     n += 1
 
 
@@ -86,7 +90,7 @@ def cleanup(threshold=1.0):
 numCycles = int(params["numCycles"])
 
 # Initial geometry
-geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
+geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
 n += 1
 
 runProcess(etchModel, "Etching", etchTime)
@@ -107,8 +111,8 @@ for i in range(numCycles):
     # Ash (remove) the polymer
     geometry.removeTopLevelSet()
     cleanup(params["gridDelta"])
-    geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
+    geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
     n += 1
 
 # save the final geometry
-geometry.saveVolumeMesh("boschProcessEmulate_final")
+geometry.saveVolumeMesh("boschProcessSimulate_final")

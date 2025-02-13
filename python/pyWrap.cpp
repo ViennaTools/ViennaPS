@@ -759,28 +759,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getParameters", &SF6O2Etching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
 
-  // SF6 Etching
-  pybind11::class_<SF6Etching<T, D>, SmartPointer<SF6Etching<T, D>>>(
-      module, "SF6Etching", processModel)
-      .def(pybind11::init<>())
-      .def(
-          pybind11::init(&SmartPointer<SF6Etching<T, D>>::New<
-                         const double /*ionFlux*/, const double /*etchantFlux*/,
-                         const T /*meanIonEnergy*/, const T /*sigmaIonEnergy*/,
-                         const T /*ionExponent*/, const T /*etchStopDepth*/>),
-          pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
-          pybind11::arg("meanIonEnergy") = 100.,
-          pybind11::arg("sigmaIonEnergy") = 10.,
-          pybind11::arg("ionExponent") = 100.,
-          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
-      .def(
-          pybind11::init(
-              &SmartPointer<SF6Etching<T, D>>::New<const SF6O2Parameters<T> &>),
-          pybind11::arg("parameters"))
-      .def("setParameters", &SF6Etching<T, D>::setParameters)
-      .def("getParameters", &SF6Etching<T, D>::getParameters,
-           pybind11::return_value_policy::reference);
-
   // Fluorocarbon Parameters
   pybind11::class_<FluorocarbonParameters<T>::MaskType>(
       module, "FluorocarbonParametersMask")
@@ -966,7 +944,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("maskMaterials",
                      &DirectionalEtching<T, D>::RateSet::maskMaterials)
       .def_readwrite("calculateVisibility",
-                     &DirectionalEtching<T, D>::RateSet::calculateVisibility);
+                     &DirectionalEtching<T, D>::RateSet::calculateVisibility)
+      .def("print", &DirectionalEtching<T, D>::RateSet::print);
 
   // Expose DirectionalEtching class to Python
   pybind11::class_<DirectionalEtching<T, D>,
@@ -1171,6 +1150,38 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
       .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
 
+  // Normalization Enum
+  pybind11::enum_<viennaray::NormalizationType>(module, "NormalizationType")
+      .value("SOURCE", viennaray::NormalizationType::SOURCE)
+      .value("MAX", viennaray::NormalizationType::MAX);
+
+  // RayTracingParameters
+  pybind11::class_<RayTracingParameters<T, D>>(module, "RayTracingParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("sourceDirection",
+                     &RayTracingParameters<T, D>::sourceDirection)
+      .def_readwrite("normalizationType",
+                     &RayTracingParameters<T, D>::normalizationType)
+      .def_readwrite("raysPerPoint", &RayTracingParameters<T, D>::raysPerPoint)
+      .def_readwrite("diskRadius", &RayTracingParameters<T, D>::diskRadius)
+      .def_readwrite("useRandomSeeds",
+                     &RayTracingParameters<T, D>::useRandomSeeds)
+      .def_readwrite("ignoreFluxBoundaries",
+                     &RayTracingParameters<T, D>::ignoreFluxBoundaries)
+      .def_readwrite("smoothingNeighbors",
+                     &RayTracingParameters<T, D>::smoothingNeighbors);
+
+  // AdvectionParameters
+  pybind11::class_<AdvectionParameters<T>>(module, "AdvectionParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("integrationScheme",
+                     &AdvectionParameters<T>::integrationScheme)
+      .def_readwrite("timeStepRatio", &AdvectionParameters<T>::timeStepRatio)
+      .def_readwrite("dissipationAlpha",
+                     &AdvectionParameters<T>::dissipationAlpha)
+      .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
+      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
+
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
       // constructors
@@ -1272,7 +1283,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getProcessDuration", &Process<T, D>::getProcessDuration,
            "Returns the duration of the recently run process. This duration "
            "can sometimes slightly vary from the set process duration, due to "
-           "the maximum time step according to the CFL condition.");
+           "the maximum time step according to the CFL condition.")
+      .def("setAdvectionParameters", &Process<T, D>::setAdvectionParameters,
+           "Set the advection parameters for the process.")
+      .def("getAdvectionParameters", &Process<T, D>::getAdvectionParameters,
+           "Get the advection parameters for the process.",
+           pybind11::return_value_policy::reference)
+      .def("setRayTracingParameters", &Process<T, D>::setRayTracingParameters,
+           "Set the ray tracing parameters for the process.")
+      .def("getRayTracingParameters", &Process<T, D>::getRayTracingParameters,
+           "Get the ray tracing parameters for the process.",
+           pybind11::return_value_policy::reference);
 
   // Domain
   pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
@@ -1332,7 +1353,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("size", &MaterialMap::size)
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
-      .def_static("isMaterial", &MaterialMap::isMaterial<T>);
+      .def_static("isMaterial", &MaterialMap::isMaterial<T>)
+      .def_static("getMaterialName", &MaterialMap::getMaterialName<Material>,
+                  "Get the name of a material.");
 
   // ***************************************************************************
   //                                   VISUALIZATION
@@ -1491,7 +1514,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<SmartPointer<Domain<T, 2>> &,
                           SmartPointer<Domain<T, 3>> &, std::array<T, 2>,
                           const int,
-                          std::array<viennals::BoundaryConditionEnum<3>, 3>>(),
+                          std::array<viennals::BoundaryConditionEnum, 3>>(),
            pybind11::arg("inputDomain"), pybind11::arg("outputDomain"),
            pybind11::arg("extent"), pybind11::arg("extrudeDimension"),
            pybind11::arg("boundaryConditions"))
@@ -1506,7 +1529,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set which index of the added dimension (x: 0, y: 1, z: 2).")
       .def("setBoundaryConditions",
            pybind11::overload_cast<
-               std::array<viennals::BoundaryConditionEnum<3>, 3>>(
+               std::array<viennals::BoundaryConditionEnum, 3>>(
                &Extrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &Extrude<T>::apply, "Run the extrusion.");

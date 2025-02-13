@@ -26,15 +26,15 @@ template <class NumericType, int D> void RunTest() {
 
   {
     // two plane geometries
-    ls::BoundaryConditionEnum<D> boundaryCondition[D];
+    ls::BoundaryConditionEnum boundaryCondition[D];
     double bounds[2 * D];
 
     for (int i = 0; i < D; ++i) {
       bounds[2 * i] = -1.;
       bounds[2 * i + 1] = 1.;
-      boundaryCondition[i] = ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY;
+      boundaryCondition[i] = ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY;
     }
-    boundaryCondition[D - 1] = ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY;
+    boundaryCondition[D - 1] = ls::BoundaryConditionEnum::INFINITE_BOUNDARY;
 
     NumericType origin[D] = {0.};
     NumericType normal[D] = {0.};
@@ -96,15 +96,15 @@ template <class NumericType, int D> void RunTest() {
   // remove level sets
   {
     // two plane geometries
-    ls::BoundaryConditionEnum<D> boundaryCondition[D];
+    ls::BoundaryConditionEnum boundaryCondition[D];
     double bounds[2 * D];
 
     for (int i = 0; i < D; ++i) {
       bounds[2 * i] = -1.;
       bounds[2 * i + 1] = 1.;
-      boundaryCondition[i] = ls::BoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY;
+      boundaryCondition[i] = ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY;
     }
-    boundaryCondition[D - 1] = ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY;
+    boundaryCondition[D - 1] = ls::BoundaryConditionEnum::INFINITE_BOUNDARY;
 
     NumericType origin[D] = {0.};
     NumericType normal[D] = {0.};

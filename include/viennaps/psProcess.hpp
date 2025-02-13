@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psProcessModel.hpp"
+#include "psProcessParams.hpp"
 #include "psTranslationField.hpp"
 #include "psUnits.hpp"
 #include "psUtils.hpp"
@@ -47,10 +48,7 @@ public:
   // Set the process domain.
   void setDomain(psDomainType passedDomain) { domain = passedDomain; }
 
-  // Set the source direction, where the rays should be traced from.
-  void setSourceDirection(viennaray::TraceDirection passedDirection) {
-    sourceDirection = passedDirection;
-  }
+  /* ----- Process parameters ----- */
 
   // Set the duration of the process.
   void setProcessDuration(NumericType passedDuration) {
@@ -62,62 +60,95 @@ public:
   // time step according to the CFL condition.
   NumericType getProcessDuration() const { return processTime; }
 
-  // Specify the number of rays to be traced for each particle throughout the
-  // process. The total count of rays is the product of this number and the
-  // number of points in the process geometry.
-  void setNumberOfRaysPerPoint(unsigned numRays) { raysPerPoint = numRays; }
+  /* ----- Ray tracing parameters ----- */
 
   // Set the number of iterations to initialize the coverages.
   void setMaxCoverageInitIterations(unsigned maxIt) { maxIterations = maxIt; }
 
-  /// Enable flux smoothing. The flux at each surface point, calculated
-  /// by the ray tracer, is averaged over the surface point neighbors.
-  void enableFluxSmoothing() { smoothFlux = true; }
+  // Set the source direction, where the rays should be traced from.
+  void setSourceDirection(viennaray::TraceDirection passedDirection) {
+    rayTracingParams.sourceDirection = passedDirection;
+  }
+
+  // Specify the number of rays to be traced for each particle throughout the
+  // process. The total count of rays is the product of this number and the
+  // number of points in the process geometry.
+  void setNumberOfRaysPerPoint(unsigned numRays) {
+    rayTracingParams.raysPerPoint = numRays;
+  }
+
+  // Enable flux smoothing. The flux at each surface point, calculated
+  // by the ray tracer, is averaged over the surface point neighbors.
+  void enableFluxSmoothing() { rayTracingParams.smoothingNeighbors = 1; }
 
   // Disable flux smoothing.
-  void disableFluxSmoothing() { smoothFlux = false; }
+  void disableFluxSmoothing() { rayTracingParams.smoothingNeighbors = 0; }
 
   void setRayTracingDiskRadius(NumericType radius) {
-    diskRadius = radius;
-    if (diskRadius < 0.) {
+    rayTracingParams.diskRadius = radius;
+    if (rayTracingParams.diskRadius < 0.) {
       Logger::getInstance()
           .addWarning("Disk radius must be positive. Using default value.")
           .print();
-      diskRadius = 0.;
+      rayTracingParams.diskRadius = 0.;
     }
   }
 
-  void enableFluxBoundaries() { ignoreFluxBoundaries = false; }
+  void enableFluxBoundaries() { rayTracingParams.ignoreFluxBoundaries = false; }
 
   // Ignore boundary conditions during the flux calculation.
-  void disableFluxBoundaries() { ignoreFluxBoundaries = true; }
+  void disableFluxBoundaries() { rayTracingParams.ignoreFluxBoundaries = true; }
+
+  // Enable the use of random seeds for ray tracing. This is useful to
+  // prevent the formation of artifacts in the flux calculation.
+  void enableRandomSeeds() { rayTracingParams.useRandomSeeds = true; }
+
+  // Disable the use of random seeds for ray tracing.
+  void disableRandomSeeds() { rayTracingParams.useRandomSeeds = false; }
+
+  void setRayTracingParameters(
+      const RayTracingParameters<NumericType, D> &passedRayTracingParams) {
+    rayTracingParams = passedRayTracingParams;
+  }
+
+  auto &getRayTracingParameters() { return rayTracingParams; }
+
+  /* ----- Advection parameters ----- */
 
   // Set the integration scheme for solving the level-set equation.
   // Possible integration schemes are specified in
   // viennals::IntegrationSchemeEnum.
   void setIntegrationScheme(
       viennals::IntegrationSchemeEnum passedIntegrationScheme) {
-    integrationScheme = passedIntegrationScheme;
+    advectionParams.integrationScheme = passedIntegrationScheme;
   }
 
   // Enable the output of the advection velocities on the level-set mesh.
-  void enableAdvectionVelocityOutput() { lsVelocityOutput = true; }
+  void enableAdvectionVelocityOutput() {
+    advectionParams.velocityOutput = true;
+  }
 
   // Disable the output of the advection velocities on the level-set mesh.
-  void disableAdvectionVelocityOutput() { lsVelocityOutput = false; }
-
-  // Enable the use of random seeds for ray tracing. This is useful to
-  // prevent the formation of artifacts in the flux calculation.
-  void enableRandomSeeds() { useRandomSeeds_ = true; }
-
-  // Disable the use of random seeds for ray tracing.
-  void disableRandomSeeds() { useRandomSeeds_ = false; }
+  void disableAdvectionVelocityOutput() {
+    advectionParams.velocityOutput = false;
+  }
 
   // Set the CFL (Courant-Friedrichs-Levy) condition to use during surface
   // advection in the level-set. The CFL condition defines the maximum distance
   // a surface is allowed to move in a single advection step. It MUST be below
   // 0.5 to guarantee numerical stability. Defaults to 0.4999.
-  void setTimeStepRatio(NumericType cfl) { timeStepRatio = cfl; }
+  void setTimeStepRatio(NumericType cfl) {
+    advectionParams.timeStepRatio = cfl;
+  }
+
+  void setAdvectionParameters(
+      const AdvectionParameters<NumericType> &passedAdvectionParams) {
+    advectionParams = passedAdvectionParams;
+  }
+
+  auto &getAdvectionParameters() { return advectionParams; }
+
+  /* ----- Process execution ----- */
 
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
@@ -140,45 +171,17 @@ public:
       return mesh;
     }
 
-    viennaray::BoundaryCondition rayBoundaryCondition[D];
     viennaray::Trace<NumericType, D> rayTracer;
-
-    // Map the domain boundary to the ray tracing boundaries
-    if (ignoreFluxBoundaries) {
-      for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
-    } else {
-      for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
-            domain->getGrid().getBoundaryConditions(i));
-    }
-    rayTracer.setSourceDirection(sourceDirection);
-    rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
-    rayTracer.setBoundaryConditions(rayBoundaryCondition);
-    rayTracer.setUseRandomSeeds(useRandomSeeds_);
-    rayTracer.setCalculateFlux(false);
-    auto source = model->getSource();
-    if (source) {
-      rayTracer.setSource(source);
-      Logger::getInstance().addInfo("Using custom source.").print();
-    }
-    auto primaryDirection = model->getPrimaryDirection();
-    if (primaryDirection) {
-      Logger::getInstance()
-          .addInfo("Using primary direction: " +
-                   utils::arrayToString(primaryDirection.value()))
-          .print();
-      rayTracer.setPrimaryDirection(primaryDirection.value());
-    }
+    initializeRayTracer(rayTracer);
 
     auto points = mesh->getNodes();
     auto normals = *mesh->getCellData().getVectorData("Normals");
     auto materialIds = *mesh->getCellData().getScalarData("MaterialIds");
-    if (diskRadius == 0.) {
+    if (rayTracingParams.diskRadius == 0.) {
       rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
     } else {
       rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta(),
-                            diskRadius);
+                            rayTracingParams.diskRadius);
     }
     rayTracer.setMaterialIds(materialIds);
 
@@ -193,9 +196,9 @@ public:
         auto rate = std::move(localData.getVectorData(i));
 
         // normalize fluxes
-        rayTracer.normalizeFlux(rate);
-        if (smoothFlux)
-          rayTracer.smoothFlux(rate);
+        rayTracer.normalizeFlux(rate, rayTracingParams.normalizationType);
+        if (rayTracingParams.smoothingNeighbors > 0)
+          rayTracer.smoothFlux(rate, rayTracingParams.smoothingNeighbors);
         mesh->getCellData().insertNextScalarData(
             std::move(rate), localData.getVectorDataLabel(i));
       }
@@ -207,17 +210,8 @@ public:
   // Run the process.
   void apply() {
     /* ---------- Check input --------- */
-    if (!model) {
-      Logger::getInstance()
-          .addWarning("No process model passed to psProcess.")
-          .print();
-      return;
-    }
-
     if (!domain) {
-      Logger::getInstance()
-          .addWarning("No domain passed to psProcess.")
-          .print();
+      Logger::getInstance().addWarning("No domain passed to Process.").print();
       return;
     }
 
@@ -226,6 +220,12 @@ public:
       return;
     }
 
+    if (!model) {
+      Logger::getInstance()
+          .addWarning("No process model passed to Process.")
+          .print();
+      return;
+    }
     model->initialize(domain, processDuration);
     const auto name = model->getProcessName().value_or("default");
 
@@ -243,7 +243,7 @@ public:
         model->getAdvectionCallback()->applyPreAdvect(0);
       } else {
         Logger::getInstance()
-            .addWarning("No advection callback passed to psProcess.")
+            .addWarning("No advection callback passed to Process.")
             .print();
       }
       return;
@@ -251,14 +251,14 @@ public:
 
     if (!model->getSurfaceModel()) {
       Logger::getInstance()
-          .addWarning("No surface model passed to psProcess.")
+          .addWarning("No surface model passed to Process.")
           .print();
       return;
     }
 
     if (!model->getVelocityField()) {
       Logger::getInstance()
-          .addWarning("No velocity field passed to psProcess.")
+          .addWarning("No velocity field passed to Process.")
           .print();
       return;
     }
@@ -290,9 +290,14 @@ public:
 
     viennals::Advect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
-    advectionKernel.setIntegrationScheme(integrationScheme);
-    advectionKernel.setTimeStepRatio(timeStepRatio);
-    advectionKernel.setSaveAdvectionVelocities(lsVelocityOutput);
+    advectionKernel.setIntegrationScheme(advectionParams.integrationScheme);
+    advectionKernel.setTimeStepRatio(advectionParams.timeStepRatio);
+    advectionKernel.setSaveAdvectionVelocities(advectionParams.velocityOutput);
+    advectionKernel.setDissipationAlpha(advectionParams.dissipationAlpha);
+    advectionKernel.setIgnoreVoids(advectionParams.ignoreVoids);
+    // normals vectors are only necessary for analytical velocity fields
+    if (model->getVelocityField()->getTranslationFieldOptions() > 0)
+      advectionKernel.setCalculateNormalVectors(false);
 
     for (auto dom : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
@@ -306,34 +311,7 @@ public:
     viennaray::Trace<NumericType, D> rayTracer;
 
     if (useRayTracing) {
-      // Map the domain boundary to the ray tracing boundaries
-      if (ignoreFluxBoundaries) {
-        for (unsigned i = 0; i < D; ++i)
-          rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
-      } else {
-        for (unsigned i = 0; i < D; ++i)
-          rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
-              domain->getGrid().getBoundaryConditions(i));
-      }
-
-      rayTracer.setSourceDirection(sourceDirection);
-      rayTracer.setNumberOfRaysPerPoint(raysPerPoint);
-      rayTracer.setBoundaryConditions(rayBoundaryCondition);
-      rayTracer.setUseRandomSeeds(useRandomSeeds_);
-      auto primaryDirection = model->getPrimaryDirection();
-      if (primaryDirection) {
-        Logger::getInstance()
-            .addInfo("Using primary direction: " +
-                     utils::arrayToString(primaryDirection.value()))
-            .print();
-        rayTracer.setPrimaryDirection(primaryDirection.value());
-      }
-      rayTracer.setCalculateFlux(false);
-      auto source = model->getSource();
-      if (source) {
-        rayTracer.setSource(source);
-        Logger::getInstance().addInfo("Using custom source.").print();
-      }
+      initializeRayTracer(rayTracer);
 
       // initialize particle data logs
       particleDataLogs.resize(model->getParticleTypes().size());
@@ -390,7 +368,12 @@ public:
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         auto materialIds =
             *diskMesh->getCellData().getScalarData("MaterialIds");
-        rayTracer.setGeometry(points, normals, gridDelta);
+        if (rayTracingParams.diskRadius == 0.) {
+          rayTracer.setGeometry(points, normals, gridDelta);
+        } else {
+          rayTracer.setGeometry(points, normals, gridDelta,
+                                rayTracingParams.diskRadius);
+        }
         rayTracer.setMaterialIds(materialIds);
 
         for (size_t iterations = 0; iterations < maxIterations; iterations++) {
@@ -440,9 +423,9 @@ public:
               auto rate = std::move(localData.getVectorData(i));
 
               // normalize fluxes
-              rayTracer.normalizeFlux(rate);
-              if (smoothFlux)
-                rayTracer.smoothFlux(rate);
+              rayTracer.normalizeFlux(rate, rayTracingParams.normalizationType);
+              if (rayTracingParams.smoothingNeighbors > 0)
+                rayTracer.smoothFlux(rate, rayTracingParams.smoothingNeighbors);
               rates->insertNextScalarData(std::move(rate),
                                           localData.getVectorDataLabel(i));
             }
@@ -522,7 +505,12 @@ public:
       // rate calculation by top-down ray tracing
       if (useRayTracing) {
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
-        rayTracer.setGeometry(points, normals, gridDelta);
+        if (rayTracingParams.diskRadius == 0.) {
+          rayTracer.setGeometry(points, normals, gridDelta);
+        } else {
+          rayTracer.setGeometry(points, normals, gridDelta,
+                                rayTracingParams.diskRadius);
+        }
         rayTracer.setMaterialIds(materialIds);
 
         // move coverages to ray tracer
@@ -563,9 +551,9 @@ public:
             auto rate = std::move(localData.getVectorData(i));
 
             // normalize rates
-            rayTracer.normalizeFlux(rate);
-            if (smoothFlux)
-              rayTracer.smoothFlux(rate);
+            rayTracer.normalizeFlux(rate, rayTracingParams.normalizationType);
+            if (rayTracingParams.smoothingNeighbors > 0)
+              rayTracer.smoothFlux(rate, rayTracingParams.smoothingNeighbors);
             rates->insertNextScalarData(std::move(rate),
                                         localData.getVectorDataLabel(i));
           }
@@ -673,7 +661,7 @@ public:
       advTimer.finish();
       Logger::getInstance().addTiming("Surface advection", advTimer).print();
 
-      if (lsVelocityOutput) {
+      if (advectionParams.velocityOutput) {
         auto lsMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
         viennals::ToMesh<NumericType, D>(domain->getLevelSets().back(), lsMesh)
             .apply();
@@ -865,25 +853,48 @@ private:
     return delta;
   }
 
+  void initializeRayTracer(viennaray::Trace<NumericType, D> &tracer) const {
+    // Map the domain boundary to the ray tracing boundaries
+    viennaray::BoundaryCondition rayBoundaryCondition[D];
+    if (rayTracingParams.ignoreFluxBoundaries) {
+      for (unsigned i = 0; i < D; ++i)
+        rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
+    } else {
+      for (unsigned i = 0; i < D; ++i)
+        rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
+            domain->getGrid().getBoundaryConditions(i));
+    }
+    tracer.setBoundaryConditions(rayBoundaryCondition);
+    tracer.setSourceDirection(rayTracingParams.sourceDirection);
+    tracer.setNumberOfRaysPerPoint(rayTracingParams.raysPerPoint);
+    tracer.setUseRandomSeeds(rayTracingParams.useRandomSeeds);
+    tracer.setCalculateFlux(false);
+
+    auto source = model->getSource();
+    if (source) {
+      tracer.setSource(source);
+      Logger::getInstance().addInfo("Using custom source.").print();
+    }
+    auto primaryDirection = model->getPrimaryDirection();
+    if (primaryDirection) {
+      Logger::getInstance()
+          .addInfo("Using primary direction: " +
+                   utils::arrayToString(primaryDirection.value()))
+          .print();
+      tracer.setPrimaryDirection(primaryDirection.value());
+    }
+  }
+
   psDomainType domain;
   SmartPointer<ProcessModel<NumericType, D>> model;
-  NumericType processDuration;
-  viennaray::TraceDirection sourceDirection =
-      D == 3 ? viennaray::TraceDirection::POS_Z
-             : viennaray::TraceDirection::POS_Y;
-  viennals::IntegrationSchemeEnum integrationScheme =
-      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
-  unsigned raysPerPoint = 1000;
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
-  bool useRandomSeeds_ = true;
-  bool smoothFlux = true;
-  NumericType diskRadius = 0.;
-  bool ignoreFluxBoundaries = false;
-  bool lsVelocityOutput = false;
+  NumericType processDuration;
   unsigned maxIterations = 20;
   bool coveragesInitialized_ = false;
   NumericType processTime = 0.;
-  NumericType timeStepRatio = 0.4999;
+
+  AdvectionParameters<NumericType> advectionParams;
+  RayTracingParameters<NumericType, D> rayTracingParams;
 };
 
 } // namespace viennaps

@@ -4,18 +4,17 @@
 #include <psExtrude.hpp>
 #include <psProcess.hpp>
 
-namespace ps = viennaps;
-namespace ls = viennals;
+using namespace viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
   // set process verbosity
-  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
+  Logger::setLogLevel(LogLevel::INTERMEDIATE);
 
   // Parse the parameters
-  ps::utils::Parameters params;
+  utils::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
@@ -23,9 +22,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // set parameter units
+  units::Length::setUnit(params.get<std::string>("lengthUnit"));
+  units::Time::setUnit(params.get<std::string>("timeUnit"));
+
   // geometry setup
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  ps::MakeStack<NumericType, D>(
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
+  MakeStack<NumericType, D>(
       geometry, params.get("gridDelta"), params.get("xExtent"),
       params.get("yExtent"), params.get<int>("numLayers"),
       params.get("layerHeight"), params.get("substrateHeight"), 0.0,
@@ -33,21 +36,23 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // copy top layer for deposition
-  geometry->duplicateTopLevelSet(ps::Material::Polymer);
+  geometry->duplicateTopLevelSet(Material::Polymer);
 
   // use pre-defined model Fluorocarbon etching model
-  auto model = ps::SmartPointer<ps::FluorocarbonEtching<NumericType, D>>::New(
-      params.get("ionFlux"), params.get("etchantFlux"),
-      params.get("polymerFlux"), params.get("energyMean"),
-      params.get("energySigma"));
+  auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(
+      params.get("ionFlux"), params.get("etchantFlux"), params.get("polyFlux"),
+      params.get("meanIonEnergy"), params.get("sigmaIonEnergy"),
+      params.get("ionExponent"));
 
   // process setup
-  ps::Process<NumericType, D> process;
+  Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("processTime"));
   process.setMaxCoverageInitIterations(10);
   process.setTimeStepRatio(0.25);
+  process.setIntegrationScheme(
+      viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
   // print initial surface
   geometry->saveVolumeMesh("initial");
@@ -58,12 +63,12 @@ int main(int argc, char *argv[]) {
   geometry->saveVolumeMesh("final");
 
   std::cout << "Extruding to 3D ..." << std::endl;
-  auto extruded = ps::SmartPointer<ps::Domain<NumericType, 3>>::New();
+  auto extruded = SmartPointer<Domain<NumericType, 3>>::New();
   std::array<NumericType, 2> extrudeExtent = {-20., 20.};
-  ps::Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
-                           {ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                            ls::BoundaryConditionEnum<3>::REFLECTIVE_BOUNDARY,
-                            ls::BoundaryConditionEnum<3>::INFINITE_BOUNDARY})
+  Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
+                       {viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+                        viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+                        viennals::BoundaryConditionEnum::INFINITE_BOUNDARY})
       .apply();
 
   extruded->saveVolumeMesh("final_extruded");

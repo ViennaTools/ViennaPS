@@ -56,17 +56,17 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
-    updateCoverages(rates, materialIds);
-    const auto numPoints = rates->getScalarData(0)->size();
+    updateCoverages(fluxes, materialIds);
+    const auto numPoints = fluxes->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
-    const auto ionSputterFlux = rates->getScalarData("ionSputterFlux");
+    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
+    const auto ionSputterFlux = fluxes->getScalarData("ionSputterFlux");
 
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
     const auto eCoverage = coverages->getScalarData("eCoverage");
 
     // save the etch rate components for visualization
@@ -125,17 +125,19 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
-    const auto numPoints = rates->getScalarData(0)->size();
+    const auto numPoints = fluxes->getScalarData(0)->size();
 
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
-    const auto oxygenFlux = rates->getScalarData("oxygenFlux");
+    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
+    std::vector<NumericType> oxygenFlux(numPoints, 0.);
+    if (params.oxygenFlux > 0)
+      oxygenFlux = *fluxes->getScalarData("oxygenFlux");
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
+    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
     const auto ionEnhancedPassivationFlux =
-        rates->getScalarData("ionEnhancedPassivationFlux");
+        fluxes->getScalarData("ionEnhancedPassivationFlux");
 
     // etchant fluorine coverage
     auto eCoverage = coverages->getScalarData("eCoverage");
@@ -146,7 +148,7 @@ public:
 
     for (size_t i = 0; i < numPoints; ++i) {
       auto Gb_F = etchantFlux->at(i) * params.etchantFlux;
-      auto Gb_O = oxygenFlux->at(i) * params.oxygenFlux;
+      auto Gb_O = oxygenFlux.at(i) * params.oxygenFlux;
       auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
       auto GY_o = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
 
@@ -155,40 +157,6 @@ public:
 
       eCoverage->at(i) = Gb_F < 1e-6 ? 0. : 1 / (1 + (a * (1 + 1 / b)));
       oCoverage->at(i) = Gb_O < 1e-6 ? 0. : 1 / (1 + (b * (1 + 1 / a)));
-    }
-  }
-};
-
-template <typename NumericType, int D>
-class SF6SurfaceModel : public SF6O2SurfaceModel<NumericType, D> {
-public:
-  using SurfaceModel<NumericType>::coverages;
-  using SF6O2SurfaceModel<NumericType, D>::params;
-
-  SF6SurfaceModel(const SF6O2Parameters<NumericType> &pParams)
-      : SF6O2SurfaceModel<NumericType, D>(pParams) {}
-
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
-                       const std::vector<NumericType> &materialIds) override {
-    // update coverages based on fluxes
-    const auto numPoints = rates->getScalarData(0)->size();
-
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
-    const auto ionEnhancedYield = rates->getScalarData("ionEnhancedYield");
-
-    // etchant fluorine coverage
-    auto eCoverage = coverages->getScalarData("eCoverage");
-    eCoverage->resize(numPoints);
-
-    for (size_t i = 0; i < numPoints; ++i) {
-      if (etchantFlux->at(i) < 1e-6) {
-        eCoverage->at(i) = 0;
-      } else {
-        double tmp = 1 + (params.Si.k_sigma +
-                          2 * ionEnhancedYield->at(i) * params.ionFlux) /
-                             (etchantFlux->at(i) * params.etchantFlux);
-        eCoverage->at(i) = 1 / tmp;
-      }
     }
   }
 };
@@ -390,63 +358,7 @@ public:
 
 private:
   NumericType sticking(const int matieralId) const {
-    auto beta = params.beta_F.find(MaterialMap::mapToMaterial(matieralId));
-    if (beta != params.beta_F.end())
-      return beta->second;
-
-    // default value
-    return 1.0;
-  }
-};
-
-template <typename NumericType, int D>
-class SF6Etchant
-    : public viennaray::Particle<SF6Etchant<NumericType, D>, NumericType> {
-  const SF6O2Parameters<NumericType> &params;
-
-public:
-  SF6Etchant(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {}
-
-  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
-                        const Vec3D<NumericType> &, const unsigned int primID,
-                        const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        RNG &) override final {
-    NumericType S_eff = 1.;
-    if (params.fluxIncludeSticking) {
-      const auto &phi_F = globalData->getVectorData(0)[primID];
-      NumericType beta = sticking(materialId);
-      S_eff = beta * std::max(1. - phi_F, 0.);
-    }
-
-    localData.getVectorData(0)[primID] += rayWeight * S_eff;
-  }
-  std::pair<NumericType, Vec3D<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
-                    const Vec3D<NumericType> &geomNormal,
-                    const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
-
-    // F surface coverage
-    const auto &phi_F = globalData->getVectorData(0)[primID];
-    // Obtain the sticking probability
-    NumericType beta = sticking(materialId);
-    NumericType S_eff = beta * std::max(1. - phi_F, 0.);
-
-    auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
-    return std::pair<NumericType, Vec3D<NumericType>>{S_eff, direction};
-  }
-  NumericType getSourceDistributionPower() const override final { return 1.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {"etchantFlux"};
-  }
-
-private:
-  NumericType sticking(const int matieralId) const {
-    auto beta = params.beta_F.find(MaterialMap::mapToMaterial(matieralId));
+    auto beta = params.beta_F.find(matieralId);
     if (beta != params.beta_F.end())
       return beta->second;
 
@@ -503,7 +415,7 @@ public:
 
 private:
   NumericType sticking(const int matieralId) const {
-    auto beta = params.beta_O.find(MaterialMap::mapToMaterial(matieralId));
+    auto beta = params.beta_O.find(matieralId);
     if (beta != params.beta_O.end())
       return beta->second;
 
@@ -578,69 +490,8 @@ private:
     this->particles.clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
-    this->insertNextParticleType(oxygen);
-  }
-
-  SF6O2Parameters<NumericType> params;
-};
-
-template <typename NumericType, int D>
-class SF6Etching : public ProcessModel<NumericType, D> {
-public:
-  SF6Etching() { initializeModel(); }
-
-  // All flux values are in units 1e15 / cm²
-  SF6Etching(const double ionFlux, const double etchantFlux,
-             const NumericType meanEnergy /* eV */,
-             const NumericType sigmaEnergy /* eV */, // 5 parameters
-             const NumericType ionExponent = 300.,
-             const NumericType etchStopDepth =
-                 std::numeric_limits<NumericType>::lowest()) {
-    params.ionFlux = ionFlux;
-    params.etchantFlux = etchantFlux;
-    params.Ions.meanEnergy = meanEnergy;
-    params.Ions.sigmaEnergy = sigmaEnergy;
-    params.Ions.exponent = ionExponent;
-    params.etchStopDepth = etchStopDepth;
-    initializeModel();
-  }
-
-  SF6Etching(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {
-    initializeModel();
-  }
-
-  void setParameters(const SF6O2Parameters<NumericType> &pParams) {
-    params = pParams;
-    initializeModel();
-  }
-
-  SF6O2Parameters<NumericType> &getParameters() { return params; }
-
-private:
-  void initializeModel() {
-    // check if units have been set
-    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
-        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
-      Logger::getInstance().addError("Units have not been set.").print();
-    }
-
-    // particles
-    auto ion = std::make_unique<impl::SF6O2Ion<NumericType, D>>(params);
-    auto etchant = std::make_unique<impl::SF6Etchant<NumericType, D>>(params);
-
-    // surface model
-    auto surfModel =
-        SmartPointer<impl::SF6SurfaceModel<NumericType, D>>::New(params);
-
-    // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
-
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("SF6Etching");
-    this->particles.clear();
-    this->insertNextParticleType(ion);
-    this->insertNextParticleType(etchant);
+    if (params.oxygenFlux > 0)
+      this->insertNextParticleType(oxygen);
   }
 
   SF6O2Parameters<NumericType> params;

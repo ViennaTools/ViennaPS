@@ -1,5 +1,7 @@
 #pragma once
 
+#include <lsAdvect.hpp>
+#include <rayTrace.hpp>
 #include <vcLogger.hpp>
 
 #include <vector>
@@ -7,6 +9,28 @@
 namespace viennaps {
 
 using namespace viennacore;
+
+template <typename NumericType, int D> struct RayTracingParameters {
+  typename viennaray::TraceDirection sourceDirection =
+      D == 3 ? viennaray::TraceDirection::POS_Z
+             : viennaray::TraceDirection::POS_Y;
+  typename viennaray::NormalizationType normalizationType =
+      viennaray::NormalizationType::SOURCE;
+  unsigned raysPerPoint = 1000;
+  NumericType diskRadius = 0.;
+  bool useRandomSeeds = true;
+  bool ignoreFluxBoundaries = false;
+  int smoothingNeighbors = 1;
+};
+
+template <typename NumericType> struct AdvectionParameters {
+  typename viennals::IntegrationSchemeEnum integrationScheme =
+      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  NumericType timeStepRatio = 0.4999;
+  NumericType dissipationAlpha = 1.0;
+  bool velocityOutput = false;
+  bool ignoreVoids = false;
+};
 
 template <typename NumericType> class ProcessParams {
 private:
