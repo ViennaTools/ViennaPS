@@ -291,6 +291,9 @@ public:
     advectionKernel.setSaveAdvectionVelocities(advectionParams.velocityOutput);
     advectionKernel.setDissipationAlpha(advectionParams.dissipationAlpha);
     advectionKernel.setIgnoreVoids(advectionParams.ignoreVoids);
+    // normals vectors are only necessary for analytical velocity fields
+    if (model->getVelocityField()->getTranslationFieldOptions() > 0)
+      advectionKernel.setCalculateNormalVectors(false);
 
     for (auto dom : domain->getLevelSets()) {
       meshConverter.insertNextLevelSet(dom);
