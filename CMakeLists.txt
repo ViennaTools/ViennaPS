@@ -15,7 +15,7 @@ option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
 
 option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
-option(VIENNAPS_DISABLE_GPU "Disable ViennaPS for checking for a GPU." OFF)
+option(VIENNAPS_DISABLE_GPU "Disable ViennaPS from checking for a GPU." OFF)
 option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
 
 # --------------------------------------------------------------------------------------------------------

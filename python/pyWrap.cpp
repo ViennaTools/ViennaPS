@@ -74,6 +74,12 @@
 #include <rayUtil.hpp>
 #include <vcLogger.hpp>
 
+// GPU
+#ifdef VIENNAPS_USE_GPU
+#include <gpu/vcContext.hpp>
+#include <gpu/vcCudaBuffer.hpp>
+#endif
+
 using namespace viennaps;
 
 // always use double for python export
@@ -1141,15 +1147,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //                                 PROCESS
   // ***************************************************************************
 
-  // rayTraceDirection Enum
-  pybind11::enum_<viennaray::TraceDirection>(module, "rayTraceDirection")
-      .value("POS_X", viennaray::TraceDirection::POS_X)
-      .value("POS_Y", viennaray::TraceDirection::POS_Y)
-      .value("POS_Z", viennaray::TraceDirection::POS_Z)
-      .value("NEG_X", viennaray::TraceDirection::NEG_X)
-      .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
-      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
-
   // Normalization Enum
   pybind11::enum_<viennaray::NormalizationType>(module, "NormalizationType")
       .value("SOURCE", viennaray::NormalizationType::SOURCE)
@@ -1535,11 +1532,34 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &Extrude<T>::apply, "Run the extrusion.");
 #endif
 
-  //   // rayReflection.hpp
-  //   module.def("rayReflectionSpecular", &rayReflectionSpecular<T>,
-  //              "Specular reflection,");
-  //   module.def("rayReflectionDiffuse", &rayReflectionDiffuse<T, D>,
-  //              "Diffuse reflection.");
-  //   module.def("rayReflectionConedCosine", &rayReflectionConedCosine<T, D>,
-  //              "Coned cosine reflection.");
+  // ***************************************************************************
+  //                                 RAY TRACING
+  // ***************************************************************************
+
+  auto m_ray = module.def_submodule("ray", "Ray tracing functions.");
+
+  // rayTraceDirection Enum
+  pybind11::enum_<viennaray::TraceDirection>(m_ray, "rayTraceDirection")
+      .value("POS_X", viennaray::TraceDirection::POS_X)
+      .value("POS_Y", viennaray::TraceDirection::POS_Y)
+      .value("POS_Z", viennaray::TraceDirection::POS_Z)
+      .value("NEG_X", viennaray::TraceDirection::NEG_X)
+      .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
+      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
+
+  // rayReflection
+  m_ray.def("ReflectionSpecular", &viennaray::ReflectionSpecular<T>,
+            "Specular reflection,");
+  m_ray.def("ReflectionDiffuse", &viennaray::ReflectionDiffuse<T, D>,
+            "Diffuse reflection.");
+  m_ray.def("ReflectionConedCosine", &viennaray::ReflectionConedCosine<T, D>,
+            "Coned cosine reflection.");
+
+#ifdef VIENNAPS_USE_GPU
+  auto m_gpu = module.def_submodule("gpu", "GPU accelerated functions.");
+
+  pybind11::class_<gpu::Context_t>(m_gpu, "Context").def(pybind11::init<>());
+
+  m_gpu.def("CreateContext", &gpu::CreateContext, "Create a GPU context.");
+#endif
 }

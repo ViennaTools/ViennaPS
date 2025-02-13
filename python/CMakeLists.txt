@@ -59,18 +59,30 @@ viennacore_setup_binding(viennaps2d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 set(LSNAME "viennals3d")
 viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 
-target_link_libraries(viennaps2d PRIVATE ViennaPS)
-target_link_libraries(viennaps3d PRIVATE ViennaPS)
+if (VIENNAPS_USE_GPU)
+  set(VIENNAPS_GPU_INCLUDE_DIRS #
+      ${PROJECT_SOURCE_DIR}/process
+      ${PROJECT_SOURCE_DIR}/rayTracing
+      ${PROJECT_SOURCE_DIR}/utils
+      ${PROJECT_SOURCE_DIR}/models)
+
+  target_include_directories(viennaps2d PRIVATE ${VIENNAPS_GPU_INCLUDE_DIRS} ${OptiX_INCLUDE})
+  target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE_DIRS} ${OptiX_INCLUDE})
+
+  target_link_libraries(viennaps2d PRIVATE ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
+  target_link_libraries(viennaps3d PRIVATE ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
+
+  target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_USE_GPU)
+  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU)  
+else()
+  target_link_libraries(viennaps2d PRIVATE ViennaPS)
+  target_link_libraries(viennaps3d PRIVATE ViennaPS)
+endif()
 
 target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2
                                               -DVIENNAPS_MODULE_NAME=viennaps2d)
 target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3
                                               -DVIENNAPS_MODULE_NAME=viennaps3d)
-
-if (VIENNAPS_USE_GPU)
-  target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_USE_GPU)
-  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU)                                      
-endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Lib-Folder
