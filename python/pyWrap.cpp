@@ -1164,6 +1164,38 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
       .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
 
+  // Normalization Enum
+  pybind11::enum_<viennaray::NormalizationType>(module, "NormalizationType")
+      .value("SOURCE", viennaray::NormalizationType::SOURCE)
+      .value("MAX", viennaray::NormalizationType::MAX);
+
+  // RayTracingParameters
+  pybind11::class_<RayTracingParameters<T, D>>(module, "RayTracingParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("sourceDirection",
+                     &RayTracingParameters<T, D>::sourceDirection)
+      .def_readwrite("normalizationType",
+                     &RayTracingParameters<T, D>::normalizationType)
+      .def_readwrite("raysPerPoint", &RayTracingParameters<T, D>::raysPerPoint)
+      .def_readwrite("diskRadius", &RayTracingParameters<T, D>::diskRadius)
+      .def_readwrite("useRandomSeeds",
+                     &RayTracingParameters<T, D>::useRandomSeeds)
+      .def_readwrite("ignoreFluxBoundaries",
+                     &RayTracingParameters<T, D>::ignoreFluxBoundaries)
+      .def_readwrite("smoothingNeighbors",
+                     &RayTracingParameters<T, D>::smoothingNeighbors);
+
+  // AdvectionParameters
+  pybind11::class_<AdvectionParameters<T>>(module, "AdvectionParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("integrationScheme",
+                     &AdvectionParameters<T>::integrationScheme)
+      .def_readwrite("timeStepRatio", &AdvectionParameters<T>::timeStepRatio)
+      .def_readwrite("dissipationAlpha",
+                     &AdvectionParameters<T>::dissipationAlpha)
+      .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
+      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
+
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
       // constructors
@@ -1265,7 +1297,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getProcessDuration", &Process<T, D>::getProcessDuration,
            "Returns the duration of the recently run process. This duration "
            "can sometimes slightly vary from the set process duration, due to "
-           "the maximum time step according to the CFL condition.");
+           "the maximum time step according to the CFL condition.")
+      .def("setAdvectionParameters", &Process<T, D>::setAdvectionParameters,
+           "Set the advection parameters for the process.")
+      .def("getAdvectionParameters", &Process<T, D>::getAdvectionParameters,
+           "Get the advection parameters for the process.",
+           pybind11::return_value_policy::reference)
+      .def("setRayTracingParameters", &Process<T, D>::setRayTracingParameters,
+           "Set the ray tracing parameters for the process.")
+      .def("getRayTracingParameters", &Process<T, D>::getRayTracingParameters,
+           "Get the ray tracing parameters for the process.",
+           pybind11::return_value_policy::reference);
 
   // Domain
   pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
