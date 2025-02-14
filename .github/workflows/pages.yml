@@ -13,6 +13,7 @@ on:
     paths:
       # The following glob pattern matches any file in the docs/ folder
       # or a subfolder, and the README in the root
+      - '.github/workflows/pages.yml'
       - 'docs/**'
       - 'README.md'
 
@@ -34,19 +35,15 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1' # Not needed with a .ruby-version file
+          ruby-version: "3.4"
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
           cache-version: 0 # Increment this number if you need to re-download cached gems
-          working-directory: '${{ github.workspace }}/docs'
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v3
@@ -59,7 +56,7 @@ jobs:
         # Automatically uploads an artifact from the './_site' directory by default
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "docs/_site/"
+          path: _site
 
   # Deployment job
   deploy:
@@ -71,4 +68,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
