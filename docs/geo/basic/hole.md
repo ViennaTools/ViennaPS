@@ -20,16 +20,17 @@ Additionally, the hole can serve as a mask, with the specified material only app
 ```c++
 // namespace viennaps
 MakeHole(DomainType domain,
-        const NumericType gridDelta,
-        const NumericType xExtent, 
-        const NumericType yExtent,
-        const NumericType holeRadius,
-        const NumericType holeDepth,
-        const NumericType taperAngle = 0., // in degrees
-        const NumericType baseHeight = 0.,
-        const bool periodicBoundary = false,
-        const bool makeMask = false,
-        const Material material = Material::None)
+         NumericType gridDelta,
+         NumericType xExtent, 
+         NumericType yExtent,
+         NumericType holeRadius,
+         NumericType holeDepth,
+         NumericType taperAngle = 0., // in degrees
+         NumericType baseHeight = 0.,
+         bool periodicBoundary = false,
+         bool makeMask = false,
+         Material material = Material::None,
+         HoleShape holeShape = HoleShape::Full)
 ```
 
 | Parameter              | Description                                                           | Type                           |
@@ -45,6 +46,7 @@ MakeHole(DomainType domain,
 | `periodicBoundary`     | (Optional) If set to true, enables periodic boundaries in both x and y directions. Default is set to false. | `bool`  |
 | `makeMask`             | (Optional) If set to true, allows the hole to function as a mask, with specified material applied only to the bottom. Default is set to false. | `bool`  |
 | `material`             | (Optional) Specifies the material used for the hole. Default is set to `Material::None`.    |   `Material`  |
+| `holeShape`            | (Optional) Specifies whether a full, half or quarter hole should be created. Half and quarter holes with reflective boundary conditions can simulate the full dynamics of a hole with less computational cost. Default is set to `HoleShape::Full`. | `HoleShape` |
 
 __Example usage:__
 
@@ -80,6 +82,7 @@ vps.MakeHole(domain=domain,
               periodicBoundary=False,
               makeMask=False,
               material=vps.Material.Si,
+              holeShape=vps.HoleShape.Quarter
              ).apply()
 ```
 </details>

@@ -10,8 +10,7 @@ nav_order: 2
 
 ---
 
-Documentation Coming soon
-{: .label .label-yellow}
+To save a triangulated mesh of the geometry surface, users can use the domain member function `saveSurfaceMesh`. The surface mesh also contains material information is the optional parameter `addMaterialIds` is set to `true`.
 
 __Example usage:__
 

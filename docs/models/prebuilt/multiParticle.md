@@ -131,6 +131,7 @@ void setRateFunction(std::function<NumericType(std::vector<NumericType> &,
 | `inflectAngle`  | Inflection angle of the ion energy reduction function    | 0.0                  |
 | `n`  | Exponent of the ion energy reduction function    | 1.0                  |
 
+The sticking probability of the neutral particle can also be specified for each material within the domain using a map between material and sticking probability. 
 
 __Example usage__:
 

@@ -41,10 +41,12 @@ SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
 
 | Parameter                  | Description                                            | Default Value          |
 |----------------------------|--------------------------------------------------------|------------------------|
-| `rate`                     | Default rate of the single particle process, if no material specific rates are defined     | 1.0                    |
+| `rate`                     | Default rate of the single particle process, if no material specific rates are defined   | 1.0              |
 | `stickingProbability`      | Sticking probability of particles                      | 1.0                    |
 | `sourceDistributionPower`  | Power of the power cosine source distribution          | 1.0                    |
 | `maskMaterial`             | Mask material                       | `Material::None`       |
+
+Rates can also be specified for specific materials using a map between material and rate.
 
 __Example usage__:
 

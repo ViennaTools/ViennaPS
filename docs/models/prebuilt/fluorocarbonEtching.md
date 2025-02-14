@@ -103,6 +103,9 @@ The ray's reflected direction is randomly chosen from a cone around the specular
 
 The fluorocarbon etching process is implemented in the `psFluorocarbonEtching` class. To customize the parameters of the process, it is advised to create a new instance of the class and set the desired parameters in the parameter struct. The following example demonstrates how to create a new instance of the class and set the parameters of the process.
 
+{: .note }
+> Time and length units have to be set before initializing the model. For details see [Units]({% link misc/units.md %}).
+
 <details markdown="1">
 <summary markdown="1">
 C++

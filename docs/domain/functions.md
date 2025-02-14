@@ -32,6 +32,8 @@ void insertNextLevelSetAsMaterial(SmartPointer<viennals::Domain<NumericType, D>>
                                   bool wrapLowerLevelSet = true)
 void duplicateTopLevelSet(const Material material = Material::None)
 void removeTopLevelSet()
+void removeLevelSet(unsigned int idx, bool removeWrapped = true)
+void removeMaterial(const Material material)
 void applyBooleanOperation(SmartPointer<viennals::Domain<NumericType, D>> levelSet, viennals::BooleanOperationEnum operation)
 void generateCellSet(const NumericType position, const Material coverMaterial,
                      const bool isAboveSurface = false)
@@ -40,6 +42,7 @@ auto &getLevelSets() const
 auto &getMaterialMap() const
 auto &getCellSet() const
 auto &getGrid() const
+auto getBoundingBox() const
 void print() const
 void saveLevelSetMesh(std::string name, int width = 1)
 void saveSurfaceMesh(std::string name, bool addMaterialIds = true)

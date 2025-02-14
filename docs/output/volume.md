@@ -10,8 +10,7 @@ nav_order: 3
 
 ---
 
-Documentation Coming soon
-{: .label .label-yellow}
+Volume meshes can be saved using the domain member function `saveVolumeMesh`. The mesh is solely for visualization purposes and can not be used for further simulations.
 
 __Example usage:__
 

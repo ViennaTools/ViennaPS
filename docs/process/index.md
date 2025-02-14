@@ -10,7 +10,7 @@ nav_order: 8
 #include <psProcess.hpp>
 ```
 ---
-The `Process` class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also encompasses the necessary methods for configuring these attributes. Upon setting these parameters, the `apply()` method is employed to execute the process, initiating and conducting the simulation.
+The `Process` class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also contains the necessary methods for configuring these attributes. Upon setting these parameters, the `apply()` method is employed to execute the process,.
 
 __Example usage:__
 
@@ -46,6 +46,86 @@ process.setProcessModel(myModel)
 process.setProcessDuration(10.)
 process.setNumberOfRaysPerPoint(1000)
 process.enableFluxSmoothing()
+process.apply()
+...
+```
+</details>
+
+## Process Parameters
+
+{: .note }
+> Advanced process parameters, as described in this section are available from version 3.3.0
+
+Expert users can set specific parameter for the Level-Set integration and Ray Tracing flux calculation steps using the advanced parameters structs `AdvectionParameters` and `RayTracingParameters`. These parameter structs contain:
+
+__AdvectionParameters:__
+
+| Parameter            | Type         | Default Value                                      | Description |
+|----------------------|-------------|----------------------------------------------------|-------------|
+| `integrationScheme`  | `IntegrationSchemeEnum` | `ENGQUIST_OSHER_1ST_ORDER` | Integration scheme used for advection. For options see [here](https://viennatools.github.io/ViennaLS/namespaceviennals.html#a939e6f11eed9a003a0723a255290377f). |
+| `timeStepRatio`      | `NumericType` | `0.4999` | Ratio controlling the time step specified by the CFL condition. More [details](https://viennatools.github.io/ViennaLS/classviennals_1_1Advect.html#ad6aba52d0b3c5fb9fcb4e83da138573c) |
+| `dissipationAlpha`   | `NumericType` | `1.0` | Factor controlling dissipation in Lax-Friedrichs type integration schemes. |
+| `velocityOutput`     | `bool` | `false` | Whether to output velocity data for each advection step. |
+| `ignoreVoids`        | `bool` | `false` | Whether to ignore void regions. |
+
+__RayTracingParameters:__
+
+| Parameter            | Type                        | Default Value                             | Description |
+|----------------------|---------------------------|-------------------------------------------|-------------|
+| `sourceDirection`    | `TraceDirection`          | `POS_Z` (if `D == 3`), `POS_Y` (otherwise) | Direction of the ray source. |
+| `normalizationType`  | `NormalizationType`       | `SOURCE`                                  | Type of normalization used. Other option `MAX`. |
+| `raysPerPoint`       | `unsigned`                | `1000`                                    | Number of rays to trace per point in the geometry. |
+| `diskRadius`        | `NumericType`             | `0`                                      | Radius of the disks in the ray tracing geometry. If this value is 0 the default disk radius is used, which is the minimum radius such that there are no holes in the geometry. |
+| `useRandomSeeds`     | `bool`                     | `true`                                    | Whether to use random seeds. |
+| `ignoreFluxBoundaries` | `bool`                 | `false`                                   | Whether to ignore boundary condtions during ray tracing. |
+| `smoothingNeighbors` | `int`                     | `1`                                       | Number of neighboring points used for smoothing the flux after ray tracing. |
+
+__Example usage:__
+
+<details markdown="1">
+<summary markdown="1">
+C++
+{: .label .label-blue}
+</summary>
+```c++
+// namespace viennaps
+...
+AdvectionParameters<NumericType> advParams;
+advParams.integrationScheme = viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER
+advParams.timeStepRatio = 0.25
+advParams.dissipationAlpha = 2.0
+
+RayTracingParameters<NumericType, D> tracingParams;
+tracingParams.raysPerPoint = 500
+tracingParams.smoothingNeighbors = 0 // disable flux smoothing
+
+Process<NumericType, D> process(myDomain, myModel, duration);
+process.setAdvectionParameters(advParams)
+process.setRayTracingParameters(tracingParams)
+process.apply();
+...
+```
+</details>
+
+<details markdown="1">
+<summary markdown="1">
+Python
+{: .label .label-green}
+</summary>
+```python
+...
+advParams = vps.AdvectionParameters()
+advParams.integrationScheme = vps.ls.IntegrationSchemeEnum.LOCAL_LAX_FRIEDRICHS_2ND_ORDER
+advParams.timeStepRatio = 0.25
+advParams.dissipationAlpha = 2.0
+
+tracingParams = vps.RayTracingParameters()
+tracingParams.raysPerPoint = 500
+tracingParams.smoothingNeighbors = 0 # disable flux smoothing
+
+process = vps.Process(myDomain, myModel, duration)
+process.setAdvectionParameters(advParams)
+process.setRayTracingParameters(tracingParams)
 process.apply()
 ...
 ```
@@ -138,7 +218,7 @@ Toggle the option to enable or disable flux boundary conditions. When flux bound
 void enableRandomSeeds()
 void disableRandomSeeds()
 ```
-Toggle the option to enable or disable random seeds. When random seeds are enabled, the random number generator is seeded with a random value, making the results generally not perectly reproducible. Per default, random seeds are enabled.
+Toggle the option to enable or disable random seeds. When random seeds are enabled, the random number generator is seeded with a random value, making the results generally not perfectly reproducible. Per default, random seeds are enabled.
 
 ---
 ### Set the integration scheme
@@ -147,7 +227,7 @@ void
 setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme)
 ```
 Set the integration scheme for solving the level-set equation.
-Possible integration schemes are specified in lsIntegrationSchemeEnum.
+Possible integration schemes are specified in [`viennals::IntegrationSchemeEnum`](https://viennatools.github.io/ViennaLS/namespaceviennals.html#a939e6f11eed9a003a0723a255290377f).
 
 ---
 ### Set the time step ratio
@@ -155,11 +235,4 @@ Possible integration schemes are specified in lsIntegrationSchemeEnum.
 void setTimeStepRatio(NumericType cfl)
 ```
 Set the CFL (Courant-Friedrichs-Levy) condition to use during surface advection in the level-set. The CFL condition defines the maximum distance a surface is allowed to move in a single advection step. It MUST be below 0.5 to guarantee numerical stability. Defaults to 0.4999.
-
----
-### Set time interval to save intermediate results
-```c++
-void setPrintTimeInterval(NumericType passedTime)
-```
-Sets the minimum time between printing intermediate results during the process. If this is set to a non-positive value, no intermediate results are printed.
 

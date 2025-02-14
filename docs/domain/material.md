@@ -28,13 +28,14 @@ The following materials are currently available in the `Material` enum:
 | `GaN`       | 9     | Gallium Nitride |
 | `W`         | 10    | Tungsten     |
 | `Al2O3`     | 11    | Aluminum Oxide |
-| `TiN`       | 12    | Titanium Nitride |
-| `Cu`        | 13    | Copper       |
-| `Polymer`   | 14    | Polymer      |
-| `Dielectric`| 15    | Dielectric Material |
-| `Metal`     | 16    | Metal        |
-| `Air`       | 17    | Air          |
-| `GAS`       | 18    | Gas          |
+| `HfO2`       | 12    | Hafnium Oxide |
+| `TiN`       | 13    | Titanium Nitride |
+| `Cu`        | 14    | Copper       |
+| `Polymer`   | 15    | Polymer      |
+| `Dielectric`| 16    | Dielectric Material |
+| `Metal`     | 17    | Metal        |
+| `Air`       | 18    | Air          |
+| `GAS`       | 19    | Gas          |
 
 __Example__:
 

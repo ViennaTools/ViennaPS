@@ -56,7 +56,7 @@ Since the surface movement is significantly smaller than the considered fluxes, 
 \end{equation}
 
 \begin{equation}
-    \theta_{O}=\left[1+\left(\cfrac{\beta\sigma_{Si}+Y_{ie}\Gamma_{i}}{\gamma_{O}\Gamma_{O}}\right)\left(1+\cfrac{\gamma_{F}\Gamma_{F}}{k\sigma_{Si}+2Y_{ie}\Gamma_{i}}\right)\right]^{-1}
+    \theta_{O}=\left[1+\left(\cfrac{\beta\sigma_{Si}+Y_{O}\Gamma_{i}}{\gamma_{O}\Gamma_{O}}\right)\left(1+\cfrac{\gamma_{F}\Gamma_{F}}{k\sigma_{Si}+2Y_{ie}\Gamma_{i}}\right)\right]^{-1}
 \end{equation}
 
 The reason that pseudo-steady-state can be assumed is that the incoming fluxes of all involved particles are in the order of 10$^{16}$--10$^{19}$ cm<sup>-1</sup>s<sup>-1</sup>, which is significantly larger than the surface etch rate ER, which is typically in the range of several nanometers per second. The oxygen particles do not take part in surface removal; instead, they occupy an area on the top surface layer and inhibit the effects of chemical etching by fluorine. Relating it to the parameters in the equation, the presence of oxygen (denoted by its flux $\Gamma_{O}$) tends to reduce $\theta_{F}$. Increasing the oxygen flux $\Gamma_O$ increases the overall expression in the square brackets, which means $\theta_{F}$ decreases. Since oxygen has a passivating effect, the etching of silicon proceeds only due to its reaction with fluorine and physical sputtering due to the incoming ion flux. At locations where oxygen coverage is high, only ion sputtering takes place. This brings us to the expression for the etch rate (ER), which is used to move the surface
@@ -118,6 +118,9 @@ SF6O2Etching(const double ionFlux, const double etchantFlux,
              const NumericType etchStopDepth =
                    std::numeric_limits<NumericType>::lowest())
 ```
+
+{: .note }
+> Time and length units have to be set before initializing the model. For details see [Units]({% link misc/units.md %}).
 
 | Parameter           | Description                                                               | Type           |
 |----------------------|--------------------------------------------------------------------------|----------------|
