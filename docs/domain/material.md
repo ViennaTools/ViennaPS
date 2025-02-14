@@ -28,7 +28,7 @@ The following materials are currently available in the `Material` enum:
 | `GaN`       | 9     | Gallium Nitride |
 | `W`         | 10    | Tungsten     |
 | `Al2O3`     | 11    | Aluminum Oxide |
-| `HfO2`       | 12    | Hafnium Oxide |
+| `HfO2`      | 12    | Hafnium Oxide |
 | `TiN`       | 13    | Titanium Nitride |
 | `Cu`        | 14    | Copper       |
 | `Polymer`   | 15    | Polymer      |
