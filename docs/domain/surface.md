@@ -28,8 +28,6 @@ $$
 S = \{\vec{x}\!: \, \phi(\vec{x}) = 0 \}. 
 $$
 
-For a more detailed description of the Level-Set method, please refer to one of the following sources[^1].
-
 If the domain contains multiple LSs, the top LS wraps the entire structure and therefore represents the surface, while all other LS functions just describe material interfaces. Formally, the different material regions can be described by ${M}$ LS functions satisfying
 
 $$ 
@@ -41,8 +39,3 @@ Here $\Phi_M$ describes the entire structure $\mathcal{M}$, and the other LS fun
 When inserting a new LS into the domain, an automatic wrapping process ensues. This process involves enveloping all existing Level-Sets through a Boolean operation, specifically a union with the topmost LS. It's worth noting, though, that this default behavior is not obligatory. In instances where a specialized domain structure is desired, users have the option to circumvent this automatic wrapping mechanism. 
 
 ---
-
-[^1]: Source 
-
-Coming soon 
-{: .label .label-yellow }

@@ -14,9 +14,6 @@ nav_order: 2
 ```
 ---
 
-Coming soon
-{: .label .label-yellow}
-
 ## Related Examples
 
 * [Cantilever Wet Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching)
