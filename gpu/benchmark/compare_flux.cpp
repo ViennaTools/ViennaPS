@@ -1,5 +1,4 @@
 #include <lsToDiskMesh.hpp>
-#include <lsToSurfaceMeshRefined.hpp>
 
 #include <models/psSingleParticleProcess.hpp>
 #include <psProcess.hpp>
@@ -22,7 +21,7 @@ int main() {
   const NumericType sticking = 0.1f;
 
   Context context;
-  CreateContext(context);
+  context.create();
 
   auto domain = MAKE_GEO<NumericType>();
 
@@ -34,7 +33,7 @@ int main() {
 
   auto elementKdTree = SmartPointer<KDTree<float, Vec3Df>>::New();
   auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
-  viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMesher(
+  gpu::CreateSurfaceMesh<NumericType, float, D> surfMesher(
       domain->getSurface(), surfMesh, elementKdTree);
 
   gpu::Trace<NumericType, D> tracer(context);
@@ -43,15 +42,10 @@ int main() {
 
   diskMesher.apply();
   surfMesher.apply();
-  gpu::TriangleMesh mesh;
-  mesh.gridDelta = GRID_DELTA;
-  mesh.vertices = surfMesh->nodes;
-  mesh.triangles = surfMesh->triangles;
-  mesh.minimumExtent = surfMesh->minimumExtent;
-  mesh.maximumExtent = surfMesh->maximumExtent;
+  gpu::TriangleMesh<float> mesh(GRID_DELTA, surfMesh);
 
   tracer.setGeometry(mesh);
-  tracer.setPipeline("SingleParticlePipeline", context->modulePath);
+  tracer.setPipeline("SingleParticlePipeline", context.modulePath);
 
   auto particle = gpu::Particle<NumericType>();
   particle.sticking = sticking;
@@ -96,8 +90,8 @@ int main() {
 
   const auto numNodes = flux->nodes.size();
 
-  auto cpu_flxu = flux->getCellData().getScalarData("particleFlux");
-  auto gpu_flxu = diskMesh->getCellData().getScalarData("flux");
+  auto cpu_flux = flux->getCellData().getScalarData("particleFlux");
+  auto gpu_flux = diskMesh->getCellData().getScalarData("flux");
 
   // top points
   const float top = 25.2f;
@@ -106,23 +100,23 @@ int main() {
   for (std::size_t i = 0; i < numNodes; i++) {
     auto &node = flux->nodes[i];
     if (std::abs(node[2] - top) < 0.1 && std::abs(node[1]) < 0.01) {
-      file_top << node[0] << ";" << node[1] << ";" << cpu_flxu->at(i) << ";"
-               << gpu_flxu->at(i) << "\n";
+      file_top << node[0] << ";" << node[1] << ";" << cpu_flux->at(i) << ";"
+               << gpu_flux->at(i) << "\n";
     }
 
     if (std::abs(node[2] - bottom) < 0.1 && std::abs(node[1]) < 0.01) {
-      file_bottom << node[0] << ";" << node[1] << ";" << cpu_flxu->at(i) << ";"
-                  << gpu_flxu->at(i) << "\n";
+      file_bottom << node[0] << ";" << node[1] << ";" << cpu_flux->at(i) << ";"
+                  << gpu_flux->at(i) << "\n";
     }
 
     if (std::abs(node[0] - 2.44) < 0.025 && std::abs(node[1]) < 0.01) {
-      file_side_1 << node[1] << ";" << node[2] << ";" << cpu_flxu->at(i) << ";"
-                  << gpu_flxu->at(i) << "\n";
+      file_side_1 << node[1] << ";" << node[2] << ";" << cpu_flux->at(i) << ";"
+                  << gpu_flux->at(i) << "\n";
     }
 
     if (std::abs(node[0] + 2.5) < 0.025 && std::abs(node[1]) < 0.01) {
-      file_side_2 << node[1] << ";" << node[2] << ";" << cpu_flxu->at(i) << ";"
-                  << gpu_flxu->at(i) << "\n";
+      file_side_2 << node[1] << ";" << node[2] << ";" << cpu_flux->at(i) << ";"
+                  << gpu_flux->at(i) << "\n";
     }
   }
 }

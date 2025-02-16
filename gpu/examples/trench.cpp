@@ -10,10 +10,10 @@ int main(int argc, char **argv) {
 
   omp_set_num_threads(1);
   constexpr int D = 3;
-  using NumericType = float;
+  using NumericType = double;
 
-  gpu::Context context;
-  gpu::CreateContext(context);
+  Context context;
+  context.create();
   Logger::setLogLevel(LogLevel::DEBUG);
 
   const NumericType gridDelta = 1.0;

@@ -14,7 +14,7 @@
 
 using namespace viennaps::gpu;
 
-extern "C" __constant__ LaunchParams<float> launchParams;
+extern "C" __constant__ LaunchParams launchParams;
 
 // for this simple example, we have a single ray type
 enum

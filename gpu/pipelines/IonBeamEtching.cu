@@ -14,7 +14,7 @@
 
 using namespace viennaps::gpu;
 
-extern "C" __constant__ LaunchParams<float> launchParams;
+extern "C" __constant__ LaunchParams launchParams;
 __constant__ float minAngle = 75 * M_PIf / 180.;
 __constant__ float thetaRMin = 60 * M_PIf / 180.;
 __constant__ float thetaRMax = M_PI_2f;

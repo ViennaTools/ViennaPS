@@ -12,7 +12,7 @@ namespace gpu {
 
 using namespace viennacore;
 
-template <typename NumericType> struct TriangleGeometry {
+struct TriangleGeometry {
   // geometry
   CudaBuffer geometryVertexBuffer;
   CudaBuffer geometryIndexBuffer;
@@ -25,8 +25,9 @@ template <typename NumericType> struct TriangleGeometry {
   CudaBuffer asBuffer;
 
   /// build acceleration structure from triangle mesh
-  void buildAccel(Context context, const TriangleMesh<NumericType> &mesh,
-                  LaunchParams<NumericType> &launchParams) {
+  void buildAccel(Context &context, const TriangleMesh<float> &mesh,
+                  LaunchParams &launchParams) {
+    assert(context.deviceID != -1 && "Context not initialized.");
 
     launchParams.source.gridDelta = mesh.gridDelta;
     launchParams.source.minPoint[0] = mesh.minimumExtent[0];
@@ -122,7 +123,7 @@ template <typename NumericType> struct TriangleGeometry {
     accelOptions.operation = OPTIX_BUILD_OPERATION_BUILD;
 
     OptixAccelBufferSizes blasBufferSizes;
-    optixAccelComputeMemoryUsage(context->optix, &accelOptions,
+    optixAccelComputeMemoryUsage(context.optix, &accelOptions,
                                  triangleInput.data(),
                                  2, // num_build_inputs
                                  &blasBufferSizes);
@@ -142,7 +143,7 @@ template <typename NumericType> struct TriangleGeometry {
     CudaBuffer outputBuffer;
     outputBuffer.alloc(blasBufferSizes.outputSizeInBytes);
 
-    optixAccelBuild(context->optix, 0, &accelOptions, triangleInput.data(), 2,
+    optixAccelBuild(context.optix, 0, &accelOptions, triangleInput.data(), 2,
                     tempBuffer.dPointer(), tempBuffer.sizeInBytes,
                     outputBuffer.dPointer(), outputBuffer.sizeInBytes,
                     &asHandle, &emitDesc, 1);
@@ -153,7 +154,7 @@ template <typename NumericType> struct TriangleGeometry {
     compactedSizeBuffer.download(&compactedSize, 1);
 
     asBuffer.alloc(compactedSize);
-    optixAccelCompact(context->optix, 0, asHandle, asBuffer.dPointer(),
+    optixAccelCompact(context.optix, 0, asHandle, asBuffer.dPointer(),
                       asBuffer.sizeInBytes, &asHandle);
     cudaDeviceSynchronize();
 
@@ -165,9 +166,9 @@ template <typename NumericType> struct TriangleGeometry {
     launchParams.traversable = asHandle;
   }
 
-  static TriangleMesh<NumericType>
-  makeBoundary(const TriangleMesh<NumericType> &passedMesh) {
-    TriangleMesh<NumericType> boundaryMesh;
+  static TriangleMesh<float>
+  makeBoundary(const TriangleMesh<float> &passedMesh) {
+    TriangleMesh<float> boundaryMesh;
 
     Vec3Df bbMin = passedMesh.minimumExtent;
     Vec3Df bbMax = passedMesh.maximumExtent;

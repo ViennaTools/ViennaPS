@@ -171,7 +171,7 @@ public:
     typename nodeContainerType::iterator nodeIt;
     lsInternal::MarchingCubes marchingCubes;
 
-    std::vector<Vec3D<MeshNT>> triangleCenters;
+    std::vector<Vec3D<LsNT>> triangleCenters;
     std::vector<Vec3D<MeshNT>> normals;
     const bool buildKdTreeFlag = kdTree != nullptr;
     const bool checkNodeFlag = checkNodeDistance;

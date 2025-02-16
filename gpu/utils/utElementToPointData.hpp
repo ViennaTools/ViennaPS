@@ -12,13 +12,14 @@ namespace gpu {
 
 using namespace viennacore;
 
-template <typename NumericType> class ElementToPointData {
+template <typename NumericType, typename MeshNT = NumericType>
+class ElementToPointData {
   CudaBuffer &d_elementData_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;
   const IndexMap indexMap_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
-  SmartPointer<viennals::Mesh<NumericType>> surfaceMesh_;
+  SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
   const NumericType conversionRadius_;
 
   static constexpr bool discard2 = true;
@@ -31,7 +32,7 @@ public:
       const std::vector<Particle<NumericType>> &particles,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-      SmartPointer<viennals::Mesh<NumericType>> surfMesh,
+      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
       : d_elementData_(d_elementData), pointData_(pointData),
         indexMap_(particles), elementKdTree_(elementKdTree),
@@ -44,7 +45,7 @@ public:
       const IndexMap &indexMap,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-      SmartPointer<viennals::Mesh<NumericType>> surfMesh,
+      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
       : d_elementData_(d_elementData), pointData_(pointData),
         indexMap_(indexMap), elementKdTree_(elementKdTree), diskMesh_(diskMesh),
@@ -87,7 +88,7 @@ public:
         const auto &p = closePoints[n];
         assert(p.first < elementNormals->size());
 
-        auto weight = DotProduct(normals->at(i), elementNormals->at(p.first));
+        auto weight = DotProductNT(normals->at(i), elementNormals->at(p.first));
 
         if (weight > 1e-6 && !std::isnan(weight)) {
           weights[n] = weight;
@@ -194,6 +195,17 @@ public:
         pointData_->getScalarData(j)->at(i) = value;
       }
     }
+  }
+
+private:
+  template <class AT, class BT, std::size_t D>
+  AT DotProductNT(const std::array<AT, D> &pVecA,
+                  const std::array<BT, D> &pVecB) {
+    AT dot = 0;
+    for (size_t i = 0; i < D; ++i) {
+      dot += pVecA[i] * pVecB[i];
+    }
+    return dot;
   }
 };
 

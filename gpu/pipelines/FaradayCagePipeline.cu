@@ -12,7 +12,7 @@
 using namespace viennaps::gpu;
 using namespace viennacore;
 
-extern "C" __constant__ LaunchParams<float> launchParams;
+extern "C" __constant__ LaunchParams launchParams;
 
 __constant__ float minAngle = 5 * M_PIf / 180.;
 __constant__ float yieldFac = 1.075;

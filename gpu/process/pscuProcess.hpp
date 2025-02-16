@@ -9,7 +9,6 @@
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
-#include <lsToSurfaceMeshRefined.hpp>
 
 #include <pscuProcessModel.hpp>
 
@@ -135,10 +134,10 @@ public:
 
     /* --------- Setup triangulated surface mesh ----------- */
     Timer transTimer;
-    auto surfMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
-    CreateSurfaceMesh<NumericType, NumericType, D> surfMeshConverter(
+    CreateSurfaceMesh<NumericType, float, D> surfMeshConverter(
         domain_->getLevelSets().back(), surfMesh, elementKdTree);
 
     /* --------- Setup for ray tracing ----------- */
@@ -147,8 +146,7 @@ public:
     Timer rtTimer;
 
     if (!rayTracerInitialized_) {
-      rayTrace_.setPipeline(model_->getPipelineFileName(),
-                            context_->modulePath);
+      rayTrace_.setPipeline(model_->getPipelineFileName(), context_.modulePath);
       rayTrace_.setNumberOfRaysPerPoint(raysPerPoint_);
       rayTrace_.setUseRandomSeeds(useRandomSeeds_);
       rayTrace_.setPeriodicBoundary(periodicBoundary_);
@@ -171,7 +169,7 @@ public:
     assert(diskMesh->nodes.size() > 0);
     assert(surfMesh->nodes.size() > 0);
 
-    TriangleMesh mesh(gridDelta, surfMesh);
+    TriangleMesh<float> mesh(gridDelta, surfMesh);
     rayTrace_.setGeometry(mesh);
     meshTimer.finish();
     Logger::getInstance().addTiming("Geometry generation", meshTimer).print();
@@ -190,9 +188,9 @@ public:
 
     // extract fluxes on points
     auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-    ElementToPointData<NumericType>(rayTrace_.getResults(), fluxes,
-                                    rayTrace_.getParticles(), elementKdTree,
-                                    diskMesh, surfMesh, gridDelta)
+    ElementToPointData<NumericType, float>(
+        rayTrace_.getResults(), fluxes, rayTrace_.getParticles(), elementKdTree,
+        diskMesh, surfMesh, gridDelta)
         .apply();
 
     mergeScalarData(diskMesh->getCellData(), fluxes);
@@ -248,7 +246,7 @@ public:
     auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
-    viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMeshConverter(
+    CreateSurfaceMesh<NumericType, float, D> surfMeshConverter(
         domain_->getLevelSets().back(), surfMesh, elementKdTree);
     // surfMeshConverter.setCheckNodeForDouble(false);
 
@@ -258,8 +256,7 @@ public:
     IndexMap fluxesIndexMap;
 
     if (!rayTracerInitialized_) {
-      rayTrace_.setPipeline(model_->getPipelineFileName(),
-                            context_->modulePath);
+      rayTrace_.setPipeline(model_->getPipelineFileName(), context_.modulePath);
       rayTrace_.setNumberOfRaysPerPoint(raysPerPoint_);
       rayTrace_.setUseRandomSeeds(useRandomSeeds_);
       rayTrace_.setPeriodicBoundary(periodicBoundary_);
@@ -281,7 +278,7 @@ public:
     assert(diskMesh->nodes.size() > 0);
     assert(surfMesh->nodes.size() > 0);
     transField->buildKdTree(diskMesh->nodes);
-    TriangleMesh mesh(gridDelta, surfMesh);
+    TriangleMesh<float> mesh(gridDelta, surfMesh);
     rayTrace_.setGeometry(mesh);
     meshTimer.finish();
     Logger::getInstance().addTiming("Geometry generation", meshTimer).print();
@@ -310,8 +307,8 @@ public:
            iterations++) {
 
         transTimer.start();
-        PointToElementData<NumericType>(d_coverages, coverages,
-                                        transField->getKdTree(), surfMesh)
+        PointToElementData<NumericType, float>(
+            d_coverages, coverages, transField->getKdTree(), surfMesh)
             .apply();
         transTimer.finish();
 
@@ -328,9 +325,9 @@ public:
         // extract fluxes on points
         auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
         transTimer.start();
-        ElementToPointData<NumericType>(rayTrace_.getResults(), fluxes,
-                                        rayTrace_.getParticles(), elementKdTree,
-                                        diskMesh, surfMesh, gridDelta)
+        ElementToPointData<NumericType, float>(
+            rayTrace_.getResults(), fluxes, rayTrace_.getParticles(),
+            elementKdTree, diskMesh, surfMesh, gridDelta)
             .apply();
         transTimer.finish();
 
@@ -376,7 +373,7 @@ public:
       meshTimer.start();
       surfMeshConverter.apply();                // build element KD tree
       transField->buildKdTree(diskMesh->nodes); // build point KD tree
-      mesh = TriangleMesh(gridDelta, surfMesh);
+      mesh = TriangleMesh<float>(gridDelta, surfMesh);
       rayTrace_.setGeometry(mesh);
       meshTimer.finish();
 
@@ -385,8 +382,8 @@ public:
       CudaBuffer d_coverages; // device buffer for coverages
       if (useCoverages) {
         transTimer.start();
-        PointToElementData<NumericType>(d_coverages, coverages,
-                                        transField->getKdTree(), surfMesh)
+        PointToElementData<NumericType, float>(
+            d_coverages, coverages, transField->getKdTree(), surfMesh)
             .apply();
         transTimer.finish();
 
@@ -405,9 +402,9 @@ public:
       // extract fluxes on points
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
       transTimer.start();
-      ElementToPointData<NumericType>(rayTrace_.getResults(), fluxes,
-                                      rayTrace_.getParticles(), elementKdTree,
-                                      diskMesh, surfMesh, gridDelta)
+      ElementToPointData<NumericType, float>(
+          rayTrace_.getResults(), fluxes, rayTrace_.getParticles(),
+          elementKdTree, diskMesh, surfMesh, gridDelta)
           .apply();
       transTimer.finish();
 
@@ -426,7 +423,7 @@ public:
           //     dummy, fluxes, transField->getKdTree(), surfMesh, true, false)
           //     .apply();
           rayTrace_.downloadResultsToPointData(surfMesh->getCellData());
-          viennals::VTKWriter<NumericType>(
+          viennals::VTKWriter<float>(
               surfMesh, name + "_flux_" + std::to_string(counter) + ".vtp")
               .apply();
         }

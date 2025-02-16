@@ -17,9 +17,9 @@ int main() {
   Logger::setLogLevel(LogLevel::DEBUG);
 
   Context context;
-  CreateContext(context);
+  context.create();
   const std::string moduleName = "testReflections.ptx";
-  AddModule(moduleName, context);
+  context.addModule(moduleName);
 
   {
     unsigned numResults = 10000;

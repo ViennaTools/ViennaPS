@@ -16,7 +16,7 @@
 #define POLY_PARTICLE_IDX 2
 #define ETCHANTPOLY_PARTICLE_IDX 3
 
-extern "C" __constant__ curtLaunchParams<float> launchParams;
+extern "C" __constant__ LaunchParams launchParams;
 enum
 {
   SURFACE_RAY_TYPE = 0,

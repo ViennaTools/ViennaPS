@@ -25,12 +25,12 @@ int main() {
   file << "Sticking;Meshing;Tracing;Postprocessing;Advection\n";
 
   Context context;
-  CreateContext(context);
+  context.create();
 
   gpu::Trace<NumericType, D> tracer(context);
   tracer.setNumberOfRaysPerPoint(3000);
   tracer.setUseRandomSeeds(false);
-  tracer.setPipeline("SingleParticlePipeline", context->modulePath);
+  tracer.setPipeline("SingleParticlePipeline", context.modulePath);
 
   auto particle = gpu::Particle<NumericType>();
   particle.name = "SingleParticle";

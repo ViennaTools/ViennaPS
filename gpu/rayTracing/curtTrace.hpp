@@ -34,9 +34,9 @@ template <class T, int D> class Trace {
 public:
   /// constructor - performs all setup, including initializing
   /// optix, creates module, pipeline, programs, SBT, etc.
-  Trace(Context passedContext) : context(passedContext) { initRayTracer(); }
+  Trace(Context &passedContext) : context(passedContext) { initRayTracer(); }
 
-  void setGeometry(const TriangleMesh<T> &passedMesh) {
+  void setGeometry(const TriangleMesh<float> &passedMesh) {
     geometry.buildAccel(context, passedMesh, launchParams);
   }
 
@@ -69,8 +69,8 @@ public:
            numCellData * launchParams.numElements);
 
     // resize our cuda result buffer
-    resultBuffer.allocInit(launchParams.numElements * numRates, T(0));
-    launchParams.resultBuffer = (T *)resultBuffer.dPointer();
+    resultBuffer.allocInit(launchParams.numElements * numRates, float(0));
+    launchParams.resultBuffer = (float *)resultBuffer.dPointer();
 
     if (useRandomSeed) {
       std::random_device rd;
@@ -101,10 +101,14 @@ public:
 
     for (size_t i = 0; i < particles.size(); i++) {
 
-      launchParams.cosineExponent = particles[i].cosineExponent;
-      launchParams.sticking = particles[i].sticking;
+      launchParams.cosineExponent =
+          static_cast<float>(particles[i].cosineExponent);
+      launchParams.sticking = static_cast<float>(particles[i].sticking);
+      Vec3Df direction{static_cast<float>(particles[i].direction[0]),
+                       static_cast<float>(particles[i].direction[1]),
+                       static_cast<float>(particles[i].direction[2])};
       launchParams.source.directionBasis =
-          rayInternal::getOrthonormalBasis<float>(particles[i].direction);
+          rayInternal::getOrthonormalBasis<float>(direction);
       launchParamsBuffer.upload(&launchParams, 1);
 
       CUstream stream;
@@ -220,13 +224,13 @@ public:
 
   void setUseRandomSeeds(const bool set) { useRandomSeed = set; }
 
-  void getFlux(T *flux, int particleIdx, int dataIdx) {
+  void getFlux(float *flux, int particleIdx, int dataIdx) {
     unsigned int offset = 0;
     for (size_t i = 0; i < particles.size(); i++) {
       if (particleIdx > i)
         offset += particles[i].dataLabels.size();
     }
-    auto temp = new T[numRates * launchParams.numElements];
+    auto temp = new float[numRates * launchParams.numElements];
     resultBuffer.download(temp, launchParams.numElements * numRates);
     offset = (offset + dataIdx) * launchParams.numElements;
     std::memcpy(flux, &temp[offset], launchParams.numElements * sizeof(T));
@@ -306,9 +310,9 @@ public:
     delete temp;
   }
 
-  void downloadResultsToPointData(viennals::PointData<T> &pointData) {
+  void downloadResultsToPointData(viennals::PointData<float> &pointData) {
     unsigned int numPoints = launchParams.numElements;
-    T *temp = new T[numPoints * numRates];
+    float *temp = new float[numPoints * numRates];
     resultBuffer.download(temp, numPoints * numRates);
 
     int offset = 0;
@@ -317,9 +321,9 @@ public:
         int tmpOffset = offset + dIdx;
         auto name = particles[pIdx].dataLabels[dIdx];
 
-        std::vector<T> *values = pointData.getScalarData(name, true);
+        std::vector<float> *values = pointData.getScalarData(name, true);
         if (values == nullptr) {
-          std::vector<T> val(numPoints);
+          std::vector<float> val(numPoints);
           pointData.insertNextScalarData(std::move(val), name);
           values = pointData.getScalarData(name);
         }
@@ -327,7 +331,7 @@ public:
           values->resize(numPoints);
 
         std::memcpy(values->data(), &temp[tmpOffset * numPoints],
-                    numPoints * sizeof(T));
+                    numPoints * sizeof(float));
       }
       offset += particles[pIdx].dataLabels.size();
     }
@@ -373,7 +377,7 @@ protected:
   }
 
   void initRayTracer() {
-    AddModule(normModuleName, context);
+    context.addModule(normModuleName);
     launchParamsBuffer.alloc(sizeof(launchParams));
     normKernelName.push_back(NumericType);
   }
@@ -404,7 +408,7 @@ protected:
     size_t inputSize = 0;
     auto pipelineInput = getInputData(pipelineFile.c_str(), inputSize);
 
-    OPTIX_CHECK(optixModuleCreate(context->optix, &moduleCompileOptions,
+    OPTIX_CHECK(optixModuleCreate(context.optix, &moduleCompileOptions,
                                   &pipelineCompileOptions, pipelineInput,
                                   inputSize, log, &sizeof_log, &module));
     // if (sizeof_log > 1)
@@ -425,9 +429,8 @@ protected:
       // OptixProgramGroup raypg;
       char log[2048];
       size_t sizeof_log = sizeof(log);
-      OPTIX_CHECK(optixProgramGroupCreate(context->optix, &pgDesc, 1,
-                                          &pgOptions, log, &sizeof_log,
-                                          &raygenPGs[i]));
+      OPTIX_CHECK(optixProgramGroupCreate(context.optix, &pgDesc, 1, &pgOptions,
+                                          log, &sizeof_log, &raygenPGs[i]));
       // if (sizeof_log > 1)
       //   PRINT(log);
     }
@@ -447,9 +450,8 @@ protected:
       // OptixProgramGroup raypg;
       char log[2048];
       size_t sizeof_log = sizeof(log);
-      OPTIX_CHECK(optixProgramGroupCreate(context->optix, &pgDesc, 1,
-                                          &pgOptions, log, &sizeof_log,
-                                          &missPGs[i]));
+      OPTIX_CHECK(optixProgramGroupCreate(context.optix, &pgDesc, 1, &pgOptions,
+                                          log, &sizeof_log, &missPGs[i]));
       // if (sizeof_log > 1)
       //   PRINT(log);
     }
@@ -468,9 +470,8 @@ protected:
 
       char log[2048];
       size_t sizeof_log = sizeof(log);
-      OPTIX_CHECK(optixProgramGroupCreate(context->optix, &pgDesc, 1,
-                                          &pgOptions, log, &sizeof_log,
-                                          &hitgroupPGs[i]));
+      OPTIX_CHECK(optixProgramGroupCreate(context.optix, &pgDesc, 1, &pgOptions,
+                                          log, &sizeof_log, &hitgroupPGs[i]));
       // if (sizeof_log > 1)
       //   PRINT(log);
     }
@@ -488,7 +489,7 @@ protected:
       char log[2048];
       size_t sizeof_log = sizeof(log);
       OPTIX_CHECK(optixPipelineCreate(
-          context->optix, &pipelineCompileOptions, &pipelineLinkOptions,
+          context.optix, &pipelineCompileOptions, &pipelineLinkOptions,
           programGroups.data(), (int)programGroups.size(), log, &sizeof_log,
           &pipelines[i]));
       // #ifndef NDEBUG
@@ -559,11 +560,11 @@ protected:
 
 protected:
   // context for cuda kernels
-  Context context;
+  Context &context;
   std::filesystem::path pipelineFile;
 
   // geometry
-  TriangleGeometry<T> geometry;
+  TriangleGeometry geometry;
 
   // particles
   std::vector<Particle<T>> particles;
@@ -591,7 +592,7 @@ protected:
   std::vector<OptixShaderBindingTable> sbts;
 
   // launch parameters, on the host, constant for all particles
-  LaunchParams<T> launchParams;
+  LaunchParams launchParams;
   CudaBuffer launchParamsBuffer;
 
   // results Buffer
@@ -609,7 +610,8 @@ protected:
   const std::string normModuleName = "normKernels.ptx";
   std::string normKernelName = "normalize_surface_";
 
-  static constexpr char NumericType = std::is_same_v<T, float> ? 'f' : 'd';
+  static constexpr char NumericType =
+      'f'; // std::is_same_v<T, float> ? 'f' : 'd';
 };
 
 } // namespace gpu

@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 
   {
     Context context;
-    CreateContext(context);
+    context.create();
 
     auto model =
         SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(exponent);

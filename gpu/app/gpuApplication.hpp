@@ -20,7 +20,7 @@ class Application : public ::Application<DIM> {
 public:
   Application(int argc, char **argv) : ::Application<DIM>(argc, argv) {
     std::cout << "Initializing CUDA and OptiX ... ";
-    CreateContext(context);
+    context.create();
     std::cout << "success" << std::endl;
   }
 

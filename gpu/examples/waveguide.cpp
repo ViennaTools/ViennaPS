@@ -109,10 +109,10 @@ void MakeGeometry(ps::SmartPointer<ps::Domain<NumericType, D>> &domain,
                           W1 + yPad,
                           -height,
                           height};
-  typename ls::BoundaryConditionEnum<D> boundaryCons[D] = {
-      ls::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY,
-      ls::BoundaryConditionEnum<D>::PERIODIC_BOUNDARY,
-      ls::BoundaryConditionEnum<D>::INFINITE_BOUNDARY};
+  typename ls::BoundaryConditionEnum boundaryCons[D] = {
+      ls::BoundaryConditionEnum::PERIODIC_BOUNDARY,
+      ls::BoundaryConditionEnum::PERIODIC_BOUNDARY,
+      ls::BoundaryConditionEnum::INFINITE_BOUNDARY};
   auto levelSet = ls::SmartPointer<ls::Domain<NumericType, D>>::New(
       bounds, boundaryCons, gridDelta);
   ls::FromSurfaceMesh<NumericType, D>(levelSet, upper).apply();
@@ -151,8 +151,8 @@ int main(int argc, char *argv[]) {
   constexpr int D = 3;
   ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
-  ps::gpu::Context context;
-  ps::gpu::CreateContext(context);
+  ps::Context context;
+  context.create();
   omp_set_num_threads(16);
   std::cout << "Using " << omp_get_max_threads() << " threads" << std::endl;
 
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
       auto fluxMesh = visProcess.calculateFlux();
 
       auto surfMesh = ps::SmartPointer<ls::Mesh<float>>::New();
-      viennals::ToSurfaceMeshRefined<NumericType, float, D>(
+      ps::gpu::CreateSurfaceMesh<NumericType, float, D>(
           copy->getLevelSets().back(), surfMesh)
           .apply();
 

@@ -17,7 +17,7 @@ using namespace viennaps::gpu;
 /*  launch parameters in constant memory, filled in by optix upon
     optixLaunch (this gets filled in from the buffer we pass to
     optixLaunch) */
-extern "C" __constant__ LaunchParams<float> launchParams;
+extern "C" __constant__ LaunchParams launchParams;
 
 // for this simple example, we have a single ray type
 enum

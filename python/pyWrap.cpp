@@ -78,6 +78,7 @@
 #ifdef VIENNAPS_USE_GPU
 #include <gpu/vcContext.hpp>
 #include <gpu/vcCudaBuffer.hpp>
+#include <pscuSingleParticleProcess.hpp>
 #endif
 
 using namespace viennaps;
@@ -1558,8 +1559,46 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 #ifdef VIENNAPS_USE_GPU
   auto m_gpu = module.def_submodule("gpu", "GPU accelerated functions.");
 
-  pybind11::class_<gpu::Context_t>(m_gpu, "Context").def(pybind11::init<>());
+  pybind11::class_<std::filesystem::path>(m_gpu, "Path")
+      .def(pybind11::init<std::string>());
+  pybind11::implicitly_convertible<std::string, std::filesystem::path>();
 
-  m_gpu.def("CreateContext", &gpu::CreateContext, "Create a GPU context.");
+  pybind11::class_<Context>(m_gpu, "Context")
+      .def(pybind11::init())
+      //  .def_readwrite("modulePath", &Context::modulePath)
+      //  .def_readwrite("moduleNames", &Context::moduleNames)
+      //  .def_readwrite("cuda", &Context::cuda, "Cuda context.")
+      //  .def_readwrite("optix", &Context::optix, "Optix context.")
+      //  .def_readwrite("deviceProps", &Context::deviceProps,
+      //                 "Device properties.")
+      //  .def("getModule", &Context::getModule)
+      .def("create", &Context::create, "Create a new context.",
+           pybind11::arg("modulePath") = VIENNAPS_KERNELS_PATH,
+           pybind11::arg("deviceID") = 0)
+      .def("destroy", &Context::destroy, "Destroy the context.")
+      .def("addModule", &Context::addModule, "Add a module to the context.")
+      .def_readwrite("deviceID", &Context::deviceID, "Device ID.");
+
+  pybind11::class_<gpu::SingleParticleProcess<T, D>>(m_gpu,
+                                                     "SingleParticleProcess")
+      .def(pybind11::init([](const T rate, const T sticking, const T power,
+                             const Material mask) {
+             return SmartPointer<SingleParticleProcess<T, D>>::New(
+                 rate, sticking, power, mask);
+           }),
+           pybind11::arg("rate") = 1.,
+           pybind11::arg("stickingProbability") = 1.,
+           pybind11::arg("sourceExponent") = 1.,
+           pybind11::arg("maskMaterial") = Material::None)
+      .def(pybind11::init([](const T rate, const T sticking, const T power,
+                             const std::vector<Material> mask) {
+             return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
+                 rate, sticking, power, mask);
+           }),
+           pybind11::arg("rate"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"))
+      .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
+           pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"));
 #endif
 }

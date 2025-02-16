@@ -13,41 +13,41 @@ class SingleParticleProcess : public ProcessModel<NumericType, D> {
 public:
   SingleParticleProcess(NumericType rate = 1.,
                         NumericType stickingProbability = 1.,
-                        NumericType sourceDistributionPower = 1.,
+                        NumericType sourceExponent = 1.,
                         Material maskMaterial = Material::None) {
     std::unordered_map<Material, NumericType> maskMaterialMap = {
         {maskMaterial, 0.}};
-    initialize(rate, stickingProbability, sourceDistributionPower,
+    initialize(rate, stickingProbability, sourceExponent,
                std::move(maskMaterialMap));
   }
 
   SingleParticleProcess(NumericType rate, NumericType stickingProbability,
-                        NumericType sourceDistributionPower,
+                        NumericType sourceExponent,
                         std::vector<Material> maskMaterial) {
     std::unordered_map<Material, NumericType> maskMaterialMap;
     for (auto &mat : maskMaterial) {
       maskMaterialMap[mat] = 0.;
     }
-    initialize(rate, stickingProbability, sourceDistributionPower,
+    initialize(rate, stickingProbability, sourceExponent,
                std::move(maskMaterialMap));
   }
 
   SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
                         NumericType stickingProbability,
-                        NumericType sourceDistributionPower) {
-    initialize(0., stickingProbability, sourceDistributionPower,
+                        NumericType sourceExponent) {
+    initialize(0., stickingProbability, sourceExponent,
                std::move(materialRates));
   }
 
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
-                  NumericType sourceDistributionPower,
+                  NumericType sourceExponent,
                   std::unordered_map<Material, NumericType> &&maskMaterial) {
     // particles
 
     Particle<NumericType> particle{.name = "SingleParticle",
                                    .sticking = stickingProbability,
-                                   .cosineExponent = sourceDistributionPower};
+                                   .cosineExponent = sourceExponent};
     particle.dataLabels.push_back("particleFlux");
 
     // surface model

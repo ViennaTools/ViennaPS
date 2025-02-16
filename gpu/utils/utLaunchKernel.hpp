@@ -16,9 +16,9 @@ class LaunchKernel {
 public:
   static void launch(const std::string &moduleName,
                      const std::string &kernelName, void **kernel_args,
-                     Context context, unsigned long sharedMemoryInBytes = 0) {
+                     Context &context, unsigned long sharedMemoryInBytes = 0) {
 
-    CUmodule module = context->getModule(moduleName);
+    CUmodule module = context.getModule(moduleName);
     CUfunction function;
     CUresult err;
 
@@ -43,10 +43,10 @@ public:
 
   static void launchSingle(const std::string &moduleName,
                            const std::string &kernelName, void **kernel_args,
-                           Context context,
+                           Context &context,
                            unsigned long sharedMemoryInBytes = 0) {
 
-    CUmodule module = context->getModule(moduleName);
+    CUmodule module = context.getModule(moduleName);
     CUfunction function;
     CUresult err;
 

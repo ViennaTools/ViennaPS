@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   }
 
   Context context;
-  CreateContext(context);
+  context.create();
 
   // set parameter units
   units::Length::setUnit(params.get<std::string>("lengthUnit"));

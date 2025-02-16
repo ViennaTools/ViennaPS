@@ -1,5 +1,4 @@
 #include <lsToDiskMesh.hpp>
-#include <lsToSurfaceMeshRefined.hpp>
 
 #include <curtTrace.hpp>
 #include <gpu/vcContext.hpp>
@@ -34,7 +33,7 @@ int main() {
 #endif
 
   Context context;
-  CreateContext(context);
+  context.create();
 
   auto domain = MAKE_GEO<NumericType>();
 
@@ -46,7 +45,7 @@ int main() {
 
   auto elementKdTree = SmartPointer<KDTree<float, Vec3Df>>::New();
   auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
-  viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMesher(
+  gpu::CreateSurfaceMesh<NumericType, float, D> surfMesher(
       domain->getSurface(), surfMesh, elementKdTree);
 
   for (int i = 0; i < numRuns; i++) {
@@ -60,18 +59,13 @@ int main() {
     timer.start();
     diskMesher.apply();
     surfMesher.apply();
-    gpu::TriangleMesh mesh;
-    mesh.gridDelta = GRID_DELTA;
-    mesh.vertices = surfMesh->nodes;
-    mesh.triangles = surfMesh->triangles;
-    mesh.minimumExtent = surfMesh->minimumExtent;
-    mesh.maximumExtent = surfMesh->maximumExtent;
+    gpu::TriangleMesh<float> mesh(GRID_DELTA, surfMesh);
     timer.finish();
     file << timer.currentDuration << ";";
     std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
               << std::endl;
 
-    tracer.setPipeline("SingleParticlePipeline", context->modulePath);
+    tracer.setPipeline("SingleParticlePipeline", context.modulePath);
 #ifdef COUNT_RAYS
     int rayCount = 0;
     tracer.setParameters(rayCount);
@@ -109,9 +103,9 @@ int main() {
               << " ms" << std::endl;
 
     if (i == numRuns - 1) {
-      auto pointKdTree = SmartPointer<KDTree<NumericType, Vec3Df>>::New();
-      pointKdTree->setPoints(diskMesh->nodes);
-      pointKdTree->build();
+      KDTree<NumericType, Vec3Df> pointKdTree;
+      pointKdTree.setPoints(diskMesh->nodes);
+      pointKdTree.build();
       gpu::CudaBuffer dummy;
       gpu::PointToElementData<NumericType>(dummy, pointData, pointKdTree,
                                            surfMesh, true, false)

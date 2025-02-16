@@ -11,10 +11,10 @@ template <typename T> struct Particle {
   std::string name;
   std::vector<std::string> dataLabels;
 
-  float sticking = 1.f;
-  float cosineExponent = 1.f;
+  T sticking = 1.;
+  T cosineExponent = 1.;
 
-  Vec3Df direction = {0.f, 0.f, -1.f};
+  Vec3D<T> direction = {0., 0., -1.0};
 };
 
 } // namespace gpu

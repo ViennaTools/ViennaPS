@@ -7,9 +7,9 @@ namespace viennaps {
 
 namespace gpu {
 
-template <typename T> struct LaunchParams {
-  T *resultBuffer;
-  T rayWeightThreshold = 0.01f;
+struct LaunchParams {
+  float *resultBuffer;
+  float rayWeightThreshold = 0.01f;
   unsigned int seed = 0;
   unsigned int numElements;
   unsigned int *dataPerParticle; // to determine result buffer index
@@ -21,10 +21,10 @@ template <typename T> struct LaunchParams {
 
   // source plane params
   struct {
-    viennacore::Vec2D<T> minPoint;
-    viennacore::Vec2D<T> maxPoint;
-    T gridDelta;
-    T planeHeight;
+    viennacore::Vec2Df minPoint;
+    viennacore::Vec2Df maxPoint;
+    float gridDelta;
+    float planeHeight;
     std::array<viennacore::Vec3Df, 3> directionBasis;
   } source;
 
@@ -34,7 +34,7 @@ template <typename T> struct LaunchParams {
 #ifdef __CUDACC__
 template <typename T>
 __device__ __forceinline__ unsigned int getIdx(int particleIdx, int dataIdx,
-                                               LaunchParams<T> *launchParams) {
+                                               LaunchParams *launchParams) {
   unsigned int offset = 0;
   for (unsigned int i = 0; i < particleIdx; i++)
     offset += launchParams->dataPerParticle[i];
