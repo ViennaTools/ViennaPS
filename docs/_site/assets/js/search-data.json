@@ -169,7 +169,7 @@
   },"24": {
     "doc": "Member Functions",
     "title": "Constructors",
-    "content": "Domain() Domain(SmartPointer&lt;Domain&gt; passedDomain) Domain(SmartPointer&lt;viennals::Domain&lt;NumericType, D&gt;&gt; passedLevelSet, bool generateCellSet = false, const NumericType passedCellSetDepth = 0., const bool passedCellSetPosition = false) Domain(lsDomainsType passedLevelSets, bool generateCellSet = false, const NumericType passedCellSetDepth = 0., const bool passedCellSetPosition = false) . ",
+    "content": "Domain() Domain(SmartPointer&lt;Domain&gt; passedDomain) // deep copy constructor Domain(SmartPointer&lt;viennals::Domain&lt;NumericType, D&gt;&gt; passedLevelSet) Domain(std::vector&lt;SmartPointer&lt;viennals::Domain&lt;NumericType, D&gt;&gt;&gt; passedLevelSets) . ",
     "url": "/domain/functions.html#constructors",
     
     "relUrl": "/domain/functions.html#constructors"
@@ -281,7 +281,7 @@
   },"40": {
     "doc": "Custom Models",
     "title": "Custom Models",
-    "content": ". Users can create a custom process model by interfacing one or more of the classes described below and then inserting them into their custom process model. | The SurfaceModel class is used to describe surface reactions, combining particle fluxes with the surface chemical reactions. | The VelocityField provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step. | ViennaPS seamlessly integrates ViennaRay functionality through the viennaray::Particle class, providing users with a versatile interface to define the key characteristics of the simulated particle species. | . ",
+    "content": ". Users can create a custom process model by interfacing one or more of the classes described below and then inserting them into their custom process model. | The SurfaceModel class is used to describe surface reactions, combining particle fluxes with the surface chemical reactions. | The VelocityField provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step. | ViennaPS seamlessly integrates ViennaRay functionality through the viennaray::Particle class, providing users with a versatile interface to define the key characteristics of the simulated particle species. | . Custom model building is only available in the C++ interface. ",
     "url": "/models/custom/",
     
     "relUrl": "/models/custom/"
@@ -722,7 +722,7 @@
   },"103": {
     "doc": "Volume",
     "title": "Related Examples",
-    "content": ". | Volume Model | Oxide Regrowth | . ",
+    "content": ". | ViennaCS | Oxide Regrowth | . ",
     "url": "/domain/volume.html#related-examples",
     
     "relUrl": "/domain/volume.html#related-examples"

@@ -17,3 +17,5 @@ Users can create a custom process model by interfacing one or more of the classe
 - The `VelocityField` provides the interface between surface velocities and the advection kernel to integrate the Level-Set equation in a time step.
 - ViennaPS seamlessly integrates ViennaRay functionality through the `viennaray::Particle` class, providing users with a versatile interface to define the key characteristics of the simulated particle species.
 
+{: .note }
+> Custom model building is only available in the C++ interface.

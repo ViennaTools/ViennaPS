@@ -13,11 +13,9 @@ nav_order: 3
 ## Constructors
 ```c++
 Domain()
-Domain(SmartPointer<Domain> passedDomain)
-Domain(SmartPointer<viennals::Domain<NumericType, D>> passedLevelSet, bool generateCellSet = false, 
-       const NumericType passedCellSetDepth = 0., const bool passedCellSetPosition = false)
-Domain(lsDomainsType passedLevelSets, bool generateCellSet = false, 
-       const NumericType passedCellSetDepth = 0., const bool passedCellSetPosition = false)
+Domain(SmartPointer<Domain> passedDomain) // deep copy constructor
+Domain(SmartPointer<viennals::Domain<NumericType, D>> passedLevelSet)
+Domain(std::vector<SmartPointer<viennals::Domain<NumericType, D>>> passedLevelSets)
 ```
 
 ## Member Functions
