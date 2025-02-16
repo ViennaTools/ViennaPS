@@ -6,9 +6,6 @@ cuda_wrap_srcs(
     PTX
     generated_files
     "testReflections.cu")
-    #${cmake_options}
-    #OPTIONS
-    #${options})
 
 add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cpp" ${generated_files})
 target_link_libraries(${PROJECT_NAME} PRIVATE ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})

@@ -138,10 +138,8 @@ public:
     auto surfMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
-    viennals::ToSurfaceMeshRefined<NumericType, NumericType, D>
-        surfMeshConverter(domain_->getLevelSets().back(), surfMesh,
-                          elementKdTree);
-    // surfMeshConverter.setCheckNodeForDouble(false);
+    CreateSurfaceMesh<NumericType, NumericType, D> surfMeshConverter(
+        domain_->getLevelSets().back(), surfMesh, elementKdTree);
 
     /* --------- Setup for ray tracing ----------- */
     unsigned int numRates = 0;
@@ -247,12 +245,11 @@ public:
     advectionKernel.prepareLS();
 
     /* --------- Setup triangulated surface mesh ----------- */
-    auto surfMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
     auto elementKdTree =
         SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>::New();
-    viennals::ToSurfaceMeshRefined<NumericType, NumericType, D>
-        surfMeshConverter(domain_->getLevelSets().back(), surfMesh,
-                          elementKdTree);
+    viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMeshConverter(
+        domain_->getLevelSets().back(), surfMesh, elementKdTree);
     // surfMeshConverter.setCheckNodeForDouble(false);
 
     /* --------- Setup for ray tracing ----------- */

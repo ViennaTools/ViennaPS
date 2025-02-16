@@ -116,7 +116,7 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 4.1.0
-  GIT_TAG refined-surface-mesh
+  GIT_TAG refactor-alpha
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

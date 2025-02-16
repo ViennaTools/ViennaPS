@@ -1,9 +1,9 @@
 #include <lsAdvect.hpp>
 #include <lsToDiskMesh.hpp>
-#include <lsToSurfaceMeshRefined.hpp>
 
 #include <psProcess.hpp>
 
+#include <curtMesh.hpp>
 #include <curtTrace.hpp>
 #include <gpu/vcContext.hpp>
 #include <utElementToPointData.hpp>
@@ -46,7 +46,7 @@ int main() {
 
     auto elementKdTree = SmartPointer<KDTree<float, Vec3Df>>::New();
     auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
-    viennals::ToSurfaceMeshRefined<NumericType, float, D> surfMesher(
+    gpu::CreateSurfaceMesh<NumericType, float, D> surfMesher(
         domain->getLevelSets().back(), surfMesh, elementKdTree);
 
     viennals::Advect<NumericType, D> advectionKernel;
@@ -72,12 +72,7 @@ int main() {
       timer.start();
       diskMesher.apply();
       surfMesher.apply();
-      gpu::TriangleMesh mesh;
-      mesh.gridDelta = GRID_DELTA;
-      mesh.vertices = surfMesh->nodes;
-      mesh.triangles = surfMesh->triangles;
-      mesh.minimumExtent = surfMesh->minimumExtent;
-      mesh.maximumExtent = surfMesh->maximumExtent;
+      gpu::TriangleMesh<float> mesh(GRID_DELTA, surfMesh);
       translationField->buildKdTree(diskMesh->nodes);
       timer.finish();
       file << timer.currentDuration << ";";

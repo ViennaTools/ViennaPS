@@ -376,8 +376,6 @@ protected:
     AddModule(normModuleName, context);
     launchParamsBuffer.alloc(sizeof(launchParams));
     normKernelName.push_back(NumericType);
-    translateFromPointDataKernelName.push_back(NumericType);
-    translateToPointDataKernelName.push_back(NumericType);
   }
 
   /// creates the module that contains all the programs we are going to use. We
@@ -610,11 +608,6 @@ protected:
 
   const std::string normModuleName = "normKernels.ptx";
   std::string normKernelName = "normalize_surface_";
-
-  const std::string translateModuleName = "translateKernels.ptx";
-  std::string translateToPointDataKernelName = "translate_to_point_cloud_mesh_";
-  std::string translateFromPointDataKernelName =
-      "translate_from_point_cloud_mesh_";
 
   static constexpr char NumericType = std::is_same_v<T, float> ? 'f' : 'd';
 };
