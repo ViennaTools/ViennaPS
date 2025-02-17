@@ -263,12 +263,13 @@ public:
       return;
     }
 
+    /* ------ Process Setup ------ */
+
+    const unsigned int logLevel = Logger::getLogLevel();
     Timer rtTimer;
     Timer callbackTimer;
     Timer advTimer;
     Timer meshConverterTimer;
-    /* ------ Process Setup ------ */
-    const unsigned int logLevel = Logger::getLogLevel();
     Timer processTimer;
     processTimer.start();
 
@@ -308,9 +309,7 @@ public:
     /* --------- Setup for ray tracing ----------- */
     const bool useRayTracing = !model->getParticleTypes().empty();
 
-    viennaray::BoundaryCondition rayBoundaryCondition[D];
     viennaray::Trace<NumericType, D> rayTracer;
-
     if (useRayTracing) {
       initializeRayTracer(rayTracer);
 
@@ -446,8 +445,8 @@ public:
           // check for convergence
           if (logLevel >= 5) {
             coverages = model->getSurfaceModel()->getCoverages();
-            auto metric =
-                calculateCoverageDeltaMetric(coverages, prevStepCoverages);
+            auto metric = utils::calculateCoverageDeltaMetric(
+                coverages, prevStepCoverages);
             for (auto val : metric) {
               covMetricFile << val << ";";
             }
@@ -468,10 +467,10 @@ public:
             }
             printDiskMesh(diskMesh, name + "_covInit_" +
                                         std::to_string(iterations) + ".vtp");
-            Logger::getInstance()
-                .addInfo("Iteration: " + std::to_string(iterations))
-                .print();
           }
+          Logger::getInstance()
+              .addInfo("Iteration: " + std::to_string(iterations))
+              .print();
         }
         coveragesInitialized_ = true;
 
@@ -590,7 +589,7 @@ public:
       // calculate coverage metric
       if (useCoverages && logLevel >= 5) {
         auto metric =
-            calculateCoverageDeltaMetric(coverages, prevStepCoverages);
+            utils::calculateCoverageDeltaMetric(coverages, prevStepCoverages);
         for (auto val : metric) {
           covMetricFile << val << ";";
         }
@@ -706,7 +705,7 @@ public:
       }
       remainingTime -= previousTimeStep;
 
-      if (Logger::getLogLevel() >= 2) {
+      if (logLevel >= 2) {
         std::stringstream stream;
         stream << std::fixed << std::setprecision(4)
                << "Process time: " << processDuration - remainingTime << " / "
@@ -829,29 +828,6 @@ private:
         covData->at(it.second) = levelSetData->at(it.first);
       }
     }
-  }
-
-  std::vector<NumericType> calculateCoverageDeltaMetric(
-      SmartPointer<viennals::PointData<NumericType>> updated,
-      SmartPointer<viennals::PointData<NumericType>> previous) const {
-
-    assert(updated->getScalarDataSize() == previous->getScalarDataSize());
-    std::vector<NumericType> delta(updated->getScalarDataSize(), 0.);
-
-#pragma omp parallel for
-    for (int i = 0; i < updated->getScalarDataSize(); i++) {
-      auto label = updated->getScalarDataLabel(i);
-      auto updatedData = updated->getScalarData(label);
-      auto previousData = previous->getScalarData(label);
-      for (size_t j = 0; j < updatedData->size(); j++) {
-        auto diff = updatedData->at(j) - previousData->at(j);
-        delta[i] += diff * diff;
-      }
-
-      delta[i] /= updatedData->size();
-    }
-
-    return delta;
   }
 
   void initializeRayTracer(viennaray::Trace<NumericType, D> &tracer) const {

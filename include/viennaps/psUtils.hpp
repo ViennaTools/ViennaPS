@@ -271,5 +271,29 @@ template <int D>
   return viennaray::BoundaryCondition::IGNORE;
 }
 
+template <class NumericType>
+[[nodiscard]] std::vector<NumericType> calculateCoverageDeltaMetric(
+    SmartPointer<viennals::PointData<NumericType>> updated,
+    SmartPointer<viennals::PointData<NumericType>> previous) {
+
+  assert(updated->getScalarDataSize() == previous->getScalarDataSize());
+  std::vector<NumericType> delta(updated->getScalarDataSize(), 0.);
+
+#pragma omp parallel for
+  for (int i = 0; i < updated->getScalarDataSize(); i++) {
+    auto label = updated->getScalarDataLabel(i);
+    auto updatedData = updated->getScalarData(label);
+    auto previousData = previous->getScalarData(label);
+    for (size_t j = 0; j < updatedData->size(); j++) {
+      auto diff = updatedData->at(j) - previousData->at(j);
+      delta[i] += diff * diff;
+    }
+
+    delta[i] /= updatedData->size();
+  }
+
+  return delta;
+}
+
 }; // namespace utils
 } // namespace viennaps

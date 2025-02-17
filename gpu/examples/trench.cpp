@@ -6,22 +6,28 @@
 
 using namespace viennaps;
 
+struct Test {
+  Context &context_;
+
+  Test(Context &context) : context_(context) {}
+};
+
 int main(int argc, char **argv) {
 
-  omp_set_num_threads(1);
+  omp_set_num_threads(16);
   constexpr int D = 3;
   using NumericType = double;
+  Logger::setLogLevel(LogLevel::INFO);
 
   Context context;
   context.create();
-  Logger::setLogLevel(LogLevel::DEBUG);
 
   const NumericType gridDelta = 1.0;
-  const NumericType extent = 100.;
+  const NumericType extent = 50.;
   const NumericType trenchWidth = 15.;
   const NumericType maskHeight = 40.;
 
-  const NumericType time = 50.;
+  const NumericType time = 30.;
   const NumericType sticking = .1;
   const NumericType rate = 1.0;
   const NumericType exponent = 1.;

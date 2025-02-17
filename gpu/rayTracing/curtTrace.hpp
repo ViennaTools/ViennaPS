@@ -47,6 +47,9 @@ public:
         fileName += ".optixir";
     }
 
+    std::cout << "File name: " << fileName << std::endl;
+    std::cout << "Path: " << path << std::endl;
+
     pipelineFile = path / fileName;
 
     if (!std::filesystem::exists(pipelineFile)) {
@@ -123,13 +126,13 @@ public:
                               numberOfRaysPerPoint));
     }
 
-    // T *temp = new T[launchParams.numElements];
+    // std::cout << util::prettyDouble(numRays * particles.size()) << std::endl;
+    // float *temp = new float[launchParams.numElements];
     // resultBuffer.download(temp, launchParams.numElements);
     // for (int i = 0; i < launchParams.numElements; i++) {
-    //   std::cout << temp[i] << std::endl;
+    //   std::cout << temp[i] << " ";
     // }
     // delete temp;
-    // std::cout << util::prettyDouble(numRays * particles.size()) << std::endl;
 
     // sync - maybe remove in future
     cudaDeviceSynchronize();
@@ -361,7 +364,7 @@ public:
 
 protected:
   void normalize() {
-    T sourceArea =
+    float sourceArea =
         (launchParams.source.maxPoint[0] - launchParams.source.minPoint[0]) *
         (launchParams.source.maxPoint[1] - launchParams.source.minPoint[1]);
     assert(resultBuffer.sizeInBytes != 0 &&
@@ -378,6 +381,7 @@ protected:
 
   void initRayTracer() {
     context.addModule(normModuleName);
+    std::cout << "Context module path ray: " << context.modulePath << std::endl;
     launchParamsBuffer.alloc(sizeof(launchParams));
     normKernelName.push_back(NumericType);
   }

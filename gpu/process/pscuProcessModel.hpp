@@ -27,9 +27,9 @@ private:
   std::string pipelineFileName;
 
 public:
-  auto getParticleTypes() { return particles; }
-  auto getSurfaceModel() { return surfaceModel; }
-  auto getVelocityField() { return velocityField; }
+  auto &getParticleTypes() { return particles; }
+  auto &getSurfaceModel() { return surfaceModel; }
+  auto &getVelocityField() { return velocityField; }
 
   void setProcessName(const std::string &name) { processName = name; }
   auto getProcessName() const { return processName; }
@@ -52,6 +52,10 @@ public:
       SmartPointer<VelocityField<NumericType, D>> passedVelocityField) {
     velocityField = passedVelocityField;
   }
+
+  virtual void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                          const NumericType processDuration) {}
+  virtual void reset() {}
 };
 
 } // namespace gpu

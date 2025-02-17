@@ -62,7 +62,7 @@ public:
     const float sqrdDist = conversionRadius_ * conversionRadius_;
 
     // retrieve data from device
-    std::vector<NumericType> elementData(numData * numElements);
+    std::vector<MeshNT> elementData(numData * numElements);
     d_elementData_.download(elementData.data(), numData * numElements);
 
     // prepare point data container

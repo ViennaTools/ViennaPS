@@ -116,8 +116,7 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 4.1.0
-  GIT_TAG refactor-alpha
+  VERSION 4.1.3
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -153,7 +152,7 @@ if(NOT VIENNAPS_DISABLE_GPU)
     set(VIENNAPS_USE_GPU OFF CACHE BOOL "Use GPU for ViennaPS")
     message(WARNING "CUDA Toolkit not found. Skipping GPU build.")
   endif()
-  endif(NOT VIENNAPS_DISABLE_GPU)
+endif(NOT VIENNAPS_DISABLE_GPU)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Examples

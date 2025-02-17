@@ -69,6 +69,7 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SF6O2Etching");
+    this->getParticleTypes().clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);
