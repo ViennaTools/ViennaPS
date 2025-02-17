@@ -28,6 +28,7 @@ template <typename NumericType> struct AdvectionParameters {
       viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   NumericType timeStepRatio = 0.4999;
   NumericType dissipationAlpha = 1.0;
+  bool checkDissipation = true;
   bool velocityOutput = false;
   bool ignoreVoids = false;
 };
