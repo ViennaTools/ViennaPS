@@ -1193,6 +1193,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("timeStepRatio", &AdvectionParameters<T>::timeStepRatio)
       .def_readwrite("dissipationAlpha",
                      &AdvectionParameters<T>::dissipationAlpha)
+      .def_readwrite("checkDissipation",
+                     &AdvectionParameters<T>::checkDissipation)
       .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
       .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
 
@@ -1351,6 +1353,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh,
            pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
       .def("saveLevelSets", &Domain<T, D>::saveLevelSets,
            pybind11::arg("filename"))
@@ -1519,6 +1522,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, 3>::saveVolumeMesh,
            pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
       .def("saveLevelSets", &Domain<T, 3>::saveLevelSets)
       .def("clear", &Domain<T, 3>::clear);
