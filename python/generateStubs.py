@@ -6,7 +6,7 @@ import argparse
 if __name__ == "__main__":
     # parse dim
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dim", type=int, default=2)
+    parser.add_argument("-D", type=int, default=2)
     args = parser.parse_args()
     dim = args.dim
 
@@ -19,7 +19,7 @@ if __name__ == "__main__":
             "-o",
             "stubs",
             "-p",
-            "viennaps"+str(dim)+"d",
+            "viennaps" + str(dim) + "d",
         ]
     )
 
