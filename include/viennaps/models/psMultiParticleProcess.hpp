@@ -99,11 +99,8 @@ public:
                     const int, const viennaray::TracingData<NumericType> *,
                     RNG &rngState) override final {
 
-    auto cosTheta = -DotProduct(rayDir, geomNormal);
-    cosTheta = std::min(cosTheta, NumericType(1.));
-    assert(cosTheta >= 0 && "Hit backside of disc");
-    assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
-
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
     NumericType incomingAngle = std::acos(cosTheta);
     assert(incomingAngle <= M_PI_2 + 1e-6 && "Error in calculating angle");
     assert(incomingAngle >= 0 && "Error in calculating angle");

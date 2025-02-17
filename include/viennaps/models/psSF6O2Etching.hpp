@@ -179,8 +179,9 @@ public:
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
     // collect data for this hit
-    const double cosTheta = -DotProduct(rayDir, geomNormal);
-    NumericType angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
+    NumericType angle = std::acos(cosTheta);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
@@ -237,14 +238,9 @@ public:
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
-    auto cosTheta = -DotProduct(rayDir, geomNormal);
-
-    assert(cosTheta >= 0 && "Hit backside of disc");
-    assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
-
-    NumericType incAngle =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
+    NumericType incAngle = std::acos(cosTheta);
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0

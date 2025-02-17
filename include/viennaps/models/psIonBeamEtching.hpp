@@ -87,10 +87,9 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
                         RNG &) override final {
-    auto cosTheta = -DotProduct(rayDir, geomNormal);
-    NumericType theta =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
+    NumericType theta = std::acos(cosTheta);
 
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
