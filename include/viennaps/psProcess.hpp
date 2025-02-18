@@ -118,8 +118,7 @@ public:
   // Set the integration scheme for solving the level-set equation.
   // Possible integration schemes are specified in
   // viennals::IntegrationSchemeEnum.
-  void setIntegrationScheme(
-      viennals::IntegrationSchemeEnum passedIntegrationScheme) {
+  void setIntegrationScheme(IntegrationScheme passedIntegrationScheme) {
     advectionParams.integrationScheme = passedIntegrationScheme;
   }
 

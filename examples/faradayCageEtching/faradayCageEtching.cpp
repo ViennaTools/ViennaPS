@@ -8,7 +8,7 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
@@ -41,9 +41,10 @@ int main(int argc, char *argv[]) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(10);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("etchTime"));
+  process.setIntegrationScheme(
+      ps::IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");
