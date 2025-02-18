@@ -33,13 +33,13 @@ Releases are tagged on the master branch and available in the [releases section]
 
 ### Dependencies (installed automatically)
 
-* [ViennaCore](https://github.com/ViennaTools/viennacore) >= 1.1.0
+* [ViennaCore](https://github.com/ViennaTools/viennacore) >= 1.2.0
 
-* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.1.1
-  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.4.0
+* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.2.0
+  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.5.0
   * [VTK](https://vtk.org/) >= 9.0.0
 
-* [ViennaRay](https://github.com/ViennaTools/viennaray) >= 3.1.0
+* [ViennaRay](https://github.com/ViennaTools/viennaray) >= 3.1.4
   * [Embree](https://www.embree.org/) >= 4.0.0
 
 * [ViennaCS](https://github.com/ViennaTools/viennacs) >= 1.0.0
