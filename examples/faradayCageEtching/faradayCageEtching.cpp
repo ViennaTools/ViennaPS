@@ -53,5 +53,5 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   // print final surface
-  geometry->saveSurfaceMesh("final.vtp");
+  geometry->saveHullMesh("final");
 }

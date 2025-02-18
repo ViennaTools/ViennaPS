@@ -341,6 +341,21 @@ public:
     visMesh.apply();
   }
 
+  void saveHullMesh(std::string fileName,
+                    double wrappingLayerEpsilon = 1e-2) const {
+    viennals::WriteVisualizationMesh<NumericType, D> visMesh;
+    visMesh.setFileName(fileName);
+    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
+    visMesh.setExtractHullMesh(true);
+    visMesh.setExtractVolumeMesh(false);
+    for (auto &ls : levelSets_) {
+      visMesh.insertNextLevelSet(ls);
+    }
+    if (materialMap_)
+      visMesh.setMaterialMap(materialMap_->getMaterialMap());
+    visMesh.apply();
+  }
+
   // Write the all Level-Sets in the domain to individual files. The file name
   // serves as the prefix for the individual files and is append by
   // "_layerX.lvst", where X is the number of the Level-Set in the domain.
