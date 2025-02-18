@@ -17,9 +17,9 @@ if __name__ == "__main__":
     options = stubgen.parse_options(
         [
             "-o",
-            "stubs_ls",
+            ".",
             "-p",
-            "viennals" + str(dim) + "d",
+            "viennaps" + str(dim) + "d",
         ]
     )
 
