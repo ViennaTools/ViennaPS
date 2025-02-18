@@ -4,6 +4,7 @@
 
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
+#include "../psUnits.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -128,6 +129,7 @@ namespace impl {
 template <typename NumericType, int D>
 class FluorocarbonSurfaceModel : public SurfaceModel<NumericType> {
   using SurfaceModel<NumericType>::coverages;
+  using SurfaceModel<NumericType>::surfaceData;
   static constexpr double eps = 1e-6;
   const FluorocarbonParameters<NumericType> &p;
 
@@ -148,20 +150,35 @@ public:
     coverages->insertNextScalarData(cov, "peCoverage");
   }
 
+  void initializeSurfaceData(unsigned numGeometryPoints) override {
+    if (Logger::getLogLevel() > 3) {
+      if (surfaceData == nullptr) {
+        surfaceData = SmartPointer<viennals::PointData<NumericType>>::New();
+      } else {
+        surfaceData->clear();
+      }
+
+      std::vector<NumericType> data(numGeometryPoints, 0.);
+      surfaceData->insertNextScalarData(data, "ionEnhancedRate");
+      surfaceData->insertNextScalarData(data, "sputterRate");
+      surfaceData->insertNextScalarData(data, "chemicalRate");
+    }
+  }
+
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
-    updateCoverages(rates, materialIds);
+    updateCoverages(fluxes, materialIds);
     const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
-    auto ionSputteringRate = rates->getScalarData("ionSputteringRate");
-    auto ionpeRate = rates->getScalarData("ionpeRate");
-    auto polyRate = rates->getScalarData("polyRate");
-    rates->insertNextScalarData(etchRate, "F_ev");
-    auto F_ev_rate = rates->getScalarData("F_ev");
+    auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
+    auto ionSputterFlux = fluxes->getScalarData("ionSputterFlux");
+    auto ionpeFlux = fluxes->getScalarData("ionpeFlux");
+    auto polyFlux = fluxes->getScalarData("polyFlux");
+    fluxes->insertNextScalarData(etchRate, "F_ev");
+    auto F_ev_rate = fluxes->getScalarData("F_ev");
 
     const auto eCoverage = coverages->getScalarData("eCoverage");
     const auto pCoverage = coverages->getScalarData("pCoverage");
@@ -169,7 +186,23 @@ public:
 
     bool etchStop = false;
 
-    // calculate etch rates
+    // save the etch rate components for visualization
+    std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
+                             *chRate = nullptr;
+    if (Logger::getLogLevel() > 3) {
+      ieRate = surfaceData->getScalarData("ionEnhancedRate");
+      spRate = surfaceData->getScalarData("sputterRate");
+      chRate = surfaceData->getScalarData("chemicalRate");
+      ieRate->resize(numPoints);
+      spRate->resize(numPoints);
+      chRate->resize(numPoints);
+    }
+
+    // The etch rate is calculated in nm/s
+    const double unitConversion =
+        units::Time::getInstance().convertSecond() /
+        units::Length::getInstance().convertNanometer();
+
     for (std::size_t i = 0; i < numPoints; ++i) {
       if (coordinates[i][D - 1] <= p.etchStopDepth) {
         etchStop = true;
@@ -178,22 +211,25 @@ public:
 
       auto matId = MaterialMap::mapToMaterial(materialIds[i]);
       if (matId == Material::Mask) {
-        etchRate[i] = (-1. / p.Mask.rho) * ionSputteringRate->at(i) * p.ionFlux;
+        etchRate[i] = (-1. / p.Mask.rho) * ionSputterFlux->at(i) * p.ionFlux *
+                      unitConversion;
       } else if (pCoverage->at(i) >= 1.) {
         // Deposition
         etchRate[i] =
             (1 / p.Polymer.rho) *
-            std::max((polyRate->at(i) * p.polyFlux * p.beta_p -
-                      ionpeRate->at(i) * p.ionFlux * peCoverage->at(i)),
-                     (NumericType)0);
+            std::max((polyFlux->at(i) * p.polyFlux * p.beta_p -
+                      ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
+                     (NumericType)0) *
+            unitConversion;
         assert(etchRate[i] >= 0 && "Negative deposition");
       } else if (matId == Material::Polymer) {
         // Etching depo layer
         etchRate[i] =
             std::min((1 / p.Polymer.rho) *
-                         (polyRate->at(i) * p.polyFlux * p.beta_p -
-                          ionpeRate->at(i) * p.ionFlux * peCoverage->at(i)),
-                     (NumericType)0);
+                         (polyFlux->at(i) * p.polyFlux * p.beta_p -
+                          ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
+                     (NumericType)0) *
+            unitConversion;
       } else {
         NumericType density = 1.;
         NumericType F_ev = 0.;
@@ -231,17 +267,17 @@ public:
         etchRate[i] =
             (1 / density) *
             (F_ev * eCoverage->at(i) +
-             ionEnhancedRate->at(i) * p.ionFlux * eCoverage->at(i) +
-             ionSputteringRate->at(i) * p.ionFlux * (1. - eCoverage->at(i)));
+             ionEnhancedFlux->at(i) * p.ionFlux * eCoverage->at(i) +
+             ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i))) *
+            unitConversion;
 
-        F_ev_rate->at(i) = F_ev * eCoverage->at(i);
-        ionSputteringRate->at(i) =
-            ionSputteringRate->at(i) * p.ionFlux * (1. - eCoverage->at(i));
-        ionEnhancedRate->at(i) =
-            ionEnhancedRate->at(i) * p.ionFlux * eCoverage->at(i);
+        if (Logger::getLogLevel() > 3) {
+          chRate->at(i) = F_ev * eCoverage->at(i);
+          spRate->at(i) =
+              ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i));
+          ieRate->at(i) = ionEnhancedFlux->at(i) * p.ionFlux * eCoverage->at(i);
+        }
       }
-
-      // etch rate is in nm / s
 
       assert(!std::isnan(etchRate[i]) && "etchRate NaN");
     }
@@ -251,49 +287,49 @@ public:
       Logger::getInstance().addInfo("Etch stop depth reached.").print();
     }
 
-    return SmartPointer<std::vector<NumericType>>::New(etchRate);
+    return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
 
-    const auto ionEnhancedRate = rates->getScalarData("ionEnhancedRate");
-    const auto ionpeRate = rates->getScalarData("ionpeRate");
-    const auto polyRate = rates->getScalarData("polyRate");
-    const auto etchantRate = rates->getScalarData("etchantRate");
+    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
+    const auto ionpeFlux = fluxes->getScalarData("ionpeFlux");
+    const auto polyFlux = fluxes->getScalarData("polyFlux");
+    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
 
     const auto eCoverage = coverages->getScalarData("eCoverage");
     const auto pCoverage = coverages->getScalarData("pCoverage");
     const auto peCoverage = coverages->getScalarData("peCoverage");
 
     // update coverages based on fluxes
-    const auto numPoints = ionEnhancedRate->size();
+    const auto numPoints = materialIds.size();
     eCoverage->resize(numPoints);
     pCoverage->resize(numPoints);
     peCoverage->resize(numPoints);
 
     // pe coverage
     for (std::size_t i = 0; i < numPoints; ++i) {
-      if (etchantRate->at(i) == 0.) {
+      if (etchantFlux->at(i) == 0.) {
         peCoverage->at(i) = 0.;
       } else {
-        peCoverage->at(i) = (etchantRate->at(i) * p.etchantFlux * p.beta_pe) /
-                            (etchantRate->at(i) * p.etchantFlux * p.beta_pe +
-                             ionpeRate->at(i) * p.ionFlux);
+        peCoverage->at(i) = (etchantFlux->at(i) * p.etchantFlux * p.beta_pe) /
+                            (etchantFlux->at(i) * p.etchantFlux * p.beta_pe +
+                             ionpeFlux->at(i) * p.ionFlux);
       }
       assert(!std::isnan(peCoverage->at(i)) && "peCoverage NaN");
     }
 
     // polymer coverage
     for (std::size_t i = 0; i < numPoints; ++i) {
-      if (polyRate->at(i) < eps) {
+      if (polyFlux->at(i) < eps) {
         pCoverage->at(i) = 0.;
-      } else if (peCoverage->at(i) < eps || ionpeRate->at(i) < eps) {
+      } else if (peCoverage->at(i) < eps || ionpeFlux->at(i) < eps) {
         pCoverage->at(i) = 1.;
       } else {
         pCoverage->at(i) =
-            (polyRate->at(i) * p.polyFlux * p.beta_p) /
-            (ionpeRate->at(i) * p.ionFlux * peCoverage->at(i) + p.delta_p);
+            (polyFlux->at(i) * p.polyFlux * p.beta_p) /
+            (ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i) + p.delta_p);
       }
       assert(!std::isnan(pCoverage->at(i)) && "pCoverage NaN");
     }
@@ -301,7 +337,7 @@ public:
     // etchant coverage
     for (std::size_t i = 0; i < numPoints; ++i) {
       if (pCoverage->at(i) < 1.) {
-        if (etchantRate->at(i) == 0.) {
+        if (etchantFlux->at(i) == 0.) {
           eCoverage->at(i) = 0;
         } else {
           NumericType F_ev = 0.;
@@ -328,10 +364,10 @@ public:
             F_ev = 0.;
           }
           eCoverage->at(i) =
-              (etchantRate->at(i) * p.etchantFlux * p.beta_e *
+              (etchantFlux->at(i) * p.etchantFlux * p.beta_e *
                (1. - pCoverage->at(i))) /
-              (p.k_ie * ionEnhancedRate->at(i) * p.ionFlux + p.k_ev * F_ev +
-               etchantRate->at(i) * p.etchantFlux * p.beta_e);
+              (p.k_ie * ionEnhancedFlux->at(i) * p.ionFlux + p.k_ev * F_ev +
+               etchantFlux->at(i) * p.etchantFlux * p.beta_e);
         }
       } else {
         eCoverage->at(i) = 0.;
@@ -473,7 +509,7 @@ public:
     return p.Ions.exponent;
   }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"ionSputteringRate", "ionEnhancedRate", "ionpeRate"};
+    return {"ionSputterFlux", "ionEnhancedFlux", "ionpeFlux"};
   }
 };
 
@@ -518,7 +554,7 @@ public:
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"polyRate"};
+    return {"polyFlux"};
   }
 };
 
@@ -566,7 +602,7 @@ public:
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"etchantRate"};
+    return {"etchantFlux"};
   }
 };
 } // namespace impl
@@ -600,12 +636,19 @@ public:
   FluorocarbonParameters<NumericType> &getParameters() { return params_; }
   void setParameters(const FluorocarbonParameters<NumericType> &parameters) {
     params_ = parameters;
+    initialize();
   }
 
 private:
   FluorocarbonParameters<NumericType> params_;
 
   void initialize() {
+    // check if units have been set
+    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
+        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+      Logger::getInstance().addError("Units have not been set.").print();
+    }
+
     // particles
     auto ion = std::make_unique<impl::FluorocarbonIon<NumericType, D>>(params_);
     auto etchant =
@@ -624,6 +667,7 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FluorocarbonEtching");
+    this->particles.clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);

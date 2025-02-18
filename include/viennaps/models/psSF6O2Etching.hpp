@@ -55,17 +55,17 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
-    updateCoverages(rates, materialIds);
-    const auto numPoints = rates->getScalarData(0)->size();
+    updateCoverages(fluxes, materialIds);
+    const auto numPoints = fluxes->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
-    const auto ionSputterFlux = rates->getScalarData("ionSputterFlux");
+    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
+    const auto ionSputterFlux = fluxes->getScalarData("ionSputterFlux");
 
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
     const auto eCoverage = coverages->getScalarData("eCoverage");
 
     // save the etch rate components for visualization
@@ -124,19 +124,19 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
-    const auto numPoints = rates->getScalarData(0)->size();
+    const auto numPoints = fluxes->getScalarData(0)->size();
 
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
     std::vector<NumericType> oxygenFlux(numPoints, 0.);
     if (params.oxygenFlux > 0)
-      oxygenFlux = *rates->getScalarData("oxygenFlux");
+      oxygenFlux = *fluxes->getScalarData("oxygenFlux");
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
+    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
     const auto ionEnhancedPassivationFlux =
-        rates->getScalarData("ionEnhancedPassivationFlux");
+        fluxes->getScalarData("ionEnhancedPassivationFlux");
 
     // etchant fluorine coverage
     auto eCoverage = coverages->getScalarData("eCoverage");
@@ -178,8 +178,9 @@ public:
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
     // collect data for this hit
-    const double cosTheta = -DotProduct(rayDir, geomNormal);
-    NumericType angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
+    NumericType angle = std::acos(cosTheta);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
@@ -236,14 +237,9 @@ public:
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
-    auto cosTheta = -DotProduct(rayDir, geomNormal);
-
-    assert(cosTheta >= 0 && "Hit backside of disc");
-    assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
-
-    NumericType incAngle =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
+    NumericType incAngle = std::acos(cosTheta);
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0

@@ -60,14 +60,9 @@ public:
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
-    auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
-
-    assert(cosTheta >= 0 && "Hit backside of disc");
-    assert(cosTheta <= 1 + 1e-6 && "Error in calculating cos theta");
-
-    NumericType incAngle =
-        std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
-                           static_cast<NumericType>(0.)));
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
+    NumericType incAngle = std::acos(cosTheta);
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
         rayDir, geomNormal, Rng, std::max(incAngle, minAngle_));

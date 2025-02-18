@@ -328,9 +328,11 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string fileName) const {
+  void saveVolumeMesh(std::string fileName,
+                      double wrappingLayerEpsilon = 1e-2) const {
     viennals::WriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(fileName);
+    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
     for (auto &ls : levelSets_) {
       visMesh.insertNextLevelSet(ls);
     }
