@@ -313,7 +313,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       "scientific simulations.";
 
   // set version string of python module
-  module.attr("__version__") = VIENNAPS_MODULE_VERSION;
+  module.attr("__version__") =
+      VIENNAPS_MODULE_VERSION; // for some reason this string does not show
+  module.attr("version") = VIENNAPS_MODULE_VERSION;
 
   // set dimension
   module.attr("D") = D;
