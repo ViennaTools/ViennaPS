@@ -24,10 +24,10 @@ int main(int argc, char *argv[]) {
 
   // geometry setup
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  ps::MakeFin<NumericType, D>(geometry, params.get("gridDelta"),
-                              params.get("xExtent"), params.get("yExtent"),
-                              params.get("finWidth"), params.get("maskHeight"),
-                              0.0, 0.0, true, true, ps::Material::Si)
+  ps::MakeFin<NumericType, D>(
+      geometry, params.get("gridDelta"), params.get("xExtent"),
+      params.get("yExtent"), params.get("finWidth"), params.get("maskHeight"),
+      0.0, 0.0, true /*enables periodic BCs*/, true, ps::Material::Si)
       .apply();
 
   std::vector<ps::Material> maskMaterials = {ps::Material::Mask};

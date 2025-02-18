@@ -8,7 +8,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-D", type=int, default=2)
     args = parser.parse_args()
-    dim = args.dim
+    dim = args.D
 
     # Don't create __pycache__ directory
     sys.dont_write_bytecode = True
@@ -17,9 +17,9 @@ if __name__ == "__main__":
     options = stubgen.parse_options(
         [
             "-o",
-            "stubs",
+            "stubs_ls",
             "-p",
-            "viennaps" + str(dim) + "d",
+            "viennals" + str(dim) + "d",
         ]
     )
 

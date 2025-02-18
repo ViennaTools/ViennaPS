@@ -55,7 +55,7 @@ params.Mask.rho = params.Si.rho * 10.0
 
 # simulation parameters
 processDuration = 3  # min
-integrationScheme = vps.ls.IntegrationSchemeEnum.ENGQUIST_OSHER_2ND_ORDER
+integrationScheme = vps.IntegrationScheme.ENGQUIST_OSHER_2ND_ORDER
 numberOfRaysPerPoint = int(1000)
 
 for i in range(len(yo2)):
