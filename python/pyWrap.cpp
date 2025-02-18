@@ -1456,7 +1456,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "boundary of the domain.")
       .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
       .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
-           "Convert a layer of the GDS geometry to a level set domain.")
+           "Convert a layer of the GDS geometry to a level set domain.",
+           pybind11::arg("layer"), pybind11::arg("baseHeight"),
+           pybind11::arg("height"), pybind11::arg("mask") = false)
       .def(
           "getBounds",
           [](GDSGeometry<T, D> &gds) -> std::array<double, 6> {
