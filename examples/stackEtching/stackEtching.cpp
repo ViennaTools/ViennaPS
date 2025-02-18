@@ -71,5 +71,5 @@ int main(int argc, char *argv[]) {
                         viennals::BoundaryConditionEnum::INFINITE_BOUNDARY})
       .apply();
 
-  extruded->saveVolumeMesh("final_extruded");
+  extruded->saveHullMesh("final_extruded");
 }

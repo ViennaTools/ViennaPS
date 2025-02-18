@@ -72,4 +72,4 @@ boundaryConds = [
 
 vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
 
-extruded.saveVolumeMesh("final_extruded")
+extruded.saveHullMesh("final_extruded")

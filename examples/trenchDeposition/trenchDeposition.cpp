@@ -42,12 +42,9 @@ int main(int argc, char *argv[]) {
   process.setNumberOfRaysPerPoint(1000);
   process.setProcessDuration(params.get("processTime"));
 
-  geometry->saveSurfaceMesh("initial.vtp");
+  geometry->saveHullMesh("initial");
 
   process.apply();
 
-  geometry->saveSurfaceMesh("final.vtp");
-
-  if constexpr (D == 2)
-    geometry->saveVolumeMesh("final");
+  geometry->saveHullMesh("final");
 }

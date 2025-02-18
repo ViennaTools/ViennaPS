@@ -1532,6 +1532,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("filename"),
            pybind11::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
+      .def("saveHullMesh", &Domain<T, 3>::saveHullMesh,
+           pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
+           "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, 3>::saveLevelSets)
       .def("clear", &Domain<T, 3>::clear);
 

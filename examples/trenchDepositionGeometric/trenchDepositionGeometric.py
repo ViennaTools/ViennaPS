@@ -41,11 +41,8 @@ model = vps.SphereDistribution(
     radius=params["layerThickness"], gridDelta=params["gridDelta"]
 )
 
-geometry.saveSurfaceMesh("initial.vtp")
+geometry.saveHullMesh("initial")
 
 vps.Process(geometry, model, 0.0).apply()
 
-geometry.saveSurfaceMesh("final.vtp")
-
-if args.dim == 2:
-    geometry.saveVolumeMesh("final")
+geometry.saveHullMesh("final")
