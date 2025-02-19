@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../geometries/psGeometryBase.hpp"
-#include "../geometries/psMakeTrench.hpp"
 #include "../psDomain.hpp"
+#include "psGeometryBase.hpp"
+#include "psMakeTrench.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
@@ -38,6 +38,7 @@ class MakeHole : public GeometryBase<NumericType, D> {
 
   const NumericType base_;
   const Material material_;
+  const Material maskMaterial_ = Material::Mask;
 
   HoleShape shape_;
 
@@ -45,11 +46,12 @@ public:
   MakeHole(psDomainType domain, NumericType holeRadius, NumericType holeDepth,
            NumericType holeTaperAngle = 0., NumericType maskHeight = 0.,
            NumericType maskTaperAngle = 0., HoleShape shape = HoleShape::Full,
-           Material material = Material::Si)
+           Material material = Material::Si,
+           Material maskMaterial = Material::Mask)
       : GeometryBase<NumericType, D>(domain), holeRadius_(holeRadius),
         holeDepth_(holeDepth), holeTaperAngle_(holeTaperAngle),
         maskHeight_(maskHeight), maskTaperAngle_(maskTaperAngle), base_(0.0),
-        material_(material), shape_(shape) {}
+        material_(material), shape_(shape), maskMaterial_(maskMaterial) {}
 
   MakeHole(psDomainType domain, NumericType gridDelta, NumericType xExtent,
            NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
@@ -81,15 +83,16 @@ public:
     }
 
     auto &setup = domain_->getSetup();
+    if (!setup.isValid()) {
+      Logger::getInstance()
+          .addWarning("MakeHole: Domain setup is not correctly initialized.")
+          .print();
+      domain_->getSetup().print();
+      return;
+    }
     auto bounds = setup.bounds_;
     auto boundaryCons = setup.boundaryCons_;
     auto gridDelta = setup.gridDelta_;
-    if (gridDelta == 0.0) {
-      Logger::getInstance()
-          .addWarning("MakeHole: Domain setup is not initialized.")
-          .print();
-      return;
-    }
 
     if (setup.hasPeriodicBoundary() &&
         (shape_ == HoleShape::Half || shape_ == HoleShape::Quarter)) {
@@ -126,7 +129,7 @@ public:
           mask, cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
           .apply();
 
-      domain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
+      domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
     }
 
     if (holeDepth_ > 0.) {

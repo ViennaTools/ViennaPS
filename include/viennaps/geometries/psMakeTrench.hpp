@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../geometries/psGeometryBase.hpp"
 #include "../psDomain.hpp"
+#include "psGeometryBase.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsFromSurfaceMesh.hpp>
@@ -34,16 +34,18 @@ class MakeTrench : public GeometryBase<NumericType, D> {
 
   const NumericType base_;
   const Material material_;
+  const Material maskMaterial_ = Material::Mask;
 
 public:
   MakeTrench(psDomainType domain, NumericType trenchWidth,
              NumericType trenchDepth, NumericType trenchTaperAngle = 0,
              NumericType maskHeight = 0, NumericType maskTaperAngle = 0,
-             bool halfTrench = false, Material material = Material::Si)
+             bool halfTrench = false, Material material = Material::Si,
+             Material maskMaterial = Material::Mask)
       : GeometryBase<NumericType, D>(domain), trenchWidth_(trenchWidth),
         trenchDepth_(trenchDepth), trenchTaperAngle_(trenchTaperAngle),
         maskHeight_(maskHeight), maskTaperAngle_(maskTaperAngle), base_(0.0),
-        material_(material) {
+        material_(material), maskMaterial_(maskMaterial) {
     if (halfTrench) {
       if (domain_->getSetup().hasPeriodicBoundary()) {
         Logger::getInstance()
@@ -73,15 +75,16 @@ public:
   void apply() {
     domain_->clear(); // this does not clear the setup
     auto setup = domain_->getSetup();
+    if (!setup.isValid()) {
+      Logger::getInstance()
+          .addWarning("MakeTrench: Domain setup is not correctly initialized.")
+          .print();
+      domain_->getSetup().print();
+      return;
+    }
     auto bounds = setup.bounds_;
     auto boundaryCons = setup.boundaryCons_;
     auto gridDelta = setup.gridDelta_;
-    if (gridDelta == 0.0) {
-      Logger::getInstance()
-          .addWarning("MakeTrench: Domain setup is not initialized.")
-          .print();
-      return;
-    }
 
     auto substrate = this->makeSubstrate(base_);
 

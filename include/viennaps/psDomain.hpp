@@ -120,6 +120,11 @@ public:
              boundaryCons_[1] == BoundaryType::PERIODIC_BOUNDARY;
     }
 
+    bool isValid() const {
+      return gridDelta_ > 0.0 && xExtent() > 0.0 &&
+             (D == 2 || (D == 3 && yExtent() > 0.0));
+    }
+
     void print() const {
       std::cout << "Domain setup:" << std::endl;
       std::cout << "\tGrid delta: " << gridDelta_ << std::endl;
