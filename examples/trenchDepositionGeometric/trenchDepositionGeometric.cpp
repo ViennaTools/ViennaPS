@@ -36,12 +36,9 @@ int main(int argc, char *argv[]) {
   process.setDomain(geometry);
   process.setProcessModel(model);
 
-  geometry->saveSurfaceMesh("initial.vtp");
+  geometry->saveHullMesh("initial");
 
   process.apply();
 
-  geometry->saveSurfaceMesh("final.vtp");
-
-  if constexpr (D == 2)
-    geometry->saveVolumeMesh("final");
+  geometry->saveHullMesh("final");
 }

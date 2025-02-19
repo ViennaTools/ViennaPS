@@ -33,13 +33,13 @@ Releases are tagged on the master branch and available in the [releases section]
 
 ### Dependencies (installed automatically)
 
-* [ViennaCore](https://github.com/ViennaTools/viennacore) >= 1.1.0
+* [ViennaCore](https://github.com/ViennaTools/viennacore) >= 1.2.0
 
-* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.1.1
-  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.4.0
+* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.2.0
+  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.5.0
   * [VTK](https://vtk.org/) >= 9.0.0
 
-* [ViennaRay](https://github.com/ViennaTools/viennaray) >= 3.1.0
+* [ViennaRay](https://github.com/ViennaTools/viennaray) >= 3.1.4
   * [Embree](https://www.embree.org/) >= 4.0.0
 
 * [ViennaCS](https://github.com/ViennaTools/viennacs) >= 1.0.0
@@ -98,7 +98,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.2.0")
+  CPMAddPackage("gh:viennatools/viennaps@3.3.0")
   ```
 
 * With a local installation
@@ -218,7 +218,7 @@ The configuration file must obey a certain structure in order to be parsed corre
 
 ## Contributing
 
-If you want to contribute to ViennaCS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html).
+If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html).
 
 Make sure to format all files before creating a pull request:
 ```bash
@@ -228,7 +228,7 @@ cmake --build build --target format
 
 ## Authors
 
-Current contributors: Tobias Reiter, Noah Karnel, Julius Piso
+Current contributors: Tobias Reiter, Noah Karnel, Lado Filipovic
 
 Contact us via: viennatools@iue.tuwien.ac.at
 

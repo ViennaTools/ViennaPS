@@ -51,9 +51,7 @@ process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
 process.setMaxCoverageInitIterations(10)
 process.setTimeStepRatio(0.25)
-process.setIntegrationScheme(
-    vps.ls.IntegrationSchemeEnum.LOCAL_LAX_FRIEDRICHS_1ST_ORDER
-)
+process.setIntegrationScheme(vps.IntegrationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER)
 
 # print initial surface
 geometry.saveVolumeMesh("initial")
@@ -74,4 +72,4 @@ boundaryConds = [
 
 vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
 
-extruded.saveVolumeMesh("final_extruded")
+extruded.saveHullMesh("final_extruded")

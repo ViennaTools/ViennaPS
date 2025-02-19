@@ -313,7 +313,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       "scientific simulations.";
 
   // set version string of python module
-  module.attr("__version__") = VIENNAPS_MODULE_VERSION;
+  module.attr("__version__") =
+      VIENNAPS_MODULE_VERSION; // for some reason this string does not show
+  module.attr("version") = VIENNAPS_MODULE_VERSION;
 
   // set dimension
   module.attr("D") = D;
@@ -875,7 +877,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("inflectAngle", &IBEParameters<T>::inflectAngle)
       .def_readwrite("minAngle", &IBEParameters<T>::minAngle)
       .def_readwrite("tiltAngle", &IBEParameters<T>::tiltAngle)
-      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction);
+      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction)
+      .def_readwrite("redepositionThreshold",
+                     &IBEParameters<T>::redepositionThreshold)
+      .def_readwrite("redepositionRate", &IBEParameters<T>::redepositionRate);
 
   pybind11::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
       module, "IonBeamEtching", processModel)
@@ -959,9 +964,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<const Vec3D<T> &, T, T, const std::vector<Material> &,
                           bool>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
-           pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") =
-               std::vector<Material>{Material::Mask},
+           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"),
            pybind11::arg("calculateVisibility") = true)
       .def(pybind11::init<
                std::vector<typename DirectionalEtching<T, D>::RateSet>>(),
@@ -1355,6 +1358,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("filename"),
            pybind11::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
+      .def("saveHullMesh", &Domain<T, D>::saveHullMesh,
+           pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
+           "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, D>::saveLevelSets,
            pybind11::arg("filename"))
       .def("clear", &Domain<T, D>::clear);
@@ -1456,7 +1463,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "boundary of the domain.")
       .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
       .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
-           "Convert a layer of the GDS geometry to a level set domain.")
+           "Convert a layer of the GDS geometry to a level set domain.",
+           pybind11::arg("layer"), pybind11::arg("baseHeight"),
+           pybind11::arg("height"), pybind11::arg("mask") = false)
       .def(
           "getBounds",
           [](GDSGeometry<T, D> &gds) -> std::array<double, 6> {
@@ -1524,6 +1533,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("filename"),
            pybind11::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
+      .def("saveHullMesh", &Domain<T, 3>::saveHullMesh,
+           pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
+           "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, 3>::saveLevelSets)
       .def("clear", &Domain<T, 3>::clear);
 

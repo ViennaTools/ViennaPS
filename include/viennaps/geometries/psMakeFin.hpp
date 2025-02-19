@@ -77,10 +77,9 @@ public:
 
       if (taperAngle_ == 0.) {
         NumericType minPoint[D] = {-finWidth_ / 2.f,
-                                   -yExtent_ / 2.f - gridDelta_ / 2.f,
+                                   -yExtent_ / 2.f - gridDelta_,
                                    baseHeight_ - gridDelta_};
-        NumericType maxPoint[D] = {finWidth_ / 2.f,
-                                   yExtent_ / 2.f + gridDelta_ / 2.f,
+        NumericType maxPoint[D] = {finWidth_ / 2.f, yExtent_ / 2.f + gridDelta_,
                                    baseHeight_ + finHeight_};
 
         viennals::MakeGeometry<NumericType, D> geo(

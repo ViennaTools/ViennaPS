@@ -10,6 +10,8 @@ namespace viennaps {
 
 using namespace viennacore;
 
+using IntegrationScheme = viennals::IntegrationSchemeEnum;
+
 template <typename NumericType, int D> struct RayTracingParameters {
   typename viennaray::TraceDirection sourceDirection =
       D == 3 ? viennaray::TraceDirection::POS_Z
@@ -24,8 +26,8 @@ template <typename NumericType, int D> struct RayTracingParameters {
 };
 
 template <typename NumericType> struct AdvectionParameters {
-  typename viennals::IntegrationSchemeEnum integrationScheme =
-      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  IntegrationScheme integrationScheme =
+      IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER;
   NumericType timeStepRatio = 0.4999;
   NumericType dissipationAlpha = 1.0;
   bool checkDissipation = true;
