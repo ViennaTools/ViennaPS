@@ -134,11 +134,6 @@ public:
 
   auto &getAdvectionParameters() { return advectionParams_; }
 
-  /// TODO: refactor
-  template <class ParamType> void setProcessParams(const ParamType &params) {
-    rayTrace_.setParameters(params);
-  }
-
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
 
     auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
@@ -182,6 +177,7 @@ public:
       fluxesIndexMap = IndexMap(rayTrace_.getParticles());
     }
     rayTracerInitialized_ = true;
+    rayTrace_.setParameters(model_->getProcessDataDPtr());
 
     /* --------- Meshing ----------- */
     Timer meshTimer;
@@ -317,6 +313,7 @@ public:
       fluxesIndexMap = IndexMap(rayTrace_.getParticles());
     }
     rayTracerInitialized_ = true;
+    rayTrace_.setParameters(model_->getProcessDataDPtr());
 
     // Determine whether there are process parameters used in ray tracing
     model_->getSurfaceModel()->initializeProcessParameters();
@@ -384,9 +381,9 @@ public:
           PointToElementData<NumericType, float>(
               d_coverages, coverages, transField->getKdTree(), surfMesh)
               .apply();
+          rayTrace_.setElementData(d_coverages, numCov);
           transTimer.finish();
 
-          rayTrace_.setElementData(d_coverages, numCov);
           // run the ray tracer
           rtTimer.start();
           rayTrace_.apply();
@@ -424,14 +421,14 @@ public:
 
           // output
           if (logLevel >= 3) {
-            // assert(numElements == mesh->triangles.size());
-            // downloadCoverages(d_coverages, mesh->getCellData(), coverages,
-            //                   numElements);
-            // rayTrace_.downloadResultsToPointData(mesh->getCellData());
-            // viennals::VTKWriter<NumericType>(
-            //     mesh,
-            //     name + "_covInit_mesh_" + std::to_string(iterations) +
-            //     ".vtp") .apply();
+            downloadCoverages(d_coverages, surfMesh->getCellData(), coverages,
+                              surfMesh->template getElements<3>().size());
+            rayTrace_.downloadResultsToPointData(surfMesh->getCellData());
+            viennals::VTKWriter<float>(surfMesh,
+                                       name + "_covInit_flux_" +
+                                           std::to_string(iterations) + ".vtp")
+                .apply();
+
             mergeScalarData(diskMesh->getCellData(), fluxes);
             mergeScalarData(diskMesh->getCellData(), coverages);
             viennals::VTKWriter<NumericType>(
@@ -466,6 +463,7 @@ public:
 #endif
       // Expand LS based on the integration scheme
       advectionKernel.prepareLS();
+      diskMeshConverter.apply(); //
 
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
       meshTimer.start();
@@ -543,6 +541,8 @@ public:
           // PointToElementData<NumericType>(
           //     dummy, fluxes, transField->getKdTree(), surfMesh, true,
           //     false) .apply();
+          downloadCoverages(d_coverages, surfMesh->getCellData(), coverages,
+                            surfMesh->template getElements<3>().size());
           rayTrace_.downloadResultsToPointData(surfMesh->getCellData());
           viennals::VTKWriter<float>(
               surfMesh, name + "_flux_" + std::to_string(counter) + ".vtp")
@@ -688,45 +688,26 @@ private:
     }
   }
 
-  // static void
-  // downloadCoverages(CudaBuffer &d_coverages,
-  //                   viennals::PointData<NumericType> &elementData,
-  //                   SmartPointer<viennals::PointData<NumericType>>
-  //                   &coverages, unsigned int numElements) {
+  static void
+  downloadCoverages(CudaBuffer &d_coverages,
+                    viennals::PointData<float> &elementData,
+                    SmartPointer<viennals::PointData<NumericType>> &coverages,
+                    unsigned int numElements) {
 
-  //   auto numCov = coverages->getScalarDataSize() + 1; // + material ids
-  //   NumericType *temp = new NumericType[numElements * numCov];
-  //   d_coverages.download(temp, numElements * numCov);
+    auto numCov = coverages->getScalarDataSize(); // + material ids
+    float *temp = new float[numElements * numCov];
+    d_coverages.download(temp, numElements * numCov);
 
-  //   // material IDs at front
-  //   {
-  //     auto matIds = elementData.getScalarData("Material");
-  //     if (matIds == nullptr) {
-  //       std::vector<NumericType> tmp(numElements);
-  //       elementData.insertNextScalarData(std::move(tmp), "Material");
-  //       matIds = elementData.getScalarData("Material");
-  //     }
-  //     if (matIds->size() != numElements)
-  //       matIds->resize(numElements);
-  //     std::memcpy(matIds->data(), temp, numElements * sizeof(NumericType));
-  //   }
+    for (unsigned i = 0; i < numCov - 1; i++) {
+      auto covName = coverages->getScalarDataLabel(i);
+      std::vector<float> values(numElements);
+      std::memcpy(values.data(), &temp[i * numElements],
+                  numElements * sizeof(float));
+      elementData.insertReplaceScalarData(values, covName);
+    }
 
-  //   for (unsigned i = 0; i < numCov - 1; i++) {
-  //     auto covName = coverages->getScalarDataLabel(i);
-  //     auto cov = elementData.getScalarData(covName);
-  //     if (cov == nullptr) {
-  //       std::vector<NumericType> covInit(numElements);
-  //       elementData.insertNextScalarData(std::move(covInit), covName);
-  //       cov = elementData.getScalarData(covName);
-  //     }
-  //     if (cov->size() != numElements)
-  //       cov->resize(numElements);
-  //     std::memcpy(cov->data(), temp + (i + 1) * numElements,
-  //                 numElements * sizeof(NumericType));
-  //   }
-
-  //   delete temp;
-  // }
+    delete temp;
+  }
 
   bool checkInput() {
     if (!model_) {

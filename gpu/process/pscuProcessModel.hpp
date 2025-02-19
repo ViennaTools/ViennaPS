@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gpu/vcContext.hpp>
+#include <gpu/vcCudaBuffer.hpp>
 
 #include <curtParticle.hpp>
 
@@ -27,9 +28,11 @@ private:
   std::string pipelineFileName;
 
 public:
+  CudaBuffer processData;
   auto &getParticleTypes() { return particles; }
   auto &getSurfaceModel() { return surfaceModel; }
   auto &getVelocityField() { return velocityField; }
+  auto getProcessDataDPtr() { return processData.dPointer(); }
 
   void setProcessName(const std::string &name) { processName = name; }
   auto getProcessName() const { return processName; }

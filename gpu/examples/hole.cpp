@@ -10,7 +10,7 @@
 using namespace viennaps;
 
 int main(int argc, char **argv) {
-  using NumericType = float;
+  using NumericType = double;
   constexpr int D = 3;
 
   Logger::setLogLevel(LogLevel::INTERMEDIATE);
@@ -55,11 +55,14 @@ int main(int argc, char **argv) {
   auto model =
       SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(modelParams);
 
+  RayTracingParameters<NumericType, D> rayTracingParams;
+  rayTracingParams.raysPerPoint = params.get("raysPerPoint");
+  rayTracingParams.smoothingNeighbors = 2;
+
   // process setup
   gpu::Process<NumericType, D> process(context, geometry, model);
-  process.setProcessParams(modelParams);
   process.setMaxCoverageInitIterations(20);
-  process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
+  process.setRayTracingParameters(rayTracingParams);
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(
       params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));

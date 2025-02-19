@@ -32,7 +32,6 @@ struct LaunchParams {
 };
 
 #ifdef __CUDACC__
-template <typename T>
 __device__ __forceinline__ unsigned int getIdx(int particleIdx, int dataIdx,
                                                LaunchParams *launchParams) {
   unsigned int offset = 0;

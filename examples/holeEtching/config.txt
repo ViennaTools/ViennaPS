@@ -28,7 +28,7 @@ A_O=2          # passivation layer yield constant
 A_Si=7         # Si yield constant
 
 etchStopDepth=-10   # maximum etching depth
-integrationScheme=EO_2
+integrationScheme=EO_1
 
 raysPerPoint=1000
 

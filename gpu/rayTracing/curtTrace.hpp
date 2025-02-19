@@ -47,9 +47,6 @@ public:
         fileName += ".optixir";
     }
 
-    std::cout << "File name: " << fileName << std::endl;
-    std::cout << "Path: " << path << std::endl;
-
     pipelineFile = path / fileName;
 
     if (!std::filesystem::exists(pipelineFile)) {
@@ -65,10 +62,11 @@ public:
 
   void apply() {
 
-    if (numCellData != 0 && cellDataBuffer.sizeInBytes == 0) {
-      cellDataBuffer.allocInit(numCellData * launchParams.numElements, T(0));
-    }
-    assert(cellDataBuffer.sizeInBytes / sizeof(T) ==
+    // if (numCellData != 0 && cellDataBuffer.sizeInBytes == 0) {
+    //   cellDataBuffer.allocInit(numCellData * launchParams.numElements,
+    //                            float(0));
+    // }
+    assert(cellDataBuffer.sizeInBytes / sizeof(float) ==
            numCellData * launchParams.numElements);
 
     // resize our cuda result buffer
@@ -175,7 +173,7 @@ public:
   // }
 
   void setElementData(CudaBuffer &passedCellDataBuffer, unsigned numData) {
-    assert(passedCellDataBuffer.sizeInBytes / sizeof(T) / numData ==
+    assert(passedCellDataBuffer.sizeInBytes / sizeof(float) / numData ==
            launchParams.numElements);
     cellDataBuffer = passedCellDataBuffer;
     numCellData = numData;
@@ -354,10 +352,8 @@ public:
 
   unsigned int getNumberOfElements() const { return launchParams.numElements; }
 
-  template <class ParamType> void setParameters(const ParamType &params) {
-    parameterBuffer.alloc(sizeof(ParamType));
-    parameterBuffer.upload(&params, 1);
-    launchParams.customData = (void *)parameterBuffer.dPointer();
+  void setParameters(CUdeviceptr params) {
+    launchParams.customData = (void *)params;
   }
 
   auto &getParameterBuffer() { return parameterBuffer; }
@@ -381,7 +377,6 @@ protected:
 
   void initRayTracer() {
     context.addModule(normModuleName);
-    std::cout << "Context module path ray: " << context.modulePath << std::endl;
     launchParamsBuffer.alloc(sizeof(launchParams));
     normKernelName.push_back(NumericType);
   }

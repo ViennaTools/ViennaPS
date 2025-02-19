@@ -41,7 +41,7 @@ public:
     auto numData = pointData_.getScalarDataSize();
     const auto &elements = surfaceMesh_->triangles;
     auto numElements = elements.size();
-    std::vector<NumericType> elementData(numData * numElements);
+    std::vector<MeshNT> elementData(numData * numElements);
     std::vector<unsigned> dataIdx(numData);
 
     if (insertToMesh_) {
