@@ -61,9 +61,15 @@ public:
   void apply() {
     domain_->clear(); // this does not clear the setup
     auto setup = domain_->getSetup();
-    auto bounds = setup.bounds;
-    auto boundaryCons = setup.boundaryCons;
-    auto gridDelta = setup.gridDelta;
+    auto bounds = setup.bounds_;
+    auto boundaryCons = setup.boundaryCons_;
+    auto gridDelta = setup.gridDelta_;
+    if (gridDelta == 0.0) {
+      Logger::getInstance()
+          .addWarning("MakeTrench: Domain setup is not initialized.")
+          .print();
+      return;
+    }
 
     auto substrate = lsDomainType::New(bounds, boundaryCons, gridDelta);
     NumericType normal[D] = {0.};

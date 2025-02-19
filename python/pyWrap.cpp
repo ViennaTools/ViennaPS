@@ -1074,9 +1074,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Trench
   pybind11::class_<MakeTrench<T, D>>(module, "MakeTrench")
-      .def(pybind11::init<DomainType, const T, const T, const T, const T,
-                          const T, const T, const T, const bool, const bool,
-                          const Material>(),
+      .def(pybind11::init<DomainType, T, T, T, T, T, T, T, bool, bool,
+                          Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("trenchWidth"), pybind11::arg("trenchDepth"),
@@ -1084,7 +1083,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::Undefined)
+           pybind11::arg("material") = Material::Si)
+      .def(pybind11::init<DomainType, T, T, T, T, T, Material>(),
+           pybind11::arg("domain"), pybind11::arg("trenchWidth"),
+           pybind11::arg("trenchDepth"), pybind11::arg("trenchTaperAngle"),
+           pybind11::arg("maskHeight"), pybind11::arg("maskTaperAngle"),
+           pybind11::arg("material") = Material::Si)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
   // Hole
@@ -1389,6 +1393,20 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("filename"))
       .def("clear", &Domain<T, D>::clear);
 
+  // Domain Setup
+  pybind11::class_<Domain<T, D>::Setup>(module, "DomainSetup")
+      .def(pybind11::init<>())
+      .def(pybind11::init<T, T, T, bool>(), pybind11::arg("gridDelta"),
+           pybind11::arg("xExtent"), pybind11::arg("yExtent"),
+           pybind11::arg("periodicBoundary") = false)
+      .def("gridDelta", &Domain<T, D>::Setup::gridDelta)
+      .def("bounds", &Domain<T, D>::Setup::bounds)
+      .def("boundaryCons", &Domain<T, D>::Setup::boundaryCons)
+      .def("xExtent", &Domain<T, D>::Setup::xExtent)
+      .def("yExtent", &Domain<T, D>::Setup::yExtent)
+      .def("hasPeriodicBoundary", &Domain<T, D>::Setup::hasPeriodicBoundary)
+      .def("print", &Domain<T, D>::Setup::print);
+
   // MaterialMap
   pybind11::class_<MaterialMap, SmartPointer<MaterialMap>>(module,
                                                            "MaterialMap")
@@ -1523,14 +1541,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init(&SmartPointer<Domain<T, 3>>::New<T, T, T, bool>),
            pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
            pybind11::arg("yExtent"), pybind11::arg("periodicBoundary") = false)
-      .def(pybind11::init(
-               &SmartPointer<Domain<T, 3>>::New<const Domain<T, 3>::Setup &>),
-           pybind11::arg("setup"))
       // methods
-      .def("setup",
-           pybind11::overload_cast<const Domain<T, 3>::Setup &>(
-               &Domain<T, 3>::setup),
-           "Setup the domain.")
       .def("setup",
            pybind11::overload_cast<T, T, T, bool>(&Domain<T, 3>::setup),
            pybind11::arg("gridDelta"), pybind11::arg("xExtent"),

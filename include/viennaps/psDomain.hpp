@@ -45,28 +45,28 @@ public:
   static constexpr char materialIdsLabel[] = "MaterialIds";
 
   struct Setup {
-    NumericType gridDelta;
-    double bounds[2 * D];
-    BoundaryType boundaryCons[D];
+    NumericType gridDelta_;
+    double bounds_[2 * D];
+    BoundaryType boundaryCons_[D];
 
-    Setup() : gridDelta(0.0) {
+    Setup() : gridDelta_(0.0) {
       for (int i = 0; i < D; i++) {
-        bounds[2 * i] = 0.0;
-        bounds[2 * i + 1] = 0.0;
-        boundaryCons[i] = BoundaryType::INFINITE_BOUNDARY;
+        bounds_[2 * i] = 0.0;
+        bounds_[2 * i + 1] = 0.0;
+        boundaryCons_[i] = BoundaryType::INFINITE_BOUNDARY;
       }
     }
     Setup(NumericType gridDelta, NumericType xExtent, NumericType yExtent,
           bool periodicBoundary = false)
-        : gridDelta(gridDelta) {
+        : gridDelta_(gridDelta) {
       if (xExtent <= 0.0) {
         Logger::getInstance()
             .addWarning("Invalid 'x' extent for domain setup.")
             .print();
       }
 
-      bounds[0] = -xExtent / 2.;
-      bounds[1] = xExtent / 2.;
+      bounds_[0] = -xExtent / 2.;
+      bounds_[1] = xExtent / 2.;
 
       if constexpr (D == 3) {
         if (yExtent <= 0.0) {
@@ -74,37 +74,55 @@ public:
               .addWarning("Invalid 'y' extent for domain setup.")
               .print();
         }
-        bounds[2] = -yExtent / 2.;
-        bounds[3] = yExtent / 2.;
-        bounds[4] = -gridDelta;
-        bounds[5] = gridDelta;
+        bounds_[2] = -yExtent / 2.;
+        bounds_[3] = yExtent / 2.;
+        bounds_[4] = -gridDelta;
+        bounds_[5] = gridDelta;
       } else {
-        bounds[2] = -gridDelta;
-        bounds[3] = gridDelta;
+        bounds_[2] = -gridDelta;
+        bounds_[3] = gridDelta;
       }
 
       for (int i = 0; i < D - 1; i++) {
         if (periodicBoundary) {
-          boundaryCons[i] = BoundaryType::PERIODIC_BOUNDARY;
+          boundaryCons_[i] = BoundaryType::PERIODIC_BOUNDARY;
         } else {
-          boundaryCons[i] = BoundaryType::REFLECTIVE_BOUNDARY;
+          boundaryCons_[i] = BoundaryType::REFLECTIVE_BOUNDARY;
         }
       }
-      boundaryCons[D - 1] = BoundaryType::INFINITE_BOUNDARY;
+      boundaryCons_[D - 1] = BoundaryType::INFINITE_BOUNDARY;
     }
 
-    NumericType xExtent() const { return bounds[1] - bounds[0]; }
+    NumericType gridDelta() const { return gridDelta_; }
 
-    NumericType yExtent() const { return bounds[3] - bounds[2]; }
+    std::array<double, 2 * D> bounds() const {
+      std::array<double, 2 * D> boundsArray;
+      for (int i = 0; i < 2 * D; i++) {
+        boundsArray[i] = bounds_[i];
+      }
+      return boundsArray;
+    }
+
+    std::array<BoundaryType, D> boundaryCons() const {
+      std::array<BoundaryType, D> boundaryConsArray;
+      for (int i = 0; i < D; i++) {
+        boundaryConsArray[i] = boundaryCons_[i];
+      }
+      return boundaryConsArray;
+    }
+
+    NumericType xExtent() const { return bounds_[1] - bounds_[0]; }
+
+    NumericType yExtent() const { return bounds_[3] - bounds_[2]; }
 
     bool hasPeriodicBoundary() const {
-      return boundaryCons[0] == BoundaryType::PERIODIC_BOUNDARY ||
-             boundaryCons[1] == BoundaryType::PERIODIC_BOUNDARY;
+      return boundaryCons_[0] == BoundaryType::PERIODIC_BOUNDARY ||
+             boundaryCons_[1] == BoundaryType::PERIODIC_BOUNDARY;
     }
 
     void print() const {
       std::cout << "Domain setup:" << std::endl;
-      std::cout << "\tGrid delta: " << gridDelta << std::endl;
+      std::cout << "\tGrid delta: " << gridDelta_ << std::endl;
       std::cout << "\tX extent: " << xExtent() << std::endl;
       if constexpr (D == 3)
         std::cout << "\tY extent: " << yExtent() << std::endl;
@@ -370,7 +388,7 @@ public:
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
   auto &getGrid() const { return levelSets_.back()->getGrid(); }
 
-  auto getGridDelta() const { return setup_.gridDelta; }
+  auto getGridDelta() const { return setup_.gridDelta_; }
 
   auto &getSetup() { return setup_; }
 
@@ -487,11 +505,11 @@ private:
   void
   setupFromLevelSet(SmartPointer<viennals::Domain<NumericType, D>> levelSet) {
     auto &grid = levelSet->getGrid();
-    setup_.gridDelta = grid.getGridDelta();
+    setup_.gridDelta_ = grid.getGridDelta();
     for (int i = 0; i < D; i++) {
-      setup_.bounds[2 * i] = grid.getMinBounds(i) * setup_.gridDelta;
-      setup_.bounds[2 * i + 1] = grid.getMaxBounds(i) * setup_.gridDelta;
-      setup_.boundaryCons[i] = grid.getBoundaryConditions(i);
+      setup_.bounds_[2 * i] = grid.getMinBounds(i) * setup_.gridDelta_;
+      setup_.bounds_[2 * i + 1] = grid.getMaxBounds(i) * setup_.gridDelta_;
+      setup_.boundaryCons_[i] = grid.getBoundaryConditions(i);
     }
   }
 
