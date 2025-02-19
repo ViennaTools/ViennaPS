@@ -49,7 +49,7 @@ public:
            NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
            NumericType taperAngle = 0., NumericType baseHeight = 0.,
            bool periodicBoundary = false, bool makeMask = false,
-           Material material = Material::None,
+           Material material = Material::Undefined,
            HoleShape shape = HoleShape::Full)
       : domain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), holeRadius_(holeRadius), holeDepth_(holeDepth),
@@ -161,7 +161,7 @@ public:
         substrate, mask, viennals::BooleanOperationEnum::UNION)
         .apply();
 
-    if (material_ == Material::None) {
+    if (material_ == Material::Undefined) {
       if (makeMask_)
         domain_->insertNextLevelSet(mask);
       domain_->insertNextLevelSet(substrate, false);

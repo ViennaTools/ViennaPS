@@ -39,14 +39,15 @@ template <class NumericType, int D> class MakePlane {
 public:
   // Adds a plane to an already existing geometry.
   MakePlane(psDomainType domain, NumericType baseHeight = 0.,
-            Material material = Material::None)
+            Material material = Material::Undefined)
       : pDomain_(domain), baseHeight_(baseHeight), material_(material),
         add_(true) {}
 
   // Creates a new geometry with a plane.
   MakePlane(psDomainType domain, NumericType gridDelta, NumericType xExtent,
             NumericType yExtent, NumericType baseHeight,
-            bool periodicBoundary = false, Material material = Material::None)
+            bool periodicBoundary = false,
+            Material material = Material::Undefined)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), baseHeight_(baseHeight),
         periodicBoundary_(periodicBoundary), material_(material), add_(false) {}
@@ -54,7 +55,7 @@ public:
   // Creates a new geometry with a plane and custom bounds.
   MakePlane(psDomainType domain, NumericType gridDelta, double bounds[2 * D],
             NumericType baseHeight, bool periodicBoundary = false,
-            Material material = Material::None)
+            Material material = Material::Undefined)
       : pDomain_(domain), gridDelta_(gridDelta), useBounds_(true),
         baseHeight_(baseHeight), periodicBoundary_(periodicBoundary),
         material_(material), add_(false) {
@@ -111,7 +112,7 @@ public:
           substrate,
           SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material_ == Material::None) {
+      if (material_ == Material::Undefined) {
         pDomain_->insertNextLevelSet(substrate);
       } else {
         pDomain_->insertNextLevelSetAsMaterial(substrate, material_);
@@ -122,7 +123,7 @@ public:
           substrate,
           SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
-      if (material_ == Material::None) {
+      if (material_ == Material::Undefined) {
         pDomain_->insertNextLevelSet(substrate);
       } else {
         pDomain_->insertNextLevelSetAsMaterial(substrate, material_);

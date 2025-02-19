@@ -12,7 +12,7 @@ namespace viennaps {
 using namespace viennacore;
 
 enum class Material : int {
-  None = -1,
+  Undefined = -1,
   Mask = 0,
   Si = 1,
   SiO2 = 2,
@@ -44,7 +44,7 @@ class MaterialMap {
 public:
   MaterialMap() { map_ = SmartPointer<viennals::MaterialMap>::New(); };
 
-  void insertNextMaterial(Material material = Material::None) {
+  void insertNextMaterial(Material material = Material::Undefined) {
     map_->insertNextMaterial(static_cast<int>(material));
   }
 
@@ -72,7 +72,7 @@ public:
 
   static inline Material mapToMaterial(const int matId) {
     if (matId > 19 || matId < -1)
-      return Material::None;
+      return Material::Undefined;
     return static_cast<Material>(matId);
   }
 
@@ -88,7 +88,7 @@ public:
   template <class T> static inline std::string getMaterialName(const T matId) {
     auto material = mapToMaterial(matId);
     switch (material) {
-    case Material::None:
+    case Material::Undefined:
       return "None";
     case Material::Mask:
       return "Mask";

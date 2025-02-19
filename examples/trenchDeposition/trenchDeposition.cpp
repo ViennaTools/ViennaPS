@@ -19,8 +19,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
-      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   ps::MakeTrench<NumericType, D>(
       geometry, params.get("gridDelta") /* grid delta */,
       params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
@@ -30,7 +29,7 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet();
+  geometry->duplicateTopLevelSet(ps::Material::SiO2);
 
   auto model = ps::SmartPointer<ps::SingleParticleProcess<NumericType, D>>::New(
       params.get("rate") /*deposition rate*/,
@@ -45,7 +44,7 @@ int main(int argc, char *argv[]) {
 
   geometry->saveHullMesh("initial");
 
-  // process.apply();
+  process.apply();
 
-  // geometry->saveHullMesh("final");
+  geometry->saveHullMesh("final");
 }

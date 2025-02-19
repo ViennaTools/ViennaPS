@@ -586,7 +586,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Enum Material
   pybind11::enum_<Material>(module, "Material")
-      .value("Undefined", Material::None) // 1
+      .value("Undefined", Material::Undefined) // 1
       .value("Mask", Material::Mask)
       .value("Si", Material::Si)
       .value("SiO2", Material::SiO2)
@@ -619,7 +619,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate") = 1.,
            pybind11::arg("stickingProbability") = 1.,
            pybind11::arg("sourceExponent") = 1.,
-           pybind11::arg("maskMaterial") = Material::None)
+           pybind11::arg("maskMaterial") = Material::Undefined)
       .def(pybind11::init([](const T rate, const T sticking, const T power,
                              const std::vector<Material> mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
@@ -925,7 +925,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
              return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
            pybind11::arg("rate") = 1.,
-           pybind11::arg("maskMaterial") = Material::None)
+           pybind11::arg("maskMaterial") = Material::Undefined)
       .def(pybind11::init([](const T rate, const std::vector<Material> mask) {
              return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
@@ -1065,10 +1065,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("height") = 0.,
            pybind11::arg("periodicBoundary") = false,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Undefined)
       .def(pybind11::init<DomainType, T, const Material>(),
            pybind11::arg("domain"), pybind11::arg("height") = 0.,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Undefined)
       .def("apply", &MakePlane<T, D>::apply,
            "Create a plane geometry or add plane to existing geometry.");
 
@@ -1084,7 +1084,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Undefined)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
   // Hole
@@ -1104,7 +1104,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None,
+           pybind11::arg("material") = Material::Undefined,
            pybind11::arg("holeShape") = HoleShape::Full) // New argument
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
@@ -1119,7 +1119,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //           pybind11::arg("baseHeight") = 0.,
   //           pybind11::arg("periodicBoundary") = false,
   //           pybind11::arg("makeMask") = false,
-  //           pybind11::arg("material") = Material::None)
+  //           pybind11::arg("material") = Material::Undefined)
   //      .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
   // Fin
@@ -1133,7 +1133,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("taperAngle") = 0., pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Undefined)
       .def("apply", &MakeFin<T, D>::apply, "Create a fin geometry.");
 
   // Stack
@@ -1371,7 +1371,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                                                            "MaterialMap")
       .def(pybind11::init<>())
       .def("insertNextMaterial", &MaterialMap::insertNextMaterial,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Undefined)
       .def("getMaterialAtIdx", &MaterialMap::getMaterialAtIdx)
       .def("getMaterialMap", &MaterialMap::getMaterialMap)
       .def("size", &MaterialMap::size)

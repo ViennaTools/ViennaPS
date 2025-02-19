@@ -43,7 +43,7 @@ public:
           NumericType yExtent, NumericType finWidth, NumericType finHeight,
           NumericType taperAngle = 0., NumericType baseHeight = 0.,
           bool periodicBoundary = false, bool makeMask = false,
-          Material material = Material::None)
+          Material material = Material::Undefined)
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), finWidth_(finWidth), finHeight_(finHeight),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
@@ -169,7 +169,7 @@ public:
           substrate, mask, viennals::BooleanOperationEnum::UNION)
           .apply();
 
-      if (material_ == Material::None) {
+      if (material_ == Material::Undefined) {
         if (makeMask_)
           pDomain_->insertNextLevelSet(mask);
         pDomain_->insertNextLevelSet(substrate, false);
@@ -246,7 +246,7 @@ public:
           substrate, mask, viennals::BooleanOperationEnum::UNION)
           .apply();
 
-      if (material_ == Material::None) {
+      if (material_ == Material::Undefined) {
         if (makeMask_)
           pDomain_->insertNextLevelSet(mask);
         pDomain_->insertNextLevelSet(substrate, false);

@@ -49,6 +49,13 @@ public:
     double bounds[2 * D];
     BoundaryType boundaryCons[D];
 
+    Setup() : gridDelta(0.0) {
+      for (int i = 0; i < D; i++) {
+        bounds[2 * i] = 0.0;
+        bounds[2 * i + 1] = 0.0;
+        boundaryCons[i] = BoundaryType::INFINITE_BOUNDARY;
+      }
+    }
     Setup(NumericType gridDelta, NumericType xExtent, NumericType yExtent,
           bool periodicBoundary = false)
         : gridDelta(gridDelta) {
@@ -186,6 +193,8 @@ public:
     }
   }
 
+  // Will be deprecated in the future. Please use insertNextLevelSetAsMaterial
+  // instead.
   void insertNextLevelSet(lsDomainType levelSet,
                           bool wrapLowerLevelSet = true) {
     if (!levelSets_.empty() && wrapLowerLevelSet) {
@@ -221,17 +230,13 @@ public:
 
   // Copy the top Level-Set and insert it in the domain (e.g. in order to
   // capture depositing material on top of the surface).
-  void duplicateTopLevelSet(const Material material = Material::None) {
+  void duplicateTopLevelSet(const Material material) {
     if (levelSets_.empty()) {
       return;
     }
 
     auto copy = lsDomainType::New(levelSets_.back());
-    if (material == Material::None) {
-      insertNextLevelSet(copy, false);
-    } else {
-      insertNextLevelSetAsMaterial(copy, material, false);
-    }
+    insertNextLevelSetAsMaterial(copy, material, false);
   }
 
   // Remove the top (last inserted) Level-Set.
@@ -423,9 +428,26 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string fileName) const {
+  void saveVolumeMesh(std::string fileName,
+                      double wrappingLayerEpsilon = 1e-2) const {
     viennals::WriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(fileName);
+    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
+    for (auto &ls : levelSets_) {
+      visMesh.insertNextLevelSet(ls);
+    }
+    if (materialMap_)
+      visMesh.setMaterialMap(materialMap_->getMaterialMap());
+    visMesh.apply();
+  }
+
+  void saveHullMesh(std::string fileName,
+                    double wrappingLayerEpsilon = 1e-2) const {
+    viennals::WriteVisualizationMesh<NumericType, D> visMesh;
+    visMesh.setFileName(fileName);
+    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
+    visMesh.setExtractHullMesh(true);
+    visMesh.setExtractVolumeMesh(false);
     for (auto &ls : levelSets_) {
       visMesh.insertNextLevelSet(ls);
     }
