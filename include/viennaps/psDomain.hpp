@@ -150,13 +150,12 @@ public:
          bool periodicBoundary = false)
       : setup_(gridDelta, xExtent, yExtent, periodicBoundary) {}
 
-  Domain(Setup setup) : setup_(setup) {}
+  Domain(const Setup &setup) : setup_(setup) {}
 
   void setup(const Setup &setup) { setup_ = setup; }
 
-  void setup(const NumericType gridDelta, const NumericType xExtent,
-             const NumericType yExtent = 0,
-             const bool periodicBoundary = false) {
+  void setup(NumericType gridDelta, NumericType xExtent,
+             NumericType yExtent = 0, bool periodicBoundary = false) {
     setup_ = Setup(gridDelta, xExtent, yExtent, periodicBoundary);
   }
 
@@ -197,6 +196,9 @@ public:
   // instead.
   void insertNextLevelSet(lsDomainType levelSet,
                           bool wrapLowerLevelSet = true) {
+    if (levelSets_.empty()) {
+      setupFromLevelSet(levelSet);
+    }
     if (!levelSets_.empty() && wrapLowerLevelSet) {
       viennals::BooleanOperation<NumericType, D>(
           levelSet, levelSets_.back(), viennals::BooleanOperationEnum::UNION)
@@ -215,6 +217,9 @@ public:
   void insertNextLevelSetAsMaterial(lsDomainType levelSet,
                                     const Material material,
                                     bool wrapLowerLevelSet = true) {
+    if (levelSets_.empty()) {
+      setupFromLevelSet(levelSet);
+    }
     if (!levelSets_.empty() && wrapLowerLevelSet) {
       viennals::BooleanOperation<NumericType, D>(
           levelSet, levelSets_.back(), viennals::BooleanOperationEnum::UNION)
@@ -232,6 +237,9 @@ public:
   // capture depositing material on top of the surface).
   void duplicateTopLevelSet(const Material material) {
     if (levelSets_.empty()) {
+      Logger::getInstance()
+          .addWarning("Trying to duplicate non-existing Level-Set in domain.")
+          .print();
       return;
     }
 

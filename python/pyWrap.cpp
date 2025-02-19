@@ -1318,7 +1318,30 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
       // constructors
       .def(pybind11::init(&DomainType::New<>))
+      .def(pybind11::init(
+               [](DomainType &domain) { return DomainType::New(domain); }),
+           pybind11::arg("domain"), "Deep copy constructor.")
+#if VIENNAPS_PYTHON_DIMENSION > 2
+      .def(pybind11::init(&DomainType::New<T, T, T, bool>),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent"), pybind11::arg("periodicBoundary") = false)
+#else
+      .def(pybind11::init(&DomainType::New<T, T, bool>),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("periodicBoundary") = false)
+#endif
+      .def(pybind11::init(&DomainType::New<const Domain<T, D>::Setup &>),
+           pybind11::arg("setup"))
       // methods
+      .def("setup",
+           pybind11::overload_cast<const Domain<T, D>::Setup &>(
+               &Domain<T, D>::setup),
+           "Setup the domain.")
+      .def("setup",
+           pybind11::overload_cast<T, T, T, bool>(&Domain<T, D>::setup),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent") = 0.,
+           pybind11::arg("periodicBoundary") = false, "Setup the domain.")
       .def("deepCopy", &Domain<T, D>::deepCopy)
       .def("insertNextLevelSet", &Domain<T, D>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
@@ -1493,6 +1516,26 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<Domain<T, 3>, SmartPointer<Domain<T, 3>>>(module, "Domain3D")
       // constructors
       .def(pybind11::init(&SmartPointer<Domain<T, 3>>::New<>))
+      .def(pybind11::init([](SmartPointer<Domain<T, 3>> &domain) {
+             return SmartPointer<Domain<T, 3>>::New(domain);
+           }),
+           pybind11::arg("domain"), "Deep copy constructor.")
+      .def(pybind11::init(&SmartPointer<Domain<T, 3>>::New<T, T, T, bool>),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent"), pybind11::arg("periodicBoundary") = false)
+      .def(pybind11::init(
+               &SmartPointer<Domain<T, 3>>::New<const Domain<T, 3>::Setup &>),
+           pybind11::arg("setup"))
+      // methods
+      .def("setup",
+           pybind11::overload_cast<const Domain<T, 3>::Setup &>(
+               &Domain<T, 3>::setup),
+           "Setup the domain.")
+      .def("setup",
+           pybind11::overload_cast<T, T, T, bool>(&Domain<T, 3>::setup),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent") = 0.,
+           pybind11::arg("periodicBoundary") = false, "Setup the domain.")
       // methods
       .def("deepCopy", &Domain<T, 3>::deepCopy)
       .def("insertNextLevelSet", &Domain<T, 3>::insertNextLevelSet,

@@ -35,10 +35,6 @@ template <class NumericType, int D> class MakeTrench {
   const NumericType base_;
   const Material material_;
 
-  const NumericType gridDelta_;
-  const NumericType xExtent_;
-  const NumericType yExtent_;
-
 public:
   MakeTrench(psDomainType domain, NumericType trenchWidth,
              NumericType trenchDepth, NumericType trenchTaperAngle,
@@ -46,10 +42,7 @@ public:
              Material material = Material::Si)
       : domain_(domain), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
         trenchTaperAngle_(trenchTaperAngle), maskHeight_(maskHeight),
-        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
-        gridDelta_(domain->getGridDelta()),
-        xExtent_(domain->getSetup().xExtent()),
-        yExtent_(domain->getSetup().yExtent()) {}
+        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material) {}
 
   MakeTrench(psDomainType domain, NumericType gridDelta, NumericType xExtent,
              NumericType yExtent, NumericType trenchWidth,
@@ -61,8 +54,7 @@ public:
         trenchTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? trenchDepth : 0),
         maskTaperAngle_(makeMask ? taperAngle : 0), base_(base),
-        material_(material), gridDelta_(gridDelta), xExtent_(xExtent),
-        yExtent_(yExtent) {
+        material_(material) {
     domain_->setup(gridDelta, xExtent, yExtent, periodicBoundary);
   }
 
@@ -71,8 +63,9 @@ public:
     auto setup = domain_->getSetup();
     auto bounds = setup.bounds;
     auto boundaryCons = setup.boundaryCons;
+    auto gridDelta = setup.gridDelta;
 
-    auto substrate = lsDomainType::New(bounds, boundaryCons, gridDelta_);
+    auto substrate = lsDomainType::New(bounds, boundaryCons, gridDelta);
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
@@ -83,7 +76,7 @@ public:
         .apply();
 
     if (maskHeight_ > 0.) {
-      auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta_);
+      auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta);
       normal[D - 1] = 1.;
       origin[D - 1] = base_ + maskHeight_;
       viennals::MakeGeometry<NumericType, D>(
@@ -91,8 +84,8 @@ public:
           SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
           .apply();
 
-      auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta_);
-      origin[D - 1] = base_ - gridDelta_ / 2.;
+      auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta);
+      origin[D - 1] = base_ - gridDelta / 2.;
       normal[D - 1] = -1.;
       viennals::MakeGeometry<NumericType, D>(
           maskAdd,
@@ -103,7 +96,7 @@ public:
           mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
           .apply();
 
-      auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta_);
+      auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
       NumericType width = trenchWidth_;
       if (trenchTaperAngle_ > 0. && trenchDepth_ > 0.) {
         width += 2 * std::tan(trenchTaperAngle_ * M_PI / 180.) * trenchDepth_;
@@ -122,13 +115,13 @@ public:
     }
 
     if (trenchDepth_ > 0.) {
-      auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta_);
+      auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
       if (trenchTaperAngle_ > 0.) {
         getTaperedCutout(cutout, trenchWidth_, base_ - trenchDepth_,
-                         trenchDepth_ + gridDelta_, trenchTaperAngle_);
+                         trenchDepth_ + gridDelta, trenchTaperAngle_);
       } else {
         getCutout(cutout, trenchWidth_, base_ - trenchDepth_,
-                  trenchDepth_ + gridDelta_);
+                  trenchDepth_ + gridDelta);
       }
       viennals::BooleanOperation<NumericType, D>(
           substrate, cutout,
@@ -144,12 +137,14 @@ private:
                  NumericType width, NumericType base, NumericType height) {
     NumericType minPoint[D];
     NumericType maxPoint[D];
+    auto gridDelta = domain_->getGridDelta();
+    auto yExtent = domain_->getSetup().yExtent();
 
     minPoint[0] = -width / 2;
     maxPoint[0] = width / 2;
     if constexpr (D == 3) {
-      minPoint[1] = -yExtent_ / 2. - gridDelta_;
-      maxPoint[1] = yExtent_ / 2. + gridDelta_;
+      minPoint[1] = -yExtent / 2. - gridDelta;
+      maxPoint[1] = yExtent / 2. + gridDelta;
     }
     minPoint[D - 1] = base;
     maxPoint[D - 1] = base + height;
@@ -166,6 +161,7 @@ private:
                         NumericType angle) {
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     const NumericType offset = std::tan(angle * M_PI / 180.) * height;
+    auto gridDelta = domain_->getGridDelta();
     if constexpr (D == 2) {
       for (int i = 0; i < 4; i++) {
         std::array<NumericType, 3> node = {0., 0., 0.};
@@ -187,40 +183,42 @@ private:
       mesh->insertNextLine(std::array<unsigned, 2>{2, 1});
       mesh->insertNextLine(std::array<unsigned, 2>{1, 0});
     } else {
+      auto gridDelta = domain_->getGridDelta();
+      auto yExtent = domain_->getSetup().yExtent();
       for (int i = 0; i < 8; i++) {
         std::array<NumericType, 3> node = {0., 0., 0.};
         mesh->insertNextNode(node);
       }
       mesh->nodes[0][0] = -width / 2.;
-      mesh->nodes[0][1] = -yExtent_ / 2. - gridDelta_;
+      mesh->nodes[0][1] = -yExtent / 2. - gridDelta;
       mesh->nodes[0][2] = base;
 
       mesh->nodes[1][0] = width / 2.;
-      mesh->nodes[1][1] = -yExtent_ / 2. - gridDelta_;
+      mesh->nodes[1][1] = -yExtent / 2. - gridDelta;
       mesh->nodes[1][2] = base;
 
       mesh->nodes[2][0] = width / 2.;
-      mesh->nodes[2][1] = yExtent_ / 2. + gridDelta_;
+      mesh->nodes[2][1] = yExtent / 2. + gridDelta;
       mesh->nodes[2][2] = base;
 
       mesh->nodes[3][0] = -width / 2.;
-      mesh->nodes[3][1] = yExtent_ / 2. + gridDelta_;
+      mesh->nodes[3][1] = yExtent / 2. + gridDelta;
       mesh->nodes[3][2] = base;
 
       mesh->nodes[4][0] = -width / 2. - offset;
-      mesh->nodes[4][1] = -yExtent_ / 2. - gridDelta_;
+      mesh->nodes[4][1] = -yExtent / 2. - gridDelta;
       mesh->nodes[4][2] = height + base;
 
       mesh->nodes[5][0] = width / 2. + offset;
-      mesh->nodes[5][1] = -yExtent_ / 2. - gridDelta_;
+      mesh->nodes[5][1] = -yExtent / 2. - gridDelta;
       mesh->nodes[5][2] = height + base;
 
       mesh->nodes[6][0] = width / 2. + offset;
-      mesh->nodes[6][1] = yExtent_ / 2. + gridDelta_;
+      mesh->nodes[6][1] = yExtent / 2. + gridDelta;
       mesh->nodes[6][2] = height + base;
 
       mesh->nodes[7][0] = -width / 2. - offset;
-      mesh->nodes[7][1] = yExtent_ / 2. + gridDelta_;
+      mesh->nodes[7][1] = yExtent / 2. + gridDelta;
       mesh->nodes[7][2] = height + base;
 
       mesh->insertNextTriangle(std::array<unsigned, 3>{0, 3, 1});
