@@ -28,7 +28,7 @@ template <typename NumericType> struct IBEParameters {
 
   // Redeposition
   NumericType redepositionThreshold = 0.1;
-  NumericType redepositionRate = 0.1;
+  NumericType redepositionRate = 0.0;
 };
 
 namespace impl {
