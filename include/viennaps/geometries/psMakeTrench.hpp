@@ -53,7 +53,7 @@ public:
                         "periodic boundaries! Creating full trench.")
             .print();
       } else {
-        domain->getSetup().bounds_[0] = 0.0;
+        domain_->getSetup().bounds_[0] = 0.0;
       }
     }
   }
@@ -173,10 +173,10 @@ private:
       mesh->nodes[2][1] = base + height;
       mesh->nodes[3][1] = base + height;
 
-      mesh->insertNextLine(std::array<unsigned, 2>{0, 3});
-      mesh->insertNextLine(std::array<unsigned, 2>{3, 2});
-      mesh->insertNextLine(std::array<unsigned, 2>{2, 1});
-      mesh->insertNextLine(std::array<unsigned, 2>{1, 0});
+      mesh->insertNextLine({0, 3});
+      mesh->insertNextLine({3, 2});
+      mesh->insertNextLine({2, 1});
+      mesh->insertNextLine({1, 0});
     } else {
       auto gridDelta = domain_->getGridDelta();
       auto yExtent = domain_->getSetup().yExtent();
@@ -216,23 +216,23 @@ private:
       mesh->nodes[7][1] = yExtent / 2. + gridDelta;
       mesh->nodes[7][2] = height + base;
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{0, 3, 1});
-      mesh->insertNextTriangle(std::array<unsigned, 3>{1, 3, 2});
+      mesh->insertNextTriangle({0, 3, 1});
+      mesh->insertNextTriangle({1, 3, 2});
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{5, 6, 4});
-      mesh->insertNextTriangle(std::array<unsigned, 3>{6, 7, 4});
+      mesh->insertNextTriangle({5, 6, 4});
+      mesh->insertNextTriangle({6, 7, 4});
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{0, 1, 5});
-      mesh->insertNextTriangle(std::array<unsigned, 3>{0, 5, 4});
+      mesh->insertNextTriangle({0, 1, 5});
+      mesh->insertNextTriangle({0, 5, 4});
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{2, 3, 6});
-      mesh->insertNextTriangle(std::array<unsigned, 3>{6, 3, 7});
+      mesh->insertNextTriangle({2, 3, 6});
+      mesh->insertNextTriangle({6, 3, 7});
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{0, 7, 3});
-      mesh->insertNextTriangle(std::array<unsigned, 3>{0, 4, 7});
+      mesh->insertNextTriangle({0, 7, 3});
+      mesh->insertNextTriangle({0, 4, 7});
 
-      mesh->insertNextTriangle(std::array<unsigned, 3>{1, 2, 6});
-      mesh->insertNextTriangle(std::array<unsigned, 3>{1, 6, 5});
+      mesh->insertNextTriangle({1, 2, 6});
+      mesh->insertNextTriangle({1, 6, 5});
     }
     viennals::FromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
   }
