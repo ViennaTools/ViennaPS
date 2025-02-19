@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../geometries/psGeometryBase.hpp"
 #include "../psDomain.hpp"
 
 #include <lsBooleanOperation.hpp>
@@ -18,12 +19,11 @@ using namespace viennacore;
 /// Moreover, the trench can serve as a mask, applying the specified material_
 /// exclusively to the bottom while the remaining portion adopts the mask
 /// material_.
-template <class NumericType, int D> class MakeTrench {
-  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
-  using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
-
-  psDomainType domain_ = nullptr;
+template <class NumericType, int D>
+class MakeTrench : public GeometryBase<NumericType, D> {
+  using typename GeometryBase<NumericType, D>::lsDomainType;
+  using typename GeometryBase<NumericType, D>::psDomainType;
+  using GeometryBase<NumericType, D>::domain_;
 
   const NumericType trenchWidth_;
   const NumericType trenchDepth_;
@@ -40,9 +40,10 @@ public:
              NumericType trenchDepth, NumericType trenchTaperAngle = 0,
              NumericType maskHeight = 0, NumericType maskTaperAngle = 0,
              bool halfTrench = false, Material material = Material::Si)
-      : domain_(domain), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
-        trenchTaperAngle_(trenchTaperAngle), maskHeight_(maskHeight),
-        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material) {
+      : GeometryBase<NumericType, D>(domain), trenchWidth_(trenchWidth),
+        trenchDepth_(trenchDepth), trenchTaperAngle_(trenchTaperAngle),
+        maskHeight_(maskHeight), maskTaperAngle_(maskTaperAngle), base_(0.0),
+        material_(material) {
     if (halfTrench) {
       if (domain_->getSetup().hasPeriodicBoundary()) {
         Logger::getInstance()
@@ -60,7 +61,7 @@ public:
              NumericType trenchDepth, NumericType taperAngle = 0.,
              NumericType base = 0., bool periodicBoundary = false,
              bool makeMask = false, Material material = Material::Si)
-      : domain_(domain), trenchWidth_(trenchWidth),
+      : GeometryBase<NumericType, D>(domain), trenchWidth_(trenchWidth),
         trenchDepth_(makeMask ? 0 : trenchDepth),
         trenchTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? trenchDepth : 0),
@@ -82,37 +83,10 @@ public:
       return;
     }
 
-    auto substrate = lsDomainType::New(bounds, boundaryCons, gridDelta);
-    NumericType normal[D] = {0.};
-    NumericType origin[D] = {0.};
-    normal[D - 1] = 1.;
-    origin[D - 1] = base_;
-    viennals::MakeGeometry<NumericType, D>(
-        substrate,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-        .apply();
+    auto substrate = this->makeSubstrate(base_);
 
     if (maskHeight_ > 0.) {
-      auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta);
-      normal[D - 1] = 1.;
-      origin[D - 1] = base_ + maskHeight_;
-      viennals::MakeGeometry<NumericType, D>(
-          mask,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
-
-      auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta);
-      origin[D - 1] = base_ - gridDelta / 2.;
-      normal[D - 1] = -1.;
-      viennals::MakeGeometry<NumericType, D>(
-          maskAdd,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
-
-      viennals::BooleanOperation<NumericType, D>(
-          mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
-          .apply();
-
+      auto mask = this->makeMask(base_, maskHeight_);
       auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
       NumericType width = trenchWidth_;
       if (trenchTaperAngle_ > 0. && trenchDepth_ > 0.) {

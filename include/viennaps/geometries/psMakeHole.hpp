@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../geometries/psGeometryBase.hpp"
 #include "../geometries/psMakeTrench.hpp"
 #include "../psDomain.hpp"
 
@@ -22,12 +23,11 @@ using namespace viennacore;
 /// Additionally, the hole can serve as a mask, with the specified material only
 /// applied to the bottom of the hole, while the remainder adopts the mask
 /// material.
-template <class NumericType, int D> class MakeHole {
-  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
-  using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
-
-  psDomainType domain_ = nullptr;
+template <class NumericType, int D>
+class MakeHole : public GeometryBase<NumericType, D> {
+  using typename GeometryBase<NumericType, D>::lsDomainType;
+  using typename GeometryBase<NumericType, D>::psDomainType;
+  using GeometryBase<NumericType, D>::domain_;
 
   const NumericType holeRadius_;
   const NumericType holeDepth_;
@@ -46,17 +46,17 @@ public:
            NumericType holeTaperAngle = 0., NumericType maskHeight = 0.,
            NumericType maskTaperAngle = 0., HoleShape shape = HoleShape::Full,
            Material material = Material::Si)
-      : domain_(domain), holeRadius_(holeRadius), holeDepth_(holeDepth),
-        holeTaperAngle_(holeTaperAngle), maskHeight_(maskHeight),
-        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
-        shape_(shape) {}
+      : GeometryBase<NumericType, D>(domain), holeRadius_(holeRadius),
+        holeDepth_(holeDepth), holeTaperAngle_(holeTaperAngle),
+        maskHeight_(maskHeight), maskTaperAngle_(maskTaperAngle), base_(0.0),
+        material_(material), shape_(shape) {}
 
   MakeHole(psDomainType domain, NumericType gridDelta, NumericType xExtent,
            NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
            NumericType taperAngle = 0., NumericType baseHeight = 0.,
            bool periodicBoundary = false, bool makeMask = false,
            Material material = Material::Si, HoleShape shape = HoleShape::Full)
-      : domain_(domain), holeRadius_(holeRadius),
+      : GeometryBase<NumericType, D>(domain), holeRadius_(holeRadius),
         holeDepth_(makeMask ? 0 : holeDepth),
         holeTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? holeDepth : 0),
@@ -109,36 +109,10 @@ public:
 
     domain_->clear(); // does not clear setup
 
-    auto substrate = lsDomainType::New(bounds, boundaryCons, gridDelta);
-    NumericType normal[D] = {0.};
-    NumericType origin[D] = {0.};
-    normal[D - 1] = 1.;
-    origin[D - 1] = base_;
-    viennals::MakeGeometry<NumericType, D>(
-        substrate,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-        .apply();
+    auto substrate = this->makeSubstrate(base_);
 
     if (maskHeight_ > 0.) {
-      auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta);
-      normal[D - 1] = 1.;
-      origin[D - 1] = base_ + maskHeight_;
-      viennals::MakeGeometry<NumericType, D>(
-          mask,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
-
-      auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta);
-      origin[D - 1] = base_ - gridDelta / 2.;
-      normal[D - 1] = -1.;
-      viennals::MakeGeometry<NumericType, D>(
-          maskAdd,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
-
-      viennals::BooleanOperation<NumericType, D>(
-          mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
-          .apply();
+      auto mask = this->makeMask(base_, maskHeight_);
 
       auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
       NumericType radius = holeRadius_;
