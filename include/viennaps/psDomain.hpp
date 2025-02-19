@@ -40,13 +40,77 @@ public:
   using lsDomainsType = std::vector<lsDomainType>;
   using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
   using materialMapType = SmartPointer<MaterialMap>;
+  using BoundaryType = hrleBoundaryType;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
+
+  struct Setup {
+    NumericType gridDelta;
+    double bounds[2 * D];
+    BoundaryType boundaryCons[D];
+
+    Setup(NumericType gridDelta, NumericType xExtent, NumericType yExtent,
+          bool periodicBoundary = false)
+        : gridDelta(gridDelta) {
+      if (xExtent <= 0.0) {
+        Logger::getInstance()
+            .addWarning("Invalid 'x' extent for domain setup.")
+            .print();
+      }
+
+      bounds[0] = -xExtent / 2.;
+      bounds[1] = xExtent / 2.;
+
+      if constexpr (D == 3) {
+        if (yExtent <= 0.0) {
+          Logger::getInstance()
+              .addWarning("Invalid 'y' extent for domain setup.")
+              .print();
+        }
+        bounds[2] = -yExtent / 2.;
+        bounds[3] = yExtent / 2.;
+        bounds[4] = -gridDelta;
+        bounds[5] = gridDelta;
+      } else {
+        bounds[2] = -gridDelta;
+        bounds[3] = gridDelta;
+      }
+
+      for (int i = 0; i < D - 1; i++) {
+        if (periodicBoundary) {
+          boundaryCons[i] = BoundaryType::PERIODIC_BOUNDARY;
+        } else {
+          boundaryCons[i] = BoundaryType::REFLECTIVE_BOUNDARY;
+        }
+      }
+      boundaryCons[D - 1] = BoundaryType::INFINITE_BOUNDARY;
+    }
+
+    NumericType xExtent() const { return bounds[1] - bounds[0]; }
+
+    NumericType yExtent() const { return bounds[3] - bounds[2]; }
+
+    bool hasPeriodicBoundary() const {
+      return boundaryCons[0] == BoundaryType::PERIODIC_BOUNDARY ||
+             boundaryCons[1] == BoundaryType::PERIODIC_BOUNDARY;
+    }
+
+    void print() const {
+      std::cout << "Domain setup:" << std::endl;
+      std::cout << "\tGrid delta: " << gridDelta << std::endl;
+      std::cout << "\tX extent: " << xExtent() << std::endl;
+      if constexpr (D == 3)
+        std::cout << "\tY extent: " << yExtent() << std::endl;
+      std::cout << "\tPeriodic boundary: " << boolString(hasPeriodicBoundary())
+                << std::endl;
+    }
+  };
 
 private:
   lsDomainsType levelSets_;
   csDomainType cellSet_ = nullptr;
   materialMapType materialMap_ = nullptr;
+  Setup setup_;
 
 public:
   // Default constructor.
@@ -56,14 +120,45 @@ public:
   Domain(SmartPointer<Domain> domain) { deepCopy(domain); }
 
   // Constructor for domain with a single initial Level-Set.
-  Domain(lsDomainType levelSet) { levelSets_.push_back(levelSet); }
+  Domain(lsDomainType levelSet) {
+    setupFromLevelSet(levelSet);
+    levelSets_.push_back(levelSet);
+  }
 
   // Constructor for domain with multiple initial Level-Sets.
-  Domain(lsDomainsType levelSets) : levelSets_(levelSets) {}
+  Domain(lsDomainsType levelSets) : levelSets_(levelSets) {
+    setupFromLevelSet(levelSets.back());
+  }
+
+  // Sets up domain in with primary direction y in 2D and z in 3D
+  Domain(NumericType gridDelta, NumericType xExtent,
+         bool periodicBoundary = false)
+      : setup_(gridDelta, xExtent, 0.0, periodicBoundary) {
+    static_assert(D == 2, "Domain setup only valid for 2D.");
+  }
+
+  // Sets up domain in with primary direction y in 2D and z in 3D
+  // In 2D yExtent is ignored.
+  Domain(NumericType gridDelta, NumericType xExtent, NumericType yExtent = 0.0,
+         bool periodicBoundary = false)
+      : setup_(gridDelta, xExtent, yExtent, periodicBoundary) {}
+
+  Domain(Setup setup) : setup_(setup) {}
+
+  void setup(const Setup &setup) { setup_ = setup; }
+
+  void setup(const NumericType gridDelta, const NumericType xExtent,
+             const NumericType yExtent = 0,
+             const bool periodicBoundary = false) {
+    setup_ = Setup(gridDelta, xExtent, yExtent, periodicBoundary);
+  }
 
   // Create a deep copy of all Level-Sets and the Cell-Set from the passed
   // domain.
   void deepCopy(SmartPointer<Domain> domain) {
+
+    clear();
+    setup_ = domain->setup_;
 
     // Copy all Level-Sets.
     for (auto &ls : domain->levelSets_) {
@@ -262,9 +357,9 @@ public:
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
   auto &getGrid() const { return levelSets_.back()->getGrid(); }
 
-  auto getGridDelta() const {
-    return levelSets_.back()->getGrid().getGridDelta();
-  }
+  auto getGridDelta() const { return setup_.gridDelta; }
+
+  auto &getSetup() { return setup_; }
 
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
@@ -328,26 +423,9 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string fileName,
-                      double wrappingLayerEpsilon = 1e-2) const {
+  void saveVolumeMesh(std::string fileName) const {
     viennals::WriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(fileName);
-    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
-    for (auto &ls : levelSets_) {
-      visMesh.insertNextLevelSet(ls);
-    }
-    if (materialMap_)
-      visMesh.setMaterialMap(materialMap_->getMaterialMap());
-    visMesh.apply();
-  }
-
-  void saveHullMesh(std::string fileName,
-                    double wrappingLayerEpsilon = 1e-2) const {
-    viennals::WriteVisualizationMesh<NumericType, D> visMesh;
-    visMesh.setFileName(fileName);
-    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
-    visMesh.setExtractHullMesh(true);
-    visMesh.setExtractVolumeMesh(false);
     for (auto &ls : levelSets_) {
       visMesh.insertNextLevelSet(ls);
     }
@@ -376,6 +454,17 @@ public:
   }
 
 private:
+  void
+  setupFromLevelSet(SmartPointer<viennals::Domain<NumericType, D>> levelSet) {
+    auto &grid = levelSet->getGrid();
+    setup_.gridDelta = grid.getGridDelta();
+    for (int i = 0; i < D; i++) {
+      setup_.bounds[2 * i] = grid.getMinBounds(i) * setup_.gridDelta;
+      setup_.bounds[2 * i + 1] = grid.getMaxBounds(i) * setup_.gridDelta;
+      setup_.boundaryCons[i] = grid.getBoundaryConditions(i);
+    }
+  }
+
   void materialMapCheck() const {
     if (!materialMap_)
       return;
@@ -386,6 +475,10 @@ private:
                       "in domain.")
           .print();
     }
+  }
+
+  static inline std::string boolString(const int in) {
+    return in == 0 ? "false" : "true";
   }
 };
 

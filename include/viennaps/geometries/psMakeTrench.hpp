@@ -52,19 +52,8 @@ public:
 
   void apply() {
     pDomain_->clear();
-    double bounds[2 * D];
-    bounds[0] = -xExtent_ / 2.;
-    bounds[1] = xExtent_ / 2.;
-
-    if constexpr (D == 3) {
-      bounds[2] = -yExtent_ / 2.;
-      bounds[3] = yExtent_ / 2.;
-      bounds[4] = -gridDelta_;
-      bounds[5] = trenchDepth_ + gridDelta_;
-    } else {
-      bounds[2] = -gridDelta_;
-      bounds[3] = trenchDepth_ + gridDelta_;
-    }
+    pDomain_->setup(gridDelta_, xExtent_, yExtent_, periodicBoundary_);
+    auto bounds = pDomain_->getSetup().bounds;
 
     BoundaryEnum boundaryCons[D];
     for (int i = 0; i < D - 1; i++) {

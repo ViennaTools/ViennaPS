@@ -8,7 +8,7 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   // Parse the parameters
   ps::utils::Parameters params;
@@ -19,7 +19,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   ps::MakeTrench<NumericType, D>(
       geometry, params.get("gridDelta") /* grid delta */,
       params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
@@ -44,7 +45,7 @@ int main(int argc, char *argv[]) {
 
   geometry->saveHullMesh("initial");
 
-  process.apply();
+  // process.apply();
 
-  geometry->saveHullMesh("final");
+  // geometry->saveHullMesh("final");
 }
