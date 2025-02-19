@@ -262,6 +262,8 @@ class IBEParameters:
     minAngle: float
     n_l: float
     planeWaferRate: float
+    redepositionThreshold: float
+    redepositionRate: float
     sigmaEnergy: float
     thresholdEnergy: float
     tiltAngle: float

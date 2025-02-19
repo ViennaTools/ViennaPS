@@ -877,7 +877,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("inflectAngle", &IBEParameters<T>::inflectAngle)
       .def_readwrite("minAngle", &IBEParameters<T>::minAngle)
       .def_readwrite("tiltAngle", &IBEParameters<T>::tiltAngle)
-      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction);
+      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction)
+      .def_readwrite("redepositionThreshold",
+                     &IBEParameters<T>::redepositionThreshold)
+      .def_readwrite("redepositionRate", &IBEParameters<T>::redepositionRate);
 
   pybind11::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
       module, "IonBeamEtching", processModel)
@@ -961,9 +964,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<const Vec3D<T> &, T, T, const std::vector<Material> &,
                           bool>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
-           pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") =
-               std::vector<Material>{Material::Mask},
+           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"),
            pybind11::arg("calculateVisibility") = true)
       .def(pybind11::init<
                std::vector<typename DirectionalEtching<T, D>::RateSet>>(),
