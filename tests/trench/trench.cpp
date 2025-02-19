@@ -26,7 +26,8 @@ template <class NumericType, int D> void RunTest() {
   {
     auto domain =
         SmartPointer<Domain<NumericType, D>>::New(.2, 10., 10., false);
-    MakeTrench<NumericType, D>(domain, 3., 5., 10., 2., 0., Material::SiO2)
+    MakeTrench<NumericType, D>(domain, 3., 5., 10., 2., 0., true,
+                               Material::SiO2)
         .apply();
 
     VC_TEST_ASSERT(domain->getLevelSets().size() == 2);

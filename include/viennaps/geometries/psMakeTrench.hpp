@@ -37,12 +37,23 @@ template <class NumericType, int D> class MakeTrench {
 
 public:
   MakeTrench(psDomainType domain, NumericType trenchWidth,
-             NumericType trenchDepth, NumericType trenchTaperAngle,
-             NumericType maskHeight, NumericType maskTaperAngle,
-             Material material = Material::Si)
+             NumericType trenchDepth, NumericType trenchTaperAngle = 0,
+             NumericType maskHeight = 0, NumericType maskTaperAngle = 0,
+             bool halfTrench = false, Material material = Material::Si)
       : domain_(domain), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
         trenchTaperAngle_(trenchTaperAngle), maskHeight_(maskHeight),
-        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material) {}
+        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material) {
+    if (halfTrench) {
+      if (domain_->getSetup().hasPeriodicBoundary()) {
+        Logger::getInstance()
+            .addWarning("MakeTrench: Half trench cannot be created with "
+                        "periodic boundaries! Creating full trench.")
+            .print();
+      } else {
+        domain->getSetup().bounds_[0] = 0.0;
+      }
+    }
+  }
 
   MakeTrench(psDomainType domain, NumericType gridDelta, NumericType xExtent,
              NumericType yExtent, NumericType trenchWidth,
@@ -105,7 +116,8 @@ public:
       auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
       NumericType width = trenchWidth_;
       if (trenchTaperAngle_ > 0. && trenchDepth_ > 0.) {
-        width += 2 * std::tan(trenchTaperAngle_ * M_PI / 180.) * trenchDepth_;
+        width += 2 * std::tan(trenchTaperAngle_ * M_PI / 180.) *
+                 (trenchDepth_ + gridDelta);
       }
       if (maskTaperAngle_ > 0.) {
         getTaperedCutout(cutout, width, base_, maskHeight_, maskTaperAngle_);
