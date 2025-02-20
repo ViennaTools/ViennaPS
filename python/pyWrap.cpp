@@ -59,6 +59,7 @@
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psCF4O2Etching.hpp>
 #include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
@@ -584,15 +585,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Enum Material
   pybind11::enum_<Material>(module, "Material")
-      .value("Undefined", Material::None) // 1
+      .value("Undefined", Material::None) // -1
       .value("Mask", Material::Mask)
       .value("Si", Material::Si)
       .value("SiO2", Material::SiO2)
-      .value("Si3N4", Material::Si3N4) // 5
+      .value("Si3N4", Material::Si3N4) // 3
       .value("SiN", Material::SiN)
       .value("SiON", Material::SiON)
       .value("SiC", Material::SiC)
-      .value("SiGe", Material::SiGe)
+      .value("SiGe", Material::SiGe)   // 7
       .value("PolySi", Material::PolySi) // 10
       .value("GaN", Material::GaN)
       .value("W", Material::W)
@@ -758,6 +759,108 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setParameters", &SF6O2Etching<T, D>::setParameters)
       .def("getParameters", &SF6O2Etching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
+
+  // CF4O2 Parameters
+  pybind11::class_<CF4O2Parameters<T>::MaskType>(module, "CF4O2ParametersMask")
+  .def(pybind11::init<>())
+  .def_readwrite("rho", &CF4O2Parameters<T>::MaskType::rho)
+  .def_readwrite("A_sp", &CF4O2Parameters<T>::MaskType::A_sp)
+  .def_readwrite("B_sp", &CF4O2Parameters<T>::MaskType::B_sp)
+  .def_readwrite("Eth_sp", &CF4O2Parameters<T>::MaskType::Eth_sp);
+
+pybind11::class_<CF4O2Parameters<T>::SiType>(module, "CF4O2ParametersSi")
+  .def(pybind11::init<>())
+  .def_readwrite("rho", &CF4O2Parameters<T>::SiType::rho)
+  .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiType::k_sigma)
+  .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiType::beta_sigma)
+  .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiType::Eth_sp)
+  .def_readwrite("A_sp", &CF4O2Parameters<T>::SiType::A_sp)
+  .def_readwrite("B_sp", &CF4O2Parameters<T>::SiType::B_sp)
+  .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiType::theta_g_sp)
+  .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiType::Eth_ie)
+  .def_readwrite("A_ie", &CF4O2Parameters<T>::SiType::A_ie)
+  .def_readwrite("B_ie", &CF4O2Parameters<T>::SiType::B_ie)
+  .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiType::theta_g_ie);
+
+pybind11::class_<CF4O2Parameters<T>::SiGeType>(module, "CF4O2ParametersSiGe")
+  .def(pybind11::init<>())
+  .def_readwrite("x", &CF4O2Parameters<T>::SiGeType::x)
+  .def_readwrite("rho", &CF4O2Parameters<T>::SiGeType::rho)
+  .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiGeType::k_sigma)
+  .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiGeType::beta_sigma)
+  .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiGeType::Eth_sp)
+  .def_readwrite("A_sp", &CF4O2Parameters<T>::SiGeType::A_sp)
+  .def_readwrite("B_sp", &CF4O2Parameters<T>::SiGeType::B_sp)
+  .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiGeType::theta_g_sp)
+  .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiGeType::Eth_ie)
+  .def_readwrite("A_ie", &CF4O2Parameters<T>::SiGeType::A_ie)
+  .def_readwrite("B_ie", &CF4O2Parameters<T>::SiGeType::B_ie)
+  .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiGeType::theta_g_ie)
+  .def("k_sigma_SiGe", &CF4O2Parameters<T>::SiGeType::k_sigma_SiGe);
+
+pybind11::class_<CF4O2Parameters<T>::PassivationType>(
+  module, "CF4O2ParametersPassivation")
+  .def(pybind11::init<>())
+  .def_readwrite("Eth_O_ie", &CF4O2Parameters<T>::PassivationType::Eth_O_ie)
+  .def_readwrite("Eth_C_ie", &CF4O2Parameters<T>::PassivationType::Eth_C_ie)
+  .def_readwrite("A_O_ie", &CF4O2Parameters<T>::PassivationType::A_O_ie)
+  .def_readwrite("A_C_ie", &CF4O2Parameters<T>::PassivationType::A_C_ie);
+
+pybind11::class_<CF4O2Parameters<T>::IonType>(module, "CF4O2ParametersIons")
+  .def(pybind11::init<>())
+  .def_readwrite("meanEnergy", &CF4O2Parameters<T>::IonType::meanEnergy)
+  .def_readwrite("sigmaEnergy", &CF4O2Parameters<T>::IonType::sigmaEnergy)
+  .def_readwrite("exponent", &CF4O2Parameters<T>::IonType::exponent)
+  .def_readwrite("inflectAngle", &CF4O2Parameters<T>::IonType::inflectAngle)
+  .def_readwrite("n_l", &CF4O2Parameters<T>::IonType::n_l)
+  .def_readwrite("minAngle", &CF4O2Parameters<T>::IonType::minAngle);
+
+pybind11::class_<CF4O2Parameters<T>>(module, "CF4O2Parameters")
+  .def(pybind11::init<>())
+  .def_readwrite("ionFlux", &CF4O2Parameters<T>::ionFlux)
+  .def_readwrite("etchantFlux", &CF4O2Parameters<T>::etchantFlux)
+  .def_readwrite("oxygenFlux", &CF4O2Parameters<T>::oxygenFlux)
+  .def_readwrite("polymerFlux", &CF4O2Parameters<T>::polymerFlux)
+  .def_readwrite("etchStopDepth", &CF4O2Parameters<T>::etchStopDepth)
+  .def_readwrite("fluxIncludeSticking",
+                 &CF4O2Parameters<T>::fluxIncludeSticking)
+  .def_readwrite("gamma_F", &CF4O2Parameters<T>::gamma_F)
+  .def_readwrite("gamma_F_oxidized", &CF4O2Parameters<T>::gamma_F_oxidized)
+  .def_readwrite("gamma_O", &CF4O2Parameters<T>::gamma_O)
+  .def_readwrite("gamma_O_passivated", &CF4O2Parameters<T>::gamma_O_passivated)
+  .def_readwrite("gamma_C", &CF4O2Parameters<T>::gamma_C)
+  .def_readwrite("gamma_C_oxidized", &CF4O2Parameters<T>::gamma_C_oxidized)
+  .def_readwrite("Mask", &CF4O2Parameters<T>::Mask)
+  .def_readwrite("Si", &CF4O2Parameters<T>::Si)
+  .def_readwrite("SiGe", &CF4O2Parameters<T>::SiGe)
+  .def_readwrite("Passivation", &CF4O2Parameters<T>::Passivation)
+  .def_readwrite("Ions", &CF4O2Parameters<T>::Ions);
+
+// CF4O2 Etching
+pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
+  module, "CF4O2Etching", processModel)
+  .def(pybind11::init<>())
+  .def(pybind11::init(
+           &SmartPointer<CF4O2Etching<T, D>>::New<
+               const double /*ionFlux*/, const double /*etchantFlux*/,
+               const double /*oxygenFlux*/, const double /*polymerFlux*/,
+               const T /*meanIonEnergy*/, const T /*sigmaIonEnergy*/, 
+               const T /*ionExponent*/, const T /*oxySputterYield*/, 
+               const T /*polySputterYield*/, const T /*etchStopDepth*/>),
+       pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
+       pybind11::arg("oxygenFlux"), pybind11::arg("polymerFlux"),
+       pybind11::arg("meanIonEnergy") = 100.,
+       pybind11::arg("sigmaIonEnergy") = 10.,
+       pybind11::arg("ionExponent") = 100.,
+       pybind11::arg("oxySputterYield") = 3.,
+       pybind11::arg("polySputterYield") = 3.,
+       pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+  .def(pybind11::init(&SmartPointer<CF4O2Etching<T, D>>::New<
+                      const CF4O2Parameters<T> &>),
+       pybind11::arg("parameters"))
+  .def("setParameters", &CF4O2Etching<T, D>::setParameters)
+  .def("getParameters", &CF4O2Etching<T, D>::getParameters,
+       pybind11::return_value_policy::reference);
 
   // Fluorocarbon Parameters
   pybind11::class_<FluorocarbonParameters<T>::MaskType>(

@@ -8,6 +8,7 @@
 #include <models/psIsotropicProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psCF4O2Etching.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 
@@ -64,6 +65,17 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
     VC_TEST_ASSERT(model->getParticleTypes().size() == 3);
+  }
+
+  // CF4O2 etching
+  {
+    units::Time::getInstance().setUnit("s");
+    units::Length::getInstance().setUnit("nm");
+    auto model =
+        SmartPointer<CF4O2Etching<NumericType, D>>::New(1., 1., 1., 1., 1., 1.);
+    VC_TEST_ASSERT(model->getSurfaceModel());
+    VC_TEST_ASSERT(model->getVelocityField());
+    VC_TEST_ASSERT(model->getParticleTypes().size() == 4);
   }
 
   // single particle TEOS deposition

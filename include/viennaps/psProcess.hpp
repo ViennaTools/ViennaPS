@@ -386,6 +386,7 @@ public:
         rayTracer.setGeometry(points, normals, gridDelta);
         rayTracer.setMaterialIds(materialIds);
 
+        std::cout << "Initializing coverages" << std::endl;
         for (size_t iterations = 0; iterations < maxIterations; iterations++) {
           // We need additional signal handling when running the C++ code from
           // the

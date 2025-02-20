@@ -200,6 +200,20 @@ private:
                          utils::Item{"smoothFlux", params->smoothFlux},
                          utils::Item{"ionExponent", params->ionExponent},
                          utils::Item{"raysPerPoint", params->raysPerPoint});
+    } else if (model == "CF4O2Etching") {
+      params->processType = ProcessType::CF4O2ETCHING;
+      utils::AssignItems(config, utils::Item{"time", params->processTime},
+                         utils::Item{"ionFlux", params->ionFlux},
+                         utils::Item{"meanIonEnergy", params->ionEnergy},
+                         utils::Item{"sigmaIonEnergy", params->sigmaIonEnergy},
+                         utils::Item{"etchantFlux", params->etchantFlux},
+                         utils::Item{"oxygenFlux", params->oxygenFlux},
+                         utils::Item{"polymerFlux", params->polymerFlux},
+                         utils::Item{"A_O", params->A_O},
+                         utils::Item{"A_C", params->A_C},
+                         utils::Item{"smoothFlux", params->smoothFlux},
+                         utils::Item{"ionExponent", params->ionExponent},
+                         utils::Item{"raysPerPoint", params->raysPerPoint});
     } else if (model == "FluorocarbonEtching") {
       params->processType = ProcessType::FLUOROCARBONETCHING;
       utils::AssignItems(config, utils::Item{"time", params->processTime},

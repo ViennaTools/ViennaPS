@@ -14,6 +14,7 @@ enum class GeometryType { NONE, TRENCH, HOLE, PLANE, STACK, GDS, IMPORT };
 enum class ProcessType {
   NONE,
   SF6O2ETCHING,
+  CF4O2ETCHING,
   FLUOROCARBONETCHING,
   SINGLEPARTICLEPROCESS,
   TEOSDEPOSITION,
@@ -79,6 +80,7 @@ struct ApplicationParameters {
   // fluxes in in (1e15 atoms/cm³)
   NumericType etchantFlux = 1.8e3;
   NumericType oxygenFlux = 1.0e2;
+  NumericType polymerFlux = 1.0e2;
   NumericType ionFlux = 12.;
   NumericType ionEnergy = 100;     // eV
   NumericType sigmaIonEnergy = 10; // eV
@@ -128,6 +130,7 @@ struct ApplicationParameters {
     raysPerPoint = 3000;
     etchantFlux = 100;
     oxygenFlux = 100;
+    polymerFlux = 100;
     ionFlux = 100;
     ionEnergy = 100;
     ionExponent = 100.;

@@ -16,6 +16,7 @@
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psCF4O2Etching.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 
@@ -155,6 +156,28 @@ protected:
         processParams->oxygenFlux, processParams->ionEnergy,
         processParams->sigmaIonEnergy, processParams->ionExponent,
         processParams->A_O);
+
+    Process<NumericType, D> process;
+    process.setDomain(processGeometry);
+    process.setProcessModel(model);
+    process.setMaxCoverageInitIterations(10);
+    if (processParams->smoothFlux)
+      process.enableFluxSmoothing();
+    process.setNumberOfRaysPerPoint(processParams->raysPerPoint);
+    process.setProcessDuration(processParams->processTime);
+    process.setIntegrationScheme(params->integrationScheme);
+    process.apply();
+  }
+
+  virtual void
+  runCF4O2Etching(SmartPointer<Domain<NumericType, D>> processGeometry,
+                  SmartPointer<ApplicationParameters> processParams) {
+    auto model = SmartPointer<CF4O2Etching<NumericType, D>>::New(
+        processParams->ionFlux, processParams->etchantFlux,
+        processParams->oxygenFlux, processParams->polymerFlux,
+        processParams->ionEnergy, processParams->sigmaIonEnergy,
+        processParams->ionExponent, processParams->A_O, 
+        processParams->A_C);
 
     Process<NumericType, D> process;
     process.setDomain(processGeometry);
@@ -465,6 +488,21 @@ private:
                 << "\n\tA_O: " << params->A_O << "\n\tUsing "
                 << params->raysPerPoint << " rays per source grid point\n\n";
       runSF6O2Etching(geometry, params);
+      break;
+    }
+
+    case ProcessType::CF4O2ETCHING: {
+      std::cout << "CF4O2 etching\n\tTime: " << params->processTime
+                << "\n\tEtchant flux: " << params->etchantFlux
+                << "\n\tOxygen flux: " << params->oxygenFlux
+                << "\n\tPolymer flux: " << params->polymerFlux
+                << "\n\tIon flux: " << params->ionFlux
+                << "\n\tIon energy: " << params->ionEnergy
+                << "\n\tIon exponent: " << params->ionExponent
+                << "\n\tA_O: " << params->A_O << "\n\tUsing "
+                << "\n\tA_C: " << params->A_C << "\n\tUsing "
+                << params->raysPerPoint << " rays per source grid point\n\n";
+      runCF4O2Etching(geometry, params);
       break;
     }
 
