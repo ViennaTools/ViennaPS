@@ -18,12 +18,11 @@ using namespace viennacore;
 /// y direction in 2D. The plane is centered around the origin with the total
 /// specified extent and height. The plane can have a periodic boundary in the x
 /// and y (only 3D) direction.
-template <class NumericType, int D>
-class MakePlane : public GeometryFactory<NumericType, D> {
-  using typename GeometryFactory<NumericType, D>::lsDomainType;
-  using typename GeometryFactory<NumericType, D>::psDomainType;
-  using GeometryFactory<NumericType, D>::domain_;
-  using GeometryFactory<NumericType, D>::name_;
+template <class NumericType, int D> class MakePlane {
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+
+  psDomainType domain_;
+  GeometryFactory<NumericType, D> geometryFactory_;
 
   const NumericType baseHeight_;
   const Material material_;
@@ -33,14 +32,14 @@ public:
   // Adds a plane to an already existing geometry.
   MakePlane(psDomainType domain, NumericType baseHeight = 0.,
             Material material = Material::Si, bool addToExisting = false)
-      : GeometryFactory<NumericType, D>(domain, __func__),
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         baseHeight_(baseHeight), material_(material), add_(addToExisting) {}
 
   // Creates a new geometry with a plane.
   MakePlane(psDomainType domain, NumericType gridDelta, NumericType xExtent,
             NumericType yExtent, NumericType baseHeight,
             bool periodicBoundary = false, Material material = Material::Si)
-      : GeometryFactory<NumericType, D>(domain, __func__),
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         baseHeight_(baseHeight), material_(material), add_(false) {
     domain_->setup(gridDelta, xExtent, yExtent,
                    periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
@@ -51,8 +50,8 @@ public:
     if (add_) {
       if (!domain_->getLevelSets().back()) {
         Logger::getInstance()
-            .addWarning(name_ + ": Plane can only be added to already "
-                                "existing geometry.")
+            .addWarning("MakePlane: Plane can only be added to already "
+                        "existing geometry.")
             .print();
         return;
       }
@@ -61,7 +60,7 @@ public:
     }
 
     domain_->getSetup().check();
-    auto substrate = this->makeSubstrate(baseHeight_);
+    auto substrate = geometryFactory_.makeSubstrate(baseHeight_);
     domain_->insertNextLevelSetAsMaterial(substrate, material_);
   }
 };

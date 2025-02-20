@@ -16,21 +16,18 @@ using namespace viennacore;
 template <class NumericType, int D> class GeometryFactory {
 protected:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
-  using psDomainType = SmartPointer<Domain<NumericType, D>>;
 
-  psDomainType domain_ = nullptr;
+  const DomainSetup<NumericType, D> &setup_;
   const std::string name_;
-  const NumericType eps_ = 1e-4;
 
 public:
-  GeometryFactory(psDomainType domain,
+  GeometryFactory(const DomainSetup<NumericType, D> &domainSetup,
                   const std::string &name = "GeometryFactory")
-      : domain_(domain), name_(name) {}
+      : setup_(domainSetup), name_(name) {}
 
   lsDomainType makeSubstrate(NumericType base) {
-    assert(domain_->getSetup().isValid());
 
-    auto substrate = lsDomainType::New(domain_->getSetup().grid());
+    auto substrate = lsDomainType::New(setup_.grid());
 
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
@@ -50,9 +47,9 @@ public:
   }
 
   lsDomainType makeMask(NumericType base, NumericType height) {
-    assert(domain_->getSetup().isValid());
+    assert(setup_.isValid());
 
-    auto mask = lsDomainType::New(domain_->getSetup().grid());
+    auto mask = lsDomainType::New(setup_.grid());
 
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
@@ -64,7 +61,7 @@ public:
         SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    auto maskAdd = lsDomainType::New(domain_->getSetup().grid());
+    auto maskAdd = lsDomainType::New(setup_.grid());
     origin[D - 1] = base;
     normal[D - 1] = -1.;
     viennals::MakeGeometry<NumericType, D>(
@@ -86,9 +83,9 @@ public:
   lsDomainType makeCylinderStencil(std::array<NumericType, D> position,
                                    NumericType radius, NumericType height,
                                    NumericType angle) {
-    assert(domain_->getSetup().isValid());
+    assert(setup_.isValid());
 
-    auto cutout = lsDomainType::New(domain_->getSetup().grid());
+    auto cutout = lsDomainType::New(setup_.grid());
 
     NumericType normal[D] = {0.};
     normal[D - 1] = 1.;
@@ -119,9 +116,9 @@ public:
           .print();
     }
 
-    auto cutout = lsDomainType::New(domain_->getSetup().grid());
-    auto gridDelta = domain_->getSetup().gridDelta();
-    auto yExt = domain_->getSetup().yExtent() / 2 + gridDelta;
+    auto cutout = lsDomainType::New(setup_.grid());
+    auto gridDelta = setup_.gridDelta();
+    auto yExt = setup_.yExtent() / 2 + gridDelta;
 
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     const NumericType offSet = height * std::tan(angle * M_PI / 180.);

@@ -18,13 +18,12 @@ using namespace viennacore;
 /// stack can incorporate a top mask with a central hole of a specified radius
 /// or a trench with a designated width. This versatile functionality enables
 /// users to create diverse and customized structures for simulation scenarios.
-template <class NumericType, int D>
-class MakeStack : public GeometryFactory<NumericType, D> {
-  using typename GeometryFactory<NumericType, D>::lsDomainType;
-  using typename GeometryFactory<NumericType, D>::psDomainType;
-  using GeometryFactory<NumericType, D>::domain_;
-  using GeometryFactory<NumericType, D>::name_;
-  using GeometryFactory<NumericType, D>::eps_;
+template <class NumericType, int D> class MakeStack {
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+
+  psDomainType domain_;
+  GeometryFactory<NumericType, D> geometryFactory_;
+  static constexpr NumericType eps_ = 1e-4;
 
   const int numLayers_;
   const NumericType layerHeight_;
@@ -42,7 +41,7 @@ public:
             NumericType trenchWidth, NumericType maskHeight,
             NumericType taperAngle, bool halfStack = false,
             Material maskMaterial = Material::Mask)
-      : GeometryFactory<NumericType, D>(domain, __func__),
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         numLayers_(numLayers), layerHeight_(layerHeight),
         substrateHeight_(substrateHeight), holeRadius_(holeRadius),
         trenchWidth_(trenchWidth), maskHeight_(maskHeight),
@@ -56,7 +55,7 @@ public:
             NumericType substrateHeight, NumericType holeRadius,
             NumericType trenchWidth, NumericType maskHeight,
             bool periodicBoundary = false)
-      : GeometryFactory<NumericType, D>(domain, __func__),
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         numLayers_(numLayers), layerHeight_(layerHeight),
         substrateHeight_(substrateHeight), holeRadius_(holeRadius),
         trenchWidth_(trenchWidth), maskHeight_(maskHeight) {
@@ -71,14 +70,14 @@ public:
 
     if (maskHeight_ > 0.) {
       NumericType maskBase = substrateHeight_ + layerHeight_ * numLayers_;
-      auto mask = this->makeMask(maskBase - eps_, maskHeight_);
+      auto mask = geometryFactory_.makeMask(maskBase - eps_, maskHeight_);
       domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
 
       std::array<NumericType, D> position = {0.};
       position[D - 1] = maskBase - 2 * eps_;
 
       if (holeRadius_ > 0. && D == 3) {
-        auto cutout = this->makeCylinderStencil(
+        auto cutout = geometryFactory_.makeCylinderStencil(
             position, holeRadius_, maskHeight_ + 3 * eps_, -taperAngle_);
         domain_->applyBooleanOperation(
             cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
@@ -89,11 +88,12 @@ public:
         }
         if (trenchWidth == 0.) {
           Logger::getInstance()
-              .addError(name_ + ": Trench width or hole radius must be greater "
-                                "0 to create mask.")
+              .addError(
+                  "MakeStack: Trench width or hole radius must be greater "
+                  "0 to create mask.")
               .print();
         }
-        auto cutout = this->makeBoxStencil(
+        auto cutout = geometryFactory_.makeBoxStencil(
             position, trenchWidth, maskHeight_ + 3 * eps_, -taperAngle_);
         domain_->applyBooleanOperation(
             cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
@@ -101,13 +101,13 @@ public:
     }
 
     // Silicon substrate
-    auto substrate = this->makeSubstrate(substrateHeight_);
+    auto substrate = geometryFactory_.makeSubstrate(substrateHeight_);
     domain_->insertNextLevelSetAsMaterial(substrate, Material::Si);
 
     // Si3N4/SiO2 layers
     NumericType current = substrateHeight_ + layerHeight_;
     for (int i = 0; i < numLayers_; ++i) {
-      auto ls = this->makeSubstrate(current);
+      auto ls = geometryFactory_.makeSubstrate(current);
       if (i % 2 == 0) {
         domain_->insertNextLevelSetAsMaterial(ls, Material::SiO2);
       } else {
@@ -121,7 +121,7 @@ public:
       position[D - 1] = substrateHeight_;
 
       if (holeRadius_ > 0. && D == 3) {
-        auto cutout = this->makeCylinderStencil(
+        auto cutout = geometryFactory_.makeCylinderStencil(
             position, holeRadius_, numLayers_ * layerHeight_ + eps_,
             -taperAngle_);
         domain_->applyBooleanOperation(
@@ -131,9 +131,9 @@ public:
         if (trenchWidth == 0.) {
           trenchWidth = 2 * holeRadius_;
         }
-        auto cutout = this->makeBoxStencil(position, trenchWidth,
-                                           numLayers_ * layerHeight_ + eps_,
-                                           -taperAngle_);
+        auto cutout = geometryFactory_.makeBoxStencil(
+            position, trenchWidth, numLayers_ * layerHeight_ + eps_,
+            -taperAngle_);
         domain_->applyBooleanOperation(
             cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
       }

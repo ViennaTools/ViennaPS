@@ -23,13 +23,12 @@ using namespace viennacore;
 /// Additionally, the hole can serve as a mask, with the specified material only
 /// applied to the bottom of the hole, while the remainder adopts the mask
 /// material.
-template <class NumericType, int D>
-class MakeHole : public GeometryFactory<NumericType, D> {
-  using typename GeometryFactory<NumericType, D>::lsDomainType;
-  using typename GeometryFactory<NumericType, D>::psDomainType;
-  using GeometryFactory<NumericType, D>::domain_;
-  using GeometryFactory<NumericType, D>::name_;
-  using GeometryFactory<NumericType, D>::eps_;
+template <class NumericType, int D> class MakeHole {
+  using psDomainType = SmartPointer<Domain<NumericType, D>>;
+
+  psDomainType domain_;
+  GeometryFactory<NumericType, D> geometryFactory_;
+  static constexpr NumericType eps_ = 1e-4;
 
   const NumericType holeRadius_;
   const NumericType holeDepth_;
@@ -50,7 +49,7 @@ public:
            NumericType maskTaperAngle = 0., HoleShape shape = HoleShape::Full,
            Material material = Material::Si,
            Material maskMaterial = Material::Mask)
-      : GeometryFactory<NumericType, D>(domain, __func__),
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         holeRadius_(holeRadius), holeDepth_(holeDepth),
         holeTaperAngle_(holeTaperAngle), maskHeight_(maskHeight),
         maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
@@ -61,7 +60,7 @@ public:
            NumericType taperAngle = 0., NumericType baseHeight = 0.,
            bool periodicBoundary = false, bool makeMask = false,
            Material material = Material::Si, HoleShape shape = HoleShape::Full)
-      : GeometryFactory<NumericType, D>(domain, __func__),
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         holeRadius_(holeRadius), holeDepth_(makeMask ? 0 : holeDepth),
         holeTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? holeDepth : 0),
@@ -75,8 +74,8 @@ public:
   void apply() {
     if constexpr (D != 3) {
       Logger::getInstance()
-          .addWarning(name_ + ": Hole geometry can only be created in 3D! "
-                              "Falling back to trench geometry.")
+          .addWarning("MakeHole: Hole geometry can only be created in 3D! "
+                      "Falling back to trench geometry.")
           .print();
       bool halfTrench =
           shape_ == HoleShape::Half || shape_ == HoleShape::Quarter;
@@ -90,13 +89,13 @@ public:
     domain_->clear(); // this does not clear the setup
     domain_->getSetup().check();
 
-    auto setup = domain_->getSetup();
+    auto &setup = domain_->getSetup();
 
     if (setup.hasPeriodicBoundary() &&
         (shape_ == HoleShape::Half || shape_ == HoleShape::Quarter)) {
       Logger::getInstance()
-          .addWarning(name_ + ": 'Half' or 'Quarter' shapes do not support "
-                              "periodic boundaries! Creating full hole.")
+          .addWarning("MakeHole: 'Half' or 'Quarter' shapes do not support "
+                      "periodic boundaries! Creating full hole.")
           .print();
       shape_ = HoleShape::Full;
     }
@@ -108,14 +107,14 @@ public:
       setup.halveYAxis();
     }
 
-    auto substrate = this->makeSubstrate(base_);
+    auto substrate = geometryFactory_.makeSubstrate(base_);
 
     if (maskHeight_ > 0.) {
-      auto mask = this->makeMask(base_ - eps_, maskHeight_);
+      auto mask = geometryFactory_.makeMask(base_ - eps_, maskHeight_);
       domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
       std::array<NumericType, D> position = {0.};
       position[D - 1] = base_ - 2 * eps_;
-      auto cutout = this->makeCylinderStencil(
+      auto cutout = geometryFactory_.makeCylinderStencil(
           position, holeRadius_, maskHeight_ + 3 * eps_, maskTaperAngle_);
       domain_->applyBooleanOperation(
           cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
@@ -126,8 +125,8 @@ public:
     if (holeDepth_ > 0.) {
       std::array<NumericType, D> position = {0.};
       position[D - 1] = base_;
-      auto cutout = this->makeCylinderStencil(position, holeRadius_,
-                                              -holeDepth_, holeTaperAngle_);
+      auto cutout = geometryFactory_.makeCylinderStencil(
+          position, holeRadius_, -holeDepth_, holeTaperAngle_);
       domain_->applyBooleanOperation(cutout,
                                      viennals::BooleanOperationEnum::INTERSECT);
     }
