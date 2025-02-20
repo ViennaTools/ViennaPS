@@ -1061,8 +1061,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Geometry Base
   pybind11::class_<GeometryFactory<T, D>>(module, "GeometryFactory")
-      .def(pybind11::init<DomainType, const std::string &>(),
-           pybind11::arg("domain"), pybind11::arg("name") = "GeometryFactory")
+      .def(pybind11::init<const DomainSetup<T, D> &, const std::string &>(),
+           pybind11::arg("domainSetup"),
+           pybind11::arg("name") = "GeometryFactory")
       .def("makeMask", &GeometryFactory<T, D>::makeMask)
       .def("makeSubstrate", &GeometryFactory<T, D>::makeSubstrate)
       .def("makeCylinderStencil", &GeometryFactory<T, D>::makeCylinderStencil)
