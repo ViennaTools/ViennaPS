@@ -50,7 +50,7 @@ public:
         maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
         maskMaterial_(maskMaterial) {
     if (halfTrench)
-      this->halfXAxis();
+      domain_->getSetup().halveXAxis();
   }
 
   MakeTrench(psDomainType domain, NumericType gridDelta, NumericType xExtent,
@@ -64,18 +64,15 @@ public:
         maskHeight_(makeMask ? trenchDepth : 0),
         maskTaperAngle_(makeMask ? taperAngle : 0), base_(base),
         material_(material) {
-    domain_->setup(gridDelta, xExtent, yExtent, periodicBoundary);
+    domain_->setup(gridDelta, xExtent, yExtent,
+                   periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
+                                    : BoundaryType::REFLECTIVE_BOUNDARY);
   }
 
   void apply() {
     domain_->clear(); // this does not clear the setup
     if (!this->setupCheck())
       return;
-
-    auto setup = domain_->getSetup();
-    auto bounds = setup.bounds_;
-    auto boundaryCons = setup.boundaryCons_;
-    auto gridDelta = setup.gridDelta_;
 
     if (maskHeight_ > 0.) {
       auto mask = this->makeMask(base_ - eps_, maskHeight_);

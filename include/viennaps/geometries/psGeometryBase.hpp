@@ -23,16 +23,13 @@ protected:
   const NumericType eps_ = 1e-4;
 
 public:
-  GeometryBase(psDomainType domain, const std::string &name)
+  GeometryBase(psDomainType domain, const std::string &name = "GeometryBase")
       : domain_(domain), name_(name) {}
 
   lsDomainType makeSubstrate(NumericType base) {
-    auto gridDelta = domain_->getSetup().gridDelta_;
-    auto bounds = domain_->getSetup().bounds_;
-    auto boundaryCons = domain_->getSetup().boundaryCons_;
-    assert(gridDelta > 0.);
+    assert(domain_->getSetup().isValid());
 
-    auto substrate = lsDomainType::New(bounds, boundaryCons, gridDelta);
+    auto substrate = lsDomainType::New(domain_->getSetup().grid());
 
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
@@ -52,12 +49,9 @@ public:
   }
 
   lsDomainType makeMask(NumericType base, NumericType height) {
-    auto gridDelta = domain_->getSetup().gridDelta_;
-    auto bounds = domain_->getSetup().bounds_;
-    auto boundaryCons = domain_->getSetup().boundaryCons_;
-    assert(gridDelta > 0.);
+    assert(domain_->getSetup().isValid());
 
-    auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta);
+    auto mask = lsDomainType::New(domain_->getSetup().grid());
 
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
@@ -69,7 +63,7 @@ public:
         SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
         .apply();
 
-    auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta);
+    auto maskAdd = lsDomainType::New(domain_->getSetup().grid());
     origin[D - 1] = base;
     normal[D - 1] = -1.;
     viennals::MakeGeometry<NumericType, D>(
@@ -88,49 +82,12 @@ public:
     return mask;
   }
 
-  bool setupCheck() {
-    auto setup = domain_->getSetup();
-    if (!setup.isValid()) {
-      Logger::getInstance()
-          .addWarning(name_ + ": Domain setup is not correctly initialized.")
-          .print();
-      setup.print();
-      return false;
-    }
-    return true;
-  }
-
-  void halfXAxis() {
-    if (domain_->getSetup().hasPeriodicBoundary()) {
-      Logger::getInstance()
-          .addWarning(name_ + ": Half geometry cannot be created with "
-                              "periodic boundaries!")
-          .print();
-    } else {
-      domain_->getSetup().bounds_[0] = 0.0;
-    }
-  }
-
-  void halfYAxis() {
-    if (domain_->getSetup().hasPeriodicBoundary()) {
-      Logger::getInstance()
-          .addWarning(name_ + ": Half geometry cannot be created with "
-                              "periodic boundaries!")
-          .print();
-    } else {
-      domain_->getSetup().bounds_[2] = 0.0;
-    }
-  }
-
   lsDomainType makeCylinderStencil(std::array<NumericType, D> position,
                                    NumericType radius, NumericType height,
                                    NumericType angle) {
-    auto gridDelta = domain_->getSetup().gridDelta_;
-    auto bounds = domain_->getSetup().bounds_;
-    auto boundaryCons = domain_->getSetup().boundaryCons_;
-    assert(gridDelta > 0.);
+    assert(domain_->getSetup().isValid());
 
-    auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
+    auto cutout = lsDomainType::New(domain_->getSetup().grid());
 
     NumericType normal[D] = {0.};
     normal[D - 1] = 1.;
@@ -161,12 +118,10 @@ public:
           .print();
     }
 
-    auto gridDelta = domain_->getSetup().gridDelta_;
-    auto bounds = domain_->getSetup().bounds_;
-    auto boundaryCons = domain_->getSetup().boundaryCons_;
+    auto gridDelta = domain_->getSetup().gridDelta();
     assert(gridDelta > 0.);
 
-    auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
+    auto cutout = lsDomainType::New(domain_->getSetup().grid());
     auto yExt = domain_->getSetup().yExtent() / 2 + gridDelta;
 
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
@@ -248,6 +203,19 @@ public:
     }
 
     return cutout;
+  }
+
+protected:
+  bool setupCheck() {
+    auto setup = domain_->getSetup();
+    if (!setup.isValid()) {
+      Logger::getInstance()
+          .addWarning(name_ + ": Domain setup is not correctly initialized.")
+          .print();
+      setup.print();
+      return false;
+    }
+    return true;
   }
 
 private:

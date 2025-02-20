@@ -42,7 +42,9 @@ public:
             bool periodicBoundary = false, Material material = Material::Si)
       : GeometryBase<NumericType, D>(domain, __func__), baseHeight_(baseHeight),
         material_(material), add_(false) {
-    domain_->setup(gridDelta, xExtent, yExtent, periodicBoundary);
+    domain_->setup(gridDelta, xExtent, yExtent,
+                   periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
+                                    : BoundaryType::REFLECTIVE_BOUNDARY);
   }
 
   void apply() {

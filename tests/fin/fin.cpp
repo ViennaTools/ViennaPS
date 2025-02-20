@@ -22,7 +22,7 @@ template <class NumericType, int D> void RunTest() {
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
 
-  domain->setup(.1, 10, 10, false);
+  domain->setup(.1, 10, 10, BoundaryType::REFLECTIVE_BOUNDARY);
   MakeFin<NumericType, D>(domain, 5., 5., 5., 2., 0., true, Material::Si)
       .apply();
 
@@ -32,6 +32,7 @@ template <class NumericType, int D> void RunTest() {
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
 
+  domain->setup(.1, 10, 10, BoundaryType::PERIODIC_BOUNDARY);
   MakeFin<NumericType, D>(domain, 5., 5., -10., 5., 10., false, Material::Si,
                           Material::Si)
       .apply();

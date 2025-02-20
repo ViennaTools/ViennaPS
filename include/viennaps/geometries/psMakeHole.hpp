@@ -66,7 +66,9 @@ public:
         maskHeight_(makeMask ? holeDepth : 0),
         maskTaperAngle_(makeMask ? taperAngle : 0), base_(baseHeight),
         material_(material), shape_(shape) {
-    domain_->setup(gridDelta, xExtent, yExtent, periodicBoundary);
+    domain_->setup(gridDelta, xExtent, yExtent,
+                   periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
+                                    : BoundaryType::REFLECTIVE_BOUNDARY);
   }
 
   void apply() {
@@ -88,10 +90,7 @@ public:
     if (!this->setupCheck())
       return;
 
-    auto &setup = domain_->getSetup();
-    auto bounds = setup.bounds_;
-    auto boundaryCons = setup.boundaryCons_;
-    auto gridDelta = setup.gridDelta_;
+    auto setup = domain_->getSetup();
 
     if (setup.hasPeriodicBoundary() &&
         (shape_ == HoleShape::Half || shape_ == HoleShape::Quarter)) {
@@ -103,10 +102,10 @@ public:
     }
 
     if (shape_ == HoleShape::Half) {
-      this->halfXAxis();
+      setup.halveXAxis();
     } else if (shape_ == HoleShape::Quarter) {
-      this->halfXAxis();
-      this->halfYAxis();
+      setup.halveXAxis();
+      setup.halveYAxis();
     }
 
     auto substrate = this->makeSubstrate(base_);

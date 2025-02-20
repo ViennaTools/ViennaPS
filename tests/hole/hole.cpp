@@ -47,7 +47,7 @@ template <class NumericType, int D> void RunTest() {
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
   // Logger::getInstance().setLogLevel(LogLevel::DEBUG);
 
-  domain->setup(.1, 10., 10., false);
+  domain->setup(.1, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
   MakeHole<NumericType, D>(domain, 2.5, 3., 10, 3., 10., HoleShape::Quarter,
                            Material::Si)
       .apply();

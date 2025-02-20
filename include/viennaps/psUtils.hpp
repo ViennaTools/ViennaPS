@@ -271,5 +271,9 @@ template <int D>
   return viennaray::BoundaryCondition::IGNORE;
 }
 
+inline std::string boolString(const int in) {
+  return in == 0 ? "false" : "true";
+}
+
 }; // namespace utils
 } // namespace viennaps

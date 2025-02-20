@@ -26,8 +26,8 @@ template <class NumericType, int D> void RunTest() {
   {
     // Logger::getInstance().setLogLevel(LogLevel::DEBUG);
 
-    auto domain =
-        SmartPointer<Domain<NumericType, D>>::New(.2, 10., 10., false);
+    auto domain = SmartPointer<Domain<NumericType, D>>::New(
+        .2, 10., 10., BoundaryType::PERIODIC_BOUNDARY);
     MakeTrench<NumericType, D>(domain, 5., 15., 40., 5., -10., false,
                                Material::SiO2)
         .apply();
@@ -43,4 +43,4 @@ template <class NumericType, int D> void RunTest() {
 
 } // namespace viennacore
 
-int main() { viennacore::RunTest<double, 3>(); }
+int main() { VC_RUN_ALL_TESTS }
