@@ -50,7 +50,7 @@ public:
         yExtent_(yExtent), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
         periodicBoundary_(periodicBoundary), makeMask_(makeMask), 
-        material_(material), halfTrench_(halfTrench), {}
+        material_(material), halfTrench_(halfTrench) {}
 
   void apply() {
     pDomain_->clear();
