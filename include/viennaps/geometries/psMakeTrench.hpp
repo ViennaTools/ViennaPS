@@ -70,10 +70,10 @@ public:
 
     double bounds[2 * D];
     bounds[0] = -xExtent_ / 2.;
-    if (halfTrench_) { 
-      bounds[1] = 0; 
-    } else { 
-      bounds[1] = xExtent_ / 2.; 
+    if (halfTrench_) {
+      bounds[1] = 0;
+    } else {
+      bounds[1] = xExtent_ / 2.;
     }
 
     if constexpr (D == 3) {
@@ -137,11 +137,11 @@ public:
           mesh->insertNextNode(node);
         }
         mesh->nodes[0][0] = -trenchWidth_ / 2.;
-        if (halfTrench_) { 
-          mesh->nodes[1][0] = 0; 
+        if (halfTrench_) {
+          mesh->nodes[1][0] = 0;
           mesh->nodes[2][0] = 0 + offset;
-        } else { 
-          mesh->nodes[1][0] = trenchWidth_ / 2.; 
+        } else {
+          mesh->nodes[1][0] = trenchWidth_ / 2.;
           mesh->nodes[2][0] = trenchWidth_ / 2. + offset;
         }
         mesh->nodes[3][0] = -trenchWidth_ / 2. - offset;
@@ -218,10 +218,10 @@ public:
       NumericType maxPoint[D];
 
       minPoint[0] = -trenchWidth_ / 2;
-      if (halfTrench_) { 
-        maxPoint[0] = 0; 
-      } else { 
-        maxPoint[0] = trenchWidth_ / 2; 
+      if (halfTrench_) {
+        maxPoint[0] = 0;
+      } else {
+        maxPoint[0] = trenchWidth_ / 2;
       }
 
       if constexpr (D == 3) {
