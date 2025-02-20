@@ -49,7 +49,7 @@ public:
       : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
         yExtent_(yExtent), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
         taperAngle_(taperAngle), baseHeight_(baseHeight),
-        periodicBoundary_(periodicBoundary), makeMask_(makeMask), 
+        periodicBoundary_(periodicBoundary), makeMask_(makeMask),
         material_(material), halfTrench_(halfTrench) {}
 
   void apply() {
