@@ -100,15 +100,6 @@ public:
            (D == 2 || (D == 3 && yExtent() > 0.0));
   }
 
-  void check() const {
-    if (!isValid()) {
-      print();
-      Logger::getInstance()
-          .addError("Domain setup is not correctly initialized.")
-          .print();
-    }
-  }
-
   void print() const {
     std::cout << "Domain setup:" << std::endl;
     std::cout << "\tGrid delta: " << gridDelta_ << std::endl;
@@ -163,6 +154,15 @@ public:
       boundaryCons_[i] = grid.getBoundaryConditions(i);
     }
     grid_ = grid;
+  }
+
+  void check() const {
+    if (!isValid()) {
+      print();
+      Logger::getInstance()
+          .addError("Domain setup is not correctly initialized.")
+          .print();
+    }
   }
 };
 

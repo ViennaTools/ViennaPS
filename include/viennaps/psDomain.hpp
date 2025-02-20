@@ -301,9 +301,9 @@ public:
   auto &getCellSet() const { return cellSet_; }
 
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
-  auto &getGrid() const { return levelSets_.back()->getGrid(); }
+  auto &getGrid() const { return setup_.grid(); }
 
-  auto getGridDelta() const { return setup_.gridDelta_; }
+  auto getGridDelta() const { return setup_.gridDelta(); }
 
   auto &getSetup() { return setup_; }
 
