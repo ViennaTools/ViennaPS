@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
-#include "psGeometryBase.hpp"
+#include "psGeometryFactory.hpp"
 #include "psMakeTrench.hpp"
 
 #include <lsBooleanOperation.hpp>
@@ -24,12 +24,12 @@ using namespace viennacore;
 /// applied to the bottom of the hole, while the remainder adopts the mask
 /// material.
 template <class NumericType, int D>
-class MakeHole : public GeometryBase<NumericType, D> {
-  using typename GeometryBase<NumericType, D>::lsDomainType;
-  using typename GeometryBase<NumericType, D>::psDomainType;
-  using GeometryBase<NumericType, D>::domain_;
-  using GeometryBase<NumericType, D>::name_;
-  using GeometryBase<NumericType, D>::eps_;
+class MakeHole : public GeometryFactory<NumericType, D> {
+  using typename GeometryFactory<NumericType, D>::lsDomainType;
+  using typename GeometryFactory<NumericType, D>::psDomainType;
+  using GeometryFactory<NumericType, D>::domain_;
+  using GeometryFactory<NumericType, D>::name_;
+  using GeometryFactory<NumericType, D>::eps_;
 
   const NumericType holeRadius_;
   const NumericType holeDepth_;
@@ -50,18 +50,19 @@ public:
            NumericType maskTaperAngle = 0., HoleShape shape = HoleShape::Full,
            Material material = Material::Si,
            Material maskMaterial = Material::Mask)
-      : GeometryBase<NumericType, D>(domain, __func__), holeRadius_(holeRadius),
-        holeDepth_(holeDepth), holeTaperAngle_(holeTaperAngle),
-        maskHeight_(maskHeight), maskTaperAngle_(maskTaperAngle), base_(0.0),
-        material_(material), shape_(shape), maskMaterial_(maskMaterial) {}
+      : GeometryFactory<NumericType, D>(domain, __func__),
+        holeRadius_(holeRadius), holeDepth_(holeDepth),
+        holeTaperAngle_(holeTaperAngle), maskHeight_(maskHeight),
+        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
+        shape_(shape), maskMaterial_(maskMaterial) {}
 
   MakeHole(psDomainType domain, NumericType gridDelta, NumericType xExtent,
            NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
            NumericType taperAngle = 0., NumericType baseHeight = 0.,
            bool periodicBoundary = false, bool makeMask = false,
            Material material = Material::Si, HoleShape shape = HoleShape::Full)
-      : GeometryBase<NumericType, D>(domain, __func__), holeRadius_(holeRadius),
-        holeDepth_(makeMask ? 0 : holeDepth),
+      : GeometryFactory<NumericType, D>(domain, __func__),
+        holeRadius_(holeRadius), holeDepth_(makeMask ? 0 : holeDepth),
         holeTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? holeDepth : 0),
         maskTaperAngle_(makeMask ? taperAngle : 0), base_(baseHeight),

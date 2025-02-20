@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
-#include "psGeometryBase.hpp"
+#include "psGeometryFactory.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
@@ -19,12 +19,12 @@ using namespace viennacore;
 /// or a trench with a designated width. This versatile functionality enables
 /// users to create diverse and customized structures for simulation scenarios.
 template <class NumericType, int D>
-class MakeStack : public GeometryBase<NumericType, D> {
-  using typename GeometryBase<NumericType, D>::lsDomainType;
-  using typename GeometryBase<NumericType, D>::psDomainType;
-  using GeometryBase<NumericType, D>::domain_;
-  using GeometryBase<NumericType, D>::name_;
-  using GeometryBase<NumericType, D>::eps_;
+class MakeStack : public GeometryFactory<NumericType, D> {
+  using typename GeometryFactory<NumericType, D>::lsDomainType;
+  using typename GeometryFactory<NumericType, D>::psDomainType;
+  using GeometryFactory<NumericType, D>::domain_;
+  using GeometryFactory<NumericType, D>::name_;
+  using GeometryFactory<NumericType, D>::eps_;
 
   const int numLayers_;
   const NumericType layerHeight_;
@@ -42,11 +42,11 @@ public:
             NumericType trenchWidth, NumericType maskHeight,
             NumericType taperAngle, bool halfStack = false,
             Material maskMaterial = Material::Mask)
-      : GeometryBase<NumericType, D>(domain, __func__), numLayers_(numLayers),
-        layerHeight_(layerHeight), substrateHeight_(substrateHeight),
-        holeRadius_(holeRadius), trenchWidth_(trenchWidth),
-        maskHeight_(maskHeight), taperAngle_(taperAngle),
-        maskMaterial_(maskMaterial) {
+      : GeometryFactory<NumericType, D>(domain, __func__),
+        numLayers_(numLayers), layerHeight_(layerHeight),
+        substrateHeight_(substrateHeight), holeRadius_(holeRadius),
+        trenchWidth_(trenchWidth), maskHeight_(maskHeight),
+        taperAngle_(taperAngle), maskMaterial_(maskMaterial) {
     if (halfStack)
       domain_->getSetup().halveXAxis();
   }
@@ -56,10 +56,10 @@ public:
             NumericType substrateHeight, NumericType holeRadius,
             NumericType trenchWidth, NumericType maskHeight,
             bool periodicBoundary = false)
-      : GeometryBase<NumericType, D>(domain, __func__), numLayers_(numLayers),
-        layerHeight_(layerHeight), substrateHeight_(substrateHeight),
-        holeRadius_(holeRadius), trenchWidth_(trenchWidth),
-        maskHeight_(maskHeight) {
+      : GeometryFactory<NumericType, D>(domain, __func__),
+        numLayers_(numLayers), layerHeight_(layerHeight),
+        substrateHeight_(substrateHeight), holeRadius_(holeRadius),
+        trenchWidth_(trenchWidth), maskHeight_(maskHeight) {
     domain_->setup(gridDelta, xExtent, yExtent,
                    periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
                                     : BoundaryType::REFLECTIVE_BOUNDARY);
@@ -93,7 +93,7 @@ public:
                                 "0 to create mask.")
               .print();
         }
-        auto cutout = this->makeTrenchStencil(
+        auto cutout = this->makeBoxStencil(
             position, trenchWidth, maskHeight_ + 3 * eps_, -taperAngle_);
         domain_->applyBooleanOperation(
             cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
@@ -131,9 +131,9 @@ public:
         if (trenchWidth == 0.) {
           trenchWidth = 2 * holeRadius_;
         }
-        auto cutout = this->makeTrenchStencil(position, trenchWidth,
-                                              numLayers_ * layerHeight_ + eps_,
-                                              -taperAngle_);
+        auto cutout = this->makeBoxStencil(position, trenchWidth,
+                                           numLayers_ * layerHeight_ + eps_,
+                                           -taperAngle_);
         domain_->applyBooleanOperation(
             cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
       }

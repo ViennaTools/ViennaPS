@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
-#include "psGeometryBase.hpp"
+#include "psGeometryFactory.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsFromSurfaceMesh.hpp>
@@ -20,12 +20,12 @@ using namespace viennacore;
 /// with the specified material exclusively applied to the bottom of the fin,
 /// while the upper portion adopts the mask material.
 template <class NumericType, int D>
-class MakeFin : public GeometryBase<NumericType, D> {
-  using typename GeometryBase<NumericType, D>::lsDomainType;
-  using typename GeometryBase<NumericType, D>::psDomainType;
-  using GeometryBase<NumericType, D>::domain_;
-  using GeometryBase<NumericType, D>::name_;
-  using GeometryBase<NumericType, D>::eps_;
+class MakeFin : public GeometryFactory<NumericType, D> {
+  using typename GeometryFactory<NumericType, D>::lsDomainType;
+  using typename GeometryFactory<NumericType, D>::psDomainType;
+  using GeometryFactory<NumericType, D>::domain_;
+  using GeometryFactory<NumericType, D>::name_;
+  using GeometryFactory<NumericType, D>::eps_;
 
   const NumericType finWidth_;
   const NumericType finHeight_;
@@ -44,7 +44,7 @@ public:
           NumericType maskTaperAngle = 0., bool halfFin = false,
           Material material = Material::Si,
           Material maskMaterial = Material::Mask)
-      : GeometryBase<NumericType, D>(domain, __func__), finWidth_(finWidth),
+      : GeometryFactory<NumericType, D>(domain, __func__), finWidth_(finWidth),
         finHeight_(finHeight), finTaperAngle_(finTaperAngle),
         maskHeight_(maskHeight), maskTaperAngle_(maskTaperAngle), base_(0.0),
         material_(material), maskMaterial_(maskMaterial) {
@@ -57,7 +57,7 @@ public:
           NumericType taperAngle = 0., NumericType baseHeight = 0.,
           bool periodicBoundary = false, bool makeMask = false,
           Material material = Material::Si)
-      : GeometryBase<NumericType, D>(domain, __func__), finWidth_(finWidth),
+      : GeometryFactory<NumericType, D>(domain, __func__), finWidth_(finWidth),
         finHeight_(makeMask ? 0 : finHeight),
         finTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? finHeight : 0),
@@ -75,8 +75,8 @@ public:
     if (maskHeight_ > 0.) {
       auto position = std::array<NumericType, D>{0.};
       position[D - 1] = base_ + finHeight_ - eps_;
-      auto mask = this->makeTrenchStencil(position, finWidth_, maskHeight_,
-                                          maskTaperAngle_);
+      auto mask = this->makeBoxStencil(position, finWidth_, maskHeight_,
+                                       maskTaperAngle_);
       domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
     }
 
@@ -85,8 +85,8 @@ public:
     if (finHeight_ > 0.) {
       auto position = std::array<NumericType, D>{0.};
       position[D - 1] = base_ + finHeight_;
-      auto fin = this->makeTrenchStencil(position, finWidth_,
-                                         -finHeight_ - eps_, finTaperAngle_);
+      auto fin = this->makeBoxStencil(position, finWidth_, -finHeight_ - eps_,
+                                      finTaperAngle_);
       viennals::BooleanOperation<NumericType, D>(
           fin, viennals::BooleanOperationEnum::INVERT)
           .apply();

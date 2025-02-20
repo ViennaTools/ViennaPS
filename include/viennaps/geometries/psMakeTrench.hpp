@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
-#include "psGeometryBase.hpp"
+#include "psGeometryFactory.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsFromSurfaceMesh.hpp>
@@ -20,12 +20,12 @@ using namespace viennacore;
 /// exclusively to the bottom while the remaining portion adopts the mask
 /// material_.
 template <class NumericType, int D>
-class MakeTrench : public GeometryBase<NumericType, D> {
-  using typename GeometryBase<NumericType, D>::lsDomainType;
-  using typename GeometryBase<NumericType, D>::psDomainType;
-  using GeometryBase<NumericType, D>::domain_;
-  using GeometryBase<NumericType, D>::name_;
-  using GeometryBase<NumericType, D>::eps_;
+class MakeTrench : public GeometryFactory<NumericType, D> {
+  using typename GeometryFactory<NumericType, D>::lsDomainType;
+  using typename GeometryFactory<NumericType, D>::psDomainType;
+  using GeometryFactory<NumericType, D>::domain_;
+  using GeometryFactory<NumericType, D>::name_;
+  using GeometryFactory<NumericType, D>::eps_;
 
   const NumericType trenchWidth_;
   const NumericType trenchDepth_;
@@ -44,7 +44,7 @@ public:
              NumericType maskHeight = 0, NumericType maskTaperAngle = 0,
              bool halfTrench = false, Material material = Material::Si,
              Material maskMaterial = Material::Mask)
-      : GeometryBase<NumericType, D>(domain, __func__),
+      : GeometryFactory<NumericType, D>(domain, __func__),
         trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
         trenchTaperAngle_(trenchTaperAngle), maskHeight_(maskHeight),
         maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
@@ -58,7 +58,7 @@ public:
              NumericType trenchDepth, NumericType taperAngle = 0.,
              NumericType base = 0., bool periodicBoundary = false,
              bool makeMask = false, Material material = Material::Si)
-      : GeometryBase<NumericType, D>(domain, __func__),
+      : GeometryFactory<NumericType, D>(domain, __func__),
         trenchWidth_(trenchWidth), trenchDepth_(makeMask ? 0 : trenchDepth),
         trenchTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? trenchDepth : 0),
@@ -78,7 +78,7 @@ public:
       domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
       std::array<NumericType, D> position = {0.};
       position[D - 1] = base_ - 2 * eps_;
-      auto cutout = this->makeTrenchStencil(
+      auto cutout = this->makeBoxStencil(
           position, trenchWidth_, maskHeight_ + 3 * eps_, -maskTaperAngle_);
       domain_->applyBooleanOperation(
           cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
@@ -90,8 +90,8 @@ public:
     if (trenchDepth_ > 0.) {
       std::array<NumericType, D> position = {0.};
       position[D - 1] = base_;
-      auto cutout = this->makeTrenchStencil(position, trenchWidth_,
-                                            -trenchDepth_, -trenchTaperAngle_);
+      auto cutout = this->makeBoxStencil(position, trenchWidth_, -trenchDepth_,
+                                         -trenchTaperAngle_);
       domain_->applyBooleanOperation(cutout,
                                      viennals::BooleanOperationEnum::INTERSECT);
     }

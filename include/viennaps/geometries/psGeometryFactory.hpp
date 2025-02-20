@@ -13,7 +13,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, int D> class GeometryBase {
+template <class NumericType, int D> class GeometryFactory {
 protected:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
@@ -23,7 +23,8 @@ protected:
   const NumericType eps_ = 1e-4;
 
 public:
-  GeometryBase(psDomainType domain, const std::string &name = "GeometryBase")
+  GeometryFactory(psDomainType domain,
+                  const std::string &name = "GeometryFactory")
       : domain_(domain), name_(name) {}
 
   lsDomainType makeSubstrate(NumericType base) {
@@ -106,9 +107,9 @@ public:
     return cutout;
   }
 
-  lsDomainType makeTrenchStencil(std::array<NumericType, D> position,
-                                 NumericType width, NumericType height,
-                                 NumericType angle) {
+  lsDomainType makeBoxStencil(std::array<NumericType, D> position,
+                              NumericType width, NumericType height,
+                              NumericType angle) {
     if (angle >= 90 || angle <= -90) {
       Logger::getInstance()
           .addError(name_ +
@@ -118,10 +119,8 @@ public:
           .print();
     }
 
-    auto gridDelta = domain_->getSetup().gridDelta();
-    assert(gridDelta > 0.);
-
     auto cutout = lsDomainType::New(domain_->getSetup().grid());
+    auto gridDelta = domain_->getSetup().gridDelta();
     auto yExt = domain_->getSetup().yExtent() / 2 + gridDelta;
 
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();

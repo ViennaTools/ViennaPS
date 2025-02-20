@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
-#include "psGeometryBase.hpp"
+#include "psGeometryFactory.hpp"
 
 #include <lsMakeGeometry.hpp>
 
@@ -19,11 +19,11 @@ using namespace viennacore;
 /// specified extent and height. The plane can have a periodic boundary in the x
 /// and y (only 3D) direction.
 template <class NumericType, int D>
-class MakePlane : public GeometryBase<NumericType, D> {
-  using typename GeometryBase<NumericType, D>::lsDomainType;
-  using typename GeometryBase<NumericType, D>::psDomainType;
-  using GeometryBase<NumericType, D>::domain_;
-  using GeometryBase<NumericType, D>::name_;
+class MakePlane : public GeometryFactory<NumericType, D> {
+  using typename GeometryFactory<NumericType, D>::lsDomainType;
+  using typename GeometryFactory<NumericType, D>::psDomainType;
+  using GeometryFactory<NumericType, D>::domain_;
+  using GeometryFactory<NumericType, D>::name_;
 
   const NumericType baseHeight_;
   const Material material_;
@@ -33,15 +33,15 @@ public:
   // Adds a plane to an already existing geometry.
   MakePlane(psDomainType domain, NumericType baseHeight = 0.,
             Material material = Material::Si, bool addToExisting = false)
-      : GeometryBase<NumericType, D>(domain, __func__), baseHeight_(baseHeight),
-        material_(material), add_(addToExisting) {}
+      : GeometryFactory<NumericType, D>(domain, __func__),
+        baseHeight_(baseHeight), material_(material), add_(addToExisting) {}
 
   // Creates a new geometry with a plane.
   MakePlane(psDomainType domain, NumericType gridDelta, NumericType xExtent,
             NumericType yExtent, NumericType baseHeight,
             bool periodicBoundary = false, Material material = Material::Si)
-      : GeometryBase<NumericType, D>(domain, __func__), baseHeight_(baseHeight),
-        material_(material), add_(false) {
+      : GeometryFactory<NumericType, D>(domain, __func__),
+        baseHeight_(baseHeight), material_(material), add_(false) {
     domain_->setup(gridDelta, xExtent, yExtent,
                    periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
                                     : BoundaryType::REFLECTIVE_BOUNDARY);
