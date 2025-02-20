@@ -78,7 +78,7 @@ public:
 
       if (holeRadius_ > 0. && D == 3) {
         auto cutout = geometryFactory_.makeCylinderStencil(
-            position, holeRadius_, maskHeight_ + 3 * eps_, -taperAngle_);
+            position, holeRadius_, maskHeight_ + 3 * eps_, taperAngle_);
         domain_->applyBooleanOperation(
             cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
       } else {

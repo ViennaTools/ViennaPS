@@ -29,6 +29,7 @@ if sys.platform == "win32":
 
 import @LSNAME@ as ls
 from @LSNAME@ import IntegrationSchemeEnum as IntegrationScheme
+from @LSNAME@ import BoundaryConditionEnum as BoundaryType
 from .@NAME@ import *
 
 # Config file reader helper function

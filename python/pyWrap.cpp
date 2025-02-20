@@ -1064,10 +1064,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<const DomainSetup<T, D> &, const std::string &>(),
            pybind11::arg("domainSetup"),
            pybind11::arg("name") = "GeometryFactory")
-      .def("makeMask", &GeometryFactory<T, D>::makeMask)
-      .def("makeSubstrate", &GeometryFactory<T, D>::makeSubstrate)
-      .def("makeCylinderStencil", &GeometryFactory<T, D>::makeCylinderStencil)
-      .def("makeBoxStencil", &GeometryFactory<T, D>::makeBoxStencil);
+      .def("makeMask", &GeometryFactory<T, D>::makeMask, pybind11::arg("base"),
+           pybind11::arg("height"))
+      .def("makeSubstrate", &GeometryFactory<T, D>::makeSubstrate,
+           pybind11::arg("base"))
+      .def("makeCylinderStencil", &GeometryFactory<T, D>::makeCylinderStencil,
+           pybind11::arg("position"), pybind11::arg("radius"),
+           pybind11::arg("height"), pybind11::arg("angle"))
+      .def("makeBoxStencil", &GeometryFactory<T, D>::makeBoxStencil,
+           pybind11::arg("position"), pybind11::arg("width"),
+           pybind11::arg("height"), pybind11::arg("angle"));
 
   // Plane
   pybind11::class_<MakePlane<T, D>>(module, "MakePlane")
@@ -1160,9 +1166,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<MakeStack<T, D>>(module, "MakeStack")
       .def(pybind11::init<DomainType, int, T, T, T, T, T, T, bool, Material>(),
            pybind11::arg("domain"), pybind11::arg("numLayers"),
-           pybind11::arg("layerHeight"), pybind11::arg("substrateHeight"),
-           pybind11::arg("holeRadius"), pybind11::arg("trenchWidth"),
-           pybind11::arg("maskHeight"), pybind11::arg("taperAngle"),
+           pybind11::arg("layerHeight"), pybind11::arg("substrateHeight") = 0,
+           pybind11::arg("holeRadius") = 0, pybind11::arg("trenchWidth") = 0,
+           pybind11::arg("maskHeight") = 0, pybind11::arg("taperAngle") = 0,
            pybind11::arg("halfStack") = false,
            pybind11::arg("maskMaterial") = Material::Mask)
       .def(pybind11::init<DomainType, T, T, T, int, T, T, T, T, T, bool>(),
@@ -1374,6 +1380,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("yExtent") = 0.,
            pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY,
            "Setup the domain.")
+      .def("getSetup", &Domain<T, D>::getSetup, "Get the domain setup.")
       .def("deepCopy", &Domain<T, D>::deepCopy)
       .def("insertNextLevelSet", &Domain<T, D>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
@@ -1587,6 +1594,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY,
            "Setup the domain.")
       // methods
+      .def("getSetup", &Domain<T, 3>::getSetup, "Get the domain setup.")
       .def("deepCopy", &Domain<T, 3>::deepCopy)
       .def("insertNextLevelSet", &Domain<T, 3>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
