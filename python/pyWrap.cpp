@@ -1101,9 +1101,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("taperingAngle") = 0.,
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
-           pybind11::arg("halfTrench2D") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::None,
+           pybind11::arg("halfTrench") = false)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
   // Hole
