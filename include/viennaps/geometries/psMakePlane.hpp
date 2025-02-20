@@ -60,9 +60,7 @@ public:
       domain_->clear();
     }
 
-    if (!this->setupCheck())
-      return;
-
+    domain_->getSetup().check();
     auto substrate = this->makeSubstrate(baseHeight_);
     domain_->insertNextLevelSetAsMaterial(substrate, material_);
   }

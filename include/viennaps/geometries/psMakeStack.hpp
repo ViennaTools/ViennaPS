@@ -67,8 +67,7 @@ public:
 
   void apply() {
     domain_->clear();
-    if (!this->setupCheck())
-      return;
+    domain_->getSetup().check();
 
     if (maskHeight_ > 0.) {
       NumericType maskBase = substrateHeight_ + layerHeight_ * numLayers_;

@@ -11,7 +11,7 @@ template <class NumericType, int D> void RunTest() {
   {
     auto domain = SmartPointer<Domain<NumericType, D>>::New();
 
-    MakeTrench<NumericType, D>(domain, .2, 10., 10., 5., 5., 10., 1., false,
+    MakeTrench<NumericType, D>(domain, .5, 10., 10., 5., 5., 10., 1., false,
                                true, Material::Si)
         .apply();
     domain->saveSurfaceMesh("trench_1_" + std::to_string(D) + "D");
@@ -27,7 +27,7 @@ template <class NumericType, int D> void RunTest() {
     // Logger::getInstance().setLogLevel(LogLevel::DEBUG);
 
     auto domain = SmartPointer<Domain<NumericType, D>>::New(
-        .2, 10., 10., BoundaryType::PERIODIC_BOUNDARY);
+        .5, 10., 10., BoundaryType::PERIODIC_BOUNDARY);
     MakeTrench<NumericType, D>(domain, 5., 15., 40., 5., -10., false,
                                Material::SiO2)
         .apply();

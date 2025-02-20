@@ -58,11 +58,18 @@ public:
     init();
   }
 
-  auto &grid() const { return grid_; }
+  auto &grid() const {
+    check();
+    return grid_;
+  }
 
-  NumericType gridDelta() const { return gridDelta_; }
+  NumericType gridDelta() const {
+    check();
+    return gridDelta_;
+  }
 
   std::array<double, 2 * D> bounds() const {
+    check();
     std::array<double, 2 * D> boundsArray;
     for (int i = 0; i < 2 * D; i++) {
       boundsArray[i] = bounds_[i];
@@ -71,6 +78,7 @@ public:
   }
 
   std::array<BoundaryType, D> boundaryCons() const {
+    check();
     std::array<BoundaryType, D> boundaryConsArray;
     for (int i = 0; i < D; i++) {
       boundaryConsArray[i] = boundaryCons_[i];
@@ -92,6 +100,15 @@ public:
            (D == 2 || (D == 3 && yExtent() > 0.0));
   }
 
+  void check() const {
+    if (!isValid()) {
+      print();
+      Logger::getInstance()
+          .addError("Domain setup is not correctly initialized.")
+          .print();
+    }
+  }
+
   void print() const {
     std::cout << "Domain setup:" << std::endl;
     std::cout << "\tGrid delta: " << gridDelta_ << std::endl;
@@ -103,7 +120,7 @@ public:
   }
 
   void halveXAxis() {
-    assert(isValid());
+    check();
     if (hasPeriodicBoundary()) {
       Logger::getInstance()
           .addWarning("Half geometry cannot be created with "
@@ -116,7 +133,7 @@ public:
   }
 
   void halveYAxis() {
-    assert(isValid());
+    check();
     if (hasPeriodicBoundary()) {
       Logger::getInstance()
           .addWarning("Half geometry cannot be created with "
@@ -129,7 +146,7 @@ public:
   }
 
   void init() {
-    assert(isValid());
+    check();
     hrleIndexType gridMin[D], gridMax[D];
     for (unsigned i = 0; i < D; ++i) {
       gridMin[i] = std::floor(bounds_[2 * i] / gridDelta_);
@@ -146,7 +163,6 @@ public:
       boundaryCons_[i] = grid.getBoundaryConditions(i);
     }
     grid_ = grid;
-    assert(isValid());
   }
 };
 

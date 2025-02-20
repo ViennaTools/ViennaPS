@@ -205,19 +205,6 @@ public:
     return cutout;
   }
 
-protected:
-  bool setupCheck() {
-    auto setup = domain_->getSetup();
-    if (!setup.isValid()) {
-      Logger::getInstance()
-          .addWarning(name_ + ": Domain setup is not correctly initialized.")
-          .print();
-      setup.print();
-      return false;
-    }
-    return true;
-  }
-
 private:
   void saveSurfaceMesh(lsDomainType levelSet, const std::string &name) {
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();

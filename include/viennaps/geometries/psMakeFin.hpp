@@ -70,8 +70,7 @@ public:
 
   void apply() {
     domain_->clear(); // this does not clear the setup
-    if (!this->setupCheck())
-      return;
+    domain_->getSetup().check();
 
     if (maskHeight_ > 0.) {
       auto position = std::array<NumericType, D>{0.};

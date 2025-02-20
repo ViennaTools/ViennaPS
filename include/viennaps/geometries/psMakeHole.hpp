@@ -87,8 +87,7 @@ public:
     }
 
     domain_->clear(); // this does not clear the setup
-    if (!this->setupCheck())
-      return;
+    domain_->getSetup().check();
 
     auto setup = domain_->getSetup();
 

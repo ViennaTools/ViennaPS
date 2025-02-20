@@ -24,7 +24,7 @@ template <class NumericType, int D> void RunTest() {
 
   //   // Test with HoleShape::Quarter
   domain->clear(); // Reset the domain for a new test
-  MakeHole<NumericType, D>(domain, .2, 10., 10., 2.5, 5., 10., 1., false, true,
+  MakeHole<NumericType, D>(domain, .5, 10., 10., 2.5, 5., 10., 1., false, true,
                            Material::Si, HoleShape::Quarter)
       .apply();
 
@@ -47,7 +47,7 @@ template <class NumericType, int D> void RunTest() {
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
   // Logger::getInstance().setLogLevel(LogLevel::DEBUG);
 
-  domain->setup(.1, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
+  domain->setup(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
   MakeHole<NumericType, D>(domain, 2.5, 3., 10, 3., 10., HoleShape::Quarter,
                            Material::Si)
       .apply();

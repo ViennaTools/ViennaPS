@@ -12,7 +12,7 @@ template <class NumericType, int D> void RunTest() {
 
   //   Logger::getInstance().setLogLevel(LogLevel::DEBUG);
 
-  MakeFin<NumericType, D>(domain, .2, 10., 10., 5., 5., 10., 1., false, true,
+  MakeFin<NumericType, D>(domain, .5, 10., 10., 5., 5., 10., 1., false, true,
                           Material::Si)
       .apply();
 
@@ -22,7 +22,7 @@ template <class NumericType, int D> void RunTest() {
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
 
-  domain->setup(.1, 10, 10, BoundaryType::REFLECTIVE_BOUNDARY);
+  domain->setup(.5, 10, 10, BoundaryType::REFLECTIVE_BOUNDARY);
   MakeFin<NumericType, D>(domain, 5., 5., 5., 2., 0., true, Material::Si)
       .apply();
 
@@ -32,7 +32,7 @@ template <class NumericType, int D> void RunTest() {
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
 
-  domain->setup(.1, 10, 10, BoundaryType::PERIODIC_BOUNDARY);
+  domain->setup(.5, 10, 10, BoundaryType::PERIODIC_BOUNDARY);
   MakeFin<NumericType, D>(domain, 5., 5., -10., 5., 10., false, Material::Si,
                           Material::Si)
       .apply();
