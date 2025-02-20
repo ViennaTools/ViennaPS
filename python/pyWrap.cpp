@@ -1094,7 +1094,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<MakeTrench<T, D>>(module, "MakeTrench")
       .def(pybind11::init<DomainType, const T, const T, const T, const T,
                           const T, const T, const T, const bool, const bool,
-                          const bool, const Material>(),
+                          const Material, const bool>(), 
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("trenchWidth"), pybind11::arg("trenchDepth"),

@@ -76,7 +76,7 @@ public:
           .print();
       MakeTrench<NumericType, D>(
           domain_, gridDelta_, xExtent_, yExtent_, 2 * holeRadius_, holeDepth_,
-          taperAngle_, baseHeight_, periodicBoundary_, false, makeMask_, material_)
+          taperAngle_, baseHeight_, periodicBoundary_, makeMask_, material_)
           .apply();
 
       return;
