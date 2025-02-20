@@ -23,6 +23,7 @@ class MakePlane : public GeometryBase<NumericType, D> {
   using typename GeometryBase<NumericType, D>::lsDomainType;
   using typename GeometryBase<NumericType, D>::psDomainType;
   using GeometryBase<NumericType, D>::domain_;
+  using GeometryBase<NumericType, D>::name_;
 
   const NumericType baseHeight_;
   const Material material_;
@@ -32,14 +33,14 @@ public:
   // Adds a plane to an already existing geometry.
   MakePlane(psDomainType domain, NumericType baseHeight = 0.,
             Material material = Material::Si, bool addToExisting = false)
-      : GeometryBase<NumericType, D>(domain), baseHeight_(baseHeight),
+      : GeometryBase<NumericType, D>(domain, __func__), baseHeight_(baseHeight),
         material_(material), add_(addToExisting) {}
 
   // Creates a new geometry with a plane.
   MakePlane(psDomainType domain, NumericType gridDelta, NumericType xExtent,
             NumericType yExtent, NumericType baseHeight,
             bool periodicBoundary = false, Material material = Material::Si)
-      : GeometryBase<NumericType, D>(domain), baseHeight_(baseHeight),
+      : GeometryBase<NumericType, D>(domain, __func__), baseHeight_(baseHeight),
         material_(material), add_(false) {
     domain_->setup(gridDelta, xExtent, yExtent, periodicBoundary);
   }
@@ -48,8 +49,8 @@ public:
     if (add_) {
       if (!domain_->getLevelSets().back()) {
         Logger::getInstance()
-            .addWarning("MakePlane: Plane can only be added to already "
-                        "existing geometry.")
+            .addWarning(name_ + ": Plane can only be added to already "
+                                "existing geometry.")
             .print();
         return;
       }
@@ -57,13 +58,8 @@ public:
       domain_->clear();
     }
 
-    if (!domain_->getSetup().isValid()) {
-      Logger::getInstance()
-          .addWarning("MakePlane: Domain setup is not correctly initialized.")
-          .print();
-      domain_->getSetup().print();
+    if (!this->setupCheck())
       return;
-    }
 
     auto substrate = this->makeSubstrate(baseHeight_);
     domain_->insertNextLevelSetAsMaterial(substrate, material_);

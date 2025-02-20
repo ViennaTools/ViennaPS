@@ -28,6 +28,8 @@ class MakeHole : public GeometryBase<NumericType, D> {
   using typename GeometryBase<NumericType, D>::lsDomainType;
   using typename GeometryBase<NumericType, D>::psDomainType;
   using GeometryBase<NumericType, D>::domain_;
+  using GeometryBase<NumericType, D>::name_;
+  using GeometryBase<NumericType, D>::eps_;
 
   const NumericType holeRadius_;
   const NumericType holeDepth_;
@@ -48,7 +50,7 @@ public:
            NumericType maskTaperAngle = 0., HoleShape shape = HoleShape::Full,
            Material material = Material::Si,
            Material maskMaterial = Material::Mask)
-      : GeometryBase<NumericType, D>(domain), holeRadius_(holeRadius),
+      : GeometryBase<NumericType, D>(domain, __func__), holeRadius_(holeRadius),
         holeDepth_(holeDepth), holeTaperAngle_(holeTaperAngle),
         maskHeight_(maskHeight), maskTaperAngle_(maskTaperAngle), base_(0.0),
         material_(material), shape_(shape), maskMaterial_(maskMaterial) {}
@@ -58,7 +60,7 @@ public:
            NumericType taperAngle = 0., NumericType baseHeight = 0.,
            bool periodicBoundary = false, bool makeMask = false,
            Material material = Material::Si, HoleShape shape = HoleShape::Full)
-      : GeometryBase<NumericType, D>(domain), holeRadius_(holeRadius),
+      : GeometryBase<NumericType, D>(domain, __func__), holeRadius_(holeRadius),
         holeDepth_(makeMask ? 0 : holeDepth),
         holeTaperAngle_(makeMask ? 0 : taperAngle),
         maskHeight_(makeMask ? holeDepth : 0),
@@ -70,8 +72,8 @@ public:
   void apply() {
     if constexpr (D != 3) {
       Logger::getInstance()
-          .addWarning("MakeHole: Hole geometry can only be created in 3D! "
-                      "Falling back to trench geometry.")
+          .addWarning(name_ + ": Hole geometry can only be created in 3D! "
+                              "Falling back to trench geometry.")
           .print();
       bool halfTrench =
           shape_ == HoleShape::Half || shape_ == HoleShape::Quarter;
@@ -82,14 +84,11 @@ public:
       return;
     }
 
-    auto &setup = domain_->getSetup();
-    if (!setup.isValid()) {
-      Logger::getInstance()
-          .addWarning("MakeHole: Domain setup is not correctly initialized.")
-          .print();
-      domain_->getSetup().print();
+    domain_->clear(); // this does not clear the setup
+    if (!this->setupCheck())
       return;
-    }
+
+    auto &setup = domain_->getSetup();
     auto bounds = setup.bounds_;
     auto boundaryCons = setup.boundaryCons_;
     auto gridDelta = setup.gridDelta_;
@@ -97,72 +96,42 @@ public:
     if (setup.hasPeriodicBoundary() &&
         (shape_ == HoleShape::Half || shape_ == HoleShape::Quarter)) {
       Logger::getInstance()
-          .addWarning("MakeHole: 'Half' or 'Quarter' shapes do not support "
-                      "periodic boundaries! Creating full hole.")
+          .addWarning(name_ + ": 'Half' or 'Quarter' shapes do not support "
+                              "periodic boundaries! Creating full hole.")
           .print();
       shape_ = HoleShape::Full;
     }
 
     if (shape_ == HoleShape::Half) {
-      setup.bounds_[0] = 0.0;
+      this->halfXAxis();
     } else if (shape_ == HoleShape::Quarter) {
-      setup.bounds_[0] = 0.0;
-      setup.bounds_[2] = 0.0;
+      this->halfXAxis();
+      this->halfYAxis();
     }
-
-    domain_->clear(); // does not clear setup
 
     auto substrate = this->makeSubstrate(base_);
 
     if (maskHeight_ > 0.) {
-      auto mask = this->makeMask(base_, maskHeight_);
-
-      auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
-      NumericType radius = holeRadius_;
-      if (holeTaperAngle_ > 0. && holeDepth_ > 0.) {
-        radius +=
-            std::tan(holeTaperAngle_ * M_PI / 180.) * (holeDepth_ + gridDelta);
-      }
-      getCutout(cutout, radius, maskHeight_, base_, maskTaperAngle_);
-
-      viennals::BooleanOperation<NumericType, D>(
-          mask, cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-          .apply();
-
+      auto mask = this->makeMask(base_ - eps_, maskHeight_);
       domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
-    }
-
-    if (holeDepth_ > 0.) {
-      auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta);
-      getCutout(cutout, holeRadius_, holeDepth_ + gridDelta, base_ - holeDepth_,
-                holeTaperAngle_);
-      viennals::BooleanOperation<NumericType, D>(
-          substrate, cutout,
-          viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-          .apply();
+      std::array<NumericType, D> position = {0.};
+      position[D - 1] = base_ - 2 * eps_;
+      auto cutout = this->makeCylinderStencil(
+          position, holeRadius_, maskHeight_ + 3 * eps_, maskTaperAngle_);
+      domain_->applyBooleanOperation(
+          cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
     }
 
     domain_->insertNextLevelSetAsMaterial(substrate, material_);
-  }
 
-private:
-  void getCutout(lsDomainType cutout, NumericType radius, NumericType height,
-                 NumericType base, NumericType angle) {
-
-    NumericType origin[D] = {0.};
-    NumericType normal[D] = {0.};
-    normal[D - 1] = 1.;
-    origin[D - 1] = base;
-
-    NumericType topRadius = radius;
-    if (angle > 0.) {
-      topRadius += std::tan(angle * M_PI / 180.) * height;
+    if (holeDepth_ > 0.) {
+      std::array<NumericType, D> position = {0.};
+      position[D - 1] = base_;
+      auto cutout = this->makeCylinderStencil(position, holeRadius_,
+                                              -holeDepth_, holeTaperAngle_);
+      domain_->applyBooleanOperation(cutout,
+                                     viennals::BooleanOperationEnum::INTERSECT);
     }
-
-    viennals::MakeGeometry<NumericType, D>(
-        cutout, SmartPointer<viennals::Cylinder<NumericType, D>>::New(
-                    origin, normal, height, radius, topRadius))
-        .apply();
   }
 };
 
