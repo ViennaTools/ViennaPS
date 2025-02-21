@@ -56,7 +56,7 @@ template <typename NumericType> struct CF4O2Parameters {
     NumericType beta_sigma = 4.0e-2; // Oxygen dissociation rate for SiGe (1e15 cm⁻²s⁻¹)
 
     NumericType k_sigma_SiGe(const NumericType x) const {
-      return 2.982146363636e2 + 1.141883636364e2 * x;
+      return 3.00e2 * std::exp(0.4675 * x);
     }
   } SiGe;
 
@@ -81,8 +81,6 @@ template <typename NumericType> struct CF4O2Parameters {
     // chemical etching
     NumericType k_sigma = 3.0e2;     // in (1e15 cm⁻²s⁻¹)
     NumericType beta_sigma = 4.0e-2; // in (1e15 cm⁻²s⁻¹)
-    // New parameter: F etching rate on O-covered Si
-    // NumericType k_sigma_F_on_O = 3.02;
   } Si;
 
   // Passivation

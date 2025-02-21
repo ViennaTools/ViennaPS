@@ -23,7 +23,7 @@ geometry = CreateGeometry(paramDict)
 config_file = "config_CF4O2.txt"
 params = vps.ReadConfigFile(config_file)
 
-vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
+vps.Logger.setLogLevel(vps.LogLevel.ERROR)
 
 vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])
@@ -79,7 +79,7 @@ parameters = model.getParameters()
 process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setMaxCoverageInitIterations(10)
+process.setMaxCoverageInitIterations(50)
 process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
 process.setIntegrationScheme(
