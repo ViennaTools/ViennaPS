@@ -19,19 +19,16 @@ else:
 
 params = vps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain()
-vps.MakeTrench(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeTrench(
+    domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
-    taperingAngle=params["taperAngle"],
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=False,
-    material=vps.Material.Si,
+    trenchTaperAngle=params["taperAngle"],
 ).apply()
 
 # copy top layer to capture deposition
@@ -53,11 +50,8 @@ process.setProcessModel(model)
 process.setNumberOfRaysPerPoint(int(params["numRaysPerPoint"]))
 process.setProcessDuration(params["processTime"])
 
-geometry.saveSurfaceMesh("MultiTEOS_initial.vtp")
+geometry.saveVolumeMesh("MultiTEOS_initial.vtp")
 
 process.apply()
 
-geometry.saveSurfaceMesh("MultiTEOS_final.vtp")
-
-if args.dim == 2:
-    geometry.saveVolumeMesh("MultiTEOS_final")
+geometry.saveVolumeMesh("MultiTEOS_final.vtp")

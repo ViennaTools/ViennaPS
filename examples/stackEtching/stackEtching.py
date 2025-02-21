@@ -19,19 +19,19 @@ vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])
 
 # Geometry setup
-geometry = vps.Domain()
-vps.MakeStack(
-    geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeStack(
+    domain=geometry,
     numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
     substrateHeight=params["substrateHeight"],
     holeRadius=0.0,
     trenchWidth=params["trenchWidth"],
     maskHeight=params["maskHeight"],
-    periodicBoundary=False,
 ).apply()
 
 geometry.duplicateTopLevelSet(vps.Material.Polymer)

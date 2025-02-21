@@ -19,15 +19,15 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  ps::MakeTrench<NumericType, D>(geometry, params.get("gridDelta"),
-                                 params.get("xExtent"), params.get("yExtent"),
-                                 params.get("trenchWidth"),
-                                 params.get("trenchHeight"))
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  ps::MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                                 params.get("trenchHeight"),
+                                 params.get("taperAngle"))
       .apply();
 
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet();
+  geometry->duplicateTopLevelSet(ps::Material::SiO2);
 
   auto model = ps::SmartPointer<ps::SphereDistribution<NumericType, D>>::New(
       params.get("layerThickness"), params.get("gridDelta"));

@@ -1352,7 +1352,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init(
                [](DomainType &domain) { return DomainType::New(domain); }),
            pybind11::arg("domain"), "Deep copy constructor.")
-#if VIENNAPS_PYTHON_DIMENSION > 2
       .def(pybind11::init(
                [](T gridDelta, T xExtent, T yExtent, BoundaryType boundary) {
                  return DomainType::New(gridDelta, xExtent, yExtent, boundary);
@@ -1360,7 +1359,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
            pybind11::arg("yExtent"),
            pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY)
-#else
+#if VIENNAPS_PYTHON_DIMENSION == 2
       .def(pybind11::init([](T gridDelta, T xExtent, BoundaryType boundary) {
              return DomainType::New(gridDelta, xExtent, boundary);
            }),

@@ -17,24 +17,20 @@ else:
     print("Running 3D simulation.")
     import viennaps3d as vps
 
-
-params = vps.ReadConfigFile(args.filename)
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+params = vps.ReadConfigFile(args.filename)
 vps.setNumThreads(16)
 
-geometry = vps.Domain()
-vps.MakeTrench(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeTrench(
+    domain=geometry,
     trenchWidth=params["trenchWidth"],
-    trenchDepth=params["maskHeight"],
-    taperingAngle=0.0,
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=True,
-    material=vps.Material.Si,
+    trenchDepth=0.0,
+    maskHeight=params["maskHeight"],
 ).apply()
 
 
