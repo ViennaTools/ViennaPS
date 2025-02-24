@@ -509,6 +509,11 @@ public:
           auto metric =
               calculateCoverageDeltaMetric(coverages, prevStepCoverages);
           while (!checkCoveragesConvergence(metric)) {
+            Logger::getInstance()
+                .addInfo("Coverages did not converge. Repeating flux "
+                         "calculation.")
+                .print();
+
             prevStepCoverages =
                 SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
 
