@@ -92,9 +92,11 @@ public:
     numRays = numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint;
     if (numRays > (1 << 29)) {
       Logger::getInstance()
-          .addError("Too many rays for single launch: " +
-                    util::prettyDouble(numRays))
+          .addWarning("Too many rays for single launch: " +
+                      util::prettyDouble(numRays))
           .print();
+      numberOfRaysPerPoint = (1 << 29) / (numPointsPerDim * numPointsPerDim);
+      numRays = numPointsPerDim * numPointsPerDim * numberOfRaysPerPoint;
     }
     Logger::getInstance()
         .addDebug("Number of rays: " + util::prettyDouble(numRays))

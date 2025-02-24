@@ -19,6 +19,7 @@ void FluxOnMesh(
 
   auto numData = pointData.getScalarDataSize();
   const auto &elements = surfaceMesh->triangles;
+  const auto &nodes = surfaceMesh->nodes;
   auto numElements = elements.size();
   std::vector<float> elementData(numData * numElements);
   std::vector<unsigned> dataIdx(numData);
@@ -35,18 +36,15 @@ void FluxOnMesh(
   for (unsigned i = 0; i < numElements; i++) {
     auto &elIdx = elements[i];
     std::array<NumericType, 3> elementCenter{
-        static_cast<NumericType>((surfaceMesh->nodes[elIdx[0]][0] +
-                                  surfaceMesh->nodes[elIdx[1]][0] +
-                                  surfaceMesh->nodes[elIdx[2]][0]) /
-                                 3.f),
-        static_cast<NumericType>((surfaceMesh->nodes[elIdx[0]][1] +
-                                  surfaceMesh->nodes[elIdx[1]][1] +
-                                  surfaceMesh->nodes[elIdx[2]][1]) /
-                                 3.f),
-        static_cast<NumericType>((surfaceMesh->nodes[elIdx[0]][2] +
-                                  surfaceMesh->nodes[elIdx[1]][2] +
-                                  surfaceMesh->nodes[elIdx[2]][2]) /
-                                 3.f)};
+        static_cast<NumericType>(
+            (nodes[elIdx[0]][0] + nodes[elIdx[1]][0] + nodes[elIdx[2]][0]) /
+            3.f),
+        static_cast<NumericType>(
+            (nodes[elIdx[0]][1] + nodes[elIdx[1]][1] + nodes[elIdx[2]][1]) /
+            3.f),
+        static_cast<NumericType>(
+            (nodes[elIdx[0]][2] + nodes[elIdx[1]][2] + nodes[elIdx[2]][2]) /
+            3.f)};
 
     auto closestPoint = pointKdTree.findNearest(elementCenter);
 
@@ -123,7 +121,7 @@ void MakeGeometry(ps::SmartPointer<ps::Domain<NumericType, D>> &domain,
                   const NumericType L2, const NumericType xPad,
                   const NumericType yPad, const NumericType height) {
 
-  const NumericType bottomLength = 4000.;
+  const NumericType bottomLength = 5500.;
 
   auto upper =
       createMesh<float>(W1, W2, W3, W4, L1, L2, bottomLength, height, true);
@@ -254,22 +252,26 @@ int main(int argc, char *argv[]) {
     geometry->saveSurfaceMesh("scaled_mask.vtp");
   }
 
-  ps::MakePlane<NumericType, D>(geometry, 0., ps::Material::Si)
+  ps::MakePlane<NumericType, D>(geometry, 0., ps::Material::Si, true)
       .apply(); // add Si as the base material
   geometry->saveSurfaceMesh("initial.vtp");
 
   {
-    std::array<NumericType, 3> direction = {0., 0., -1.};
-    auto directionalEtch =
-        ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(
-            direction);
-    ps::Process<NumericType, D>(geometry, directionalEtch,
+    typename ps::DirectionalEtching<NumericType, D>::RateSet rateSet;
+    rateSet.direction = {0.};
+    rateSet.direction[D - 1] = -1.;
+    rateSet.directionalVelocity = -1.;
+    rateSet.isotropicVelocity = 0.;
+    rateSet.maskMaterials = std::vector<ps::Material>{ps::Material::Mask};
+    rateSet.calculateVisibility = false;
+
+    auto etchModel =
+        ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(rateSet);
+    ps::Process<NumericType, D>(geometry, etchModel,
                                 params.get("verticalDepth"))
         .apply();
   }
   geometry->saveSurfaceMesh("vertical_etch.vtp");
-
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   NumericType time = 0.;
   NumericType duration = params.get("processTime");
@@ -300,8 +302,11 @@ int main(int argc, char *argv[]) {
     auto copy = ps::SmartPointer<ps::Domain<NumericType, D>>::New(geometry);
     clean<NumericType, D>(copy, params.get("smoothingSize"));
     {
+      ps::RayTracingParameters<NumericType, D> rayParams;
+      rayParams.raysPerPoint = params.get<int>("raysPerPoint") * 2;
+      rayParams.smoothingNeighbors = 2;
       ps::gpu::Process<NumericType, D> visProcess(context, copy, model, 0.);
-      visProcess.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
+      visProcess.setRayTracingParameters(rayParams);
 
       auto fluxMesh = visProcess.calculateFlux();
 
@@ -317,8 +322,11 @@ int main(int argc, char *argv[]) {
       FluxOnMesh<NumericType>(fluxMesh->getCellData(), pointKdTree, surfMesh);
       viennals::VTKWriter<float>(surfMesh,
                                  params.get<std::string>("outputFile") + "_T" +
-                                     std::to_string(counter++) + ".vtp")
+                                     std::to_string(counter) + ".vtp")
           .apply();
+      copy->saveHullMesh(params.get<std::string>("outputFile") + "_T" +
+                             std::to_string(counter++),
+                         1e-1);
     }
 
     time += timePerAngle;

@@ -45,10 +45,7 @@ public:
   Process(Context &context, DomainType domain, ModelType model,
           NumericType duration = 0.0)
       : context_(context), domain_(domain), model_(model),
-        processDuration_(duration) {
-    std::cout << "Context module path process constr: " << context_.modulePath
-              << std::endl;
-  }
+        processDuration_(duration) {}
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
@@ -222,8 +219,6 @@ public:
   void apply() {
     if (checkInput())
       return;
-
-    std::cout << "context module path: " << context_.modulePath << std::endl;
 
     /* ---------- Process Setup --------- */
 

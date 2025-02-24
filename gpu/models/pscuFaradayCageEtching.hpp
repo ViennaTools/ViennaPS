@@ -31,7 +31,7 @@ public:
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
-        velocity->at(i) = -flux->at(i) / 2.f;
+        velocity->at(i) = -flux->at(i) / 1.5;
       }
     }
 
