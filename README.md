@@ -35,7 +35,7 @@ Releases are tagged on the master branch and available in the [releases section]
 
 * [ViennaCore](https://github.com/ViennaTools/viennacore) >= 1.2.0
 
-* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.2.0
+* [ViennaLS](https://github.com/ViennaTools/viennals) >= 4.2.1
   * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) >= 0.5.0
   * [VTK](https://vtk.org/) >= 9.0.0
 
