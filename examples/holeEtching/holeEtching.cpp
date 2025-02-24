@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(20);
+  process.setCoverageDeltaThreshold(1e-4);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(

@@ -23,9 +23,8 @@ vps.Length.setUnit("um")
 vps.Time.setUnit("min")
 
 # hole geometry parameters
-gridDelta = 0.025  # um
-xExtent = 1.0
-yExtent = 1.0
+gridDelta = 0.03  # um
+extent = 3.0
 holeRadius = 0.175
 maskHeight = 1.2
 taperAngle = 1.193
@@ -62,22 +61,23 @@ for i in range(len(yo2)):
 
     # geometry setup, all units in um
     geometry = vps.Domain(
-        gridDelta=params["gridDelta"],
-        xExtent=params["xExtent"],
-        yExtent=params["yExtent"],
+        gridDelta=gridDelta,
+        xExtent=extent,
+        yExtent=extent,
     )
     vps.MakeHole(
         domain=geometry,
-        holeRadius=params["holeRadius"],
+        holeRadius=holeRadius,
         holeDepth=0.0,
-        maskHeight=params["maskHeight"],
-        maskTaperAngle=params["taperAngle"],
-        holeShape=vps.HoleShape.Half,
+        maskHeight=maskHeight,
+        maskTaperAngle=taperAngle,
+        # holeShape=vps.HoleShape.Half,
     ).apply()
 
     process = vps.Process()
     process.setDomain(geometry)
     process.setMaxCoverageInitIterations(20)
+    process.setCoverageDeltaThreshold(1e-4)
     process.setProcessDuration(processDuration)
     process.setIntegrationScheme(integrationScheme)
     process.setNumberOfRaysPerPoint(numberOfRaysPerPoint)

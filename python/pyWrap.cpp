@@ -1300,6 +1300,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaxCoverageInitIterations",
            &Process<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
+      .def("setCoverageDeltaThreshold",
+           &Process<T, D>::setCoverageDeltaThreshold,
+           "Set the threshold for the coverage delta metric to reach "
+           "convergence.")
       .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
