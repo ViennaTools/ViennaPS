@@ -19,19 +19,16 @@ else:
 
 params = vps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain()
-vps.MakeTrench(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeTrench(
+    domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
-    taperingAngle=params["taperAngle"],
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=False,
-    material=vps.Material.Si,
+    trenchTaperAngle=params["taperAngle"],
 ).apply()
 
 geometry.duplicateTopLevelSet(vps.Material.SiO2)
@@ -41,11 +38,8 @@ model = vps.SingleParticleProcess(
     sourceExponent=params["sourcePower"],
 )
 
-geometry.saveSurfaceMesh("initial.vtp")
+geometry.saveHullMesh("initial")
 
 vps.Process(geometry, model, params["processTime"]).apply()
 
-geometry.saveSurfaceMesh("final.vtp")
-
-if args.dim == 2:
-    geometry.saveVolumeMesh("final")
+geometry.saveHullMesh("final")

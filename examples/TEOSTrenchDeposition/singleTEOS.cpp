@@ -20,15 +20,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  ps::MakeTrench<NumericType, D>(
-      geometry, params.get("gridDelta") /* grid delta */,
-      params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
-      params.get("trenchWidth") /*trench width*/,
-      params.get("trenchHeight") /*trench height*/,
-      params.get("taperAngle") /* tapering angle */, 0 /*base height*/,
-      false /*periodic boundary*/, false /*create mask*/,
-      ps::Material::Si /*material*/)
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  ps::MakeTrench<NumericType, D>(geometry,
+                                 params.get("trenchWidth") /*trench width*/,
+                                 params.get("trenchHeight") /*trench height*/,
+                                 params.get("taperAngle") /* tapering angle */)
       .apply();
 
   // copy top layer to capture deposition
@@ -46,12 +43,9 @@ int main(int argc, char **argv) {
   process.setNumberOfRaysPerPoint(params.get("numRaysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
 
-  geometry->saveSurfaceMesh("SingleTEOS_initial.vtp");
+  geometry->saveVolumeMesh("SingleTEOS_initial");
 
   process.apply();
 
-  geometry->saveSurfaceMesh("SingleTEOS_final.vtp");
-
-  if constexpr (D == 2)
-    geometry->saveVolumeMesh("SingleTEOS_final");
+  geometry->saveVolumeMesh("SingleTEOS_final");
 }

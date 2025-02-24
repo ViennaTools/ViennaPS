@@ -23,9 +23,8 @@ vps.Length.setUnit("um")
 vps.Time.setUnit("min")
 
 # hole geometry parameters
-gridDelta = 0.025  # um
-xExtent = 1.0
-yExtent = 1.0
+gridDelta = 0.03  # um
+extent = 3.0
 holeRadius = 0.175
 maskHeight = 1.2
 taperAngle = 1.193
@@ -55,29 +54,30 @@ params.Mask.rho = params.Si.rho * 10.0
 
 # simulation parameters
 processDuration = 3  # min
-integrationScheme = vps.ls.IntegrationSchemeEnum.ENGQUIST_OSHER_2ND_ORDER
+integrationScheme = vps.IntegrationScheme.ENGQUIST_OSHER_2ND_ORDER
 numberOfRaysPerPoint = int(1000)
 
 for i in range(len(yo2)):
 
-    geometry = vps.Domain()
+    # geometry setup, all units in um
+    geometry = vps.Domain(
+        gridDelta=gridDelta,
+        xExtent=extent,
+        yExtent=extent,
+    )
     vps.MakeHole(
-        geometry,
-        gridDelta,
-        xExtent,
-        yExtent,
-        holeRadius,
-        maskHeight,
-        taperAngle,
-        0.0,
-        False,
-        True,
-        vps.Material.Si,
+        domain=geometry,
+        holeRadius=holeRadius,
+        holeDepth=0.0,
+        maskHeight=maskHeight,
+        maskTaperAngle=taperAngle,
+        # holeShape=vps.HoleShape.Half,
     ).apply()
 
     process = vps.Process()
     process.setDomain(geometry)
     process.setMaxCoverageInitIterations(20)
+    process.setCoverageDeltaThreshold(1e-4)
     process.setProcessDuration(processDuration)
     process.setIntegrationScheme(integrationScheme)
     process.setNumberOfRaysPerPoint(numberOfRaysPerPoint)

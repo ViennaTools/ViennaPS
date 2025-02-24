@@ -12,6 +12,55 @@ namespace ps = viennaps;
 namespace ls = viennals;
 
 template <class NumericType>
+void FluxOnMesh(
+    ls::PointData<NumericType> &pointData,
+    ps::KDTree<NumericType, ps::Vec3D<NumericType>> const &pointKdTree,
+    ps::SmartPointer<ls::Mesh<float>> surfaceMesh) {
+
+  auto numData = pointData.getScalarDataSize();
+  const auto &elements = surfaceMesh->triangles;
+  auto numElements = elements.size();
+  std::vector<float> elementData(numData * numElements);
+  std::vector<unsigned> dataIdx(numData);
+  auto material = pointData.getScalarData("MaterialIds");
+
+  std::vector<float> data(numElements);
+  for (unsigned i = 0; i < numData; i++) {
+    auto label = pointData.getScalarDataLabel(i);
+    surfaceMesh->getCellData().insertReplaceScalarData(data, label);
+    dataIdx[i] = surfaceMesh->getCellData().getScalarDataIndex(label);
+  }
+
+#pragma omp parallel for
+  for (unsigned i = 0; i < numElements; i++) {
+    auto &elIdx = elements[i];
+    std::array<NumericType, 3> elementCenter{
+        static_cast<NumericType>((surfaceMesh->nodes[elIdx[0]][0] +
+                                  surfaceMesh->nodes[elIdx[1]][0] +
+                                  surfaceMesh->nodes[elIdx[2]][0]) /
+                                 3.f),
+        static_cast<NumericType>((surfaceMesh->nodes[elIdx[0]][1] +
+                                  surfaceMesh->nodes[elIdx[1]][1] +
+                                  surfaceMesh->nodes[elIdx[2]][1]) /
+                                 3.f),
+        static_cast<NumericType>((surfaceMesh->nodes[elIdx[0]][2] +
+                                  surfaceMesh->nodes[elIdx[1]][2] +
+                                  surfaceMesh->nodes[elIdx[2]][2]) /
+                                 3.f)};
+
+    auto closestPoint = pointKdTree.findNearest(elementCenter);
+
+    for (unsigned j = 0; j < numData; j++) {
+      auto value = pointData.getScalarData(j)->at(closestPoint->first);
+      if (material->at(closestPoint->first) == 0)
+        value = 0;
+      surfaceMesh->getCellData().getScalarData(dataIdx[j])->at(i) =
+          static_cast<float>(value);
+    }
+  }
+}
+
+template <class NumericType>
 auto createMesh(const NumericType W1, const NumericType W2,
                 const NumericType W3, const NumericType W4,
                 const NumericType L1, const NumericType L2,
@@ -239,7 +288,6 @@ int main(int argc, char *argv[]) {
     ps::gpu::Process<NumericType, D> process(context, geometry, model,
                                              timePerAngle);
     process.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
-    process.setPeriodicBoundary(true);
     process.setIntegrationScheme(
         viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER);
     // process.setSmoothFlux(params.get("smoothFlux"));
@@ -254,7 +302,6 @@ int main(int argc, char *argv[]) {
     {
       ps::gpu::Process<NumericType, D> visProcess(context, copy, model, 0.);
       visProcess.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
-      visProcess.setPeriodicBoundary(true);
 
       auto fluxMesh = visProcess.calculateFlux();
 
@@ -267,10 +314,7 @@ int main(int argc, char *argv[]) {
       pointKdTree.setPoints(fluxMesh->nodes);
       pointKdTree.build();
 
-      ps::gpu::CudaBuffer dummy;
-      ps::gpu::PointToElementData<NumericType>(
-          dummy, fluxMesh->getCellData(), pointKdTree, surfMesh, true, false)
-          .apply();
+      FluxOnMesh<NumericType>(fluxMesh->getCellData(), pointKdTree, surfMesh);
       viennals::VTKWriter<float>(surfMesh,
                                  params.get<std::string>("outputFile") + "_T" +
                                      std::to_string(counter++) + ".vtp")

@@ -62,7 +62,7 @@ public:
 
   virtual void
   setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
-    primaryDirection = rayInternal::Normalize(passedPrimaryDirection);
+    primaryDirection = Normalize(passedPrimaryDirection);
   }
 
   template <typename ParticleType,

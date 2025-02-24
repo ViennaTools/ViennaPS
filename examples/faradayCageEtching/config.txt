@@ -1,5 +1,5 @@
 # Geometry 
-gridDelta = 0.1
+gridDelta = 0.125
 xExtent = 10.0
 yExtent = 10.0
 

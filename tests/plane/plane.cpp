@@ -17,12 +17,17 @@ template <class NumericType, int D> void RunTest() {
   VC_TEST_ASSERT(domain->getMaterialMap());
   VC_TEST_ASSERT(domain->getMaterialMap()->size() == 1);
 
-  MakePlane<NumericType, D>(domain, 5., Material::Si).apply();
+  MakePlane<NumericType, D>(domain, 5., Material::Si, true).apply();
 
   VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
   VC_TEST_ASSERT(domain->getMaterialMap()->size() == 2);
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
+
+  MakePlane<NumericType, D>(domain, 5., Material::Si, false).apply();
+
+  VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
+  VC_TEST_ASSERT(domain->getMaterialMap()->size() == 1);
 }
 
 } // namespace viennacore

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
+#include "psGeometryFactory.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsFromSurfaceMesh.hpp>
@@ -19,214 +20,79 @@ using namespace viennacore;
 /// exclusively to the bottom while the remaining portion adopts the mask
 /// material_.
 template <class NumericType, int D> class MakeTrench {
-  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
-  using BoundaryEnum = typename viennals::Domain<NumericType, D>::BoundaryType;
 
-  psDomainType pDomain_ = nullptr;
-
-  const NumericType gridDelta_;
-  const NumericType xExtent_;
-  const NumericType yExtent_;
+  psDomainType domain_;
+  GeometryFactory<NumericType, D> geometryFactory_;
+  static constexpr NumericType eps_ = 1e-4;
 
   const NumericType trenchWidth_;
   const NumericType trenchDepth_;
-  const NumericType taperAngle_; // taper angle in degrees
-  const NumericType baseHeight_;
+  const NumericType trenchTaperAngle_; // angle in degrees
 
-  const bool periodicBoundary_;
-  const bool makeMask_;
-  Material material_;
+  const NumericType maskHeight_;
+  const NumericType maskTaperAngle_;
+
+  const NumericType base_;
+  const Material material_;
+  const Material maskMaterial_ = Material::Mask;
 
 public:
+  MakeTrench(psDomainType domain, NumericType trenchWidth,
+             NumericType trenchDepth, NumericType trenchTaperAngle = 0,
+             NumericType maskHeight = 0, NumericType maskTaperAngle = 0,
+             bool halfTrench = false, Material material = Material::Si,
+             Material maskMaterial = Material::Mask)
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
+        trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
+        trenchTaperAngle_(trenchTaperAngle), maskHeight_(maskHeight),
+        maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
+        maskMaterial_(maskMaterial) {
+    if (halfTrench)
+      domain_->getSetup().halveXAxis();
+  }
+
   MakeTrench(psDomainType domain, NumericType gridDelta, NumericType xExtent,
              NumericType yExtent, NumericType trenchWidth,
              NumericType trenchDepth, NumericType taperAngle = 0.,
-             NumericType baseHeight = 0., bool periodicBoundary = false,
-             bool makeMask = false, Material material = Material::None)
-      : pDomain_(domain), gridDelta_(gridDelta), xExtent_(xExtent),
-        yExtent_(yExtent), trenchWidth_(trenchWidth), trenchDepth_(trenchDepth),
-        taperAngle_(taperAngle), baseHeight_(baseHeight),
-        periodicBoundary_(periodicBoundary), makeMask_(makeMask),
-        material_(material) {}
+             NumericType base = 0., bool periodicBoundary = false,
+             bool makeMask = false, Material material = Material::Si)
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
+        trenchWidth_(trenchWidth), trenchDepth_(makeMask ? 0 : trenchDepth),
+        trenchTaperAngle_(makeMask ? 0 : taperAngle),
+        maskHeight_(makeMask ? trenchDepth : 0),
+        maskTaperAngle_(makeMask ? taperAngle : 0), base_(base),
+        material_(material) {
+    domain_->setup(gridDelta, xExtent, yExtent,
+                   periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
+                                    : BoundaryType::REFLECTIVE_BOUNDARY);
+  }
 
   void apply() {
-    pDomain_->clear();
-    double bounds[2 * D];
-    bounds[0] = -xExtent_ / 2.;
-    bounds[1] = xExtent_ / 2.;
+    domain_->clear(); // this does not clear the setup
+    domain_->getSetup().check();
 
-    if constexpr (D == 3) {
-      bounds[2] = -yExtent_ / 2.;
-      bounds[3] = yExtent_ / 2.;
-      bounds[4] = -gridDelta_;
-      bounds[5] = trenchDepth_ + gridDelta_;
-    } else {
-      bounds[2] = -gridDelta_;
-      bounds[3] = trenchDepth_ + gridDelta_;
+    if (maskHeight_ > 0.) {
+      auto mask = geometryFactory_.makeMask(base_ - eps_, maskHeight_);
+      domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
+      std::array<NumericType, D> position = {0.};
+      position[D - 1] = base_ - 2 * eps_;
+      auto cutout = geometryFactory_.makeBoxStencil(
+          position, trenchWidth_, maskHeight_ + 3 * eps_, -maskTaperAngle_);
+      domain_->applyBooleanOperation(
+          cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
     }
 
-    BoundaryEnum boundaryCons[D];
-    for (int i = 0; i < D - 1; i++) {
-      if (periodicBoundary_) {
-        boundaryCons[i] = BoundaryEnum::PERIODIC_BOUNDARY;
-      } else {
-        boundaryCons[i] = BoundaryEnum::REFLECTIVE_BOUNDARY;
-      }
-    }
-    boundaryCons[D - 1] = BoundaryEnum::INFINITE_BOUNDARY;
+    auto substrate = geometryFactory_.makeSubstrate(base_);
+    domain_->insertNextLevelSetAsMaterial(substrate, material_);
 
-    auto substrate = lsDomainType::New(bounds, boundaryCons, gridDelta_);
-    NumericType normal[D] = {0.};
-    NumericType origin[D] = {0.};
-    normal[D - 1] = 1.;
-    origin[D - 1] = baseHeight_;
-    viennals::MakeGeometry<NumericType, D>(
-        substrate,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-        .apply();
-
-    auto mask = lsDomainType::New(bounds, boundaryCons, gridDelta_);
-    origin[D - 1] = trenchDepth_ + baseHeight_;
-    viennals::MakeGeometry<NumericType, D>(
-        mask,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-        .apply();
-
-    auto maskAdd = lsDomainType::New(bounds, boundaryCons, gridDelta_);
-    origin[D - 1] = baseHeight_;
-    normal[D - 1] = -1.;
-    viennals::MakeGeometry<NumericType, D>(
-        maskAdd,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-        .apply();
-
-    viennals::BooleanOperation<NumericType, D>(
-        mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
-        .apply();
-
-    auto cutout = lsDomainType::New(bounds, boundaryCons, gridDelta_);
-
-    if (taperAngle_) {
-      auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-      const NumericType offset =
-          std::tan(taperAngle_ * M_PI / 180.) * trenchDepth_;
-      if constexpr (D == 2) {
-        for (int i = 0; i < 4; i++) {
-          std::array<NumericType, 3> node = {0., 0., 0.};
-          mesh->insertNextNode(node);
-        }
-        mesh->nodes[0][0] = -trenchWidth_ / 2.;
-        mesh->nodes[1][0] = trenchWidth_ / 2.;
-        mesh->nodes[2][0] = trenchWidth_ / 2. + offset;
-        mesh->nodes[3][0] = -trenchWidth_ / 2. - offset;
-
-        mesh->nodes[0][1] = baseHeight_;
-        mesh->nodes[1][1] = baseHeight_;
-        mesh->nodes[2][1] = trenchDepth_ + baseHeight_;
-        mesh->nodes[3][1] = trenchDepth_ + baseHeight_;
-
-        mesh->insertNextLine(std::array<unsigned, 2>{0, 3});
-        mesh->insertNextLine(std::array<unsigned, 2>{3, 2});
-        mesh->insertNextLine(std::array<unsigned, 2>{2, 1});
-        mesh->insertNextLine(std::array<unsigned, 2>{1, 0});
-        viennals::FromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
-      } else {
-        for (int i = 0; i < 8; i++) {
-          std::array<NumericType, 3> node = {0., 0., 0.};
-          mesh->insertNextNode(node);
-        }
-        mesh->nodes[0][0] = -trenchWidth_ / 2.;
-        mesh->nodes[0][1] = -yExtent_ / 2. - gridDelta_;
-        mesh->nodes[0][2] = baseHeight_;
-
-        mesh->nodes[1][0] = trenchWidth_ / 2.;
-        mesh->nodes[1][1] = -yExtent_ / 2. - gridDelta_;
-        mesh->nodes[1][2] = baseHeight_;
-
-        mesh->nodes[2][0] = trenchWidth_ / 2.;
-        mesh->nodes[2][1] = yExtent_ / 2. + gridDelta_;
-        mesh->nodes[2][2] = baseHeight_;
-
-        mesh->nodes[3][0] = -trenchWidth_ / 2.;
-        mesh->nodes[3][1] = yExtent_ / 2. + gridDelta_;
-        mesh->nodes[3][2] = baseHeight_;
-
-        mesh->nodes[4][0] = -trenchWidth_ / 2. - offset;
-        mesh->nodes[4][1] = -yExtent_ / 2. - gridDelta_;
-        mesh->nodes[4][2] = trenchDepth_ + baseHeight_;
-
-        mesh->nodes[5][0] = trenchWidth_ / 2. + offset;
-        mesh->nodes[5][1] = -yExtent_ / 2. - gridDelta_;
-        mesh->nodes[5][2] = trenchDepth_ + baseHeight_;
-
-        mesh->nodes[6][0] = trenchWidth_ / 2. + offset;
-        mesh->nodes[6][1] = yExtent_ / 2. + gridDelta_;
-        mesh->nodes[6][2] = trenchDepth_ + baseHeight_;
-
-        mesh->nodes[7][0] = -trenchWidth_ / 2. - offset;
-        mesh->nodes[7][1] = yExtent_ / 2. + gridDelta_;
-        mesh->nodes[7][2] = trenchDepth_ + baseHeight_;
-
-        mesh->insertNextTriangle(std::array<unsigned, 3>{0, 3, 1});
-        mesh->insertNextTriangle(std::array<unsigned, 3>{1, 3, 2});
-
-        mesh->insertNextTriangle(std::array<unsigned, 3>{5, 6, 4});
-        mesh->insertNextTriangle(std::array<unsigned, 3>{6, 7, 4});
-
-        mesh->insertNextTriangle(std::array<unsigned, 3>{0, 1, 5});
-        mesh->insertNextTriangle(std::array<unsigned, 3>{0, 5, 4});
-
-        mesh->insertNextTriangle(std::array<unsigned, 3>{2, 3, 6});
-        mesh->insertNextTriangle(std::array<unsigned, 3>{6, 3, 7});
-
-        mesh->insertNextTriangle(std::array<unsigned, 3>{0, 7, 3});
-        mesh->insertNextTriangle(std::array<unsigned, 3>{0, 4, 7});
-
-        mesh->insertNextTriangle(std::array<unsigned, 3>{1, 2, 6});
-        mesh->insertNextTriangle(std::array<unsigned, 3>{1, 6, 5});
-
-        viennals::FromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
-      }
-    } else {
-      NumericType minPoint[D];
-      NumericType maxPoint[D];
-
-      minPoint[0] = -trenchWidth_ / 2;
-      maxPoint[0] = trenchWidth_ / 2;
-
-      if constexpr (D == 3) {
-        minPoint[1] = -yExtent_ / 2. - gridDelta_ / 2.;
-        maxPoint[1] = yExtent_ / 2. + gridDelta_ / 2.;
-        minPoint[2] = baseHeight_;
-        maxPoint[2] = trenchDepth_ + baseHeight_;
-      } else {
-        minPoint[1] = baseHeight_;
-        maxPoint[1] = trenchDepth_ + baseHeight_;
-      }
-      viennals::MakeGeometry<NumericType, D> geo(
-          cutout,
-          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint));
-      geo.setIgnoreBoundaryConditions(true);
-      geo.apply();
-    }
-
-    viennals::BooleanOperation<NumericType, D>(
-        mask, cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-        .apply();
-
-    viennals::BooleanOperation<NumericType, D>(
-        substrate, mask, viennals::BooleanOperationEnum::UNION)
-        .apply();
-
-    if (material_ == Material::None) {
-      if (makeMask_)
-        pDomain_->insertNextLevelSet(mask);
-      pDomain_->insertNextLevelSet(substrate, false);
-    } else {
-      if (makeMask_)
-        pDomain_->insertNextLevelSetAsMaterial(mask, Material::Mask);
-      pDomain_->insertNextLevelSetAsMaterial(substrate, material_, false);
+    if (trenchDepth_ > 0.) {
+      std::array<NumericType, D> position = {0.};
+      position[D - 1] = base_;
+      auto cutout = geometryFactory_.makeBoxStencil(
+          position, trenchWidth_, -trenchDepth_, -trenchTaperAngle_);
+      domain_->applyBooleanOperation(cutout,
+                                     viennals::BooleanOperationEnum::INTERSECT);
     }
   }
 };

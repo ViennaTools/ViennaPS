@@ -230,7 +230,8 @@ public:
 
     // particles
     auto particle =
-        std::make_unique<impl::IBEIon<NumericType, D>>(params_.ibeParams);
+        std::make_unique<impl::IBEIonWithRedeposition<NumericType, D>>(
+            params_.ibeParams);
 
     // surface model
     auto surfModel = SmartPointer<impl::IBESurfaceModel<NumericType>>::New(

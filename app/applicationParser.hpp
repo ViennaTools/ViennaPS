@@ -56,7 +56,7 @@ public:
 private:
   void parseMaterial(const std::string materialString, Material &material) {
     if (materialString == "Undefined") {
-      material = Material::None;
+      material = Material::Undefined;
     } else if (materialString == "Si") {
       material = Material::Si;
     } else if (materialString == "SiO2") {
@@ -93,7 +93,7 @@ private:
       material = Material::GaN;
     } else {
       std::cout << "Unknown material: " << materialString << std::endl;
-      material = Material::None;
+      material = Material::Undefined;
     }
   }
 

@@ -249,8 +249,7 @@ struct Parameters {
   }
 };
 
-template <int D>
-[[nodiscard]] viennaray::BoundaryCondition convertBoundaryCondition(
+[[nodiscard]] inline viennaray::BoundaryCondition convertBoundaryCondition(
     viennals::BoundaryConditionEnum originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
   case viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY:
@@ -272,9 +271,9 @@ template <int D>
 }
 
 template <class NumericType>
-[[nodiscard]] std::vector<NumericType> calculateCoverageDeltaMetric(
-    SmartPointer<viennals::PointData<NumericType>> updated,
-    SmartPointer<viennals::PointData<NumericType>> previous) {
+std::vector<NumericType> calculateCoverageDeltaMetric(
+    viennacore::SmartPointer<viennals::PointData<NumericType>> updated,
+    viennacore::SmartPointer<viennals::PointData<NumericType>> previous) {
 
   assert(updated->getScalarDataSize() == previous->getScalarDataSize());
   std::vector<NumericType> delta(updated->getScalarDataSize(), 0.);
@@ -293,6 +292,10 @@ template <class NumericType>
   }
 
   return delta;
+}
+
+inline std::string boolString(const int in) {
+  return in == 0 ? "false" : "true";
 }
 
 }; // namespace utils

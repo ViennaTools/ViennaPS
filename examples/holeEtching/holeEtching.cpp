@@ -27,12 +27,12 @@ int main(int argc, char *argv[]) {
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
-  MakeHole<NumericType, D>(
-      geometry, params.get("gridDelta"), params.get("xExtent"),
-      params.get("yExtent"), params.get("holeRadius"), params.get("maskHeight"),
-      params.get("taperAngle"), 0 /* base height */,
-      false /* periodic boundary */, true /*create mask*/, Material::Si)
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  MakeHole<NumericType, D>(geometry, params.get("holeRadius"),
+                           0.0 /* holeDepth */, 0.0 /* holeTaperAngle */,
+                           params.get("maskHeight"), params.get("taperAngle"),
+                           HoleShape::Half)
       .apply();
 
   // use pre-defined model SF6O2 etching model
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(20);
+  process.setCoverageDeltaThreshold(1e-4);
   process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(

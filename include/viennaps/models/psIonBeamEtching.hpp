@@ -25,6 +25,10 @@ template <typename NumericType> struct IBEParameters {
   NumericType tiltAngle = 0;     // degree
   std::function<NumericType(NumericType)> yieldFunction =
       [](NumericType theta) { return 1.; };
+
+  // Redeposition
+  NumericType redepositionThreshold = 0.1;
+  NumericType redepositionRate = 0.0;
 };
 
 namespace impl {
@@ -47,6 +51,7 @@ public:
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("ionFlux");
+    auto redeposition = rates->getScalarData("redepositionFlux");
 
     const NumericType norm =
         params_.planeWaferRate /
@@ -56,6 +61,7 @@ public:
     for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!isMaskMaterial(materialIds[i])) {
         velocity->at(i) = -flux->at(i) * norm;
+        velocity->at(i) += redeposition->at(i) * params_.redepositionRate;
       }
     }
 
@@ -73,9 +79,11 @@ private:
 };
 
 template <typename NumericType, int D>
-class IBEIon : public viennaray::Particle<IBEIon<NumericType, D>, NumericType> {
+class IBEIonWithRedeposition
+    : public viennaray::Particle<IBEIonWithRedeposition<NumericType, D>,
+                                 NumericType> {
 public:
-  IBEIon(const IBEParameters<NumericType> &params)
+  IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
       : params_(params), normalDist_(params.meanEnergy, params.sigmaEnergy),
         A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
         inflectAngle_(params.inflectAngle * M_PI / 180.),
@@ -94,6 +102,9 @@ public:
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
         params_.yieldFunction(theta);
+
+    if (params_.redepositionRate > 0.)
+      localData.getVectorData(1)[primID] += redepositionWeight_;
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
@@ -113,6 +124,14 @@ public:
     } else {
       Eref_peak = A_ * std::pow(incAngle / inflectAngle_, params_.n_l);
     }
+
+    if (params_.redepositionRate > 0.) {
+      redepositionWeight_ =
+          std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
+                   0.) *
+          params_.yieldFunction(incAngle);
+    }
+
     // Gaussian distribution around the Eref_peak scaled by the particle energy
     NumericType newEnergy;
     std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
@@ -121,7 +140,8 @@ public:
       newEnergy = normalDist(rngState);
     } while (newEnergy > energy_ || newEnergy < 0.);
 
-    if (newEnergy > params_.thresholdEnergy) {
+    if (newEnergy > params_.thresholdEnergy ||
+        redepositionWeight_ > params_.redepositionThreshold) {
       energy_ = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, rngState, std::max(incAngle, minAngle_));
@@ -136,6 +156,7 @@ public:
     do {
       energy_ = normalDist_(rngState);
     } while (energy_ < params_.thresholdEnergy);
+    redepositionWeight_ = 0.;
   }
 
   NumericType getSourceDistributionPower() const override final {
@@ -143,11 +164,12 @@ public:
   }
 
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"ionFlux"};
+    return {"ionFlux", "redepositionFlux"};
   }
 
 private:
   NumericType energy_;
+  NumericType redepositionWeight_;
 
   const IBEParameters<NumericType> &params_;
   const NumericType inflectAngle_;
@@ -181,7 +203,8 @@ public:
       return;
 
     // particles
-    auto particle = std::make_unique<impl::IBEIon<NumericType, D>>(params_);
+    auto particle =
+        std::make_unique<impl::IBEIonWithRedeposition<NumericType, D>>(params_);
 
     // surface model
     auto surfModel = SmartPointer<impl::IBESurfaceModel<NumericType>>::New(

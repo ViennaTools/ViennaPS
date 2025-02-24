@@ -156,7 +156,7 @@ public:
 
     // Map the domain boundary to the ray tracing boundaries
     for (unsigned i = 0; i < D; ++i)
-      rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
+      rayBoundaryCondition[i] = utils::convertBoundaryCondition(
           pDomain_->getGrid().getBoundaryConditions(i));
 
     rayTracer.setSourceDirection(sourceDirection_);

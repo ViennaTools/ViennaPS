@@ -19,19 +19,19 @@ vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])
 
 # Geometry setup
-geometry = vps.Domain()
-vps.MakeStack(
-    geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeStack(
+    domain=geometry,
     numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
     substrateHeight=params["substrateHeight"],
     holeRadius=0.0,
     trenchWidth=params["trenchWidth"],
     maskHeight=params["maskHeight"],
-    periodicBoundary=False,
 ).apply()
 
 geometry.duplicateTopLevelSet(vps.Material.Polymer)
@@ -51,9 +51,7 @@ process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
 process.setMaxCoverageInitIterations(10)
 process.setTimeStepRatio(0.25)
-process.setIntegrationScheme(
-    vps.ls.IntegrationSchemeEnum.LOCAL_LAX_FRIEDRICHS_1ST_ORDER
-)
+process.setIntegrationScheme(vps.IntegrationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER)
 
 # print initial surface
 geometry.saveVolumeMesh("initial")
@@ -74,4 +72,4 @@ boundaryConds = [
 
 vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
 
-extruded.saveVolumeMesh("final_extruded")
+extruded.saveHullMesh("final_extruded")

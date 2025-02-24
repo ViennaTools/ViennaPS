@@ -8,7 +8,7 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   // Parse the parameters
   ps::utils::Parameters params;
@@ -19,17 +19,15 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  ps::MakeTrench<NumericType, D>(
-      geometry, params.get("gridDelta") /* grid delta */,
-      params.get("xExtent") /*x extent*/, params.get("yExtent") /*y extent*/,
-      params.get("trenchWidth") /*trench width*/,
-      params.get("trenchHeight") /*trench height*/,
-      params.get("taperAngle") /* tapering angle */)
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  ps::MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                                 params.get("trenchHeight"),
+                                 params.get("taperAngle"))
       .apply();
 
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet();
+  geometry->duplicateTopLevelSet(ps::Material::SiO2);
 
   auto model = ps::SmartPointer<ps::SingleParticleProcess<NumericType, D>>::New(
       params.get("rate") /*deposition rate*/,
@@ -42,12 +40,9 @@ int main(int argc, char *argv[]) {
   process.setNumberOfRaysPerPoint(1000);
   process.setProcessDuration(params.get("processTime"));
 
-  geometry->saveSurfaceMesh("initial.vtp");
+  geometry->saveHullMesh("initial");
 
   process.apply();
 
-  geometry->saveSurfaceMesh("final.vtp");
-
-  if constexpr (D == 2)
-    geometry->saveVolumeMesh("final");
+  geometry->saveHullMesh("final");
 }

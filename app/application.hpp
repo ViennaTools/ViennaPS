@@ -603,7 +603,7 @@ private:
 
   static std::string materialString(const Material material) {
     switch (material) {
-    case Material::None:
+    case Material::Undefined:
       return "None";
     case Material::Mask:
       return "Mask";

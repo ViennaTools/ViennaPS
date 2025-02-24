@@ -80,13 +80,13 @@ else()
 endif()
 
 target_link_libraries(viennaps2d PRIVATE ViennaPS)
-target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2
-                                              -DVIENNAPS_MODULE_NAME=viennaps2d
-                                              )
-                                              
-target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3
-                                              -DVIENNAPS_MODULE_NAME=viennaps3d
-                                              )
+
+target_compile_definitions(
+  viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2 -DVIENNAPS_MODULE_NAME=viennaps2d
+                     -DVIENNAPS_VERSION=${CMAKE_PROJECT_VERSION})
+target_compile_definitions(
+  viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3 -DVIENNAPS_MODULE_NAME=viennaps3d
+                     -DVIENNAPS_VERSION=${CMAKE_PROJECT_VERSION})
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Lib-Folder

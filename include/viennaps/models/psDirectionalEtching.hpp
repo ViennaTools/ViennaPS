@@ -166,9 +166,8 @@ public:
   // and optional mask materials
   DirectionalEtching(const Vec3D<NumericType> &direction,
                      NumericType directionalVelocity,
-                     NumericType isotropicVelocity = 0.,
-                     const std::vector<Material> &maskMaterials =
-                         std::vector<Material>{Material::Mask},
+                     NumericType isotropicVelocity,
+                     const std::vector<Material> &maskMaterials,
                      bool calculateVisibility = true) {
     std::vector<RateSet> rateSets;
     rateSets.emplace_back(direction, directionalVelocity, isotropicVelocity,

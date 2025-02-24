@@ -1,5 +1,6 @@
 #pragma once
 
+#include "psDomainSetup.hpp"
 #include "psMaterials.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
 
@@ -40,10 +41,12 @@ public:
   using lsDomainsType = std::vector<lsDomainType>;
   using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
   using materialMapType = SmartPointer<MaterialMap>;
+  using Setup = DomainSetup<NumericType, D>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
 
 private:
+  Setup setup_;
   lsDomainsType levelSets_;
   csDomainType cellSet_ = nullptr;
   materialMapType materialMap_ = nullptr;
@@ -56,14 +59,45 @@ public:
   Domain(SmartPointer<Domain> domain) { deepCopy(domain); }
 
   // Constructor for domain with a single initial Level-Set.
-  Domain(lsDomainType levelSet) { levelSets_.push_back(levelSet); }
+  Domain(lsDomainType levelSet) {
+    setup_.init(levelSet->getGrid());
+    levelSets_.push_back(levelSet);
+  }
 
   // Constructor for domain with multiple initial Level-Sets.
-  Domain(lsDomainsType levelSets) : levelSets_(levelSets) {}
+  Domain(lsDomainsType levelSets) : levelSets_(levelSets) {
+    setup_.init(levelSets.back()->getGrid());
+  }
+
+  // Sets up domain in with primary direction y in 2D and z in 3D
+  Domain(NumericType gridDelta, NumericType xExtent,
+         BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
+      : setup_(gridDelta, xExtent, 0.0, boundary) {
+    static_assert(D == 2, "Domain setup only valid for 2D.");
+  }
+
+  // Sets up domain in with primary direction y in 2D and z in 3D
+  // In 2D yExtent is ignored.
+  Domain(NumericType gridDelta, NumericType xExtent, NumericType yExtent = 0.0,
+         BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
+      : setup_(gridDelta, xExtent, yExtent, boundary) {}
+
+  Domain(const Setup &setup) : setup_(setup) {}
+
+  void setup(const Setup &setup) { setup_ = setup; }
+
+  void setup(NumericType gridDelta, NumericType xExtent,
+             NumericType yExtent = 0,
+             BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY) {
+    setup_ = Setup(gridDelta, xExtent, yExtent, boundary);
+  }
 
   // Create a deep copy of all Level-Sets and the Cell-Set from the passed
   // domain.
   void deepCopy(SmartPointer<Domain> domain) {
+
+    clear();
+    setup_ = domain->setup_;
 
     // Copy all Level-Sets.
     for (auto &ls : domain->levelSets_) {
@@ -91,8 +125,13 @@ public:
     }
   }
 
+  // Will be deprecated in the future. Please use insertNextLevelSetAsMaterial
+  // instead.
   void insertNextLevelSet(lsDomainType levelSet,
                           bool wrapLowerLevelSet = true) {
+    if (levelSets_.empty()) {
+      setup_.init(levelSet->getGrid());
+    }
     if (!levelSets_.empty() && wrapLowerLevelSet) {
       viennals::BooleanOperation<NumericType, D>(
           levelSet, levelSets_.back(), viennals::BooleanOperationEnum::UNION)
@@ -111,6 +150,9 @@ public:
   void insertNextLevelSetAsMaterial(lsDomainType levelSet,
                                     const Material material,
                                     bool wrapLowerLevelSet = true) {
+    if (levelSets_.empty()) {
+      setup_.init(levelSet->getGrid());
+    }
     if (!levelSets_.empty() && wrapLowerLevelSet) {
       viennals::BooleanOperation<NumericType, D>(
           levelSet, levelSets_.back(), viennals::BooleanOperationEnum::UNION)
@@ -126,17 +168,16 @@ public:
 
   // Copy the top Level-Set and insert it in the domain (e.g. in order to
   // capture depositing material on top of the surface).
-  void duplicateTopLevelSet(const Material material = Material::None) {
+  void duplicateTopLevelSet(const Material material) {
     if (levelSets_.empty()) {
+      Logger::getInstance()
+          .addWarning("Trying to duplicate non-existing Level-Set in domain.")
+          .print();
       return;
     }
 
     auto copy = lsDomainType::New(levelSets_.back());
-    if (material == Material::None) {
-      insertNextLevelSet(copy, false);
-    } else {
-      insertNextLevelSetAsMaterial(copy, material, false);
-    }
+    insertNextLevelSetAsMaterial(copy, material, false);
   }
 
   // Remove the top (last inserted) Level-Set.
@@ -263,11 +304,11 @@ public:
   auto &getCellSet() const { return cellSet_; }
 
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
-  auto &getGrid() const { return levelSets_.back()->getGrid(); }
+  auto &getGrid() const { return setup_.grid(); }
 
-  auto getGridDelta() const {
-    return levelSets_.back()->getGrid().getGridDelta();
-  }
+  auto getGridDelta() const { return setup_.gridDelta(); }
+
+  auto &getSetup() { return setup_; }
 
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
@@ -331,9 +372,26 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string fileName) const {
+  void saveVolumeMesh(std::string fileName,
+                      double wrappingLayerEpsilon = 1e-2) const {
     viennals::WriteVisualizationMesh<NumericType, D> visMesh;
     visMesh.setFileName(fileName);
+    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
+    for (auto &ls : levelSets_) {
+      visMesh.insertNextLevelSet(ls);
+    }
+    if (materialMap_)
+      visMesh.setMaterialMap(materialMap_->getMaterialMap());
+    visMesh.apply();
+  }
+
+  void saveHullMesh(std::string fileName,
+                    double wrappingLayerEpsilon = 1e-2) const {
+    viennals::WriteVisualizationMesh<NumericType, D> visMesh;
+    visMesh.setFileName(fileName);
+    visMesh.setWrappingLayerEpsilon(wrappingLayerEpsilon);
+    visMesh.setExtractHullMesh(true);
+    visMesh.setExtractVolumeMesh(false);
     for (auto &ls : levelSets_) {
       visMesh.insertNextLevelSet(ls);
     }
