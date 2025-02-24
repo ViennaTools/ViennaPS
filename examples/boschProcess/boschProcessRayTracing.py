@@ -40,19 +40,18 @@ shape_map = {
 hole_shape_str = params.get("holeShape", "Full").strip()
 
 # geometry setup, all units in um
-geometry = vps.Domain()
-vps.MakeHole(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeHole(
+    domain=geometry,
     holeRadius=params["holeRadius"],
-    holeDepth=params["maskHeight"],
-    taperingAngle=params["taperAngle"],
+    holeDepth=0.0,
+    maskHeight=params["maskHeight"],
+    maskTaperAngle=params["taperAngle"],
     holeShape=shape_map[hole_shape_str],
-    periodicBoundary=False,
-    makeMask=True,
-    material=vps.Material.Si,
 ).apply()
 
 depoModel = vps.MultiParticleProcess()

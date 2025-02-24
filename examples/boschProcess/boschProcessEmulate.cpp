@@ -11,6 +11,7 @@ using NumericType = double;
 
 void etch(SmartPointer<Domain<NumericType, D>> domain,
           utils::Parameters &params) {
+  std::cout << "  - Etching - " << std::endl;
   typename DirectionalEtching<NumericType, D>::RateSet rateSet;
   rateSet.direction = {0.};
   rateSet.direction[D - 1] = -1.;
@@ -27,6 +28,7 @@ void etch(SmartPointer<Domain<NumericType, D>> domain,
 
 void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
                   utils::Parameters &params) {
+  std::cout << "  - Punching through - " << std::endl;
   typename DirectionalEtching<NumericType, D>::RateSet rateSet;
   rateSet.direction = {0.};
   rateSet.direction[D - 1] = -1.;
@@ -44,6 +46,7 @@ void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
 
 void deposit(SmartPointer<Domain<NumericType, D>> domain,
              NumericType depositionThickness) {
+  std::cout << "  - Deposition - " << std::endl;
   domain->duplicateTopLevelSet(Material::Polymer);
   auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(
       depositionThickness, domain->getGridDelta());
@@ -77,12 +80,11 @@ int main(int argc, char **argv) {
   }
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
-  MakeTrench<NumericType, D>(
-      geometry, params.get("gridDelta"), params.get("xExtent"),
-      params.get("yExtent"), params.get("trenchWidth"),
-      params.get("maskHeight"), 0. /* taper angle */, 0. /* base height */,
-      false /* periodic boundary */, true /* create mask */, Material::Si)
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                             0.0 /* trenchDepth */, 0.0 /* trenchTaperAngle */,
+                             params.get("maskHeight"))
       .apply();
 
   const NumericType depositionThickness = params.get("depositionThickness");
@@ -95,6 +97,7 @@ int main(int argc, char **argv) {
   geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
 
   for (int i = 0; i < numCycles; ++i) {
+    std::cout << "Cycle " << i + 1 << std::endl;
     deposit(geometry, depositionThickness);
     geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
     punchThrough(geometry, params);

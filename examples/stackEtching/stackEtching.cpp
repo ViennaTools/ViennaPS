@@ -27,12 +27,12 @@ int main(int argc, char *argv[]) {
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   MakeStack<NumericType, D>(
-      geometry, params.get("gridDelta"), params.get("xExtent"),
-      params.get("yExtent"), params.get<int>("numLayers"),
-      params.get("layerHeight"), params.get("substrateHeight"), 0.0,
-      params.get("trenchWidth"), params.get("maskHeight"), false)
+      geometry, params.get<int>("numLayers"), params.get("layerHeight"),
+      params.get("substrateHeight"), 0.0 /*holeRadius*/,
+      params.get("trenchWidth"), params.get("maskHeight"), false /*halfStack*/)
       .apply();
 
   // copy top layer for deposition

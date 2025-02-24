@@ -1,5 +1,4 @@
 #include <geometries/psMakeTrench.hpp>
-#include <models/psDirectionalEtching.hpp>
 #include <models/psIonBeamEtching.hpp>
 
 #include <psProcess.hpp>
@@ -21,22 +20,12 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
-  MakeTrench<NumericType, D>(
-      geometry, params.get("gridDelta"), params.get("xExtent"),
-      params.get("yExtent"), params.get("trenchWidth"),
-      params.get("maskHeight"), 0.0 /* tapering angle */, 0.0 /* base height */,
-      true /*periodic*/, true /*make mask*/, Material::Si)
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                             params.get("trenchDepth"),
+                             0.0 /*trenchTaperAngle*/, params.get("maskHeight"))
       .apply();
-
-  {
-    // etch trench
-    Vec3D<NumericType> direction{0., 0., 0.};
-    direction[D - 1] = -1.;
-    auto model =
-        SmartPointer<DirectionalEtching<NumericType, D>>::New(direction, -1.0);
-    Process<NumericType, D>(geometry, model, params.get("trenchDepth")).apply();
-  }
 
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet(Material::Polymer);

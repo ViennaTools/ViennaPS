@@ -23,17 +23,17 @@ vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])
 
 # geometry setup, all units in um
-geometry = vps.Domain()
-vps.MakeHole(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeHole(
+    domain=geometry,
     holeRadius=params["holeRadius"],
-    holeDepth=params["maskHeight"],
-    taperingAngle=params["taperAngle"],
-    makeMask=True,
-    material=vps.Material.Si,
+    holeDepth=0.0,
+    maskHeight=params["maskHeight"],
+    maskTaperAngle=params["taperAngle"],
     holeShape=vps.HoleShape.Half,
 ).apply()
 
@@ -44,16 +44,17 @@ modelParams.etchantFlux = params["etchantFlux"]
 modelParams.oxygenFlux = params["oxygenFlux"]
 modelParams.Ions.meanEnergy = params["meanEnergy"]
 modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
+modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Passivation.A_ie = params["A_O"]
+modelParams.Si.A_ie = params["A_Si"]
 modelParams.etchStopDepth = params["etchStopDepth"]
-
 model = vps.SF6O2Etching(modelParams)
 
 # process setup
 process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setMaxCoverageInitIterations(10)
+process.setMaxCoverageInitIterations(20)
 process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
 process.setIntegrationScheme(

@@ -22,28 +22,17 @@ vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
 params = vps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain()
-vps.MakeTrench(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
-    trenchWidth=params["trenchWidth"],
-    trenchDepth=params["maskHeight"],
-    taperingAngle=0.0,
-    baseHeight=0.0,
-    periodicBoundary=True,
-    makeMask=True,
-    material=vps.Material.Si,
-).apply()
-
-direction = [0.0, 0.0, 0.0]
-direction[args.dim - 1] = -1.0
-model = vps.DirectionalEtching(
-    direction=direction,
-    directionalVelocity=-1.0,
 )
-vps.Process(geometry, model, params["trenchDepth"]).apply()
+vps.MakeTrench(
+    domain=geometry,
+    trenchWidth=params["trenchWidth"],
+    trenchDepth=params["trenchDepth"],
+    maskHeight=params["maskHeight"],
+).apply()
 
 # copy top layer to capture deposition
 geometry.duplicateTopLevelSet(vps.Material.Polymer)

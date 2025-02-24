@@ -249,8 +249,7 @@ struct Parameters {
   }
 };
 
-template <int D>
-[[nodiscard]] viennaray::BoundaryCondition convertBoundaryCondition(
+[[nodiscard]] inline viennaray::BoundaryCondition convertBoundaryCondition(
     viennals::BoundaryConditionEnum originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
   case viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY:
@@ -269,6 +268,10 @@ template <int D>
     return viennaray::BoundaryCondition::IGNORE;
   }
   return viennaray::BoundaryCondition::IGNORE;
+}
+
+inline std::string boolString(const int in) {
+  return in == 0 ? "false" : "true";
 }
 
 }; // namespace utils

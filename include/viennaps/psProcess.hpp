@@ -849,7 +849,7 @@ private:
         rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
     } else {
       for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = utils::convertBoundaryCondition<D>(
+        rayBoundaryCondition[i] = utils::convertBoundaryCondition(
             domain->getGrid().getBoundaryConditions(i));
     }
     tracer.setBoundaryConditions(rayBoundaryCondition);

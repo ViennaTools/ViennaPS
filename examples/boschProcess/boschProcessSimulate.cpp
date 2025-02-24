@@ -81,12 +81,11 @@ int main(int argc, char **argv) {
   }
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
-  MakeTrench<NumericType, D>(
-      geometry, params.get("gridDelta"), params.get("xExtent"),
-      params.get("yExtent"), params.get("trenchWidth"),
-      params.get("maskHeight"), 0. /* taper angle */, 0. /* base height */,
-      false /* periodic boundary */, true /* create mask */, Material::Si)
+  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                             0.0 /* trenchDepth */, 0.0 /* trenchTaperAngle */,
+                             params.get("maskHeight"))
       .apply();
 
   const NumericType depositionThickness = params.get("depositionThickness");

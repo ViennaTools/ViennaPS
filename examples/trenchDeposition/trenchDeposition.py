@@ -19,19 +19,16 @@ else:
 
 params = vps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain()
-vps.MakeTrench(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+vps.MakeTrench(
+    domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
-    taperingAngle=params["taperAngle"],
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=False,
-    material=vps.Material.Si,
+    trenchTaperAngle=params["taperAngle"],
 ).apply()
 
 geometry.duplicateTopLevelSet(vps.Material.SiO2)

@@ -98,7 +98,7 @@ CPMAddPackage(
   NAME ViennaCore
   VERSION 1.2.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE app/"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMAddPackage(
@@ -114,7 +114,7 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 4.2.0
+  VERSION 4.2.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

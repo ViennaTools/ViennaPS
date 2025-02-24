@@ -22,17 +22,17 @@ params = vps.ReadConfigFile(args.filename)
 vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 
 # geometry setup, all units in um
-geometry = vps.Domain()
-vps.MakeFin(
-    domain=geometry,
+geometry = vps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+    boundary=vps.BoundaryType.PERIODIC_BOUNDARY,
+)
+vps.MakeFin(
+    domain=geometry,
     finWidth=params["finWidth"],
-    finHeight=params["maskHeight"],
-    periodicBoundary=True,
-    makeMask=True,
-    material=vps.Material.Si,
+    finHeight=0.0,
+    maskHeight=params["maskHeight"],
 ).apply()
 
 # use pre-defined etching model
@@ -51,10 +51,10 @@ process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["etchTime"])  # seconds
 
 # print initial surface
-geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)
+geometry.saveHullMesh(filename="initial")
 
 # run the process
 process.apply()
 
 # print final surface
-geometry.saveSurfaceMesh(filename="final.vtp", addMaterialIds=True)
+geometry.saveHullMesh(filename="final")

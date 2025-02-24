@@ -27,9 +27,10 @@ def _windows_dll_path():
 if sys.platform == "win32":
     _windows_dll_path()
 
-from .@NAME@ import *
-from @LSNAME@ import IntegrationSchemeEnum as IntegrationScheme
 import @LSNAME@ as ls
+from @LSNAME@ import IntegrationSchemeEnum as IntegrationScheme
+from @LSNAME@ import BoundaryConditionEnum as BoundaryType
+from .@NAME@ import *
 
 # Config file reader helper function
 def ReadConfigFile(fileName: str):

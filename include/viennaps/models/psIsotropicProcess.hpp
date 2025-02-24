@@ -53,7 +53,7 @@ template <typename NumericType, int D>
 class IsotropicProcess : public ProcessModel<NumericType, D> {
 public:
   IsotropicProcess(const NumericType isotropicRate,
-                   const Material maskMaterial = Material::None) {
+                   const Material maskMaterial = Material::Undefined) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 

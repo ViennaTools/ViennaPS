@@ -60,19 +60,19 @@ numberOfRaysPerPoint = int(1000)
 
 for i in range(len(yo2)):
 
-    geometry = vps.Domain()
+    # geometry setup, all units in um
+    geometry = vps.Domain(
+        gridDelta=params["gridDelta"],
+        xExtent=params["xExtent"],
+        yExtent=params["yExtent"],
+    )
     vps.MakeHole(
-        geometry,
-        gridDelta,
-        xExtent,
-        yExtent,
-        holeRadius,
-        maskHeight,
-        taperAngle,
-        0.0,
-        False,
-        True,
-        vps.Material.Si,
+        domain=geometry,
+        holeRadius=params["holeRadius"],
+        holeDepth=0.0,
+        maskHeight=params["maskHeight"],
+        maskTaperAngle=params["taperAngle"],
+        holeShape=vps.HoleShape.Half,
     ).apply()
 
     process = vps.Process()
