@@ -65,6 +65,11 @@ public:
   // Set the number of iterations to initialize the coverages.
   void setMaxCoverageInitIterations(unsigned maxIt) { maxIterations = maxIt; }
 
+  // Set the threshold for the coverage delta metric to reach convergence.
+  void setCoverageDeltaThreshold(NumericType treshold) {
+    coverageDeltaTreshold = treshold;
+  }
+
   // Set the source direction, where the rays should be traced from.
   void setSourceDirection(viennaray::TraceDirection passedDirection) {
     rayTracingParams.sourceDirection = passedDirection;
@@ -350,6 +355,17 @@ public:
       Timer timer;
       useCoverages = true;
       Logger::getInstance().addInfo("Using coverages.").print();
+
+      if (maxIterations == std::numeric_limits<unsigned>::max() &&
+          coverageDeltaTreshold == 0.) {
+        maxIterations = 10;
+        Logger::getInstance()
+            .addWarning("No coverage initialization parameters set. Using " +
+                        std::to_string(maxIterations) +
+                        " initialization iterations.")
+            .print();
+      }
+
       // debug output
       if (logLevel >= 5)
         covMetricFile.open(name + "_covMetric.txt");
@@ -357,6 +373,7 @@ public:
       if (!coveragesInitialized_) {
         timer.start();
         Logger::getInstance().addInfo("Initializing coverages ... ").print();
+
         auto points = diskMesh->getNodes();
         auto normals = *diskMesh->getCellData().getVectorData("Normals");
         auto materialIds =
@@ -369,10 +386,11 @@ public:
         }
         rayTracer.setMaterialIds(materialIds);
 
-        for (size_t iterations = 0; iterations < maxIterations; iterations++) {
+        model->initialize(domain, -1.);
+
+        for (unsigned iteration = 0; iteration < maxIterations; ++iteration) {
           // We need additional signal handling when running the C++ code from
-          // the
-          // Python bindings to allow interrupts in the Python scripts
+          // the Python bindings to allow interrupts in the Python scripts
 #ifdef VIENNAPS_PYTHON_BUILD
           if (PyErr_CheckSignals() != 0)
             throw pybind11::error_already_set();
@@ -380,90 +398,53 @@ public:
           // save current coverages to compare with the new ones
           auto prevStepCoverages =
               SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
-          // move coverages to the ray tracer
-          viennaray::TracingData<NumericType> rayTraceCoverages =
-              movePointDataToRayData(coverages);
-          if (useProcessParams) {
-            // store scalars in addition to coverages
-            auto processParams =
-                model->getSurfaceModel()->getProcessParameters();
-            NumericType numParams = processParams->getScalarData().size();
-            rayTraceCoverages.setNumberOfScalarData(numParams);
-            for (size_t i = 0; i < numParams; ++i) {
-              rayTraceCoverages.setScalarData(
-                  i, processParams->getScalarData(i),
-                  processParams->getScalarDataLabel(i));
-            }
-          }
-          rayTracer.setGlobalData(rayTraceCoverages);
 
-          auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
+          auto fluxes =
+              calculateFluxes(rayTracer, useCoverages, useProcessParams);
 
-          std::size_t particleIdx = 0;
-          for (auto &particle : model->getParticleTypes()) {
-            int dataLogSize = model->getParticleLogSize(particleIdx);
-            if (dataLogSize > 0) {
-              rayTracer.getDataLog().data.resize(1);
-              rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
-            }
-            rayTracer.setParticleType(particle);
-            rayTracer.apply();
+          // update coverages in the model
+          model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
 
-            // fill up rates vector with rates from this particle type
-            auto &localData = rayTracer.getLocalData();
-            int numRates = particle->getLocalDataLabels().size();
-            for (int i = 0; i < numRates; ++i) {
-              auto rate = std::move(localData.getVectorData(i));
-
-              // normalize fluxes
-              rayTracer.normalizeFlux(rate, rayTracingParams.normalizationType);
-              if (rayTracingParams.smoothingNeighbors > 0)
-                rayTracer.smoothFlux(rate, rayTracingParams.smoothingNeighbors);
-              rates->insertNextScalarData(std::move(rate),
-                                          localData.getVectorDataLabel(i));
-            }
-
-            if (dataLogSize > 0) {
-              particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
-            }
-            ++particleIdx;
-          }
-
-          // move coverages back in the model
-          moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
-                                 rayTraceCoverages);
-          model->getSurfaceModel()->updateCoverages(rates, materialIds);
-
-          // check for convergence
-          if (logLevel >= 5) {
-            coverages = model->getSurfaceModel()->getCoverages();
-            auto metric =
-                calculateCoverageDeltaMetric(coverages, prevStepCoverages);
-            for (auto val : metric) {
-              covMetricFile << val << ";";
-            }
-            covMetricFile << "\n";
-          }
+          // metric to check for convergence
+          coverages = model->getSurfaceModel()->getCoverages();
+          auto metric =
+              calculateCoverageDeltaMetric(coverages, prevStepCoverages);
 
           if (logLevel >= 3) {
-            auto coverages = model->getSurfaceModel()->getCoverages();
-            for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-              auto label = coverages->getScalarDataLabel(idx);
-              diskMesh->getCellData().insertNextScalarData(
-                  *coverages->getScalarData(idx), label);
-            }
-            for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
-              auto label = rates->getScalarDataLabel(idx);
-              diskMesh->getCellData().insertNextScalarData(
-                  *rates->getScalarData(idx), label);
-            }
+            mergeScalarData(diskMesh->getCellData(), coverages);
+            mergeScalarData(diskMesh->getCellData(), fluxes);
             printDiskMesh(diskMesh, name + "_covIinit_" +
-                                        std::to_string(iterations) + ".vtp");
+                                        std::to_string(iteration) + ".vtp");
             Logger::getInstance()
-                .addInfo("Iteration: " + std::to_string(iterations))
+                .addInfo("Iteration: " + std::to_string(iteration + 1))
                 .print();
+
+            std::stringstream stream;
+            stream << std::setprecision(4) << std::fixed;
+            stream << "Coverage delta metric: ";
+            for (int i = 0; i < coverages->getScalarDataSize(); i++) {
+              stream << coverages->getScalarDataLabel(i) << ": " << metric[i]
+                     << "\t";
+            }
+            Logger::getInstance().addInfo(stream.str()).print();
+
+            // log metric to file
+            if (logLevel >= 5) {
+              for (auto val : metric) {
+                covMetricFile << val << ";";
+              }
+              covMetricFile << "\n";
+            }
           }
-        }
+
+          if (checkCoveragesConvergence(metric)) {
+            Logger::getInstance()
+                .addInfo("Coverages converged after " +
+                         std::to_string(iteration + 1) + " iterations.")
+                .print();
+            break;
+          }
+        } // end coverage initialization loop
         coveragesInitialized_ = true;
 
         timer.finish();
@@ -490,7 +471,7 @@ public:
       advectionKernel.prepareLS();
       model->initialize(domain, remainingTime);
 
-      auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
+      auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
       meshConverter.apply();
       auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh->getNodes();
@@ -507,87 +488,48 @@ public:
         }
         rayTracer.setMaterialIds(materialIds);
 
-        // move coverages to ray tracer
-        viennaray::TracingData<NumericType> rayTraceCoverages;
-        if (useCoverages) {
-          rayTraceCoverages =
-              movePointDataToRayData(model->getSurfaceModel()->getCoverages());
-          if (useProcessParams) {
-            // store scalars in addition to coverages
-            auto processParams =
-                model->getSurfaceModel()->getProcessParameters();
-            NumericType numParams = processParams->getScalarData().size();
-            rayTraceCoverages.setNumberOfScalarData(numParams);
-            for (size_t i = 0; i < numParams; ++i) {
-              rayTraceCoverages.setScalarData(
-                  i, processParams->getScalarData(i),
-                  processParams->getScalarDataLabel(i));
-            }
-          }
-          rayTracer.setGlobalData(rayTraceCoverages);
-        }
+        fluxes = calculateFluxes(rayTracer, useCoverages, useProcessParams);
 
-        std::size_t particleIdx = 0;
-        for (auto &particle : model->getParticleTypes()) {
-          int dataLogSize = model->getParticleLogSize(particleIdx);
-          if (dataLogSize > 0) {
-            rayTracer.getDataLog().data.resize(1);
-            rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
-          }
-          rayTracer.setParticleType(particle);
-          rayTracer.apply();
-
-          // fill up rates vector with rates from this particle type
-          auto numRates = particle->getLocalDataLabels().size();
-          auto &localData = rayTracer.getLocalData();
-          for (int i = 0; i < numRates; ++i) {
-            auto rate = std::move(localData.getVectorData(i));
-
-            // normalize rates
-            rayTracer.normalizeFlux(rate, rayTracingParams.normalizationType);
-            if (rayTracingParams.smoothingNeighbors > 0)
-              rayTracer.smoothFlux(rate, rayTracingParams.smoothingNeighbors);
-            rates->insertNextScalarData(std::move(rate),
-                                        localData.getVectorDataLabel(i));
-          }
-
-          if (dataLogSize > 0) {
-            particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
-          }
-          ++particleIdx;
-        }
-
-        // move coverages back to model
-        if (useCoverages)
-          moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
-                                 rayTraceCoverages);
         rtTimer.finish();
         Logger::getInstance()
             .addTiming("Top-down flux calculation", rtTimer)
             .print();
       }
 
-      // save coverages for comparison
-      SmartPointer<viennals::PointData<NumericType>> prevStepCoverages;
-      if (useCoverages && logLevel >= 5) {
+      // update coverages and calculate coverage delta metric
+      if (useCoverages) {
         coverages = model->getSurfaceModel()->getCoverages();
-        prevStepCoverages =
+        auto prevStepCoverages =
             SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
-      }
 
-      // get velocities from rates
-      auto velocities = model->getSurfaceModel()->calculateVelocities(
-          rates, points, materialIds);
+        // update coverages in the model
+        model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
 
-      // calculate coverage metric
-      if (useCoverages && logLevel >= 5) {
-        auto metric =
-            calculateCoverageDeltaMetric(coverages, prevStepCoverages);
-        for (auto val : metric) {
-          covMetricFile << val << ";";
+        if (coverageDeltaTreshold > 0) {
+          auto metric =
+              calculateCoverageDeltaMetric(coverages, prevStepCoverages);
+          while (!checkCoveragesConvergence(metric)) {
+            prevStepCoverages =
+                SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
+
+            fluxes = calculateFluxes(rayTracer, useCoverages, useProcessParams);
+            model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
+
+            coverages = model->getSurfaceModel()->getCoverages();
+            metric = calculateCoverageDeltaMetric(coverages, prevStepCoverages);
+            if (logLevel >= 5) {
+              for (auto val : metric) {
+                covMetricFile << val << ";";
+              }
+              covMetricFile << "\n";
+            }
+          }
         }
-        covMetricFile << "\n";
       }
+
+      // calculate velocities from fluxes
+      auto velocities = model->getSurfaceModel()->calculateVelocities(
+          fluxes, points, materialIds);
 
       // prepare velocity field
       model->getVelocityField()->prepare(domain, velocities,
@@ -602,17 +544,9 @@ public:
                                                        "velocities");
         if (useCoverages) {
           auto coverages = model->getSurfaceModel()->getCoverages();
-          for (size_t idx = 0; idx < coverages->getScalarDataSize(); idx++) {
-            auto label = coverages->getScalarDataLabel(idx);
-            diskMesh->getCellData().insertNextScalarData(
-                *coverages->getScalarData(idx), label);
-          }
+          mergeScalarData(diskMesh->getCellData(), coverages);
         }
-        for (size_t idx = 0; idx < rates->getScalarDataSize(); idx++) {
-          auto label = rates->getScalarDataLabel(idx);
-          diskMesh->getCellData().insertNextScalarData(
-              *rates->getScalarData(idx), label);
-        }
+        mergeScalarData(diskMesh->getCellData(), fluxes);
         printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
         if (domain->getCellSet()) {
           domain->getCellSet()->writeVTU(name + "_cellSet_" +
@@ -753,13 +687,23 @@ public:
   }
 
 private:
-  void printDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
-                     std::string name) const {
+  static void printDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
+                            std::string name) {
     viennals::VTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
-  viennaray::TracingData<NumericType> movePointDataToRayData(
-      SmartPointer<viennals::PointData<NumericType>> pointData) const {
+  static void
+  mergeScalarData(viennals::PointData<NumericType> &scalarData,
+                  SmartPointer<viennals::PointData<NumericType>> dataToInsert) {
+    int numScalarData = dataToInsert->getScalarDataSize();
+    for (int i = 0; i < numScalarData; i++) {
+      scalarData.insertReplaceScalarData(*dataToInsert->getScalarData(i),
+                                         dataToInsert->getScalarDataLabel(i));
+    }
+  }
+
+  static viennaray::TracingData<NumericType> movePointDataToRayData(
+      SmartPointer<viennals::PointData<NumericType>> pointData) {
     viennaray::TracingData<NumericType> rayData;
     const auto numData = pointData->getScalarDataSize();
     rayData.setNumberOfVectorData(numData);
@@ -772,9 +716,9 @@ private:
     return std::move(rayData);
   }
 
-  void moveRayDataToPointData(
+  static void moveRayDataToPointData(
       SmartPointer<viennals::PointData<NumericType>> pointData,
-      viennaray::TracingData<NumericType> &rayData) const {
+      viennaray::TracingData<NumericType> &rayData) {
     pointData->clear();
     const auto numData = rayData.getVectorData().size();
     for (size_t i = 0; i < numData; ++i)
@@ -818,9 +762,9 @@ private:
     }
   }
 
-  std::vector<NumericType> calculateCoverageDeltaMetric(
+  static std::vector<NumericType> calculateCoverageDeltaMetric(
       SmartPointer<viennals::PointData<NumericType>> updated,
-      SmartPointer<viennals::PointData<NumericType>> previous) const {
+      SmartPointer<viennals::PointData<NumericType>> previous) {
 
     assert(updated->getScalarDataSize() == previous->getScalarDataSize());
     std::vector<NumericType> delta(updated->getScalarDataSize(), 0.);
@@ -839,6 +783,15 @@ private:
     }
 
     return delta;
+  }
+
+  bool
+  checkCoveragesConvergence(const std::vector<NumericType> &deltaMetric) const {
+    for (auto val : deltaMetric) {
+      if (val > coverageDeltaTreshold)
+        return false;
+    }
+    return true;
   }
 
   void initializeRayTracer(viennaray::Trace<NumericType, D> &tracer) const {
@@ -873,11 +826,83 @@ private:
     }
   }
 
+  auto calculateFluxes(viennaray::Trace<NumericType, D> &rayTracer,
+                       const bool useCoverages, const bool useProcessParams) {
+
+    viennaray::TracingData<NumericType> rayTracingData;
+
+    // move coverages to the ray tracer
+    if (useCoverages) {
+      rayTracingData =
+          movePointDataToRayData(model->getSurfaceModel()->getCoverages());
+    }
+
+    if (useProcessParams) {
+      // store scalars in addition to coverages
+      auto processParams = model->getSurfaceModel()->getProcessParameters();
+      NumericType numParams = processParams->getScalarData().size();
+      rayTracingData.setNumberOfScalarData(numParams);
+      for (size_t i = 0; i < numParams; ++i) {
+        rayTracingData.setScalarData(i, processParams->getScalarData(i),
+                                     processParams->getScalarDataLabel(i));
+      }
+    }
+
+    if (useCoverages || useProcessParams)
+      rayTracer.setGlobalData(rayTracingData);
+
+    auto fluxes = runRayTracer(rayTracer);
+
+    // move coverages back in the model
+    if (useCoverages)
+      moveRayDataToPointData(model->getSurfaceModel()->getCoverages(),
+                             rayTracingData);
+
+    return fluxes;
+  }
+
+  auto runRayTracer(viennaray::Trace<NumericType, D> &rayTracer) {
+    auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+    unsigned particleIdx = 0;
+    for (auto &particle : model->getParticleTypes()) {
+      int dataLogSize = model->getParticleLogSize(particleIdx);
+      if (dataLogSize > 0) {
+        rayTracer.getDataLog().data.resize(1);
+        rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
+      }
+      rayTracer.setParticleType(particle);
+      rayTracer.apply();
+
+      // fill up fluxes vector with fluxes from this particle type
+      auto &localData = rayTracer.getLocalData();
+      int numFluxes = particle->getLocalDataLabels().size();
+      for (int i = 0; i < numFluxes; ++i) {
+        auto flux = std::move(localData.getVectorData(i));
+
+        // normalize and smooth
+        rayTracer.normalizeFlux(flux, rayTracingParams.normalizationType);
+        if (rayTracingParams.smoothingNeighbors > 0)
+          rayTracer.smoothFlux(flux, rayTracingParams.smoothingNeighbors);
+
+        fluxes->insertNextScalarData(std::move(flux),
+                                     localData.getVectorDataLabel(i));
+      }
+
+      if (dataLogSize > 0) {
+        particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
+      }
+      ++particleIdx;
+    }
+    return fluxes;
+  }
+
+private:
   psDomainType domain;
   SmartPointer<ProcessModel<NumericType, D>> model;
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
   NumericType processDuration;
-  unsigned maxIterations = 20;
+  unsigned maxIterations = std::numeric_limits<unsigned>::max();
+  NumericType coverageDeltaTreshold = 0.;
   bool coveragesInitialized_ = false;
   NumericType processTime = 0.;
 

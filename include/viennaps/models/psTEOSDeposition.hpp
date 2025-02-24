@@ -24,7 +24,6 @@ public:
       SmartPointer<viennals::PointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) override {
-    updateCoverages(rates, materialIDs);
     // define the surface reaction here
     auto particleFlux = rates->getScalarData("particleFlux");
     std::vector<NumericType> velocity(particleFlux->size(), 0.);
