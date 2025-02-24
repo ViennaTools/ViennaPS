@@ -22,9 +22,9 @@ gridDelta = 5.0  # um
 
 # read GDS mask file
 boundaryConditions = [
-    vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
+    vps.BoundaryType.REFLECTIVE_BOUNDARY,
+    vps.BoundaryType.REFLECTIVE_BOUNDARY,
+    vps.BoundaryType.INFINITE_BOUNDARY,
 ]
 
 gds_mask = vps.GDSGeometry(gridDelta)
@@ -62,7 +62,7 @@ process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(5.0 * 60.0)  # 5 minutes of etching
 process.setIntegrationScheme(
-    vls.IntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+    vps.IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
 for n in range(minutes):

@@ -67,7 +67,7 @@ public:
 
   // Set the threshold for the coverage delta metric to reach convergence.
   void setCoverageDeltaThreshold(NumericType treshold) {
-    coverageDeltaTreshold = treshold;
+    coverageDeltaThreshold = treshold;
   }
 
   // Set the source direction, where the rays should be traced from.
@@ -357,7 +357,7 @@ public:
       Logger::getInstance().addInfo("Using coverages.").print();
 
       if (maxIterations == std::numeric_limits<unsigned>::max() &&
-          coverageDeltaTreshold == 0.) {
+          coverageDeltaThreshold == 0.) {
         maxIterations = 10;
         Logger::getInstance()
             .addWarning("No coverage initialization parameters set. Using " +
@@ -413,7 +413,7 @@ public:
           if (logLevel >= 3) {
             mergeScalarData(diskMesh->getCellData(), coverages);
             mergeScalarData(diskMesh->getCellData(), fluxes);
-            printDiskMesh(diskMesh, name + "_covIinit_" +
+            printDiskMesh(diskMesh, name + "_covInit_" +
                                         std::to_string(iteration) + ".vtp");
             Logger::getInstance()
                 .addInfo("Iteration: " + std::to_string(iteration + 1))
@@ -505,7 +505,7 @@ public:
         // update coverages in the model
         model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
 
-        if (coverageDeltaTreshold > 0) {
+        if (coverageDeltaThreshold > 0) {
           auto metric =
               calculateCoverageDeltaMetric(coverages, prevStepCoverages);
           while (!checkCoveragesConvergence(metric)) {
@@ -557,6 +557,9 @@ public:
           auto coverages = model->getSurfaceModel()->getCoverages();
           mergeScalarData(diskMesh->getCellData(), coverages);
         }
+        auto surfaceData = model->getSurfaceModel()->getSurfaceData();
+        if (surfaceData)
+          mergeScalarData(diskMesh->getCellData(), surfaceData);
         mergeScalarData(diskMesh->getCellData(), fluxes);
         printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
         if (domain->getCellSet()) {
@@ -799,7 +802,7 @@ private:
   bool
   checkCoveragesConvergence(const std::vector<NumericType> &deltaMetric) const {
     for (auto val : deltaMetric) {
-      if (val > coverageDeltaTreshold)
+      if (val > coverageDeltaThreshold)
         return false;
     }
     return true;
@@ -913,7 +916,7 @@ private:
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
   NumericType processDuration;
   unsigned maxIterations = std::numeric_limits<unsigned>::max();
-  NumericType coverageDeltaTreshold = 0.;
+  NumericType coverageDeltaThreshold = 0.;
   bool coveragesInitialized_ = false;
   NumericType processTime = 0.;
 
