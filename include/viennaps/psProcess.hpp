@@ -517,7 +517,9 @@ public:
             prevStepCoverages =
                 SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
 
+            rtTimer.start();
             fluxes = calculateFluxes(rayTracer, useCoverages, useProcessParams);
+            rtTimer.finish();
             model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
 
             coverages = model->getSurfaceModel()->getCoverages();
@@ -528,6 +530,10 @@ public:
               }
               covMetricFile << "\n";
             }
+
+            Logger::getInstance()
+                .addTiming("Top-down flux calculation", rtTimer)
+                .print();
           }
         }
       }
