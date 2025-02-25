@@ -15,15 +15,22 @@ ViennaPS is a header-only C++ process simulation library, which includes surface
 > [!NOTE]  
 > ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
-## Releases
-Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
+## Quick Start  
 
-ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org/project/ViennaPS/) for most platforms.  
-You can install it using:
+To install ViennaPS for Python, simply run:  
 
 ```sh
 pip install ViennaPS
 ```
+
+To use ViennaPS in C++, clone the repository and follow the installation steps below.
+
+For full documentation, visit [ViennaPS Documentation](https://viennatools.github.io/ViennaPS/).
+
+## Releases
+Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
+
+ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org/project/ViennaPS/) for most platforms.  
 
 ## Building
 
@@ -62,7 +69,7 @@ If the dependencies are not found on the system, they will be built from source.
 > [!NOTE]  
 > __For more detailed installation instructions and troubleshooting tips, please refer to the ViennaPS [documentation](https://viennatools.github.io/ViennaPS/inst/).__
 
-ViennaPS operates as a header-only library, eliminating the need for a formal installation process. Nonetheless, we advise following the procedure to neatly organize and relocate all header files to a designated directory:
+ViennaPS is a header-only library, so no formal installation is required. However, following the steps below helps organize and manage dependencies more effectively:
 
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
@@ -85,7 +92,7 @@ cd ViennaPS
 pip install .
 ```
 
-> Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
+> Some features of the ViennaPS Python module require the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
 
 ## Using the Python package
 
@@ -236,7 +243,7 @@ cmake --build build --target format
 
 ## Authors
 
-Current contributors: Tobias Reiter, Noah Karnel, Lado Filipovic
+Current contributors: Tobias Reiter, Lado Filipovic, Noah Karnel
 
 Contact us via: viennatools@iue.tuwien.ac.at
 
