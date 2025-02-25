@@ -164,6 +164,10 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/hole
 
 The image presents the results of different flux configurations, as tested in _testFluxes.py_. Each structure represents a variation in flux conditions, leading to differences in hole shape, depth, and profile characteristics. The variations highlight the influence of ion and neutral fluxes on the etching process.
 
+> [!NOTE] 
+> The underlying model may change in future releases, so running this example in newer versions of ViennaPS might not always reproduce exactly the same results.  
+> The images shown here were generated using **ViennaPS v3.3.0**.
+
 <div align="center">
   <img src="assets/sf6o2_results.png" width=700 style="background-color:white;">
 </div>
