@@ -6,6 +6,7 @@
 
 [![🐍 Build Bindings](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml)
 [![🧪 Run Tests](https://github.com/ViennaTools/ViennaPS/actions/workflows/build.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/build.yml)
+[![PyPi Version](https://img.shields.io/pypi/v/ViennaPS?logo=pypi)](https://pypi.org/project/ViennaPS/)
 
 </div>
 
@@ -16,6 +17,13 @@ ViennaPS is a header-only C++ process simulation library, which includes surface
 
 ## Releases
 Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
+
+ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org/project/ViennaPS/).  
+You can install it using:
+
+```sh
+pip install ViennaPS
+```
 
 ## Building
 
