@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Hole Geometry
-parent: Basic Geometries
+parent: Geometry Builders
 grand_parent: Creating a Geometry
 nav_order: 3
 ---
@@ -10,7 +10,7 @@ nav_order: 3
 {: .fs-9 .fw-500 }
 
 ```c++
-#include <psMakeHole.hpp> 
+#include <geometries/psMakeHole.hpp> 
 ```
 ---
 
@@ -19,6 +19,18 @@ Additionally, the hole can serve as a mask, with the specified material only app
 
 ```c++
 // namespace viennaps
+
+// with DomainSetup configured (v3.3.0)
+MakeHole(psDomainType domain, 
+         NumericType holeRadius, 
+         NumericType holeDepth,
+         NumericType holeTaperAngle = 0., 
+         NumericType maskHeight = 0.,
+         NumericType maskTaperAngle = 0., 
+         HoleShape shape = HoleShape::Full,
+         Material material = Material::Si,
+         Material maskMaterial = Material::Mask)
+
 MakeHole(DomainType domain,
          NumericType gridDelta,
          NumericType xExtent, 
@@ -29,24 +41,33 @@ MakeHole(DomainType domain,
          NumericType baseHeight = 0.,
          bool periodicBoundary = false,
          bool makeMask = false,
-         Material material = Material::None,
+         Material material = Material::Si,
          HoleShape holeShape = HoleShape::Full)
 ```
 
-| Parameter              | Description                                                           | Type                           |
-|------------------------|-----------------------------------------------------------------------|--------------------------------|
-| `domain`               | Specifies the type of domain for the hole geometry.                |  `SmartPointer<Domain<NumericType, D>>`  |
-| `gridDelta`            | Represents the grid spacing or resolution used in the simulation.                   | `NumericType`                  |
-| `xExtent`              | Defines the extent of the hole geometry in the x-direction.                         | `NumericType`                  |
-| `yExtent`              | Specifies the extent of the hole geometry in the y-direction.                  | `NumericType`                  |
-| `holeRadius`           | Sets the radius of the hole.                                   | `NumericType`                  |
-| `holeDepth`            | Determines the depth of the hole.                                       | `NumericType`                  |
-| `taperAngle`           | (Optional) Specifies the angle of tapering for the hole geometry in degrees. Default is set to 0. | `NumericType`      |
-| `baseHeight`           | (Optional) Sets the base height of the hole. Default is set to 0.             | `NumericType`                  |
-| `periodicBoundary`     | (Optional) If set to true, enables periodic boundaries in both x and y directions. Default is set to false. | `bool`  |
-| `makeMask`             | (Optional) If set to true, allows the hole to function as a mask, with specified material applied only to the bottom. Default is set to false. | `bool`  |
-| `material`             | (Optional) Specifies the material used for the hole. Default is set to `Material::None`.    |   `Material`  |
-| `holeShape`            | (Optional) Specifies whether a full, half or quarter hole should be created. Half and quarter holes with reflective boundary conditions can simulate the full dynamics of a hole with less computational cost. Default is set to `HoleShape::Full`. | `HoleShape` |
+| Parameter          | Type           | Description  | Applicable Constructor |
+|-------------------|---------------|--------------|------------------------|
+| `domain`         | `psDomainType` | The simulation domain. | Both |
+| `holeRadius`     | `NumericType`  | Radius of the hole. | Both |
+| `holeDepth`      | `NumericType`  | Depth of the hole. | Both |
+| `holeTaperAngle` | `NumericType`  | Taper angle of the hole (default: `0.`). | Both |
+| `maskHeight`     | `NumericType`  | Height of the masking layer (default: `0.`). | First constructor only |
+| `maskTaperAngle` | `NumericType`  | Taper angle of the masking layer (default: `0.`). | First constructor only |
+| `shape`          | `HoleShape`    | Shape of the hole (default: `HoleShape::Full`). | Both |
+| `material`       | `Material`     | Material of the hole (default: `Material::Si`). | Both |
+| `maskMaterial`   | `Material`     | Material of the mask (default: `Material::Mask`). | First constructor only |
+| `gridDelta`      | `NumericType`  | Grid spacing in the simulation domain. | Second constructor only |
+| `xExtent`        | `NumericType`  | Extent of the domain in the x-direction. | Second constructor only |
+| `yExtent`        | `NumericType`  | Extent of the domain in the y-direction. | Second constructor only |
+| `taperAngle`     | `NumericType`  | Alternative name for `holeTaperAngle` in the second constructor (default: `0.`). | Second constructor only |
+| `baseHeight`     | `NumericType`  | Height at which the hole starts (default: `0.`). | Second constructor only |
+| `periodicBoundary` | `bool`       | If `true`, enables periodic boundary conditions (default: `false`). | Second constructor only |
+| `makeMask`       | `bool`         | If `true`, the mask is created instead of the hole, setting `holeDepth` to `0` (default: `false`). | Second constructor only |
+
+> **Note**:  
+> - The first constructor requires that the domain is already configured.  
+> - The second constructor sets up a new simulation domain with `gridDelta`, `xExtent`, and `yExtent`.  
+> - If `makeMask` is `true`, the hole is not created, and only the masking layer is applied.  
 
 __Example usage:__
 
@@ -57,6 +78,13 @@ C++
 </summary>
 ```c++
 // namespace viennaps
+
+// with DomainSetup configured (v3.3.0)
+auto domain = SmartPointer<Domain<NumericType, D>>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
+MakeHole<NumericType, D>(domain, 5.0, 5.0, 10., 0., 0., HoleShape::Quarter, Material::Si, Material::Mask)
+    .apply();
+
+// without DomainSetup
 auto domain = SmartPointer<Domain<NumericType, D>>::New();
 MakeHole<NumericType, D>(domain, 0.5, 10.0, 10.0, 2.5, 5.0, 10., 0., false,
                          false, Material::Si)
@@ -70,6 +98,22 @@ Python
 {: .label .label-green }
 </summary>
 ```python
+# with DomainSetup configured (v3.3.0)
+domain = vps.Domain(gridDelta=0.5, 
+                    xExtent=10.0, 
+                    yExtent=10.0, 
+                    boundaryType=vps.BoundaryType.REFLECTIVE_BOUNDARY)
+vps.MakeHole(domain=domain,
+             holeRadius=5.0,
+             holeDepth=0.0,
+             holeTaperAngle=0.0,
+             maskHeight=5.0,
+             maskTaperAngle=2.0,
+             shape=vps.HoleShape.Quarter,
+             material=vps.Material.Si,
+             maskMaterial=vps.Material.Mask
+            ).apply()
+
 domain = vps.Domain()
 vps.MakeHole(domain=domain,
               gridDelta=0.5,

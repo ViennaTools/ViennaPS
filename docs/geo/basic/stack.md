@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Stack Geometry
-parent: Basic Geometries
+parent: Geometry Builders
 grand_parent: Creating a Geometry
 nav_order: 5
 ---
@@ -10,7 +10,7 @@ nav_order: 5
 {: .fs-9 .fw-500 }
 
 ```c++
-#include <psMakeStack.hpp>
+#include <geometries/psMakeStack.hpp>
 ```
 ---
 
@@ -18,17 +18,29 @@ The `MakeStack` generates a stack of alternating SiO<sub>2</sub>/Si<sub>3</sub>N
 
 ```c++
 // namespace viennaps
+// with DomainSetup configured (v3.3.0)
+MakeStack(psDomainType domain, 
+          int numLayers, 
+          NumericType layerHeight,
+          NumericType substrateHeight, 
+          NumericType holeRadius,
+          NumericType trenchWidth, 
+          NumericType maskHeight,
+          NumericType taperAngle, 
+          bool halfStack = false,
+          Material maskMaterial = Material::Mask)
+
 MakeStack(DomainType domain, 
-          const NumericType gridDelta,
-          const NumericType xExtent, 
-          const NumericType yExtent,
-          const int numLayers, 
-          const NumericType layerHeight,
-          const NumericType substrateHeight,
-          const NumericType holeRadius,
-          const NumericType trenchWidth,
-          const NumericType maskHeight, 
-          const bool periodicBoundary = false)
+          NumericType gridDelta,
+          NumericType xExtent, 
+          NumericType yExtent,
+          int numLayers, 
+          NumericType layerHeight,
+          NumericType substrateHeight,
+          NumericType holeRadius,
+          NumericType trenchWidth,
+          NumericType maskHeight, 
+          bool periodicBoundary = false)
 ```
 
 | Parameter              | Description                                                       | Type                           |

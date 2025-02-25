@@ -10,4 +10,4 @@ has_children: true
 
 ---
 
-Create intricate geometries using the versatile tools offered by ViennaLS or generate a basic geometry using of the provided geometry builders. Alternatively, you can import a geometry from a GDSII mask file.
+Create custom geometries using the versatile tools offered by ViennaLS or generate a basic geometry (plane, hole, trench, fin, stack) using one of the provided geometry builders. Alternatively, you can import a geometry from a GDSII mask file.

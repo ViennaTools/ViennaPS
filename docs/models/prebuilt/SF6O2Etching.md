@@ -39,16 +39,16 @@ Lastly, ion-enhanced etching, also known as reactive ion etching (RIE), combines
 The surface can be covered in fluorine or oxygen. The physical model keeps track of these coverages, given by $\theta_F$ and $\theta_O$, respectively, by calculating the flux-induced rates and considering the coverages from the previous time step. They are calculated with Langmuir–Hinshelwood-type surface site balance equations, given by:
 
 \begin{equation}
-    \sigma_{Si}\cfrac{d\theta_{F}}{dt}=\gamma_{F}\Gamma_{F}\left(1-\theta_{F}-\theta_{O}\right)-k\sigma_{Si}\theta_{F}-2Y_{ie}\Gamma_{i}\theta_{F}
+    \sigma_{Si}\cfrac{d\theta_{F}}{dt}=\beta_{F}\Gamma_{F}\left(1-\theta_{F}-\theta_{O}\right)-k\sigma_{Si}\theta_{F}-2Y_{ie}\Gamma_{i}\theta_{F}
     \label{equ:thetaF}
 \end{equation}
 
 \begin{equation}
-    \sigma_{Si}\cfrac{d\theta_{O}}{dt}=\gamma_{O}\Gamma_{O}\left(1-\theta_{F}-\theta_{O}\right)-\beta\sigma_{Si}\theta_{O}-Y_{O}\Gamma_{i}\theta_{O}
+    \sigma_{Si}\cfrac{d\theta_{O}}{dt}=\beta_{O}\Gamma_{O}\left(1-\theta_{F}-\theta_{O}\right)-\beta\sigma_{Si}\theta_{O}-Y_{O}\Gamma_{i}\theta_{O}
     \label{equ:thetaO}
 \end{equation}
 
-The term $\sigma_{Si}$ represents the density of silicon at the surface point $\vec{x}$ which is not included in the equations for legibility; $\Gamma_F$, $\Gamma_O$, and $\Gamma_i$ are the emitted fluorine, oxygen, and ion fluxes, respectively; $\gamma_F$ and $\gamma_O$ are the sticking coefficients for fluorine and oxygen on a non-covered silicon substrate, respectively; $k$ is the chemical etch reaction rate constant; $\beta$ is the oxygen recombination rate constant; and $Y_{ie}$ and $Y_O$ are the total ion-enhanced and oxygen etching yields, respectively. $Y_{ie}$ and $Y_O$ are yield functions that are dependent on the ion energies in the reactor. 
+The term $\sigma_{Si}$ represents the density of silicon at the surface point $\vec{x}$ which is not included in the equations for legibility; $\Gamma_F$, $\Gamma_O$, and $\Gamma_i$ are the emitted fluorine, oxygen, and ion fluxes, respectively; $\beta_F$ and $\beta_O$ are the sticking coefficients for fluorine and oxygen on a non-covered silicon substrate, respectively; $k$ is the chemical etch reaction rate constant; $\beta$ is the oxygen recombination rate constant; and $Y_{ie}$ and $Y_O$ are the total ion-enhanced and oxygen etching yields, respectively. $Y_{ie}$ and $Y_O$ are yield functions that are dependent on the ion energies in the reactor. 
 
 Since the surface movement is significantly smaller than the considered fluxes, it can be assumed that it does not impact the calculation. With this assumption of a pseudo-steady-state, the coverage equations can be set equal to zero, resulting in the following surface coverage equations:
 \begin{equation}
@@ -107,9 +107,30 @@ The ray's reflected direction is randomly chosen from a cone around the specular
 
 <img src="{% link assets/images/coned_specular.png %}" alt="drawing" width="500"/>
 
+The ions sticking probability is described by two parameters $\theta_\textrm{Rmin}$ and $\theta_\textrm{Rmax}$:
+\begin{equation}
+    \beta_{ion} = 1 \quad \text{ if }\theta \leq \theta_\textrm{Rmin}
+\end{equation}
+\begin{equation}
+    \beta_{ion} = 1 - \frac{\theta - \theta_\textrm{Rmin}}{\theta_\textrm{Rmax}- \theta_\textrm{Rmin}}  \quad \text{ if }\theta > \theta_\textrm{Rmin}
+\end{equation}
+
+## Neutrals
+
+There are two neutral particle species in this model: __etchant__ (Flourine) and __oxygen__. The sticking probability is a function of the surface coverage and the sticking probability of the respective particle. The sticking probability is given by:
+\begin{equation}
+    \beta_{eff_{F/O}} = \beta_{F/O} (1 - \theta_F - \theta_O)
+\end{equation} 
+Neutrals reflect diffusely from the surface with a cosine distribution. 
+
+
 ## Implementation
 
+{: .note }
+> Time and length units have to be set before initializing the model. For details see [Units]({% link misc/units.md %}).
+
 ```c++
+SF6O2Etching() // use default values only
 SF6O2Etching(const double ionFlux, const double etchantFlux,
              const double oxygenFlux, const NumericType meanEnergy /* eV */,
              const NumericType sigmaEnergy /* eV */, 
@@ -117,57 +138,46 @@ SF6O2Etching(const double ionFlux, const double etchantFlux,
              const NumericType oxySputterYield = 2.,
              const NumericType etchStopDepth =
                    std::numeric_limits<NumericType>::lowest())
+SF6O2Etching(const SF6O2Parameters<NumericType> &parameters)
 ```
 
-{: .note }
-> Time and length units have to be set before initializing the model. For details see [Units]({% link misc/units.md %}).
 
-| Parameter           | Description                                                               | Type           |
-|----------------------|--------------------------------------------------------------------------|----------------|
-| `ionFlux`           | Ion flux for the {{ page.sf6o2 }} etching process.                        | `double`       |
-| `etchantFlux`       | Etchant flux for the {{ page.sf6o2 }} etching process.                    | `double`       |
-| `oxygenFlux`        | Oxygen flux for the {{ page.sf6o2 }} etching process.                     | `double`       |
-| `meanEnergy`        | Mean energy of ions (eV).                                                 | `NumericType`  |
-| `sigmaEnergy`       | Energy distribution standard deviation (eV).                              | `NumericType`  |
-| `ionExponent`       | (Optional) Exponent in the power cosine source distribution of ions for initial directions. Default is set to 100.       | `NumericType`  |
-| `oxySputterYield`   | (Optional) Oxygen sputtering yield. Default is set to 2.                  | `NumericType`  |
-| `etchStopDepth`     | (Optional) Depth at which etching should stop. Default is negative infinity.| `NumericType`  |
+Users can access and modify all detailed parameters by creating a `SF6O2Parameters` struct, which encapsulates the following values:
 
 {: .note}
-> All flux values are units 10<sup>15</sup> / cm<sup>2</sup> /s<sup>2</sup> .
-
-Alternatively, users can access and modify all detailed parameters by retrieving the parameter struct, which encapsulates the following values:
+> All flux values are units 10<sup>15</sup> / cm<sup>2</sup> /s<sup>2</sup>.
 
 | Parameter           | Description                                            | Default Value          |
 |---------------------|--------------------------------------------------------|------------------------|
-| `ionFlux`             | Ion flux (10<sup>15</sup> /cm² /s)                     | 12.0                   |
-| `etchantFlux`         | Etchant flux (10<sup>15</sup> /cm² /s)                 | 1800.0                 |
-| `oxygenFlux`          | Oxygen flux (10<sup>15</sup> /cm² /s)                  | 100.0                  |
-| `etchStopDepth`       | Depth at which etching stops                           | -inf                   |
-| `beta_F`              | Sticking probability for fluorine                      | 0.7                    |
-| `beta_O`              | Sticking probability for oxygen                        | 1.0                    |
+| `ionFlux`             | Ion flux                                             | 12.0                   |
+| `etchantFlux`         | Etchant flux                                         | 1800.0                 |
+| `oxygenFlux`          | Oxygen flux                                          | 100.0                  |
+| `beta_F`              | Sticking probability map for fluorine                | 0.7 (on Si and Mask)   |
+| `beta_O`              | Sticking probability map for oxygen                  | 1.0 (on Si and Mask)   |
+| `etchStopDepth`       | Depth at which etching stops                         | -inf                   |
+| `fluxIncludeSticking` | Include the effective sticking probability when accumlating fluxes, Required more iterations to reach coverage convergence | `false` |
 | `Mask.rho`            | Mask density (10<sup>22</sup> atoms/cm³)               | 500.0                  |
-| `Mask.beta_F`         | Mask sticking probability for fluorine                 | 0.01                   |
-| `Mask.beta_O`         | Mask sticking probability for oxygen                   | 0.1                    |
 | `Mask.Eth_sp`         | Mask sputtering threshold energy (eV)                  | 20.0                   |
 | `Mask.A_sp`           | Mask sputtering coefficient                            | 0.0139                 |
 | `Mask.B_sp`           | Mask sputtering coefficient                            | 9.3                    |
 | `Si.rho`              | Silicon density (10<sup>22</sup> atoms/cm³)            | 5.02                   |
 | `Si.Eth_sp`           | Silicon sputtering threshold energy (eV)               | 20.0                   |
-| `Si.Eth_ie`           | Silicon ion enhanced etching threshold energy (eV)     | 4.0                    |
+| `Si.Eth_ie`           | Silicon ion enhanced etching threshold energy (eV)     | 15.0                    |
 | `Si.A_sp`             | Silicon sputtering coefficient                         | 0.0337                 |
 | `Si.B_sp`             | Silicon sputtering coefficient                         | 9.3                    |
-| `Si.A_ie`             | Silicon ion enhanced etching coefficient               | 0.0361                 |
+| `Si.A_ie`             | Silicon ion enhanced etching coefficient               | 7.0                 |
 | `Si.k_sigma`          | Silicon chemical etch rate coefficient (10<sup>15</sup> /cm² /s) | 300.         |
 | `Si.beta_sigma`       | Silicon oxygen recombination coefficient (10<sup>15</sup> /cm² /s) | 0.05       |
-| `Passivation.Eth_ie`  | Passivation ion enhanced etching threshold energy (eV) | 4.0                    |
-| `Passivation.A_ie`    | Passivation ion enhanced etching coefficient           | 0.0361                 |
+| `Passivation.Eth_ie`  | Passivation ion enhanced etching threshold energy (eV) | 10.0                    |
+| `Passivation.A_ie`    | Passivation ion enhanced etching coefficient           | 3.0              |
 | `Ions.meanEnergy`     | Mean ion energy (eV)                                   | 100.0                  |
 | `Ions.sigmaEnergy`    | Standard deviation of ion energy (eV)                  | 10.0                   |
 | `Ions.exponent`       | Exponent of power cosine source distribution of initial ion directions  | 500.0 |
 | `Ions.inflectAngle`   | Inflection angle (rad)                                 | 1.55334303             |
 | `Ions.n_l`            | Exponent of reflection power                           | 10.0                   |
 | `Ions.minAngle`       | Minimum cone angle for ion reflection                  | 1.3962634              |
+| `Ions.thetaRMin`      | Minimum angle for ion sticking probability             | 70.0 (deg)             |
+| `Ions.thetaRMax`      | Maximum angle for ion sticking probability             | 90.0 (deg)             |
 
 __Example usage:__
 
@@ -179,11 +189,11 @@ C++
 ```c++
 // namespace viennaps
 ...
-auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New();
-auto &parameters = model->getParameters();
-parameters.ionFlux = 10.; 
+SF6O2Parameters<NumericType> parameters;
+parameters.ionFlux = 10.;
 parameters.Mask.rho = 500.;
-// this modifies a direct reference of the parameters
+
+auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(parameters);
 ...
 ```
 </details>
@@ -195,42 +205,14 @@ Python
 </summary>
 ```python
 ...
-model = vps.SF6O2Etching()
-parameters = model.getParameters()
+parameters = vps.SF6O2Parameters()
 parameters.ionFlux = 10.
 parameters.Mask.rho = 500.
-# this modifies a direct reference of the parameters
+
+model = vps.SF6O2Etching(parameters)
 ...
 ```
 </details>
-
-## SF<sub>6</sub> Etching
-
-The SF<sub>6</sub> etching model is a simplified version of the SF<sub>6</sub>O<sub>2</sub> etching model. The model only considers the etching of silicon by fluorine ions. The model is based on the same principles as the SF<sub>6</sub>O<sub>2</sub> etching model, but without the presence of oxygen. The model is implemented in the same way as the SF<sub>6</sub>O<sub>2</sub> etching model, but with the following parameters:
-
-```c++
-
-SF6Etching(const double ionFlux, const double etchantFlux,
-           const NumericType meanEnergy /* eV */,
-           const NumericType sigmaEnergy /* eV */, // 5 parameters
-           const NumericType ionExponent = 300.,
-           const NumericType etchStopDepth =
-                std::numeric_limits<NumericType>::lowest()) 
-```
-
-| Parameter           | Description                                                               | Type           |
-|----------------------|--------------------------------------------------------------------------|----------------|
-| `ionFlux`           | Ion flux for the SF<sub>6</sub> etching process.                          | `double`       |
-| `etchantFlux`       | Etchant flux for the SF<sub>6</sub> etching process.                      | `double`       |
-| `meanEnergy`        | Mean energy of ions (eV).                                                 | `NumericType`  |
-| `sigmaEnergy`       | Energy distribution standard deviation (eV).                              | `NumericType`  |
-| `ionExponent`       | (Optional) Exponent in the power cosine source distribution of ions for initial directions. Default is set to 300.       | `NumericType`  |
-| `etchStopDepth`     | (Optional) Depth at which etching should stop. Default is negative infinity.| `NumericType`  |
-
-{: .note}
-> All flux values are units 10<sup>15</sup> / cm<sup>2</sup> /s<sup>2</sup> .
-
-The detailed parameters can be accessed and modified in the same way as for the SF<sub>6</sub>O<sub>2</sub> etching model.
 
 ## Related Examples
 

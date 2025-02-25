@@ -1,12 +1,12 @@
 ---
 layout: default
-title: Basic Geometries
+title: Geometry Builders
 parent: Creating a Geometry
 nav_order: 0
 has_children: true
 ---
 
-# Basic Geometries 
+# Basic Geometry Builders
 {: .fs-9 .fw-500 }
 
 ---

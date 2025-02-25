@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Trench Geometry
-parent: Basic Geometries
+parent: Geometry Builders
 grand_parent: Creating a Geometry
 nav_order: 2
 ---
@@ -10,7 +10,7 @@ nav_order: 2
 {: .fs-9 .fw-500 }
 
 ```c++
-#include <psMakeTrench.hpp> 
+#include <geometries/psMakeTrench.hpp> 
 ```
 ---
 
@@ -24,17 +24,29 @@ mask material.
 
 ```c++
 // namespace viennaps
+// with DomainSetup configured (v3.3.0)
+MakeTrench(psDomainType domain, 
+           NumericType trenchWidth,
+           NumericType trenchDepth, 
+           NumericType trenchTaperAngle = 0,
+           NumericType maskHeight = 0, 
+           NumericType maskTaperAngle = 0,
+           bool halfTrench = false, 
+           Material material = Material::Si,
+           Material maskMaterial = Material::Mask)
+
+
 MakeTrench(DomainType domain, 
-           const NumericType gridDelta,
-           const NumericType xExtent, 
-           const NumericType yExtent,
-           const NumericType trenchWidth,
-           const NumericType trenchDepth,
-           const NumericType taperingAngle = 0., // in degrees
-           const NumericType baseHeight = 0.,
-           const bool periodicBoundary = false,
-           const bool makeMask = false,
-           const Material material = Material::None)
+           NumericType gridDelta,
+           NumericType xExtent, 
+           NumericType yExtent,
+           NumericType trenchWidth,
+           NumericType trenchDepth,
+           NumericType taperingAngle = 0., // in degrees
+           NumericType baseHeight = 0.,
+           bool periodicBoundary = false,
+           bool makeMask = false,
+           Material material = Material::Si)
 ``` 
 
 | Parameter              | Description                                                         | Type                           |
