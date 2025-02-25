@@ -738,7 +738,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("exponent", &SF6O2Parameters<T>::IonType::exponent)
       .def_readwrite("inflectAngle", &SF6O2Parameters<T>::IonType::inflectAngle)
       .def_readwrite("n_l", &SF6O2Parameters<T>::IonType::n_l)
-      .def_readwrite("minAngle", &SF6O2Parameters<T>::IonType::minAngle);
+      .def_readwrite("minAngle", &SF6O2Parameters<T>::IonType::minAngle)
+      .def_readwrite("thetaRMin", &SF6O2Parameters<T>::IonType::thetaRMin)
+      .def_readwrite("thetaRMax", &SF6O2Parameters<T>::IonType::thetaRMax);
 
   pybind11::class_<SF6O2Parameters<T>>(module, "SF6O2Parameters")
       .def(pybind11::init<>())

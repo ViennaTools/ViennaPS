@@ -867,6 +867,8 @@ class SF6O2ParametersIons:
     minAngle: float
     n_l: float
     sigmaEnergy: float
+    thetaRMin: float
+    thetaRMax: float
     def __init__(self) -> None: ...
 
 class SF6O2ParametersMask:
