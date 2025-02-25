@@ -251,24 +251,23 @@ public:
                                       params.Ions.n_l);
     }
     // Gaussian distribution around the Eref_peak scaled by the particle energy
-    NumericType NewEnergy;
+    NumericType newEnergy;
     std::normal_distribution<NumericType> normalDist(E * Eref_peak, 0.1 * E);
     do {
-      NewEnergy = normalDist(Rng);
-    } while (NewEnergy > E || NewEnergy < 0.);
+      newEnergy = normalDist(Rng);
+    } while (newEnergy > E || newEnergy < 0.);
 
-    NumericType sticking = 0.;
-    // NumericType sticking = 1.;
-    // if (incAngle > params.Ions.thetaRMin) {
-    //   sticking =
-    //       1. - std::min((incAngle - params.Ions.thetaRMin) /
-    //                         (params.Ions.thetaRMax - params.Ions.thetaRMin),
-    //                     NumericType(1.));
-    // }
+    NumericType sticking = 1.;
+    if (incAngle > params.Ions.thetaRMin) {
+      sticking =
+          1. - std::clamp((incAngle - params.Ions.thetaRMin) /
+                              (params.Ions.thetaRMax - params.Ions.thetaRMin),
+                          NumericType(0.), NumericType(1.));
+    }
 
     // Set the flag to stop tracing if the energy is below the threshold
-    if (NewEnergy > params.Si.Eth_ie) {
-      E = NewEnergy;
+    if (newEnergy > params.Si.Eth_ie) {
+      E = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng,
           M_PI_2 - std::min(incAngle, params.Ions.minAngle));
@@ -303,12 +302,17 @@ private:
 };
 
 template <typename NumericType, int D>
-class SF6O2Etchant
-    : public viennaray::Particle<SF6O2Etchant<NumericType, D>, NumericType> {
+class SF6O2Neutral
+    : public viennaray::Particle<SF6O2Neutral<NumericType, D>, NumericType> {
   const SF6O2Parameters<NumericType> &params;
+  const std::string fluxLabel;
+  const std::unordered_map<int, NumericType> &beta_map;
 
 public:
-  SF6O2Etchant(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {}
+  SF6O2Neutral(const SF6O2Parameters<NumericType> &pParams,
+               const std::string pFluxLabel,
+               std::unordered_map<int, NumericType> &pBetaMap)
+      : params(pParams), fluxLabel(pFluxLabel), beta_map(pBetaMap) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
@@ -347,70 +351,13 @@ public:
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"etchantFlux"};
+    return {fluxLabel};
   }
 
 private:
   NumericType sticking(const int matieralId) const {
-    auto beta = params.beta_F.find(matieralId);
-    if (beta != params.beta_F.end())
-      return beta->second;
-
-    // default value
-    return 1.0;
-  }
-};
-
-template <typename NumericType, int D>
-class SF6O2Oxygen
-    : public viennaray::Particle<SF6O2Oxygen<NumericType, D>, NumericType> {
-  const SF6O2Parameters<NumericType> &params;
-
-public:
-  SF6O2Oxygen(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {}
-
-  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
-                        const Vec3D<NumericType> &, const unsigned int primID,
-                        const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
-                        RNG &) override final {
-    NumericType S_eff = 1.;
-    if (params.fluxIncludeSticking) {
-      const auto &phi_F = globalData->getVectorData(0)[primID];
-      const auto &phi_O = globalData->getVectorData(1)[primID];
-      NumericType beta = sticking(materialId);
-      S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
-    }
-
-    localData.getVectorData(0)[primID] += rayWeight * S_eff;
-  }
-  std::pair<NumericType, Vec3D<NumericType>>
-  surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
-                    const Vec3D<NumericType> &geomNormal,
-                    const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
-
-    NumericType S_eff;
-    const auto &phi_F = globalData->getVectorData(0)[primID];
-    const auto &phi_O = globalData->getVectorData(1)[primID];
-    NumericType beta = sticking(materialId);
-    S_eff = beta * std::max(1. - phi_O - phi_F, 0.);
-
-    auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
-    return std::pair<NumericType, Vec3D<NumericType>>{S_eff, direction};
-  }
-  NumericType getSourceDistributionPower() const override final { return 1.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {"oxygenFlux"};
-  }
-
-private:
-  NumericType sticking(const int matieralId) const {
-    auto beta = params.beta_O.find(matieralId);
-    if (beta != params.beta_O.end())
+    auto beta = beta_map.find(matieralId);
+    if (beta != beta_map.end())
       return beta->second;
 
     // default value
@@ -422,7 +369,6 @@ private:
 /// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
 /// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
 /// DOI: https://doi.org/10.1116/1.1830495
-/// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
 class SF6O2Etching : public ProcessModel<NumericType, D> {
 public:
@@ -467,25 +413,28 @@ private:
     }
 
     // particles
+    this->particles.clear();
     auto ion = std::make_unique<impl::SF6O2Ion<NumericType, D>>(params);
-    auto etchant = std::make_unique<impl::SF6O2Etchant<NumericType, D>>(params);
-    auto oxygen = std::make_unique<impl::SF6O2Oxygen<NumericType, D>>(params);
+    this->insertNextParticleType(ion);
+    auto etchant = std::make_unique<impl::SF6O2Neutral<NumericType, D>>(
+        params, "etchantFlux", params.beta_F);
+    this->insertNextParticleType(etchant);
+    if (params.oxygenFlux > 0) {
+      auto oxygen = std::make_unique<impl::SF6O2Neutral<NumericType, D>>(
+          params, "oxygenFlux", params.beta_O);
+      this->insertNextParticleType(oxygen);
+    }
 
     // surface model
     auto surfModel =
         SmartPointer<impl::SF6O2SurfaceModel<NumericType, D>>::New(params);
+    this->setSurfaceModel(surfModel);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
-
-    this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
+
     this->setProcessName("SF6O2Etching");
-    this->particles.clear();
-    this->insertNextParticleType(ion);
-    this->insertNextParticleType(etchant);
-    if (params.oxygenFlux > 0)
-      this->insertNextParticleType(oxygen);
   }
 
   SF6O2Parameters<NumericType> params;

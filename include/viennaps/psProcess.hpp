@@ -67,7 +67,7 @@ public:
 
   // Set the threshold for the coverage delta metric to reach convergence.
   void setCoverageDeltaThreshold(NumericType treshold) {
-    coverageDeltaTreshold = treshold;
+    coverageDeltaThreshold = treshold;
   }
 
   // Set the source direction, where the rays should be traced from.
@@ -156,7 +156,10 @@ public:
 
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
-  SmartPointer<viennals::Mesh<NumericType>> calculateFlux() const {
+  SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
+    model->initialize(domain, 0.);
+    const auto name = model->getProcessName().value_or("default");
+    const auto logLevel = Logger::getLogLevel();
 
     // Generate disk mesh from domain
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
@@ -166,21 +169,13 @@ public:
     }
     meshConverter.apply();
 
-    model->initialize(domain, 0.);
-    if (model->getSurfaceModel()->getCoverages() != nullptr) {
-      Logger::getInstance()
-          .addWarning(
-              "Coverages are not supported for single-pass flux calculation.")
-          .print();
-      return mesh;
-    }
-
     viennaray::Trace<NumericType, D> rayTracer;
     initializeRayTracer(rayTracer);
 
     auto points = mesh->getNodes();
     auto normals = *mesh->getCellData().getVectorData("Normals");
     auto materialIds = *mesh->getCellData().getScalarData("MaterialIds");
+
     if (rayTracingParams.diskRadius == 0.) {
       rayTracer.setGeometry(points, normals, domain->getGrid().getGridDelta());
     } else {
@@ -189,24 +184,116 @@ public:
     }
     rayTracer.setMaterialIds(materialIds);
 
-    for (auto &particle : model->getParticleTypes()) {
-      rayTracer.setParticleType(particle);
-      rayTracer.apply();
+    const bool useProcessParams =
+        model->getSurfaceModel()->getProcessParameters() != nullptr;
+    bool useCoverages = false;
 
-      // fill up rates vector with rates from this particle type
-      auto &localData = rayTracer.getLocalData();
-      int numRates = particle->getLocalDataLabels().size();
-      for (int i = 0; i < numRates; ++i) {
-        auto rate = std::move(localData.getVectorData(i));
+    // Initialize coverages
+    model->getSurfaceModel()->initializeSurfaceData(points.size());
+    if (!coveragesInitialized_)
+      model->getSurfaceModel()->initializeCoverages(points.size());
+    auto coverages = model->getSurfaceModel()->getCoverages();
+    std::ofstream covMetricFile;
+    if (coverages != nullptr) {
+      Timer timer;
+      useCoverages = true;
+      Logger::getInstance().addInfo("Using coverages.").print();
 
-        // normalize fluxes
-        rayTracer.normalizeFlux(rate, rayTracingParams.normalizationType);
-        if (rayTracingParams.smoothingNeighbors > 0)
-          rayTracer.smoothFlux(rate, rayTracingParams.smoothingNeighbors);
-        mesh->getCellData().insertNextScalarData(
-            std::move(rate), localData.getVectorDataLabel(i));
+      if (maxIterations == std::numeric_limits<unsigned>::max() &&
+          coverageDeltaThreshold == 0.) {
+        maxIterations = 10;
+        Logger::getInstance()
+            .addWarning("No coverage initialization parameters set. Using " +
+                        std::to_string(maxIterations) +
+                        " initialization iterations.")
+            .print();
       }
-    }
+
+      if (!coveragesInitialized_) {
+        timer.start();
+        Logger::getInstance().addInfo("Initializing coverages ... ").print();
+        // debug output
+        if (logLevel >= 5)
+          covMetricFile.open(name + "_covMetric.txt");
+
+        for (unsigned iteration = 0; iteration < maxIterations; ++iteration) {
+          // We need additional signal handling when running the C++ code from
+          // the Python bindings to allow interrupts in the Python scripts
+#ifdef VIENNAPS_PYTHON_BUILD
+          if (PyErr_CheckSignals() != 0)
+            throw pybind11::error_already_set();
+#endif
+          // save current coverages to compare with the new ones
+          auto prevStepCoverages =
+              SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
+
+          auto fluxes =
+              calculateFluxes(rayTracer, useCoverages, useProcessParams);
+
+          // update coverages in the model
+          model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
+
+          // metric to check for convergence
+          coverages = model->getSurfaceModel()->getCoverages();
+          auto metric =
+              calculateCoverageDeltaMetric(coverages, prevStepCoverages);
+
+          if (logLevel >= 3) {
+            mergeScalarData(mesh->getCellData(), coverages);
+            mergeScalarData(mesh->getCellData(), fluxes);
+            auto surfaceData = model->getSurfaceModel()->getSurfaceData();
+            if (surfaceData)
+              mergeScalarData(mesh->getCellData(), surfaceData);
+            printDiskMesh(mesh, name + "_covInit_" + std::to_string(iteration) +
+                                    ".vtp");
+
+            Logger::getInstance()
+                .addInfo("Iteration: " + std::to_string(iteration + 1))
+                .print();
+
+            std::stringstream stream;
+            stream << std::setprecision(4) << std::fixed;
+            stream << "Coverage delta metric: ";
+            for (int i = 0; i < coverages->getScalarDataSize(); i++) {
+              stream << coverages->getScalarDataLabel(i) << ": " << metric[i]
+                     << "\t";
+            }
+            Logger::getInstance().addInfo(stream.str()).print();
+
+            // log metric to file
+            if (logLevel >= 5) {
+              for (auto val : metric) {
+                covMetricFile << val << ";";
+              }
+              covMetricFile << "\n";
+            }
+          }
+
+          if (checkCoveragesConvergence(metric)) {
+            Logger::getInstance()
+                .addInfo("Coverages converged after " +
+                         std::to_string(iteration + 1) + " iterations.")
+                .print();
+            break;
+          }
+        } // end coverage initialization loop
+        coveragesInitialized_ = true;
+
+        if (logLevel >= 5)
+          covMetricFile.close();
+
+        timer.finish();
+        Logger::getInstance()
+            .addTiming("Coverage initialization", timer)
+            .print();
+      }
+    } // end coverage initialization
+
+    auto fluxes = calculateFluxes(rayTracer, useCoverages, useProcessParams);
+    mergeScalarData(mesh->getCellData(), fluxes);
+    auto surfaceData = model->getSurfaceModel()->getSurfaceData();
+    if (surfaceData)
+      mergeScalarData(mesh->getCellData(), surfaceData);
 
     return mesh;
   }
@@ -357,7 +444,7 @@ public:
       Logger::getInstance().addInfo("Using coverages.").print();
 
       if (maxIterations == std::numeric_limits<unsigned>::max() &&
-          coverageDeltaTreshold == 0.) {
+          coverageDeltaThreshold == 0.) {
         maxIterations = 10;
         Logger::getInstance()
             .addWarning("No coverage initialization parameters set. Using " +
@@ -413,7 +500,10 @@ public:
           if (logLevel >= 3) {
             mergeScalarData(diskMesh->getCellData(), coverages);
             mergeScalarData(diskMesh->getCellData(), fluxes);
-            printDiskMesh(diskMesh, name + "_covIinit_" +
+            auto surfaceData = model->getSurfaceModel()->getSurfaceData();
+            if (surfaceData)
+              mergeScalarData(diskMesh->getCellData(), surfaceData);
+            printDiskMesh(diskMesh, name + "_covInit_" +
                                         std::to_string(iteration) + ".vtp");
             Logger::getInstance()
                 .addInfo("Iteration: " + std::to_string(iteration + 1))
@@ -505,7 +595,7 @@ public:
         // update coverages in the model
         model->getSurfaceModel()->updateCoverages(fluxes, materialIds);
 
-        if (coverageDeltaTreshold > 0) {
+        if (coverageDeltaThreshold > 0) {
           auto metric =
               calculateCoverageDeltaMetric(coverages, prevStepCoverages);
           while (!checkCoveragesConvergence(metric)) {
@@ -557,6 +647,9 @@ public:
           auto coverages = model->getSurfaceModel()->getCoverages();
           mergeScalarData(diskMesh->getCellData(), coverages);
         }
+        auto surfaceData = model->getSurfaceModel()->getSurfaceData();
+        if (surfaceData)
+          mergeScalarData(diskMesh->getCellData(), surfaceData);
         mergeScalarData(diskMesh->getCellData(), fluxes);
         printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
         if (domain->getCellSet()) {
@@ -799,7 +892,7 @@ private:
   bool
   checkCoveragesConvergence(const std::vector<NumericType> &deltaMetric) const {
     for (auto val : deltaMetric) {
-      if (val > coverageDeltaTreshold)
+      if (val > coverageDeltaThreshold)
         return false;
     }
     return true;
@@ -913,7 +1006,7 @@ private:
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
   NumericType processDuration;
   unsigned maxIterations = std::numeric_limits<unsigned>::max();
-  NumericType coverageDeltaTreshold = 0.;
+  NumericType coverageDeltaThreshold = 0.;
   bool coveragesInitialized_ = false;
   NumericType processTime = 0.;
 

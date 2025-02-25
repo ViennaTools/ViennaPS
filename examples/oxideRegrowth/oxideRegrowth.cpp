@@ -32,12 +32,12 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   ps::MakeStack<NumericType, D>(
-      domain, params.get("gridDelta"), params.get("xExtent"),
-      params.get("yExtent"), params.get("numLayers"), params.get("layerHeight"),
-      params.get("substrateHeight"), 0. /*hole radius*/,
-      params.get("trenchWidth"), 0., false)
+      domain, params.get("numLayers"), params.get("layerHeight"),
+      params.get("substrateHeight"), 0. /*holeRadius*/,
+      params.get("trenchWidth"), 0. /*maskHeight*/, 0. /*taperAngle*/)
       .apply();
   // copy top layer for deposition
   domain->duplicateTopLevelSet(ps::Material::Polymer);

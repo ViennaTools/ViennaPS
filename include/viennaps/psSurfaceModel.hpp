@@ -47,6 +47,8 @@ public:
   auto getCoverages() const { return coverages; }
 
   auto getProcessParameters() const { return processParams; }
+
+  auto getSurfaceData() const { return surfaceData; }
 };
 
 } // namespace viennaps

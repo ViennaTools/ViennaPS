@@ -36,12 +36,13 @@ int main(int argc, char **argv) {
   const NumericType gridDelta = 5.; // um
 
   // Read GDS file and convert to level set
-  typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
+  ps::BoundaryType boundaryCons[D];
   for (int i = 0; i < D - 1; i++)
-    boundaryCons[i] = ls::Domain<NumericType, D>::BoundaryType::
-        REFLECTIVE_BOUNDARY; // boundary conditions in x and y direction
-  boundaryCons[D - 1] = ls::Domain<NumericType, D>::BoundaryType::
-      INFINITE_BOUNDARY; // open boundary in z direction
+    boundaryCons[i] =
+        ps::BoundaryType::REFLECTIVE_BOUNDARY; // boundary conditions in x and y
+                                               // direction
+  boundaryCons[D - 1] =
+      ps::BoundaryType::INFINITE_BOUNDARY; // open boundary in z direction
   auto gds_mask =
       ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   gds_mask->setBoundaryConditions(boundaryCons);
