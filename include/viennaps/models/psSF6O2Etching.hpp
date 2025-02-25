@@ -268,7 +268,6 @@ public:
     // Set the flag to stop tracing if the energy is below the threshold
     if (newEnergy > params.Si.Eth_ie) {
       E = newEnergy;
-      reflect = true;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng,
           M_PI_2 - std::min(incAngle, params.Ions.minAngle));
@@ -370,7 +369,6 @@ private:
 /// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
 /// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
 /// DOI: https://doi.org/10.1116/1.1830495
-/// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
 class SF6O2Etching : public ProcessModel<NumericType, D> {
 public:
