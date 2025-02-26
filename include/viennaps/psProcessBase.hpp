@@ -1,6 +1,6 @@
 #pragma once
 
-#include "psProcessModel.hpp"
+#include "psProcessModelBase.hpp"
 #include "psProcessParams.hpp"
 #include "psTranslationField.hpp"
 #include "psUnits.hpp"
@@ -29,19 +29,11 @@ public:
   ProcessBase(DomainType passedDomain) : domain_(passedDomain) {}
   // Constructor for a process with a pre-configured process model.
   ProcessBase(DomainType passedDomain,
-              SmartPointer<ProcessModel<NumericType, D>> passedProcessModel,
+              SmartPointer<ProcessModelBase<NumericType, D>> passedProcessModel,
               const NumericType passedDuration = 0.)
       : domain_(passedDomain), model_(passedProcessModel),
         processDuration_(passedDuration) {}
   ~ProcessBase() { assert(!covMetricFile.is_open()); }
-
-  // Set the process model. This can be either a pre-configured process model or
-  // a custom process model. A custom process model must interface the
-  // psProcessModel class.
-  void setProcessModel(
-      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
-    model_ = passedProcessModel;
-  }
 
   // Set the process domain.
   void setDomain(DomainType passedDomain) { domain_ = passedDomain; }
@@ -149,23 +141,23 @@ public:
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
-    initRayTracer();
+    initFluxEngine();
     model_->initialize(domain_, 0.);
     const auto name = model_->getProcessName().value_or("default");
     const auto logLevel = Logger::getLogLevel();
 
     // Generate disk mesh from domain
     diskMesh_ = SmartPointer<viennals::Mesh<NumericType>>::New();
-    viennals::ToDiskMesh<NumericType, D> meshConverter(diskMesh_);
+    viennals::ToDiskMesh<NumericType, D> meshGenerator(diskMesh_);
     for (auto dom : domain_->getLevelSets()) {
-      meshConverter.insertNextLevelSet(dom);
+      meshGenerator.insertNextLevelSet(dom);
     }
-    meshConverter.apply();
+    meshGenerator.apply();
     auto numPoints = diskMesh_->getNodes().size();
     const auto &materialIds =
         *diskMesh_->getCellData().getScalarData("MaterialIds");
 
-    setRayTracerGeometry();
+    setFluxEngineGeometry();
 
     const bool useProcessParams =
         model_->getSurfaceModel()->getProcessParameters() != nullptr;
@@ -264,20 +256,23 @@ public:
     Timer processTimer;
     processTimer.start();
 
+    auto surfaceModel = model_->getSurfaceModel();
+    auto velocityField = model_->getVelocityField();
+    auto advectionCallback = model_->getAdvectionCallback();
     double remainingTime = processDuration_;
     const NumericType gridDelta = domain_->getGrid().getGridDelta();
 
     diskMesh_ = SmartPointer<viennals::Mesh<NumericType>>::New();
     auto translator = SmartPointer<TranslatorType>::New();
-    viennals::ToDiskMesh<NumericType, D> meshConverter(diskMesh_);
-    meshConverter.setTranslator(translator);
+    viennals::ToDiskMesh<NumericType, D> meshGenerator(diskMesh_);
+    meshGenerator.setTranslator(translator);
     if (domain_->getMaterialMap() &&
         domain_->getMaterialMap()->size() == domain_->getLevelSets().size()) {
-      meshConverter.setMaterialMap(domain_->getMaterialMap()->getMaterialMap());
+      meshGenerator.setMaterialMap(domain_->getMaterialMap()->getMaterialMap());
     }
 
     auto transField = SmartPointer<TranslationField<NumericType, D>>::New(
-        model_->getVelocityField(), domain_->getMaterialMap());
+        velocityField, domain_->getMaterialMap());
     transField->setTranslator(translator);
 
     viennals::Advect<NumericType, D> advectionKernel;
@@ -289,30 +284,30 @@ public:
     advectionKernel.setIgnoreVoids(advectionParams_.ignoreVoids);
     advectionKernel.setCheckDissipation(advectionParams_.checkDissipation);
     // normals vectors are only necessary for analytical velocity fields
-    if (model_->getVelocityField()->getTranslationFieldOptions() > 0)
+    if (velocityField->getTranslationFieldOptions() > 0)
       advectionKernel.setCalculateNormalVectors(false);
 
     for (auto dom : domain_->getLevelSets()) {
-      meshConverter.insertNextLevelSet(dom);
+      meshGenerator.insertNextLevelSet(dom);
       advectionKernel.insertNextLevelSet(dom);
     }
 
     // Check if the process model uses ray tracing
-    const bool useRayTracing = !model_->getParticleTypes().empty();
-    if (useRayTracing) {
-      initRayTracer();
+    const bool useFluxEngine = model_->useFluxEngine();
+    if (useFluxEngine) {
+      initFluxEngine();
     }
 
     // Determine whether advection callback is used
-    const bool useAdvectionCallback = model_->getAdvectionCallback() != nullptr;
+    const bool useAdvectionCallback = advectionCallback != nullptr;
     if (useAdvectionCallback) {
-      model_->getAdvectionCallback()->setDomain(domain_);
+      advectionCallback->setDomain(domain_);
     }
 
     // Determine whether there are process parameters used in ray tracing
-    model_->getSurfaceModel()->initializeProcessParameters();
+    surfaceModel->initializeProcessParameters();
     const bool useProcessParams =
-        model_->getSurfaceModel()->getProcessParameters() != nullptr;
+        surfaceModel->getProcessParameters() != nullptr;
 
     if (useProcessParams)
       Logger::getInstance().addInfo("Using process parameters.").print();
@@ -322,12 +317,12 @@ public:
     bool useCoverages = false;
 
     // Initialize coverages
-    meshConverter.apply();
+    meshGenerator.apply();
     auto numPoints = diskMesh_->getNodes().size();
-    model_->getSurfaceModel()->initializeSurfaceData(numPoints);
+    surfaceModel->initializeSurfaceData(numPoints);
     if (!coveragesInitialized_)
-      model_->getSurfaceModel()->initializeCoverages(numPoints);
-    auto coverages = model_->getSurfaceModel()->getCoverages();
+      surfaceModel->initializeCoverages(numPoints);
+    auto coverages = surfaceModel->getCoverages();
     if (coverages != nullptr) {
       useCoverages = true;
       // debug output
@@ -355,31 +350,29 @@ public:
       model_->initialize(domain_, remainingTime);
 
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-      meshConverter.apply();
+      meshGenerator.apply();
       auto materialIds = *diskMesh_->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh_->getNodes();
 
-      // rate calculation by top-down ray tracing
-      if (useRayTracing) {
+      // rate calculation by implementation specific flux engine
+      if (useFluxEngine) {
         rtTimer.start();
 
-        setRayTracerGeometry();
+        setFluxEngineGeometry();
         fluxes = calculateFluxes(useCoverages, useProcessParams);
 
         rtTimer.finish();
-        Logger::getInstance()
-            .addTiming("Top-down flux calculation", rtTimer)
-            .print();
+        Logger::getInstance().addTiming("Flux calculation", rtTimer).print();
       }
 
       // update coverages and calculate coverage delta metric
       if (useCoverages) {
-        coverages = model_->getSurfaceModel()->getCoverages();
+        coverages = surfaceModel->getCoverages();
         auto prevStepCoverages =
             SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
 
         // update coverages in the model
-        model_->getSurfaceModel()->updateCoverages(fluxes, materialIds);
+        surfaceModel->updateCoverages(fluxes, materialIds);
 
         if (coverageDeltaThreshold_ > 0) {
           auto metric =
@@ -396,9 +389,9 @@ public:
             rtTimer.start();
             fluxes = calculateFluxes(useCoverages, useProcessParams);
             rtTimer.finish();
-            model_->getSurfaceModel()->updateCoverages(fluxes, materialIds);
+            surfaceModel->updateCoverages(fluxes, materialIds);
 
-            coverages = model_->getSurfaceModel()->getCoverages();
+            coverages = surfaceModel->getCoverages();
             metric = this->calculateCoverageDeltaMetric(coverages,
                                                         prevStepCoverages);
             if (logLevel >= 5) {
@@ -416,13 +409,13 @@ public:
       }
 
       // calculate velocities from fluxes
-      auto velocities = model_->getSurfaceModel()->calculateVelocities(
-          fluxes, points, materialIds);
+      auto velocities =
+          surfaceModel->calculateVelocities(fluxes, points, materialIds);
 
       // prepare velocity field
-      model_->getVelocityField()->prepare(domain_, velocities,
-                                          processDuration_ - remainingTime);
-      if (model_->getVelocityField()->getTranslationFieldOptions() == 2)
+      velocityField->prepare(domain_, velocities,
+                             processDuration_ - remainingTime);
+      if (velocityField->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 
       // print debug output
@@ -431,10 +424,10 @@ public:
           diskMesh_->getCellData().insertNextScalarData(*velocities,
                                                         "velocities");
         if (useCoverages) {
-          auto coverages = model_->getSurfaceModel()->getCoverages();
+          auto coverages = surfaceModel->getCoverages();
           this->mergeScalarData(diskMesh_->getCellData(), coverages);
         }
-        auto surfaceData = model_->getSurfaceModel()->getSurfaceData();
+        auto surfaceData = surfaceModel->getSurfaceData();
         if (surfaceData)
           this->mergeScalarData(diskMesh_->getCellData(), surfaceData);
         this->mergeScalarData(diskMesh_->getCellData(), fluxes);
@@ -450,8 +443,8 @@ public:
       // apply advection callback
       if (useAdvectionCallback) {
         callbackTimer.start();
-        bool continueProcess = model_->getAdvectionCallback()->applyPreAdvect(
-            processDuration_ - remainingTime);
+        bool continueProcess =
+            advectionCallback->applyPreAdvect(processDuration_ - remainingTime);
         callbackTimer.finish();
         Logger::getInstance()
             .addTiming("Advection callback pre-advect", callbackTimer)
@@ -473,8 +466,7 @@ public:
 
       // move coverages to LS, so they are moved with the advection step
       if (useCoverages)
-        this->moveCoveragesToTopLS(translator,
-                                   model_->getSurfaceModel()->getCoverages());
+        this->moveCoveragesToTopLS(translator, surfaceModel->getCoverages());
       advTimer.start();
       advectionKernel.apply();
       advTimer.finish();
@@ -490,15 +482,15 @@ public:
       }
 
       // update the translator to retrieve the correct coverages from the LS
-      meshConverter.apply();
+      meshGenerator.apply();
       if (useCoverages)
-        this->updateCoveragesFromAdvectedSurface(
-            translator, model_->getSurfaceModel()->getCoverages());
+        this->updateCoveragesFromAdvectedSurface(translator,
+                                                 surfaceModel->getCoverages());
 
       // apply advection callback
       if (useAdvectionCallback) {
         callbackTimer.start();
-        bool continueProcess = model_->getAdvectionCallback()->applyPostAdvect(
+        bool continueProcess = advectionCallback->applyPostAdvect(
             advectionKernel.getAdvectedTime());
         callbackTimer.finish();
         Logger::getInstance()
@@ -543,9 +535,9 @@ public:
                    advTimer.totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
         .print();
-    if (useRayTracing) {
+    if (useFluxEngine) {
       Logger::getInstance()
-          .addTiming("Top-down flux calculation total time",
+          .addTiming("Flux calculation total time",
                      rtTimer.totalDuration * 1e-9,
                      processTimer.totalDuration * 1e-9)
           .print();
@@ -743,16 +735,16 @@ protected:
   // Implementation specific functions
   virtual bool checkInput() = 0;
 
-  virtual void initRayTracer() = 0;
+  virtual void initFluxEngine() = 0;
 
-  virtual void setRayTracerGeometry() = 0;
+  virtual void setFluxEngineGeometry() = 0;
 
   virtual SmartPointer<viennals::PointData<NumericType>>
   calculateFluxes(const bool useCoverages, const bool useProcessParams) = 0;
 
 protected:
   DomainType domain_;
-  SmartPointer<ProcessModel<NumericType, D>> model_;
+  SmartPointer<ProcessModelBase<NumericType, D>> model_;
   NumericType processDuration_;
   NumericType processTime_ = 0.;
   unsigned maxIterations_ = std::numeric_limits<unsigned>::max();

@@ -41,6 +41,15 @@ public:
       : ProcessBase<NumericType, D>(passedDomain, passedProcessModel,
                                     passedDuration) {}
 
+  // Set the process model. This can be either a pre-configured process model or
+  // a custom process model. A custom process model must interface the
+  // psProcessModel class.
+  void setProcessModel(
+      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
+    processModel_ = passedProcessModel;
+    this->model_ = passedProcessModel;
+  }
+
   void setRayTracingDiskRadius(NumericType radius) {
     rayTracingParams_.diskRadius = radius;
     if (rayTracingParams_.diskRadius < 0.) {
@@ -94,7 +103,7 @@ protected:
 
   bool checkInput() override { return true; }
 
-  void initRayTracer() override {
+  void initFluxEngine() override {
     // Map the domain boundary to the ray tracing boundaries
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     if (rayTracingParams_.ignoreFluxBoundaries) {
@@ -111,12 +120,12 @@ protected:
     rayTracer.setUseRandomSeeds(rayTracingParams_.useRandomSeeds);
     rayTracer.setCalculateFlux(false);
 
-    auto source = model_->getSource();
+    auto source = processModel_->getSource();
     if (source) {
       rayTracer.setSource(source);
       Logger::getInstance().addInfo("Using custom source.").print();
     }
-    auto primaryDirection = model_->getPrimaryDirection();
+    auto primaryDirection = processModel_->getPrimaryDirection();
     if (primaryDirection) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
@@ -126,9 +135,9 @@ protected:
     }
 
     // initialize particle data logs
-    particleDataLogs.resize(model_->getParticleTypes().size());
-    for (std::size_t i = 0; i < model_->getParticleTypes().size(); i++) {
-      int logSize = model_->getParticleLogSize(i);
+    particleDataLogs.resize(processModel_->getParticleTypes().size());
+    for (std::size_t i = 0; i < processModel_->getParticleTypes().size(); i++) {
+      int logSize = processModel_->getParticleLogSize(i);
       if (logSize > 0) {
         particleDataLogs[i].data.resize(1);
         particleDataLogs[i].data[0].resize(logSize);
@@ -136,7 +145,7 @@ protected:
     }
   }
 
-  void setRayTracerGeometry() override {
+  void setFluxEngineGeometry() override {
     assert(diskMesh_ != nullptr);
     auto points = diskMesh_->getNodes();
     auto normals = *diskMesh_->getCellData().getVectorData("Normals");
@@ -156,16 +165,16 @@ protected:
                   const bool useProcessParams) override {
 
     viennaray::TracingData<NumericType> rayTracingData;
+    auto surfaceModel = this->model_->getSurfaceModel();
 
     // move coverages to the ray tracer
     if (useCoverages) {
-      rayTracingData =
-          movePointDataToRayData(model_->getSurfaceModel()->getCoverages());
+      rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
     }
 
     if (useProcessParams) {
       // store scalars in addition to coverages
-      auto processParams = model_->getSurfaceModel()->getProcessParameters();
+      auto processParams = surfaceModel->getProcessParameters();
       NumericType numParams = processParams->getScalarData().size();
       rayTracingData.setNumberOfScalarData(numParams);
       for (size_t i = 0; i < numParams; ++i) {
@@ -181,8 +190,7 @@ protected:
 
     // move coverages back in the model
     if (useCoverages)
-      moveRayDataToPointData(model_->getSurfaceModel()->getCoverages(),
-                             rayTracingData);
+      moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
 
     return fluxes;
   }
@@ -191,8 +199,8 @@ private:
   SmartPointer<viennals::PointData<NumericType>> runRayTracer() {
     auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
     unsigned particleIdx = 0;
-    for (auto &particle : model_->getParticleTypes()) {
-      int dataLogSize = model_->getParticleLogSize(particleIdx);
+    for (auto &particle : processModel_->getParticleTypes()) {
+      int dataLogSize = processModel_->getParticleLogSize(particleIdx);
       if (dataLogSize > 0) {
         rayTracer.getDataLog().data.resize(1);
         rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
@@ -226,10 +234,10 @@ private:
 private:
   // Members
   using ProcessBase<NumericType, D>::domain_;
-  using ProcessBase<NumericType, D>::model_;
   using ProcessBase<NumericType, D>::rayTracingParams_;
   using ProcessBase<NumericType, D>::diskMesh_;
 
+  SmartPointer<ProcessModel<NumericType, D>> processModel_;
   viennaray::Trace<NumericType, D> rayTracer;
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
 };
