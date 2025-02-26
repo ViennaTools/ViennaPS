@@ -36,7 +36,7 @@ public:
     return {points_[pointIdx], direction};
   }
 
-  size_t getNumPoints() const override {
+  [[nodiscard]] size_t getNumPoints() const override {
     return points_.size() * numRaysPerPoint_;
   }
 
@@ -58,8 +58,8 @@ template <typename NumericType, int D> class AtomicLayerProcess {
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
 
 public:
-  AtomicLayerProcess() {}
-  AtomicLayerProcess(psDomainType domain) : pDomain_(domain) {}
+  AtomicLayerProcess() = default;
+  explicit AtomicLayerProcess(psDomainType domain) : pDomain_(domain) {}
   // Constructor for a process with a pre-configured process model.
   AtomicLayerProcess(
       psDomainType domain,
@@ -151,7 +151,7 @@ public:
 
     /* --------- Setup for ray tracing ----------- */
 
-    typename viennaray::BoundaryCondition rayBoundaryCondition[D];
+    viennaray::BoundaryCondition rayBoundaryCondition[D];
     viennaray::Trace<NumericType, D> rayTracer;
 
     // Map the domain boundary to the ray tracing boundaries
@@ -374,7 +374,7 @@ public:
     Logger::getInstance().addTiming("\nProcess " + name, processTimer).print();
   }
 
-  void writeParticleDataLogs(std::string fileName) {
+  void writeParticleDataLogs(const std::string &fileName) {
     std::ofstream file(fileName.c_str());
 
     for (std::size_t i = 0; i < particleDataLogs_.size(); i++) {

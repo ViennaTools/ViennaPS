@@ -21,7 +21,7 @@ template <typename NumericType, int D = 3> class GDSReader {
   std::string fileName;
 
 public:
-  GDSReader() {}
+  GDSReader() = default;
   GDSReader(SmartPointer<GDSGeometry<NumericType, D>> passedGeometry,
             std::string passedFileName)
       : geometry(passedGeometry), fileName(std::move(passedFileName)) {}
@@ -97,7 +97,7 @@ private:
   }
 
   char *readAsciiString() {
-    char *str = NULL;
+    char *str = nullptr;
 
     if (currentRecordLen > 0) {
       currentRecordLen += currentRecordLen % 2;
@@ -139,19 +139,17 @@ private:
 
   double readEightByteReal() {
     unsigned char value;
-    std::array<unsigned char, 7> bytes;
+    std::array<unsigned char, 7> bytes = {};
     double sign = 1.0;
-    double exponent;
-    double mant;
 
     (void)!fread(&value, 1, 1, filePtr);
     if (value & 128) {
       value -= 128;
       sign = -1.0;
     }
-    exponent = static_cast<double>(value);
+    auto exponent = static_cast<double>(value);
     exponent -= 64.0;
-    mant = 0.0;
+    double mant = 0.0;
 
     for (int i = 0; i < 7; i++) {
       (void)!fread(&bytes[i], 1, 1, filePtr);

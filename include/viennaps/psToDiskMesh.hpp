@@ -19,7 +19,7 @@ template <class NumericType, int D> class ToDiskMesh {
   meshType mesh;
 
 public:
-  ToDiskMesh() {}
+  ToDiskMesh() = default;
 
   ToDiskMesh(psDomainType passedDomain, meshType passedMesh)
       : domain(passedDomain), mesh(passedMesh) {}
@@ -36,7 +36,7 @@ public:
     translator = passedTranslator;
   }
 
-  translatorType getTranslator() const { return translator; }
+  [[nodiscard]] translatorType getTranslator() const { return translator; }
 
   void apply() {
     viennals::ToDiskMesh<NumericType, D> meshConverter;

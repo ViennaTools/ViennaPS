@@ -8,7 +8,6 @@
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
-#include <rayUtil.hpp>
 
 #include <vcLogger.hpp>
 #include <vcVectorUtil.hpp>

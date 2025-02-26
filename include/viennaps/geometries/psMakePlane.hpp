@@ -3,8 +3,6 @@
 #include "../psDomain.hpp"
 #include "psGeometryFactory.hpp"
 
-#include <lsMakeGeometry.hpp>
-
 #include <vcLogger.hpp>
 
 namespace viennaps {

@@ -4,6 +4,7 @@
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 
+#include <utility>
 #include <vcKDTree.hpp>
 #include <vcLogger.hpp>
 
@@ -19,14 +20,13 @@ template <class NumericType, int D> class SurfacePointValuesToLevelSet {
   std::vector<std::string> dataNames;
 
 public:
-  SurfacePointValuesToLevelSet() {}
-
+  SurfacePointValuesToLevelSet() = default;
   SurfacePointValuesToLevelSet(
       lsDomainType passedLevelSet,
       SmartPointer<viennals::Mesh<NumericType>> passedMesh,
       std::vector<std::string> passedDataNames)
-      : levelSet(passedLevelSet), mesh(passedMesh), dataNames(passedDataNames) {
-  }
+      : levelSet(passedLevelSet), mesh(passedMesh),
+        dataNames(std::move(passedDataNames)) {}
 
   void setLevelSet(lsDomainType passedLevelSet) { levelSet = passedLevelSet; }
 
@@ -34,13 +34,13 @@ public:
     mesh = passedMesh;
   }
 
-  void setDataName(std::string passesDataName) {
+  void setDataName(const std::string &passesDataName) {
     dataNames.clear();
     dataNames.push_back(passesDataName);
   }
 
   void setDataName(std::vector<std::string> passesDataNames) {
-    dataNames = passesDataNames;
+    dataNames = std::move(passesDataNames);
   }
 
   void apply() {
@@ -71,10 +71,10 @@ public:
          !it.isFinished(); ++it) {
 
       if (it.isDefined()) {
-        auto lsIndicies = it.getStartIndices();
+        auto lsIndices = it.getStartIndices();
         Vec3D<NumericType> levelSetPointCoordinate{0., 0., 0.};
         for (unsigned i = 0; i < D; i++) {
-          levelSetPointCoordinate[i] = lsIndicies[i] * gridDelta;
+          levelSetPointCoordinate[i] = lsIndices[i] * gridDelta;
         }
         auto meshPointId = transTree.findNearest(levelSetPointCoordinate);
         assert(it.getPointId() < levelSet->getNumberOfPoints());
@@ -82,7 +82,7 @@ public:
       }
     }
 
-    for (const auto dataName : dataNames) {
+    for (const auto &dataName : dataNames) {
       auto pointData = mesh->getCellData().getScalarData(dataName);
       if (!pointData)
         continue;

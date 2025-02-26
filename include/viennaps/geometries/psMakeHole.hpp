@@ -5,7 +5,6 @@
 #include "psMakeTrench.hpp"
 
 #include <lsBooleanOperation.hpp>
-#include <lsMakeGeometry.hpp>
 
 namespace viennaps {
 
@@ -53,7 +52,7 @@ public:
         holeRadius_(holeRadius), holeDepth_(holeDepth),
         holeTaperAngle_(holeTaperAngle), maskHeight_(maskHeight),
         maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
-        shape_(shape), maskMaterial_(maskMaterial) {}
+        maskMaterial_(maskMaterial), shape_(shape) {}
 
   MakeHole(psDomainType domain, NumericType gridDelta, NumericType xExtent,
            NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
