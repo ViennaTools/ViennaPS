@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setNumberOfRaysPerPoint(params.get("numRaysPerPoint"));
+  process.setNumberOfRaysPerPoint(params.get<unsigned>("numRaysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
 
   geometry->saveVolumeMesh("SingleTEOS_initial");

@@ -9,10 +9,10 @@ using namespace viennaps;
 constexpr int D = 2;
 using NumericType = double;
 
-void etch(SmartPointer<Domain<NumericType, D>> domain,
+void etch(SmartPointer<Domain<NumericType, D>> &domain,
           utils::Parameters &params) {
   std::cout << "  - Etching - " << std::endl;
-  typename DirectionalEtching<NumericType, D>::RateSet rateSet;
+  DirectionalEtching<NumericType, D>::RateSet rateSet;
   rateSet.direction = {0.};
   rateSet.direction[D - 1] = -1.;
   rateSet.directionalVelocity = params.get("ionRate");
@@ -26,10 +26,10 @@ void etch(SmartPointer<Domain<NumericType, D>> domain,
   Process<NumericType, D>(domain, etchModel, params.get("etchTime")).apply();
 }
 
-void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
+void punchThrough(SmartPointer<Domain<NumericType, D>> &domain,
                   utils::Parameters &params) {
   std::cout << "  - Punching through - " << std::endl;
-  typename DirectionalEtching<NumericType, D>::RateSet rateSet;
+  DirectionalEtching<NumericType, D>::RateSet rateSet;
   rateSet.direction = {0.};
   rateSet.direction[D - 1] = -1.;
   rateSet.directionalVelocity =
@@ -44,7 +44,7 @@ void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
   Process<NumericType, D>(domain, depoRemoval, 1.).apply();
 }
 
-void deposit(SmartPointer<Domain<NumericType, D>> domain,
+void deposit(SmartPointer<Domain<NumericType, D>> &domain,
              NumericType depositionThickness) {
   std::cout << "  - Deposition - " << std::endl;
   domain->duplicateTopLevelSet(Material::Polymer);
@@ -53,11 +53,11 @@ void deposit(SmartPointer<Domain<NumericType, D>> domain,
   Process<NumericType, D>(domain, model).apply();
 }
 
-void ash(SmartPointer<Domain<NumericType, D>> domain) {
+void ash(SmartPointer<Domain<NumericType, D>> &domain) {
   domain->removeTopLevelSet();
 }
 
-void cleanup(SmartPointer<Domain<NumericType, D>> domain,
+void cleanup(SmartPointer<Domain<NumericType, D>> &domain,
              NumericType threshold) {
   auto expand = SmartPointer<IsotropicProcess<NumericType, D>>::New(threshold);
   Process<NumericType, D>(domain, expand, 1.).apply();

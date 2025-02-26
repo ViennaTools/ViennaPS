@@ -18,7 +18,7 @@ template <typename T, int D> class MeasureProfile {
   T cutoffHeight_;
 
 public:
-  MeasureProfile(ps::SmartPointer<ps::Domain<T, D>> domain, T cutoffHeight)
+  MeasureProfile(ps::SmartPointer<ps::Domain<T, D>> &domain, T cutoffHeight)
       : cutoffHeight_(cutoffHeight) {
     domain_ = ps::SmartPointer<ps::Domain<T, D>>::New();
     domain_->deepCopy(domain);
@@ -40,7 +40,7 @@ public:
     return {position, height};
   }
 
-  void save(std::string filename) {
+  void save(const std::string &filename) {
     auto result = get();
     std::ofstream file(filename);
     for (size_t i = 0; i < result.first.size(); ++i) {
@@ -93,8 +93,8 @@ int main(int argc, char **argv) {
   ps::AtomicLayerProcess<NumericType, D> ALP(domain, model);
   ALP.setCoverageTimeStep(params.get("coverageTimeStep"));
   ALP.setPulseTime(params.get("pulseTime"));
-  ALP.setNumCycles(params.get("numCycles"));
-  ALP.setNumberOfRaysPerPoint(params.get("numRaysPerPoint"));
+  ALP.setNumCycles(params.get<unsigned>("numCycles"));
+  ALP.setNumberOfRaysPerPoint(params.get<unsigned>("numRaysPerPoint"));
   ALP.disableRandomSeeds();
   ALP.apply();
 

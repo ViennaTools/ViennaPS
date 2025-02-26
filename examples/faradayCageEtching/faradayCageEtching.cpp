@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
+  process.setNumberOfRaysPerPoint(params.get<unsigned>("raysPerPoint"));
   process.setProcessDuration(params.get("etchTime"));
   process.setIntegrationScheme(
       ps::IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER);

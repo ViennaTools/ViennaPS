@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setCoverageDeltaThreshold(1e-4);
-  process.setNumberOfRaysPerPoint(params.get("raysPerPoint"));
+  process.setNumberOfRaysPerPoint(params.get<unsigned>("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(
       params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));
