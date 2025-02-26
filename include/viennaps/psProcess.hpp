@@ -32,22 +32,21 @@ class Process : public ProcessBase<NumericType, D> {
 
 public:
   Process() {}
-  Process(DomainType passedDomain)
-      : ProcessBase<NumericType, D>(passedDomain) {}
+  Process(DomainType domain) : ProcessBase<NumericType, D>(domain) {}
   // Constructor for a process with a pre-configured process model.
-  Process(DomainType passedDomain,
-          SmartPointer<ProcessModel<NumericType, D>> passedProcessModel,
-          const NumericType passedDuration = 0.)
-      : ProcessBase<NumericType, D>(passedDomain, passedProcessModel,
-                                    passedDuration) {}
+  Process(DomainType domain,
+          SmartPointer<ProcessModel<NumericType, D>> processModel,
+          const NumericType duration = 0.)
+      : ProcessBase<NumericType, D>(domain, processModel, duration),
+        processModel_(processModel) {}
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
   // psProcessModel class.
-  void setProcessModel(
-      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
-    processModel_ = passedProcessModel;
-    this->model_ = passedProcessModel;
+  void
+  setProcessModel(SmartPointer<ProcessModel<NumericType, D>> processModel) {
+    processModel_ = processModel;
+    this->model_ = processModel;
   }
 
   void setRayTracingDiskRadius(NumericType radius) {

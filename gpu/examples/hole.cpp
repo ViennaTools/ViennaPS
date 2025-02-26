@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::INTERMEDIATE);
+  Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -21,8 +21,10 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    return 1;
+    params.readConfigFile(
+        "/home/reiter/Code/ViennaPS/build/examples/holeEtching/config.txt");
+    // std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    // return 1;
   }
 
   Context context;
@@ -64,6 +66,7 @@ int main(int argc, char **argv) {
   process.setMaxCoverageInitIterations(20);
   process.setRayTracingParameters(rayTracingParams);
   process.setProcessDuration(params.get("processTime"));
+  process.setCoverageDeltaThreshold(1e-4);
   process.setIntegrationScheme(
       params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));
 

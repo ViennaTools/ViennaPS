@@ -26,24 +26,21 @@ template <typename NumericType, int D> class ProcessBase {
 
 public:
   ProcessBase() {}
-  ProcessBase(DomainType passedDomain) : domain_(passedDomain) {}
+  ProcessBase(DomainType domain) : domain_(domain) {}
   // Constructor for a process with a pre-configured process model.
-  ProcessBase(DomainType passedDomain,
-              SmartPointer<ProcessModelBase<NumericType, D>> passedProcessModel,
-              const NumericType passedDuration = 0.)
-      : domain_(passedDomain), model_(passedProcessModel),
-        processDuration_(passedDuration) {}
+  ProcessBase(DomainType domain,
+              SmartPointer<ProcessModelBase<NumericType, D>> processModel,
+              const NumericType duration = 0.)
+      : domain_(domain), model_(processModel), processDuration_(duration) {}
   ~ProcessBase() { assert(!covMetricFile.is_open()); }
 
   // Set the process domain.
-  void setDomain(DomainType passedDomain) { domain_ = passedDomain; }
+  void setDomain(DomainType domain) { domain_ = domain; }
 
   /* ----- Process parameters ----- */
 
   // Set the duration of the process.
-  void setProcessDuration(NumericType passedDuration) {
-    processDuration_ = passedDuration;
-  }
+  void setProcessDuration(NumericType duration) { processDuration_ = duration; }
 
   // Returns the duration of the recently run process. This duration can
   // sometimes slightly vary from the set process duration, due to the maximum
@@ -141,16 +138,35 @@ public:
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
-    initFluxEngine();
+
+    if (!checkModelAndDomain())
+      return nullptr;
+
     model_->initialize(domain_, 0.);
     const auto name = model_->getProcessName().value_or("default");
+
+    if (!model_->useFluxEngine()) {
+      Logger::getInstance()
+          .addWarning("Process model '" + name + "' does not use flux engine.")
+          .print();
+      return nullptr;
+    }
+
+    if (!checkInput())
+      return nullptr;
+
+    initFluxEngine();
     const auto logLevel = Logger::getLogLevel();
 
     // Generate disk mesh from domain
     diskMesh_ = SmartPointer<viennals::Mesh<NumericType>>::New();
     viennals::ToDiskMesh<NumericType, D> meshGenerator(diskMesh_);
-    for (auto dom : domain_->getLevelSets()) {
-      meshGenerator.insertNextLevelSet(dom);
+    if (domain_->getMaterialMap() &&
+        domain_->getMaterialMap()->size() == domain_->getLevelSets().size()) {
+      meshGenerator.setMaterialMap(domain_->getMaterialMap()->getMaterialMap());
+    }
+    for (auto ls : domain_->getLevelSets()) {
+      meshGenerator.insertNextLevelSet(ls);
     }
     meshGenerator.apply();
     auto numPoints = diskMesh_->getNodes().size();
@@ -171,8 +187,10 @@ public:
 
     if (coverages != nullptr) {
       useCoverages = true;
+      Logger::getInstance().addInfo("Using coverages.").print();
+
       // debug output
-      if (logLevel >= 5 && !covMetricFile.is_open())
+      if (logLevel >= 5)
         covMetricFile.open(name + "_covMetric.txt");
 
       coverageInitIterations(useProcessParams);
@@ -193,22 +211,8 @@ public:
   // Run the process.
   void apply() {
     /* ---------- Check input --------- */
-    if (!domain_) {
-      Logger::getInstance().addWarning("No domain passed to Process.").print();
+    if (!checkModelAndDomain())
       return;
-    }
-
-    if (domain_->getLevelSets().empty()) {
-      Logger::getInstance().addWarning("No level sets in domain.").print();
-      return;
-    }
-
-    if (!model_) {
-      Logger::getInstance()
-          .addWarning("No process model passed to Process.")
-          .print();
-      return;
-    }
 
     model_->initialize(domain_, processDuration_);
     const auto name = model_->getProcessName().value_or("default");
@@ -271,12 +275,12 @@ public:
       meshGenerator.setMaterialMap(domain_->getMaterialMap()->getMaterialMap());
     }
 
-    auto transField = SmartPointer<TranslationField<NumericType, D>>::New(
+    translationField_ = SmartPointer<TranslationField<NumericType, D>>::New(
         velocityField, domain_->getMaterialMap());
-    transField->setTranslator(translator);
+    translationField_->setTranslator(translator);
 
     viennals::Advect<NumericType, D> advectionKernel;
-    advectionKernel.setVelocityField(transField);
+    advectionKernel.setVelocityField(translationField_);
     advectionKernel.setIntegrationScheme(advectionParams_.integrationScheme);
     advectionKernel.setTimeStepRatio(advectionParams_.timeStepRatio);
     advectionKernel.setSaveAdvectionVelocities(advectionParams_.velocityOutput);
@@ -324,11 +328,14 @@ public:
       surfaceModel->initializeCoverages(numPoints);
     auto coverages = surfaceModel->getCoverages();
     if (coverages != nullptr) {
+      Logger::getInstance().addInfo("Using coverages.").print();
       useCoverages = true;
+
       // debug output
-      if (logLevel >= 5 && !covMetricFile.is_open())
+      if (logLevel >= 5)
         covMetricFile.open(name + "_covMetric.txt");
 
+      setFluxEngineGeometry();
       coverageInitIterations(useProcessParams);
     }
 
@@ -394,12 +401,6 @@ public:
             coverages = surfaceModel->getCoverages();
             metric = this->calculateCoverageDeltaMetric(coverages,
                                                         prevStepCoverages);
-            if (logLevel >= 5) {
-              for (auto val : metric) {
-                covMetricFile << val << ";";
-              }
-              covMetricFile << "\n";
-            }
 
             Logger::getInstance()
                 .addTiming("Top-down flux calculation", rtTimer)
@@ -416,7 +417,7 @@ public:
       velocityField->prepare(domain_, velocities,
                              processDuration_ - remainingTime);
       if (velocityField->getTranslationFieldOptions() == 2)
-        transField->buildKdTree(points);
+        translationField_->buildKdTree(points);
 
       // print debug output
       if (logLevel >= 4) {
@@ -555,6 +556,27 @@ public:
   }
 
 protected:
+  bool checkModelAndDomain() const {
+    if (!domain_) {
+      Logger::getInstance().addWarning("No domain passed to Process.").print();
+      return false;
+    }
+
+    if (domain_->getLevelSets().empty()) {
+      Logger::getInstance().addWarning("No level sets in domain.").print();
+      return false;
+    }
+
+    if (!model_) {
+      Logger::getInstance()
+          .addWarning("No process model passed to Process.")
+          .print();
+      return false;
+    }
+
+    return true;
+  }
+
   static void printDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
                             std::string name) {
     viennals::VTKWriter<NumericType>(mesh, std::move(name)).apply();
@@ -606,7 +628,7 @@ protected:
     }
   }
 
-  static std::vector<NumericType> calculateCoverageDeltaMetric(
+  std::vector<NumericType> calculateCoverageDeltaMetric(
       SmartPointer<viennals::PointData<NumericType>> updated,
       SmartPointer<viennals::PointData<NumericType>> previous) {
 
@@ -626,6 +648,7 @@ protected:
       delta[i] /= updatedData->size();
     }
 
+    logMetric(delta);
     return delta;
   }
 
@@ -640,7 +663,6 @@ protected:
 
   void coverageInitIterations(const bool useProcessParams) {
     Timer timer;
-    Logger::getInstance().addInfo("Using coverages.").print();
     auto coverages = model_->getSurfaceModel()->getCoverages();
     const auto name = model_->getProcessName().value_or("default");
     const auto logLevel = Logger::getLogLevel();
@@ -704,15 +726,6 @@ protected:
                    << "\t";
           }
           Logger::getInstance().addInfo(stream.str()).print();
-
-          // log metric to file
-          if (logLevel >= 5) {
-            assert(covMetricFile.is_open());
-            for (auto val : metric) {
-              covMetricFile << val << ";";
-            }
-            covMetricFile << "\n";
-          }
         }
 
         if (checkCoveragesConvergence(metric)) {
@@ -730,6 +743,17 @@ protected:
     } else {
       Logger::getInstance().addInfo("Coverages already initialized.").print();
     }
+  }
+
+  void logMetric(const std::vector<NumericType> &metric) {
+    if (Logger::getLogLevel() < 5)
+      return;
+
+    assert(covMetricFile.is_open());
+    for (auto val : metric) {
+      covMetricFile << val << ";";
+    }
+    covMetricFile << "\n";
   }
 
   // Implementation specific functions
@@ -755,7 +779,8 @@ protected:
   RayTracingParameters<NumericType, D> rayTracingParams_;
 
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_ = nullptr;
-  std::fstream covMetricFile;
+  SmartPointer<TranslationField<NumericType, D>> translationField_ = nullptr;
+  std::ofstream covMetricFile;
 };
 
 } // namespace viennaps

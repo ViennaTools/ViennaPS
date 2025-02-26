@@ -5,10 +5,7 @@
 
 #include <curtParticle.hpp>
 
-#include <psAdvectionCallback.hpp>
-#include <psGeometricModel.hpp>
-#include <psSurfaceModel.hpp>
-#include <psVelocityField.hpp>
+#include <psProcessModelBase.hpp>
 
 namespace viennaps {
 
@@ -16,13 +13,12 @@ namespace gpu {
 
 using namespace viennacore;
 
-template <class NumericType, int D> class ProcessModel {
+template <class NumericType, int D>
+class ProcessModel : public ProcessModelBase<NumericType, D> {
 private:
   using ParticleTypeList = std::vector<Particle<NumericType>>;
 
   ParticleTypeList particles;
-  SmartPointer<::viennaps::SurfaceModel<NumericType>> surfaceModel = nullptr;
-  SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
   std::string pipelineFileName;
@@ -30,12 +26,8 @@ private:
 public:
   CudaBuffer processData;
   auto &getParticleTypes() { return particles; }
-  auto &getSurfaceModel() { return surfaceModel; }
-  auto &getVelocityField() { return velocityField; }
   auto getProcessDataDPtr() { return processData.dPointer(); }
-
-  void setProcessName(const std::string &name) { processName = name; }
-  auto getProcessName() const { return processName; }
+  bool useFluxEngine() override { return particles.size() > 0; }
 
   void setPipelineFileName(const std::string &fileName) {
     pipelineFileName = fileName;
@@ -46,19 +38,16 @@ public:
     particles.push_back(passedParticle);
   }
 
-  void setSurfaceModel(
-      SmartPointer<::viennaps::SurfaceModel<NumericType>> passedSurfaceModel) {
-    surfaceModel = passedSurfaceModel;
+  /// Set a primary direction for the source distribution (tilted distribution).
+  virtual std::optional<std::array<NumericType, 3>>
+  getPrimaryDirection() const {
+    return primaryDirection;
   }
 
-  void setVelocityField(
-      SmartPointer<VelocityField<NumericType, D>> passedVelocityField) {
-    velocityField = passedVelocityField;
+  virtual void
+  setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
+    primaryDirection = Normalize(passedPrimaryDirection);
   }
-
-  virtual void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                          const NumericType processDuration) {}
-  virtual void reset() {}
 };
 
 } // namespace gpu

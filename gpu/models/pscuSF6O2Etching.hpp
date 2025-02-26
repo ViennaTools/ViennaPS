@@ -66,8 +66,8 @@ private:
     this->setProcessName("SF6O2Etching");
     this->getParticleTypes().clear();
     this->insertNextParticleType(ion);
-    // this->insertNextParticleType(etchant);
-    // this->insertNextParticleType(oxygen);
+    this->insertNextParticleType(etchant);
+    this->insertNextParticleType(oxygen);
     this->setPipelineFileName("SF6O2Pipeline");
 
     this->processData.alloc(sizeof(SF6O2Parameters<float>));
