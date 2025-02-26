@@ -59,11 +59,7 @@ public:
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
-<<<<<<< HEAD
-    updateCoverages(fluxes, materialIds);
-=======
->>>>>>> master
-    const auto numPoints = fluxes->getScalarData(0)->size();
+    const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
     const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");

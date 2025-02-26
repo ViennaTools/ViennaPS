@@ -33,6 +33,7 @@ public:
               const NumericType passedDuration = 0.)
       : domain_(passedDomain), model_(passedProcessModel),
         processDuration_(passedDuration) {}
+  ~ProcessBase() { assert(!covMetricFile.is_open()); }
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
@@ -178,7 +179,14 @@ public:
 
     if (coverages != nullptr) {
       useCoverages = true;
+      // debug output
+      if (logLevel >= 5 && !covMetricFile.is_open())
+        covMetricFile.open(name + "_covMetric.txt");
+
       coverageInitIterations(useProcessParams);
+
+      if (logLevel >= 5)
+        covMetricFile.close();
     }
 
     auto fluxes = calculateFluxes(useCoverages, useProcessParams);
@@ -322,6 +330,10 @@ public:
     auto coverages = model_->getSurfaceModel()->getCoverages();
     if (coverages != nullptr) {
       useCoverages = true;
+      // debug output
+      if (logLevel >= 5 && !covMetricFile.is_open())
+        covMetricFile.open(name + "_covMetric.txt");
+
       coverageInitIterations(useProcessParams);
     }
 
@@ -546,7 +558,7 @@ public:
           .print();
     }
     model_->reset();
-    if (logLevel >= 5)
+    if (useCoverages && logLevel >= 5)
       covMetricFile.close();
   }
 
@@ -654,9 +666,6 @@ protected:
     if (!coveragesInitialized_) {
       timer.start();
       Logger::getInstance().addInfo("Initializing coverages ... ").print();
-      // debug output
-      if (logLevel >= 5 && !covMetricFile.is_open())
-        covMetricFile.open(name + "_covMetric.txt");
 
       for (unsigned iteration = 0; iteration < maxIterations_; ++iteration) {
         // We need additional signal handling when running the C++ code from
@@ -706,6 +715,7 @@ protected:
 
           // log metric to file
           if (logLevel >= 5) {
+            assert(covMetricFile.is_open());
             for (auto val : metric) {
               covMetricFile << val << ";";
             }
@@ -722,9 +732,6 @@ protected:
         }
       } // end coverage initialization loop
       coveragesInitialized_ = true;
-
-      if (logLevel >= 5)
-        covMetricFile.close();
 
       timer.finish();
       Logger::getInstance().addTiming("Coverage initialization", timer).print();
