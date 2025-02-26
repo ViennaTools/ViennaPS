@@ -14,7 +14,7 @@ public:
   SingleParticleProcess(NumericType rate = 1.,
                         NumericType stickingProbability = 1.,
                         NumericType sourceExponent = 1.,
-                        Material maskMaterial = Material::None) {
+                        Material maskMaterial = Material::Undefined) {
     std::unordered_map<Material, NumericType> maskMaterialMap = {
         {maskMaterial, 0.}};
     initialize(rate, stickingProbability, sourceExponent,

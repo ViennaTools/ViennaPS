@@ -2,6 +2,7 @@
 
 #include "psProcessModelBase.hpp"
 
+#include <lsConcepts.hpp>
 #include <lsPointData.hpp>
 
 #include <rayParticle.hpp>

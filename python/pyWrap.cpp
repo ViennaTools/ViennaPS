@@ -76,10 +76,6 @@
 #include <rayUtil.hpp>
 #include <vcLogger.hpp>
 
-#ifndef VIENNAPS_USE_GPU
-#define VIENNAPS_USE_GPU
-#endif
-
 // GPU
 #ifdef VIENNAPS_USE_GPU
 #include <gpu/vcContext.hpp>
@@ -1773,7 +1769,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate") = 1.,
            pybind11::arg("stickingProbability") = 1.,
            pybind11::arg("sourceExponent") = 1.,
-           pybind11::arg("maskMaterial") = Material::None)
+           pybind11::arg("maskMaterial") = Material::Undefined)
       .def(pybind11::init([](const T rate, const T sticking, const T power,
                              const std::vector<Material> mask) {
              return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
@@ -1789,13 +1785,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<gpu::SF6O2Etching<T, D>,
                    SmartPointer<gpu::SF6O2Etching<T, D>>>(m_gpu, "SF6O2Etching",
                                                           processModel)
-      .def(pybind11::init<>())
       .def(pybind11::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
                           const SF6O2Parameters<T> &>),
-           pybind11::arg("parameters"))
-      .def("setParameters", &gpu::SF6O2Etching<T, D>::setParameters)
-      .def("getParameters", &gpu::SF6O2Etching<T, D>::getParameters,
-           pybind11::return_value_policy::reference);
+           pybind11::arg("parameters"));
 
   // Process
   pybind11::class_<gpu::Process<T, D>>(m_gpu, "Process",
