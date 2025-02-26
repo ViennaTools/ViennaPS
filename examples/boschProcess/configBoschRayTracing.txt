@@ -19,7 +19,7 @@ stickingDep = 0.1
 # Fluxes
 Flux_ionD = 3.125e15    # atoms/cm^2.s
 Flux_neuD = 2.0e18      # atoms/cm^2.s
-# Effecrtive deposition rates
+# Effective deposition rates
 alphaDep = 10.          # A^3/atom
 betaDep  = 0.5          # A^3/atom
 # Time
