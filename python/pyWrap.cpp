@@ -1234,40 +1234,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
       .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
 
-  // Normalization Enum
-  pybind11::enum_<viennaray::NormalizationType>(module, "NormalizationType")
-      .value("SOURCE", viennaray::NormalizationType::SOURCE)
-      .value("MAX", viennaray::NormalizationType::MAX);
-
-  // RayTracingParameters
-  pybind11::class_<RayTracingParameters<T, D>>(module, "RayTracingParameters")
-      .def(pybind11::init<>())
-      .def_readwrite("sourceDirection",
-                     &RayTracingParameters<T, D>::sourceDirection)
-      .def_readwrite("normalizationType",
-                     &RayTracingParameters<T, D>::normalizationType)
-      .def_readwrite("raysPerPoint", &RayTracingParameters<T, D>::raysPerPoint)
-      .def_readwrite("diskRadius", &RayTracingParameters<T, D>::diskRadius)
-      .def_readwrite("useRandomSeeds",
-                     &RayTracingParameters<T, D>::useRandomSeeds)
-      .def_readwrite("ignoreFluxBoundaries",
-                     &RayTracingParameters<T, D>::ignoreFluxBoundaries)
-      .def_readwrite("smoothingNeighbors",
-                     &RayTracingParameters<T, D>::smoothingNeighbors);
-
-  // AdvectionParameters
-  pybind11::class_<AdvectionParameters<T>>(module, "AdvectionParameters")
-      .def(pybind11::init<>())
-      .def_readwrite("integrationScheme",
-                     &AdvectionParameters<T>::integrationScheme)
-      .def_readwrite("timeStepRatio", &AdvectionParameters<T>::timeStepRatio)
-      .def_readwrite("dissipationAlpha",
-                     &AdvectionParameters<T>::dissipationAlpha)
-      .def_readwrite("checkDissipation",
-                     &AdvectionParameters<T>::checkDissipation)
-      .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
-      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
-
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
       // constructors

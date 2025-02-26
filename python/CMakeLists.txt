@@ -60,6 +60,7 @@ set(LSNAME "viennals3d")
 viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 
 if (VIENNAPS_USE_GPU)
+  message(STATUS "[ViennaPS] Building GPU bindings")
   set(VIENNAPS_GPU_INCLUDE_DIRS #
       ${CMAKE_SOURCE_DIR}/gpu/process
       ${CMAKE_SOURCE_DIR}/gpu/rayTracing
