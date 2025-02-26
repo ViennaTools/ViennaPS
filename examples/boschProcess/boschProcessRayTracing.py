@@ -59,9 +59,9 @@ depoModel.addNeutralParticle(params["stickingDep"])
 depoModel.addIonParticle(params["ionSourceExponent"])
 
 etchModel = vps.MultiParticleProcess()
-materialStickingEtch = {vps.Material.Si: params["stickingEtchPoly"], 
+materialStickingEtch = {vps.Material.Si: params["stickingEtchSubs"], 
                          vps.Material.Mask: params["stickingEtchMask"],
-                         vps.Material.Polymer: params["stickingEtchSubs"]}
+                         vps.Material.Polymer: params["stickingEtchPoly"]}
 etchModel.addNeutralParticle(materialStickingEtch, defaultStickingProbability=1.0)
 etchModel.addIonParticle(params["ionSourceExponent"])
 
