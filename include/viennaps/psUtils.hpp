@@ -18,17 +18,17 @@ namespace viennaps {
 
 namespace utils {
 
-// Checks if a string starts with a - or not
+// Checks if a string starts with an - or not
 [[nodiscard]] inline bool isSigned(const std::string &s) {
   auto pos = s.find_first_not_of(' ');
-  if (pos == s.npos)
+  if (pos == std::string::npos)
     return false;
   if (s[pos] == '-')
     return true;
   return false;
 }
 
-[[nodiscard]] viennals::IntegrationSchemeEnum
+[[nodiscard]] inline viennals::IntegrationSchemeEnum
 convertIntegrationScheme(const std::string &s) {
   if (s == "ENGQUIST_OSHER_1ST_ORDER" || s == "EO_1")
     return viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
@@ -74,7 +74,7 @@ template <typename T> [[nodiscard]] T convert(const std::string &s) {
     if (isSigned(s))
       throw std::invalid_argument("The value must be unsigned");
     unsigned long int val = std::stoul(s);
-    unsigned int num = static_cast<unsigned int>(val);
+    auto num = static_cast<unsigned int>(val);
     if (val != num)
       throw std::out_of_range("The value is larger than the largest value "
                               "representable by `unsigned int`.");
@@ -119,7 +119,7 @@ template <typename T> std::optional<T> safeConvert(const std::string &s) {
   T value;
   try {
     value = convert<T>(s);
-  } catch (std::exception &e) {
+  } catch (std::exception &) {
     std::cout << '\'' << s << "' couldn't be converted to type  '"
               << typeid(value).name() << "'\n";
     return std::nullopt;
@@ -184,14 +184,14 @@ public:
   K key;
   V &value;
 
-  Item(K key_, V &value_) : key(key_), value(value_), conv(&convert<V>) {}
+  Item(K key_, V &value_) : conv(&convert<V>), key(key_), value(value_) {}
 
-  Item(K key_, V &value_, C conv_) : key(key_), value(value_), conv(conv_) {}
+  Item(K key_, V &value_, C conv_) : conv(conv_), key(key_), value(value_) {}
 
   void operator()(const std::string &k) {
     try {
       value = conv(k);
-    } catch (std::exception &e) {
+    } catch (std::exception &) {
       std::cout << '\'' << k << "' couldn't be converted to type of parameter '"
                 << key << "'\n";
     }
@@ -243,7 +243,6 @@ struct Parameters {
     if (!exists(key)) {
       std::cout << "Key not found in parameters: " << key << std::endl;
       exit(1);
-      return T();
     }
     return convert<T>(m.at(key));
   }
@@ -262,8 +261,6 @@ struct Parameters {
     return viennaray::BoundaryCondition::PERIODIC;
 
   case viennals::BoundaryConditionEnum::POS_INFINITE_BOUNDARY:
-    return viennaray::BoundaryCondition::IGNORE;
-
   case viennals::BoundaryConditionEnum::NEG_INFINITE_BOUNDARY:
     return viennaray::BoundaryCondition::IGNORE;
   }

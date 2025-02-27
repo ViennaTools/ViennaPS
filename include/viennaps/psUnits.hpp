@@ -1,8 +1,6 @@
 #pragma once
 
-namespace viennaps {
-
-namespace units {
+namespace viennaps::units {
 
 class Length {
   static int unit_;
@@ -18,7 +16,7 @@ public:
     UNDEFINED
   };
 
-  Length() {}
+  Length() = default;
 
   static void setUnit(const int passedUnit) { unit_ = passedUnit; }
 
@@ -53,7 +51,7 @@ public:
   Length(const Length &) = delete;
   void operator=(const Length &) = delete;
 
-  double convertMeter() const {
+  static double convertMeter() {
     switch (unit_) {
     case METER:
       return 1.;
@@ -71,13 +69,14 @@ public:
       Logger::getInstance().addWarning("Length unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return 0.;
   }
 
-  double convertCentimeter() const {
+  static double convertCentimeter() {
     switch (unit_) {
     case METER:
       return 1e2;
@@ -95,13 +94,14 @@ public:
       Logger::getInstance().addWarning("Length unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return 0.;
   }
 
-  double convertMillimeter() const {
+  static double convertMillimeter() {
     switch (unit_) {
     case METER:
       return 1e3;
@@ -119,13 +119,14 @@ public:
       Logger::getInstance().addWarning("Length unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return 0.;
   }
 
-  double convertMicrometer() const {
+  static double convertMicrometer() {
     switch (unit_) {
     case METER:
       return 1e6;
@@ -143,13 +144,14 @@ public:
       Logger::getInstance().addWarning("Length unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return 0.;
   }
 
-  double convertNanometer() const {
+  static double convertNanometer() {
     switch (unit_) {
     case METER:
       return 1e9;
@@ -167,13 +169,14 @@ public:
       Logger::getInstance().addWarning("Length unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return 0.;
   }
 
-  double convertAngstrom() const {
+  static double convertAngstrom() {
     switch (unit_) {
     case METER:
       return 1e10;
@@ -191,13 +194,14 @@ public:
       Logger::getInstance().addWarning("Length unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return 0.;
   }
 
-  std::string toString() const {
+  static std::string toString() {
     switch (unit_) {
     case METER:
       return "meter";
@@ -213,13 +217,14 @@ public:
       return "angstrom";
     case UNDEFINED:
       return "";
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return "error-length-unit";
   }
 
-  std::string toShortString() const {
+  static std::string toShortString() {
     switch (unit_) {
     case METER:
       return "m";
@@ -235,9 +240,10 @@ public:
       return "A";
     case UNDEFINED:
       return "";
+    default:
+      Logger::getInstance().addError("Invalid length unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid length unit.").print();
     return "error-length-unit";
   }
 };
@@ -250,7 +256,7 @@ class Time {
 public:
   enum : int { MINUTE, SECOND, MILLISECOND, UNDEFINED };
 
-  Time() {}
+  Time() = default;
 
   static void setUnit(const int passedUnit) { unit_ = passedUnit; }
 
@@ -278,7 +284,7 @@ public:
   Time(const Time &) = delete;
   void operator=(const Time &) = delete;
 
-  double convertMinute() const {
+  static double convertMinute() {
     switch (unit_) {
     case MINUTE:
       return 1.;
@@ -290,13 +296,14 @@ public:
       Logger::getInstance().addWarning("Time unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid time unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid time unit.").print();
     return 0.;
   }
 
-  double convertSecond() const {
+  static double convertSecond() {
     switch (unit_) {
     case MINUTE:
       return 60.;
@@ -308,13 +315,14 @@ public:
       Logger::getInstance().addWarning("Time unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid time unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid time unit.").print();
     return 0.;
   }
 
-  double convertMillisecond() const {
+  static double convertMillisecond() {
     switch (unit_) {
     case MINUTE:
       return 60000.;
@@ -326,13 +334,14 @@ public:
       Logger::getInstance().addWarning("Time unit is not defined.").print();
       return 1.;
     }
+    default:
+      Logger::getInstance().addError("Invalid time unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid time unit.").print();
     return 0.;
   }
 
-  std::string toString() const {
+  static std::string toString() {
     switch (unit_) {
     case MINUTE:
       return "minute";
@@ -342,13 +351,14 @@ public:
       return "millisecond";
     case UNDEFINED:
       return "";
+    default:
+      Logger::getInstance().addError("Invalid time unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid time unit.").print();
     return "error-time-unit";
   }
 
-  std::string toShortString() const {
+  static std::string toShortString() {
     switch (unit_) {
     case MINUTE:
       return "min";
@@ -358,14 +368,15 @@ public:
       return "ms";
     case UNDEFINED:
       return "";
+    default:
+      Logger::getInstance().addError("Invalid time unit.").print();
     }
 
-    Logger::getInstance().addError("Invalid time unit.").print();
     return "error-time-unit";
   }
 };
 
 inline int Time::unit_ = Time::UNDEFINED;
 
-} // namespace units
-}; // namespace viennaps
+} // namespace viennaps::units
+; // namespace viennaps

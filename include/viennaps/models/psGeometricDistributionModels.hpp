@@ -33,7 +33,7 @@ public:
   GeometricDistributionModel(GeomDistPtr passedDist, LSPtr passedMask)
       : dist(passedDist), mask(passedMask) {}
 
-  void apply() {
+  void apply() override {
     if (dist) {
       if (mask) {
         viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),

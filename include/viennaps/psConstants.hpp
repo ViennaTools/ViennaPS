@@ -2,9 +2,7 @@
 
 #include <cmath>
 
-namespace viennaps {
-
-namespace constants {
+namespace viennaps::constants {
 
 static constexpr double kB = 8.617333262 * 1e-5; // eV / K
 static constexpr double roomTemperature = 300.;  // K
@@ -104,5 +102,4 @@ static constexpr double A = 1. / (1. + n_l * (M_PI_2 / inflectAngle - 1.));
 static constexpr double minAngle = 1.3962634;
 } // namespace Ion
 
-} // namespace constants
-} // namespace viennaps
+} // namespace viennaps::constants

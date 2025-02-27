@@ -14,7 +14,7 @@ template <class NumericType, int D> class Planarize {
   NumericType cutoffPosition_ = 0.;
 
 public:
-  Planarize() {}
+  Planarize() = default;
   Planarize(SmartPointer<Domain<NumericType, D>> domain,
             const NumericType passedCutoff)
       : pDomain_(domain), cutoffPosition_(passedCutoff) {}

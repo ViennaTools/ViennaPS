@@ -4,8 +4,6 @@
 #include "psGeometryFactory.hpp"
 
 #include <lsBooleanOperation.hpp>
-#include <lsFromSurfaceMesh.hpp>
-#include <lsMakeGeometry.hpp>
 
 namespace viennaps {
 

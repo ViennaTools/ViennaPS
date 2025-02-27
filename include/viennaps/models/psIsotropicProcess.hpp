@@ -69,7 +69,7 @@ public:
   }
 
   IsotropicProcess(const NumericType isotropicRate,
-                   const std::vector<Material> maskMaterials) {
+                   const std::vector<Material> &maskMaterials) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 

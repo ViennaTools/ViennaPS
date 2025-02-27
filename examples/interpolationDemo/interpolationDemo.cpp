@@ -11,7 +11,6 @@
 #include <string>
 
 #include <compact/psCSVDataSource.hpp>
-#include <compact/psCSVWriter.hpp>
 
 #include <compact/psNearestNeighborsInterpolation.hpp>
 #include <compact/psRectilinearGridInterpolation.hpp>
@@ -71,7 +70,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Named parameters: ";
     auto namedParameters = dataSource.getNamedParameters();
-    for (auto [key, value] : namedParameters) {
+    for (const auto &[key, value] : namedParameters) {
       std::cout << key << '=' << value << ',';
     }
     std::cout << std::endl;

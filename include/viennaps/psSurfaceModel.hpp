@@ -21,15 +21,15 @@ public:
   virtual ~SurfaceModel() = default;
 
   virtual void initializeCoverages(unsigned numGeometryPoints) {
-    // if no coverages get initialized here, they wont be used at all
+    // if no coverages get initialized here, they won't be used at all
   }
 
   virtual void initializeProcessParameters() {
-    // if no process parameters get initialized here, they wont be used at all
+    // if no process parameters get initialized here, they won't be used at all
   }
 
   virtual void initializeSurfaceData(unsigned numGeometryPoints) {
-    // if no surface data get initialized here, they wont be used at all
+    // if no surface data get initialized here, they won't be used at all
   }
 
   virtual SmartPointer<std::vector<NumericType>>

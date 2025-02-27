@@ -16,9 +16,7 @@
 #define endian_swap_short(w) (((w & 0xff) << 8) | ((w & 0xff00) >> 8))
 #endif
 
-namespace viennaps {
-
-namespace GDS {
+namespace viennaps::GDS {
 
 enum class ElementType {
   elBoundary,
@@ -186,5 +184,4 @@ template <class T> struct Structure {
   }
 };
 
-} // namespace GDS
-} // namespace viennaps
+} // namespace viennaps::GDS

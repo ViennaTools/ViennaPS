@@ -36,7 +36,7 @@ public:
   // 0: do not translate level set ID to surface ID
   // 1: use unordered map to translate level set ID to surface ID
   // 2: use kd-tree to translate level set ID to surface ID
-  virtual int getTranslationFieldOptions() const { return 1; }
+  [[nodiscard]] virtual int getTranslationFieldOptions() const { return 1; }
 
   // Function to override for process-specific preparation
   virtual void
@@ -49,7 +49,7 @@ public:
 template <typename NumericType, int D>
 class DefaultVelocityField : public VelocityField<NumericType, D> {
 public:
-  DefaultVelocityField(const int translationFieldOptions = 1)
+  explicit DefaultVelocityField(const int translationFieldOptions = 1)
       : translationFieldOptions_(translationFieldOptions) {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &, int,
@@ -58,7 +58,7 @@ public:
     return velocities_->at(pointId);
   }
 
-  int getTranslationFieldOptions() const override {
+  [[nodiscard]] int getTranslationFieldOptions() const override {
     return translationFieldOptions_;
   }
 

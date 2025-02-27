@@ -16,7 +16,7 @@ public:
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        viennaray::RNG &rngState) override final {
+                        viennaray::RNG &rngState) final {
     // collect data for this hit
     localData.getVectorData(0)[primID] += rayWeight;
   }
@@ -26,17 +26,15 @@ public:
                     const viennaray::Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    viennaray::RNG &rngState) override final {
+                    viennaray::RNG &rngState) final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, viennaray::Vec3D<NumericType>>{
         stickingProbability, direction};
   }
-  void initNew(viennaray::RNG &rngState) override final {}
-  NumericType getSourceDistributionPower() const override final {
-    return sourcePower;
-  }
-  std::vector<std::string> getLocalDataLabels() const override final {
+  void initNew(viennaray::RNG &rngState) final {}
+  NumericType getSourceDistributionPower() const final { return sourcePower; }
+  [[nodiscard]] std::vector<std::string> getLocalDataLabels() const final {
     return std::vector<std::string>{"particleRate"};
   }
 

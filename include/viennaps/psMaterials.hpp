@@ -50,7 +50,7 @@ public:
 
   // Returns the material at the given index. If the index is out of bounds, it
   // returns Material::GAS.
-  Material getMaterialAtIdx(std::size_t idx) const {
+  [[nodiscard]] Material getMaterialAtIdx(std::size_t idx) const {
     if (idx >= size())
       return Material::GAS;
     int matId = map_->getMaterialId(idx);
@@ -66,9 +66,13 @@ public:
     map_->setMaterialId(idx, static_cast<int>(material));
   }
 
-  SmartPointer<viennals::MaterialMap> getMaterialMap() const { return map_; }
+  [[nodiscard]] SmartPointer<viennals::MaterialMap> getMaterialMap() const {
+    return map_;
+  }
 
-  inline std::size_t const size() const { return map_->getNumberOfLayers(); }
+  [[nodiscard]] inline std::size_t size() const {
+    return map_->getNumberOfLayers();
+  }
 
   static inline Material mapToMaterial(const int matId) {
     if (matId > 19 || matId < -1)
@@ -86,8 +90,7 @@ public:
   }
 
   template <class T> static inline std::string getMaterialName(const T matId) {
-    auto material = mapToMaterial(matId);
-    switch (material) {
+    switch (auto material = mapToMaterial(matId)) {
     case Material::Undefined:
       return "None";
     case Material::Mask:

@@ -7,7 +7,7 @@
 template <class T, int D>
 class VelocityField : public viennaps::VelocityField<T, D> {
 public:
-  VelocityField() {}
+  VelocityField() = default;
 
   T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
                       const std::array<T, 3> & /*normalVector*/,

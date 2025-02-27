@@ -63,13 +63,13 @@ public:
               NumericType sigmaEnergy, NumericType thresholdEnergy,
               NumericType B_sp, NumericType thetaRMin, NumericType thetaRMax,
               NumericType inflectAngle, NumericType minAngle, NumericType n,
-              std::string dataLabel)
+              const std::string &dataLabel)
       : sourcePower_(sourcePower), meanEnergy_(meanEnergy),
         sigmaEnergy_(sigmaEnergy), thresholdEnergy_(thresholdEnergy),
         B_sp_(B_sp), thetaRMin_(thetaRMin), thetaRMax_(thetaRMax),
-        inflectAngle_(inflectAngle), minAngle_(minAngle), n_(n),
-        dataLabel_(dataLabel),
-        A_(1. / (1. + n * (M_PI_2 / inflectAngle - 1.))) {}
+        inflectAngle_(inflectAngle), minAngle_(minAngle),
+        A_(1. / (1. + n * (M_PI_2 / inflectAngle - 1.))), n_(n),
+        dataLabel_(dataLabel) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -182,14 +182,14 @@ template <typename NumericType, int D>
 class DiffuseParticle
     : public viennaray::Particle<DiffuseParticle<NumericType, D>, NumericType> {
 public:
-  DiffuseParticle(NumericType stickingProbability, std::string dataLabel)
+  DiffuseParticle(NumericType stickingProbability, const std::string &dataLabel)
       : stickingProbability_(stickingProbability), dataLabel_(dataLabel) {}
 
   DiffuseParticle(NumericType stickingProbability,
                   std::unordered_map<Material, NumericType> materialSticking,
-                  std::string dataLabel)
-      : stickingProbability_(stickingProbability),
-        materialSticking_(materialSticking), dataLabel_(dataLabel) {}
+                  const std::string &dataLabel)
+      : materialSticking_(materialSticking),
+        stickingProbability_(stickingProbability), dataLabel_(dataLabel) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -245,7 +245,7 @@ public:
   }
 
   void addNeutralParticle(NumericType stickingProbability,
-                          std::string label = "neutralFlux") {
+                          const std::string &label = "neutralFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
@@ -256,7 +256,7 @@ public:
   void
   addNeutralParticle(std::unordered_map<Material, NumericType> materialSticking,
                      NumericType defaultStickingProbability = 1.,
-                     std::string label = "neutralFlux") {
+                     const std::string &label = "neutralFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
@@ -270,7 +270,7 @@ public:
                       NumericType sigmaEnergy = 0.,
                       NumericType thresholdEnergy = 0.,
                       NumericType inflectAngle = 0., NumericType n = 1,
-                      std::string label = "ionFlux") {
+                      const std::string &label = "ionFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
     auto particle = std::make_unique<impl::IonParticle<NumericType, D>>(

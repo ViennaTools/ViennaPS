@@ -11,8 +11,8 @@ using BoundaryType = hrleBoundaryType;
 
 template <class NumericType, int D> class DomainSetup {
   NumericType gridDelta_;
-  double bounds_[2 * D];
-  BoundaryType boundaryCons_[D];
+  double bounds_[2 * D] = {0.};
+  BoundaryType boundaryCons_[D] = {};
   hrleGrid<D> grid_;
 
 public:

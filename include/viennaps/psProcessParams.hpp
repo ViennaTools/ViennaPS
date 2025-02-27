@@ -13,10 +13,10 @@ using namespace viennacore;
 using IntegrationScheme = viennals::IntegrationSchemeEnum;
 
 template <typename NumericType, int D> struct RayTracingParameters {
-  typename viennaray::TraceDirection sourceDirection =
+  viennaray::TraceDirection sourceDirection =
       D == 3 ? viennaray::TraceDirection::POS_Z
              : viennaray::TraceDirection::POS_Y;
-  typename viennaray::NormalizationType normalizationType =
+  viennaray::NormalizationType normalizationType =
       viennaray::NormalizationType::SOURCE;
   unsigned raysPerPoint = 1000;
   NumericType diskRadius = 0.;
@@ -41,7 +41,8 @@ private:
   std::vector<std::string> scalarDataLabels;
 
 public:
-  void insertNextScalar(NumericType value, std::string label = "scalarData") {
+  void insertNextScalar(NumericType value,
+                        const std::string &label = "scalarData") {
     scalarData.push_back(value);
     scalarDataLabels.push_back(label);
   }
@@ -50,12 +51,12 @@ public:
 
   const NumericType &getScalarData(int i) const { return scalarData[i]; }
 
-  NumericType &getScalarData(std::string label) {
+  NumericType &getScalarData(const std::string &label) {
     int idx = getScalarDataIndex(label);
     return scalarData[idx];
   }
 
-  int getScalarDataIndex(std::string label) {
+  [[nodiscard]] int getScalarDataIndex(const std::string &label) const {
     for (int i = 0; i < scalarDataLabels.size(); ++i) {
       if (scalarDataLabels[i] == label) {
         return i;
@@ -70,7 +71,7 @@ public:
   std::vector<NumericType> &getScalarData() { return scalarData; }
 
   const std::vector<NumericType> &getScalarData() const { return scalarData; }
-  std::string getScalarDataLabel(int i) const {
+  [[nodiscard]] std::string getScalarDataLabel(int i) const {
     if (i >= scalarDataLabels.size())
       Logger::getInstance()
           .addError("Getting scalar data label in ProcessParams out of range.")
