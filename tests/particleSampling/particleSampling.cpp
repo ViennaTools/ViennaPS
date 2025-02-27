@@ -1,11 +1,7 @@
 #include <rayParticle.hpp>
-
-#include <psProcessModel.hpp>
-#include <psSurfaceModel.hpp>
-
 #include <vcSampling.hpp>
 
-using namespace viennaps;
+using namespace viennacore;
 
 template <class NumericType> struct UnivariateDistribution {
   std::vector<NumericType> pdf;
@@ -55,11 +51,10 @@ public:
     NumericType theta = directionSample[0];
     if constexpr (D == 2) {
       direction[0] = std::sin(theta);
-      direction[D - 1] = -std::cos(theta);
+      direction[1] = -std::cos(theta);
     } else {
       std::uniform_real_distribution<NumericType> uniform_dist(0, 2 * M_PI);
       auto phi = uniform_dist(rngState);
-
       direction[0] = std::sin(theta) * std::cos(phi);
       direction[1] = std::sin(theta) * std::sin(phi);
       direction[2] = -std::cos(theta);
@@ -109,11 +104,10 @@ public:
     Vec3D<NumericType> direction = {0., 0., 0.};
     if constexpr (D == 2) {
       direction[0] = std::sin(theta);
-      direction[D - 1] = -std::cos(theta);
+      direction[1] = -std::cos(theta);
     } else {
       std::uniform_real_distribution<NumericType> uniform_dist(0, 2 * M_PI);
       auto phi = uniform_dist(rngState);
-
       direction[0] = std::sin(theta) * std::cos(phi);
       direction[1] = std::sin(theta) * std::sin(phi);
       direction[2] = -std::cos(theta);
@@ -133,7 +127,7 @@ public:
 
 int main() {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
   Logger::setLogLevel(LogLevel::DEBUG);
 
   constexpr int N = 1000; // pdf resolution
@@ -165,16 +159,17 @@ int main() {
     auto testParticle =
         std::make_unique<UnivariateDistributionParticle<NumericType, D>>(
             angularDistribution, energyDistribution);
-    // check is particle can be copied correctly with sampling instances
+    // check if particle can be copied correctly with sampling instances
     auto testCopy = testParticle->clone();
 
     RNG rngState(236521);
     for (int i = 0; i < 10; ++i) {
       auto direction = testCopy->initNewWithDirection(rngState);
+      assert(IsNormalized(direction));
     }
   }
 
-  // Setup with one bi-variate distribution
+  // ----- Setup with 1 bi-variate distributions -----
   {
     BivariateDistribution<NumericType> angularEnergyDistribution;
     angularEnergyDistribution.support_x.resize(N);
@@ -208,6 +203,7 @@ int main() {
     RNG rngState(235123612);
     for (int i = 0; i < 10; ++i) {
       auto direction = testCopy->initNewWithDirection(rngState);
+      assert(IsNormalized(direction));
     }
   }
 }
