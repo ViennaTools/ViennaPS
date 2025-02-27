@@ -341,10 +341,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_static("getInstance", &Logger::getInstance,
                   pybind11::return_value_policy::reference)
       .def("addDebug", &Logger::addDebug)
-      .def("addTiming",
-           (Logger & (Logger::*)(std::string, double)) & Logger::addTiming)
-      .def("addTiming", (Logger & (Logger::*)(std::string, double, double)) &
+      .def("addTiming", (Logger & (Logger::*)(const std::string &, double)) &
                             Logger::addTiming)
+      .def("addTiming",
+           (Logger & (Logger::*)(const std::string &, double, double)) &
+               Logger::addTiming)
       .def("addInfo", &Logger::addInfo)
       .def("addWarning", &Logger::addWarning)
       .def("addError", &Logger::addError, pybind11::arg("s"),
