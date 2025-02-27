@@ -41,7 +41,7 @@ class IBESurfaceModel : public SurfaceModel<NumericType> {
 public:
   IBESurfaceModel(const IBEParameters<NumericType> &params,
                   const std::vector<Material> &mask)
-      : maskMaterials_(mask), params_(params) {}
+      : params_(params), maskMaterials_(mask) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
       SmartPointer<viennals::PointData<NumericType>> rates,
@@ -84,10 +84,10 @@ class IBEIonWithRedeposition
                                  NumericType> {
 public:
   IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
-      : params_(params), normalDist_(params.meanEnergy, params.sigmaEnergy),
+      : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
+        minAngle_(params.minAngle * M_PI / 180.),
         A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
-        inflectAngle_(params.inflectAngle * M_PI / 180.),
-        minAngle_(params.minAngle * M_PI / 180.) {}
+        normalDist_(params.meanEnergy, params.sigmaEnergy) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,

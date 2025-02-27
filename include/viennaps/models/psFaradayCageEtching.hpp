@@ -5,9 +5,6 @@
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
 
-#include <rayParticle.hpp>
-#include <rayReflection.hpp>
-
 #include <functional>
 #include <random>
 

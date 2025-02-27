@@ -1,5 +1,3 @@
-include_directories(${CMAKE_SOURCE_DIR}/include/viennaps/models)
-
 add_gpu_executable(holeGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/hole.cpp
                    ${CMAKE_SOURCE_DIR}/gpu/pipelines/SF6O2Pipeline.cu)
 

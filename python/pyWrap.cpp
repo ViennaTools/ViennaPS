@@ -352,10 +352,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_static("getInstance", &Logger::getInstance,
                   pybind11::return_value_policy::reference)
       .def("addDebug", &Logger::addDebug)
-      .def("addTiming",
-           (Logger & (Logger::*)(std::string, double)) & Logger::addTiming)
-      .def("addTiming", (Logger & (Logger::*)(std::string, double, double)) &
+      .def("addTiming", (Logger & (Logger::*)(const std::string &, double)) &
                             Logger::addTiming)
+      .def("addTiming",
+           (Logger & (Logger::*)(const std::string &, double, double)) &
+               Logger::addTiming)
       .def("addInfo", &Logger::addInfo)
       .def("addWarning", &Logger::addWarning)
       .def("addError", &Logger::addError, pybind11::arg("s"),
@@ -498,7 +499,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            (T & (ProcessParams<T>::*)(int)) & ProcessParams<T>::getScalarData)
       .def("getScalarData", (const T &(ProcessParams<T>::*)(int) const) &
                                 ProcessParams<T>::getScalarData)
-      .def("getScalarData", (T & (ProcessParams<T>::*)(std::string)) &
+      .def("getScalarData", (T & (ProcessParams<T>::*)(const std::string &)) &
                                 ProcessParams<T>::getScalarData)
       .def("getScalarDataIndex", &ProcessParams<T>::getScalarDataIndex)
       .def("getScalarData", (std::vector<T> & (ProcessParams<T>::*)()) &
@@ -650,13 +651,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       module, "MultiParticleProcess", processModel)
       .def(pybind11::init())
       .def("addNeutralParticle",
-           pybind11::overload_cast<T, std::string>(
+           pybind11::overload_cast<T, const std::string &>(
                &MultiParticleProcess<T, D>::addNeutralParticle),
            pybind11::arg("stickingProbability"),
            pybind11::arg("label") = "neutralFlux")
       .def("addNeutralParticle",
            pybind11::overload_cast<std::unordered_map<Material, T>, T,
-                                   std::string>(
+                                   const std::string &>(
                &MultiParticleProcess<T, D>::addNeutralParticle),
            pybind11::arg("materialSticking"),
            pybind11::arg("defaultStickingProbability") = 1.,
@@ -1231,6 +1232,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("timeStepRatio", &AdvectionParameters<T>::timeStepRatio)
       .def_readwrite("dissipationAlpha",
                      &AdvectionParameters<T>::dissipationAlpha)
+      .def_readwrite("checkDissipation",
+                     &AdvectionParameters<T>::checkDissipation)
       .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
       .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
 

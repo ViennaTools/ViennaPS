@@ -24,7 +24,7 @@ public:
   SingleParticleALDSurfaceModel(NumericType dt, NumericType gpc, NumericType ev,
                                 NumericType flux, NumericType sticking,
                                 NumericType s0)
-      : dt_(dt), gpc_(gpc), ev_(ev), flux_(flux), sticking_(sticking), s0_(s0) {
+      : dt_(dt), gpc_(gpc), s0_(s0), ev_(ev), flux_(flux), sticking_(sticking) {
   }
 
   void initializeCoverages(unsigned numPoints) override {

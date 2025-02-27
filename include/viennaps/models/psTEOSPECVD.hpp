@@ -59,7 +59,7 @@ public:
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &Rng) override final {
+                    RNG &Rng) final {
     auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
                                NumericType(1));
     NumericType incAngle = std::acos(cosTheta);
@@ -75,14 +75,12 @@ public:
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        RNG &Rng) override final {
+                        RNG &Rng) final {
     localData.getVectorData(0)[primID] += rayWeight;
   }
 
-  NumericType getSourceDistributionPower() const override final {
-    return exponent_;
-  }
-  std::vector<std::string> getLocalDataLabels() const override final {
+  NumericType getSourceDistributionPower() const final { return exponent_; }
+  [[nodiscard]] std::vector<std::string> getLocalDataLabels() const final {
     return {"ionFlux"};
   }
 

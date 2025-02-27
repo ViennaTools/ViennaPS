@@ -1747,7 +1747,8 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
       endif()
 
       get_filename_component(basename_we ${basename} NAME_WE)
-      set(generated_file_wotarget "${generated_file_path}/${basename_we}.${cuda_compile_to_external_module_type}")
+      set(generated_file_wotarget
+          "${generated_file_path}/${basename_we}.${cuda_compile_to_external_module_type}")
 
       # Set all of our file names.  Make sure that whatever filenames that have
       # generated_file_path in them get passed in through as a command line
@@ -2009,7 +2010,7 @@ function(CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS output_file cuda_target options
     set_source_files_properties(
       "${output_file}"
       PROPERTIES EXTERNAL_OBJECT TRUE # This is an object file not to be compiled, but only
-                                      # be linked.
+                 # be linked.
                  GENERATED TRUE # This file is generated during the build
     )
 

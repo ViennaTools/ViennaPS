@@ -59,23 +59,26 @@ viennacore_setup_binding(viennaps2d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 set(LSNAME "viennals3d")
 viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 
-if (VIENNAPS_USE_GPU)
-  message(STATUS "[ViennaPS] Building GPU bindings")
-  set(VIENNAPS_GPU_INCLUDE_DIRS #
-      ${CMAKE_SOURCE_DIR}/gpu/process
-      ${CMAKE_SOURCE_DIR}/gpu/rayTracing
-      ${CMAKE_SOURCE_DIR}/gpu/utils
-      ${CMAKE_SOURCE_DIR}/gpu/models)
-  set(VIENNAPS_PTX_DIR "${CMAKE_BINARY_DIR}/lib/ptx")
+if(VIENNAPS_USE_GPU)
+  message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps3d'")
+  include("../cmake/cuda_helper.cmake")
 
+  # Include pipeline files
+  set(PIPELINES_DIR "${CMAKE_SOURCE_DIR}/gpu/pipelines")
+  set(KERNELS_DIR "${CMAKE_SOURCE_DIR}/gpu/deviceKernels")
+  set(CMAKE_CURRENT_BINARY_DIR "${VIENNAPS_LIBRARY_OUTPUT_DIR}/lib/ptx")
+  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/SF6O2Pipeline.cu")
+  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/SingleParticlePipeline.cu")
+  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/FaradayCagePipeline.cu")
+  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/IonBeamPipeline.cu")
+  generate_kernel(viennaps3d generated_files "${KERNELS_DIR}/normKernels.cu")
+
+  # Include ViennaPS GPU and OptiX headers
+  target_sources(viennaps3d PRIVATE ${generated_files})
   target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE_DIRS} ${OptiX_INCLUDE})
-
   target_link_libraries(viennaps3d PRIVATE ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
-
-  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU 
-                                                -DVIENNACORE_COMPILE_GPU
-                                                -DVIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR}
-                                                )  
+  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU -DVIENNACORE_COMPILE_GPU
+                                                -DVIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR})
 else()
   target_link_libraries(viennaps3d PRIVATE ViennaPS)
 endif()

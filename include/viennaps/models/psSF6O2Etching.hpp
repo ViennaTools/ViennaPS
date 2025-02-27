@@ -9,7 +9,6 @@
 #include "../psSurfaceModel.hpp"
 #include "../psUnits.hpp"
 #include "../psVelocityField.hpp"
-#include "psSF6O2Parameters.hpp"
 
 #include "psSF6O2Parameters.hpp"
 
@@ -59,7 +58,7 @@ public:
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
-    const auto numPoints = materialIds.size();
+    const auto numPoints = fluxes->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
     const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
@@ -186,12 +185,12 @@ public:
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
     assert(rayWeight > 0. && "Invalid ray weight");
 
-    NumericType A_sp = params.Si.A_sp;
-    NumericType B_sp = params.Si.B_sp;
+    // NumericType A_sp = params.Si.A_sp;
+    // NumericType B_sp = params.Si.B_sp;
     NumericType Eth_sp = params.Si.Eth_sp;
     if (MaterialMap::isMaterial(materialId, Material::Mask)) {
-      A_sp = params.Mask.A_sp;
-      B_sp = params.Mask.B_sp;
+      // A_sp = params.Mask.A_sp;
+      // B_sp = params.Mask.B_sp;
       Eth_sp = params.Mask.Eth_sp;
     }
 
@@ -311,7 +310,7 @@ class SF6O2Neutral
 
 public:
   SF6O2Neutral(const SF6O2Parameters<NumericType> &pParams,
-               const std::string pFluxLabel,
+               const std::string &pFluxLabel,
                std::unordered_map<int, NumericType> &pBetaMap)
       : params(pParams), fluxLabel(pFluxLabel), beta_map(pBetaMap) {}
 

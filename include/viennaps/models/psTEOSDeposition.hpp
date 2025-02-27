@@ -104,7 +104,7 @@ class SingleTEOSParticle
 public:
   SingleTEOSParticle(const NumericType pStickingProbability,
                      const NumericType pReactionOrder,
-                     const std::string pDataLabel = "particleFlux")
+                     const std::string &pDataLabel = "particleFlux")
       : stickingProbability(pStickingProbability),
         reactionOrder(pReactionOrder), dataLabel(pDataLabel) {}
   std::pair<NumericType, Vec3D<NumericType>>
@@ -154,7 +154,8 @@ class MultiTEOSParticle
     : public viennaray::Particle<MultiTEOSParticle<NumericType, D>,
                                  NumericType> {
 public:
-  MultiTEOSParticle(const NumericType pStickingProbability, std::string pLabel)
+  MultiTEOSParticle(const NumericType pStickingProbability,
+                    const std::string &pLabel)
       : stickingProbability(pStickingProbability), dataLabel(pLabel) {}
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
