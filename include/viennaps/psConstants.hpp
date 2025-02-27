@@ -103,4 +103,3 @@ static constexpr double minAngle = 1.3962634;
 } // namespace Ion
 
 } // namespace viennaps::constants
-

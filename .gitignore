@@ -1,8 +1,8 @@
 build/
-
+cmake-build*
 .vscode
 .vs
-
+.idea/
 dist/
 dependencies/
 *.ipynb
