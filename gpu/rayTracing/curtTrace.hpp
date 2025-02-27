@@ -24,9 +24,7 @@
 #include <gpu/vcCudaBuffer.hpp>
 #include <vcUtil.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
@@ -34,13 +32,15 @@ template <class T, int D> class Trace {
 public:
   /// constructor - performs all setup, including initializing
   /// optix, creates module, pipeline, programs, SBT, etc.
-  Trace(Context &passedContext) : context(passedContext) { initRayTracer(); }
+  explicit Trace(Context &passedContext) : context(passedContext) {
+    initRayTracer();
+  }
 
   void setGeometry(const TriangleMesh<float> &passedMesh) {
     geometry.buildAccel(context, passedMesh, launchParams);
   }
 
-  void setPipeline(std::string fileName, std::filesystem::path path) {
+  void setPipeline(std::string fileName, const std::filesystem::path &path) {
     // check if filename ends in .optixir
     if (fileName.find(".optixir") == std::string::npos) {
       if (fileName.find(".ptx") == std::string::npos)
@@ -261,7 +261,7 @@ public:
     createMissPrograms();
     createHitgroupPrograms();
     createPipelines();
-    if (sbts.size() == 0) {
+    if (sbts.empty()) {
       for (size_t i = 0; i < particles.size(); i++) {
         OptixShaderBindingTable sbt = {};
         sbts.push_back(sbt);
@@ -315,7 +315,7 @@ public:
 
   void downloadResultsToPointData(viennals::PointData<float> &pointData) {
     unsigned int numPoints = launchParams.numElements;
-    float *temp = new float[numPoints * numRates];
+    auto *temp = new float[numPoints * numRates];
     resultBuffer.download(temp, numPoints * numRates);
 
     int offset = 0;
@@ -491,8 +491,8 @@ protected:
       size_t sizeof_log = sizeof(log);
       OPTIX_CHECK(optixPipelineCreate(
           context.optix, &pipelineCompileOptions, &pipelineLinkOptions,
-          programGroups.data(), (int)programGroups.size(), log, &sizeof_log,
-          &pipelines[i]));
+          programGroups.data(), static_cast<int>(programGroups.size()), log,
+          &sizeof_log, &pipelines[i]));
       // #ifndef NDEBUG
       //       if (sizeof_log > 1)
       //         PRINT(log);
@@ -580,7 +580,7 @@ protected:
   OptixPipelineCompileOptions pipelineCompileOptions = {};
   OptixPipelineLinkOptions pipelineLinkOptions = {};
 
-  OptixModule module;
+  OptixModule module{};
   OptixModuleCompileOptions moduleCompileOptions = {};
 
   // program groups, and the SBT built around
@@ -601,8 +601,8 @@ protected:
 
   bool useRandomSeed = false;
   unsigned numCellData = 0;
-  int numberOfRaysPerPoint = 3000;
-  int numberOfRaysFixed = 0;
+  unsigned numberOfRaysPerPoint = 3000;
+  unsigned numberOfRaysFixed = 0;
   int runNumber = 0;
 
   size_t numRays = 0;
@@ -615,5 +615,4 @@ protected:
       'f'; // std::is_same_v<T, float> ? 'f' : 'd';
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

@@ -1,24 +1,18 @@
 #pragma once
 
-#include <psProcessModel.hpp>
-
-#include <rayParticle.hpp>
-#include <rayReflection.hpp>
-
 #include <curtParticle.hpp>
 #include <pscuProcessModel.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
 namespace impl {
 template <typename NumericType, int D>
-class FaradayCageSurfaceModel : public ::viennaps::SurfaceModel<NumericType> {
+class FaradayCageSurfaceModel final
+    : public ::viennaps::SurfaceModel<NumericType> {
 public:
-  FaradayCageSurfaceModel() {}
+  FaradayCageSurfaceModel() = default;
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
       SmartPointer<viennals::PointData<NumericType>> rates,
@@ -43,7 +37,7 @@ public:
 // Etching or deposition based on a single particle model with diffuse
 // reflections.
 template <typename NumericType, int D>
-class FaradayCageEtching : public ProcessModel<NumericType, D> {
+class FaradayCageEtching final : public ProcessModel<NumericType, D> {
 public:
   // Angles in degrees
   FaradayCageEtching(NumericType stickingProbability,
@@ -84,5 +78,4 @@ public:
   }
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

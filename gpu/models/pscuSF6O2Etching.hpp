@@ -1,18 +1,11 @@
 #pragma once
 
-#include <psProcessModel.hpp>
-
-#include <rayParticle.hpp>
-#include <rayReflection.hpp>
-
 #include <curtParticle.hpp>
 #include <pscuProcessModel.hpp>
 
 #include <models/psSF6O2Etching.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
@@ -21,14 +14,15 @@ using namespace viennacore;
 /// DOI: https://doi.org/10.1116/1.1830495
 /// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
-class SF6O2Etching : public ProcessModel<NumericType, D> {
+class SF6O2Etching final : public ProcessModel<NumericType, D> {
 public:
-  SF6O2Etching(const SF6O2Parameters<NumericType> &pParams) : params(pParams) {
-    setParamaters(pParams);
+  explicit SF6O2Etching(const SF6O2Parameters<NumericType> &pParams)
+      : params(pParams) {
+    setParameters(pParams);
     initializeModel();
   }
 
-  ~SF6O2Etching() { this->processData.free(); }
+  ~SF6O2Etching() override { this->processData.free(); }
 
 private:
   void initializeModel() {
@@ -44,13 +38,13 @@ private:
     gpu::Particle<NumericType> etchant;
     etchant.name = "etchant";
     etchant.dataLabels.push_back("etchantFlux");
-    etchant.sticking = params.beta_F[int(Material::Si)];
+    etchant.sticking = params.beta_F[static_cast<int>(Material::Si)];
     etchant.cosineExponent = 1.f;
 
     gpu::Particle<NumericType> oxygen;
     oxygen.name = "oxygen";
     oxygen.dataLabels.push_back("oxygenFlux");
-    oxygen.sticking = params.beta_O[int(Material::Si)];
+    oxygen.sticking = params.beta_O[static_cast<int>(Material::Si)];
     oxygen.cosineExponent = 1.f;
 
     // surface model
@@ -74,7 +68,7 @@ private:
     this->processData.upload(&deviceParams, 1);
   }
 
-  void setParamaters(const SF6O2Parameters<NumericType> &pParams) {
+  void setParameters(const SF6O2Parameters<NumericType> &pParams) {
     if constexpr (std::is_same_v<NumericType, float>) {
       deviceParams = pParams;
     } else {
@@ -132,5 +126,4 @@ private:
   SF6O2Parameters<float> deviceParams;
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

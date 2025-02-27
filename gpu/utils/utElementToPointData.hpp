@@ -6,9 +6,7 @@
 #include <lsMesh.hpp>
 #include <vcKDTree.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
@@ -209,5 +207,4 @@ private:
   }
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

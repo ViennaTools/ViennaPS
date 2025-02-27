@@ -3,9 +3,7 @@
 #include <optix_types.h>
 #include <vcVectorUtil.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 struct HitSBTData {
   viennacore::Vec3Df *vertex;
@@ -49,5 +47,4 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) HitgroupRecordDisk {
   HitSBTDiskData data;
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

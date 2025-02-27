@@ -10,14 +10,10 @@
 #include <vcSmartPointer.hpp>
 #include <vcVectorUtil.hpp>
 
-#include <atomic>
 #include <map>
-#include <utility>
 #include <vector>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
@@ -32,8 +28,8 @@ struct LineMesh {
 
 template <typename NumericType> struct TriangleMesh {
   TriangleMesh() = default;
-  TriangleMesh(float gd, SmartPointer<viennals::Mesh<NumericType>> mesh)
-      : gridDelta(gd), triangles(mesh->triangles) {
+  TriangleMesh(const float gd, SmartPointer<viennals::Mesh<NumericType>> mesh)
+      : triangles(mesh->triangles), gridDelta(gd) {
     if constexpr (std::is_same_v<NumericType, float>) {
       vertices = mesh->nodes;
       minimumExtent = mesh->minimumExtent;
@@ -161,7 +157,7 @@ public:
           .print();
     }
 
-    typedef typename std::map<hrleVectorType<hrleIndexType, D>, unsigned>
+    typedef std::map<hrleVectorType<hrleIndexType, D>, unsigned>
         nodeContainerType;
 
     nodeContainerType nodes[D];
@@ -169,7 +165,6 @@ public:
     std::map<Vec3D<MeshNT>, unsigned, compareNodes> nodeCoordinates;
 
     typename nodeContainerType::iterator nodeIt;
-    lsInternal::MarchingCubes marchingCubes;
 
     std::vector<Vec3D<LsNT>> triangleCenters;
     std::vector<Vec3D<MeshNT>> normals;
@@ -201,8 +196,9 @@ public:
         continue;
 
       // for each element
-      const int *Triangles = (D == 2) ? marchingCubes.polygonize2d(signs)
-                                      : marchingCubes.polygonize3d(signs);
+      const int *Triangles =
+          (D == 2) ? lsInternal::MarchingCubes::polygonize2d(signs)
+                   : lsInternal::MarchingCubes::polygonize3d(signs);
 
       for (; Triangles[0] != -1; Triangles += D) {
         std::array<unsigned, D> nod_numbers;
@@ -215,7 +211,7 @@ public:
           unsigned p1 = corner1[edge];
 
           // determine direction of edge
-          int dir = direction[edge];
+          unsigned dir = direction[edge];
 
           // look for existing surface node
           hrleVectorType<hrleIndexType, D> d(cellIt.getIndices());
@@ -236,10 +232,8 @@ public:
                     cellIt.getIndices(z) +
                     BitMaskToVector<D, hrleIndexType>(p0)[z]);
               } else {
-                MeshNT d0 =
-                    static_cast<MeshNT>(cellIt.getCorner(p0).getValue());
-                MeshNT d1 =
-                    static_cast<MeshNT>(cellIt.getCorner(p1).getValue());
+                auto d0 = static_cast<MeshNT>(cellIt.getCorner(p0).getValue());
+                auto d1 = static_cast<MeshNT>(cellIt.getCorner(p1).getValue());
 
                 // calculate the surface-grid intersection point
                 if (d0 == -d1) { // includes case where d0=d1=0
@@ -352,5 +346,4 @@ public:
 template <class LsNT, class MeshNT, int D>
 MeshNT CreateSurfaceMesh<LsNT, MeshNT, D>::minNodeDistance = 0.1;
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

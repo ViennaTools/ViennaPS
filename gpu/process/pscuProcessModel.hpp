@@ -1,15 +1,12 @@
 #pragma once
 
-#include <gpu/vcContext.hpp>
 #include <gpu/vcCudaBuffer.hpp>
 
 #include <curtParticle.hpp>
 
 #include <psProcessModelBase.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
@@ -26,7 +23,7 @@ private:
 public:
   CudaBuffer processData;
   auto &getParticleTypes() { return particles; }
-  auto getProcessDataDPtr() { return processData.dPointer(); }
+  auto getProcessDataDPtr() const { return processData.dPointer(); }
   bool useFluxEngine() override { return particles.size() > 0; }
 
   void setPipelineFileName(const std::string &fileName) {
@@ -50,5 +47,4 @@ public:
   }
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

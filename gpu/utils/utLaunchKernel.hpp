@@ -5,9 +5,7 @@
 
 #include <gpu/vcContext.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
@@ -20,9 +18,8 @@ public:
 
     CUmodule module = context.getModule(moduleName);
     CUfunction function;
-    CUresult err;
 
-    err = cuModuleGetFunction(&function, module, kernelName.data());
+    CUresult err = cuModuleGetFunction(&function, module, kernelName.data());
     if (err != CUDA_SUCCESS)
       viennacore::Logger::getInstance()
           .addFunctionError(std::string(kernelName), err)
@@ -34,7 +31,7 @@ public:
                          sharedMemoryInBytes * threadsPerBlock, // shared memory
                          0,                                     // stream
                          kernel_args, // kernel parameters
-                         NULL);
+                         nullptr);
     if (err != CUDA_SUCCESS)
       viennacore::Logger::getInstance()
           .addLaunchError(std::string(kernelName), err)
@@ -48,9 +45,8 @@ public:
 
     CUmodule module = context.getModule(moduleName);
     CUfunction function;
-    CUresult err;
 
-    err = cuModuleGetFunction(&function, module, kernelName.data());
+    CUresult err = cuModuleGetFunction(&function, module, kernelName.data());
     if (err != CUDA_SUCCESS)
       viennacore::Logger::getInstance()
           .addFunctionError(kernelName, err)
@@ -62,7 +58,7 @@ public:
                          sharedMemoryInBytes, // shared memory
                          0,                   // stream
                          kernel_args,         // kernel parameters
-                         NULL);
+                         nullptr);
     if (err != CUDA_SUCCESS)
       viennacore::Logger::getInstance().addLaunchError(kernelName, err).print();
   }
@@ -71,5 +67,4 @@ public:
   static constexpr int threadsPerBlock = 512;
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

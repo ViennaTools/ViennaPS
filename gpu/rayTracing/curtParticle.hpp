@@ -3,9 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 template <typename T> struct Particle {
   std::string name;
@@ -17,5 +15,4 @@ template <typename T> struct Particle {
   Vec3D<T> direction = {0., 0., -1.0};
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

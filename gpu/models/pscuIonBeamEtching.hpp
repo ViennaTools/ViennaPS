@@ -4,20 +4,18 @@
 
 #include <pscuProcessModel.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 template <typename NumericType, int D>
-class IonBeamEtching : public ProcessModel<NumericType, D> {
+class IonBeamEtching final : public ProcessModel<NumericType, D> {
 public:
-  IonBeamEtching(NumericType exponent) {
+  explicit IonBeamEtching(NumericType exponent) {
     Particle<NumericType> particle{
         .name = "ion", .sticking = 0.f, .cosineExponent = exponent};
     particle.dataLabels.push_back("particleFlux");
 
     // surface model
-    fluxDataLabels_.push_back("particleFlux");
+    fluxDataLabels_.emplace_back("particleFlux");
     auto surfModel =
         SmartPointer<impl::MultiParticleSurfaceModel<NumericType, D>>::New(
             fluxDataLabels_);
@@ -46,5 +44,4 @@ public:
 private:
   std::vector<std::string> fluxDataLabels_;
 };
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

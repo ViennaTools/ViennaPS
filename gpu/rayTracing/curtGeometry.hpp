@@ -6,9 +6,7 @@
 #include <curtLaunchParams.hpp>
 #include <curtMesh.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
@@ -38,8 +36,8 @@ struct TriangleGeometry {
     launchParams.numElements = mesh.triangles.size();
 
     // 2 inputs: one for the geometry, one for the boundary
-    std::array<OptixBuildInput, 2> triangleInput;
-    std::array<uint32_t, 2> triangleInputFlags;
+    std::array<OptixBuildInput, 2> triangleInput{};
+    std::array<uint32_t, 2> triangleInputFlags{};
 
     // ------------------- geometry input -------------------
     // upload the model to the device: the builder
@@ -174,6 +172,7 @@ struct TriangleGeometry {
     Vec3Df bbMax = passedMesh.maximumExtent;
     // adjust bounding box to include source plane
     bbMax[2] += passedMesh.gridDelta;
+    boundaryMesh.gridDelta = passedMesh.gridDelta;
 
     boundaryMesh.vertices.reserve(8);
     boundaryMesh.triangles.reserve(8);
@@ -215,5 +214,4 @@ struct TriangleGeometry {
   }
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

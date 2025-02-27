@@ -4,17 +4,15 @@
 
 #include <pscuProcessModel.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 template <typename NumericType, int D>
-class SingleParticleProcess : public ProcessModel<NumericType, D> {
+class SingleParticleProcess final : public ProcessModel<NumericType, D> {
 public:
-  SingleParticleProcess(NumericType rate = 1.,
-                        NumericType stickingProbability = 1.,
-                        NumericType sourceExponent = 1.,
-                        Material maskMaterial = Material::Undefined) {
+  explicit SingleParticleProcess(NumericType rate = 1.,
+                                 NumericType stickingProbability = 1.,
+                                 NumericType sourceExponent = 1.,
+                                 Material maskMaterial = Material::Undefined) {
     std::unordered_map<Material, NumericType> maskMaterialMap = {
         {maskMaterial, 0.}};
     initialize(rate, stickingProbability, sourceExponent,
@@ -65,5 +63,4 @@ private:
     this->setProcessName("SingleParticleProcess");
   }
 };
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

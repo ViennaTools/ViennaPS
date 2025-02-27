@@ -5,17 +5,15 @@
 #include <string>
 #include <vector>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 struct SourceCache {
   using CacheType = std::map<std::string, std::string *>;
   CacheType map;
 
   ~SourceCache() {
-    for (CacheType::const_iterator it = map.begin(); it != map.end(); ++it)
-      delete it->second;
+    for (auto &it : map)
+      delete it.second;
   }
 };
 static SourceCache g_sourceCache;
@@ -44,13 +42,13 @@ inline void getInputDataFromFile(std::string &inputData, const char *filename) {
   }
 }
 
-const char *getInputData(const char *filename, size_t &dataSize) {
+inline const char *getInputData(const char *filename, size_t &dataSize) {
 
   std::string *inputData;
-  std::string key = std::string(filename);
-  typename SourceCache::CacheType::iterator elem = g_sourceCache.map.find(key);
+  const auto key = std::string(filename);
 
-  if (elem == g_sourceCache.map.end()) {
+  if (auto elem = g_sourceCache.map.find(key);
+      elem == g_sourceCache.map.end()) {
     inputData = new std::string();
 
     getInputDataFromFile(*inputData, filename);
@@ -63,5 +61,4 @@ const char *getInputData(const char *filename, size_t &dataSize) {
   return inputData->c_str();
 }
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

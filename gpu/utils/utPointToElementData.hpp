@@ -2,9 +2,7 @@
 
 #include <vcKDTree.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 template <class NumericType, class MeshNT = NumericType>
 class PointToElementData {
@@ -23,8 +21,8 @@ public:
                      KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
                      bool insertToMesh = false, bool upload = true)
-      : d_elementData_(d_elementData), pointData_(*pointData),
-        pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),
+      : pointData_(*pointData), pointKdTree_(pointKdTree),
+        surfaceMesh_(surfaceMesh), d_elementData_(d_elementData),
         insertToMesh_(insertToMesh), upload_(upload) {}
 
   PointToElementData(CudaBuffer &d_elementData,
@@ -32,8 +30,8 @@ public:
                      KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
                      bool insertToMesh = false, bool upload = true)
-      : d_elementData_(d_elementData), pointData_(pointData),
-        pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh),
+      : pointData_(pointData), pointKdTree_(pointKdTree),
+        surfaceMesh_(surfaceMesh), d_elementData_(d_elementData),
         insertToMesh_(insertToMesh), upload_(upload) {}
 
   void apply() {
@@ -105,5 +103,4 @@ public:
   }
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu

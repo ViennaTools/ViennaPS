@@ -3,13 +3,11 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
-namespace viennaps {
-namespace gpu {
+namespace viennaps::gpu {
 
 typedef curandStatePhilox4_32_10_t RNGState;
 
 }
-} // namespace viennaps
 
 // Other possible RNGState types:
 // typedef curandStateXORWOW_t curtRNGState; // bad

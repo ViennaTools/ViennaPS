@@ -8,33 +8,26 @@
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
-#include <lsToDiskMesh.hpp>
 
 #include <pscuProcessModel.hpp>
 
 #include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
 #include <psProcess.hpp>
-#include <psProcessParams.hpp>
 #include <psTranslationField.hpp>
-#include <psUtils.hpp>
-#include <psVelocityField.hpp>
 
 #include <curtParticle.hpp>
-#include <curtSmoothing.hpp>
 #include <curtTrace.hpp>
 
 #include <utElementToPointData.hpp>
 #include <utPointToElementData.hpp>
 
-namespace viennaps {
-
-namespace gpu {
+namespace viennaps::gpu {
 
 using namespace viennacore;
 
 template <typename NumericType, int D>
-class Process : public ProcessBase<NumericType, D> {
+class Process final : public ProcessBase<NumericType, D> {
   using DomainType = SmartPointer<::viennaps::Domain<NumericType, D>>;
   using ModelType = SmartPointer<ProcessModel<NumericType, D>>;
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
@@ -125,7 +118,7 @@ protected:
     rayTracer_.setGeometry(mesh);
 
     assert(diskMesh_->nodes.size() > 0);
-    assert(surfaceMesh_->nodes.size() > 0);
+    assert(!surfaceMesh_->nodes.empty());
   }
 
   SmartPointer<viennals::PointData<NumericType>>
@@ -167,7 +160,7 @@ protected:
       if (useCoverages) {
         auto coverages = processModel_->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
-                          surfaceMesh_->template getElements<3>().size());
+                          surfaceMesh_->getElements<3>().size());
       }
       rayTracer_.downloadResultsToPointData(surfaceMesh_->getCellData());
       static unsigned iterations = 0;
@@ -191,7 +184,7 @@ private:
                     unsigned int numElements) {
 
     auto numCov = coverages->getScalarDataSize();
-    float *temp = new float[numElements * numCov];
+    auto *temp = new float[numElements * numCov];
     d_coverages.download(temp, numElements * numCov);
 
     for (unsigned i = 0; i < numCov; i++) {
@@ -221,5 +214,4 @@ private:
   bool rayTracerInitialized_ = false;
 };
 
-} // namespace gpu
-} // namespace viennaps
+} // namespace viennaps::gpu
