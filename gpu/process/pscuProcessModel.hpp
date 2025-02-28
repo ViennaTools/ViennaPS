@@ -2,7 +2,7 @@
 
 #include <gpu/vcCudaBuffer.hpp>
 
-#include <curtParticle.hpp>
+#include <gpu/raygParticle.hpp>
 
 #include <psProcessModelBase.hpp>
 
@@ -13,7 +13,7 @@ using namespace viennacore;
 template <class NumericType, int D>
 class ProcessModel : public ProcessModelBase<NumericType, D> {
 private:
-  using ParticleTypeList = std::vector<Particle<NumericType>>;
+  using ParticleTypeList = std::vector<viennaray::gpu::Particle<NumericType>>;
 
   ParticleTypeList particles;
   std::optional<std::string> processName = std::nullopt;
@@ -31,7 +31,8 @@ public:
   }
   auto getPipelineFileName() const { return pipelineFileName; }
 
-  void insertNextParticleType(const Particle<NumericType> &passedParticle) {
+  void insertNextParticleType(
+      const viennaray::gpu::Particle<NumericType> &passedParticle) {
     particles.push_back(passedParticle);
   }
 

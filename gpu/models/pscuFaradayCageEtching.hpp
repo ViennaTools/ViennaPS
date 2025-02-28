@@ -1,7 +1,9 @@
 #pragma once
 
-#include <curtParticle.hpp>
+#include <gpu/raygParticle.hpp>
 #include <pscuProcessModel.hpp>
+
+#include <vcVectorUtil.hpp>
 
 namespace viennaps::gpu {
 
@@ -49,7 +51,7 @@ public:
     float cage_x = cosf(cageAngle * M_PIf / 180.f);
     float cage_y = sinf(cageAngle * M_PIf / 180.f);
 
-    Particle<NumericType> particle1{
+    viennaray::gpu::Particle<NumericType> particle1{
         .name = "ion",
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
@@ -57,7 +59,7 @@ public:
     particle1.dataLabels.push_back("particleFlux");
     this->insertNextParticleType(particle1);
 
-    Particle<NumericType> particle2{
+    viennaray::gpu::Particle<NumericType> particle2{
         .name = "ion",
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,

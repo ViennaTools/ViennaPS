@@ -43,9 +43,10 @@ private:
                   std::unordered_map<Material, NumericType> &&maskMaterial) {
     // particles
 
-    Particle<NumericType> particle{.name = "SingleParticle",
-                                   .sticking = stickingProbability,
-                                   .cosineExponent = sourceExponent};
+    viennaray::gpu::Particle<NumericType> particle{
+        .name = "SingleParticle",
+        .sticking = stickingProbability,
+        .cosineExponent = sourceExponent};
     particle.dataLabels.push_back("particleFlux");
 
     // surface model

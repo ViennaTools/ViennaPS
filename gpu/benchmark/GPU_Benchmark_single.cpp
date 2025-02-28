@@ -1,7 +1,8 @@
 #include <lsToDiskMesh.hpp>
 
-#include <curtTrace.hpp>
+#include <gpu/raygTrace.hpp>
 #include <gpu/vcContext.hpp>
+#include <utCreateSurfaceMesh.hpp>
 #include <utElementToPointData.hpp>
 #include <utPointToElementData.hpp>
 
@@ -51,7 +52,7 @@ int main() {
   for (int i = 0; i < numRuns; i++) {
     file << sticking << ";";
 
-    gpu::Trace<NumericType, D> tracer(context);
+    viennaray::gpu::Trace<NumericType, D> tracer(context);
     tracer.setNumberOfRaysPerPoint(3000);
     tracer.setUseRandomSeeds(false);
 
@@ -59,7 +60,7 @@ int main() {
     timer.start();
     diskMesher.apply();
     surfMesher.apply();
-    gpu::TriangleMesh<float> mesh(GRID_DELTA, surfMesh);
+    auto mesh = gpu::CreateTriangleMesh(GRID_DELTA, surfMesh);
     timer.finish();
     file << timer.currentDuration << ";";
     std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
@@ -71,7 +72,7 @@ int main() {
     tracer.setParameters(rayCount);
 #endif
 
-    auto particle = gpu::Particle<NumericType>();
+    auto particle = viennaray::gpu::Particle<NumericType>();
     particle.sticking = sticking;
     particle.name = "SingleParticle";
     particle.dataLabels.push_back("flux");

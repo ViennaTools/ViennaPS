@@ -1,6 +1,6 @@
 #pragma once
 
-#include <curtParticle.hpp>
+#include <gpu/raygParticle.hpp>
 #include <pscuProcessModel.hpp>
 
 #include <models/psSF6O2Etching.hpp>
@@ -27,7 +27,7 @@ public:
 private:
   void initializeModel() {
     // particles
-    gpu::Particle<NumericType> ion;
+    viennaray::gpu::Particle<NumericType> ion;
     ion.name = "ion";
     ion.dataLabels.push_back("ionSputterFlux");
     ion.dataLabels.push_back("ionEnhancedFlux");
@@ -35,13 +35,13 @@ private:
     ion.sticking = 0.f;
     ion.cosineExponent = params.Ions.exponent;
 
-    gpu::Particle<NumericType> etchant;
+    viennaray::gpu::Particle<NumericType> etchant;
     etchant.name = "etchant";
     etchant.dataLabels.push_back("etchantFlux");
     etchant.sticking = params.beta_F[static_cast<int>(Material::Si)];
     etchant.cosineExponent = 1.f;
 
-    gpu::Particle<NumericType> oxygen;
+    viennaray::gpu::Particle<NumericType> oxygen;
     oxygen.name = "oxygen";
     oxygen.dataLabels.push_back("oxygenFlux");
     oxygen.sticking = params.beta_O[static_cast<int>(Material::Si)];

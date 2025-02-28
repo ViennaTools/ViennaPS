@@ -11,14 +11,12 @@
 
 #include <pscuProcessModel.hpp>
 
-#include <psAdvectionCallback.hpp>
 #include <psDomain.hpp>
 #include <psProcess.hpp>
-#include <psTranslationField.hpp>
 
-#include <curtParticle.hpp>
-#include <curtTrace.hpp>
+#include <gpu/raygTrace.hpp>
 
+#include <utCreateSurfaceMesh.hpp>
 #include <utElementToPointData.hpp>
 #include <utPointToElementData.hpp>
 
@@ -28,7 +26,7 @@ using namespace viennacore;
 
 template <typename NumericType, int D>
 class Process final : public ProcessBase<NumericType, D> {
-  using DomainType = SmartPointer<::viennaps::Domain<NumericType, D>>;
+  using DomainType = SmartPointer<Domain<NumericType, D>>;
   using ModelType = SmartPointer<ProcessModel<NumericType, D>>;
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
   using KDTreeType =
@@ -114,7 +112,7 @@ protected:
                                              surfaceMesh_, elementKdTree_)
         .apply();
 
-    TriangleMesh<float> mesh(domain_->getGridDelta(), surfaceMesh_);
+    auto mesh = CreateTriangleMesh(domain_->getGridDelta(), surfaceMesh_);
     rayTracer_.setGeometry(mesh);
 
     assert(diskMesh_->nodes.size() > 0);
@@ -162,7 +160,7 @@ protected:
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
                           surfaceMesh_->getElements<3>().size());
       }
-      rayTracer_.downloadResultsToPointData(surfaceMesh_->getCellData());
+      downloadResultsToPointData(surfaceMesh_->getCellData());
       static unsigned iterations = 0;
       viennals::VTKWriter<float>(
           surfaceMesh_, name + "_flux_" + std::to_string(iterations++) + ".vtp")
@@ -198,9 +196,37 @@ private:
     delete temp;
   }
 
+  void downloadResultsToPointData(viennals::PointData<float> &pointData) {
+    const auto numRates = rayTracer_.getNumberOfRates();
+    const auto numPoints = rayTracer_.getNumberOfElements();
+    assert(numRates > 0);
+    assert(numPoints == surfaceMesh_->getElements<3>().size());
+    auto valueBuffer = rayTracer_.getResults();
+    auto *temp = new float[numPoints * numRates];
+    valueBuffer.download(temp, numPoints * numRates);
+    auto particles = rayTracer_.getParticles();
+
+    int offset = 0;
+    for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
+      for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
+        int tmpOffset = offset + dIdx;
+        auto name = particles[pIdx].dataLabels[dIdx];
+
+        std::vector<float> values(numPoints);
+        std::memcpy(values.data(), &temp[tmpOffset * numPoints],
+                    numPoints * sizeof(float));
+
+        pointData.insertReplaceScalarData(std::move(values), name);
+      }
+      offset += particles[pIdx].dataLabels.size();
+    }
+
+    delete temp;
+  }
+
 private:
   Context &context_;
-  Trace<NumericType, D> rayTracer_;
+  viennaray::gpu::Trace<NumericType, D> rayTracer_;
 
   using ProcessBase<NumericType, D>::domain_;
   using ProcessBase<NumericType, D>::rayTracingParams_;

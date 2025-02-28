@@ -1,15 +1,15 @@
 #include <optix_device.h>
 
-#include <curtLaunchParams.hpp>
-#include <curtPerRayData.hpp>
-#include <curtRNG.hpp>
-#include <curtReflection.hpp>
-#include <curtSBTRecords.hpp>
-#include <curtSource.hpp>
+#include <gpu/raygLaunchParams.hpp>
+#include <gpu/raygPerRayData.hpp>
+#include <gpu/raygRNG.hpp>
+#include <gpu/raygReflection.hpp>
+#include <gpu/raygSBTRecords.hpp>
+#include <gpu/raygSource.hpp>
 
 #include <gpu/vcContext.hpp>
 
-using namespace viennaps::gpu;
+using namespace viennaray::gpu;
 using namespace viennacore;
 
 extern "C" __constant__ LaunchParams launchParams;
@@ -18,13 +18,11 @@ __constant__ float minAngle = 5 * M_PIf / 180.;
 __constant__ float yieldFac = 1.075;
 __constant__ float tiltAngle = 60.f;
 
-extern "C" __global__ void __closesthit__ion()
-{
+extern "C" __global__ void __closesthit__ion() {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
-  if (sbtData->isBoundary)
-  {
+  if (sbtData->isBoundary) {
     applyPeriodicBoundary(prd, sbtData);
     // if (launchParams.periodicBoundary)
     // {
@@ -34,9 +32,7 @@ extern "C" __global__ void __closesthit__ion()
     // {
     //   reflectFromBoundary(prd);
     // }
-  }
-  else
-  {
+  } else {
     const unsigned int primID = optixGetPrimitiveIndex();
     Vec3Df geomNormal = computeNormal(sbtData, primID);
     float cosTheta = -DotProduct(prd->dir, geomNormal);
@@ -50,18 +46,17 @@ extern "C" __global__ void __closesthit__ion()
 
     // ---------- REFLECTION ------------ //
     prd->rayWeight -= prd->rayWeight * launchParams.sticking;
-    // conedCosineReflection(prd, (float)(M_PIf / 2.f - min(incAngle, minAngle)), geomNormal);
+    // conedCosineReflection(prd, (float)(M_PIf / 2.f - min(incAngle,
+    // minAngle)), geomNormal);
     specularReflection(prd);
   }
 }
 
-extern "C" __global__ void __miss__ion()
-{
+extern "C" __global__ void __miss__ion() {
   getPRD<PerRayData>()->rayWeight = -1.f;
 }
 
-extern "C" __global__ void __raygen__ion()
-{
+extern "C" __global__ void __raygen__ion() {
   const uint3 idx = optixGetLaunchIndex();
   const uint3 dims = optixGetLaunchDimensions();
   const int linearLaunchIndex =
@@ -75,16 +70,16 @@ extern "C" __global__ void __raygen__ion()
 
   // initialize ray position and direction
   initializeRayPosition(&prd, &launchParams);
-  initializeRayDirection(&prd, launchParams.cosineExponent, launchParams.source.directionBasis);
+  initializeRayDirection(&prd, launchParams.cosineExponent,
+                         launchParams.source.directionBasis);
 
   // the values we store the PRD pointer in:
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
   unsigned refCount = 0;
 
-  while (prd.rayWeight > launchParams.rayWeightThreshold)
-  {
-    optixTrace(launchParams.traversable,                        // traversable GAS
+  while (prd.rayWeight > launchParams.rayWeightThreshold) {
+    optixTrace(launchParams.traversable, // traversable GAS
                make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
                1e-4f,                                           // tmin
@@ -99,8 +94,7 @@ extern "C" __global__ void __raygen__ion()
 
     refCount++;
 
-    if (refCount > launchParams.maxRayDepth)
-    {
+    if (refCount > launchParams.maxRayDepth) {
       break;
     }
   }

@@ -1,18 +1,18 @@
 #include <optix_device.h>
 
-#include <curtLaunchParams.hpp>
-#include <curtPerRayData.hpp>
-#include <curtRNG.hpp>
-#include <curtReflection.hpp>
-#include <curtSBTRecords.hpp>
-#include <curtSource.hpp>
+#include <gpu/raygLaunchParams.hpp>
+#include <gpu/raygPerRayData.hpp>
+#include <gpu/raygRNG.hpp>
+#include <gpu/raygReflection.hpp>
+#include <gpu/raygSBTRecords.hpp>
+#include <gpu/raygSource.hpp>
 
 #include <psSF6O2Parameters.hpp>
 
 #include <gpu/vcContext.hpp>
 #include <vcVectorUtil.hpp>
 
-using namespace viennaps::gpu;
+using namespace viennaray::gpu;
 
 extern "C" __constant__ LaunchParams launchParams;
 

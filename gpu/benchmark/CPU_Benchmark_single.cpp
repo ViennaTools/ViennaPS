@@ -9,12 +9,12 @@
 using namespace viennaps;
 
 int main() {
-  omp_set_num_threads(16);
+  omp_set_num_threads(1);
   using NumericType = float;
   constexpr int D = DIM;
 
-  int numRuns = 10;
-  const NumericType sticking = 0.1f;
+  int numRuns = 1;
+  const NumericType sticking = 0.5f;
   std::ofstream file("CPU_Benchmark_single.txt");
   file << "Sticking;Meshing;Tracing;Postprocessing;NumberOfTraces\n";
 

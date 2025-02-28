@@ -3,9 +3,10 @@
 
 #include <psProcess.hpp>
 
-#include <curtMesh.hpp>
-#include <curtTrace.hpp>
+#include <gpu/raygMesh.hpp>
+#include <gpu/raygTrace.hpp>
 #include <gpu/vcContext.hpp>
+#include <utCreateSurfaceMesh.hpp>
 #include <utElementToPointData.hpp>
 
 #include "BenchmarkGeometry.hpp"
@@ -27,14 +28,14 @@ int main() {
   Context context;
   context.create();
 
-  gpu::Trace<NumericType, D> tracer(context);
+  viennaray::gpu::Trace<NumericType, D> tracer(context);
   tracer.setNumberOfRaysPerPoint(3000);
   tracer.setUseRandomSeeds(false);
   tracer.setPipeline("SingleParticlePipeline", context.modulePath);
 
-  auto particle = gpu::Particle<NumericType>();
+  auto particle = viennaray::gpu::Particle<NumericType>();
   particle.name = "SingleParticle";
-  particle.dataLabels.push_back("flux");
+  particle.dataLabels.emplace_back("flux");
   tracer.insertNextParticle(particle);
   tracer.prepareParticlePrograms();
 
@@ -72,7 +73,7 @@ int main() {
       timer.start();
       diskMesher.apply();
       surfMesher.apply();
-      gpu::TriangleMesh<float> mesh(GRID_DELTA, surfMesh);
+      auto mesh = gpu::CreateTriangleMesh(GRID_DELTA, surfMesh);
       translationField->buildKdTree(diskMesh->nodes);
       timer.finish();
       file << timer.currentDuration << ";";

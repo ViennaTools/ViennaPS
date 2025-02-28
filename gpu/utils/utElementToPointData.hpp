@@ -1,7 +1,7 @@
 #pragma once
 
-#include <curtIndexMap.hpp>
-#include <curtParticle.hpp>
+#include <gpu/raygIndexMap.hpp>
+#include <gpu/raygParticle.hpp>
 #include <gpu/vcCudaBuffer.hpp>
 #include <lsMesh.hpp>
 #include <vcKDTree.hpp>
@@ -14,7 +14,7 @@ template <typename NumericType, typename MeshNT = NumericType>
 class ElementToPointData {
   CudaBuffer &d_elementData_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;
-  const IndexMap indexMap_;
+  const viennaray::gpu::IndexMap indexMap_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
@@ -27,7 +27,7 @@ public:
   ElementToPointData(
       CudaBuffer &d_elementData,
       SmartPointer<viennals::PointData<NumericType>> pointData,
-      const std::vector<Particle<NumericType>> &particles,
+      const std::vector<viennaray::gpu::Particle<NumericType>> &particles,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
@@ -40,7 +40,7 @@ public:
   ElementToPointData(
       CudaBuffer &d_elementData,
       SmartPointer<viennals::PointData<NumericType>> pointData,
-      const IndexMap &indexMap,
+      const viennaray::gpu::IndexMap &indexMap,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,

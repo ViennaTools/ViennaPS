@@ -1,80 +1,24 @@
 #pragma once
 
-#include <hrleDenseCellIterator.hpp>
-#include <hrleSparseCellIterator.hpp>
 #include <lsDomain.hpp>
-#include <lsMarchingCubes.hpp>
 #include <lsMesh.hpp>
+#include <lsToSurfaceMesh.hpp>
 
-#include <vcKDTree.hpp>
-#include <vcSmartPointer.hpp>
-#include <vcVectorUtil.hpp>
-
-#include <map>
-#include <vector>
+#include <gpu/raygMesh.hpp>
 
 namespace viennaps::gpu {
 
 using namespace viennacore;
 
-struct LineMesh {
-  std::vector<Vec3Df> vertices;
-  std::vector<Vec2D<unsigned>> lines;
+template <class NumericType>
+viennaray::gpu::TriangleMesh<float>
+CreateTriangleMesh(const NumericType gridDelta,
+                   SmartPointer<viennals::Mesh<float>> mesh) {
+  viennaray::gpu::TriangleMesh<float> triangleMesh;
+  triangleMesh.gridDelta = static_cast<float>(gridDelta);
 
-  Vec3Df minimumExtent;
-  Vec3Df maximumExtent;
-  float gridDelta;
-};
-
-template <typename NumericType> struct TriangleMesh {
-  TriangleMesh() = default;
-  TriangleMesh(const float gd, SmartPointer<viennals::Mesh<NumericType>> mesh)
-      : triangles(mesh->triangles), gridDelta(gd) {
-    if constexpr (std::is_same_v<NumericType, float>) {
-      vertices = mesh->nodes;
-      minimumExtent = mesh->minimumExtent;
-      maximumExtent = mesh->maximumExtent;
-    } else {
-      vertices.reserve(mesh->nodes.size());
-      for (const auto &node : mesh->nodes) {
-        vertices.push_back({static_cast<float>(node[0]),
-                            static_cast<float>(node[1]),
-                            static_cast<float>(node[2])});
-      }
-      minimumExtent = {static_cast<float>(mesh->minimumExtent[0]),
-                       static_cast<float>(mesh->minimumExtent[1]),
-                       static_cast<float>(mesh->minimumExtent[2])};
-      maximumExtent = {static_cast<float>(mesh->maximumExtent[0]),
-                       static_cast<float>(mesh->maximumExtent[1]),
-                       static_cast<float>(mesh->maximumExtent[2])};
-    }
-  }
-
-  std::vector<Vec3Df> vertices;
-  std::vector<Vec3D<unsigned>> triangles;
-
-  Vec3Df minimumExtent;
-  Vec3Df maximumExtent;
-  float gridDelta;
-};
-
-struct SphereMesh {
-  std::vector<Vec3Df> vertices;
-  std::vector<float> radii;
-
-  Vec3Df minimumExtent;
-  Vec3Df maximumExtent;
-  float gridDelta;
-};
-
-struct OrientedPointCloud {
-  std::vector<Vec3Df> vertices;
-  std::vector<Vec3Df> normals;
-
-  Vec3Df minimumExtent;
-  Vec3Df maximumExtent;
-  float gridDelta;
-};
+  return triangleMesh;
+}
 
 template <class LsNT, class MeshNT = LsNT, int D = 3> class CreateSurfaceMesh {
 

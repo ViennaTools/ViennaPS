@@ -56,11 +56,11 @@ endif()
 
 #### Set variables
 set(VIENNAPS_GPU_INCLUDE_DIRS
-    "${PROJECT_SOURCE_DIR}/process;${PROJECT_SOURCE_DIR}/rayTracing;${PROJECT_SOURCE_DIR}/utils;${PROJECT_SOURCE_DIR}/models"
+    "${PROJECT_SOURCE_DIR}/process;${PROJECT_SOURCE_DIR}/utils;${PROJECT_SOURCE_DIR}/models"
     CACHE STRING "Include directories for ViennaPS GPU processing.")
 set(VIENNAPS_CUDA_KERNELS
-    "${PROJECT_SOURCE_DIR}/deviceKernels/normKernels.cu"
-    CACHE STRING "Path to the ViennaPS CUDA kernel source file.")
+    "${ViennaRay_SOURCE_DIR}/gpu/kernels/normKernels.cu"
+    CACHE STRING "Paths to the ViennaPS CUDA kernel source file.")
 set(VIENNAPS_PTX_DIR
     "${CMAKE_BINARY_DIR}/lib/ptx"
     CACHE STRING "Directory for compiled PTX files.")
@@ -82,7 +82,7 @@ mark_as_advanced(CLEAR CUDA_64_BIT_DEVICE_CODE)
 # as much as you wish from the GUI or from ccmake.
 if(NOT PASSED_FIRST_CONFIGURE)
   message(STATUS "Setting default NVCC flags for first time configuration.")
-  include("../cmake/cuda_helper.cmake")
+  include("${VIENNACORE_CMAKE_TOOLS}/cuda_helper.cmake")
 
   set(CUDA_NVCC_FLAGS_DESCRIPTION "Semi-colon delimit multiple arguments.")
   string(REPLACE "sm_" "compute_" CUDA_MIN_SM_COMPUTE_TARGET ${CUDA_MIN_SM_TARGET})
@@ -130,84 +130,6 @@ if(NOT PASSED_FIRST_CONFIGURE)
     add_cuda_flag("--use-local-env")
   endif()
 endif()
-
-# In CMake, functions have their own scope, whereas macros use the scope of the caller.
-macro(add_GPU_executable target_name_base target_name_var)
-  set(target_name ${target_name_base})
-  set(${target_name_var}
-      ${target_name}
-      PARENT_SCOPE)
-
-  # Separate the sources from the CMake and CUDA options fed to the macro.  This code
-  # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the
-  # code here, so that we can use our own name for the target.  target_name is used in the
-  # creation of the output file names, and we want this to be unique for each target in
-  # the SDK.
-  cuda_get_sources_and_options(source_files cmake_options options ${ARGN})
-
-  # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
-  set(cu_obj_source_files)
-  set(cu_optix_source_files)
-  foreach(file ${source_files})
-    get_filename_component(_file_extension ${file} EXT)
-    if(${_file_extension} MATCHES "cu")
-      list(APPEND cu_optix_source_files ${file})
-    endif()
-  endforeach()
-
-  # Add the path to the OptiX headers to our include paths.
-  include_directories(${OptiX_INCLUDE})
-
-  # Include ViennaPS headers which are used in pipelines
-  include_directories(${VIENNAPS_GPU_INCLUDE_DIRS})
-  include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore) # needed for Context
-  include_directories(${CMAKE_SOURCE_DIR}/include/viennaps/models)
-  add_compile_definitions(VIENNACORE_COMPILE_GPU)
-
-  # Create CUDA kernels
-  cuda_wrap_srcs(
-    ${target_name}
-    PTX
-    generated_files
-    ${VIENNAPS_CUDA_KERNELS}
-    ${cmake_options}
-    OPTIONS
-    ${options})
-
-  # Create the rules to build the PTX and/or OPTIX files.
-  if(VIENNAPS_INPUT_GENERATE_OPTIXIR)
-    cuda_wrap_srcs(
-      ${target_name}
-      OPTIXIR
-      generated_optixir_files
-      ${cu_optix_source_files}
-      ${cmake_options}
-      OPTIONS
-      ${options})
-    list(APPEND generated_files ${generated_optixir_files})
-  endif()
-  if(VIENNAPS_INPUT_GENERATE_PTX)
-    cuda_wrap_srcs(
-      ${target_name}
-      PTX
-      generated_ptx_files
-      ${cu_optix_source_files}
-      ${cmake_options}
-      OPTIONS
-      ${options})
-    list(APPEND generated_files ${generated_ptx_files})
-  endif()
-
-  # Here is where we create the rule to make the executable.  We define a target name and
-  # list all the source files used to create the target.  In addition we also pass along
-  # the cmake_options parsed out of the arguments.
-  message(STATUS "Adding target: ${target_name}")
-  add_executable(${target_name} ${source_files} ${generated_files} ${cmake_options})
-  target_include_directories(${target_name} PRIVATE ${VIENNAPS_GPU_INCLUDE_DIRS})
-  target_link_libraries(${target_name} ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
-  target_compile_definitions(${target_name}
-                             PRIVATE VIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR})
-endmacro()
 
 if(VIENNAPS_BUILD_EXAMPLES)
   message(STATUS "[ViennaPS] Adding GPU Examples")

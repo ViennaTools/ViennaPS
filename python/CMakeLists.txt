@@ -61,17 +61,18 @@ viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 
 if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps3d'")
-  include("../cmake/cuda_helper.cmake")
+  include("${CMAKE_SOURCE_DIR}/cmake/generate_ptx.cmake")
 
   # Include pipeline files
   set(PIPELINES_DIR "${CMAKE_SOURCE_DIR}/gpu/pipelines")
-  set(KERNELS_DIR "${CMAKE_SOURCE_DIR}/gpu/deviceKernels")
+  set(VIENNARAY_KERNELS_DIR "${ViennaRay_SOURCE_DIR}/gpu/kernels")
+  set(CUDA_GENERATED_OUTPUT_DIR ${VIENNAPS_PTX_DIR})
   set(CMAKE_CURRENT_BINARY_DIR "${VIENNAPS_LIBRARY_OUTPUT_DIR}/lib/ptx")
-  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/SF6O2Pipeline.cu")
+  #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/SF6O2Pipeline.cu")
   generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/SingleParticlePipeline.cu")
-  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/FaradayCagePipeline.cu")
-  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/IonBeamPipeline.cu")
-  generate_kernel(viennaps3d generated_files "${KERNELS_DIR}/normKernels.cu")
+  #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/FaradayCagePipeline.cu")
+  #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/IonBeamPipeline.cu")
+  generate_kernel(viennaps3d generated_files "${VIENNARAY_KERNELS_DIR}/normKernels.cu")
 
   # Include ViennaPS GPU and OptiX headers
   target_sources(viennaps3d PRIVATE ${generated_files})
@@ -99,9 +100,9 @@ target_compile_definitions(
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs")
 
 # Not required for both targets, one will suffice
-viennacore_setup_embree_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
-viennacore_setup_vtk_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
-viennacore_setup_tbb_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
+#viennacore_setup_embree_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
+#viennacore_setup_vtk_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
+#viennacore_setup_tbb_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
 
 install(
   DIRECTORY "${VIENNAPS_LIB_FOLDER}"
