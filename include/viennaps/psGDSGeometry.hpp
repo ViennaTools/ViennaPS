@@ -31,7 +31,7 @@ public:
     }
   }
 
-  GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
+  explicit GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
     if constexpr (D == 2) {
       Logger::getInstance()
           .addError("Cannot import 2D geometry from GDS file.")
@@ -212,7 +212,6 @@ private:
   }
 
   void preBuildStructures() {
-    int n = 0;
     for (auto &str : structures) {
       if (str.isRef) {
         if (!str.sRefs.empty()) {
@@ -579,7 +578,7 @@ private:
   unsigned triangulationTimeOut = 1000000;
   static constexpr double eps = 1e-6;
 
-  double bounds_[6];
+  double bounds_[6] = {};
   NumericType gridDelta_ = 1.;
   BoundaryType boundaryConds_[3] = {BoundaryType::REFLECTIVE_BOUNDARY,
                                     BoundaryType::REFLECTIVE_BOUNDARY,

@@ -2,19 +2,11 @@
 
 #include "psProcessBase.hpp"
 #include "psProcessModel.hpp"
-#include "psProcessParams.hpp"
 #include "psTranslationField.hpp"
-#include "psUnits.hpp"
 #include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
-#include <lsCalculateVisibilities.hpp>
-#include <lsDomain.hpp>
-#include <lsMesh.hpp>
-#include <lsToDiskMesh.hpp>
-#include <lsVTKWriter.hpp>
 
-#include <rayParticle.hpp>
 #include <rayTrace.hpp>
 
 namespace viennaps {
@@ -25,13 +17,13 @@ using namespace viennacore;
 /// process model to a domain. Depending on the user inputs surface advection, a
 /// single callback function or a geometric advection is applied.
 template <typename NumericType, int D>
-class Process : public ProcessBase<NumericType, D> {
+class Process final : public ProcessBase<NumericType, D> {
   // Typedefs
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
   using DomainType = SmartPointer<Domain<NumericType, D>>;
 
 public:
-  Process() {}
+  Process() = default;
   Process(DomainType domain) : ProcessBase<NumericType, D>(domain) {}
   // Constructor for a process with a pre-configured process model.
   Process(DomainType domain,
@@ -59,7 +51,7 @@ public:
     }
   }
 
-  void writeParticleDataLogs(std::string fileName) {
+  void writeParticleDataLogs(const std::string &fileName) {
     std::ofstream file(fileName.c_str());
 
     for (std::size_t i = 0; i < particleDataLogs.size(); i++) {
@@ -119,13 +111,11 @@ protected:
     rayTracer.setUseRandomSeeds(rayTracingParams_.useRandomSeeds);
     rayTracer.setCalculateFlux(false);
 
-    auto source = processModel_->getSource();
-    if (source) {
+    if (auto source = processModel_->getSource()) {
       rayTracer.setSource(source);
       Logger::getInstance().addInfo("Using custom source.").print();
     }
-    auto primaryDirection = processModel_->getPrimaryDirection();
-    if (primaryDirection) {
+    if (auto primaryDirection = processModel_->getPrimaryDirection()) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
                    utils::arrayToString(primaryDirection.value()))
@@ -136,8 +126,7 @@ protected:
     // initialize particle data logs
     particleDataLogs.resize(processModel_->getParticleTypes().size());
     for (std::size_t i = 0; i < processModel_->getParticleTypes().size(); i++) {
-      int logSize = processModel_->getParticleLogSize(i);
-      if (logSize > 0) {
+      if (int logSize = processModel_->getParticleLogSize(i); logSize > 0) {
         particleDataLogs[i].data.resize(1);
         particleDataLogs[i].data[0].resize(logSize);
       }

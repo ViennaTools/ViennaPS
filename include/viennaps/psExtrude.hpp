@@ -6,7 +6,6 @@
 #include <lsToMesh.hpp>
 
 namespace viennaps {
-
 using namespace viennacore;
 
 template <class NumericType> class Extrude {
@@ -14,10 +13,10 @@ template <class NumericType> class Extrude {
   SmartPointer<Domain<NumericType, 3>> outputDomain;
   std::array<NumericType, 2> extent = {0., 0.};
   int extrudeDim = 0;
-  std::array<viennals::BoundaryConditionEnum, 3> boundaryConds;
+  std::array<viennals::BoundaryConditionEnum, 3> boundaryConds = {};
 
 public:
-  Extrude() {}
+  Extrude() = default;
   Extrude(SmartPointer<Domain<NumericType, 2>> &passedInputDomain,
           SmartPointer<Domain<NumericType, 3>> &passedOutputDomain,
           std::array<NumericType, 2> passedExtent, const int passedExtrudeDim,
@@ -96,5 +95,4 @@ public:
     }
   }
 };
-
 } // namespace viennaps

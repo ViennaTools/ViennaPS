@@ -4,10 +4,8 @@
 #include "psProcessParams.hpp"
 #include "psTranslationField.hpp"
 #include "psUnits.hpp"
-#include "psUtils.hpp"
 
 #include <lsAdvect.hpp>
-#include <lsCalculateVisibilities.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 #include <lsToDiskMesh.hpp>
@@ -25,14 +23,14 @@ template <typename NumericType, int D> class ProcessBase {
   using DomainType = SmartPointer<Domain<NumericType, D>>;
 
 public:
-  ProcessBase() {}
+  ProcessBase() = default;
   ProcessBase(DomainType domain) : domain_(domain) {}
   // Constructor for a process with a pre-configured process model.
   ProcessBase(DomainType domain,
               SmartPointer<ProcessModelBase<NumericType, D>> processModel,
               const NumericType duration = 0.)
       : domain_(domain), model_(processModel), processDuration_(duration) {}
-  ~ProcessBase() { assert(!covMetricFile.is_open()); }
+  virtual ~ProcessBase() { assert(!covMetricFile.is_open()); }
 
   // Set the process domain.
   void setDomain(DomainType domain) { domain_ = domain; }
@@ -201,8 +199,7 @@ public:
 
     auto fluxes = calculateFluxes(useCoverages, useProcessParams);
     mergeScalarData(diskMesh_->getCellData(), fluxes);
-    auto surfaceData = model_->getSurfaceModel()->getSurfaceData();
-    if (surfaceData)
+    if (auto surfaceData = model_->getSurfaceModel()->getSurfaceData())
       mergeScalarData(diskMesh_->getCellData(), surfaceData);
 
     return diskMesh_;
@@ -425,15 +422,13 @@ public:
           diskMesh_->getCellData().insertNextScalarData(*velocities,
                                                         "velocities");
         if (useCoverages) {
-          auto coverages = surfaceModel->getCoverages();
-          this->mergeScalarData(diskMesh_->getCellData(), coverages);
+          mergeScalarData(diskMesh_->getCellData(),
+                          surfaceModel->getCoverages());
         }
-        auto surfaceData = surfaceModel->getSurfaceData();
-        if (surfaceData)
-          this->mergeScalarData(diskMesh_->getCellData(), surfaceData);
-        this->mergeScalarData(diskMesh_->getCellData(), fluxes);
-        this->printDiskMesh(diskMesh_,
-                            name + "_" + std::to_string(counter) + ".vtp");
+        if (auto surfaceData = surfaceModel->getSurfaceData())
+          mergeScalarData(diskMesh_->getCellData(), surfaceData);
+        mergeScalarData(diskMesh_->getCellData(), fluxes);
+        printDiskMesh(diskMesh_, name + "_" + std::to_string(counter) + ".vtp");
         if (domain_->getCellSet()) {
           domain_->getCellSet()->writeVTU(name + "_cellSet_" +
                                           std::to_string(counter) + ".vtu");
@@ -593,7 +588,7 @@ protected:
   }
 
   void moveCoveragesToTopLS(
-      SmartPointer<TranslatorType> translator,
+      SmartPointer<TranslatorType> const &translator,
       SmartPointer<viennals::PointData<NumericType>> coverages) {
     auto topLS = domain_->getLevelSets().back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
@@ -614,7 +609,7 @@ protected:
   }
 
   void updateCoveragesFromAdvectedSurface(
-      SmartPointer<TranslatorType> translator,
+      SmartPointer<TranslatorType> const &translator,
       SmartPointer<viennals::PointData<NumericType>> coverages) const {
     auto topLS = domain_->getLevelSets().back();
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
@@ -662,7 +657,6 @@ protected:
   }
 
   void coverageInitIterations(const bool useProcessParams) {
-    Timer timer;
     auto coverages = model_->getSurfaceModel()->getCoverages();
     const auto name = model_->getProcessName().value_or("default");
     const auto logLevel = Logger::getLogLevel();
@@ -678,6 +672,7 @@ protected:
     }
 
     if (!coveragesInitialized_) {
+      Timer timer;
       timer.start();
       Logger::getInstance().addInfo("Initializing coverages ... ").print();
 
@@ -708,8 +703,7 @@ protected:
         if (logLevel >= 3) {
           mergeScalarData(diskMesh_->getCellData(), coverages);
           mergeScalarData(diskMesh_->getCellData(), fluxes);
-          auto surfaceData = model_->getSurfaceModel()->getSurfaceData();
-          if (surfaceData)
+          if (auto surfaceData = model_->getSurfaceModel()->getSurfaceData())
             mergeScalarData(diskMesh_->getCellData(), surfaceData);
           printDiskMesh(diskMesh_, name + "_covInit_" +
                                        std::to_string(iteration) + ".vtp");

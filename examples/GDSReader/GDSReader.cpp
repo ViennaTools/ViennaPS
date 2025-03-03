@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
   constexpr int D = 3;
 
   // read GDS mask file
-  const NumericType gridDelta = 0.01;
+  constexpr NumericType gridDelta = 0.01;
   ls::BoundaryConditionEnum boundaryConds[D] = {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,

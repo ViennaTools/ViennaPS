@@ -21,14 +21,14 @@ class TranslationField : public viennals::VelocityField<NumericType> {
 public:
   TranslationField(
       SmartPointer<viennaps::VelocityField<NumericType, D>> velocityField,
-      SmartPointer<MaterialMap> materialMap)
-      : translationMethod_(velocityField->getTranslationFieldOptions()),
-        modelVelocityField_(velocityField), materialMap_(materialMap) {}
+      SmartPointer<MaterialMap> const &materialMap)
+      : modelVelocityField_(velocityField), materialMap_(materialMap),
+        translationMethod_(velocityField->getTranslationFieldOptions()) {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material,
                                 const Vec3D<NumericType> &normalVector,
-                                unsigned long pointId) {
+                                unsigned long pointId) override {
     translateLsId(pointId, coordinate);
     if (materialMap_)
       material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
@@ -39,7 +39,7 @@ public:
   Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
                                        int material,
                                        const Vec3D<NumericType> &normalVector,
-                                       unsigned long pointId) {
+                                       unsigned long pointId) override {
     translateLsId(pointId, coordinate);
     if (materialMap_)
       material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
@@ -49,14 +49,14 @@ public:
 
   NumericType
   getDissipationAlpha(int direction, int material,
-                      const Vec3D<NumericType> &centralDifferences) {
+                      const Vec3D<NumericType> &centralDifferences) override {
     if (materialMap_)
       material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
     return modelVelocityField_->getDissipationAlpha(direction, material,
                                                     centralDifferences);
   }
 
-  void setTranslator(SmartPointer<TranslatorType> translator) {
+  void setTranslator(const SmartPointer<TranslatorType> &translator) {
     translator_ = translator;
   }
 

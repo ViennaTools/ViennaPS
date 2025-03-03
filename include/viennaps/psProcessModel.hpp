@@ -3,7 +3,6 @@
 #include "psProcessModelBase.hpp"
 
 #include <lsConcepts.hpp>
-#include <lsPointData.hpp>
 
 #include <rayParticle.hpp>
 #include <raySource.hpp>
@@ -24,8 +23,6 @@ protected:
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
 
 public:
-  virtual ~ProcessModel() = default;
-
   auto &getParticleTypes() { return particles; }
   auto getSource() { return source; }
   bool useFluxEngine() override { return particles.size() > 0; }

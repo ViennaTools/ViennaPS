@@ -56,16 +56,16 @@ public:
   Domain() = default;
 
   // Deep copy constructor.
-  Domain(SmartPointer<Domain> domain) { deepCopy(domain); }
+  explicit Domain(SmartPointer<Domain> domain) { deepCopy(domain); }
 
   // Constructor for domain with a single initial Level-Set.
-  Domain(lsDomainType levelSet) {
+  explicit Domain(lsDomainType levelSet) {
     setup_.init(levelSet->getGrid());
     levelSets_.push_back(levelSet);
   }
 
   // Constructor for domain with multiple initial Level-Sets.
-  Domain(lsDomainsType levelSets) : levelSets_(levelSets) {
+  explicit Domain(lsDomainsType levelSets) : levelSets_(levelSets) {
     setup_.init(levelSets.back()->getGrid());
   }
 
@@ -82,7 +82,7 @@ public:
          BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : setup_(gridDelta, xExtent, yExtent, boundary) {}
 
-  Domain(const Setup &setup) : setup_(setup) {}
+  explicit Domain(const Setup &setup) : setup_(setup) {}
 
   void setup(const Setup &setup) { setup_ = setup; }
 
@@ -196,7 +196,7 @@ public:
     }
   }
 
-  // Apply a boolean operation with the passed Level-Set to all of the
+  // Apply a boolean operation with the passed Level-Set to all
   // Level-Sets in the domain.
   void applyBooleanOperation(lsDomainType levelSet,
                              viennals::BooleanOperationEnum operation) {
@@ -277,7 +277,7 @@ public:
         position);
   }
 
-  void setMaterialMap(materialMapType passedMaterialMap) {
+  void setMaterialMap(const materialMapType &passedMaterialMap) {
     materialMap_ = passedMaterialMap;
     materialMapCheck();
   }
@@ -336,7 +336,7 @@ public:
   }
 
   // Save the level set as a VTK file.
-  void saveLevelSetMesh(std::string fileName, int width = 1) {
+  void saveLevelSetMesh(const std::string &fileName, int width = 1) {
     for (int i = 0; i < levelSets_.size(); i++) {
       auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
       viennals::Expand<NumericType, D>(levelSets_.at(i), width).apply();
@@ -401,9 +401,9 @@ public:
   }
 
   // Write the all Level-Sets in the domain to individual files. The file name
-  // serves as the prefix for the individual files and is append by
+  // serves as the prefix for the individual files and is appended by
   // "_layerX.lvst", where X is the number of the Level-Set in the domain.
-  void saveLevelSets(std::string fileName) const {
+  void saveLevelSets(const std::string &fileName) const {
     for (int i = 0; i < levelSets_.size(); i++) {
       viennals::Writer<NumericType, D>(
           levelSets_.at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
