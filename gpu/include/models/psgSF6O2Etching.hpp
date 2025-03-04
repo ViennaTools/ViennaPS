@@ -1,9 +1,9 @@
 #pragma once
 
-#include <gpu/raygParticle.hpp>
-#include <pscuProcessModel.hpp>
-
 #include <models/psSF6O2Etching.hpp>
+#include <raygParticle.hpp>
+
+#include <psgProcessModel.hpp>
 
 namespace viennaps::gpu {
 

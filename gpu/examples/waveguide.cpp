@@ -1,12 +1,11 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psDirectionalEtching.hpp>
-#include <models/psIonBeamEtching.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
-#include <pscuFaradayCageEtching.hpp>
-#include <pscuProcess.hpp>
+#include <models/pscFaradayCageEtching.hpp>
+#include <pscProcess.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;
@@ -15,7 +14,7 @@ template <class NumericType>
 void FluxOnMesh(
     ls::PointData<NumericType> &pointData,
     ps::KDTree<NumericType, ps::Vec3D<NumericType>> const &pointKdTree,
-    ps::SmartPointer<ls::Mesh<float>> surfaceMesh) {
+    const ps::SmartPointer<ls::Mesh<float>> &surfaceMesh) {
 
   auto numData = pointData.getScalarDataSize();
   const auto &elements = surfaceMesh->triangles;
@@ -209,23 +208,23 @@ int main(int argc, char *argv[]) {
     params.readConfigFile(argv[1]);
   } else {
     std::cout << "Usage: " << argv[0] << " <parameter file>" << std::endl;
-    return 1;
+    return EXIT_FAILURE;
   }
 
   // geometry setup
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-  const NumericType W1 = params.get("W1");
-  const NumericType W2 = params.get("W2");
-  const NumericType W3 = params.get("W3");
-  const NumericType W4 = params.get("W4");
+  const auto W1 = params.get<NumericType>("W1");
+  const auto W2 = params.get<NumericType>("W2");
+  const auto W3 = params.get<NumericType>("W3");
+  const auto W4 = params.get<NumericType>("W4");
 
   if (W3 <= W2) {
     std::cout << "W3 must be greater than W2" << std::endl;
-    return 1;
+    return EXIT_FAILURE;
   }
   if (W2 <= W1) {
     std::cout << "W2 must be greater than W1" << std::endl;
-    return 1;
+    return EXIT_FAILURE;
   }
 
   std::cout << "Output file: ";

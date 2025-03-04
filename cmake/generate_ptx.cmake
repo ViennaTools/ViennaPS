@@ -1,20 +1,19 @@
-macro(generate_pipeline target_name generated_files)
+function(generate_pipeline target_name generated_files)
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.
   cuda_get_sources_and_options(cu_optix_source_files cmake_options options ${ARGN})
 
   # Add the path to the OptiX headers to our include paths.
-  include_directories(${OptiX_INCLUDE})
+  cuda_include_directories(${OptiX_INCLUDE})
 
-  # Include ViennaPS headers which are used in pipelines
-  include_directories(${ViennaRay_SOURCE_DIR}/include/viennaray)
-  include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore) # needed for Context
-  include_directories(${CMAKE_SOURCE_DIR}/include/viennaps/models)
+  # Include ViennaRay headers which are used in pipelines
+  cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
+  cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore) # needed for Context
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
 
   # Generate OptiX IR files if enabled
-  if(VIENNAPS_INPUT_GENERATE_OPTIXIR)
+  if(VIENNAPS_GENERATE_OPTIXIR)
     cuda_wrap_srcs(
       ${target_name}
       OPTIXIR
@@ -27,7 +26,7 @@ macro(generate_pipeline target_name generated_files)
   endif()
 
   # Generate PTX files if enabled
-  if(VIENNAPS_INPUT_GENERATE_PTX)
+  if(VIENNAPS_GENERATE_PTX)
     cuda_wrap_srcs(
       ${target_name}
       PTX
@@ -40,30 +39,32 @@ macro(generate_pipeline target_name generated_files)
   endif()
 
   list(APPEND ${generated_files} ${generated_files_local})
-endmacro()
+endfunction()
 
-macro(generate_kernel target_name generated_files)
+function(generate_kernel generated_files)
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.
   cuda_get_sources_and_options(cu_source_files cmake_options options ${ARGN})
 
-  cuda_wrap_srcs(
-    ${target_name}
-    PTX
-    generated_ptx_files
-    ${cu_source_files}
-    ${cmake_options}
-    OPTIONS
-    ${options})
+  cuda_include_directories(${OptiX_INCLUDE})
+  cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
+  cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
+  add_compile_definitions(VIENNACORE_COMPILE_GPU)
 
-  list(APPEND ${generated_files} ${generated_ptx_files})
-endmacro()
+  cuda_compile_ptx(generated_ptx_files ${cu_source_files} ${cmake_options} ${options})
+
+  set(${generated_files}
+      ${generated_ptx_files}
+      PARENT_SCOPE)
+endfunction()
 
 # In CMake, functions have their own scope, whereas macros use the scope of the caller.
-macro(add_GPU_executable target_name_base target_name_var)
+function(add_GPU_executable target_name_base target_name_var)
   set(target_name ${target_name_base})
-  set(${target_name_var} ${target_name})
+  set(${target_name_var}
+      ${target_name}
+      PARENT_SCOPE)
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the
@@ -83,12 +84,12 @@ macro(add_GPU_executable target_name_base target_name_var)
   endforeach()
 
   # Add the path to the OptiX headers to our include paths.
-  include_directories(${OptiX_INCLUDE})
+  cuda_include_directories(${OptiX_INCLUDE})
 
-  # Include ViennaPS headers which are used in pipelines
-  include_directories(${ViennaRay_SOURCE_DIR}/include/viennaray)
-  include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore) # needed for Context
-  include_directories(${CMAKE_SOURCE_DIR}/include/viennaps/models)
+  # Include ViennaRay headers which are used in pipelines
+  cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
+  cuda_include_directories(${ViennaPS_SOURCE_DIR}/include/viennaps)
+  cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
 
   # Create CUDA kernels
@@ -96,13 +97,14 @@ macro(add_GPU_executable target_name_base target_name_var)
     ${target_name}
     PTX
     generated_files
+    ${VIENNARAY_CUDA_KERNELS}
     ${VIENNAPS_CUDA_KERNELS}
     ${cmake_options}
     OPTIONS
     ${options})
 
   # Create the rules to build the PTX and/or OPTIX files.
-  if(VIENNAPS_INPUT_GENERATE_OPTIXIR)
+  if(VIENNAPS_GENERATE_OPTIXIR)
     cuda_wrap_srcs(
       ${target_name}
       OPTIXIR
@@ -113,7 +115,7 @@ macro(add_GPU_executable target_name_base target_name_var)
       ${options})
     list(APPEND generated_files ${generated_optixir_files})
   endif()
-  if(VIENNAPS_INPUT_GENERATE_PTX)
+  if(VIENNAPS_GENERATE_PTX)
     cuda_wrap_srcs(
       ${target_name}
       PTX
@@ -130,8 +132,7 @@ macro(add_GPU_executable target_name_base target_name_var)
   # the cmake_options parsed out of the arguments.
   message(STATUS "Adding target: ${target_name}")
   add_executable(${target_name} ${source_files} ${generated_files} ${cmake_options})
-  target_include_directories(${target_name} PRIVATE ${VIENNAPS_GPU_INCLUDE_DIRS})
-  target_link_libraries(${target_name} ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
-  target_compile_definitions(${target_name}
-                             PRIVATE VIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR})
-endmacro()
+  target_include_directories(${target_name} PRIVATE ${OptiX_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
+                                                    ${VIENNAPS_GPU_INCLUDE})
+  target_link_libraries(${target_name} PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
+endfunction()

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <gpu/vcCudaBuffer.hpp>
+#include <vcCudaBuffer.hpp>
 
-#include <gpu/raygParticle.hpp>
+#include <raygParticle.hpp>
 
 #include <psProcessModelBase.hpp>
 

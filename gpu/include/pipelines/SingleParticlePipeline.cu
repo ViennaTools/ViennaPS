@@ -1,28 +1,32 @@
 #include <optix_device.h>
 
-#include <gpu/raygLaunchParams.hpp>
-#include <gpu/raygPerRayData.hpp>
-#include <gpu/raygRNG.hpp>
-#include <gpu/raygReflection.hpp>
-#include <gpu/raygSBTRecords.hpp>
-#include <gpu/raygSource.hpp>
+#ifndef __CUDACC__
+#define __CUDACC__
+#endif
 
-#include <psSF6O2Parameters.hpp>
+#include <raygBoundary.hpp>
+#include <raygLaunchParams.hpp>
+#include <raygPerRayData.hpp>
+#include <raygRNG.hpp>
+#include <raygReflection.hpp>
+#include <raygSBTRecords.hpp>
+#include <raygSource.hpp>
 
-#include <gpu/vcContext.hpp>
-#include <vcVectorUtil.hpp>
+#include <vcContext.hpp>
+
+// #define COUNT_RAYS
 
 using namespace viennaray::gpu;
 
+/*  launch parameters in constant memory, filled in by optix upon
+    optixLaunch (this gets filled in from the buffer we pass to
+    optixLaunch) */
 extern "C" __constant__ LaunchParams launchParams;
-__constant__ float minAngle = 75 * M_PIf / 180.;
-__constant__ float thetaRMin = 60 * M_PIf / 180.;
-__constant__ float thetaRMax = M_PI_2f;
 
 // for this simple example, we have a single ray type
 enum { SURFACE_RAY_TYPE = 0, RAY_TYPE_COUNT };
 
-extern "C" __global__ void __closesthit__ion() {
+extern "C" __global__ void __closesthit__SingleParticle() {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
@@ -33,36 +37,26 @@ extern "C" __global__ void __closesthit__ion() {
       reflectFromBoundary(prd);
     }
   } else {
-    auto geomNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
-    auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
-    float angle = acosf(max(min(cosTheta, 1.f), 0.f));
-
-    float f_ie_theta = 1.f;
-    // if (cosTheta <= 0.5f)
-    //     f_ie_theta = max(3.f - 6.f * angle / M_PIf, 0.f);
-
-    float yield = prd->rayWeight * f_ie_theta;
-
     const unsigned int primID = optixGetPrimitiveIndex();
-    atomicAdd(&launchParams.resultBuffer[primID], yield);
-
-    // ------------- REFLECTION --------------- //
-
-    float sticking = 1.;
-    if (angle > thetaRMin)
-      sticking = 1.f - min((angle - thetaRMin) / (thetaRMax - thetaRMin), 1.f);
-
-    prd->rayWeight -= prd->rayWeight * sticking;
+    atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight);
+    prd->rayWeight -= prd->rayWeight * launchParams.sticking;
     if (prd->rayWeight > launchParams.rayWeightThreshold)
-      conedCosineReflection(prd, geomNormal, M_PI_2f - min(angle, minAngle));
+      diffuseReflection(prd);
   }
 }
 
-extern "C" __global__ void __miss__ion() {
+//------------------------------------------------------------------------------
+// miss program that gets called for any ray that did not have a
+// valid intersection
+// ------------------------------------------------------------------------------
+extern "C" __global__ void __miss__SingleParticle() {
   getPRD<PerRayData>()->rayWeight = 0.f;
 }
 
-extern "C" __global__ void __raygen__ion() {
+//------------------------------------------------------------------------------
+// ray gen program - entry point
+//------------------------------------------------------------------------------
+extern "C" __global__ void __raygen__SingleParticle() {
   const uint3 idx = optixGetLaunchIndex();
   const uint3 dims = optixGetLaunchDimensions();
   const int linearLaunchIndex =
@@ -94,5 +88,10 @@ extern "C" __global__ void __raygen__ion() {
                RAY_TYPE_COUNT,                // SBT stride
                SURFACE_RAY_TYPE,              // missSBTIndex
                u0, u1);
+
+#ifdef COUNT_RAYS
+    int *counter = reinterpret_cast<int *>(launchParams.customData);
+    atomicAdd(counter, 1);
+#endif
   }
 }

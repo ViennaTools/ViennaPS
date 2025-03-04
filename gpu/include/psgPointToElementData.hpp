@@ -1,5 +1,8 @@
 #pragma once
 
+#include <lsMesh.hpp>
+
+#include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
 
 namespace viennaps::gpu {

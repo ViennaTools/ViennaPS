@@ -1,8 +1,8 @@
 #pragma once
 
 #include <models/psSingleParticleProcess.hpp>
-
-#include <pscuProcessModel.hpp>
+#include <psgProcessModel.hpp>
+#include <raygParticle.hpp>
 
 namespace viennaps::gpu {
 

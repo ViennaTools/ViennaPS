@@ -3,22 +3,21 @@
 #include <cassert>
 #include <cstring>
 
-#include <gpu/vcContext.hpp>
+#include <vcContext.hpp>
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 
-#include <pscuProcessModel.hpp>
-
 #include <psDomain.hpp>
-#include <psProcess.hpp>
+#include <psProcessBase.hpp>
 
-#include <gpu/raygTrace.hpp>
+#include <raygTrace.hpp>
 
-#include <utCreateSurfaceMesh.hpp>
-#include <utElementToPointData.hpp>
-#include <utPointToElementData.hpp>
+#include "psgCreateSurfaceMesh.hpp"
+#include "psgElementToPointData.hpp"
+#include "psgPointToElementData.hpp"
+#include "psgProcessModel.hpp"
 
 namespace viennaps::gpu {
 
@@ -45,7 +44,7 @@ public:
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
-  // pscuProcessModel class.
+  // pscProcessModel class.
   void setProcessModel(ModelType processModel) {
     processModel_ = processModel;
     this->model_ = processModel;
@@ -202,8 +201,8 @@ private:
     assert(numRates > 0);
     assert(numPoints == surfaceMesh_->getElements<3>().size());
     auto valueBuffer = rayTracer_.getResults();
-    auto *temp = new float[numPoints * numRates];
-    valueBuffer.download(temp, numPoints * numRates);
+    std::vector<float> tmpBuffer(numRates * numPoints);
+    valueBuffer.download(tmpBuffer.data(), numPoints * numRates);
     auto particles = rayTracer_.getParticles();
 
     int offset = 0;
@@ -213,15 +212,13 @@ private:
         auto name = particles[pIdx].dataLabels[dIdx];
 
         std::vector<float> values(numPoints);
-        std::memcpy(values.data(), &temp[tmpOffset * numPoints],
+        std::memcpy(values.data(), &tmpBuffer[tmpOffset * numPoints],
                     numPoints * sizeof(float));
 
         pointData.insertReplaceScalarData(std::move(values), name);
       }
       offset += particles[pIdx].dataLabels.size();
     }
-
-    delete temp;
   }
 
 private:

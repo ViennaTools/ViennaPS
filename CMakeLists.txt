@@ -97,7 +97,7 @@ CPMAddPackage(
   VERSION 1.2.1
   GIT_TAG update-CPM
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/"
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMAddPackage(
@@ -110,6 +110,7 @@ CPMFindPackage(
   VERSION 3.2.0
   GIT_TAG gpu-support
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
+  OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
@@ -151,36 +152,9 @@ endif()
 # Setup GPU
 # --------------------------------------------------------------------------------------------------------
 
-if(${VIENNAPS_USE_GPU})
-  # Add paths to our CMake code to the module path, so they can be found automatically by
-  # CMake (i.e. FindCUDA and FindOptiX).
-  set(CMAKE_MODULE_PATH ${VIENNACORE_CMAKE_TOOLS} ${CMAKE_MODULE_PATH})
-  find_package(CUDA 5.0 QUIET)
-
-  # Find OptiX
-  if("${is_cached}" STREQUAL "" AND DEFINED OptiX_INSTALL_DIR)
-    # Required for windows to convert backslashes to forward slashes
-    file(TO_CMAKE_PATH "${OptiX_INSTALL_DIR}" OptiX_INSTALL_DIR)
-    set(OptiX_INSTALL_DIR
-        "${OptiX_INSTALL_DIR}"
-        CACHE PATH "Path to OptiX installation" FORCE)
-  else()
-    set(OptiX_INSTALL_DIR
-        $ENV{OptiX_INSTALL_DIR}
-        CACHE PATH "Path to OptiX installation.")
-  endif()
-
-  # Search for the OptiX libraries and include files.
-  find_package(OptiX QUIET)
-
-  # Requires both CUDA and OptiX
-  if(CUDA_FOUND AND OptiX_INCLUDE)
-    message(STATUS "Found CUDA Toolkit: ${CUDA_TOOLKIT_ROOT_DIR}")
-    add_subdirectory(gpu)
-  else()
-    set(VIENNAPS_USE_GPU OFF)
-    message(WARNING "CUDA Toolkit not found. Skipping GPU build.")
-  endif()
+# If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
+if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+  add_subdirectory(gpu)
 endif()
 
 # --------------------------------------------------------------------------------------------------------

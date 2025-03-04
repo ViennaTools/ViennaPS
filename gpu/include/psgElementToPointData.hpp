@@ -1,9 +1,11 @@
 #pragma once
 
-#include <gpu/raygIndexMap.hpp>
-#include <gpu/raygParticle.hpp>
-#include <gpu/vcCudaBuffer.hpp>
 #include <lsMesh.hpp>
+
+#include <raygIndexMap.hpp>
+#include <raygParticle.hpp>
+
+#include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
 
 namespace viennaps::gpu {

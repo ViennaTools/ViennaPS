@@ -1,16 +1,10 @@
 #include <geometries/psMakePlane.hpp>
 #include <geometries/psMakeTrench.hpp>
 
-#include <pscuProcess.hpp>
-#include <pscuSingleParticleProcess.hpp>
+#include <models/psgSingleParticleProcess.hpp>
+#include <psgProcess.hpp>
 
 using namespace viennaps;
-
-struct Test {
-  Context &context_;
-
-  Test(Context &context) : context_(context) {}
-};
 
 int main(int argc, char **argv) {
 
@@ -22,15 +16,15 @@ int main(int argc, char **argv) {
   Context context;
   context.create();
 
-  const NumericType gridDelta = 1.0;
-  const NumericType extent = 50.;
-  const NumericType trenchWidth = 15.;
-  const NumericType maskHeight = 40.;
+  constexpr NumericType gridDelta = 1.0;
+  constexpr NumericType extent = 50.;
+  constexpr NumericType trenchWidth = 15.;
+  constexpr NumericType maskHeight = 40.;
 
-  const NumericType time = 30.;
-  const NumericType sticking = .1;
-  const NumericType rate = 1.0;
-  const NumericType exponent = 1.;
+  constexpr NumericType time = 30.;
+  constexpr NumericType sticking = 1.0;
+  constexpr NumericType rate = 1.0;
+  constexpr NumericType exponent = 1.;
 
   auto domain = SmartPointer<Domain<NumericType, D>>::New();
   MakeTrench<NumericType, D>(domain, gridDelta, extent, extent, trenchWidth,

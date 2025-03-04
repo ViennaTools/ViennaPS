@@ -1,11 +1,8 @@
 #include <geometries/psMakeHole.hpp>
-
-#include <gpu/vcContext.hpp>
-
-#include <pscuProcess.hpp>
-#include <pscuSF6O2Etching.hpp>
-
 #include <psUtils.hpp>
+
+#include <models/psgSF6O2Etching.hpp>
+#include <psgProcess.hpp>
 
 using namespace viennaps;
 
@@ -22,7 +19,7 @@ int main(int argc, char **argv) {
     params.readConfigFile(argv[1]);
   } else {
     params.readConfigFile(
-        "/home/reiter/Code/ViennaPS/build/examples/holeEtching/config.txt");
+        "/home/reiter/Code/ViennaPS/examples/holeEtching/config.txt");
     // std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
     // return 1;
   }
@@ -58,7 +55,7 @@ int main(int argc, char **argv) {
       SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(modelParams);
 
   RayTracingParameters<NumericType, D> rayTracingParams;
-  rayTracingParams.raysPerPoint = params.get("raysPerPoint");
+  rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
   rayTracingParams.smoothingNeighbors = 2;
 
   // process setup

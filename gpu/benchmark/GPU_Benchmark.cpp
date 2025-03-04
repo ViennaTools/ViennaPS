@@ -6,8 +6,8 @@
 #include <gpu/raygMesh.hpp>
 #include <gpu/raygTrace.hpp>
 #include <gpu/vcContext.hpp>
-#include <utCreateSurfaceMesh.hpp>
-#include <utElementToPointData.hpp>
+#include <pscCreateSurfaceMesh.hpp>
+#include <pscElementToPointData.hpp>
 
 #include "BenchmarkGeometry.hpp"
 
@@ -18,8 +18,8 @@ int main() {
   using NumericType = float;
   constexpr int D = DIM;
 
-  const std::array<NumericType, 10> sticking = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f,
-                                                0.6f, 0.7f, 0.8f, 0.9f, 1.f};
+  constexpr std::array<NumericType, 10> sticking = {
+      0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.f};
   //   const std::array<NumericType, 1> sticking = {1.f};
   const int processSteps = 10;
   std::ofstream file("GPU_Benchmark.txt");
@@ -39,7 +39,7 @@ int main() {
   tracer.insertNextParticle(particle);
   tracer.prepareParticlePrograms();
 
-  for (int i = 0; i < sticking.size(); i++) {
+  for (auto i : sticking) {
     auto domain = MAKE_GEO<NumericType>();
 
     auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
@@ -58,16 +58,16 @@ int main() {
         velocityField, domain->getMaterialMap());
     advectionKernel.setVelocityField(translationField);
 
-    for (const auto ls : domain->getLevelSets()) {
+    for (const auto &ls : domain->getLevelSets()) {
       diskMesher.insertNextLevelSet(ls);
       advectionKernel.insertNextLevelSet(ls);
     }
 
     auto &particles = tracer.getParticles();
-    particles[0].sticking = sticking[i];
+    particles[0].sticking = i;
 
     for (int j = 0; j < processSteps; j++) {
-      file << sticking[i] << ";";
+      file << i << ";";
 
       Timer timer;
       timer.start();

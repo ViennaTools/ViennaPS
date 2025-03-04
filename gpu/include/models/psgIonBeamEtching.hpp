@@ -1,8 +1,8 @@
 #pragma once
 
 #include <models/psMultiParticleProcess.hpp>
-
-#include <pscuProcessModel.hpp>
+#include <psgProcessModel.hpp>
+#include <raygParticle.hpp>
 
 namespace viennaps::gpu {
 
@@ -10,7 +10,7 @@ template <typename NumericType, int D>
 class IonBeamEtching final : public ProcessModel<NumericType, D> {
 public:
   explicit IonBeamEtching(NumericType exponent) {
-    Particle<NumericType> particle{
+    viennaray::gpu::Particle<NumericType> particle{
         .name = "ion", .sticking = 0.f, .cosineExponent = exponent};
     particle.dataLabels.push_back("particleFlux");
 

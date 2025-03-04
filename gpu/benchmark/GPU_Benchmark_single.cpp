@@ -2,9 +2,9 @@
 
 #include <gpu/raygTrace.hpp>
 #include <gpu/vcContext.hpp>
-#include <utCreateSurfaceMesh.hpp>
-#include <utElementToPointData.hpp>
-#include <utPointToElementData.hpp>
+#include <pscCreateSurfaceMesh.hpp>
+#include <pscElementToPointData.hpp>
+#include <pscPointToElementData.hpp>
 
 #include "BenchmarkGeometry.hpp"
 
@@ -17,10 +17,10 @@ int main() {
   using NumericType = float;
   constexpr int D = DIM;
 
-  viennacore::Logger::setLogLevel(viennacore::LogLevel::DEBUG);
+  viennacore::Logger::setLogLevel(viennacore::LogLevel::WARNING);
 
-  const int numRuns = 10;
-  const NumericType sticking = 0.1f;
+  constexpr int numRuns = 10;
+  constexpr NumericType sticking = 0.1f;
 #ifdef COUNT_RAYS
   std::ofstream file("GPU_Benchmark_single_with_ray_count.txt");
 #else
@@ -40,7 +40,7 @@ int main() {
 
   auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
   viennals::ToDiskMesh<NumericType, D> diskMesher(diskMesh);
-  for (const auto ls : domain->getLevelSets()) {
+  for (const auto &ls : domain->getLevelSets()) {
     diskMesher.insertNextLevelSet(ls);
   }
 
@@ -75,7 +75,7 @@ int main() {
     auto particle = viennaray::gpu::Particle<NumericType>();
     particle.sticking = sticking;
     particle.name = "SingleParticle";
-    particle.dataLabels.push_back("flux");
+    particle.dataLabels.emplace_back("flux");
 
     tracer.insertNextParticle(particle);
     tracer.prepareParticlePrograms();

@@ -1,13 +1,13 @@
 #include <optix_device.h>
 
-#include <gpu/raygLaunchParams.hpp>
-#include <gpu/raygPerRayData.hpp>
-#include <gpu/raygRNG.hpp>
-#include <gpu/raygReflection.hpp>
-#include <gpu/raygSBTRecords.hpp>
-#include <gpu/raygSource.hpp>
+#include <raygLaunchParams.hpp>
+#include <raygPerRayData.hpp>
+#include <raygRNG.hpp>
+#include <raygReflection.hpp>
+#include <raygSBTRecords.hpp>
+#include <raygSource.hpp>
 
-#include <gpu/vcContext.hpp>
+#include <vcContext.hpp>
 
 using namespace viennaray::gpu;
 using namespace viennacore;

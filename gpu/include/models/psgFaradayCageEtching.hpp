@@ -1,7 +1,7 @@
 #pragma once
 
-#include <gpu/raygParticle.hpp>
-#include <pscuProcessModel.hpp>
+#include <psgProcessModel.hpp>
+#include <raygParticle.hpp>
 
 #include <vcVectorUtil.hpp>
 
