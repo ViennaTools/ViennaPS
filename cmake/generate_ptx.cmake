@@ -1,4 +1,4 @@
-function(generate_pipeline target_name generated_files)
+function(generate_pipeline target_name generated_files_output)
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.
@@ -9,7 +9,8 @@ function(generate_pipeline target_name generated_files)
 
   # Include ViennaRay headers which are used in pipelines
   cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
-  cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore) # needed for Context
+  cuda_include_directories(${ViennaPS_SOURCE_DIR}/include/viennaps)
+  cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
 
   # Generate OptiX IR files if enabled
@@ -38,10 +39,12 @@ function(generate_pipeline target_name generated_files)
     list(APPEND generated_files_local ${generated_ptx_files})
   endif()
 
-  list(APPEND ${generated_files} ${generated_files_local})
+  set(${generated_files_output}
+      "${generated_files_local};${${generated_files_output}}"
+      PARENT_SCOPE)
 endfunction()
 
-function(generate_kernel generated_files)
+function(generate_kernel target_name generated_files_output)
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.
@@ -52,10 +55,17 @@ function(generate_kernel generated_files)
   cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
 
-  cuda_compile_ptx(generated_ptx_files ${cu_source_files} ${cmake_options} ${options})
+  cuda_wrap_srcs(
+    ${target_name}
+    PTX
+    generated_ptx_files
+    ${cu_source_files}
+    ${cmake_options}
+    OPTIONS
+    ${options})
 
-  set(${generated_files}
-      ${generated_ptx_files}
+  set(${generated_files_output}
+      "${generated_ptx_files};${${generated_files_output}}"
       PARENT_SCOPE)
 endfunction()
 

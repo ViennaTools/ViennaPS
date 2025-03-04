@@ -78,13 +78,13 @@
 
 // GPU
 #ifdef VIENNAPS_USE_GPU
-#include <gpu/vcContext.hpp>
-#include <gpu/vcCudaBuffer.hpp>
+#include <vcContext.hpp>
+#include <vcCudaBuffer.hpp>
 
-#include <pscuSF6O2Etching.hpp>
-#include <pscuSingleParticleProcess.hpp>
+#include <models/psgSF6O2Etching.hpp>
+#include <models/psgSingleParticleProcess.hpp>
 
-#include <pscuProcess.hpp>
+#include <psgProcess.hpp>
 #endif
 
 using namespace viennaps;
@@ -1720,7 +1720,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       //                 "Device properties.")
       //  .def("getModule", &Context::getModule)
       .def("create", &Context::create, "Create a new context.",
-           pybind11::arg("modulePath") = VIENNAPS_KERNELS_PATH,
+           pybind11::arg("modulePath") = VIENNACORE_KERNELS_PATH,
            pybind11::arg("deviceID") = 0)
       .def("destroy", &Context::destroy, "Destroy the context.")
       .def("addModule", &Context::addModule, "Add a module to the context.")
@@ -1758,7 +1758,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                           const SF6O2Parameters<T> &>),
            pybind11::arg("parameters"));
 
-  // Process
+  // GPU Process
   pybind11::class_<gpu::Process<T, D>>(m_gpu, "Process",
                                        pybind11::module_local())
       // constructors

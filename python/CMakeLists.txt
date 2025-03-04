@@ -64,22 +64,21 @@ if(VIENNAPS_USE_GPU)
   include("${CMAKE_SOURCE_DIR}/cmake/generate_ptx.cmake")
 
   # Include pipeline files
-  set(PIPELINES_DIR "${CMAKE_SOURCE_DIR}/gpu/pipelines")
-  set(VIENNARAY_KERNELS_DIR "${ViennaRay_SOURCE_DIR}/gpu/kernels")
-  set(CUDA_GENERATED_OUTPUT_DIR ${VIENNAPS_PTX_DIR})
-  set(CMAKE_CURRENT_BINARY_DIR "${VIENNAPS_LIBRARY_OUTPUT_DIR}/lib/ptx")
-  #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/SF6O2Pipeline.cu")
-  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/SingleParticlePipeline.cu")
+  set(generated_files) # Empty list variable
+  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/SF6O2Pipeline.cu")
+  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/SingleParticlePipeline.cu")
   #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/FaradayCagePipeline.cu")
   #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/IonBeamPipeline.cu")
-  generate_kernel(viennaps3d generated_files "${VIENNARAY_KERNELS_DIR}/normKernels.cu")
+  generate_kernel(viennaps3d generated_files ${VIENNARAY_CUDA_KERNELS})
+
+  message(STATUS "generated files: " ${generated_files})
 
   # Include ViennaPS GPU and OptiX headers
   target_sources(viennaps3d PRIVATE ${generated_files})
-  target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE_DIRS} ${OptiX_INCLUDE})
-  target_link_libraries(viennaps3d PRIVATE ViennaPS ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY})
-  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU -DVIENNACORE_COMPILE_GPU
-                                                -DVIENNAPS_KERNELS_PATH_DEFINE=${VIENNAPS_PTX_DIR})
+  target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
+                                                ${OptiX_INCLUDE})
+  target_link_libraries(viennaps3d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
+  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU -DVIENNACORE_COMPILE_GPU)
 else()
   target_link_libraries(viennaps3d PRIVATE ViennaPS)
 endif()
