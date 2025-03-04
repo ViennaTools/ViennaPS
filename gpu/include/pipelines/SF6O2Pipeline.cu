@@ -1,5 +1,9 @@
 #include <optix_device.h>
 
+#ifndef __CUDACC__
+#define __CUDACC__
+#endif
+
 #include <raygLaunchParams.hpp>
 #include <raygPerRayData.hpp>
 #include <raygRNG.hpp>

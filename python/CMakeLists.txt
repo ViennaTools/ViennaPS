@@ -61,14 +61,14 @@ viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 
 if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps3d'")
-  include("${CMAKE_SOURCE_DIR}/cmake/generate_ptx.cmake")
+  include("../cmake/generate_ptx.cmake")
 
   # Include pipeline files
   set(generated_files) # Empty list variable
   generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/SF6O2Pipeline.cu")
   generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/SingleParticlePipeline.cu")
-  #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/FaradayCagePipeline.cu")
-  #    generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/IonBeamPipeline.cu")
+  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/FaradayCagePipeline.cu")
+  generate_pipeline(viennaps3d generated_files "${PIPELINES_DIR}/IonBeamPipeline.cu")
   generate_kernel(viennaps3d generated_files ${VIENNARAY_CUDA_KERNELS})
 
   message(STATUS "generated files: " ${generated_files})

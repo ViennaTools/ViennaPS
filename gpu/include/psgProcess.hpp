@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cassert>
-#include <cstring>
-
 #include <vcContext.hpp>
 
 #include <lsAdvect.hpp>
@@ -18,6 +15,8 @@
 #include "psgElementToPointData.hpp"
 #include "psgPointToElementData.hpp"
 #include "psgProcessModel.hpp"
+
+#include <cassert>
 
 namespace viennaps::gpu {
 
@@ -114,6 +113,21 @@ protected:
     auto mesh = CreateTriangleMesh(domain_->getGridDelta(), surfaceMesh_);
     rayTracer_.setGeometry(mesh);
 
+    if (processModel_->useMaterialIds()) {
+      auto const &pointMaterialIds =
+          *diskMesh_->getCellData().getScalarData("MaterialIds");
+      std::vector<int> elementMaterialIds;
+      auto &pointKdTree = translationField_->getKdTree();
+      if (pointKdTree.getNumberOfPoints() != diskMesh_->nodes.size()) {
+        pointKdTree.setPoints(diskMesh_->nodes);
+        pointKdTree.build();
+      }
+      PointToElementDataSingle<NumericType, NumericType, int, float>(
+          pointMaterialIds, elementMaterialIds, pointKdTree, surfaceMesh_)
+          .apply();
+      rayTracer_.setMaterialIds(elementMaterialIds);
+    }
+
     assert(diskMesh_->nodes.size() > 0);
     assert(!surfaceMesh_->nodes.empty());
   }
@@ -131,7 +145,7 @@ protected:
       assert(coverages);
       auto numCov = coverages->getScalarDataSize();
       auto &pointKdTree = translationField_->getKdTree();
-      if (pointKdTree.getNumberOfPoints() == 0) {
+      if (pointKdTree.getNumberOfPoints() != diskMesh_->nodes.size()) {
         pointKdTree.setPoints(diskMesh_->nodes);
         pointKdTree.build();
       }

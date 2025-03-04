@@ -106,4 +106,48 @@ public:
   }
 };
 
+template <class NumericType, class PointNT, class ElemNT, class MeshNT>
+class PointToElementDataSingle {
+  const std::vector<PointNT> &pointData_;
+  std::vector<ElemNT> &elementData_;
+  KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree_;
+  SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
+
+public:
+  PointToElementDataSingle(
+      const std::vector<PointNT> &pointData, std::vector<ElemNT> &elementData,
+      KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,
+      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh)
+      : pointData_(pointData), elementData_(elementData),
+        pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh) {}
+
+  void apply() {
+    const auto &elements = surfaceMesh_->triangles;
+    auto numElements = elements.size();
+    elementData_.resize(numElements);
+
+#pragma omp parallel for
+    for (unsigned i = 0; i < numElements; i++) {
+      auto &elIdx = elements[i];
+      std::array<NumericType, 3> elementCenter{
+          static_cast<NumericType>((surfaceMesh_->nodes[elIdx[0]][0] +
+                                    surfaceMesh_->nodes[elIdx[1]][0] +
+                                    surfaceMesh_->nodes[elIdx[2]][0]) /
+                                   3.f),
+          static_cast<NumericType>((surfaceMesh_->nodes[elIdx[0]][1] +
+                                    surfaceMesh_->nodes[elIdx[1]][1] +
+                                    surfaceMesh_->nodes[elIdx[2]][1]) /
+                                   3.f),
+          static_cast<NumericType>((surfaceMesh_->nodes[elIdx[0]][2] +
+                                    surfaceMesh_->nodes[elIdx[1]][2] +
+                                    surfaceMesh_->nodes[elIdx[2]][2]) /
+                                   3.f)};
+
+      auto closestPoint = pointKdTree_.findNearest(elementCenter);
+      const auto value = pointData_.at(closestPoint->first);
+      elementData_[i] = static_cast<ElemNT>(value);
+    }
+  }
+};
+
 } // namespace viennaps::gpu

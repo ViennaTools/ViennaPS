@@ -7,7 +7,7 @@ add_gpu_executable(waveguideGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/waveguid
                    ${VIENNAPS_PIPELINE_DIR}/FaradayCagePipeline.cu)
 
 add_gpu_executable(trenchGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/trench.cpp
-                   ${VIENNAPS_PIPELINE_DIR}/SingleParticlePipeline.cu)
+                   ${VIENNAPS_PIPELINE_DIR}/MultiParticlePipeline.cu)
 
 add_gpu_executable(holeCompare target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp
                    ${VIENNAPS_PIPELINE_DIR}/IonBeamPipeline.cu)

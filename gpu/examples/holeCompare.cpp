@@ -2,12 +2,10 @@
 #include <models/psMultiParticleProcess.hpp>
 #include <psProcess.hpp>
 
-#include <gpu/vcContext.hpp>
+#include <vcContext.hpp>
 
-#include <pscuIonBeamEtching.hpp>
-#include <pscuProcess.hpp>
-
-#include <psUtils.hpp>
+#include <models/psgIonBeamEtching.hpp>
+#include <psgProcess.hpp>
 
 using namespace viennaps;
 
