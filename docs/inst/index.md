@@ -9,6 +9,16 @@ nav_order: 3
 
 ---
 
+## Quick Start  
+
+To install ViennaPS for Python, simply run:  
+
+```sh
+pip install ViennaPS
+```
+If there is no pre-built package available for your operating system, you can build the package yourself using the instructions below.
+To use ViennaPS in C++, clone the repository and follow the installation steps below.
+
 ## Supported Operating Systems
 
 * Windows (Visual Studio)
@@ -44,17 +54,8 @@ This will install the necessary headers and CMake files to the specified path. I
 
 The `-G Ninja` option can be omitted if you prefer to use _Unix Makefiles_ as the build system. However, this can potentially lead to conflicts when later installing the Python package using the pip installer, as pip always employs _Ninja_ as the build system.
 
-## Python package
+## Building the Python package locally
 
-Pre-built python packages are now available in the TestPyPi index for most common operating systems. To download the package, run the following command:
-
-```bash
-pip install ViennaPS
-```
-
-If there is no pre-built package available for your operating system, you can build the package yourself using the instructions below.
-
-## Building the Python package
 
 In order to build the Python bindings, the [pybind11](https://github.com/pybind/pybind11) library is required. On Linux based system (Ubuntu/Debian), pybind11 can be installed via the package manager: `sudo apt install pybind11-dev`. For macOS, the installation via Homebrew is recommended: `brew install pybind11`. 
 The ViennaPS Python package can be built and installed using the `pip` command:
@@ -68,19 +69,6 @@ pip install .
 
 {: .note}
 > Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore necessary to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
-
-## Using the Python package
-
-The 2D version of the library can be imported as follows:
-```python
-import viennaps2d as vps
-```
-
-In order to switch to 3D mode, only the import needs to be changed:
-
-```python
-import viennaps3d as vps
-```
 
 ## Integration in CMake projects
 

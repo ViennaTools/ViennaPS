@@ -26,8 +26,6 @@ Process<NumericType, D> process;
 process.setDomain(myDomain);
 process.setProcessModel(myModel);
 process.setProcessDuration(10.);
-process.setNumberOfRaysPerPoint(1000);
-process.enableFluxSmoothing();
 process.apply();
 ...
 ```
@@ -44,8 +42,6 @@ process = vps.Process()
 process.setDomain(myDomain)
 process.setProcessModel(myModel)
 process.setProcessDuration(10.)
-process.setNumberOfRaysPerPoint(1000)
-process.enableFluxSmoothing()
 process.apply()
 ...
 ```
@@ -183,18 +179,52 @@ void setProcessDuration(NumericType passedDuration)
 Specifies the duration of the process. If the process duration is set to 0, exclusively the advection callback `applyPreAdvect()` is executed on the domain. This feature is particularly useful for applying only a volume model without engaging in further simulation steps.
 
 ---
-### Set the number of rays to be traced
+### Single-Pass Flux Calculation
 ```c++
-void setNumberOfRaysPerPoint(unsigned raysPerPoint)
+SmartPointer<viennals::Mesh<NumericType>> calculateFlux()
 ```
-Specify the number of rays to be traced for each particle throughout the process. The total count of rays is the product of this number and the number of points in the process geometry.
+Calculate the flux(es) for the current process. This function returns a smart pointer to a `viennals::Mesh<NumericType>` object containing the disk mesh and flux data.
 
 ---
 ### Set the number of coverage initialization iterations
 ```c++
 void setMaxCoverageInitIterations(unsigned numIter)
 ```
-Set the number of iterations to initialize the coverages.
+Set the maximum number of iterations to initialize the coverages. If additionally the coverage delta threshold is set, the coverage initialization is considered converged if the coverage delta is below the threshold or the maximum number of iterations is reached.
+
+--- 
+### Set coverage delta threshold
+```c++
+void setCoverageDeltaThreshold(NumericType threshold)
+```
+Set the threshold for the coverage delta metric to reach convergence. If the coverage delta is below this threshold, the coverage initialization is considered converged. During a process, if the coverage delta is higher than this threshold, the flux calculation is repeated.
+
+---
+### Set the advection parameters
+```c++
+void setAdvectionParameters(const AdvectionParameters<NumericType>& passedAdvectionParameters)
+```
+Set the advection parameters for the level-set integration. The advection parameters are defined in the `AdvectionParameters` struct.
+
+---
+### Set the ray tracing parameters
+```c++
+void setRayTracingParameters(const RayTracingParameters<NumericType, D>& passedRayTracingParameters)
+```
+Set the ray tracing parameters for the flux calculation. The ray tracing parameters are defined in the `RayTracingParameters` struct.
+
+---
+
+{: .note }
+> The following functions are used to set parameters in the `AdvectionParameters` and `RayTracingParameters` structs. 
+> From version **3.3.0**, it is recommended to use the `setAdvectionParameters` and `setRayTracingParameters` functions to set these parameters.
+
+---
+### Set the number of rays to be traced
+```c++
+void setNumberOfRaysPerPoint(unsigned raysPerPoint)
+```
+Specify the number of rays to be traced for each particle throughout the process. The total count of rays is the product of this number and the number of points in the process geometry.
 
 ---
 ### Enable or disable flux smoothing
