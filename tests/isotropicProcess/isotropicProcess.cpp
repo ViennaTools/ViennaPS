@@ -60,4 +60,4 @@ template <class NumericType, int D> void RunTest() {
 
 } // namespace viennacore
 
-int main() { viennacore::RunTest<float, 2>(); }
+int main() { VC_RUN_ALL_TESTS }

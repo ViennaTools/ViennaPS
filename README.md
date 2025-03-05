@@ -10,7 +10,9 @@
 
 </div>
 
-ViennaPS is a header-only C++ process simulation library, which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. This library seamlessly integrates advanced level-set functionalities with top-down Monte Carlo flux calculations, powered by state-of-the-art ray tracing techniques. This combination brings a new level of accuracy and efficiency to process simulations, empowering engineers and researchers to model complex systems.
+ViennaPS is a header-only C++ library for simulating microelectronic fabrication processes. It combines surface and volume representations with advanced level-set methods and Monte Carlo flux calculations, powered by high-performance ray tracing. Users can develop custom models, use pre-configured physical models, or leverage emulation for flexible and efficient process simulations.
+
+ViennaPS is designed to be easily integrated into existing C++ projects and provides Python bindings for seamless use in Python environments. The library is under active development and is continuously improved to meet the evolving needs of process simulation in microelectronics.
 
 > [!NOTE]  
 > ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
@@ -126,6 +128,10 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
     target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
     ```
 
+## GPU Acceleration (Experimental)
+
+As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental and may not work on all systems. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/).
+
 ## Basic Examples
 
 ### Building
@@ -216,35 +222,6 @@ cmake --build build
 ctest -E "Benchmark|Performance" --test-dir build
 ```
 
-## Application
-
-> [!WARNING] 
-> The ViennaPS application is no longer updated with new functionalities added to ViennaPS after release 1.2.0. Please use the __Python bindings__ instead.
-
-It is also possible to build an application which can parse a custom configuration file and execute pre-defined processes. The application can be built using CMake:
-
-```bash
-git clone https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-
-cmake -B build -DVIENNAPS_BUILD_APPLICATION=ON
-cmake --build build
-```
-
-This creates 2 executables `ViennaPS2D` and `ViennaPS3D` which run processes in 2 or 3 dimensions respectively. Every configuration file can be run in 2D or 3D mode.
-
-The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in _SampleConfig.txt_. The configuration file is parsed line by line and each succesfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in **app/README.md**.
-
-### GPU Support
-
-The application can also be built with GPU support for ray tracing processes. In order to utilize the GPU support a NVIDIA GPU with Ampere compute capabilities or higher is needed. The package also requires a CUDA toolkit version 11.0 or higher and the NVIDIA OptiX 7 ray tracing library. To build the GPU application use:
-```bash
-cmake -B build -DVIENNAPS_BUILD_GPU_APPLICATION=ON
-make buildGPUApplication
-```
-This creates the executable `ViennaPS_GPU` (Note: The GPU application only supports 3D mode). The GPU application can run and parse all the same configuration files as the CPU application. 
-The configuration file must obey a certain structure in order to be parsed correctly. An example for a configuration file can be seen in `SampleConfig.txt`. The configuration file is parsed line by line and each successfully parsed line is executed immediately. A detailed documentation for the configuration file can be found in the [app readme](app/README.md).
-
 ## Contributing
 
 If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html).
@@ -257,7 +234,7 @@ cmake --build build --target format
 
 ## Authors
 
-Current contributors: Tobias Reiter, Lado Filipovic, Noah Karnel
+Current contributors: Tobias Reiter, Lado Filipovic, Roman Kostal, Noah Karnel
 
 Contact us via: viennatools@iue.tuwien.ac.at
 

@@ -98,9 +98,9 @@ target_compile_definitions(
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs")
 
 # Not required for both targets, one will suffice
-#viennacore_setup_embree_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
-#viennacore_setup_vtk_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
-#viennacore_setup_tbb_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_embree_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_vtk_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_tbb_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
 
 install(
   DIRECTORY "${VIENNAPS_LIB_FOLDER}"
