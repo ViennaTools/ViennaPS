@@ -40,7 +40,7 @@ cmake --build build --target format
 
 ViennaPS was developed under the aegis of the [Institute for Microelectronics](http://www.iue.tuwien.ac.at/) at the __TU Wien__. 
 
-Current contributors: Tobias Reiter, Noah Karnel, Julius Piso, Lado Filipovic
+Current contributors: Tobias Reiter, Noah Karnel, Roman Kostal, Lado Filipovic
 
 Contact us via: [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.at)
 

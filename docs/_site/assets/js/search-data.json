@@ -203,15 +203,15 @@
     "relUrl": "/geo/gdsimport.html"
   },"29": {
     "doc": "GPU Acceleration",
-    "title": "Installing the GPU Module for ViennaPS 3D",
-    "content": ". ",
-    "url": "/inst/gpu.html#installing-the-gpu-module-for-viennaps-3d",
+    "title": "Installing the GPU Module",
+    "content": ". The GPU ray tracing module is still an experimental feature and is under active development. If you encounter any issues or have suggestions, please let us know on GitHub. ",
+    "url": "/inst/gpu.html#installing-the-gpu-module",
     
-    "relUrl": "/inst/gpu.html#installing-the-gpu-module-for-viennaps-3d"
+    "relUrl": "/inst/gpu.html#installing-the-gpu-module"
   },"30": {
     "doc": "GPU Acceleration",
     "title": "Requirements",
-    "content": "The GPU ray tracing module is implemented using OptiX 8.0. To use it, ensure your system meets the following requirements: . | NVIDIA Driver: Version 535 or higher | CUDA Toolkit: Version 12.0 | . ",
+    "content": "The GPU ray tracing module is implemented using OptiX 8.0. To use it, ensure your system meets the following requirements: . | NVIDIA Driver: Version 535 or higher | CUDA Toolkit: Version 12.0 | OptiX SDK: Version 8.0 | . ",
     "url": "/inst/gpu.html#requirements",
     
     "relUrl": "/inst/gpu.html#requirements"
@@ -225,7 +225,7 @@
   },"32": {
     "doc": "GPU Acceleration",
     "title": "Python Build Instructions",
-    "content": "For building the Python GPU module: . | Set the environment variable OptiX_INSTALL_DIR to the OptiX installation directory. | This variable will be used during the CMake setup. | . | Run the following command to install the module locally: pip install . Ensure VIENNAPS_USE_GPU is enabled and OptiX_INSTALL_DIR is set. | The GPU functions are available in the GPU submodule: import viennaps3d as vps gpuProcess = vps.gpu.Process() . Note: The GPU submodule is only available in the 3D bindings since GPU ray tracing is implemented for 3D only. | . ",
+    "content": "For building the Python GPU module: . | Set the environment variable OptiX_INSTALL_DIR to the OptiX installation directory. | This variable will be used during the CMake setup. | . | Run the following command to install the module locally: pip install . Ensure VIENNAPS_USE_GPU is enabled and OptiX_INSTALL_DIR is set. | The GPU functions are available in the GPU submodule: import viennaps3d as vps context = vps.gpu.Context() context.create() gpuProcess = vps.gpu.Process(context) . Note: The GPU submodule is only available in the 3D bindings since GPU ray tracing is implemented for 3D only. | . Example usage of the GPU module can be found in the examples. Currently, only a limited number of models are available for GPU acceleration: SingleParticleProcess, MultiParticleProcess, and SF6O2Etching. ",
     "url": "/inst/gpu.html#python-build-instructions",
     
     "relUrl": "/inst/gpu.html#python-build-instructions"
@@ -477,7 +477,7 @@
   },"68": {
     "doc": "Home",
     "title": "About the project",
-    "content": "ViennaPS was developed under the aegis of the Institute for Microelectronics at the TU Wien. Current contributors: Tobias Reiter, Noah Karnel, Julius Piso, Lado Filipovic . Contact us via: viennatools@iue.tuwien.ac.at . ",
+    "content": "ViennaPS was developed under the aegis of the Institute for Microelectronics at the TU Wien. Current contributors: Tobias Reiter, Noah Karnel, Roman Kostal, Lado Filipovic . Contact us via: viennatools@iue.tuwien.ac.at . ",
     "url": "/#about-the-project",
     
     "relUrl": "/#about-the-project"
