@@ -76,6 +76,18 @@
 #include <rayUtil.hpp>
 #include <vcLogger.hpp>
 
+// GPU
+#ifdef VIENNAPS_USE_GPU
+#include <vcContext.hpp>
+#include <vcCudaBuffer.hpp>
+
+#include <models/psgMultiParticleProcess.hpp>
+#include <models/psgSF6O2Etching.hpp>
+#include <models/psgSingleParticleProcess.hpp>
+
+#include <psgProcess.hpp>
+#endif
+
 using namespace viennaps;
 
 // always use double for python export
@@ -151,7 +163,7 @@ public:
                         const int materialID,
                         viennaray::TracingData<T> &localData,
                         const viennaray::TracingData<T> *globalData,
-                        RNG &Rng) override final {
+                        RNG &Rng) final {
     PYBIND11_OVERRIDE(void, ClassName, surfaceCollision, rayWeight, rayDir,
                       geomNormal, primID, materialID, localData, globalData,
                       Rng);
@@ -160,21 +172,21 @@ public:
   std::pair<T, Vec3D<T>> surfaceReflection(
       T rayWeight, const Vec3D<T> &rayDir, const Vec3D<T> &geomNormal,
       const unsigned int primID, const int materialID,
-      const viennaray::TracingData<T> *globalData, RNG &Rng) override final {
+      const viennaray::TracingData<T> *globalData, RNG &Rng) final {
     using Pair = std::pair<T, Vec3D<T>>;
     PYBIND11_OVERRIDE(Pair, ClassName, surfaceReflection, rayWeight, rayDir,
                       geomNormal, primID, materialID, globalData, Rng);
   }
 
-  void initNew(RNG &RNG) override final {
+  void initNew(RNG &RNG) final {
     PYBIND11_OVERRIDE(void, ClassName, initNew, RNG);
   }
 
-  T getSourceDistributionPower() const override final {
+  T getSourceDistributionPower() const final {
     PYBIND11_OVERRIDE(T, ClassName, getSourceDistributionPower);
   }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
+  std::vector<std::string> getLocalDataLabels() const final {
     PYBIND11_OVERRIDE(std::vector<std::string>, ClassName, getLocalDataLabels);
   }
 };
@@ -613,7 +625,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // Single Particle Process
   pybind11::class_<SingleParticleProcess<T, D>,
                    SmartPointer<SingleParticleProcess<T, D>>>(
-      module, "SingleParticleProcess", processModel)
+      module, "SingleParticleProcess", processModel, pybind11::module_local())
       .def(pybind11::init([](const T rate, const T sticking, const T power,
                              const Material mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
@@ -624,7 +636,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("sourceExponent") = 1.,
            pybind11::arg("maskMaterial") = Material::Undefined)
       .def(pybind11::init([](const T rate, const T sticking, const T power,
-                             const std::vector<Material> mask) {
+                             const std::vector<Material> &mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
                  rate, sticking, power, mask);
            }),
@@ -971,11 +983,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
            pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"),
            pybind11::arg("calculateVisibility") = true)
-      .def(pybind11::init<
-               std::vector<typename DirectionalEtching<T, D>::RateSet>>(),
+      .def(pybind11::init<std::vector<DirectionalEtching<T, D>::RateSet>>(),
            pybind11::arg("rateSets"))
       // Constructor accepting a single rate set
-      .def(pybind11::init<const typename DirectionalEtching<T, D>::RateSet &>(),
+      .def(pybind11::init<const DirectionalEtching<T, D>::RateSet &>(),
            pybind11::arg("rateSet"));
 
   // Sphere Distribution
@@ -1192,15 +1203,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //                                 PROCESS
   // ***************************************************************************
 
-  // rayTraceDirection Enum
-  pybind11::enum_<viennaray::TraceDirection>(module, "rayTraceDirection")
-      .value("POS_X", viennaray::TraceDirection::POS_X)
-      .value("POS_Y", viennaray::TraceDirection::POS_Y)
-      .value("POS_Z", viennaray::TraceDirection::POS_Z)
-      .value("NEG_X", viennaray::TraceDirection::NEG_X)
-      .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
-      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
-
   // Normalization Enum
   pybind11::enum_<viennaray::NormalizationType>(module, "NormalizationType")
       .value("SOURCE", viennaray::NormalizationType::SOURCE)
@@ -1278,7 +1280,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           "results deterministic.");
 
   // Process
-  pybind11::class_<Process<T, D>>(module, "Process")
+  pybind11::class_<Process<T, D>>(module, "Process", pybind11::module_local())
       // constructors
       .def(pybind11::init())
       .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
@@ -1540,7 +1542,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(
           "setBoundaryConditions",
           [](GDSGeometry<T, D> &gds,
-             std::vector<typename viennals::Domain<T, D>::BoundaryType> &bcs) {
+             std::vector<viennals::Domain<T, D>::BoundaryType> &bcs) {
             if (bcs.size() == D)
               gds.setBoundaryConditions(bcs.data());
           },
@@ -1673,11 +1675,183 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("apply", &Extrude<T>::apply, "Run the extrusion.");
 #endif
 
-  //   // rayReflection.hpp
-  //   module.def("rayReflectionSpecular", &rayReflectionSpecular<T>,
-  //              "Specular reflection,");
-  //   module.def("rayReflectionDiffuse", &rayReflectionDiffuse<T, D>,
-  //              "Diffuse reflection.");
-  //   module.def("rayReflectionConedCosine", &rayReflectionConedCosine<T, D>,
-  //              "Coned cosine reflection.");
+  // ***************************************************************************
+  //                                 RAY TRACING
+  // ***************************************************************************
+
+  auto m_ray = module.def_submodule("ray", "Ray tracing functions.");
+
+  // rayTraceDirection Enum
+  pybind11::enum_<viennaray::TraceDirection>(m_ray, "rayTraceDirection")
+      .value("POS_X", viennaray::TraceDirection::POS_X)
+      .value("POS_Y", viennaray::TraceDirection::POS_Y)
+      .value("POS_Z", viennaray::TraceDirection::POS_Z)
+      .value("NEG_X", viennaray::TraceDirection::NEG_X)
+      .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
+      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
+
+  // rayReflection
+  m_ray.def("ReflectionSpecular", &viennaray::ReflectionSpecular<T>,
+            "Specular reflection,");
+  m_ray.def("ReflectionDiffuse", &viennaray::ReflectionDiffuse<T, D>,
+            "Diffuse reflection.");
+  m_ray.def("ReflectionConedCosine", &viennaray::ReflectionConedCosine<T, D>,
+            "Coned cosine reflection.");
+
+#ifdef VIENNAPS_USE_GPU
+  auto m_gpu = module.def_submodule("gpu", "GPU accelerated functions.");
+
+  // GPU ProcessModel
+  pybind11::class_<gpu::ProcessModel<T, D>,
+                   SmartPointer<gpu::ProcessModel<T, D>>>
+      processModel_gpu(m_gpu, "ProcessModel", pybind11::module_local());
+
+  pybind11::class_<std::filesystem::path>(m_gpu, "Path")
+      .def(pybind11::init<std::string>());
+  pybind11::implicitly_convertible<std::string, std::filesystem::path>();
+
+  pybind11::class_<Context>(m_gpu, "Context")
+      .def(pybind11::init())
+      //  .def_readwrite("modulePath", &Context::modulePath)
+      //  .def_readwrite("moduleNames", &Context::moduleNames)
+      //  .def_readwrite("cuda", &Context::cuda, "Cuda context.")
+      //  .def_readwrite("optix", &Context::optix, "Optix context.")
+      //  .def_readwrite("deviceProps", &Context::deviceProps,
+      //                 "Device properties.")
+      //  .def("getModule", &Context::getModule)
+      .def("create", &Context::create, "Create a new context.",
+           pybind11::arg("modulePath") = VIENNACORE_KERNELS_PATH,
+           pybind11::arg("deviceID") = 0)
+      .def("destroy", &Context::destroy, "Destroy the context.")
+      .def("addModule", &Context::addModule, "Add a module to the context.")
+      .def_readwrite("deviceID", &Context::deviceID, "Device ID.");
+
+  pybind11::class_<gpu::SingleParticleProcess<T, D>,
+                   SmartPointer<gpu::SingleParticleProcess<T, D>>>(
+      m_gpu, "SingleParticleProcess", processModel_gpu,
+      pybind11::module_local())
+      .def(pybind11::init([](const T rate, const T sticking, const T power,
+                             const Material mask) {
+             return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
+                 rate, sticking, power, mask);
+           }),
+           pybind11::arg("rate") = 1.,
+           pybind11::arg("stickingProbability") = 1.,
+           pybind11::arg("sourceExponent") = 1.,
+           pybind11::arg("maskMaterial") = Material::Undefined)
+      .def(pybind11::init([](const T rate, const T sticking, const T power,
+                             const std::vector<Material> mask) {
+             return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
+                 rate, sticking, power, mask);
+           }),
+           pybind11::arg("rate"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"))
+      .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
+           pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"));
+
+  // Multi Particle Process
+  pybind11::class_<gpu::MultiParticleProcess<T, D>,
+                   SmartPointer<gpu::MultiParticleProcess<T, D>>>(
+      m_gpu, "MultiParticleProcess", processModel_gpu, pybind11::module_local())
+      .def(pybind11::init())
+      .def("addNeutralParticle",
+           pybind11::overload_cast<T, const std::string &>(
+               &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("stickingProbability"),
+           pybind11::arg("label") = "neutralFlux")
+      .def("addNeutralParticle",
+           pybind11::overload_cast<std::unordered_map<Material, T>, T,
+                                   const std::string &>(
+               &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("materialSticking"),
+           pybind11::arg("defaultStickingProbability") = 1.,
+           pybind11::arg("label") = "neutralFlux")
+      .def("addIonParticle", &gpu::MultiParticleProcess<T, D>::addIonParticle,
+           pybind11::arg("sourcePower"), pybind11::arg("thetaRMin") = 0.,
+           pybind11::arg("thetaRMax") = 90., pybind11::arg("minAngle") = 0.,
+           pybind11::arg("B_sp") = -1., pybind11::arg("meanEnergy") = 0.,
+           pybind11::arg("sigmaEnergy") = 0.,
+           pybind11::arg("thresholdEnergy") = 0.,
+           pybind11::arg("inflectAngle") = 0., pybind11::arg("n") = 1,
+           pybind11::arg("label") = "ionFlux")
+      .def("setRateFunction",
+           &gpu::MultiParticleProcess<T, D>::setRateFunction);
+
+  // SF6O2 Etching
+  pybind11::class_<gpu::SF6O2Etching<T, D>,
+                   SmartPointer<gpu::SF6O2Etching<T, D>>>(m_gpu, "SF6O2Etching",
+                                                          processModel_gpu)
+      .def(pybind11::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
+                          const SF6O2Parameters<T> &>),
+           pybind11::arg("parameters"));
+
+  // GPU Process
+  pybind11::class_<gpu::Process<T, D>>(m_gpu, "Process",
+                                       pybind11::module_local())
+      // constructors
+      .def(pybind11::init<gpu::Context &>(), pybind11::arg("context"))
+      .def(pybind11::init<gpu::Context &, DomainType,
+                          SmartPointer<gpu::ProcessModel<T, D>>, T>(),
+           pybind11::arg("context"), pybind11::arg("domain"),
+           pybind11::arg("model"), pybind11::arg("duration"))
+      // methods
+      .def("apply", &gpu::Process<T, D>::apply, "Run the process.")
+      .def("calculateFlux", &gpu::Process<T, D>::calculateFlux,
+           "Perform a single-pass flux calculation.")
+      .def("setDomain", &gpu::Process<T, D>::setDomain,
+           "Set the process domain.")
+      .def("setProcessModel", &gpu::Process<T, D>::setProcessModel,
+           "Set the process model. This has to be a pre-configured process "
+           "model.")
+      .def("setProcessDuration", &gpu::Process<T, D>::setProcessDuration,
+           "Set the process duration.")
+      .def("setNumberOfRaysPerPoint",
+           &gpu::Process<T, D>::setNumberOfRaysPerPoint,
+           "Set the number of rays to traced for each particle in the process. "
+           "The number is per point in the process geometry.")
+      .def("setMaxCoverageInitIterations",
+           &gpu::Process<T, D>::setMaxCoverageInitIterations,
+           "Set the number of iterations to initialize the coverages.")
+      .def("setIntegrationScheme", &gpu::Process<T, D>::setIntegrationScheme,
+           "Set the integration scheme for solving the level-set equation. "
+           "Possible integration schemes are specified in "
+           "viennals::IntegrationSchemeEnum.")
+      .def("enableAdvectionVelocityOutput",
+           &gpu::Process<T, D>::enableAdvectionVelocityOutput,
+           "Enable the output of the advection velocity field on the ls-mesh.")
+      .def("disableAdvectionVelocityOutput",
+           &gpu::Process<T, D>::disableAdvectionVelocityOutput,
+           "Disable the output of the advection velocity field on the ls-mesh.")
+      .def("setTimeStepRatio", &gpu::Process<T, D>::setTimeStepRatio,
+           "Set the CFL condition to use during advection. The CFL condition "
+           "sets the maximum distance a surface can be moved during one "
+           "advection step. It MUST be below 0.5 to guarantee numerical "
+           "stability. Defaults to 0.4999.")
+      .def("enableRandomSeeds", &gpu::Process<T, D>::enableRandomSeeds,
+           "Enable random seeds for the ray tracer. This will make the process "
+           "results non-deterministic.")
+      .def(
+          "disableRandomSeeds", &gpu::Process<T, D>::disableRandomSeeds,
+          "Disable random seeds for the ray tracer. This will make the process "
+          "results deterministic.")
+      .def("getProcessDuration", &gpu::Process<T, D>::getProcessDuration,
+           "Returns the duration of the recently run process. This duration "
+           "can sometimes slightly vary from the set process duration, due to "
+           "the maximum time step according to the CFL condition.")
+      .def("setAdvectionParameters",
+           &gpu::Process<T, D>::setAdvectionParameters,
+           "Set the advection parameters for the process.")
+      .def("getAdvectionParameters",
+           &gpu::Process<T, D>::getAdvectionParameters,
+           "Get the advection parameters for the process.",
+           pybind11::return_value_policy::reference)
+      .def("setRayTracingParameters",
+           &gpu::Process<T, D>::setRayTracingParameters,
+           "Set the ray tracing parameters for the process.")
+      .def("getRayTracingParameters",
+           &gpu::Process<T, D>::getRayTracingParameters,
+           "Get the ray tracing parameters for the process.",
+           pybind11::return_value_policy::reference);
+#endif
 }

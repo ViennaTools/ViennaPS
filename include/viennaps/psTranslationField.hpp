@@ -65,6 +65,8 @@ public:
     kdTree_.build();
   }
 
+  auto &getKdTree() { return kdTree_; }
+
   void translateLsId(unsigned long &lsId,
                      const Vec3D<NumericType> &coordinate) const {
     switch (translationMethod_) {
