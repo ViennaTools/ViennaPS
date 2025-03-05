@@ -2,6 +2,7 @@
 layout: default
 title: Installing the Library
 nav_order: 3
+has_children: true
 ---
 
 # Installing the Library
