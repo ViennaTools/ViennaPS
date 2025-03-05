@@ -8,12 +8,12 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
-option(VIENNAPS_BUILD_EXAMPLES "Build examples" ON)
+option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
-option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" ON)
+option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" OFF)
 
 # --------------------------------------------------------------------------------------------------------
 # Library options

@@ -81,6 +81,7 @@
 #include <vcContext.hpp>
 #include <vcCudaBuffer.hpp>
 
+#include <models/psgMultiParticleProcess.hpp>
 #include <models/psgSF6O2Etching.hpp>
 #include <models/psgSingleParticleProcess.hpp>
 
@@ -162,7 +163,7 @@ public:
                         const int materialID,
                         viennaray::TracingData<T> &localData,
                         const viennaray::TracingData<T> *globalData,
-                        RNG &Rng) override final {
+                        RNG &Rng) final {
     PYBIND11_OVERRIDE(void, ClassName, surfaceCollision, rayWeight, rayDir,
                       geomNormal, primID, materialID, localData, globalData,
                       Rng);
@@ -171,21 +172,21 @@ public:
   std::pair<T, Vec3D<T>> surfaceReflection(
       T rayWeight, const Vec3D<T> &rayDir, const Vec3D<T> &geomNormal,
       const unsigned int primID, const int materialID,
-      const viennaray::TracingData<T> *globalData, RNG &Rng) override final {
+      const viennaray::TracingData<T> *globalData, RNG &Rng) final {
     using Pair = std::pair<T, Vec3D<T>>;
     PYBIND11_OVERRIDE(Pair, ClassName, surfaceReflection, rayWeight, rayDir,
                       geomNormal, primID, materialID, globalData, Rng);
   }
 
-  void initNew(RNG &RNG) override final {
+  void initNew(RNG &RNG) final {
     PYBIND11_OVERRIDE(void, ClassName, initNew, RNG);
   }
 
-  T getSourceDistributionPower() const override final {
+  T getSourceDistributionPower() const final {
     PYBIND11_OVERRIDE(T, ClassName, getSourceDistributionPower);
   }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
+  std::vector<std::string> getLocalDataLabels() const final {
     PYBIND11_OVERRIDE(std::vector<std::string>, ClassName, getLocalDataLabels);
   }
 };
@@ -635,7 +636,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("sourceExponent") = 1.,
            pybind11::arg("maskMaterial") = Material::Undefined)
       .def(pybind11::init([](const T rate, const T sticking, const T power,
-                             const std::vector<Material> mask) {
+                             const std::vector<Material> &mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
                  rate, sticking, power, mask);
            }),
@@ -982,11 +983,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
            pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"),
            pybind11::arg("calculateVisibility") = true)
-      .def(pybind11::init<
-               std::vector<typename DirectionalEtching<T, D>::RateSet>>(),
+      .def(pybind11::init<std::vector<DirectionalEtching<T, D>::RateSet>>(),
            pybind11::arg("rateSets"))
       // Constructor accepting a single rate set
-      .def(pybind11::init<const typename DirectionalEtching<T, D>::RateSet &>(),
+      .def(pybind11::init<const DirectionalEtching<T, D>::RateSet &>(),
            pybind11::arg("rateSet"));
 
   // Sphere Distribution
@@ -1542,7 +1542,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(
           "setBoundaryConditions",
           [](GDSGeometry<T, D> &gds,
-             std::vector<typename viennals::Domain<T, D>::BoundaryType> &bcs) {
+             std::vector<viennals::Domain<T, D>::BoundaryType> &bcs) {
             if (bcs.size() == D)
               gds.setBoundaryConditions(bcs.data());
           },
@@ -1750,10 +1750,38 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
            pybind11::arg("sourceExponent"));
 
+  // Multi Particle Process
+  pybind11::class_<gpu::MultiParticleProcess<T, D>,
+                   SmartPointer<gpu::MultiParticleProcess<T, D>>>(
+      m_gpu, "MultiParticleProcess", processModel_gpu, pybind11::module_local())
+      .def(pybind11::init())
+      .def("addNeutralParticle",
+           pybind11::overload_cast<T, const std::string &>(
+               &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("stickingProbability"),
+           pybind11::arg("label") = "neutralFlux")
+      .def("addNeutralParticle",
+           pybind11::overload_cast<std::unordered_map<Material, T>, T,
+                                   const std::string &>(
+               &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("materialSticking"),
+           pybind11::arg("defaultStickingProbability") = 1.,
+           pybind11::arg("label") = "neutralFlux")
+      .def("addIonParticle", &gpu::MultiParticleProcess<T, D>::addIonParticle,
+           pybind11::arg("sourcePower"), pybind11::arg("thetaRMin") = 0.,
+           pybind11::arg("thetaRMax") = 90., pybind11::arg("minAngle") = 0.,
+           pybind11::arg("B_sp") = -1., pybind11::arg("meanEnergy") = 0.,
+           pybind11::arg("sigmaEnergy") = 0.,
+           pybind11::arg("thresholdEnergy") = 0.,
+           pybind11::arg("inflectAngle") = 0., pybind11::arg("n") = 1,
+           pybind11::arg("label") = "ionFlux")
+      .def("setRateFunction",
+           &gpu::MultiParticleProcess<T, D>::setRateFunction);
+
   // SF6O2 Etching
   pybind11::class_<gpu::SF6O2Etching<T, D>,
                    SmartPointer<gpu::SF6O2Etching<T, D>>>(m_gpu, "SF6O2Etching",
-                                                          processModel)
+                                                          processModel_gpu)
       .def(pybind11::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
                           const SF6O2Parameters<T> &>),
            pybind11::arg("parameters"));

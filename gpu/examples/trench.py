@@ -1,8 +1,9 @@
+import viennaps3d.viennaps3d.gpu as gpu
 import viennaps3d as vps
 
 vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
 
-context = vps.gpu.Context()
+context = gpu.Context()
 context.create()
 
 # Create a trench
@@ -33,14 +34,17 @@ rate = 1.0
 exponent = 1.0
 
 # Create a trench depo model
-model = vps.gpu.SingleParticleProcess(
-    rate=rate, stickingProbability=sticking, sourceExponent=exponent
-)
+model = gpu.SingleParticleProcess(rate, sticking, exponent)
 
-process = vps.gpu.Process(context)
+rtParams = vps.RayTracingParameters()
+rtParams.smoothingNeighbors = 2
+rtParams.raysPerPoint = 1000
+
+process = gpu.Process(context)
 process.setDomain(domain)
 process.setProcessModel(model)
 process.setProcessDuration(time)
+process.setRayTracingParameters(rtParams)
 
 process.apply()
 

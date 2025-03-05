@@ -6,7 +6,7 @@ build-backend = "scikit_build_core.build"
 version = "3.3.0"
 name = "ViennaPS"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 description = "Semiconductor fabrication process simulation library"
 dependencies = ["ViennaLS>=4.2.1"]
 

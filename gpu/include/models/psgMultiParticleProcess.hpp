@@ -4,25 +4,12 @@
 #include <psConstants.hpp>
 #include <psMaterials.hpp>
 
+#include <models/psgPipelineParameters.hpp>
 #include <psgProcessModel.hpp>
 
 #include <rayParticle.hpp>
 
 namespace viennaps::gpu {
-
-namespace impl {
-struct IonParams {
-  float thetaRMin = 0.f;
-  float thetaRMax = 0.f;
-  float minAngle = 0.f;
-  float B_sp = 0.f;
-  float meanEnergy = 0.f;
-  float sigmaEnergy = 0.f;
-  float thresholdEnergy = 0.f;
-  float inflectAngle = 0.f;
-  float n = 0.f;
-};
-} // namespace impl
 
 using namespace viennacore;
 
@@ -128,18 +115,6 @@ private:
       particle.direction = direction.value();
     }
   }
-
-  struct IonParams {
-    NumericType sourcePower;
-    NumericType thetaRMin;
-    NumericType thetaRMax;
-    NumericType minAngle;
-    NumericType B_sp;
-    NumericType meanEnergy;
-    NumericType sigmaEnergy;
-    NumericType thresholdEnergy;
-    NumericType inflectAngle;
-  };
 };
 
 } // namespace viennaps::gpu

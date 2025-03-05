@@ -57,13 +57,13 @@ extern "C" __global__ void __closesthit__ion() {
                 f_ie_theta;
 
     // // sputtering yield Y_sp ionSputteringRate
-    atomicAdd(&launchParams.resultBuffer[getIdx(0, 0, &launchParams)], Y_sp);
+    atomicAdd(&launchParams.resultBuffer[getIdx(0, launchParams)], Y_sp);
 
     // ion enhanced etching yield Y_Si ionEnhancedRate
-    atomicAdd(&launchParams.resultBuffer[getIdx(0, 1, &launchParams)], Y_Si);
+    atomicAdd(&launchParams.resultBuffer[getIdx(1, launchParams)], Y_Si);
 
     // ion enhanced O sputtering yield Y_O oxygenSputteringRate
-    atomicAdd(&launchParams.resultBuffer[getIdx(0, 2, &launchParams)], Y_O);
+    atomicAdd(&launchParams.resultBuffer[getIdx(2, launchParams)], Y_O);
 
     // ------------- REFLECTION --------------- //
 
@@ -164,7 +164,7 @@ extern "C" __global__ void __closesthit__etchant() {
     const float &phi_O = data[primID + launchParams.numElements];
 
     const float Seff = launchParams.sticking * max(1.f - phi_F - phi_O, 0.f);
-    atomicAdd(&launchParams.resultBuffer[getIdx(1, 0, &launchParams)],
+    atomicAdd(&launchParams.resultBuffer[getIdx(0, launchParams)],
               prd->rayWeight);
     prd->rayWeight -= prd->rayWeight * Seff;
     diffuseReflection(prd);
@@ -227,7 +227,7 @@ extern "C" __global__ void __closesthit__oxygen() {
     const auto &phi_O = data[primID + launchParams.numElements];
 
     const float Seff = launchParams.sticking * max(1.f - phi_F - phi_O, 0.f);
-    atomicAdd(&launchParams.resultBuffer[getIdx(2, 0, &launchParams)],
+    atomicAdd(&launchParams.resultBuffer[getIdx(0, launchParams)],
               prd->rayWeight);
     prd->rayWeight -= prd->rayWeight * Seff;
     diffuseReflection(prd);

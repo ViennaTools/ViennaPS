@@ -33,9 +33,15 @@ extern "C" __global__ void __closesthit__Neutral() {
       reflectFromBoundary(prd);
     }
   } else {
+    // ------------- SURFACE COLLISION ------------- //
+    atomicAdd(&launchParams.resultBuffer[getIdx(0, launchParams)],
+              prd->rayWeight);
+
+    // ------------- REFLECTION ------------- //
     const unsigned int primID = optixGetPrimitiveIndex();
-    atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight);
-    prd->rayWeight -= prd->rayWeight * launchParams.sticking;
+    int material = launchParams.materialIds[primID];
+    float sticking = launchParams.materialSticking[material];
+    prd->rayWeight -= prd->rayWeight * sticking;
     if (prd->rayWeight > launchParams.rayWeightThreshold)
       diffuseReflection(prd);
   }
