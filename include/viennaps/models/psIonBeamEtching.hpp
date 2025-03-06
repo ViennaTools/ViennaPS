@@ -2,6 +2,7 @@
 
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
+#include "psIonBeamParameters.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -13,28 +14,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType> struct IBEParameters {
-  NumericType planeWaferRate = 1.;
-  std::unordered_map<Material, NumericType> materialPlaneWaferRate;
-
-  NumericType meanEnergy = 250;     // eV
-  NumericType sigmaEnergy = 10;     // eV
-  NumericType thresholdEnergy = 20; // eV
-  NumericType exponent = 100;
-  NumericType n_l = 10;
-  NumericType inflectAngle = 89; // degree
-  NumericType minAngle = 5;      // degree
-  NumericType tiltAngle = 0;     // degree
-  std::function<NumericType(NumericType)> yieldFunction =
-      [](NumericType theta) { return 1.; };
-
-  // Redeposition
-  NumericType redepositionThreshold = 0.1;
-  NumericType redepositionRate = 0.0;
-};
-
 namespace impl {
-
 template <typename NumericType>
 class IBESurfaceModel : public SurfaceModel<NumericType> {
   const IBEParameters<NumericType> params_;
@@ -88,11 +68,11 @@ private:
 };
 
 template <typename NumericType, int D>
-class IBEIonWithRedeposition
+class IBEIonWithRedeposition final
     : public viennaray::Particle<IBEIonWithRedeposition<NumericType, D>,
                                  NumericType> {
 public:
-  IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
+  explicit IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
       : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.),
         A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
@@ -103,7 +83,7 @@ public:
                         const unsigned int primID, const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
+                        RNG &) override {
     auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
                                NumericType(1));
     NumericType theta = std::acos(cosTheta);
@@ -121,7 +101,7 @@ public:
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
+                    RNG &rngState) override {
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
@@ -153,7 +133,7 @@ public:
         redepositionWeight_ > params_.redepositionThreshold) {
       energy_ = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, rngState, std::max(incAngle, minAngle_));
+          rayDir, geomNormal, rngState, M_PI_2 - std::min(incAngle, minAngle_));
       return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
       return std::pair<NumericType, Vec3D<NumericType>>{
@@ -161,18 +141,18 @@ public:
     }
   }
 
-  void initNew(RNG &rngState) override final {
+  void initNew(RNG &rngState) override {
     do {
       energy_ = normalDist_(rngState);
     } while (energy_ < params_.thresholdEnergy);
     redepositionWeight_ = 0.;
   }
 
-  NumericType getSourceDistributionPower() const override final {
+  NumericType getSourceDistributionPower() const override {
     return params_.exponent;
   }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
+  std::vector<std::string> getLocalDataLabels() const override {
     return {"ionFlux", "redepositionFlux"};
   }
 
@@ -193,7 +173,7 @@ class IonBeamEtching : public ProcessModel<NumericType, D> {
 public:
   IonBeamEtching() = default;
 
-  IonBeamEtching(const std::vector<Material> &maskMaterial)
+  explicit IonBeamEtching(const std::vector<Material> &maskMaterial)
       : maskMaterials_(maskMaterial) {}
 
   IonBeamEtching(const std::vector<Material> &maskMaterial,
