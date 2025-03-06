@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.3.0)
+  VERSION 3.4.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -13,9 +13,7 @@ option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
-
-option(VIENNAPS_BUILD_APPLICATION "Build application" OFF)
-option(VIENNAPS_USE_DOUBLE "Use double precision floating point numbers in application" OFF)
+option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" OFF)
 
 # --------------------------------------------------------------------------------------------------------
 # Library options
@@ -74,7 +72,7 @@ set_target_properties(
              WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 if(MSVC)
-  # https://learn.microsoft.com/cpp/c-runtime-library/math-constants TODO: In case C++20 is adpoted
+  # https://learn.microsoft.com/cpp/c-runtime-library/math-constants TODO: In case C++20 is adopted
   # any time soon: https://cppreference.com/w/cpp/numeric/constants
 
   target_compile_definitions(${PROJECT_NAME} INTERFACE _USE_MATH_DEFINES=1)
@@ -96,20 +94,21 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.2.1
+  VERSION 1.3.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  OPTIONS "VIENNACORE_FORMAT_EXCLUDE app/"
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMAddPackage(
   NAME PackageProject
-  VERSION 1.11.2
+  VERSION 1.13.0
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 3.2.0
+  VERSION 3.3.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
+  OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
@@ -126,15 +125,6 @@ CPMFindPackage(
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
-
-# --------------------------------------------------------------------------------------------------------
-# Setup Application
-# --------------------------------------------------------------------------------------------------------
-
-if(VIENNAPS_BUILD_APPLICATION)
-  message(STATUS "[ViennaPS] Building Application")
-  add_subdirectory(app)
-endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Examples
@@ -154,6 +144,15 @@ if(VIENNAPS_BUILD_TESTS)
 
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+# --------------------------------------------------------------------------------------------------------
+# Setup GPU
+# --------------------------------------------------------------------------------------------------------
+
+# If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
+if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+  add_subdirectory(gpu)
 endif()
 
 # --------------------------------------------------------------------------------------------------------

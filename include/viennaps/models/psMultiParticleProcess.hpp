@@ -81,15 +81,15 @@ public:
 
     if (B_sp_ >= 0.) {
       NumericType cosTheta = -DotProduct(rayDir, geomNormal);
-      NumericType angle = std::acos(cosTheta);
-      if (cosTheta)
-        flux *= std::max(3. - 6. * angle / M_PI, 0.);
-      // flux *= (1 + B_sp_ * (1 - cosTheta * cosTheta)) * cosTheta;
+      // if (cosTheta < 0.5)
+      // flux *= std::max(3. - 6. * angle / M_PI, 0.);
+      flux *= (1 + B_sp_ * (1 - cosTheta * cosTheta)) * cosTheta;
     }
 
-    if (energy_ > 0.)
+    if (energy_ > 0.) {
       flux *= std::max(std::sqrt(energy_) - std::sqrt(thresholdEnergy_),
                        NumericType(0.));
+    }
 
     localData.getVectorData(0)[primID] += flux;
   }
