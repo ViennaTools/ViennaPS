@@ -53,38 +53,32 @@ int main(int argc, char **argv) {
            (yieldFac - 0.9);
   };
 
-  { // ANSGM Etch
-    const NumericType angle = params.get("phi1");
-    const NumericType angleRad = constants::degToRad(angle);
-    model->setPrimaryDirection({-std::sin(angleRad), -std::cos(angleRad), 0});
-    ibeParams.tiltAngle = angle;
+  Process<NumericType, D> process(geometry, model);
+  process.setAdvectionParameters(advParams);
+  process.setRayTracingParameters(rayTracingParams);
 
-    Process<NumericType, D> process(geometry, model);
-    process.setAdvectionParameters(advParams);
-    process.setRayTracingParameters(rayTracingParams);
+  // ANSGM Etch
+  NumericType angle = params.get("phi1");
+  NumericType angleRad = constants::degToRad(angle);
+  model->setPrimaryDirection({-std::sin(angleRad), -std::cos(angleRad), 0});
+  ibeParams.tiltAngle = angle;
 
-    process.setProcessDuration(params.get("ANSGM_Depth"));
-    process.apply();
-    geometry->saveSurfaceMesh("ANSGM_Etch");
-  }
+  process.setProcessDuration(params.get("ANSGM_Depth"));
+  process.apply();
+  geometry->saveSurfaceMesh("ANSGM_Etch");
 
   geometry->removeTopLevelSet(); // remove mask
   geometry->saveSurfaceMesh("ANSGM");
 
-  { // Blazed Gratings Etch
-    const NumericType angle = params.get("phi2");
-    const NumericType angleRad = constants::degToRad(angle);
-    model->setPrimaryDirection({-std::sin(angleRad), -std::cos(angleRad), 0});
-    ibeParams.tiltAngle = angle;
+  // Blazed Gratings Etch
+  angle = params.get("phi2");
+  angleRad = constants::degToRad(angle);
+  model->setPrimaryDirection({-std::sin(angleRad), -std::cos(angleRad), 0});
+  ibeParams.tiltAngle = angle;
 
-    Process<NumericType, D> process(geometry, model);
-    process.setAdvectionParameters(advParams);
-    process.setRayTracingParameters(rayTracingParams);
-
-    for (int i = 1; i < 5; ++i) {
-      process.setProcessDuration(params.get("etchTimeP" + std::to_string(i)));
-      process.apply();
-      geometry->saveSurfaceMesh("BlazedGratingsEtch_P" + std::to_string(i));
-    }
+  for (int i = 1; i < 5; ++i) {
+    process.setProcessDuration(params.get("etchTimeP" + std::to_string(i)));
+    process.apply();
+    geometry->saveSurfaceMesh("BlazedGratingsEtch_P" + std::to_string(i));
   }
 }

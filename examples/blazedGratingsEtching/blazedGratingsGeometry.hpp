@@ -43,11 +43,10 @@ auto GenerateMask(const NumericType bumpWidth, const NumericType bumpHeight,
     auto tip =
         SmartPointer<viennals::Domain<NumericType, D>>::New(domain->getGrid());
     viennals::FromSurfaceMesh<NumericType, D>(tip, mesh).apply();
-
-    for (int j = 0; j < mesh->getNodes().size(); j++) {
-      mesh->nodes[j][0] += bumpWidth + bumpSpacing;
-    }
-
+    viennals::TransformMesh<NumericType>(
+        mesh, viennals::TransformEnum::TRANSLATION,
+        Vec3D<NumericType>{bumpWidth + bumpSpacing, 0., 0.})
+        .apply();
     viennals::BooleanOperation<NumericType, D>(
         mask, tip, viennals::BooleanOperationEnum::UNION)
         .apply();

@@ -61,6 +61,92 @@ class BoxDistribution(ProcessModel):
     @overload
     def __init__(self, halfAxes, gridDelta: float) -> None: ...
 
+class CF4O2Etching(ProcessModel):
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        ionFlux: float,
+        etchantFlux: float,
+        oxygenFlux: float,
+        polymerFlux: float,
+        meanIonEnergy: float = ...,
+        sigmaIonEnergy: float = ...,
+        ionExponent: float = ...,
+        oxySputterYield: float = ...,
+        polySputterYield: float = ...,
+        etchStopDepth: float = ...,
+    ) -> None: ...
+    @overload
+    def __init__(self, parameters: CF4O2Parameters) -> None: ...
+    def getParameters(self) -> CF4O2Parameters: ...
+    def setParameters(self, arg0: CF4O2Parameters) -> None: ...
+
+class CF4O2Parameters:
+    Ions: CF4O2ParametersIons
+    Mask: CF4O2ParametersMask
+    Passivation: CF4O2ParametersPassivation
+    Si: CF4O2ParametersSi
+    SiGe: CF4O2ParametersSiGe
+    etchStopDepth: float
+    etchantFlux: float
+    fluxIncludeSticking: bool
+    gamma_C: dict[Material, float]
+    gamma_C_oxidized: dict[Material, float]
+    gamma_F: dict[Material, float]
+    gamma_F_oxidized: dict[Material, float]
+    gamma_O: dict[Material, float]
+    gamma_O_passivated: dict[Material, float]
+    ionFlux: float
+    oxygenFlux: float
+    polymerFlux: float
+    def __init__(self) -> None: ...
+
+class CF4O2ParametersIons:
+    exponent: float
+    inflectAngle: float
+    meanEnergy: float
+    minAngle: float
+    n_l: float
+    sigmaEnergy: float
+    def __init__(self) -> None: ...
+
+class CF4O2ParametersMask:
+    A_sp: float
+    Eth_sp: float
+    rho: float
+    def __init__(self) -> None: ...
+
+class CF4O2ParametersPassivation:
+    A_C_ie: float
+    A_O_ie: float
+    Eth_C_ie: float
+    Eth_O_ie: float
+    def __init__(self) -> None: ...
+
+class CF4O2ParametersSi:
+    A_ie: float
+    A_sp: float
+    Eth_ie: float
+    Eth_sp: float
+    beta_sigma: float
+    k_sigma: float
+    rho: float
+    def __init__(self) -> None: ...
+
+class CF4O2ParametersSiGe:
+    A_ie: float
+    A_sp: float
+    Eth_ie: float
+    Eth_sp: float
+    beta_sigma: float
+    k_sigma: float
+    rho: float
+    x: float
+    def __init__(self) -> None: ...
+    def k_sigma_SiGe(self, arg0: float) -> float: ...
+
 class DirectionalEtching(ProcessModel):
     @overload
     def __init__(
@@ -377,6 +463,7 @@ class HoleShape:
 class IBEParameters:
     exponent: float
     inflectAngle: float
+    materialPlaneWaferRate: dict[Material, float]
     meanEnergy: float
     minAngle: float
     n_l: float
