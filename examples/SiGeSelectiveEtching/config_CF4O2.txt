@@ -1,12 +1,8 @@
-# Config file for a hole etching example process
-
-# all length units are in micrometers (um)
-# Domain
+timeUnit=second
 lengthUnit=nanometer
 
 # Process parameters
 processTime=10
-timeUnit=second
 
 # all flux values are units 1e15 / cm²
 etchantFlux=5.e2
@@ -20,9 +16,6 @@ sigmaEnergy=10 # eV
 A_O=2          # oxidation layer yield constant
 A_C=2          # polymer layer yield constant
 A_Si=7         # Si yield constant
-
-etchStopDepth=-1000   # maximum etching depth
-integrationScheme=EO_2
 
 raysPerPoint=1000
 

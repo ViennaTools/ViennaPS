@@ -1,12 +1,11 @@
 import viennaps2d as vps
 from SiGeStackGeometry import CreateGeometry
-import numpy as np
 
 vps.setNumThreads(16)
 
 # create initial geometry
 paramDict = {
-    "numPillars":5,
+    "numPillars": 5,
     "numLayers": 12,
     "layerHeight": 20.0,
     "maskWidth": 100.0,
@@ -23,7 +22,7 @@ geometry = CreateGeometry(paramDict)
 config_file = "config_CF4O2.txt"
 params = vps.ReadConfigFile(config_file)
 
-vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])
@@ -38,7 +37,6 @@ modelParams.Ions.meanEnergy = params["meanEnergy"]
 modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
 modelParams.Passivation.A_O_ie = params["A_O"]
 modelParams.Passivation.A_C_ie = params["A_C"]
-modelParams.etchStopDepth = params["etchStopDepth"]
 
 # Use Material enum
 modelParams.gamma_F = {
@@ -79,12 +77,9 @@ parameters = model.getParameters()
 process = vps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setMaxCoverageInitIterations(50)
+process.setCoverageDeltaThreshold(1e-4)
 process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
-process.setIntegrationScheme(
-    vps.util.convertIntegrationScheme(params["integrationScheme"])
-)
 process.setTimeStepRatio(0.2)
 
 # print initial surface

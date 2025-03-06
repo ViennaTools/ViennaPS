@@ -27,6 +27,7 @@
 #include <psAtomicLayerProcess.hpp>
 #include <psConstants.hpp>
 #include <psDomain.hpp>
+#include <psDomainSetup.hpp>
 #include <psExtrude.hpp>
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
@@ -35,6 +36,7 @@
 #include <psUnits.hpp>
 
 // geometries
+#include <geometries/psGeometryFactory.hpp>
 #include <geometries/psMakeFin.hpp>
 #include <geometries/psMakeHole.hpp>
 #include <geometries/psMakePlane.hpp>
@@ -50,6 +52,7 @@
 
 // models
 #include <models/psAnisotropicProcess.hpp>
+#include <models/psCF4O2Etching.hpp>
 #include <models/psDirectionalEtching.hpp>
 #include <models/psFaradayCageEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
@@ -59,7 +62,6 @@
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
-#include <models/psCF4O2Etching.hpp>
 #include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
@@ -74,6 +76,18 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 #include <vcLogger.hpp>
+
+// GPU
+#ifdef VIENNAPS_USE_GPU
+#include <vcContext.hpp>
+#include <vcCudaBuffer.hpp>
+
+#include <models/psgMultiParticleProcess.hpp>
+#include <models/psgSF6O2Etching.hpp>
+#include <models/psgSingleParticleProcess.hpp>
+
+#include <psgProcess.hpp>
+#endif
 
 using namespace viennaps;
 
@@ -150,7 +164,7 @@ public:
                         const int materialID,
                         viennaray::TracingData<T> &localData,
                         const viennaray::TracingData<T> *globalData,
-                        RNG &Rng) override final {
+                        RNG &Rng) final {
     PYBIND11_OVERRIDE(void, ClassName, surfaceCollision, rayWeight, rayDir,
                       geomNormal, primID, materialID, localData, globalData,
                       Rng);
@@ -159,21 +173,21 @@ public:
   std::pair<T, Vec3D<T>> surfaceReflection(
       T rayWeight, const Vec3D<T> &rayDir, const Vec3D<T> &geomNormal,
       const unsigned int primID, const int materialID,
-      const viennaray::TracingData<T> *globalData, RNG &Rng) override final {
+      const viennaray::TracingData<T> *globalData, RNG &Rng) final {
     using Pair = std::pair<T, Vec3D<T>>;
     PYBIND11_OVERRIDE(Pair, ClassName, surfaceReflection, rayWeight, rayDir,
                       geomNormal, primID, materialID, globalData, Rng);
   }
 
-  void initNew(RNG &RNG) override final {
+  void initNew(RNG &RNG) final {
     PYBIND11_OVERRIDE(void, ClassName, initNew, RNG);
   }
 
-  T getSourceDistributionPower() const override final {
+  T getSourceDistributionPower() const final {
     PYBIND11_OVERRIDE(T, ClassName, getSourceDistributionPower);
   }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
+  std::vector<std::string> getLocalDataLabels() const final {
     PYBIND11_OVERRIDE(std::vector<std::string>, ClassName, getLocalDataLabels);
   }
 };
@@ -314,7 +328,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       "scientific simulations.";
 
   // set version string of python module
-  module.attr("__version__") = VIENNAPS_MODULE_VERSION;
+  module.attr("__version__") =
+      VIENNAPS_MODULE_VERSION; // for some reason this string does not show
+  module.attr("version") = VIENNAPS_MODULE_VERSION;
 
   // set dimension
   module.attr("D") = D;
@@ -338,10 +354,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_static("getInstance", &Logger::getInstance,
                   pybind11::return_value_policy::reference)
       .def("addDebug", &Logger::addDebug)
-      .def("addTiming",
-           (Logger & (Logger::*)(std::string, double)) & Logger::addTiming)
-      .def("addTiming", (Logger & (Logger::*)(std::string, double, double)) &
+      .def("addTiming", (Logger & (Logger::*)(const std::string &, double)) &
                             Logger::addTiming)
+      .def("addTiming",
+           (Logger & (Logger::*)(const std::string &, double, double)) &
+               Logger::addTiming)
       .def("addInfo", &Logger::addInfo)
       .def("addWarning", &Logger::addWarning)
       .def("addError", &Logger::addError, pybind11::arg("s"),
@@ -484,7 +501,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            (T & (ProcessParams<T>::*)(int)) & ProcessParams<T>::getScalarData)
       .def("getScalarData", (const T &(ProcessParams<T>::*)(int) const) &
                                 ProcessParams<T>::getScalarData)
-      .def("getScalarData", (T & (ProcessParams<T>::*)(std::string)) &
+      .def("getScalarData", (T & (ProcessParams<T>::*)(const std::string &)) &
                                 ProcessParams<T>::getScalarData)
       .def("getScalarDataIndex", &ProcessParams<T>::getScalarDataIndex)
       .def("getScalarData", (std::vector<T> & (ProcessParams<T>::*)()) &
@@ -585,15 +602,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Enum Material
   pybind11::enum_<Material>(module, "Material")
-      .value("Undefined", Material::None) // -1
+      .value("Undefined", Material::Undefined) // 1
       .value("Mask", Material::Mask)
       .value("Si", Material::Si)
       .value("SiO2", Material::SiO2)
-      .value("Si3N4", Material::Si3N4) // 3
+      .value("Si3N4", Material::Si3N4) // 5
       .value("SiN", Material::SiN)
       .value("SiON", Material::SiON)
       .value("SiC", Material::SiC)
-      .value("SiGe", Material::SiGe)   // 7
+      .value("SiGe", Material::SiGe)
       .value("PolySi", Material::PolySi) // 10
       .value("GaN", Material::GaN)
       .value("W", Material::W)
@@ -609,7 +626,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // Single Particle Process
   pybind11::class_<SingleParticleProcess<T, D>,
                    SmartPointer<SingleParticleProcess<T, D>>>(
-      module, "SingleParticleProcess", processModel)
+      module, "SingleParticleProcess", processModel, pybind11::module_local())
       .def(pybind11::init([](const T rate, const T sticking, const T power,
                              const Material mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
@@ -618,9 +635,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate") = 1.,
            pybind11::arg("stickingProbability") = 1.,
            pybind11::arg("sourceExponent") = 1.,
-           pybind11::arg("maskMaterial") = Material::None)
+           pybind11::arg("maskMaterial") = Material::Undefined)
       .def(pybind11::init([](const T rate, const T sticking, const T power,
-                             const std::vector<Material> mask) {
+                             const std::vector<Material> &mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
                  rate, sticking, power, mask);
            }),
@@ -636,13 +653,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       module, "MultiParticleProcess", processModel)
       .def(pybind11::init())
       .def("addNeutralParticle",
-           pybind11::overload_cast<T, std::string>(
+           pybind11::overload_cast<T, const std::string &>(
                &MultiParticleProcess<T, D>::addNeutralParticle),
            pybind11::arg("stickingProbability"),
            pybind11::arg("label") = "neutralFlux")
       .def("addNeutralParticle",
            pybind11::overload_cast<std::unordered_map<Material, T>, T,
-                                   std::string>(
+                                   const std::string &>(
                &MultiParticleProcess<T, D>::addNeutralParticle),
            pybind11::arg("materialSticking"),
            pybind11::arg("defaultStickingProbability") = 1.,
@@ -720,7 +737,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("exponent", &SF6O2Parameters<T>::IonType::exponent)
       .def_readwrite("inflectAngle", &SF6O2Parameters<T>::IonType::inflectAngle)
       .def_readwrite("n_l", &SF6O2Parameters<T>::IonType::n_l)
-      .def_readwrite("minAngle", &SF6O2Parameters<T>::IonType::minAngle);
+      .def_readwrite("minAngle", &SF6O2Parameters<T>::IonType::minAngle)
+      .def_readwrite("thetaRMin", &SF6O2Parameters<T>::IonType::thetaRMin)
+      .def_readwrite("thetaRMax", &SF6O2Parameters<T>::IonType::thetaRMax);
 
   pybind11::class_<SF6O2Parameters<T>>(module, "SF6O2Parameters")
       .def(pybind11::init<>())
@@ -762,105 +781,106 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // CF4O2 Parameters
   pybind11::class_<CF4O2Parameters<T>::MaskType>(module, "CF4O2ParametersMask")
-  .def(pybind11::init<>())
-  .def_readwrite("rho", &CF4O2Parameters<T>::MaskType::rho)
-  .def_readwrite("A_sp", &CF4O2Parameters<T>::MaskType::A_sp)
-  .def_readwrite("B_sp", &CF4O2Parameters<T>::MaskType::B_sp)
-  .def_readwrite("Eth_sp", &CF4O2Parameters<T>::MaskType::Eth_sp);
+      .def(pybind11::init<>())
+      .def_readwrite("rho", &CF4O2Parameters<T>::MaskType::rho)
+      .def_readwrite("A_sp", &CF4O2Parameters<T>::MaskType::A_sp)
+      .def_readwrite("B_sp", &CF4O2Parameters<T>::MaskType::B_sp)
+      .def_readwrite("Eth_sp", &CF4O2Parameters<T>::MaskType::Eth_sp);
 
-pybind11::class_<CF4O2Parameters<T>::SiType>(module, "CF4O2ParametersSi")
-  .def(pybind11::init<>())
-  .def_readwrite("rho", &CF4O2Parameters<T>::SiType::rho)
-  .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiType::k_sigma)
-  .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiType::beta_sigma)
-  .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiType::Eth_sp)
-  .def_readwrite("A_sp", &CF4O2Parameters<T>::SiType::A_sp)
-  .def_readwrite("B_sp", &CF4O2Parameters<T>::SiType::B_sp)
-  .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiType::theta_g_sp)
-  .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiType::Eth_ie)
-  .def_readwrite("A_ie", &CF4O2Parameters<T>::SiType::A_ie)
-  .def_readwrite("B_ie", &CF4O2Parameters<T>::SiType::B_ie)
-  .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiType::theta_g_ie);
+  pybind11::class_<CF4O2Parameters<T>::SiType>(module, "CF4O2ParametersSi")
+      .def(pybind11::init<>())
+      .def_readwrite("rho", &CF4O2Parameters<T>::SiType::rho)
+      .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiType::k_sigma)
+      .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiType::beta_sigma)
+      .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiType::Eth_sp)
+      .def_readwrite("A_sp", &CF4O2Parameters<T>::SiType::A_sp)
+      .def_readwrite("B_sp", &CF4O2Parameters<T>::SiType::B_sp)
+      .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiType::theta_g_sp)
+      .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiType::Eth_ie)
+      .def_readwrite("A_ie", &CF4O2Parameters<T>::SiType::A_ie)
+      .def_readwrite("B_ie", &CF4O2Parameters<T>::SiType::B_ie)
+      .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiType::theta_g_ie);
 
-pybind11::class_<CF4O2Parameters<T>::SiGeType>(module, "CF4O2ParametersSiGe")
-  .def(pybind11::init<>())
-  .def_readwrite("x", &CF4O2Parameters<T>::SiGeType::x)
-  .def_readwrite("rho", &CF4O2Parameters<T>::SiGeType::rho)
-  .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiGeType::k_sigma)
-  .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiGeType::beta_sigma)
-  .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiGeType::Eth_sp)
-  .def_readwrite("A_sp", &CF4O2Parameters<T>::SiGeType::A_sp)
-  .def_readwrite("B_sp", &CF4O2Parameters<T>::SiGeType::B_sp)
-  .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiGeType::theta_g_sp)
-  .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiGeType::Eth_ie)
-  .def_readwrite("A_ie", &CF4O2Parameters<T>::SiGeType::A_ie)
-  .def_readwrite("B_ie", &CF4O2Parameters<T>::SiGeType::B_ie)
-  .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiGeType::theta_g_ie)
-  .def("k_sigma_SiGe", &CF4O2Parameters<T>::SiGeType::k_sigma_SiGe);
+  pybind11::class_<CF4O2Parameters<T>::SiGeType>(module, "CF4O2ParametersSiGe")
+      .def(pybind11::init<>())
+      .def_readwrite("x", &CF4O2Parameters<T>::SiGeType::x)
+      .def_readwrite("rho", &CF4O2Parameters<T>::SiGeType::rho)
+      .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiGeType::k_sigma)
+      .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiGeType::beta_sigma)
+      .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiGeType::Eth_sp)
+      .def_readwrite("A_sp", &CF4O2Parameters<T>::SiGeType::A_sp)
+      .def_readwrite("B_sp", &CF4O2Parameters<T>::SiGeType::B_sp)
+      .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiGeType::theta_g_sp)
+      .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiGeType::Eth_ie)
+      .def_readwrite("A_ie", &CF4O2Parameters<T>::SiGeType::A_ie)
+      .def_readwrite("B_ie", &CF4O2Parameters<T>::SiGeType::B_ie)
+      .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiGeType::theta_g_ie)
+      .def("k_sigma_SiGe", &CF4O2Parameters<T>::SiGeType::k_sigma_SiGe);
 
-pybind11::class_<CF4O2Parameters<T>::PassivationType>(
-  module, "CF4O2ParametersPassivation")
-  .def(pybind11::init<>())
-  .def_readwrite("Eth_O_ie", &CF4O2Parameters<T>::PassivationType::Eth_O_ie)
-  .def_readwrite("Eth_C_ie", &CF4O2Parameters<T>::PassivationType::Eth_C_ie)
-  .def_readwrite("A_O_ie", &CF4O2Parameters<T>::PassivationType::A_O_ie)
-  .def_readwrite("A_C_ie", &CF4O2Parameters<T>::PassivationType::A_C_ie);
+  pybind11::class_<CF4O2Parameters<T>::PassivationType>(
+      module, "CF4O2ParametersPassivation")
+      .def(pybind11::init<>())
+      .def_readwrite("Eth_O_ie", &CF4O2Parameters<T>::PassivationType::Eth_O_ie)
+      .def_readwrite("Eth_C_ie", &CF4O2Parameters<T>::PassivationType::Eth_C_ie)
+      .def_readwrite("A_O_ie", &CF4O2Parameters<T>::PassivationType::A_O_ie)
+      .def_readwrite("A_C_ie", &CF4O2Parameters<T>::PassivationType::A_C_ie);
 
-pybind11::class_<CF4O2Parameters<T>::IonType>(module, "CF4O2ParametersIons")
-  .def(pybind11::init<>())
-  .def_readwrite("meanEnergy", &CF4O2Parameters<T>::IonType::meanEnergy)
-  .def_readwrite("sigmaEnergy", &CF4O2Parameters<T>::IonType::sigmaEnergy)
-  .def_readwrite("exponent", &CF4O2Parameters<T>::IonType::exponent)
-  .def_readwrite("inflectAngle", &CF4O2Parameters<T>::IonType::inflectAngle)
-  .def_readwrite("n_l", &CF4O2Parameters<T>::IonType::n_l)
-  .def_readwrite("minAngle", &CF4O2Parameters<T>::IonType::minAngle);
+  pybind11::class_<CF4O2Parameters<T>::IonType>(module, "CF4O2ParametersIons")
+      .def(pybind11::init<>())
+      .def_readwrite("meanEnergy", &CF4O2Parameters<T>::IonType::meanEnergy)
+      .def_readwrite("sigmaEnergy", &CF4O2Parameters<T>::IonType::sigmaEnergy)
+      .def_readwrite("exponent", &CF4O2Parameters<T>::IonType::exponent)
+      .def_readwrite("inflectAngle", &CF4O2Parameters<T>::IonType::inflectAngle)
+      .def_readwrite("n_l", &CF4O2Parameters<T>::IonType::n_l)
+      .def_readwrite("minAngle", &CF4O2Parameters<T>::IonType::minAngle);
 
-pybind11::class_<CF4O2Parameters<T>>(module, "CF4O2Parameters")
-  .def(pybind11::init<>())
-  .def_readwrite("ionFlux", &CF4O2Parameters<T>::ionFlux)
-  .def_readwrite("etchantFlux", &CF4O2Parameters<T>::etchantFlux)
-  .def_readwrite("oxygenFlux", &CF4O2Parameters<T>::oxygenFlux)
-  .def_readwrite("polymerFlux", &CF4O2Parameters<T>::polymerFlux)
-  .def_readwrite("etchStopDepth", &CF4O2Parameters<T>::etchStopDepth)
-  .def_readwrite("fluxIncludeSticking",
-                 &CF4O2Parameters<T>::fluxIncludeSticking)
-  .def_readwrite("gamma_F", &CF4O2Parameters<T>::gamma_F)
-  .def_readwrite("gamma_F_oxidized", &CF4O2Parameters<T>::gamma_F_oxidized)
-  .def_readwrite("gamma_O", &CF4O2Parameters<T>::gamma_O)
-  .def_readwrite("gamma_O_passivated", &CF4O2Parameters<T>::gamma_O_passivated)
-  .def_readwrite("gamma_C", &CF4O2Parameters<T>::gamma_C)
-  .def_readwrite("gamma_C_oxidized", &CF4O2Parameters<T>::gamma_C_oxidized)
-  .def_readwrite("Mask", &CF4O2Parameters<T>::Mask)
-  .def_readwrite("Si", &CF4O2Parameters<T>::Si)
-  .def_readwrite("SiGe", &CF4O2Parameters<T>::SiGe)
-  .def_readwrite("Passivation", &CF4O2Parameters<T>::Passivation)
-  .def_readwrite("Ions", &CF4O2Parameters<T>::Ions);
+  pybind11::class_<CF4O2Parameters<T>>(module, "CF4O2Parameters")
+      .def(pybind11::init<>())
+      .def_readwrite("ionFlux", &CF4O2Parameters<T>::ionFlux)
+      .def_readwrite("etchantFlux", &CF4O2Parameters<T>::etchantFlux)
+      .def_readwrite("oxygenFlux", &CF4O2Parameters<T>::oxygenFlux)
+      .def_readwrite("polymerFlux", &CF4O2Parameters<T>::polymerFlux)
+      .def_readwrite("etchStopDepth", &CF4O2Parameters<T>::etchStopDepth)
+      .def_readwrite("fluxIncludeSticking",
+                     &CF4O2Parameters<T>::fluxIncludeSticking)
+      .def_readwrite("gamma_F", &CF4O2Parameters<T>::gamma_F)
+      .def_readwrite("gamma_F_oxidized", &CF4O2Parameters<T>::gamma_F_oxidized)
+      .def_readwrite("gamma_O", &CF4O2Parameters<T>::gamma_O)
+      .def_readwrite("gamma_O_passivated",
+                     &CF4O2Parameters<T>::gamma_O_passivated)
+      .def_readwrite("gamma_C", &CF4O2Parameters<T>::gamma_C)
+      .def_readwrite("gamma_C_oxidized", &CF4O2Parameters<T>::gamma_C_oxidized)
+      .def_readwrite("Mask", &CF4O2Parameters<T>::Mask)
+      .def_readwrite("Si", &CF4O2Parameters<T>::Si)
+      .def_readwrite("SiGe", &CF4O2Parameters<T>::SiGe)
+      .def_readwrite("Passivation", &CF4O2Parameters<T>::Passivation)
+      .def_readwrite("Ions", &CF4O2Parameters<T>::Ions);
 
-// CF4O2 Etching
-pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
-  module, "CF4O2Etching", processModel)
-  .def(pybind11::init<>())
-  .def(pybind11::init(
-           &SmartPointer<CF4O2Etching<T, D>>::New<
-               const double /*ionFlux*/, const double /*etchantFlux*/,
-               const double /*oxygenFlux*/, const double /*polymerFlux*/,
-               const T /*meanIonEnergy*/, const T /*sigmaIonEnergy*/, 
-               const T /*ionExponent*/, const T /*oxySputterYield*/, 
-               const T /*polySputterYield*/, const T /*etchStopDepth*/>),
-       pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
-       pybind11::arg("oxygenFlux"), pybind11::arg("polymerFlux"),
-       pybind11::arg("meanIonEnergy") = 100.,
-       pybind11::arg("sigmaIonEnergy") = 10.,
-       pybind11::arg("ionExponent") = 100.,
-       pybind11::arg("oxySputterYield") = 3.,
-       pybind11::arg("polySputterYield") = 3.,
-       pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
-  .def(pybind11::init(&SmartPointer<CF4O2Etching<T, D>>::New<
-                      const CF4O2Parameters<T> &>),
-       pybind11::arg("parameters"))
-  .def("setParameters", &CF4O2Etching<T, D>::setParameters)
-  .def("getParameters", &CF4O2Etching<T, D>::getParameters,
-       pybind11::return_value_policy::reference);
+  // CF4O2 Etching
+  pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
+      module, "CF4O2Etching", processModel)
+      .def(pybind11::init<>())
+      .def(pybind11::init(
+               &SmartPointer<CF4O2Etching<T, D>>::New<
+                   const double /*ionFlux*/, const double /*etchantFlux*/,
+                   const double /*oxygenFlux*/, const double /*polymerFlux*/,
+                   const T /*meanIonEnergy*/, const T /*sigmaIonEnergy*/,
+                   const T /*ionExponent*/, const T /*oxySputterYield*/,
+                   const T /*polySputterYield*/, const T /*etchStopDepth*/>),
+           pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
+           pybind11::arg("oxygenFlux"), pybind11::arg("polymerFlux"),
+           pybind11::arg("meanIonEnergy") = 100.,
+           pybind11::arg("sigmaIonEnergy") = 10.,
+           pybind11::arg("ionExponent") = 100.,
+           pybind11::arg("oxySputterYield") = 3.,
+           pybind11::arg("polySputterYield") = 3.,
+           pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+      .def(pybind11::init(&SmartPointer<CF4O2Etching<T, D>>::New<
+                          const CF4O2Parameters<T> &>),
+           pybind11::arg("parameters"))
+      .def("setParameters", &CF4O2Etching<T, D>::setParameters)
+      .def("getParameters", &CF4O2Etching<T, D>::getParameters,
+           pybind11::return_value_policy::reference);
 
   // Fluorocarbon Parameters
   pybind11::class_<FluorocarbonParameters<T>::MaskType>(
@@ -978,7 +998,10 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       .def_readwrite("inflectAngle", &IBEParameters<T>::inflectAngle)
       .def_readwrite("minAngle", &IBEParameters<T>::minAngle)
       .def_readwrite("tiltAngle", &IBEParameters<T>::tiltAngle)
-      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction);
+      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction)
+      .def_readwrite("redepositionThreshold",
+                     &IBEParameters<T>::redepositionThreshold)
+      .def_readwrite("redepositionRate", &IBEParameters<T>::redepositionRate);
 
   pybind11::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
       module, "IonBeamEtching", processModel)
@@ -1023,7 +1046,7 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
              return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
            pybind11::arg("rate") = 1.,
-           pybind11::arg("maskMaterial") = Material::None)
+           pybind11::arg("maskMaterial") = Material::Undefined)
       .def(pybind11::init([](const T rate, const std::vector<Material> mask) {
              return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
@@ -1050,7 +1073,7 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
                      &DirectionalEtching<T, D>::RateSet::calculateVisibility)
       .def("print", &DirectionalEtching<T, D>::RateSet::print);
 
-  // Expose DirectionalEtching class to Python
+  // DirectionalEtching
   pybind11::class_<DirectionalEtching<T, D>,
                    SmartPointer<DirectionalEtching<T, D>>>(
       module, "DirectionalEtching", processModel)
@@ -1062,15 +1085,12 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       .def(pybind11::init<const Vec3D<T> &, T, T, const std::vector<Material> &,
                           bool>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
-           pybind11::arg("isotropicVelocity") = 0.,
-           pybind11::arg("maskMaterial") =
-               std::vector<Material>{Material::Mask},
+           pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"),
            pybind11::arg("calculateVisibility") = true)
-      .def(pybind11::init<
-               std::vector<typename DirectionalEtching<T, D>::RateSet>>(),
+      .def(pybind11::init<std::vector<DirectionalEtching<T, D>::RateSet>>(),
            pybind11::arg("rateSets"))
       // Constructor accepting a single rate set
-      .def(pybind11::init<const typename DirectionalEtching<T, D>::RateSet &>(),
+      .def(pybind11::init<const DirectionalEtching<T, D>::RateSet &>(),
            pybind11::arg("rateSet"));
 
   // Sphere Distribution
@@ -1157,26 +1177,49 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
   //                               GEOMETRIES
   // ***************************************************************************
 
+  // Geometry Base
+  pybind11::class_<GeometryFactory<T, D>>(module, "GeometryFactory")
+      .def(pybind11::init<const DomainSetup<T, D> &, const std::string &>(),
+           pybind11::arg("domainSetup"),
+           pybind11::arg("name") = "GeometryFactory")
+      .def("makeMask", &GeometryFactory<T, D>::makeMask, pybind11::arg("base"),
+           pybind11::arg("height"))
+      .def("makeSubstrate", &GeometryFactory<T, D>::makeSubstrate,
+           pybind11::arg("base"))
+      .def("makeCylinderStencil", &GeometryFactory<T, D>::makeCylinderStencil,
+           pybind11::arg("position"), pybind11::arg("radius"),
+           pybind11::arg("height"), pybind11::arg("angle"))
+      .def("makeBoxStencil", &GeometryFactory<T, D>::makeBoxStencil,
+           pybind11::arg("position"), pybind11::arg("width"),
+           pybind11::arg("height"), pybind11::arg("angle"));
+
   // Plane
   pybind11::class_<MakePlane<T, D>>(module, "MakePlane")
-      .def(pybind11::init<DomainType, const T, const T, const T, const T,
-                          const bool, const Material>(),
+      .def(pybind11::init<DomainType, T, Material, bool>(),
+           pybind11::arg("domain"), pybind11::arg("height") = 0.,
+           pybind11::arg("material") = Material::Si,
+           pybind11::arg("addToExisting") = false)
+      .def(pybind11::init<DomainType, T, T, T, T, bool, Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("height") = 0.,
            pybind11::arg("periodicBoundary") = false,
-           pybind11::arg("material") = Material::None)
-      .def(pybind11::init<DomainType, T, const Material>(),
-           pybind11::arg("domain"), pybind11::arg("height") = 0.,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Si)
       .def("apply", &MakePlane<T, D>::apply,
            "Create a plane geometry or add plane to existing geometry.");
 
   // Trench
   pybind11::class_<MakeTrench<T, D>>(module, "MakeTrench")
-      .def(pybind11::init<DomainType, const T, const T, const T, const T,
-                          const T, const T, const T, const bool, const bool,
-                          const Material>(),
+      .def(
+          pybind11::init<DomainType, T, T, T, T, T, bool, Material, Material>(),
+          pybind11::arg("domain"), pybind11::arg("trenchWidth"),
+          pybind11::arg("trenchDepth"), pybind11::arg("trenchTaperAngle") = 0,
+          pybind11::arg("maskHeight") = 0, pybind11::arg("maskTaperAngle") = 0,
+          pybind11::arg("halfTrench") = false,
+          pybind11::arg("material") = Material::Si,
+          pybind11::arg("maskMaterial") = Material::Mask)
+      .def(pybind11::init<DomainType, T, T, T, T, T, T, T, bool, bool,
+                          Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("trenchWidth"), pybind11::arg("trenchDepth"),
@@ -1184,7 +1227,7 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Si)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
   // Hole
@@ -1194,8 +1237,16 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       .value("Quarter", HoleShape::Quarter);
 
   pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
-      .def(pybind11::init<DomainType, const T, const T, const T, const T,
-                          const T, const T, const T, const bool, const bool,
+      .def(pybind11::init<DomainType, T, T, T, T, T, HoleShape, Material,
+                          Material>(),
+           pybind11::arg("domain"), pybind11::arg("holeRadius"),
+           pybind11::arg("holeDepth"), pybind11::arg("holeTaperAngle") = 0.,
+           pybind11::arg("maskHeight") = 0.,
+           pybind11::arg("maskTaperAngle") = 0.,
+           pybind11::arg("holeShape") = HoleShape::Full,
+           pybind11::arg("material") = Material::Si,
+           pybind11::arg("maskMaterial") = Material::Mask)
+      .def(pybind11::init<DomainType, T, T, T, T, T, T, T, bool, bool,
                           const Material, HoleShape>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
@@ -1204,43 +1255,41 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
            pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None,
-           pybind11::arg("holeShape") = HoleShape::Full) // New argument
+           pybind11::arg("material") = Material::Si,
+           pybind11::arg("holeShape") = HoleShape::Full)
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
-
-  //  pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
-  //      .def(pybind11::init<DomainType, const T, const T, const T, const T,
-  //                          const T, const T, const T, const bool, const bool,
-  //                          const Material>(),
-  //           pybind11::arg("domain"), pybind11::arg("gridDelta"),
-  //           pybind11::arg("xExtent"), pybind11::arg("yExtent"),
-  //           pybind11::arg("holeRadius"), pybind11::arg("holeDepth"),
-  //           pybind11::arg("taperingAngle") = 0.,
-  //           pybind11::arg("baseHeight") = 0.,
-  //           pybind11::arg("periodicBoundary") = false,
-  //           pybind11::arg("makeMask") = false,
-  //           pybind11::arg("material") = Material::None)
-  //      .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
   // Fin
   pybind11::class_<MakeFin<T, D>>(module, "MakeFin")
-      .def(pybind11::init<DomainType, const T, const T, const T, const T,
-                          const T, const T, const T, const bool, const bool,
-                          const Material>(),
+      .def(
+          pybind11::init<DomainType, T, T, T, T, T, bool, Material, Material>(),
+          pybind11::arg("domain"), pybind11::arg("finWidth"),
+          pybind11::arg("finHeight"), pybind11::arg("finTaperAngle") = 0.,
+          pybind11::arg("maskHeight") = 0, pybind11::arg("maskTaperAngle") = 0,
+          pybind11::arg("halfFin") = false,
+          pybind11::arg("material") = Material::Si,
+          pybind11::arg("maskMaterial") = Material::Mask)
+      .def(pybind11::init<DomainType, T, T, T, T, T, T, T, bool, bool,
+                          Material>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("finWidth"), pybind11::arg("finHeight"),
            pybind11::arg("taperAngle") = 0., pybind11::arg("baseHeight") = 0.,
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Si)
       .def("apply", &MakeFin<T, D>::apply, "Create a fin geometry.");
 
   // Stack
   pybind11::class_<MakeStack<T, D>>(module, "MakeStack")
-      .def(pybind11::init<DomainType &, const T, const T, const T, const int,
-                          const T, const T, const T, const T, const T,
-                          const bool>(),
+      .def(pybind11::init<DomainType, int, T, T, T, T, T, T, bool, Material>(),
+           pybind11::arg("domain"), pybind11::arg("numLayers"),
+           pybind11::arg("layerHeight"), pybind11::arg("substrateHeight") = 0,
+           pybind11::arg("holeRadius") = 0, pybind11::arg("trenchWidth") = 0,
+           pybind11::arg("maskHeight") = 0, pybind11::arg("taperAngle") = 0,
+           pybind11::arg("halfStack") = false,
+           pybind11::arg("maskMaterial") = Material::Mask)
+      .def(pybind11::init<DomainType, T, T, T, int, T, T, T, T, T, bool>(),
            pybind11::arg("domain"), pybind11::arg("gridDelta"),
            pybind11::arg("xExtent"), pybind11::arg("yExtent"),
            pybind11::arg("numLayers"), pybind11::arg("layerHeight"),
@@ -1258,14 +1307,39 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
   //                                 PROCESS
   // ***************************************************************************
 
-  // rayTraceDirection Enum
-  pybind11::enum_<viennaray::TraceDirection>(module, "rayTraceDirection")
-      .value("POS_X", viennaray::TraceDirection::POS_X)
-      .value("POS_Y", viennaray::TraceDirection::POS_Y)
-      .value("POS_Z", viennaray::TraceDirection::POS_Z)
-      .value("NEG_X", viennaray::TraceDirection::NEG_X)
-      .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
-      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
+  // Normalization Enum
+  pybind11::enum_<viennaray::NormalizationType>(module, "NormalizationType")
+      .value("SOURCE", viennaray::NormalizationType::SOURCE)
+      .value("MAX", viennaray::NormalizationType::MAX);
+
+  // RayTracingParameters
+  pybind11::class_<RayTracingParameters<T, D>>(module, "RayTracingParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("sourceDirection",
+                     &RayTracingParameters<T, D>::sourceDirection)
+      .def_readwrite("normalizationType",
+                     &RayTracingParameters<T, D>::normalizationType)
+      .def_readwrite("raysPerPoint", &RayTracingParameters<T, D>::raysPerPoint)
+      .def_readwrite("diskRadius", &RayTracingParameters<T, D>::diskRadius)
+      .def_readwrite("useRandomSeeds",
+                     &RayTracingParameters<T, D>::useRandomSeeds)
+      .def_readwrite("ignoreFluxBoundaries",
+                     &RayTracingParameters<T, D>::ignoreFluxBoundaries)
+      .def_readwrite("smoothingNeighbors",
+                     &RayTracingParameters<T, D>::smoothingNeighbors);
+
+  // AdvectionParameters
+  pybind11::class_<AdvectionParameters<T>>(module, "AdvectionParameters")
+      .def(pybind11::init<>())
+      .def_readwrite("integrationScheme",
+                     &AdvectionParameters<T>::integrationScheme)
+      .def_readwrite("timeStepRatio", &AdvectionParameters<T>::timeStepRatio)
+      .def_readwrite("dissipationAlpha",
+                     &AdvectionParameters<T>::dissipationAlpha)
+      .def_readwrite("checkDissipation",
+                     &AdvectionParameters<T>::checkDissipation)
+      .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
+      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
 
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
@@ -1310,7 +1384,7 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
           "results deterministic.");
 
   // Process
-  pybind11::class_<Process<T, D>>(module, "Process")
+  pybind11::class_<Process<T, D>>(module, "Process", pybind11::module_local())
       // constructors
       .def(pybind11::init())
       .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
@@ -1335,6 +1409,10 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       .def("setMaxCoverageInitIterations",
            &Process<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
+      .def("setCoverageDeltaThreshold",
+           &Process<T, D>::setCoverageDeltaThreshold,
+           "Set the threshold for the coverage delta metric to reach "
+           "convergence.")
       .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
@@ -1368,13 +1446,53 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       .def("getProcessDuration", &Process<T, D>::getProcessDuration,
            "Returns the duration of the recently run process. This duration "
            "can sometimes slightly vary from the set process duration, due to "
-           "the maximum time step according to the CFL condition.");
+           "the maximum time step according to the CFL condition.")
+      .def("setAdvectionParameters", &Process<T, D>::setAdvectionParameters,
+           "Set the advection parameters for the process.")
+      .def("getAdvectionParameters", &Process<T, D>::getAdvectionParameters,
+           "Get the advection parameters for the process.",
+           pybind11::return_value_policy::reference)
+      .def("setRayTracingParameters", &Process<T, D>::setRayTracingParameters,
+           "Set the ray tracing parameters for the process.")
+      .def("getRayTracingParameters", &Process<T, D>::getRayTracingParameters,
+           "Get the ray tracing parameters for the process.",
+           pybind11::return_value_policy::reference);
 
   // Domain
   pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
       // constructors
       .def(pybind11::init(&DomainType::New<>))
+      .def(pybind11::init(
+               [](DomainType &domain) { return DomainType::New(domain); }),
+           pybind11::arg("domain"), "Deep copy constructor.")
+      .def(pybind11::init(
+               [](T gridDelta, T xExtent, T yExtent, BoundaryType boundary) {
+                 return DomainType::New(gridDelta, xExtent, yExtent, boundary);
+               }),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent"),
+           pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY)
+#if VIENNAPS_PYTHON_DIMENSION == 2
+      .def(pybind11::init([](T gridDelta, T xExtent, BoundaryType boundary) {
+             return DomainType::New(gridDelta, xExtent, boundary);
+           }),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY)
+#endif
+      .def(pybind11::init(&DomainType::New<const DomainSetup<T, D> &>),
+           pybind11::arg("setup"))
       // methods
+      .def("setup",
+           pybind11::overload_cast<const DomainSetup<T, D> &>(
+               &Domain<T, D>::setup),
+           "Setup the domain.")
+      .def("setup",
+           pybind11::overload_cast<T, T, T, BoundaryType>(&Domain<T, D>::setup),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent") = 0.,
+           pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY,
+           "Setup the domain.")
+      .def("getSetup", &Domain<T, D>::getSetup, "Get the domain setup.")
       .def("deepCopy", &Domain<T, D>::deepCopy)
       .def("insertNextLevelSet", &Domain<T, D>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
@@ -1412,17 +1530,41 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
            "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh,
            pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
+      .def("saveHullMesh", &Domain<T, D>::saveHullMesh,
+           pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
+           "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, D>::saveLevelSets,
            pybind11::arg("filename"))
       .def("clear", &Domain<T, D>::clear);
+
+  // Domain Setup
+  pybind11::class_<DomainSetup<T, D>>(module, "DomainSetup")
+      .def(pybind11::init<>())
+      .def(pybind11::init<T, T, T, BoundaryType>(), pybind11::arg("gridDelta"),
+           pybind11::arg("xExtent"), pybind11::arg("yExtent"),
+           pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY)
+      .def("grid", &DomainSetup<T, D>::grid)
+      .def("gridDelta", &DomainSetup<T, D>::gridDelta)
+      .def("bounds", &DomainSetup<T, D>::bounds)
+      .def("boundaryCons", &DomainSetup<T, D>::boundaryCons)
+      .def("xExtent", &DomainSetup<T, D>::xExtent)
+      .def("yExtent", &DomainSetup<T, D>::yExtent)
+      .def("hasPeriodicBoundary", &DomainSetup<T, D>::hasPeriodicBoundary)
+      .def("isValid", &DomainSetup<T, D>::isValid)
+      .def("print", &DomainSetup<T, D>::print)
+      .def("check", &DomainSetup<T, D>::check)
+      .def("halveXAxis", &DomainSetup<T, D>::halveXAxis)
+      .def("halveYAxis", &DomainSetup<T, D>::halveYAxis);
 
   // MaterialMap
   pybind11::class_<MaterialMap, SmartPointer<MaterialMap>>(module,
                                                            "MaterialMap")
       .def(pybind11::init<>())
       .def("insertNextMaterial", &MaterialMap::insertNextMaterial,
-           pybind11::arg("material") = Material::None)
+           pybind11::arg("material") = Material::Undefined)
       .def("getMaterialAtIdx", &MaterialMap::getMaterialAtIdx)
       .def("getMaterialMap", &MaterialMap::getMaterialMap)
       .def("size", &MaterialMap::size)
@@ -1504,7 +1646,7 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       .def(
           "setBoundaryConditions",
           [](GDSGeometry<T, D> &gds,
-             std::vector<typename viennals::Domain<T, D>::BoundaryType> &bcs) {
+             std::vector<viennals::Domain<T, D>::BoundaryType> &bcs) {
             if (bcs.size() == D)
               gds.setBoundaryConditions(bcs.data());
           },
@@ -1514,7 +1656,9 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
            "boundary of the domain.")
       .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
       .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
-           "Convert a layer of the GDS geometry to a level set domain.")
+           "Convert a layer of the GDS geometry to a level set domain.",
+           pybind11::arg("layer"), pybind11::arg("baseHeight"),
+           pybind11::arg("height"), pybind11::arg("mask") = false)
       .def(
           "getBounds",
           [](GDSGeometry<T, D> &gds) -> std::array<double, 6> {
@@ -1542,7 +1686,27 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
   pybind11::class_<Domain<T, 3>, SmartPointer<Domain<T, 3>>>(module, "Domain3D")
       // constructors
       .def(pybind11::init(&SmartPointer<Domain<T, 3>>::New<>))
+      .def(pybind11::init([](SmartPointer<Domain<T, 3>> &domain) {
+             return SmartPointer<Domain<T, 3>>::New(domain);
+           }),
+           pybind11::arg("domain"), "Deep copy constructor.")
+      .def(pybind11::init(
+               [](T gridDelta, T xExtent, T yExtent, BoundaryType boundary) {
+                 return SmartPointer<Domain<T, 3>>::New(gridDelta, xExtent,
+                                                        yExtent, boundary);
+               }),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent"),
+           pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY)
       // methods
+      .def("setup",
+           pybind11::overload_cast<T, T, T, BoundaryType>(&Domain<T, 3>::setup),
+           pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
+           pybind11::arg("yExtent"),
+           pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY,
+           "Setup the domain.")
+      // methods
+      .def("getSetup", &Domain<T, 3>::getSetup, "Get the domain setup.")
       .def("deepCopy", &Domain<T, 3>::deepCopy)
       .def("insertNextLevelSet", &Domain<T, 3>::insertNextLevelSet,
            pybind11::arg("levelset"), pybind11::arg("wrapLowerLevelSet") = true,
@@ -1580,7 +1744,12 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
            "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, 3>::saveVolumeMesh,
            pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
+      .def("saveHullMesh", &Domain<T, 3>::saveHullMesh,
+           pybind11::arg("filename"),
+           pybind11::arg("wrappingLayerEpsilon") = 1e-2,
+           "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, 3>::saveLevelSets)
       .def("clear", &Domain<T, 3>::clear);
 
@@ -1589,7 +1758,7 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       .def(pybind11::init<SmartPointer<Domain<T, 2>> &,
                           SmartPointer<Domain<T, 3>> &, std::array<T, 2>,
                           const int,
-                          std::array<viennals::BoundaryConditionEnum<3>, 3>>(),
+                          std::array<viennals::BoundaryConditionEnum, 3>>(),
            pybind11::arg("inputDomain"), pybind11::arg("outputDomain"),
            pybind11::arg("extent"), pybind11::arg("extrudeDimension"),
            pybind11::arg("boundaryConditions"))
@@ -1604,17 +1773,189 @@ pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
            "Set which index of the added dimension (x: 0, y: 1, z: 2).")
       .def("setBoundaryConditions",
            pybind11::overload_cast<
-               std::array<viennals::BoundaryConditionEnum<3>, 3>>(
+               std::array<viennals::BoundaryConditionEnum, 3>>(
                &Extrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &Extrude<T>::apply, "Run the extrusion.");
 #endif
 
-  //   // rayReflection.hpp
-  //   module.def("rayReflectionSpecular", &rayReflectionSpecular<T>,
-  //              "Specular reflection,");
-  //   module.def("rayReflectionDiffuse", &rayReflectionDiffuse<T, D>,
-  //              "Diffuse reflection.");
-  //   module.def("rayReflectionConedCosine", &rayReflectionConedCosine<T, D>,
-  //              "Coned cosine reflection.");
+  // ***************************************************************************
+  //                                 RAY TRACING
+  // ***************************************************************************
+
+  auto m_ray = module.def_submodule("ray", "Ray tracing functions.");
+
+  // rayTraceDirection Enum
+  pybind11::enum_<viennaray::TraceDirection>(m_ray, "rayTraceDirection")
+      .value("POS_X", viennaray::TraceDirection::POS_X)
+      .value("POS_Y", viennaray::TraceDirection::POS_Y)
+      .value("POS_Z", viennaray::TraceDirection::POS_Z)
+      .value("NEG_X", viennaray::TraceDirection::NEG_X)
+      .value("NEG_Y", viennaray::TraceDirection::NEG_Y)
+      .value("NEG_Z", viennaray::TraceDirection::NEG_Z);
+
+  // rayReflection
+  m_ray.def("ReflectionSpecular", &viennaray::ReflectionSpecular<T>,
+            "Specular reflection,");
+  m_ray.def("ReflectionDiffuse", &viennaray::ReflectionDiffuse<T, D>,
+            "Diffuse reflection.");
+  m_ray.def("ReflectionConedCosine", &viennaray::ReflectionConedCosine<T, D>,
+            "Coned cosine reflection.");
+
+#ifdef VIENNAPS_USE_GPU
+  auto m_gpu = module.def_submodule("gpu", "GPU accelerated functions.");
+
+  // GPU ProcessModel
+  pybind11::class_<gpu::ProcessModel<T, D>,
+                   SmartPointer<gpu::ProcessModel<T, D>>>
+      processModel_gpu(m_gpu, "ProcessModel", pybind11::module_local());
+
+  pybind11::class_<std::filesystem::path>(m_gpu, "Path")
+      .def(pybind11::init<std::string>());
+  pybind11::implicitly_convertible<std::string, std::filesystem::path>();
+
+  pybind11::class_<Context>(m_gpu, "Context")
+      .def(pybind11::init())
+      //  .def_readwrite("modulePath", &Context::modulePath)
+      //  .def_readwrite("moduleNames", &Context::moduleNames)
+      //  .def_readwrite("cuda", &Context::cuda, "Cuda context.")
+      //  .def_readwrite("optix", &Context::optix, "Optix context.")
+      //  .def_readwrite("deviceProps", &Context::deviceProps,
+      //                 "Device properties.")
+      //  .def("getModule", &Context::getModule)
+      .def("create", &Context::create, "Create a new context.",
+           pybind11::arg("modulePath") = VIENNACORE_KERNELS_PATH,
+           pybind11::arg("deviceID") = 0)
+      .def("destroy", &Context::destroy, "Destroy the context.")
+      .def("addModule", &Context::addModule, "Add a module to the context.")
+      .def_readwrite("deviceID", &Context::deviceID, "Device ID.");
+
+  pybind11::class_<gpu::SingleParticleProcess<T, D>,
+                   SmartPointer<gpu::SingleParticleProcess<T, D>>>(
+      m_gpu, "SingleParticleProcess", processModel_gpu,
+      pybind11::module_local())
+      .def(pybind11::init([](const T rate, const T sticking, const T power,
+                             const Material mask) {
+             return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
+                 rate, sticking, power, mask);
+           }),
+           pybind11::arg("rate") = 1.,
+           pybind11::arg("stickingProbability") = 1.,
+           pybind11::arg("sourceExponent") = 1.,
+           pybind11::arg("maskMaterial") = Material::Undefined)
+      .def(pybind11::init([](const T rate, const T sticking, const T power,
+                             const std::vector<Material> mask) {
+             return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
+                 rate, sticking, power, mask);
+           }),
+           pybind11::arg("rate"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"))
+      .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
+           pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
+           pybind11::arg("sourceExponent"));
+
+  // Multi Particle Process
+  pybind11::class_<gpu::MultiParticleProcess<T, D>,
+                   SmartPointer<gpu::MultiParticleProcess<T, D>>>(
+      m_gpu, "MultiParticleProcess", processModel_gpu, pybind11::module_local())
+      .def(pybind11::init())
+      .def("addNeutralParticle",
+           pybind11::overload_cast<T, const std::string &>(
+               &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("stickingProbability"),
+           pybind11::arg("label") = "neutralFlux")
+      .def("addNeutralParticle",
+           pybind11::overload_cast<std::unordered_map<Material, T>, T,
+                                   const std::string &>(
+               &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
+           pybind11::arg("materialSticking"),
+           pybind11::arg("defaultStickingProbability") = 1.,
+           pybind11::arg("label") = "neutralFlux")
+      .def("addIonParticle", &gpu::MultiParticleProcess<T, D>::addIonParticle,
+           pybind11::arg("sourcePower"), pybind11::arg("thetaRMin") = 0.,
+           pybind11::arg("thetaRMax") = 90., pybind11::arg("minAngle") = 0.,
+           pybind11::arg("B_sp") = -1., pybind11::arg("meanEnergy") = 0.,
+           pybind11::arg("sigmaEnergy") = 0.,
+           pybind11::arg("thresholdEnergy") = 0.,
+           pybind11::arg("inflectAngle") = 0., pybind11::arg("n") = 1,
+           pybind11::arg("label") = "ionFlux")
+      .def("setRateFunction",
+           &gpu::MultiParticleProcess<T, D>::setRateFunction);
+
+  // SF6O2 Etching
+  pybind11::class_<gpu::SF6O2Etching<T, D>,
+                   SmartPointer<gpu::SF6O2Etching<T, D>>>(m_gpu, "SF6O2Etching",
+                                                          processModel_gpu)
+      .def(pybind11::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
+                          const SF6O2Parameters<T> &>),
+           pybind11::arg("parameters"));
+
+  // GPU Process
+  pybind11::class_<gpu::Process<T, D>>(m_gpu, "Process",
+                                       pybind11::module_local())
+      // constructors
+      .def(pybind11::init<gpu::Context &>(), pybind11::arg("context"))
+      .def(pybind11::init<gpu::Context &, DomainType,
+                          SmartPointer<gpu::ProcessModel<T, D>>, T>(),
+           pybind11::arg("context"), pybind11::arg("domain"),
+           pybind11::arg("model"), pybind11::arg("duration"))
+      // methods
+      .def("apply", &gpu::Process<T, D>::apply, "Run the process.")
+      .def("calculateFlux", &gpu::Process<T, D>::calculateFlux,
+           "Perform a single-pass flux calculation.")
+      .def("setDomain", &gpu::Process<T, D>::setDomain,
+           "Set the process domain.")
+      .def("setProcessModel", &gpu::Process<T, D>::setProcessModel,
+           "Set the process model. This has to be a pre-configured process "
+           "model.")
+      .def("setProcessDuration", &gpu::Process<T, D>::setProcessDuration,
+           "Set the process duration.")
+      .def("setNumberOfRaysPerPoint",
+           &gpu::Process<T, D>::setNumberOfRaysPerPoint,
+           "Set the number of rays to traced for each particle in the process. "
+           "The number is per point in the process geometry.")
+      .def("setMaxCoverageInitIterations",
+           &gpu::Process<T, D>::setMaxCoverageInitIterations,
+           "Set the number of iterations to initialize the coverages.")
+      .def("setIntegrationScheme", &gpu::Process<T, D>::setIntegrationScheme,
+           "Set the integration scheme for solving the level-set equation. "
+           "Possible integration schemes are specified in "
+           "viennals::IntegrationSchemeEnum.")
+      .def("enableAdvectionVelocityOutput",
+           &gpu::Process<T, D>::enableAdvectionVelocityOutput,
+           "Enable the output of the advection velocity field on the ls-mesh.")
+      .def("disableAdvectionVelocityOutput",
+           &gpu::Process<T, D>::disableAdvectionVelocityOutput,
+           "Disable the output of the advection velocity field on the ls-mesh.")
+      .def("setTimeStepRatio", &gpu::Process<T, D>::setTimeStepRatio,
+           "Set the CFL condition to use during advection. The CFL condition "
+           "sets the maximum distance a surface can be moved during one "
+           "advection step. It MUST be below 0.5 to guarantee numerical "
+           "stability. Defaults to 0.4999.")
+      .def("enableRandomSeeds", &gpu::Process<T, D>::enableRandomSeeds,
+           "Enable random seeds for the ray tracer. This will make the process "
+           "results non-deterministic.")
+      .def(
+          "disableRandomSeeds", &gpu::Process<T, D>::disableRandomSeeds,
+          "Disable random seeds for the ray tracer. This will make the process "
+          "results deterministic.")
+      .def("getProcessDuration", &gpu::Process<T, D>::getProcessDuration,
+           "Returns the duration of the recently run process. This duration "
+           "can sometimes slightly vary from the set process duration, due to "
+           "the maximum time step according to the CFL condition.")
+      .def("setAdvectionParameters",
+           &gpu::Process<T, D>::setAdvectionParameters,
+           "Set the advection parameters for the process.")
+      .def("getAdvectionParameters",
+           &gpu::Process<T, D>::getAdvectionParameters,
+           "Get the advection parameters for the process.",
+           pybind11::return_value_policy::reference)
+      .def("setRayTracingParameters",
+           &gpu::Process<T, D>::setRayTracingParameters,
+           "Set the ray tracing parameters for the process.")
+      .def("getRayTracingParameters",
+           &gpu::Process<T, D>::getRayTracingParameters,
+           "Get the ray tracing parameters for the process.",
+           pybind11::return_value_policy::reference);
+#endif
 }

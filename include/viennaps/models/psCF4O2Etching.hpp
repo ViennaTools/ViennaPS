@@ -4,11 +4,8 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
-#include "../psConstants.hpp"
 #include "../psProcessModel.hpp"
-#include "../psSurfaceModel.hpp"
 #include "../psUnits.hpp"
-#include "../psVelocityField.hpp"
 
 #include "psCF4O2Parameters.hpp"
 
@@ -25,7 +22,7 @@ public:
   using SurfaceModel<NumericType>::surfaceData;
   const CF4O2Parameters<NumericType> &params;
 
-  CF4O2SurfaceModel(const CF4O2Parameters<NumericType> &pParams)
+  explicit CF4O2SurfaceModel(const CF4O2Parameters<NumericType> &pParams)
       : params(pParams) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
@@ -70,7 +67,7 @@ public:
     const auto eCoverage = coverages->getScalarData("eCoverage");
     const auto oCoverage = coverages->getScalarData("oCoverage");
     const auto cCoverage = coverages->getScalarData("cCoverage");
-    
+
     // save the etch rate components for visualization
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
                              *chRate = nullptr;
@@ -97,19 +94,19 @@ public:
 
       // The etch rate is calculated in nm/s
       const double unitConversion =
-      units::Time::getInstance().convertSecond() /
-      units::Length::getInstance().convertNanometer();
+          units::Time::convertSecond() / units::Length::convertNanometer();
 
       if (MaterialMap::isMaterial(materialIds[i], Material::SiGe)) {
-        const auto k_sigma = oCoverage->at(i) > 0.5 * eCoverage->at(i) ? 
-                             params.SiGe.k_sigma_SiGe(1.) : 
-                             (eCoverage->at(i) - oCoverage->at(i)) * params.SiGe.k_sigma + 
-                              oCoverage->at(i) * params.SiGe.k_sigma_SiGe(1.);
-                            
+        const auto k_sigma =
+            oCoverage->at(i) > 0.5 * eCoverage->at(i)
+                ? params.SiGe.k_sigma_SiGe(1.)
+                : (eCoverage->at(i) - oCoverage->at(i)) * params.SiGe.k_sigma +
+                      oCoverage->at(i) * params.SiGe.k_sigma_SiGe(1.);
+
         const auto chemicalRate = k_sigma * eCoverage->at(i) / 4.;
-      
-        etchRate[i] = -(1 / params.SiGe.rho) * 
-                      (chemicalRate + sputterRate + ionEnhancedRate) * 
+
+        etchRate[i] = -(1 / params.SiGe.rho) *
+                      (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
@@ -120,16 +117,16 @@ public:
         // Standard etching for Si
         const auto chemicalRate = params.Si.k_sigma * eCoverage->at(i) / 4.;
 
-        etchRate[i] = -(1 / params.Si.rho) * 
-                      (chemicalRate + sputterRate + ionEnhancedRate) * 
+        etchRate[i] = -(1 / params.Si.rho) *
+                      (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
           chRate->at(i) = chemicalRate;
-        }              
+        }
       } else { // Mask
-      // if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
+               // if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
         etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
@@ -183,33 +180,47 @@ public:
       auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
       auto GY_o = ionEnhancedOxidationFlux->at(i) * params.ionFlux;
       auto GY_c = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
-      
+
       auto a = Gb_o;
       auto b = Gb_e;
       auto c = Gb_c;
-      auto d = GY_o;        // need to add beta_sigma and Gb_e (material dependent)
-      auto e = 2 * GY_ie;   // need to add k_sigma
-      auto f = GY_c + Gb_o; // need to add beta_sigma and Gb_e (material dependent)
+      auto d = GY_o; // need to add beta_sigma and Gb_e (material dependent)
+      auto e = 2 * GY_ie; // need to add k_sigma
+      auto f =
+          GY_c + Gb_o; // need to add beta_sigma and Gb_e (material dependent)
 
       if (MaterialMap::isMaterial(materialIds[i], Material::SiGe)) {
-        d += params.SiGe.beta_sigma + Gb_e; // Gb_e represents removeal of G-G bonds
+        d += params.SiGe.beta_sigma +
+             Gb_e; // Gb_e represents removal of G-G bonds
         e += params.SiGe.k_sigma;
-      } else {                              // F cannot remove O from Si-O bonds, so Gb_e = 0 for Si
+      } else { // F cannot remove O from Si-O bonds, so Gb_e = 0 for Si
         d += params.Si.beta_sigma;
         e += params.Si.k_sigma;
       }
-      eCoverage->at(i) = std::max(0., std::min(1., std::abs(Gb_e) < 1e-6 ? 0. : (b * d * f) / (e * f * ( a + d ) + b * d * f + c * d * e)));
-      oCoverage->at(i) = std::max(0., std::min(1., std::abs(Gb_o) < 1e-6 ? 0. : (a * e * f) / (e * f * ( a + d ) + b * d * f + c * d * e)));
-      cCoverage->at(i) = std::max(0., std::min(1., std::abs(Gb_c) < 1e-6 ? 0. : (c * d * e) / (e * f * ( a + d ) + b * d * f + c * d * e)));
+      eCoverage->at(i) = std::max(
+          0., std::min(1., std::abs(Gb_e) < 1e-6
+                               ? 0.
+                               : (b * d * f) / (e * f * (a + d) + b * d * f +
+                                                c * d * e)));
+      oCoverage->at(i) = std::max(
+          0., std::min(1., std::abs(Gb_o) < 1e-6
+                               ? 0.
+                               : (a * e * f) / (e * f * (a + d) + b * d * f +
+                                                c * d * e)));
+      cCoverage->at(i) = std::max(
+          0., std::min(1., std::abs(Gb_c) < 1e-6
+                               ? 0.
+                               : (c * d * e) / (e * f * (a + d) + b * d * f +
+                                                c * d * e)));
     }
   }
 };
 
 template <typename NumericType, int D>
-class CF4O2Ion
+class CF4O2Ion final
     : public viennaray::Particle<CF4O2Ion<NumericType, D>, NumericType> {
 public:
-CF4O2Ion(const CF4O2Parameters<NumericType> &pParams)
+  explicit CF4O2Ion(const CF4O2Parameters<NumericType> &pParams)
       : params(pParams),
         A_energy(1. / (1. + params.Ions.n_l *
                                 (M_PI_2 / params.Ions.inflectAngle - 1.))),
@@ -222,7 +233,7 @@ CF4O2Ion(const CF4O2Parameters<NumericType> &pParams)
                         const unsigned int primID, const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        RNG &) override final {
+                        RNG &) override {
     // collect data for this hit
     const double cosTheta = -DotProduct(rayDir, geomNormal);
     NumericType angle = std::acos(std::max(std::min(cosTheta, 1.), 0.));
@@ -232,22 +243,12 @@ CF4O2Ion(const CF4O2Parameters<NumericType> &pParams)
     assert(rayWeight > 0. && "Invalid ray weight");
 
     NumericType A_sp = params.Si.A_sp;
-    NumericType B_sp = params.Si.B_sp;
     NumericType Eth_sp = params.Si.Eth_sp;
     if (MaterialMap::isMaterial(materialId, Material::Mask)) {
       A_sp = params.Mask.A_sp;
-      B_sp = params.Mask.B_sp;
       Eth_sp = params.Mask.Eth_sp;
     }
 
-    // NumericType f_sp_theta =
-    //     std::max((1 + B_sp * (1 - cosTheta * cosTheta)) *
-    //                  std::cos(angle / params.Si.theta_g_sp * M_PI_2),
-    //              0.);
-    // NumericType f_ie_theta =
-    //     std::max((1 + params.Si.B_ie * (1 - cosTheta * cosTheta)) *
-    //                  std::cos(angle / params.Si.theta_g_ie * M_PI_2),
-    //              0.);
     NumericType f_sp_theta = 1.;
     NumericType f_ie_theta = 1.;
     if (cosTheta < 0.5) {
@@ -256,7 +257,7 @@ CF4O2Ion(const CF4O2Parameters<NumericType> &pParams)
 
     const double sqrtE = std::sqrt(E);
     NumericType Y_sp =
-        params.Si.A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
+        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
     NumericType Y_Si =
         params.Si.A_ie * std::max(sqrtE - sqrt_E_th_ie_Si, 0.) * f_ie_theta;
     NumericType Y_O = params.Passivation.A_O_ie *
@@ -287,7 +288,7 @@ CF4O2Ion(const CF4O2Parameters<NumericType> &pParams)
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &Rng) override final {
+                    RNG &Rng) override {
     auto cosTheta = -DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
@@ -335,18 +336,19 @@ CF4O2Ion(const CF4O2Parameters<NumericType> &pParams)
           1., Vec3D<NumericType>{0., 0., 0.}};
     }
   }
-  void initNew(RNG &rngState) override final {
+  void initNew(RNG &rngState) override {
     std::normal_distribution<NumericType> normalDist{params.Ions.meanEnergy,
                                                      params.Ions.sigmaEnergy};
     do {
       E = normalDist(rngState);
     } while (E <= 0.);
   }
-  NumericType getSourceDistributionPower() const override final {
+  NumericType getSourceDistributionPower() const override {
     return params.Ions.exponent;
   }
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {"ionSputterFlux", "ionEnhancedFlux", "ionEnhancedOxidationFlux", "ionEnhancedPassivationFlux"};
+  [[nodiscard]] std::vector<std::string> getLocalDataLabels() const override {
+    return {"ionSputterFlux", "ionEnhancedFlux", "ionEnhancedOxidationFlux",
+            "ionEnhancedPassivationFlux"};
   }
 
 private:
@@ -361,19 +363,20 @@ private:
 };
 
 template <typename NumericType, int D>
-class CF4O2Etchant
+class CF4O2Etchant final
     : public viennaray::Particle<CF4O2Etchant<NumericType, D>, NumericType> {
   const CF4O2Parameters<NumericType> &params;
 
 public:
-CF4O2Etchant(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
+  explicit CF4O2Etchant(const CF4O2Parameters<NumericType> &pParams)
+      : params(pParams) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
                         const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        RNG &) override final {
+                        RNG &) override {
     NumericType S_eff = 1.;
     if (params.fluxIncludeSticking) {
       // F surface coverage
@@ -384,7 +387,8 @@ CF4O2Etchant(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
       const auto &phi_C = globalData->getVectorData(2)[primID];
       NumericType gamma_F = sticking(materialId);
       NumericType gamma_FO = stickingOxidized(materialId);
-      S_eff = gamma_F * std::max(1. - phi_F - phi_O - phi_C, 0.) + gamma_FO * phi_O;
+      S_eff =
+          gamma_F * std::max(1. - phi_F - phi_O - phi_C, 0.) + gamma_FO * phi_O;
     }
 
     localData.getVectorData(0)[primID] += rayWeight * S_eff;
@@ -394,7 +398,7 @@ CF4O2Etchant(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
+                    RNG &rngState) override {
 
     // F surface coverage
     const auto &phi_F = globalData->getVectorData(0)[primID];
@@ -405,20 +409,21 @@ CF4O2Etchant(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
     // Obtain the sticking probability
     NumericType gamma_F = sticking(materialId);
     NumericType gamma_FO = stickingOxidized(materialId);
-    NumericType S_eff = gamma_F * std::max(1. - phi_F - phi_O - phi_C, 0.) + gamma_FO * phi_O;
+    NumericType S_eff =
+        gamma_F * std::max(1. - phi_F - phi_O - phi_C, 0.) + gamma_FO * phi_O;
 
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Vec3D<NumericType>>{S_eff, direction};
   }
-  NumericType getSourceDistributionPower() const override final { return 1.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
+  NumericType getSourceDistributionPower() const override { return 1.; }
+  [[nodiscard]] std::vector<std::string> getLocalDataLabels() const override {
     return {"etchantFlux"};
   }
 
 private:
   NumericType sticking(const int materialId) const {
-    Material material = static_cast<Material>(materialId);
+    auto material = static_cast<Material>(materialId);
     auto gamma = params.gamma_F.find(material);
     if (gamma != params.gamma_F.end())
       return gamma->second;
@@ -429,9 +434,9 @@ private:
 
   // Sticking probability for oxidized SiGe or Si
   NumericType stickingOxidized(const int materialId) const {
-    Material material = static_cast<Material>(materialId);
+    auto material = static_cast<Material>(materialId);
     auto gamma = params.gamma_F_oxidized.find(material);
-    if (gamma != params.gamma_F_oxidized.end()) 
+    if (gamma != params.gamma_F_oxidized.end())
       return gamma->second;
 
     return 1.0; // Default
@@ -439,19 +444,20 @@ private:
 };
 
 template <typename NumericType, int D>
-class CF4O2Oxygen
+class CF4O2Oxygen final
     : public viennaray::Particle<CF4O2Oxygen<NumericType, D>, NumericType> {
   const CF4O2Parameters<NumericType> &params;
 
 public:
-CF4O2Oxygen(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
+  explicit CF4O2Oxygen(const CF4O2Parameters<NumericType> &pParams)
+      : params(pParams) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
                         const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        RNG &) override final {
+                        RNG &) override {
     NumericType S_eff = 1.;
     if (params.fluxIncludeSticking) {
       const auto &phi_F = globalData->getVectorData(0)[primID];
@@ -459,7 +465,8 @@ CF4O2Oxygen(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
       const auto &phi_C = globalData->getVectorData(2)[primID];
       NumericType gamma_O = sticking(materialId);
       NumericType gamma_OC = stickingPassivated(materialId);
-      S_eff = gamma_O * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_OC * phi_C;
+      S_eff =
+          gamma_O * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_OC * phi_C;
     }
 
     localData.getVectorData(0)[primID] += rayWeight * S_eff;
@@ -469,27 +476,28 @@ CF4O2Oxygen(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
+                    RNG &rngState) override {
 
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
     const auto &phi_C = globalData->getVectorData(2)[primID];
     NumericType gamma_O = sticking(materialId);
     NumericType gamma_OC = stickingPassivated(materialId);
-    NumericType S_eff = gamma_O * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_OC * phi_C;
+    NumericType S_eff =
+        gamma_O * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_OC * phi_C;
 
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Vec3D<NumericType>>{S_eff, direction};
   }
-  NumericType getSourceDistributionPower() const override final { return 1.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
+  NumericType getSourceDistributionPower() const override { return 1.; }
+  [[nodiscard]] std::vector<std::string> getLocalDataLabels() const override {
     return {"oxygenFlux"};
   }
 
 private:
   NumericType sticking(const int materialId) const {
-    Material material = static_cast<Material>(materialId);
+    auto material = static_cast<Material>(materialId);
     auto gamma = params.gamma_O.find(material);
     if (gamma != params.gamma_O.end())
       return gamma->second;
@@ -499,7 +507,7 @@ private:
   }
 
   NumericType stickingPassivated(const int materialId) const {
-    Material material = static_cast<Material>(materialId);
+    auto material = static_cast<Material>(materialId);
     auto gamma = params.gamma_O_passivated.find(material);
     if (gamma != params.gamma_O_passivated.end())
       return gamma->second;
@@ -510,19 +518,20 @@ private:
 };
 
 template <typename NumericType, int D>
-class CF4O2Polymer
+class CF4O2Polymer final
     : public viennaray::Particle<CF4O2Polymer<NumericType, D>, NumericType> {
   const CF4O2Parameters<NumericType> &params;
 
 public:
-CF4O2Polymer(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
+  explicit CF4O2Polymer(const CF4O2Parameters<NumericType> &pParams)
+      : params(pParams) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
                         const int materialId,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
-                        RNG &) override final {
+                        RNG &) override {
     NumericType S_eff = 1.;
     if (params.fluxIncludeSticking) {
       const auto &phi_F = globalData->getVectorData(0)[primID];
@@ -530,7 +539,8 @@ CF4O2Polymer(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
       const auto &phi_C = globalData->getVectorData(2)[primID];
       NumericType gamma_C = sticking(materialId);
       NumericType gamma_CO = stickingOxidized(materialId);
-      S_eff = gamma_C * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_CO * phi_O;
+      S_eff =
+          gamma_C * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_CO * phi_O;
     }
 
     localData.getVectorData(0)[primID] += rayWeight * S_eff;
@@ -540,27 +550,28 @@ CF4O2Polymer(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {}
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
+                    RNG &rngState) override {
 
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
     const auto &phi_C = globalData->getVectorData(2)[primID];
     NumericType gamma_C = sticking(materialId);
     NumericType gamma_CO = stickingOxidized(materialId);
-    NumericType S_eff = gamma_C * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_CO * phi_O;
+    NumericType S_eff =
+        gamma_C * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_CO * phi_O;
 
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Vec3D<NumericType>>{S_eff, direction};
   }
-  NumericType getSourceDistributionPower() const override final { return 1.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
+  NumericType getSourceDistributionPower() const override { return 1.; }
+  [[nodiscard]] std::vector<std::string> getLocalDataLabels() const override {
     return {"polymerFlux"};
   }
 
 private:
   NumericType sticking(const int materialId) const {
-    Material material = static_cast<Material>(materialId);
+    auto material = static_cast<Material>(materialId);
     auto gamma = params.gamma_C.find(material);
     if (gamma != params.gamma_C.end())
       return gamma->second;
@@ -570,7 +581,7 @@ private:
   }
 
   NumericType stickingOxidized(const int materialId) const {
-    Material material = static_cast<Material>(materialId);
+    auto material = static_cast<Material>(materialId);
     auto gamma = params.gamma_C_oxidized.find(material);
     if (gamma != params.gamma_C_oxidized.end())
       return gamma->second;
@@ -581,14 +592,10 @@ private:
 };
 } // namespace impl
 
-/// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
-/// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
-/// DOI: https://doi.org/10.1116/1.1830495
-/// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
-class CF4O2Etching : public ProcessModel<NumericType, D> {
+class CF4O2Etching final : public ProcessModel<NumericType, D> {
 public:
-CF4O2Etching() { initializeModel(); }
+  CF4O2Etching() { initializeModel(); }
 
   // All flux values are in units 1e15 / cm²
   CF4O2Etching(const double ionFlux, const double etchantFlux,
@@ -613,7 +620,8 @@ CF4O2Etching() { initializeModel(); }
     initializeModel();
   }
 
-  CF4O2Etching(const CF4O2Parameters<NumericType> &pParams) : params(pParams) {
+  explicit CF4O2Etching(const CF4O2Parameters<NumericType> &pParams)
+      : params(pParams) {
     initializeModel();
   }
 
@@ -627,8 +635,8 @@ CF4O2Etching() { initializeModel(); }
 private:
   void initializeModel() {
     // check if units have been set
-    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
-        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+    if (units::Length::getUnit() == units::Length::UNDEFINED ||
+        units::Time::getUnit() == units::Time::UNDEFINED) {
       Logger::getInstance().addError("Units have not been set.").print();
     }
 
