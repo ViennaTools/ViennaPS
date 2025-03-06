@@ -2,13 +2,13 @@
 #include <vcTestAsserts.hpp>
 
 #include <models/psAnisotropicProcess.hpp>
+#include <models/psCF4O2Etching.hpp>
 #include <models/psDirectionalEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
-#include <models/psCF4O2Etching.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 

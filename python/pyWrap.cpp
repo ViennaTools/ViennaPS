@@ -784,7 +784,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<>())
       .def_readwrite("rho", &CF4O2Parameters<T>::MaskType::rho)
       .def_readwrite("A_sp", &CF4O2Parameters<T>::MaskType::A_sp)
-      .def_readwrite("B_sp", &CF4O2Parameters<T>::MaskType::B_sp)
       .def_readwrite("Eth_sp", &CF4O2Parameters<T>::MaskType::Eth_sp);
 
   pybind11::class_<CF4O2Parameters<T>::SiType>(module, "CF4O2ParametersSi")
@@ -794,12 +793,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiType::beta_sigma)
       .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiType::Eth_sp)
       .def_readwrite("A_sp", &CF4O2Parameters<T>::SiType::A_sp)
-      .def_readwrite("B_sp", &CF4O2Parameters<T>::SiType::B_sp)
-      .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiType::theta_g_sp)
       .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiType::Eth_ie)
-      .def_readwrite("A_ie", &CF4O2Parameters<T>::SiType::A_ie)
-      .def_readwrite("B_ie", &CF4O2Parameters<T>::SiType::B_ie)
-      .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiType::theta_g_ie);
+      .def_readwrite("A_ie", &CF4O2Parameters<T>::SiType::A_ie);
 
   pybind11::class_<CF4O2Parameters<T>::SiGeType>(module, "CF4O2ParametersSiGe")
       .def(pybind11::init<>())
@@ -809,12 +804,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiGeType::beta_sigma)
       .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiGeType::Eth_sp)
       .def_readwrite("A_sp", &CF4O2Parameters<T>::SiGeType::A_sp)
-      .def_readwrite("B_sp", &CF4O2Parameters<T>::SiGeType::B_sp)
-      .def_readwrite("theta_g_sp", &CF4O2Parameters<T>::SiGeType::theta_g_sp)
       .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiGeType::Eth_ie)
       .def_readwrite("A_ie", &CF4O2Parameters<T>::SiGeType::A_ie)
-      .def_readwrite("B_ie", &CF4O2Parameters<T>::SiGeType::B_ie)
-      .def_readwrite("theta_g_ie", &CF4O2Parameters<T>::SiGeType::theta_g_ie)
       .def("k_sigma_SiGe", &CF4O2Parameters<T>::SiGeType::k_sigma_SiGe);
 
   pybind11::class_<CF4O2Parameters<T>::PassivationType>(

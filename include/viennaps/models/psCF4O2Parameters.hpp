@@ -14,12 +14,18 @@ template <typename NumericType> struct CF4O2Parameters {
   NumericType polymerFlux = 1.0e2;
 
   // sticking probabilities
-  std::unordered_map<Material, NumericType> gamma_F            = {{Material::Mask, 0.7}, {Material::Si, 0.7}, {Material::SiGe, 0.7}};
-  std::unordered_map<Material, NumericType> gamma_F_oxidized   = {{Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
-  std::unordered_map<Material, NumericType> gamma_O            = {{Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}};
-  std::unordered_map<Material, NumericType> gamma_O_passivated = {{Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
-  std::unordered_map<Material, NumericType> gamma_C            = {{Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}};
-  std::unordered_map<Material, NumericType> gamma_C_oxidized   = {{Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
+  std::unordered_map<Material, NumericType> gamma_F = {
+      {Material::Mask, 0.7}, {Material::Si, 0.7}, {Material::SiGe, 0.7}};
+  std::unordered_map<Material, NumericType> gamma_F_oxidized = {
+      {Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
+  std::unordered_map<Material, NumericType> gamma_O = {
+      {Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}};
+  std::unordered_map<Material, NumericType> gamma_O_passivated = {
+      {Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
+  std::unordered_map<Material, NumericType> gamma_C = {
+      {Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}};
+  std::unordered_map<Material, NumericType> gamma_C_oxidized = {
+      {Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
 
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
   bool fluxIncludeSticking = false;
@@ -31,7 +37,6 @@ template <typename NumericType> struct CF4O2Parameters {
 
     NumericType Eth_sp = 20.; // eV
     NumericType A_sp = 0.0139;
-    NumericType B_sp = 9.3;
   } Mask;
 
   // SiGe Material Properties
@@ -44,16 +49,13 @@ template <typename NumericType> struct CF4O2Parameters {
     NumericType Eth_ie = 14.; // eV
 
     NumericType A_sp = 0.03;
-    NumericType B_sp = 8.5;
-    NumericType theta_g_sp = M_PI_2; // Angle where yield is zero [rad]
-
     NumericType A_ie = 6.5;
-    NumericType B_ie = 0.75;
-    NumericType theta_g_ie = constants::degToRad(76); // Angle where yield is zero [rad]
 
     // Chemical etching (separate rates for F on O)
-    NumericType k_sigma = this->k_sigma_SiGe(x); // F chemical etching rate on SiGe (1e15 cm⁻²s⁻¹)
-    NumericType beta_sigma = 4.0e-2; // Oxygen dissociation rate for SiGe (1e15 cm⁻²s⁻¹)
+    NumericType k_sigma =
+        this->k_sigma_SiGe(x); // F chemical etching rate on SiGe (1e15 cm⁻²s⁻¹)
+    NumericType beta_sigma =
+        4.0e-2; // Oxygen dissociation rate for SiGe (1e15 cm⁻²s⁻¹)
 
     NumericType k_sigma_SiGe(const NumericType x) const {
       return 3.00e2 * std::exp(0.4675 * x);
@@ -70,13 +72,7 @@ template <typename NumericType> struct CF4O2Parameters {
     NumericType Eth_ie = 15.; // eV
 
     NumericType A_sp = 0.0337;
-    NumericType B_sp = 9.3;
-    NumericType theta_g_sp = M_PI_2; // angle where yield is zero [rad]
-
     NumericType A_ie = 7.;
-    NumericType B_ie = 0.8;
-    NumericType theta_g_ie =
-        constants::degToRad(78); // angle where yield is zero [rad]
 
     // chemical etching
     NumericType k_sigma = 3.0e2;     // in (1e15 cm⁻²s⁻¹)
@@ -100,9 +96,6 @@ template <typename NumericType> struct CF4O2Parameters {
     NumericType inflectAngle = 1.55334303;
     NumericType n_l = 10.;
     NumericType minAngle = 1.3962634;
-
-    NumericType thetaRMin = constants::degToRad(70.);
-    NumericType thetaRMax = constants::degToRad(90.);
   } Ions;
 };
 
