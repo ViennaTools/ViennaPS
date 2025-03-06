@@ -5,7 +5,7 @@ vps.setNumThreads(16)
 
 # create initial geometry
 paramDict = {
-    "numPillars": 5,
+    "numPillars": 3,
     "numLayers": 12,
     "layerHeight": 20.0,
     "maskWidth": 100.0,
@@ -15,7 +15,7 @@ paramDict = {
     "overEtch": 100.0,
     "lateralSpacing": 300.0,
     "periodicBoundary": False,
-    "gridDelta": 2.0,
+    "gridDelta": 2.5,
 }
 geometry = CreateGeometry(paramDict)
 
