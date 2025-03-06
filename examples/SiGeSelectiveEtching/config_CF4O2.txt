@@ -1,0 +1,22 @@
+timeUnit=second
+lengthUnit=nanometer
+
+# Process parameters
+processTime=10
+
+# all flux values are units 1e15 / cm²
+etchantFlux=5.e2
+oxygenFlux=5.e1
+polymerFlux=5.
+ionFlux=0.
+
+ionExponent=200
+meanEnergy=100 # eV
+sigmaEnergy=10 # eV
+A_O=2          # oxidation layer yield constant
+A_C=2          # polymer layer yield constant
+A_Si=7         # Si yield constant
+
+raysPerPoint=1000
+
+outputFile=final_y0p62

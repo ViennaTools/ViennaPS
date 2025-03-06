@@ -383,7 +383,8 @@ public:
               this->calculateCoverageDeltaMetric(coverages, prevStepCoverages);
           while (!this->checkCoveragesConvergence(metric)) {
             Logger::getInstance()
-                .addInfo("Coverages did not converge. Repeating flux "
+                .addInfo("Coverages did not converge within threshold. "
+                         "Repeating flux "
                          "calculation.")
                 .print();
 
@@ -516,8 +517,7 @@ public:
         std::stringstream stream;
         stream << std::fixed << std::setprecision(4)
                << "Process time: " << processDuration_ - remainingTime << " / "
-               << processDuration_ << " "
-               << units::Time::getInstance().toShortString();
+               << processDuration_ << " " << units::Time::toShortString();
         Logger::getInstance().addInfo(stream.str()).print();
       }
     }
