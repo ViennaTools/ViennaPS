@@ -1,0 +1,8 @@
+gridDelta = 3.
+yExtent = 100.
+
+# Geometry
+numBumps = 3
+bumpHeight = 100.
+bumpWidth = 190
+bumpDuty = 0.43

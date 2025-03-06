@@ -15,6 +15,8 @@ using namespace viennacore;
 
 template <typename NumericType> struct IBEParameters {
   NumericType planeWaferRate = 1.;
+  std::unordered_map<Material, NumericType> materialPlaneWaferRate;
+
   NumericType meanEnergy = 250;     // eV
   NumericType sigmaEnergy = 10;     // eV
   NumericType thresholdEnergy = 20; // eV
@@ -54,13 +56,20 @@ public:
     auto redeposition = rates->getScalarData("redepositionFlux");
 
     const NumericType norm =
-        params_.planeWaferRate /
+        1. /
         ((std::sqrt(params_.meanEnergy) - std::sqrt(params_.thresholdEnergy)) *
          params_.yieldFunction(std::cos(params_.tiltAngle * M_PI / 180.)));
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!isMaskMaterial(materialIds[i])) {
-        velocity->at(i) = -flux->at(i) * norm;
+        NumericType rate = params_.planeWaferRate;
+        if (auto material = MaterialMap::mapToMaterial(materialIds[i]);
+            params_.materialPlaneWaferRate.find(material) !=
+            params_.materialPlaneWaferRate.end()) {
+          rate = params_.materialPlaneWaferRate.at(material);
+        }
+
+        velocity->at(i) = -flux->at(i) * norm * rate;
         velocity->at(i) += redeposition->at(i) * params_.redepositionRate;
       }
     }
@@ -198,7 +207,7 @@ public:
   }
 
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                  const NumericType processDuration) override final {
+                  const NumericType processDuration) final {
     if (firstInit)
       return;
 
@@ -222,7 +231,7 @@ public:
     firstInit = true;
   }
 
-  void reset() override final { firstInit = false; }
+  void reset() final { firstInit = false; }
 
 private:
   bool firstInit = false;
