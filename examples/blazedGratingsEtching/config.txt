@@ -1,0 +1,23 @@
+gridDelta = 3.
+yExtent = 100.
+raysPerPoint = 1000
+
+# Geometry
+numBumps = 3
+bumpHeight = 100.
+bumpWidth = 190
+bumpDuty = 0.43
+
+phi1 = 10
+phi2 = 54
+
+yieldFactor = 1.075
+meanEnergy = 200
+exponent = 300
+
+ANSGM_Depth = 160
+
+etchTimeP1 = 60
+etchTimeP2 = 30
+etchTimeP3 = 30
+etchTimeP4 = 30
