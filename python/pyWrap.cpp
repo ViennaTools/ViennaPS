@@ -981,7 +981,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<IBEParameters<T>>(module, "IBEParameters")
       .def(pybind11::init<>())
       .def_readwrite("planeWaferRate", &IBEParameters<T>::planeWaferRate)
-      .def_readwrite("materialPlaneWaferRate", &IBEParameters<T>::materialPlaneWaferRate)
+      .def_readwrite("materialPlaneWaferRate",
+                     &IBEParameters<T>::materialPlaneWaferRate)
       .def_readwrite("meanEnergy", &IBEParameters<T>::meanEnergy)
       .def_readwrite("sigmaEnergy", &IBEParameters<T>::sigmaEnergy)
       .def_readwrite("thresholdEnergy", &IBEParameters<T>::thresholdEnergy)
