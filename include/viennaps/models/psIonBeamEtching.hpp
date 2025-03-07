@@ -10,6 +10,10 @@
 #include <functional>
 #include <random>
 
+#ifdef VIENNAPS_PYTHON_BUILD
+#include <Python.h>
+#endif
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -88,9 +92,20 @@ public:
                                NumericType(1));
     NumericType theta = std::acos(cosTheta);
 
+    NumericType yield;
+    // This throws an error in the Python build, because the Python GIL is not
+    // held when the yield function is called from multiple threads
+#ifdef VIENNAPS_PYTHON_BUILD
+    Py_BEGIN_ALLOW_THREADS;
+    yield = params_.yieldFunction(theta);
+    Py_END_ALLOW_THREADS;
+#else
+    yield = params_.yieldFunction(theta);
+#endif
+
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
-        params_.yieldFunction(theta);
+        yield;
 
     if (params_.redepositionRate > 0.)
       localData.getVectorData(1)[primID] += redepositionWeight_;
@@ -209,6 +224,33 @@ public:
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
     firstInit = true;
+
+    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
+      std::stringstream ss;
+      ss << "Initialized IonBeamEtching with parameters:\n"
+         << "\tPlane wafer rate: " << params_.planeWaferRate << "\n"
+         << "\tMaterial plane wafer rate:\n";
+      for (const auto &[mat, rate] : params_.materialPlaneWaferRate) {
+        ss << "\t    " << MaterialMap::getMaterialName(mat) << ": " << rate
+           << "\n";
+      }
+      ss << "\tMean energy: " << params_.meanEnergy << " eV\n"
+         << "\tSigma energy: " << params_.sigmaEnergy << " eV\n"
+         << "\tThreshold energy: " << params_.thresholdEnergy << " eV\n"
+         << "\tExponent: " << params_.exponent << "\n"
+         << "\tn_l: " << params_.n_l << "\n"
+         << "\tInflection angle: " << params_.inflectAngle << " degree\n"
+         << "\tMinimum angle: " << params_.minAngle << " degree\n"
+         << "\tTilt angle: " << params_.tiltAngle << " degree\n"
+         << "\tRedeposition threshold: " << params_.redepositionThreshold
+         << "\n"
+         << "\tRedeposition rate: " << params_.redepositionRate << "\n"
+         << "\tMask materials:\n";
+      for (const auto &mat : maskMaterials_) {
+        ss << "\t    " << MaterialMap::getMaterialName(mat) << "\n";
+      }
+      Logger::getInstance().addDebug(ss.str()).print();
+    }
   }
 
   void reset() final { firstInit = false; }
