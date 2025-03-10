@@ -2,6 +2,7 @@
 
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
+#include "psIonBeamParameters.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -9,30 +10,15 @@
 #include <functional>
 #include <random>
 
+#ifdef VIENNAPS_PYTHON_BUILD
+#include <Python.h>
+#endif
+
 namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType> struct IBEParameters {
-  NumericType planeWaferRate = 1.;
-  NumericType meanEnergy = 250;     // eV
-  NumericType sigmaEnergy = 10;     // eV
-  NumericType thresholdEnergy = 20; // eV
-  NumericType exponent = 100;
-  NumericType n_l = 10;
-  NumericType inflectAngle = 89; // degree
-  NumericType minAngle = 5;      // degree
-  NumericType tiltAngle = 0;     // degree
-  std::function<NumericType(NumericType)> yieldFunction =
-      [](NumericType theta) { return 1.; };
-
-  // Redeposition
-  NumericType redepositionThreshold = 0.1;
-  NumericType redepositionRate = 0.0;
-};
-
 namespace impl {
-
 template <typename NumericType>
 class IBESurfaceModel : public SurfaceModel<NumericType> {
   const IBEParameters<NumericType> params_;
@@ -54,13 +40,20 @@ public:
     auto redeposition = rates->getScalarData("redepositionFlux");
 
     const NumericType norm =
-        params_.planeWaferRate /
+        1. /
         ((std::sqrt(params_.meanEnergy) - std::sqrt(params_.thresholdEnergy)) *
          params_.yieldFunction(std::cos(params_.tiltAngle * M_PI / 180.)));
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!isMaskMaterial(materialIds[i])) {
-        velocity->at(i) = -flux->at(i) * norm;
+        NumericType rate = params_.planeWaferRate;
+        if (auto material = MaterialMap::mapToMaterial(materialIds[i]);
+            params_.materialPlaneWaferRate.find(material) !=
+            params_.materialPlaneWaferRate.end()) {
+          rate = params_.materialPlaneWaferRate.at(material);
+        }
+
+        velocity->at(i) = -flux->at(i) * norm * rate;
         velocity->at(i) += redeposition->at(i) * params_.redepositionRate;
       }
     }
@@ -79,11 +72,11 @@ private:
 };
 
 template <typename NumericType, int D>
-class IBEIonWithRedeposition
+class IBEIonWithRedeposition final
     : public viennaray::Particle<IBEIonWithRedeposition<NumericType, D>,
                                  NumericType> {
 public:
-  IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
+  explicit IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
       : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.),
         A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
@@ -94,14 +87,25 @@ public:
                         const unsigned int primID, const int,
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
+                        RNG &) override {
     auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
                                NumericType(1));
     NumericType theta = std::acos(cosTheta);
 
+    NumericType yield;
+    // This throws an error in the Python build, because the Python GIL is not
+    // held when the yield function is called from multiple threads
+#ifdef VIENNAPS_PYTHON_BUILD
+    Py_BEGIN_ALLOW_THREADS;
+    yield = params_.yieldFunction(theta);
+    Py_END_ALLOW_THREADS;
+#else
+    yield = params_.yieldFunction(theta);
+#endif
+
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
-        params_.yieldFunction(theta);
+        yield;
 
     if (params_.redepositionRate > 0.)
       localData.getVectorData(1)[primID] += redepositionWeight_;
@@ -112,7 +116,7 @@ public:
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
-                    RNG &rngState) override final {
+                    RNG &rngState) override {
 
     // Small incident angles are reflected with the energy fraction centered at
     // 0
@@ -144,7 +148,7 @@ public:
         redepositionWeight_ > params_.redepositionThreshold) {
       energy_ = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, rngState, std::max(incAngle, minAngle_));
+          rayDir, geomNormal, rngState, M_PI_2 - std::min(incAngle, minAngle_));
       return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
       return std::pair<NumericType, Vec3D<NumericType>>{
@@ -152,18 +156,18 @@ public:
     }
   }
 
-  void initNew(RNG &rngState) override final {
+  void initNew(RNG &rngState) override {
     do {
       energy_ = normalDist_(rngState);
     } while (energy_ < params_.thresholdEnergy);
     redepositionWeight_ = 0.;
   }
 
-  NumericType getSourceDistributionPower() const override final {
+  NumericType getSourceDistributionPower() const override {
     return params_.exponent;
   }
 
-  std::vector<std::string> getLocalDataLabels() const override final {
+  std::vector<std::string> getLocalDataLabels() const override {
     return {"ionFlux", "redepositionFlux"};
   }
 
@@ -184,7 +188,7 @@ class IonBeamEtching : public ProcessModel<NumericType, D> {
 public:
   IonBeamEtching() = default;
 
-  IonBeamEtching(const std::vector<Material> &maskMaterial)
+  explicit IonBeamEtching(const std::vector<Material> &maskMaterial)
       : maskMaterials_(maskMaterial) {}
 
   IonBeamEtching(const std::vector<Material> &maskMaterial,
@@ -198,7 +202,7 @@ public:
   }
 
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                  const NumericType processDuration) override final {
+                  const NumericType processDuration) final {
     if (firstInit)
       return;
 
@@ -220,9 +224,36 @@ public:
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
     firstInit = true;
+
+    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
+      std::stringstream ss;
+      ss << "Initialized IonBeamEtching with parameters:\n"
+         << "\tPlane wafer rate: " << params_.planeWaferRate << "\n"
+         << "\tMaterial plane wafer rate:\n";
+      for (const auto &[mat, rate] : params_.materialPlaneWaferRate) {
+        ss << "\t    " << MaterialMap::getMaterialName(mat) << ": " << rate
+           << "\n";
+      }
+      ss << "\tMean energy: " << params_.meanEnergy << " eV\n"
+         << "\tSigma energy: " << params_.sigmaEnergy << " eV\n"
+         << "\tThreshold energy: " << params_.thresholdEnergy << " eV\n"
+         << "\tExponent: " << params_.exponent << "\n"
+         << "\tn_l: " << params_.n_l << "\n"
+         << "\tInflection angle: " << params_.inflectAngle << " degree\n"
+         << "\tMinimum angle: " << params_.minAngle << " degree\n"
+         << "\tTilt angle: " << params_.tiltAngle << " degree\n"
+         << "\tRedeposition threshold: " << params_.redepositionThreshold
+         << "\n"
+         << "\tRedeposition rate: " << params_.redepositionRate << "\n"
+         << "\tMask materials:\n";
+      for (const auto &mat : maskMaterials_) {
+        ss << "\t    " << MaterialMap::getMaterialName(mat) << "\n";
+      }
+      Logger::getInstance().addDebug(ss.str()).print();
+    }
   }
 
-  void reset() override final { firstInit = false; }
+  void reset() final { firstInit = false; }
 
 private:
   bool firstInit = false;

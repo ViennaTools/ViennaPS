@@ -20,7 +20,7 @@ class TranslationField : public viennals::VelocityField<NumericType> {
 
 public:
   TranslationField(
-      SmartPointer<viennaps::VelocityField<NumericType, D>> velocityField,
+      SmartPointer<::viennaps::VelocityField<NumericType, D>> velocityField,
       SmartPointer<MaterialMap> const &materialMap)
       : modelVelocityField_(velocityField), materialMap_(materialMap),
         translationMethod_(velocityField->getTranslationFieldOptions()) {}
@@ -93,7 +93,7 @@ public:
 private:
   SmartPointer<TranslatorType> translator_;
   KDTree<NumericType, Vec3D<NumericType>> kdTree_;
-  const SmartPointer<viennaps::VelocityField<NumericType, D>>
+  const SmartPointer<::viennaps::VelocityField<NumericType, D>>
       modelVelocityField_;
   const SmartPointer<MaterialMap> materialMap_;
   const int translationMethod_ = 1;
