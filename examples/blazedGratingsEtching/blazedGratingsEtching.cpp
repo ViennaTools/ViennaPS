@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   Logger::setLogLevel(LogLevel::INFO);
 
   // Parse the parameters
-  utils::Parameters params;
+  viennacore::util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

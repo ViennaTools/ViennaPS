@@ -3,7 +3,7 @@
 #include "psProcessBase.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
-#include "psUtils.hpp"
+#include "psUtil.hpp"
 
 #include <lsAdvect.hpp>
 
@@ -102,7 +102,7 @@ protected:
         rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
     } else {
       for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = utils::convertBoundaryCondition(
+        rayBoundaryCondition[i] = util::convertBoundaryCondition(
             domain_->getGrid().getBoundaryConditions(i));
     }
     rayTracer.setBoundaryConditions(rayBoundaryCondition);
@@ -118,7 +118,7 @@ protected:
     if (auto primaryDirection = processModel_->getPrimaryDirection()) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
-                   utils::arrayToString(primaryDirection.value()))
+                   util::arrayToString(primaryDirection.value()))
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }

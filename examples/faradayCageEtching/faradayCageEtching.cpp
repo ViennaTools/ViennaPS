@@ -2,7 +2,7 @@
 #include <models/psFaradayCageEtching.hpp>
 
 #include <psProcess.hpp>
-#include <psUtils.hpp>
+#include <psUtil.hpp>
 
 namespace ps = viennaps;
 
@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   omp_set_num_threads(16);
 
   // Parse the parameters
-  ps::utils::Parameters params;
+  ps::util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

@@ -1,7 +1,7 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psAnisotropicProcess.hpp>
 #include <psProcess.hpp>
-#include <psUtils.hpp>
+#include <psUtil.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;
@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
   constexpr int D = 3;
 
   // Parse the parameters
-  ps::utils::Parameters params;
+  ps::util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

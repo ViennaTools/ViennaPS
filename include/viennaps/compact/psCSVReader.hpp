@@ -1,13 +1,14 @@
 #pragma once
 
+#include <vcLogger.hpp>
+#include <vcUtil.hpp>
+
 #include <fstream>
 #include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "../psUtils.hpp"
 
 namespace viennaps {
 
@@ -87,7 +88,7 @@ public:
         std::vector<NumericType> a;
         int i = 0;
         while (std::getline(iss, tmp, delimiter)) {
-          auto valueOpt = utils::safeConvert<NumericType>(tmp);
+          auto valueOpt = util::safeConvert<NumericType>(tmp);
           if (valueOpt)
             a.push_back(valueOpt.value());
           else {

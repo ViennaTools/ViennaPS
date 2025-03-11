@@ -1,6 +1,6 @@
 #pragma once
 
-#include "psUtils.hpp"
+#include "psUtil.hpp"
 #include <hrleGrid.hpp>
 #include <vcLogger.hpp>
 
@@ -107,7 +107,7 @@ public:
     if constexpr (D == 3)
       std::cout << "\tY extent: " << yExtent() << std::endl;
     std::cout << "\tPeriodic boundary: "
-              << utils::boolString(hasPeriodicBoundary()) << std::endl;
+              << util::boolString(hasPeriodicBoundary()) << std::endl;
   }
 
   void halveXAxis() {

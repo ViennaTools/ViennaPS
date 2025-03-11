@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
   omp_set_num_threads(1);
 #endif
 
-  ps::utils::Parameters params;
+  ps::util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

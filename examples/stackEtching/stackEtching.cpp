@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   Logger::setLogLevel(LogLevel::INTERMEDIATE);
 
   // Parse the parameters
-  utils::Parameters params;
+  util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

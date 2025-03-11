@@ -1,5 +1,5 @@
 #include <geometries/psMakeHole.hpp>
-#include <psUtils.hpp>
+#include <psUtil.hpp>
 
 #include <models/psgSF6O2Etching.hpp>
 #include <psgProcess.hpp>
@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
   omp_set_num_threads(16);
 
   // Parse the parameters
-  utils::Parameters params;
+  util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

@@ -6,12 +6,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../psUtils.hpp"
 #include "psCSVReader.hpp"
 #include "psCSVWriter.hpp"
 #include "psDataSource.hpp"
 
 #include <vcLogger.hpp>
+#include <vcUtil.hpp>
 
 namespace viennaps {
 
@@ -35,7 +35,7 @@ class CSVDataSource : public DataSource<NumericType> {
   processPositionalParam(const std::string &input,
                          std::vector<NumericType> &positionalParameters) {
     // Positional parameter
-    auto v = utils::safeConvert<NumericType>(input);
+    auto v = util::safeConvert<NumericType>(input);
     if (v.has_value())
       positionalParameters.push_back(v.value());
     else {
@@ -55,7 +55,7 @@ class CSVDataSource : public DataSource<NumericType> {
 
     std::smatch smatch;
     if (std::regex_search(input, smatch, rgx) && smatch.size() == 3) {
-      auto v = utils::safeConvert<NumericType>(smatch[2]);
+      auto v = util::safeConvert<NumericType>(smatch[2]);
       if (v.has_value())
         namedParameters.insert({smatch[1], v.value()});
       else {

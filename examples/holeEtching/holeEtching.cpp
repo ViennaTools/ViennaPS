@@ -2,7 +2,7 @@
 #include <models/psSF6O2Etching.hpp>
 
 #include <psProcess.hpp>
-#include <psUtils.hpp>
+#include <psUtil.hpp>
 
 using namespace viennaps;
 
@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   omp_set_num_threads(16);
 
   // Parse the parameters
-  utils::Parameters params;
+  util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
@@ -55,8 +55,8 @@ int main(int argc, char *argv[]) {
   process.setCoverageDeltaThreshold(1e-4);
   process.setNumberOfRaysPerPoint(params.get<unsigned>("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
-  process.setIntegrationScheme(
-      params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));
+  process.setIntegrationScheme(util::convertIntegrationScheme(
+      params.get<std::string>("integrationScheme")));
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");
