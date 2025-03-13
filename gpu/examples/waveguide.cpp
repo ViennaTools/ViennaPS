@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Using " << omp_get_max_threads() << " threads" << std::endl;
 
   // Parse the parameters
-  ps::utils::Parameters params;
+  ps::util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

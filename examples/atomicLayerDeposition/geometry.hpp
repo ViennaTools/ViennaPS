@@ -4,7 +4,7 @@
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
 #include <psDomain.hpp>
-#include <psUtils.hpp>
+#include <psUtil.hpp>
 
 using namespace viennacore;
 

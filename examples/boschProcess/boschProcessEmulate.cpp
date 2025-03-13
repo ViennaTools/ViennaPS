@@ -3,14 +3,14 @@
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <psProcess.hpp>
-#include <psUtils.hpp>
+#include <psUtil.hpp>
 
 using namespace viennaps;
 constexpr int D = 2;
 using NumericType = double;
 
 void etch(SmartPointer<Domain<NumericType, D>> &domain,
-          utils::Parameters &params) {
+          util::Parameters &params) {
   std::cout << "  - Etching - " << std::endl;
   DirectionalEtching<NumericType, D>::RateSet rateSet;
   rateSet.direction = {0.};
@@ -27,7 +27,7 @@ void etch(SmartPointer<Domain<NumericType, D>> &domain,
 }
 
 void punchThrough(SmartPointer<Domain<NumericType, D>> &domain,
-                  utils::Parameters &params) {
+                  util::Parameters &params) {
   std::cout << "  - Punching through - " << std::endl;
   DirectionalEtching<NumericType, D>::RateSet rateSet;
   rateSet.direction = {0.};
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
   omp_set_num_threads(16);
 
   // Parse the parameters
-  utils::Parameters params;
+  util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {

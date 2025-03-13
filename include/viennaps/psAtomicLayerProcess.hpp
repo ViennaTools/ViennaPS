@@ -3,7 +3,7 @@
 #include "psDomain.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
-#include "psUtils.hpp"
+#include "psUtil.hpp"
 
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
@@ -156,7 +156,7 @@ public:
 
     // Map the domain boundary to the ray tracing boundaries
     for (unsigned i = 0; i < D; ++i)
-      rayBoundaryCondition[i] = utils::convertBoundaryCondition(
+      rayBoundaryCondition[i] = util::convertBoundaryCondition(
           pDomain_->getGrid().getBoundaryConditions(i));
 
     rayTracer.setSourceDirection(sourceDirection_);
@@ -167,7 +167,7 @@ public:
     if (primaryDirection) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
-                   utils::arrayToString(primaryDirection.value()))
+                   util::arrayToString(primaryDirection.value()))
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }

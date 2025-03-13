@@ -71,7 +71,7 @@
 #include <psToDiskMesh.hpp>
 
 // other
-#include <psUtils.hpp>
+#include <psUtil.hpp>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
@@ -1611,7 +1611,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");
-  m_util.def("convertIntegrationScheme", &utils::convertIntegrationScheme,
+  m_util.def("convertIntegrationScheme", &util::convertIntegrationScheme,
              "Convert a string to an integration scheme.");
 
   // Planarize

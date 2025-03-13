@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
   ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
 
   // Parse the parameters
-  ps::utils::Parameters params;
+  ps::util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
