@@ -95,6 +95,7 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 1.3.1
+  GIT_TAG vector-type
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
@@ -114,6 +115,7 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 4.2.2
+  GIT_TAG timestep
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
