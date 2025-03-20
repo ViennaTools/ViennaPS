@@ -37,9 +37,9 @@ int main(int argc, char **argv) {
       mask->layerToLevelSet(0 /*layer*/, 0 /*base z position*/, 0.1 /*height*/);
   geometry->insertNextLevelSet(layer0);
 
-  auto layer1 = mask->layerToLevelSet(1 /*layer*/, -0.15 /*base z position*/,
-                                      0.45 /*height*/);
-  geometry->insertNextLevelSet(layer1);
+//   auto layer1 = mask->layerToLevelSet(1 /*layer*/, -0.15 /*base z position*/,
+//                                       0.45 /*height*/);
+//   geometry->insertNextLevelSet(layer1);
 
   geometry->saveSurfaceMesh("Geometry.vtp", true /* add material IDs */);
 

@@ -106,6 +106,14 @@ template <class T> struct Element {
   int16_t layer;
   int32_t plexNumber = -1;
   std::vector<std::array<T, 3>> pointCloud;
+
+  // Member function to print pointCloud
+  void print() const {
+    std::cout << "Point Cloud Data:\n";
+    for (const auto& point : pointCloud) {
+        std::cout << "(" << point[0] << ", " << point[1] << ", " << point[2] << ")\n";
+    }
+  }
 };
 
 template <class T> struct SRef {
