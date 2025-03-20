@@ -7,9 +7,11 @@
 #include <queue>
 #include <fstream>
 
-class psGDSMaskProximity {
+namespace viennaps {
+
+template <class NumericType> class psGDSMaskProximity {
     public:
-        using Grid = std::vector<std::vector<double>>;
+        using Grid = std::vector<std::vector<NumericType>>;
         using Polygon = std::vector<std::pair<double, double>>;
             
         psGDSMaskProximity(double gridRes, int gridSizeX, int gridSizeY)
@@ -291,3 +293,5 @@ class psGDSMaskProximity {
             return output;
         }
     };
+
+} // namespace viennaps

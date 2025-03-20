@@ -90,7 +90,7 @@ public:
           double polygonMaxX = 70.0;
           double polygonMaxY = 70.0;
           double proximitySigma = 0.01;
-          psGDSMaskProximity proximityEffect(proximitySigma, polygonMaxX, polygonMaxY);
+          psGDSMaskProximity<NumericType> proximityEffect(proximitySigma, polygonMaxX, polygonMaxY);
           proximityEffect.addPolygons(allPolygons);
 
           double forwardSigma = 3.0;
