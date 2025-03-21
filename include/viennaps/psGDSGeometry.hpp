@@ -74,6 +74,7 @@ public:
         if (auto contains = str.containsLayers.find(layer);
             contains != str.containsLayers.end()) {
 
+          int i = 0;
           // Step 1: Collect all polygons across the entire layer
           std::vector<std::vector<std::pair<double, double>>> allPolygons;
           for (auto &el : str.elements) {
@@ -82,26 +83,26 @@ public:
               for (const auto &point : el.pointCloud) {
                 polygon.push_back(std::pair<double, double>(point[0], point[1]));
               }
+              viennaps::GDS::saveContoursToCSV(polygon, "GDSII_layer" + std::to_string(layer) + "_polygon" + std::to_string(i) + ".csv");
+              i++;
               allPolygons.push_back(polygon);
             }
           }
 
           // Step 2: Apply Gaussian convolution to simulate global proximity effects
-          double polygonMaxX = 70.0;
-          double polygonMaxY = 70.0;
-          double proximitySigma = 0.01;
-          psGDSMaskProximity<NumericType> proximityEffect(proximitySigma, polygonMaxX, polygonMaxY);
+          double proximitySigma = 0.005;
+          psGDSMaskProximity<NumericType> proximityEffect(proximitySigma, bounds_);
           proximityEffect.addPolygons(allPolygons);
 
-          double forwardSigma = 3.0;
-          double backwardSigma = 50.0;
-          proximityEffect.applyProximityEffects(forwardSigma, backwardSigma);
+          double forwardSigma = 6.0;
+          double backwardSigma = 60.0;
+          proximityEffect.applyProximityEffects(forwardSigma, backwardSigma, layer);
 
           // Step 3: Extract modified exposure contours at threshold 0.5
           std::vector<std::vector<std::pair<double, double>>> modifiedPolygons = 
-              proximityEffect.extractContoursAtThreshold(0.5);
+              proximityEffect.extractContoursAtThreshold(0.7);
 
-          int i = 0;
+          i = 0;
           auto elementIt = str.elements.begin();  // Use iterator to avoid reallocation issues
 
           while (elementIt != str.elements.end() && !modifiedPolygons.empty()) {
@@ -109,19 +110,16 @@ public:
                   elementIt->pointCloud.clear();
 
                   // Assign polygon to current element
-                  std::vector<std::pair<double, double>> simplifiedPolygon = simplifyPolygon(modifiedPolygons.front(), 0.10);
-                  proximityEffect.saveContoursToCSV(simplifiedPolygon, "simple_polygon_" + std::to_string(i) + ".csv");
+                  std::vector<std::pair<double, double>> simplifiedPolygon = simplifyPolygon(modifiedPolygons.front(), 0.05, 0.35);
+                  viennaps::GDS::saveContoursToCSV(modifiedPolygons.front(), "layer" + std::to_string(layer) + "_polygon" + std::to_string(i) + ".csv");
+                  viennaps::GDS::saveContoursToCSV(simplifiedPolygon, "layer" + std::to_string(layer) + "_simplePolygon" + std::to_string(i) + ".csv");
                   i++;
 
-                  // Compute scaling factors
-                  double scaleX = (bounds_[1] - bounds_[0]) / (polygonMaxX);
-                  double scaleY = (bounds_[3] - bounds_[2]) / (polygonMaxY);
-
                   for (const auto &point : simplifiedPolygon) {
-                      double scaledX = (point.first) * scaleX + bounds_[0];
-                      double scaledY = (point.second) * scaleY + bounds_[2];
-
-                      elementIt->pointCloud.push_back({scaledX, scaledY, 0.});
+                    double scaledX = point.first * proximitySigma + bounds_[0];
+                    double scaledY = point.second * proximitySigma + bounds_[2];
+                
+                    elementIt->pointCloud.push_back({scaledX, scaledY, 0.});
                   }
 
                   if (elementIt->elementType == GDS::ElementType::elBox) {
@@ -300,36 +298,39 @@ private:
 
   // Function to simplify a polygon using gradient-based filtering
   std::vector<std::pair<double, double>> simplifyPolygon(
-      const std::vector<std::pair<double, double>>& polygon, 
-      double angleThreshold = 0.05) { // Adjust angle threshold as needed
-      if (polygon.size() < 5) return polygon; // Not enough points to simplify
+    const std::vector<std::pair<double, double>>& polygon, 
+    double angleThreshold = 0.05, 
+    double distanceThreshold = 0.5) {  // Adjust angle threshold and grid spacing as needed
 
-      std::vector<std::pair<double, double>> simplifiedPolygon;
-      simplifiedPolygon.push_back(polygon.front()); // Keep first point
+    if (polygon.size() < 5) return polygon; // Not enough points to simplify
 
-      for (size_t i = 1; i < polygon.size() - 1; ++i) {
-          double angle = computeAngle(polygon[i - 1], polygon[i], polygon[i + 1]);
-          if (angle > angleThreshold) { // Only keep points with significant angle change
-              simplifiedPolygon.push_back(polygon[i]);
-          }
-      }
+    std::vector<std::pair<double, double>> simplifiedPolygon;
+    simplifiedPolygon.push_back(polygon.front()); // Keep first point
 
-      simplifiedPolygon.push_back(polygon.back()); // Keep last point
+    for (size_t i = 1; i < polygon.size() - 1; ++i) {
+        double angle = computeAngle(polygon[i - 1], polygon[i], polygon[i + 1]);
 
-      // Find the two adjacent points that are farthest apart
-      size_t farthestIdx = findFarthestAdjacentPoints(simplifiedPolygon);
+      if (angle > angleThreshold && euclideanDistance(polygon[i], simplifiedPolygon.back()) >= distanceThreshold) {          
+            simplifiedPolygon.push_back(polygon[i]);
+        }
+    }
 
-      // Reorder the polygon so the farthest adjacent points are first and last
-      std::vector<std::pair<double, double>> reorderedPolygon;
-      reorderedPolygon.insert(reorderedPolygon.begin(), simplifiedPolygon.begin() + farthestIdx + 1, simplifiedPolygon.end());
-      reorderedPolygon.insert(reorderedPolygon.end(), simplifiedPolygon.begin(), simplifiedPolygon.begin() + farthestIdx);
+    simplifiedPolygon.push_back(polygon.back()); // Keep last point
 
-      // Ensure the polygon remains **open** by removing duplicate endpoints
-      if (reorderedPolygon.front() == reorderedPolygon.back()) {
-        reorderedPolygon.pop_back(); // Remove last point if it duplicates the first
-      }
+    // Find the two adjacent points that are farthest apart
+    size_t farthestIdx = findFarthestAdjacentPoints(simplifiedPolygon);
 
-      return reorderedPolygon;
+    // Reorder the polygon so the farthest adjacent points are first and last
+    std::vector<std::pair<double, double>> reorderedPolygon;
+    reorderedPolygon.insert(reorderedPolygon.begin(), simplifiedPolygon.begin() + farthestIdx + 1, simplifiedPolygon.end());
+    reorderedPolygon.insert(reorderedPolygon.end(), simplifiedPolygon.begin(), simplifiedPolygon.begin() + farthestIdx);
+
+    // Ensure the polygon remains open by removing duplicate endpoints
+    if (reorderedPolygon.front() == reorderedPolygon.back()) {
+      reorderedPolygon.pop_back();
+    }
+
+    return reorderedPolygon;
   }
 
   GDS::Structure<NumericType> *getStructure(const std::string &strName) {

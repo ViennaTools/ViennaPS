@@ -13,9 +13,20 @@ template <class NumericType> class psGDSMaskProximity {
     public:
         using Grid = std::vector<std::vector<NumericType>>;
         using Polygon = std::vector<std::pair<double, double>>;
-            
-        psGDSMaskProximity(double gridRes, int gridSizeX, int gridSizeY)
-            : gridResolution(gridRes), gridSizeX(gridSizeX), gridSizeY(gridSizeY) {
+    
+        // Constructor: Initialize rasterization grid using GDSGeometry bounds_
+        psGDSMaskProximity(double gridRes, const double bounds[6])
+            : gridResolution(gridRes) {
+            // Compute grid size based on total bounds
+            gridMinX = bounds[0];
+            gridMaxX = bounds[1];
+            gridMinY = bounds[2];
+            gridMaxY = bounds[3];
+        
+            gridSizeX = static_cast<int>(std::ceil((gridMaxX - gridMinX) / gridResolution));
+            gridSizeY = static_cast<int>(std::ceil((gridMaxY - gridMinY) / gridResolution));
+
+            // Initialize the exposure grid with full domain size
             exposureGrid = Grid(gridSizeY, std::vector<double>(gridSizeX, 0.0));
         }
     
@@ -25,16 +36,15 @@ template <class NumericType> class psGDSMaskProximity {
             }
         }
     
-        void applyProximityEffects(double sigmaForward, double sigmaBack) {
+        void applyProximityEffects(double sigmaForward, double sigmaBack, int layer = 0) {
             forwardScattering = applyGaussianBlur2D(exposureGrid, sigmaForward);
             backScattering = applyGaussianBlur2D(exposureGrid, sigmaBack);
             finalExposure = combineExposures();
             // if (lsInternal::Logger::getLogLevel() >= 4)
-                saveFinalExposureToCSV("final_exposure.csv");
+                saveGridsToCSV();
         }
     
         std::vector<Polygon> extractContoursAtThreshold(double threshold = 0.5) {
-            // std::cout << "Extracting contours at threshold " << threshold << std::endl;
         
             if (finalExposure.empty() || finalExposure[0].empty()) {
                 std::cerr << "Error: finalExposure grid is empty!" << std::endl;
@@ -46,7 +56,6 @@ template <class NumericType> class psGDSMaskProximity {
             std::vector<Polygon> modifiedPolygons;
             Polygon allContours;
         
-            // Directions for Manhattan neighbors (up, down, left, right)
             std::vector<std::pair<int, int>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
         
             for (size_t y = 0; y < rows; ++y) {
@@ -70,15 +79,16 @@ template <class NumericType> class psGDSMaskProximity {
                             double T_high = finalExposure[y][x];  // Current pixel (above threshold)
                             double T_low = finalExposure[ny][nx]; // Neighbor pixel (below threshold)
                             double interpFactor = (T_high - threshold) / (T_high - T_low);
-                            double newX = x + (dx * interpFactor); // * gridResolution;
-                            double newY = y + (dy * interpFactor); // * gridResolution;
+                            double newX = x + (dx * interpFactor);
+                            double newY = y + (dy * interpFactor);
                             allContours.push_back({newX, newY});
                         }
                     }
                 }
             }
 
-            saveContoursToCSV(allContours, "contours.csv");
+            static int count = 0;
+            viennaps::GDS::saveContoursToCSV(allContours, "layer" + std::to_string(count++) + "_allContours.csv");
         
             // Group allContours into separate polygons
             std::vector<bool> visited(allContours.size(), false);
@@ -116,85 +126,75 @@ template <class NumericType> class psGDSMaskProximity {
                 modifiedPolygons.push_back(currentPolygon);
             }
 
-            int i = 0;
-            for (auto currentPoly : modifiedPolygons) {
-                saveContoursToCSV(currentPoly, "polygon_" + std::to_string(i) + ".csv");
-                i++;
-            }
-
             return modifiedPolygons;
         }
                                 
-        void saveFinalExposureToCSV(const std::string& filename) {
-            if (finalExposure.empty() || finalExposure[0].empty()) {
-                std::cerr << "Error: finalExposure grid is empty, cannot save CSV!" << std::endl;
-                return;
-            }
-        
-            std::ofstream file(filename);
-            if (!file) {
-                std::cerr << "Error: Cannot open file " << filename << " for writing!" << std::endl;
-                return;
-            }
-        
-            for (size_t y = 0; y < finalExposure.size(); ++y) {
-                for (size_t x = 0; x < finalExposure[y].size(); ++x) {
-                    file << finalExposure[y][x];
-                    if (x < finalExposure[y].size() - 1)
-                        file << ",";
-                }
-                file << "\n";
-            }
-        
-            file.close();
-            // std::cout << "Saved finalExposure to " << filename << std::endl;
-        }
-
-        void saveContoursToCSV(const Polygon &allContours, const std::string &filename) {
-            std::ofstream file(filename);
-            if (!file.is_open()) {
-                std::cerr << "Error opening file: " << filename << std::endl;
-                return;
-            }
-        
-            for (const auto &point : allContours) {
-                file << point.first << "," << point.second << "\n";
-            }
-        
-            file.close();
-            // std::cout << "Contours saved to " << filename << std::endl;
-        }
-
         const Grid& getFinalExposure() const { return finalExposure; }
         double getGridResolution() const { return gridResolution; }
     
     private:
         double gridResolution;
         int gridSizeX, gridSizeY;
+        double gridMinX, gridMaxX, gridMinY, gridMaxY;
         Grid exposureGrid, forwardScattering, backScattering, finalExposure;
-    
-        void rasterizePolygon(const Polygon& polygon) {
-            std::vector<int> nodeX;  
+   
+        void saveGridsToCSV() {
+            static int count = 0;
+            std::string baseFilename = "layer" + std::to_string(count++);
         
-            // Find min/max Y values
-            double minY = polygon[0].second, maxY = polygon[0].second;
-            for (const auto& point : polygon) {
-                minY = std::min(minY, point.second);
-                maxY = std::max(maxY, point.second);
+            struct GridInfo {
+                std::string name;
+                const Grid* grid;
+            };
+        
+            std::vector<GridInfo> grids = {
+                {"finalExposure", &finalExposure},
+                {"exposure", &exposureGrid}
+            };
+        
+            for (const auto& gridInfo : grids) {
+                if (gridInfo.grid->empty() || (*gridInfo.grid)[0].empty()) {
+                    std::cerr << "Error: " << gridInfo.name << " grid is empty, cannot save CSV!" << std::endl;
+                    continue;
+                }
+        
+                std::string filename = baseFilename + "_" + gridInfo.name + ".csv";
+                std::ofstream file(filename);
+                if (!file) {
+                    std::cerr << "Error: Cannot open file " << filename << " for writing!" << std::endl;
+                    continue;
+                }
+        
+                for (const auto& row : *gridInfo.grid) {
+                    for (size_t x = 0; x < row.size(); ++x) {
+                        file << row[x];
+                        if (x < row.size() - 1) file << ",";  // CSV format
+                    }
+                    file << "\n";  // New row for next Y line
+                }
+        
+                file.close();
             }
+        }        
+
+        void rasterizePolygon(const Polygon& polygon) {
+            std::vector<int> nodeX;
         
-            int yMin = static_cast<int>(minY / gridResolution);
-            int yMax = static_cast<int>(maxY / gridResolution);
-        
+            // Convert bounds to grid index space
+            int xMin = static_cast<int>(gridMinX / gridResolution - 0.5);
+            int xMax = static_cast<int>(gridMaxX / gridResolution + 0.5);
+            int yMin = static_cast<int>(gridMinY / gridResolution - 0.5);
+            int yMax = static_cast<int>(gridMaxY / gridResolution + 0.5);
+            
             for (int y = yMin; y <= yMax; ++y) {
                 nodeX.clear();
         
                 // Find intersections with edges
                 for (size_t i = 0; i < polygon.size(); ++i) {
                     size_t j = (i + 1) % polygon.size();
-                    double x1 = polygon[i].first / gridResolution;
+                    double x1 = polygon[i].first / gridResolution - xMin;
                     double y1 = polygon[i].second / gridResolution;
-                    double x2 = polygon[j].first / gridResolution;
+                    double x2 = polygon[j].first / gridResolution - xMin;
                     double y2 = polygon[j].second / gridResolution;
         
                     if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) {
@@ -252,13 +252,18 @@ template <class NumericType> class psGDSMaskProximity {
             for (int y = 0; y < gridSizeY; ++y) {
                 for (int x = 0; x < gridSizeX; ++x) {
                     double value = 0.0;
+
+
                     for (int ky = -halfSize; ky <= halfSize; ++ky) {
                         for (int kx = -halfSize; kx <= halfSize; ++kx) {
-                            if ((y + ky) >= 0 && (y + ky) < gridSizeY && (x + kx) >= 0 && (x + kx) < gridSizeX) {
-                                value += input[y + ky][x + kx] * kernel[ky + halfSize][kx + halfSize];
-                            }                            
+                            int srcY = std::clamp(y + ky, 0, gridSizeY - 1);
+                            int srcX = std::clamp(x + kx, 0, gridSizeX - 1);
+        
+                            // Apply kernel while ensuring proper boundary handling
+                            value += input[srcY][srcX] * kernel[ky + halfSize][kx + halfSize];
                         }
                     }
+
                     output[y][x] = value;
                 }
             }
@@ -289,7 +294,6 @@ template <class NumericType> class psGDSMaskProximity {
                 }
             }
         
-            // std::cout << "Exposure grid normalized to max value of 1." << std::endl;
             return output;
         }
     };

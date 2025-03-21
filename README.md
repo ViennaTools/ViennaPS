@@ -17,6 +17,98 @@ ViennaPS is designed to be easily integrated into existing C++ projects and prov
 > [!NOTE]  
 > ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
+***
+***
+
+# What's New in This Branch?
+
+This branch introduces a type of mask proximity correction, simulating the impact of electron forward and backward scattering during e-beam lithography. The previous version directly converted GDSII polygons into level sets, but this enhancement applies a Gaussian blurring effect to better reflect real-world exposure.
+- **TODO: Make optical proximity correction generic to also incorporate realistic parameters for electron and photon interactions.**
+
+## Implementation Details
+### **1. Converting GDSII Polygons to a Rasterized Grid**
+- The imported mask polygons are converted into a rasterized grid representation.
+- The `addPolygons` function rasterizes the polygons onto a discretized grid.
+- The `rasterizePolygon` function fills grid cells inside the polygon using an Even-Odd rule algorithm.
+- **TODO: Allow user to configure the rasterization grid parameters (currently hardcoded).**
+
+### **2. Applying Gaussian Blurring to Simulate Electron Scattering**
+- Electron scattering effects are simulated by applying two separate Gaussian convolutions:
+  - *Forward scattering (small sigma)*: Models short-range diffusion.
+  - *Backward scattering (large sigma)*: Models long-range diffusion.
+- The function `applyGaussianBlur2D` performs 2D convolution using a Gaussian kernel:
+  - The kernel weights are computed based on a Gaussian distribution.
+  - A normalized exposure map is generated to ensure values remain between 0 and 1.
+- **TODO: Extend this to a Multi-Gaussian model.**
+- **TODO: Support additional scattering models, such as exponential, Lorentzian, or Molière for e-scattering.**
+
+### **3. Combining Exposure Contributions**
+- The `combineExposures` function merges forward and backward scattering contributions using a weighting factor (`backScatterFactor = 0.2`).
+- The final exposure values are normalized to ensure the maximum intensity is 1.0.
+- **TODO: Make the backScatterFactor a tunable parameter linked to physical scattering models.**
+
+### **4. Extracting Contours from the Processed Exposure Grid**
+- The `extractContoursAtThreshold(0.5)` function finds the contour where the exposure is equal to 0.5.
+- Contours are extracted using a neighbor-based interpolation to refine the edges.
+- A distance-based grouping algorithm splits contour points into separate polygons.
+- **TODO: Extract the contour from the 2D exposure plane using level sets.**
+  - **Convert exposure grid to a signed distance function (SDF).**
+  - **Use the threshold surface as an implicit level-set or shift by threshold value for a zero level-set.**
+  - **Eliminates polygon generation and splitting: a multi-polygon contour can be stored in a single level-set domain.**
+
+### **5. Polygon Simplification and Reordering for Efficient Processing**
+- Extracted contours often contain excessive detail, leading to unnecessary complexity in further processing.
+- The function `simplifyPolygon` applies gradient- and distance-based filtering to remove insignificant points.
+- The `simplifyPolygon` function only keeps points where:
+  - The normal angle change between neighboring lines exceeds a threshold (`angleThreshold`).
+  - The distance between points exceeds a specified threshold (`distanceThreshold`).
+- The pruning also ensures that the resulting polygon is open-ended rather than artificially closed.
+    - This is required for the GDS extrusion algorithm.
+- The ordering of the polygon is optimized to ensuire compatibility to GDS-implemented extrusion
+  - The two adjacent points that are farthest apart are identified.
+  - The polygon is reordered so that these two points become the start and end of the sequence.
+  - Any duplicate endpoints are removed, ensuring the polygon remains open.
+- **TODO: Optimize polygon simplification by adapting the angle threshold dynamically based on polygon complexity.**
+- **TODO: Try to remove this altogether by using level-set based processing.**
+
+### **6. Reinserting the Modified Polygons**
+- Extracted contours from the rasterized grid are scaled back to the original GDSII coordinate space.
+- The new polygons replace the previous elements in the GDS elements of the `GDSGeometry` class.
+- The new elements are then passed to the `addPolygon` function instead of the original GDSII polygons.
+- Since some original polygons may merge, any unused elements are removed.
+- **TODO: Improve the extrusion process which is not robust and can fail with complex geometries and near-closed polygons.**
+
+### **7. Debugging and Visualization**
+- Initial GDSII polygons: `GDSII_layerL_polygonN.csv`
+- Exposure grid for e-beam writing: `layerL_exposure.csv`
+- Exposure grid output: `layerL_finalExposure.csv`
+- Extracted contour for a layer: `layerL_allContours.csv`
+- Polygon outputs: `layerL_polygon_N.csv`
+- Simplified polygon outputs: `layerL_simplePolygon_N.csv`
+- Jupyter notebook visualization script: `plotCSV.ipynb`
+- **TODO: Include these outputs only when the Logger level is** `INFO` **or above**
+
+### GDS mask import example
+
+This [example](https://github.com/ViennaTools/ViennaPS/tree/maskOPC/examples/GDSReader) tests the GDS mask import feature. The difference in the final mask profiles before and after proximity correction are given in the image below.
+
+<div align="center">
+  <img src="assets/masks.png" width=1200 style="background-color:white;">
+</div>
+
+
+### **TODO: Future Work for Level Set-Based Mask Processing**
+- **Add option to generate a dense 2D/3D LS directly from SDF values.**
+- **Support grid coarsening for computational efficiency.**
+  - **Rasterization grid needs to be finer than the final geometry.**
+- **Implement level-set-based extrusion**
+  - **2D level sets would serve as layers in a 3D level set (stack 2D layers).**
+  - **Use contour-generated level set as middle-layers.**
+  - **Generate top/bottom capping layers based on distances to the contour in 2D domain.**
+
+***
+***
+
 ## Quick Start  
 
 To install ViennaPS for Python, simply run:  

@@ -192,4 +192,18 @@ template <class T> struct Structure {
   }
 };
 
+void saveContoursToCSV(const std::vector<std::pair<double, double>> &contours, const std::string &filename) {
+  std::ofstream file(filename);
+  if (!file.is_open()) {
+      std::cerr << "Error opening file: " << filename << std::endl;
+      return;
+  }
+
+  for (const auto &point : contours) {
+      file << point.first << "," << point.second << "\n";
+  }
+
+  file.close();
+}
+
 } // namespace viennaps::GDS
