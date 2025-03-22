@@ -7,6 +7,8 @@ except ModuleNotFoundError:
     print("ViennaLS Python module not found. Can not parse GDS file.")
     exit(1)
 
+vps.Logger.setLogLevel(vps.LogLevel.INFO)
+
 gridDelta = 0.01
 boundaryConds = [
     vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
@@ -27,12 +29,12 @@ normal = [0.0, 0.0, 1.0]
 plane = vls.Domain(bounds, boundaryConds, gridDelta)
 vls.MakeGeometry(plane, vls.Plane(origin, normal)).apply()
 
-# geometry.insertNextLevelSet(plane)
+geometry.insertNextLevelSet(plane)
 
 layer0 = mask.layerToLevelSet(0, 0.0, 0.1, False)
 geometry.insertNextLevelSet(layer0)
 
-# layer1 = mask.layerToLevelSet(1, -0.15, 0.45, False)
-# geometry.insertNextLevelSet(layer1)
+layer1 = mask.layerToLevelSet(1, -0.15, 0.45, False)
+geometry.insertNextLevelSet(layer1)
 
 geometry.saveSurfaceMesh("Geometry.vtp", True)

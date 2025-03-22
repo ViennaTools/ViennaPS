@@ -15,17 +15,20 @@ template <class NumericType> class psGDSMaskProximity {
         using Polygon = std::vector<std::pair<double, double>>;
     
         // Constructor: Initialize rasterization grid using GDSGeometry bounds_
-        psGDSMaskProximity(double gridRes, const double bounds[6])
-            : gridResolution(gridRes) {
-            // Compute grid size based on total bounds
-            gridMinX = bounds[0];
-            gridMaxX = bounds[1];
-            gridMinY = bounds[2];
-            gridMaxY = bounds[3];
-        
-            gridSizeX = static_cast<int>(std::ceil((gridMaxX - gridMinX) / gridResolution));
-            gridSizeY = static_cast<int>(std::ceil((gridMaxY - gridMinY) / gridResolution));
+        psGDSMaskProximity(double gridRes, 
+            const std::vector<double>& sigmaValues, 
+            const std::vector<double>& weightsconst,
+            const double bounds[6])
+            : gridResolution(gridRes), sigmas(sigmaValues), weights(weightsconst), 
+              gridMinX(bounds[0]), gridMaxX(bounds[1]),
+              gridMinY(bounds[2]), gridMaxY(bounds[3]),
+              gridSizeX(static_cast<int>(std::ceil((bounds[1] - bounds[0]) / gridRes))),
+              gridSizeY(static_cast<int>(std::ceil((bounds[3] - bounds[2]) / gridRes))) {
 
+            if (sigmaValues.size() != weights.size()) {
+                throw std::invalid_argument("Number of sigmas must match the number of weights.");
+            }
+        
             // Initialize the exposure grid with full domain size
             exposureGrid = Grid(gridSizeY, std::vector<double>(gridSizeX, 0.0));
         }
@@ -36,11 +39,17 @@ template <class NumericType> class psGDSMaskProximity {
             }
         }
     
-        void applyProximityEffects(double sigmaForward, double sigmaBack, int layer = 0) {
-            forwardScattering = applyGaussianBlur2D(exposureGrid, sigmaForward);
-            backScattering = applyGaussianBlur2D(exposureGrid, sigmaBack);
+        void apply() {
+
+            // Apply Gaussian blur for each sigma and store the result
+            for (double sigma : sigmas) {
+                blurredGrids.push_back(applyGaussianBlur2D(exposureGrid, sigma));
+            }
+
+            // Combine all exposures with corresponding weights
             finalExposure = combineExposures();
-            // if (lsInternal::Logger::getLogLevel() >= 4)
+        
+            if (lsInternal::Logger::getLogLevel() >= 2)
                 saveGridsToCSV();
         }
     
@@ -87,8 +96,10 @@ template <class NumericType> class psGDSMaskProximity {
                 }
             }
 
-            static int count = 0;
-            viennaps::GDS::saveContoursToCSV(allContours, "layer" + std::to_string(count++) + "_allContours.csv");
+            if (lsInternal::Logger::getLogLevel() >= 2) {
+                static int count = 0;
+                viennaps::GDS::saveContoursToCSV(allContours, "layer" + std::to_string(count++) + "_allContours.csv");    
+            }
         
             // Group allContours into separate polygons
             std::vector<bool> visited(allContours.size(), false);
@@ -136,7 +147,10 @@ template <class NumericType> class psGDSMaskProximity {
         double gridResolution;
         int gridSizeX, gridSizeY;
         double gridMinX, gridMaxX, gridMinY, gridMaxY;
-        Grid exposureGrid, forwardScattering, backScattering, finalExposure;
+        // Grid exposureGrid, forwardScattering, backScattering, finalExposure;
+        Grid exposureGrid, finalExposure;
+        std::vector<Grid> blurredGrids;
+        std::vector<double> sigmas, weights;
    
         void saveGridsToCSV() {
             static int count = 0;
@@ -181,10 +195,10 @@ template <class NumericType> class psGDSMaskProximity {
             std::vector<int> nodeX;
         
             // Convert bounds to grid index space
-            int xMin = static_cast<int>(gridMinX / gridResolution - 0.5);
-            int xMax = static_cast<int>(gridMaxX / gridResolution + 0.5);
-            int yMin = static_cast<int>(gridMinY / gridResolution - 0.5);
-            int yMax = static_cast<int>(gridMaxY / gridResolution + 0.5);
+            int xMin = static_cast<int>(gridMinX / getGridResolution() - 0.5);
+            int xMax = static_cast<int>(gridMaxX / getGridResolution() + 0.5);
+            int yMin = static_cast<int>(gridMinY / getGridResolution() - 0.5);
+            int yMax = static_cast<int>(gridMaxY / getGridResolution() + 0.5);
             
             for (int y = yMin; y <= yMax; ++y) {
                 nodeX.clear();
@@ -192,10 +206,10 @@ template <class NumericType> class psGDSMaskProximity {
                 // Find intersections with edges
                 for (size_t i = 0; i < polygon.size(); ++i) {
                     size_t j = (i + 1) % polygon.size();
-                    double x1 = polygon[i].first / gridResolution - xMin;
-                    double y1 = polygon[i].second / gridResolution;
-                    double x2 = polygon[j].first / gridResolution - xMin;
-                    double y2 = polygon[j].second / gridResolution;
+                    double x1 = polygon[i].first / getGridResolution() - xMin;
+                    double y1 = polygon[i].second / getGridResolution();
+                    double x2 = polygon[j].first / getGridResolution() - xMin;
+                    double y2 = polygon[j].second / getGridResolution();
         
                     if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) {
                         double xInt = x1 + (y - y1) * (x2 - x1) / (y2 - y1);
@@ -253,7 +267,6 @@ template <class NumericType> class psGDSMaskProximity {
                 for (int x = 0; x < gridSizeX; ++x) {
                     double value = 0.0;
 
-
                     for (int ky = -halfSize; ky <= halfSize; ++ky) {
                         for (int kx = -halfSize; kx <= halfSize; ++kx) {
                             int srcY = std::clamp(y + ky, 0, gridSizeY - 1);
@@ -271,25 +284,28 @@ template <class NumericType> class psGDSMaskProximity {
             return output;
         }
     
-        Grid combineExposures(double backScatterFactor = 0.2) {
+        Grid combineExposures() {
             Grid output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
             double maxValue = 0.0;
         
-            // Step 1: Compute the combined exposure and find max value
+            // Step 1: Compute the weighted sum and find max value in one pass
             for (int y = 0; y < gridSizeY; ++y) {
                 for (int x = 0; x < gridSizeX; ++x) {
-                    output[y][x] = forwardScattering[y][x] + backScatterFactor * backScattering[y][x];
-                    if (output[y][x] > maxValue) {
-                        maxValue = output[y][x];
+                    double combinedValue = 0.0;
+                    for (size_t i = 0; i < blurredGrids.size(); ++i) {
+                        combinedValue += weights[i] * blurredGrids[i][y][x];
                     }
+                    output[y][x] = combinedValue;
+                    maxValue = std::max(maxValue, combinedValue);
                 }
             }
         
             // Step 2: Normalize to max of 1 (if maxValue > 0)
             if (maxValue > 0.0) {
+                double invMax = 1.0 / maxValue;
                 for (int y = 0; y < gridSizeY; ++y) {
                     for (int x = 0; x < gridSizeX; ++x) {
-                        output[y][x] /= maxValue;
+                        output[y][x] *= invMax;
                     }
                 }
             }

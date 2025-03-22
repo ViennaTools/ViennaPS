@@ -83,22 +83,21 @@ public:
               for (const auto &point : el.pointCloud) {
                 polygon.push_back(std::pair<double, double>(point[0], point[1]));
               }
-              viennaps::GDS::saveContoursToCSV(polygon, "GDSII_layer" + std::to_string(layer) + "_polygon" + std::to_string(i) + ".csv");
-              i++;
+              if (lsInternal::Logger::getLogLevel() >= 2)
+                viennaps::GDS::saveContoursToCSV(polygon, "layer" + std::to_string(layer) + "_GDSIIpolygon" + std::to_string(i++) + ".csv");
               allPolygons.push_back(polygon);
             }
           }
 
           // Step 2: Apply Gaussian convolution to simulate global proximity effects
-          double proximitySigma = 0.005;
-          psGDSMaskProximity<NumericType> proximityEffect(proximitySigma, bounds_);
+          double rasterResolution = 0.005;
+          std::vector<double> sigmas = {6., 60.};  // Different Gaussian blurring scales
+          std::vector<double> weights = {1.0, 0.2}; // Weighting factors for each sigma
+          psGDSMaskProximity<NumericType> proximityEffect(rasterResolution, sigmas, weights, bounds_);
           proximityEffect.addPolygons(allPolygons);
+          proximityEffect.apply();  // Apply blurring
 
-          double forwardSigma = 6.0;
-          double backwardSigma = 60.0;
-          proximityEffect.applyProximityEffects(forwardSigma, backwardSigma, layer);
-
-          // Step 3: Extract modified exposure contours at threshold 0.5
+          // Step 3: Extract modified exposure contours at threshold 0.7
           std::vector<std::vector<std::pair<double, double>>> modifiedPolygons = 
               proximityEffect.extractContoursAtThreshold(0.7);
 
@@ -111,13 +110,14 @@ public:
 
                   // Assign polygon to current element
                   std::vector<std::pair<double, double>> simplifiedPolygon = simplifyPolygon(modifiedPolygons.front(), 0.05, 0.35);
-                  viennaps::GDS::saveContoursToCSV(modifiedPolygons.front(), "layer" + std::to_string(layer) + "_polygon" + std::to_string(i) + ".csv");
-                  viennaps::GDS::saveContoursToCSV(simplifiedPolygon, "layer" + std::to_string(layer) + "_simplePolygon" + std::to_string(i) + ".csv");
-                  i++;
+                  if (lsInternal::Logger::getLogLevel() >= 2) {
+                      viennaps::GDS::saveContoursToCSV(modifiedPolygons.front(), "layer" + std::to_string(layer) + "_polygon" + std::to_string(i) + ".csv");
+                      viennaps::GDS::saveContoursToCSV(simplifiedPolygon, "layer" + std::to_string(layer) + "_simplePolygon" + std::to_string(i++) + ".csv");
+                  }
 
                   for (const auto &point : simplifiedPolygon) {
-                    double scaledX = point.first * proximitySigma + bounds_[0];
-                    double scaledY = point.second * proximitySigma + bounds_[2];
+                    double scaledX = point.first * rasterResolution + bounds_[0];
+                    double scaledY = point.second * rasterResolution + bounds_[2];
                 
                     elementIt->pointCloud.push_back({scaledX, scaledY, 0.});
                   }

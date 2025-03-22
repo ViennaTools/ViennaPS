@@ -33,13 +33,13 @@ This branch introduces a type of mask proximity correction, simulating the impac
 - **TODO: Allow user to configure the rasterization grid parameters (currently hardcoded).**
 
 ### **2. Applying Gaussian Blurring to Simulate Electron Scattering**
-- Electron scattering effects are simulated by applying two separate Gaussian convolutions:
+- Electron scattering effects are simulated by applying multiple separate Gaussian convolutions:
   - *Forward scattering (small sigma)*: Models short-range diffusion.
   - *Backward scattering (large sigma)*: Models long-range diffusion.
 - The function `applyGaussianBlur2D` performs 2D convolution using a Gaussian kernel:
   - The kernel weights are computed based on a Gaussian distribution.
   - A normalized exposure map is generated to ensure values remain between 0 and 1.
-- **TODO: Extend this to a Multi-Gaussian model.**
+- Method has been extended to a Multi-Gaussian model.
 - **TODO: Support additional scattering models, such as exponential, Lorentzian, or Molière for e-scattering.**
 
 ### **3. Combining Exposure Contributions**
@@ -79,14 +79,14 @@ This branch introduces a type of mask proximity correction, simulating the impac
 - **TODO: Improve the extrusion process which is not robust and can fail with complex geometries and near-closed polygons.**
 
 ### **7. Debugging and Visualization**
-- Initial GDSII polygons: `GDSII_layerL_polygonN.csv`
-- Exposure grid for e-beam writing: `layerL_exposure.csv`
-- Exposure grid output: `layerL_finalExposure.csv`
-- Extracted contour for a layer: `layerL_allContours.csv`
-- Polygon outputs: `layerL_polygon_N.csv`
-- Simplified polygon outputs: `layerL_simplePolygon_N.csv`
-- Jupyter notebook visualization script: `plotCSV.ipynb`
-- **TODO: Include these outputs only when the Logger level is** `INFO` **or above**
+- When the Logger level is `INFO` or above, the following are generated:
+  - Initial GDSII polygons: `GDSII_layerL_polygonN.csv`
+  - Exposure grid for e-beam writing: `layerL_exposure.csv`
+  - Exposure grid output: `layerL_finalExposure.csv`
+  - Extracted contour for a layer: `layerL_allContours.csv`
+  - Polygon outputs: `layerL_polygon_N.csv`
+  - Simplified polygon outputs: `layerL_simplePolygon_N.csv`
+- Python visualization script: `plotCSV.py`
 
 ### GDS mask import example
 
