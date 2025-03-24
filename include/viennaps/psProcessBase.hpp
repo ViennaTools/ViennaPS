@@ -487,8 +487,11 @@ public:
       // apply advection callback
       if (useAdvectionCallback) {
         callbackTimer.start();
-        bool continueProcess = advectionCallback->applyPostAdvect(
-            advectionKernel.getAdvectedTime());
+        auto advectedTime = advectionKernel.getAdvectedTime();
+        advectedTime = advectedTime == std::numeric_limits<double>::max()
+                           ? remainingTime
+                           : advectedTime;
+        bool continueProcess = advectionCallback->applyPostAdvect(advectedTime);
         callbackTimer.finish();
         Logger::getInstance()
             .addTiming("Advection callback post-advect", callbackTimer)
