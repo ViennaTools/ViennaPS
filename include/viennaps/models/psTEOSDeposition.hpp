@@ -20,10 +20,10 @@ public:
                          const NumericType passedOrder)
       : depositionRate(passedRate), reactionOrder(passedOrder) {}
 
-  SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<viennals::PointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIDs) override {
+  SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIDs) override {
     // define the surface reaction here
     auto particleFlux = rates->getScalarData("particleFlux");
     std::vector<NumericType> velocity(particleFlux->size(), 0.);
@@ -75,10 +75,10 @@ public:
       : depositionRateP1(passedRateP1), reactionOrderP1(passedOrderP1),
         depositionRateP2(passedRateP2), reactionOrderP2(passedOrderP2) {}
 
-  SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<viennals::PointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIDs) override {
+  SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIDs) override {
     // define the surface reaction here
     auto particleFluxP1 = rates->getScalarData("particleFluxP1");
     auto particleFluxP2 = rates->getScalarData("particleFluxP2");

@@ -18,10 +18,9 @@ int main(int argc, char **argv) {
   std::string maskFileName = "cantilever_mask.gds";
 
   // crystal surface direction
-  const std::array<NumericType, 3> direction100 = {0.707106781187,
-                                                   0.707106781187, 0.};
-  const std::array<NumericType, 3> direction010 = {-0.707106781187,
-                                                   0.707106781187, 0.};
+  const ps::Vec3D<NumericType> direction100{0.707106781187, 0.707106781187, 0.};
+  const ps::Vec3D<NumericType> direction010{-0.707106781187, 0.707106781187,
+                                            0.};
   // etch rates for crystal directions in um / s
   // 30 % KOH at 70°C
   // https://doi.org/10.1016/S0924-4247(97)01658-0

@@ -3,7 +3,7 @@
 #include "../psMaterials.hpp"
 #include "../psProcessModel.hpp"
 
-#include <vcVectorUtil.hpp>
+#include <vcVectorType.hpp>
 
 namespace viennaps {
 
@@ -15,7 +15,7 @@ template <class NumericType, int D>
 class AnisotropicVelocityField : public VelocityField<NumericType, D> {
   static Vec3D<NumericType> ScaleImpl(const NumericType pF,
                                       const Vec3D<NumericType> &pT) {
-    return {pF * pT[0], pF * pT[1], pF * pT[2]};
+    return Vec3D<NumericType>{pF * pT[0], pF * pT[1], pF * pT[2]};
   }
 
   Vec3D<Vec3D<NumericType>> directions;
@@ -103,18 +103,18 @@ public:
       const std::vector<std::pair<Material, NumericType>> pMaterials)
       : materials(pMaterials) {
     if constexpr (D == 2) {
-      direction100 = {0., 1., 0.};
-      direction010 = {1., 0., -1.};
+      direction100 = Vec3D<NumericType>{0., 1., 0.};
+      direction010 = Vec3D<NumericType>{1., 0., -1.};
     } else {
-      direction100 = {0.707106781187, 0.707106781187, 0};
-      direction010 = {-0.707106781187, 0.707106781187, 0.};
+      direction100 = Vec3D<NumericType>{0.707106781187, 0.707106781187, 0};
+      direction010 = Vec3D<NumericType>{-0.707106781187, 0.707106781187, 0.};
     }
     initialize();
   }
 
   AnisotropicProcess(
-      const Vec3D<NumericType> passedDir100,
-      const Vec3D<NumericType> passedDir010, const NumericType passedR100,
+      const Vec3D<NumericType> &passedDir100,
+      const Vec3D<NumericType> &passedDir010, const NumericType passedR100,
       const NumericType passedR110, const NumericType passedR111,
       const NumericType passedR311,
       const std::vector<std::pair<Material, NumericType>> pMaterials)

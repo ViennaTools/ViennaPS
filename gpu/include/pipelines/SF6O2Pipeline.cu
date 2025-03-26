@@ -14,7 +14,7 @@
 #include <models/psSF6O2Parameters.hpp>
 
 #include <vcContext.hpp>
-#include <vcVectorUtil.hpp>
+#include <vcVectorType.hpp>
 
 using namespace viennaray::gpu;
 

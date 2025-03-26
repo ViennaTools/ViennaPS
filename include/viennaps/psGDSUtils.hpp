@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <vcVectorType.hpp>
+
 #ifndef endian_swap_long
 #define endian_swap_long(w)                                                    \
   (((w & 0xff) << 24) | ((w & 0xff00) << 8) | ((w & 0xff0000) >> 8) |          \
@@ -17,6 +19,8 @@
 #endif
 
 namespace viennaps::GDS {
+
+using namespace viennacore;
 
 enum class ElementType {
   elBoundary,
@@ -105,7 +109,7 @@ template <class T> struct Element {
   ElementType elementType;
   int16_t layer;
   int32_t plexNumber = -1;
-  std::vector<std::array<T, 3>> pointCloud;
+  std::vector<Vec3D<T>> pointCloud;
 };
 
 template <class T> struct SRef {
@@ -113,7 +117,7 @@ template <class T> struct SRef {
   T angle = 0;
   T magnification = 0;
   bool flipped = false;
-  std::array<T, 3> refPoint;
+  Vec3D<T> refPoint;
 };
 
 template <class T> struct ARef {
@@ -121,7 +125,7 @@ template <class T> struct ARef {
   T angle = 0;
   T magnification = 0;
   bool flipped = false;
-  std::array<std::array<T, 3>, 3> refPoints;
+  std::array<Vec3D<T>, 3> refPoints;
   std::array<int16_t, 2> arrayDims;
 };
 

@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Extruding to 3D ..." << std::endl;
   auto extruded = SmartPointer<Domain<NumericType, 3>>::New();
-  std::array<NumericType, 2> extrudeExtent = {-20., 20.};
+  Vec2D<NumericType> extrudeExtent{-20., 20.};
   Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
                        {viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
                         viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,

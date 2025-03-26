@@ -118,7 +118,7 @@ protected:
     if (auto primaryDirection = processModel_->getPrimaryDirection()) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
-                   util::arrayToString(primaryDirection.value()))
+                   primaryDirection.value().toString())
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }

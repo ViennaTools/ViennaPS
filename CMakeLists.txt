@@ -8,12 +8,14 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
+option(VIENNAPS_USE_OPENMP "Use OpenMP for ViennaPS" ON)
+option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" OFF)
+
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
-option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" OFF)
 
 # --------------------------------------------------------------------------------------------------------
 # Library options
@@ -95,8 +97,9 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 1.3.1
+  GIT_TAG vector-type
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}"
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" "VIENNACORE_USE_OPENMP ${VIENNAPS_USE_OPENMP}" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMAddPackage(
@@ -107,20 +110,24 @@ CPMAddPackage(
 CPMFindPackage(
   NAME ViennaRay
   VERSION 3.3.0
+  GIT_TAG refactor-vector-type
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
-  OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
+  OPTIONS "VIENNARAY_USE_OPENMP ${VIENNAPS_USE_OPENMP}" "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaLS
   VERSION 4.2.2
-  GIT_TAG timestep
+  GIT_TAG hrle-refactor
+  OPTIONS "VIENNALS_USE_OPENMP ${VIENNAPS_USE_OPENMP}" 
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaCS
   VERSION 1.0.0
+  GIT_TAG refactor-vector-type
+  OPTIONS "VIENNACS_USE_OPENMP ${VIENNAPS_USE_OPENMP}" 
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

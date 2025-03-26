@@ -28,7 +28,7 @@ public:
       : points_(points), normals_(normals), desorptionRates_(desorptionRates),
         numRaysPerPoint_(numRaysPerPoint) {}
 
-  Vec2D<Vec3D<NumericType>>
+  std::array<Vec3D<NumericType>, 2>
   getOriginAndDirection(const size_t idx, RNG &RngState) const override {
     size_t pointIdx = idx / numRaysPerPoint_;
     auto direction = viennaray::ReflectionDiffuse<NumericType, D>(
@@ -167,7 +167,7 @@ public:
     if (primaryDirection) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
-                   util::arrayToString(primaryDirection.value()))
+                   primaryDirection.value().toString())
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }

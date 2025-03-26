@@ -318,7 +318,7 @@ public:
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
   auto getBoundingBox() const {
-    std::array<std::array<NumericType, 3>, 2> boundingBox;
+    std::array<Vec3D<NumericType>, 2> boundingBox;
     auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     viennals::ToDiskMesh<NumericType, D>(levelSets_.back(), mesh).apply();
     boundingBox[0] = mesh->minimumExtent;

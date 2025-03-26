@@ -8,7 +8,7 @@
 #include <raygSource.hpp>
 
 #include <vcContext.hpp>
-#include <vcVectorUtil.hpp>
+#include <vcVectorType.hpp>
 
 using namespace viennaray::gpu;
 
