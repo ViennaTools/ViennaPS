@@ -125,8 +125,7 @@ public:
           .print();
     }
 
-    typedef std::map<hrleVectorType<hrleIndexType, D>, unsigned>
-        nodeContainerType;
+    typedef std::map<viennahrle::Index<D>, unsigned> nodeContainerType;
 
     nodeContainerType nodes[D];
     minNodeDistance = gridDelta * 0.01;
@@ -140,14 +139,14 @@ public:
     const bool checkNodeFlag = checkNodeDistance;
 
     // iterate over all active surface points
-    for (hrleConstSparseCellIterator<hrleDomainType> cellIt(
+    for (viennahrle::ConstSparseCellIterator<hrleDomainType> cellIt(
              levelSet->getDomain());
          !cellIt.isFinished(); cellIt.next()) {
 
       for (int u = 0; u < D; u++) {
         while (!nodes[u].empty() &&
                nodes[u].begin()->first <
-                   hrleVectorType<hrleIndexType, D>(cellIt.getIndices()))
+                   viennahrle::Index<D>(cellIt.getIndices()))
           nodes[u].erase(nodes[u].begin());
       }
 
@@ -182,8 +181,8 @@ public:
           unsigned dir = direction[edge];
 
           // look for existing surface node
-          hrleVectorType<hrleIndexType, D> d(cellIt.getIndices());
-          d += BitMaskToVector<D, hrleIndexType>(p0);
+          viennahrle::Index<D> d(cellIt.getIndices());
+          d += viennahrle::BitMaskToIndex<D>(p0);
 
           nodeIt = nodes[dir].find(d);
           if (nodeIt != nodes[dir].end()) {
@@ -196,9 +195,9 @@ public:
               if (z != dir) {
                 // TODO might not need BitMaskToVector here, just check if z
                 // bit is set
-                cc[z] = static_cast<MeshNT>(
-                    cellIt.getIndices(z) +
-                    BitMaskToVector<D, hrleIndexType>(p0)[z]);
+                cc[z] =
+                    static_cast<MeshNT>(cellIt.getIndices(z) +
+                                        viennahrle::BitMaskToIndex<D>(p0)[z]);
               } else {
                 auto d0 = static_cast<MeshNT>(cellIt.getCorner(p0).getValue());
                 auto d1 = static_cast<MeshNT>(cellIt.getCorner(p1).getValue());

@@ -8,8 +8,6 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
-option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" OFF)
-
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
@@ -98,7 +96,7 @@ CPMAddPackage(
         VERSION 1.3.1
         GIT_TAG vector-type
         GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-        OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}"
+        OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" 
         EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMAddPackage(
@@ -111,7 +109,6 @@ CPMFindPackage(
         VERSION 3.3.0
         GIT_TAG refactor-vector-type
         GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
-        OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
         EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
@@ -156,7 +153,7 @@ endif ()
 # --------------------------------------------------------------------------------------------------------
 
 # If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
-if (VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+if (VIENNACORE_USE_GPU AND VIENNACORE_PTX_DIR)
     add_subdirectory(gpu)
 endif ()
 

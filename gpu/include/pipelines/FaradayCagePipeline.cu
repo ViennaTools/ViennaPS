@@ -1,5 +1,6 @@
 #include <optix_device.h>
 
+#include <raygBoundary.hpp>
 #include <raygLaunchParams.hpp>
 #include <raygPerRayData.hpp>
 #include <raygRNG.hpp>
@@ -76,9 +77,8 @@ extern "C" __global__ void __raygen__ion() {
   // the values we store the PRD pointer in:
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
-  unsigned refCount = 0;
 
-  while (prd.rayWeight > launchParams.rayWeightThreshold) {
+  while (continueRay(launchParams, prd)) {
     optixTrace(launchParams.traversable, // traversable GAS
                make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
@@ -91,11 +91,5 @@ extern "C" __global__ void __raygen__ion() {
                1,                             // SBT stride
                0,                             // missSBTIndex
                u0, u1);
-
-    refCount++;
-
-    if (refCount > launchParams.maxRayDepth) {
-      break;
-    }
   }
 }
