@@ -8,13 +8,14 @@ namespace viennacore {
 using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
-  Logger::getInstance().setLogLevel(LogLevel::DEBUG);
+  Logger::setLogLevel(LogLevel::DEBUG);
   omp_set_num_threads(1);
 
   auto domain = SmartPointer<Domain<NumericType, D>>::New();
   MakeStack<NumericType, D>(domain, 1.0, 10., 10., 5 /*num layers*/, 3., 2., 2.,
                             2., 0., true)
       .apply();
+  domain->saveLevelSetMesh("stack_1_" + std::to_string(D) + "D");
 
   VC_TEST_ASSERT(domain->getLevelSets().size() == 6);
   VC_TEST_ASSERT(domain->getMaterialMap());
@@ -23,7 +24,7 @@ template <class NumericType, int D> void RunTest() {
 
   domain->setup(1.0, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
   MakeStack<NumericType, D>(domain, 5, 1., 2., 0., 5., 3., 10., true).apply();
-  // domain->saveHullMesh("stack_2_" + std::to_string(D) + "D");
+  domain->saveLevelSetMesh("stack_2_" + std::to_string(D) + "D");
 
   VC_TEST_ASSERT(domain->getLevelSets().size() == 7);
   VC_TEST_ASSERT(domain->getMaterialMap());

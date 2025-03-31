@@ -167,7 +167,7 @@ public:
     if (primaryDirection) {
       Logger::getInstance()
           .addInfo("Using primary direction: " +
-                   primaryDirection.value().toString())
+                   util::arrayToString(primaryDirection.value()))
           .print();
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }

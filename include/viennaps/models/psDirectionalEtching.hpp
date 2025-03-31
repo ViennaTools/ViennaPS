@@ -78,7 +78,7 @@ public:
                                        int material,
                                        const Vec3D<NumericType> &normalVector,
                                        unsigned long pointId) override {
-    Vec3D<NumericType> vectorVelocity(NumericType(0));
+    Vec3D<NumericType> vectorVelocity{0., 0., 0.};
 
     for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
       const auto &rateSet = rateSets_[rateSetID];

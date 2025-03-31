@@ -228,7 +228,7 @@ private:
         X = units * (float)pX;
         Y = units * (float)pY;
 
-        currentElPointCloud.emplace_back(X, Y, 0.);
+        currentElPointCloud.push_back({X, Y, 0.});
 
         if (X < currentStructure.elementBoundingBox[0][0]) {
           currentStructure.elementBoundingBox[0][0] = X;
