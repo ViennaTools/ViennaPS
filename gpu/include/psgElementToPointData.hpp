@@ -8,6 +8,8 @@
 #include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
 
+#include <numeric>
+
 namespace viennaps::gpu {
 
 using namespace viennacore;

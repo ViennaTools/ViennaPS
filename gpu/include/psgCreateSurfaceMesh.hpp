@@ -6,6 +6,8 @@
 
 #include <raygMesh.hpp>
 
+#include <vcKDTree.hpp>
+
 namespace viennaps::gpu {
 
 using namespace viennacore;

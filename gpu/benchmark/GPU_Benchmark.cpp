@@ -3,11 +3,11 @@
 
 #include <psProcess.hpp>
 
-#include <gpu/raygMesh.hpp>
-#include <gpu/raygTrace.hpp>
-#include <gpu/vcContext.hpp>
-#include <pscCreateSurfaceMesh.hpp>
-#include <pscElementToPointData.hpp>
+#include <psgCreateSurfaceMesh.hpp>
+#include <psgElementToPointData.hpp>
+#include <raygMesh.hpp>
+#include <raygTrace.hpp>
+#include <vcContext.hpp>
 
 #include "BenchmarkGeometry.hpp"
 

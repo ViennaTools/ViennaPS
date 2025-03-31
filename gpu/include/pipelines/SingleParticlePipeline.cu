@@ -34,7 +34,7 @@ extern "C" __global__ void __closesthit__SingleParticle() {
     if (launchParams.periodicBoundary) {
       applyPeriodicBoundary(prd, sbtData);
     } else {
-      reflectFromBoundary(prd);
+      reflectFromBoundary(prd, sbtData);
     }
   } else {
     const unsigned int primID = optixGetPrimitiveIndex();
@@ -75,7 +75,7 @@ extern "C" __global__ void __raygen__SingleParticle() {
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
 
-  while (prd.rayWeight > launchParams.rayWeightThreshold) {
+  while (continueRay(launchParams, prd)) {
     optixTrace(launchParams.traversable, // traversable GAS
                make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
