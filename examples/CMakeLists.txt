@@ -1,3 +1,8 @@
+if (NOT VIENNACORE_USE_OPENMP)
+  message(SEND_ERROR "ViennaPS examples are only available with OpenMP support.")
+  return()
+endif()
+
 add_custom_target(ViennaPS_Examples ALL)
 
 set(VIENNAPS_ARTIFACTS_DIRECTORY $<1:${PROJECT_BINARY_DIR}/artifacts>)

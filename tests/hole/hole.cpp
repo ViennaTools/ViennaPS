@@ -8,7 +8,9 @@ namespace viennacore {
 using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
+#ifdef _OPENMP
   omp_set_num_threads(1);
+#endif
   auto domain = SmartPointer<Domain<NumericType, D>>::New();
 
   // Test with HoleShape::Full
@@ -45,7 +47,7 @@ template <class NumericType, int D> void RunTest() {
   VC_TEST_ASSERT(domain->getMaterialMap()->size() == 2);
 
   LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
-  // Logger::getInstance().setLogLevel(LogLevel::DEBUG);
+  // Logger::setLogLevel(LogLevel::DEBUG);
 
   domain->setup(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
   MakeHole<NumericType, D>(domain, 2.5, 3., 10, 3., 10., HoleShape::Quarter,

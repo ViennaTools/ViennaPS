@@ -9,8 +9,9 @@ using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::DEBUG);
+#ifdef _OPENMP
   omp_set_num_threads(1);
-
+#endif
   auto domain = SmartPointer<Domain<NumericType, D>>::New();
   MakeStack<NumericType, D>(domain, 1.0, 10., 10., 5 /*num layers*/, 3., 2., 2.,
                             2., 0., true)
