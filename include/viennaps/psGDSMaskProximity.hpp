@@ -1,317 +1,170 @@
-#pragma once
-
 #include <vector>
 #include <cmath>
-#include <iostream>
 #include <algorithm>
-#include <queue>
 #include <fstream>
+#include <string>
+
+#include <lsDomain.hpp>
+#include <lsToMesh.hpp>
+
+#include <vcSmartPointer.hpp>
+
+#include <hrleSparseIterator.hpp>
+#include <hrleDenseIterator.hpp>
+
+namespace ls = viennals;
 
 namespace viennaps {
 
-template <class NumericType> class psGDSMaskProximity {
-    public:
-        using Grid = std::vector<std::vector<NumericType>>;
-        using Polygon = std::vector<std::pair<double, double>>;
-    
-        // Constructor: Initialize rasterization grid using GDSGeometry bounds_
-        psGDSMaskProximity(double gridRes, 
-            const std::vector<double>& sigmaValues, 
-            const std::vector<double>& weightsconst,
-            const double bounds[6])
-            : gridResolution(gridRes), sigmas(sigmaValues), weights(weightsconst), 
-              gridMinX(bounds[0]), gridMaxX(bounds[1]),
-              gridMinY(bounds[2]), gridMaxY(bounds[3]),
-              gridSizeX(static_cast<int>(std::ceil((bounds[1] - bounds[0]) / gridRes))),
-              gridSizeY(static_cast<int>(std::ceil((bounds[3] - bounds[2]) / gridRes))) {
+template <typename NumericType>
+class GDSMaskProximity {
+  using DomainType2D = SmartPointer<ls::Domain<NumericType, 2>>;
+  using Grid2D = std::vector<std::vector<NumericType>>;
 
-            if (sigmaValues.size() != weights.size()) {
-                throw std::invalid_argument("Number of sigmas must match the number of weights.");
-            }
-        
-            // Initialize the exposure grid with full domain size
-            exposureGrid = Grid(gridSizeY, std::vector<double>(gridSizeX, 0.0));
+public:
+  GDSMaskProximity(DomainType2D inputLS, double delta, const std::vector<double> &sigmas,
+                          const std::vector<double> &weights)
+      : inputLevelSet(inputLS), gridDelta(delta), sigmas(sigmas), weights(weights) {
+    assert(sigmas.size() == weights.size());
+    assert(inputLevelSet != nullptr);
+    initializeGrid();
+  }
+
+  void apply() {
+    for (double sigma : sigmas) {
+      blurredGrids.push_back(applyGaussianBlur2D(sdfGrid, sigma));
+    }
+
+    finalGrid = combineExposures();
+    // saveGridToCSV(finalGrid, "finalGrid.csv");
+  }
+
+  const Grid2D& getExposureGrid() const { return finalGrid; }
+
+  void saveGridToCSV(const std::vector<std::vector<NumericType>> &grid, const std::string &filename) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+      std::cerr << "Error: Cannot open file '" << filename << "' for writing!" << std::endl;
+      return;
+    }
+  
+    for (const auto &row : grid) {
+      for (size_t i = 0; i < row.size(); ++i) {
+        file << row[i];
+        if (i < row.size() - 1)
+          file << ",";
+      }
+      file << "\n";
+    }
+  
+    file.close();
+  }
+  
+private:
+  DomainType2D inputLevelSet;
+  Grid2D sdfGrid, finalGrid;
+
+  std::vector<Grid2D> blurredGrids;
+  std::vector<double> sigmas, weights;
+  double gridDelta;
+  int gridSizeX, gridSizeY;
+
+  void initializeGrid() {
+    auto minIdx = inputLevelSet->getGrid().getMinIndex();
+    auto maxIdx = inputLevelSet->getGrid().getMaxIndex();
+    gridSizeX = maxIdx[0] - minIdx[0] + 1;
+    gridSizeY = maxIdx[1] - minIdx[1] + 1;
+
+    sdfGrid.resize(gridSizeY, std::vector<NumericType>(gridSizeX, 0.0));
+
+    hrleDenseIterator<typename ls::Domain<double, 2>::DomainType> it(inputLevelSet->getDomain());
+    for (; !it.isFinished(); ++it) {
+        auto idx = it.getIndices();
+        double val = it.getValue();
+        int x = idx[0] - minIdx[0];
+        int y = idx[1] - minIdx[1];
+        sdfGrid[y][x] = (val < 0.) ? 1.0 : 0.0; // Binary mask
+      }
+    }
+
+    Grid2D applyGaussianBlur2D(const Grid2D& input, double sigma) {
+        if (input.empty() || input[0].empty()) {
+            std::cerr << "Error: input grid is empty!" << std::endl;
+            return {};
         }
-    
-        void addPolygons(const std::vector<Polygon>& polygons) {
-            for (const auto& polygon : polygons) {
-                rasterizePolygon(polygon);
+
+        int kernelSize = std::min(21, std::max(3, static_cast<int>(6 * sigma)));  
+        if (kernelSize % 2 == 0) kernelSize += 1;
+
+        int halfSize = kernelSize / 2;
+        Grid2D output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
+
+        // Create 2D Gaussian kernel
+        std::vector<std::vector<double>> kernel(kernelSize, std::vector<double>(kernelSize));
+        double sum = 0.0;
+        for (int i = 0; i < kernelSize; ++i) {
+            for (int j = 0; j < kernelSize; ++j) {
+                double x = i - halfSize;
+                double y = j - halfSize;
+                kernel[i][j] = std::exp(-0.5 * (x * x + y * y) / (sigma * sigma));
+                sum += kernel[i][j];
             }
         }
+        for (auto& row : kernel)
+            for (auto& val : row)
+                val /= sum;  
+
+        // Perform 2D convolution
+        for (int y = 0; y < gridSizeY; ++y) {
+            for (int x = 0; x < gridSizeX; ++x) {
+                double value = 0.0;
+
+                for (int ky = -halfSize; ky <= halfSize; ++ky) {
+                    for (int kx = -halfSize; kx <= halfSize; ++kx) {
+                        int srcY = std::clamp(y + ky, 0, gridSizeY - 1);
+                        int srcX = std::clamp(x + kx, 0, gridSizeX - 1);
     
-        void apply() {
-
-            // Apply Gaussian blur for each sigma and store the result
-            for (double sigma : sigmas) {
-                blurredGrids.push_back(applyGaussianBlur2D(exposureGrid, sigma));
-            }
-
-            // Combine all exposures with corresponding weights
-            finalExposure = combineExposures();
-        
-            if (lsInternal::Logger::getLogLevel() >= 2)
-                saveGridsToCSV();
-        }
-    
-        std::vector<Polygon> extractContoursAtThreshold(double threshold = 0.5) {
-        
-            if (finalExposure.empty() || finalExposure[0].empty()) {
-                std::cerr << "Error: finalExposure grid is empty!" << std::endl;
-                return {};
-            }
-        
-            size_t rows = finalExposure.size();
-            size_t cols = finalExposure[0].size();
-            std::vector<Polygon> modifiedPolygons;
-            Polygon allContours;
-        
-            std::vector<std::pair<int, int>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
-        
-            for (size_t y = 0; y < rows; ++y) {
-                for (size_t x = 0; x < cols; ++x) {
-                    if (std::abs(finalExposure[y][x] - threshold) < 1e-6) {
-                        allContours.push_back({x, y});
-                        continue;
-                    }
-
-                    if (finalExposure[y][x] < threshold) continue;
-
-                    if (y == 0 || y == rows - 1 || x == 0 || x == cols - 1) {
-                        allContours.push_back({x, y});
-                        continue;
-                    }
-        
-                    // Only process if this point is above threshold and touches a lower value
-                    for (auto [dy, dx] : directions) {
-                        size_t ny = y + dy, nx = x + dx;
-                        if (ny >= 0 && ny < rows && nx >= 0 && nx < cols && finalExposure[ny][nx] < threshold) {
-                            double T_high = finalExposure[y][x];  // Current pixel (above threshold)
-                            double T_low = finalExposure[ny][nx]; // Neighbor pixel (below threshold)
-                            double interpFactor = (T_high - threshold) / (T_high - T_low);
-                            double newX = x + (dx * interpFactor);
-                            double newY = y + (dy * interpFactor);
-                            allContours.push_back({newX, newY});
-                        }
+                        // Apply kernel while ensuring proper boundary handling
+                        value += input[srcY][srcX] * kernel[ky + halfSize][kx + halfSize];
                     }
                 }
-            }
 
-            if (lsInternal::Logger::getLogLevel() >= 2) {
-                static int count = 0;
-                viennaps::GDS::saveContoursToCSV(allContours, "layer" + std::to_string(count++) + "_allContours.csv");    
-            }
-        
-            // Group allContours into separate polygons
-            std::vector<bool> visited(allContours.size(), false);
-            double distanceThreshold = 1.5;
-
-            for (size_t i = 0; i < allContours.size(); ++i) {
-                if (visited[i]) continue;  
-
-                Polygon currentPolygon;
-                size_t currentIndex = i;
-
-                while (true) {
-                    visited[currentIndex] = true;
-                    currentPolygon.push_back(allContours[currentIndex]);
-
-                    // Search for the closest unvisited neighbor in a looped manner
-                    double minDist = std::numeric_limits<double>::max();
-                    size_t closestIdx = -1;
-
-                    for (size_t j = 0; j < allContours.size(); ++j) {
-                        if (!visited[j]) {
-                            double dist = std::hypot(allContours[currentIndex].first - allContours[j].first, 
-                                                    allContours[currentIndex].second - allContours[j].second);
-                            if (dist < minDist) {
-                                minDist = dist;
-                                closestIdx = j;
-                            }
-                        }
-                    }
-
-                    if (minDist > distanceThreshold) break;
-                    currentIndex = closestIdx;
-                }
-                // currentPolygon.push_back(currentPolygon.front());  // Close the polygon
-                modifiedPolygons.push_back(currentPolygon);
-            }
-
-            return modifiedPolygons;
-        }
-                                
-        const Grid& getFinalExposure() const { return finalExposure; }
-        double getGridResolution() const { return gridResolution; }
-    
-    private:
-        double gridResolution;
-        int gridSizeX, gridSizeY;
-        double gridMinX, gridMaxX, gridMinY, gridMaxY;
-        // Grid exposureGrid, forwardScattering, backScattering, finalExposure;
-        Grid exposureGrid, finalExposure;
-        std::vector<Grid> blurredGrids;
-        std::vector<double> sigmas, weights;
-   
-        void saveGridsToCSV() {
-            static int count = 0;
-            std::string baseFilename = "layer" + std::to_string(count++);
-        
-            struct GridInfo {
-                std::string name;
-                const Grid* grid;
-            };
-        
-            std::vector<GridInfo> grids = {
-                {"finalExposure", &finalExposure},
-                {"exposure", &exposureGrid}
-            };
-        
-            for (const auto& gridInfo : grids) {
-                if (gridInfo.grid->empty() || (*gridInfo.grid)[0].empty()) {
-                    std::cerr << "Error: " << gridInfo.name << " grid is empty, cannot save CSV!" << std::endl;
-                    continue;
-                }
-        
-                std::string filename = baseFilename + "_" + gridInfo.name + ".csv";
-                std::ofstream file(filename);
-                if (!file) {
-                    std::cerr << "Error: Cannot open file " << filename << " for writing!" << std::endl;
-                    continue;
-                }
-        
-                for (const auto& row : *gridInfo.grid) {
-                    for (size_t x = 0; x < row.size(); ++x) {
-                        file << row[x];
-                        if (x < row.size() - 1) file << ",";  // CSV format
-                    }
-                    file << "\n";  // New row for next Y line
-                }
-        
-                file.close();
-            }
-        }        
-
-        void rasterizePolygon(const Polygon& polygon) {
-            std::vector<int> nodeX;
-        
-            // Convert bounds to grid index space
-            int xMin = static_cast<int>(gridMinX / getGridResolution() - 0.5);
-            int xMax = static_cast<int>(gridMaxX / getGridResolution() + 0.5);
-            int yMin = static_cast<int>(gridMinY / getGridResolution() - 0.5);
-            int yMax = static_cast<int>(gridMaxY / getGridResolution() + 0.5);
-            
-            for (int y = yMin; y <= yMax; ++y) {
-                nodeX.clear();
-        
-                // Find intersections with edges
-                for (size_t i = 0; i < polygon.size(); ++i) {
-                    size_t j = (i + 1) % polygon.size();
-                    double x1 = polygon[i].first / getGridResolution() - xMin;
-                    double y1 = polygon[i].second / getGridResolution();
-                    double x2 = polygon[j].first / getGridResolution() - xMin;
-                    double y2 = polygon[j].second / getGridResolution();
-        
-                    if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) {
-                        double xInt = x1 + (y - y1) * (x2 - x1) / (y2 - y1);
-                        nodeX.push_back(static_cast<int>(xInt));
-                    }
-                }
-        
-                // Sort X intersections
-                std::sort(nodeX.begin(), nodeX.end());
-        
-                // Fill using Even-Odd rule
-                bool inside = false;
-                for (size_t i = 0; i < nodeX.size(); ++i) {
-                    inside = !inside;  // Toggle inside status
-                    if (inside && i + 1 < nodeX.size()) {
-                        for (int x = nodeX[i]; x <= nodeX[i + 1]; ++x) {
-                            if (x >= 0 && x < gridSizeX && y >= 0 && y < gridSizeY) {
-                                exposureGrid[y][x] = 1.0;  // Fill inside pixels
-                            }
-                        }
-                    }
-                }
+                output[y][x] = value;
             }
         }
 
-        Grid applyGaussianBlur2D(const Grid& input, double sigma) {
-            if (input.empty() || input[0].empty()) {
-                std::cerr << "Error: input grid is empty!" << std::endl;
-                return {};
-            }
+        return output;
+    }
 
-            int kernelSize = std::min(21, std::max(3, static_cast<int>(6 * sigma)));  
-            if (kernelSize % 2 == 0) kernelSize += 1;
+
+    Grid2D combineExposures() {
+        Grid2D output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
+        double maxValue = 0.0;
     
-            int halfSize = kernelSize / 2;
-            Grid output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
-    
-            // Create 2D Gaussian kernel
-            std::vector<std::vector<double>> kernel(kernelSize, std::vector<double>(kernelSize));
-            double sum = 0.0;
-            for (int i = 0; i < kernelSize; ++i) {
-                for (int j = 0; j < kernelSize; ++j) {
-                    double x = i - halfSize;
-                    double y = j - halfSize;
-                    kernel[i][j] = std::exp(-0.5 * (x * x + y * y) / (sigma * sigma));
-                    sum += kernel[i][j];
+        // Step 1: Compute the weighted sum and find max value in one pass
+        for (int y = 0; y < gridSizeY; ++y) {
+            for (int x = 0; x < gridSizeX; ++x) {
+                double combinedValue = 0.0;
+                for (size_t i = 0; i < blurredGrids.size(); ++i) {
+                    combinedValue += weights[i] * blurredGrids[i][y][x];
                 }
+                output[y][x] = combinedValue;
+                maxValue = std::max(maxValue, combinedValue);
             }
-            for (auto& row : kernel)
-                for (auto& val : row)
-                    val /= sum;  
+        }
     
-            // Perform 2D convolution
+        // Step 2: Normalize to max of 1 (if maxValue > 0)
+        if (maxValue > 0.0) {
+            double invMax = 1.0 / maxValue;
             for (int y = 0; y < gridSizeY; ++y) {
                 for (int x = 0; x < gridSizeX; ++x) {
-                    double value = 0.0;
-
-                    for (int ky = -halfSize; ky <= halfSize; ++ky) {
-                        for (int kx = -halfSize; kx <= halfSize; ++kx) {
-                            int srcY = std::clamp(y + ky, 0, gridSizeY - 1);
-                            int srcX = std::clamp(x + kx, 0, gridSizeX - 1);
-        
-                            // Apply kernel while ensuring proper boundary handling
-                            value += input[srcY][srcX] * kernel[ky + halfSize][kx + halfSize];
-                        }
-                    }
-
-                    output[y][x] = value;
+                    output[y][x] *= invMax;
                 }
             }
-    
-            return output;
         }
     
-        Grid combineExposures() {
-            Grid output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
-            double maxValue = 0.0;
-        
-            // Step 1: Compute the weighted sum and find max value in one pass
-            for (int y = 0; y < gridSizeY; ++y) {
-                for (int x = 0; x < gridSizeX; ++x) {
-                    double combinedValue = 0.0;
-                    for (size_t i = 0; i < blurredGrids.size(); ++i) {
-                        combinedValue += weights[i] * blurredGrids[i][y][x];
-                    }
-                    output[y][x] = combinedValue;
-                    maxValue = std::max(maxValue, combinedValue);
-                }
-            }
-        
-            // Step 2: Normalize to max of 1 (if maxValue > 0)
-            if (maxValue > 0.0) {
-                double invMax = 1.0 / maxValue;
-                for (int y = 0; y < gridSizeY; ++y) {
-                    for (int x = 0; x < gridSizeX; ++x) {
-                        output[y][x] *= invMax;
-                    }
-                }
-            }
-        
-            return output;
-        }
-    };
+        return output;
+    }
+};
 
 } // namespace viennaps

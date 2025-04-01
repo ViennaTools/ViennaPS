@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
   constexpr int D = 3;
 
   // read GDS mask file
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
+  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
 
   constexpr NumericType gridDelta = 0.005;
   ls::BoundaryConditionEnum boundaryConds[D] = {
@@ -40,11 +40,11 @@ int main(int argc, char **argv) {
   auto layer0 =
       mask->layerToLevelSet(0 /*layer*/, 0.0 /*base z position*/, 0.1 /*height*/, true);
 
-  geometry->insertNextLevelSetAsMaterial(layer0, viennaps::Material::SiO2);
+  geometry->insertNextLevelSetAsMaterial(layer0, viennaps::Material::Mask);
 
   auto layer1 = mask->layerToLevelSet(1 /*layer*/, -0.15 /*base z position*/,
                                       0.45 /*height*/, true);
-  geometry->insertNextLevelSetAsMaterial(layer1, viennaps::Material::Mask);
+  geometry->insertNextLevelSetAsMaterial(layer1, viennaps::Material::SiO2);
 
   geometry->saveSurfaceMesh("Geometry.vtp", false /* add material IDs */);
   geometry->saveVolumeMesh("Geometry");
