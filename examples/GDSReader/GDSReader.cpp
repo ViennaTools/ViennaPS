@@ -1,5 +1,7 @@
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
+#include <psMaterials.hpp>
+#include <hrleGrid.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;
@@ -9,11 +11,14 @@ int main(int argc, char **argv) {
   constexpr int D = 3;
 
   // read GDS mask file
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
+
   constexpr NumericType gridDelta = 0.005;
   ls::BoundaryConditionEnum boundaryConds[D] = {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::INFINITE_BOUNDARY};
+    
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
   ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
@@ -30,18 +35,19 @@ int main(int argc, char **argv) {
   ls::MakeGeometry<NumericType, D>(
       plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
       .apply();
-
-  geometry->insertNextLevelSet(plane);
+  geometry->insertNextLevelSetAsMaterial(plane, viennaps::Material::Si);
 
   auto layer0 =
-      mask->layerToLevelSet(0 /*layer*/, 0 /*base z position*/, 0.1 /*height*/);
-  geometry->insertNextLevelSet(layer0);
+      mask->layerToLevelSet(0 /*layer*/, 0.0 /*base z position*/, 0.1 /*height*/, true);
+
+  geometry->insertNextLevelSetAsMaterial(layer0, viennaps::Material::SiO2);
 
   auto layer1 = mask->layerToLevelSet(1 /*layer*/, -0.15 /*base z position*/,
-                                      0.45 /*height*/);
-  geometry->insertNextLevelSet(layer1);
+                                      0.45 /*height*/, true);
+  geometry->insertNextLevelSetAsMaterial(layer1, viennaps::Material::Mask);
 
-  geometry->saveSurfaceMesh("Geometry.vtp", true /* add material IDs */);
+  geometry->saveSurfaceMesh("Geometry.vtp", false /* add material IDs */);
+  geometry->saveVolumeMesh("Geometry");
 
   return 0;
 }

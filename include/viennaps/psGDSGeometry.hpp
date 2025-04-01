@@ -1,7 +1,6 @@
 #pragma once
 
 #include "psGDSUtils.hpp"
-#include "psGDSMaskProximity.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -10,9 +9,14 @@
 #include <lsMakeGeometry.hpp>
 #include <lsTransformMesh.hpp>
 
+#include <lsVTKWriter.hpp>
+#include <lsToSurfaceMesh.hpp>
+#include <lsToMesh.hpp>
+
+#include <lsExtrude.hpp>
+
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
-#include <cmath>
 
 namespace viennaps {
 
@@ -22,6 +26,7 @@ template <class NumericType, int D = 3> class GDSGeometry {
   using StructureLayers =
       std::unordered_map<int16_t, SmartPointer<viennals::Mesh<NumericType>>>;
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using lsDomainType2D = SmartPointer<viennals::Domain<NumericType, 2>>;
   using BoundaryType = typename viennals::Domain<NumericType, D>::BoundaryType;
 
 public:
@@ -42,6 +47,8 @@ public:
   }
 
   void setGridDelta(const NumericType gridDelta) { gridDelta_ = gridDelta; }
+
+  NumericType getGridDelta() const { return gridDelta_; }
 
   void setBoundaryPadding(const NumericType xPadding,
                           const NumericType yPadding) {
@@ -67,80 +74,21 @@ public:
                                const NumericType height, bool mask = false) {
 
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-
+    
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
         // add single elements
         if (auto contains = str.containsLayers.find(layer);
             contains != str.containsLayers.end()) {
-
-          int i = 0;
-          // Step 1: Collect all polygons across the entire layer
-          std::vector<std::vector<std::pair<double, double>>> allPolygons;
           for (auto &el : str.elements) {
             if (el.layer == layer) {
-              std::vector<std::pair<double, double>> polygon;
-              for (const auto &point : el.pointCloud) {
-                polygon.push_back(std::pair<double, double>(point[0], point[1]));
+              if (el.elementType == GDS::ElementType::elBox) {
+                addBox(levelSet, el, baseHeight, height, 0., 0.);
+              } else {
+                addPolygon(levelSet, el, baseHeight, height, 0, 0);
               }
-              if (lsInternal::Logger::getLogLevel() >= 2)
-                viennaps::GDS::saveContoursToCSV(polygon, "layer" + std::to_string(layer) + "_GDSIIpolygon" + std::to_string(i++) + ".csv");
-              allPolygons.push_back(polygon);
             }
           }
-
-          // Step 2: Apply Gaussian convolution to simulate global proximity effects
-          double rasterResolution = 0.005;
-          std::vector<double> sigmas = {6., 60.};  // Different Gaussian blurring scales
-          std::vector<double> weights = {1.0, 0.2}; // Weighting factors for each sigma
-          psGDSMaskProximity<NumericType> proximityEffect(rasterResolution, sigmas, weights, bounds_);
-          proximityEffect.addPolygons(allPolygons);
-          proximityEffect.apply();  // Apply blurring
-
-          // Step 3: Extract modified exposure contours at threshold 0.7
-          std::vector<std::vector<std::pair<double, double>>> modifiedPolygons = 
-              proximityEffect.extractContoursAtThreshold(0.7);
-
-          i = 0;
-          auto elementIt = str.elements.begin();  // Use iterator to avoid reallocation issues
-
-          while (elementIt != str.elements.end() && !modifiedPolygons.empty()) {
-              if (elementIt->layer == layer) {
-                  elementIt->pointCloud.clear();
-
-                  // Assign polygon to current element
-                  std::vector<std::pair<double, double>> simplifiedPolygon = simplifyPolygon(modifiedPolygons.front(), 0.05, 0.35);
-                  if (lsInternal::Logger::getLogLevel() >= 2) {
-                      viennaps::GDS::saveContoursToCSV(modifiedPolygons.front(), "layer" + std::to_string(layer) + "_polygon" + std::to_string(i) + ".csv");
-                      viennaps::GDS::saveContoursToCSV(simplifiedPolygon, "layer" + std::to_string(layer) + "_simplePolygon" + std::to_string(i++) + ".csv");
-                  }
-
-                  for (const auto &point : simplifiedPolygon) {
-                    double scaledX = point.first * rasterResolution + bounds_[0];
-                    double scaledY = point.second * rasterResolution + bounds_[2];
-                
-                    elementIt->pointCloud.push_back({scaledX, scaledY, 0.});
-                  }
-
-                  if (elementIt->elementType == GDS::ElementType::elBox) {
-                    addBox(levelSet, *elementIt, baseHeight, height, 0., 0.);
-                  } else {
-                    addPolygon(levelSet, *elementIt, baseHeight, height, 0., 0.);
-                  }
-                  // Remove the processed polygon
-                  modifiedPolygons.erase(modifiedPolygons.begin());
-              }
-
-              ++elementIt;
-          }
-
-          // Remove leftover empty elements (only from the specified layer)
-          str.elements.erase(std::remove_if(str.elements.begin(), str.elements.end(),
-                                            [&](const auto &el) {
-                                                return el.layer == layer && el.pointCloud.empty();
-                                            }),
-                            str.elements.end());
-
         }
 
         // add structure references
@@ -201,32 +149,24 @@ public:
     }
 
     if (mask) {
-      auto topPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-      NumericType normal[3] = {0., 0., 1.};
-      NumericType origin[3] = {0., 0., baseHeight + height};
-      viennals::MakeGeometry<NumericType, D>(
-          topPlane,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
+      // Create bottom substrate (z >= 0)
+      auto bottomLS = lsDomainType::New(levelSet->getGrid());
+      double originLow[3] = {0., 0., baseHeight};
+      double normalLow[3] = {0., 0., -1.};
+      auto bottomPlane = viennals::SmartPointer<viennals::Plane<double, D>>::New(originLow, normalLow);
+      viennals::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
 
-      auto botPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-      normal[D - 1] = -1.;
-      origin[D - 1] = baseHeight;
-      viennals::MakeGeometry<NumericType, D>(
-          botPlane,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
+      // Create top cap (z <= 5 µm)
+      auto topLS = lsDomainType::New(levelSet->getGrid());
+      double originHigh[3] = {0., 0., baseHeight + height}; // Adjust to match extrusion
+      double normalHigh[3] = {0., 0., 1.};
+      auto topPlane = viennals::SmartPointer<viennals::Plane<double, D>>::New(originHigh, normalHigh);
+      viennals::MakeGeometry<double, D>(topLS, topPlane).apply();
 
-      viennals::BooleanOperation<NumericType, D>(
-          topPlane, botPlane, viennals::BooleanOperationEnum::INTERSECT)
-          .apply();
-
-      viennals::BooleanOperation<NumericType, D>(
-          topPlane, levelSet,
-          viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-          .apply();
-
-      return topPlane;
+      // Intersect with bottom
+      viennals::BooleanOperation<double, D>(levelSet, bottomLS, viennals::BooleanOperationEnum::INTERSECT).apply();
+      // Intersect with top
+      viennals::BooleanOperation<double, D>(levelSet, topLS, viennals::BooleanOperationEnum::INTERSECT).apply();
     }
     return levelSet;
   }
@@ -241,7 +181,7 @@ public:
     return {minBounds, maxBounds};
   }
 
-  auto getBounds() { return bounds_; }
+  auto getBounds() const { return bounds_; }
 
   void insertNextStructure(GDS::Structure<NumericType> const &structure) {
     structures.push_back(structure);
@@ -254,85 +194,6 @@ public:
   }
 
 private:
-
-  // Function to compute angle change between three points
-  double computeAngle(std::pair<double, double> p1, 
-                      std::pair<double, double> p2, 
-                      std::pair<double, double> p3) {
-      double v1x = p2.first - p1.first;
-      double v1y = p2.second - p1.second;
-      double v2x = p3.first - p2.first;
-      double v2y = p3.second - p2.second;
-
-      double dotProduct = v1x * v2x + v1y * v2y;
-      double magnitude1 = std::sqrt(v1x * v1x + v1y * v1y);
-      double magnitude2 = std::sqrt(v2x * v2x + v2y * v2y);
-
-      if (magnitude1 == 0.0 || magnitude2 == 0.0) return 0.0; // Avoid division by zero
-
-      double cosTheta = dotProduct / (magnitude1 * magnitude2);
-      return std::acos(std::clamp(cosTheta, -1.0, 1.0)); // Clamp to avoid NaN
-  }
-
-  // Function to compute Euclidean distance
-  double euclideanDistance(const std::pair<double, double>& p1, const std::pair<double, double>& p2) {
-    return std::sqrt(std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2));
-  }
-
-  // Function to find the two adjacent points in the polygon that are farthest apart
-  size_t findFarthestAdjacentPoints(const std::vector<std::pair<double, double>>& polygon) {
-    if (polygon.size() < 2) return 0; // Not enough points to process
-
-    size_t maxIdx = 0;
-    double maxDistance = 0.0;
-
-    for (size_t i = 0; i < polygon.size() - 1; ++i) {
-        double dist = euclideanDistance(polygon[i], polygon[i + 1]);
-        if (dist > maxDistance) {
-            maxDistance = dist;
-            maxIdx = i;
-        }
-    }
-    return maxIdx;  // Return index of the first point in the farthest pair
-  }
-
-  // Function to simplify a polygon using gradient-based filtering
-  std::vector<std::pair<double, double>> simplifyPolygon(
-    const std::vector<std::pair<double, double>>& polygon, 
-    double angleThreshold = 0.05, 
-    double distanceThreshold = 0.5) {  // Adjust angle threshold and grid spacing as needed
-
-    if (polygon.size() < 5) return polygon; // Not enough points to simplify
-
-    std::vector<std::pair<double, double>> simplifiedPolygon;
-    simplifiedPolygon.push_back(polygon.front()); // Keep first point
-
-    for (size_t i = 1; i < polygon.size() - 1; ++i) {
-        double angle = computeAngle(polygon[i - 1], polygon[i], polygon[i + 1]);
-
-      if (angle > angleThreshold && euclideanDistance(polygon[i], simplifiedPolygon.back()) >= distanceThreshold) {          
-            simplifiedPolygon.push_back(polygon[i]);
-        }
-    }
-
-    simplifiedPolygon.push_back(polygon.back()); // Keep last point
-
-    // Find the two adjacent points that are farthest apart
-    size_t farthestIdx = findFarthestAdjacentPoints(simplifiedPolygon);
-
-    // Reorder the polygon so the farthest adjacent points are first and last
-    std::vector<std::pair<double, double>> reorderedPolygon;
-    reorderedPolygon.insert(reorderedPolygon.begin(), simplifiedPolygon.begin() + farthestIdx + 1, simplifiedPolygon.end());
-    reorderedPolygon.insert(reorderedPolygon.end(), simplifiedPolygon.begin(), simplifiedPolygon.begin() + farthestIdx);
-
-    // Ensure the polygon remains open by removing duplicate endpoints
-    if (reorderedPolygon.front() == reorderedPolygon.back()) {
-      reorderedPolygon.pop_back();
-    }
-
-    return reorderedPolygon;
-  }
-
   GDS::Structure<NumericType> *getStructure(const std::string &strName) {
     for (size_t i = 0; i < structures.size(); i++) {
       if (strName == structures[i].name) {
@@ -372,10 +233,12 @@ private:
             mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
           } else {
             bool retry = false;
-            mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
+            // mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
+            mesh = polygonToSurfaceMesh(el, 0, 0);
             if (retry) {
               pointOrderFlag = !pointOrderFlag;
-              mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
+              // mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
+              mesh = polygonToSurfaceMesh(el, 0, 0);
             }
           }
           strLayerMapping[el.layer]->append(*mesh);
@@ -484,21 +347,24 @@ private:
         .apply();
   }
 
-  void addPolygon(lsDomainType levelSet, GDS::Element<NumericType> &element,
-                  const NumericType baseHeight, const NumericType height,
-                  const NumericType xOffset, const NumericType yOffset) {
-    bool retry = false;
-    auto mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset,
-                                     yOffset, retry);
-    if (retry) {
-      pointOrderFlag = !pointOrderFlag;
-      mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset,
-                                  retry);
-    }
-    auto tmpLS = lsDomainType::New(levelSet->getGrid());
-    viennals::FromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
+  void addPolygon(lsDomainType levelSet,
+                  const GDS::Element<NumericType> &element,
+                  const NumericType baseHeight,
+                  const NumericType height,
+                  const NumericType xOffset,
+                  const NumericType yOffset) {
+
+    // Create a 2D level set from the polygon
+    auto mesh = polygonToSurfaceMesh(element, xOffset, yOffset);
+    lsDomainType2D tmpLS = lsDomainType2D::New(getBounds(), boundaryConds_, getGridDelta());
+    viennals::FromSurfaceMesh<NumericType, 2>(tmpLS, mesh).apply();
+
+    auto levelSet3D = lsDomainType::New(levelSet->getGrid());
+    std::array<NumericType, 2> extrudeExtent = {baseHeight, baseHeight + height};
+    viennals::Extrude<NumericType>(tmpLS, levelSet3D, extrudeExtent).apply();
+   
     viennals::BooleanOperation<NumericType, D>(
-        levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
+        levelSet, levelSet3D, viennals::BooleanOperationEnum::UNION)
         .apply();
   }
 
@@ -536,7 +402,50 @@ private:
   }
 
   SmartPointer<viennals::Mesh<NumericType>>
-  polygonToSurfaceMesh(GDS::Element<NumericType> &element,
+  polygonToSurfaceMesh(const GDS::Element<NumericType> &element,
+                       const NumericType xOffset, const NumericType yOffset) {
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    const auto &points = element.pointCloud;
+  
+    if (points.size() < 2) {
+      return mesh;
+    }
+  
+    // --- Determine winding order (signed area) ---
+    double signedArea = 0.0;
+    for (size_t i = 0; i < points.size(); ++i) {
+      const auto &p1 = points[i];
+      const auto &p2 = points[(i + 1) % points.size()];
+      signedArea += (p1[0] * p2[1] - p2[0] * p1[1]);
+    }
+    bool isCCW = (signedArea > 0);
+  
+    // --- Add points to mesh with offsets ---
+    std::vector<unsigned> indices;
+    for (const auto &pt : points) {
+      indices.push_back(mesh->insertNextNode(pt));
+    }
+
+    // --- Add lines ---
+    for (size_t i = 1; i < indices.size(); ++i) {
+      if (isCCW)
+        mesh->insertNextLine({indices[i], indices[i - 1]});
+      else
+        mesh->insertNextLine({indices[i - 1], indices[i]});
+    }
+  
+    // --- Close the polygon ---
+    if (points.front() != points.back()) {
+      if (isCCW)
+        mesh->insertNextLine({indices.front(), indices.back()});
+      else
+        mesh->insertNextLine({indices.back(), indices.front()});
+    }
+      return mesh;
+  }
+
+  SmartPointer<viennals::Mesh<NumericType>>
+  polygonToSurfaceMeshGeom(GDS::Element<NumericType> &element,
                        const NumericType baseHeight, const NumericType height,
                        const NumericType xOffset, const NumericType yOffset,
                        bool &retry) {

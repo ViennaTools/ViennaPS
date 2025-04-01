@@ -111,11 +111,22 @@ CPMFindPackage(
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-CPMFindPackage(
-  NAME ViennaLS
-  VERSION 4.2.2
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../install")
+# Find dependencies *before* loading ViennaLS
+find_package(OpenMP REQUIRED)
+
+find_package(ViennaLS QUIET)
+
+if(NOT ViennaLS_FOUND)
+  message(STATUS "ViennaLS not found locally, falling back to CPM...")
+  CPMFindPackage(
+    NAME ViennaLS
+    VERSION 4.2.2
+    GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
+    EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+else()
+  message(STATUS "Found local ViennaLS installation in ../install")
+endif()
 
 CPMFindPackage(
   NAME ViennaCS
