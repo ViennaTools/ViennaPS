@@ -1,4 +1,4 @@
-if (NOT VIENNACORE_USE_OPENMP)
+if(NOT VIENNACORE_USE_OPENMP)
   message(SEND_ERROR "ViennaPS examples are only available with OpenMP support.")
   return()
 endif()
