@@ -1,6 +1,6 @@
 ---
 layout: default
-title: GPU Acceleration
+title: GPU Module
 parent: Installing the Library
 nav_order: 1
 ---
