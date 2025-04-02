@@ -8,6 +8,8 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
+option(VIENNAPS_USE_GPU "Enable GPU support" ON)
+
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
