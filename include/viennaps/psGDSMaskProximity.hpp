@@ -24,7 +24,7 @@ class GDSMaskProximity {
 public:
   GDSMaskProximity(DomainType2D inputLS, double delta, const std::vector<double> &sigmas,
                           const std::vector<double> &weights)
-      : inputLevelSet(inputLS), gridDelta(delta), sigmas(sigmas), weights(weights) {
+      : inputLevelSet(inputLS), exposureDelta(delta), sigmas(sigmas), weights(weights) {
     assert(sigmas.size() == weights.size());
     assert(inputLevelSet != nullptr);
     initializeGrid();
@@ -36,7 +36,6 @@ public:
     }
 
     finalGrid = combineExposures();
-    // saveGridToCSV(finalGrid, "finalGrid.csv");
   }
 
   const Grid2D& getExposureGrid() const { return finalGrid; }
@@ -61,12 +60,14 @@ public:
   }
   
 private:
+  std::vector<double> sigmas, weights;
+  double threshold = 0.5;
+  double exposureDelta = 1.0;
+
   DomainType2D inputLevelSet;
   Grid2D sdfGrid, finalGrid;
 
   std::vector<Grid2D> blurredGrids;
-  std::vector<double> sigmas, weights;
-  double gridDelta;
   int gridSizeX, gridSizeY;
 
   void initializeGrid() {

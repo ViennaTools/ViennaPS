@@ -21,6 +21,7 @@ int main(int argc, char **argv) {
     
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
+  mask->addBlur({5., 80.}, {0.8, 0.2}, 0.5, gridDelta);
   ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
 
   // geometry setup
@@ -43,7 +44,7 @@ int main(int argc, char **argv) {
   geometry->insertNextLevelSetAsMaterial(layer0, viennaps::Material::Mask);
 
   auto layer1 = mask->layerToLevelSet(1 /*layer*/, -0.15 /*base z position*/,
-                                      0.45 /*height*/, true);
+                                      0.45 /*height*/, true, false);
   geometry->insertNextLevelSetAsMaterial(layer1, viennaps::Material::SiO2);
 
   geometry->saveSurfaceMesh("Geometry.vtp", false /* add material IDs */);
