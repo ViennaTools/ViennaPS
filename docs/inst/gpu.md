@@ -25,9 +25,18 @@ The GPU ray tracing module is implemented using [**OptiX 8.0**](https://develope
 
 To enable GPU support, follow these steps:
 
-1. Open the `CMakeLists.txt` file and enable the `VIENNAPS_USE_GPU` option.
+1. Run CMake with the `-DVIENNAPS_USE_GPU=ON` option to enable GPU support.
 2. Specify the path to your OptiX installation by setting the CMake variable `OptiX_INSTALL_DIR`.
    - This should point to the directory where the `include` folder containing OptiX headers is located.
+  E.g.:
+   ```sh
+   cmake -DVIENNAPS_USE_GPU=ON -DOptiX_INSTALL_DIR=/path/to/optix .
+   ```
+   Alternatively, you can set the `OptiX_INSTALL_DIR` environment variable:
+   ```sh
+   export OptiX_INSTALL_DIR=/path/to/optix
+   ```
+   This will be used during the CMake setup.
 3. Install the **CUDA toolkit system-wide** so CMake can detect it automatically or provide `CUDA_PATH` CMake variable.
 4. Run CMake configuration. If both **CUDA and OptiX** are found, the GPU extension will be enabled.
 5. (Optional) To build examples or tests, set:
@@ -42,9 +51,8 @@ For building the Python GPU module:
    - This variable will be used during the CMake setup.
 2. Run the following command to install the module locally:
    ```sh
-   pip install .
+   CMAKE_ARGS=-DVIENNAPS_USE_GPU=ON pip install .
    ```
-   Ensure `VIENNAPS_USE_GPU` is enabled and `OptiX_INSTALL_DIR` is set.
 3. The GPU functions are available in the `GPU` submodule:
    ```python
    import viennaps3d as vps
