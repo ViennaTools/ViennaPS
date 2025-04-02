@@ -1648,10 +1648,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set padding between the largest point of the geometry and the "
            "boundary of the domain.")
       .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
-      .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
-           "Convert a layer of the GDS geometry to a level set domain.",
-           pybind11::arg("layer"), pybind11::arg("baseHeight"),
-           pybind11::arg("height"), pybind11::arg("mask") = false)
       .def(
           "getBounds",
           [](GDSGeometry<T, D> &gds) -> std::array<double, 6> {
@@ -1662,7 +1658,27 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
             return bounds;
           },
           "Get the bounds of the geometry.");
+     // Level set conversion
+     .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
+          "Convert a layer of the GDS geometry to a level set domain.",
+          pybind11::arg("layer"),
+          pybind11::arg("baseHeight"),
+          pybind11::arg("height"),
+          pybind11::arg("mask") = false,
+          pybind11::arg("blurring") = true)
 
+     // Blurring
+     .def("addBlur", &GDSGeometry<T, D>::addBlur,
+          pybind11::arg("sigmas"),
+          pybind11::arg("weights"),
+          pybind11::arg("threshold") = 0.5,
+          pybind11::arg("delta") = 0.0,
+          "Set parameters for applying mask blurring.")
+     .def("getAllLayers", &GDSGeometry<T, D>::getAllLayers,
+          "Return a set of all layers found in the GDS file.")
+     .def("getNumberOfStructures", &GDSGeometry<T, D>::getNumberOfStructures,
+          "Return number of structure definitions.")
+      
   pybind11::class_<GDSReader<T, D>>(module, "GDSReader")
       // constructors
       .def(pybind11::init())

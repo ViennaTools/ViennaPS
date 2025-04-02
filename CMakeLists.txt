@@ -20,7 +20,7 @@ option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" OFF)
 # --------------------------------------------------------------------------------------------------------
 
 set(VIENNAPS_LOOKUP_DIRS
-    ""
+    "${CMAKE_CURRENT_SOURCE_DIR}/../install"
     CACHE STRING "Directories to account for when searching installed dependencies")
 
 list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
@@ -110,12 +110,6 @@ CPMFindPackage(
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
-
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../install")
-# Find dependencies *before* loading ViennaLS
-find_package(OpenMP REQUIRED)
-
-find_package(ViennaLS QUIET)
 
 if(NOT ViennaLS_FOUND)
   message(STATUS "ViennaLS not found locally, falling back to CPM...")

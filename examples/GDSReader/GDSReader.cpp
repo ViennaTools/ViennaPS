@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
   // read GDS mask file
   ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
 
-  constexpr NumericType gridDelta = 0.005;
+  constexpr NumericType gridDelta = 0.01;
   ls::BoundaryConditionEnum boundaryConds[D] = {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
   mask->addBlur({5., 80.}, {0.8, 0.2}, 0.5, gridDelta);
-  ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
+  ps::GDSReader<NumericType, D>(mask, "myTest.gds").apply();
 
   // geometry setup
   auto bounds = mask->getBounds();
@@ -38,14 +38,23 @@ int main(int argc, char **argv) {
       .apply();
   geometry->insertNextLevelSetAsMaterial(plane, viennaps::Material::Si);
 
-  auto layer0 =
-      mask->layerToLevelSet(0 /*layer*/, 0.0 /*base z position*/, 0.1 /*height*/, true);
-
+  auto layer0 = mask->layerToLevelSet(0, 0.0, 0.1, true);
   geometry->insertNextLevelSetAsMaterial(layer0, viennaps::Material::Mask);
 
-  auto layer1 = mask->layerToLevelSet(1 /*layer*/, -0.15 /*base z position*/,
-                                      0.45 /*height*/, true, false);
+  auto layer1 = mask->layerToLevelSet(1, -0.1, 0.3, true);
   geometry->insertNextLevelSetAsMaterial(layer1, viennaps::Material::SiO2);
+
+  auto layer2 = mask->layerToLevelSet(2, 0., 0.15, true, false);
+  geometry->insertNextLevelSetAsMaterial(layer2, viennaps::Material::Si3N4);
+
+  auto layer3 = mask->layerToLevelSet(3, 0, 0.25, true);
+  geometry->insertNextLevelSetAsMaterial(layer3, viennaps::Material::Cu);
+
+  auto layer4 = mask->layerToLevelSet(4, 0, 0.4, true, false);
+  geometry->insertNextLevelSetAsMaterial(layer3, viennaps::Material::W);
+
+  auto layer5 = mask->layerToLevelSet(5, 0, 0.2, true);
+  geometry->insertNextLevelSetAsMaterial(layer5, viennaps::Material::PolySi);
 
   geometry->saveSurfaceMesh("Geometry.vtp", false /* add material IDs */);
   geometry->saveVolumeMesh("Geometry");

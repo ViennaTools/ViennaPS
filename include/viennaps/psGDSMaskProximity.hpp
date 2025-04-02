@@ -5,11 +5,9 @@
 #include <string>
 
 #include <lsDomain.hpp>
-#include <lsToMesh.hpp>
 
 #include <vcSmartPointer.hpp>
 
-#include <hrleSparseIterator.hpp>
 #include <hrleDenseIterator.hpp>
 
 namespace ls = viennals;
@@ -40,7 +38,7 @@ public:
 
   const Grid2D& getExposureGrid() const { return finalGrid; }
 
-  void saveGridToCSV(const std::vector<std::vector<NumericType>> &grid, const std::string &filename) {
+  void saveGridToCSV(const Grid2D &grid, const std::string &filename) {
     std::ofstream file(filename);
     if (!file.is_open()) {
       std::cerr << "Error: Cannot open file '" << filename << "' for writing!" << std::endl;
@@ -61,8 +59,7 @@ public:
   
 private:
   std::vector<double> sigmas, weights;
-  double threshold = 0.5;
-  double exposureDelta = 1.0;
+  double exposureDelta;
 
   DomainType2D inputLevelSet;
   Grid2D sdfGrid, finalGrid;

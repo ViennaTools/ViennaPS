@@ -22,89 +22,55 @@ ViennaPS is designed to be easily integrated into existing C++ projects and prov
 
 # What's New in This Branch?
 
-This branch introduces a type of mask proximity correction, simulating the impact of electron forward and backward scattering during e-beam lithography. The previous version directly converted GDSII polygons into level sets, but this enhancement applies a Gaussian blurring effect to better reflect real-world exposure.
-- **TODO: Make optical proximity correction generic to also incorporate realistic parameters for electron and photon interactions.**
+This branch introduces a comprehensive redesign of mask proximity correction using level set-based blurring of GDSII geometries. Rather than relying on polygon extraction, this version converts GDS polygons into 2D level sets, applies multi-Gaussian blurring, and inserts computed signed distances directly into sparse level set domains for robust feature modeling.
 
 ## Implementation Details
-### **1. Converting GDSII Polygons to a Rasterized Grid**
-- The imported mask polygons are converted into a rasterized grid representation.
-- The `addPolygons` function rasterizes the polygons onto a discretized grid.
-- The `rasterizePolygon` function fills grid cells inside the polygon using an Even-Odd rule algorithm.
-- **TODO: Allow user to configure the rasterization grid parameters (currently hardcoded).**
 
-### **2. Applying Gaussian Blurring to Simulate Electron Scattering**
-- Electron scattering effects are simulated by applying multiple separate Gaussian convolutions:
-  - *Forward scattering (small sigma)*: Models short-range diffusion.
-  - *Backward scattering (large sigma)*: Models long-range diffusion.
-- The function `applyGaussianBlur2D` performs 2D convolution using a Gaussian kernel:
-  - The kernel weights are computed based on a Gaussian distribution.
-  - A normalized exposure map is generated to ensure values remain between 0 and 1.
-- Method has been extended to a Multi-Gaussian model.
-- **TODO: Support additional scattering models, such as exponential, Lorentzian, or Molière for e-scattering.**
+### **Proximity Effect Modeling Using Multi-Gaussian Blurring**
+- A `GDSMaskProximity` class performs multi-sigma Gaussian blurring on the binary mask:
+  - *Forward scattering*: Short-range diffusion (small sigma).
+  - *Backward scattering*: Long-range diffusion (large sigma).
+- Arbitrary combinations of `(sigma, weight)` can be specified.
 
-### **3. Combining Exposure Contributions**
-- The `combineExposures` function merges forward and backward scattering contributions using a weighting factor (`backScatterFactor = 0.2`).
-- The final exposure values are normalized to ensure the maximum intensity is 1.0.
-- **TODO: Make the backScatterFactor a tunable parameter linked to physical scattering models.**
+### **Thresholded Exposure Contour Detection Using SDFs**
+- The blurred exposure map is thresholded to generate the 0-level contour.
+- Distance to the contour is estimated using interpolation between neighboring values.
+- Resulting distances are signed and inserted as sparse points in a 2D level set.
+- ExposureDelta and gridDelta can be different, allowing sub-grid resolution modeling.
+  - **TODO: TEST THIS**
 
-### **4. Extracting Contours from the Processed Exposure Grid**
-- The `extractContoursAtThreshold(0.5)` function finds the contour where the exposure is equal to 0.5.
-- Contours are extracted using a neighbor-based interpolation to refine the edges.
-- A distance-based grouping algorithm splits contour points into separate polygons.
-- **TODO: Extract the contour from the 2D exposure plane using level sets.**
-  - **Convert exposure grid to a signed distance function (SDF).**
-  - **Use the threshold surface as an implicit level-set or shift by threshold value for a zero level-set.**
-  - **Eliminates polygon generation and splitting: a multi-polygon contour can be stored in a single level-set domain.**
+### **Level Set Extrusion for 3D Geometry Generation**
+- The 2D level set is extruded in the z-direction to form a 3D volume using `ls::Extrude`.
+- Extrusion thickness and z-position are controlled per layer.
+- Top and bottom capping planes are optionally intersected to constrain height.
 
-### **5. Polygon Simplification and Reordering for Efficient Processing**
-- Extracted contours often contain excessive detail, leading to unnecessary complexity in further processing.
-- The function `simplifyPolygon` applies gradient- and distance-based filtering to remove insignificant points.
-- The `simplifyPolygon` function only keeps points where:
-  - The normal angle change between neighboring lines exceeds a threshold (`angleThreshold`).
-  - The distance between points exceeds a specified threshold (`distanceThreshold`).
-- The pruning also ensures that the resulting polygon is open-ended rather than artificially closed.
-    - This is required for the GDS extrusion algorithm.
-- The ordering of the polygon is optimized to ensuire compatibility to GDS-implemented extrusion
-  - The two adjacent points that are farthest apart are identified.
-  - The polygon is reordered so that these two points become the start and end of the sequence.
-  - Any duplicate endpoints are removed, ensuring the polygon remains open.
-- **TODO: Optimize polygon simplification by adapting the angle threshold dynamically based on polygon complexity.**
-- **TODO: Try to remove this altogether by using level-set based processing.**
+### **Hierarchical GDS Structure and Reference Handling**
+- Referenced structures (`SREF`) are also supported:
+  - Rotation (`ANGLE`), scaling (`MAG`), and flipping (`STRANS`) are correctly interpreted.
+  - Transformations are applied directly to level sets instead of 3D meshes.
+- Geometry from references is inserted before extrusion, avoiding mesh generation.
 
-### **6. Reinserting the Modified Polygons**
-- Extracted contours from the rasterized grid are scaled back to the original GDSII coordinate space.
-- The new polygons replace the previous elements in the GDS elements of the `GDSGeometry` class.
-- The new elements are then passed to the `addPolygon` function instead of the original GDSII polygons.
-- Since some original polygons may merge, any unused elements are removed.
-- **TODO: Improve the extrusion process which is not robust and can fail with complex geometries and near-closed polygons.**
+### **GDSGeometry Blurring API**
+- Blurring parameters can be passed to `GDSGeometry::addBlur(sigmas, weights, threshold, delta)`.
+- When `blur = true`, `layerToLevelSet()` applies blurring and inserts distances automatically.
+- Blurring can be disabled per layer if needed.
 
-### **7. Debugging and Visualization**
-- When the Logger level is `INFO` or above, the following are generated:
-  - Initial GDSII polygons: `GDSII_layerL_polygonN.csv`
-  - Exposure grid for e-beam writing: `layerL_exposure.csv`
-  - Exposure grid output: `layerL_finalExposure.csv`
-  - Extracted contour for a layer: `layerL_allContours.csv`
-  - Polygon outputs: `layerL_polygon_N.csv`
-  - Simplified polygon outputs: `layerL_simplePolygon_N.csv`
-- Python visualization script: `plotCSV.py`
+---
 
-### GDS mask import example
+### GDS Mask Import Example
 
-This [example](https://github.com/ViennaTools/ViennaPS/tree/maskOPC/examples/GDSReader) tests the GDS mask import feature. The difference in the final mask profiles before and after proximity correction are given in the image below.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/maskOPC/examples/GDSReader) tests the full GDS mask import, blurring, rotation, scaling, and flipping as well as the level set conversion pipeline. Shown below is the result after applying proximity correction and extrusion on a simple test.
 
 <div align="center">
   <img src="assets/masks.png" width=1200 style="background-color:white;">
 </div>
 
+---
 
 ### **TODO: Future Work for Level Set-Based Mask Processing**
-- **Add option to generate a dense 2D/3D LS directly from SDF values.**
-- **Support grid coarsening for computational efficiency.**
-  - **Rasterization grid needs to be finer than the final geometry.**
-- **Implement level-set-based extrusion**
-  - **2D level sets would serve as layers in a 3D level set (stack 2D layers).**
-  - **Use contour-generated level set as middle-layers.**
-  - **Generate top/bottom capping layers based on distances to the contour in 2D domain.**
+- Implement optional Laplacian smoothing post-blur.
+- Support analytical proximity kernels (e.g., Molière, Lorentzian).
+- Allow importing multiple GDS files or cells.
 
 ***
 ***
