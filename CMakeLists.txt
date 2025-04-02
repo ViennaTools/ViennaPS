@@ -95,7 +95,8 @@ CPMAddPackage(
   NAME ViennaCore
   VERSION 1.4.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMAddPackage(
   NAME PackageProject
@@ -104,9 +105,10 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 3.4.0
+  VERSION 3.4.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+  OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMFindPackage(
   NAME ViennaLS
@@ -148,7 +150,8 @@ endif()
 # --------------------------------------------------------------------------------------------------------
 
 # If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
-if(VIENNACORE_USE_GPU AND VIENNACORE_PTX_DIR)
+if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+  message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
 endif()
 

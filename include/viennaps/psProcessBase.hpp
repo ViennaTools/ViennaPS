@@ -173,6 +173,9 @@ public:
 
     setFluxEngineGeometry();
 
+    translationField_ = SmartPointer<TranslationField<NumericType, D>>::New(
+        model_->getVelocityField(), domain_->getMaterialMap());
+
     const bool useProcessParams =
         model_->getSurfaceModel()->getProcessParameters() != nullptr;
     bool useCoverages = false;
@@ -687,6 +690,7 @@ protected:
           throw pybind11::error_already_set();
 #endif
         // save current coverages to compare with the new ones
+        assert(coverages != nullptr);
         auto prevStepCoverages =
             SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
 
