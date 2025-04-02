@@ -83,6 +83,9 @@ else()
 endif()
 
 target_link_libraries(viennaps2d PRIVATE ViennaPS)
+# We have to include the CUDA headers for the 2D version as well because ViennaCore uses them in the Logger
+target_include_directories(viennaps2d PRIVATE ${CUDA_INCLUDE_DIRS})
+target_link_libraries(viennaps2d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
 
 target_compile_definitions(
   viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2 -DVIENNAPS_MODULE_NAME=viennaps2d
