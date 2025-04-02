@@ -4,6 +4,7 @@
 #define __CUDACC__
 #endif
 
+#include <raygBoundary.hpp>
 #include <raygLaunchParams.hpp>
 #include <raygPerRayData.hpp>
 #include <raygRNG.hpp>
@@ -14,7 +15,7 @@
 #include <models/psSF6O2Parameters.hpp>
 
 #include <vcContext.hpp>
-#include <vcVectorUtil.hpp>
+#include <vcVectorType.hpp>
 
 using namespace viennaray::gpu;
 
@@ -31,7 +32,7 @@ extern "C" __global__ void __closesthit__ion() {
     if (launchParams.periodicBoundary) {
       applyPeriodicBoundary(prd, sbtData);
     } else {
-      reflectFromBoundary(prd);
+      reflectFromBoundary(prd, sbtData);
     }
   } else {
     auto geomNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
@@ -130,8 +131,7 @@ extern "C" __global__ void __raygen__ion() {
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
 
-  while (prd.rayWeight > launchParams.rayWeightThreshold &&
-         prd.energy > minEnergy) {
+  while (continueRay(launchParams, prd)) {
     optixTrace(launchParams.traversable, // traversable GAS
                make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
@@ -155,7 +155,7 @@ extern "C" __global__ void __closesthit__etchant() {
     if (launchParams.periodicBoundary) {
       applyPeriodicBoundary(prd, sbtData);
     } else {
-      reflectFromBoundary(prd);
+      reflectFromBoundary(prd, sbtData);
     }
   } else {
     float *data = (float *)sbtData->cellData;
@@ -194,7 +194,7 @@ extern "C" __global__ void __raygen__etchant() {
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
 
-  while (prd.rayWeight > launchParams.rayWeightThreshold) {
+  while (continueRay(launchParams, prd)) {
     optixTrace(launchParams.traversable, // traversable GAS
                make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction
@@ -218,7 +218,7 @@ extern "C" __global__ void __closesthit__oxygen() {
     if (launchParams.periodicBoundary) {
       applyPeriodicBoundary(prd, sbtData);
     } else {
-      reflectFromBoundary(prd);
+      reflectFromBoundary(prd, sbtData);
     }
   } else {
     float *data = (float *)sbtData->cellData;
@@ -257,7 +257,7 @@ extern "C" __global__ void __raygen__oxygen() {
   uint32_t u0, u1;
   packPointer((void *)&prd, u0, u1);
 
-  while (prd.rayWeight > launchParams.rayWeightThreshold) {
+  while (continueRay(launchParams, prd)) {
     optixTrace(launchParams.traversable, // traversable GAS
                make_float3(prd.pos[0], prd.pos[1], prd.pos[2]), // origin
                make_float3(prd.dir[0], prd.dir[1], prd.dir[2]), // direction

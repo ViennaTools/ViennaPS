@@ -173,6 +173,9 @@ public:
 
     setFluxEngineGeometry();
 
+    translationField_ = SmartPointer<TranslationField<NumericType, D>>::New(
+        model_->getVelocityField(), domain_->getMaterialMap());
+
     const bool useProcessParams =
         model_->getSurfaceModel()->getProcessParameters() != nullptr;
     bool useCoverages = false;
@@ -429,7 +432,7 @@ public:
         if (auto surfaceData = surfaceModel->getSurfaceData())
           mergeScalarData(diskMesh_->getCellData(), surfaceData);
         mergeScalarData(diskMesh_->getCellData(), fluxes);
-        printDiskMesh(diskMesh_, name + "_" + std::to_string(counter) + ".vtp");
+        saveDiskMesh(diskMesh_, name + "_" + std::to_string(counter) + ".vtp");
         if (domain_->getCellSet()) {
           domain_->getCellSet()->writeVTU(name + "_cellSet_" +
                                           std::to_string(counter) + ".vtu");
@@ -487,8 +490,11 @@ public:
       // apply advection callback
       if (useAdvectionCallback) {
         callbackTimer.start();
-        bool continueProcess = advectionCallback->applyPostAdvect(
-            advectionKernel.getAdvectedTime());
+        auto advectedTime = advectionKernel.getAdvectedTime();
+        advectedTime = advectedTime == std::numeric_limits<double>::max()
+                           ? remainingTime
+                           : advectedTime;
+        bool continueProcess = advectionCallback->applyPostAdvect(advectedTime);
         callbackTimer.finish();
         Logger::getInstance()
             .addTiming("Advection callback post-advect", callbackTimer)
@@ -572,8 +578,8 @@ protected:
     return true;
   }
 
-  static void printDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
-                            std::string name) {
+  static void saveDiskMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
+                           std::string name) {
     viennals::VTKWriter<NumericType>(mesh, std::move(name)).apply();
   }
 
@@ -684,6 +690,7 @@ protected:
           throw pybind11::error_already_set();
 #endif
         // save current coverages to compare with the new ones
+        assert(coverages != nullptr);
         auto prevStepCoverages =
             SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
 
@@ -705,8 +712,8 @@ protected:
           mergeScalarData(diskMesh_->getCellData(), fluxes);
           if (auto surfaceData = model_->getSurfaceModel()->getSurfaceData())
             mergeScalarData(diskMesh_->getCellData(), surfaceData);
-          printDiskMesh(diskMesh_, name + "_covInit_" +
-                                       std::to_string(iteration) + ".vtp");
+          saveDiskMesh(diskMesh_,
+                       name + "_covInit_" + std::to_string(iteration) + ".vtp");
 
           Logger::getInstance()
               .addInfo("Iteration: " + std::to_string(iteration + 1))
@@ -750,7 +757,8 @@ protected:
     covMetricFile << "\n";
   }
 
-  // Implementation specific functions
+  // Implementation specific functions (to be implemented by derived classes,
+  // currently CPU or GPU Process)
   virtual bool checkInput() = 0;
 
   virtual void initFluxEngine() = 0;

@@ -64,8 +64,8 @@ int main(int argc, char **argv) {
   process.setRayTracingParameters(rayTracingParams);
   process.setProcessDuration(params.get("processTime"));
   process.setCoverageDeltaThreshold(1e-4);
-  process.setIntegrationScheme(
-      params.get<viennals::IntegrationSchemeEnum>("integrationScheme"));
+  process.setIntegrationScheme(util::convertIntegrationScheme(
+      params.get<std::string>("integrationScheme")));
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

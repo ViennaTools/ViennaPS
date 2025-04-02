@@ -43,7 +43,7 @@ template <class NumericType, int D> void RunTest() {
         .apply();
 
     typename DirectionalEtching<NumericType, D>::RateSet rateSet;
-    rateSet.direction = {0.};
+    rateSet.direction = Vec3D<NumericType>{0., 0., 0.};
     rateSet.direction[D - 1] = -1.;
     rateSet.directionalVelocity = -1.;
     rateSet.isotropicVelocity = 0.;

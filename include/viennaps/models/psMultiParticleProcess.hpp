@@ -29,10 +29,10 @@ public:
     };
   }
 
-  SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<viennals::PointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) override {
+  SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIds) override {
 
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);

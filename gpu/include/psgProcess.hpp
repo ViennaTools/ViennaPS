@@ -143,6 +143,8 @@ protected:
     if (useCoverages) {
       auto coverages = processModel_->getSurfaceModel()->getCoverages();
       assert(coverages);
+      assert(diskMesh_);
+      assert(translationField_);
       auto numCov = coverages->getScalarDataSize();
       auto &pointKdTree = translationField_->getKdTree();
       if (pointKdTree.getNumberOfPoints() != diskMesh_->nodes.size()) {

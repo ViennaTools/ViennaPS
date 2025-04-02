@@ -60,7 +60,8 @@ int main(int argc, char **argv) {
   // ANSGM Etch
   NumericType angle = params.get("phi1");
   NumericType angleRad = constants::degToRad(angle);
-  model->setPrimaryDirection({-std::sin(angleRad), -std::cos(angleRad), 0});
+  model->setPrimaryDirection(
+      Vec3D<NumericType>{-std::sin(angleRad), -std::cos(angleRad), 0});
   ibeParams.tiltAngle = angle;
 
   process.setProcessDuration(params.get("ANSGM_Depth"));
@@ -73,7 +74,8 @@ int main(int argc, char **argv) {
   // Blazed Gratings Etch
   angle = params.get("phi2");
   angleRad = constants::degToRad(angle);
-  model->setPrimaryDirection({-std::sin(angleRad), -std::cos(angleRad), 0});
+  model->setPrimaryDirection(
+      Vec3D<NumericType>{-std::sin(angleRad), -std::cos(angleRad), 0});
   ibeParams.tiltAngle = angle;
 
   for (int i = 1; i < 5; ++i) {

@@ -101,15 +101,15 @@ public:
             if (sref.angle > 0.) {
               viennals::TransformMesh<NumericType>(
                   preBuiltStrMesh, viennals::TransformEnum::ROTATION,
-                  hrleVectorType<double, 3>{0., 0., 1.}, deg2rad(sref.angle))
+                  VectorType<double, 3>{0., 0., 1.}, deg2rad(sref.angle))
                   .apply();
             }
 
             if (sref.magnification > 0.) {
               viennals::TransformMesh<NumericType>(
                   preBuiltStrMesh, viennals::TransformEnum::SCALE,
-                  hrleVectorType<double, 3>{sref.magnification,
-                                            sref.magnification, 1.})
+                  VectorType<double, 3>{sref.magnification, sref.magnification,
+                                        1.})
                   .apply();
             }
 
@@ -122,8 +122,7 @@ public:
 
             viennals::TransformMesh<NumericType>(
                 preBuiltStrMesh, viennals::TransformEnum::TRANSLATION,
-                hrleVectorType<double, 3>{sref.refPoint[0], sref.refPoint[1],
-                                          0.})
+                VectorType<double, 3>{sref.refPoint[0], sref.refPoint[1], 0.})
                 .apply();
 
             strMesh->append(*preBuiltStrMesh);
@@ -406,7 +405,7 @@ private:
 
     // sidewalls
     for (unsigned i = 0; i < numPointsFlat; i++) {
-      std::array<NumericType, 3> offsetPoint = element.pointCloud[i];
+      auto offsetPoint = element.pointCloud[i];
       offsetPoint[0] += xOffset;
       offsetPoint[1] += yOffset;
       offsetPoint[2] = baseHeight;
@@ -423,7 +422,7 @@ private:
 
     for (unsigned i = 0; i < numPointsFlat; i++) {
       unsigned upPoint = i + numPointsFlat;
-      std::array<NumericType, 3> offsetPoint = element.pointCloud[i];
+      auto offsetPoint = element.pointCloud[i];
       offsetPoint[0] += xOffset;
       offsetPoint[1] += yOffset;
       offsetPoint[2] = baseHeight + height;

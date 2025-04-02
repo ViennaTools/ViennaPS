@@ -3,7 +3,7 @@
 #include <psgProcessModel.hpp>
 #include <raygParticle.hpp>
 
-#include <vcVectorUtil.hpp>
+#include <vcVectorType.hpp>
 
 namespace viennaps::gpu {
 

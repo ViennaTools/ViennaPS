@@ -33,7 +33,7 @@ auto GenerateMask(const NumericType bumpWidth, const NumericType bumpHeight,
     double x = -bumpWidth / 2. +
                i * bumpWidth / static_cast<NumericType>(numNodes - 1);
     double y = -4. * bumpHeight * x * x / (bumpWidth * bumpWidth) + bumpHeight;
-    mesh->insertNextNode({x + offset, y, 0.});
+    mesh->insertNextNode(Vec3D<NumericType>{x + offset, y, 0.});
     if (i > 0)
       mesh->insertNextLine({i - 1, i});
   }

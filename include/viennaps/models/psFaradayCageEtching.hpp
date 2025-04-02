@@ -23,7 +23,7 @@ namespace impl {
 template <typename NumericType, int D>
 class PeriodicSource : public viennaray::Source<NumericType> {
 public:
-  PeriodicSource(const std::array<std::array<NumericType, 3>, 2> &boundingBox,
+  PeriodicSource(const std::array<Vec3D<NumericType>, 2> &boundingBox,
                  const NumericType gridDelta, const NumericType tiltAngle,
                  const NumericType cageAngle, const NumericType cosinePower)
       : sourceExtent_{boundingBox[1][0] - boundingBox[0][0],
@@ -37,7 +37,7 @@ public:
     NumericType cosTilt = std::cos(tiltAngle * M_PI / 180.);
     NumericType sinTilt = std::sin(tiltAngle * M_PI / 180.);
 
-    viennaray::Vec3D<NumericType> direction;
+    Vec3D<NumericType> direction;
     direction[0] = -cosTilt * cage_y;
     direction[1] = cosTilt * cage_x;
     direction[2] = -sinTilt;
@@ -71,24 +71,24 @@ public:
     orthoBasis2_ = rayInternal::getOrthonormalBasis(direction);
   }
 
-  viennaray::Vec2D<viennaray::Vec3D<NumericType>>
+  std::array<Vec3D<NumericType>, 2>
   getOriginAndDirection(const size_t idx,
                         viennaray::RNG &RngState) const override {
     std::uniform_real_distribution<NumericType> dist(0., 1.);
 
-    viennaray::Vec3D<NumericType> origin;
+    Vec3D<NumericType> origin;
     origin[0] = minPoint_[0] + sourceExtent_[0] * dist(RngState);
     if constexpr (D == 3)
       origin[1] = minPoint_[1] + sourceExtent_[1] * dist(RngState);
     origin[D - 1] = zPos_;
 
-    viennaray::Vec3D<NumericType> direction;
+    Vec3D<NumericType> direction;
     if (idx % 2 == 0) {
       direction = getCustomDirection(RngState, orthoBasis1_);
     } else {
       direction = getCustomDirection(RngState, orthoBasis2_);
     }
-    rayInternal::Normalize(direction);
+    Normalize(direction);
 
     return {origin, direction};
   }
@@ -110,7 +110,7 @@ public:
   void saveSourcePlane() const {
     auto mesh = viennals::SmartPointer<viennals::Mesh<NumericType>>::New();
     if constexpr (D == 3) {
-      std::array<NumericType, 3> point = {minPoint_[0], minPoint_[1], zPos_};
+      Vec3D<NumericType> point{minPoint_[0], minPoint_[1], zPos_};
       mesh->insertNextNode(point);
       point[0] += sourceExtent_[0];
       mesh->insertNextNode(point);
@@ -121,7 +121,7 @@ public:
       mesh->insertNextTriangle({0, 1, 2});
       mesh->insertNextTriangle({0, 2, 3});
     } else {
-      std::array<NumericType, 3> point = {minPoint_[0], zPos_, NumericType(0)};
+      Vec3D<NumericType> point{minPoint_[0], zPos_, NumericType(0)};
       mesh->insertNextNode(point);
       point[0] += sourceExtent_[0];
       mesh->insertNextNode(point);
@@ -131,13 +131,13 @@ public:
   }
 
 private:
-  viennaray::Vec3D<NumericType> getCustomDirection(
-      viennaray::RNG &rngState,
-      const std::array<viennaray::Vec3D<NumericType>, 3> &basis) const {
-    viennaray::Vec3D<NumericType> direction;
+  Vec3D<NumericType>
+  getCustomDirection(viennaray::RNG &rngState,
+                     const std::array<Vec3D<NumericType>, 3> &basis) const {
+    Vec3D<NumericType> direction;
     std::uniform_real_distribution<NumericType> uniDist;
 
-    viennaray::Vec3D<NumericType> rndDirection{0., 0., 0.};
+    Vec3D<NumericType> rndDirection{0., 0., 0.};
     auto r1 = uniDist(rngState);
     auto r2 = uniDist(rngState);
 
@@ -171,8 +171,8 @@ private:
   NumericType const gridDelta_;
   const NumericType ee_;
 
-  std::array<viennaray::Vec3D<NumericType>, 3> orthoBasis1_;
-  std::array<viennaray::Vec3D<NumericType>, 3> orthoBasis2_;
+  std::array<Vec3D<NumericType>, 3> orthoBasis1_;
+  std::array<Vec3D<NumericType>, 3> orthoBasis2_;
 };
 
 } // namespace impl

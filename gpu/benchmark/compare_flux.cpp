@@ -3,13 +3,40 @@
 #include <models/psSingleParticleProcess.hpp>
 #include <psProcess.hpp>
 
-#include <curtTrace.hpp>
-#include <gpu/vcContext.hpp>
-#include <utElementToPointData.hpp>
+#include <psgCreateSurfaceMesh.hpp>
+#include <psgElementToPointData.hpp>
+#include <raygTrace.hpp>
+#include <vcContext.hpp>
 
 #include "BenchmarkGeometry.hpp"
 
 using namespace viennaps;
+
+void downloadResultsToPointData(viennaray::gpu::Trace<float, 3> &rayTracer,
+                                viennals::PointData<float> &pointData) {
+  const auto numRates = rayTracer.getNumberOfRates();
+  const auto numPoints = rayTracer.getNumberOfElements();
+  assert(numRates > 0);
+  auto valueBuffer = rayTracer.getResults();
+  std::vector<float> tmpBuffer(numRates * numPoints);
+  valueBuffer.download(tmpBuffer.data(), numPoints * numRates);
+  auto particles = rayTracer.getParticles();
+
+  int offset = 0;
+  for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
+    for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
+      int tmpOffset = offset + dIdx;
+      auto name = particles[pIdx].dataLabels[dIdx];
+
+      std::vector<float> values(numPoints);
+      std::memcpy(values.data(), &tmpBuffer[tmpOffset * numPoints],
+                  numPoints * sizeof(float));
+
+      pointData.insertReplaceScalarData(std::move(values), name);
+    }
+    offset += particles[pIdx].dataLabels.size();
+  }
+}
 
 int main() {
   omp_set_num_threads(16);
@@ -36,18 +63,18 @@ int main() {
   gpu::CreateSurfaceMesh<NumericType, float, D> surfMesher(
       domain->getSurface(), surfMesh, elementKdTree);
 
-  gpu::Trace<NumericType, D> tracer(context);
+  viennaray::gpu::Trace<NumericType, D> tracer(context);
   tracer.setNumberOfRaysPerPoint(3000);
   tracer.setUseRandomSeeds(false);
 
   diskMesher.apply();
   surfMesher.apply();
-  gpu::TriangleMesh<float> mesh(GRID_DELTA, surfMesh);
+  auto mesh = gpu::CreateTriangleMesh(GRID_DELTA, surfMesh);
 
   tracer.setGeometry(mesh);
   tracer.setPipeline("SingleParticlePipeline", context.modulePath);
 
-  auto particle = gpu::Particle<NumericType>();
+  auto particle = viennaray::gpu::Particle<NumericType>();
   particle.sticking = sticking;
   particle.name = "SingleParticle";
   particle.dataLabels.push_back("flux");
@@ -62,7 +89,7 @@ int main() {
                                        diskMesh, surfMesh, GRID_DELTA)
       .apply();
 
-  tracer.downloadResultsToPointData(surfMesh->getCellData());
+  downloadResultsToPointData(tracer, surfMesh->getCellData());
   viennals::VTKWriter<NumericType>(surfMesh, "GPU_SingleParticleFlux_tri.vtp")
       .apply();
   diskMesh->cellData = *pointData;

@@ -45,7 +45,7 @@ public:
     energy_ = energySample[0];
 
     ////// Custom Direction Sampling
-    Vec3D<NumericType> direction = {0., 0., 0.};
+    Vec3D<NumericType> direction{0., 0., 0.};
     auto directionSample = directionSampling_.sample(rngState);
     // the returned sample is a 1D array
     NumericType theta = directionSample[0];
@@ -101,7 +101,7 @@ public:
     NumericType theta = sample[0];
     energy_ = sample[1];
 
-    Vec3D<NumericType> direction = {0., 0., 0.};
+    Vec3D<NumericType> direction{0., 0., 0.};
     if constexpr (D == 2) {
       direction[0] = std::sin(theta);
       direction[1] = -std::cos(theta);

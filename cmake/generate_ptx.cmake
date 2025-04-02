@@ -5,7 +5,7 @@ function(generate_pipeline target_name generated_files_output)
   cuda_get_sources_and_options(cu_optix_source_files cmake_options options ${ARGN})
 
   # Add the path to the OptiX headers to our include paths.
-  cuda_include_directories(${OptiX_INCLUDE})
+  cuda_include_directories(${OptiX_INCLUDE} ${CUDA_INCLUDE_DIRS})
 
   # Include ViennaRay headers which are used in pipelines
   cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
@@ -50,7 +50,7 @@ function(generate_kernel target_name generated_files_output)
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.
   cuda_get_sources_and_options(cu_source_files cmake_options options ${ARGN})
 
-  cuda_include_directories(${OptiX_INCLUDE})
+  cuda_include_directories(${OptiX_INCLUDE} ${CUDA_INCLUDE_DIRS})
   cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
@@ -94,7 +94,7 @@ function(add_GPU_executable target_name_base target_name_var)
   endforeach()
 
   # Add the path to the OptiX headers to our include paths.
-  cuda_include_directories(${OptiX_INCLUDE})
+  cuda_include_directories(${OptiX_INCLUDE} ${CUDA_INCLUDE_DIRS})
 
   # Include ViennaRay headers which are used in pipelines
   cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
@@ -143,6 +143,6 @@ function(add_GPU_executable target_name_base target_name_var)
   message(STATUS "Adding target: ${target_name}")
   add_executable(${target_name} ${source_files} ${generated_files} ${cmake_options})
   target_include_directories(${target_name} PRIVATE ${OptiX_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
-                                                    ${VIENNAPS_GPU_INCLUDE})
+                                                    ${VIENNAPS_GPU_INCLUDE} ${CUDA_INCLUDE_DIRS})
   target_link_libraries(${target_name} PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
 endfunction()

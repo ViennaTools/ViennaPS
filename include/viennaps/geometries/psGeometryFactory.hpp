@@ -126,18 +126,20 @@ public:
     if constexpr (D == 2) {
       auto const x = position[0];
       auto const y = position[1];
-      mesh->insertNextNode({x - width / 2, y, 0.});
-      mesh->insertNextNode({x + width / 2, y, 0.});
+      mesh->insertNextNode(Vec3D<NumericType>{x - width / 2, y, 0.});
+      mesh->insertNextNode(Vec3D<NumericType>{x + width / 2, y, 0.});
       mesh->insertNextLine({1, 0});
 
       if (offSet >= width / 2) { // single top node
         NumericType top = y + width * height / (2 * offSet);
-        mesh->insertNextNode({x, top, 0.});
+        mesh->insertNextNode(Vec3D<NumericType>{x, top, 0.});
         mesh->insertNextLine({2, 1});
         mesh->insertNextLine({0, 2});
       } else {
-        mesh->insertNextNode({x + width / 2 - offSet, y + height, 0.});
-        mesh->insertNextNode({x - width / 2 + offSet, y + height, 0.});
+        mesh->insertNextNode(
+            Vec3D<NumericType>{x + width / 2 - offSet, y + height, 0.});
+        mesh->insertNextNode(
+            Vec3D<NumericType>{x - width / 2 + offSet, y + height, 0.});
         mesh->insertNextLine({2, 1});
         mesh->insertNextLine({3, 2});
         mesh->insertNextLine({0, 3});
@@ -145,17 +147,17 @@ public:
     } else { // 3D
       auto const x = position[0];
       auto const base = position[2];
-      mesh->insertNextNode({x - width / 2, yExt, base});
-      mesh->insertNextNode({x + width / 2, yExt, base});
+      mesh->insertNextNode(Vec3D<NumericType>{x - width / 2, yExt, base});
+      mesh->insertNextNode(Vec3D<NumericType>{x + width / 2, yExt, base});
 
       if (offSet >= width / 2) { // single top node
         NumericType top = base + width * height / (2 * offSet);
-        mesh->insertNextNode({x, yExt, top});
+        mesh->insertNextNode(Vec3D<NumericType>{x, yExt, top});
 
         // shifted nodes by y extent
-        mesh->insertNextNode({x - width / 2, -yExt, base});
-        mesh->insertNextNode({x + width / 2, -yExt, base});
-        mesh->insertNextNode({x, -yExt, top});
+        mesh->insertNextNode(Vec3D<NumericType>{x - width / 2, -yExt, base});
+        mesh->insertNextNode(Vec3D<NumericType>{x + width / 2, -yExt, base});
+        mesh->insertNextNode(Vec3D<NumericType>{x, -yExt, top});
 
         // triangles
         mesh->insertNextTriangle({0, 2, 1}); // front
@@ -167,14 +169,18 @@ public:
         mesh->insertNextTriangle({0, 3, 2}); // left
         mesh->insertNextTriangle({3, 5, 2}); // left
       } else {
-        mesh->insertNextNode({x + width / 2 - offSet, yExt, base + height});
-        mesh->insertNextNode({x - width / 2 + offSet, yExt, base + height});
+        mesh->insertNextNode(
+            Vec3D<NumericType>{x + width / 2 - offSet, yExt, base + height});
+        mesh->insertNextNode(
+            Vec3D<NumericType>{x - width / 2 + offSet, yExt, base + height});
 
         // shifted nodes by y extent
-        mesh->insertNextNode({x - width / 2, -yExt, base});
-        mesh->insertNextNode({x + width / 2, -yExt, base});
-        mesh->insertNextNode({x + width / 2 - offSet, -yExt, base + height});
-        mesh->insertNextNode({x - width / 2 + offSet, -yExt, base + height});
+        mesh->insertNextNode(Vec3D<NumericType>{x - width / 2, -yExt, base});
+        mesh->insertNextNode(Vec3D<NumericType>{x + width / 2, -yExt, base});
+        mesh->insertNextNode(
+            Vec3D<NumericType>{x + width / 2 - offSet, -yExt, base + height});
+        mesh->insertNextNode(
+            Vec3D<NumericType>{x - width / 2 + offSet, -yExt, base + height});
 
         // triangles
         mesh->insertNextTriangle({0, 3, 1}); // front
