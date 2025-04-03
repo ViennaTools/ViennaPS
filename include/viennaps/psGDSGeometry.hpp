@@ -96,7 +96,6 @@ public:
                 addPolygon(blurring ? blurredLS : unblurredLS, el, 0., 0.);
             }
           }
-
         }
 
         for (auto &sref : str.sRefs) {
@@ -196,7 +195,7 @@ public:
     GDSMaskProximity<NumericType> proximity(blurredLS, exposureDelta, sigmas, weights);
     proximity.apply();
 
-    auto exposureGrid = proximity.getExposureGrid();
+    auto exposureGrid = proximity.getExposedGrid();
     if (lsInternal::Logger::getLogLevel() >= 2)
       proximity.saveGridToCSV(exposureGrid, "finalGrid.csv");
 

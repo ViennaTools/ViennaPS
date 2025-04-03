@@ -30,13 +30,15 @@ public:
 
   void apply() {
     for (double sigma : sigmas) {
-      blurredGrids.push_back(applyGaussianBlur2D(sdfGrid, sigma));
+      blurredGrids.push_back(applyGaussianBlur(sigma));
     }
 
     finalGrid = combineExposures();
   }
 
-  const Grid2D& getExposureGrid() const { return finalGrid; }
+  const Grid2D& getExposedGrid() const { return finalGrid; }
+
+  const Grid2D& getExposureMap() const { return exposureMap; }
 
   void saveGridToCSV(const Grid2D &grid, const std::string &filename) {
     std::ofstream file(filename);
@@ -62,10 +64,11 @@ private:
   double exposureDelta;
 
   DomainType2D inputLevelSet;
-  Grid2D sdfGrid, finalGrid;
+  Grid2D finalGrid;
+  Grid2D exposureMap;
 
   std::vector<Grid2D> blurredGrids;
-  int gridSizeX, gridSizeY;
+  int gridSizeX = 0, gridSizeY = 0;
 
   void initializeGrid() {
     auto minIdx = inputLevelSet->getGrid().getMinIndex();
@@ -73,7 +76,7 @@ private:
     gridSizeX = maxIdx[0] - minIdx[0] + 1;
     gridSizeY = maxIdx[1] - minIdx[1] + 1;
 
-    sdfGrid.resize(gridSizeY, std::vector<NumericType>(gridSizeX, 0.0));
+    exposureMap.resize(gridSizeY, std::vector<NumericType>(gridSizeX, 0.0));
 
     hrleDenseIterator<typename ls::Domain<double, 2>::DomainType> it(inputLevelSet->getDomain());
     for (; !it.isFinished(); ++it) {
@@ -81,12 +84,12 @@ private:
         double val = it.getValue();
         int x = idx[0] - minIdx[0];
         int y = idx[1] - minIdx[1];
-        sdfGrid[y][x] = (val < 0.) ? 1.0 : 0.0; // Binary mask
+        exposureMap[y][x] = (val < 0.) ? 1.0 : 0.0; // Binary mask
       }
     }
 
-    Grid2D applyGaussianBlur2D(const Grid2D& input, double sigma) {
-        if (input.empty() || input[0].empty()) {
+    Grid2D applyGaussianBlur(double sigma) {
+        if (exposureMap.empty() || exposureMap[0].empty()) {
             std::cerr << "Error: input grid is empty!" << std::endl;
             return {};
         }
@@ -123,7 +126,7 @@ private:
                         int srcX = std::clamp(x + kx, 0, gridSizeX - 1);
     
                         // Apply kernel while ensuring proper boundary handling
-                        value += input[srcY][srcX] * kernel[ky + halfSize][kx + halfSize];
+                        value += exposureMap[srcY][srcX] * kernel[ky + halfSize][kx + halfSize];
                     }
                 }
 
@@ -133,7 +136,6 @@ private:
 
         return output;
     }
-
 
     Grid2D combineExposures() {
         Grid2D output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
