@@ -8,7 +8,7 @@
 #include <vcKDTree.hpp>
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
-#include <vcVectorUtil.hpp>
+#include <vcVectorType.hpp>
 
 namespace viennaps {
 

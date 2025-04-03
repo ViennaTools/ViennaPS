@@ -23,7 +23,7 @@ public:
   getVectorVelocity(const Vec3D<NumericType> &coordinate, int material,
                     const Vec3D<NumericType> &normalVector,
                     unsigned long pointId) {
-    return {0., 0., 0.};
+    return Vec3D<NumericType>{0., 0., 0.};
   }
 
   virtual NumericType

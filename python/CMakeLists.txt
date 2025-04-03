@@ -75,7 +75,7 @@ if(VIENNAPS_USE_GPU)
   # Include ViennaPS GPU and OptiX headers
   target_sources(viennaps3d PRIVATE ${generated_files})
   target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
-                                                ${OptiX_INCLUDE})
+                                                ${OptiX_INCLUDE} ${CUDA_INCLUDE_DIRS})
   target_link_libraries(viennaps3d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
   target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU -DVIENNACORE_COMPILE_GPU)
 else()

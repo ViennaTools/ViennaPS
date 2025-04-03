@@ -602,26 +602,27 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Enum Material
   pybind11::enum_<Material>(module, "Material")
-      .value("Undefined", Material::Undefined) // 1
-      .value("Mask", Material::Mask)
+      .value("Undefined", Material::Undefined) // -1
+      .value("Mask", Material::Mask)           // 0
       .value("Si", Material::Si)
       .value("SiO2", Material::SiO2)
-      .value("Si3N4", Material::Si3N4) // 5
+      .value("Si3N4", Material::Si3N4) // 3
       .value("SiN", Material::SiN)
       .value("SiON", Material::SiON)
       .value("SiC", Material::SiC)
       .value("SiGe", Material::SiGe)
-      .value("PolySi", Material::PolySi) // 10
+      .value("PolySi", Material::PolySi) // 8
       .value("GaN", Material::GaN)
       .value("W", Material::W)
       .value("Al2O3", Material::Al2O3)
-      .value("TiN", Material::TiN)
-      .value("Cu", Material::Cu) // 15
+      .value("HfO2", Material::HfO2)
+      .value("TiN", Material::TiN) // 13
+      .value("Cu", Material::Cu)
       .value("Polymer", Material::Polymer)
       .value("Dielectric", Material::Dielectric)
       .value("Metal", Material::Metal)
-      .value("Air", Material::Air)
-      .value("GAS", Material::GAS); // 20
+      .value("Air", Material::Air) // 18
+      .value("GAS", Material::GAS);
 
   // Single Particle Process
   pybind11::class_<SingleParticleProcess<T, D>,
@@ -1385,8 +1386,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("domain"), pybind11::arg("model"),
            pybind11::arg("duration"))
       // methods
-      .def("apply", &Process<T, D>::apply, "Run the process.")
+      .def("apply", &Process<T, D>::apply,
+           //  pybind11::call_guard<pybind11::gil_scoped_release>(),
+           "Run the process.")
       .def("calculateFlux", &Process<T, D>::calculateFlux,
+           //  pybind11::call_guard<pybind11::gil_scoped_release>(),
            "Perform a single-pass flux calculation.")
       .def("setDomain", &Process<T, D>::setDomain, "Set the process domain.")
       .def("setProcessModel", &Process<T, D>::setProcessModel,

@@ -20,7 +20,7 @@ protected:
       particles;
   SmartPointer<viennaray::Source<NumericType>> source = nullptr;
   std::vector<int> particleLogSize;
-  std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
+  std::optional<Vec3D<NumericType>> primaryDirection = std::nullopt;
 
 public:
   auto &getParticleTypes() { return particles; }
@@ -28,8 +28,7 @@ public:
   bool useFluxEngine() override { return particles.size() > 0; }
 
   /// Set a primary direction for the source distribution (tilted distribution).
-  virtual std::optional<std::array<NumericType, 3>>
-  getPrimaryDirection() const {
+  virtual std::optional<Vec3D<NumericType>> getPrimaryDirection() const {
     return primaryDirection;
   }
 
@@ -38,7 +37,7 @@ public:
   }
 
   virtual void
-  setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
+  setPrimaryDirection(const Vec3D<NumericType> &passedPrimaryDirection) {
     primaryDirection = Normalize(passedPrimaryDirection);
   }
 

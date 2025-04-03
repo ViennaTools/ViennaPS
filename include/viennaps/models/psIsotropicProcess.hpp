@@ -22,9 +22,8 @@ public:
   IsotropicVelocityField(NumericType rate, std::vector<int> &&mask)
       : rate_{rate}, maskMaterials_{std::move(mask)} {}
 
-  NumericType getScalarVelocity(const std::array<NumericType, 3> &,
-                                int material,
-                                const std::array<NumericType, 3> &,
+  NumericType getScalarVelocity(const Vec3D<NumericType> &, int material,
+                                const Vec3D<NumericType> &,
                                 unsigned long) override {
     if (isMaskMaterial(material)) {
       return 0.;

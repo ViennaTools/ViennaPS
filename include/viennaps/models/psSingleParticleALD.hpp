@@ -37,10 +37,10 @@ public:
     coverages->insertNextScalarData(cov, "Coverage");
   }
 
-  SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<viennals::PointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
-      const std::vector<NumericType> &materialIds) override {
+  SmartPointer<std::vector<NumericType>>
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+                      const std::vector<Vec3D<NumericType>> &coordinates,
+                      const std::vector<NumericType> &materialIds) override {
 
     const auto numPoints = rates->getScalarData(0)->size();
     std::vector<NumericType> depoRate(numPoints, 0.);

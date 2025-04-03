@@ -78,7 +78,7 @@ class ByproductDynamics : public AdvectionCallback<T, D> {
   const T reDepositionThreshold = 0.1;
   const T reDepoTimeInt = 60;
   const T timeStabilityFactor = 0.245;
-  std::vector<std::array<T, 3>> nodes;
+  std::vector<Vec3D<T>> nodes;
   T prevProcTime = 0.;
   unsigned counter = 0;
 

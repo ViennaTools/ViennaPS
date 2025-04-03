@@ -13,7 +13,7 @@ void etch(SmartPointer<Domain<NumericType, D>> &domain,
           util::Parameters &params) {
   std::cout << "  - Etching - " << std::endl;
   DirectionalEtching<NumericType, D>::RateSet rateSet;
-  rateSet.direction = {0.};
+  rateSet.direction = Vec3D<NumericType>{0.};
   rateSet.direction[D - 1] = -1.;
   rateSet.directionalVelocity = params.get("ionRate");
   rateSet.isotropicVelocity = params.get("neutralRate");
@@ -30,7 +30,7 @@ void punchThrough(SmartPointer<Domain<NumericType, D>> &domain,
                   util::Parameters &params) {
   std::cout << "  - Punching through - " << std::endl;
   DirectionalEtching<NumericType, D>::RateSet rateSet;
-  rateSet.direction = {0.};
+  rateSet.direction = Vec3D<NumericType>{0.};
   rateSet.direction[D - 1] = -1.;
   rateSet.directionalVelocity =
       -(params.get("depositionThickness") + params.get("gridDelta") / 2.);

@@ -10,7 +10,7 @@ using namespace viennaps;
 template <class NumericType, int D> void RunTest() {
   auto domain = SmartPointer<Domain<NumericType, D>>::New();
 
-  //   Logger::getInstance().setLogLevel(LogLevel::DEBUG);
+  // Logger::setLogLevel(LogLevel::DEBUG);
 
   MakeFin<NumericType, D>(domain, .5, 10., 10., 5., 5., 10., 1., false, true,
                           Material::Si)

@@ -10,7 +10,7 @@
 #include <rayReflection.hpp>
 
 #include <vcLogger.hpp>
-#include <vcVectorUtil.hpp>
+#include <vcVectorType.hpp>
 
 namespace viennaps {
 

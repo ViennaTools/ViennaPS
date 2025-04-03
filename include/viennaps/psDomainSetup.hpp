@@ -7,13 +7,13 @@
 namespace viennaps {
 
 using namespace viennacore;
-using BoundaryType = hrleBoundaryType;
+using BoundaryType = viennahrle::BoundaryType;
 
 template <class NumericType, int D> class DomainSetup {
   NumericType gridDelta_;
   double bounds_[2 * D] = {0.};
   BoundaryType boundaryCons_[D] = {};
-  hrleGrid<D> grid_;
+  viennahrle::Grid<D> grid_;
 
 public:
   DomainSetup() : gridDelta_(0.0) {
@@ -138,15 +138,15 @@ public:
 
   void init() {
     check();
-    hrleIndexType gridMin[D], gridMax[D];
+    viennahrle::IndexType gridMin[D], gridMax[D];
     for (unsigned i = 0; i < D; ++i) {
       gridMin[i] = std::floor(bounds_[2 * i] / gridDelta_);
       gridMax[i] = std::ceil(bounds_[2 * i + 1] / gridDelta_);
     }
-    grid_ = hrleGrid<D>(gridMin, gridMax, gridDelta_, boundaryCons_);
+    grid_ = viennahrle::Grid<D>(gridMin, gridMax, gridDelta_, boundaryCons_);
   }
 
-  void init(hrleGrid<D> grid) {
+  void init(viennahrle::Grid<D> grid) {
     gridDelta_ = grid.getGridDelta();
     for (int i = 0; i < D; i++) {
       bounds_[2 * i] = grid.getMinBounds(i) * gridDelta_;

@@ -23,7 +23,7 @@ public:
 
   viennaps::SmartPointer<std::vector<NumericType>> calculateVelocities(
       viennaps::SmartPointer<viennals::PointData<NumericType>> rates,
-      const std::vector<std::array<NumericType, 3>> &coordinates,
+      const std::vector<viennaps::Vec3D<NumericType>> &coordinates,
       const std::vector<NumericType> &materialIds) override {
     // use coverages and rates here to calculate the velocity here
     return viennaps::SmartPointer<std::vector<NumericType>>::New(

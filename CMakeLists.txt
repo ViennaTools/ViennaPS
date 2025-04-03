@@ -13,7 +13,6 @@ option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
 option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish wheel" OFF)
-option(VIENNAPS_USE_GPU "Use GPU for ViennaPS" OFF)
 
 # --------------------------------------------------------------------------------------------------------
 # Library options
@@ -94,10 +93,10 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.3.1
+  VERSION 1.4.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  OPTIONS "VIENNACORE_FORMAT_EXCLUDE docs/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMAddPackage(
   NAME PackageProject
@@ -106,16 +105,16 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 3.3.0
+  VERSION 3.4.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
-  OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+  OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
 if(NOT ViennaLS_FOUND)
   message(STATUS "ViennaLS not found locally, falling back to CPM...")
   CPMFindPackage(
     NAME ViennaLS
-    VERSION 4.2.2
+    VERSION 4.3.0
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
     EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 else()
@@ -124,7 +123,7 @@ endif()
 
 CPMFindPackage(
   NAME ViennaCS
-  VERSION 1.0.0
+  VERSION 1.1.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -157,6 +156,7 @@ endif()
 
 # If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
 if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+  message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
 endif()
 

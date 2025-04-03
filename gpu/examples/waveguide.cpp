@@ -4,8 +4,8 @@
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
-#include <models/pscFaradayCageEtching.hpp>
-#include <pscProcess.hpp>
+#include <models/psgFaradayCageEtching.hpp>
+#include <psgProcess.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;

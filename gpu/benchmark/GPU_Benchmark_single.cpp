@@ -1,10 +1,10 @@
 #include <lsToDiskMesh.hpp>
 
-#include <gpu/raygTrace.hpp>
-#include <gpu/vcContext.hpp>
-#include <pscCreateSurfaceMesh.hpp>
-#include <pscElementToPointData.hpp>
-#include <pscPointToElementData.hpp>
+#include <psgCreateSurfaceMesh.hpp>
+#include <psgElementToPointData.hpp>
+#include <psgPointToElementData.hpp>
+#include <raygTrace.hpp>
+#include <vcContext.hpp>
 
 #include "BenchmarkGeometry.hpp"
 

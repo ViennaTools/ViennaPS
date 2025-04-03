@@ -11,7 +11,7 @@ using namespace viennacore;
 template <class NumericType> class Extrude {
   SmartPointer<Domain<NumericType, 2>> inputDomain;
   SmartPointer<Domain<NumericType, 3>> outputDomain;
-  std::array<NumericType, 2> extent = {0., 0.};
+  Vec2D<NumericType> extent{NumericType(0)};
   int extrudeDim = 0;
   std::array<viennals::BoundaryConditionEnum, 3> boundaryConds = {};
 
@@ -19,7 +19,7 @@ public:
   Extrude() = default;
   Extrude(SmartPointer<Domain<NumericType, 2>> &passedInputDomain,
           SmartPointer<Domain<NumericType, 3>> &passedOutputDomain,
-          std::array<NumericType, 2> passedExtent, const int passedExtrudeDim,
+          const Vec2D<NumericType> &passedExtent, const int passedExtrudeDim,
           std::array<viennals::BoundaryConditionEnum, 3> passedBoundaryConds)
       : inputDomain(passedInputDomain), outputDomain(passedOutputDomain),
         extent(passedExtent), extrudeDim(passedExtrudeDim),
@@ -36,7 +36,7 @@ public:
   }
 
   // Set the min and max extent in the extruded dimension
-  void setExtent(std::array<NumericType, 2> passedExtent) {
+  void setExtent(const Vec2D<NumericType> &passedExtent) {
     extent = passedExtent;
   }
 

@@ -24,7 +24,7 @@ template <class NumericType, int D> void RunTest() {
   }
 
   {
-    // Logger::getInstance().setLogLevel(LogLevel::DEBUG);
+    // Logger::setLogLevel(LogLevel::DEBUG);
 
     auto domain = SmartPointer<Domain<NumericType, D>>::New(
         .5, 10., 10., BoundaryType::PERIODIC_BOUNDARY);

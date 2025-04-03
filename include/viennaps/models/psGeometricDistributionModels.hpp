@@ -15,9 +15,9 @@ using namespace viennacore;
 // Simple geometric model that implements a
 template <typename NumericType, int D, typename DistType>
 class GeometricDistributionModel : public GeometricModel<NumericType, D> {
-  static_assert(
-      std::is_base_of_v<viennals::GeometricAdvectDistribution<hrleCoordType, D>,
-                        DistType>);
+  static_assert(std::is_base_of_v<
+                viennals::GeometricAdvectDistribution<viennahrle::CoordType, D>,
+                DistType>);
 
   using GeomDistPtr = SmartPointer<DistType>;
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
@@ -55,13 +55,14 @@ class SphereDistribution : public ProcessModel<NumericType, D> {
 public:
   SphereDistribution(const NumericType radius, const NumericType gridDelta,
                      LSPtr mask = nullptr) {
-    auto dist =
-        SmartPointer<viennals::SphereDistribution<hrleCoordType, D>>::New(
-            radius, gridDelta);
+    auto dist = SmartPointer<
+        viennals::SphereDistribution<viennahrle::CoordType, D>>::New(radius,
+                                                                     gridDelta);
 
     auto geomModel = SmartPointer<GeometricDistributionModel<
         NumericType, D,
-        viennals::SphereDistribution<hrleCoordType, D>>>::New(dist, mask);
+        viennals::SphereDistribution<viennahrle::CoordType, D>>>::New(dist,
+                                                                      mask);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
@@ -73,14 +74,15 @@ class BoxDistribution : public ProcessModel<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
-  BoxDistribution(const std::array<hrleCoordType, 3> &halfAxes,
+  BoxDistribution(const std::array<viennahrle::CoordType, 3> &halfAxes,
                   const NumericType gridDelta, LSPtr mask = nullptr) {
-    auto dist = SmartPointer<viennals::BoxDistribution<hrleCoordType, D>>::New(
-        halfAxes, gridDelta);
+    auto dist =
+        SmartPointer<viennals::BoxDistribution<viennahrle::CoordType, D>>::New(
+            halfAxes, gridDelta);
 
     auto geomModel = SmartPointer<GeometricDistributionModel<
         NumericType, D,
-        viennals::BoxDistribution<hrleCoordType, D>>>::New(dist, mask);
+        viennals::BoxDistribution<viennahrle::CoordType, D>>>::New(dist, mask);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");

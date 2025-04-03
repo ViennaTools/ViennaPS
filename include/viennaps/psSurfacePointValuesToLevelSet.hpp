@@ -65,7 +65,7 @@ public:
     std::vector<std::size_t> levelSetPointToMeshIds(
         levelSet->getNumberOfPoints());
 
-    for (hrleConstSparseIterator<
+    for (viennahrle::ConstSparseIterator<
              typename viennals::Domain<NumericType, D>::DomainType>
              it(levelSet->getDomain());
          !it.isFinished(); ++it) {
