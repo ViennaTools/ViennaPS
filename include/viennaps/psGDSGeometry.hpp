@@ -30,8 +30,8 @@ template <class NumericType, int D = 3> class GDSGeometry {
       std::unordered_map<int16_t, SmartPointer<ls::Mesh<NumericType>>>;
   using lsDomainType = SmartPointer<ls::Domain<NumericType, D>>;
   using lsDomainType2D = SmartPointer<ls::Domain<NumericType, 2>>;
-  using BoundaryType = typename ls::Domain<NumericType, D>::BoundaryType;
-  using PointType = typename std::vector<std::pair<hrleVectorType<hrleIndexType, 2>, NumericType>>;
+  
+  using PointType = typename ls::Domain<NumericType, 2>::PointValueVectorType;
 
 public:
   GDSGeometry() {
@@ -155,7 +155,7 @@ public:
         std::array<NumericType, 2> extrudeExtent = {baseHeight, baseHeight + height};
 
         if (blurring) {
-          PointType pointData =  applyBlur(blurredLS);
+          PointType pointData = applyBlur(blurredLS);
           blurredLS->insertPoints(pointData);
           blurredLS->finalize(2);
           ls::Expand<double, 2>(blurredLS, 2).apply();
@@ -217,7 +217,7 @@ public:
           int xLS = std::round(xReal / gridDelta_);
           double yReal = y * exposureDelta + bounds_[2];
           int yLS = std::round(yReal / gridDelta_);
-          hrleVectorType<hrleIndexType, 3> pos;
+          viennahrle::Index<2> pos;
           pos[0] = xLS; pos[1] = yLS;
           pointData.emplace_back(pos, 0.);
           break;
@@ -242,7 +242,7 @@ public:
             int xLS = std::round(xReal / gridDelta_);
             double yReal = ny * exposureDelta + bounds_[2];
             int yLS = std::round(yReal / gridDelta_);
-            hrleVectorType<hrleIndexType, 3> pos;
+            viennahrle::Index<2> pos;
             pos[0] = xLS; pos[1] = yLS;
             pointData.emplace_back(pos, 0.);
             break;
@@ -270,7 +270,7 @@ public:
           int xIndex = std::round(xReal / gridDelta_);
           int yIndex = std::round(yReal / gridDelta_);
 
-          hrleVectorType<hrleIndexType, 3> curIndex;
+          viennahrle::Index<2> curIndex;
           curIndex[0] = xIndex; curIndex[1] = yIndex;
 
           double sign = (current < threshold) ? 1.0 : -1.0;
@@ -474,8 +474,8 @@ private:
     assert(element.elementType == GDS::ElementType::elBox);
     assert(element.pointCloud.size() == 4); // GDSII box is a rectangle
 
-    using VectorType = hrleVectorType<NumericType, 2>;
-
+    using VectorType = ls::VectorType<NumericType, 2>;
+    
     // The corners in GDS are typically ordered clockwise or counter-clockwise
     VectorType minCorner{
         std::min({element.pointCloud[0][0], element.pointCloud[1][0],

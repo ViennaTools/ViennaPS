@@ -19,7 +19,7 @@ option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish whe
 # --------------------------------------------------------------------------------------------------------
 
 set(VIENNAPS_LOOKUP_DIRS
-    "${CMAKE_CURRENT_SOURCE_DIR}/../install"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../install/"
     CACHE STRING "Directories to account for when searching installed dependencies")
 
 list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})

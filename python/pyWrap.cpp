@@ -1652,11 +1652,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set padding between the largest point of the geometry and the "
            "boundary of the domain.")
       .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
-     //  .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
-     //      "Convert a layer of the GDS geometry to a level set domain.",
-     //      pybind11::arg("layer"), pybind11::arg("baseHeight"),
-     //      pybind11::arg("height"), pybind11::arg("mask") = false,
-     //      pybind11::arg("blurring") = true)
      .def(
           "getBounds",
           [](GDSGeometry<T, D> &gds) -> std::array<double, 6> {

@@ -78,15 +78,15 @@ private:
 
     exposureMap.resize(gridSizeY, std::vector<NumericType>(gridSizeX, 0.0));
 
-    hrleDenseIterator<typename ls::Domain<double, 2>::DomainType> it(inputLevelSet->getDomain());
+    viennahrle::DenseIterator<typename ls::Domain<double, 2>::DomainType> it(inputLevelSet->getDomain());
     for (; !it.isFinished(); ++it) {
         auto idx = it.getIndices();
         double val = it.getValue();
         int x = idx[0] - minIdx[0];
         int y = idx[1] - minIdx[1];
         exposureMap[y][x] = (val < 0.) ? 1.0 : 0.0; // Binary mask
-      }
     }
+  }
 
     Grid2D applyGaussianBlur(double sigma) {
         if (exposureMap.empty() || exposureMap[0].empty()) {
