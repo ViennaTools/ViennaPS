@@ -41,12 +41,12 @@ endif()
 
 execute_process(
   COMMAND "/usr/bin/git"
-          checkout "v1.3.1" --
+          checkout "v1.4.0" --
   WORKING_DIRECTORY "/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/_deps/viennacore-src"
   RESULT_VARIABLE error_code
 )
 if(error_code)
-  message(FATAL_ERROR "Failed to checkout tag: 'v1.3.1'")
+  message(FATAL_ERROR "Failed to checkout tag: 'v1.4.0'")
 endif()
 
 set(init_submodules TRUE)

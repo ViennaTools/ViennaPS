@@ -4,6 +4,8 @@
 #include <fstream>
 #include <string>
 
+#include "psDomain.hpp"
+
 #include <lsDomain.hpp>
 
 #include <vcSmartPointer.hpp>

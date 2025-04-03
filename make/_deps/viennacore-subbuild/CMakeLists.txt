@@ -27,7 +27,7 @@ set_property(GLOBAL PROPERTY _CMAKE_FindGit_GIT_EXECUTABLE_VERSION
 
 include(ExternalProject)
 ExternalProject_Add(viennacore-populate
-                     "UPDATE_DISCONNECTED" "False" "GIT_REPOSITORY" "https://github.com/ViennaTools/ViennaCore" "EXTERNALPROJECT_INTERNAL_ARGUMENT_SEPARATOR" "GIT_TAG" "v1.3.1"
+                     "UPDATE_DISCONNECTED" "False" "GIT_REPOSITORY" "https://github.com/ViennaTools/ViennaCore" "EXTERNALPROJECT_INTERNAL_ARGUMENT_SEPARATOR" "GIT_TAG" "v1.4.0"
                     SOURCE_DIR          "/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/_deps/viennacore-src"
                     BINARY_DIR          "/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/_deps/viennacore-build"
                     CONFIGURE_COMMAND   ""

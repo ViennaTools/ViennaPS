@@ -1362,7 +1362,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=3
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -1412,7 +1412,7 @@ CPM_DIRECTORY:INTERNAL=/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/mak
 CPM_DRY_RUN:INTERNAL=OFF
 CPM_FILE:INTERNAL=/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/cmake/CPM_0.40.5.cmake
 CPM_INDENT:INTERNAL=CPM:
-CPM_PACKAGES:INTERNAL=ViennaCore;PackageProject;ViennaRay;ViennaLS;ViennaCS
+CPM_PACKAGES:INTERNAL=ViennaCore
 CPM_PACKAGE_LOCK_FILE:INTERNAL=/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/cpm-package-lock.cmake
 CPM_PACKAGE_PackageProject_BINARY_DIR:INTERNAL=/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/_deps/packageproject-build
 CPM_PACKAGE_PackageProject_SOURCE_DIR:INTERNAL=/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/_deps/packageproject-src
@@ -1420,7 +1420,7 @@ CPM_PACKAGE_PackageProject_VERSION:INTERNAL=1.13.0
 CPM_PACKAGE_ViennaCS_VERSION:INTERNAL=1.0.0
 CPM_PACKAGE_ViennaCore_BINARY_DIR:INTERNAL=/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/_deps/viennacore-build
 CPM_PACKAGE_ViennaCore_SOURCE_DIR:INTERNAL=/home/filipov/Software/ViennaTools/MaskNoise/ViennaPS/make/_deps/viennacore-src
-CPM_PACKAGE_ViennaCore_VERSION:INTERNAL=1.3.1
+CPM_PACKAGE_ViennaCore_VERSION:INTERNAL=1.4.0
 CPM_PACKAGE_ViennaLS_VERSION:INTERNAL=4.2.2
 CPM_PACKAGE_ViennaRay_VERSION:INTERNAL=3.3.0
 CPM_VERSION:INTERNAL=0.40.5
