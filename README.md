@@ -36,8 +36,8 @@ This branch introduces a comprehensive redesign of mask proximity correction usi
 - The blurred exposure map is thresholded to generate the 0-level contour.
 - Distance to the contour is estimated using interpolation between neighboring values.
 - Resulting distances are signed and inserted as sparse points in a 2D level set.
-- ExposureDelta and gridDelta can be different, allowing sub-grid resolution modeling.
-  - **TODO: TEST THIS**
+- ExposureDelta and gridDelta can be different, allowing for sub-grid resolution modeling.
+- **TODO: Apply Gaussian blur based on real-word scenarios, store exposure map on a finer grid**
 
 ### **Level Set Extrusion for 3D Geometry Generation**
 - The 2D level set is extruded in the z-direction to form a 3D volume using `ls::Extrude`.

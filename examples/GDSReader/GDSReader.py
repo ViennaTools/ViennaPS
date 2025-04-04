@@ -10,6 +10,10 @@ except ModuleNotFoundError:
 vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
 
 gridDelta = 0.01
+exposureDelta = 0.003
+forwardSigma = 20.
+backSigma = 120.
+
 boundaryConds = [
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
@@ -18,7 +22,7 @@ boundaryConds = [
 
 mask = vps.GDSGeometry(gridDelta)
 mask.setBoundaryConditions(boundaryConds)
-mask.addBlur([5., 80.], [0.8, 0.2], 0.5, gridDelta)
+mask.addBlur([forwardSigma, backSigma], [0.8, 0.2], 0.5, exposureDelta)
 
 reader = vps.GDSReader(mask, "myTest.gds")
 reader.apply()

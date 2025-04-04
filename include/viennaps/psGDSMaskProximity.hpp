@@ -27,7 +27,7 @@ public:
       : inputLevelSet(inputLS), exposureDelta(delta), sigmas(sigmas),
         weights(weights) {
     assert(sigmas.size() == weights.size());
-    assert(inputLevelSet != nullptr);
+    assert(inputLS != nullptr);
     initializeGrid();
   }
 
@@ -43,15 +43,15 @@ public:
 
   const Grid2D &getExposureMap() const { return exposureMap; }
 
-  void saveGridToCSV(const Grid2D &grid, const std::string &filename) {
+  void saveGridToCSV(const std::string &filename) {
     std::ofstream file(filename);
     if (!file.is_open()) {
       std::cerr << "Error: Cannot open file '" << filename << "' for writing!"
                 << std::endl;
       return;
     }
-
-    for (const auto &row : grid) {
+  
+    for (const auto &row : finalGrid) {
       for (size_t i = 0; i < row.size(); ++i) {
         file << row[i];
         if (i < row.size() - 1)
@@ -61,6 +61,32 @@ public:
     }
 
     file.close();
+  }
+  
+  double exposureAt(double xReal, double yReal) {
+    double xExpId = (xReal) / exposureDelta;
+    double yExpId = (yReal) / exposureDelta;
+
+    int x0 = static_cast<int>(std::floor(xExpId));
+    int x1 = x0 + 1;
+    int y0 = static_cast<int>(std::floor(yExpId));
+    int y1 = y0 + 1;
+  
+    if (y0 < 0 || y1 >= static_cast<int>(finalGrid.size()) ||
+        x0 < 0 || x1 >= static_cast<int>(finalGrid[0].size())) 
+        // !applyBoundaryCondition(x0, x1, gridSizeX, gridSizeY, boundaryConds_) {
+      return 0.0; // or apply boundary conditions
+  
+    double dx = xExpId - x0;
+    double dy = yExpId - y0;
+  
+    // Bilinear interpolation
+    double val =
+        (1 - dx) * (1 - dy) * finalGrid[y0][x0] +
+        dx * (1 - dy) * finalGrid[y0][x1] +
+        (1 - dx) * dy * finalGrid[y1][x0] +
+        dx * dy * finalGrid[y1][x1];
+    return val;
   }
 
 private:
@@ -172,6 +198,47 @@ private:
     }
 
     return output;
+  }
+  
+  bool applyBoundaryCondition(
+    int &x, int &y,
+    int maxX, int maxY,
+    const BoundaryType boundaryConditions[]) {
+    // X
+    if (x < 0) {
+      if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
+        return false;
+      else if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
+        x = -x;
+      else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
+        x = maxX - 1;
+    } else if (x >= maxX) {
+      if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
+        return false;
+      else if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
+        x = 2 * maxX - x - 2;
+      else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
+        x = 0;
+    }
+
+    // Y
+    if (y < 0) {
+      if (boundaryConditions[1] == BoundaryType::INFINITE_BOUNDARY)
+        return false;
+      else if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
+        y = -y;
+      else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
+        y = maxY - 1;
+    } else if (y >= maxY) {
+      if (boundaryConditions[1] == BoundaryType::INFINITE_BOUNDARY)
+        return false;
+      else if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
+        y = 2 * maxY - y - 2;
+      else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
+        y = 0;
+    }
+
+    return true;
   }
 };
 

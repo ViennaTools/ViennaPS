@@ -32,6 +32,7 @@ template <class NumericType, int D = 3> class GDSGeometry {
   using lsDomainType2D = SmartPointer<ls::Domain<NumericType, 2>>;
 
   using PointType = typename ls::Domain<NumericType, 2>::PointValueVectorType;
+  using IndexType = typename viennahrle::Index<2>;
 
 public:
   GDSGeometry() {
@@ -75,16 +76,14 @@ public:
 
   lsDomainType layerToLevelSet(const int16_t layer,
                                const NumericType baseHeight,
-                               const NumericType height, bool mask = false,
-                               bool blurring = true) {
+                               const NumericType height, bool mask = false, 
+                               bool blurLayer = true) {
 
-    blurring = blurring && blur;
+    const bool blurring = blurLayer && blur;
+    // levelSet is the final 3D mask
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D unblurredLS =
-        lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D blurredLS =
-        lsDomainType2D::New(bounds_, boundaryConds_, exposureDelta);
-
+    lsDomainType2D GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_, blurring ? exposureDelta : gridDelta_);
+    
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
         // add single layer
@@ -93,9 +92,9 @@ public:
           for (auto &el : str.elements) {
             if (el.layer == layer) {
               if (el.elementType == GDS::ElementType::elBox)
-                addBox(blurring ? blurredLS : unblurredLS, el, 0., 0.);
+                addBox(GDSLevelSet, el, 0., 0.);
               else
-                addPolygon(blurring ? blurredLS : unblurredLS, el, 0., 0.);
+                addPolygon(GDSLevelSet, el, 0., 0.);
             }
           }
         }
@@ -149,9 +148,9 @@ public:
 
             // Add element to layer
             if (el.elementType == GDS::ElementType::elBox)
-              addBox(blurring ? blurredLS : unblurredLS, elCopy, 0., 0.);
+              addBox(GDSLevelSet, elCopy, 0., 0.);
             else
-              addPolygon(blurring ? blurredLS : unblurredLS, elCopy, 0., 0.);
+              addPolygon(GDSLevelSet, elCopy, 0., 0.);
           }
         }
 
@@ -159,16 +158,14 @@ public:
                                                     baseHeight + height};
 
         if (blurring) {
-          PointType pointData = applyBlur(blurredLS);
-          blurredLS->insertPoints(pointData);
-          blurredLS->finalize(2);
-          ls::Expand<double, 2>(blurredLS, 2).apply();
-
-          ls::Extrude<NumericType>(blurredLS, levelSet, extrudeExtent).apply();
-        } else {
-          ls::Extrude<NumericType>(unblurredLS, levelSet, extrudeExtent)
-              .apply();
-        }
+          lsDomainType2D maskLS = lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
+          PointType pointData = applyBlur(GDSLevelSet);
+          maskLS->insertPoints(pointData);
+          maskLS->finalize(2);
+          ls::Expand<double, 2>(maskLS, 2).apply();
+          ls::Extrude<NumericType>(maskLS, levelSet, extrudeExtent).apply();
+        } else
+          ls::Extrude<NumericType>(GDSLevelSet, levelSet, extrudeExtent).apply();
       } // if (!str.isRef)
     } // for (auto &str : structures)
 
@@ -202,36 +199,38 @@ public:
     return levelSet;
   } // function end
 
-  PointType applyBlur(lsDomainType2D blurredLS) {
-    GDSMaskProximity<NumericType> proximity(blurredLS, exposureDelta, sigmas,
+  PointType applyBlur(lsDomainType2D blurringLS) {
+    // Apply Gaussian blur based on the GDS-extracted "blurringLS"
+    GDSMaskProximity<NumericType> proximity(blurringLS, exposureDelta, sigmas, 
                                             weights);
     proximity.apply();
 
-    auto exposureGrid = proximity.getExposedGrid();
+    // exposureGrid is the final blurred grid to be used for SDF calculation
+    // auto exposureGrid = proximity.getExposedGrid();
     if (lsInternal::Logger::getLogLevel() >= 2)
-      proximity.saveGridToCSV(exposureGrid, "finalGrid.csv");
-
-    int gridSizeY = exposureGrid.size();
-    int gridSizeX = exposureGrid[0].size();
+      proximity.saveGridToCSV("finalGrid.csv");
 
     PointType pointData;
     std::vector<std::pair<int, int>> directions = {
         {-1, 0}, {1, 0}, {0, -1}, {0, 1} // 4-neighbor stencil
     };
 
-    for (int y = 0; y < gridSizeY; ++y) {
-      for (int x = 0; x < gridSizeX; ++x) {
-        double current = exposureGrid[y][x];
+    // Calculate grid bounds
+    const int xStart = std::floor(minBounds[0] / gridDelta_);
+    const int xEnd   = std::ceil(maxBounds[0] / gridDelta_);
+    const int yStart = std::floor(minBounds[1] / gridDelta_);
+    const int yEnd   = std::ceil(maxBounds[1] / gridDelta_);
 
-        // Check if point (x,y) is on the contour
+    for (int y = yStart; y <= yEnd; ++y) {
+      for (int x = xStart; x <= xEnd; ++x) {
+    
+        double xReal = x * gridDelta_ - bounds_[0];
+        double yReal = y * gridDelta_ - bounds_[2];
+
+        double current = proximity.exposureAt(xReal, yReal);
+        // Check if current is on the contour
         if (current == threshold) {
-          double xReal = x * exposureDelta + bounds_[0];
-          int xLS = std::round(xReal / gridDelta_);
-          double yReal = y * exposureDelta + bounds_[2];
-          int yLS = std::round(yReal / gridDelta_);
-          viennahrle::Index<2> pos;
-          pos[0] = xLS;
-          pos[1] = yLS;
+          IndexType pos; pos[0] = x; pos[1] = y;
           pointData.emplace_back(pos, 0.);
           break;
         }
@@ -240,35 +239,22 @@ public:
         int bestNx = -1, bestNy = -1;
 
         for (auto [dy, dx] : directions) {
-          int ny = y + dy;
           int nx = x + dx;
+          int ny = y + dy;
+          double nxReal = nx * gridDelta_ - bounds_[0];
+          double nyReal = ny * gridDelta_ - bounds_[2];
 
-          if ((nx < 0 || nx >= gridSizeX || ny < 0 || ny >= gridSizeY) &&
-              !applyBoundaryCondition(nx, ny, gridSizeX, gridSizeY,
-                                      boundaryConds_))
-            continue;
+          double neighbor = proximity.exposureAt(nxReal, nyReal);
 
-          double neighbor = exposureGrid[ny][nx];
-
-          // Check if neighbor (nx,ny) is on the contour
-          if (neighbor == threshold) {
-            double xReal = nx * exposureDelta + bounds_[0];
-            int xLS = std::round(xReal / gridDelta_);
-            double yReal = ny * exposureDelta + bounds_[2];
-            int yLS = std::round(yReal / gridDelta_);
-            viennahrle::Index<2> pos;
-            pos[0] = xLS;
-            pos[1] = yLS;
-            pointData.emplace_back(pos, 0.);
+          // Check if neighbor is on the contour
+          // If so, skip checks and add neighbor when it becomes "current"
+          if (neighbor == threshold)
             break;
-          }
-
-          // Check if neighbors are on opposite sites of contour
+          
+          // Check if neighbor is on opposite side of the contour
           if ((current - threshold) * (neighbor - threshold) < 0) {
             // Interpolate sub-cell distance
-            double dist =
-                std::abs((threshold - current) / (neighbor - current));
-
+            double dist = std::abs((threshold - current) / (neighbor - current));
             if (dist < minDist) {
               minDist = dist;
               bestNx = nx;
@@ -276,35 +262,28 @@ public:
             }
           }
         }
-
         if ((minDist < 1.0) && (bestNx >= 0.) && (bestNy >= 0.)) {
-          double sdfCurrent = minDist * exposureDelta;
-
-          double xReal = x * exposureDelta + bounds_[0];
-          double yReal = y * exposureDelta + bounds_[2];
-
-          int xIndex = std::round(xReal / gridDelta_);
-          int yIndex = std::round(yReal / gridDelta_);
-
-          viennahrle::Index<2> curIndex;
-          curIndex[0] = xIndex;
-          curIndex[1] = yIndex;
-
+          double sdfCurrent  = minDist * gridDelta_;
+          IndexType pos; pos[0] = x; pos[1] = y;
           double sign = (current < threshold) ? 1.0 : -1.0;
-          pointData.emplace_back(curIndex, sign * sdfCurrent);
+          pointData.emplace_back(pos, sign * sdfCurrent);
         }
-      } // end x iter
-    } // end y iter
+      }
+    }
     return pointData;
   }
 
   void addBlur(std::vector<NumericType> inSigmas,
                std::vector<NumericType> inWeights,
-               NumericType inThreshold = 0.5, NumericType delta = 0.) {
-    sigmas = inSigmas;
+               NumericType inThreshold = 0.5,
+               NumericType delta = -1.) {
     weights = inWeights;
     threshold = inThreshold;
-    exposureDelta = delta;
+    exposureDelta = delta == -1. ? gridDelta_ : delta;
+    // Scale sigmas to represent geometry dimensions
+    for (auto sigma : inSigmas) {
+      sigmas.push_back(sigma * gridDelta_ / exposureDelta);
+    }
     blur = true;
   }
 
@@ -340,44 +319,6 @@ public:
   std::size_t getNumberOfStructures() const { return structures.size(); }
 
 private:
-  bool applyBoundaryCondition(int &x, int &y, int maxX, int maxY,
-                              const BoundaryType boundaryConditions[]) {
-    // X
-    if (x < 0) {
-      if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
-        x = -x;
-      else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
-        x = maxX - 1;
-    } else if (x >= maxX) {
-      if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
-        x = 2 * maxX - x - 2;
-      else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
-        x = 0;
-    }
-
-    // Y
-    if (y < 0) {
-      if (boundaryConditions[1] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
-        y = -y;
-      else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
-        y = maxY - 1;
-    } else if (y >= maxY) {
-      if (boundaryConditions[1] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
-        y = 2 * maxY - y - 2;
-      else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
-        y = 0;
-    }
-
-    return true;
-  }
 
   GDS::Structure<NumericType> *getStructure(const std::string &strName) {
     for (size_t i = 0; i < structures.size(); i++) {
@@ -515,8 +456,7 @@ private:
 
     // Create a 2D level set from the polygon
     auto mesh = polygonToSurfaceMesh(element, xOffset, yOffset);
-    lsDomainType2D tmpLS =
-        lsDomainType2D::New(getBounds(), boundaryConds_, getGridDelta());
+    lsDomainType2D tmpLS = lsDomainType2D::New(layer2D);
     ls::FromSurfaceMesh<NumericType, 2>(tmpLS, mesh).apply();
 
     ls::BooleanOperation<NumericType, 2>(layer2D, tmpLS,

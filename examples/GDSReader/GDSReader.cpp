@@ -14,6 +14,10 @@ int main(int argc, char **argv) {
   ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
 
   constexpr NumericType gridDelta = 0.01;
+  constexpr NumericType exposureDelta = 0.005;
+  double forwardSigma = 20.;
+  double backsSigma = 120.;
+
   ls::BoundaryConditionEnum boundaryConds[D] = {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
@@ -21,7 +25,10 @@ int main(int argc, char **argv) {
 
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
-  mask->addBlur({5., 80.}, {0.8, 0.2}, 0.5, gridDelta);
+  mask->addBlur({forwardSigma, backsSigma}, // Gaussian sigmas
+                {0.8, 0.2},                 // Weights
+                0.5,                        // Threshold
+                exposureDelta);             // Exposure grid delta
   ps::GDSReader<NumericType, D>(mask, "myTest.gds").apply();
 
   // geometry setup
