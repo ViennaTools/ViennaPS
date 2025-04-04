@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
-    prog="faradayCageEtching", description="Run a faraday cage etching process."
+    prog="oxideRegrowth", description="Model oxide regrowth during SiN etching in SiN/SiO2 stack."
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
