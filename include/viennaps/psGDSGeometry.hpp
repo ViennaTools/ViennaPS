@@ -169,8 +169,8 @@ public:
         } else
           ls::Extrude<NumericType>(GDSLevelSet, levelSet, extrudeExtent)
               .apply();
-      } // if (!str.isRef)
-    } // for (auto &str : structures)
+      }
+    }
 
     if (mask) {
       // Create bottom substrate (z >= 0)
