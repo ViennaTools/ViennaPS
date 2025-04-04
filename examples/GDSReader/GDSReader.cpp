@@ -1,7 +1,7 @@
+#include <hrleGrid.hpp>
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
 #include <psMaterials.hpp>
-#include <hrleGrid.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;
@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::INFINITE_BOUNDARY};
-    
+
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
   mask->setBoundaryConditions(boundaryConds);
   mask->addBlur({5., 80.}, {0.8, 0.2}, 0.5, gridDelta);

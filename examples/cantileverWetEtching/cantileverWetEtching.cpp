@@ -54,8 +54,8 @@ int main(int argc, char **argv) {
       4 * gridDelta /*mask height*/, true /*invert mask*/);
 
   // Create plane substrate under mask
-  NumericType origin[D] = {0., 0., 0.};   // surface origin
-  NumericType normal[D] = {0., 0., 1.};   // surface normal
+  NumericType origin[D] = {0., 0., 0.};         // surface origin
+  NumericType normal[D] = {0., 0., 1.};         // surface normal
   const double *bounds = gds_mask->getBounds(); // extent of GDS mask
   auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
       bounds, boundaryCons, gridDelta);

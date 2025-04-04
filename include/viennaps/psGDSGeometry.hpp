@@ -1,7 +1,7 @@
 #pragma once
 
-#include "psGDSUtils.hpp"
 #include "psGDSMaskProximity.hpp"
+#include "psGDSUtils.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -10,9 +10,9 @@
 #include <lsMakeGeometry.hpp>
 #include <lsTransformMesh.hpp>
 
-#include <lsVTKWriter.hpp>
-#include <lsToSurfaceMesh.hpp>
 #include <lsToMesh.hpp>
+#include <lsToSurfaceMesh.hpp>
+#include <lsVTKWriter.hpp>
 
 #include <lsExtrude.hpp>
 
@@ -22,7 +22,7 @@
 namespace ls = viennals;
 
 namespace viennaps {
-  
+
 using namespace viennacore;
 
 template <class NumericType, int D = 3> class GDSGeometry {
@@ -30,7 +30,7 @@ template <class NumericType, int D = 3> class GDSGeometry {
       std::unordered_map<int16_t, SmartPointer<ls::Mesh<NumericType>>>;
   using lsDomainType = SmartPointer<ls::Domain<NumericType, D>>;
   using lsDomainType2D = SmartPointer<ls::Domain<NumericType, 2>>;
-  
+
   using PointType = typename ls::Domain<NumericType, 2>::PointValueVectorType;
 
 public:
@@ -75,14 +75,16 @@ public:
 
   lsDomainType layerToLevelSet(const int16_t layer,
                                const NumericType baseHeight,
-                               const NumericType height, 
-                               bool mask = false, bool blurring = true) {
+                               const NumericType height, bool mask = false,
+                               bool blurring = true) {
 
     blurring = blurring && blur;
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D unblurredLS = lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D blurredLS = lsDomainType2D::New(bounds_, boundaryConds_, exposureDelta);
-    
+    lsDomainType2D unblurredLS =
+        lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
+    lsDomainType2D blurredLS =
+        lsDomainType2D::New(bounds_, boundaryConds_, exposureDelta);
+
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
         // add single layer
@@ -100,12 +102,13 @@ public:
 
         for (auto &sref : str.sRefs) {
           auto refStr = getStructure(sref.strName);
-          if (!refStr) continue;
+          if (!refStr)
+            continue;
 
           for (auto &el : refStr->elements) {
             if (el.layer != layer)
               continue;
-            
+
             // Apply transformations to element copy
             auto elCopy = el;
 
@@ -152,7 +155,8 @@ public:
           }
         }
 
-        std::array<NumericType, 2> extrudeExtent = {baseHeight, baseHeight + height};
+        std::array<NumericType, 2> extrudeExtent = {baseHeight,
+                                                    baseHeight + height};
 
         if (blurring) {
           PointType pointData = applyBlur(blurredLS);
@@ -162,37 +166,45 @@ public:
 
           ls::Extrude<NumericType>(blurredLS, levelSet, extrudeExtent).apply();
         } else {
-          ls::Extrude<NumericType>(unblurredLS, levelSet, extrudeExtent).apply();
+          ls::Extrude<NumericType>(unblurredLS, levelSet, extrudeExtent)
+              .apply();
         }
       } // if (!str.isRef)
     } // for (auto &str : structures)
-    
 
     if (mask) {
       // Create bottom substrate (z >= 0)
       auto bottomLS = lsDomainType::New(levelSet->getGrid());
       double originLow[3] = {0., 0., baseHeight};
       double normalLow[3] = {0., 0., -1.};
-      auto bottomPlane = ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
+      auto bottomPlane =
+          ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
       ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
 
       // Create top cap (z <= 5 µm)
       auto topLS = lsDomainType::New(levelSet->getGrid());
-      double originHigh[3] = {0., 0., baseHeight + height}; // Adjust to match extrusion
+      double originHigh[3] = {0., 0.,
+                              baseHeight + height}; // Adjust to match extrusion
       double normalHigh[3] = {0., 0., 1.};
-      auto topPlane = ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
+      auto topPlane =
+          ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
       ls::MakeGeometry<double, D>(topLS, topPlane).apply();
 
       // Intersect with bottom
-      ls::BooleanOperation<double, D>(levelSet, bottomLS, ls::BooleanOperationEnum::INTERSECT).apply();
+      ls::BooleanOperation<double, D>(levelSet, bottomLS,
+                                      ls::BooleanOperationEnum::INTERSECT)
+          .apply();
       // Intersect with top
-      ls::BooleanOperation<double, D>(levelSet, topLS, ls::BooleanOperationEnum::INTERSECT).apply();
+      ls::BooleanOperation<double, D>(levelSet, topLS,
+                                      ls::BooleanOperationEnum::INTERSECT)
+          .apply();
     } // if(mask) end
     return levelSet;
   } // function end
 
   PointType applyBlur(lsDomainType2D blurredLS) {
-    GDSMaskProximity<NumericType> proximity(blurredLS, exposureDelta, sigmas, weights);
+    GDSMaskProximity<NumericType> proximity(blurredLS, exposureDelta, sigmas,
+                                            weights);
     proximity.apply();
 
     auto exposureGrid = proximity.getExposedGrid();
@@ -204,9 +216,9 @@ public:
 
     PointType pointData;
     std::vector<std::pair<int, int>> directions = {
-      {-1, 0}, {1, 0}, {0, -1}, {0, 1}  // 4-neighbor stencil
+        {-1, 0}, {1, 0}, {0, -1}, {0, 1} // 4-neighbor stencil
     };
-    
+
     for (int y = 0; y < gridSizeY; ++y) {
       for (int x = 0; x < gridSizeX; ++x) {
         double current = exposureGrid[y][x];
@@ -218,20 +230,22 @@ public:
           double yReal = y * exposureDelta + bounds_[2];
           int yLS = std::round(yReal / gridDelta_);
           viennahrle::Index<2> pos;
-          pos[0] = xLS; pos[1] = yLS;
+          pos[0] = xLS;
+          pos[1] = yLS;
           pointData.emplace_back(pos, 0.);
           break;
         }
-    
+
         double minDist = std::numeric_limits<double>::max();
         int bestNx = -1, bestNy = -1;
-        
+
         for (auto [dy, dx] : directions) {
           int ny = y + dy;
           int nx = x + dx;
 
           if ((nx < 0 || nx >= gridSizeX || ny < 0 || ny >= gridSizeY) &&
-              !applyBoundaryCondition(nx, ny, gridSizeX, gridSizeY, boundaryConds_))
+              !applyBoundaryCondition(nx, ny, gridSizeX, gridSizeY,
+                                      boundaryConds_))
             continue;
 
           double neighbor = exposureGrid[ny][nx];
@@ -243,15 +257,17 @@ public:
             double yReal = ny * exposureDelta + bounds_[2];
             int yLS = std::round(yReal / gridDelta_);
             viennahrle::Index<2> pos;
-            pos[0] = xLS; pos[1] = yLS;
+            pos[0] = xLS;
+            pos[1] = yLS;
             pointData.emplace_back(pos, 0.);
             break;
           }
-           
+
           // Check if neighbors are on opposite sites of contour
           if ((current - threshold) * (neighbor - threshold) < 0) {
             // Interpolate sub-cell distance
-            double dist = std::abs((threshold - current) / (neighbor - current));
+            double dist =
+                std::abs((threshold - current) / (neighbor - current));
 
             if (dist < minDist) {
               minDist = dist;
@@ -262,7 +278,7 @@ public:
         }
 
         if ((minDist < 1.0) && (bestNx >= 0.) && (bestNy >= 0.)) {
-          double sdfCurrent  = minDist * exposureDelta;
+          double sdfCurrent = minDist * exposureDelta;
 
           double xReal = x * exposureDelta + bounds_[0];
           double yReal = y * exposureDelta + bounds_[2];
@@ -271,7 +287,8 @@ public:
           int yIndex = std::round(yReal / gridDelta_);
 
           viennahrle::Index<2> curIndex;
-          curIndex[0] = xIndex; curIndex[1] = yIndex;
+          curIndex[0] = xIndex;
+          curIndex[1] = yIndex;
 
           double sign = (current < threshold) ? 1.0 : -1.0;
           pointData.emplace_back(curIndex, sign * sdfCurrent);
@@ -283,8 +300,7 @@ public:
 
   void addBlur(std::vector<NumericType> inSigmas,
                std::vector<NumericType> inWeights,
-               NumericType inThreshold = 0.5,
-               NumericType delta = 0.) {
+               NumericType inThreshold = 0.5, NumericType delta = 0.) {
     sigmas = inSigmas;
     weights = inWeights;
     threshold = inThreshold;
@@ -321,16 +337,11 @@ public:
     return allLayers;
   }
 
-  std::size_t getNumberOfStructures() const {
-    return structures.size();
-  }
+  std::size_t getNumberOfStructures() const { return structures.size(); }
 
 private:
-
-  bool applyBoundaryCondition(
-      int &x, int &y,
-      int maxX, int maxY,
-      const BoundaryType boundaryConditions[]) {
+  bool applyBoundaryCondition(int &x, int &y, int maxX, int maxY,
+                              const BoundaryType boundaryConditions[]) {
     // X
     if (x < 0) {
       if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
@@ -384,7 +395,9 @@ private:
         if (refStr)
           refStr->isRef = true;
         else
-          Logger::getInstance().addWarning("Missing referenced structure: " + sref.strName).print();
+          Logger::getInstance()
+              .addWarning("Missing referenced structure: " + sref.strName)
+              .print();
       }
     }
   }
@@ -475,21 +488,19 @@ private:
     assert(element.pointCloud.size() == 4); // GDSII box is a rectangle
 
     using VectorType = ls::VectorType<NumericType, 2>;
-    
+
     // The corners in GDS are typically ordered clockwise or counter-clockwise
     VectorType minCorner{
         std::min({element.pointCloud[0][0], element.pointCloud[1][0],
                   element.pointCloud[2][0], element.pointCloud[3][0]}),
         std::min({element.pointCloud[0][1], element.pointCloud[1][1],
-                  element.pointCloud[2][1], element.pointCloud[3][1]})
-    };
+                  element.pointCloud[2][1], element.pointCloud[3][1]})};
 
     VectorType maxCorner{
         std::max({element.pointCloud[0][0], element.pointCloud[1][0],
                   element.pointCloud[2][0], element.pointCloud[3][0]}),
         std::max({element.pointCloud[0][1], element.pointCloud[1][1],
-                  element.pointCloud[2][1], element.pointCloud[3][1]})
-    };
+                  element.pointCloud[2][1], element.pointCloud[3][1]})};
 
     // Generate a level set box using MakeGeometry
     ls::MakeGeometry<NumericType, 2>(
@@ -497,20 +508,20 @@ private:
         SmartPointer<ls::Box<NumericType, 2>>::New(minCorner, maxCorner))
         .apply();
   }
-  
+
   void addPolygon(lsDomainType2D layer2D,
                   const GDS::Element<NumericType> &element,
-                  const NumericType xOffset,
-                  const NumericType yOffset) {
+                  const NumericType xOffset, const NumericType yOffset) {
 
     // Create a 2D level set from the polygon
     auto mesh = polygonToSurfaceMesh(element, xOffset, yOffset);
-    lsDomainType2D tmpLS = lsDomainType2D::New(getBounds(), boundaryConds_, getGridDelta());
+    lsDomainType2D tmpLS =
+        lsDomainType2D::New(getBounds(), boundaryConds_, getGridDelta());
     ls::FromSurfaceMesh<NumericType, 2>(tmpLS, mesh).apply();
 
-    ls::BooleanOperation<NumericType, 2>(
-      layer2D, tmpLS, ls::BooleanOperationEnum::UNION)
-      .apply();
+    ls::BooleanOperation<NumericType, 2>(layer2D, tmpLS,
+                                         ls::BooleanOperationEnum::UNION)
+        .apply();
   }
 
   SmartPointer<ls::Mesh<NumericType>>
@@ -518,11 +529,11 @@ private:
                        const NumericType xOffset, const NumericType yOffset) {
     auto mesh = SmartPointer<ls::Mesh<NumericType>>::New();
     const auto &points = element.pointCloud;
-  
+
     if (points.size() < 2) {
       return mesh;
     }
-  
+
     // --- Determine winding order (signed area) ---
     double signedArea = 0.0;
     for (size_t i = 0; i < points.size(); ++i) {
@@ -531,7 +542,7 @@ private:
       signedArea += (p1[0] * p2[1] - p2[0] * p1[1]);
     }
     bool isCCW = (signedArea > 0);
-  
+
     // --- Add points to mesh with offsets ---
     std::vector<unsigned> indices;
     for (const auto &pt : points) {
@@ -545,7 +556,7 @@ private:
       else
         mesh->insertNextLine({indices[i - 1], indices[i]});
     }
-  
+
     // --- Close the polygon ---
     if (points.front() != points.back()) {
       if (isCCW)
@@ -553,7 +564,7 @@ private:
       else
         mesh->insertNextLine({indices.back(), indices.front()});
     }
-      return mesh;
+    return mesh;
   }
 
   static inline NumericType deg2rad(const NumericType angleDeg) {
@@ -578,7 +589,6 @@ private:
   std::vector<NumericType> weights;
   NumericType threshold;
   NumericType exposureDelta;
-
 };
 
 } // namespace viennaps

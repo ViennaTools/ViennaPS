@@ -2,9 +2,9 @@
 #pragma once
 
 #include <lsDomain.hpp>
-#include <vcSmartPointer.hpp>
-#include <lsPreCompileMacros.hpp>
 #include <lsFiniteDifferences.hpp>
+#include <lsPreCompileMacros.hpp>
+#include <vcSmartPointer.hpp>
 
 namespace viennaps {
 
