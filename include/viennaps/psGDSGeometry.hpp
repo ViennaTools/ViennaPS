@@ -76,14 +76,15 @@ public:
 
   lsDomainType layerToLevelSet(const int16_t layer,
                                const NumericType baseHeight,
-                               const NumericType height, bool mask = false, 
+                               const NumericType height, bool mask = false,
                                bool blurLayer = true) {
 
     const bool blurring = blurLayer && blur;
     // levelSet is the final 3D mask
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_, blurring ? exposureDelta : gridDelta_);
-    
+    lsDomainType2D GDSLevelSet = lsDomainType2D::New(
+        bounds_, boundaryConds_, blurring ? exposureDelta : gridDelta_);
+
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
         // add single layer
@@ -158,14 +159,16 @@ public:
                                                     baseHeight + height};
 
         if (blurring) {
-          lsDomainType2D maskLS = lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
+          lsDomainType2D maskLS =
+              lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
           PointType pointData = applyBlur(GDSLevelSet);
           maskLS->insertPoints(pointData);
           maskLS->finalize(2);
           ls::Expand<double, 2>(maskLS, 2).apply();
           ls::Extrude<NumericType>(maskLS, levelSet, extrudeExtent).apply();
         } else
-          ls::Extrude<NumericType>(GDSLevelSet, levelSet, extrudeExtent).apply();
+          ls::Extrude<NumericType>(GDSLevelSet, levelSet, extrudeExtent)
+              .apply();
       } // if (!str.isRef)
     } // for (auto &str : structures)
 
@@ -201,7 +204,7 @@ public:
 
   PointType applyBlur(lsDomainType2D blurringLS) {
     // Apply Gaussian blur based on the GDS-extracted "blurringLS"
-    GDSMaskProximity<NumericType> proximity(blurringLS, exposureDelta, sigmas, 
+    GDSMaskProximity<NumericType> proximity(blurringLS, exposureDelta, sigmas,
                                             weights);
     proximity.apply();
 
@@ -217,20 +220,22 @@ public:
 
     // Calculate grid bounds
     const int xStart = std::floor(minBounds[0] / gridDelta_);
-    const int xEnd   = std::ceil(maxBounds[0] / gridDelta_);
+    const int xEnd = std::ceil(maxBounds[0] / gridDelta_);
     const int yStart = std::floor(minBounds[1] / gridDelta_);
-    const int yEnd   = std::ceil(maxBounds[1] / gridDelta_);
+    const int yEnd = std::ceil(maxBounds[1] / gridDelta_);
 
     for (int y = yStart; y <= yEnd; ++y) {
       for (int x = xStart; x <= xEnd; ++x) {
-    
+
         double xReal = x * gridDelta_ - bounds_[0];
         double yReal = y * gridDelta_ - bounds_[2];
 
         double current = proximity.exposureAt(xReal, yReal);
         // Check if current is on the contour
         if (current == threshold) {
-          IndexType pos; pos[0] = x; pos[1] = y;
+          IndexType pos;
+          pos[0] = x;
+          pos[1] = y;
           pointData.emplace_back(pos, 0.);
           break;
         }
@@ -250,11 +255,12 @@ public:
           // If so, skip checks and add neighbor when it becomes "current"
           if (neighbor == threshold)
             break;
-          
+
           // Check if neighbor is on opposite side of the contour
           if ((current - threshold) * (neighbor - threshold) < 0) {
             // Interpolate sub-cell distance
-            double dist = std::abs((threshold - current) / (neighbor - current));
+            double dist =
+                std::abs((threshold - current) / (neighbor - current));
             if (dist < minDist) {
               minDist = dist;
               bestNx = nx;
@@ -263,8 +269,10 @@ public:
           }
         }
         if ((minDist < 1.0) && (bestNx >= 0.) && (bestNy >= 0.)) {
-          double sdfCurrent  = minDist * gridDelta_;
-          IndexType pos; pos[0] = x; pos[1] = y;
+          double sdfCurrent = minDist * gridDelta_;
+          IndexType pos;
+          pos[0] = x;
+          pos[1] = y;
           double sign = (current < threshold) ? 1.0 : -1.0;
           pointData.emplace_back(pos, sign * sdfCurrent);
         }
@@ -275,8 +283,7 @@ public:
 
   void addBlur(std::vector<NumericType> inSigmas,
                std::vector<NumericType> inWeights,
-               NumericType inThreshold = 0.5,
-               NumericType delta = -1.) {
+               NumericType inThreshold = 0.5, NumericType delta = -1.) {
     weights = inWeights;
     threshold = inThreshold;
     exposureDelta = delta == -1. ? gridDelta_ : delta;
@@ -319,7 +326,6 @@ public:
   std::size_t getNumberOfStructures() const { return structures.size(); }
 
 private:
-
   GDS::Structure<NumericType> *getStructure(const std::string &strName) {
     for (size_t i = 0; i < structures.size(); i++) {
       if (strName == structures[i].name) {

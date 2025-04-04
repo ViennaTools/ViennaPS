@@ -50,7 +50,7 @@ public:
                 << std::endl;
       return;
     }
-  
+
     for (const auto &row : finalGrid) {
       for (size_t i = 0; i < row.size(); ++i) {
         file << row[i];
@@ -62,7 +62,7 @@ public:
 
     file.close();
   }
-  
+
   double exposureAt(double xReal, double yReal) {
     double xExpId = (xReal) / exposureDelta;
     double yExpId = (yReal) / exposureDelta;
@@ -71,21 +71,20 @@ public:
     int x1 = x0 + 1;
     int y0 = static_cast<int>(std::floor(yExpId));
     int y1 = y0 + 1;
-  
-    if (y0 < 0 || y1 >= static_cast<int>(finalGrid.size()) ||
-        x0 < 0 || x1 >= static_cast<int>(finalGrid[0].size())) 
-        // !applyBoundaryCondition(x0, x1, gridSizeX, gridSizeY, boundaryConds_) {
+
+    if (y0 < 0 || y1 >= static_cast<int>(finalGrid.size()) || x0 < 0 ||
+        x1 >= static_cast<int>(finalGrid[0].size()))
+      // !applyBoundaryCondition(x0, x1, gridSizeX, gridSizeY, boundaryConds_) {
       return 0.0; // or apply boundary conditions
-  
+
     double dx = xExpId - x0;
     double dy = yExpId - y0;
-  
+
     // Bilinear interpolation
-    double val =
-        (1 - dx) * (1 - dy) * finalGrid[y0][x0] +
-        dx * (1 - dy) * finalGrid[y0][x1] +
-        (1 - dx) * dy * finalGrid[y1][x0] +
-        dx * dy * finalGrid[y1][x1];
+    double val = (1 - dx) * (1 - dy) * finalGrid[y0][x0] +
+                 dx * (1 - dy) * finalGrid[y0][x1] +
+                 (1 - dx) * dy * finalGrid[y1][x0] +
+                 dx * dy * finalGrid[y1][x1];
     return val;
   }
 
@@ -199,11 +198,9 @@ private:
 
     return output;
   }
-  
-  bool applyBoundaryCondition(
-    int &x, int &y,
-    int maxX, int maxY,
-    const BoundaryType boundaryConditions[]) {
+
+  bool applyBoundaryCondition(int &x, int &y, int maxX, int maxY,
+                              const BoundaryType boundaryConditions[]) {
     // X
     if (x < 0) {
       if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
