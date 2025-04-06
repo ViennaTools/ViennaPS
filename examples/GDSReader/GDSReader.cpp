@@ -23,7 +23,8 @@ int main(int argc, char **argv) {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::INFINITE_BOUNDARY};
 
-  auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta, boundaryConds);
+  auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(
+      gridDelta, boundaryConds);
   mask->addBlur({forwardSigma, backsSigma}, // Gaussian sigmas
                 {0.8, 0.2},                 // Weights
                 0.5,                        // Threshold
