@@ -11,6 +11,7 @@
 #include <vcSmartPointer.hpp>
 
 #include <hrleDenseIterator.hpp>
+#include <hrleGrid.hpp>
 
 namespace ls = viennals;
 
@@ -21,10 +22,10 @@ template <typename NumericType> class GDSMaskProximity {
   using Grid2D = std::vector<std::vector<NumericType>>;
 
 public:
-  GDSMaskProximity(DomainType2D inputLS, double delta,
+  GDSMaskProximity(DomainType2D inputLS, int delta,
                    const std::vector<double> &sigmas,
                    const std::vector<double> &weights)
-      : inputLevelSet(inputLS), exposureDelta(delta), sigmas(sigmas),
+      : inputLevelSet(inputLS), deltaRatio(delta), sigmas(sigmas),
         weights(weights) {
     assert(sigmas.size() == weights.size());
     assert(inputLS != nullptr);
@@ -43,7 +44,12 @@ public:
 
   const Grid2D &getExposureMap() const { return exposureMap; }
 
+  // Save the final grid
   void saveGridToCSV(const std::string &filename) {
+    saveGridToCSV(filename, finalGrid);
+  }
+
+  void saveGridToCSV(const std::string &filename, Grid2D grid) {
     std::ofstream file(filename);
     if (!file.is_open()) {
       std::cerr << "Error: Cannot open file '" << filename << "' for writing!"
@@ -51,7 +57,7 @@ public:
       return;
     }
 
-    for (const auto &row : finalGrid) {
+    for (const auto &row : grid) {
       for (size_t i = 0; i < row.size(); ++i) {
         file << row[i];
         if (i < row.size() - 1)
@@ -64,33 +70,54 @@ public:
   }
 
   double exposureAt(double xReal, double yReal) {
-    double xExpId = (xReal) / exposureDelta;
-    double yExpId = (yReal) / exposureDelta;
+    const double delta = inputLevelSet->getGrid().getGridDelta();
+    auto boundaryConds_ = inputLevelSet->getGrid().getBoundaryConditions();
+
+    double xExpId = (xReal) / delta;
+    double yExpId = (yReal) / delta;
 
     int x0 = static_cast<int>(std::floor(xExpId));
     int x1 = x0 + 1;
     int y0 = static_cast<int>(std::floor(yExpId));
     int y1 = y0 + 1;
 
-    if (y0 < 0 || y1 >= static_cast<int>(finalGrid.size()) || x0 < 0 ||
-        x1 >= static_cast<int>(finalGrid[0].size()))
-      // !applyBoundaryCondition(x0, x1, gridSizeX, gridSizeY, boundaryConds_) {
-      return 0.0; // or apply boundary conditions
+    int maxY = static_cast<int>(finalGrid.size()) - 1;
+    int maxX = static_cast<int>(finalGrid[0].size()) - 1;
 
     double dx = xExpId - x0;
     double dy = yExpId - y0;
 
-    // Bilinear interpolation
-    double val = (1 - dx) * (1 - dy) * finalGrid[y0][x0] +
-                 dx * (1 - dy) * finalGrid[y0][x1] +
-                 (1 - dx) * dy * finalGrid[y1][x0] +
-                 dx * dy * finalGrid[y1][x1];
-    return val;
+    // Check if all four points are in-bounds
+    if (x0 > 0 && x0 < maxX && y0 > 0 && y0 < maxY) {
+      double v00 = finalGrid[y0][x0];
+      double v10 = finalGrid[y0][x1];
+      double v01 = finalGrid[y1][x0];
+      double v11 = finalGrid[y1][x1];
+
+      return (1 - dx) * (1 - dy) * v00 + dx * (1 - dy) * v10 +
+             (1 - dx) * dy * v01 + dx * dy * v11;
+    }
+
+    // Handle boundary condition fallback
+    auto getSafeValue = [&](int x, int y) -> double {
+      int tx = x, ty = y;
+      if (!applyBoundaryCondition(tx, ty, maxX, maxY, boundaryConds_))
+        return 0.0;
+      return finalGrid[ty][tx];
+    };
+
+    double v00 = getSafeValue(x0, y0);
+    double v10 = getSafeValue(x1, y0);
+    double v01 = getSafeValue(x0, y1);
+    double v11 = getSafeValue(x1, y1);
+
+    return (1 - dx) * (1 - dy) * v00 + dx * (1 - dy) * v10 +
+           (1 - dx) * dy * v01 + dx * dy * v11;
   }
 
 private:
   std::vector<double> sigmas, weights;
-  double exposureDelta;
+  int deltaRatio;
 
   DomainType2D inputLevelSet;
   Grid2D finalGrid;
@@ -124,21 +151,30 @@ private:
       return {};
     }
 
-    int kernelSize = std::min(21, std::max(3, static_cast<int>(6 * sigma)));
+    // Fine grid (used for kernel and output)
+    int fineSizeY = exposureMap.size();
+    int fineSizeX = exposureMap[0].size();
+    double fineDelta = inputLevelSet->getGrid().getGridDelta();
+
+    // Create output exposure grid on the fine grid
+    Grid2D output(fineSizeY, std::vector<double>(fineSizeX, 0.0));
+
+    // Kernel size based on fine grid resolution
+    int kernelSize =
+        std::min(static_cast<int>(21 * deltaRatio),
+                 std::max(3, static_cast<int>(std::ceil(6 * sigma))));
     if (kernelSize % 2 == 0)
       kernelSize += 1;
-
     int halfSize = kernelSize / 2;
-    Grid2D output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
 
-    // Create 2D Gaussian kernel
+    // Create Gaussian kernel (on fine grid spacing)
     std::vector<std::vector<double>> kernel(kernelSize,
                                             std::vector<double>(kernelSize));
     double sum = 0.0;
     for (int i = 0; i < kernelSize; ++i) {
       for (int j = 0; j < kernelSize; ++j) {
-        double x = i - halfSize;
-        double y = j - halfSize;
+        double x = (i - halfSize) * fineDelta;
+        double y = (j - halfSize) * fineDelta;
         kernel[i][j] = std::exp(-0.5 * (x * x + y * y) / (sigma * sigma));
         sum += kernel[i][j];
       }
@@ -147,26 +183,27 @@ private:
       for (auto &val : row)
         val /= sum;
 
-    // Perform 2D convolution
-    for (int y = 0; y < gridSizeY; ++y) {
-      for (int x = 0; x < gridSizeX; ++x) {
-        double value = 0.0;
+    // Apply Gaussian convolution centered at every beam location (coarse grid
+    // spacing)
+    for (int y = 0; y < fineSizeY; y += deltaRatio) {
+      for (int x = 0; x < fineSizeX; x += deltaRatio) {
+        if (exposureMap[y][x] <= 0.0)
+          continue;
 
+        // Apply Gaussian centered at (x,y)
         for (int ky = -halfSize; ky <= halfSize; ++ky) {
           for (int kx = -halfSize; kx <= halfSize; ++kx) {
-            int srcY = std::clamp(y + ky, 0, gridSizeY - 1);
-            int srcX = std::clamp(x + kx, 0, gridSizeX - 1);
+            int nx = x + kx;
+            int ny = y + ky;
 
-            // Apply kernel while ensuring proper boundary handling
-            value +=
-                exposureMap[srcY][srcX] * kernel[ky + halfSize][kx + halfSize];
+            if (nx >= 0 && nx < fineSizeX && ny >= 0 && ny < fineSizeY) {
+              output[ny][nx] +=
+                  exposureMap[y][x] * kernel[ky + halfSize][kx + halfSize];
+            }
           }
         }
-
-        output[y][x] = value;
       }
     }
-
     return output;
   }
 
@@ -199,8 +236,9 @@ private:
     return output;
   }
 
-  bool applyBoundaryCondition(int &x, int &y, int maxX, int maxY,
-                              const BoundaryType boundaryConditions[]) {
+  bool applyBoundaryCondition(
+      int &x, int &y, int maxX, int maxY,
+      const std::array<BoundaryType, 2> &boundaryConditions) {
     // X
     if (x < 0) {
       if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
@@ -209,13 +247,17 @@ private:
         x = -x;
       else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
         x = maxX - 1;
-    } else if (x >= maxX) {
+      else
+        return false;
+    } else if (x > maxX) {
       if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
         return false;
       else if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
-        x = 2 * maxX - x - 2;
+        x = 2 * maxX - x - 1;
       else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
         x = 0;
+      else
+        return false;
     }
 
     // Y
@@ -226,13 +268,17 @@ private:
         y = -y;
       else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
         y = maxY - 1;
-    } else if (y >= maxY) {
+      else
+        return false;
+    } else if (y > maxY) {
       if (boundaryConditions[1] == BoundaryType::INFINITE_BOUNDARY)
         return false;
       else if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
-        y = 2 * maxY - y - 2;
+        y = 2 * maxY - y - 1;
       else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
         y = 0;
+      else
+        return false;
     }
 
     return true;

@@ -15,16 +15,15 @@ int main(int argc, char **argv) {
 
   constexpr NumericType gridDelta = 0.01;
   constexpr NumericType exposureDelta = 0.005;
-  double forwardSigma = 20.;
-  double backsSigma = 120.;
+  double forwardSigma = 5.;
+  double backsSigma = 50.;
 
   ls::BoundaryConditionEnum boundaryConds[D] = {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::INFINITE_BOUNDARY};
 
-  auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta);
-  mask->setBoundaryConditions(boundaryConds);
+  auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(gridDelta, boundaryConds);
   mask->addBlur({forwardSigma, backsSigma}, // Gaussian sigmas
                 {0.8, 0.2},                 // Weights
                 0.5,                        // Threshold
@@ -58,7 +57,7 @@ int main(int argc, char **argv) {
   geometry->insertNextLevelSetAsMaterial(layer3, viennaps::Material::Cu);
 
   auto layer4 = mask->layerToLevelSet(4, 0, 0.4, true, false);
-  geometry->insertNextLevelSetAsMaterial(layer3, viennaps::Material::W);
+  geometry->insertNextLevelSetAsMaterial(layer4, viennaps::Material::W);
 
   auto layer5 = mask->layerToLevelSet(5, 0, 0.2, true);
   geometry->insertNextLevelSetAsMaterial(layer5, viennaps::Material::PolySi);

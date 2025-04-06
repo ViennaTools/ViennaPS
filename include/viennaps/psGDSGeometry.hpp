@@ -51,6 +51,18 @@ public:
     }
   }
 
+  explicit GDSGeometry(const NumericType gridDelta,
+                       BoundaryType boundaryConds[3])
+      : gridDelta_(gridDelta) {
+    for (int i = 0; i < 3; ++i)
+      boundaryConds_[i] = boundaryConds[i];
+    if constexpr (D == 2) {
+      Logger::getInstance()
+          .addError("Cannot import 2D geometry from GDS file.")
+          .print();
+    }
+  }
+
   void setGridDelta(const NumericType gridDelta) { gridDelta_ = gridDelta; }
 
   NumericType getGridDelta() const { return gridDelta_; }
@@ -82,8 +94,9 @@ public:
     const bool blurring = blurLayer && blur;
     // levelSet is the final 3D mask
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D GDSLevelSet = lsDomainType2D::New(
-        bounds_, boundaryConds_, blurring ? exposureDelta : gridDelta_);
+    lsDomainType2D GDSLevelSet =
+        lsDomainType2D::New(bounds_, boundaryConds_,
+                            blurring ? beamDelta / gridRefinement : gridDelta_);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
@@ -204,7 +217,7 @@ public:
 
   PointType applyBlur(lsDomainType2D blurringLS) {
     // Apply Gaussian blur based on the GDS-extracted "blurringLS"
-    GDSMaskProximity<NumericType> proximity(blurringLS, exposureDelta, sigmas,
+    GDSMaskProximity<NumericType> proximity(blurringLS, gridRefinement, sigmas,
                                             weights);
     proximity.apply();
 
@@ -283,11 +296,23 @@ public:
 
   void addBlur(std::vector<NumericType> inSigmas,
                std::vector<NumericType> inWeights,
-               NumericType inThreshold = 0.5, NumericType delta = -1.) {
+               NumericType inThreshold = 0.5, NumericType delta = -1.,
+               int gridRefinement = 4) {
     weights = inWeights;
     threshold = inThreshold;
-    exposureDelta = delta == -1. ? gridDelta_ : delta;
+    beamDelta = (delta == -1.) ? gridDelta_ : delta;
+    // Defines the ratio of the beam grid to the storage of the
+    // illumination during Gaussians convolution
+    gridRefinement = std::ceil(gridRefinement * beamDelta / gridDelta_);
+
+    Logger::getInstance()
+        .addInfo("gridDelta = " + std::to_string(gridDelta_) +
+                 ", beamDelta = " + std::to_string(beamDelta) +
+                 ", gridRefinement = " + std::to_string(gridRefinement))
+        .print();
+
     // Scale sigmas to represent geometry dimensions
+    NumericType exposureDelta = beamDelta / gridRefinement;
     for (auto sigma : inSigmas) {
       sigmas.push_back(sigma * gridDelta_ / exposureDelta);
     }
@@ -519,7 +544,6 @@ private:
 
 private:
   std::vector<GDS::Structure<NumericType>> structures;
-  std::unordered_map<std::string, StructureLayers> assembledStructures;
   std::array<NumericType, 2> boundaryPadding = {0., 0.};
   std::array<NumericType, 2> minBounds;
   std::array<NumericType, 2> maxBounds;
@@ -534,7 +558,8 @@ private:
   std::vector<NumericType> sigmas;
   std::vector<NumericType> weights;
   NumericType threshold;
-  NumericType exposureDelta;
+  NumericType beamDelta;
+  int gridRefinement = 4;
 };
 
 } // namespace viennaps

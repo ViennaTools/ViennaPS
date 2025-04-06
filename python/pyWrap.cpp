@@ -1637,7 +1637,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init(&SmartPointer<GDSGeometry<T, D>>::New<>))
       .def(pybind11::init(&SmartPointer<GDSGeometry<T, D>>::New<const T>),
            pybind11::arg("gridDelta"))
-      // methods
+      .def(pybind11::init(
+               [](const T gridDelta,
+                  std::array<typename ls::Domain<T, D>::BoundaryType, 3> bcs) {
+                 auto ptr = SmartPointer<GDSGeometry<T, D>>::New(gridDelta);
+                 ptr->setBoundaryConditions(bcs.data());
+                 return ptr;
+               }),
+           pybind11::arg("gridDelta"),
+           pybind11::arg("boundaryConditions")) // methods
       .def("setGridDelta", &GDSGeometry<T, D>::setGridDelta,
            "Set the grid spacing.")
       .def(
@@ -1671,7 +1679,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // Blurring
       .def("addBlur", &GDSGeometry<T, D>::addBlur, pybind11::arg("sigmas"),
            pybind11::arg("weights"), pybind11::arg("threshold") = 0.5,
-           pybind11::arg("delta") = 0.0,
+           pybind11::arg("delta") = 0.0, pybind11::arg("gridRefinement") = 4,
            "Set parameters for applying mask blurring.")
       .def("getAllLayers", &GDSGeometry<T, D>::getAllLayers,
            "Return a set of all layers found in the GDS file.")

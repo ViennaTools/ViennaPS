@@ -16,6 +16,6 @@ def plot_final_exposure(final_exposure_file):
         plt.ylabel("Y Coordinate (µm)")
         plt.show()
     else:
-        print(f"Final exposure file not found for {layer}.")
+        print(f"Final exposure file not found.")
 
 plot_final_exposure("finalGrid.csv")
