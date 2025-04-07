@@ -15,7 +15,7 @@ using namespace viennacore;
 
 /// This class reads a GDS file and creates a GDSGeometry object. It is a
 /// very simple implementation and does not support all GDS features.
- template <typename NumericType, int D> class GDSReader {
+template <typename NumericType, int D> class GDSReader {
   FILE *filePtr = nullptr;
   SmartPointer<GDSGeometry<NumericType, D>> geometry = nullptr;
   std::string fileName;

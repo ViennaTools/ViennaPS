@@ -69,12 +69,11 @@ public:
     std::cout << "============================" << std::endl;
   }
 
-  lsDomainType2D getMaskLevelSet(const int16_t layer,
-                     bool blurLayer = true) {
-    
+  lsDomainType2D getMaskLevelSet(const int16_t layer, bool blurLayer = true) {
+
     const bool blurring = blurLayer && blur;
-    auto GDSLevelSet = lsDomainType2D::New(
-        bounds_, boundaryConds_, blurring ? beamDelta : gridDelta_);
+    auto GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_,
+                                           blurring ? beamDelta : gridDelta_);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
@@ -143,7 +142,6 @@ public:
               addBox(GDSLevelSet, elCopy, 0., 0.);
             else
               addPolygon(GDSLevelSet, elCopy, 0., 0.);
-
           }
         }
       }
@@ -163,10 +161,9 @@ public:
 
   lsDomainType layerToLevelSet(const int16_t layer,
                                const NumericType baseHeight,
-                               const NumericType height, 
-                               bool mask = false,
+                               const NumericType height, bool mask = false,
                                bool blurLayer = true) {
-    
+
     if constexpr (D == 2) {
       // Return the 2D level set
       return getMaskLevelSet(layer, blurLayer);
@@ -174,8 +171,9 @@ public:
       // Create a 3D level set from the 2D level set and return it
       auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
       auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-      ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height}).apply();
-  
+      ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height})
+          .apply();
+
       if (mask) {
         // Create bottom substrate
         auto bottomLS = lsDomainType::New(levelSet->getGrid());
@@ -184,16 +182,16 @@ public:
         auto bottomPlane =
             ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
         ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
-  
+
         // Create top cap
         auto topLS = lsDomainType::New(levelSet->getGrid());
-        double originHigh[3] = {0., 0.,
-                                baseHeight + height}; // Adjust to match extrusion
+        double originHigh[3] = {
+            0., 0., baseHeight + height}; // Adjust to match extrusion
         double normalHigh[3] = {0., 0., 1.};
         auto topPlane =
             ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
         ls::MakeGeometry<double, D>(topLS, topPlane).apply();
-  
+
         // Intersect with bottom
         ls::BooleanOperation<double, D>(levelSet, bottomLS,
                                         ls::BooleanOperationEnum::INTERSECT)
@@ -443,7 +441,7 @@ private:
     bounds_[3] = maxBounds[1] + boundaryPadding[1];
     if constexpr (D == 3) {
       bounds_[4] = -1.;
-      bounds_[5] = 1.;  
+      bounds_[5] = 1.;
     }
   }
 
