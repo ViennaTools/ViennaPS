@@ -25,7 +25,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, int D = 3> class GDSGeometry {
+template <class NumericType, int D> class GDSGeometry {
   using StructureLayers =
       std::unordered_map<int16_t, SmartPointer<ls::Mesh<NumericType>>>;
   using lsDomainType = SmartPointer<ls::Domain<NumericType, D>>;
@@ -35,32 +35,15 @@ template <class NumericType, int D = 3> class GDSGeometry {
   using IndexType = typename viennahrle::Index<2>;
 
 public:
-  GDSGeometry() {
-    if constexpr (D == 2) {
-      Logger::getInstance()
-          .addError("Cannot import 2D geometry from GDS file.")
-          .print();
-    }
-  }
+  GDSGeometry() {}
 
-  explicit GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
-    if constexpr (D == 2) {
-      Logger::getInstance()
-          .addError("Cannot import 2D geometry from GDS file.")
-          .print();
-    }
-  }
+  explicit GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {}
 
   explicit GDSGeometry(const NumericType gridDelta,
-                       BoundaryType boundaryConds[3])
+                       BoundaryType boundaryConds[D])
       : gridDelta_(gridDelta) {
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < D; ++i)
       boundaryConds_[i] = boundaryConds[i];
-    if constexpr (D == 2) {
-      Logger::getInstance()
-          .addError("Cannot import 2D geometry from GDS file.")
-          .print();
-    }
   }
 
   void setGridDelta(const NumericType gridDelta) { gridDelta_ = gridDelta; }
@@ -73,8 +56,8 @@ public:
     boundaryPadding[1] = yPadding;
   }
 
-  void setBoundaryConditions(BoundaryType boundaryConds[3]) {
-    for (int i = 0; i < 3; i++)
+  void setBoundaryConditions(BoundaryType boundaryConds[D]) {
+    for (int i = 0; i < D; i++)
       boundaryConds_[i] = boundaryConds[i];
   }
 
@@ -86,20 +69,12 @@ public:
     std::cout << "============================" << std::endl;
   }
 
-  lsDomainType layerToLevelSet(const int16_t layer,
-                               const NumericType baseHeight,
-                               const NumericType height, bool mask = false,
-                               bool blurLayer = true) {
-
+  lsDomainType2D getMaskLevelSet(const int16_t layer,
+                     bool blurLayer = true) {
+    
     const bool blurring = blurLayer && blur;
-    // levelSet is the final 3D mask
-    auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D GDSLevelSet = lsDomainType2D::New(
+    auto GDSLevelSet = lsDomainType2D::New(
         bounds_, boundaryConds_, blurring ? beamDelta : gridDelta_);
-    // lsDomainType2D GDSLevelSet =
-    //     lsDomainType2D::New(bounds_, boundaryConds_,
-    //                         blurring ? beamDelta / gridRefinement :
-    //                         gridDelta_);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
@@ -168,55 +143,69 @@ public:
               addBox(GDSLevelSet, elCopy, 0., 0.);
             else
               addPolygon(GDSLevelSet, elCopy, 0., 0.);
+
           }
         }
-
-        std::array<NumericType, 2> extrudeExtent = {baseHeight,
-                                                    baseHeight + height};
-
-        if (blurring) {
-          lsDomainType2D maskLS =
-              lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
-          PointType pointData = applyBlur(GDSLevelSet);
-          maskLS->insertPoints(pointData);
-          maskLS->finalize(2);
-          ls::Expand<double, 2>(maskLS, 2).apply();
-          ls::Extrude<NumericType>(maskLS, levelSet, extrudeExtent).apply();
-        } else
-          ls::Extrude<NumericType>(GDSLevelSet, levelSet, extrudeExtent)
-              .apply();
       }
     }
 
-    if (mask) {
-      // Create bottom substrate (z >= 0)
-      auto bottomLS = lsDomainType::New(levelSet->getGrid());
-      double originLow[3] = {0., 0., baseHeight};
-      double normalLow[3] = {0., 0., -1.};
-      auto bottomPlane =
-          ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
-      ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
+    if (blurring) {
+      lsDomainType2D maskLS =
+          lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
+      PointType pointData = applyBlur(GDSLevelSet);
+      maskLS->insertPoints(pointData);
+      maskLS->finalize(2);
+      // ls::Expand<double, 2>(maskLS, 2).apply();
+      return maskLS;
+    }
+    return GDSLevelSet;
+  }
 
-      // Create top cap (z <= 5 µm)
-      auto topLS = lsDomainType::New(levelSet->getGrid());
-      double originHigh[3] = {0., 0.,
-                              baseHeight + height}; // Adjust to match extrusion
-      double normalHigh[3] = {0., 0., 1.};
-      auto topPlane =
-          ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
-      ls::MakeGeometry<double, D>(topLS, topPlane).apply();
-
-      // Intersect with bottom
-      ls::BooleanOperation<double, D>(levelSet, bottomLS,
-                                      ls::BooleanOperationEnum::INTERSECT)
-          .apply();
-      // Intersect with top
-      ls::BooleanOperation<double, D>(levelSet, topLS,
-                                      ls::BooleanOperationEnum::INTERSECT)
-          .apply();
-    } // if(mask) end
-    return levelSet;
-  } // function end
+  lsDomainType layerToLevelSet(const int16_t layer,
+                               const NumericType baseHeight,
+                               const NumericType height, 
+                               bool mask = false,
+                               bool blurLayer = true) {
+    
+    if constexpr (D == 2) {
+      // Return the 2D level set
+      return getMaskLevelSet(layer, blurLayer);
+    } else {
+      // Create a 3D level set from the 2D level set and return it
+      auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
+      auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
+      ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height}).apply();
+  
+      if (mask) {
+        // Create bottom substrate
+        auto bottomLS = lsDomainType::New(levelSet->getGrid());
+        double originLow[3] = {0., 0., baseHeight};
+        double normalLow[3] = {0., 0., -1.};
+        auto bottomPlane =
+            ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
+        ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
+  
+        // Create top cap
+        auto topLS = lsDomainType::New(levelSet->getGrid());
+        double originHigh[3] = {0., 0.,
+                                baseHeight + height}; // Adjust to match extrusion
+        double normalHigh[3] = {0., 0., 1.};
+        auto topPlane =
+            ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
+        ls::MakeGeometry<double, D>(topLS, topPlane).apply();
+  
+        // Intersect with bottom
+        ls::BooleanOperation<double, D>(levelSet, bottomLS,
+                                        ls::BooleanOperationEnum::INTERSECT)
+            .apply();
+        // Intersect with top
+        ls::BooleanOperation<double, D>(levelSet, topLS,
+                                        ls::BooleanOperationEnum::INTERSECT)
+            .apply();
+      }
+      return levelSet;
+    }
+  }
 
   PointType applyBlur(lsDomainType2D blurringLS) {
     // Apply Gaussian blur based on the GDS-extracted "blurringLS"
@@ -452,8 +441,10 @@ private:
     bounds_[1] = maxBounds[0] + boundaryPadding[0];
     bounds_[2] = minBounds[1] - boundaryPadding[1];
     bounds_[3] = maxBounds[1] + boundaryPadding[1];
-    bounds_[4] = -1.;
-    bounds_[5] = 1.;
+    if constexpr (D == 3) {
+      bounds_[4] = -1.;
+      bounds_[5] = 1.;  
+    }
   }
 
   void addBox(lsDomainType2D layer2D, GDS::Element<NumericType> &element,

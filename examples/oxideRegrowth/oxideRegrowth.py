@@ -1,4 +1,3 @@
-import viennacs2d
 import sys
 from argparse import ArgumentParser
 

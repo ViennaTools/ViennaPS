@@ -1,4 +1,3 @@
-#include <hrleGrid.hpp>
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
 #include <psMaterials.hpp>
