@@ -94,9 +94,12 @@ public:
     const bool blurring = blurLayer && blur;
     // levelSet is the final 3D mask
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    lsDomainType2D GDSLevelSet =
-        lsDomainType2D::New(bounds_, boundaryConds_,
-                            blurring ? beamDelta / gridRefinement : gridDelta_);
+    lsDomainType2D GDSLevelSet = lsDomainType2D::New(
+        bounds_, boundaryConds_, blurring ? beamDelta : gridDelta_);
+    // lsDomainType2D GDSLevelSet =
+    //     lsDomainType2D::New(bounds_, boundaryConds_,
+    //                         blurring ? beamDelta / gridRefinement :
+    //                         gridDelta_);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {

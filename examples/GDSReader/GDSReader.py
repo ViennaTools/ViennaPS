@@ -12,7 +12,7 @@ vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
 gridDelta = 0.01
 exposureDelta = 0.005
 forwardSigma = 5.
-backSigma = 500.
+backSigma = 50.
 
 boundaryConds = [
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,

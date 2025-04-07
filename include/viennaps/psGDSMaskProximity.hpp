@@ -33,9 +33,8 @@ public:
   }
 
   void apply() {
-    for (double sigma : sigmas) {
+    for (double sigma : sigmas)
       blurredGrids.push_back(applyGaussianBlur(sigma));
-    }
 
     finalGrid = combineExposures();
   }
@@ -70,7 +69,7 @@ public:
   }
 
   double exposureAt(double xReal, double yReal) {
-    const double delta = inputLevelSet->getGrid().getGridDelta();
+    const double delta = inputLevelSet->getGrid().getGridDelta() / deltaRatio;
     auto boundaryConds_ = inputLevelSet->getGrid().getBoundaryConditions();
 
     double xExpId = (xReal) / delta;
@@ -151,10 +150,15 @@ private:
       return {};
     }
 
+    // Coarse grid (used for Gaussian convolution)
+    const int coarseSizeY = exposureMap.size();
+    const int coarseSizeX = exposureMap[0].size();
+    const double coarseDelta = inputLevelSet->getGrid().getGridDelta();
+
     // Fine grid (used for kernel and output)
-    int fineSizeY = exposureMap.size();
-    int fineSizeX = exposureMap[0].size();
-    double fineDelta = inputLevelSet->getGrid().getGridDelta();
+    const int fineSizeY = coarseSizeY * deltaRatio;
+    const int fineSizeX = coarseSizeX * deltaRatio;
+    const double fineDelta = coarseDelta / deltaRatio;
 
     // Create output exposure grid on the fine grid
     Grid2D output(fineSizeY, std::vector<double>(fineSizeX, 0.0));
@@ -185,16 +189,16 @@ private:
 
     // Apply Gaussian convolution centered at every beam location (coarse grid
     // spacing)
-    for (int y = 0; y < fineSizeY; y += deltaRatio) {
-      for (int x = 0; x < fineSizeX; x += deltaRatio) {
+    for (int y = 0; y < coarseSizeY; y++) {
+      for (int x = 0; x < coarseSizeX; x++) {
         if (exposureMap[y][x] <= 0.0)
           continue;
 
         // Apply Gaussian centered at (x,y)
         for (int ky = -halfSize; ky <= halfSize; ++ky) {
           for (int kx = -halfSize; kx <= halfSize; ++kx) {
-            int nx = x + kx;
-            int ny = y + ky;
+            int nx = x * deltaRatio + kx;
+            int ny = y * deltaRatio + ky;
 
             if (nx >= 0 && nx < fineSizeX && ny >= 0 && ny < fineSizeY) {
               output[ny][nx] +=
@@ -208,12 +212,14 @@ private:
   }
 
   Grid2D combineExposures() {
-    Grid2D output(gridSizeY, std::vector<double>(gridSizeX, 0.0));
+    auto fineGridSizeY = gridSizeY * deltaRatio;
+    auto fineGridSizeX = gridSizeX * deltaRatio;
+    Grid2D output(fineGridSizeY, std::vector<double>(fineGridSizeX, 0.0));
     double maxValue = 0.0;
 
     // Step 1: Compute the weighted sum and find max value in one pass
-    for (int y = 0; y < gridSizeY; ++y) {
-      for (int x = 0; x < gridSizeX; ++x) {
+    for (int y = 0; y < fineGridSizeY; ++y) {
+      for (int x = 0; x < fineGridSizeX; ++x) {
         double combinedValue = 0.0;
         for (size_t i = 0; i < blurredGrids.size(); ++i) {
           combinedValue += weights[i] * blurredGrids[i][y][x];
@@ -226,8 +232,8 @@ private:
     // Step 2: Normalize to max of 1 (if maxValue > 0)
     if (maxValue > 0.0) {
       double invMax = 1.0 / maxValue;
-      for (int y = 0; y < gridSizeY; ++y) {
-        for (int x = 0; x < gridSizeX; ++x) {
+      for (int y = 0; y < fineGridSizeY; ++y) {
+        for (int x = 0; x < fineGridSizeX; ++x) {
           output[y][x] *= invMax;
         }
       }
