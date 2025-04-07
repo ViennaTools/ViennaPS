@@ -30,12 +30,12 @@ int main(int argc, char **argv) {
                 exposureDelta);             // Exposure grid delta
   ps::GDSReader<NumericType, D>(mask, "myTest.gds").apply();
 
-  auto maskLayer = mask->getMaskLevelSet(0, false);
+  auto maskLayer = mask->layerToLevelSet(0, false);
   auto mesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
   ls::ToSurfaceMesh<NumericType, D>(maskLayer, mesh).apply();
   ls::VTKWriter<NumericType>(mesh, "maskLayer.vtp").apply();
 
-  auto blurredLayer = mask->getMaskLevelSet(0, true);
+  auto blurredLayer = mask->layerToLevelSet(0, true);
   ls::ToSurfaceMesh<NumericType, D>(blurredLayer, mesh).apply();
   ls::VTKWriter<NumericType>(mesh, "blurredLayer.vtp").apply();
 

@@ -36,12 +36,12 @@ reader = vps.GDSReader(mask, "myTest.gds")
 reader.apply()
 
 # Export unblurred mask layer
-maskLayer = mask.getMaskLevelSet(0, blurLayer=False)
+maskLayer = mask.layerToLevelSet(0, blurLayer=False)
 mesh = vls.Mesh()
 vls.ToSurfaceMesh(maskLayer, mesh).apply()
 vls.VTKWriter(mesh, "maskLayer.vtp").apply()
 
 # Export blurred mask layer
-blurredLayer = mask.getMaskLevelSet(0, blurLayer=True)
+blurredLayer = mask.layerToLevelSet(0, blurLayer=True)
 vls.ToSurfaceMesh(blurredLayer, mesh).apply()
 vls.VTKWriter(mesh, "blurredLayer.vtp").apply()

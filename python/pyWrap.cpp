@@ -1795,15 +1795,20 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           "Get the bounds of the geometry.")
   // Level set conversion
 #if VIENNAPS_PYTHON_DIMENSION == 2
-      .def("getMaskLevelSet", &GDSGeometry<T, D>::getMaskLevelSet,
-           "Convert a layer of the GDS geometry to a 2D level set domain.",
+      .def("layerToLevelSet",
+           static_cast<SmartPointer<viennals::Domain<T, D>> (
+               GDSGeometry<T, D>::*)(const int16_t, bool)>(
+               &GDSGeometry<T, D>::layerToLevelSet),
            pybind11::arg("layer"), pybind11::arg("blurLayer") = true)
-#endif
-      .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
-           "Convert a layer of the GDS geometry to a 3D level set domain.",
-           pybind11::arg("layer"), pybind11::arg("baseHeight"),
-           pybind11::arg("height"), pybind11::arg("mask") = false,
+#else
+      .def("layerToLevelSet",
+           static_cast<SmartPointer<viennals::Domain<T, D>> (
+               GDSGeometry<T, D>::*)(const int16_t, T, T, bool, bool)>(
+               &GDSGeometry<T, D>::layerToLevelSet),
+           pybind11::arg("layer"), pybind11::arg("baseHeight") = 0.,
+           pybind11::arg("height") = 1., pybind11::arg("mask") = false,
            pybind11::arg("blurLayer") = true)
+#endif
       // Blurring
       .def("addBlur", &GDSGeometry<T, D>::addBlur, pybind11::arg("sigmas"),
            pybind11::arg("weights"), pybind11::arg("threshold") = 0.5,

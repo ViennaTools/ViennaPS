@@ -69,140 +69,58 @@ public:
     std::cout << "============================" << std::endl;
   }
 
-  lsDomainType2D getMaskLevelSet(const int16_t layer, bool blurLayer = true) {
-
-    const bool blurring = blurLayer && blur;
-    auto GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_,
-                                           blurring ? beamDelta : gridDelta_);
-
-    for (auto &str : structures) { // loop over all structures
-      if (!str.isRef) {
-        // add single layer
-        if (auto contains = str.containsLayers.find(layer);
-            contains != str.containsLayers.end()) {
-          for (auto &el : str.elements) {
-            if (el.layer == layer) {
-              if (el.elementType == GDS::ElementType::elBox)
-                addBox(GDSLevelSet, el, 0., 0.);
-              else
-                addPolygon(GDSLevelSet, el, 0., 0.);
-            }
-          }
-        }
-
-        for (auto &sref : str.sRefs) {
-          auto refStr = getStructure(sref.strName);
-          if (!refStr)
-            continue;
-
-          for (auto &el : refStr->elements) {
-            if (el.layer != layer)
-              continue;
-
-            // Apply transformations to element copy
-            auto elCopy = el;
-
-            // Magnification
-            if (sref.magnification != 0.) {
-              for (auto &pt : elCopy.pointCloud) {
-                pt[0] *= sref.magnification;
-                pt[1] *= sref.magnification;
-              }
-            }
-
-            // Rotation
-            if (sref.angle != 0) {
-              double rad = deg2rad(sref.angle);
-              double cosA = std::cos(rad);
-              double sinA = std::sin(rad);
-              for (auto &pt : elCopy.pointCloud) {
-                double x = pt[0];
-                double y = pt[1];
-                pt[0] = x * cosA - y * sinA;
-                pt[1] = x * sinA + y * cosA;
-              }
-            }
-
-            // Translation
-            for (auto &pt : elCopy.pointCloud) {
-              pt[0] += sref.refPoint[0];
-              pt[1] += sref.refPoint[1];
-            }
-
-            // Flip along x
-            if (sref.flipped) {
-              for (auto &pt : elCopy.pointCloud)
-                pt[0] = -pt[0];
-              // keep winding order
-              std::reverse(elCopy.pointCloud.begin(), elCopy.pointCloud.end());
-            }
-
-            // Add element to layer
-            if (el.elementType == GDS::ElementType::elBox)
-              addBox(GDSLevelSet, elCopy, 0., 0.);
-            else
-              addPolygon(GDSLevelSet, elCopy, 0., 0.);
-          }
-        }
-      }
-    }
-
-    if (blurring) {
-      lsDomainType2D maskLS =
-          lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
-      PointType pointData = applyBlur(GDSLevelSet);
-      maskLS->insertPoints(pointData);
-      maskLS->finalize(2);
-      // ls::Expand<double, 2>(maskLS, 2).apply();
-      return maskLS;
-    }
-    return GDSLevelSet;
+  // 2D version
+  template <int Dim = D, typename std::enable_if<Dim == 2, int>::type = 0>
+  lsDomainType layerToLevelSet(const int16_t layer, bool blurLayer = true) {
+    return getMaskLevelSet(layer, blurLayer);
   }
 
+  // 3D version
+  template <int Dim = D, typename std::enable_if<Dim == 3, int>::type = 0>
   lsDomainType layerToLevelSet(const int16_t layer,
-                               const NumericType baseHeight,
-                               const NumericType height, bool mask = false,
+                               const NumericType baseHeight = 0.,
+                               const NumericType height = 1., bool mask = false,
                                bool blurLayer = true) {
 
-    if constexpr (D == 2) {
-      // Return the 2D level set
-      return getMaskLevelSet(layer, blurLayer);
-    } else {
-      // Create a 3D level set from the 2D level set and return it
-      auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
-      auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-      ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height})
+    // if constexpr (D == 2) {
+    //   // Return the 2D level set
+    //   return getMaskLevelSet(layer, blurLayer);
+    // } else {
+    // Create a 3D level set from the 2D level set and return it
+    auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
+    auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
+    ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height})
+        .apply();
+
+    if (mask) {
+      // Create bottom substrate
+      auto bottomLS = lsDomainType::New(levelSet->getGrid());
+      double originLow[3] = {0., 0., baseHeight};
+      double normalLow[3] = {0., 0., -1.};
+      auto bottomPlane =
+          ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
+      ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
+
+      // Create top cap
+      auto topLS = lsDomainType::New(levelSet->getGrid());
+      double originHigh[3] = {0., 0.,
+                              baseHeight + height}; // Adjust to match extrusion
+      double normalHigh[3] = {0., 0., 1.};
+      auto topPlane =
+          ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
+      ls::MakeGeometry<double, D>(topLS, topPlane).apply();
+
+      // Intersect with bottom
+      ls::BooleanOperation<double, D>(levelSet, bottomLS,
+                                      ls::BooleanOperationEnum::INTERSECT)
           .apply();
-
-      if (mask) {
-        // Create bottom substrate
-        auto bottomLS = lsDomainType::New(levelSet->getGrid());
-        double originLow[3] = {0., 0., baseHeight};
-        double normalLow[3] = {0., 0., -1.};
-        auto bottomPlane =
-            ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
-        ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
-
-        // Create top cap
-        auto topLS = lsDomainType::New(levelSet->getGrid());
-        double originHigh[3] = {
-            0., 0., baseHeight + height}; // Adjust to match extrusion
-        double normalHigh[3] = {0., 0., 1.};
-        auto topPlane =
-            ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
-        ls::MakeGeometry<double, D>(topLS, topPlane).apply();
-
-        // Intersect with bottom
-        ls::BooleanOperation<double, D>(levelSet, bottomLS,
-                                        ls::BooleanOperationEnum::INTERSECT)
-            .apply();
-        // Intersect with top
-        ls::BooleanOperation<double, D>(levelSet, topLS,
-                                        ls::BooleanOperationEnum::INTERSECT)
-            .apply();
-      }
-      return levelSet;
+      // Intersect with top
+      ls::BooleanOperation<double, D>(levelSet, topLS,
+                                      ls::BooleanOperationEnum::INTERSECT)
+          .apply();
     }
+    return levelSet;
+    // }
   }
 
   PointType applyBlur(lsDomainType2D blurringLS) {
@@ -532,6 +450,96 @@ private:
 
   static inline NumericType deg2rad(const NumericType angleDeg) {
     return angleDeg * M_PI / 180.;
+  }
+
+  lsDomainType2D getMaskLevelSet(const int16_t layer, bool blurLayer = true) {
+
+    const bool blurring = blurLayer && blur;
+    auto GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_,
+                                           blurring ? beamDelta : gridDelta_);
+
+    for (auto &str : structures) { // loop over all structures
+      if (!str.isRef) {
+        // add single layer
+        if (auto contains = str.containsLayers.find(layer);
+            contains != str.containsLayers.end()) {
+          for (auto &el : str.elements) {
+            if (el.layer == layer) {
+              if (el.elementType == GDS::ElementType::elBox)
+                addBox(GDSLevelSet, el, 0., 0.);
+              else
+                addPolygon(GDSLevelSet, el, 0., 0.);
+            }
+          }
+        }
+
+        for (auto &sref : str.sRefs) {
+          auto refStr = getStructure(sref.strName);
+          if (!refStr)
+            continue;
+
+          for (auto &el : refStr->elements) {
+            if (el.layer != layer)
+              continue;
+
+            // Apply transformations to element copy
+            auto elCopy = el;
+
+            // Magnification
+            if (sref.magnification != 0.) {
+              for (auto &pt : elCopy.pointCloud) {
+                pt[0] *= sref.magnification;
+                pt[1] *= sref.magnification;
+              }
+            }
+
+            // Rotation
+            if (sref.angle != 0) {
+              double rad = deg2rad(sref.angle);
+              double cosA = std::cos(rad);
+              double sinA = std::sin(rad);
+              for (auto &pt : elCopy.pointCloud) {
+                double x = pt[0];
+                double y = pt[1];
+                pt[0] = x * cosA - y * sinA;
+                pt[1] = x * sinA + y * cosA;
+              }
+            }
+
+            // Translation
+            for (auto &pt : elCopy.pointCloud) {
+              pt[0] += sref.refPoint[0];
+              pt[1] += sref.refPoint[1];
+            }
+
+            // Flip along x
+            if (sref.flipped) {
+              for (auto &pt : elCopy.pointCloud)
+                pt[0] = -pt[0];
+              // keep winding order
+              std::reverse(elCopy.pointCloud.begin(), elCopy.pointCloud.end());
+            }
+
+            // Add element to layer
+            if (el.elementType == GDS::ElementType::elBox)
+              addBox(GDSLevelSet, elCopy, 0., 0.);
+            else
+              addPolygon(GDSLevelSet, elCopy, 0., 0.);
+          }
+        }
+      }
+    }
+
+    if (blurring) {
+      lsDomainType2D maskLS =
+          lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
+      PointType pointData = applyBlur(GDSLevelSet);
+      maskLS->insertPoints(pointData);
+      maskLS->finalize(2);
+      // ls::Expand<double, 2>(maskLS, 2).apply();
+      return maskLS;
+    }
+    return GDSLevelSet;
   }
 
 private:
