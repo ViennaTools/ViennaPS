@@ -8,6 +8,8 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
+option(VIENNAPS_USE_GPU "Enable GPU support" ON)
+
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
@@ -159,6 +161,9 @@ endif()
 if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
   message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
+else()
+  message(STATUS "[ViennaPS] Disabled GPU Support")
+  set(VIENNAPS_USE_GPU OFF)
 endif()
 
 # --------------------------------------------------------------------------------------------------------

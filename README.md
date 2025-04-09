@@ -209,6 +209,16 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxid
   <img src="assets/redeposition.gif" width=700 style="background-color:white;">
 </div>
 
+### GDS Mask Import Example
+
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSReader) tests the full GDS mask import, blurring, rotation, scaling, and flipping as well as the level set conversion pipeline. Shown below is the result after applying proximity correction and extrusion on a simple test.
+
+<div align="center">
+  <img src="assets/masks.png" width=1200 style="background-color:white;">
+</div>
+
+
+
 ## Tests
 
 ViennaPS uses CTest to run its tests. In order to check whether ViennaPS runs without issues on your system, you can run:
