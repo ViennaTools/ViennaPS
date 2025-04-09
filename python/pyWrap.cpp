@@ -71,6 +71,7 @@
 #include <psToDiskMesh.hpp>
 
 // other
+#include <csDenseCellSet.hpp>
 #include <psUtil.hpp>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -595,6 +596,118 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //       .def("getLocalDataLabels", &psSpecularParticle::getLocalDataLabels)
   //       .def("getSourceDistributionPower",
   //            &psSpecularParticle::getSourceDistributionPower);
+
+  // ***************************************************************************
+  //                      Dense Cell Set from ViennaCS
+  // ***************************************************************************
+  pybind11::class_<viennacs::DenseCellSet<T, D>,
+                   SmartPointer<viennacs::DenseCellSet<T, D>>>(module,
+                                                               "DenseCellSet")
+      .def(pybind11::init())
+      .def("fromLevelSets", &viennacs::DenseCellSet<T, D>::fromLevelSets,
+           pybind11::arg("levelSets"), pybind11::arg("materialMap") = nullptr,
+           pybind11::arg("depth") = 0.)
+      .def("getBoundingBox", &viennacs::DenseCellSet<T, D>::getBoundingBox)
+      .def(
+          "addScalarData",
+          [](viennacs::DenseCellSet<T, D> &cellSet, std::string name,
+             T initValue) {
+            cellSet.addScalarData(name, initValue);
+            // discard return value
+          },
+          "Add a scalar value to be stored and modified in each cell.")
+      .def("getDepth", &viennacs::DenseCellSet<T, D>::getDepth,
+           "Get the depth of the cell set.")
+      .def("getGridDelta", &viennacs::DenseCellSet<T, D>::getGridDelta,
+           "Get the cell size.")
+      .def("getNodes", &viennacs::DenseCellSet<T, D>::getNodes,
+           "Get the nodes of the cell set which correspond to the corner "
+           "points of the cells.")
+      .def("getNode", &viennacs::DenseCellSet<T, D>::getNode,
+           "Get the node at the given index.")
+      .def("getElements", &viennacs::DenseCellSet<T, D>::getElements,
+           "Get elements (cells). The indicies in the elements correspond to "
+           "the corner nodes.")
+      .def("getElement", &viennacs::DenseCellSet<T, D>::getElement,
+           "Get the element at the given index.")
+      .def("getSurface", &viennacs::DenseCellSet<T, D>::getSurface,
+           "Get the surface level-set.")
+      .def("getCellGrid", &viennacs::DenseCellSet<T, D>::getCellGrid,
+           "Get the underlying mesh of the cell set.")
+      .def("getNumberOfCells", &viennacs::DenseCellSet<T, D>::getNumberOfCells,
+           "Get the number of cells.")
+      .def("getFillingFraction",
+           &viennacs::DenseCellSet<T, D>::getFillingFraction,
+           "Get the filling fraction of the cell containing the point.")
+      .def("getFillingFractions",
+           &viennacs::DenseCellSet<T, D>::getFillingFractions,
+           "Get the filling fractions of all cells.")
+      .def("getAverageFillingFraction",
+           &viennacs::DenseCellSet<T, D>::getAverageFillingFraction,
+           "Get the average filling at a point in some radius.")
+      .def("getCellCenter", &viennacs::DenseCellSet<T, D>::getCellCenter,
+           "Get the center of a cell with given index")
+      .def("getScalarData", &viennacs::DenseCellSet<T, D>::getScalarData,
+           "Get the data stored at each cell. WARNING: This function only "
+           "returns a copy of the data")
+      .def("getScalarDataLabels",
+           &viennacs::DenseCellSet<T, D>::getScalarDataLabels,
+           "Get the labels of the scalar data stored in the cell set.")
+      .def("getIndex", &viennacs::DenseCellSet<T, D>::getIndex,
+           "Get the index of the cell containing the given point.")
+      .def("setCellSetPosition",
+           &viennacs::DenseCellSet<T, D>::setCellSetPosition,
+           "Set whether the cell set should be created below (false) or above "
+           "(true) the surface.")
+      .def(
+          "setCoverMaterial", &viennacs::DenseCellSet<T, D>::setCoverMaterial,
+          "Set the material of the cells which are above or below the surface.")
+      .def("setPeriodicBoundary",
+           &viennacs::DenseCellSet<T, D>::setPeriodicBoundary,
+           "Enable periodic boundary conditions in specified dimensions.")
+      .def("setFillingFraction",
+           pybind11::overload_cast<const int, const T>(
+               &viennacs::DenseCellSet<T, D>::setFillingFraction),
+           "Sets the filling fraction at given cell index.")
+      .def("setFillingFraction",
+           pybind11::overload_cast<const std::array<T, 3> &, const T>(
+               &viennacs::DenseCellSet<T, D>::setFillingFraction),
+           "Sets the filling fraction for cell which contains given point.")
+      .def("addFillingFraction",
+           pybind11::overload_cast<const int, const T>(
+               &viennacs::DenseCellSet<T, D>::addFillingFraction),
+           "Add to the filling fraction at given cell index.")
+      .def("addFillingFraction",
+           pybind11::overload_cast<const std::array<T, 3> &, const T>(
+               &viennacs::DenseCellSet<T, D>::addFillingFraction),
+           "Add to the filling fraction for cell which contains given point.")
+      .def("addFillingFractionInMaterial",
+           &viennacs::DenseCellSet<T, D>::addFillingFractionInMaterial,
+           "Add to the filling fraction for cell which contains given point "
+           "only if the cell has the specified material ID.")
+      .def("writeVTU", &viennacs::DenseCellSet<T, D>::writeVTU,
+           "Write the cell set as .vtu file")
+      .def("writeCellSetData", &viennacs::DenseCellSet<T, D>::writeCellSetData,
+           "Save cell set data in simple text format.")
+      .def("readCellSetData", &viennacs::DenseCellSet<T, D>::readCellSetData,
+           "Read cell set data from text.")
+      .def("clear", &viennacs::DenseCellSet<T, D>::clear,
+           "Clear the filling fractions.")
+      .def("updateMaterials", &viennacs::DenseCellSet<T, D>::updateMaterials,
+           "Update the material IDs of the cell set. This function should be "
+           "called if the level sets, the cell set is made out of, have "
+           "changed. This does not work if the surface of the volume has "
+           "changed. In this case, call the function 'updateSurface' first.")
+      .def("updateSurface", &viennacs::DenseCellSet<T, D>::updateSurface,
+           "Updates the surface of the cell set. The new surface should be "
+           "below the old surface as this function can only remove cells from "
+           "the cell set.")
+      .def("buildNeighborhood",
+           &viennacs::DenseCellSet<T, D>::buildNeighborhood,
+           "Generate fast neighbor access for each cell.",
+           pybind11::arg("forceRebuild") = false)
+      .def("getNeighbors", &viennacs::DenseCellSet<T, D>::getNeighbors,
+           "Get the neighbor indices for a cell.");
 
   // ***************************************************************************
   //                                  MODELS
@@ -1629,7 +1742,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set the cutoff height for the planarization.")
       .def("apply", &Planarize<T, D>::apply, "Apply the planarization.");
 
-#if VIENNAPS_PYTHON_DIMENSION > 2
+  pybind11::class_<GDSReader<T, D>>(module, "GDSReader")
+      // constructors
+      .def(pybind11::init())
+      .def(pybind11::init<SmartPointer<GDSGeometry<T, D>> &, std::string>())
+      // methods
+      .def("setGeometry", &GDSReader<T, D>::setGeometry,
+           "Set the domain to be parsed in.")
+      .def("setFileName", &GDSReader<T, D>::setFileName,
+           "Set name of the GDS file.")
+      .def("apply", &GDSReader<T, D>::apply, "Parse the GDS file.");
+
   // GDS file parsing
   pybind11::class_<GDSGeometry<T, D>, SmartPointer<GDSGeometry<T, D>>>(
       module, "GDSGeometry")
@@ -1637,7 +1760,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init(&SmartPointer<GDSGeometry<T, D>>::New<>))
       .def(pybind11::init(&SmartPointer<GDSGeometry<T, D>>::New<const T>),
            pybind11::arg("gridDelta"))
-      // methods
+      .def(pybind11::init(
+               [](const T gridDelta,
+                  std::array<typename ls::Domain<T, D>::BoundaryType, D> bcs) {
+                 auto ptr = SmartPointer<GDSGeometry<T, D>>::New(gridDelta);
+                 ptr->setBoundaryConditions(bcs.data());
+                 return ptr;
+               }),
+           pybind11::arg("gridDelta"),
+           pybind11::arg("boundaryConditions")) // methods
       .def("setGridDelta", &GDSGeometry<T, D>::setGridDelta,
            "Set the grid spacing.")
       .def(
@@ -1652,10 +1783,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set padding between the largest point of the geometry and the "
            "boundary of the domain.")
       .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
-      .def("layerToLevelSet", &GDSGeometry<T, D>::layerToLevelSet,
-           "Convert a layer of the GDS geometry to a level set domain.",
-           pybind11::arg("layer"), pybind11::arg("baseHeight"),
-           pybind11::arg("height"), pybind11::arg("mask") = false)
       .def(
           "getBounds",
           [](GDSGeometry<T, D> &gds) -> std::array<double, 6> {
@@ -1665,19 +1792,34 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
               bounds[i] = b[i];
             return bounds;
           },
-          "Get the bounds of the geometry.");
-
-  pybind11::class_<GDSReader<T, D>>(module, "GDSReader")
-      // constructors
-      .def(pybind11::init())
-      .def(pybind11::init<SmartPointer<GDSGeometry<T, D>> &, std::string>())
-      // methods
-      .def("setGeometry", &GDSReader<T, D>::setGeometry,
-           "Set the domain to be parsed in.")
-      .def("setFileName", &GDSReader<T, D>::setFileName,
-           "Set name of the GDS file.")
-      .def("apply", &GDSReader<T, D>::apply, "Parse the GDS file.");
+          "Get the bounds of the geometry.")
+  // Level set conversion
+#if VIENNAPS_PYTHON_DIMENSION == 2
+      .def("layerToLevelSet",
+           static_cast<SmartPointer<viennals::Domain<T, D>> (
+               GDSGeometry<T, D>::*)(const int16_t, bool)>(
+               &GDSGeometry<T, D>::layerToLevelSet),
+           pybind11::arg("layer"), pybind11::arg("blurLayer") = true)
 #else
+      .def("layerToLevelSet",
+           static_cast<SmartPointer<viennals::Domain<T, D>> (
+               GDSGeometry<T, D>::*)(const int16_t, T, T, bool, bool)>(
+               &GDSGeometry<T, D>::layerToLevelSet),
+           pybind11::arg("layer"), pybind11::arg("baseHeight") = 0.,
+           pybind11::arg("height") = 1., pybind11::arg("mask") = false,
+           pybind11::arg("blurLayer") = true)
+#endif
+      // Blurring
+      .def("addBlur", &GDSGeometry<T, D>::addBlur, pybind11::arg("sigmas"),
+           pybind11::arg("weights"), pybind11::arg("threshold") = 0.5,
+           pybind11::arg("delta") = 0.0, pybind11::arg("gridRefinement") = 4,
+           "Set parameters for applying mask blurring.")
+      .def("getAllLayers", &GDSGeometry<T, D>::getAllLayers,
+           "Return a set of all layers found in the GDS file.")
+      .def("getNumberOfStructures", &GDSGeometry<T, D>::getNumberOfStructures,
+           "Return number of structure definitions.");
+
+#if VIENNAPS_PYTHON_DIMENSION < 3
   // wrap a 3D domain in 2D mode to be used with psExtrude
   // Domain
   pybind11::class_<Domain<T, 3>, SmartPointer<Domain<T, 3>>>(module, "Domain3D")

@@ -20,6 +20,7 @@ option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish whe
 
 set(VIENNAPS_LOOKUP_DIRS
     ""
+    # "${CMAKE_CURRENT_SOURCE_DIR}/../install/"
     CACHE STRING "Directories to account for when searching installed dependencies")
 
 list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
@@ -110,11 +111,16 @@ CPMFindPackage(
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
-CPMFindPackage(
-  NAME ViennaLS
-  VERSION 4.3.0
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+if(NOT ViennaLS_FOUND)
+  message(STATUS "ViennaLS not found locally, falling back to CPM...")
+  CPMFindPackage(
+    NAME ViennaLS
+    VERSION 4.3.0
+    GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
+    EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+else()
+  message(STATUS "Found local ViennaLS installation in ../install")
+endif()
 
 CPMFindPackage(
   NAME ViennaCS

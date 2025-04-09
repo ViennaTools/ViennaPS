@@ -17,6 +17,64 @@ ViennaPS is designed to be easily integrated into existing C++ projects and prov
 > [!NOTE]  
 > ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
+***
+***
+
+# What's New in This Branch?
+
+This branch introduces a comprehensive redesign of mask proximity correction using level set-based blurring of GDSII geometries. Rather than relying on polygon extraction, this version converts GDS polygons into 2D level sets, applies multi-Gaussian blurring, and inserts computed signed distances directly into sparse level set domains for robust feature modeling.
+
+## Implementation Details
+
+### **Proximity Effect Modeling Using Multi-Gaussian Blurring**
+- A `GDSMaskProximity` class performs multi-sigma Gaussian blurring on the binary mask:
+  - *Forward scattering*: Short-range diffusion (small sigma).
+  - *Backward scattering*: Long-range diffusion (large sigma).
+- Arbitrary combinations of `(sigma, weight)` can be specified.
+
+### **Thresholded Exposure Contour Detection Using SDFs**
+- The blurred exposure map is thresholded to generate the 0-level contour.
+- Distance to the contour is estimated using interpolation between neighboring values.
+- Resulting distances are signed and inserted as sparse points in a 2D level set.
+- ExposureDelta and gridDelta can be different, allowing for sub-grid resolution modeling.
+- **TODO: Apply Gaussian blur based on real-word scenarios, store exposure map on a finer grid**
+
+### **Level Set Extrusion for 3D Geometry Generation**
+- The 2D level set is extruded in the z-direction to form a 3D volume using `ls::Extrude`.
+- Extrusion thickness and z-position are controlled per layer.
+- Top and bottom capping planes are optionally intersected to constrain height.
+
+### **Hierarchical GDS Structure and Reference Handling**
+- Referenced structures (`SREF`) are also supported:
+  - Rotation (`ANGLE`), scaling (`MAG`), and flipping (`STRANS`) are correctly interpreted.
+  - Transformations are applied directly to level sets instead of 3D meshes.
+- Geometry from references is inserted before extrusion, avoiding mesh generation.
+
+### **GDSGeometry Blurring API**
+- Blurring parameters can be passed to `GDSGeometry::addBlur(sigmas, weights, threshold, delta)`.
+- When `blur = true`, `layerToLevelSet()` applies blurring and inserts distances automatically.
+- Blurring can be disabled per layer if needed.
+
+---
+
+### GDS Mask Import Example
+
+This [example](https://github.com/ViennaTools/ViennaPS/tree/maskOPC/examples/GDSReader) tests the full GDS mask import, blurring, rotation, scaling, and flipping as well as the level set conversion pipeline. Shown below is the result after applying proximity correction and extrusion on a simple test.
+
+<div align="center">
+  <img src="assets/masks.png" width=1200 style="background-color:white;">
+</div>
+
+---
+
+### **TODO: Future Work for Level Set-Based Mask Processing**
+- Implement optional Laplacian smoothing post-blur.
+- Support analytical proximity kernels (e.g., Molière, Lorentzian).
+- Allow importing multiple GDS files or cells.
+
+***
+***
+
 ## Quick Start  
 
 To install ViennaPS for Python, simply run:  

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "psGDSMaskProximity.hpp"
 #include "psGDSUtils.hpp"
 
 #include <lsBooleanOperation.hpp>
@@ -9,37 +10,45 @@
 #include <lsMakeGeometry.hpp>
 #include <lsTransformMesh.hpp>
 
+#include <lsToMesh.hpp>
+#include <lsToSurfaceMesh.hpp>
+#include <lsVTKWriter.hpp>
+
+#include <lsExtrude.hpp>
+
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
+
+namespace ls = viennals;
 
 namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, int D = 3> class GDSGeometry {
+template <class NumericType, int D> class GDSGeometry {
   using StructureLayers =
-      std::unordered_map<int16_t, SmartPointer<viennals::Mesh<NumericType>>>;
-  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
-  using BoundaryType = typename viennals::Domain<NumericType, D>::BoundaryType;
+      std::unordered_map<int16_t, SmartPointer<ls::Mesh<NumericType>>>;
+  using lsDomainType = SmartPointer<ls::Domain<NumericType, D>>;
+  using lsDomainType2D = SmartPointer<ls::Domain<NumericType, 2>>;
+
+  using PointType = typename ls::Domain<NumericType, 2>::PointValueVectorType;
+  using IndexType = typename viennahrle::Index<2>;
 
 public:
-  GDSGeometry() {
-    if constexpr (D == 2) {
-      Logger::getInstance()
-          .addError("Cannot import 2D geometry from GDS file.")
-          .print();
-    }
-  }
+  GDSGeometry() {}
 
-  explicit GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {
-    if constexpr (D == 2) {
-      Logger::getInstance()
-          .addError("Cannot import 2D geometry from GDS file.")
-          .print();
-    }
+  explicit GDSGeometry(const NumericType gridDelta) : gridDelta_(gridDelta) {}
+
+  explicit GDSGeometry(const NumericType gridDelta,
+                       BoundaryType boundaryConds[D])
+      : gridDelta_(gridDelta) {
+    for (int i = 0; i < D; ++i)
+      boundaryConds_[i] = boundaryConds[i];
   }
 
   void setGridDelta(const NumericType gridDelta) { gridDelta_ = gridDelta; }
+
+  NumericType getGridDelta() const { return gridDelta_; }
 
   void setBoundaryPadding(const NumericType xPadding,
                           const NumericType yPadding) {
@@ -47,8 +56,8 @@ public:
     boundaryPadding[1] = yPadding;
   }
 
-  void setBoundaryConditions(BoundaryType boundaryConds[3]) {
-    for (int i = 0; i < 3; i++)
+  void setBoundaryConditions(BoundaryType boundaryConds[D]) {
+    for (int i = 0; i < D; i++)
       boundaryConds_[i] = boundaryConds[i];
   }
 
@@ -60,113 +69,162 @@ public:
     std::cout << "============================" << std::endl;
   }
 
+  // 2D version
+  template <int Dim = D, typename std::enable_if<Dim == 2, int>::type = 0>
+  lsDomainType layerToLevelSet(const int16_t layer, bool blurLayer = true) {
+    return getMaskLevelSet(layer, blurLayer);
+  }
+
+  // 3D version
+  template <int Dim = D, typename std::enable_if<Dim == 3, int>::type = 0>
   lsDomainType layerToLevelSet(const int16_t layer,
-                               const NumericType baseHeight,
-                               const NumericType height, bool mask = false) {
+                               const NumericType baseHeight = 0.,
+                               const NumericType height = 1., bool mask = false,
+                               bool blurLayer = true) {
 
+    // if constexpr (D == 2) {
+    //   // Return the 2D level set
+    //   return getMaskLevelSet(layer, blurLayer);
+    // } else {
+    // Create a 3D level set from the 2D level set and return it
+    auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
+    ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height})
+        .apply();
 
-    for (auto &str : structures) { // loop over all structures
-      if (!str.isRef) {
-        // add single elements
-        if (auto contains = str.containsLayers.find(layer);
-            contains != str.containsLayers.end()) {
-          for (auto &el : str.elements) {
-            if (el.layer == layer) {
-              if (el.elementType == GDS::ElementType::elBox) {
-                addBox(levelSet, el, baseHeight, height, 0., 0.);
-              } else {
-                addPolygon(levelSet, el, baseHeight, height, 0, 0);
-              }
+    if (mask) {
+      // Create bottom substrate
+      auto bottomLS = lsDomainType::New(levelSet->getGrid());
+      double originLow[3] = {0., 0., baseHeight};
+      double normalLow[3] = {0., 0., -1.};
+      auto bottomPlane =
+          ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
+      ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
+
+      // Create top cap
+      auto topLS = lsDomainType::New(levelSet->getGrid());
+      double originHigh[3] = {0., 0.,
+                              baseHeight + height}; // Adjust to match extrusion
+      double normalHigh[3] = {0., 0., 1.};
+      auto topPlane =
+          ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
+      ls::MakeGeometry<double, D>(topLS, topPlane).apply();
+
+      // Intersect with bottom
+      ls::BooleanOperation<double, D>(levelSet, bottomLS,
+                                      ls::BooleanOperationEnum::INTERSECT)
+          .apply();
+      // Intersect with top
+      ls::BooleanOperation<double, D>(levelSet, topLS,
+                                      ls::BooleanOperationEnum::INTERSECT)
+          .apply();
+    }
+    return levelSet;
+    // }
+  }
+
+  PointType applyBlur(lsDomainType2D blurringLS) {
+    // Apply Gaussian blur based on the GDS-extracted "blurringLS"
+    GDSMaskProximity<NumericType> proximity(blurringLS, gridRefinement, sigmas,
+                                            weights);
+    proximity.apply();
+
+    // exposureGrid is the final blurred grid to be used for SDF calculation
+    // auto exposureGrid = proximity.getExposedGrid();
+    if (lsInternal::Logger::getLogLevel() >= 2)
+      proximity.saveGridToCSV("finalGrid.csv");
+
+    PointType pointData;
+    std::vector<std::pair<int, int>> directions = {
+        {-1, 0}, {1, 0}, {0, -1}, {0, 1} // 4-neighbor stencil
+    };
+
+    // Calculate grid bounds
+    const int xStart = std::floor(minBounds[0] / gridDelta_);
+    const int xEnd = std::ceil(maxBounds[0] / gridDelta_);
+    const int yStart = std::floor(minBounds[1] / gridDelta_);
+    const int yEnd = std::ceil(maxBounds[1] / gridDelta_);
+
+    for (int y = yStart; y <= yEnd; ++y) {
+      for (int x = xStart; x <= xEnd; ++x) {
+
+        double xReal = x * gridDelta_ - bounds_[0];
+        double yReal = y * gridDelta_ - bounds_[2];
+
+        double current = proximity.exposureAt(xReal, yReal);
+        // Check if current is on the contour
+        if (current == threshold) {
+          IndexType pos;
+          pos[0] = x;
+          pos[1] = y;
+          pointData.emplace_back(pos, 0.);
+          break;
+        }
+
+        double minDist = std::numeric_limits<double>::max();
+        int bestNx = -1, bestNy = -1;
+
+        for (auto [dy, dx] : directions) {
+          int nx = x + dx;
+          int ny = y + dy;
+          double nxReal = nx * gridDelta_ - bounds_[0];
+          double nyReal = ny * gridDelta_ - bounds_[2];
+
+          double neighbor = proximity.exposureAt(nxReal, nyReal);
+
+          // Check if neighbor is on the contour
+          // If so, skip checks and add neighbor when it becomes "current"
+          if (neighbor == threshold)
+            break;
+
+          // Check if neighbor is on opposite side of the contour
+          if ((current - threshold) * (neighbor - threshold) < 0) {
+            // Interpolate sub-cell distance
+            double dist =
+                std::abs((threshold - current) / (neighbor - current));
+            if (dist < minDist) {
+              minDist = dist;
+              bestNx = nx;
+              bestNy = ny;
             }
           }
         }
-
-        // add structure references
-        auto strMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-        for (auto &sref : str.sRefs) {
-          auto refStr = getStructure(sref.strName);
-          if (auto contains = refStr->containsLayers.find(layer);
-              contains != refStr->containsLayers.end()) {
-            assert(assembledStructures[refStr->name][layer]);
-
-            // copy mesh here
-            auto copy = assembledStructures[refStr->name][layer];
-            auto preBuiltStrMesh =
-                SmartPointer<viennals::Mesh<NumericType>>::New();
-            preBuiltStrMesh->nodes = copy->nodes;
-            preBuiltStrMesh->triangles = copy->triangles;
-            adjustPreBuiltMeshHeight(preBuiltStrMesh, baseHeight, height);
-
-            if (sref.angle > 0.) {
-              viennals::TransformMesh<NumericType>(
-                  preBuiltStrMesh, viennals::TransformEnum::ROTATION,
-                  VectorType<double, 3>{0., 0., 1.}, deg2rad(sref.angle))
-                  .apply();
-            }
-
-            if (sref.magnification > 0.) {
-              viennals::TransformMesh<NumericType>(
-                  preBuiltStrMesh, viennals::TransformEnum::SCALE,
-                  VectorType<double, 3>{sref.magnification, sref.magnification,
-                                        1.})
-                  .apply();
-            }
-
-            if (sref.flipped) {
-              Logger::getInstance()
-                  .addWarning("Flipping x-axis currently not supported.")
-                  .print();
-              continue;
-            }
-
-            viennals::TransformMesh<NumericType>(
-                preBuiltStrMesh, viennals::TransformEnum::TRANSLATION,
-                VectorType<double, 3>{sref.refPoint[0], sref.refPoint[1], 0.})
-                .apply();
-
-            strMesh->append(*preBuiltStrMesh);
-          }
-        }
-        if (strMesh->nodes.size() > 0) {
-          auto tmpLS = lsDomainType::New(levelSet->getGrid());
-          viennals::FromSurfaceMesh<NumericType, D>(tmpLS, strMesh).apply();
-          viennals::BooleanOperation<NumericType, D>(
-              levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
-              .apply();
+        if ((minDist < 1.0) && (bestNx >= 0.) && (bestNy >= 0.)) {
+          double sdfCurrent = minDist * gridDelta_;
+          IndexType pos;
+          pos[0] = x;
+          pos[1] = y;
+          double sign = (current < threshold) ? 1.0 : -1.0;
+          pointData.emplace_back(pos, sign * sdfCurrent);
         }
       }
     }
+    return pointData;
+  }
 
-    if (mask) {
-      auto topPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-      NumericType normal[3] = {0., 0., 1.};
-      NumericType origin[3] = {0., 0., baseHeight + height};
-      viennals::MakeGeometry<NumericType, D>(
-          topPlane,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
+  void addBlur(std::vector<NumericType> inSigmas,
+               std::vector<NumericType> inWeights,
+               NumericType inThreshold = 0.5, NumericType delta = -1.,
+               int gridRefinement = 4) {
+    weights = inWeights;
+    threshold = inThreshold;
+    beamDelta = (delta == -1.) ? gridDelta_ : delta;
+    // Defines the ratio of the beam grid to the storage of the
+    // illumination during Gaussians convolution
+    gridRefinement = std::ceil(gridRefinement * beamDelta / gridDelta_);
 
-      auto botPlane = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-      normal[D - 1] = -1.;
-      origin[D - 1] = baseHeight;
-      viennals::MakeGeometry<NumericType, D>(
-          botPlane,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
-          .apply();
+    Logger::getInstance()
+        .addInfo("gridDelta = " + std::to_string(gridDelta_) +
+                 ", beamDelta = " + std::to_string(beamDelta) +
+                 ", gridRefinement = " + std::to_string(gridRefinement))
+        .print();
 
-      viennals::BooleanOperation<NumericType, D>(
-          topPlane, botPlane, viennals::BooleanOperationEnum::INTERSECT)
-          .apply();
-
-      viennals::BooleanOperation<NumericType, D>(
-          topPlane, levelSet,
-          viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-          .apply();
-
-      return topPlane;
+    // Scale sigmas to represent geometry dimensions
+    NumericType exposureDelta = beamDelta / gridRefinement;
+    for (auto sigma : inSigmas) {
+      sigmas.push_back(sigma * gridDelta_ / exposureDelta);
     }
-    return levelSet;
+    blur = true;
   }
 
   void printBound() const {
@@ -179,7 +237,7 @@ public:
     return {minBounds, maxBounds};
   }
 
-  auto getBounds() { return bounds_; }
+  auto getBounds() const { return bounds_; }
 
   void insertNextStructure(GDS::Structure<NumericType> const &structure) {
     structures.push_back(structure);
@@ -187,9 +245,18 @@ public:
 
   void finalize() {
     checkReferences();
-    preBuildStructures();
     calculateBoundingBoxes();
   }
+
+  std::set<int16_t> getAllLayers() const {
+    std::set<int16_t> allLayers;
+    for (const auto &str : structures) {
+      allLayers.insert(str.containsLayers.begin(), str.containsLayers.end());
+    }
+    return allLayers;
+  }
+
+  std::size_t getNumberOfStructures() const { return structures.size(); }
 
 private:
   GDS::Structure<NumericType> *getStructure(const std::string &strName) {
@@ -205,42 +272,12 @@ private:
     for (auto &str : structures) {
       for (auto &sref : str.sRefs) {
         auto refStr = getStructure(sref.strName);
-        refStr->isRef = true;
-      }
-    }
-  }
-
-  void preBuildStructures() {
-    for (auto &str : structures) {
-      if (str.isRef) {
-        if (!str.sRefs.empty()) {
-          std::cerr << "Referenced structure contains references" << std::endl;
-          continue;
-        }
-
-        StructureLayers strLayerMapping;
-
-        for (auto layer : str.containsLayers) {
-          strLayerMapping.insert(
-              {layer, SmartPointer<viennals::Mesh<NumericType>>::New()});
-        }
-
-        for (auto &el : str.elements) {
-          SmartPointer<viennals::Mesh<NumericType>> mesh;
-          if (el.elementType == GDS::ElementType::elBox) {
-            mesh = boxToSurfaceMesh(el, 0, 1, 0, 0);
-          } else {
-            bool retry = false;
-            mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
-            if (retry) {
-              pointOrderFlag = !pointOrderFlag;
-              mesh = polygonToSurfaceMesh(el, 0, 1, 0, 0, retry);
-            }
-          }
-          strLayerMapping[el.layer]->append(*mesh);
-        }
-
-        assembledStructures.insert({str.name, strLayerMapping});
+        if (refStr)
+          refStr->isRef = true;
+        else
+          Logger::getInstance()
+              .addWarning("Missing referenced structure: " + sref.strName)
+              .print();
       }
     }
   }
@@ -320,271 +357,209 @@ private:
     bounds_[1] = maxBounds[0] + boundaryPadding[0];
     bounds_[2] = minBounds[1] - boundaryPadding[1];
     bounds_[3] = maxBounds[1] + boundaryPadding[1];
-    bounds_[4] = -1.;
-    bounds_[5] = 1.;
+    if constexpr (D == 3) {
+      bounds_[4] = -1.;
+      bounds_[5] = 1.;
+    }
   }
 
-  void addBox(lsDomainType levelSet, GDS::Element<NumericType> &element,
-              const NumericType baseHeight, const NumericType height,
+  void addBox(lsDomainType2D layer2D, GDS::Element<NumericType> &element,
               const NumericType xOffset, const NumericType yOffset) const {
-    auto tmpLS = lsDomainType::New(levelSet->getGrid());
 
-    auto minPoint = element.pointCloud[1];
-    minPoint[2] = baseHeight;
-    auto maxPoint = element.pointCloud[3];
-    maxPoint[2] = baseHeight + height;
+    assert(element.elementType == GDS::ElementType::elBox);
+    assert(element.pointCloud.size() == 4); // GDSII box is a rectangle
 
-    viennals::MakeGeometry<NumericType, D>(
-        tmpLS, SmartPointer<viennals::Box<NumericType, D>>::New(
-                   minPoint.data(), maxPoint.data()))
-        .apply();
-    viennals::BooleanOperation<NumericType, D>(
-        levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
+    using VectorType = ls::VectorType<NumericType, 2>;
+
+    // The corners in GDS are typically ordered clockwise or counter-clockwise
+    VectorType minCorner{
+        std::min({element.pointCloud[0][0], element.pointCloud[1][0],
+                  element.pointCloud[2][0], element.pointCloud[3][0]}),
+        std::min({element.pointCloud[0][1], element.pointCloud[1][1],
+                  element.pointCloud[2][1], element.pointCloud[3][1]})};
+
+    VectorType maxCorner{
+        std::max({element.pointCloud[0][0], element.pointCloud[1][0],
+                  element.pointCloud[2][0], element.pointCloud[3][0]}),
+        std::max({element.pointCloud[0][1], element.pointCloud[1][1],
+                  element.pointCloud[2][1], element.pointCloud[3][1]})};
+
+    // Generate a level set box using MakeGeometry
+    ls::MakeGeometry<NumericType, 2>(
+        layer2D,
+        SmartPointer<ls::Box<NumericType, 2>>::New(minCorner, maxCorner))
         .apply();
   }
 
-  void addPolygon(lsDomainType levelSet, GDS::Element<NumericType> &element,
-                  const NumericType baseHeight, const NumericType height,
+  void addPolygon(lsDomainType2D layer2D,
+                  const GDS::Element<NumericType> &element,
                   const NumericType xOffset, const NumericType yOffset) {
-    bool retry = false;
-    auto mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset,
-                                     yOffset, retry);
-    if (retry) {
-      pointOrderFlag = !pointOrderFlag;
-      mesh = polygonToSurfaceMesh(element, baseHeight, height, xOffset, yOffset,
-                                  retry);
-    }
-    auto tmpLS = lsDomainType::New(levelSet->getGrid());
-    viennals::FromSurfaceMesh<NumericType, D>(tmpLS, mesh).apply();
-    viennals::BooleanOperation<NumericType, D>(
-        levelSet, tmpLS, viennals::BooleanOperationEnum::UNION)
+
+    // Create a 2D level set from the polygon
+    auto mesh = polygonToSurfaceMesh(element, xOffset, yOffset);
+    lsDomainType2D tmpLS = lsDomainType2D::New(layer2D);
+    ls::FromSurfaceMesh<NumericType, 2>(tmpLS, mesh).apply();
+
+    ls::BooleanOperation<NumericType, 2>(layer2D, tmpLS,
+                                         ls::BooleanOperationEnum::UNION)
         .apply();
   }
 
-  SmartPointer<viennals::Mesh<NumericType>>
-  boxToSurfaceMesh(GDS::Element<NumericType> &element,
-                   const NumericType baseHeight, const NumericType height,
-                   const NumericType xOffset, const NumericType yOffset) {
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+  SmartPointer<ls::Mesh<NumericType>>
+  polygonToSurfaceMesh(const GDS::Element<NumericType> &element,
+                       const NumericType xOffset, const NumericType yOffset) {
+    auto mesh = SmartPointer<ls::Mesh<NumericType>>::New();
+    const auto &points = element.pointCloud;
 
-    for (auto &point : element.pointCloud) {
-      point[0] += xOffset;
-      point[1] += yOffset;
-      point[2] = baseHeight;
-      mesh->insertNextNode(point);
+    if (points.size() < 2) {
+      return mesh;
     }
 
-    for (auto &point : element.pointCloud) {
-      point[0] += xOffset;
-      point[1] += yOffset;
-      point[2] = baseHeight + height;
-      mesh->insertNextNode(point);
+    // --- Determine winding order (signed area) ---
+    double signedArea = 0.0;
+    for (size_t i = 0; i < points.size(); ++i) {
+      const auto &p1 = points[i];
+      const auto &p2 = points[(i + 1) % points.size()];
+      signedArea += (p1[0] * p2[1] - p2[0] * p1[1]);
+    }
+    bool isCCW = (signedArea > 0);
+
+    // --- Add points to mesh with offsets ---
+    std::vector<unsigned> indices;
+    for (const auto &pt : points) {
+      indices.push_back(mesh->insertNextNode(pt));
     }
 
-    for (unsigned i = 0; i < 4; i++) {
-      mesh->insertNextTriangle(std::array<unsigned, 3>{i, i + 4, (i + 1) % 4});
-      mesh->insertNextTriangle(
-          std::array<unsigned, 3>{i + 4, (i + 4 + 1) % 4 + 4, (i + 4 + 1) % 4});
+    // --- Add lines ---
+    for (size_t i = 1; i < indices.size(); ++i) {
+      if (isCCW)
+        mesh->insertNextLine({indices[i], indices[i - 1]});
+      else
+        mesh->insertNextLine({indices[i - 1], indices[i]});
     }
-    mesh->insertNextTriangle(std::array<unsigned, 3>{0, 1, 3});
-    mesh->insertNextTriangle(std::array<unsigned, 3>{1, 2, 3});
-    mesh->insertNextTriangle(std::array<unsigned, 3>{4, 7, 5});
-    mesh->insertNextTriangle(std::array<unsigned, 3>{5, 7, 6});
 
+    // --- Close the polygon ---
+    if (points.front() != points.back()) {
+      if (isCCW)
+        mesh->insertNextLine({indices.front(), indices.back()});
+      else
+        mesh->insertNextLine({indices.back(), indices.front()});
+    }
     return mesh;
-  }
-
-  SmartPointer<viennals::Mesh<NumericType>>
-  polygonToSurfaceMesh(GDS::Element<NumericType> &element,
-                       const NumericType baseHeight, const NumericType height,
-                       const NumericType xOffset, const NumericType yOffset,
-                       bool &retry) {
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
-
-    unsigned numPointsFlat = element.pointCloud.size();
-
-    // sidewalls
-    for (unsigned i = 0; i < numPointsFlat; i++) {
-      auto offsetPoint = element.pointCloud[i];
-      offsetPoint[0] += xOffset;
-      offsetPoint[1] += yOffset;
-      offsetPoint[2] = baseHeight;
-      mesh->insertNextNode(offsetPoint);
-
-      if (pointOrderFlag) {
-        mesh->insertNextTriangle(std::array<unsigned, 3>{
-            i, (i + 1) % numPointsFlat, i + numPointsFlat});
-      } else {
-        mesh->insertNextTriangle(std::array<unsigned, 3>{
-            i + numPointsFlat, (i + 1) % numPointsFlat, i});
-      }
-    }
-
-    for (unsigned i = 0; i < numPointsFlat; i++) {
-      unsigned upPoint = i + numPointsFlat;
-      auto offsetPoint = element.pointCloud[i];
-      offsetPoint[0] += xOffset;
-      offsetPoint[1] += yOffset;
-      offsetPoint[2] = baseHeight + height;
-      mesh->insertNextNode(offsetPoint);
-
-      if (pointOrderFlag) {
-        mesh->insertNextTriangle(std::array<unsigned, 3>{
-            upPoint, (upPoint + 1) % numPointsFlat,
-            (upPoint + 1) % numPointsFlat + numPointsFlat});
-      } else {
-        mesh->insertNextTriangle(std::array<unsigned, 3>{
-            (upPoint + 1) % numPointsFlat + numPointsFlat,
-            (upPoint + 1) % numPointsFlat, upPoint});
-      }
-    }
-
-    // polygon triangulation (ear clipping algorithm)
-    std::vector<unsigned> leftNeighbors(numPointsFlat);
-    std::vector<unsigned> rightNeighbors(numPointsFlat);
-
-    // initialize neighbors
-    for (unsigned i = 0; i < numPointsFlat; i++) {
-      leftNeighbors[i] = ((i - 1) + numPointsFlat) % numPointsFlat;
-      rightNeighbors[i] = ((i + 1) + numPointsFlat) % numPointsFlat;
-    }
-
-    unsigned numTriangles = 0;
-    unsigned i = numPointsFlat - 1;
-    unsigned counter = 0;
-    while (numTriangles < (numPointsFlat - 2)) {
-      i = rightNeighbors[i];
-      if (isEar(leftNeighbors[i], i, rightNeighbors[i], mesh, numPointsFlat)) {
-        if (pointOrderFlag) {
-
-          mesh->insertNextTriangle(
-              std::array<unsigned, 3>{rightNeighbors[i], i, leftNeighbors[i]});
-        } else {
-          mesh->insertNextTriangle(
-              std::array<unsigned, 3>{leftNeighbors[i], i, rightNeighbors[i]});
-        }
-
-        // remove point
-        leftNeighbors[rightNeighbors[i]] = leftNeighbors[i];
-        rightNeighbors[leftNeighbors[i]] = rightNeighbors[i];
-
-        numTriangles++;
-      }
-
-      if (counter++ > triangulationTimeOut) {
-        if (!retry) {
-          retry = true;
-          return mesh;
-        } else {
-          Logger::getInstance()
-              .addError("Timeout in surface triangulation.")
-              .print();
-        }
-      }
-    }
-
-    // use same triangles for other side
-    auto &triangles = mesh->template getElements<3>();
-    unsigned numPrevTriangles = triangles.size() - 1;
-    for (unsigned j = 0; j < numTriangles; j++) {
-      auto triangle = triangles[numPrevTriangles - j];
-      for (int d = 0; d < 3; d++) {
-        triangle[d] += numPointsFlat;
-      }
-      std::swap(triangle[0], triangle[2]); // swap for correct orientation
-      mesh->insertNextTriangle(triangle);
-    }
-
-    return mesh;
-  }
-
-  bool isEar(int i, int j, int k,
-             SmartPointer<viennals::Mesh<NumericType>> mesh,
-             unsigned numPoints) const {
-    auto &points = mesh->getNodes();
-
-    // check if triangle is clockwise orientated
-    if (((points[i][0] * points[j][1] + points[i][1] * points[k][0] +
-          points[j][0] * points[k][1] - points[k][0] * points[j][1] -
-          points[k][1] * points[i][0] - points[j][0] * points[i][1]) < 0.) !=
-        !pointOrderFlag)
-      return false;
-
-    for (unsigned m = 0; m < numPoints; m++) {
-      if ((m != i) && (m != j) && (m != k)) {
-        // check if point in triangle
-        auto side_1 =
-            (points[m][0] - points[j][0]) * (points[i][1] - points[j][1]) -
-            (points[i][0] - points[j][0]) * (points[m][1] - points[j][1]);
-        // Segment B to C
-        auto side_2 =
-            (points[m][0] - points[k][0]) * (points[j][1] - points[k][1]) -
-            (points[j][0] - points[k][0]) * (points[m][1] - points[k][1]);
-        // Segment C to A
-        auto side_3 =
-            (points[m][0] - points[i][0]) * (points[k][1] - points[i][1]) -
-            (points[k][0] - points[i][0]) * (points[m][1] - points[i][1]);
-
-        // All the signs must be positive or all negative
-        if (((side_1 < eps) && (side_2 < eps) && (side_3 < eps)) ||
-            ((side_1 > -eps) && (side_2 > -eps) && (side_3 > -eps)))
-          return false;
-      }
-    }
-
-    return true;
-  }
-
-  void adjustPreBuiltMeshHeight(SmartPointer<viennals::Mesh<NumericType>> mesh,
-                                const NumericType baseHeight,
-                                const NumericType height) const {
-    auto &nodes = mesh->getNodes();
-
-    for (auto &n : nodes) {
-      if (n[2] < 1.) {
-        n[2] = baseHeight;
-      } else {
-        n[2] = baseHeight + height;
-      }
-    }
-  }
-
-  void resetPreBuiltMeshHeight(SmartPointer<viennals::Mesh<NumericType>> mesh,
-                               const NumericType baseHeight,
-                               const NumericType height) const {
-    auto &nodes = mesh->getNodes();
-
-    for (auto &n : nodes) {
-      if (n[2] == baseHeight) {
-        n[2] = 0.;
-      } else {
-        n[2] = 1.;
-      }
-    }
   }
 
   static inline NumericType deg2rad(const NumericType angleDeg) {
     return angleDeg * M_PI / 180.;
   }
 
+  lsDomainType2D getMaskLevelSet(const int16_t layer, bool blurLayer = true) {
+
+    const bool blurring = blurLayer && blur;
+    auto GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_,
+                                           blurring ? beamDelta : gridDelta_);
+
+    for (auto &str : structures) { // loop over all structures
+      if (!str.isRef) {
+        // add single layer
+        if (auto contains = str.containsLayers.find(layer);
+            contains != str.containsLayers.end()) {
+          for (auto &el : str.elements) {
+            if (el.layer == layer) {
+              if (el.elementType == GDS::ElementType::elBox)
+                addBox(GDSLevelSet, el, 0., 0.);
+              else
+                addPolygon(GDSLevelSet, el, 0., 0.);
+            }
+          }
+        }
+
+        for (auto &sref : str.sRefs) {
+          auto refStr = getStructure(sref.strName);
+          if (!refStr)
+            continue;
+
+          for (auto &el : refStr->elements) {
+            if (el.layer != layer)
+              continue;
+
+            // Apply transformations to element copy
+            auto elCopy = el;
+
+            // Magnification
+            if (sref.magnification != 0.) {
+              for (auto &pt : elCopy.pointCloud) {
+                pt[0] *= sref.magnification;
+                pt[1] *= sref.magnification;
+              }
+            }
+
+            // Rotation
+            if (sref.angle != 0) {
+              double rad = deg2rad(sref.angle);
+              double cosA = std::cos(rad);
+              double sinA = std::sin(rad);
+              for (auto &pt : elCopy.pointCloud) {
+                double x = pt[0];
+                double y = pt[1];
+                pt[0] = x * cosA - y * sinA;
+                pt[1] = x * sinA + y * cosA;
+              }
+            }
+
+            // Translation
+            for (auto &pt : elCopy.pointCloud) {
+              pt[0] += sref.refPoint[0];
+              pt[1] += sref.refPoint[1];
+            }
+
+            // Flip along x
+            if (sref.flipped) {
+              for (auto &pt : elCopy.pointCloud)
+                pt[0] = -pt[0];
+              // keep winding order
+              std::reverse(elCopy.pointCloud.begin(), elCopy.pointCloud.end());
+            }
+
+            // Add element to layer
+            if (el.elementType == GDS::ElementType::elBox)
+              addBox(GDSLevelSet, elCopy, 0., 0.);
+            else
+              addPolygon(GDSLevelSet, elCopy, 0., 0.);
+          }
+        }
+      }
+    }
+
+    if (blurring) {
+      lsDomainType2D maskLS =
+          lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
+      PointType pointData = applyBlur(GDSLevelSet);
+      maskLS->insertPoints(pointData);
+      maskLS->finalize(2);
+      // ls::Expand<double, 2>(maskLS, 2).apply();
+      return maskLS;
+    }
+    return GDSLevelSet;
+  }
+
 private:
   std::vector<GDS::Structure<NumericType>> structures;
-  std::unordered_map<std::string, StructureLayers> assembledStructures;
   std::array<NumericType, 2> boundaryPadding = {0., 0.};
   std::array<NumericType, 2> minBounds;
   std::array<NumericType, 2> maxBounds;
-  static bool pointOrderFlag;
-  unsigned triangulationTimeOut = 1000000;
-  static constexpr double eps = 1e-6;
 
   double bounds_[6] = {};
   NumericType gridDelta_ = 1.;
   BoundaryType boundaryConds_[3] = {BoundaryType::REFLECTIVE_BOUNDARY,
                                     BoundaryType::REFLECTIVE_BOUNDARY,
                                     BoundaryType::INFINITE_BOUNDARY};
-};
 
-template <class NumericType, int D>
-bool GDSGeometry<NumericType, D>::pointOrderFlag = true;
+  bool blur = false;
+  std::vector<NumericType> sigmas;
+  std::vector<NumericType> weights;
+  NumericType threshold;
+  NumericType beamDelta;
+  int gridRefinement = 4;
+};
 
 } // namespace viennaps
