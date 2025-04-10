@@ -92,16 +92,7 @@ public:
                                NumericType(1));
     NumericType theta = std::acos(cosTheta);
 
-    NumericType yield;
-    // This throws an error in the Python build, because the Python GIL is not
-    // held when the yield function is called from multiple threads
-#ifdef VIENNAPS_PYTHON_BUILD
-    Py_BEGIN_ALLOW_THREADS;
-    yield = params_.yieldFunction(theta);
-    Py_END_ALLOW_THREADS;
-#else
-    yield = params_.yieldFunction(theta);
-#endif
+    NumericType yield = params_.yieldFunction(theta);
 
     localData.getVectorData(0)[primID] +=
         std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
