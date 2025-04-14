@@ -4,6 +4,7 @@
 #include "psGDSUtils.hpp"
 
 #include <lsBooleanOperation.hpp>
+#include <lsCheck.hpp>
 #include <lsDomain.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometries.hpp>
@@ -83,8 +84,10 @@ public:
 
     // Create a 3D level set from the 2D level set and return it
     auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
+    viennals::Check<NumericType, 2>(GDSLevelSet).apply();
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    viennals::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height})
+    viennals::Extrude<NumericType>(
+        GDSLevelSet, levelSet, {baseHeight - gridDelta_, height + gridDelta_})
         .apply();
 
     if (mask) {
@@ -93,10 +96,9 @@ public:
           .apply();
     }
 
-    constexpr NumericType eps = 1e-6;
     // Create bottom substrate
     auto bottomLS = lsDomainType::New(levelSet->getGrid());
-    double originLow[3] = {0., 0., baseHeight + eps};
+    double originLow[3] = {0., 0., baseHeight};
     double normalLow[3] = {0., 0., -1.};
     auto bottomPlane =
         viennals::SmartPointer<viennals::Plane<NumericType, D>>::New(originLow,
@@ -106,7 +108,7 @@ public:
     // Create top cap
     auto topLS = lsDomainType::New(levelSet->getGrid());
     NumericType originHigh[3] = {
-        0., 0., baseHeight + height - eps}; // Adjust to match extrusion
+        0., 0., baseHeight + height}; // Adjust to match extrusion
     NumericType normalHigh[3] = {0., 0., 1.};
     auto topPlane =
         viennals::SmartPointer<viennals::Plane<NumericType, D>>::New(
@@ -138,7 +140,7 @@ public:
       proximity.saveGridToCSV("finalGrid.csv");
 
     PointType pointData;
-    std::vector<std::pair<int, int>> directions = {
+    const std::vector<std::pair<int, int>> directions = {
         {-1, 0}, {1, 0}, {0, -1}, {0, 1} // 4-neighbor stencil
     };
 
@@ -193,7 +195,7 @@ public:
           }
         }
         if ((minDist < 1.0) && (bestNx >= 0.) && (bestNy >= 0.)) {
-          double sdfCurrent = minDist * gridDelta_;
+          double sdfCurrent = minDist; // * gridDelta_;
           IndexType pos;
           pos[0] = x;
           pos[1] = y;

@@ -158,6 +158,12 @@ public:
     if (levelSets_.empty()) {
       setup_.init(levelSet->getGrid());
     }
+    if (levelSet->getGrid().getGridDelta() != setup_.gridDelta()) {
+      Logger::getInstance()
+          .addError("Grid delta of Level-Set does not match domain grid "
+                    "delta.")
+          .print();
+    }
     if (!levelSets_.empty() && wrapLowerLevelSet) {
       viennals::BooleanOperation<NumericType, D>(
           levelSet, levelSets_.back(), viennals::BooleanOperationEnum::UNION)
