@@ -62,6 +62,7 @@
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psHBrO2Etching.hpp>
 #include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
@@ -892,6 +893,83 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setParameters", &SF6O2Etching<T, D>::setParameters)
       .def("getParameters", &SF6O2Etching<T, D>::getParameters,
            pybind11::return_value_policy::reference);
+
+  // HBrO2 Parameters
+  pybind11::class_<HBrO2Parameters<T>::MaskType>(module, "HBrO2ParametersMask")
+  .def(pybind11::init<>())
+  .def_readwrite("rho", &HBrO2Parameters<T>::MaskType::rho)
+  .def_readwrite("A_sp", &HBrO2Parameters<T>::MaskType::A_sp)
+  .def_readwrite("B_sp", &HBrO2Parameters<T>::MaskType::B_sp)
+  .def_readwrite("Eth_sp", &HBrO2Parameters<T>::MaskType::Eth_sp);
+
+pybind11::class_<HBrO2Parameters<T>::SiType>(module, "HBrO2ParametersSi")
+  .def(pybind11::init<>())
+  .def_readwrite("rho", &HBrO2Parameters<T>::SiType::rho)
+  .def_readwrite("k_sigma", &HBrO2Parameters<T>::SiType::k_sigma)
+  .def_readwrite("beta_sigma", &HBrO2Parameters<T>::SiType::beta_sigma)
+  .def_readwrite("Eth_sp", &HBrO2Parameters<T>::SiType::Eth_sp)
+  .def_readwrite("A_sp", &HBrO2Parameters<T>::SiType::A_sp)
+  .def_readwrite("B_sp", &HBrO2Parameters<T>::SiType::B_sp)
+  .def_readwrite("theta_g_sp", &HBrO2Parameters<T>::SiType::theta_g_sp)
+  .def_readwrite("Eth_ie", &HBrO2Parameters<T>::SiType::Eth_ie)
+  .def_readwrite("A_ie", &HBrO2Parameters<T>::SiType::A_ie)
+  .def_readwrite("B_ie", &HBrO2Parameters<T>::SiType::B_ie)
+  .def_readwrite("theta_g_ie", &HBrO2Parameters<T>::SiType::theta_g_ie);
+
+pybind11::class_<HBrO2Parameters<T>::PassivationType>(
+  module, "HBrO2ParametersPassivation")
+  .def(pybind11::init<>())
+  .def_readwrite("Eth_ie", &HBrO2Parameters<T>::PassivationType::Eth_ie)
+  .def_readwrite("A_ie", &HBrO2Parameters<T>::PassivationType::A_ie);
+
+pybind11::class_<HBrO2Parameters<T>::IonType>(module, "HBrO2ParametersIons")
+  .def(pybind11::init<>())
+  .def_readwrite("meanEnergy", &HBrO2Parameters<T>::IonType::meanEnergy)
+  .def_readwrite("sigmaEnergy", &HBrO2Parameters<T>::IonType::sigmaEnergy)
+  .def_readwrite("exponent", &HBrO2Parameters<T>::IonType::exponent)
+  .def_readwrite("inflectAngle", &HBrO2Parameters<T>::IonType::inflectAngle)
+  .def_readwrite("n_l", &HBrO2Parameters<T>::IonType::n_l)
+  .def_readwrite("minAngle", &HBrO2Parameters<T>::IonType::minAngle)
+  .def_readwrite("thetaRMin", &HBrO2Parameters<T>::IonType::thetaRMin)
+  .def_readwrite("thetaRMax", &HBrO2Parameters<T>::IonType::thetaRMax);
+
+pybind11::class_<HBrO2Parameters<T>>(module, "HBrO2Parameters")
+  .def(pybind11::init<>())
+  .def_readwrite("ionFlux", &HBrO2Parameters<T>::ionFlux)
+  .def_readwrite("etchantFlux", &HBrO2Parameters<T>::etchantFlux)
+  .def_readwrite("oxygenFlux", &HBrO2Parameters<T>::oxygenFlux)
+  .def_readwrite("etchStopDepth", &HBrO2Parameters<T>::etchStopDepth)
+  .def_readwrite("fluxIncludeSticking",
+                 &HBrO2Parameters<T>::fluxIncludeSticking)
+  .def_readwrite("beta_Br", &HBrO2Parameters<T>::beta_Br)
+  .def_readwrite("beta_O", &HBrO2Parameters<T>::beta_O)
+  .def_readwrite("Mask", &HBrO2Parameters<T>::Mask)
+  .def_readwrite("Si", &HBrO2Parameters<T>::Si)
+  .def_readwrite("Passivation", &HBrO2Parameters<T>::Passivation)
+  .def_readwrite("Ions", &HBrO2Parameters<T>::Ions);
+
+// HBrO2 Etching
+pybind11::class_<HBrO2Etching<T, D>, SmartPointer<HBrO2Etching<T, D>>>(
+  module, "HBrO2Etching", processModel)
+  .def(pybind11::init<>())
+  .def(pybind11::init(
+           &SmartPointer<HBrO2Etching<T, D>>::New<
+               const double /*ionFlux*/, const double /*etchantFlux*/,
+               const double /*oxygenFlux*/, const T /*meanIonEnergy*/,
+               const T /*sigmaIonEnergy*/, const T /*ionExponent*/,
+               const T /*oxySputterYield*/, const T /*etchStopDepth*/>),
+       pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
+       pybind11::arg("oxygenFlux"), pybind11::arg("meanIonEnergy") = 100.,
+       pybind11::arg("sigmaIonEnergy") = 10.,
+       pybind11::arg("ionExponent") = 100.,
+       pybind11::arg("oxySputterYield") = 3.,
+       pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+  .def(pybind11::init(&SmartPointer<HBrO2Etching<T, D>>::New<
+                      const HBrO2Parameters<T> &>),
+       pybind11::arg("parameters"))
+  .def("setParameters", &HBrO2Etching<T, D>::setParameters)
+  .def("getParameters", &HBrO2Etching<T, D>::getParameters,
+       pybind11::return_value_policy::reference);
 
   // CF4O2 Parameters
   pybind11::class_<CF4O2Parameters<T>::MaskType>(module, "CF4O2ParametersMask")
@@ -2027,6 +2105,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                                                           processModel_gpu)
       .def(pybind11::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
                           const SF6O2Parameters<T> &>),
+           pybind11::arg("parameters"));
+
+  // HBrO2 Etching
+  pybind11::class_<gpu::HBrO2Etching<T, D>,
+                   SmartPointer<gpu::HBrO2Etching<T, D>>>(m_gpu, "HBrO2Etching",
+                                         processModel_gpu)
+      .def(pybind11::init(&SmartPointer<gpu::HBrO2Etching<T, D>>::New<
+                          const HBrO2Parameters<T> &>),
            pybind11::arg("parameters"));
 
   // GPU Process

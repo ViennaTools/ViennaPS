@@ -82,11 +82,6 @@ public:
                                const NumericType height = 1., bool mask = false,
                                bool blurLayer = true) {
 
-    // if constexpr (D == 2) {
-    //   // Return the 2D level set
-    //   return getMaskLevelSet(layer, blurLayer);
-    // } else {
-    // Create a 3D level set from the 2D level set and return it
     auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
     ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height})
@@ -120,7 +115,6 @@ public:
           .apply();
     }
     return levelSet;
-    // }
   }
 
   PointType applyBlur(lsDomainType2D blurringLS) {
@@ -129,8 +123,6 @@ public:
                                             weights);
     proximity.apply();
 
-    // exposureGrid is the final blurred grid to be used for SDF calculation
-    // auto exposureGrid = proximity.getExposedGrid();
     if (lsInternal::Logger::getLogLevel() >= 2)
       proximity.saveGridToCSV("finalGrid.csv");
 
