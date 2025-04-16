@@ -11,9 +11,15 @@ template <class NumericType, int D> void RunTest() {
   auto model = SmartPointer<ProcessModel<NumericType, D>>::New();
 
   // constructors
-  { Process<NumericType, D> process; }
-  { Process<NumericType, D> process(domain); }
-  { Process<NumericType, D> process(domain, model, 0.); }
+  {
+    Process<NumericType, D> process;
+  }
+  {
+    Process<NumericType, D> process(domain);
+  }
+  {
+    Process<NumericType, D> process(domain, model, 0.);
+  }
 }
 
 } // namespace viennacore

@@ -26,7 +26,6 @@ template <class NumericType> struct RateSet {
           const std::vector<Material> &masks =
               std::vector<Material>{
                   Material::Mask}, // Default to Material::Mask
-          // const std::vector<int>& masks = {},
           bool calcVis = true)
       : direction(dir), directionalVelocity(dirVel), isotropicVelocity(isoVel),
         maskMaterials(masks),
@@ -130,8 +129,13 @@ public:
     }
   }
 
-  const std::vector<RateSet<NumericType>> &getRateSets() const { return rateSets_; }
-  const std::unordered_map<unsigned, std::vector<NumericType>> &getVisibilities() const { return visibilities_; }
+  const std::vector<RateSet<NumericType>> &getRateSets() const {
+    return rateSets_;
+  }
+  const std::unordered_map<unsigned, std::vector<NumericType>> &
+  getVisibilities() const {
+    return visibilities_;
+  }
 
 protected:
   static bool isMaskMaterial(const int material,
@@ -154,10 +158,10 @@ public:
   using RateSet = impl::RateSet<NumericType>;
 
   DirectionalProcess(const Vec3D<NumericType> &direction,
-                  NumericType directionalVelocity,
-                  NumericType isotropicVelocity = 0.,
-                  const Material maskMaterial = Material::Mask,
-                  bool calculateVisibility = true) {
+                     NumericType directionalVelocity,
+                     NumericType isotropicVelocity = 0.,
+                     const Material maskMaterial = Material::Mask,
+                     bool calculateVisibility = true) {
     std::vector<RateSet> rateSets;
     rateSets.emplace_back(direction, directionalVelocity, isotropicVelocity,
                           std::vector<Material>{maskMaterial},
@@ -168,10 +172,10 @@ public:
   // Constructor accepting direction, directional velocity, isotropic velocity,
   // and optional mask materials
   DirectionalProcess(const Vec3D<NumericType> &direction,
-                  NumericType directionalVelocity,
-                  NumericType isotropicVelocity,
-                  const std::vector<Material> &maskMaterials,
-                  bool calculateVisibility = true) {
+                     NumericType directionalVelocity,
+                     NumericType isotropicVelocity,
+                     const std::vector<Material> &maskMaterials,
+                     bool calculateVisibility = true) {
     std::vector<RateSet> rateSets;
     rateSets.emplace_back(direction, directionalVelocity, isotropicVelocity,
                           maskMaterials, calculateVisibility);

@@ -16,7 +16,8 @@ void runDeposition(SmartPointer<ProcessModel<NumericType, D>> &depoModel,
                    SmartPointer<Domain<NumericType, D>> &domain,
                    util::Parameters &params) {
   std::cout << "  - Depositing - " << std::endl;
-  Process<NumericType, D>(domain, depoModel, params.get("depositionTime")).apply();
+  Process<NumericType, D>(domain, depoModel, params.get("depositionTime"))
+      .apply();
 }
 
 int main(int argc, char **argv) {
@@ -35,19 +36,17 @@ int main(int argc, char **argv) {
 
   // geometry setup
   auto geometry = SmartPointer<Domain<NumericType, D>>::New();
-      // params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
-  MakeTrench<NumericType, D>(geometry, 
-                             params.get("gridDelta"),
-                             params.get("xExtent"),
-                             params.get("yExtent"),
+
+  MakeTrench<NumericType, D>(geometry, params.get("gridDelta"),
+                             params.get("xExtent"), params.get("yExtent"),
                              params.get("trenchWidth"),
                              params.get("maskHeight"),
-                             params.get("taperingAngle"),
-                             0.0,         /* baseHeight */
+                             params.get("taperingAngle"), 0.0, /* baseHeight */
                              false,       /* periodicBoundary */
                              false,       /* makeMask */
                              Material::Si /* material */
-                            ).apply();
+                             )
+      .apply();
 
   geometry->saveVolumeMesh("Trench");
   geometry->duplicateTopLevelSet(Material::SiO2);
@@ -65,9 +64,10 @@ int main(int argc, char **argv) {
     trenchCenter[1] = params.get<NumericType>("trenchCenterY");
   }
 
-  auto velocityField = SmartPointer<sputterDepositionVelocityField<NumericType, D>>::New(
-    std::move(rateInfo), rateFile, trenchCenter);
-  
+  auto velocityField =
+      SmartPointer<sputterDepositionVelocityField<NumericType, D>>::New(
+          std::move(rateInfo), rateFile, trenchCenter);
+
   // Manually construct the model using the custom velocity field
   auto surfaceModel = SmartPointer<SurfaceModel<NumericType>>::New();
   auto depoModel = SmartPointer<ProcessModel<NumericType, D>>::New();
