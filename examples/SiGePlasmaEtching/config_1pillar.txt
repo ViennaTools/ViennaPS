@@ -1,0 +1,34 @@
+# Domain
+gridDelta = 2.5
+extent = 600.
+
+# Geometry
+numLayers = 12
+numPillars = 1
+layerHeight = 20.0
+maskHeight = 50.
+
+lateralSpacing = 200.
+maskWidth = 150.
+trenchWidth = 100.
+trenchWidthBot = 80.
+
+overEtch = 100.
+# Process
+rate_SiGe = 4.8
+rate_Si = 0.
+rate_SiO2 = 0.
+sticking = 0.01
+power = 1.
+time = 10.
+numRaysPerPoint=1000
+
+saveVolume = 1
+halfGeometry = 1
+
+measureHeight = 10.
+measureHeightDelta = 10.
+pillarMaxPos = 200
+
+
+fileName = 1pillar_

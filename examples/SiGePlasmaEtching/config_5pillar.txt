@@ -1,0 +1,33 @@
+# Domain
+gridDelta = 2.
+
+# Geometry
+numLayers = 12
+numPillars = 5
+layerHeight = 20.0
+maskHeight = 55.
+
+lateralSpacing = 200.
+maskWidth = 100.
+trenchWidth = 100.
+trenchWidthBot = 80.
+
+overEtch = 100.
+
+# Process
+rate_SiGe = 4.5
+rate_Si = 0.
+rate_SiO2 = 0.
+sticking = 0.08
+power = 1.
+time = 10.
+numRaysPerPoint = 500
+
+saveVolume = 1
+halfGeometry = 0
+
+measureHeight = 10.
+measureHeightDelta = 10.
+
+
+fileName = 5pillar_cd100_
