@@ -53,7 +53,7 @@
 // models
 #include <models/psAnisotropicProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
-#include <models/psDirectionalEtching.hpp>
+#include <models/psDirectionalProcess.hpp>
 #include <models/psFaradayCageEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
@@ -1160,7 +1160,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("rate"), pybind11::arg("maskMaterial"));
 
   // Expose RateSet struct to Python
-  pybind11::class_<DirectionalEtching<T, D>::RateSet>(module, "RateSet")
+  pybind11::class_<DirectionalProcess<T, D>::RateSet>(module, "RateSet")
       .def(pybind11::init<const Vec3D<T> &, const T, const T,
                           const std::vector<Material> &, const bool>(),
            pybind11::arg("direction") = Vec3D<T>{0., 0., 0.},
@@ -1169,21 +1169,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("maskMaterials") =
                std::vector<Material>{Material::Mask},
            pybind11::arg("calculateVisibility") = true)
-      .def_readwrite("direction", &DirectionalEtching<T, D>::RateSet::direction)
+      .def_readwrite("direction", &DirectionalProcess<T, D>::RateSet::direction)
       .def_readwrite("directionalVelocity",
-                     &DirectionalEtching<T, D>::RateSet::directionalVelocity)
+                     &DirectionalProcess<T, D>::RateSet::directionalVelocity)
       .def_readwrite("isotropicVelocity",
-                     &DirectionalEtching<T, D>::RateSet::isotropicVelocity)
+                     &DirectionalProcess<T, D>::RateSet::isotropicVelocity)
       .def_readwrite("maskMaterials",
-                     &DirectionalEtching<T, D>::RateSet::maskMaterials)
+                     &DirectionalProcess<T, D>::RateSet::maskMaterials)
       .def_readwrite("calculateVisibility",
-                     &DirectionalEtching<T, D>::RateSet::calculateVisibility)
-      .def("print", &DirectionalEtching<T, D>::RateSet::print);
+                     &DirectionalProcess<T, D>::RateSet::calculateVisibility)
+      .def("print", &DirectionalProcess<T, D>::RateSet::print);
 
-  // DirectionalEtching
-  pybind11::class_<DirectionalEtching<T, D>,
-                   SmartPointer<DirectionalEtching<T, D>>>(
-      module, "DirectionalEtching", processModel)
+  // DirectionalProcess
+  pybind11::class_<DirectionalProcess<T, D>,
+                   SmartPointer<DirectionalProcess<T, D>>>(
+      module, "DirectionalProcess", processModel)
       .def(pybind11::init<const Vec3D<T> &, T, T, const Material, bool>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
            pybind11::arg("isotropicVelocity") = 0.,
@@ -1194,10 +1194,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
            pybind11::arg("isotropicVelocity"), pybind11::arg("maskMaterial"),
            pybind11::arg("calculateVisibility") = true)
-      .def(pybind11::init<std::vector<DirectionalEtching<T, D>::RateSet>>(),
+      .def(pybind11::init<std::vector<DirectionalProcess<T, D>::RateSet>>(),
            pybind11::arg("rateSets"))
       // Constructor accepting a single rate set
-      .def(pybind11::init<const DirectionalEtching<T, D>::RateSet &>(),
+      .def(pybind11::init<const DirectionalProcess<T, D>::RateSet &>(),
            pybind11::arg("rateSet"));
 
   // Sphere Distribution

@@ -1,0 +1,15 @@
+# Geometry
+gridDelta = 0.015
+xExtent = 3.5
+yExtent = 3.5
+
+trenchCenterX = 10.
+trenchWidth = 2.0
+maskHeight = 1.5
+taperingAngle = 7.5
+
+# Process
+depositionTime = 1.5
+numCycles = 10
+
+rateFile = rates2D.csv

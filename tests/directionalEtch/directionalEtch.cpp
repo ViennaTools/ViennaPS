@@ -1,5 +1,5 @@
 #include <geometries/psMakeTrench.hpp>
-#include <models/psDirectionalEtching.hpp>
+#include <models/psDirectionalProcess.hpp>
 
 #include <lsTestAsserts.hpp>
 #include <psDomain.hpp>
@@ -20,7 +20,7 @@ template <class NumericType, int D> void RunTest() {
         .apply();
     Vec3D<NumericType> direction{0., 0., 0.};
     direction[D - 1] = -1.;
-    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(
+    auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(
         direction, 1., 0., Material::Mask);
 
     VC_TEST_ASSERT(model->getSurfaceModel());
@@ -42,7 +42,7 @@ template <class NumericType, int D> void RunTest() {
                                true, Material::Si)
         .apply();
 
-    typename DirectionalEtching<NumericType, D>::RateSet rateSet;
+    typename DirectionalProcess<NumericType, D>::RateSet rateSet;
     rateSet.direction = Vec3D<NumericType>{0., 0., 0.};
     rateSet.direction[D - 1] = -1.;
     rateSet.directionalVelocity = -1.;
@@ -50,7 +50,7 @@ template <class NumericType, int D> void RunTest() {
     rateSet.maskMaterials = std::vector<Material>{Material::Mask};
     rateSet.calculateVisibility = false;
 
-    auto model = SmartPointer<DirectionalEtching<NumericType, D>>::New(rateSet);
+    auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(rateSet);
 
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());

@@ -3,7 +3,7 @@
 
 #include <models/psAnisotropicProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
-#include <models/psDirectionalEtching.hpp>
+#include <models/psDirectionalProcess.hpp>
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>

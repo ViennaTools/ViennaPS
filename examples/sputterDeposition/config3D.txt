@@ -1,0 +1,16 @@
+# Geometry
+gridDelta = 0.1
+xExtent = 15
+yExtent = 15
+
+trenchCenterX = 15.
+trenchCenterY = 15.
+holeRadius = 5.0
+holeDepth = 7.5
+taperingAngle = 7.5
+
+# Process
+depositionTime = 1.5
+numCycles = 10
+
+rateFile = rates3D.csv

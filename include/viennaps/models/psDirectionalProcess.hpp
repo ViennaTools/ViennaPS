@@ -49,12 +49,12 @@ template <class NumericType> struct RateSet {
 };
 
 template <class NumericType, int D>
-class DirectionalEtchVelocityField : public VelocityField<NumericType, D> {
+class DirectionalVelocityField : public VelocityField<NumericType, D> {
   const std::vector<RateSet<NumericType>> rateSets_;
   std::unordered_map<unsigned, std::vector<NumericType>> visibilities_;
 
 public:
-  DirectionalEtchVelocityField(std::vector<RateSet<NumericType>> &&rateSets)
+  DirectionalVelocityField(std::vector<RateSet<NumericType>> &&rateSets)
       : rateSets_(std::move(rateSets)) {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
@@ -96,7 +96,7 @@ public:
           rateSet.direction * rateSet.directionalVelocity;
 
       NumericType dotProduct = DotProduct(potentialVelocity, normalVector);
-      if (dotProduct > 0) { // Only include positive dot products (etching)
+      if (dotProduct != 0) {
         vectorVelocity = vectorVelocity - potentialVelocity;
       }
     }
@@ -130,7 +130,10 @@ public:
     }
   }
 
-private:
+  const std::vector<RateSet<NumericType>> &getRateSets() const { return rateSets_; }
+  const std::unordered_map<unsigned, std::vector<NumericType>> &getVisibilities() const { return visibilities_; }
+
+protected:
   static bool isMaskMaterial(const int material,
                              const std::vector<Material> &maskMaterials) {
     for (const auto &maskMaterial : maskMaterials) {
@@ -144,17 +147,17 @@ private:
 
 } // namespace impl
 
-/// Directional etching with multiple rate sets and masking materials.
+/// Directional rate with multiple rate sets and masking materials.
 template <typename NumericType, int D>
-class DirectionalEtching : public ProcessModel<NumericType, D> {
+class DirectionalProcess : public ProcessModel<NumericType, D> {
 public:
   using RateSet = impl::RateSet<NumericType>;
 
-  DirectionalEtching(const Vec3D<NumericType> &direction,
-                     NumericType directionalVelocity,
-                     NumericType isotropicVelocity = 0.,
-                     const Material maskMaterial = Material::Mask,
-                     bool calculateVisibility = true) {
+  DirectionalProcess(const Vec3D<NumericType> &direction,
+                  NumericType directionalVelocity,
+                  NumericType isotropicVelocity = 0.,
+                  const Material maskMaterial = Material::Mask,
+                  bool calculateVisibility = true) {
     std::vector<RateSet> rateSets;
     rateSets.emplace_back(direction, directionalVelocity, isotropicVelocity,
                           std::vector<Material>{maskMaterial},
@@ -164,11 +167,11 @@ public:
 
   // Constructor accepting direction, directional velocity, isotropic velocity,
   // and optional mask materials
-  DirectionalEtching(const Vec3D<NumericType> &direction,
-                     NumericType directionalVelocity,
-                     NumericType isotropicVelocity,
-                     const std::vector<Material> &maskMaterials,
-                     bool calculateVisibility = true) {
+  DirectionalProcess(const Vec3D<NumericType> &direction,
+                  NumericType directionalVelocity,
+                  NumericType isotropicVelocity,
+                  const std::vector<Material> &maskMaterials,
+                  bool calculateVisibility = true) {
     std::vector<RateSet> rateSets;
     rateSets.emplace_back(direction, directionalVelocity, isotropicVelocity,
                           maskMaterials, calculateVisibility);
@@ -176,14 +179,14 @@ public:
   }
 
   // Constructor accepting single rate set
-  DirectionalEtching(const RateSet &rateSet) {
+  DirectionalProcess(const RateSet &rateSet) {
     std::vector<RateSet> rateSets;
     rateSets.push_back(rateSet);
     initialize(std::move(rateSets));
   }
 
   // Constructor accepting multiple rate sets
-  DirectionalEtching(std::vector<RateSet> rateSets) {
+  DirectionalProcess(std::vector<RateSet> rateSets) {
     initialize(std::move(rateSets));
   }
 
@@ -194,12 +197,12 @@ private:
 
     // Velocity field with multiple rate sets
     auto velField =
-        SmartPointer<impl::DirectionalEtchVelocityField<NumericType, D>>::New(
+        SmartPointer<impl::DirectionalVelocityField<NumericType, D>>::New(
             std::move(rateSets));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->setProcessName("DirectionalEtching");
+    this->setProcessName("DirectionalProcess");
   }
 };
 
