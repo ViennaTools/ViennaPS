@@ -38,7 +38,8 @@ int main(int argc, char **argv) {
 
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(
       gridDelta, boundaryConds);
-  ps::GDSReader<NumericType, D>(mask, "wiggle_full.gds").apply();
+  ps::GDSReader<NumericType, D>(mask, params.get<std::string>("gdsFile"))
+      .apply();
 
   // geometry setup
   auto bounds = mask->getBounds();
@@ -56,7 +57,7 @@ int main(int argc, char **argv) {
 
   auto maskLS = mask->layerToLevelSet(0, 0.0, 0.18, true);
   geometry->insertNextLevelSetAsMaterial(maskLS, ps::Material::Mask);
-  
+
   ps::HBrO2Parameters<NumericType> modelParams;
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
@@ -65,7 +66,8 @@ int main(int argc, char **argv) {
   modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Ions.n_l = 200;
-  auto model = ps::SmartPointer<ps::HBrO2Etching<NumericType, D>>::New(modelParams);
+  auto model =
+      ps::SmartPointer<ps::HBrO2Etching<NumericType, D>>::New(modelParams);
 
   // Process setup
   ps::Process<NumericType, D> process;
@@ -75,7 +77,7 @@ int main(int argc, char **argv) {
   process.setNumberOfRaysPerPoint(static_cast<int>(params.get("raysPerPoint")));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(ps::util::convertIntegrationScheme(
-    params.get<std::string>("integrationScheme")));
+      params.get<std::string>("integrationScheme")));
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");
@@ -84,7 +86,7 @@ int main(int argc, char **argv) {
     process.apply();
     geometry->saveSurfaceMesh("etched_" + std::to_string(i) + ".vtp", true);
   }
- 
+
   geometry->saveVolumeMesh("Geometry");
 
   return 0;

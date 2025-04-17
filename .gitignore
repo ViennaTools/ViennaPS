@@ -19,3 +19,4 @@ CMakeSettings.json
 *.egg-info
 *env*
 .eggs/
+output/

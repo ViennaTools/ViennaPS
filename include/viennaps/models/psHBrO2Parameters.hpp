@@ -38,7 +38,7 @@ template <typename NumericType> struct HBrO2Parameters {
     NumericType Eth_sp = 30.; // eV
     NumericType Eth_ie = 15.; // eV
 
-    NumericType A_sp = 0.5;//0.0337;
+    NumericType A_sp = 0.5; // 0.0337;
     NumericType B_sp = 9.3;
     NumericType theta_g_sp = M_PI_2; // angle where yield is zero [rad]
 

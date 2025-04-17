@@ -25,8 +25,10 @@ boundaryConds = [
     vps.ls.BoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
 
+params = vps.ReadConfigFile(args.filename)
+
 mask = vps.GDSGeometry(gridDelta, boundaryConds)
-reader = vps.GDSReader(mask, "wiggle_full.gds")
+reader = vps.GDSReader(mask, params["gdsFile"])
 reader.apply()
 
 # Prepare geometry
@@ -42,8 +44,6 @@ geometry.insertNextLevelSetAsMaterial(substrate, vps.Material.Si)
 # Insert GDS layers
 maskLS = mask.layerToLevelSet(0, 0.0, 0.18, True)
 geometry.insertNextLevelSetAsMaterial(maskLS, vps.Material.Mask)
-
-params = vps.ReadConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
 vps.Logger.setLogLevel(vps.LogLevel.INFO)
