@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
   constexpr int D = 3;
 
   ps::Logger::setLogLevel(ps::LogLevel::ERROR);
-  omp_set_num_threads(16);
+  omp_set_num_threads(12);
 
   // Parse the parameters
   ps::util::Parameters params;
@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
   ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
   ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
 
-  constexpr NumericType gridDelta = 0.005;
+  constexpr NumericType gridDelta = 0.005*(1.+1e-12);
 
   ls::BoundaryConditionEnum boundaryConds[D] = {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
@@ -56,6 +56,11 @@ int main(int argc, char **argv) {
   geometry->insertNextLevelSetAsMaterial(plane, ps::Material::Si);
 
   auto maskLS = mask->layerToLevelSet(0, 0.0, 0.18, true);
+  if (!maskLS || maskLS->getNumberOfPoints() == 0) {
+    std::cerr << "ERROR: maskLS is null or empty!" << std::endl;
+    return 1;
+  }
+
   geometry->insertNextLevelSetAsMaterial(maskLS, ps::Material::Mask);
 
   ps::HBrO2Parameters<NumericType> modelParams;
@@ -80,14 +85,14 @@ int main(int argc, char **argv) {
       params.get<std::string>("integrationScheme")));
 
   // print initial surface
-  geometry->saveSurfaceMesh("initial.vtp");
+  geometry->saveSurfaceMesh("DRAM_Initial.vtp");
 
   for (int i = 1; i < 101; ++i) {
     process.apply();
-    geometry->saveSurfaceMesh("etched_" + std::to_string(i) + ".vtp", true);
+    geometry->saveSurfaceMesh("DRAM_Etched_" + std::to_string(i) + ".vtp", true);
   }
 
-  geometry->saveVolumeMesh("Geometry");
+  geometry->saveVolumeMesh("DRAM_Final");
 
   return 0;
 }

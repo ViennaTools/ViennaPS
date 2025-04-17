@@ -4,6 +4,7 @@ add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cpp")
 target_link_libraries(${PROJECT_NAME} PRIVATE ViennaPS)
 
 configure_file(config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
+configure_file(plotCSV.py ${CMAKE_CURRENT_BINARY_DIR}/plotCSV.py COPYONLY)
 # Find all .gds files in the current source directory
 file(GLOB GDS_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.gds")
 # Copy each .gds file to the binary directory

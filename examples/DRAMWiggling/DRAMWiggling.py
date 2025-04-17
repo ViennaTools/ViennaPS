@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(prog="DRAMWiggling", description="Run a DRAM etching process which results in AA wiggling.")
-parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
+parser.add_argument("-D", "-DIM", dest="dim", type=int, default=3)
 parser.add_argument("filename")
 args = parser.parse_args()
 
@@ -17,7 +17,7 @@ except ModuleNotFoundError:
 
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
 
-gridDelta = 0.005
+gridDelta = 0.005*(1.+1e-12)
 
 boundaryConds = [
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
@@ -73,14 +73,14 @@ process.setIntegrationScheme(
 )
 
 # print initial surface
-geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="DRAM_Initial.vtp", addMaterialIds=True)
 
 for i in range(1, 101):
     # run the process
     process.apply()
     geometry.saveSurfaceMesh(
-        filename=f"etched_{i}.vtp", addMaterialIds=True
+        filename=f"DRAM_Etched_{i}.vtp", addMaterialIds=True
     )
 
 # print final volume
-geometry.saveVolumeMesh("Geometry")
+geometry.saveVolumeMesh("DRAM_Final")
