@@ -1,21 +1,20 @@
+#include <geometries/psMakePlane.hpp>
+#include <models/psAnisotropicProcess.hpp>
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 
-#include <models/psAnisotropicProcess.hpp>
-
 namespace ps = viennaps;
-namespace ls = viennals;
 
 int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
 
   // set number threads to be used
-  omp_set_num_threads(12);
+  omp_set_num_threads(16);
 
-  std::string maskFileName = "cantilever_mask.gds";
+  const std::string maskFileName = "cantilever_mask.gds";
 
   // crystal surface direction
   const ps::Vec3D<NumericType> direction100{0.707106781187, 0.707106781187, 0.};
@@ -51,22 +50,15 @@ int main(int argc, char **argv) {
 
   auto mask = gds_mask->layerToLevelSet(
       1 /*layer in GDS file*/, 0 /*base z position*/,
-      4 * gridDelta /*mask height*/, true /*invert mask*/);
-
-  // Create plane substrate under mask
-  NumericType origin[D] = {0., 0., 0.};         // surface origin
-  NumericType normal[D] = {0., 0., 1.};         // surface normal
-  const double *bounds = gds_mask->getBounds(); // extent of GDS mask
-  auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
-      bounds, boundaryCons, gridDelta);
-  ls::MakeGeometry<NumericType, D>(
-      plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
-      .apply();
+      4 * gridDelta /*mask height*/, true /*invert mask*/, false /*blur*/);
 
   // Set up domain
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   geometry->insertNextLevelSetAsMaterial(mask, ps::Material::Mask);
-  geometry->insertNextLevelSetAsMaterial(plane, ps::Material::Si);
+
+  // Create plane substrate under mask
+  ps::MakePlane<NumericType, D>(geometry, 0., ps::Material::Si, true).apply();
+
   geometry->saveSurfaceMesh("initialGeometry.vtp");
 
   // Anisotropic wet etching process model
@@ -80,7 +72,7 @@ int main(int argc, char **argv) {
   process.setProcessModel(model);
   process.setProcessDuration(5. * 60.); // 5 minutes of etching
   process.setIntegrationScheme(
-      ls::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+      viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
 
   for (int n = 0; n < minutes; n++) {
     process.apply(); // run process
