@@ -53,6 +53,7 @@
 // models
 #include <models/psAnisotropicProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
+#include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
 #include <models/psFaradayCageEtching.hpp>
 #include <models/psFluorocarbonEtching.hpp>
@@ -1199,6 +1200,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       // Constructor accepting a single rate set
       .def(pybind11::init<const DirectionalProcess<T, D>::RateSet &>(),
            pybind11::arg("rateSet"));
+
+  // CSVFileProcess
+  pybind11::class_<CSVFileProcess<T, D>, ProcessModel<T, D>,
+                   SmartPointer<CSVFileProcess<T, D>>>(module, "CSVFileProcess")
+      .def(pybind11::init<const std::string &, const Vec3D<T> &,
+                          const std::array<T, D == 2 ? 1 : 2> &, T, T,
+                          const std::vector<Material> &, bool>(),
+           pybind11::arg("ratesFile"), pybind11::arg("direction"),
+           pybind11::arg("offset"), pybind11::arg("isotropicComponent") = 0.,
+           pybind11::arg("directionalComponent") = 1.,
+           pybind11::arg("maskMaterials") =
+               std::vector<Material>{Material::Mask},
+           pybind11::arg("calculateVisibility") = true);
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,

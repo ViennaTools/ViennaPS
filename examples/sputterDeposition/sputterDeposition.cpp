@@ -2,7 +2,7 @@
 #include <psProcess.hpp>
 #include <psUtil.hpp>
 
-#include "sputterDepositionVelocityField.hpp"
+#include <models/psCSVFileProcess.hpp>
 
 using namespace viennaps;
 constexpr int D = 2;
@@ -12,7 +12,7 @@ using NumericType = double;
 #include <psVelocityField.hpp>
 #include <vector>
 
-void runDeposition(SmartPointer<ProcessModel<NumericType, D>> &depoModel,
+void runDeposition(SmartPointer<CSVFileProcess<NumericType, D>> &depoModel,
                    SmartPointer<Domain<NumericType, D>> &domain,
                    util::Parameters &params) {
   std::cout << "  - Depositing - " << std::endl;
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   MakeTrench<NumericType, D>(geometry, params.get("gridDelta"),
                              params.get("xExtent"), params.get("yExtent"),
                              params.get("trenchWidth"),
-                             params.get("maskHeight"),
+                             params.get("trenchDepth"),
                              params.get("taperingAngle"), 0.0, /* baseHeight */
                              false,       /* periodicBoundary */
                              false,       /* makeMask */
@@ -51,29 +51,14 @@ int main(int argc, char **argv) {
   geometry->saveVolumeMesh("Trench");
   geometry->duplicateTopLevelSet(Material::SiO2);
 
-  DirectionalProcess<NumericType, D>::RateSet rateInfo;
-  rateInfo.direction = Vec3D<NumericType>{0.};
-  rateInfo.direction[D - 1] = -1.;
+  auto direction = Vec3D<NumericType>{0., -1., 0.};
 
-  std::string rateFile = params.get<std::string>("rateFile");
-  std::array<NumericType, D - 1> trenchCenter;
-  if constexpr (D == 2) {
-    trenchCenter[0] = params.get<NumericType>("trenchCenterX");
-  } else if constexpr (D == 3) {
-    trenchCenter[0] = params.get<NumericType>("trenchCenterX");
-    trenchCenter[1] = params.get<NumericType>("trenchCenterY");
-  }
+  std::string ratesFile = params.get<std::string>("ratesFile");
+  std::array<NumericType, D - 1> offset;
+  offset[0] = params.get<NumericType>("offsetX");
 
-  auto velocityField =
-      SmartPointer<sputterDepositionVelocityField<NumericType, D>>::New(
-          std::move(rateInfo), rateFile, trenchCenter);
-
-  // Manually construct the model using the custom velocity field
-  auto surfaceModel = SmartPointer<SurfaceModel<NumericType>>::New();
-  auto depoModel = SmartPointer<ProcessModel<NumericType, D>>::New();
-  depoModel->setSurfaceModel(surfaceModel);
-  depoModel->setVelocityField(velocityField);
-  depoModel->setProcessName("sputterDeposition");
+  auto depoModel = SmartPointer<CSVFileProcess<NumericType, D>>::New(
+      ratesFile, direction, offset);
 
   const int numCycles = params.get<int>("numCycles");
   const std::string name = "TrenchDeposition_";

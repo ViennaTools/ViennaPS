@@ -171,6 +171,18 @@ class DirectionalProcess(ProcessModel):
     @overload
     def __init__(self, rateSet: RateSet) -> None: ...
 
+class CSVFileProcess(ProcessModel):
+    def __init__(
+        self,
+        ratesFile: str,
+        direction,
+        offset: list[float],
+        isotropicScale: float = ...,
+        directionalScale: float = ...,
+        maskMaterials: list[Material] = ...,
+        calculateVisibility: bool = ...,
+    ) -> None: ...
+
 class Domain:
     @overload
     def __init__(self) -> None: ...

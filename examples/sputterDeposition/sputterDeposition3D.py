@@ -2,63 +2,58 @@ from argparse import ArgumentParser
 
 # Argument parsing
 parser = ArgumentParser(
-    prog="trenchDeposition",
-    description="Run trench deposition with a rate profile from a CSV file.",
+    prog="holeDeposition",
+    description="Run hole deposition with a CSV-defined rate profile.",
 )
-parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-# Select dimension module
-if args.dim == 2:
-    print("Running 2D simulation.")
-    import viennaps2d as vps
-else:
-    print("Running 3D simulation.")
-    import viennaps3d as vps
+# Import 3D ViennaPS
+import viennaps3d as vps
 
-# Setup
+# Setup logging and threads
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
 vps.setNumThreads(16)
 
-# Load parameters
+# Load config
 params = vps.ReadConfigFile(args.filename)
 
 # Geometry setup
 geometry = vps.Domain()
-vps.MakeTrench(
+vps.MakeHole(
     domain=geometry,
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
-    trenchWidth=params["trenchWidth"],
-    trenchDepth=params["trenchDepth"],
+    holeRadius=params["holeRadius"],
+    holeDepth=params["holeDepth"],
     taperingAngle=params["taperingAngle"],
     baseHeight=0.0,
     periodicBoundary=False,
     makeMask=False,
     material=vps.Material.Si,
+    holeShape=vps.HoleShape.Full,
 ).apply()
 
-geometry.saveVolumeMesh("Trench")
+geometry.saveVolumeMesh("Hole")
 geometry.duplicateTopLevelSet(vps.Material.SiO2)
 
-# Setup direction
-direction = [0.0, -1.0, 0.0]
+# Direction: vertical deposition
+direction = [0.0, 0.0, -1.0]
 
-# Setup offset
-offset = [params["offsetX"]]
+# Offset in X, Y
+offset = [params["offsetX"], params["offsetY"]]
 
-# Create CSV-based deposition process
+# CSV-based deposition model
 depoModel = vps.CSVFileProcess(
     ratesFile=params["ratesFile"].strip(),
     direction=direction,
     offset=offset,
 )
 
-# Simulation loop
+# Simulation
 numCycles = int(params["numCycles"])
-filename_prefix = "TrenchDeposition_"
+filename_prefix = "HoleDeposition_"
 
 n = 0
 geometry.saveSurfaceMesh(f"{filename_prefix}{n}.vtp")
@@ -70,4 +65,4 @@ for i in range(numCycles):
     geometry.saveSurfaceMesh(f"{filename_prefix}{n}.vtp")
     n += 1
 
-geometry.saveVolumeMesh("TrenchFinal")
+geometry.saveVolumeMesh("HoleFinal")
