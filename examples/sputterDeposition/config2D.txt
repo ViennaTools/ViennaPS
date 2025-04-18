@@ -3,7 +3,7 @@ gridDelta = 0.015
 xExtent = 3.5
 yExtent = 3.5
 
-offsetX = 10.
+offsetX = 15.
 trenchWidth = 2.0
 trenchDepth = 1.5
 taperingAngle = 7.5
