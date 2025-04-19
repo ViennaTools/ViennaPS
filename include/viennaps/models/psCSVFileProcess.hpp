@@ -333,8 +333,7 @@ private:
       return interpolateRateLinear(coord);
     } else if (interpolationMode == Interpolation::IDW) {
       return interpolateRateIDW(coord);
-    } else if (interpolationMode ==
-               Interpolation::CUSTOM) {
+    } else if (interpolationMode == Interpolation::CUSTOM) {
       return customInterpolator(coord);
     } else {
       std::cerr << "Error: Invalid interpolation mode." << std::endl;
