@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -20,7 +21,7 @@ template <typename NumericType, int D>
 class velocityFieldFromFile : public VelocityField<NumericType, D> {
 public:
   using OffsetType = std::array<NumericType, D == 2 ? 1 : 2>;
-  enum class Interpolation { LINEAR, IDW };
+  enum class Interpolation { LINEAR, IDW, CUSTOM };
 
   velocityFieldFromFile(const std::string &ratesFile,
                         const Vec3D<NumericType> &dir, const OffsetType &off,
@@ -112,6 +113,13 @@ public:
 
   void setOffset(std::array<NumericType, D> off) { offset = off; }
 
+  void setInterpolationMode(Interpolation mode) { interpolationMode = mode; }
+
+  void setCustomInterpolator(
+      std::function<NumericType(const Vec3D<NumericType> &)> func) {
+    customInterpolator = func;
+  }
+
 protected:
   static bool isMaskMaterial(const int material,
                              const std::vector<Material> &maskMaterials) {
@@ -132,7 +140,8 @@ private:
   std::vector<Material> maskMaterials;
   NumericType isotropicScale;
   NumericType directionalScale;
-  Interpolation interpolationMode = Interpolation::LINEAR;
+  std::optional<Interpolation> interpolationMode;
+  std::function<NumericType(const Vec3D<NumericType> &)> customInterpolator;
 
   std::vector<std::array<NumericType, D>>
   readRateCSV(const std::string &filename) {
@@ -173,11 +182,7 @@ private:
     }
 
     interpolationMode = detectInterpolationMode(result);
-    if (interpolationMode == Interpolation::IDW) {
-      std::cout << "Interpolation mode: IDW" << std::endl;
-    } else {
-      std::cout << "Interpolation mode: Linear" << std::endl;
-    }
+
     return result;
   }
 
@@ -326,8 +331,14 @@ private:
   NumericType interpolateRate(const Vec3D<NumericType> &coord) const {
     if (interpolationMode == Interpolation::LINEAR) {
       return interpolateRateLinear(coord);
-    } else {
+    } else if (interpolationMode == Interpolation::IDW) {
       return interpolateRateIDW(coord);
+    } else if (interpolationMode ==
+               Interpolation::CUSTOM) {
+      return customInterpolator(coord);
+    } else {
+      std::cerr << "Error: Invalid interpolation mode." << std::endl;
+      return 1.0;
     }
   }
 };
@@ -355,6 +366,25 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("CSVFileProcess");
+  }
+
+  void setInterpolationMode(
+      typename impl::velocityFieldFromFile<NumericType, D>::Interpolation
+          mode) {
+    auto velField =
+        std::dynamic_pointer_cast<impl::velocityFieldFromFile<NumericType, D>>(
+            this->getVelocityField());
+    if (velField)
+      velField->setInterpolationMode(mode);
+  }
+
+  void setCustomInterpolator(
+      std::function<NumericType(const Vec3D<NumericType> &)> func) {
+    auto velField =
+        std::dynamic_pointer_cast<impl::velocityFieldFromFile<NumericType, D>>(
+            this->getVelocityField());
+    if (velField)
+      velField->setCustomInterpolator(func);
   }
 };
 

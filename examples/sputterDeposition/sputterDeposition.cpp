@@ -10,12 +10,10 @@ using NumericType = double;
 
 #include <psMaterials.hpp>
 #include <psVelocityField.hpp>
-#include <vector>
 
 void runDeposition(SmartPointer<CSVFileProcess<NumericType, D>> &depoModel,
                    SmartPointer<Domain<NumericType, D>> &domain,
                    util::Parameters &params) {
-  std::cout << "  - Depositing - " << std::endl;
   Process<NumericType, D>(domain, depoModel, params.get("depositionTime"))
       .apply();
 }
@@ -30,8 +28,18 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    std::cout << "Usage: " << argv[0] << " <config file> [visualize]"
+              << std::endl;
     return 1;
+  }
+
+  // Optional visualization
+  if ((argc >= 3 && std::string(argv[2]) == "visualize")) {
+    std::string cmd = std::string("python3 visualizeDomain.py ") + argv[1];
+    int ret = std::system(cmd.c_str());
+    if (ret != 0) {
+      std::cerr << "Visualization script failed or not found." << std::endl;
+    }
   }
 
   // geometry setup
@@ -59,6 +67,26 @@ int main(int argc, char **argv) {
 
   auto depoModel = SmartPointer<CSVFileProcess<NumericType, D>>::New(
       ratesFile, direction, offset);
+
+  std::string interpModeStr = params.get<std::string>("interpolationMode");
+  if (interpModeStr == "linear") {
+    depoModel->setInterpolationMode(
+        impl::velocityFieldFromFile<NumericType, D>::Interpolation::LINEAR);
+  } else if (interpModeStr == "idw") {
+    depoModel->setInterpolationMode(
+        impl::velocityFieldFromFile<NumericType, D>::Interpolation::IDW);
+  } else if (interpModeStr == "custom") {
+    // Define a custom interpolation function
+    auto customInterp = [](const Vec3D<NumericType> &coord) -> NumericType {
+      return 0.04 + 0.01 * std::sin(10.0 * coord[0]);
+    };
+    depoModel->setCustomInterpolator(customInterp);
+    depoModel->setInterpolationMode(
+        impl::velocityFieldFromFile<NumericType, D>::Interpolation::CUSTOM);
+  } else {
+    std::cerr << "Warning: Unknown interpolation mode \"" << interpModeStr
+              << "\" — using auto-detection." << std::endl;
+  }
 
   const int numCycles = params.get<int>("numCycles");
   const std::string name = "TrenchDeposition_";

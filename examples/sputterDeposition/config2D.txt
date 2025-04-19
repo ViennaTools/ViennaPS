@@ -3,7 +3,7 @@ gridDelta = 0.015
 xExtent = 3.5
 yExtent = 3.5
 
-offsetX = 15.
+offsetX = 10.
 trenchWidth = 2.0
 trenchDepth = 1.5
 taperingAngle = 7.5
@@ -11,5 +11,7 @@ taperingAngle = 7.5
 # Process
 depositionTime = 1.5
 numCycles = 10
+
+interpolationMode=custom
 
 ratesFile = rates2D.csv

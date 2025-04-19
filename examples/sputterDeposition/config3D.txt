@@ -13,4 +13,6 @@ taperingAngle = 7.5
 depositionTime = 1.5
 numCycles = 10
 
+interpolationMode=linear
+
 ratesFile = rates3D.csv

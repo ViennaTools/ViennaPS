@@ -1201,6 +1201,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<const DirectionalProcess<T, D>::RateSet &>(),
            pybind11::arg("rateSet"));
 
+  // Expose enum
+  pybind11::enum_<impl::velocityFieldFromFile<T, D>::Interpolation>(
+      module, "Interpolation")
+      .value("LINEAR", impl::velocityFieldFromFile<T, D>::Interpolation::LINEAR)
+      .value("IDW", impl::velocityFieldFromFile<T, D>::Interpolation::IDW)
+      .value("CUSTOM",
+             impl::velocityFieldFromFile<T, D>::Interpolation::CUSTOM);
+
   // CSVFileProcess
   pybind11::class_<CSVFileProcess<T, D>, ProcessModel<T, D>,
                    SmartPointer<CSVFileProcess<T, D>>>(module, "CSVFileProcess")
@@ -1212,7 +1220,27 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("directionalComponent") = 1.,
            pybind11::arg("maskMaterials") =
                std::vector<Material>{Material::Mask},
-           pybind11::arg("calculateVisibility") = true);
+           pybind11::arg("calculateVisibility") = true)
+      .def(
+          "setInterpolationMode",
+          [](CSVFileProcess<T, D> &self,
+             typename impl::velocityFieldFromFile<T, D>::Interpolation mode) {
+            self.setInterpolationMode(mode);
+          },
+          pybind11::arg("mode"))
+      .def(
+          "setCustomInterpolator",
+          [](CSVFileProcess<T, D> &self, pybind11::function pyFunc) {
+            std::cout << "[ViennaPS] NOTE: Custom Python interpolator requires "
+                         "single-threaded execution.\n";
+            omp_set_num_threads(1);
+            self.setCustomInterpolator([pyFunc](const Vec3D<T> &coord) -> T {
+              pybind11::gil_scoped_acquire gil;
+              auto result = pyFunc(coord);
+              return result.cast<T>();
+            });
+          },
+          pybind11::arg("function"));
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,
