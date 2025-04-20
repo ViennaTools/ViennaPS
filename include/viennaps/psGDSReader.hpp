@@ -249,7 +249,9 @@ private:
   }
 
   void parseXYRef() {
-    bool flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
+    /// TODO: this sometimes yield true when it should not
+    // bool flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
+    bool flipped = false;
 
     if (currentElement == GDS::ElementType::elSRef) {
       float X = units * (float)readFourByteSignedInt();

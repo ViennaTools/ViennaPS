@@ -4,6 +4,7 @@
 #include "psGDSUtils.hpp"
 
 #include <lsBooleanOperation.hpp>
+#include <lsCheck.hpp>
 #include <lsDomain.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometries.hpp>
@@ -19,19 +20,18 @@
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 
-namespace ls = viennals;
-
 namespace viennaps {
 
 using namespace viennacore;
 
 template <class NumericType, int D> class GDSGeometry {
   using StructureLayers =
-      std::unordered_map<int16_t, SmartPointer<ls::Mesh<NumericType>>>;
-  using lsDomainType = SmartPointer<ls::Domain<NumericType, D>>;
-  using lsDomainType2D = SmartPointer<ls::Domain<NumericType, 2>>;
+      std::unordered_map<int16_t, SmartPointer<viennals::Mesh<NumericType>>>;
+  using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+  using lsDomainType2D = SmartPointer<viennals::Domain<NumericType, 2>>;
 
-  using PointType = typename ls::Domain<NumericType, 2>::PointValueVectorType;
+  using PointType =
+      typename viennals::Domain<NumericType, 2>::PointValueVectorType;
   using IndexType = typename viennahrle::Index<2>;
 
 public:
@@ -82,45 +82,50 @@ public:
                                const NumericType height = 1., bool mask = false,
                                bool blurLayer = true) {
 
-    // if constexpr (D == 2) {
-    //   // Return the 2D level set
-    //   return getMaskLevelSet(layer, blurLayer);
-    // } else {
     // Create a 3D level set from the 2D level set and return it
     auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
+    viennals::Check<NumericType, 2>(GDSLevelSet).apply();
     auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
-    ls::Extrude<NumericType>(GDSLevelSet, levelSet, {baseHeight, height})
+    viennals::Extrude<NumericType>(
+        GDSLevelSet, levelSet, {baseHeight - gridDelta_, height + gridDelta_})
         .apply();
 
     if (mask) {
-      // Create bottom substrate
-      auto bottomLS = lsDomainType::New(levelSet->getGrid());
-      double originLow[3] = {0., 0., baseHeight};
-      double normalLow[3] = {0., 0., -1.};
-      auto bottomPlane =
-          ls::SmartPointer<ls::Plane<double, D>>::New(originLow, normalLow);
-      ls::MakeGeometry<double, 3>(bottomLS, bottomPlane).apply();
-
-      // Create top cap
-      auto topLS = lsDomainType::New(levelSet->getGrid());
-      double originHigh[3] = {0., 0.,
-                              baseHeight + height}; // Adjust to match extrusion
-      double normalHigh[3] = {0., 0., 1.};
-      auto topPlane =
-          ls::SmartPointer<ls::Plane<double, D>>::New(originHigh, normalHigh);
-      ls::MakeGeometry<double, D>(topLS, topPlane).apply();
-
-      // Intersect with bottom
-      ls::BooleanOperation<double, D>(levelSet, bottomLS,
-                                      ls::BooleanOperationEnum::INTERSECT)
-          .apply();
-      // Intersect with top
-      ls::BooleanOperation<double, D>(levelSet, topLS,
-                                      ls::BooleanOperationEnum::INTERSECT)
+      viennals::BooleanOperation<NumericType, D>(
+          levelSet, viennals::BooleanOperationEnum::INVERT)
           .apply();
     }
+
+    // Create bottom substrate
+    auto bottomLS = lsDomainType::New(levelSet->getGrid());
+    double originLow[3] = {0., 0., baseHeight};
+    double normalLow[3] = {0., 0., -1.};
+    auto bottomPlane =
+        viennals::SmartPointer<viennals::Plane<NumericType, D>>::New(originLow,
+                                                                     normalLow);
+    viennals::MakeGeometry<NumericType, 3>(bottomLS, bottomPlane).apply();
+
+    // Create top cap
+    auto topLS = lsDomainType::New(levelSet->getGrid());
+    NumericType originHigh[3] = {
+        0., 0., baseHeight + height}; // Adjust to match extrusion
+    NumericType normalHigh[3] = {0., 0., 1.};
+    auto topPlane =
+        viennals::SmartPointer<viennals::Plane<NumericType, D>>::New(
+            originHigh, normalHigh);
+    viennals::MakeGeometry<NumericType, D>(topLS, topPlane).apply();
+
+    // Intersect with bottom
+    viennals::BooleanOperation<NumericType, D>(
+        levelSet, bottomLS, viennals::BooleanOperationEnum::INTERSECT)
+        .apply();
+
+    // Intersect with top
+    viennals::BooleanOperation<NumericType, D>(
+        levelSet, topLS, viennals::BooleanOperationEnum::INTERSECT)
+        .apply();
+
     return levelSet;
-    // }
   }
 
   PointType applyBlur(lsDomainType2D blurringLS) {
@@ -135,7 +140,7 @@ public:
       proximity.saveGridToCSV("finalGrid.csv");
 
     PointType pointData;
-    std::vector<std::pair<int, int>> directions = {
+    const std::vector<std::pair<int, int>> directions = {
         {-1, 0}, {1, 0}, {0, -1}, {0, 1} // 4-neighbor stencil
     };
 
@@ -190,7 +195,7 @@ public:
           }
         }
         if ((minDist < 1.0) && (bestNx >= 0.) && (bestNy >= 0.)) {
-          double sdfCurrent = minDist * gridDelta_;
+          double sdfCurrent = minDist; // * gridDelta_;
           IndexType pos;
           pos[0] = x;
           pos[1] = y;
@@ -369,7 +374,7 @@ private:
     assert(element.elementType == GDS::ElementType::elBox);
     assert(element.pointCloud.size() == 4); // GDSII box is a rectangle
 
-    using VectorType = ls::VectorType<NumericType, 2>;
+    using VectorType = viennals::VectorType<NumericType, 2>;
 
     // The corners in GDS are typically ordered clockwise or counter-clockwise
     VectorType minCorner{
@@ -385,9 +390,9 @@ private:
                   element.pointCloud[2][1], element.pointCloud[3][1]})};
 
     // Generate a level set box using MakeGeometry
-    ls::MakeGeometry<NumericType, 2>(
+    viennals::MakeGeometry<NumericType, 2>(
         layer2D,
-        SmartPointer<ls::Box<NumericType, 2>>::New(minCorner, maxCorner))
+        SmartPointer<viennals::Box<NumericType, 2>>::New(minCorner, maxCorner))
         .apply();
   }
 
@@ -398,17 +403,17 @@ private:
     // Create a 2D level set from the polygon
     auto mesh = polygonToSurfaceMesh(element, xOffset, yOffset);
     lsDomainType2D tmpLS = lsDomainType2D::New(layer2D);
-    ls::FromSurfaceMesh<NumericType, 2>(tmpLS, mesh).apply();
+    viennals::FromSurfaceMesh<NumericType, 2>(tmpLS, mesh).apply();
 
-    ls::BooleanOperation<NumericType, 2>(layer2D, tmpLS,
-                                         ls::BooleanOperationEnum::UNION)
+    viennals::BooleanOperation<NumericType, 2>(
+        layer2D, tmpLS, viennals::BooleanOperationEnum::UNION)
         .apply();
   }
 
-  SmartPointer<ls::Mesh<NumericType>>
+  SmartPointer<viennals::Mesh<NumericType>>
   polygonToSurfaceMesh(const GDS::Element<NumericType> &element,
                        const NumericType xOffset, const NumericType yOffset) {
-    auto mesh = SmartPointer<ls::Mesh<NumericType>>::New();
+    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
     const auto &points = element.pointCloud;
 
     if (points.size() < 2) {
@@ -536,7 +541,7 @@ private:
       PointType pointData = applyBlur(GDSLevelSet);
       maskLS->insertPoints(pointData);
       maskLS->finalize(2);
-      // ls::Expand<double, 2>(maskLS, 2).apply();
+      // viennals::Expand<double, 2>(maskLS, 2).apply();
       return maskLS;
     }
     return GDSLevelSet;
