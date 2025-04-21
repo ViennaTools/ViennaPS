@@ -30,7 +30,7 @@ void writeCSV(const std::string &filename, bool etch = false) {
     for (int i = 0; i < numPoints; ++i) {
       NumericType x = minCoord + i * step;
       NumericType rate = dist(rng);
-      out << x << "," << (etch ? -rate : rate) << "\n";
+      out << x << "," << (etch ? -rate : rate) << std::endl;
     }
   } else {
     out << "x,y,rate\n";
@@ -39,10 +39,12 @@ void writeCSV(const std::string &filename, bool etch = false) {
       for (int j = 0; j < numPoints; ++j) {
         NumericType y = minCoord + j * step;
         NumericType rate = dist(rng);
-        out << x << "," << y << "," << (etch ? -rate : rate) << "\n";
+        out << x << "," << y << "," << (etch ? -rate : rate) << std::endl;
       }
     }
   }
+  out.flush();
+  out.close();
 }
 
 template <typename NumericType, int D> void RunTest() {
