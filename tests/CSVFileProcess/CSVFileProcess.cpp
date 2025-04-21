@@ -10,6 +10,11 @@
 #include <fstream>
 #include <random>
 
+#ifdef _WIN32
+#include <thread>
+#include <chrono>
+#endif
+
 namespace viennacore {
 
 using namespace viennaps;
@@ -43,7 +48,6 @@ void writeCSV(const std::string &filename, bool etch = false) {
       }
     }
   }
-  out.flush();
   out.close();
 }
 
@@ -70,6 +74,13 @@ template <typename NumericType, int D> void RunTest() {
       std::array<NumericType, D == 2 ? 1 : 2> offset{};
       auto direction = Vec3D<NumericType>{0., 0., 0.};
       direction[D - 1] = -1.;
+
+#ifdef _WIN32
+      // Wait up to 100ms for the file to become readable
+      int waitCount = 0;
+      while (!std::filesystem::exists(csvPath) && waitCount++ < 10)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#endif
 
       auto model = SmartPointer<CSVFileProcess<NumericType, D>>::New(
           csvPath, direction, offset);
