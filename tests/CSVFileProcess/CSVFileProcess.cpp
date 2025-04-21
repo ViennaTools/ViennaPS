@@ -53,11 +53,11 @@ void writeCSV(const std::string &filename, bool etch = false) {
 
 template <typename NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
-  std::filesystem::create_directory("test_csv");
+  // std::filesystem::create_directory("test_csv");
   const std::string csvPath =
-      D == 2 ? "test_csv/rates2D.csv" : "test_csv/rates3D.csv";
+      D == 2 ? "rates2D.csv" : "rates3D.csv";
   // for (bool etch : {false, true}) {
-  for (bool etch : {false}) {
+  for (bool etch : {false, true}) {
     writeCSV<NumericType, D>(csvPath, etch);
 
     for (bool useCustomInterp : {false, true}) {
@@ -119,9 +119,11 @@ template <typename NumericType, int D> void RunTest() {
       LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
     }
   }
-  std::filesystem::remove_all("test_csv");
+  std::filesystem::remove_all(csvPath);
 }
 
 } // namespace viennacore
 
-int main() { VC_RUN_ALL_TESTS }
+int main() { 
+  VC_RUN_ALL_TESTS 
+}
