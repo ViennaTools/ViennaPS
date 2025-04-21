@@ -164,19 +164,22 @@ private:
 
       std::istringstream stream(line);
       std::string cell;
-      std::array<NumericType, D> entry;
 
       int i = 0;
-      while (std::getline(stream, cell, ',') && i < D) {
-        entry[i++] = static_cast<NumericType>(std::stod(cell));
+      std::vector<std::string> cells;
+      while (std::getline(stream, cell, ',')) {
+        cells.push_back(cell);
       }
 
-      // Last value is the rate
-      if (std::getline(stream, cell, ',')) {
-        if constexpr (D == 2)
-          entry[1] = static_cast<NumericType>(std::stod(cell)); // x, rate
-        else if constexpr (D == 3)
-          entry[2] = static_cast<NumericType>(std::stod(cell)); // x, y, rate
+      if ((D == 2 && cells.size() != 2) || (D == 3 && cells.size() != 3)) {
+        std::cerr << "Malformed line: " << line << " in " << filename
+                  << std::endl;
+        continue;
+      }
+
+      std::array<NumericType, D> entry;
+      for (int i = 0; i < D; ++i) {
+        entry[i] = static_cast<NumericType>(std::stod(cells[i]));
       }
       result.push_back(entry);
     }

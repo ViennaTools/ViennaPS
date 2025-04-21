@@ -10,13 +10,13 @@ namespace viennacore {
 
 using namespace viennaps;
 
-template <typename NumericType, int D>
-void RunTest() {
+template <typename NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
 
   for (bool etch : {false, true}) {
     // Select CSV file based on dimension and etch/deposit mode
-    std::string csvPath = "rates" + std::to_string(D) + "D_" + (etch ? "etch" : "deposit") + ".csv";
+    std::string csvPath = "rates" + std::to_string(D) + "D_" +
+                          (etch ? "etch" : "deposit") + ".csv";
 
     for (bool useCustomInterp : {false, true}) {
       auto domain = SmartPointer<Domain<NumericType, D>>::New();
