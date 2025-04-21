@@ -52,10 +52,15 @@ public:
       return 0.;
     }
 
-    if (calculateVisibility && pointId < visibilities_.size() &&
-        visibilities_.at(pointId) == 0.) {
+    if (calculateVisibility && (pointId >= visibilities_.size() || visibilities_.at(pointId) == 0.)) {
       return 0.;
     }
+
+    // if (calculateVisibility &&
+    //   pointId < visibilities_.size() &&
+    //   visibilities_.at(pointId) == 0.) {
+    //     return 0.;
+    // }
 
     NumericType scalarVelocity = interpolateRate(coordinate);
     return scalarVelocity * isotropicScale;
@@ -71,10 +76,15 @@ public:
       return Vec3D<NumericType>{0., 0., 0.};
     }
 
-    if (calculateVisibility && pointId < visibilities_.size() &&
-        visibilities_.at(pointId) == 0.) {
+    if (calculateVisibility && (pointId >= visibilities_.size() || visibilities_.at(pointId) == 0.)) {
       return Vec3D<NumericType>{0., 0., 0.};
     }
+
+    // if (calculateVisibility &&
+    //   pointId < visibilities_.size() &&
+    //   visibilities_.at(pointId) == 0.) {
+    //     return Vec3D<NumericType>{0., 0., 0.};
+    // }
 
     NumericType scaling = interpolateRate(coordinate);
     Vec3D<NumericType> potentialVelocity =
@@ -148,67 +158,63 @@ private:
   std::vector<std::array<NumericType, D>>
   readRateCSV(const std::string &filename) {
     std::vector<std::array<NumericType, D>> result;
-
+  
     std::ifstream file(filename);
     if (!file.is_open()) {
-      std::cerr << "Error: Could not open CSV rates file: " << filename
-                << std::endl;
+      std::cerr << "Error: Could not open CSV rates file: " << filename << std::endl;
       return result;
     }
-
+  
     std::string line;
     bool headerSkipped = false;
-
+  
     while (std::getline(file, line)) {
-      // Remove possible Windows carriage return
+      // Remove possible Windows CR characters
       line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-
+      file >> std::noskip;
+  
       if (!headerSkipped) {
         headerSkipped = true;
         continue;
       }
-
+  
       std::istringstream stream(line);
       std::string cell;
       std::array<NumericType, D> entry{};
-
+      int i = 0;
+  
       try {
-        // Read D - 1 coordinate components
-        for (int i = 0; i < D - 1; ++i) {
-          if (!std::getline(stream, cell, ',')) {
-            throw std::runtime_error("Missing coordinate component");
-          }
-          entry[i] = static_cast<NumericType>(std::stod(cell));
+        // Read coordinate columns
+        while (std::getline(stream, cell, ',') && i < D - 1) {
+          entry[i++] = static_cast<NumericType>(std::stod(cell));
         }
-
-        // Read the final rate value
+  
+        // Last value is the rate
         if (std::getline(stream, cell, ',')) {
           entry[D - 1] = static_cast<NumericType>(std::stod(cell));
         } else {
-          std::cerr << "Warning: Missing rate value in line: " << line
-                    << std::endl;
+          std::cerr << "Warning: Missing rate value in line: " << line << std::endl;
           continue;
         }
-
+  
         result.push_back(entry);
-
+  
       } catch (const std::exception &e) {
-        std::cerr << "CSV parse error in file '" << filename
-                  << "': " << e.what() << "\n  Offending line: " << line
-                  << std::endl;
+        std::cerr << "CSV parse error in file '" << filename << "': " << e.what()
+                  << "\n  Offending line: " << line << std::endl;
         continue;
       }
     }
-
+  
     if (result.empty()) {
-      std::cerr << "Warning: CSV file read but no data points loaded from "
-                << filename << std::endl;
+      std::cerr << "Warning: CSV file read but no data points loaded from " << filename << std::endl;
     }
-
+    
     interpolationMode = detectInterpolationMode(result);
+    file.close();
     return result;
   }
-
+  
   Interpolation detectInterpolationMode(
       const std::vector<std::array<NumericType, D>> &points) const {
     bool isStructured = true;
