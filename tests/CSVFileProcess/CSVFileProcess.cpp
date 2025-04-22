@@ -17,6 +17,7 @@ template <typename NumericType, int D> void RunTest() {
     // Select CSV file based on dimension and etch/deposit mode
     std::string csvPath = "rates" + std::to_string(D) + "D_" +
                           (etch ? "etch" : "deposit") + ".csv";
+    std::cout << "CSV file: " << csvPath << std::endl;
 
     for (bool useCustomInterp : {false}) { //, true}) {
       auto domain = SmartPointer<Domain<NumericType, D>>::New();
@@ -30,7 +31,7 @@ template <typename NumericType, int D> void RunTest() {
                                  etch, Material::Si, HoleShape::Full)
             .apply();
 
-      std::array<NumericType, D == 2 ? 1 : 2> offset{};
+      Vec3D<NumericType> offset{};
       auto direction = Vec3D<NumericType>{0., 0., 0.};
       direction[D - 1] = -1.;
 
@@ -41,7 +42,13 @@ template <typename NumericType, int D> void RunTest() {
         model->setInterpolationMode(
             impl::velocityFieldFromFile<NumericType, D>::Interpolation::CUSTOM);
         model->setCustomInterpolator([](const Vec3D<NumericType> &coord) {
-          return 1.0 + 0.5 * std::sin(coord[0] + (D > 1 ? coord[1] : 0.0));
+          double intervalue = 0.0;
+          if constexpr (D == 2) {
+            intervalue = coord[0] + coord[1];
+          } else if constexpr (D == 3) {
+            intervalue = coord[0] + coord[1] + coord[2];
+          }
+          return 1.0 + 0.5 * std::sin(intervalue);
         });
       } else {
         model->setInterpolationMode(

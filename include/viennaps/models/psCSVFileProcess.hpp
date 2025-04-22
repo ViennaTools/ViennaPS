@@ -20,11 +20,11 @@ namespace impl {
 template <typename NumericType, int D>
 class velocityFieldFromFile : public VelocityField<NumericType, D> {
 public:
-  using OffsetType = std::array<NumericType, D == 2 ? 1 : 2>;
+  // using OffsetType = std::array<NumericType, D == 2 ? 1 : 2>;
   enum class Interpolation { LINEAR, IDW, CUSTOM };
 
   velocityFieldFromFile(const std::string &ratesFile,
-                        const Vec3D<NumericType> &dir, const OffsetType &off,
+                        const Vec3D<NumericType> &dir, const Vec3D<NumericType> &off,
                         const NumericType isoScale = 0.,
                         const NumericType dirScale = 1.,
                         const std::vector<Material> &masks =
@@ -125,7 +125,7 @@ public:
     ratePoints = std::move(points);
   }
 
-  void setOffset(std::array<NumericType, D> off) { offset = off; }
+  void setOffset(Vec3D<NumericType> off) { offset = off; }
 
   void setInterpolationMode(Interpolation mode) { interpolationMode = mode; }
 
@@ -147,7 +147,7 @@ protected:
 
 private:
   std::vector<std::array<NumericType, D>> ratePoints;
-  OffsetType offset;
+  Vec3D<NumericType> offset;
   Vec3D<NumericType> direction;
   bool calculateVisibility;
   std::vector<NumericType> visibilities_;
@@ -391,11 +391,12 @@ private:
 /// Rate determined by CSV file.
 template <typename NumericType, int D>
 class CSVFileProcess : public ProcessModel<NumericType, D> {
-  using OffsetType = std::array<NumericType, D == 2 ? 1 : 2>;
+  // static constexpr std::size_t offsetSize = (D == 2 ? 1 : 2);
+  // using OffsetType = std::array<NumericType, offsetSize>;
 
 public:
   CSVFileProcess(const std::string &ratesFile, const Vec3D<NumericType> &dir,
-                 const OffsetType &off, const NumericType isoScale = 0.,
+                 const Vec3D<NumericType> &off, const NumericType isoScale = 0.,
                  const NumericType dirScale = 1.,
                  const std::vector<Material> &masks =
                      std::vector<Material>{

@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   auto direction = Vec3D<NumericType>{0., 0., -1.};
 
   std::string ratesFile = params.get<std::string>("ratesFile");
-  std::array<NumericType, D - 1> offset;
+  auto offset = Vec3D<NumericType>{0., 0., 0.};
   offset[0] = params.get<NumericType>("offsetX");
   offset[1] = params.get<NumericType>("offsetY");
 
