@@ -1,6 +1,4 @@
 from argparse import ArgumentParser
-import matplotlib.pyplot as plt
-import numpy as np
 
 # Argument parsing
 parser = ArgumentParser(
@@ -59,7 +57,8 @@ geometry.duplicateTopLevelSet(vps.Material.SiO2)
 direction = [0.0, -1.0, 0.0]
 
 # Setup offset
-offset = [params["offsetX"]]
+offset = [0.0, 0.0, 0.0]
+offset[0] = params["offsetX"]
 
 # Create CSV-based deposition process
 depoModel = vps.CSVFileProcess(
@@ -76,6 +75,7 @@ elif mode == "idw":
     depoModel.setInterpolationMode(vps.Interpolation.IDW)
 elif mode == "custom":
     def custom_interp(coord):
+        import numpy as np
         x, _, _ = coord
         return 0.04 + 0.01 * np.sin(10.0 * x)
     depoModel.setInterpolationMode(vps.Interpolation.CUSTOM)

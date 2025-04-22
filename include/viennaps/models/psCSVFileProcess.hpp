@@ -22,14 +22,13 @@ class velocityFieldFromFile : public VelocityField<NumericType, D> {
 public:
   enum class Interpolation { LINEAR, IDW, CUSTOM };
 
-  velocityFieldFromFile(const std::string &ratesFile,
-                        const Vec3D<NumericType> &dir, const Vec3D<NumericType> &off,
-                        const NumericType isoScale = 0.,
-                        const NumericType dirScale = 1.,
-                        const std::vector<Material> &masks =
-                            std::vector<Material>{
-                                Material::Mask}, // Default to Material::Mask)
-                        bool calcVis = true)
+  velocityFieldFromFile(
+      const std::string &ratesFile, const Vec3D<NumericType> &dir,
+      const Vec3D<NumericType> &off, const NumericType isoScale = 0.,
+      const NumericType dirScale = 1.,
+      const std::vector<Material> &masks =
+          std::vector<Material>{Material::Mask}, // Default to Material::Mask)
+      bool calcVis = true)
       : direction(dir), offset(off), isotropicScale(isoScale),
         directionalScale(dirScale), maskMaterials(masks),
         calculateVisibility(calcVis &&
@@ -52,7 +51,7 @@ public:
     }
 
     if (calculateVisibility &&
-        (pointId >= visibilities_.size() || visibilities_.at(pointId) == 0.)) {
+        (pointId >= visibilities.size() || visibilities.at(pointId) == 0.)) {
       return 0.;
     }
 
@@ -71,7 +70,7 @@ public:
     }
 
     if (calculateVisibility &&
-        (pointId >= visibilities_.size() || visibilities_.at(pointId) == 0.)) {
+        (pointId >= visibilities.size() || visibilities.at(pointId) == 0.)) {
       return Vec3D<NumericType>{0., 0., 0.};
     }
 
@@ -95,7 +94,7 @@ public:
                SmartPointer<std::vector<NumericType>> velocities,
                const NumericType processTime) override {
 
-    visibilities_.clear();
+    visibilities.clear();
 
     // Calculate visibilities
     auto surfaceLS = domain->getLevelSets().back();
@@ -104,7 +103,7 @@ public:
       viennals::CalculateVisibilities<NumericType, D>(surfaceLS, direction,
                                                       label)
           .apply();
-      visibilities_ = *surfaceLS->getPointData().getScalarData(label);
+      visibilities = *surfaceLS->getPointData().getScalarData(label);
     }
   }
 
@@ -137,7 +136,7 @@ private:
   Vec3D<NumericType> offset;
   Vec3D<NumericType> direction;
   bool calculateVisibility;
-  std::vector<NumericType> visibilities_;
+  std::vector<NumericType> visibilities;
   std::vector<Material> maskMaterials;
   NumericType isotropicScale;
   NumericType directionalScale;
@@ -156,10 +155,9 @@ private:
     }
 
     std::string line;
+    std::getline(file, line);
 
     while (std::getline(file, line)) {
-      // Remove possible Windows CR characters
-      // line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
 
       std::istringstream stream(line);
       std::string cell;
@@ -285,14 +283,14 @@ private:
       NumericType x0 = *x0It, x1 = *x1It;
       NumericType y0 = *y0It, y1 = *y1It;
 
-
       auto safeLookup = [&](NumericType a, NumericType b) -> NumericType {
         auto it = rateMap.find({a, b});
-        if (it != rateMap.end()) return it->second;
+        if (it != rateMap.end())
+          return it->second;
         std::cerr << "Missing rate value at (" << a << ", " << b << ")\n";
         return 1.0;
       };
-      
+
       NumericType q11 = rateMap[{x0, y0}];
       NumericType q21 = rateMap[{x1, y0}];
       NumericType q12 = rateMap[{x0, y1}];

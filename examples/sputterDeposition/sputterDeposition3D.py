@@ -57,7 +57,9 @@ geometry.duplicateTopLevelSet(vps.Material.SiO2)
 direction = [0.0, 0.0, -1.0]
 
 # Offset in X, Y
-offset = [params["offsetX"], params["offsetY"]]
+offset = [0.0, 0.0, 0.0]
+offset[0] = params["offsetX"]
+offset[1] = params["offsetY"]
 
 # CSV-based deposition model
 depoModel = vps.CSVFileProcess(

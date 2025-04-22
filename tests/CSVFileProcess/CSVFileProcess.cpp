@@ -6,17 +6,59 @@
 #include <psProcess.hpp>
 #include <vcTestAsserts.hpp>
 
+#include <filesystem>
+
 namespace viennacore {
 
 using namespace viennaps;
 
+template <typename NumericType, int D>
+void writeCSV(const std::string &filename, bool etch = false) {
+  std::ofstream out(filename);
+  if (!out.is_open()) {
+    std::cerr << "Error: Could not open file for writing: " << filename
+              << std::endl;
+    return;
+  }
+
+  std::mt19937 rng(42); // Fixed seed for reproducibility
+  std::uniform_real_distribution<NumericType> dist(1.0, 2.0); // rate range
+
+  const int numPoints = 25;
+  const NumericType minCoord = -50.0;
+  const NumericType maxCoord = 50.0;
+  const NumericType step = (maxCoord - minCoord) / (numPoints - 1);
+
+  if constexpr (D == 2) {
+    out << "x,rate\n";
+    for (int i = 0; i < numPoints; ++i) {
+      NumericType x = minCoord + i * step;
+      NumericType rate = dist(rng);
+      out << x << "," << (etch ? -rate : rate) << "\n";
+    }
+  } else if constexpr (D == 3) {
+    out << "x,y,rate\n";
+    for (int i = 0; i < numPoints; ++i) {
+      NumericType x = minCoord + i * step;
+      for (int j = 0; j < numPoints; ++j) {
+        NumericType y = minCoord + j * step;
+        NumericType rate = dist(rng);
+        out << x << "," << y << "," << (etch ? -rate : rate) << "\n";
+      }
+    }
+  }
+
+  out.close();
+}
+
 template <typename NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
 
+  std::filesystem::create_directory("test_csv");
+  const std::string csvPath = "test_csv/rates" + std::to_string(D) + "D.csv";
+
   for (bool etch : {false, true}) {
-    // Select CSV file based on dimension and etch/deposit mode
-    std::string csvPath = "rates" + std::to_string(D) + "D_" +
-                          (etch ? "etch" : "deposit") + ".csv";
+    writeCSV<NumericType, D>(csvPath, etch);
 
     for (bool useCustomInterp : {false, true}) {
       auto domain = SmartPointer<Domain<NumericType, D>>::New();
@@ -41,13 +83,7 @@ template <typename NumericType, int D> void RunTest() {
         model->setInterpolationMode(
             impl::velocityFieldFromFile<NumericType, D>::Interpolation::CUSTOM);
         model->setCustomInterpolator([](const Vec3D<NumericType> &coord) {
-          double intervalue = 0.0;
-          if constexpr (D == 2) {
-            intervalue = coord[0] + coord[1];
-          } else if constexpr (D == 3) {
-            intervalue = coord[0] + coord[1] + coord[2];
-          }
-          return 1.0 + 0.5 * std::sin(intervalue);
+          return 1.0 + 0.5 * std::sin(coord[0] + coord[1]);
         });
       } else {
         model->setInterpolationMode(
@@ -70,6 +106,7 @@ template <typename NumericType, int D> void RunTest() {
       LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
     }
   }
+  std::filesystem::remove_all("test_csv");
 }
 
 } // namespace viennacore

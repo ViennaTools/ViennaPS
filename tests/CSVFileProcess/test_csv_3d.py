@@ -6,21 +6,18 @@ vps.Logger.setLogLevel(vps.LogLevel.WARNING)
 
 def write_csv(filename, etch=False):
     rng = np.random.default_rng(42)
-    x = np.linspace(-50, 50, 101)
-    y = np.linspace(-50, 50, 101)
+    x = np.linspace(-50, 50, 51)
+    y = np.linspace(-50, 50, 51)
     xx, yy = np.meshgrid(x, y)
     rates = rng.uniform(1.0, 2.0, size=xx.shape)
     if etch:
         rates = -rates
-        filename = filename + "_etch.csv"
-    else:
-        filename = filename + "_deposit.csv"
     np.savetxt(filename, np.column_stack((xx.ravel(), yy.ravel(), rates.ravel())),
                delimiter=",", header="x,y,rate", comments="")
 
 def run3D():
     for etch in [False, True]:
-        write_csv("rates3D", etch)
+        write_csv("rates3D.csv", etch)
         for custom in [False, True]:
             domain = vps.Domain()
             vps.MakeHole(
@@ -39,9 +36,7 @@ def run3D():
             ).apply()
             if not etch:
                 domain.duplicateTopLevelSet(vps.Material.SiO2)
-                model = vps.CSVFileProcess("rates3D_deposit.csv", direction=[0.0, 0.0, -1.0], offset=[0.0, 0.0])
-            else:
-                model = vps.CSVFileProcess("rates3D_etch.csv", direction=[0.0, 0.0, -1.0], offset=[0.0, 0.0])
+            model = vps.CSVFileProcess("rates3D.csv", direction=[0.0, 0.0, -1.0], offset=[0.0, 0.0, 0.0])
 
             if custom:
                 model.setInterpolationMode(vps.Interpolation.CUSTOM)
@@ -50,8 +45,8 @@ def run3D():
                 model.setInterpolationMode(vps.Interpolation.LINEAR)
 
             vps.Process(domain, model, 1.0).apply()
+        os.remove("rates3D.csv")
 
-    # os.remove("rates3D.csv")
     print("3D CSVFileProcess tests passed")
 
 if __name__ == "__main__":

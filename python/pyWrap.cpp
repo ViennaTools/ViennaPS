@@ -1213,8 +1213,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<CSVFileProcess<T, D>, ProcessModel<T, D>,
                    SmartPointer<CSVFileProcess<T, D>>>(module, "CSVFileProcess")
       .def(pybind11::init<const std::string &, const Vec3D<T> &,
-                          const std::array<T, D == 2 ? 1 : 2> &, T, T,
-                          const std::vector<Material> &, bool>(),
+                          const Vec3D<T> &, T, T, const std::vector<Material> &,
+                          bool>(),
            pybind11::arg("ratesFile"), pybind11::arg("direction"),
            pybind11::arg("offset"), pybind11::arg("isotropicComponent") = 0.,
            pybind11::arg("directionalComponent") = 1.,
