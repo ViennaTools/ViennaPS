@@ -61,6 +61,7 @@ jobs:
         run: cmake -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
+        shell: bash
         run: |
           ctest --rerun-failed --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build || \
           ctest --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
