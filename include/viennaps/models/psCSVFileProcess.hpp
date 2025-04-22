@@ -247,6 +247,11 @@ private:
       globalCoord[i] += offset[i];
 
     if constexpr (D == 2) {
+      if (ratePoints.size() < 2) {
+        std::cerr << "Not enough points for linear interpolation\n";
+        return 1.0;
+      }
+
       // Linear interpolation along x
       NumericType x = globalCoord[0];
       for (std::size_t i = 1; i < ratePoints.size(); ++i) {
@@ -261,6 +266,11 @@ private:
       }
       return ratePoints.back()[1]; // extrapolate
     } else if constexpr (D == 3) {
+      if (ratePoints.size() < 4) {
+        std::cerr << "Not enough points for bilinear interpolation\n";
+        return 1.0;
+      }
+
       NumericType x = globalCoord[0];
       NumericType y = globalCoord[1];
 
@@ -281,12 +291,13 @@ private:
       auto x0It = xVals.lower_bound(x);
       auto y0It = yVals.lower_bound(y);
 
-      if (x0It == xVals.begin() || y0It == yVals.begin())
+      // if (x0It == xVals.begin() || y0It == yVals.begin())
+      if (x0It == xVals.begin() || y0It == yVals.begin() || x0It == xVals.end() || y0It == yVals.end())
         return 1.0;
-      if (x0It == xVals.end())
-        --x0It;
-      if (y0It == yVals.end())
-        --y0It;
+      // if (x0It == xVals.end())
+      //   --x0It;
+      // if (y0It == yVals.end())
+      //   --y0It;
 
       auto x1It = x0It, y1It = y0It;
       --x0It;
@@ -295,6 +306,14 @@ private:
       NumericType x0 = *x0It, x1 = *x1It;
       NumericType y0 = *y0It, y1 = *y1It;
 
+
+      auto safeLookup = [&](NumericType a, NumericType b) -> NumericType {
+        auto it = rateMap.find({a, b});
+        if (it != rateMap.end()) return it->second;
+        std::cerr << "Missing rate value at (" << a << ", " << b << ")\n";
+        return 1.0;
+      };
+      
       NumericType q11 = rateMap[{x0, y0}];
       NumericType q21 = rateMap[{x1, y0}];
       NumericType q12 = rateMap[{x0, y1}];
