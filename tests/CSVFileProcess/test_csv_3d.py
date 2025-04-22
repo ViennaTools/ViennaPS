@@ -13,7 +13,7 @@ def write_csv(filename, etch=False):
     if etch:
         rates = -rates
     np.savetxt(filename, np.column_stack((xx.ravel(), yy.ravel(), rates.ravel())),
-               delimiter=",", header="x,y,rate", comments="")
+               delimiter=",", comments="")
 
 def run3D():
     for etch in [False, True]:
@@ -36,7 +36,7 @@ def run3D():
             ).apply()
             if not etch:
                 domain.duplicateTopLevelSet(vps.Material.SiO2)
-            model = vps.CSVFileProcess("rates3D.csv", direction=[0.0, 0.0, -1.0], offset=[0.0, 0.0, 0.0])
+            model = vps.CSVFileProcess("rates3D.csv", direction=[0.0, 0.0, -1.0], offset=[0.0, 0.0])
 
             if custom:
                 model.setInterpolationMode(vps.Interpolation.CUSTOM)

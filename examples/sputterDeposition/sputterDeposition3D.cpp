@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   auto direction = Vec3D<NumericType>{0., 0., -1.};
 
   std::string ratesFile = params.get<std::string>("ratesFile");
-  auto offset = Vec3D<NumericType>{0., 0., 0.};
+  auto offset = Vec2D<NumericType>{0., 0.};
   offset[0] = params.get<NumericType>("offsetX");
   offset[1] = params.get<NumericType>("offsetY");
 
@@ -70,25 +70,14 @@ int main(int argc, char **argv) {
       ratesFile, direction, offset);
 
   std::string interpModeStr = params.get<std::string>("interpolationMode");
-  if (interpModeStr == "linear") {
-    depoModel->setInterpolationMode(
-        impl::velocityFieldFromFile<NumericType, D>::Interpolation::LINEAR);
-  } else if (interpModeStr == "idw") {
-    depoModel->setInterpolationMode(
-        impl::velocityFieldFromFile<NumericType, D>::Interpolation::IDW);
-  } else if (interpModeStr == "custom") {
-    // Define a custom interpolation function
+  depoModel->setInterpolationMode(interpModeStr);
+  if (interpModeStr == "custom") {
     auto customInterp = [](const Vec3D<NumericType> &coord) -> NumericType {
       const NumericType x = coord[0];
       const NumericType y = coord[1];
       return 0.05 + 0.02 * std::sin(1.0 * x) * std::cos(1.0 * y);
     };
     depoModel->setCustomInterpolator(customInterp);
-    depoModel->setInterpolationMode(
-        impl::velocityFieldFromFile<NumericType, D>::Interpolation::CUSTOM);
-  } else {
-    std::cerr << "Warning: Unknown interpolation mode \"" << interpModeStr
-              << "\" — using auto-detection." << std::endl;
   }
 
   const int numCycles = params.get<int>("numCycles");

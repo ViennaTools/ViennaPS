@@ -1,18 +1,22 @@
 from argparse import ArgumentParser
-import matplotlib.pyplot as plt
-import numpy as np
 
 # Argument parsing
 parser = ArgumentParser(
     prog="holeDeposition",
     description="Run hole deposition with a CSV-defined rate profile.",
 )
+parser.add_argument("-D", "-DIM", dest="dim", type=int, default=3)
 parser.add_argument("filename")
-parser.add_argument("--visualize", action="store_true", help="Visualize the deposition rate profile and trench domain")
+parser.add_argument("--visualize", action="store_true", help="Visualize the rate and geometry domains")
 args = parser.parse_args()
 
-# Import 3D ViennaPS
-import viennaps3d as vps
+# Select dimension module
+if args.dim == 2:
+    print("Running 2D simulation.")
+    import viennaps2d as vps
+else:
+    print("Running 3D simulation.")
+    import viennaps3d as vps
 
 # Setup logging and threads
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
@@ -57,7 +61,7 @@ geometry.duplicateTopLevelSet(vps.Material.SiO2)
 direction = [0.0, 0.0, -1.0]
 
 # Offset in X, Y
-offset = [0.0, 0.0, 0.0]
+offset = [0.0, 0.0]
 offset[0] = params["offsetX"]
 offset[1] = params["offsetY"]
 
@@ -70,18 +74,13 @@ depoModel = vps.CSVFileProcess(
 
 # Select interpolation mode
 mode = params["interpolationMode"].strip().lower()
-if mode == "linear":
-    depoModel.setInterpolationMode(vps.Interpolation.LINEAR)
-elif mode == "idw":
-    depoModel.setInterpolationMode(vps.Interpolation.IDW)
-elif mode == "custom":
+depoModel.setInterpolationMode(mode)
+if mode == "custom":
     def custom_interp(coord):
-        x, y, _ = coord
-        return 0.04 + 0.02 * np.sin(1.0 * x) * np.cos(1.0 * y)
-    depoModel.setInterpolationMode(vps.Interpolation.CUSTOM)
+        import numpy as np
+        x, _, _ = coord
+        return 0.04 + 0.01 * np.sin(10.0 * x)
     depoModel.setCustomInterpolator(custom_interp)
-else:
-    print(f"Warning: Unknown interpolation mode '{mode}', using default.")
 
 # Simulation
 numCycles = int(params["numCycles"])

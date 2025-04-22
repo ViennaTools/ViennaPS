@@ -33,6 +33,7 @@
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
+#include <psRateGrid.hpp>
 #include <psUnits.hpp>
 
 // geometries
@@ -49,6 +50,7 @@
 #include <psProcessParams.hpp>
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
+#include <psVelocityFieldFromFile.hpp>
 
 // models
 #include <models/psAnisotropicProcess.hpp>
@@ -1201,19 +1203,47 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<const DirectionalProcess<T, D>::RateSet &>(),
            pybind11::arg("rateSet"));
 
-  // Expose enum
-  pybind11::enum_<impl::velocityFieldFromFile<T, D>::Interpolation>(
-      module, "Interpolation")
-      .value("LINEAR", impl::velocityFieldFromFile<T, D>::Interpolation::LINEAR)
-      .value("IDW", impl::velocityFieldFromFile<T, D>::Interpolation::IDW)
-      .value("CUSTOM",
-             impl::velocityFieldFromFile<T, D>::Interpolation::CUSTOM);
+  // Enum for interpolation
+  pybind11::enum_<RateGrid<T, D>::Interpolation>(module, "Interpolation")
+      .value("LINEAR", RateGrid<T, D>::Interpolation::LINEAR)
+      .value("IDW", RateGrid<T, D>::Interpolation::IDW)
+      .value("CUSTOM", RateGrid<T, D>::Interpolation::CUSTOM);
+
+  // RateGrid
+  pybind11::class_<RateGrid<T, D>>(module, "RateGrid")
+      .def(pybind11::init<>())
+      .def("loadFromCSV", &RateGrid<T, D>::loadFromCSV,
+           pybind11::arg("filename"))
+      .def("setOffset", &RateGrid<T, D>::setOffset, pybind11::arg("offset"))
+      .def("setInterpolationMode",
+          static_cast<void (RateGrid<T, D>::*)(RateGrid<T, D>::Interpolation)>(
+              &RateGrid<T, D>::setInterpolationMode),
+          pybind11::arg("mode"))
+     .def("setInterpolationMode",
+          [](RateGrid<T, D>& self, const std::string& str) {
+            self.setInterpolationMode(RateGrid<T, D>::fromString(str));
+          },
+          pybind11::arg("mode"))
+     .def(
+          "setCustomInterpolator",
+          [](RateGrid<T, D> &self, pybind11::function pyFunc) {
+            std::cout << "[ViennaPS] NOTE: Custom Python interpolator requires "
+                         "single-threaded execution.\n";
+            omp_set_num_threads(1);
+            self.setCustomInterpolator([pyFunc](const Vec3D<T> &coord) -> T {
+              pybind11::gil_scoped_acquire gil;
+              auto result = pyFunc(coord);
+              return result.cast<T>();
+            });
+          },
+          pybind11::arg("function"))
+      .def("interpolate", &RateGrid<T, D>::interpolate, pybind11::arg("coord"));
 
   // CSVFileProcess
   pybind11::class_<CSVFileProcess<T, D>, ProcessModel<T, D>,
                    SmartPointer<CSVFileProcess<T, D>>>(module, "CSVFileProcess")
       .def(pybind11::init<const std::string &, const Vec3D<T> &,
-                          const Vec3D<T> &, T, T, const std::vector<Material> &,
+                          const Vec2D<T> &, T, T, const std::vector<Material> &,
                           bool>(),
            pybind11::arg("ratesFile"), pybind11::arg("direction"),
            pybind11::arg("offset"), pybind11::arg("isotropicComponent") = 0.,
@@ -1221,13 +1251,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("maskMaterials") =
                std::vector<Material>{Material::Mask},
            pybind11::arg("calculateVisibility") = true)
-      .def(
-          "setInterpolationMode",
-          [](CSVFileProcess<T, D> &self,
-             typename impl::velocityFieldFromFile<T, D>::Interpolation mode) {
-            self.setInterpolationMode(mode);
-          },
-          pybind11::arg("mode"))
+           .def("setInterpolationMode",
+               [](CSVFileProcess<T, D> &self, RateGrid<T, D>::Interpolation mode) {
+                 self.setInterpolationMode(mode);
+               },
+               pybind11::arg("mode"))
+          .def("setInterpolationMode",
+               [](CSVFileProcess<T, D> &self, const std::string& str) {
+                 self.setInterpolationMode(str);
+               },
+               pybind11::arg("mode"))
       .def(
           "setCustomInterpolator",
           [](CSVFileProcess<T, D> &self, pybind11::function pyFunc) {
@@ -1240,7 +1273,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
               return result.cast<T>();
             });
           },
-          pybind11::arg("function"));
+          pybind11::arg("function"))
+      .def("setOffset", &CSVFileProcess<T, D>::setOffset,
+           pybind11::arg("offset"));
 
   // Sphere Distribution
   pybind11::class_<SphereDistribution<T, D>,

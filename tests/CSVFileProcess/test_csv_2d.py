@@ -10,12 +10,11 @@ def write_csv(filename, etch=False):
     rates = rng.uniform(1.0, 2.0, size=x.shape)
     if etch:
         rates = -rates
-    np.savetxt(filename, np.column_stack((x, rates)), delimiter=",", header="x,rate", comments="")
+    np.savetxt(filename, np.column_stack((x, rates)), delimiter=",", comments="")
 
 def run2D():
     for etch in [False, True]:
         write_csv("rates2D.csv", etch)
-        # write_csv("rates2D", etch)
         for custom in [False, True]:
             domain = vps.Domain()
             vps.MakeTrench(
@@ -33,7 +32,7 @@ def run2D():
             ).apply()
             if not etch:
                 domain.duplicateTopLevelSet(vps.Material.SiO2)
-            model = vps.CSVFileProcess("rates2D.csv", direction=[0.0, -1.0, 0.0], offset=[0.0, 0.0, 0.0])
+            model = vps.CSVFileProcess("rates2D.csv", direction=[0.0, -1.0, 0.0], offset=[0.0, 0.0])
 
             if custom:
                 model.setInterpolationMode(vps.Interpolation.CUSTOM)

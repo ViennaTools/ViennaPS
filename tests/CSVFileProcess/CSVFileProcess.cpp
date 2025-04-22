@@ -21,23 +21,21 @@ void writeCSV(const std::string &filename, bool etch = false) {
     return;
   }
 
-  std::mt19937 rng(42); // Fixed seed for reproducibility
+  std::mt19937 rng(42);
   std::uniform_real_distribution<NumericType> dist(1.0, 2.0); // rate range
 
-  const int numPoints = 25;
+  const int numPoints = 51;
   const NumericType minCoord = -50.0;
   const NumericType maxCoord = 50.0;
   const NumericType step = (maxCoord - minCoord) / (numPoints - 1);
 
   if constexpr (D == 2) {
-    out << "x,rate\n";
     for (int i = 0; i < numPoints; ++i) {
       NumericType x = minCoord + i * step;
       NumericType rate = dist(rng);
       out << x << "," << (etch ? -rate : rate) << "\n";
     }
   } else if constexpr (D == 3) {
-    out << "x,y,rate\n";
     for (int i = 0; i < numPoints; ++i) {
       NumericType x = minCoord + i * step;
       for (int j = 0; j < numPoints; ++j) {
@@ -72,7 +70,7 @@ template <typename NumericType, int D> void RunTest() {
                                  etch, Material::Si, HoleShape::Full)
             .apply();
 
-      Vec3D<NumericType> offset{};
+      Vec2D<NumericType> offset{};
       auto direction = Vec3D<NumericType>{0., 0., 0.};
       direction[D - 1] = -1.;
 

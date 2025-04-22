@@ -7,7 +7,7 @@ parser = ArgumentParser(
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
-parser.add_argument("--visualize", action="store_true", help="Visualize the deposition rate profile and trench domain")
+parser.add_argument("--visualize", action="store_true", help="Visualize the rate and geometry domains")
 args = parser.parse_args()
 
 # Select dimension module
@@ -57,7 +57,7 @@ geometry.duplicateTopLevelSet(vps.Material.SiO2)
 direction = [0.0, -1.0, 0.0]
 
 # Setup offset
-offset = [0.0, 0.0, 0.0]
+offset = [0.0, 0.0]
 offset[0] = params["offsetX"]
 
 # Create CSV-based deposition process
@@ -69,19 +69,13 @@ depoModel = vps.CSVFileProcess(
 
 # Select interpolation mode
 mode = params["interpolationMode"].strip().lower()
-if mode == "linear":
-    depoModel.setInterpolationMode(vps.Interpolation.LINEAR)
-elif mode == "idw":
-    depoModel.setInterpolationMode(vps.Interpolation.IDW)
-elif mode == "custom":
+depoModel.setInterpolationMode(mode)
+if mode == "custom":
     def custom_interp(coord):
         import numpy as np
         x, _, _ = coord
         return 0.04 + 0.01 * np.sin(10.0 * x)
-    depoModel.setInterpolationMode(vps.Interpolation.CUSTOM)
     depoModel.setCustomInterpolator(custom_interp)
-else:
-    print(f"Warning: Unknown interpolation mode '{mode}', using default.")
 
 # Simulation loop
 numCycles = int(params["numCycles"])
