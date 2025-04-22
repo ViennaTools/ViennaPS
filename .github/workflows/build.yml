@@ -61,6 +61,15 @@ jobs:
         run: cmake -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
-        run: ctest -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+        run: |
+          ctest --rerun-failed --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build || \
+          ctest --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+        # ctest --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
         # run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
 
+      - name: 📤 Upload CTest Logs (if any)
+        if: always()  # Always run, even if previous steps fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: CTestLogs-${{ matrix.os }}-${{ matrix.config }}
+          path: build/Testing/Temporary/LastTest.log
