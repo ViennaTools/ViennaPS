@@ -61,4 +61,6 @@ jobs:
         run: cmake -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
-        run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+        run: ctest -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+        # run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+
