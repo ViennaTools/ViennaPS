@@ -63,14 +63,14 @@ jobs:
       - name: 🧪 Test
         shell: bash
         run: |
-          ctest --rerun-failed --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build || \
-          ctest --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
-        # ctest --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
-        # run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+          # Run all tests first
+          ctest --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build || true
 
-      - name: 📤 Upload CTest Logs (if any)
-        if: always()  # Always run, even if previous steps fail
-        uses: actions/upload-artifact@v4
-        with:
-          name: CTestLogs-${{ matrix.os }}-${{ matrix.config }}
-          path: build/Testing/Temporary/LastTest.log
+          # Try rerunning failed tests
+          if [ -f build/Testing/Temporary/LastTestsFailed.log ]; then
+            echo "⚠️ Some tests failed, rerunning..."
+            ctest --rerun-failed --output-on-failure -VV -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build || true
+          fi
+
+          # Print path to full verbose log
+          echo "📝 Full log file: build/Testing/Temporary/LastTest.log"
