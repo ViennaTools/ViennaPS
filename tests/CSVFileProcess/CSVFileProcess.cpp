@@ -58,7 +58,9 @@ template <typename NumericType, int D> void RunTest() {
   for (bool etch : {false, true}) {
     writeCSV<NumericType, D>(csvPath, etch);
 
-    for (bool useCustomInterp : {false, true}) {
+    for (const std::string &modeStr : {"linear", "idw", "custom"}) {
+      std::cout << "[CSVFileProcess] Test: " << modeStr << " | Etch: " << etch
+                << " | Dim: " << D << "\n";
       auto domain = SmartPointer<Domain<NumericType, D>>::New();
 
       if constexpr (D == 2)
@@ -77,15 +79,14 @@ template <typename NumericType, int D> void RunTest() {
       auto model = SmartPointer<CSVFileProcess<NumericType, D>>::New(
           csvPath, direction, offset);
 
-      if (useCustomInterp) {
-        model->setInterpolationMode(
-            impl::velocityFieldFromFile<NumericType, D>::Interpolation::CUSTOM);
+      model->setInterpolationMode(modeStr);
+
+      if (modeStr == "custom") {
         model->setCustomInterpolator([](const Vec3D<NumericType> &coord) {
           return 1.0 + 0.5 * std::sin(coord[0] + coord[1]);
         });
-      } else {
-        model->setInterpolationMode(
-            impl::velocityFieldFromFile<NumericType, D>::Interpolation::LINEAR);
+      } else if (modeStr == "idw") {
+        model->setIDWNeighbors(4);
       }
 
       if (!etch)

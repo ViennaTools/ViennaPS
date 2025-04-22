@@ -31,6 +31,14 @@ public:
     this->setProcessName("CSVFileProcess");
   }
 
+  void setIDWNeighbors(const int k = 4) {
+    auto velField =
+        std::dynamic_pointer_cast<impl::velocityFieldFromFile<NumericType, D>>(
+            this->getVelocityField());
+    if (velField)
+      velField->setIDWNeighbors(k);
+  }
+
   void setInterpolationMode(const std::string &str) {
     auto velField =
         std::dynamic_pointer_cast<impl::velocityFieldFromFile<NumericType, D>>(

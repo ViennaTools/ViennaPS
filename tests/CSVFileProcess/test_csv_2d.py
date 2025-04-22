@@ -15,7 +15,7 @@ def write_csv(filename, etch=False):
 def run2D():
     for etch in [False, True]:
         write_csv("rates2D.csv", etch)
-        for custom in [False, True]:
+        for mode in ["linear", "idw", "custom"]:
             domain = vps.Domain()
             vps.MakeTrench(
                 domain=domain,
@@ -30,15 +30,17 @@ def run2D():
                 makeMask=etch,
                 material=vps.Material.Si,
             ).apply()
+
             if not etch:
                 domain.duplicateTopLevelSet(vps.Material.SiO2)
-            model = vps.CSVFileProcess("rates2D.csv", direction=[0.0, -1.0, 0.0], offset=[0.0, 0.0])
 
-            if custom:
-                model.setInterpolationMode(vps.Interpolation.CUSTOM)
+            model = vps.CSVFileProcess("rates2D.csv", direction=[0.0, -1.0, 0.0], offset=[0.0, 0.0])
+            print(f"Testing {mode} interpolation | Etch: {etch}")
+            model.setInterpolationMode(mode)
+            if mode == "custom":
                 model.setCustomInterpolator(lambda coord: 1.0 + 0.5 * np.sin(coord[0]))
-            else:
-                model.setInterpolationMode(vps.Interpolation.LINEAR)
+            elif mode == "idw":
+                model.setIDWNeighbors(4)
 
             vps.Process(domain, model, 1.0).apply()
         os.remove("rates2D.csv")

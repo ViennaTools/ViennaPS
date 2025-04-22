@@ -103,6 +103,13 @@ public:
     return 1.0;
   }
 
+  void setIDWNeighbors(int k) {
+    if (k < 1)
+      std::cerr << "Too few IDW neighbors: Default (4) will be used."
+                << std::endl;
+    idwNeighbors = k;
+  }
+
 private:
   std::vector<std::array<NumericType, D>> points;
   std::unordered_map<Vec2D<NumericType>, NumericType, Vec2DHash<NumericType>>
@@ -111,6 +118,7 @@ private:
 
   Vec2D<NumericType> offset{};
   std::optional<Interpolation> interpolationMode;
+  int idwNeighbors = 4;
   std::function<NumericType(const Vec3D<NumericType> &)> customInterpolator;
 
   Interpolation detectInterpolationMode() const {
@@ -201,7 +209,6 @@ private:
       query[i] = coord[i] + offset[i];
 
     const NumericType epsilon = 1e-6;
-    const int k = 4;
 
     std::vector<std::pair<NumericType, NumericType>> dists;
     for (const auto &pt : points) {
@@ -213,12 +220,12 @@ private:
     }
 
     std::partial_sort(dists.begin(),
-                      dists.begin() + std::min(k, (int)dists.size()),
+                      dists.begin() + std::min(idwNeighbors, (int)dists.size()),
                       dists.end());
 
     NumericType wSum = 0.0;
     NumericType wrSum = 0.0;
-    for (int i = 0; i < std::min(k, (int)dists.size()); ++i) {
+    for (int i = 0; i < std::min(idwNeighbors, (int)dists.size()); ++i) {
       auto [dist, val] = dists[i];
       if (dist < epsilon)
         return val;

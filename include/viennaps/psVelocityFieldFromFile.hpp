@@ -98,6 +98,8 @@ public:
     }
   }
 
+  void setIDWNeighbors(const int k = 4) { rateGrid.setIDWNeighbors(k); }
+
   void setInterpolationMode(const std::string &str) {
     rateGrid.setInterpolationMode(rateGrid.fromString(str));
   }

@@ -18,7 +18,7 @@ def write_csv(filename, etch=False):
 def run3D():
     for etch in [False, True]:
         write_csv("rates3D.csv", etch)
-        for custom in [False, True]:
+        for mode in ["linear", "idw", "custom"]:
             domain = vps.Domain()
             vps.MakeHole(
                 domain=domain,
@@ -34,15 +34,18 @@ def run3D():
                 material=vps.Material.Si,
                 holeShape=vps.HoleShape.Full,
             ).apply()
+
             if not etch:
                 domain.duplicateTopLevelSet(vps.Material.SiO2)
+
             model = vps.CSVFileProcess("rates3D.csv", direction=[0.0, 0.0, -1.0], offset=[0.0, 0.0])
 
-            if custom:
-                model.setInterpolationMode(vps.Interpolation.CUSTOM)
+            print(f"Testing {mode} interpolation | Etch: {etch}")
+            model.setInterpolationMode(mode)
+            if mode == "custom":
                 model.setCustomInterpolator(lambda coord: 1.0 + 0.5 * np.sin(coord[0] + coord[1]))
-            else:
-                model.setInterpolationMode(vps.Interpolation.LINEAR)
+            elif mode == "idw":
+                model.setIDWNeighbors(8)
 
             vps.Process(domain, model, 1.0).apply()
         os.remove("rates3D.csv")

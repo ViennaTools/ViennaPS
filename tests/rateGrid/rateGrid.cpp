@@ -58,36 +58,44 @@ template <typename NumericType, int D> void RunTest() {
 
   writeCSV<NumericType, D>(csvPath);
 
-  for (bool useCustomInterp : {false, true}) {
+  for (auto mode : {RateGrid<NumericType, D>::Interpolation::LINEAR,
+                    RateGrid<NumericType, D>::Interpolation::IDW,
+                    RateGrid<NumericType, D>::Interpolation::CUSTOM}) {
+
     RateGrid<NumericType, D> grid;
     VC_TEST_ASSERT(grid.loadFromCSV(csvPath));
+    grid.setOffset({0., 0.});
+    grid.setInterpolationMode(mode);
 
-    Vec2D<NumericType> offset = {0., 0.};
-    grid.setOffset(offset);
-
-    if (useCustomInterp) {
-      grid.setInterpolationMode(
-          RateGrid<NumericType, D>::Interpolation::CUSTOM);
+    if (mode == RateGrid<NumericType, D>::Interpolation::CUSTOM) {
       grid.setCustomInterpolator([](const Vec3D<NumericType> &coord) {
         return 1.0 + 0.1 * std::cos(coord[0] + coord[1]);
       });
-    } else {
-      grid.setInterpolationMode(
-          RateGrid<NumericType, D>::Interpolation::LINEAR);
+    } else if (mode == RateGrid<NumericType, D>::Interpolation::IDW) {
+      grid.setIDWNeighbors(4);
     }
 
     // Choose test coordinates within expected range
-    Vec3D<NumericType> coord = {0.0, 0.0, 0.0};
-    coord[0] = 0.2;
-    if constexpr (D == 3)
-      coord[1] = -0.3;
+    std::mt19937 rng(42);
+    std::uniform_real_distribution<NumericType> coordDom(-5.0,
+                                                         5.0); // domain range
+    for (int i = 0; i < 10; ++i) {
+      Vec3D<NumericType> coord = {coordDom(rng), 0.0, 0.0};
+      if constexpr (D == 3)
+        coord[1] = coordDom(rng);
 
-    NumericType result = grid.interpolate(coord);
-
-    VC_TEST_ASSERT(result > 0.0); // Basic sanity check
-    std::cout << "[RateGrid] Interpolation result: " << result << std::endl;
+      NumericType result = grid.interpolate(coord);
+      if (mode != RateGrid<NumericType, D>::Interpolation::CUSTOM)
+        VC_TEST_ASSERT(result >= 0.5 && result <= 1.5);
+      std::cout << "[RateGrid] Interpolation at (";
+      for (int j = 0; j < D - 1; ++j) {
+        std::cout << coord[j];
+        if (j < D - 2)
+          std::cout << ", ";
+      }
+      std::cout << ") = " << result << std::endl;
+    }
   }
-
   std::filesystem::remove_all("test_rategrid");
 }
 

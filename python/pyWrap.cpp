@@ -1225,6 +1225,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
             self.setInterpolationMode(RateGrid<T, D>::fromString(str));
           },
           pybind11::arg("mode"))
+      .def("setIDWNeighbors", &RateGrid<T, D>::setIDWNeighbors,
+           pybind11::arg("k"))
       .def(
           "setCustomInterpolator",
           [](RateGrid<T, D> &self, pybind11::function pyFunc) {
@@ -1264,6 +1266,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
             self.setInterpolationMode(str);
           },
           pybind11::arg("mode"))
+      .def("setIDWNeighbors", &CSVFileProcess<T, D>::setIDWNeighbors,
+           pybind11::arg("k") = 4)
       .def(
           "setCustomInterpolator",
           [](CSVFileProcess<T, D> &self, pybind11::function pyFunc) {
