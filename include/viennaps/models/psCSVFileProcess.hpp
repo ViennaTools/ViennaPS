@@ -20,7 +20,6 @@ namespace impl {
 template <typename NumericType, int D>
 class velocityFieldFromFile : public VelocityField<NumericType, D> {
 public:
-  // using OffsetType = std::array<NumericType, D == 2 ? 1 : 2>;
   enum class Interpolation { LINEAR, IDW, CUSTOM };
 
   velocityFieldFromFile(const std::string &ratesFile,
@@ -57,12 +56,6 @@ public:
       return 0.;
     }
 
-    // if (calculateVisibility &&
-    //   pointId < visibilities_.size() &&
-    //   visibilities_.at(pointId) == 0.) {
-    //     return 0.;
-    // }
-
     NumericType scalarVelocity = interpolateRate(coordinate);
     return scalarVelocity * isotropicScale;
   }
@@ -81,12 +74,6 @@ public:
         (pointId >= visibilities_.size() || visibilities_.at(pointId) == 0.)) {
       return Vec3D<NumericType>{0., 0., 0.};
     }
-
-    // if (calculateVisibility &&
-    //   pointId < visibilities_.size() &&
-    //   visibilities_.at(pointId) == 0.) {
-    //     return Vec3D<NumericType>{0., 0., 0.};
-    // }
 
     NumericType scaling = interpolateRate(coordinate);
     Vec3D<NumericType> potentialVelocity =
@@ -169,16 +156,10 @@ private:
     }
 
     std::string line;
-    bool headerSkipped = false;
 
     while (std::getline(file, line)) {
       // Remove possible Windows CR characters
-      line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-
-      if (!headerSkipped) {
-        headerSkipped = true;
-        continue;
-      }
+      // line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
 
       std::istringstream stream(line);
       std::string cell;
@@ -274,8 +255,7 @@ private:
       NumericType x = globalCoord[0];
       NumericType y = globalCoord[1];
 
-      // Find the four surrounding points: (x0, y0), (x1, y0), (x0, y1), (x1,
-      // y1)
+      // Find the surrounding points: (x0, y0), (x1, y0), (x0, y1), (x1, y1)
       std::map<std::pair<NumericType, NumericType>, NumericType> rateMap;
       for (const auto &pt : ratePoints) {
         rateMap[{pt[0], pt[1]}] = pt[2];
@@ -291,13 +271,12 @@ private:
       auto x0It = xVals.lower_bound(x);
       auto y0It = yVals.lower_bound(y);
 
-      // if (x0It == xVals.begin() || y0It == yVals.begin())
-      if (x0It == xVals.begin() || y0It == yVals.begin() || x0It == xVals.end() || y0It == yVals.end())
+      if (x0It == xVals.begin() || y0It == yVals.begin())
         return 1.0;
-      // if (x0It == xVals.end())
-      //   --x0It;
-      // if (y0It == yVals.end())
-      //   --y0It;
+      if (x0It == xVals.end())
+        --x0It;
+      if (y0It == yVals.end())
+        --y0It;
 
       auto x1It = x0It, y1It = y0It;
       --x0It;
@@ -391,8 +370,6 @@ private:
 /// Rate determined by CSV file.
 template <typename NumericType, int D>
 class CSVFileProcess : public ProcessModel<NumericType, D> {
-  // static constexpr std::size_t offsetSize = (D == 2 ? 1 : 2);
-  // using OffsetType = std::array<NumericType, offsetSize>;
 
 public:
   CSVFileProcess(const std::string &ratesFile, const Vec3D<NumericType> &dir,
