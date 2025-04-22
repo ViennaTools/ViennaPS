@@ -38,7 +38,7 @@ public:
     if (velField)
       velField->setInterpolationMode(str);
   }
-  
+
   void setInterpolationMode(
       typename impl::velocityFieldFromFile<NumericType, D>::Interpolation
           mode) {

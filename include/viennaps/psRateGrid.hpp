@@ -11,7 +11,6 @@ namespace viennaps {
 
 using namespace viennacore;
 
-
 template <typename T> struct Vec2DHash {
   std::size_t operator()(const Vec2D<T> &v) const {
     auto h1 = std::hash<T>{}(v[0]);
@@ -24,34 +23,35 @@ template <typename NumericType, int D> class RateGrid {
 public:
   enum class Interpolation { LINEAR, IDW, CUSTOM };
 
-  bool loadFromCSV(const std::string& filename) {
+  bool loadFromCSV(const std::string &filename) {
     CSVReader<NumericType> reader(filename);
     auto content = reader.readContent();
     if (!content.has_value()) {
-      std::cerr << "RateGrid: Failed to read CSV content from " << filename << "\n";
+      std::cerr << "RateGrid: Failed to read CSV content from " << filename
+                << "\n";
       return false;
     }
-  
-    const auto& rawData = content.value();
+
+    const auto &rawData = content.value();
     points.clear();
     rateMap.clear();
     xVals.clear();
     yVals.clear();
-  
-    for (const auto& row : rawData) {
+
+    for (const auto &row : rawData) {
       if (row.size() != D) {
         Logger::getInstance()
             .addWarning("RateGrid: Invalid number of columns in row!")
             .print();
         continue;
       }
-  
+
       std::array<NumericType, D> pt{};
       for (int i = 0; i < D; ++i)
         pt[i] = row[i];
-  
+
       points.push_back(pt);
-  
+
       if constexpr (D == 2) {
         xVals.insert(pt[0]);
       } else if constexpr (D == 3) {
@@ -60,22 +60,25 @@ public:
         rateMap[{pt[0], pt[1]}] = pt[2];
       }
     }
-  
+
     interpolationMode = detectInterpolationMode();
     return true;
-  }  
+  }
 
   void setOffset(const Vec2D<NumericType> &off) { offset = off; }
 
   static Interpolation fromString(const std::string &str) {
     std::string s = str;
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    if (s == "linear") return Interpolation::LINEAR;
-    if (s == "idw") return Interpolation::IDW;
-    if (s == "custom") return Interpolation::CUSTOM;
+    if (s == "linear")
+      return Interpolation::LINEAR;
+    if (s == "idw")
+      return Interpolation::IDW;
+    if (s == "custom")
+      return Interpolation::CUSTOM;
     throw std::invalid_argument("Unknown interpolation mode: " + str);
   }
-  
+
   void setInterpolationMode(Interpolation mode) { interpolationMode = mode; }
 
   void setCustomInterpolator(

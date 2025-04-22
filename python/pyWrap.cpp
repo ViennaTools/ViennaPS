@@ -1216,15 +1216,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("filename"))
       .def("setOffset", &RateGrid<T, D>::setOffset, pybind11::arg("offset"))
       .def("setInterpolationMode",
-          static_cast<void (RateGrid<T, D>::*)(RateGrid<T, D>::Interpolation)>(
-              &RateGrid<T, D>::setInterpolationMode),
-          pybind11::arg("mode"))
-     .def("setInterpolationMode",
-          [](RateGrid<T, D>& self, const std::string& str) {
+           static_cast<void (RateGrid<T, D>::*)(RateGrid<T, D>::Interpolation)>(
+               &RateGrid<T, D>::setInterpolationMode),
+           pybind11::arg("mode"))
+      .def(
+          "setInterpolationMode",
+          [](RateGrid<T, D> &self, const std::string &str) {
             self.setInterpolationMode(RateGrid<T, D>::fromString(str));
           },
           pybind11::arg("mode"))
-     .def(
+      .def(
           "setCustomInterpolator",
           [](RateGrid<T, D> &self, pybind11::function pyFunc) {
             std::cout << "[ViennaPS] NOTE: Custom Python interpolator requires "
@@ -1251,16 +1252,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("maskMaterials") =
                std::vector<Material>{Material::Mask},
            pybind11::arg("calculateVisibility") = true)
-           .def("setInterpolationMode",
-               [](CSVFileProcess<T, D> &self, RateGrid<T, D>::Interpolation mode) {
-                 self.setInterpolationMode(mode);
-               },
-               pybind11::arg("mode"))
-          .def("setInterpolationMode",
-               [](CSVFileProcess<T, D> &self, const std::string& str) {
-                 self.setInterpolationMode(str);
-               },
-               pybind11::arg("mode"))
+      .def(
+          "setInterpolationMode",
+          [](CSVFileProcess<T, D> &self, RateGrid<T, D>::Interpolation mode) {
+            self.setInterpolationMode(mode);
+          },
+          pybind11::arg("mode"))
+      .def(
+          "setInterpolationMode",
+          [](CSVFileProcess<T, D> &self, const std::string &str) {
+            self.setInterpolationMode(str);
+          },
+          pybind11::arg("mode"))
       .def(
           "setCustomInterpolator",
           [](CSVFileProcess<T, D> &self, pybind11::function pyFunc) {
