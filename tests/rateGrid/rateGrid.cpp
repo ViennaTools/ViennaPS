@@ -77,8 +77,7 @@ template <typename NumericType, int D> void RunTest() {
 
     // Choose test coordinates within expected range
     std::mt19937 rng(42);
-    std::uniform_real_distribution<NumericType> coordDom(-5.0,
-                                                         5.0); // domain range
+    std::uniform_real_distribution<NumericType> coordDom(-5.0, 5.0);
     for (int i = 0; i < 10; ++i) {
       Vec3D<NumericType> coord = {coordDom(rng), 0.0, 0.0};
       if constexpr (D == 3)
