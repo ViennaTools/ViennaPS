@@ -50,7 +50,6 @@
 #include <psProcessParams.hpp>
 #include <psSurfaceModel.hpp>
 #include <psVelocityField.hpp>
-#include <psVelocityFieldFromFile.hpp>
 
 // models
 #include <models/psAnisotropicProcess.hpp>

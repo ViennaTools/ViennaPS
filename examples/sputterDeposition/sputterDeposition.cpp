@@ -5,6 +5,7 @@
 #include <models/psCSVFileProcess.hpp>
 
 using namespace viennaps;
+
 constexpr int D = 2;
 using NumericType = double;
 
@@ -21,7 +22,7 @@ void runDeposition(SmartPointer<CSVFileProcess<NumericType, D>> &depoModel,
 int main(int argc, char **argv) {
 
   Logger::setLogLevel(LogLevel::ERROR);
-  omp_set_num_threads(16);
+  omp_set_num_threads(1);
 
   // Parse the parameters
   util::Parameters params;
@@ -59,7 +60,7 @@ int main(int argc, char **argv) {
   geometry->saveVolumeMesh("Trench");
   geometry->duplicateTopLevelSet(Material::SiO2);
 
-  auto direction = Vec3D<NumericType>{0., -1., 0.};
+  auto direction = Vec3D<NumericType>{0., -1.0, 0.};
 
   std::string ratesFile = params.get<std::string>("ratesFile");
   auto offset = Vec2D<NumericType>{0., 0.};

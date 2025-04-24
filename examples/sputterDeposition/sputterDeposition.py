@@ -54,7 +54,7 @@ geometry.saveVolumeMesh("Trench")
 geometry.duplicateTopLevelSet(vps.Material.SiO2)
 
 # Setup direction
-direction = [0.0, -1.0, 0.0]
+direction = [0., -1.0, 0.0]
 
 # Setup offset
 offset = [0.0, 0.0]

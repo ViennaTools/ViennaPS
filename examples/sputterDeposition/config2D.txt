@@ -1,17 +1,17 @@
 # Geometry
-gridDelta = 0.015
+gridDelta = 0.025
 xExtent = 3.5
 yExtent = 3.5
 
 offsetX = 10.
-trenchWidth = 2.0
-trenchDepth = 1.5
-taperingAngle = 7.5
+trenchWidth = 1.0
+trenchDepth = 3.5
+taperingAngle = 2.5
 
 # Process
 depositionTime = 1.5
-numCycles = 10
+numCycles = 20
 
-interpolationMode=custom
+interpolationMode=linear
 
 ratesFile = rates2D.csv
