@@ -13,8 +13,13 @@ namespace impl {
 template <typename NumericType, int D>
 class FaradayCageSurfaceModel final
     : public ::viennaps::SurfaceModel<NumericType> {
+
+  const NumericType tiltAngle_ = 0;
+  const NumericType rate_ = 0;
+
 public:
-  FaradayCageSurfaceModel() = default;
+  FaradayCageSurfaceModel(const NumericType rate, const NumericType tiltAngle)
+      : rate_(rate), tiltAngle_(tiltAngle) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
       SmartPointer<viennals::PointData<NumericType>> rates,
@@ -25,9 +30,11 @@ public:
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("particleFlux");
 
+    const NumericType norm = rate_ * .5 / std::cos(tiltAngle_ * M_PI / 180.);
+
     for (std::size_t i = 0; i < velocity->size(); i++) {
       if (!MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
-        velocity->at(i) = -flux->at(i) / 1.5;
+        velocity->at(i) = -flux->at(i) * norm;
       }
     }
 
@@ -42,7 +49,7 @@ template <typename NumericType, int D>
 class FaradayCageEtching final : public ProcessModel<NumericType, D> {
 public:
   // Angles in degrees
-  FaradayCageEtching(NumericType stickingProbability,
+  FaradayCageEtching(NumericType rate, NumericType stickingProbability,
                      NumericType sourceDistributionPower, NumericType cageAngle,
                      NumericType tiltAngle) {
 
@@ -55,7 +62,8 @@ public:
         .name = "ion",
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
-        .direction = Vec3Df{-cage_y * cosTilt, cage_x * cosTilt, -sinTilt}};
+        .direction =
+            Vec3D<NumericType>{-cage_y * cosTilt, cage_x * cosTilt, -sinTilt}};
     particle1.dataLabels.push_back("particleFlux");
     this->insertNextParticleType(particle1);
 
@@ -63,12 +71,14 @@ public:
         .name = "ion",
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
-        .direction = Vec3Df{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}};
+        .direction =
+            Vec3D<NumericType>{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}};
     this->insertNextParticleType(particle2);
 
     // surface model
     auto surfModel =
-        SmartPointer<impl::FaradayCageSurfaceModel<NumericType, D>>::New();
+        SmartPointer<impl::FaradayCageSurfaceModel<NumericType, D>>::New(
+            rate, tiltAngle);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
