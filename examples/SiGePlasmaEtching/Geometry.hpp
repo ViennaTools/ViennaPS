@@ -14,93 +14,16 @@ void printLS(viennals::SmartPointer<viennals::Domain<double, D>> domain,
   viennals::VTKWriter<double>(mesh, fileName).apply();
 }
 
-template <class ParamsType>
-std::pair<double, double>
-MeasureDepth(viennaps::SmartPointer<viennaps::Domain<double, 2>> domain,
-             ParamsType params) {
-  std::pair<double, double> depth{-1., -1.};
-
-  auto copyDomain = viennaps::SmartPointer<viennaps::Domain<double, 2>>::New();
-  copyDomain->deepCopy(domain);
-
-  const double pillarMaxPos = params.numPillars == 1
-                                  ? std::numeric_limits<double>::max()
-                                  : params.pillarMaxPos;
-
-  viennaps::Planarize<double, 2>(copyDomain, params.measureHeight).apply();
-  auto mesh = viennaps::SmartPointer<viennals::Mesh<double>>::New();
-  viennals::ToDiskMesh<double, 2>(copyDomain->getLevelSets().back(), mesh)
-      .apply();
-  double maxYPos = std::numeric_limits<double>::lowest();
-
-  // measure first pillar
-  for (const auto node : mesh->nodes) {
-    if (node[1] > maxYPos && node[0] < pillarMaxPos)
-      maxYPos = node[1];
-  }
-
-  std::vector<std::array<double, 3>> topNodes;
-  for (const auto node : mesh->nodes) {
-    if (node[1] > maxYPos - params.gridDelta / 2. && node[0] < pillarMaxPos)
-      topNodes.push_back(node);
-  }
-
-  double xPos_out_SiGe = topNodes[0][0];
-  double xPos_in_SiGe = topNodes[0][0];
-
-  for (const auto node : topNodes) {
-    if (node[0] < xPos_out_SiGe)
-      xPos_out_SiGe = node[0];
-
-    if (node[0] > xPos_in_SiGe)
-      xPos_in_SiGe = node[0];
-  }
-
-  viennaps::Planarize<double, 2>(copyDomain, params.measureHeight -
-                                                 params.measureHeightDelta)
-      .apply();
-  viennals::ToDiskMesh<double, 2>(copyDomain->getLevelSets().back(), mesh)
-      .apply();
-
-  maxYPos = std::numeric_limits<double>::lowest();
-  for (const auto node : mesh->nodes) {
-    if (node[1] > maxYPos && node[0] < pillarMaxPos)
-      maxYPos = node[1];
-  }
-
-  topNodes.clear();
-  for (const auto node : mesh->nodes) {
-    if (node[1] > maxYPos - params.gridDelta / 2. && node[0] < pillarMaxPos)
-      topNodes.push_back(node);
-  }
-
-  double xPos_out_Si = topNodes[0][0];
-  double xPos_in_Si = topNodes[0][0];
-
-  for (const auto node : topNodes) {
-    if (node[0] < xPos_out_Si)
-      xPos_out_Si = node[0];
-
-    if (node[0] > xPos_in_Si)
-      xPos_in_Si = node[0];
-  }
-
-  depth.first =
-      std::abs(xPos_out_SiGe - xPos_out_Si); // depth on left side of pillar
-  depth.second =
-      std::abs(xPos_in_Si - xPos_in_SiGe); // depth on right side of pillar
-
-  return depth;
-}
-
 template <class ParamsType, int D>
 void MakeInitialGeometry(
     viennaps::SmartPointer<viennaps::Domain<double, D>> domain,
     ParamsType params) {
   const double totalHeight = params.numLayers * params.layerHeight;
+
   auto extent = params.getExtent();
-  double bounds[] = {-extent[0] / 2., params.halfGeometry ? 0 : extent[0] / 2.,
-                     -1., 1.};
+
+  double bounds[] = {0., params.halfGeometry ? extent[0] / 2. : extent[0], -1.,
+                     1.};
   viennals::BoundaryConditionEnum boundaryConds[] = {
       params.periodicBoundary
           ? viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY

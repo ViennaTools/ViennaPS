@@ -1,5 +1,5 @@
 # Domain
-gridDelta = 2.
+gridDelta = 5.
 
 # Geometry
 numLayers = 12
@@ -13,15 +13,17 @@ trenchWidth = 100.
 trenchWidthBot = 80.
 
 overEtch = 105.
-offSet = 135.
+offSet = 0.
+buffer = 100.
 
 # Units
 timeUnit=second
 lengthUnit=nanometer
 
 # Process parameters
-processTime=1
-numRaysPerPoint = 1000
+processTime=10
+numCycles=1
+numRaysPerPoint = 100
 # Flux values in units of 1e15 / cm²
 etchantFlux=5.e2
 oxygenFlux=5.e1
@@ -29,17 +31,17 @@ polymerFlux=5.
 ionFlux=0.
 integrationScheme=EO_1
 
-ionExponent=200
-meanEnergy=100 # eV
-sigmaEnergy=10 # eV
+ionExponent=200.
+meanEnergy=100. # eV
+sigmaEnergy=10. # eV
 A_O=2          # oxidation layer yield constant
 A_C=2          # polymer layer yield constant
 A_Si=7         # Si yield constant
 
 saveVolume = 1
-pillarMaxPos = -300
-
-halfGeometry = 0
+halfGeometry = 1
 periodicBoundary = 0
+
 fileName = real_
-pathFile = 10s_pillars_points.csv
+pathFile = 10s_20mTorr_100nm_init.csv
+targetFile = 10s_20mTorr_100nm_final.csv

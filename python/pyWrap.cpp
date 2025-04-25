@@ -67,6 +67,9 @@
 #include <models/psTEOSDeposition.hpp>
 #include <models/psTEOSPECVD.hpp>
 
+// compact
+#include <compact/psCSVReader.hpp>
+
 // visualization
 #include <psToDiskMesh.hpp>
 
@@ -1279,6 +1282,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("coverageTimeStep"), pybind11::arg("evFlux"),
            pybind11::arg("inFlux"), pybind11::arg("s0"),
            pybind11::arg("gasMFP"));
+
+  // ***************************************************************************
+  //                               COMPACT
+  // ***************************************************************************
+// CSVReader bindings
+pybind11::class_<CSVReader<double>>(module, "CSVReader")
+    .def(pybind11::init<>())
+    .def(pybind11::init<std::string, char>(), pybind11::arg("filename"), pybind11::arg("delimiter") = ',')
+    .def("setFilename", &CSVReader<double>::setFilename, pybind11::arg("filename"))
+    .def("setDelimiter", &CSVReader<double>::setDelimiter, pybind11::arg("delimiter"))
+    .def("readHeader", &CSVReader<double>::readHeader)
+    .def("readContent", &CSVReader<double>::readContent);
 
   // ***************************************************************************
   //                               GEOMETRIES
