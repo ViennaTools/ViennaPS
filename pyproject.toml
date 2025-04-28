@@ -19,4 +19,5 @@ Issues = "https://github.com/ViennaTools/ViennaPS/issues"
 [tool.scikit-build]
 build-dir = "build"
 cmake.args = ["-DVIENNAPS_BUILD_PYTHON=ON"]
+sdist.include = ["python/viennaps3d/ptx/*"]
 wheel.packages = ["python/viennaps3d", "python/viennaps2d"]

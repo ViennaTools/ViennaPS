@@ -96,6 +96,7 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 1.4.1
+  GIT_TAG package-python-gpu
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
