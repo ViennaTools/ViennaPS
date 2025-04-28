@@ -49,7 +49,7 @@ etchDir = vps.RateSet(
     isotropicVelocity=0.0,
     maskMaterials=[vps.Material.Mask],
 )
-depoRemoval = vps.DirectionalEtching(rateSets=[etchDir])
+depoRemoval = vps.DirectionalProcess(rateSets=[etchDir])
 
 # Define isotropic + direction rate for etching of substrate
 etchIso = vps.RateSet(
@@ -58,7 +58,7 @@ etchIso = vps.RateSet(
     isotropicVelocity=params["neutralRate"],
     maskMaterials=[vps.Material.Mask, vps.Material.Polymer],
 )
-etchModel = vps.DirectionalEtching(rateSets=[etchIso])
+etchModel = vps.DirectionalProcess(rateSets=[etchIso])
 etchTime = params["etchTime"]
 
 n = 0

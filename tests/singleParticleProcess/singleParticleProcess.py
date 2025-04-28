@@ -1,78 +1,10 @@
-def run2D():
-    import viennaps2d as vps
+import subprocess
+import sys
 
-    # Create a 2D simulation object
-    domain = vps.Domain()
-    vps.MakeTrench(
-        domain=domain,
-        gridDelta=1.0,
-        xExtent=10.0,
-        yExtent=10.0,
-        trenchWidth=5.0,
-        trenchDepth=5.0,
-        taperingAngle=0.0,
-        baseHeight=0.0,
-        periodicBoundary=False,
-        makeMask=True,
-        material=vps.Material.Si,
-    ).apply()
+print("Running 2D SingleParticleProcess test...")
+subprocess.check_call([sys.executable, "test_single_particle_2d.py"])
 
-    model = vps.SingleParticleProcess(
-        rate=-1.0,
-        stickingProbability=1.0,
-        sourceExponent=1.0,
-        maskMaterial=vps.Material.Mask,
-    )
-    vps.Process(domain, model, 5.0).apply()
+print("Running 3D SingleParticleProcess test...")
+subprocess.check_call([sys.executable, "test_single_particle_3d.py"])
 
-    model = vps.SingleParticleProcess(
-        rate=-1.0,
-        stickingProbability=1.0,
-        sourceExponent=1.0,
-        maskMaterials=[vps.Material.Mask],
-    )
-    vps.Process(domain, model, 5.0).apply()
-
-
-def run3D():
-    import viennaps3d as vps
-
-    # Create a 2D simulation object
-    domain = vps.Domain()
-    vps.MakeTrench(
-        domain=domain,
-        gridDelta=1.0,
-        xExtent=10.0,
-        yExtent=10.0,
-        trenchWidth=5.0,
-        trenchDepth=5.0,
-        taperingAngle=0.0,
-        baseHeight=0.0,
-        periodicBoundary=False,
-        makeMask=True,
-        material=vps.Material.Si,
-    ).apply()
-
-    model = vps.SingleParticleProcess(
-        rate=-1.0,
-        stickingProbability=1.0,
-        sourceExponent=1.0,
-        maskMaterial=vps.Material.Mask,
-    )
-    vps.Process(domain, model, 5.0).apply()
-
-    model = vps.SingleParticleProcess(
-        rate=-1.0,
-        stickingProbability=1.0,
-        sourceExponent=1.0,
-        maskMaterials=[vps.Material.Mask],
-    )
-    vps.Process(domain, model, 5.0).apply()
-
-
-if __name__ == "__main__":
-    run2D()
-    print("2D test passed")
-    run3D()
-    print("3D test passed")
-    print("All tests passed")
+print("All SingleParticleProcess tests passed")

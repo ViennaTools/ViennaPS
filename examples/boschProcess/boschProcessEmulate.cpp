@@ -1,5 +1,5 @@
 #include <geometries/psMakeTrench.hpp>
-#include <models/psDirectionalEtching.hpp>
+#include <models/psDirectionalProcess.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <psProcess.hpp>
@@ -12,7 +12,7 @@ using NumericType = double;
 void etch(SmartPointer<Domain<NumericType, D>> &domain,
           util::Parameters &params) {
   std::cout << "  - Etching - " << std::endl;
-  DirectionalEtching<NumericType, D>::RateSet rateSet;
+  DirectionalProcess<NumericType, D>::RateSet rateSet;
   rateSet.direction = Vec3D<NumericType>{0.};
   rateSet.direction[D - 1] = -1.;
   rateSet.directionalVelocity = params.get("ionRate");
@@ -22,14 +22,14 @@ void etch(SmartPointer<Domain<NumericType, D>> &domain,
   rateSet.calculateVisibility = true;
 
   auto etchModel =
-      SmartPointer<DirectionalEtching<NumericType, D>>::New(rateSet);
+      SmartPointer<DirectionalProcess<NumericType, D>>::New(rateSet);
   Process<NumericType, D>(domain, etchModel, params.get("etchTime")).apply();
 }
 
 void punchThrough(SmartPointer<Domain<NumericType, D>> &domain,
                   util::Parameters &params) {
   std::cout << "  - Punching through - " << std::endl;
-  DirectionalEtching<NumericType, D>::RateSet rateSet;
+  DirectionalProcess<NumericType, D>::RateSet rateSet;
   rateSet.direction = Vec3D<NumericType>{0.};
   rateSet.direction[D - 1] = -1.;
   rateSet.directionalVelocity =
@@ -40,7 +40,7 @@ void punchThrough(SmartPointer<Domain<NumericType, D>> &domain,
 
   // punch through step
   auto depoRemoval =
-      SmartPointer<DirectionalEtching<NumericType, D>>::New(rateSet);
+      SmartPointer<DirectionalProcess<NumericType, D>>::New(rateSet);
   Process<NumericType, D>(domain, depoRemoval, 1.).apply();
 }
 

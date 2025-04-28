@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
   geometry->saveSurfaceMesh("initial.vtp");
 
   {
-    typename ps::DirectionalEtching<NumericType, D>::RateSet rateSet;
+    typename ps::DirectionalProcess<NumericType, D>::RateSet rateSet;
     rateSet.direction = {0.};
     rateSet.direction[D - 1] = -1.;
     rateSet.directionalVelocity = -1.;
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
     rateSet.calculateVisibility = false;
 
     auto etchModel =
-        ps::SmartPointer<ps::DirectionalEtching<NumericType, D>>::New(rateSet);
+        ps::SmartPointer<ps::DirectionalProcess<NumericType, D>>::New(rateSet);
     ps::Process<NumericType, D>(geometry, etchModel,
                                 params.get("verticalDepth"))
         .apply();
