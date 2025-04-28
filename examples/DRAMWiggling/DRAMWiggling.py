@@ -1,24 +1,15 @@
+import viennaps3d as vps
 from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
-parser = ArgumentParser(prog="DRAMWiggling", description="Run a DRAM etching process which results in AA wiggling.")
-parser.add_argument("-D", "-DIM", dest="dim", type=int, default=3)
+parser = ArgumentParser(
+    prog="DRAMWiggling",
+    description="Run a DRAM etching process which results in AA wiggling.",
+)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-import viennaps3d as vps
-
-try:
-    # ViennaLS Python bindings are needed for the extrusion tool
-    import viennals3d as vls
-except ModuleNotFoundError:
-    print("ViennaLS Python module not found. Can not parse GDS file.")
-    exit(1)
-
-vps.Logger.setLogLevel(vps.LogLevel.ERROR)
-
-gridDelta = 0.005*(1.+1e-12)
-
+gridDelta = 0.005 * (1.0 + 1e-12)
 boundaryConds = [
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
@@ -28,22 +19,19 @@ boundaryConds = [
 params = vps.ReadConfigFile(args.filename)
 
 mask = vps.GDSGeometry(gridDelta, boundaryConds)
+mask.setBoundaryPadding(0.1, 0.1)
 reader = vps.GDSReader(mask, params["gdsFile"])
 reader.apply()
 
 # Prepare geometry
-bounds = mask.getBounds()
 geometry = vps.Domain()
 
-# Substrate plane
-origin = [0., 0., 0.]
-normal = [0., 0., 1.]
-substrate = vls.Domain(bounds, boundaryConds, gridDelta)
-vls.MakeGeometry(substrate, vls.Plane(origin, normal)).apply()
-geometry.insertNextLevelSetAsMaterial(substrate, vps.Material.Si)
 # Insert GDS layers
 maskLS = mask.layerToLevelSet(0, 0.0, 0.18, True)
 geometry.insertNextLevelSetAsMaterial(maskLS, vps.Material.Mask)
+
+# Add plane
+vps.MakePlane(geometry, 0.0, vps.Material.Si, True).apply()
 
 # print intermediate output surfaces during the process
 vps.Logger.setLogLevel(vps.LogLevel.INFO)
@@ -75,12 +63,11 @@ process.setIntegrationScheme(
 # print initial surface
 geometry.saveSurfaceMesh(filename="DRAM_Initial.vtp", addMaterialIds=True)
 
-for i in range(1, 101):
+numSteps = int(params["numSteps"])
+for i in range(numSteps):
     # run the process
     process.apply()
-    geometry.saveSurfaceMesh(
-        filename=f"DRAM_Etched_{i}.vtp", addMaterialIds=True
-    )
+    geometry.saveSurfaceMesh(filename=f"DRAM_Etched_{i + 1}.vtp", addMaterialIds=True)
 
 # print final volume
-geometry.saveVolumeMesh("DRAM_Final")
+geometry.saveHullMesh("DRAM_Final")

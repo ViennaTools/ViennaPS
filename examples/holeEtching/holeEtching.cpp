@@ -36,15 +36,15 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  SF6O2Parameters<NumericType> modelParams;
+  auto modelParams = SF6O2Etching<NumericType, D>::defaultParameters();
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
-  modelParams.oxygenFlux = params.get("oxygenFlux");
+  modelParams.passivationFlux = params.get("oxygenFlux");
   modelParams.Ions.meanEnergy = params.get("meanEnergy");
   modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Passivation.A_ie = params.get("A_O");
-  modelParams.Si.A_ie = params.get("A_Si");
+  modelParams.Substrate.A_ie = params.get("A_Si");
   modelParams.etchStopDepth = params.get("etchStopDepth");
   auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 

@@ -1,3 +1,4 @@
+#include <geometries/psMakePlane.hpp>
 #include <models/psHBrO2Etching.hpp>
 #include <psProcess.hpp>
 #include <psUtil.hpp>
@@ -29,8 +30,7 @@ int main(int argc, char **argv) {
   ps::units::Length::setUnit(params.get<std::string>("lengthUnit"));
   ps::units::Time::setUnit(params.get<std::string>("timeUnit"));
 
-  constexpr NumericType gridDelta = 0.005*(1.+1e-12);
-
+  constexpr NumericType gridDelta = 0.005 * (1. + 1e-12);
   ls::BoundaryConditionEnum boundaryConds[D] = {
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
       ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
@@ -42,26 +42,11 @@ int main(int argc, char **argv) {
       .apply();
 
   // geometry setup
-  auto bounds = mask->getBounds();
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
-
-  // substrate plane
-  NumericType origin[D] = {0., 0., 0.};
-  NumericType normal[D] = {0., 0., 1.};
-  auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
-      bounds, boundaryConds, gridDelta);
-  ls::MakeGeometry<NumericType, D>(
-      plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
-      .apply();
-  geometry->insertNextLevelSetAsMaterial(plane, ps::Material::Si);
-
   auto maskLS = mask->layerToLevelSet(0, 0.0, 0.18, true);
-  if (!maskLS || maskLS->getNumberOfPoints() == 0) {
-    std::cerr << "ERROR: maskLS is null or empty!" << std::endl;
-    return 1;
-  }
-
   geometry->insertNextLevelSetAsMaterial(maskLS, ps::Material::Mask);
+
+  ps::MakePlane<NumericType, D>(geometry, 0.0, ps::Material::Si, true).apply();
 
   ps::HBrO2Parameters<NumericType> modelParams;
   modelParams.ionFlux = params.get("ionFlux");
@@ -78,7 +63,7 @@ int main(int argc, char **argv) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setMaxCoverageInitIterations(10);
+  process.setCoverageDeltaThreshold(1e-4);
   process.setNumberOfRaysPerPoint(static_cast<int>(params.get("raysPerPoint")));
   process.setProcessDuration(params.get("processTime"));
   process.setIntegrationScheme(ps::util::convertIntegrationScheme(
@@ -87,12 +72,13 @@ int main(int argc, char **argv) {
   // print initial surface
   geometry->saveSurfaceMesh("DRAM_Initial.vtp");
 
-  for (int i = 1; i < 101; ++i) {
+  const int numSteps = params.get("numSteps");
+  for (int i = 0; i < numSteps; ++i) {
     process.apply();
-    geometry->saveSurfaceMesh("DRAM_Etched_" + std::to_string(i) + ".vtp", true);
+    geometry->saveSurfaceMesh("DRAM_Etched_" + std::to_string(i + 1) + ".vtp");
   }
 
-  geometry->saveVolumeMesh("DRAM_Final");
+  geometry->saveHullMesh("DRAM_Final");
 
   return 0;
 }

@@ -19,5 +19,6 @@ sigmaEnergy=10 # eV
 
 integrationScheme=LF_2
 
+numSteps=0
 raysPerPoint=1000
-gdsFile=wiggle_full.gds
+gdsFile=wiggle_new.gds

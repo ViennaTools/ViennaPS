@@ -17,7 +17,6 @@ template <typename NumericType> struct SF6O2Parameters {
   std::unordered_map<int, NumericType> beta_O = {{1, 1.}, {0, 1.}};
 
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
-  bool fluxIncludeSticking = false;
 
   // Mask
   struct MaskType {
