@@ -51,7 +51,7 @@ def ReadConfigFile(fileName: str):
     Parameters
     ----------
     fileName: str
-              Name of the config file.
+                Name of the config file.
     
     Returns
     -------
@@ -71,8 +71,10 @@ def ReadConfigFile(fileName: str):
                 par_value = line[line.find('=')+1:]
 
                 try:
-                    val= float(par_value) 
+                    val = float(par_value) 
                 except: 
                     val = par_value
-                    par_dict[par_name] = val
-                    return par_dict
+
+                par_dict[par_name] = val
+
+    return par_dict
