@@ -158,7 +158,7 @@ private:
       auto y0It = yVals.lower_bound(y);
 
       if (x0It == xVals.begin() || y0It == yVals.begin())
-        return points.front()[D-1];
+        return points.front()[D - 1];
 
       if (x0It == xVals.end())
         --x0It;
