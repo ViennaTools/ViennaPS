@@ -2051,6 +2051,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("deviceID") = 0)
       .def("destroy", &Context::destroy, "Destroy the context.")
       .def("addModule", &Context::addModule, "Add a module to the context.")
+      .def("getModulePath", &Context::getModulePath, "Get the module path.")
       .def_readwrite("deviceID", &Context::deviceID, "Device ID.");
 
   pybind11::class_<gpu::SingleParticleProcess<T, D>,

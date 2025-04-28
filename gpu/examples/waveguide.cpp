@@ -1,5 +1,5 @@
 #include <geometries/psMakePlane.hpp>
-#include <models/psDirectionalEtching.hpp>
+#include <models/psDirectionalProcess.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
