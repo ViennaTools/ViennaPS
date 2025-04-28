@@ -19,3 +19,5 @@ CMakeSettings.json
 *.egg-info
 *env*
 .eggs/
+*.ptx
+*.optixir

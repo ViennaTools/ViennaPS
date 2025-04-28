@@ -1,5 +1,5 @@
 #include <geometries/psMakePlane.hpp>
-#include <models/psDirectionalEtching.hpp>
+#include <models/psDirectionalProcess.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
@@ -282,7 +282,7 @@ int main(int argc, char *argv[]) {
     // faraday cage source setup
     auto model =
         ps::SmartPointer<ps::gpu::FaradayCageEtching<NumericType, D>>::New(
-            params.get("stickProbability"), params.get("sourcePower"),
+            1.0, params.get("stickProbability"), params.get("sourcePower"),
             cageAngle, tiltAngle);
 
     // process setup

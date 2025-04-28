@@ -85,6 +85,7 @@
 #include <vcContext.hpp>
 #include <vcCudaBuffer.hpp>
 
+#include <models/psgFaradayCageEtching.hpp>
 #include <models/psgMultiParticleProcess.hpp>
 #include <models/psgSF6O2Etching.hpp>
 #include <models/psgSingleParticleProcess.hpp>
@@ -2050,6 +2051,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("deviceID") = 0)
       .def("destroy", &Context::destroy, "Destroy the context.")
       .def("addModule", &Context::addModule, "Add a module to the context.")
+      .def("getModulePath", &Context::getModulePath, "Get the module path.")
       .def_readwrite("deviceID", &Context::deviceID, "Device ID.");
 
   pybind11::class_<gpu::SingleParticleProcess<T, D>,
@@ -2111,6 +2113,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
                           const SF6O2Parameters<T> &>),
            pybind11::arg("parameters"));
+
+  // Faraday Cage Etching
+  pybind11::class_<gpu::FaradayCageEtching<T, D>,
+                   SmartPointer<gpu::FaradayCageEtching<T, D>>>(
+      m_gpu, "FaradayCageEtching", processModel_gpu)
+      .def(
+          pybind11::init(
+              &SmartPointer<gpu::FaradayCageEtching<T, D>>::New<T, T, T, T, T>),
+          pybind11::arg("rate"), pybind11::arg("stickingProbability"),
+          pybind11::arg("power"), pybind11::arg("cageAngle"),
+          pybind11::arg("cageDistance"));
 
   // GPU Process
   pybind11::class_<gpu::Process<T, D>>(m_gpu, "Process",
