@@ -77,12 +77,24 @@ if(VIENNAPS_USE_GPU)
   target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
                                                 ${OptiX_INCLUDE} ${CUDA_INCLUDE_DIRS})
   target_link_libraries(viennaps3d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
-  target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_USE_GPU -DVIENNACORE_COMPILE_GPU)
+  target_compile_definitions(viennaps3d PRIVATE VIENNAPS_USE_GPU)
+  target_compile_definitions(viennaps3d
+                             PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
+
+  # We have to include the CUDA headers for the 2D version as well because ViennaCore uses them in the Logger
+  target_include_directories(viennaps2d PRIVATE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(viennaps2d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
+
+  add_custom_command(
+    TARGET viennaps3d
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${VIENNACORE_PTX_DIR}"
+            "${CMAKE_SOURCE_DIR}/python/viennaps3d/ptx"
+    COMMENT "Copying .ptx and .optixir files to Python package directory")
 else()
   target_link_libraries(viennaps3d PRIVATE ViennaPS)
+  target_link_libraries(viennaps2d PRIVATE ViennaPS)
 endif()
-
-target_link_libraries(viennaps2d PRIVATE ViennaPS)
 
 target_compile_definitions(
   viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2 -DVIENNAPS_MODULE_NAME=viennaps2d

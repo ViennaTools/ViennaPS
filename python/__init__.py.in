@@ -24,6 +24,15 @@ def _windows_dll_path():
         os.add_dll_directory(path)
         os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
 
+def _module_ptx_path():
+    from importlib.util import find_spec
+    import os
+
+    spec = find_spec("viennaps3d")
+    install_path = os.path.dirname(os.path.abspath(spec.origin))
+    return os.path.join(install_path, "ptx")
+
+
 if sys.platform == "win32":
     _windows_dll_path()
 
@@ -31,6 +40,9 @@ import @LSNAME@ as ls
 from @LSNAME@ import IntegrationSchemeEnum as IntegrationScheme
 from @LSNAME@ import BoundaryConditionEnum as BoundaryType
 from .@NAME@ import *
+
+if D == 3:
+    ptxPath = _module_ptx_path()
 
 # Config file reader helper function
 def ReadConfigFile(fileName: str):
@@ -59,9 +71,8 @@ def ReadConfigFile(fileName: str):
                 par_value = line[line.find('=')+1:]
 
                 try:
-                    val = float(par_value) 
-                except: val = par_value
-
-                par_dict[par_name] = val
-
-    return par_dict
+                    val= float(par_value) 
+                except: 
+                    val = par_value
+                    par_dict[par_name] = val
+                    return par_dict

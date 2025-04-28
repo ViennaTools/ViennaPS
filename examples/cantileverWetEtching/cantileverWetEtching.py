@@ -1,6 +1,5 @@
 # This example only works in 3D mode
 import viennaps3d as vps
-import viennals3d as vls
 
 maskFileName = "cantilever_mask.gds"
 
@@ -33,17 +32,15 @@ gds_mask.setBoundaryPadding(x_add, y_add)
 vps.GDSReader(gds_mask, maskFileName).apply()
 
 # convert GDS geometry to level set
-mask = gds_mask.layerToLevelSet(1, 0.0, 4 * gridDelta, True)
-
-# create plane geometry as substrate
-bounds = gds_mask.getBounds()
-plane = vls.Domain(bounds, boundaryConditions, gridDelta)
-vls.MakeGeometry(plane, vls.Plane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0])).apply()
+mask = gds_mask.layerToLevelSet(1, 0.0, 4 * gridDelta, True, False)
 
 # set up domain
 geometry = vps.Domain()
-geometry.insertNextLevelSet(mask)
-geometry.insertNextLevelSet(plane)
+geometry.insertNextLevelSetAsMaterial(mask, vps.Material.Mask)
+
+# create plane substrate under mask
+vps.MakePlane(geometry, 0.0, vps.Material.Si, True).apply()
+
 geometry.saveSurfaceMesh("initialGeometry.vtp", True)
 
 # wet etch process

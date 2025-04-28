@@ -147,7 +147,7 @@ class CF4O2ParametersSiGe:
     def __init__(self) -> None: ...
     def k_sigma_SiGe(self, arg0: float) -> float: ...
 
-class DirectionalEtching(ProcessModel):
+class DirectionalProcess(ProcessModel):
     @overload
     def __init__(
         self,
@@ -170,6 +170,18 @@ class DirectionalEtching(ProcessModel):
     def __init__(self, rateSets: list[RateSet]) -> None: ...
     @overload
     def __init__(self, rateSet: RateSet) -> None: ...
+
+class CSVFileProcess(ProcessModel):
+    def __init__(
+        self,
+        ratesFile: str,
+        direction,
+        offset: list[float],
+        isotropicScale: float = ...,
+        directionalScale: float = ...,
+        maskMaterials: list[Material] = ...,
+        calculateVisibility: bool = ...,
+    ) -> None: ...
 
 class Domain:
     @overload

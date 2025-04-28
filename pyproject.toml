@@ -3,7 +3,7 @@ requires = ["scikit-build-core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-version = "3.4.0"
+version = "3.4.1"
 name = "ViennaPS"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -19,4 +19,5 @@ Issues = "https://github.com/ViennaTools/ViennaPS/issues"
 [tool.scikit-build]
 build-dir = "build"
 cmake.args = ["-DVIENNAPS_BUILD_PYTHON=ON"]
+sdist.include = ["python/viennaps3d/ptx/*"]
 wheel.packages = ["python/viennaps3d", "python/viennaps2d"]

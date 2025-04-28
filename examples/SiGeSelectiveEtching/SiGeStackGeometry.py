@@ -87,7 +87,7 @@ def CreateGeometry(paramDict: dict):
         * (paramDict["trenchWidthTop"] - paramDict["trenchWidthBottom"])
         / (paramDict["numLayers"] * paramDict["layerHeight"] + paramDict["maskHeight"])
     )
-    processModel = vps.DirectionalEtching(direction, -1, isoVel, vps.Material.Mask)
+    processModel = vps.DirectionalProcess(direction, -1, isoVel, vps.Material.Mask)
 
     time = (
         paramDict["numLayers"] * paramDict["layerHeight"]

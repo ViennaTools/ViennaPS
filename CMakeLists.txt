@@ -2,11 +2,13 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.4.0)
+  VERSION 3.4.1)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
 # --------------------------------------------------------------------------------------------------------
+
+option(VIENNAPS_USE_GPU "Enable GPU support" ON)
 
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
@@ -94,7 +96,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.4.0
+  VERSION 1.4.2
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -111,16 +113,11 @@ CPMFindPackage(
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
-if(NOT ViennaLS_FOUND)
-  message(STATUS "ViennaLS not found locally, falling back to CPM...")
-  CPMFindPackage(
-    NAME ViennaLS
-    VERSION 4.3.0
-    GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-    EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
-else()
-  message(STATUS "Found local ViennaLS installation in ../install")
-endif()
+CPMFindPackage(
+  NAME ViennaLS
+  VERSION 4.3.1
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaCS
@@ -159,6 +156,9 @@ endif()
 if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
   message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
+else()
+  message(STATUS "[ViennaPS] Disabled GPU Support")
+  set(VIENNAPS_USE_GPU OFF)
 endif()
 
 # --------------------------------------------------------------------------------------------------------

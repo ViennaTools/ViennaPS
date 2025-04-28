@@ -20,3 +20,5 @@ CMakeSettings.json
 *env*
 .eggs/
 output/
+*.ptx
+*.optixir
