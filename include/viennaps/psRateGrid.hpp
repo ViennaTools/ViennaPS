@@ -90,7 +90,7 @@ public:
   NumericType interpolate(const Vec3D<NumericType> &coord) const {
     if (!interpolationMode.has_value()) {
       std::cerr << "Interpolation mode not set." << std::endl;
-      return 1.0;
+      return 0.0;
     }
 
     if (interpolationMode == Interpolation::LINEAR)
@@ -100,7 +100,7 @@ public:
     else if (interpolationMode == Interpolation::CUSTOM)
       return customInterpolator(coord);
 
-    return 1.0;
+    return 0.0;
   }
 
   void setIDWNeighbors(int k) {
@@ -158,7 +158,7 @@ private:
       auto y0It = yVals.lower_bound(y);
 
       if (x0It == xVals.begin() || y0It == yVals.begin())
-        return 1.0;
+        return points.front()[D-1];
 
       if (x0It == xVals.end())
         --x0It;
@@ -178,7 +178,7 @@ private:
         if (it != rateMap.end())
           return it->second;
         std::cerr << "Missing rate at (" << xi << ", " << yi << ")\n";
-        return NumericType(1.0);
+        return NumericType(0.0);
       };
 
       NumericType q11 = safeGet(x0, y0);
@@ -188,7 +188,7 @@ private:
 
       NumericType denom = (x1 - x0) * (y1 - y0);
       if (denom == 0.0)
-        return 1.0;
+        return (q11 + q21 + q12 + q22) / 4.0;
 
       NumericType rate =
           1.0 / denom *
@@ -197,12 +197,12 @@ private:
 
       return rate;
     }
-    return 1.0;
+    return 0.0;
   }
 
   NumericType interpolateIDW(const Vec3D<NumericType> &coord) const {
     if (points.empty())
-      return 1.0;
+      return 0.0;
 
     Vec2D<NumericType> query;
     for (int i = 0; i < D - 1; ++i)
