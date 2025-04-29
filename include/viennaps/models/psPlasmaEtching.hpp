@@ -34,7 +34,7 @@ public:
     }
     std::vector<NumericType> cov(numGeometryPoints, 0.);
     coverages->insertNextScalarData(cov, "eCoverage");
-    coverages->insertNextScalarData(cov, "oCoverage");
+    coverages->insertNextScalarData(cov, "pCoverage");
   }
 
   void initializeSurfaceData(unsigned numGeometryPoints) override {
@@ -59,11 +59,17 @@ public:
     const auto numPoints = materialIds.size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
-    const auto ionSputterFlux = fluxes->getScalarData("ionSputterFlux");
+    std::vector<NumericType> ionEnhancedFlux, ionSputterFlux;
+    if (params.ionFlux > 0) {
+      ionEnhancedFlux = *fluxes->getScalarData("ionEnhancedFlux");
+      ionSputterFlux = *fluxes->getScalarData("ionSputterFlux");
+    } else {
+      ionEnhancedFlux.resize(numPoints, 0.);
+      ionSputterFlux.resize(numPoints, 0.);
+    }
 
-    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
     const auto eCoverage = coverages->getScalarData("eCoverage");
+    assert(eCoverage != nullptr && "eCoverage not initialized");
 
     // save the etch rate components for visualization
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
@@ -84,9 +90,9 @@ public:
         break;
       }
 
-      const auto sputterRate = ionSputterFlux->at(i) * params.ionFlux;
+      const auto sputterRate = ionSputterFlux[i] * params.ionFlux;
       const auto ionEnhancedRate =
-          eCoverage->at(i) * ionEnhancedFlux->at(i) * params.ionFlux;
+          eCoverage->at(i) * ionEnhancedFlux[i] * params.ionFlux;
       const auto chemicalRate =
           params.Substrate.k_sigma * eCoverage->at(i) / 4.;
 
@@ -125,35 +131,51 @@ public:
   void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
-    const auto numPoints = fluxes->getScalarData(0)->size();
+    const auto numPoints = materialIds.size();
+    std::vector<NumericType> zero(numPoints, 0.);
+    std::vector<NumericType> *etchantFlux = nullptr, *passivationFlux = nullptr,
+                             *ionEnhancedFlux = nullptr,
+                             *ionEnhancedPassivationFlux = nullptr;
 
-    const auto etchantFlux = fluxes->getScalarData("etchantFlux");
-    std::vector<NumericType> passivationFlux(numPoints, 0.);
-    if (params.passivationFlux > 0)
-      passivationFlux = *fluxes->getScalarData("passivationFlux");
+    if (params.etchantFlux > 0) {
+      etchantFlux = fluxes->getScalarData("etchantFlux");
+    } else {
+      etchantFlux = &zero;
+    }
 
-    const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
-    const auto ionEnhancedPassivationFlux =
-        fluxes->getScalarData("ionEnhancedPassivationFlux");
+    if (params.passivationFlux > 0) {
+      passivationFlux = fluxes->getScalarData("passivationFlux");
+    } else {
+      passivationFlux = &zero;
+    }
 
-    // etchant fluorine coverage
+    if (params.ionFlux > 0) {
+      ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
+      ionEnhancedPassivationFlux =
+          fluxes->getScalarData("ionEnhancedPassivationFlux");
+    } else {
+      ionEnhancedFlux = &zero;
+      ionEnhancedPassivationFlux = &zero;
+    }
+
+    // etchant coverage
     auto eCoverage = coverages->getScalarData("eCoverage");
     eCoverage->resize(numPoints);
-    // oxygen coverage
-    auto oCoverage = coverages->getScalarData("oCoverage");
-    oCoverage->resize(numPoints);
+    // passivation coverage
+    auto pCoverage = coverages->getScalarData("pCoverage");
+    pCoverage->resize(numPoints);
 
     for (size_t i = 0; i < numPoints; ++i) {
-      auto Gb_F = etchantFlux->at(i) * params.etchantFlux;
-      auto Gb_O = passivationFlux.at(i) * params.passivationFlux;
+      auto Gb_E = etchantFlux->at(i) * params.etchantFlux;
+      auto Gb_P = passivationFlux->at(i) * params.passivationFlux;
       auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
-      auto GY_o = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
+      auto GY_p = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
 
-      auto a = (params.Substrate.k_sigma + 2 * GY_ie) / Gb_F;
-      auto b = (params.Substrate.beta_sigma + GY_o) / Gb_O;
+      auto a = (params.Substrate.k_sigma + 2 * GY_ie) / Gb_E;
+      auto b = (params.Substrate.beta_sigma + GY_p) / Gb_P;
 
-      eCoverage->at(i) = Gb_F < 1e-6 ? 0. : 1 / (1 + (a * (1 + 1 / b)));
-      oCoverage->at(i) = Gb_O < 1e-6 ? 0. : 1 / (1 + (b * (1 + 1 / a)));
+      eCoverage->at(i) = Gb_E < 1e-6 ? 0. : 1 / (1 + (a * (1 + 1 / b)));
+      pCoverage->at(i) = Gb_P < 1e-6 ? 0. : 1 / (1 + (b * (1 + 1 / a)));
     }
   }
 };
@@ -332,8 +354,7 @@ public:
 
     NumericType S_eff = 1.;
     for (int i = 0; i < numCoverages; ++i) {
-      const auto &phi = globalData->getVectorData(i)[primID];
-      S_eff -= phi;
+      S_eff -= globalData->getVectorData(i)[primID];
     }
     if (S_eff < 0.) {
       S_eff = 0.;

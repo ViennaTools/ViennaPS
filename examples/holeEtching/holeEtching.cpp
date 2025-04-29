@@ -18,8 +18,10 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    return 1;
+    params.readConfigFile(
+        "/home/reiter/Code/ViennaPS/build/examples/holeEtching/config.txt");
+    // std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    // return 1;
   }
 
   // set parameter units
@@ -27,7 +29,7 @@ int main(int argc, char *argv[]) {
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+  auto geometry = Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   MakeHole<NumericType, D>(geometry, params.get("holeRadius"),
                            0.0 /* holeDepth */, 0.0 /* holeTaperAngle */,

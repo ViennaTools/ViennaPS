@@ -111,7 +111,7 @@ public:
 
     defParams.Ions.thetaRMin = constants::degToRad(70.);
     defParams.Ions.thetaRMax = constants::degToRad(90.);
-    oxygenFlux oxygenFlux return defParams;
+    return defParams;
   }
 
 private:
