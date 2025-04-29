@@ -21,4 +21,4 @@ integrationScheme=LF_2
 
 numSteps=100
 raysPerPoint=1000
-gdsFile=wiggle_new.gds
+gdsFile=wiggle_full.gds
