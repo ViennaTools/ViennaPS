@@ -87,6 +87,7 @@
 #include <vcCudaBuffer.hpp>
 
 #include <models/psgFaradayCageEtching.hpp>
+#include <models/psgHBrO2Etching.hpp>
 #include <models/psgMultiParticleProcess.hpp>
 #include <models/psgSF6O2Etching.hpp>
 #include <models/psgSingleParticleProcess.hpp>
@@ -2154,6 +2155,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    SmartPointer<gpu::SF6O2Etching<T, D>>>(m_gpu, "SF6O2Etching",
                                                           processModel_gpu)
       .def(pybind11::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
+                          const PlasmaEtchingParameters<T> &>),
+           pybind11::arg("parameters"));
+
+  // HBrO2 Etching
+  pybind11::class_<gpu::HBrO2Etching<T, D>,
+                   SmartPointer<gpu::HBrO2Etching<T, D>>>(m_gpu, "HBrO2Etching",
+                                                          processModel_gpu)
+      .def(pybind11::init(&SmartPointer<gpu::HBrO2Etching<T, D>>::New<
                           const PlasmaEtchingParameters<T> &>),
            pybind11::arg("parameters"));
 
