@@ -65,7 +65,7 @@ if(VIENNAPS_USE_GPU)
 
   # Include pipeline files
   set(generated_files) # Empty list variable
-  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/SF6O2Pipeline.cu")
+  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/PlasmaEtchingPipeline.cu")
   generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/SingleParticlePipeline.cu")
   generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/MultiParticlePipeline.cu")
   generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/FaradayCagePipeline.cu")

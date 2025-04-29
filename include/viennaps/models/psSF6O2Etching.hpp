@@ -39,7 +39,7 @@ public:
     params = defaultParameters();
     params.ionFlux = ionFlux;
     params.etchantFlux = etchantFlux;
-    params.oxygenFlux = oxygenFlux;
+    params.passivationFlux = oxygenFlux;
     params.Ions.meanEnergy = meanEnergy;
     params.Ions.sigmaEnergy = sigmaEnergy;
     params.Ions.exponent = ionExponent;
