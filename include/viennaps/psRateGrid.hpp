@@ -157,9 +157,10 @@ private:
       auto x0It = xVals.lower_bound(x);
       auto y0It = yVals.lower_bound(y);
 
-      if (x0It == xVals.begin() || y0It == yVals.begin())
-        return points.front()[D - 1];
-
+      if (x0It == xVals.begin())
+        ++x0It;
+      if (y0It == yVals.begin())
+        ++y0It;
       if (x0It == xVals.end())
         --x0It;
       if (y0It == yVals.end())
@@ -181,6 +182,22 @@ private:
         return NumericType(0.0);
       };
 
+      // Edge-specific fallback logic
+      if (x0 == x1) {
+        // Vertical edge: interpolate along y
+        NumericType q0 = safeGet(x0, y0);
+        NumericType q1 = safeGet(x0, y1);
+        return q0 + ((y - y0) / (y1 - y0)) * (q1 - q0);
+      }
+
+      if (y0 == y1) {
+        // Horizontal edge: interpolate along x
+        NumericType q0 = safeGet(x0, y0);
+        NumericType q1 = safeGet(x1, y0);
+        return q0 + ((x - x0) / (x1 - x0)) * (q1 - q0);
+      }
+
+      // Full bilinear interpolation
       NumericType q11 = safeGet(x0, y0);
       NumericType q21 = safeGet(x1, y0);
       NumericType q12 = safeGet(x0, y1);
@@ -234,7 +251,7 @@ private:
       wrSum += w * val;
     }
 
-    return (wSum > 0) ? wrSum / wSum : 1.0;
+    return (wSum > 0) ? wrSum / wSum : 0.0;
   }
 };
 
