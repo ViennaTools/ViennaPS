@@ -218,11 +218,11 @@ public:
 
     // NumericType f_sp_theta = 1.;
     NumericType f_sp_theta =
-        std::max((1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta, 0.);
+        std::max((1. + B_sp * (1. - cosTheta * cosTheta)) * cosTheta, 0.);
 
     NumericType f_ie_theta = 1.;
     if (cosTheta < 0.5) {
-      f_ie_theta = std::max(3 - 6 * angle / M_PI, 0.);
+      f_ie_theta = std::max(3. - 6. * angle / M_PI, 0.);
     }
     // NumericType f_ie_theta =
     //     std::max((1 + params.Substrate.B_ie * (1 - cosTheta * cosTheta)) *
