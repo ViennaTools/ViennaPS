@@ -145,4 +145,6 @@ function(add_GPU_executable target_name_base target_name_var)
   target_include_directories(${target_name} PRIVATE ${OptiX_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
                                                     ${VIENNAPS_GPU_INCLUDE} ${CUDA_INCLUDE_DIRS})
   target_link_libraries(${target_name} PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
+  target_compile_definitions(${target_name}
+                             PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
 endfunction()

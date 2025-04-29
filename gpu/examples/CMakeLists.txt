@@ -3,7 +3,7 @@ project(ViennaPS-GPU_Examples)
 add_custom_target(ViennaPS-GPU_Examples ALL)
 
 add_gpu_executable(holeGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/hole.cpp
-                   ${VIENNAPS_PIPELINE_DIR}/SF6O2Pipeline.cu)
+                   ${VIENNAPS_PIPELINE_DIR}/PlasmaEtchingPipeline.cu)
 add_dependencies(ViennaPS-GPU_Examples holeGPU)
 
 add_gpu_executable(waveguideGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/waveguide.cpp

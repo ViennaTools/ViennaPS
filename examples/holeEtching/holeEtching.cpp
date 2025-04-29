@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+  auto geometry = Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   MakeHole<NumericType, D>(geometry, params.get("holeRadius"),
                            0.0 /* holeDepth */, 0.0 /* holeTaperAngle */,
@@ -36,15 +36,15 @@ int main(int argc, char *argv[]) {
       .apply();
 
   // use pre-defined model SF6O2 etching model
-  SF6O2Parameters<NumericType> modelParams;
+  auto modelParams = SF6O2Etching<NumericType, D>::defaultParameters();
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
-  modelParams.oxygenFlux = params.get("oxygenFlux");
+  modelParams.passivationFlux = params.get("oxygenFlux");
   modelParams.Ions.meanEnergy = params.get("meanEnergy");
   modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Passivation.A_ie = params.get("A_O");
-  modelParams.Si.A_ie = params.get("A_Si");
+  modelParams.Substrate.A_ie = params.get("A_Si");
   modelParams.etchStopDepth = params.get("etchStopDepth");
   auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 

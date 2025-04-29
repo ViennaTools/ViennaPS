@@ -6,18 +6,17 @@
 
 namespace viennaps {
 
-template <typename NumericType> struct SF6O2Parameters {
+template <typename NumericType> struct PlasmaEtchingParameters {
   // fluxes in (1e15 /cm² /s)
   NumericType ionFlux = 12.;
   NumericType etchantFlux = 1.8e3;
-  NumericType oxygenFlux = 1.0e2;
+  NumericType passivationFlux = 1.0e2;
 
   // sticking probabilities
-  std::unordered_map<int, NumericType> beta_F = {{1, 0.7}, {0, 0.7}};
-  std::unordered_map<int, NumericType> beta_O = {{1, 1.}, {0, 1.}};
+  std::unordered_map<int, NumericType> beta_E;
+  std::unordered_map<int, NumericType> beta_P;
 
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
-  bool fluxIncludeSticking = false;
 
   // Mask
   struct MaskType {
@@ -29,8 +28,8 @@ template <typename NumericType> struct SF6O2Parameters {
     NumericType B_sp = 9.3;
   } Mask;
 
-  // Si
-  struct SiType {
+  // Etching material
+  struct MaterialType {
     // density
     NumericType rho = 5.02; // 1e22 atoms/cm³
 
@@ -40,17 +39,19 @@ template <typename NumericType> struct SF6O2Parameters {
 
     NumericType A_sp = 0.0337;
     NumericType B_sp = 9.3;
-    NumericType theta_g_sp = M_PI_2; // angle where yield is zero [rad]
+    // unused
+    // NumericType theta_g_sp = M_PI_2; // angle where yield is zero [rad]
 
     NumericType A_ie = 7.;
     NumericType B_ie = 0.8;
-    NumericType theta_g_ie =
-        constants::degToRad(78); // angle where yield is zero [rad]
+    // unused
+    // NumericType theta_g_ie =
+    //     constants::degToRad(78); // angle where yield is zero [rad]
 
     // chemical etching
     NumericType k_sigma = 3.0e2;     // in (1e15 cm⁻²s⁻¹)
     NumericType beta_sigma = 4.0e-2; // in (1e15 cm⁻²s⁻¹)
-  } Si;
+  } Substrate;
 
   // Passivation
   struct PassivationType {

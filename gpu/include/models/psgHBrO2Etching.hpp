@@ -1,6 +1,6 @@
 #pragma once
 
-#include <models/psSF6O2Etching.hpp>
+#include <models/psHBrO2Etching.hpp>
 #include <raygParticle.hpp>
 
 #include <psgProcessModel.hpp>
@@ -9,20 +9,17 @@ namespace viennaps::gpu {
 
 using namespace viennacore;
 
-/// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
-/// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
-/// DOI: https://doi.org/10.1116/1.1830495
-/// The resulting rate is in units of um / s.
+/// Model for etching Si in a HBr/O2 plasma.
 template <typename NumericType, int D>
-class SF6O2Etching final : public ProcessModel<NumericType, D> {
+class HBrO2Etching final : public ProcessModel<NumericType, D> {
 public:
-  explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
+  explicit HBrO2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams) {
     setParameters(pParams);
     initializeModel();
   }
 
-  ~SF6O2Etching() override { this->processData.free(); }
+  ~HBrO2Etching() override { this->processData.free(); }
 
 private:
   void initializeModel() {
@@ -56,7 +53,7 @@ private:
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->setProcessName("SF6O2Etching");
+    this->setProcessName("HBrO2Etching");
     this->getParticleTypes().clear();
 
     this->insertNextParticleType(ion);

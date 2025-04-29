@@ -1,0 +1,24 @@
+# Config file for a hole etching example process
+
+# all length units are in micrometers (um)
+# Domain
+lengthUnit=um
+
+# Process parameters
+processTime=1
+timeUnit=second
+
+# all flux values are units 1e15 / cm²
+ionFlux=10.
+etchantFlux=4.5e3
+oxygenFlux=2.5e3
+
+ionExponent=1000
+meanEnergy=200 # eV
+sigmaEnergy=10 # eV
+
+integrationScheme=LF_2
+
+numSteps=100
+raysPerPoint=1000
+gdsFile=wiggle_full.gds

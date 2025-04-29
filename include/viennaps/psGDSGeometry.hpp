@@ -20,6 +20,8 @@
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 
+namespace ls = viennals;
+
 namespace viennaps {
 
 using namespace viennacore;

@@ -37,12 +37,12 @@ A_O = [2, 2, 2, 1, 1]
 yo2 = [0.44, 0.5, 0.56, 0.62, 0]
 
 # etching model parameters
-params = vps.SF6O2Parameters()
-params.Si.A_ie = 5.0
-params.Si.Eth_ie = 15.0
+params = vps.SF6O2Etching.defaultParameters()
+params.Substrate.A_ie = 5.0
+params.Substrate.Eth_ie = 15.0
 
-params.Si.A_sp = 0.0337
-params.Si.Eth_sp = 20.0
+params.Substrate.A_sp = 0.0337
+params.Substrate.Eth_sp = 20.0
 
 params.Ions.exponent = 500
 params.Ions.meanEnergy = 100.0
@@ -50,7 +50,7 @@ params.Ions.sigmaEnergy = 10.0
 params.Ions.minAngle = np.deg2rad(85.0)
 params.Ions.inflectAngle = np.deg2rad(89.0)
 
-params.Mask.rho = params.Si.rho * 10.0
+params.Mask.rho = params.Substrate.rho * 10.0
 
 # simulation parameters
 processDuration = 3  # min
@@ -84,7 +84,7 @@ for i in range(len(yo2)):
 
     params.ionFlux = ionFlux[i]
     params.etchantFlux = etchantFlux[i]
-    params.oxygenFlux = oxygenFlux[i]
+    params.passivationFlux = oxygenFlux[i]
     params.Passivation.A_ie = A_O[i]
 
     model = vps.SF6O2Etching(params)

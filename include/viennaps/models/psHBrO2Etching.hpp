@@ -17,19 +17,17 @@ namespace viennaps {
 
 using namespace viennacore;
 
-/// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
-/// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
-/// DOI: https://doi.org/10.1116/1.1830495
+/// Model for etching Si in a HBr/O2 plasma.
 template <typename NumericType, int D>
-class SF6O2Etching : public ProcessModel<NumericType, D> {
+class HBrO2Etching : public ProcessModel<NumericType, D> {
 public:
-  SF6O2Etching() {
+  HBrO2Etching() {
     params = defaultParameters();
     initializeModel();
   }
 
   // All flux values are in units 1e15 / cm²
-  SF6O2Etching(const double ionFlux, const double etchantFlux,
+  HBrO2Etching(const double ionFlux, const double etchantFlux,
                const double oxygenFlux, const NumericType meanEnergy /* eV */,
                const NumericType sigmaEnergy /* eV */, // 5 parameters
                const NumericType ionExponent = 300.,
@@ -48,7 +46,7 @@ public:
     initializeModel();
   }
 
-  SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
+  HBrO2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams) {
     initializeModel();
   }
@@ -70,7 +68,7 @@ public:
     defParams.passivationFlux = 1.0e2;
 
     // sticking probabilities
-    defParams.beta_E = {{1, 0.7}, {0, 0.7}};
+    defParams.beta_E = {{1, 0.1}, {0, 0.1}};
     defParams.beta_P = {{1, 1.}, {0, 1.}};
 
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
@@ -83,13 +81,13 @@ public:
 
     // Si
     defParams.Substrate.rho = 5.02;   // 1e22 atoms/cm³
-    defParams.Substrate.Eth_sp = 20.; // eV
+    defParams.Substrate.Eth_sp = 30.; // eV
     defParams.Substrate.Eth_ie = 15.; // eV
-    defParams.Substrate.A_sp = 0.0337;
+    defParams.Substrate.A_sp = 0.5;
     defParams.Substrate.B_sp = 9.3;
     // defParams.Substrate.theta_g_sp = M_PI_2; // angle where yield is zero
     // [rad]
-    defParams.Substrate.A_ie = 7.;
+    defParams.Substrate.A_ie = 5.;
     defParams.Substrate.B_ie = 0.8;
     // defParams.Substrate.theta_g_ie =
     //     constants::degToRad(78);          // angle where yield is zero [rad]
@@ -152,7 +150,7 @@ private:
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
     this->setVelocityField(velField);
 
-    this->setProcessName("SF6O2Etching");
+    this->setProcessName("HBrO2Etching");
   }
 
   PlasmaEtchingParameters<NumericType> params;
