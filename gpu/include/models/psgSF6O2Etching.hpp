@@ -16,7 +16,7 @@ using namespace viennacore;
 template <typename NumericType, int D>
 class SF6O2Etching final : public ProcessModel<NumericType, D> {
 public:
-  explicit SF6O2Etching(const SF6O2Parameters<NumericType> &pParams)
+  explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams) {
     setParameters(pParams);
     initializeModel();
@@ -36,21 +36,20 @@ private:
     ion.cosineExponent = params.Ions.exponent;
 
     viennaray::gpu::Particle<NumericType> etchant;
-    etchant.name = "etchant";
+    etchant.name = "neutral";
     etchant.dataLabels.push_back("etchantFlux");
-    etchant.sticking = params.beta_F[static_cast<int>(Material::Si)];
     etchant.cosineExponent = 1.f;
+    etchant.materialSticking = params.beta_E;
 
     viennaray::gpu::Particle<NumericType> oxygen;
-    oxygen.name = "oxygen";
-    oxygen.dataLabels.push_back("oxygenFlux");
-    oxygen.sticking = params.beta_O[static_cast<int>(Material::Si)];
+    oxygen.name = "neutral";
+    oxygen.dataLabels.push_back("passivationFlux");
     oxygen.cosineExponent = 1.f;
+    oxygen.materialSticking = params.beta_P;
 
     // surface model
-    auto surfModel =
-        SmartPointer<viennaps::impl::SF6O2SurfaceModel<NumericType, D>>::New(
-            params);
+    auto surfModel = SmartPointer<
+        viennaps::impl::PlasmaEtchingSurfaceModel<NumericType, D>>::New(params);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
@@ -60,47 +59,53 @@ private:
     this->setProcessName("SF6O2Etching");
     this->getParticleTypes().clear();
 
-    this->insertNextParticleType(ion);     // 0
-    this->insertNextParticleType(etchant); // 1
-    this->insertNextParticleType(oxygen);  // 2
-    this->setPipelineFileName("SF6O2Pipeline");
+    this->insertNextParticleType(ion);
+    this->insertNextParticleType(etchant);
+    this->insertNextParticleType(oxygen);
+    this->setPipelineFileName("PlasmaEtchingPipeline");
 
-    this->processData.alloc(sizeof(SF6O2Parameters<float>));
+    this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
     this->processData.upload(&deviceParams, 1);
+
+    this->setUseMaterialIds(true);
   }
 
-  void setParameters(const SF6O2Parameters<NumericType> &pParams) {
+  void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
     if constexpr (std::is_same_v<NumericType, float>) {
       deviceParams = pParams;
     } else {
       deviceParams.ionFlux = static_cast<float>(pParams.ionFlux);
       deviceParams.etchantFlux = static_cast<float>(pParams.etchantFlux);
-      deviceParams.oxygenFlux = static_cast<float>(pParams.oxygenFlux);
+      deviceParams.passivationFlux =
+          static_cast<float>(pParams.passivationFlux);
 
-      for (auto &pair : pParams.beta_F) {
-        deviceParams.beta_F[pair.first] = static_cast<float>(pair.second);
+      for (auto &pair : pParams.beta_E) {
+        deviceParams.beta_E[pair.first] = static_cast<float>(pair.second);
       }
-      for (auto &pair : pParams.beta_O) {
-        deviceParams.beta_O[pair.first] = static_cast<float>(pair.second);
+      for (auto &pair : pParams.beta_P) {
+        deviceParams.beta_P[pair.first] = static_cast<float>(pair.second);
       }
 
       deviceParams.etchStopDepth = static_cast<float>(pParams.etchStopDepth);
-      deviceParams.fluxIncludeSticking = pParams.fluxIncludeSticking;
 
       deviceParams.Mask.A_sp = static_cast<float>(pParams.Mask.A_sp);
       deviceParams.Mask.B_sp = static_cast<float>(pParams.Mask.B_sp);
       deviceParams.Mask.Eth_sp = static_cast<float>(pParams.Mask.Eth_sp);
       deviceParams.Mask.rho = static_cast<float>(pParams.Mask.rho);
 
-      deviceParams.Si.A_ie = static_cast<float>(pParams.Si.A_ie);
-      deviceParams.Si.A_sp = static_cast<float>(pParams.Si.A_sp);
-      deviceParams.Si.B_ie = static_cast<float>(pParams.Si.B_ie);
-      deviceParams.Si.B_sp = static_cast<float>(pParams.Si.B_sp);
-      deviceParams.Si.Eth_ie = static_cast<float>(pParams.Si.Eth_ie);
-      deviceParams.Si.Eth_sp = static_cast<float>(pParams.Si.Eth_sp);
-      deviceParams.Si.k_sigma = static_cast<float>(pParams.Si.k_sigma);
-      deviceParams.Si.beta_sigma = static_cast<float>(pParams.Si.beta_sigma);
-      deviceParams.Si.rho = static_cast<float>(pParams.Si.rho);
+      deviceParams.Substrate.A_ie = static_cast<float>(pParams.Substrate.A_ie);
+      deviceParams.Substrate.A_sp = static_cast<float>(pParams.Substrate.A_sp);
+      deviceParams.Substrate.B_ie = static_cast<float>(pParams.Substrate.B_ie);
+      deviceParams.Substrate.B_sp = static_cast<float>(pParams.Substrate.B_sp);
+      deviceParams.Substrate.Eth_ie =
+          static_cast<float>(pParams.Substrate.Eth_ie);
+      deviceParams.Substrate.Eth_sp =
+          static_cast<float>(pParams.Substrate.Eth_sp);
+      deviceParams.Substrate.k_sigma =
+          static_cast<float>(pParams.Substrate.k_sigma);
+      deviceParams.Substrate.beta_sigma =
+          static_cast<float>(pParams.Substrate.beta_sigma);
+      deviceParams.Substrate.rho = static_cast<float>(pParams.Substrate.rho);
 
       deviceParams.Passivation.A_ie =
           static_cast<float>(pParams.Passivation.A_ie);
@@ -123,8 +128,8 @@ private:
     }
   }
 
-  SF6O2Parameters<NumericType> params;
-  SF6O2Parameters<float> deviceParams;
+  PlasmaEtchingParameters<NumericType> params;
+  PlasmaEtchingParameters<float> deviceParams;
 };
 
 } // namespace viennaps::gpu

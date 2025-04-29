@@ -287,7 +287,9 @@ public:
     }
 
     // Set the flag to stop tracing if the energy is below the threshold
-    if (newEnergy > params.Substrate.Eth_ie) {
+    NumericType minEnergy =
+        std::min(params.Substrate.Eth_ie, params.Substrate.Eth_sp);
+    if (newEnergy > minEnergy) {
       E = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng,
