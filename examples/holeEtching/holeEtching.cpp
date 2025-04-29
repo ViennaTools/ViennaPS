@@ -18,10 +18,8 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    params.readConfigFile(
-        "/home/reiter/Code/ViennaPS/build/examples/holeEtching/config.txt");
-    // std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    // return 1;
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
   // set parameter units

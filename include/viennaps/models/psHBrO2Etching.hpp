@@ -10,8 +10,8 @@
 #include "../psUnits.hpp"
 #include "../psVelocityField.hpp"
 
-#include "psHBrO2Parameters.hpp"
-#include "psSF6O2Etching.hpp"
+#include "psPlasmaEtching.hpp"
+#include "psPlasmaEtchingParameters.hpp"
 
 namespace viennaps {
 
@@ -21,7 +21,10 @@ using namespace viennacore;
 template <typename NumericType, int D>
 class HBrO2Etching : public ProcessModel<NumericType, D> {
 public:
-  HBrO2Etching() { initializeModel(); }
+  HBrO2Etching() {
+    params = defaultParameters();
+    initializeModel();
+  }
 
   // All flux values are in units 1e15 / cm²
   HBrO2Etching(const double ionFlux, const double etchantFlux,
@@ -31,6 +34,7 @@ public:
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth =
                    std::numeric_limits<NumericType>::lowest()) {
+    params = defaultParameters();
     params.ionFlux = ionFlux;
     params.etchantFlux = etchantFlux;
     params.oxygenFlux = oxygenFlux;
@@ -42,16 +46,71 @@ public:
     initializeModel();
   }
 
-  HBrO2Etching(const HBrO2Parameters<NumericType> &pParams) : params(pParams) {
+  HBrO2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
+      : params(pParams) {
     initializeModel();
   }
 
-  void setParameters(const HBrO2Parameters<NumericType> &pParams) {
+  void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
     params = pParams;
     initializeModel();
   }
 
-  HBrO2Parameters<NumericType> &getParameters() { return params; }
+  PlasmaEtchingParameters<NumericType> &getParameters() { return params; }
+
+  static PlasmaEtchingParameters<NumericType> defaultParameters() {
+
+    PlasmaEtchingParameters<NumericType> defParams;
+
+    // fluxes in (1e15 /cm² /s)
+    defParams.ionFlux = 12.;
+    defParams.etchantFlux = 1.8e3;
+    defParams.passivationFlux = 1.0e2;
+
+    // sticking probabilities
+    defParams.beta_E = {{1, 0.1}, {0, 0.1}};
+    defParams.beta_P = {{1, 1.}, {0, 1.}};
+
+    defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
+
+    // Mask
+    defParams.Mask.rho = 500.;   // 1e22 atoms/cm³
+    defParams.Mask.Eth_sp = 20.; // eV
+    defParams.Mask.A_sp = 0.0139;
+    defParams.Mask.B_sp = 9.3;
+
+    // Si
+    defParams.Substrate.rho = 5.02;   // 1e22 atoms/cm³
+    defParams.Substrate.Eth_sp = 30.; // eV
+    defParams.Substrate.Eth_ie = 15.; // eV
+    defParams.Substrate.A_sp = 0.5;
+    defParams.Substrate.B_sp = 9.3;
+    // defParams.Substrate.theta_g_sp = M_PI_2; // angle where yield is zero
+    // [rad]
+    defParams.Substrate.A_ie = 5.;
+    defParams.Substrate.B_ie = 0.8;
+    // defParams.Substrate.theta_g_ie =
+    //     constants::degToRad(78);          // angle where yield is zero [rad]
+    defParams.Substrate.k_sigma = 3.0e2;     // in (1e15 cm⁻²s⁻¹)
+    defParams.Substrate.beta_sigma = 4.0e-2; // in (1e15 cm⁻²s⁻¹)
+
+    // Passivation
+    defParams.Passivation.Eth_ie = 10.; // eV
+    defParams.Passivation.A_ie = 3;
+
+    // Ions
+    defParams.Ions.meanEnergy = 100.; // eV
+    defParams.Ions.sigmaEnergy = 10.; // eV
+    defParams.Ions.exponent = 500.;
+
+    defParams.Ions.inflectAngle = 1.55334303;
+    defParams.Ions.n_l = 10.;
+    defParams.Ions.minAngle = 1.3962634;
+
+    defParams.Ions.thetaRMin = constants::degToRad(70.);
+    defParams.Ions.thetaRMax = constants::degToRad(90.);
+    return defParams;
+  }
 
 private:
   void initializeModel() {
@@ -63,24 +122,28 @@ private:
 
     // particles
     this->particles.clear();
-    auto ion = std::make_unique<
-        impl::SF6O2Ion<HBrO2Parameters<NumericType>, NumericType, D>>(params);
-    this->insertNextParticleType(ion);
-    auto etchant = std::make_unique<
-        impl::SF6O2Neutral<HBrO2Parameters<NumericType>, NumericType, D>>(
-        params, "etchantFlux", params.beta_Br);
-    this->insertNextParticleType(etchant);
-    if (params.oxygenFlux > 0) {
-      auto oxygen = std::make_unique<
-          impl::SF6O2Neutral<HBrO2Parameters<NumericType>, NumericType, D>>(
-          params, "oxygenFlux", params.beta_O);
+    if (params.ionFlux > 0) {
+      auto ion =
+          std::make_unique<impl::PlasmaEtchingIon<NumericType, D>>(params);
+      this->insertNextParticleType(ion);
+    }
+    if (params.etchantFlux > 0) {
+      auto etchant =
+          std::make_unique<impl::PlasmaEtchingNeutral<NumericType, D>>(
+              "etchantFlux", params.beta_E, 2);
+      this->insertNextParticleType(etchant);
+    }
+    if (params.passivationFlux > 0) {
+      auto oxygen =
+          std::make_unique<impl::PlasmaEtchingNeutral<NumericType, D>>(
+              "passivationFlux", params.beta_P, 2);
       this->insertNextParticleType(oxygen);
     }
 
     // surface model
     auto surfModel =
-        SmartPointer<impl::SF6O2SurfaceModel<HBrO2Parameters<NumericType>,
-                                             NumericType, D>>::New(params);
+        SmartPointer<impl::PlasmaEtchingSurfaceModel<NumericType, D>>::New(
+            params);
     this->setSurfaceModel(surfModel);
 
     // velocity field
@@ -90,7 +153,7 @@ private:
     this->setProcessName("HBrO2Etching");
   }
 
-  HBrO2Parameters<NumericType> params;
+  PlasmaEtchingParameters<NumericType> params;
 };
 
 } // namespace viennaps
