@@ -72,7 +72,8 @@ def ReadConfigFile(fileName: str):
 
                 try:
                     val = float(par_value) 
-                except: val = par_value
+                except: 
+                    val = par_value
 
                 par_dict[par_name] = val
 
