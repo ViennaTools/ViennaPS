@@ -34,15 +34,15 @@ vps.MakeHole(
 ).apply()
 
 # use pre-defined model SF6O2 etching model
-modelParams = vps.SF6O2Parameters()
+modelParams = vps.SF6O2Etching.defaultParameters()
 modelParams.ionFlux = params["ionFlux"]
 modelParams.etchantFlux = params["etchantFlux"]
-modelParams.oxygenFlux = params["oxygenFlux"]
+modelParams.passivationFlux = params["oxygenFlux"]
 modelParams.Ions.meanEnergy = params["meanEnergy"]
 modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
 modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Passivation.A_ie = params["A_O"]
-modelParams.Si.A_ie = params["A_Si"]
+modelParams.Substrate.A_ie = params["A_Si"]
 modelParams.etchStopDepth = params["etchStopDepth"]
 model = vps.gpu.SF6O2Etching(modelParams)
 

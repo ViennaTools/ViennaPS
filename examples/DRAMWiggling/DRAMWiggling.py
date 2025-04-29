@@ -9,7 +9,7 @@ parser = ArgumentParser(
 parser.add_argument("filename")
 args = parser.parse_args()
 
-gridDelta = 0.005 * (1.0 + 1e-12)
+gridDelta = 0.01 * (1.0 + 1e-12)
 boundaryConds = [
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
@@ -27,7 +27,7 @@ reader.apply()
 geometry = vps.Domain()
 
 # Insert GDS layers
-maskLS = mask.layerToLevelSet(0, 0.0, 0.18, True)
+maskLS = mask.layerToLevelSet(0, 0.0, 0.18)
 geometry.insertNextLevelSetAsMaterial(maskLS, vps.Material.Mask)
 
 # Add plane
@@ -39,10 +39,10 @@ vps.Logger.setLogLevel(vps.LogLevel.INFO)
 vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])
 
-modelParams = vps.HBrO2Parameters()
+modelParams = vps.HBrO2Etching.defaultParameters()
 modelParams.ionFlux = params["ionFlux"]
 modelParams.etchantFlux = params["etchantFlux"]
-modelParams.oxygenFlux = params["oxygenFlux"]
+modelParams.passivationFlux = params["oxygenFlux"]
 modelParams.Ions.meanEnergy = params["meanEnergy"]
 modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
 modelParams.Ions.exponent = params["ionExponent"]
