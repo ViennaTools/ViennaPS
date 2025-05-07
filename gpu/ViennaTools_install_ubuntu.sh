@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# Check ubuntu version
+if [ "$(lsb_release -rs)" != "24.04" ]; then
+    echo "This script is intended for Ubuntu 24.04. Please run it on the correct version."
+    exit 1
+fi
+echo "Ubuntu version is 24.04. Proceeding with installation."
+
+venv_dir=$1
+if [ -z "$venv_dir" ]; then
+    venv_dir=".venv"
+    echo "No virtual environment directory specified. Using default: $venv_dir"
+fi
+
+# Check if gcc-12 and g++-12 are installed
+if ! command -v gcc-12 &> /dev/null || ! command -v g++-12 &> /dev/null; then
+    echo "gcc-12 and g++-12 are required but not installed. Please install them first."
+    exit 1
+fi
+
+# Check CUDA version
+if ! command -v nvcc &> /dev/null; then
+    echo "nvcc is required but not installed. Please install it first."
+    exit 1
+fi
+nvcc_version=$(nvcc --version | grep release | sed 's/.*release //; s/,//')
+if [[ $nvcc_version < "12.0" ]]; then
+    echo "CUDA toolkit version 12.0 or higher is required. Please update your CUDA toolkit."
+    exit 1
+fi
+
+echo "CUDA toolkit version: $nvcc_version"
+
+# Check for optix directory
+# Check for environment variable
+if [ -n "$OptiX_INSTALL_DIR" ]; then
+    optix_dir="$OptiX_INSTALL_DIR"
+fi
+if [ -z "$optix_dir" ]; then
+    echo "Please enter the path to the OptiX directory (e.g., /opt/NVIDIA/Optix):"
+    read -r optix_dir
+    if [ -z "$optix_dir" ]; then
+        echo "No OptiX directory specified. Please set the OptiX_INSTALL_DIR environment variable or provide a path."
+        exit 1
+    fi
+fi
+
+echo "OptiX directory is set to: $optix_dir"
+
+# Install VTK and embree and python3-venv
+sudo apt install -y libvtk9-dev libembree-dev python3-venv
+
+# Check if the ViennaTools directory already exists
+if [ -d "ViennaTools" ]; then
+    echo "ViennaTools directory exists. Attempting to reinstall."
+
+    cd ViennaTools
+    cd ViennaLS
+    if [ $? -ne 0 ]; then
+        echo "Failed to navigate to ViennaLS directory."
+        exit 1
+    fi
+    git pull
+    cd ..
+
+    cd ViennaPS
+    if [ $? -ne 0 ]; then
+        echo "Failed to navigate to ViennaPS directory."
+        exit 1
+    fi
+    git pull
+    cd ..
+
+    # Check if venv directory exists
+    if [ -d "$venv_dir" ]; then
+        echo "$venv_dir already exists. Attempting to reinstall."
+    else
+        # Create a new Python virtual environment
+        python3 -m venv $venv_dir
+    fi
+    
+else
+    # Create a directory for the installation
+    mkdir -p ViennaTools
+    cd ViennaTools
+    if [ $? -ne 0 ]; then
+        echo "Failed to create or navigate to ViennaTools directory."
+        exit 1
+    fi
+
+    # Clone the ViennaLS repository
+    git clone https://github.com/ViennaTools/ViennaLS.git
+    if [ $? -ne 0 ]; then
+        echo "Failed to clone ViennaLS repository."
+        exit 1
+    fi
+
+    # Clone the ViennaPS repository
+    git clone https://github.com/ViennaTools/ViennaPS.git
+    if [ $? -ne 0 ]; then
+        echo "Failed to clone ViennaPS repository."
+        exit 1
+    fi
+
+    # Create Python virtual environment
+    python3 -m venv $venv_dir
+fi
+
+# Activate the virtual environment
+source $venv_dir/bin/activate
+
+# Install ViennaLS
+cd ViennaLS
+pip install . -v
+cd ..
+
+# Install ViennaPS with GPU support (using gcc-12 and g++-12)
+cd ViennaPS
+CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_FORCE_GPU=ON pip install . -v
+cd ..
+
+echo "Installation complete. To activate the virtual environment, run:"
+echo "source ViennaTools/$venv_dir/bin/activate"
+echo "To deactivate the virtual environment, run:"
+echo "deactivate"

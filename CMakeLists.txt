@@ -9,6 +9,7 @@ project(
 # --------------------------------------------------------------------------------------------------------
 
 option(VIENNAPS_USE_GPU "Enable GPU support" ON)
+option(VIENNAPS_FORCE_GPU "Require GPU support" OFF)
 
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
@@ -91,15 +92,15 @@ target_include_directories(
 # --------------------------------------------------------------------------------------------------------
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
-
 include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.4.2
+  VERSION 1.4.3
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
+  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}" 
+          "VIENNACORE_FORCE_GPU ${VIENNAPS_FORCE_GPU}")
 
 CPMAddPackage(
   NAME PackageProject
