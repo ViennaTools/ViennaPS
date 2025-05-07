@@ -1204,7 +1204,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init([](const T rate, const std::vector<Material> mask) {
              return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
            }),
-           pybind11::arg("rate"), pybind11::arg("maskMaterial"));
+           pybind11::arg("rate"), pybind11::arg("maskMaterial"))
+      .def(pybind11::init([](std::unordered_map<Material, T> materialRates,
+                             T defaultRate) {
+             return SmartPointer<IsotropicProcess<T, D>>::New(materialRates,
+                                                              defaultRate);
+           }),
+           pybind11::arg("materialRates"), pybind11::arg("defaultRate") = 0.);
 
   // Expose RateSet struct to Python
   pybind11::class_<DirectionalProcess<T, D>::RateSet>(module, "RateSet")
