@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Before running this script, ensure you have the following dependencies installed:
+# 1. Embree >= 4.0.0 
+# 2. VTK >= 9.0.0
+# (on Ubuntu 24.04, you can install them using the command: sudo apt install -y libvtk9-dev libembree-dev)
+
 # Directory for the virtual environment
 read -r -p "Enter the path to the virtual environment directory (default: .venv): " venv_dir
 if [ -z "$venv_dir" ]; then

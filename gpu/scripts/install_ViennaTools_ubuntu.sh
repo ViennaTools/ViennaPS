@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script installs the ViennaTools package on Ubuntu 24.04 with GPU support.
+# It attempts to install the required dependencies on the system, therefore sudo privileges are required.
+
 # Check ubuntu version
 if [ "$(lsb_release -rs)" != "24.04" ]; then
     echo "This script is intended for Ubuntu 24.04. Please run it on the correct version."
