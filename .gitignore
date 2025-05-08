@@ -5,11 +5,11 @@ cmake-build*
 .idea/
 dist/
 dependencies/
+install/
 *.ipynb
 old_*
 *_old*
 *a.out
-install*
 *.vtk
 *.vtu
 *.vtp

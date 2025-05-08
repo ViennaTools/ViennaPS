@@ -16,34 +16,28 @@ namespace impl {
 template <class NumericType, int D>
 class IsotropicVelocityField : public VelocityField<NumericType, D> {
   const NumericType rate_ = 1.;
-  const std::vector<int> maskMaterials_;
+  const std::vector<std::pair<int, NumericType>> materialRates_;
 
 public:
-  IsotropicVelocityField(NumericType rate, std::vector<int> &&mask)
-      : rate_{rate}, maskMaterials_{std::move(mask)} {}
+  IsotropicVelocityField(NumericType rate,
+                         std::vector<std::pair<int, NumericType>> &&matRates)
+      : rate_{rate}, materialRates_{std::move(matRates)} {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &, int material,
                                 const Vec3D<NumericType> &,
                                 unsigned long) override {
-    if (isMaskMaterial(material)) {
-      return 0.;
-    } else {
-      return rate_;
+    for (const auto &materialRate : materialRates_) {
+      if (material == materialRate.first) {
+        return materialRate.second;
+      }
     }
+
+    return rate_;
   }
 
   // the translation field should be disabled when using a surface model
   // which only depends on an analytic velocity field
   int getTranslationFieldOptions() const override { return 0; }
-
-private:
-  bool isMaskMaterial(const int material) const {
-    for (const auto &mat : maskMaterials_) {
-      if (material == mat)
-        return true;
-    }
-    return false;
-  }
 };
 } // namespace impl
 
@@ -53,33 +47,41 @@ class IsotropicProcess : public ProcessModel<NumericType, D> {
 public:
   IsotropicProcess(const NumericType isotropicRate,
                    const Material maskMaterial = Material::Undefined) {
-    // default surface model
-    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
-
-    // velocity field
-    std::vector<int> maskMaterialsInt = {static_cast<int>(maskMaterial)};
-    auto velField =
-        SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
-            isotropicRate, std::move(maskMaterialsInt));
-
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("IsotropicProcess");
+    std::vector<std::pair<int, NumericType>> materialRates;
+    if (maskMaterial != Material::Undefined) {
+      materialRates.emplace_back(static_cast<int>(maskMaterial), 0.);
+    }
+    setup(isotropicRate, std::move(materialRates));
   }
 
   IsotropicProcess(const NumericType isotropicRate,
                    const std::vector<Material> &maskMaterials) {
+    std::vector<std::pair<int, NumericType>> materialRates;
+    for (const auto &mat : maskMaterials) {
+      materialRates.emplace_back(static_cast<int>(mat), 0.);
+    }
+    setup(isotropicRate, std::move(materialRates));
+  }
+
+  IsotropicProcess(std::unordered_map<Material, NumericType> materialRates,
+                   const NumericType defaultRate = 0.) {
+    std::vector<std::pair<int, NumericType>> rates;
+    for (const auto &[mat, rate] : materialRates) {
+      rates.emplace_back(static_cast<int>(mat), rate);
+    }
+    setup(defaultRate, std::move(rates));
+  }
+
+private:
+  void setup(NumericType rate,
+             std::vector<std::pair<int, NumericType>> &&materialRates) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
-    std::vector<int> maskMaterialsInt;
-    for (const auto &mat : maskMaterials) {
-      maskMaterialsInt.push_back(static_cast<int>(mat));
-    }
     auto velField =
         SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
-            isotropicRate, std::move(maskMaterialsInt));
+            rate, std::move(materialRates));
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
