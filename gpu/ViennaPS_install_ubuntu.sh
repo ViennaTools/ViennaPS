@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Directory for the virtual environment
-venv_dir=$1
+read -r -p "Enter the path to the virtual environment directory (default: .venv): " venv_dir
 if [ -z "$venv_dir" ]; then
     venv_dir=".venv"
     echo "No virtual environment directory specified. Using default: $venv_dir"
@@ -25,27 +25,25 @@ if [[ $nvcc_version < "12.0" ]]; then
     echo "CUDA toolkit version 12.0 or higher is required. Please update your CUDA toolkit."
     exit 1
 fi
-
 echo "CUDA toolkit version: $nvcc_version"
 
-# Check for optix directory
+# Check for OptiX directory
 if [ -n "$OptiX_INSTALL_DIR" ]; then
     optix_dir="$OptiX_INSTALL_DIR"
+    echo "Using OptiX directory from environment variable: $optix_dir"
 fi
 if [ -z "$optix_dir" ]; then
-    echo "Please enter the path to the OptiX directory (e.g., /path/to/Optix):"
-    read -r optix_dir
+    read -r -p "Please enter the path to the OptiX directory (e.g., /path/to/Optix): " optix_dir
     if [ -z "$optix_dir" ]; then
         echo "No OptiX directory specified. Please set the OptiX_INSTALL_DIR environment variable or provide a path."
         exit 1
     fi
+    echo "OptiX directory is set to: $optix_dir"
 fi
-
-echo "OptiX directory is set to: $optix_dir"
 
 # Check if venv directory exists
 if [ -d "$venv_dir" ]; then
-    echo "$venv_dir already exists. Attempting to reinstall."
+    echo "$venv_dir already exists. Reusing the existing virtual environment."
 else
     # Create a new Python virtual environment
     python3 -m venv $venv_dir
@@ -57,8 +55,7 @@ source $venv_dir/bin/activate
 # Check if ViennaLS Python package is installed
 if ! pip show ViennaLS &> /dev/null; then
     echo "ViennaLS Python package is not installed. Local ViennaLS build is required."
-    echo "Enter the path to the ViennaLS directory (e.g., /path/to/ViennaLS):"
-    read -r viennals_dir
+    read -r -p "Enter the path to the ViennaLS directory (e.g., /path/to/ViennaLS): " viennals_dir
     if [ -z "$viennals_dir" ]; then
         echo "No ViennaLS directory specified. Please provide a path."
         exit 1
@@ -73,8 +70,7 @@ fi
 # Check if current directory is ViennaPS
 viennaps_dir=$(basename "$PWD")
 if [ "$viennaps_dir" != "ViennaPS" ]; then 
-    echo "Please enter the path to the ViennaPS directory (e.g., /path/to/ViennaPS):"
-    read -r viennaps_dir
+    read -r -p "Please enter the path to the ViennaPS directory (e.g., /path/to/ViennaPS): " viennaps_dir
     if [ -z "$viennaps_dir" ]; then
         echo "No ViennaPS directory specified. Please provide a path."
         exit 1
