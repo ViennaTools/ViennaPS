@@ -8,6 +8,7 @@
 #include <lsDomain.hpp>
 #include <lsExpand.hpp>
 
+#include <geometries/psMakeHole.hpp>
 #include <geometries/psMakeTrench.hpp>
 #include <psDomain.hpp>
 #include <psMaterials.hpp>
@@ -73,6 +74,93 @@ bool domainsEqual(viennaps::SmartPointer<viennaps::Domain<T, D>> domainA,
   // 2. Same material map
   // 3. Same grid delta
   // For a more thorough test, we could also check the level set values
+
+  return true;
+}
+
+// Test function for 3D hole write and read
+template <class T> bool test3DHoleWriteAndRead() {
+  constexpr int D = 3;
+  using DomainType = viennaps::SmartPointer<viennaps::Domain<T, D>>;
+
+  std::cout << "\n=========================================" << std::endl;
+  std::cout << "Testing 3D hole geometry write and read..." << std::endl;
+
+  // Create a test filename
+  std::string testFileName = "testHole3D.vpsd";
+
+  // Remove any existing test file
+  if (std::filesystem::exists(testFileName)) {
+    std::filesystem::remove(testFileName);
+  }
+
+  // Create a domain for testing
+  const T gridDelta = 1.0;
+  const T xExtent = 100.0;
+  const T yExtent = 100.0;
+  const T zExtent = 80.0;
+  const T holeRadius = 25.0;
+  const T holeDepth = 40.0;
+  const T taperAngle = 5.0; // 5 degree taper
+
+  // Create a 3D domain
+  DomainType domain = DomainType::New(gridDelta, xExtent, yExtent);
+
+  // Apply the hole geometry
+  viennaps::MakeHole<T, D>(domain, holeRadius, holeDepth, taperAngle,
+                           10.0,                      // maskHeight
+                           2.0,                       // maskTaperAngle
+                           viennaps::HoleShape::Full, // full hole
+                           viennaps::Material::Si, viennaps::Material::SiO2)
+      .apply();
+
+  // Expand the level sets for better visualization
+  for (auto &ls : domain->getLevelSets()) {
+    viennals::Expand<T, D>(ls, 2).apply();
+  }
+
+  // Write the domain to file
+  viennaps::Writer<T, D> writer(domain, testFileName);
+  writer.apply();
+
+  // Write meshes for visualization
+  domain->saveSurfaceMesh("writtenHole3D-surfaceMesh");
+  domain->saveLevelSetMesh("writtenHole3D-levelSetMesh", 5);
+
+  // Verify the file was created
+  if (!std::filesystem::exists(testFileName)) {
+    std::cerr << "Error: 3D hole test file was not created!" << std::endl;
+    return false;
+  }
+
+  // Read the domain back from file
+  viennaps::Reader<T, D> reader(testFileName);
+  auto readDomain = reader.apply();
+
+  // Write meshes for visualization
+  readDomain->saveSurfaceMesh("readHole3D-surfaceMesh");
+  readDomain->saveLevelSetMesh("readHole3D-levelSetMesh", 5);
+
+  // Verify the domains are equal
+  if (domainsEqual(domain, readDomain)) {
+    std::cout << "✓ 3D hole domain successfully written and read back!"
+              << std::endl;
+  } else {
+    std::cerr << "✗ Error: Read hole domain does not match original domain!"
+              << std::endl;
+    return false;
+  }
+
+  // Print domain information for visual verification
+  std::cout << "\nOriginal 3D hole domain info:" << std::endl;
+  std::cout << "Number of level sets: " << domain->getLevelSets().size()
+            << std::endl;
+  std::cout << "Grid delta: " << domain->getGridDelta() << std::endl;
+
+  std::cout << "\nRead 3D hole domain info:" << std::endl;
+  std::cout << "Number of level sets: " << readDomain->getLevelSets().size()
+            << std::endl;
+  std::cout << "Grid delta: " << readDomain->getGridDelta() << std::endl;
 
   return true;
 }
@@ -159,10 +247,16 @@ int main() {
             << std::endl;
   std::cout << "Grid delta: " << readDomain->getGridDelta() << std::endl;
 
-  std::cout << "Test completed successfully!" << std::endl;
+  std::cout << "2D test completed successfully!" << std::endl;
 
-  // Clean up the test file
-  // std::filesystem::remove(testFileName);
+  // Test the 3D hole write and read functionality
+  bool hole3DTestPassed = test3DHoleWriteAndRead<NumericType>();
 
+  if (!hole3DTestPassed) {
+    std::cerr << "3D hole test failed!" << std::endl;
+    return 1;
+  }
+
+  std::cout << "\nAll tests completed successfully!" << std::endl;
   return 0;
 }
