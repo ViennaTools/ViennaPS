@@ -34,7 +34,9 @@
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
 #include <psRateGrid.hpp>
+#include <psReader.hpp>
 #include <psUnits.hpp>
+#include <psWriter.hpp>
 
 // geometries
 #include <geometries/psGeometryFactory.hpp>
@@ -1839,6 +1841,34 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //      "level-set point IDs to mesh point IDs.")
   // .def("getTranslator", &ToDiskMesh<T, D>::getTranslator,
   //      "Retrieve the translator from the mesh converter.");
+
+  // ***************************************************************************
+  //                                 IO OPERATIONS
+  // ***************************************************************************
+
+  // Writer
+  pybind11::class_<Writer<T, D>>(module, "Writer")
+      .def(pybind11::init<>())
+      .def(pybind11::init<SmartPointer<Domain<T, D>>>(),
+           pybind11::arg("domain"))
+      .def(pybind11::init<SmartPointer<Domain<T, D>>, std::string>(),
+           pybind11::arg("domain"), pybind11::arg("fileName"))
+      .def("setDomain", &Writer<T, D>::setDomain,
+           "Set the domain to be written to a file.")
+      .def("setFileName", &Writer<T, D>::setFileName,
+           "Set the output file name (should end with .vpsd).")
+      .def("apply", &Writer<T, D>::apply,
+           "Write the domain to the specified file.");
+
+  // Reader
+  pybind11::class_<Reader<T, D>>(module, "Reader")
+      .def(pybind11::init<>())
+      .def(pybind11::init<std::string>(), pybind11::arg("fileName"))
+      .def("setFileName", &Reader<T, D>::setFileName,
+           "Set the input file name to read (should end with .vpsd).")
+      .def("apply", &Reader<T, D>::apply,
+           "Read the domain from the specified file.",
+           pybind11::return_value_policy::take_ownership);
 
   //   ***************************************************************************
   //                                  OTHER
