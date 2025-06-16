@@ -185,7 +185,7 @@ protected:
 
 private:
   SmartPointer<viennals::PointData<NumericType>> runRayTracer() {
-    auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+    auto fluxes = viennals::PointData<NumericType>::New();
     unsigned particleIdx = 0;
     for (auto &particle : processModel_->getParticleTypes()) {
       int dataLogSize = processModel_->getParticleLogSize(particleIdx);

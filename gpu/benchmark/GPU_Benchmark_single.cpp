@@ -38,14 +38,14 @@ int main() {
 
   auto domain = MAKE_GEO<NumericType>();
 
-  auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+  auto diskMesh = viennals::Mesh<NumericType>::New();
   viennals::ToDiskMesh<NumericType, D> diskMesher(diskMesh);
   for (const auto &ls : domain->getLevelSets()) {
     diskMesher.insertNextLevelSet(ls);
   }
 
   auto elementKdTree = SmartPointer<KDTree<float, Vec3Df>>::New();
-  auto surfMesh = SmartPointer<viennals::Mesh<float>>::New();
+  auto surfMesh = viennals::Mesh<float>::New();
   gpu::CreateSurfaceMesh<NumericType, float, D> surfMesher(
       domain->getSurface(), surfMesh, elementKdTree);
 
@@ -93,7 +93,7 @@ int main() {
     flux.resize(surfMesh->triangles.size());
     tracer.getFlux(flux.data(), 0, 0);
     surfMesh->getCellData().insertNextScalarData(flux, "flux");
-    auto pointData = SmartPointer<viennals::PointData<NumericType>>::New();
+    auto pointData = viennals::PointData<NumericType>::New();
     gpu::ElementToPointData<NumericType>(tracer.getResults(), pointData,
                                          tracer.getParticles(), elementKdTree,
                                          diskMesh, surfMesh, GRID_DELTA)

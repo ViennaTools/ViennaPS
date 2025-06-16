@@ -102,7 +102,7 @@ public:
     auto &cellSet = domain->getCellSet();
 
     // redeposition
-    auto mesh = SmartPointer<viennals::Mesh<T>>::New();
+    auto mesh = viennals::Mesh<T>::New();
     ToDiskMesh<T, D>(domain, mesh).apply();
 
     const auto &points = mesh->nodes;

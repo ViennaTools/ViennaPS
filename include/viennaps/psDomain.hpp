@@ -326,7 +326,7 @@ public:
   // [min, max][x, y, z]
   auto getBoundingBox() const {
     std::array<Vec3D<NumericType>, 2> boundingBox;
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto mesh = viennals::Mesh<NumericType>::New();
     viennals::ToDiskMesh<NumericType, D>(levelSets_.back(), mesh).apply();
     boundingBox[0] = mesh->minimumExtent;
     boundingBox[1] = mesh->maximumExtent;
@@ -350,7 +350,7 @@ public:
   // Save the level set as a VTK file.
   void saveLevelSetMesh(const std::string &fileName, int width = 1) {
     for (int i = 0; i < levelSets_.size(); i++) {
-      auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+      auto mesh = viennals::Mesh<NumericType>::New();
       viennals::Expand<NumericType, D>(levelSets_.at(i), width).apply();
       viennals::ToMesh<NumericType, D>(levelSets_.at(i), mesh).apply();
       viennals::VTKWriter<NumericType>(mesh, fileName + "_layer" +
@@ -362,7 +362,7 @@ public:
   // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
   void saveSurfaceMesh(std::string fileName, bool addMaterialIds = true) {
 
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto mesh = viennals::Mesh<NumericType>::New();
 
     if (addMaterialIds) {
       viennals::ToDiskMesh<NumericType, D> meshConverter;

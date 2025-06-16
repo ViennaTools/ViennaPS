@@ -20,7 +20,7 @@ int main() {
 
   auto domain = MAKE_GEO<NumericType>();
 
-  auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+  auto mesh = viennals::Mesh<NumericType>::New();
   viennals::ToDiskMesh<NumericType, D> mesher(mesh);
 
   viennaray::Trace<NumericType, D> tracer;

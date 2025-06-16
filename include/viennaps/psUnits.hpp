@@ -378,5 +378,4 @@ public:
 
 inline int Time::unit_ = Time::UNDEFINED;
 
-} // namespace viennaps::units
-; // namespace viennaps
+}; // namespace viennaps::units

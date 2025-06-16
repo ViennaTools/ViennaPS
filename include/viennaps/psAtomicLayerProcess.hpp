@@ -126,7 +126,7 @@ public:
     auto name = pModel_->getProcessName().value_or("default");
 
     const NumericType gridDelta = pDomain_->getGrid().getGridDelta();
-    auto diskMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto diskMesh = viennals::Mesh<NumericType>::New();
     auto translator = SmartPointer<translatorType>::New();
     viennals::ToDiskMesh<NumericType, D> meshConverter(diskMesh);
     meshConverter.setTranslator(translator);
@@ -204,7 +204,7 @@ public:
       meshConverter.apply();
       auto numPoints = diskMesh->nodes.size();
       surfaceModel->initializeCoverages(numPoints);
-      auto rates = SmartPointer<viennals::PointData<NumericType>>::New();
+      auto rates = viennals::PointData<NumericType>::New();
       auto const materialIds =
           *diskMesh->getCellData().getScalarData("MaterialIds");
       auto const points = diskMesh->getNodes();
@@ -306,7 +306,7 @@ public:
               .print();
         }
 
-        auto purgeRates = SmartPointer<viennals::PointData<NumericType>>::New();
+        auto purgeRates = viennals::PointData<NumericType>::New();
 
         viennaray::Trace<NumericType, D> purgeTracer;
         purgeTracer.setSourceDirection(sourceDirection_);

@@ -1,14 +1,13 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psAnisotropicProcess.hpp>
 #include <psProcess.hpp>
-#include <psUtil.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
   // Parse the parameters
   ps::util::Parameters params;
@@ -19,12 +18,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+  auto geometry = ps::Domain<NumericType, D>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   // substrate
-  ps::MakePlane<NumericType, D>(geometry, params.get("gridDelta"),
-                                params.get("xExtent"), params.get("yExtent"),
-                                0., false, ps::Material::Mask)
-      .apply();
+  ps::MakePlane<NumericType, D>(geometry, 0., ps::Material::Si, false).apply();
   // create fin on substrate
   {
     auto fin =
@@ -42,9 +39,12 @@ int main(int argc, char *argv[]) {
     ls::MakeGeometry<NumericType, D>(
         fin, ps::SmartPointer<ls::Box<NumericType, D>>::New(minPoint, maxPoint))
         .apply();
-    geometry->insertNextLevelSetAsMaterial(fin, ps::Material::Si);
-    geometry->saveSurfaceMesh("fin.vtp");
+    geometry->applyBooleanOperation(fin, viennals::BooleanOperationEnum::UNION);
   }
+
+  ps::MakePlane<NumericType, D>(geometry, params.get("oxideHeight"),
+                                ps::Material::SiO2, true)
+      .apply();
 
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet(ps::Material::SiGe);

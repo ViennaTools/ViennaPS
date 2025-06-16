@@ -34,28 +34,25 @@ void makeHAR(SmartPointer<viennaps::Domain<NumericType, D>> domain,
       viennals::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
   {
-    auto substrate = SmartPointer<viennals::Domain<NumericType, D>>::New(
-        bounds, boundaryCons, gridDelta);
+    auto substrate =
+        viennals::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
     normal[D - 1] = 1.;
     origin[D - 1] = openingDepth + gapHeight;
     viennals::MakeGeometry<NumericType, D>(
-        substrate,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
+        substrate, viennals::Plane<NumericType, D>::New(origin, normal))
         .apply();
     domain->insertNextLevelSetAsMaterial(substrate, material);
   }
 
   {
-    auto vertBox =
-        SmartPointer<viennals::Domain<NumericType, D>>::New(domain->getGrid());
+    auto vertBox = viennals::Domain<NumericType, D>::New(domain->getGrid());
     NumericType minPoint[D] = {0., 0.};
     NumericType maxPoint[D] = {openingWidth,
                                gapHeight + openingDepth + gridDelta};
     viennals::MakeGeometry<NumericType, D>(
-        vertBox,
-        SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
+        vertBox, viennals::Box<NumericType, D>::New(minPoint, maxPoint))
         .apply();
 
     domain->applyBooleanOperation(
@@ -63,13 +60,11 @@ void makeHAR(SmartPointer<viennaps::Domain<NumericType, D>> domain,
   }
 
   {
-    auto horiBox =
-        SmartPointer<viennals::Domain<NumericType, D>>::New(domain->getGrid());
+    auto horiBox = viennals::Domain<NumericType, D>::New(domain->getGrid());
     NumericType minPoint[D] = {openingWidth - gridDelta, 0.};
     NumericType maxPoint[D] = {openingWidth + gapLength, gapHeight};
     viennals::MakeGeometry<NumericType, D>(
-        horiBox,
-        SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
+        horiBox, viennals::Box<NumericType, D>::New(minPoint, maxPoint))
         .apply();
 
     domain->applyBooleanOperation(
@@ -102,28 +97,25 @@ void makeT(SmartPointer<viennaps::Domain<NumericType, D>> domain,
     bounds[3] = openingDepth + gapHeight + gridDelta;
 
     {
-      auto substrate = SmartPointer<viennals::Domain<NumericType, D>>::New(
+      auto substrate = viennals::Domain<NumericType, D>::New(
           bounds, boundaryCons, gridDelta);
       NumericType normal[D] = {0.};
       NumericType origin[D] = {0.};
       normal[D - 1] = 1.;
       origin[D - 1] = openingDepth + gapHeight;
       viennals::MakeGeometry<NumericType, D>(
-          substrate,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
+          substrate, viennals::Plane<NumericType, D>::New(origin, normal))
           .apply();
       domain->insertNextLevelSetAsMaterial(substrate, material);
     }
 
     {
-      auto vertBox = SmartPointer<viennals::Domain<NumericType, D>>::New(
-          domain->getGrid());
+      auto vertBox = viennals::Domain<NumericType, D>::New(domain->getGrid());
       NumericType minPoint[D] = {-gridDelta, 0.};
       NumericType maxPoint[D] = {openingWidth / 2.,
                                  gapHeight + openingDepth + gridDelta};
       viennals::MakeGeometry<NumericType, D>(
-          vertBox,
-          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
+          vertBox, viennals::Box<NumericType, D>::New(minPoint, maxPoint))
           .apply();
 
       domain->applyBooleanOperation(
@@ -131,13 +123,11 @@ void makeT(SmartPointer<viennaps::Domain<NumericType, D>> domain,
     }
 
     {
-      auto horiBox = SmartPointer<viennals::Domain<NumericType, D>>::New(
-          domain->getGrid());
+      auto horiBox = viennals::Domain<NumericType, D>::New(domain->getGrid());
       NumericType minPoint[D] = {openingWidth / 2. - gridDelta, 0.};
       NumericType maxPoint[D] = {openingWidth / 2. + gapLength, gapHeight};
       viennals::MakeGeometry<NumericType, D>(
-          horiBox,
-          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
+          horiBox, viennals::Box<NumericType, D>::New(minPoint, maxPoint))
           .apply();
 
       domain->applyBooleanOperation(
@@ -155,28 +145,25 @@ void makeT(SmartPointer<viennaps::Domain<NumericType, D>> domain,
     bounds[5] = openingDepth + gapHeight + gridDelta;
 
     {
-      auto substrate = SmartPointer<viennals::Domain<NumericType, D>>::New(
+      auto substrate = viennals::Domain<NumericType, D>::New(
           bounds, boundaryCons, gridDelta);
       NumericType normal[D] = {0.};
       NumericType origin[D] = {0.};
       normal[D - 1] = 1.;
       origin[D - 1] = openingDepth + gapHeight;
       viennals::MakeGeometry<NumericType, D>(
-          substrate,
-          SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
+          substrate, viennals::Plane<NumericType, D>::New(origin, normal))
           .apply();
       domain->insertNextLevelSetAsMaterial(substrate, material);
     }
 
     {
-      auto vertBox = SmartPointer<viennals::Domain<NumericType, D>>::New(
-          domain->getGrid());
+      auto vertBox = viennals::Domain<NumericType, D>::New(domain->getGrid());
       NumericType minPoint[D] = {-gridDelta, -gapWidth / 2., 0.};
       NumericType maxPoint[D] = {openingWidth / 2., gapWidth / 2.,
                                  gapHeight + openingDepth + gridDelta};
       viennals::MakeGeometry<NumericType, D>(
-          vertBox,
-          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
+          vertBox, viennals::Box<NumericType, D>::New(minPoint, maxPoint))
           .apply();
 
       domain->applyBooleanOperation(
@@ -184,15 +171,13 @@ void makeT(SmartPointer<viennaps::Domain<NumericType, D>> domain,
     }
 
     {
-      auto horiBox = SmartPointer<viennals::Domain<NumericType, D>>::New(
-          domain->getGrid());
+      auto horiBox = viennals::Domain<NumericType, D>::New(domain->getGrid());
       NumericType minPoint[D] = {openingWidth / 2. - gridDelta, -gapWidth / 2.,
                                  0.};
       NumericType maxPoint[D] = {openingWidth / 2. + gapLength, gapWidth / 2.,
                                  gapHeight};
       viennals::MakeGeometry<NumericType, D>(
-          horiBox,
-          SmartPointer<viennals::Box<NumericType, D>>::New(minPoint, maxPoint))
+          horiBox, viennals::Box<NumericType, D>::New(minPoint, maxPoint))
           .apply();
 
       domain->applyBooleanOperation(

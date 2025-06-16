@@ -105,7 +105,7 @@ public:
 
     // Read each level set
     for (uint32_t i = 0; i < numLevelSets; i++) {
-      auto ls = SmartPointer<viennals::Domain<NumericType, D>>::New();
+      auto ls = viennals::Domain<NumericType, D>::New();
       ls->deserialize(fin);
       domain->insertNextLevelSet(ls, false); // Don't wrap lower level sets
     }

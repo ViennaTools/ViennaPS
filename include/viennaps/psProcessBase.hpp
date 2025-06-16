@@ -157,7 +157,7 @@ public:
     const auto logLevel = Logger::getLogLevel();
 
     // Generate disk mesh from domain
-    diskMesh_ = SmartPointer<viennals::Mesh<NumericType>>::New();
+    diskMesh_ = viennals::Mesh<NumericType>::New();
     viennals::ToDiskMesh<NumericType, D> meshGenerator(diskMesh_);
     if (domain_->getMaterialMap() &&
         domain_->getMaterialMap()->size() == domain_->getLevelSets().size()) {
@@ -266,7 +266,7 @@ public:
     double remainingTime = processDuration_;
     const NumericType gridDelta = domain_->getGrid().getGridDelta();
 
-    diskMesh_ = SmartPointer<viennals::Mesh<NumericType>>::New();
+    diskMesh_ = viennals::Mesh<NumericType>::New();
     auto translator = SmartPointer<TranslatorType>::New();
     viennals::ToDiskMesh<NumericType, D> meshGenerator(diskMesh_);
     meshGenerator.setTranslator(translator);
@@ -356,7 +356,7 @@ public:
       advectionKernel.prepareLS();
       model_->initialize(domain_, remainingTime);
 
-      auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+      auto fluxes = viennals::PointData<NumericType>::New();
       meshGenerator.apply();
       auto materialIds = *diskMesh_->getCellData().getScalarData("MaterialIds");
       auto points = diskMesh_->getNodes();
@@ -376,7 +376,7 @@ public:
       if (useCoverages) {
         coverages = surfaceModel->getCoverages();
         auto prevStepCoverages =
-            SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
+            viennals::PointData<NumericType>::New(*coverages);
 
         // update coverages in the model
         surfaceModel->updateCoverages(fluxes, materialIds);
@@ -386,13 +386,13 @@ public:
               this->calculateCoverageDeltaMetric(coverages, prevStepCoverages);
           while (!this->checkCoveragesConvergence(metric)) {
             Logger::getInstance()
-                .addInfo("Coverages did not converge within threshold. "
-                         "Repeating flux "
-                         "calculation.")
+                .addDebug("Coverages did not converge within threshold. "
+                          "Repeating flux "
+                          "calculation.")
                 .print();
 
             prevStepCoverages =
-                SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
+                viennals::PointData<NumericType>::New(*coverages);
 
             rtTimer.start();
             fluxes = calculateFluxes(useCoverages, useProcessParams);
@@ -473,7 +473,7 @@ public:
       Logger::getInstance().addTiming("Surface advection", advTimer).print();
 
       if (advectionParams_.velocityOutput) {
-        auto lsMesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+        auto lsMesh = viennals::Mesh<NumericType>::New();
         viennals::ToMesh<NumericType, D>(domain_->getLevelSets().back(), lsMesh)
             .apply();
         viennals::VTKWriter<NumericType>(
@@ -692,7 +692,7 @@ protected:
         // save current coverages to compare with the new ones
         assert(coverages != nullptr);
         auto prevStepCoverages =
-            SmartPointer<viennals::PointData<NumericType>>::New(*coverages);
+            viennals::PointData<NumericType>::New(*coverages);
 
         auto fluxes = calculateFluxes(true, useProcessParams);
 

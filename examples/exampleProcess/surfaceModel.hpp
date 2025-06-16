@@ -11,7 +11,7 @@ public:
   void initializeCoverages(unsigned numGeometryPoints) override {
     std::vector<NumericType> someCoverages(numGeometryPoints, 0);
 
-    coverages = viennaps::SmartPointer<viennals::PointData<NumericType>>::New();
+    coverages = viennals::PointData<NumericType>::New();
     coverages->insertNextScalarData(someCoverages, "coverages");
   }
 

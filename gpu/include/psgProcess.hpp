@@ -103,7 +103,7 @@ protected:
   }
 
   void setFluxEngineGeometry() override {
-    surfaceMesh_ = SmartPointer<viennals::Mesh<float>>::New();
+    surfaceMesh_ = viennals::Mesh<float>::New();
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
     CreateSurfaceMesh<NumericType, float, D>(domain_->getLevelSets().back(),
@@ -161,7 +161,7 @@ protected:
     rayTracer_.apply();
 
     // extract fluxes on points
-    auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+    auto fluxes = viennals::PointData<NumericType>::New();
     ElementToPointData<NumericType, float>(
         rayTracer_.getResults(), fluxes, rayTracer_.getParticles(),
         elementKdTree_, diskMesh_, surfaceMesh_,

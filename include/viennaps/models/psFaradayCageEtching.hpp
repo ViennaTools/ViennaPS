@@ -108,7 +108,7 @@ public:
   }
 
   void saveSourcePlane() const {
-    auto mesh = viennals::SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto mesh = viennals::Mesh<NumericType>::New();
     if constexpr (D == 3) {
       Vec3D<NumericType> point{minPoint_[0], minPoint_[1], zPos_};
       mesh->insertNextNode(point);

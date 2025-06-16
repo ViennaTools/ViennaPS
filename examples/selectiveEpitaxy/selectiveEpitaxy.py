@@ -13,31 +13,25 @@ args = parser.parse_args()
 if args.dim == 2:
     print("Running 2D simulation.")
     import viennaps2d as vps
-    import viennals2d as vls
 else:
     print("Running 3D simulation.")
     import viennaps3d as vps
-    import viennals3d as vls
 
 params = vps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain()
+geometry = vps.Domain(
+    gridDelta=params["gridDelta"], xExtent=params["xExtent"], yExtent=params["yExtent"]
+)
 vps.MakePlane(
-    domain=geometry,
-    gridDelta=params["gridDelta"],
-    xExtent=params["xExtent"],
-    yExtent=params["yExtent"],
-    height=0.0,
-    periodicBoundary=False,
-    material=vps.Material.Mask,
+    domain=geometry, height=0.0, material=vps.Material.Si, addToExisting=False
 ).apply()
 
-fin = vls.Domain(geometry.getLevelSets()[-1])
+fin = vps.ls.Domain(geometry.getLevelSets()[-1])
 
 if args.dim == 3:
-    vls.MakeGeometry(
+    vps.ls.MakeGeometry(
         fin,
-        vls.Box(
+        vps.ls.Box(
             [
                 -params["finWidth"] / 2.0,
                 -params["finLength"] / 2.0,
@@ -47,9 +41,9 @@ if args.dim == 3:
         ),
     ).apply()
 else:
-    vls.MakeGeometry(
+    vps.ls.MakeGeometry(
         fin,
-        vls.Box(
+        vps.ls.Box(
             [
                 -params["finWidth"] / 2.0,
                 -params["gridDelta"],
@@ -58,7 +52,16 @@ else:
         ),
     ).apply()
 
-geometry.insertNextLevelSetAsMaterial(fin, vps.Material.Si)
+geometry.applyBooleanOperation(fin, vps.ls.BooleanOperationEnum.UNION)
+
+geometry.saveVolumeMesh("fin")
+
+vps.MakePlane(
+    domain=geometry,
+    height=params["oxideHeight"],
+    material=vps.Material.SiO2,
+    addToExisting=True,
+).apply()
 
 # copy top layer to capture deposition
 geometry.duplicateTopLevelSet(vps.Material.SiGe)
@@ -75,7 +78,7 @@ process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
 process.setIntegrationScheme(
-    vls.IntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+    vps.ls.IntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
 geometry.saveVolumeMesh("initial")

@@ -26,7 +26,7 @@ public:
 
   ResultType get() {
     ps::Planarize<T, D>(domain_, cutoffHeight_).apply();
-    auto mesh = ps::SmartPointer<viennals::Mesh<T>>::New();
+    auto mesh = viennals::Mesh<T>::New();
     ps::ToDiskMesh<T, D>(domain_, mesh).apply();
 
     std::vector<T> height, position;
