@@ -112,7 +112,7 @@ source $venv_dir/bin/activate
 
 # Install ViennaLS
 cd ViennaLS
-pip install . -v
+CC=gcc-12 CXX=g++-12 pip install . -v
 cd ..
 
 # Install ViennaPS with GPU support (using gcc-12 and g++-12)
