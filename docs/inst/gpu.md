@@ -20,6 +20,34 @@ The GPU ray tracing module is implemented using [**OptiX 8.0**](https://develope
 - **NVIDIA Driver:** Version 535 or higher
 - **CUDA Toolkit:** Version 12.0
 - **OptiX SDK:** Version 8.0
+- **GCC:** Version 12.0 
+
+{: .note }
+> ViennaPS depends on ViennaLS. When building ViennaPS locally (especially with GPU support), **you must also build ViennaLS locally** from the same source. Using the PyPI version of ViennaLS is **not compatible** with a local ViennaPS build.
+
+## Python Bindngs Scripts
+
+To make installation easier, we provide two setup scripts:
+
+#### 1. `install_ViennaPS_linux.sh`
+
+- **Compatibility:** All Linux distributions  
+- **Functionality:**  
+  - Builds and installs **ViennaPS** locally  
+  - Checks for an existing local build of **ViennaLS**  
+- **Limitations:**  
+  - Assumes you have already installed dependencies like VTK and embree manually  
+
+#### 2. `install_ViennaTools_ubuntu.sh`
+
+- **Compatibility:** **Ubuntu 24.04 only**  
+- **Functionality:**  
+  - Installs all required dependencies: `VTK`, `embree`, and others using `apt`  
+  - Builds and installs **ViennaLS** and **ViennaPS** in a local folder named `ViennaTools`  
+  - Suitable for a fresh installation on Ubuntu systems  
+- **Advantages:**  
+  - Fully automated setup including all system dependencies  
+  - Ideal for users new to the ViennaTools ecosystem  
 
 ## CMake Configuration
 
