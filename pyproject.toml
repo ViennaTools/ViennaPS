@@ -3,12 +3,12 @@ requires = ["scikit-build-core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-version = "3.5.0"
+version = "3.5.1"
 name = "ViennaPS"
 readme = "README.md"
 license = { file = "LICENSE" }
 description = "Semiconductor fabrication process simulation library"
-dependencies = ["ViennaLS>=4.3.0"]
+dependencies = ["ViennaLS>=4.3.2"]
 
 [project.urls]
 Homepage = "https://viennatools.github.io/ViennaPS/"
