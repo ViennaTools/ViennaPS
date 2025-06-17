@@ -51,7 +51,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = SmartPointer<viennals::PointData<NumericType>>::New();
+      coverages = viennals::PointData<NumericType>::New();
     } else {
       coverages->clear();
     }

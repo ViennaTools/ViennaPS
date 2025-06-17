@@ -66,7 +66,7 @@ if ! pip show ViennaLS &> /dev/null; then
         exit 1
     fi
     cd "$viennals_dir" || { echo "Failed to change directory to $viennals_dir"; exit 1; }
-    pip install .
+    CC=gcc-12 CXX=g++-12 pip install .
 else
     echo "ViennaLS Python package is already installed. Local build is required."
     echo "If you want to reinstall, please uninstall it first using: pip uninstall ViennaLS"

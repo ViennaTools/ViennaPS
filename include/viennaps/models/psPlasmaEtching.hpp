@@ -28,7 +28,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = SmartPointer<viennals::PointData<NumericType>>::New();
+      coverages = viennals::PointData<NumericType>::New();
     } else {
       coverages->clear();
     }
@@ -40,7 +40,7 @@ public:
   void initializeSurfaceData(unsigned numGeometryPoints) override {
     if (Logger::getLogLevel() > 3) {
       if (surfaceData == nullptr) {
-        surfaceData = SmartPointer<viennals::PointData<NumericType>>::New();
+        surfaceData = viennals::PointData<NumericType>::New();
       } else {
         surfaceData->clear();
       }

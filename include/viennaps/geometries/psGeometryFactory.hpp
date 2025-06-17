@@ -35,8 +35,7 @@ public:
     normal[D - 1] = 1.;
     origin[D - 1] = base;
     viennals::MakeGeometry<NumericType, D>(
-        substrate,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
+        substrate, viennals::Plane<NumericType, D>::New(origin, normal))
         .apply();
 
     if (Logger::getInstance().getLogLevel() >= 5) {
@@ -57,16 +56,14 @@ public:
     normal[D - 1] = 1.;
     origin[D - 1] = base + height;
     viennals::MakeGeometry<NumericType, D>(
-        mask,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
+        mask, viennals::Plane<NumericType, D>::New(origin, normal))
         .apply();
 
     auto maskAdd = lsDomainType::New(setup_.grid());
     origin[D - 1] = base;
     normal[D - 1] = -1.;
     viennals::MakeGeometry<NumericType, D>(
-        maskAdd,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
+        maskAdd, viennals::Plane<NumericType, D>::New(origin, normal))
         .apply();
 
     viennals::BooleanOperation<NumericType, D>(
@@ -92,7 +89,7 @@ public:
 
     NumericType topRadius = radius + std::tan(angle * M_PI / 180.) * height;
     viennals::MakeGeometry<NumericType, D>(
-        cutout, SmartPointer<viennals::Cylinder<NumericType, D>>::New(
+        cutout, viennals::Cylinder<NumericType, D>::New(
                     position.data(), normal, height, radius, topRadius))
         .apply();
 
@@ -120,7 +117,7 @@ public:
     auto gridDelta = setup_.gridDelta();
     auto yExt = setup_.yExtent() / 2 + gridDelta;
 
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto mesh = viennals::Mesh<NumericType>::New();
     const NumericType offSet = height * std::tan(angle * M_PI / 180.);
 
     if constexpr (D == 2) {
@@ -209,7 +206,7 @@ public:
 
 private:
   void saveSurfaceMesh(lsDomainType levelSet, const std::string &name) {
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto mesh = viennals::Mesh<NumericType>::New();
     viennals::ToSurfaceMesh<NumericType, D>(levelSet, mesh).apply();
     viennals::VTKWriter<NumericType>(mesh, name_ + name).apply();
   }

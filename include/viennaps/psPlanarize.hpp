@@ -32,11 +32,9 @@ public:
     origin[D - 1] = cutoffPosition_;
     NumericType normal[D] = {0.};
     normal[D - 1] = -1.;
-    auto plane = SmartPointer<viennals::Domain<NumericType, D>>::New(
-        pDomain_->getGrid());
+    auto plane = viennals::Domain<NumericType, D>::New(pDomain_->getGrid());
     viennals::MakeGeometry<NumericType, D>(
-        plane,
-        SmartPointer<viennals::Plane<NumericType, D>>::New(origin, normal))
+        plane, viennals::Plane<NumericType, D>::New(origin, normal))
         .apply();
     pDomain_->applyBooleanOperation(
         plane, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);

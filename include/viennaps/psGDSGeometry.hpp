@@ -103,8 +103,7 @@ public:
     double originLow[3] = {0., 0., baseHeight};
     double normalLow[3] = {0., 0., -1.};
     auto bottomPlane =
-        viennals::SmartPointer<viennals::Plane<NumericType, D>>::New(originLow,
-                                                                     normalLow);
+        viennals::Plane<NumericType, D>::New(originLow, normalLow);
     viennals::MakeGeometry<NumericType, 3>(bottomLS, bottomPlane).apply();
 
     // Create top cap
@@ -113,8 +112,7 @@ public:
         0., 0., baseHeight + height}; // Adjust to match extrusion
     NumericType normalHigh[3] = {0., 0., 1.};
     auto topPlane =
-        viennals::SmartPointer<viennals::Plane<NumericType, D>>::New(
-            originHigh, normalHigh);
+        viennals::Plane<NumericType, D>::New(originHigh, normalHigh);
     viennals::MakeGeometry<NumericType, D>(topLS, topPlane).apply();
 
     // Intersect with bottom
@@ -393,8 +391,7 @@ private:
 
     // Generate a level set box using MakeGeometry
     viennals::MakeGeometry<NumericType, 2>(
-        layer2D,
-        SmartPointer<viennals::Box<NumericType, 2>>::New(minCorner, maxCorner))
+        layer2D, viennals::Box<NumericType, 2>::New(minCorner, maxCorner))
         .apply();
   }
 
@@ -415,7 +412,7 @@ private:
   SmartPointer<viennals::Mesh<NumericType>>
   polygonToSurfaceMesh(const GDS::Element<NumericType> &element,
                        const NumericType xOffset, const NumericType yOffset) {
-    auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+    auto mesh = viennals::Mesh<NumericType>::New();
     const auto &points = element.pointCloud;
 
     if (points.size() < 2) {

@@ -73,13 +73,13 @@ public:
     outputDomain->clear();
 
     for (std::size_t i = 0; i < inputDomain->getLevelSets().size(); i++) {
-      auto tmpLS = SmartPointer<viennals::Domain<NumericType, 3>>::New();
+      auto tmpLS = viennals::Domain<NumericType, 3>::New();
       viennals::Extrude<NumericType>(inputDomain->getLevelSets().at(i), tmpLS,
                                      extent, extrudeDim, boundaryConds)
           .apply();
 
       if (Logger::getLogLevel() >= 5) {
-        auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+        auto mesh = viennals::Mesh<NumericType>::New();
         viennals::ToMesh<NumericType, 3>(tmpLS, mesh).apply();
         viennals::VTKWriter<NumericType>(mesh, "extrude_layer_" +
                                                    std::to_string(i) + ".vtp")

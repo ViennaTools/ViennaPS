@@ -20,13 +20,12 @@ auto GenerateMask(const NumericType bumpWidth, const NumericType bumpHeight,
 
   MakePlane<NumericType, D>(domain, 0., Material::SiO2).apply();
 
-  auto mask =
-      SmartPointer<viennals::Domain<NumericType, D>>::New(domain->getGrid());
+  auto mask = viennals::Domain<NumericType, D>::New(domain->getGrid());
 
   // parabolic masks
   const double offset = -xExtent / 2. + bumpSpacing + bumpWidth / 2.;
 
-  auto mesh = SmartPointer<viennals::Mesh<NumericType>>::New();
+  auto mesh = viennals::Mesh<NumericType>::New();
 
   constexpr int numNodes = 100;
   for (unsigned i = 0; i < numNodes; i++) {
@@ -40,8 +39,7 @@ auto GenerateMask(const NumericType bumpWidth, const NumericType bumpHeight,
   mesh->insertNextLine({numNodes - 1, 0});
 
   for (int i = 0; i < numBumps; i++) {
-    auto tip =
-        SmartPointer<viennals::Domain<NumericType, D>>::New(domain->getGrid());
+    auto tip = viennals::Domain<NumericType, D>::New(domain->getGrid());
     viennals::FromSurfaceMesh<NumericType, D>(tip, mesh).apply();
     viennals::TransformMesh<NumericType>(
         mesh, viennals::TransformEnum::TRANSLATION,
