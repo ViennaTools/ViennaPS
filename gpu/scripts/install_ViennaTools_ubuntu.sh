@@ -3,6 +3,21 @@
 # This script installs the ViennaTools package on Ubuntu 24.04 with GPU support.
 # It attempts to install the required dependencies on the system, therefore sudo privileges are required.
 
+# Check if the script is run with bash
+if [ -z "$BASH_VERSION" ]; then
+    echo "This script must be run with bash. Please run it using: bash install_ViennaTools_ubuntu.sh <-v|--verbose>"
+    exit 1
+fi
+
+# Check if verbose mode is enabled
+verbose_flag=""
+if [[ "$1" == "-v" || "$1" == "--verbose" ]]; then
+    echo "Verbose mode is enabled."
+    verbose_flag="-v"
+else
+    echo "Verbose mode is disabled."
+fi
+
 # Check ubuntu version
 if [ "$(lsb_release -rs)" != "24.04" ]; then
     echo "This script is intended for Ubuntu 24.04. Please run it on the correct version."
@@ -112,12 +127,12 @@ source $venv_dir/bin/activate
 
 # Install ViennaLS
 cd ViennaLS
-CC=gcc-12 CXX=g++-12 pip install . -v
+CC=gcc-12 CXX=g++-12 pip install . $verbose_flag
 cd ..
 
 # Install ViennaPS with GPU support (using gcc-12 and g++-12)
 cd ViennaPS
-OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_FORCE_GPU=ON pip install . -v
+OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_FORCE_GPU=ON pip install . $verbose_flag
 cd ..
 
 echo "Installation complete. To activate the virtual environment, run:"

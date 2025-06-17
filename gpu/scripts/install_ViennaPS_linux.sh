@@ -5,6 +5,21 @@
 # 2. VTK >= 9.0.0
 # (on Ubuntu 24.04, you can install them using the command: sudo apt install -y libvtk9-dev libembree-dev)
 
+# Check if the script is run with bash
+if [ -z "$BASH_VERSION" ]; then
+    echo "This script must be run with bash. Please run it using: bash install_ViennaPS_linux.sh <-v|--verbose>"
+    exit 1
+fi
+
+# Check if verbose mode is enabled
+verbose_flag=""
+if [[ "$1" == "-v" || "$1" == "--verbose" ]]; then
+    echo "Verbose mode is enabled."
+    verbose_flag="-v"
+else
+    echo "Verbose mode is disabled."
+fi
+
 # Directory for the virtual environment
 read -r -p "Enter the path to the virtual environment directory (default: .venv): " venv_dir
 if [ -z "$venv_dir" ]; then
@@ -58,18 +73,36 @@ fi
 source $venv_dir/bin/activate
 
 # Check if ViennaLS Python package is installed
+viennals_version_required="4.3.2"
 if ! pip show ViennaLS &> /dev/null; then
     echo "ViennaLS Python package is not installed. Local ViennaLS build is required."
-    read -r -p "Enter the path to the ViennaLS directory (e.g., /path/to/ViennaLS): " viennals_dir
+    read -r -p "Enter the path to the ViennaLS directory (e.g., /path/to/ViennaLS, press enter to download): " viennals_dir
     if [ -z "$viennals_dir" ]; then
-        echo "No ViennaLS directory specified. Please provide a path."
-        exit 1
+        echo "No ViennaLS directory specified. Downloading version $viennals_version_required."
+        mkdir ViennaLS_tmp_install
+        git clone https://github.com/ViennaTools/ViennaLS.git ViennaLS_tmp_install
+        cd ViennaLS_tmp_install || { echo "Failed to change directory to ViennaLS_tmp_install"; exit 1; }
+        git checkout v$viennals_version_required &> /dev/null
+        CC=gcc-12 CXX=g++-12 pip install . $verbose_flag
+        cd ..
+        rm -rf ViennaLS_tmp_install
     fi
     cd "$viennals_dir" || { echo "Failed to change directory to $viennals_dir"; exit 1; }
-    CC=gcc-12 CXX=g++-12 pip install .
+    CC=gcc-12 CXX=g++-12 pip install . $verbose_flag
 else
-    echo "ViennaLS Python package is already installed. Local build is required."
-    echo "If you want to reinstall, please uninstall it first using: pip uninstall ViennaLS"
+    viennals_version=$(pip show ViennaLS | grep Version | awk '{print $2}')
+    echo -e "\033[1;33m""ViennaLS Python package is already installed ($viennals_version). Local build is required.\033[0m"
+    echo -e "\033[1;33m""If you want to reinstall, please uninstall it first using: pip uninstall ViennaLS\033[0m"
+    read -r -p "Continue with the current version ($viennals_version)? (y/n): " continue_install
+    if [[ "$continue_install" != "y" && "$continue_install" != "Y" ]]; then
+        echo "Installation aborted."
+        exit 1
+    fi
+    if [ "$viennals_version" != "$viennals_version_required" ]; then
+        echo -e "\033[1;33m""Note: The version of ViennaLS is not $viennals_version_required, which may cause compatibility issues.\033[0m"
+        echo -e "\033[1;33m""Please ensure you have the correct version installed.\033[0m"
+        exit 1
+    fi
 fi
 
 # Check if current directory is ViennaPS
@@ -84,7 +117,7 @@ if [ "$viennaps_dir" != "ViennaPS" ]; then
 fi
 
 # Install ViennaPS with GPU support (using gcc-12 and g++-12)
-OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_FORCE_GPU=ON pip install . -v
+OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_FORCE_GPU=ON pip install . $verbose_flag
 
 echo "Installation complete. To activate the virtual environment, run:"
 echo "source $venv_dir/bin/activate"
