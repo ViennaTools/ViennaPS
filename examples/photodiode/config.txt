@@ -1,0 +1,57 @@
+# Lengths in micrometers
+
+# Domain
+gridDelta = 0.005
+xExtent = 0.42
+yExtent = 0.2
+
+# Geometry
+numHoles = 5
+holeWidth = 0.03
+holeDepth = 0.04
+bulkHeight = 0.31
+maskHeight = 0.04
+passivationHeight = 0.005
+antiReflectHeight1 = 0.01
+antiReflectHeight2 = 0.01
+airHeight = 0.06  # Extra space for adding a lens on top in postprocessing
+
+
+# Process parameters
+withEtching = 0     # Enable/Disable etching process (create holes manually instead) (0 or 1)
+processTime = 6.4   # seconds
+
+# Flux values in 1e16 / cm²
+ionFlux = 6.
+etchantFlux = 840.
+oxygenFlux = 840.
+
+ionExponent = 200
+meanEnergy = 100 # eV
+sigmaEnergy = 10 # eV
+A_O = 3 # passivation layer sputtering coefficient
+
+etchStopDepth = -1000 # maximum etching depth
+
+raysPerPoint = 500
+
+
+
+# Electric material parameters
+lensPermittivity = 1.96         # PDMS
+antiReflectPermittivity1 = 2.6
+antiReflectPermittivity2 = 3.8
+passivationPermittivity = 4.0   # SiN
+siliconPermittivity = 15.813
+
+# FDTD simulation
+fdtdWithMaterial = 1         # Enable/Disable material parameters for transmission calculation (0 or 1)
+fdtdWavelength = 0.45        # um
+fdtdCellsPerWavelength = 80  # lambda / dx
+fdtdTime = 6.35              # Simulation time in fs
+fdtdOutputInterval = 0.09    # fs
+
+
+
+
+numThreads = 4
