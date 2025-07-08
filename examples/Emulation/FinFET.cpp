@@ -44,7 +44,7 @@ int main() {
   BoundaryType boundaryConds[D] = {BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::INFINITE_BOUNDARY};
-  NumericType bounds[2 * D] = {0, 90, 0, 100, 0, 70}; // in nanometres
+  NumericType bounds[2 * D] = {0, 90, 0, 100, 0, 70}; // in nanometers
   constexpr NumericType gridDelta = 0.59;
   auto domain = DomainType::New();
 
@@ -79,7 +79,7 @@ int main() {
   // Double patterning processes
   { // DP-Depo
     std::cout << "DP-Depo ...";
-    domain->duplicateTopLevelSet(Material::SiO2);
+    domain->duplicateTopLevelSet(Material::Metal);
     auto dist =
         SmartPointer<SphereDistribution<NumericType, D>>::New(4, gridDelta);
     Process<NumericType, D>(domain, dist).apply();
@@ -107,14 +107,14 @@ int main() {
     std::cout << "Si-Patterning ...";
     Vec3D<NumericType> direction = {0, 0, -1};
     auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(
-        direction, -1.1, 0.1, Material::SiO2, false);
+        direction, -1.1, 0.1, Material::Metal, false);
     Process<NumericType, D>(domain, model, 90.).apply();
     std::cout << " done" << std::endl;
   }
   writeVolume(domain);
   writeSurface(domain);
 
-  // Remove DP mask
+  // Remove DP mask (metal)
   domain->removeTopLevelSet();
   writeSurface(domain);
 
