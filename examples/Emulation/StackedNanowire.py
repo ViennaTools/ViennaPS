@@ -10,7 +10,7 @@ boundaryConds = [
     vls.BoundaryConditionEnum.PERIODIC_BOUNDARY,
     vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
-gridDelta = 1.51
+gridDelta = 0.51
 n = 0
 
 domain = vps.Domain()
@@ -88,29 +88,20 @@ n += 1
 # Dummy gate mask addition
 print("Adding dummy gate mask ...")
 mask = vls.Domain(bounds, boundaryConds, gridDelta)
-geo = vls.MakeGeometry(mask, vls.Box([-10, 30, 75], [80, 70, 90]))
+geo = vls.MakeGeometry(mask, vls.Box([-10, 30, 75], [80, 70, 80]))
 geo.setIgnoreBoundaryConditions(True)
 geo.apply()
 
-domain.insertNextLevelSetAsMaterial(mask, vps.Material.Mask)
-domain.saveVolumeMesh("StackedNanowire_" + str(n))
-n += 1
+vls.BooleanOperation(
+    mask, domain.getLevelSets()[-2], vls.BooleanOperationEnum.UNION
+).apply()
 
-# Dummy gate patterning
-print("Patterning dummy gate ...")
-directional = vps.DirectionalProcess(
-    direction=[0.0, 0.0, -1.0],
-    directionalVelocity=-1.0,
-    isotropicVelocity=0.0,
-    maskMaterial=[
-        vps.Material.Mask,
-        vps.Material.Si,
-        vps.Material.SiGe,
-        vps.Material.SiO2,
-    ],
-    calculateVisibility=False,
-)
-vps.Process(domain, directional, 90.0).apply()
+tmpDomain = vps.Domain()
+tmpDomain.insertNextLevelSetAsMaterial(mask, vps.Material.Mask)
+tmpDomain.insertNextLevelSetAsMaterial(domain.getLevelSets()[-1], vps.Material.PolySi)
+
+geometricEtch = vps.BoxDistribution([-gridDelta, -gridDelta, -80], gridDelta, mask)
+vps.Process(tmpDomain, geometricEtch, 1.0).apply()
 
 domain.removeMaterial(vps.Material.Mask)
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
@@ -126,7 +117,7 @@ print("Patterning spacer ...")
 directional = vps.DirectionalProcess(
     direction=[0.0, 0.0, -1.0],
     directionalVelocity=-1.0,
-    isotropicVelocity=0.0,
+    isotropicVelocity=-0.05,
     maskMaterial=[
         vps.Material.PolySi,
         vps.Material.Si,
@@ -137,19 +128,31 @@ directional = vps.DirectionalProcess(
 )
 vps.Process(domain, directional, 40.0).apply()
 
-domain.saveSurfaceMesh("StackedNanowire_" + str(n), True)
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
 
 # Fin patterning
 print("Patterning Fin ...")
-directional = vps.DirectionalProcess(
+rateSet1 = vps.RateSet(
     direction=[0.0, 0.0, -1.0],
     directionalVelocity=-1.0,
     isotropicVelocity=0.0,
-    maskMaterial=[vps.Material.PolySi, vps.Material.SiO2, vps.Material.Si3N4],
+    maskMaterials=[vps.Material.PolySi, vps.Material.SiO2, vps.Material.Si3N4],
     calculateVisibility=False,
 )
+rateSet2 = vps.RateSet(
+    direction=[0.0, 0.0, -1.0],
+    directionalVelocity=-0.1,
+    isotropicVelocity=0.0,
+    maskMaterials=[
+        vps.Material.SiO2,
+        vps.Material.Si3N4,
+        vps.Material.Si,
+        vps.Material.SiGe,
+    ],
+    calculateVisibility=False,
+)
+directional = vps.DirectionalProcess([rateSet1, rateSet2])
 vps.Process(domain, directional, 21.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
@@ -171,12 +174,13 @@ print("Depositing dielectric ...")
 domain.duplicateTopLevelSet(vps.Material.Dielectric)
 vps.Process(domain, growth, 35.0).apply()
 
-vps.Planarize(domain, 72.5).apply()
+vps.Planarize(domain, 60).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
 
 # Remove dummy gate
+print("Removing dummy gate ...")
 domain.removeMaterial(vps.Material.PolySi)
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1

@@ -111,14 +111,14 @@ public:
                SmartPointer<std::vector<NumericType>> velocities,
                const NumericType processTime) override {
 
-    visibilities_.clear();
+    if (rateSet.calculateVisibility) {
+      visibilities_.clear();
 
-    // Calculate visibilities for each rate set
-    auto surfaceLS = domain->getLevelSets().back();
-    for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
-      auto &rateSet = rateSets_[rateSetID];
+      // Calculate visibilities for each rate set
+      auto surfaceLS = domain->getLevelSets().back();
+      for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
+        auto &rateSet = rateSets_[rateSetID];
 
-      if (rateSet.calculateVisibility) {
         std::string label = "Visibilities_" + std::to_string(rateSetID);
         viennals::CalculateVisibilities<NumericType, D>(
             surfaceLS, rateSet.direction, label)
