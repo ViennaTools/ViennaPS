@@ -824,7 +824,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("reactionOrderIon") = 1.,
           pybind11::arg("minAngleIon") = 0.);
 
-  // SF6O2 Parameters
+  // Plasma Etching Parameters
   pybind11::class_<PlasmaEtchingParameters<T>::MaskType>(
       module, "PlasmaEtchingParametersMask")
       .def(pybind11::init<>())
@@ -832,6 +832,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("A_sp", &PlasmaEtchingParameters<T>::MaskType::A_sp)
       .def_readwrite("B_sp", &PlasmaEtchingParameters<T>::MaskType::B_sp)
       .def_readwrite("Eth_sp", &PlasmaEtchingParameters<T>::MaskType::Eth_sp);
+
+  pybind11::class_<PlasmaEtchingParameters<T>::PolymerType>(
+      module, "PlasmaEtchingParametersPolymer")
+      .def(pybind11::init<>())
+      .def_readwrite("rho", &PlasmaEtchingParameters<T>::PolymerType::rho)
+      .def_readwrite("A_sp", &PlasmaEtchingParameters<T>::PolymerType::A_sp)
+      .def_readwrite("B_sp", &PlasmaEtchingParameters<T>::PolymerType::B_sp)
+      .def_readwrite("Eth_sp",
+                     &PlasmaEtchingParameters<T>::PolymerType::Eth_sp);
 
   pybind11::class_<PlasmaEtchingParameters<T>::MaterialType>(
       module, "PlasmaEtchingParametersSubstrate")
