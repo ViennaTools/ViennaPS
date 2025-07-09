@@ -1147,6 +1147,26 @@ class SF6O2Etching(ProcessModel):
     def getParameters(self) -> PlasmaEtchingParameters: ...
     def setParameters(self, arg0: PlasmaEtchingParameters) -> None: ...
 
+class SF6C4F8Etching(ProcessModel):
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self,
+        ionFlux: float,
+        etchantFlux: float,
+        meanEnergy: float,
+        sigmaEnergy: float,
+        ionExponent: float = ...,
+        etchStopDepth: float = ...,
+    ) -> None: ...
+    @overload
+    def __init__(self, parameters: PlasmaEtchingParameters) -> None: ...
+    @staticmethod
+    def defaultParameters() -> PlasmaEtchingParameters: ...
+    def getParameters(self) -> PlasmaEtchingParameters: ...
+    def setParameters(self, arg0: PlasmaEtchingParameters) -> None: ...
+
 class SingleParticleALD(ProcessModel):
     def __init__(
         self,

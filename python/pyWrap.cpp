@@ -66,6 +66,7 @@
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psOxideRegrowth.hpp>
+#include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>
 #include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
@@ -941,6 +942,28 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getParameters", &HBrO2Etching<T, D>::getParameters,
            pybind11::return_value_policy::reference)
       .def_static("defaultParameters", &HBrO2Etching<T, D>::defaultParameters);
+
+  // SF6C4F8 Etching
+  pybind11::class_<SF6C4F8Etching<T, D>, SmartPointer<SF6C4F8Etching<T, D>>>(
+      module, "SF6C4F8Etching", processModel)
+      .def(pybind11::init<>())
+      .def(
+          pybind11::init(&SmartPointer<SF6C4F8Etching<T, D>>::New<
+                         const double /*ionFlux*/, const double /*etchantFlux*/,
+                         const T /*meanEnergy*/, const T /*sigmaEnergy*/,
+                         const T /*ionExponent*/, const T /*etchStopDepth*/>),
+          pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
+          pybind11::arg("meanEnergy"), pybind11::arg("sigmaEnergy"),
+          pybind11::arg("ionExponent") = 300.,
+          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+      .def(pybind11::init(&SmartPointer<SF6C4F8Etching<T, D>>::New<
+                          const PlasmaEtchingParameters<T> &>),
+           pybind11::arg("parameters"))
+      .def("setParameters", &SF6C4F8Etching<T, D>::setParameters)
+      .def("getParameters", &SF6C4F8Etching<T, D>::getParameters,
+           pybind11::return_value_policy::reference)
+      .def_static("defaultParameters",
+                  &SF6C4F8Etching<T, D>::defaultParameters);
 
   // CF4O2 Parameters
   pybind11::class_<CF4O2Parameters<T>::MaskType>(module, "CF4O2ParametersMask")
