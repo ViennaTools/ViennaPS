@@ -40,16 +40,20 @@ public:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using lsDomainsType = std::vector<lsDomainType>;
   using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
-  using materialMapType = SmartPointer<MaterialMap>;
+  using MaterialMapType = SmartPointer<MaterialMap>;
+  using MetaDataType =
+      std::unordered_map<std::string, std::vector<NumericType>>;
   using Setup = DomainSetup<NumericType, D>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
+  static bool useMetaData;
 
 private:
   Setup setup_;
   lsDomainsType levelSets_;
   csDomainType cellSet_ = nullptr;
-  materialMapType materialMap_ = nullptr;
+  MaterialMapType materialMap_ = nullptr;
+  MetaDataType metaData_;
 
 public:
   // Default constructor.
@@ -62,11 +66,13 @@ public:
   explicit Domain(lsDomainType levelSet) {
     setup_.init(levelSet->getGrid());
     levelSets_.push_back(levelSet);
+    initMetaData();
   }
 
   // Constructor for domain with multiple initial Level-Sets.
   explicit Domain(lsDomainsType levelSets) : levelSets_(levelSets) {
     setup_.init(levelSets.back()->getGrid());
+    initMetaData();
   }
 
   // Sets up domain in with primary direction y in 2D and z in 3D
@@ -74,32 +80,45 @@ public:
          BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : setup_(gridDelta, xExtent, 0.0, boundary) {
     static_assert(D == 2, "Domain setup only valid for 2D.");
+    initMetaData();
   }
 
   // Sets up domain in with primary direction y in 2D and z in 3D
   // In 2D yExtent is ignored.
   Domain(NumericType gridDelta, NumericType xExtent, NumericType yExtent = 0.0,
          BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
-      : setup_(gridDelta, xExtent, yExtent, boundary) {}
+      : setup_(gridDelta, xExtent, yExtent, boundary) {
+    initMetaData();
+  }
 
   Domain(double bounds[2 * D], BoundaryType boundaryConditions[D],
          NumericType gridDelta = 1.0)
-      : setup_(bounds, boundaryConditions, gridDelta) {}
+      : setup_(bounds, boundaryConditions, gridDelta) {
+    initMetaData();
+  }
 
   // Convenience function to create a new domain.
   template <class... Args> static auto New(Args &&...args) {
     return SmartPointer<Domain>::New(std::forward<Args>(args)...);
   }
 
-  explicit Domain(const Setup &setup) : setup_(setup) {}
+  explicit Domain(const Setup &setup) : setup_(setup) { initMetaData(); }
 
-  void setup(const Setup &setup) { setup_ = setup; }
+  void setup(const Setup &setup) {
+    setup_ = setup;
+    initMetaData();
+  }
 
   void setup(NumericType gridDelta, NumericType xExtent,
              NumericType yExtent = 0,
              BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY) {
     setup_ = Setup(gridDelta, xExtent, yExtent, boundary);
+    initMetaData();
   }
+
+  static void enableMetaData() { useMetaData = true; }
+
+  static void disableMetaData() { useMetaData = false; }
 
   // Create a deep copy of all Level-Sets and the Cell-Set from the passed
   // domain.
@@ -107,6 +126,7 @@ public:
 
     clear();
     setup_ = domain->setup_;
+    metaData_ = domain->metaData_;
 
     // Copy all Level-Sets.
     for (auto &ls : domain->levelSets_) {
@@ -115,7 +135,7 @@ public:
 
     // Copy material map.
     if (domain->materialMap_) {
-      materialMap_ = materialMapType::New();
+      materialMap_ = MaterialMapType::New();
       for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
         materialMap_->insertNextMaterial(
             domain->materialMap_->getMaterialAtIdx(i));
@@ -140,6 +160,7 @@ public:
                           bool wrapLowerLevelSet = true) {
     if (levelSets_.empty()) {
       setup_.init(levelSet->getGrid());
+      initMetaData();
     }
     if (!levelSets_.empty() && wrapLowerLevelSet) {
       viennals::BooleanOperation<NumericType, D>(
@@ -161,6 +182,7 @@ public:
                                     bool wrapLowerLevelSet = true) {
     if (levelSets_.empty()) {
       setup_.init(levelSet->getGrid());
+      initMetaData();
     }
     if (std::abs(levelSet->getGrid().getGridDelta() - setup_.gridDelta()) >
         1e-6) {
@@ -175,7 +197,7 @@ public:
           .apply();
     }
     if (!materialMap_) {
-      materialMap_ = materialMapType::New();
+      materialMap_ = MaterialMapType::New();
     }
     materialMap_->insertNextMaterial(material);
     levelSets_.push_back(levelSet);
@@ -204,7 +226,7 @@ public:
 
     levelSets_.pop_back();
     if (materialMap_) {
-      auto newMatMap = materialMapType::New();
+      auto newMatMap = MaterialMapType::New();
       for (std::size_t i = 0; i < levelSets_.size(); i++) {
         newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
       }
@@ -235,7 +257,7 @@ public:
     }
 
     if (materialMap_) {
-      auto newMatMap = materialMapType::New();
+      auto newMatMap = MaterialMapType::New();
       for (std::size_t i = 0; i < levelSets_.size(); i++) {
         if (i == idx)
           continue;
@@ -293,7 +315,7 @@ public:
         position);
   }
 
-  void setMaterialMap(const materialMapType &passedMaterialMap) {
+  void setMaterialMap(const MaterialMapType &passedMaterialMap) {
     materialMap_ = passedMaterialMap;
     materialMapCheck();
   }
@@ -301,11 +323,27 @@ public:
   // Set the material of a specific Level-Set in the domain.
   void setMaterial(unsigned int lsId, const Material material) {
     if (materialMap_) {
-      materialMap_ = materialMapType::New();
+      materialMap_ = MaterialMapType::New();
     }
     materialMap_->setMaterialAtIdx(lsId, material);
     materialMapCheck();
   }
+
+  // Add metadata to the domain.
+  // The metadata is stored as a key-value pair, where the key is a string and
+  // the value is a vector of NumericType values.
+  // This can be used to store additional information about the domain, such as
+  // simulation parameters, process information, or any other relevant data.
+  void addMetaData(const std::string &key,
+                   const std::vector<NumericType> &values) {
+    metaData_[key] = values;
+  }
+
+  void addMetaData(const std::string &key, NumericType value) {
+    metaData_[key] = std::vector<NumericType>{value};
+  }
+
+  void setMetaData(const MetaDataType &metaData) { metaData_ = metaData; }
 
   // Returns the top Level-Set (surface) in the domain.
   auto &getSurface() const { return levelSets_.back(); }
@@ -342,6 +380,8 @@ public:
     return levelSets_.back()->getGrid().getBoundaryConditions();
   }
 
+  auto getMetaData() const { return metaData_; }
+
   void print() const {
     std::cout << "Process Simulation Domain:" << std::endl;
     std::cout << "**************************" << std::endl;
@@ -357,9 +397,10 @@ public:
       auto mesh = viennals::Mesh<NumericType>::New();
       viennals::Expand<NumericType, D>(levelSets_.at(i), width).apply();
       viennals::ToMesh<NumericType, D>(levelSets_.at(i), mesh).apply();
-      viennals::VTKWriter<NumericType>(mesh, fileName + "_layer" +
-                                                 std::to_string(i) + ".vtp")
-          .apply();
+      viennals::VTKWriter<NumericType> writer(
+          mesh, fileName + "_layer" + std::to_string(i) + ".vtp");
+      writer.setMetaData(metaData_);
+      writer.apply();
     }
   }
 
@@ -384,7 +425,9 @@ public:
     }
 
     viennals::ToSurfaceMesh<NumericType, D>(levelSets_.back(), mesh).apply();
-    viennals::VTKWriter<NumericType>(mesh, fileName).apply();
+    viennals::VTKWriter<NumericType> writer(mesh, fileName);
+    writer.setMetaData(metaData_);
+    writer.apply();
   }
 
   // Save the domain as a volume mesh
@@ -432,7 +475,14 @@ public:
     if (cellSet_)
       cellSet_ = csDomainType::New();
     if (materialMap_)
-      materialMap_ = materialMapType::New();
+      materialMap_ = MaterialMapType::New();
+    clearMetaData(true);
+  }
+
+  void clearMetaData(bool clearDomainData = false) {
+    metaData_.clear();
+    if (!clearDomainData)
+      initMetaData();
   }
 
 private:
@@ -447,6 +497,20 @@ private:
           .print();
     }
   }
+
+  void initMetaData() {
+    if (useMetaData) {
+      metaData_["Grid Delta"] = std::vector<NumericType>{setup_.gridDelta()};
+      std::vector<NumericType> boundaryConds(D);
+      for (int i = 0; i < D; i++) {
+        boundaryConds[i] = static_cast<NumericType>(setup_.boundaryCons()[i]);
+      }
+      metaData_["Boundary Conditions"] = boundaryConds;
+    }
+  }
 };
+
+template <class NumericType, int D>
+bool Domain<NumericType, D>::useMetaData = true;
 
 } // namespace viennaps
