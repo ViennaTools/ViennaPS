@@ -23,6 +23,14 @@ namespace viennaps {
 
 using namespace viennacore;
 
+enum class MetaDataLevel {
+  NONE = 0,    // No metadata add to ouptut
+  DOMAIN = 1,  // Domain-specific metadata (grid delta, boundary conditions)
+  PROCESS = 2, // Process-specific metadata (e.g., process parameters)
+  FULL = 3     // Full metadata including all available information (advection
+               // parameters, ray tracing parameters, etc.)
+};
+
 /**
   This class represents all materials in the simulation domain.
   It contains Level-Sets for an accurate surface representation
@@ -46,7 +54,7 @@ public:
   using Setup = DomainSetup<NumericType, D>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
-  static bool useMetaData;
+  static MetaDataLevel useMetaData;
 
 private:
   Setup setup_;
@@ -116,9 +124,12 @@ public:
     initMetaData();
   }
 
-  static void enableMetaData() { useMetaData = true; }
+  static void
+  enableMetaData(const MetaDataLevel level = MetaDataLevel::PROCESS) {
+    useMetaData = level;
+  }
 
-  static void disableMetaData() { useMetaData = false; }
+  static void disableMetaData() { useMetaData = MetaDataLevel::NONE; }
 
   // Create a deep copy of all Level-Sets and the Cell-Set from the passed
   // domain.
@@ -343,7 +354,11 @@ public:
     metaData_[key] = std::vector<NumericType>{value};
   }
 
-  void setMetaData(const MetaDataType &metaData) { metaData_ = metaData; }
+  void addMetaData(const MetaDataType &metaData) {
+    for (const auto &pair : metaData) {
+      metaData_[pair.first] = pair.second;
+    }
+  }
 
   // Returns the top Level-Set (surface) in the domain.
   auto &getSurface() const { return levelSets_.back(); }
@@ -499,7 +514,7 @@ private:
   }
 
   void initMetaData() {
-    if (useMetaData) {
+    if (static_cast<int>(useMetaData) > 0) {
       metaData_["Grid Delta"] = std::vector<NumericType>{setup_.gridDelta()};
       std::vector<NumericType> boundaryConds(D);
       for (int i = 0; i < D; i++) {
@@ -511,6 +526,6 @@ private:
 };
 
 template <class NumericType, int D>
-bool Domain<NumericType, D>::useMetaData = true;
+MetaDataLevel Domain<NumericType, D>::useMetaData = MetaDataLevel::NONE;
 
 } // namespace viennaps

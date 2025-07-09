@@ -255,6 +255,10 @@ public:
     if (!checkInput())
       return;
 
+    domain_->clearMetaData(false); // clear previous metadata (without domain
+                                   // metadata)
+    domain_->addMetaData(model_->getProcessData());
+
     /* ------ Process Setup ------ */
     const unsigned int logLevel = Logger::getLogLevel();
     Timer processTimer;

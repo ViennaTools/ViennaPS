@@ -19,6 +19,7 @@ protected:
   SmartPointer<GeometricModel<NumericType, D>> geometricModel = nullptr;
   SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
+  std::unordered_map<std::string, std::vector<NumericType>> processData;
 
 public:
   virtual ~ProcessModelBase() = default;
@@ -33,6 +34,7 @@ public:
   auto getGeometricModel() const { return geometricModel; }
   auto getVelocityField() const { return velocityField; }
   auto getProcessName() const { return processName; }
+  auto getProcessData() const { return processData; }
 
   void setProcessName(const std::string &name) { processName = name; }
 
