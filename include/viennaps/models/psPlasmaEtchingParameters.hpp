@@ -28,6 +28,17 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     NumericType B_sp = 9.3;
   } Mask;
 
+  // Polymer
+  struct PolymerType {
+    // density
+    NumericType rho = 5.0; // 1e22 atoms/cm³
+
+    // sputtering coefficients
+    NumericType Eth_sp = 15.; // eV
+    NumericType A_sp = 0.02;
+    NumericType B_sp = 8.5;
+  } Polymer;
+
   // Etching material
   struct MaterialType {
     // density
