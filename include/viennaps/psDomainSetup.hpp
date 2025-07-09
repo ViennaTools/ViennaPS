@@ -24,6 +24,17 @@ public:
     }
   }
 
+  DomainSetup(double bounds[2 * D], BoundaryType boundaryCons[D],
+              NumericType gridDelta)
+      : gridDelta_(gridDelta) {
+    for (int i = 0; i < D; i++) {
+      bounds_[2 * i] = bounds[2 * i];
+      bounds_[2 * i + 1] = bounds[2 * i + 1];
+      boundaryCons_[i] = boundaryCons[i];
+    }
+    init();
+  }
+
   DomainSetup(NumericType gridDelta, NumericType xExtent, NumericType yExtent,
               BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : gridDelta_(gridDelta) {

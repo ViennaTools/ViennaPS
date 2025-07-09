@@ -93,7 +93,7 @@ else
     viennals_version=$(pip show ViennaLS | grep Version | awk '{print $2}')
     echo -e "\033[1;33m""ViennaLS Python package is already installed ($viennals_version). Local build is required.\033[0m"
     echo -e "\033[1;33m""If you want to reinstall, please uninstall it first using: pip uninstall ViennaLS\033[0m"
-    read -r -p "Continue with the current version ($viennals_version)? (y/n): " continue_install
+    read -r -p "Continue with the current version ViennaLS ($viennals_version)? (y/n): " continue_install
     if [[ "$continue_install" != "y" && "$continue_install" != "Y" ]]; then
         echo "Installation aborted."
         exit 1
@@ -108,7 +108,7 @@ fi
 # Check if current directory is ViennaPS
 viennaps_dir=$(basename "$PWD")
 if [ "$viennaps_dir" != "ViennaPS" ]; then 
-    read -r -p "Please enter the path to the ViennaPS directory (e.g., /path/to/ViennaPS): " viennaps_dir
+    read -r -p "Please enter the path to the ViennaPS directory (e.g., /home/user/ViennaPS): " viennaps_dir
     if [ -z "$viennaps_dir" ]; then
         echo "No ViennaPS directory specified. Please provide a path."
         exit 1

@@ -384,7 +384,9 @@ public:
         if (coverageDeltaThreshold_ > 0) {
           auto metric =
               this->calculateCoverageDeltaMetric(coverages, prevStepCoverages);
-          while (!this->checkCoveragesConvergence(metric)) {
+          int coverageCalculationReps = 0;
+          while (!this->checkCoveragesConvergence(metric) &&
+                 coverageCalculationReps < maxIterations_) {
             Logger::getInstance()
                 .addDebug("Coverages did not converge within threshold. "
                           "Repeating flux "
@@ -406,6 +408,15 @@ public:
             Logger::getInstance()
                 .addTiming("Top-down flux calculation", rtTimer)
                 .print();
+
+            coverageCalculationReps++;
+
+            if (coverageCalculationReps % 100 == 0) {
+              Logger::getInstance()
+                  .addWarning("Coverages did not converge in 100 iterations. "
+                              "Consider reducing threshold.")
+                  .print();
+            }
           }
         }
       }
