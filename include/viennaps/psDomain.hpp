@@ -82,6 +82,10 @@ public:
          BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : setup_(gridDelta, xExtent, yExtent, boundary) {}
 
+  Domain(double bounds[2 * D], BoundaryType boundaryConditions[D],
+         NumericType gridDelta = 1.0)
+      : setup_(bounds, boundaryConditions, gridDelta) {}
+
   // Convenience function to create a new domain.
   template <class... Args> static auto New(Args &&...args) {
     return SmartPointer<Domain>::New(std::forward<Args>(args)...);

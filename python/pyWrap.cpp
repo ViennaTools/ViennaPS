@@ -1725,6 +1725,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("gridDelta"), pybind11::arg("xExtent"),
            pybind11::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY)
 #endif
+      .def(pybind11::init([](std::array<double, 2 * D> bounds,
+                             std::array<BoundaryType, D> bcs, T gridDelta) {
+             return DomainType::New(bounds.data(), bcs.data(), gridDelta);
+           }),
+           pybind11::arg("bounds"), pybind11::arg("boundaryConditions"),
+           pybind11::arg("gridDelta") = 1.0)
       .def(pybind11::init(&DomainType::New<const DomainSetup<T, D> &>),
            pybind11::arg("setup"))
       // methods
@@ -2211,7 +2217,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
               &SmartPointer<gpu::FaradayCageEtching<T, D>>::New<T, T, T, T, T>),
           pybind11::arg("rate"), pybind11::arg("stickingProbability"),
           pybind11::arg("power"), pybind11::arg("cageAngle"),
-          pybind11::arg("cageDistance"));
+          pybind11::arg("tiltAngle"));
 
   // GPU Process
   pybind11::class_<gpu::Process<T, D>>(m_gpu, "Process",

@@ -2,6 +2,7 @@ import viennaps3d as vps
 import viennals3d as vls
 
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+n = 0
 
 # domain
 bounds = [0.0, 70.0, 0.0, 100.0, 0.0, 70.0]
@@ -11,13 +12,9 @@ boundaryConds = [
     vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
 gridDelta = 0.51
-n = 0
 
-domain = vps.Domain()
-
-levelSet = vls.Domain(bounds, boundaryConds, gridDelta)
-vls.MakeGeometry(levelSet, vls.Plane([0.0, 0.0, 10.0], [0.0, 0.0, 1.0])).apply()
-domain.insertNextLevelSetAsMaterial(levelSet, vps.Material.SiO2)
+domain = vps.Domain(bounds, boundaryConds, gridDelta)
+vps.MakePlane(domain, 10.0, vps.Material.SiO2).apply()
 
 # Epi Fin growth
 print("Epi Fin growth ...")
@@ -115,8 +112,8 @@ vps.Process(domain, growth, 12.0).apply()
 # Spacer patterning
 print("Patterning spacer ...")
 directional = vps.DirectionalProcess(
-    direction=[0.0, 0.0, -1.0],
-    directionalVelocity=-1.0,
+    direction=[0.0, 0.0, 1.0],
+    directionalVelocity=1.0,
     isotropicVelocity=-0.05,
     maskMaterial=[
         vps.Material.PolySi,
@@ -134,15 +131,15 @@ n += 1
 # Fin patterning
 print("Patterning Fin ...")
 rateSet1 = vps.RateSet(
-    direction=[0.0, 0.0, -1.0],
-    directionalVelocity=-1.0,
+    direction=[0.0, 0.0, 1.0],
+    directionalVelocity=1.0,
     isotropicVelocity=0.0,
     maskMaterials=[vps.Material.PolySi, vps.Material.SiO2, vps.Material.Si3N4],
     calculateVisibility=False,
 )
 rateSet2 = vps.RateSet(
-    direction=[0.0, 0.0, -1.0],
-    directionalVelocity=-0.1,
+    direction=[0.0, 0.0, 1.0],
+    directionalVelocity=0.1,
     isotropicVelocity=0.0,
     maskMaterials=[
         vps.Material.SiO2,
@@ -162,9 +159,10 @@ n += 1
 print("SD Epitaxy ...")
 domain.duplicateTopLevelSet(vps.Material.Metal)
 epitaxy = vps.IsotropicProcess(
-    1.0, maskMaterial=[vps.Material.PolySi, vps.Material.SiO2, vps.Material.Si3N4]
+    rate=1.0,
+    maskMaterial=[vps.Material.PolySi, vps.Material.SiO2, vps.Material.Si3N4],
 )
-vps.Process(domain, epitaxy, 11.0).apply()
+vps.Process(domain, epitaxy, 10.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
@@ -188,7 +186,7 @@ n += 1
 # remove SiGe interlayer
 print("Removing SiGe interlayer ...")
 etch = vps.IsotropicProcess(
-    -1.0,
+    rate=-1.0,
     maskMaterial=[
         vps.Material.Si,
         vps.Material.SiO2,
@@ -216,4 +214,3 @@ vps.Process(domain, growth, 20.0).apply()
 vps.Planarize(domain, 47.5).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
-n += 1
