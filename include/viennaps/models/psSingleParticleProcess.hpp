@@ -120,7 +120,7 @@ public:
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
                   NumericType sourceDistributionPower,
-                  std::unordered_map<Material, NumericType> &&maskMaterial) {
+                  std::unordered_map<Material, NumericType> &&materialRates) {
     // particles
     auto particle = std::make_unique<impl::SingleParticle<NumericType, D>>(
         stickingProbability, sourceDistributionPower);
@@ -128,7 +128,7 @@ private:
     // surface model
     auto surfModel =
         SmartPointer<impl::SingleParticleSurfaceModel<NumericType, D>>::New(
-            rate, maskMaterial);
+            rate, materialRates);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
@@ -137,7 +137,26 @@ private:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
+
+    processData["Default Rate"] = std::vector<NumericType>{rate};
+    processData["Sticking Probability"] =
+        std::vector<NumericType>{stickingProbability};
+    processData["Source Distribution Power"] =
+        std::vector<NumericType>{sourceDistributionPower};
+    if (!materialRates.empty()) {
+      processData["Materials"] = std::vector<NumericType>{};
+      processData["Rates"] = std::vector<NumericType>{};
+
+      for (const auto &pair : materialRates) {
+        processData["Materials"].push_back(
+            static_cast<NumericType>(pair.first));
+        processData["Rates"].push_back(pair.second);
+      }
+    }
   }
+
+protected:
+  using ProcessModelBase<NumericType, D>::processData;
 };
 
 } // namespace viennaps
