@@ -11,7 +11,7 @@ boundaryConds = [
     vls.BoundaryConditionEnum.PERIODIC_BOUNDARY,
     vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
-gridDelta = 0.51
+gridDelta = 0.71
 
 domain = vps.Domain(bounds, boundaryConds, gridDelta)
 vps.MakePlane(domain, 10.0, vps.Material.SiO2).apply()
@@ -162,7 +162,7 @@ epitaxy = vps.IsotropicProcess(
     rate=1.0,
     maskMaterial=[vps.Material.PolySi, vps.Material.SiO2, vps.Material.Si3N4],
 )
-vps.Process(domain, epitaxy, 10.0).apply()
+vps.Process(domain, epitaxy, 9.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
