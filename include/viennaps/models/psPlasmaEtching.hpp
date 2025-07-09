@@ -108,6 +108,13 @@ public:
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
+      } else if (MaterialMap::isMaterial(materialIds[i], Material::Polymer)) {
+        etchRate[i] = -(1 / params.Polymer.rho) * sputterRate * unitConversion;
+        if (Logger::getLogLevel() > 3) {
+          spRate->at(i) = sputterRate;
+          ieRate->at(i) = 0.;
+          chRate->at(i) = 0.;
+        }
       } else {
         etchRate[i] = -(1 / params.Substrate.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
@@ -214,6 +221,10 @@ public:
       A_sp = params.Mask.A_sp;
       B_sp = params.Mask.B_sp;
       Eth_sp = params.Mask.Eth_sp;
+    } else if (MaterialMap::isMaterial(materialId, Material::Polymer)) {
+      A_sp = params.Polymer.A_sp;
+      B_sp = params.Polymer.B_sp;
+      Eth_sp = params.Polymer.Eth_sp;
     }
 
     // NumericType f_sp_theta = 1.;
