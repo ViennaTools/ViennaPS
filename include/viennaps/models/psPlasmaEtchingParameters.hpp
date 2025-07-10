@@ -84,7 +84,7 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     NumericType thetaRMax = constants::degToRad(90.);
   } Ions;
 
-  auto toProcessData() const {
+  auto toProcessMetaData() const {
     std::unordered_map<std::string, std::vector<NumericType>> processData;
 
     processData["Ion Flux"] = {ionFlux};

@@ -214,7 +214,7 @@ public:
     this->particles.clear();
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
-    this->processData = params_.toProcessData();
+    this->processMetaData = params_.toProcessMetaData();
     firstInit = true;
 
     if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {

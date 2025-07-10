@@ -139,16 +139,16 @@ private:
     this->setProcessName("AnisotropicProcess");
 
     // store process data
-    processData["r100"] = {r100};
-    processData["r110"] = {r110};
-    processData["r111"] = {r111};
-    processData["r311"] = {r311};
-    processData["Direction100"] = {direction100[0], direction100[1],
-                                   direction100[2]};
-    processData["Direction010"] = {direction010[0], direction010[1],
-                                   direction010[2]};
+    processMetaData["r100"] = {r100};
+    processMetaData["r110"] = {r110};
+    processMetaData["r111"] = {r111};
+    processMetaData["r311"] = {r311};
+    processMetaData["Direction100"] = {direction100[0], direction100[1],
+                                       direction100[2]};
+    processMetaData["Direction010"] = {direction010[0], direction010[1],
+                                       direction010[2]};
     for (const auto &material : materials) {
-      processData[MaterialMap::getMaterialName(material.first) + " Rate"] =
+      processMetaData[MaterialMap::getMaterialName(material.first) + " Rate"] =
           std::vector<NumericType>{material.second};
     }
   }
@@ -164,7 +164,7 @@ private:
   NumericType r311 = 0.0300166666667;
 
   std::vector<std::pair<Material, NumericType>> materials;
-  using ProcessModel<NumericType, D>::processData;
+  using ProcessModel<NumericType, D>::processMetaData;
 };
 
 } // namespace viennaps

@@ -87,6 +87,12 @@ public:
     this->setVelocityField(velField);
     this->setProcessName("FaradayCageEtching");
     this->setPipelineFileName("FaradayCagePipeline");
+
+    this->processData["PWR"] = {rate};
+    this->processData["stickingProbability"] = {stickingProbability};
+    this->processData["sourceExponent"] = {sourceDistributionPower};
+    this->processData["cageAngle"] = {cageAngle};
+    this->processData["tiltAngle"] = {tiltAngle};
   }
 };
 

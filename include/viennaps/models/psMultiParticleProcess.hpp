@@ -243,17 +243,17 @@ public:
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
 
-    processData["StickingProbability"] = std::vector<NumericType>{};
-    processData["Exponent"] = std::vector<NumericType>{};
-    processData["MeanEnergy"] = std::vector<NumericType>{};
-    processData["SigmaEnergy"] = std::vector<NumericType>{};
-    processData["ThresholdEnergy"] = std::vector<NumericType>{};
-    processData["B_sp"] = std::vector<NumericType>{};
-    processData["ThetaRMin"] = std::vector<NumericType>{};
-    processData["ThetaRMax"] = std::vector<NumericType>{};
-    processData["InflectAngle"] = std::vector<NumericType>{};
-    processData["MinAngle"] = std::vector<NumericType>{};
-    processData["n_l"] = std::vector<NumericType>{};
+    processMetaData["StickingProbability"] = std::vector<NumericType>{};
+    processMetaData["Exponent"] = std::vector<NumericType>{};
+    processMetaData["MeanEnergy"] = std::vector<NumericType>{};
+    processMetaData["SigmaEnergy"] = std::vector<NumericType>{};
+    processMetaData["ThresholdEnergy"] = std::vector<NumericType>{};
+    processMetaData["B_sp"] = std::vector<NumericType>{};
+    processMetaData["ThetaRMin"] = std::vector<NumericType>{};
+    processMetaData["ThetaRMax"] = std::vector<NumericType>{};
+    processMetaData["InflectAngle"] = std::vector<NumericType>{};
+    processMetaData["MinAngle"] = std::vector<NumericType>{};
+    processMetaData["n_l"] = std::vector<NumericType>{};
   }
 
   void addNeutralParticle(NumericType stickingProbability,
@@ -263,6 +263,8 @@ public:
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
         stickingProbability, dataLabel);
     this->insertNextParticleType(particle);
+
+    processMetaData["StickingProbability"].push_back(stickingProbability);
   }
 
   void
@@ -275,7 +277,8 @@ public:
         defaultStickingProbability, materialSticking, dataLabel);
     this->insertNextParticleType(particle);
 
-    processData["StickingProbability"].push_back(defaultStickingProbability);
+    processMetaData["StickingProbability"].push_back(
+        defaultStickingProbability);
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
@@ -292,6 +295,17 @@ public:
         thetaRMin * M_PI / 180., thetaRMax * M_PI / 180.,
         inflectAngle * M_PI / 180., minAngle * M_PI / 180., n, dataLabel);
     this->insertNextParticleType(particle);
+
+    processMetaData["Exponent"].push_back(sourcePower);
+    processMetaData["MeanEnergy"].push_back(meanEnergy);
+    processMetaData["SigmaEnergy"].push_back(sigmaEnergy);
+    processMetaData["ThresholdEnergy"].push_back(thresholdEnergy);
+    processMetaData["B_sp"].push_back(B_sp);
+    processMetaData["ThetaRMin"].push_back(thetaRMin);
+    processMetaData["ThetaRMax"].push_back(thetaRMax);
+    processMetaData["InflectAngle"].push_back(inflectAngle);
+    processMetaData["MinAngle"].push_back(minAngle);
+    processMetaData["n_l"].push_back(n);
   }
 
   void
@@ -306,7 +320,7 @@ public:
 
 private:
   std::vector<std::string> fluxDataLabels_;
-  using ProcessModel<NumericType, D>::processData;
+  using ProcessModel<NumericType, D>::processMetaData;
 };
 
 } // namespace viennaps

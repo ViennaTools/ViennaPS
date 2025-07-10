@@ -25,7 +25,7 @@ template <typename NumericType> struct IBEParameters {
   NumericType redepositionThreshold = 0.1;
   NumericType redepositionRate = 0.0;
 
-  auto toProcessData() const {
+  auto toProcessMetaData() const {
     std::unordered_map<std::string, std::vector<NumericType>> processData;
 
     processData["Plane Wafer Rate"] = {planeWaferRate};

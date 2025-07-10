@@ -258,7 +258,7 @@ public:
     if (static_cast<int>(domain_->useMetaData) > 0) {
       domain_->clearMetaData(false); // clear previous metadata (without domain
                                      // metadata)
-      domain_->addMetaData(model_->getProcessData());
+      domain_->addMetaData(model_->getProcessMetaData());
     }
     /* ------ Process Setup ------ */
     const unsigned int logLevel = Logger::getLogLevel();

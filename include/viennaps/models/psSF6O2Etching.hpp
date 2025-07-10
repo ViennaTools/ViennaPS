@@ -154,9 +154,9 @@ private:
 
     this->setProcessName("SF6O2Etching");
 
-    this->processData = params.toProcessData();
+    this->processMetaData = params.toProcessMetaData();
     // add units
-    this->processData["Units"] = std::vector<NumericType>{
+    this->processMetaData["Units"] = std::vector<NumericType>{
         static_cast<NumericType>(units::Length::getInstance().getUnit()),
         static_cast<NumericType>(units::Time::getInstance().getUnit())};
   }

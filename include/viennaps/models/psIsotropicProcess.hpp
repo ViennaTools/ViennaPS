@@ -88,18 +88,18 @@ private:
     this->setProcessName("IsotropicProcess");
 
     // store process data
-    processData["IsotropicRate"] = std::vector<NumericType>{rate};
+    processMetaData["IsotropicRate"] = std::vector<NumericType>{rate};
     if (!materialRates.empty()) {
-      processData["MaterialRates"] = std::vector<NumericType>{};
+      processMetaData["MaterialRates"] = std::vector<NumericType>{};
       for (const auto &materialRate : materialRates) {
-        processData["Material"].push_back(
+        processMetaData["Material"].push_back(
             static_cast<NumericType>(materialRate.first));
-        processData["MaterialRates"].push_back(materialRate.second);
+        processMetaData["MaterialRates"].push_back(materialRate.second);
       }
     }
   }
 
-  using ProcessModel<NumericType, D>::processData;
+  using ProcessModel<NumericType, D>::processMetaData;
 };
 
 } // namespace viennaps
