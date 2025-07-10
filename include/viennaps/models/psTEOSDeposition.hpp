@@ -189,8 +189,6 @@ private:
 
 template <class NumericType, int D>
 class TEOSDeposition : public ProcessModel<NumericType, D> {
-  using ProcessModelBase<NumericType, D>::processMetaData;
-
 public:
   TEOSDeposition(const NumericType pStickingP1, const NumericType pRateP1,
                  const NumericType pOrderP1, const NumericType pStickingP2 = 0.,
@@ -217,9 +215,9 @@ public:
       this->insertNextParticleType(particle);
       this->setProcessName("SingleTEOSParticleTEOS");
 
-      processMetaData["StickingProbability"] = {pStickingP1};
-      processMetaData["Rate"] = {pRateP1};
-      processMetaData["Order"] = {pOrderP1};
+      this->processMetaData["StickingProbability"] = {pStickingP1};
+      this->processMetaData["Rate"] = {pRateP1};
+      this->processMetaData["Order"] = {pOrderP1};
     } else {
       // use multi (two) particle model
 
@@ -241,9 +239,9 @@ public:
       this->insertNextParticleType(particle2);
       this->setProcessName("MultiTEOSParticleTEOS");
 
-      processMetaData["StickingProbability"] = {pStickingP1, pStickingP2};
-      processMetaData["Rate"] = {pRateP1, pRateP2};
-      processMetaData["Order"] = {pOrderP1, pOrderP2};
+      this->processMetaData["StickingProbability"] = {pStickingP1, pStickingP2};
+      this->processMetaData["Rate"] = {pRateP1, pRateP2};
+      this->processMetaData["Order"] = {pOrderP1, pOrderP2};
     }
   }
 };

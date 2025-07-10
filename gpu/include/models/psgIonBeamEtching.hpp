@@ -29,6 +29,7 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
+    this->processMetaData["exponent"] = {exponent};
   }
 
   void

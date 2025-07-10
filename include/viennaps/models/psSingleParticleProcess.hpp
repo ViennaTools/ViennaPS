@@ -138,24 +138,21 @@ private:
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
 
-    processMetaData["Default Rate"] = std::vector<NumericType>{rate};
-    processMetaData["Sticking Probability"] =
+    this->processMetaData["Default Rate"] = std::vector<NumericType>{rate};
+    this->processMetaData["Sticking Probability"] =
         std::vector<NumericType>{stickingProbability};
-    processMetaData["Source Exponent"] =
+    this->processMetaData["Source Exponent"] =
         std::vector<NumericType>{sourceDistributionPower};
     if (!materialRates.empty()) {
       for (const auto &pair : materialRates) {
         if (pair.first == Material::Undefined)
           continue; // skip undefined material
 
-        processMetaData[MaterialMap::getMaterialName(pair.first) + " Rate"] =
-            std::vector<NumericType>{pair.second};
+        this->processMetaData[MaterialMap::getMaterialName(pair.first) +
+                              " Rate"] = std::vector<NumericType>{pair.second};
       }
     }
   }
-
-protected:
-  using ProcessModelBase<NumericType, D>::processMetaData;
 };
 
 } // namespace viennaps

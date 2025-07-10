@@ -88,11 +88,12 @@ public:
     this->setProcessName("FaradayCageEtching");
     this->setPipelineFileName("FaradayCagePipeline");
 
-    this->processData["PWR"] = {rate};
-    this->processData["stickingProbability"] = {stickingProbability};
-    this->processData["sourceExponent"] = {sourceDistributionPower};
-    this->processData["cageAngle"] = {cageAngle};
-    this->processData["tiltAngle"] = {tiltAngle};
+    // meta data
+    this->processMetaData["PWR"] = {rate};
+    this->processMetaData["stickingProbability"] = {stickingProbability};
+    this->processMetaData["sourceExponent"] = {sourceDistributionPower};
+    this->processMetaData["cageAngle"] = {cageAngle};
+    this->processMetaData["tiltAngle"] = {tiltAngle};
   }
 };
 

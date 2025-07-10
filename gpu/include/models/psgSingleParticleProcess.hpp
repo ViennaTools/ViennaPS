@@ -40,7 +40,7 @@ public:
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
                   NumericType sourceExponent,
-                  std::unordered_map<Material, NumericType> &&maskMaterial) {
+                  std::unordered_map<Material, NumericType> &&materialRates) {
     // particles
 
     viennaray::gpu::Particle<NumericType> particle{
@@ -51,7 +51,7 @@ private:
 
     // surface model
     auto surfModel = SmartPointer<::viennaps::impl::SingleParticleSurfaceModel<
-        NumericType, D>>::New(rate, maskMaterial);
+        NumericType, D>>::New(rate, materialRates);
 
     // velocity field
     auto velField =
@@ -62,6 +62,21 @@ private:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
+
+    this->processMetaData["Default Rate"] = std::vector<NumericType>{rate};
+    this->processMetaData["Sticking Probability"] =
+        std::vector<NumericType>{stickingProbability};
+    this->processMetaData["Source Exponent"] =
+        std::vector<NumericType>{sourceExponent};
+    if (!materialRates.empty()) {
+      for (const auto &pair : materialRates) {
+        if (pair.first == Material::Undefined)
+          continue; // skip undefined material
+
+        this->processMetaData[MaterialMap::getMaterialName(pair.first) +
+                              " Rate"] = std::vector<NumericType>{pair.second};
+      }
+    }
   }
 };
 } // namespace viennaps::gpu
