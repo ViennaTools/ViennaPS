@@ -147,8 +147,8 @@ private:
                                    direction100[2]};
     processData["Direction010"] = {direction010[0], direction010[1],
                                    direction010[2]};
-    for (const auto &material : Rates) {
-      processData[MaterialMap::getMaterialName(pair.first) + " Rate"] =
+    for (const auto &material : materials) {
+      processData[MaterialMap::getMaterialName(material.first) + " Rate"] =
           std::vector<NumericType>{material.second};
     }
   }

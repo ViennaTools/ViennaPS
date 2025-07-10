@@ -23,6 +23,15 @@ template <typename NumericType, int D> struct RayTracingParameters {
   bool useRandomSeeds = true;
   bool ignoreFluxBoundaries = false;
   int smoothingNeighbors = 1;
+
+  auto toMetaData() const {
+    std::unordered_map<std::string, std::vector<NumericType>> metaData;
+    metaData["RaysPerPoint"] = {static_cast<NumericType>(raysPerPoint)};
+    metaData["DiskRadius"] = {diskRadius};
+    metaData["SmoothingNeighbors"] = {
+        static_cast<NumericType>(smoothingNeighbors)};
+    return metaData;
+  }
 };
 
 template <typename NumericType> struct AdvectionParameters {
@@ -33,6 +42,15 @@ template <typename NumericType> struct AdvectionParameters {
   bool checkDissipation = true;
   bool velocityOutput = false;
   bool ignoreVoids = false;
+
+  auto toMetaData() const {
+    std::unordered_map<std::string, std::vector<NumericType>> metaData;
+    metaData["IntegrationScheme"] = {
+        static_cast<NumericType>(integrationScheme)};
+    metaData["TimeStepRatio"] = {timeStepRatio};
+    metaData["DissipationAlpha"] = {dissipationAlpha};
+    return metaData;
+  }
 };
 
 template <typename NumericType> class ProcessParams {

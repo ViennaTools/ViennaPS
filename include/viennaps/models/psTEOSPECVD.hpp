@@ -118,6 +118,15 @@ public:
     this->insertNextParticleType(radical);
     this->insertNextParticleType(ion);
     this->setProcessName("TEOSPECVD");
+
+    this->processData["RadicalSticking"] = {radicalSticking};
+    this->processData["RadicalRate"] = {radicalRate};
+    this->processData["RadicalOrder"] = {radicalOrder};
+    this->processData["IonRate"] = {ionRate};
+    this->processData["IonSticking"] = {ionSticking};
+    this->processData["IonExponent"] = {ionExponent};
+    this->processData["IonOrder"] = {ionOrder};
+    this->processData["IonMinAngle"] = {ionMinAngle};
   }
 };
 

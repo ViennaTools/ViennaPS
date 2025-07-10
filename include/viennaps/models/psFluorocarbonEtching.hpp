@@ -121,6 +121,12 @@ template <typename NumericType> struct FluorocarbonParameters {
 
   // fixed
   static constexpr double kB = 8.617333262 * 1e-5; // eV / K
+
+  auto toProcessData() const {
+    std::unordered_map<std::string, std::vector<NumericType>> processData;
+
+    return processData;
+  }
 };
 
 namespace impl {
@@ -669,6 +675,7 @@ private:
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
+    this->processData = params_.toProcessData();
   }
 };
 
