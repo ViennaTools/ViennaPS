@@ -1736,6 +1736,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Get the ray tracing parameters for the process.",
            pybind11::return_value_policy::reference);
 
+  // ***************************************************************************
+  //                                 DOMAIN
+  // ***************************************************************************
+
+  // Meta Data Enum
+  pybind11::enum_<MetaDataLevel>(module, "MetaDataLevel")
+      .value("NONE", MetaDataLevel::NONE)
+      .value("DOMAIN", MetaDataLevel::DOMAIN)
+      .value("PROCESS", MetaDataLevel::PROCESS)
+      .value("FULL", MetaDataLevel::FULL);
+
   // Domain
   pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
       // constructors
@@ -1805,6 +1816,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Get the bounding box of the domain.")
       .def("getBoundaryConditions", &Domain<T, D>::getBoundaryConditions,
            "Get the boundary conditions of the domain.")
+      .def("getMetaData", &Domain<T, D>::getMetaData,
+           "Get meta data (e.g. process data) stored in the domain")
       .def("print", &Domain<T, D>::print)
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
@@ -1822,7 +1835,29 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, D>::saveLevelSets,
            pybind11::arg("filename"))
-      .def("clear", &Domain<T, D>::clear);
+      .def("clear", &Domain<T, D>::clear)
+      .def("clearMetaData", &Domain<T, D>::clearMetaData,
+           "Clear meta data from domain.",
+           pybind11::arg("clearDomainData") = false)
+      .def("addMetaData",
+           pybind11::overload_cast<const std::string &, T>(
+               &Domain<T, D>::addMetaData),
+           "Add a single metadata entry to the domain.")
+      .def("addMetaData",
+           pybind11::overload_cast<const std::string &, const std::vector<T> &>(
+               &Domain<T, D>::addMetaData),
+           "Add a single metadata entry to the domain.")
+      .def("addMetaData",
+           pybind11::overload_cast<
+               const std::unordered_map<std::string, std::vector<T>> &>(
+               &Domain<T, D>::addMetaData),
+           "Add metadata to the domain.")
+      // static
+      .def_static("enableMetaData", &Domain<T, D>::enableMetaData,
+                  "Enable adding meta data from processes to domain.",
+                  pybind11::arg("level") = MetaDataLevel::PROCESS)
+      .def_static("disableMetaData", &Domain<T, D>::disableMetaData,
+                  "Disable adding meta data to domain.");
 
   // Domain Setup
   pybind11::class_<DomainSetup<T, D>>(module, "DomainSetup")
