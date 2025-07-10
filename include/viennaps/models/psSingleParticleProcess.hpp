@@ -141,16 +141,15 @@ private:
     processData["Default Rate"] = std::vector<NumericType>{rate};
     processData["Sticking Probability"] =
         std::vector<NumericType>{stickingProbability};
-    processData["Source Distribution Power"] =
+    processData["Source Exponent"] =
         std::vector<NumericType>{sourceDistributionPower};
     if (!materialRates.empty()) {
-      processData["Materials"] = std::vector<NumericType>{};
-      processData["Rates"] = std::vector<NumericType>{};
+      processData["Material"] = std::vector<NumericType>{};
+      processData["Rate"] = std::vector<NumericType>{};
 
       for (const auto &pair : materialRates) {
-        processData["Materials"].push_back(
-            static_cast<NumericType>(pair.first));
-        processData["Rates"].push_back(pair.second);
+        processData["Material"].push_back(static_cast<NumericType>(pair.first));
+        processData["Rate"].push_back(pair.second);
       }
     }
   }
