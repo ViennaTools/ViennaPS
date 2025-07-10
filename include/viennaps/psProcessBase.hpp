@@ -255,7 +255,7 @@ public:
     if (!checkInput())
       return;
 
-    if (static_cast<int>(domain_->useMetaData) > 0) {
+    if (static_cast<int>(domain_->useMetaData) > 1) {
       domain_->clearMetaData(false); // clear previous metadata (without domain
                                      // metadata)
       domain_->addMetaData(model_->getProcessMetaData());
@@ -547,10 +547,10 @@ public:
     processTime_ = processDuration_ - remainingTime;
     processTimer.finish();
 
-    if (static_cast<int>(domain_->useMetaData) > 0) {
+    if (static_cast<int>(domain_->useMetaData) > 1) {
       domain_->addMetaData("ProcessTime", processTime_);
     }
-    if (static_cast<int>(domain_->useMetaData) > 1) {
+    if (static_cast<int>(domain_->useMetaData) > 2) {
       domain_->addMetaData(advectionParams_.toMetaData());
       domain_->addMetaData(rayTracingParams_.toMetaData());
       domain_->addMetaData("MaxCoverageIterations", maxIterations_);

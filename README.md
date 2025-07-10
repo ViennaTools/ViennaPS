@@ -50,16 +50,16 @@ ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org
 
 ### Dependencies (installed automatically)
 
-* [ViennaCore](https://github.com/ViennaTools/viennacore) (1.4.3+)
+* [ViennaCore](https://github.com/ViennaTools/viennacore) 
 
-* [ViennaLS](https://github.com/ViennaTools/viennals) (4.3.2+)
-  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) (0.6.0+)
+* [ViennaLS](https://github.com/ViennaTools/viennals) 
+  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) 
   * [VTK](https://vtk.org/) (9.0.0+)
 
-* [ViennaRay](https://github.com/ViennaTools/viennaray) (3.4.1+)
+* [ViennaRay](https://github.com/ViennaTools/viennaray) 
   * [Embree](https://www.embree.org/) (4.0.0+)
 
-* [ViennaCS](https://github.com/ViennaTools/viennacs) (1.1.0+)
+* [ViennaCS](https://github.com/ViennaTools/viennacs)
 
 * [pybind11](https://github.com/pybind/pybind11) (2.12.0+, only for building Python libs)
 
@@ -115,7 +115,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.5.2")
+  CPMAddPackage("gh:viennatools/viennaps@3.6.0")
   ```
 
 * With a local installation

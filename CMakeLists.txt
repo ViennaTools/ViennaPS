@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.5.2)
+  VERSION 3.6.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -23,7 +23,6 @@ option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish whe
 
 set(VIENNAPS_LOOKUP_DIRS
     ""
-    # "${CMAKE_CURRENT_SOURCE_DIR}/../install/"
     CACHE STRING "Directories to account for when searching installed dependencies")
 
 list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
