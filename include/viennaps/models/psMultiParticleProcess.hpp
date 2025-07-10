@@ -242,6 +242,18 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
+
+    processData["StickingProbability"] = std::vector<NumericType>{};
+    processData["Exponent"] = std::vector<NumericType>{};
+    processData["MeanEnergy"] = std::vector<NumericType>{};
+    processData["SigmaEnergy"] = std::vector<NumericType>{};
+    processData["ThresholdEnergy"] = std::vector<NumericType>{};
+    processData["B_sp"] = std::vector<NumericType>{};
+    processData["ThetaRMin"] = std::vector<NumericType>{};
+    processData["ThetaRMax"] = std::vector<NumericType>{};
+    processData["InflectAngle"] = std::vector<NumericType>{};
+    processData["MinAngle"] = std::vector<NumericType>{};
+    processData["n_l"] = std::vector<NumericType>{};
   }
 
   void addNeutralParticle(NumericType stickingProbability,
@@ -262,6 +274,8 @@ public:
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
         defaultStickingProbability, materialSticking, dataLabel);
     this->insertNextParticleType(particle);
+
+    processData["StickingProbability"].push_back(defaultStickingProbability);
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
@@ -292,6 +306,7 @@ public:
 
 private:
   std::vector<std::string> fluxDataLabels_;
+  using ProcessModel<NumericType, D>::processData;
 };
 
 } // namespace viennaps

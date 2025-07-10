@@ -16,6 +16,13 @@ template <typename NumericType> struct FaradayCageParameters {
   IBEParameters<NumericType> ibeParams;
 
   NumericType cageAngle = 0; // degree
+
+  auto toProcessData() const {
+    std::unordered_map<std::string, std::vector<NumericType>> processData =
+        ibeParams.toProcessData();
+    processData["Cage Angle"] = {cageAngle * M_PI / 180.};
+    return processData;
+  }
 };
 
 namespace impl {
@@ -245,6 +252,7 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("FaradayCageEtching");
+    this->processData = params_.toProcessData();
 
     firstInit = true;
   }

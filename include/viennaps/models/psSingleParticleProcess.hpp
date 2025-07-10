@@ -144,12 +144,12 @@ private:
     processData["Source Exponent"] =
         std::vector<NumericType>{sourceDistributionPower};
     if (!materialRates.empty()) {
-      processData["Material"] = std::vector<NumericType>{};
-      processData["Rate"] = std::vector<NumericType>{};
-
       for (const auto &pair : materialRates) {
-        processData["Material"].push_back(static_cast<NumericType>(pair.first));
-        processData["Rate"].push_back(pair.second);
+        if (pair.first == Material::Undefined)
+          continue; // skip undefined material
+
+        processData[MaterialMap::getMaterialName(pair.first) + " Rate"] =
+            std::vector<NumericType>{pair.second};
       }
     }
   }

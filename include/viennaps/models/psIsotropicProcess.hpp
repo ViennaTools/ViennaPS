@@ -86,7 +86,20 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("IsotropicProcess");
+
+    // store process data
+    processData["IsotropicRate"] = std::vector<NumericType>{rate};
+    if (!materialRates.empty()) {
+      processData["MaterialRates"] = std::vector<NumericType>{};
+      for (const auto &materialRate : materialRates) {
+        processData["Material"].push_back(
+            static_cast<NumericType>(materialRate.first));
+        processData["MaterialRates"].push_back(materialRate.second);
+      }
+    }
   }
+
+  using ProcessModel<NumericType, D>::processData;
 };
 
 } // namespace viennaps

@@ -207,7 +207,29 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("DirectionalProcess");
+
+    // Store process data
+    processData["DirectionalVelocity"] = std::vector<NumericType>();
+    processData["IsotropicVelocity"] = std::vector<NumericType>();
+    processData["MaskMaterials"] = std::vector<NumericType>();
+    processData["CalculateVisibility"] = std::vector<NumericType>();
+    int i = 0;
+    for (const auto &rateSet : rateSets) {
+      processData["DirectionalVelocity"].push_back(rateSet.directionalVelocity);
+      processData["IsotropicVelocity"].push_back(rateSet.isotropicVelocity);
+      for (const auto &maskMaterial : rateSet.maskMaterials) {
+        processData["MaskMaterials"].push_back(
+            static_cast<NumericType>(maskMaterial));
+      }
+      processData["CalculateVisibility"].push_back(
+          static_cast<NumericType>(rateSet.calculateVisibility ? 1 : 0));
+      processData["Direction " + std::to_string(i++)] =
+          std::vector<NumericType>{rateSet.direction[0], rateSet.direction[1],
+                                   rateSet.direction[2]};
+    }
   }
+
+  using ProcessModel<NumericType, D>::processData;
 };
 
 } // namespace viennaps

@@ -545,6 +545,7 @@ public:
 
     processTime_ = processDuration_ - remainingTime;
     processTimer.finish();
+    domain_->addMetaData("ProcessTime", processTime_);
 
     Logger::getInstance()
         .addTiming("\nProcess " + name, processTimer)
