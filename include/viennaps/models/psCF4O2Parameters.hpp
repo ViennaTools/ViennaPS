@@ -97,6 +97,71 @@ template <typename NumericType> struct CF4O2Parameters {
     NumericType n_l = 10.;
     NumericType minAngle = 1.3962634;
   } Ions;
+
+  auto toProcessMetaData() const {
+    std::unordered_map<std::string, std::vector<NumericType>> metaData;
+
+    // put everything into the meta data
+    metaData["ionFlux"] = {ionFlux};
+    metaData["etchantFlux"] = {etchantFlux};
+    metaData["oxygenFlux"] = {oxygenFlux};
+    metaData["polymerFlux"] = {polymerFlux};
+    metaData["MaskRho"] = {Mask.rho};
+    metaData["MaskEthSp"] = {Mask.Eth_sp};
+    metaData["MaskASp"] = {Mask.A_sp};
+    metaData["SiGeRho"] = {SiGe.rho};
+    metaData["SiGeEthSp"] = {SiGe.Eth_sp};
+    metaData["SiGeEthIe"] = {SiGe.Eth_ie};
+    metaData["SiGeASp"] = {SiGe.A_sp};
+    metaData["SiGeAIe"] = {SiGe.A_ie};
+    metaData["SiGeKSigma"] = {SiGe.k_sigma};
+    metaData["SiGeBetaSigma"] = {SiGe.beta_sigma};
+    metaData["SiRho"] = {Si.rho};
+    metaData["SiEthSp"] = {Si.Eth_sp};
+    metaData["SiEthIe"] = {Si.Eth_ie};
+    metaData["SiASp"] = {Si.A_sp};
+    metaData["SiAIe"] = {Si.A_ie};
+    metaData["SiKSigma"] = {Si.k_sigma};
+    metaData["SiBetaSigma"] = {Si.beta_sigma};
+    metaData["PassivationEthOie"] = {Passivation.Eth_O_ie};
+    metaData["PassivationEthCie"] = {Passivation.Eth_C_ie};
+    metaData["PassivationAOie"] = {Passivation.A_O_ie};
+    metaData["PassivationACie"] = {Passivation.A_C_ie};
+    metaData["IonsMeanEnergy"] = {Ions.meanEnergy};
+    metaData["IonsSigmaEnergy"] = {Ions.sigmaEnergy};
+    metaData["IonsExponent"] = {Ions.exponent};
+    metaData["IonsInflectAngle"] = {Ions.inflectAngle};
+    metaData["IonsNL"] = {Ions.n_l};
+    metaData["IonsMinAngle"] = {Ions.minAngle};
+
+    // sticking probabilities
+    for (const auto &gamma : gamma_F) {
+      metaData["gamma_F_" + MaterialMap::getMaterialName(gamma.first)] = {
+          gamma.second};
+    }
+    for (const auto &gamma : gamma_F_oxidized) {
+      metaData["gamma_F_oxidized_" +
+               MaterialMap::getMaterialName(gamma.first)] = {gamma.second};
+    }
+    for (const auto &gamma : gamma_O) {
+      metaData["gamma_O_" + MaterialMap::getMaterialName(gamma.first)] = {
+          gamma.second};
+    }
+    for (const auto &gamma : gamma_O_passivated) {
+      metaData["gamma_O_passivated_" +
+               MaterialMap::getMaterialName(gamma.first)] = {gamma.second};
+    }
+    for (const auto &gamma : gamma_C) {
+      metaData["gamma_C_" + MaterialMap::getMaterialName(gamma.first)] = {
+          gamma.second};
+    }
+    for (const auto &gamma : gamma_C_oxidized) {
+      metaData["gamma_C_oxidized_" +
+               MaterialMap::getMaterialName(gamma.first)] = {gamma.second};
+    }
+
+    return metaData;
+  }
 };
 
 } // namespace viennaps

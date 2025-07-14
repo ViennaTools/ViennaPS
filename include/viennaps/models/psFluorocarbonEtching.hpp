@@ -125,6 +125,54 @@ template <typename NumericType> struct FluorocarbonParameters {
   auto toProcessMetaData() const {
     std::unordered_map<std::string, std::vector<NumericType>> processData;
 
+    processData["ionFlux"] = {ionFlux};
+    processData["etchantFlux"] = {etchantFlux};
+    processData["polymerFlux"] = {polyFlux};
+    processData["delta_p"] = {delta_p};
+    processData["etchStopDepth"] = {etchStopDepth};
+    processData["temperature"] = {temperature};
+    processData["k_ie"] = {k_ie};
+    processData["k_ev"] = {k_ev};
+    processData["beta_pe"] = {beta_pe};
+    processData["beta_p"] = {beta_p};
+    processData["beta_e"] = {beta_e};
+    processData["Mask Rho"] = {Mask.rho};
+    processData["Mask Beta_P"] = {Mask.beta_p};
+    processData["Mask Beta_E"] = {Mask.beta_e};
+    processData["Mask A_sp"] = {Mask.A_sp};
+    processData["Mask B_sp"] = {Mask.B_sp};
+    processData["Mask E_th_sp"] = {Mask.Eth_sp};
+    processData["SiO2 Rho"] = {SiO2.rho};
+    processData["SiO2 E_th_sp"] = {SiO2.Eth_sp};
+    processData["SiO2 E_th_ie"] = {SiO2.Eth_ie};
+    processData["SiO2 A_Sp"] = {SiO2.A_sp};
+    processData["SiO2 B_sp"] = {SiO2.B_sp};
+    processData["SiO2 K"] = {SiO2.K};
+    processData["SiO2 E_a"] = {SiO2.E_a};
+    processData["Polymer Rho"] = {Polymer.rho};
+    processData["Polymer E_th_ie"] = {Polymer.Eth_ie};
+    processData["Polymer A_ie"] = {Polymer.A_ie};
+    processData["Si3N4 Rho"] = {Si3N4.rho};
+    processData["Si3N4 E_th_sp"] = {Si3N4.Eth_sp};
+    processData["Si3N4 E_th_ie"] = {Si3N4.Eth _ie};
+    processData["Si3N4 A_Sp"] = {Si3N4.A_sp};
+    processData["Si3N4 B_sp"] = {Si3N4.B_sp};
+    processData["Si3N4 K"] = {Si3N4.K};
+    processData["Si3N4 EA"] = {Si3N4.E_a};
+    processData["Si Rho"] = {Si.rho};
+    processData["Si E_th_sp"] = {Si.Eth_sp};
+    processData["Si E_th_ie"] = {Si.Eth_ie};
+    processData["Si A_Sp"] = {Si.A_sp};
+    processData["Si B_sp"] = {Si.B_sp};
+    processData["Si K"] = {Si.K};
+    processData["Si E_a"] = {Si.E_a};
+    processData["Ion MeanEnergy"] = {Ions.meanEnergy};
+    processData["Ion SigmaEnergy"] = {Ions.sigmaEnergy};
+    processData["Ion Exponent"] = {Ions.exponent};
+    processData["Ion InflectAngle"] = {Ions.inflectAngle};
+    processData["Ion n_k"] = {Ions.n_l};
+    processData["Ion MinAngle"] = {Ions.minAngle};
+
     return processData;
   }
 };
@@ -676,6 +724,9 @@ private:
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
     this->processMetaData = params_.toProcessMetaData();
+    this->processMetaData["Units"] = std::vector<NumericType>{
+        static_cast<NumericType>(units::Length::getInstance().getUnit()),
+        static_cast<NumericType>(units::Time::getInstance().getUnit())};
   }
 };
 
