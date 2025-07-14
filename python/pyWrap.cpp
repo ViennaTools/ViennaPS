@@ -2313,6 +2313,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaxCoverageInitIterations",
            &gpu::Process<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
+      .def("setCoverageDeltaThreshold",
+           &gpu::Process<T, D>::setCoverageDeltaThreshold,
+           "Set the threshold for the coverage delta metric to reach "
+           "convergence.")
       .def("setIntegrationScheme", &gpu::Process<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
@@ -2328,6 +2332,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "sets the maximum distance a surface can be moved during one "
            "advection step. It MUST be below 0.5 to guarantee numerical "
            "stability. Defaults to 0.4999.")
+      .def("enableFluxSmoothing", &gpu::Process<T, D>::enableFluxSmoothing,
+           "Enable flux smoothing. The flux at each surface point, calculated "
+           "by the ray tracer, is averaged over the surface point neighbors.")
+      .def("disableFluxSmoothing", &gpu::Process<T, D>::disableFluxSmoothing,
+           "Disable flux smoothing")
       .def("enableRandomSeeds", &gpu::Process<T, D>::enableRandomSeeds,
            "Enable random seeds for the ray tracer. This will make the process "
            "results non-deterministic.")

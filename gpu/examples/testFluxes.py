@@ -1,26 +1,17 @@
 from argparse import ArgumentParser
 import numpy as np
 
-# parse config file name and simulation dimension
-parser = ArgumentParser(
-    prog="testFluxes", description="Test different flux configurations."
-)
-parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
-args = parser.parse_args()
-
 # switch between 2D and 3D mode
-if args.dim == 2:
-    print("Running 2D simulation.")
-    import viennaps2d as vps
-else:
-    print("Running 3D simulation.")
-    import viennaps3d as vps
+import viennaps3d as vps
 
 vps.setNumThreads(16)
 vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 vps.Length.setUnit("um")
 vps.Time.setUnit("min")
+
+context = vps.gpu.Context()
+context.create(modulePath=vps.ptxPath)
 
 # hole geometry parameters
 gridDelta = 0.03  # um
@@ -74,20 +65,24 @@ for i in range(len(yo2)):
         holeShape=vps.HoleShape.Half,
     ).apply()
 
-    process = vps.Process()
+    rayParams = vps.RayTracingParameters()
+    rayParams.smoothingNeighbors = 2
+    rayParams.raysPerPoint = numberOfRaysPerPoint
+
+    process = vps.gpu.Process(context)
     process.setDomain(geometry)
     process.setMaxCoverageInitIterations(20)
     process.setCoverageDeltaThreshold(1e-4)
     process.setProcessDuration(processDuration)
     process.setIntegrationScheme(integrationScheme)
-    process.setNumberOfRaysPerPoint(numberOfRaysPerPoint)
+    process.setRayTracingParameters(rayParams)
 
     params.ionFlux = ionFlux[i]
     params.etchantFlux = etchantFlux[i]
     params.passivationFlux = oxygenFlux[i]
     params.Passivation.A_ie = A_O[i]
 
-    model = vps.SF6O2Etching(params)
+    model = vps.gpu.SF6O2Etching(params)
 
     process.setProcessModel(model)
     process.apply()
