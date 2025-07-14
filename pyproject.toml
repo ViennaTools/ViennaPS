@@ -8,7 +8,7 @@ name = "ViennaPS"
 readme = "README.md"
 license = { file = "LICENSE" }
 description = "Semiconductor fabrication process simulation library"
-dependencies = ["ViennaLS>=4.3.3"]
+dependencies = ["ViennaLS>=4.4.0"]
 
 [project.urls]
 Homepage = "https://viennatools.github.io/ViennaPS/"
