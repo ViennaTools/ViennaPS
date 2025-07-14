@@ -556,6 +556,6 @@ private:
 };
 
 template <class NumericType, int D>
-MetaDataLevel Domain<NumericType, D>::useMetaData = MetaDataLevel::PROCESS;
+MetaDataLevel Domain<NumericType, D>::useMetaData = MetaDataLevel::NONE;
 
 } // namespace viennaps
