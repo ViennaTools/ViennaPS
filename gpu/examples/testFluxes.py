@@ -1,7 +1,4 @@
-from argparse import ArgumentParser
 import numpy as np
-
-# switch between 2D and 3D mode
 import viennaps3d as vps
 
 vps.setNumThreads(16)

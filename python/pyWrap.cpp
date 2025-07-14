@@ -1463,10 +1463,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("base"))
       .def("makeCylinderStencil", &GeometryFactory<T, D>::makeCylinderStencil,
            pybind11::arg("position"), pybind11::arg("radius"),
-           pybind11::arg("height"), pybind11::arg("angle"))
+           pybind11::arg("height"), pybind11::arg("angle") = 0.)
       .def("makeBoxStencil", &GeometryFactory<T, D>::makeBoxStencil,
            pybind11::arg("position"), pybind11::arg("width"),
-           pybind11::arg("height"), pybind11::arg("angle"));
+           pybind11::arg("height"), pybind11::arg("angle") = 0.,
+           pybind11::arg("length") = -1.);
 
   // Plane
   pybind11::class_<MakePlane<T, D>>(module, "MakePlane")
