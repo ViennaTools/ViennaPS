@@ -663,6 +663,11 @@ private:
       this->insertNextParticleType(oxygen);
     if (params.polymerFlux > 0)
       this->insertNextParticleType(polymer);
+
+    this->processMetaData = params.toProcessMetaData();
+    this->processMetaData["Units"] = std::vector<NumericType>{
+        static_cast<NumericType>(units::Length::getInstance().getUnit()),
+        static_cast<NumericType>(units::Time::getInstance().getUnit())};
   }
 
   CF4O2Parameters<NumericType> params;

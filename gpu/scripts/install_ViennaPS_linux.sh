@@ -73,7 +73,7 @@ fi
 source $venv_dir/bin/activate
 
 # Check if ViennaLS Python package is installed
-viennals_version_required="4.3.2"
+viennals_version_required="4.4.0"
 if ! pip show ViennaLS &> /dev/null; then
     echo "ViennaLS Python package is not installed. Local ViennaLS build is required."
     read -r -p "Enter the path to the ViennaLS directory (e.g., /path/to/ViennaLS, press enter to download): " viennals_dir
