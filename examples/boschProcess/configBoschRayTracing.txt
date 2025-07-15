@@ -1,5 +1,5 @@
 # Geometry
-holeShape = Quarter
+holeShape = Half
 # all length units are in micrometers (um)
 gridDelta=0.025  # um
 xExtent=3.5      # um
