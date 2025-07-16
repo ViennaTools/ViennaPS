@@ -25,7 +25,7 @@ using namespace viennacore;
 
 enum class MetaDataLevel {
   NONE = 0,    // No metadata add to ouptut
-  DOMAIN = 1,  // Domain-specific metadata (grid delta, boundary conditions)
+  GRID = 1,    // Domain-specific metadata (grid delta, boundary conditions)
   PROCESS = 2, // Process-specific metadata (e.g., process parameters)
   FULL = 3     // Full metadata including all available information (advection
                // parameters, ray tracing parameters, etc.)
@@ -398,8 +398,8 @@ public:
   }
 
   void print(std::ostream &out = std::cout, bool hrle = false) const {
-    out << "Process Simulation Domain:" << "\n";
-    out << "******************************" << "\n";
+    out << "Process Simulation Domain:\n";
+    out << "******************************\n";
     out << "Number of Level-Sets: " << levelSets_.size() << "\n";
     if (materialMap_) {
       out << "Materials:\n";
@@ -409,17 +409,17 @@ public:
             << "\n";
       }
     } else {
-      out << "No Material Map available." << "\n";
+      out << "No Material Map available.\n";
     }
     auto bb = getBoundingBox();
     out << "Bounding Box: [" << bb[0][0] << ", " << bb[0][1] << ", " << bb[0][2]
         << "] - [" << bb[1][0] << ", " << bb[1][1] << ", " << bb[1][2] << "]\n";
-    out << "******************************" << "\n";
+    out << "******************************\n";
     if (hrle) {
       for (auto &ls : levelSets_) {
         ls->print();
       }
-      out << "******************************" << "\n";
+      out << "******************************\n";
     }
     if (!metaData_.empty()) {
       out << "Meta Data:\n";
