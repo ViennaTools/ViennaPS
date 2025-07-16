@@ -1744,7 +1744,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // Meta Data Enum
   pybind11::enum_<MetaDataLevel>(module, "MetaDataLevel")
       .value("NONE", MetaDataLevel::NONE)
-      .value("DOMAIN", MetaDataLevel::DOMAIN)
+      .value("GRID", MetaDataLevel::GRID)
       .value("PROCESS", MetaDataLevel::PROCESS)
       .value("FULL", MetaDataLevel::FULL);
 
