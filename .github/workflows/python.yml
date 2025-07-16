@@ -89,8 +89,13 @@ jobs:
         include:
           - os: ubuntu-latest
             container: ghcr.io/viennatools/vienna-builder:python
+            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-*"
+
           - os: windows-latest
+            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-*"
+
           - os: macos-latest
+            skip: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-* pp38-* pp39-*"
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
@@ -130,7 +135,7 @@ jobs:
       - name: 🏗️ Build Wheels
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_SKIP: "cp36-* cp37-* cp38-* cp39-*"
+          CIBW_SKIP: ${{ matrix.skip }}
           CIBW_ARCHS: auto64
 
       - name: 📦 Upload Artifact
