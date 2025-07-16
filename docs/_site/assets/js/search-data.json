@@ -582,7 +582,7 @@
   },"83": {
     "doc": "VTK Metadata Export",
     "title": "Usage Example",
-    "content": "// Enable metadata export with full detail Domain&lt;float, 3&gt;::enableMetaData(MetaDataLevel::FULL); // Create domain and apply process Domain&lt;float, 3&gt; dom(...); SF6O2EtchingProcess process; process.apply(dom); // Write output domain.saveSurfaceMesh(\"output_surface.vtp\"); // Surface mesh with metadata . The resulting VTK file will now contain metadata including grid spacing, boundary conditions, and all relevant parameters from the SF6O2EtchingProcess. ",
+    "content": "// Enable metadata export with full detail Domain&lt;double, 3&gt;::enableMetaData(MetaDataLevel::FULL); // Create domain and apply process auto domain = Domain&lt;double, 3&gt;::New(); ... Process&lt;double, 3&gt; process(domain, model); process.apply(); // Write output domain.saveSurfaceMesh(\"output_surface.vtp\"); // Surface mesh with metadata . The resulting VTK file will now contain metadata including grid spacing, boundary conditions, and all relevant parameters from the applied process. Python: . # Enable metadata export with full detail vps.Domain.enableMetaData(vps.MetaDataLevel.FULL) # Create domain and apply process domain = vps.Domain() ... process = vps.Process(domain, model) process.apply() # Write output domain.saveSurfaceMesh(\"output_surface.vtp\") # Surface mesh with metadata . ",
     "url": "/output/metadata.html#usage-example",
     
     "relUrl": "/output/metadata.html#usage-example"

@@ -42,18 +42,39 @@ The default level when enabling metadata is `MetaDataLevel::PROCESS`.
 
 ```cpp
 // Enable metadata export with full detail
-Domain<float, 3>::enableMetaData(MetaDataLevel::FULL);
+Domain<double, 3>::enableMetaData(MetaDataLevel::FULL);
 
 // Create domain and apply process
-Domain<float, 3> dom(...);
-SF6O2EtchingProcess process;
-process.apply(dom);
+auto domain = Domain<double, 3>::New();
+...
+Process<double, 3> process(domain, model);
+process.apply();
 
 // Write output
 domain.saveSurfaceMesh("output_surface.vtp"); // Surface mesh with metadata
 ```
 
-The resulting VTK file will now contain metadata including grid spacing, boundary conditions, and all relevant parameters from the `SF6O2EtchingProcess`.
+The resulting VTK file will now contain metadata including grid spacing, boundary conditions, and all relevant parameters from the applied process.
+
+<details markdown="1">
+<summary markdown="1">
+Python:
+{: .label .label-green }
+</summary>
+```python
+# Enable metadata export with full detail
+vps.Domain.enableMetaData(vps.MetaDataLevel.FULL)
+
+# Create domain and apply process
+domain = vps.Domain()
+...
+process = vps.Process(domain, model)
+process.apply()
+
+# Write output
+domain.saveSurfaceMesh("output_surface.vtp") # Surface mesh with metadata
+```
+</details>
 
 ---
 
