@@ -8,6 +8,67 @@
 
 using namespace viennaps;
 
+template <class NumericType> struct BivariateDistribution {
+  std::vector<std::vector<NumericType>> pdf; // 2D grid of values
+  std::vector<NumericType> support_x;        // (x-values)
+  std::vector<NumericType> support_y;        // (y-values)
+};
+
+template <typename NumericType>
+auto loadDistributionFromFile(const std::string &fileName) {
+  BivariateDistribution<NumericType> distribution;
+
+  // Load the distribution from the file
+  std::ifstream file(fileName);
+  if (!file.is_open()) {
+    throw std::runtime_error("Could not open file: " + fileName);
+  }
+
+  std::string line;
+  // Header
+  std::getline(file, line);
+
+  // Read y-support
+  std::getline(file, line);
+  std::istringstream yStream(line);
+  NumericType yValue;
+  while (yStream >> yValue) {
+    distribution.support_y.push_back(yValue);
+  }
+  distribution.support_y.shrink_to_fit();
+
+  // Read x-support
+  std::getline(file, line);
+  std::istringstream xStream(line);
+  NumericType xValue;
+  while (xStream >> xValue) {
+    distribution.support_x.push_back(xValue);
+  }
+  distribution.support_x.shrink_to_fit();
+
+  // Read PDF values
+  size_t rowSize = 0;
+  while (std::getline(file, line)) {
+    if (line.empty())
+      continue; // Skip empty lines
+
+    std::istringstream iss(line);
+    std::vector<NumericType> pdfRow;
+    if (rowSize > 0)
+      pdfRow.reserve(rowSize); // Reserve space if row size is known
+
+    NumericType pdfValue;
+    while (iss >> pdfValue) {
+      pdfRow.push_back(pdfValue);
+    }
+
+    rowSize = pdfRow.size();
+    distribution.pdf.push_back(pdfRow);
+  }
+
+  return distribution;
+}
+
 template <class NumericType, int D>
 class BivariateDistributionParticle final
     : public viennaray::Particle<BivariateDistributionParticle<NumericType, D>,
@@ -127,33 +188,38 @@ public:
   }
 };
 
-int main() {
+int main(int argc, char *argv[]) {
 
-  Logger::setLogLevel(LogLevel::DEBUG);
+  Logger::setLogLevel(LogLevel::INFO);
   using NumericType = double;
   constexpr int D = 2;
 
+  std::string filename = "custom_distribution.txt";
+  if (argc > 1) {
+    filename = argv[1];
+  }
+
+  // Create a domain with trench geometry
   const NumericType gridDelta = 0.1;
   const NumericType xExtent = 10.0;
   auto domain = Domain<NumericType, D>::New(gridDelta, xExtent,
                                             BoundaryType::REFLECTIVE_BOUNDARY);
   MakeTrench<NumericType, D>(domain, 4.0, 0.0, 0.0, 1.0).apply();
 
+  // Set up the process model with custom particle distribution
   auto model = SmartPointer<ProcessModel<NumericType, D>>::New();
   model->setProcessName("CustomParticleDistribution");
   auto surfaceModel = SmartPointer<CustomSurfaceModel<NumericType>>::New();
   model->setSurfaceModel(surfaceModel);
   auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
   model->setVelocityField(velField);
-
-  auto distribution =
-      loadDistributionFromFile<NumericType>("custom_distribution.txt");
-
+  auto distribution = loadDistributionFromFile<NumericType>(filename);
   auto particle =
       std::make_unique<BivariateDistributionParticle<NumericType, D>>(
           distribution);
   model->insertNextParticleType(particle);
 
+  // Run the process
   Process<NumericType, D>(domain, model, 2.0).apply();
 
   domain->saveVolumeMesh("customParticleDistribution");

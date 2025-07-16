@@ -1,8 +1,23 @@
+##############################################################
+# TecPlotReader.py
+# A GUI and batch exporter for Tecplot particle distribution data.
+# It allows users to visualize and save particle distributions
+# from Tecplot files, with options for trimming and selecting variables.
+# Usage:
+#   python TecPlotReader.py -f data.pdt
+#   python TecPlotReader.py -f data.pdt -i variable_name -o output.txt
+#   python TecPlotReader.py  # to open the GUI
+# Requires: tkinter, matplotlib, numpy, re
+#####################################################################
+
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog, messagebox
 import numpy as np
 import matplotlib.pyplot as plt
 import re
+import argparse
+import sys
 
 
 # --- Data Handling Functions ---
@@ -28,6 +43,8 @@ def read_tecplot_data(filename, thetaKey, energyKey, zone_lines_max=2):
 
         if mode == 0:
             for var in re.findall(r'"([^\"]+)"', line):
+                if var not in (thetaKey, energyKey):
+                    var = var.split()[0]  # take only the first part
                 variables.append(var)
                 data_dict[var] = []
         elif mode == 1:
@@ -97,11 +114,11 @@ def save_data(data_dict, key, thetaKey, energyKey, eps, outname):
 
 
 # --- GUI ---
-class TecplotGUI(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Tecplot Distribution Viewer")
-        self.geometry("500x400")
+class TecplotGUI(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, padding=10)
+        parent.title("Tecplot Distribution Viewer")
+        parent.minsize(500, 400)
         self.data = {}
         self.vars = []
 
@@ -111,40 +128,48 @@ class TecplotGUI(tk.Tk):
         self.entry_energy = tk.StringVar(value=self.tk_energy)
         self.entry_zone_lines = tk.IntVar(value=2)
 
+        # use a built‑in theme
+        style = ttk.Style()
+        style.theme_use("clam")
+
         # File input
-        tk.Label(self, text="Filename:").pack(anchor="w")
-        frame_file = tk.Frame(self)
-        self.entry_file = tk.Entry(frame_file, width=40)
+        ttk.Label(self, text="Filename:").pack(anchor="w")
+        frame_file = ttk.Frame(self)
+        self.entry_file = ttk.Entry(frame_file, width=40)
         self.entry_file.pack(side="left", padx=5)
-        tk.Button(frame_file, text="Browse", command=self.browse_file).pack(side="left")
-        tk.Button(frame_file, text="Load Data", command=self.load_data).pack(
-            side="left"
+        ttk.Button(frame_file, text="Browse", command=self.browse_file).pack(
+            side="left", padx=5
+        )
+        ttk.Button(frame_file, text="\u21bb", command=self.load_data, width=4).pack(
+            side="left", padx=5
         )
         frame_file.pack(pady=5)
 
         # Variable list
-        tk.Label(self, text="Select Variable:").pack(anchor="w")
+        ttk.Label(self, text="Select Variable:").pack(anchor="w")
         self.listbox = tk.Listbox(self)
         self.listbox.pack(fill="both", expand=True, padx=5)
 
         # Trim eps
-        frame_eps = tk.Frame(self)
-        tk.Label(frame_eps, text="Trim eps:").pack(side="left")
-        self.entry_eps = tk.Entry(frame_eps, width=10)
+        frame_eps = ttk.Frame(self)
+        ttk.Label(frame_eps, text="Trim eps:").pack(side="left")
+        self.entry_eps = ttk.Entry(frame_eps, width=10)
         self.entry_eps.insert(0, "1e-4")
         self.entry_eps.pack(side="left", padx=5)
         frame_eps.pack(pady=5)
 
         # Buttons
-        frame_buttons = tk.Frame(self)
-        tk.Button(frame_buttons, text="Plot", command=self.on_plot).pack(
+        frame_buttons = ttk.Frame(self)
+        ttk.Button(frame_buttons, text="Show", command=self.on_plot).pack(
             side="left", padx=5
         )
-        tk.Button(frame_buttons, text="Save...", command=self.on_save).pack(side="left")
+        ttk.Button(frame_buttons, text="Save...", command=self.on_save).pack(
+            side="left", padx=5
+        )
         frame_buttons.pack(pady=10)
 
         # Extended options button
-        btn_ext = tk.Button(frame_buttons, text="Options", command=self.open_options)
+        btn_ext = ttk.Button(frame_buttons, text="Options", command=self.open_options)
         btn_ext.pack(side="left", padx=5)
 
     def browse_file(self):
@@ -154,6 +179,7 @@ class TecplotGUI(tk.Tk):
         if f:
             self.entry_file.delete(0, tk.END)
             self.entry_file.insert(0, f)
+            self.load_data()
 
     def load_data(self):
         fn = self.entry_file.get().strip()
@@ -231,9 +257,72 @@ class TecplotGUI(tk.Tk):
         frame_zone.pack(pady=10)
 
         # Done button to close
-        tk.Button(win, text="OK", command=win.destroy).pack(pady=10)
+        ttk.Button(win, text="OK", command=win.destroy).pack(pady=10)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Tecplot distribution GUI or batch exporter"
+    )
+    parser.add_argument("-f", "--file", help="input Tecplot file", metavar="FILE")
+    parser.add_argument(
+        "-i", "--input", help="variable name to extract", metavar="VAR", default="ALL"
+    )
+    parser.add_argument(
+        "-o", "--output", help="output filename", metavar="OUT", default="output.txt"
+    )
+    parser.add_argument("--eps", help="trim epsilon", type=float, default=1e-4)
+
+    args = parser.parse_args()
+
+    # no input file → open GUI
+    if not (args.file):
+        root = tk.Tk()
+        app = TecplotGUI(root)
+        app.pack(fill="both", expand=True)
+        root.mainloop()
+        return
+
+    # batch mode: load, trim, save, then exit
+    # defaults for theta and energy keys
+    theta_key = "THETA (DEG)"
+    energy_key = "ENERGY (EV)"
+    try:
+        data_dict, variables = read_tecplot_data(
+            args.file,
+            thetaKey=theta_key,
+            energyKey=energy_key,
+        )
+
+        outFileName = args.output
+        if outFileName.endswith(".txt"):
+            outFileName = outFileName[:-4]
+
+        if args.input == "ALL":
+            keys = [v for v in variables if v not in (theta_key, energy_key)]
+        else:
+            keys = [args.input] if args.input in variables else []
+        if not keys:
+            print(
+                f"Error: variable '{args.input}' not found in {args.file}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        for key in keys:
+            save_data(
+                data_dict,
+                key=key,
+                thetaKey=theta_key,
+                energyKey=energy_key,
+                eps=args.eps,
+                outname=outFileName + f"_{key}.txt",
+            )
+            print(f"Saved {key} → {outFileName}_{key}.txt")
+    except Exception as e:
+        print(f"Batch error: {e}", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":
-    app = TecplotGUI()
-    app.mainloop()
+    main()
