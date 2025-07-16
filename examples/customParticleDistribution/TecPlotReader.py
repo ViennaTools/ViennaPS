@@ -103,6 +103,25 @@ def plot_data(data_dict, key, thetaKey, energyKey, eps):
     plt.show()
 
 
+def line_plot(data_dict, key, thetaKey, energyKey, eps):
+    d, e = trim_data(data_dict[key], data_dict[energyKey], eps)
+    theta = data_dict[thetaKey]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    for i in range(len(e)):
+        ax.plot(
+            ys=theta,
+            zs=d[i, :],
+            xs=e[i],
+            color=plt.cm.viridis(i / len(e)),
+        )
+    ax.set_ylabel(thetaKey)
+    ax.set_zlabel(f"Distribution: {key}")
+    ax.set_xlabel(energyKey)
+    plt.tight_layout()
+    plt.show()
+
+
 def save_data(data_dict, key, thetaKey, energyKey, eps, outname):
     d, e = trim_data(data_dict[key], data_dict[energyKey], eps)
     with open(outname, "w") as f:
@@ -127,6 +146,7 @@ class TecplotGUI(ttk.Frame):
         self.entry_theta = tk.StringVar(value=self.tk_theta)
         self.entry_energy = tk.StringVar(value=self.tk_energy)
         self.entry_zone_lines = tk.IntVar(value=2)
+        self.line_plot_var = tk.BooleanVar(value=False)
 
         # use a built‑in theme
         style = ttk.Style()
@@ -212,7 +232,14 @@ class TecplotGUI(ttk.Frame):
             return
         key = self.vars[sel[0]]
         eps = float(self.entry_eps.get())
-        plot_data(self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps)
+        if self.line_plot_var.get():
+            line_plot(
+                self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps
+            )
+        else:
+            plot_data(
+                self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps
+            )
 
     def on_save(self):
         sel = self.listbox.curselection()
@@ -258,8 +285,24 @@ class TecplotGUI(ttk.Frame):
         entry_zone.pack(side="left", padx=5)
         frame_zone.pack(pady=10)
 
+        # Checkbox for line plot
+        chk_line_plot = ttk.Checkbutton(
+            win,
+            text="Line Plot",
+            variable=self.line_plot_var,
+            command=self.toggle_line_plot,
+        )
+        chk_line_plot.pack(anchor="w", padx=15, pady=5)
+
         # Done button to close
         ttk.Button(win, text="OK", command=win.destroy).pack(pady=10)
+
+    def toggle_line_plot(self):
+        # Toggle the line plot option
+        if self.line_plot_var.get():
+            self.line_plot_var.set(True)
+        else:
+            self.line_plot_var.set(False)
 
 
 def main():
