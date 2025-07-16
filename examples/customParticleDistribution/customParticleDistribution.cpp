@@ -4,8 +4,6 @@
 #include <rayParticle.hpp>
 #include <vcSampling.hpp>
 
-#include "loadDistribution.hpp"
-
 using namespace viennaps;
 
 template <class NumericType> struct BivariateDistribution {

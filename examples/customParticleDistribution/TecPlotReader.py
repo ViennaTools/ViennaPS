@@ -147,7 +147,9 @@ class TecplotGUI(ttk.Frame):
 
         # Variable list
         ttk.Label(self, text="Select Variable:").pack(anchor="w")
-        self.listbox = tk.Listbox(self)
+        self.listbox = tk.Listbox(
+            self, background="white", selectmode=tk.SINGLE, foreground="black"
+        )
         self.listbox.pack(fill="both", expand=True, padx=5)
 
         # Trim eps
