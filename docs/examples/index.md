@@ -28,7 +28,7 @@ cd examples/exampleName
 ./ExampleName config.txt # (Other)
 ```
 
-Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. 
+Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for most examples.
 
 ## Examples List
 

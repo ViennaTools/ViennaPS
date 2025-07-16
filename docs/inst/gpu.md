@@ -17,7 +17,7 @@ nav_order: 1
 
 The GPU ray tracing module is implemented using [**OptiX 8.0**](https://developer.nvidia.com/rtx/ray-tracing/optix). To use it, ensure your system meets the following requirements:
 
-- **NVIDIA Driver:** Version 535 or higher
+- **NVIDIA Driver:** Version 550 or higher
 - **CUDA Toolkit:** Version 12.0
 - **OptiX SDK:** Version 8.0
 - **GCC:** Version 12.0 
