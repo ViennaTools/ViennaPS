@@ -7,8 +7,6 @@
 #include <models/psgPipelineParameters.hpp>
 #include <psgProcessModel.hpp>
 
-#include <rayParticle.hpp>
-
 namespace viennaps::gpu {
 
 using namespace viennacore;
@@ -44,6 +42,8 @@ public:
 
     this->insertNextParticleType(particle);
     this->setUseMaterialIds(true);
+
+    addStickingData(stickingProbability);
   }
 
   void
@@ -64,6 +64,8 @@ public:
 
     this->insertNextParticleType(particle);
     this->setUseMaterialIds(true);
+
+    addStickingData(defaultStickingProbability);
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
@@ -94,6 +96,17 @@ public:
     params.n = n;
     this->processData.allocUploadSingle(params);
     this->insertNextParticleType(particle);
+
+    addIonData({{"SourcePower", sourcePower},
+                {"MeanEnergy", meanEnergy},
+                {"SigmaEnergy", sigmaEnergy},
+                {"ThresholdEnergy", thresholdEnergy},
+                {"B_sp", B_sp},
+                {"ThetaRMin", thetaRMin},
+                {"ThetaRMax", thetaRMax},
+                {"InflectAngle", inflectAngle},
+                {"MinAngle", minAngle},
+                {"n", n}});
   }
 
   void
@@ -108,11 +121,31 @@ public:
 
 private:
   std::vector<std::string> fluxDataLabels_;
+  using ProcessModelBase<NumericType, D>::processMetaData;
 
   void setDirection(viennaray::gpu::Particle<NumericType> &particle) {
     auto direction = this->getPrimaryDirection();
     if (direction.has_value()) {
       particle.direction = direction.value();
+    }
+  }
+
+  void addStickingData(NumericType stickingProbability) {
+    if (processMetaData.find("StickingProbability") == processMetaData.end()) {
+      processMetaData["StickingProbability"] =
+          std::vector<NumericType>{stickingProbability};
+    } else {
+      processMetaData["StickingProbability"].push_back(stickingProbability);
+    }
+  }
+
+  void addIonData(std::vector<std::pair<std::string, NumericType>> data) {
+    for (const auto &pair : data) {
+      if (processMetaData.find(pair.first) == processMetaData.end()) {
+        processMetaData[pair.first] = std::vector<NumericType>{pair.second};
+      } else {
+        processMetaData[pair.first].push_back(pair.second);
+      }
     }
   }
 };

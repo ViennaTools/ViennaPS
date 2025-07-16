@@ -19,8 +19,7 @@ constexpr int D = 3;
 using NumericType = double;
 using LevelSetType = SmartPointer<viennals::Domain<NumericType, D>>;
 using DomainType = SmartPointer<Domain<NumericType, D>>;
-using IsotropicProcessGeometric =
-    SmartPointer<SphereDistribution<NumericType, D>>;
+using IsotropicProcessGeometric = SmartPointer<SphereDistribution<double, D>>;
 constexpr bool volumeOutput = true;
 
 void writeVolume(DomainType domain) {
@@ -46,7 +45,7 @@ int main() {
   BoundaryType boundaryConds[D] = {BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::INFINITE_BOUNDARY};
-  NumericType bounds[2 * D] = {0, 90, 0, 100, 0, 70}; // in nanometers
+  double bounds[2 * D] = {0, 90, 0, 100, 0, 70}; // in nanometers
   constexpr NumericType gridDelta = 0.79;
   auto domain = DomainType::New(bounds, boundaryConds, gridDelta);
 
@@ -58,8 +57,8 @@ int main() {
   // Add double patterning mask
   {
     auto ls = LevelSetType::New(domain->getGrid());
-    VectorType<double, D> min{30, -10, 69.9};
-    VectorType<double, D> max{60, 110, 90};
+    VectorType<NumericType, D> min{30, -10, 69.9};
+    VectorType<NumericType, D> max{60, 110, 90};
     viennals::MakeGeometry<NumericType, D>(
         ls, viennals::Box<NumericType, D>::New(min, max))
         .apply();
@@ -82,7 +81,7 @@ int main() {
   { // DP-Patterning
     std::cout << "DP-Patterning ...";
     const NumericType etchDepth = 6; // nm
-    auto dist = SmartPointer<BoxDistribution<NumericType, D>>::New(
+    auto dist = SmartPointer<BoxDistribution<double, D>>::New(
         std::array<NumericType, D>{-gridDelta, -gridDelta, -etchDepth},
         gridDelta, domain->getLevelSets().front());
     Process<NumericType, D>(domain, dist).apply();
@@ -165,8 +164,8 @@ int main() {
   // dummy gate mask addition
   {
     auto ls = LevelSetType::New(domain->getGrid());
-    VectorType<double, D> min{-10, 30, 145};
-    VectorType<double, D> max{100, 70, 175};
+    VectorType<NumericType, D> min{-10, 30, 145};
+    VectorType<NumericType, D> max{100, 70, 175};
     viennals::MakeGeometry<NumericType, D>(
         ls, SmartPointer<viennals::Box<NumericType, D>>::New(min, max))
         .apply();
@@ -207,7 +206,7 @@ int main() {
   { // spacer etch
     std::cout << "Spacer Etch ...";
     auto ls = domain->getLevelSets()[domain->getLevelSets().size() - 2];
-    auto dist = SmartPointer<BoxDistribution<NumericType, D>>::New(
+    auto dist = SmartPointer<BoxDistribution<double, D>>::New(
         std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, gridDelta, ls);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;

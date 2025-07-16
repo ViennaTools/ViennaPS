@@ -39,12 +39,15 @@ int main(int argc, char **argv) {
         return mat == Material::Mask ? 0. : -flux[0] * rate;
       });
 
+  RayTracingParameters<NumericType, D> rayTracingParams;
+  rayTracingParams.smoothingNeighbors = 2;
+  rayTracingParams.raysPerPoint = 3000;
+
   gpu::Process<NumericType, D> process(context, domain, model, time);
-  process.setNumberOfRaysPerPoint(3000);
+  process.setRayTracingParameters(rayTracingParams);
   process.disableRandomSeeds();
 
-  domain->duplicateTopLevelSet(Material::SiO2);
   process.apply();
 
-  domain->saveSurfaceMesh("trench_depo.vtp");
+  domain->saveSurfaceMesh("trench_etch.vtp");
 }

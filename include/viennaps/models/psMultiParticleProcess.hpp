@@ -251,6 +251,8 @@ public:
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
         stickingProbability, dataLabel);
     this->insertNextParticleType(particle);
+
+    addStickingData(stickingProbability);
   }
 
   void
@@ -262,6 +264,8 @@ public:
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
         defaultStickingProbability, materialSticking, dataLabel);
     this->insertNextParticleType(particle);
+
+    addStickingData(defaultStickingProbability);
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
@@ -278,6 +282,17 @@ public:
         thetaRMin * M_PI / 180., thetaRMax * M_PI / 180.,
         inflectAngle * M_PI / 180., minAngle * M_PI / 180., n, dataLabel);
     this->insertNextParticleType(particle);
+
+    addIonData({{"SourcePower", sourcePower},
+                {"MeanEnergy", meanEnergy},
+                {"SigmaEnergy", sigmaEnergy},
+                {"ThresholdEnergy", thresholdEnergy},
+                {"B_sp", B_sp},
+                {"ThetaRMin", thetaRMin},
+                {"ThetaRMax", thetaRMax},
+                {"InflectAngle", inflectAngle},
+                {"MinAngle", minAngle},
+                {"n", n}});
   }
 
   void
@@ -292,6 +307,26 @@ public:
 
 private:
   std::vector<std::string> fluxDataLabels_;
+  using ProcessModel<NumericType, D>::processMetaData;
+
+  void addStickingData(NumericType stickingProbability) {
+    if (processMetaData.find("StickingProbability") == processMetaData.end()) {
+      processMetaData["StickingProbability"] =
+          std::vector<NumericType>{stickingProbability};
+    } else {
+      processMetaData["StickingProbability"].push_back(stickingProbability);
+    }
+  }
+
+  void addIonData(std::vector<std::pair<std::string, NumericType>> data) {
+    for (const auto &pair : data) {
+      if (processMetaData.find(pair.first) == processMetaData.end()) {
+        processMetaData[pair.first] = std::vector<NumericType>{pair.second};
+      } else {
+        processMetaData[pair.first].push_back(pair.second);
+      }
+    }
+  }
 };
 
 } // namespace viennaps

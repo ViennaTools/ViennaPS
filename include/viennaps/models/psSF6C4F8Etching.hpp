@@ -149,9 +149,16 @@ private:
     this->setVelocityField(velField);
 
     this->setProcessName("SF6C4F8Etching");
+
+    processMetaData = params.toProcessMetaData();
+    // add units
+    processMetaData["Units"] = std::vector<NumericType>{
+        static_cast<NumericType>(units::Length::getInstance().getUnit()),
+        static_cast<NumericType>(units::Time::getInstance().getUnit())};
   }
 
   PlasmaEtchingParameters<NumericType> params;
+  using ProcessModel<NumericType, D>::processMetaData;
 };
 
 } // namespace viennaps

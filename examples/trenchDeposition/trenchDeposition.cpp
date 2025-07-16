@@ -37,7 +37,6 @@ int main(int argc, char *argv[]) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setNumberOfRaysPerPoint(1000);
   process.setProcessDuration(params.get("processTime"));
 
   geometry->saveHullMesh("initial");

@@ -331,6 +331,19 @@ public:
     this->setSurfaceModel(surfModel);
     this->setAdvectionCallback(dynamics);
     this->setProcessName("OxideRegrowth");
+
+    this->processMetaData["Nitride Etch Rate"] = {nitrideEtchRate};
+    this->processMetaData["Oxide Etch Rate"] = {oxideEtchRate};
+    this->processMetaData["Redeposition Rate"] = {redepositionRate};
+    this->processMetaData["ReDeposition Threshold"] = {reDepositionThreshold};
+    this->processMetaData["ReDeposition Time Interval"] = {redepositionTimeInt};
+    this->processMetaData["Diffusion Coefficient"] = {diffusionCoefficient};
+    this->processMetaData["Sink Strength"] = {sinkStrength};
+    this->processMetaData["Scallop Velocity"] = {scallopVelocity};
+    this->processMetaData["Center Velocity"] = {centerVelocity};
+    this->processMetaData["Top Height"] = {topHeight};
+    this->processMetaData["Center Width"] = {centerWidth};
+    this->processMetaData["Time Stability Factor"] = {timeStabilityFactor};
   }
 };
 

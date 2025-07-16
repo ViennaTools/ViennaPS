@@ -92,7 +92,7 @@ public:
   template <class T> static inline std::string getMaterialName(const T matId) {
     switch (auto material = mapToMaterial(matId)) {
     case Material::Undefined:
-      return "None";
+      return "Undefined";
     case Material::Mask:
       return "Mask";
     case Material::Si:

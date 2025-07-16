@@ -12,7 +12,6 @@ namespace viennaps {
 
 using namespace viennacore;
 
-// Simple geometric model that implements a
 template <typename NumericType, int D, typename DistType>
 class GeometricDistributionModel : public GeometricModel<NumericType, D> {
   static_assert(std::is_base_of_v<
@@ -35,6 +34,10 @@ public:
 
   void apply() override {
     if (dist) {
+      if (static_cast<int>(domain->useMetaData) > 1) {
+        domain->clearMetaData();
+        domain->addMetaData(this->processData);
+      }
       if (mask) {
         viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),
                                                   dist, mask)
@@ -66,6 +69,7 @@ public:
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
+    this->processMetaData["Radius"] = std::vector<NumericType>{radius};
   }
 };
 
@@ -86,6 +90,10 @@ public:
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");
+    this->processMetaData["HalfAxes"] =
+        std::vector<NumericType>{static_cast<NumericType>(halfAxes[0]),
+                                 static_cast<NumericType>(halfAxes[1]),
+                                 static_cast<NumericType>(halfAxes[2])};
   }
 };
 

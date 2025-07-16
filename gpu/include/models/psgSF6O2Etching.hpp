@@ -68,6 +68,7 @@ private:
     this->processData.upload(&deviceParams, 1);
 
     this->setUseMaterialIds(true);
+    this->processMetaData = params.toProcessMetaData();
   }
 
   void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {

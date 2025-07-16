@@ -120,7 +120,7 @@ public:
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
                   NumericType sourceDistributionPower,
-                  std::unordered_map<Material, NumericType> &&maskMaterial) {
+                  std::unordered_map<Material, NumericType> &&materialRates) {
     // particles
     auto particle = std::make_unique<impl::SingleParticle<NumericType, D>>(
         stickingProbability, sourceDistributionPower);
@@ -128,7 +128,7 @@ private:
     // surface model
     auto surfModel =
         SmartPointer<impl::SingleParticleSurfaceModel<NumericType, D>>::New(
-            rate, maskMaterial);
+            rate, materialRates);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
@@ -137,6 +137,21 @@ private:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
+
+    this->processMetaData["Default Rate"] = std::vector<NumericType>{rate};
+    this->processMetaData["Sticking Probability"] =
+        std::vector<NumericType>{stickingProbability};
+    this->processMetaData["Source Exponent"] =
+        std::vector<NumericType>{sourceDistributionPower};
+    if (!materialRates.empty()) {
+      for (const auto &pair : materialRates) {
+        if (pair.first == Material::Undefined)
+          continue; // skip undefined material
+
+        this->processMetaData[MaterialMap::getMaterialName(pair.first) +
+                              " Rate"] = std::vector<NumericType>{pair.second};
+      }
+    }
   }
 };
 

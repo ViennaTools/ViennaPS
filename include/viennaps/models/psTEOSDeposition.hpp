@@ -214,6 +214,10 @@ public:
       this->setSurfaceModel(surfModel);
       this->insertNextParticleType(particle);
       this->setProcessName("SingleTEOSParticleTEOS");
+
+      this->processMetaData["StickingProbability"] = {pStickingP1};
+      this->processMetaData["Rate"] = {pRateP1};
+      this->processMetaData["Order"] = {pOrderP1};
     } else {
       // use multi (two) particle model
 
@@ -234,6 +238,10 @@ public:
       this->insertNextParticleType(particle1);
       this->insertNextParticleType(particle2);
       this->setProcessName("MultiTEOSParticleTEOS");
+
+      this->processMetaData["StickingProbability"] = {pStickingP1, pStickingP2};
+      this->processMetaData["Rate"] = {pRateP1, pRateP2};
+      this->processMetaData["Order"] = {pOrderP1, pOrderP2};
     }
   }
 };

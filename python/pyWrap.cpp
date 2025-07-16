@@ -1463,10 +1463,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("base"))
       .def("makeCylinderStencil", &GeometryFactory<T, D>::makeCylinderStencil,
            pybind11::arg("position"), pybind11::arg("radius"),
-           pybind11::arg("height"), pybind11::arg("angle"))
+           pybind11::arg("height"), pybind11::arg("angle") = 0.)
       .def("makeBoxStencil", &GeometryFactory<T, D>::makeBoxStencil,
            pybind11::arg("position"), pybind11::arg("width"),
-           pybind11::arg("height"), pybind11::arg("angle"));
+           pybind11::arg("height"), pybind11::arg("angle") = 0.,
+           pybind11::arg("length") = -1.);
 
   // Plane
   pybind11::class_<MakePlane<T, D>>(module, "MakePlane")
@@ -1736,6 +1737,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Get the ray tracing parameters for the process.",
            pybind11::return_value_policy::reference);
 
+  // ***************************************************************************
+  //                                 DOMAIN
+  // ***************************************************************************
+
+  // Meta Data Enum
+  pybind11::enum_<MetaDataLevel>(module, "MetaDataLevel")
+      .value("NONE", MetaDataLevel::NONE)
+      .value("GRID", MetaDataLevel::GRID)
+      .value("PROCESS", MetaDataLevel::PROCESS)
+      .value("FULL", MetaDataLevel::FULL);
+
   // Domain
   pybind11::class_<Domain<T, D>, DomainType>(module, "Domain")
       // constructors
@@ -1805,6 +1817,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Get the bounding box of the domain.")
       .def("getBoundaryConditions", &Domain<T, D>::getBoundaryConditions,
            "Get the boundary conditions of the domain.")
+      .def("getMetaData", &Domain<T, D>::getMetaData,
+           "Get meta data (e.g. process data) stored in the domain")
       .def("print", &Domain<T, D>::print)
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
@@ -1822,7 +1836,29 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, D>::saveLevelSets,
            pybind11::arg("filename"))
-      .def("clear", &Domain<T, D>::clear);
+      .def("clear", &Domain<T, D>::clear)
+      .def("clearMetaData", &Domain<T, D>::clearMetaData,
+           "Clear meta data from domain.",
+           pybind11::arg("clearDomainData") = false)
+      .def("addMetaData",
+           pybind11::overload_cast<const std::string &, T>(
+               &Domain<T, D>::addMetaData),
+           "Add a single metadata entry to the domain.")
+      .def("addMetaData",
+           pybind11::overload_cast<const std::string &, const std::vector<T> &>(
+               &Domain<T, D>::addMetaData),
+           "Add a single metadata entry to the domain.")
+      .def("addMetaData",
+           pybind11::overload_cast<
+               const std::unordered_map<std::string, std::vector<T>> &>(
+               &Domain<T, D>::addMetaData),
+           "Add metadata to the domain.")
+      // static
+      .def_static("enableMetaData", &Domain<T, D>::enableMetaData,
+                  "Enable adding meta data from processes to domain.",
+                  pybind11::arg("level") = MetaDataLevel::PROCESS)
+      .def_static("disableMetaData", &Domain<T, D>::disableMetaData,
+                  "Disable adding meta data to domain.");
 
   // Domain Setup
   pybind11::class_<DomainSetup<T, D>>(module, "DomainSetup")
@@ -2278,6 +2314,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setMaxCoverageInitIterations",
            &gpu::Process<T, D>::setMaxCoverageInitIterations,
            "Set the number of iterations to initialize the coverages.")
+      .def("setCoverageDeltaThreshold",
+           &gpu::Process<T, D>::setCoverageDeltaThreshold,
+           "Set the threshold for the coverage delta metric to reach "
+           "convergence.")
       .def("setIntegrationScheme", &gpu::Process<T, D>::setIntegrationScheme,
            "Set the integration scheme for solving the level-set equation. "
            "Possible integration schemes are specified in "
@@ -2293,6 +2333,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "sets the maximum distance a surface can be moved during one "
            "advection step. It MUST be below 0.5 to guarantee numerical "
            "stability. Defaults to 0.4999.")
+      .def("enableFluxSmoothing", &gpu::Process<T, D>::enableFluxSmoothing,
+           "Enable flux smoothing. The flux at each surface point, calculated "
+           "by the ray tracer, is averaged over the surface point neighbors.")
+      .def("disableFluxSmoothing", &gpu::Process<T, D>::disableFluxSmoothing,
+           "Disable flux smoothing")
       .def("enableRandomSeeds", &gpu::Process<T, D>::enableRandomSeeds,
            "Enable random seeds for the ray tracer. This will make the process "
            "results non-deterministic.")

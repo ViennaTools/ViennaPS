@@ -137,6 +137,20 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("AnisotropicProcess");
+
+    // store process data
+    processMetaData["r100"] = {r100};
+    processMetaData["r110"] = {r110};
+    processMetaData["r111"] = {r111};
+    processMetaData["r311"] = {r311};
+    processMetaData["Direction100"] = {direction100[0], direction100[1],
+                                       direction100[2]};
+    processMetaData["Direction010"] = {direction010[0], direction010[1],
+                                       direction010[2]};
+    for (const auto &material : materials) {
+      processMetaData[MaterialMap::getMaterialName(material.first) + " Rate"] =
+          std::vector<NumericType>{material.second};
+    }
   }
 
   // crystal surface direction
@@ -150,6 +164,7 @@ private:
   NumericType r311 = 0.0300166666667;
 
   std::vector<std::pair<Material, NumericType>> materials;
+  using ProcessModel<NumericType, D>::processMetaData;
 };
 
 } // namespace viennaps

@@ -83,6 +83,69 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     NumericType thetaRMin = constants::degToRad(70.);
     NumericType thetaRMax = constants::degToRad(90.);
   } Ions;
+
+  auto toProcessMetaData() const {
+    std::unordered_map<std::string, std::vector<NumericType>> processData;
+
+    processData["Ion Flux"] = {ionFlux};
+    processData["Etchant Flux"] = {etchantFlux};
+    processData["Passivation Flux"] = {passivationFlux};
+
+    for (const auto &pair : beta_E) {
+      processData["Beta_E " + std::to_string(pair.first)] = {pair.second};
+    }
+    for (const auto &pair : beta_P) {
+      processData["Beta_P " + std::to_string(pair.first)] = {pair.second};
+    }
+
+    if (etchStopDepth != std::numeric_limits<NumericType>::lowest())
+      processData["Etch Stop Depth"] = {etchStopDepth};
+
+    // Mask
+    processData["Mask Rho"] = {Mask.rho};
+    processData["Mask Eth_sp"] = {Mask.Eth_sp};
+    processData["Mask A_sp"] = {Mask.A_sp};
+    processData["Mask B_sp"] = {Mask.B_sp};
+
+    // Polymer
+    processData["Polymer Rho"] = {Polymer.rho};
+    processData["Polymer Eth_sp"] = {Polymer.Eth_sp};
+    processData["Polymer A_sp"] = {Polymer.A_sp};
+    processData["Polymer B_sp"] = {Polymer.B_sp};
+
+    // Material
+    processData["Substrate Rho"] = {Substrate.rho};
+    processData["Substrate Eth_sp"] = {Substrate.Eth_sp};
+    processData["Substrate Eth_ie"] = {Substrate.Eth_ie};
+    processData["Substrate A_sp"] = {Substrate.A_sp};
+    processData["Substrate B_sp"] = {Substrate.B_sp};
+    // processData["Substrate Theta G Sp"] = {Substrate.theta_g_sp};
+    processData["Substrate A_ie"] = {Substrate.A_ie};
+    processData["Substrate B_ie"] = {Substrate.B_ie};
+    // processData["Substrate Theta G Ie"] = {Substrate.theta_g_ie};
+    processData["Substrate K_sigma"] = {Substrate.k_sigma};
+    processData["Substrate Beta_sigma"] = {Substrate.beta_sigma};
+
+    // Passivation
+    if (passivationFlux > 0) {
+      processData["Passivation Eth_ie"] = {Passivation.Eth_ie};
+      processData["Passivation A_ie"] = {Passivation.A_ie};
+    }
+
+    // Ions
+    if (ionFlux > 0) {
+      processData["Ions MeanEnergy"] = {Ions.meanEnergy};
+      processData["Ions SigmaEnergy"] = {Ions.sigmaEnergy};
+      processData["Ions Exponent"] = {Ions.exponent};
+      processData["Ions InflectAngle"] = {Ions.inflectAngle};
+      processData["Ions n_l"] = {Ions.n_l};
+      processData["Ions MinAngle"] = {Ions.minAngle};
+      processData["Ions ThetaRMin"] = {Ions.thetaRMin};
+      processData["Ions ThetaRMax"] = {Ions.thetaRMax};
+    }
+
+    return processData;
+  }
 };
 
 } // namespace viennaps
