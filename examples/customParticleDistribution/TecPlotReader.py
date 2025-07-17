@@ -10,6 +10,7 @@
 # Requires: tkinter, matplotlib, numpy, re
 #####################################################################
 
+from math import dist
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog, messagebox
@@ -18,6 +19,7 @@ import matplotlib.pyplot as plt
 import re
 import argparse
 import sys
+from scipy.optimize import curve_fit
 
 
 # --- Data Handling Functions ---
@@ -95,6 +97,7 @@ def trim_data(data, energy, eps=1e-4):
 def plot_data(data_dict, key, thetaKey, energyKey, eps):
     d, e = trim_data(data_dict[key], data_dict[energyKey], eps)
     xx, yy = np.meshgrid(data_dict[thetaKey], e)
+    plt.figure()
     plt.pcolormesh(xx, yy, d)
     plt.colorbar()
     plt.xlabel(thetaKey)
@@ -103,12 +106,91 @@ def plot_data(data_dict, key, thetaKey, energyKey, eps):
     plt.show()
 
 
+def line_plot(data_dict, key, thetaKey, energyKey, eps):
+    d, e = trim_data(data_dict[key], data_dict[energyKey], eps)
+    theta = data_dict[thetaKey]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    for i in range(len(e)):
+        ax.plot(
+            ys=theta,
+            zs=d[i, :],
+            xs=e[i],
+            color=plt.cm.viridis(i / len(e)),
+        )
+    ax.set_ylabel(thetaKey)
+    ax.set_zlabel(f"Distribution: {key}")
+    ax.set_xlabel(energyKey)
+    plt.tight_layout()
+    plt.show()
+
+
+def fit_data(data_dict, key, thetaKey, energyKey, eps, power_cutoff=10000):
+    def angle_fit(t, power):
+        f = np.cos(t) ** power
+        f = np.abs(np.sin(t) * f)
+        return f / np.max(f)
+
+    def gaussian(x, mu, sigma):
+        f = np.exp(-((x - mu) ** 2) / (2 * sigma**2))
+        return f / np.max(f)
+
+    def dist_fit(t, e, power, mu, sigma):
+        return angle_fit(t, power) * gaussian(e, mu, sigma)
+
+    dist, energy = trim_data(data_dict[key], data_dict[energyKey], eps)
+    theta = data_dict[thetaKey]
+    theta_fit = np.linspace(np.min(theta), np.max(theta), 1000)
+    energy_fit = np.linspace(np.min(energy), np.max(energy), 1000)
+
+    powers = np.zeros(len(energy))
+    for i in range(len(energy)):
+        sample = dist[i, :]  # / np.max(dist[i, :])
+        sample_max = np.max(sample)
+        popt, _ = curve_fit(
+            angle_fit,
+            np.deg2rad(theta),
+            sample / sample_max,
+            bounds=([1], [50000]),
+            p0=[500],
+        )
+        powers[i] = popt[0]
+
+    powers_cut = powers < power_cutoff
+    popt_p, _ = curve_fit(
+        lambda x, a, b: a * x + b,
+        energy[powers_cut],
+        powers[powers_cut],
+        bounds=([0, 0], [10, 10000]),
+        p0=[1, 1],
+    )
+
+    dist_t = np.sum(dist, axis=1)
+    t_max = np.max(dist_t)
+    popt_g, _ = curve_fit(
+        gaussian, energy, dist_t / t_max, bounds=([0, 0], [100, 50]), p0=[38, 5]
+    )
+
+    xx, yy = np.meshgrid(theta_fit, energy_fit)
+    d = dist_fit(np.deg2rad(xx), yy, popt_p[1], popt_g[0], popt_g[1])
+    plt.figure()
+    plt.pcolormesh(xx, yy, d, shading="auto")
+    plt.colorbar(label="Distribution")
+    plt.xlabel(thetaKey)
+    plt.ylabel(energyKey)
+    plt.title(
+        f"Power {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}"
+    )
+    plt.tight_layout()
+    plt.show()
+
+
 def save_data(data_dict, key, thetaKey, energyKey, eps, outname):
     d, e = trim_data(data_dict[key], data_dict[energyKey], eps)
     with open(outname, "w") as f:
         f.write(f"# {key}\n")
-        f.write(" ".join(map(str, data_dict[thetaKey])) + "\n")
         f.write(" ".join(map(str, e)) + "\n")
+        f.write(" ".join(map(str, data_dict[thetaKey])) + "\n")
         for row in d:
             f.write(" ".join(map(str, row)) + "\n")
 
@@ -127,6 +209,7 @@ class TecplotGUI(ttk.Frame):
         self.entry_theta = tk.StringVar(value=self.tk_theta)
         self.entry_energy = tk.StringVar(value=self.tk_energy)
         self.entry_zone_lines = tk.IntVar(value=2)
+        self.line_plot_var = tk.BooleanVar(value=False)
 
         # use a built‑in theme
         style = ttk.Style()
@@ -163,6 +246,9 @@ class TecplotGUI(ttk.Frame):
         # Buttons
         frame_buttons = ttk.Frame(self)
         ttk.Button(frame_buttons, text="Show", command=self.on_plot).pack(
+            side="left", padx=5
+        )
+        ttk.Button(frame_buttons, text="Fit", command=self.on_fit).pack(
             side="left", padx=5
         )
         ttk.Button(frame_buttons, text="Save...", command=self.on_save).pack(
@@ -212,7 +298,14 @@ class TecplotGUI(ttk.Frame):
             return
         key = self.vars[sel[0]]
         eps = float(self.entry_eps.get())
-        plot_data(self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps)
+        if self.line_plot_var.get():
+            line_plot(
+                self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps
+            )
+        else:
+            plot_data(
+                self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps
+            )
 
     def on_save(self):
         sel = self.listbox.curselection()
@@ -236,6 +329,16 @@ class TecplotGUI(ttk.Frame):
             )
             messagebox.showinfo("Saved", f"Data saved to {out}")
 
+    def on_fit(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            messagebox.showwarning("Warning", "No variable selected.")
+            return
+        key = self.vars[sel[0]]
+        eps = float(self.entry_eps.get())
+        fit_data(self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps)
+        # messagebox.showinfo("Fit", f"Fit completed for {key}")
+
     def open_options(self):
         win = tk.Toplevel(self)
         win.title("Options")
@@ -258,8 +361,24 @@ class TecplotGUI(ttk.Frame):
         entry_zone.pack(side="left", padx=5)
         frame_zone.pack(pady=10)
 
+        # Checkbox for line plot
+        chk_line_plot = ttk.Checkbutton(
+            win,
+            text="Line Plot",
+            variable=self.line_plot_var,
+            command=self.toggle_line_plot,
+        )
+        chk_line_plot.pack(anchor="w", padx=15, pady=5)
+
         # Done button to close
         ttk.Button(win, text="OK", command=win.destroy).pack(pady=10)
+
+    def toggle_line_plot(self):
+        # Toggle the line plot option
+        if self.line_plot_var.get():
+            self.line_plot_var.set(True)
+        else:
+            self.line_plot_var.set(False)
 
 
 def main():
