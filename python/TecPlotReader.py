@@ -143,6 +143,8 @@ def fit_data(
     useSin=False,
     verbose=False,
     vm=False,
+    alpha=0.0,
+    beta=2.0,
 ):
     def _powerCos(t, power):
         f = np.cos(t) ** power
@@ -174,7 +176,9 @@ def fit_data(
     # fit angle distribution
     angle_p = np.zeros(len(energy))
     for i in range(len(energy)):
-        sample = dist[i, :]
+        sample = dist[i, :] * (
+            beta - (beta - 1) * np.exp(-alpha * np.abs(np.deg2rad(theta)))
+        )
         sample_max = np.max(sample)
         if sample_max > 0:
             popt, _ = curve_fit(
@@ -348,6 +352,8 @@ class TecplotGUI(ttk.Frame):
         self.fit_use_sin = tk.BooleanVar(value=False)
         self.fit_verbose = tk.BooleanVar(value=False)
         self.fit_function = tk.StringVar(value="powerCosine")
+        self.fit_alpha = tk.DoubleVar(value=0.0)
+        self.fit_beta = tk.DoubleVar(value=2.0)
         self.path_fn = ""
 
         # File input
@@ -493,6 +499,8 @@ class TecplotGUI(ttk.Frame):
             useSin=use_sine,
             verbose=verbose,
             vm=vm,
+            alpha=self.fit_alpha.get(),
+            beta=self.fit_beta.get(),
         )
         if res == -1:
             messagebox.showerror("Error", "Failed to fit data.")
@@ -500,7 +508,7 @@ class TecplotGUI(ttk.Frame):
     def open_options(self):
         win = tk.Toplevel(self)
         win.title("Options")
-        win.geometry("300x400")
+        win.geometry("300x470")
         win.resizable(False, False)
 
         # Keys
@@ -541,18 +549,24 @@ class TecplotGUI(ttk.Frame):
             frame_fit, textvariable=self.fit_angle_p_cutoff, width=20
         )
         entry_power.grid(row=2, column=1)
+        ttk.Label(frame_fit, text="Alpha:").grid(row=3, column=0)
+        entry_alpha = ttk.Entry(frame_fit, textvariable=self.fit_alpha, width=20)
+        entry_alpha.grid(row=3, column=1)
+        ttk.Label(frame_fit, text="Beta:").grid(row=4, column=0)
+        entry_beta = ttk.Entry(frame_fit, textvariable=self.fit_beta, width=20)
+        entry_beta.grid(row=4, column=1)
         chk_fit_sin = ttk.Checkbutton(
             frame_fit,
             text="Use Sine in Fit",
             variable=self.fit_use_sin,
         )
-        chk_fit_sin.grid(row=3, columnspan=2, pady=5)
+        chk_fit_sin.grid(row=5, columnspan=2, pady=5)
         chk_fit_verbose = ttk.Checkbutton(
             frame_fit,
             text="Show All Plots",
             variable=self.fit_verbose,
         )
-        chk_fit_verbose.grid(row=4, columnspan=2, pady=5)
+        chk_fit_verbose.grid(row=6, columnspan=2, pady=5)
         frame_fit.pack(pady=10)
 
         # Done button to close
