@@ -21,6 +21,7 @@ import re
 import argparse
 import sys
 from scipy.optimize import curve_fit
+from scipy import stats
 
 
 # --- Data Handling Functions ---
@@ -138,29 +139,40 @@ def fit_data(
     thetaKey,
     energyKey,
     eps,
-    power_cutoff=10000,
+    angle_p_cutoff=10000,
     useSin=False,
-    verbose=True,
+    verbose=False,
+    vm=False,
 ):
-    def angle_fit(t, power):
+    def _powerCos(t, power):
         f = np.cos(t) ** power
         if useSin:
             f = np.abs(np.sin(t) * f)
         return f / np.max(f)
 
-    def gaussian(x, mu, sigma):
+    def _vonMises(t, kappa):
+        f = stats.vonmises.pdf(t, kappa=kappa, loc=0, scale=np.pi / 2)
+        if useSin:
+            f = np.abs(np.sin(t) * f)
+        return f / np.max(f)
+
+    def _gaussian(x, mu, sigma):
         f = np.exp(-((x - mu) ** 2) / (2 * sigma**2))
         return f / np.max(f)
 
-    def dist_fit(t, e, power, mu, sigma):
-        return angle_fit(t, power) * gaussian(e, mu, sigma)
+    angle_fit = _vonMises if vm else _powerCos
+    angle_param = "Kappa" if vm else "Power"
+
+    def dist_fit(t, e, p, mu, sigma):
+        return angle_fit(t, p) * _gaussian(e, mu, sigma)
 
     dist, energy = trim_data(data_dict[key], data_dict[energyKey], eps)
     theta = data_dict[thetaKey]
     theta_fit = np.linspace(np.min(theta), np.max(theta), 1000)
     energy_fit = np.linspace(np.min(energy), np.max(energy), 1000)
 
-    powers = np.zeros(len(energy))
+    # fit angle distribution
+    angle_p = np.zeros(len(energy))
     for i in range(len(energy)):
         sample = dist[i, :]
         sample_max = np.max(sample)
@@ -169,12 +181,12 @@ def fit_data(
                 angle_fit,
                 np.deg2rad(theta),
                 sample / sample_max,
-                bounds=([1], [power_cutoff]),
-                p0=[500],
+                bounds=([1], [angle_p_cutoff]),
+                p0=[100],
             )
-            powers[i] = popt[0]
+            angle_p[i] = popt[0]
         else:
-            powers[i] = power_cutoff
+            angle_p[i] = angle_p_cutoff
 
     if verbose:
         fig, ax = plt.subplots()
@@ -182,11 +194,11 @@ def fit_data(
         [line_dist] = ax.plot(theta, dist[0, :], label="Distribution")
         [line_fit] = ax.plot(
             theta_fit,
-            angle_fit(np.deg2rad(theta_fit), powers[0]) * np.max(dist[0, :]),
+            angle_fit(np.deg2rad(theta_fit), angle_p[0]) * np.max(dist[0, :]),
             label="Fit",
         )
         ax.set_xlabel(thetaKey)
-        ax.set_title(f"Energy = {energy[0]:.2f} eV, Power = {powers[0]:.2f}")
+        ax.set_title(f"Energy = {energy[0]:.2f} eV, {angle_param} = {angle_p[0]:.2f}")
 
         # TextBox for the integer, centered
         axbox = plt.axes([0.4, 0.15, 0.2, 0.05])
@@ -194,7 +206,7 @@ def fit_data(
 
         # “–” button
         axdec = plt.axes([0.33, 0.15, 0.05, 0.05])
-        btn_dec = Button(axdec, "–")
+        btn_dec = Button(axdec, "-")
 
         # “+” button
         axinc = plt.axes([0.62, 0.15, 0.05, 0.05])
@@ -209,9 +221,11 @@ def fit_data(
                 return
             line_dist.set_ydata(dist[f, :])
             line_fit.set_ydata(
-                angle_fit(np.deg2rad(theta_fit), powers[f]) * np.max(dist[f, :])
+                angle_fit(np.deg2rad(theta_fit), angle_p[f]) * np.max(dist[f, :])
             )
-            ax.set_title(f"Energy = {energy[f]:.2f} eV, Power = {powers[f]:.2f}")
+            ax.set_title(
+                f"Energy = {energy[f]:.2f} eV, {angle_param} = {angle_p[f]:.2f}"
+            )
             ax.relim()
             ax.autoscale_view()
             fig.canvas.draw_idle()
@@ -231,45 +245,48 @@ def fit_data(
         btn_dec.on_clicked(on_dec)
         text_box.on_submit(lambda text: update_plot())
 
-    powers_cut = powers < power_cutoff
+    # fit resulting parameter distribution
+    angle_p_cut = angle_p < (angle_p_cutoff - 1)
     popt_p, _ = curve_fit(
         lambda x, a, b: a * x + b,
-        energy[powers_cut],
-        powers[powers_cut],
+        energy[angle_p_cut],
+        angle_p[angle_p_cut],
         bounds=([0, 0], [10, 10000]),
         p0=[1, 1],
     )
 
     if verbose:
         plt.figure()
-        plt.plot(energy, powers, "-x", label="Powers")
+        plt.plot(energy, angle_p, "-x", label=angle_param)
         plt.plot(
-            energy[powers_cut],
-            popt_p[0] * energy[powers_cut] + popt_p[1],
+            energy[angle_p_cut],
+            popt_p[0] * energy[angle_p_cut] + popt_p[1],
             "o--",
-            label="Power Fit",
+            label=f"{angle_param} Fit",
         )
-        plt.axhline(power_cutoff, color="red", linestyle="--", label="Cutoff")
+        plt.axhline(angle_p_cutoff, color="red", linestyle="--", label="Cutoff")
         plt.xlabel(energyKey)
-        plt.ylabel("Power")
-        plt.title(f"Power Fit: a={popt_p[0]:.2f}, b={popt_p[1]:.2f}")
+        plt.ylabel(angle_param)
+        plt.title(f"{angle_param} Fit: a={popt_p[0]:.2f}, b={popt_p[1]:.2f}")
         plt.legend()
 
+    # fit energy distribution
     dist_t = np.sum(dist, axis=1)
     t_max = np.max(dist_t)
     if t_max > 0:
         mu_0 = np.trapezoid(dist_t * energy, x=energy)
         popt_g, _ = curve_fit(
-            gaussian, energy, dist_t / t_max, bounds=([0, 0], [100, 50]), p0=[mu_0, 5]
+            _gaussian, energy, dist_t / t_max, bounds=([0, 0], [100, 50]), p0=[mu_0, 5]
         )
     else:
         return -1
 
     if verbose:
+        plt.figure()
         plt.plot(energy, dist_t, label="Cumulative Distribution")
         plt.plot(
             energy_fit,
-            gaussian(energy_fit, *popt_g) * t_max,
+            _gaussian(energy_fit, *popt_g) * t_max,
             label="Gaussian Fit",
         )
         plt.xlabel(energyKey)
@@ -277,7 +294,9 @@ def fit_data(
         plt.title(f"Gaussian Fit: mu={popt_g[0]:.2f}, sigma={popt_g[1]:.2f}")
         plt.legend()
 
-    print(f"Power {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}")
+    print(
+        f"{angle_param} {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}"
+    )
 
     tt, ee = np.meshgrid(theta_fit, energy_fit)
     d = dist_fit(np.deg2rad(tt), ee, popt_p[1], popt_g[0], popt_g[1])
@@ -287,7 +306,7 @@ def fit_data(
     plt.xlabel(thetaKey)
     plt.ylabel(energyKey)
     plt.title(
-        f"Power {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}"
+        f"{angle_param} {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}"
     )
     plt.tight_layout()
     plt.show()
@@ -325,9 +344,10 @@ class TecplotGUI(ttk.Frame):
         self.entry_energy = tk.StringVar(value=self.tk_energy)
         self.entry_zone_lines = tk.IntVar(value=2)
         self.line_plot_var = tk.BooleanVar(value=False)
-        self.fit_power_cutoff = tk.IntVar(value=10000)
+        self.fit_angle_p_cutoff = tk.IntVar(value=10000)
         self.fit_use_sin = tk.BooleanVar(value=False)
         self.fit_verbose = tk.BooleanVar(value=False)
+        self.fit_function = tk.StringVar(value="powerCosine")
         self.path_fn = ""
 
         # File input
@@ -452,21 +472,30 @@ class TecplotGUI(ttk.Frame):
             return
         key = self.vars[sel[0]]
         eps = float(self.entry_eps.get())
-        power_cutoff = self.fit_power_cutoff.get()
+        angle_p_cutoff = self.fit_angle_p_cutoff.get()
         use_sine = self.fit_use_sin.get()
         verbose = self.fit_verbose.get()
+        fit_function = self.fit_function.get()
+        if fit_function == "vonMises":
+            vm = True
+        elif fit_function == "powerCosine":
+            vm = False
+        else:
+            messagebox.showerror("Error", "Unknown fit function selected.")
+            return
         res = fit_data(
             self.data,
             key,
             self.entry_theta.get(),
             self.entry_energy.get(),
             eps,
-            power_cutoff=power_cutoff,
+            angle_p_cutoff=angle_p_cutoff,
             useSin=use_sine,
             verbose=verbose,
+            vm=vm,
         )
         if res == -1:
-            messagebox.showerror("Error", "Could not fit data.")
+            messagebox.showerror("Error", "Failed to fit data.")
 
     def open_options(self):
         win = tk.Toplevel(self)
@@ -501,21 +530,29 @@ class TecplotGUI(ttk.Frame):
 
         frame_fit = ttk.Frame(win)
         ttk.Label(frame_fit, text="Fit Options:").grid(row=0, columnspan=2)
-        ttk.Label(frame_fit, text="Power Cutoff:").grid(row=1, column=0)
-        entry_power = ttk.Entry(frame_fit, textvariable=self.fit_power_cutoff, width=20)
-        entry_power.grid(row=1, column=1)
+        ttk.Combobox(
+            frame_fit,
+            textvariable=self.fit_function,
+            values=["powerCosine", "vonMises"],
+            state="readonly",
+        ).grid(row=1, columnspan=2, pady=5)
+        ttk.Label(frame_fit, text="Cutoff:").grid(row=2, column=0)
+        entry_power = ttk.Entry(
+            frame_fit, textvariable=self.fit_angle_p_cutoff, width=20
+        )
+        entry_power.grid(row=2, column=1)
         chk_fit_sin = ttk.Checkbutton(
             frame_fit,
             text="Use Sine in Fit",
             variable=self.fit_use_sin,
         )
-        chk_fit_sin.grid(row=2, columnspan=2, pady=5)
+        chk_fit_sin.grid(row=3, columnspan=2, pady=5)
         chk_fit_verbose = ttk.Checkbutton(
             frame_fit,
             text="Show All Plots",
             variable=self.fit_verbose,
         )
-        chk_fit_verbose.grid(row=3, columnspan=2, pady=5)
+        chk_fit_verbose.grid(row=4, columnspan=2, pady=5)
         frame_fit.pack(pady=10)
 
         # Done button to close
