@@ -6,8 +6,9 @@
 # Usage:
 #   python TecPlotReader.py -f data.pdt
 #   python TecPlotReader.py -f data.pdt -i variable_name -o output.txt
+#   python TecPlotReader.py -f data.pdt -i variable_name --fit
 #   python TecPlotReader.py  # to open the GUI
-# Requires: tkinter, matplotlib, numpy, re
+# Requires: tkinter, matplotlib, numpy, scipy
 #####################################################################
 
 import tkinter as tk
@@ -161,20 +162,19 @@ def fit_data(
 
     powers = np.zeros(len(energy))
     for i in range(len(energy)):
-        sample = dist[i, :]  # / np.max(dist[i, :])
+        sample = dist[i, :]
         sample_max = np.max(sample)
         if sample_max > 0:
-            sample = sample / sample_max
             popt, _ = curve_fit(
                 angle_fit,
                 np.deg2rad(theta),
-                sample,
-                bounds=([1], [50000]),
+                sample / sample_max,
+                bounds=([1], [power_cutoff]),
                 p0=[500],
             )
             powers[i] = popt[0]
         else:
-            powers[i] = 50000
+            powers[i] = power_cutoff
 
     if verbose:
         fig, ax = plt.subplots()
@@ -203,6 +203,8 @@ def fit_data(
         def update_plot():
             try:
                 f = int(text_box.text)
+                if f < 0 or f >= len(energy):
+                    raise ValueError("Index out of bounds")
             except ValueError:
                 return
             line_dist.set_ydata(dist[f, :])
@@ -215,16 +217,12 @@ def fit_data(
             fig.canvas.draw_idle()
 
         def on_inc(event):
-            v = int(text_box.text) + 1
-            if v >= len(energy):
-                v = len(energy) - 1
+            v = min(int(text_box.text) + 1, len(energy) - 1)
             text_box.set_val(str(v))
             update_plot()
 
         def on_dec(event):
-            v = int(text_box.text) - 1
-            if v < 0:
-                v = 0
+            v = max(int(text_box.text) - 1, 0)
             text_box.set_val(str(v))
             update_plot()
 
@@ -268,24 +266,23 @@ def fit_data(
         return -1
 
     if verbose:
-        fig, ax_e = plt.subplots()
-        ax_e.plot(energy, dist_t, label="Cumulative Distribution")
-        ax_e.plot(
+        plt.plot(energy, dist_t, label="Cumulative Distribution")
+        plt.plot(
             energy_fit,
-            gaussian(energy_fit, popt_g[0], popt_g[1]) * t_max,
+            gaussian(energy_fit, *popt_g) * t_max,
             label="Gaussian Fit",
         )
-        ax_e.set_xlabel(energyKey)
-        ax_e.set_ylabel("Cumulative Distribution")
-        ax_e.set_title(f"Gaussian Fit: mu={popt_g[0]:.2f}, sigma={popt_g[1]:.2f}")
-        ax_e.legend()
+        plt.xlabel(energyKey)
+        plt.ylabel("Cumulative Distribution")
+        plt.title(f"Gaussian Fit: mu={popt_g[0]:.2f}, sigma={popt_g[1]:.2f}")
+        plt.legend()
 
     print(f"Power {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}")
 
-    xx, yy = np.meshgrid(theta_fit, energy_fit)
-    d = dist_fit(np.deg2rad(xx), yy, popt_p[1], popt_g[0], popt_g[1])
+    tt, ee = np.meshgrid(theta_fit, energy_fit)
+    d = dist_fit(np.deg2rad(tt), ee, popt_p[1], popt_g[0], popt_g[1])
     plt.figure()
-    plt.pcolormesh(xx, yy, d, shading="auto")
+    plt.pcolormesh(tt, ee, d, shading="auto")
     plt.colorbar(label="Distribution")
     plt.xlabel(thetaKey)
     plt.ylabel(energyKey)
