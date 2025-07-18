@@ -10,12 +10,12 @@
 # Requires: tkinter, matplotlib, numpy, re
 #####################################################################
 
-from math import dist
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog, messagebox
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.widgets import TextBox, Button
 import re
 import argparse
 import sys
@@ -57,7 +57,7 @@ def read_tecplot_data(filename, thetaKey, energyKey, zone_lines_max=2):
                     I, J = int(mI.group(1)), int(mJ.group(1))
             zone_lines_read += 1
             if zone_lines_read == zone_lines_max:
-                mode = 2
+                mode = 2  # switch to data mode
         elif mode == 2:
             var = variables[var_counter]
             parts = line.split()
@@ -76,6 +76,12 @@ def read_tecplot_data(filename, thetaKey, energyKey, zone_lines_max=2):
     # convert to arrays
     for k in data_dict:
         data_dict[k] = np.array(data_dict[k])
+
+    if thetaKey not in data_dict or energyKey not in data_dict:
+        raise ValueError(
+            f"Required keys '{thetaKey}' or '{energyKey}' not found in the data."
+        )
+
     # extract 1D theta and energy
     data_dict[thetaKey] = data_dict[thetaKey][0, :]
     data_dict[energyKey] = data_dict[energyKey][:, 0]
@@ -99,7 +105,7 @@ def plot_data(data_dict, key, thetaKey, energyKey, eps):
     xx, yy = np.meshgrid(data_dict[thetaKey], e)
     plt.figure()
     plt.pcolormesh(xx, yy, d)
-    plt.colorbar()
+    plt.colorbar(label="Distribution")
     plt.xlabel(thetaKey)
     plt.ylabel(energyKey)
     plt.title(f"Distribution: {key}")
@@ -125,10 +131,20 @@ def line_plot(data_dict, key, thetaKey, energyKey, eps):
     plt.show()
 
 
-def fit_data(data_dict, key, thetaKey, energyKey, eps, power_cutoff=10000):
+def fit_data(
+    data_dict,
+    key,
+    thetaKey,
+    energyKey,
+    eps,
+    power_cutoff=10000,
+    useSin=False,
+    verbose=True,
+):
     def angle_fit(t, power):
         f = np.cos(t) ** power
-        f = np.abs(np.sin(t) * f)
+        if useSin:
+            f = np.abs(np.sin(t) * f)
         return f / np.max(f)
 
     def gaussian(x, mu, sigma):
@@ -147,14 +163,75 @@ def fit_data(data_dict, key, thetaKey, energyKey, eps, power_cutoff=10000):
     for i in range(len(energy)):
         sample = dist[i, :]  # / np.max(dist[i, :])
         sample_max = np.max(sample)
-        popt, _ = curve_fit(
-            angle_fit,
-            np.deg2rad(theta),
-            sample / sample_max,
-            bounds=([1], [50000]),
-            p0=[500],
+        if sample_max > 0:
+            sample = sample / sample_max
+            popt, _ = curve_fit(
+                angle_fit,
+                np.deg2rad(theta),
+                sample,
+                bounds=([1], [50000]),
+                p0=[500],
+            )
+            powers[i] = popt[0]
+        else:
+            powers[i] = 50000
+
+    if verbose:
+        fig, ax = plt.subplots()
+        plt.subplots_adjust(bottom=0.3)  # leave room at bottom
+        [line_dist] = ax.plot(theta, dist[0, :], label="Distribution")
+        [line_fit] = ax.plot(
+            theta_fit,
+            angle_fit(np.deg2rad(theta_fit), powers[0]) * np.max(dist[0, :]),
+            label="Fit",
         )
-        powers[i] = popt[0]
+        ax.set_xlabel(thetaKey)
+        ax.set_title(f"Energy = {energy[0]:.2f} eV, Power = {powers[0]:.2f}")
+
+        # TextBox for the integer, centered
+        axbox = plt.axes([0.4, 0.15, 0.2, 0.05])
+        text_box = TextBox(axbox, "", initial=str(0))
+
+        # “–” button
+        axdec = plt.axes([0.33, 0.15, 0.05, 0.05])
+        btn_dec = Button(axdec, "–")
+
+        # “+” button
+        axinc = plt.axes([0.62, 0.15, 0.05, 0.05])
+        btn_inc = Button(axinc, "+")
+
+        def update_plot():
+            try:
+                f = int(text_box.text)
+            except ValueError:
+                return
+            line_dist.set_ydata(dist[f, :])
+            line_fit.set_ydata(
+                angle_fit(np.deg2rad(theta_fit), powers[f]) * np.max(dist[f, :])
+            )
+            ax.set_title(f"Energy = {energy[f]:.2f} eV, Power = {powers[f]:.2f}")
+            ax.relim()
+            ax.autoscale_view()
+            fig.canvas.draw_idle()
+
+        def on_inc(event):
+            v = int(text_box.text) + 1
+            if v >= len(energy):
+                v = len(energy) - 1
+            text_box.set_val(str(v))
+            update_plot()
+
+        def on_dec(event):
+            v = int(text_box.text) - 1
+            if v < 0:
+                v = 0
+            text_box.set_val(str(v))
+            update_plot()
+
+        # wire up callbacks
+        btn_inc.on_clicked(on_inc)
+        btn_dec.on_clicked(on_dec)
+        text_box.on_submit(lambda text: update_plot())
 
     powers_cut = powers < power_cutoff
     popt_p, _ = curve_fit(
@@ -165,11 +242,45 @@ def fit_data(data_dict, key, thetaKey, energyKey, eps, power_cutoff=10000):
         p0=[1, 1],
     )
 
+    if verbose:
+        plt.figure()
+        plt.plot(energy, powers, "-x", label="Powers")
+        plt.plot(
+            energy[powers_cut],
+            popt_p[0] * energy[powers_cut] + popt_p[1],
+            "o--",
+            label="Power Fit",
+        )
+        plt.axhline(power_cutoff, color="red", linestyle="--", label="Cutoff")
+        plt.xlabel(energyKey)
+        plt.ylabel("Power")
+        plt.title(f"Power Fit: a={popt_p[0]:.2f}, b={popt_p[1]:.2f}")
+        plt.legend()
+
     dist_t = np.sum(dist, axis=1)
     t_max = np.max(dist_t)
-    popt_g, _ = curve_fit(
-        gaussian, energy, dist_t / t_max, bounds=([0, 0], [100, 50]), p0=[38, 5]
-    )
+    if t_max > 0:
+        mu_0 = np.trapezoid(dist_t * energy, x=energy)
+        popt_g, _ = curve_fit(
+            gaussian, energy, dist_t / t_max, bounds=([0, 0], [100, 50]), p0=[mu_0, 5]
+        )
+    else:
+        return -1
+
+    if verbose:
+        fig, ax_e = plt.subplots()
+        ax_e.plot(energy, dist_t, label="Cumulative Distribution")
+        ax_e.plot(
+            energy_fit,
+            gaussian(energy_fit, popt_g[0], popt_g[1]) * t_max,
+            label="Gaussian Fit",
+        )
+        ax_e.set_xlabel(energyKey)
+        ax_e.set_ylabel("Cumulative Distribution")
+        ax_e.set_title(f"Gaussian Fit: mu={popt_g[0]:.2f}, sigma={popt_g[1]:.2f}")
+        ax_e.legend()
+
+    print(f"Power {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}")
 
     xx, yy = np.meshgrid(theta_fit, energy_fit)
     d = dist_fit(np.deg2rad(xx), yy, popt_p[1], popt_g[0], popt_g[1])
@@ -183,6 +294,8 @@ def fit_data(data_dict, key, thetaKey, energyKey, eps, power_cutoff=10000):
     )
     plt.tight_layout()
     plt.show()
+
+    return 0
 
 
 def save_data(data_dict, key, thetaKey, energyKey, eps, outname):
@@ -200,77 +313,83 @@ class TecplotGUI(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent, padding=10)
         parent.title("Tecplot Distribution Viewer")
-        parent.minsize(500, 400)
+        parent.minsize(400, 300)
         self.data = {}
         self.vars = []
 
+        # use a built‑in theme
+        # style = ttk.Style()
+        # style.theme_use("clam")
+
+        # Options Input
         self.tk_theta = "THETA (DEG)"
         self.tk_energy = "ENERGY (EV)"
         self.entry_theta = tk.StringVar(value=self.tk_theta)
         self.entry_energy = tk.StringVar(value=self.tk_energy)
         self.entry_zone_lines = tk.IntVar(value=2)
         self.line_plot_var = tk.BooleanVar(value=False)
-
-        # use a built‑in theme
-        style = ttk.Style()
-        style.theme_use("clam")
+        self.fit_power_cutoff = tk.IntVar(value=10000)
+        self.fit_use_sin = tk.BooleanVar(value=False)
+        self.fit_verbose = tk.BooleanVar(value=False)
+        self.path_fn = ""
 
         # File input
-        ttk.Label(self, text="Filename:").pack(anchor="w")
         frame_file = ttk.Frame(self)
-        self.entry_file = ttk.Entry(frame_file, width=40)
+        ttk.Label(frame_file, text="Filename:").pack(anchor="w")
+        self.entry_file = ttk.Entry(frame_file, width=20)
         self.entry_file.pack(side="left", padx=5)
         ttk.Button(frame_file, text="Browse", command=self.browse_file).pack(
-            side="left", padx=5
-        )
-        ttk.Button(frame_file, text="\u21bb", command=self.load_data, width=4).pack(
             side="left", padx=5
         )
         frame_file.pack(pady=5)
 
         # Variable list
-        ttk.Label(self, text="Select Variable:").pack(anchor="w")
+        frame_main = ttk.Frame(self)
+        ttk.Label(frame_main, text="Select Variable:").grid(row=0, column=0)
         self.listbox = tk.Listbox(
-            self, background="white", selectmode=tk.SINGLE, foreground="black"
+            frame_main, background="gray", selectmode=tk.SINGLE, foreground="black"
         )
-        self.listbox.pack(fill="both", expand=True, padx=5)
+        self.listbox.grid(row=1, column=0, padx=5, rowspan=6)
 
         # Trim eps
-        frame_eps = ttk.Frame(self)
-        ttk.Label(frame_eps, text="Trim eps:").pack(side="left")
-        self.entry_eps = ttk.Entry(frame_eps, width=10)
+        ttk.Label(frame_main, text="Trim eps:").grid(row=1, column=1, padx=5)
+        self.entry_eps = ttk.Entry(frame_main, width=10)
         self.entry_eps.insert(0, "1e-4")
-        self.entry_eps.pack(side="left", padx=5)
-        frame_eps.pack(pady=5)
+        self.entry_eps.grid(row=2, column=1, padx=5)
 
         # Buttons
-        frame_buttons = ttk.Frame(self)
-        ttk.Button(frame_buttons, text="Show", command=self.on_plot).pack(
-            side="left", padx=5
+        ttk.Button(frame_main, text="Show", command=self.on_plot).grid(
+            row=3, column=1, padx=5
         )
-        ttk.Button(frame_buttons, text="Fit", command=self.on_fit).pack(
-            side="left", padx=5
+        ttk.Button(frame_main, text="Fit", command=self.on_fit).grid(
+            row=4, column=1, padx=5
         )
-        ttk.Button(frame_buttons, text="Save...", command=self.on_save).pack(
-            side="left", padx=5
+        ttk.Button(frame_main, text="Save", command=self.on_save).grid(
+            row=5, column=1, padx=5
         )
-        frame_buttons.pack(pady=10)
 
         # Extended options button
-        btn_ext = ttk.Button(frame_buttons, text="Options", command=self.open_options)
-        btn_ext.pack(side="left", padx=5)
+        btn_ext = ttk.Button(
+            frame_main, text="Options", command=self.open_options
+        ).grid(row=6, column=1, padx=5)
+        frame_main.pack(pady=5)
 
     def browse_file(self):
         f = filedialog.askopenfilename(
-            filetypes=[("TecPlot files", "*.pdt"), ("All files", "*")]
+            filetypes=[("TecPlot files", "*.pdt"), ("All files", "*")],
+            title="Select TecPlot File",
+            initialdir=".",
         )
         if f:
             self.entry_file.delete(0, tk.END)
+            # insert the filename into the entry
+            self.path_fn = f
+            f = f.split("/")[-1] if "/" in f else f.split("\\")[-1]
             self.entry_file.insert(0, f)
             self.load_data()
 
     def load_data(self):
-        fn = self.entry_file.get().strip()
+        fn = self.path_fn.strip()
         self.tk_theta = self.entry_theta.get().strip()
         self.tk_energy = self.entry_energy.get().strip()
         zone_lines = self.entry_zone_lines.get()
@@ -336,49 +455,74 @@ class TecplotGUI(ttk.Frame):
             return
         key = self.vars[sel[0]]
         eps = float(self.entry_eps.get())
-        fit_data(self.data, key, self.entry_theta.get(), self.entry_energy.get(), eps)
-        # messagebox.showinfo("Fit", f"Fit completed for {key}")
+        power_cutoff = self.fit_power_cutoff.get()
+        use_sine = self.fit_use_sin.get()
+        verbose = self.fit_verbose.get()
+        res = fit_data(
+            self.data,
+            key,
+            self.entry_theta.get(),
+            self.entry_energy.get(),
+            eps,
+            power_cutoff=power_cutoff,
+            useSin=use_sine,
+            verbose=verbose,
+        )
+        if res == -1:
+            messagebox.showerror("Error", "Could not fit data.")
 
     def open_options(self):
         win = tk.Toplevel(self)
         win.title("Options")
-        win.geometry("300x200")
+        win.geometry("300x400")
+        win.resizable(False, False)
 
         # Keys
-        frame_keys = tk.Frame(win)
-        tk.Label(frame_keys, text="Theta Key:").grid(row=0, column=0)
-        entry_t = tk.Entry(frame_keys, textvariable=self.entry_theta)
-        entry_t.grid(row=0, column=1)
-        tk.Label(frame_keys, text="Energy Key:").grid(row=1, column=0)
-        entry_e = tk.Entry(frame_keys, textvariable=self.entry_energy)
-        entry_e.grid(row=1, column=1)
+        frame_keys = ttk.Frame(win)
+        ttk.Label(frame_keys, text="Parsing:").grid(row=0, columnspan=2, pady=5)
+        ttk.Label(frame_keys, text="Theta Key:").grid(row=1, column=0)
+        entry_t = ttk.Entry(frame_keys, textvariable=self.entry_theta, width=20)
+        entry_t.grid(row=1, column=1)
+        ttk.Label(frame_keys, text="Energy Key:").grid(row=2, column=0)
+        entry_e = ttk.Entry(frame_keys, textvariable=self.entry_energy, width=20)
+        entry_e.grid(row=2, column=1)
+        ttk.Label(frame_keys, text="Zone Lines:").grid(row=3, column=0)
+        entry_zone = ttk.Entry(frame_keys, textvariable=self.entry_zone_lines, width=20)
+        entry_zone.grid(row=3, column=1)
         frame_keys.pack(pady=10)
 
-        # Zone lines
-        frame_zone = tk.Frame(win)
-        tk.Label(frame_zone, text="Zone Lines:").pack(side="left")
-        entry_zone = tk.Entry(frame_zone, textvariable=self.entry_zone_lines, width=5)
-        entry_zone.pack(side="left", padx=5)
-        frame_zone.pack(pady=10)
-
         # Checkbox for line plot
+        frame_plot = ttk.Frame(win)
+        ttk.Label(frame_plot, text="Plot Options:").pack(anchor="center")
         chk_line_plot = ttk.Checkbutton(
-            win,
+            frame_plot,
             text="Line Plot",
             variable=self.line_plot_var,
-            command=self.toggle_line_plot,
         )
-        chk_line_plot.pack(anchor="w", padx=15, pady=5)
+        chk_line_plot.pack(anchor="center", pady=5)
+        frame_plot.pack(pady=10)
+
+        frame_fit = ttk.Frame(win)
+        ttk.Label(frame_fit, text="Fit Options:").grid(row=0, columnspan=2)
+        ttk.Label(frame_fit, text="Power Cutoff:").grid(row=1, column=0)
+        entry_power = ttk.Entry(frame_fit, textvariable=self.fit_power_cutoff, width=20)
+        entry_power.grid(row=1, column=1)
+        chk_fit_sin = ttk.Checkbutton(
+            frame_fit,
+            text="Use Sine in Fit",
+            variable=self.fit_use_sin,
+        )
+        chk_fit_sin.grid(row=2, columnspan=2, pady=5)
+        chk_fit_verbose = ttk.Checkbutton(
+            frame_fit,
+            text="Show All Plots",
+            variable=self.fit_verbose,
+        )
+        chk_fit_verbose.grid(row=3, columnspan=2, pady=5)
+        frame_fit.pack(pady=10)
 
         # Done button to close
-        ttk.Button(win, text="OK", command=win.destroy).pack(pady=10)
-
-    def toggle_line_plot(self):
-        # Toggle the line plot option
-        if self.line_plot_var.get():
-            self.line_plot_var.set(True)
-        else:
-            self.line_plot_var.set(False)
+        ttk.Button(win, text="OK", command=win.destroy).pack(anchor="s", pady=5)
 
 
 def main():
@@ -393,6 +537,7 @@ def main():
         "-o", "--output", help="output filename", metavar="OUT", default="output.txt"
     )
     parser.add_argument("--eps", help="trim epsilon", type=float, default=1e-4)
+    parser.add_argument("--fit", help="Fit distribution to data", action="store_true")
 
     args = parser.parse_args()
 
@@ -414,6 +559,22 @@ def main():
             thetaKey=theta_key,
             energyKey=energy_key,
         )
+
+        if args.fit:
+            if args.input == "ALL":
+                print("Error: Variable input need for fit.")
+                return
+
+            if args.input not in variables:
+                print(
+                    f"Error: variable '{args.input}' not found in {args.file}",
+                )
+                return
+
+            res = fit_data(data_dict, args.input, theta_key, energy_key, args.eps)
+            if res == -1:
+                print("Error fitting data.")
+            return
 
         outFileName = args.output
         if outFileName.endswith(".txt"):
