@@ -25,15 +25,7 @@ auto loadDistributionFromFile(const std::string &fileName) {
   std::string line;
   // Header
   std::getline(file, line);
-
-  // Read y-support
-  std::getline(file, line);
-  std::istringstream yStream(line);
-  NumericType yValue;
-  while (yStream >> yValue) {
-    distribution.support_y.push_back(yValue);
-  }
-  distribution.support_y.shrink_to_fit();
+  std::cout << "Reading distribution: " << line << std::endl;
 
   // Read x-support
   std::getline(file, line);
@@ -43,6 +35,15 @@ auto loadDistributionFromFile(const std::string &fileName) {
     distribution.support_x.push_back(xValue);
   }
   distribution.support_x.shrink_to_fit();
+
+  // Read y-support
+  std::getline(file, line);
+  std::istringstream yStream(line);
+  NumericType yValue;
+  while (yStream >> yValue) {
+    distribution.support_y.push_back(yValue);
+  }
+  distribution.support_y.shrink_to_fit();
 
   // Read PDF values
   size_t rowSize = 0;
@@ -64,20 +65,33 @@ auto loadDistributionFromFile(const std::string &fileName) {
     distribution.pdf.push_back(pdfRow);
   }
 
+  file.close();
+
+  // Check if the distribution is valid
+  if (distribution.pdf.size() != distribution.support_x.size() ||
+      rowSize != distribution.support_y.size()) {
+    Logger::getInstance()
+        .addError("Invalid distribution data: "
+                  "Number of rows in PDF does not match x-support size "
+                  "or row size does not match y-support size.")
+        .print();
+  }
+
   return distribution;
 }
 
 template <class NumericType, int D>
-class BivariateDistributionParticle final
-    : public viennaray::Particle<BivariateDistributionParticle<NumericType, D>,
+class CustomDistributionParticle final
+    : public viennaray::Particle<CustomDistributionParticle<NumericType, D>,
                                  NumericType> {
   NumericType energy_;
+  NumericType theta_;
   Sampling<NumericType, 2>
       directionNEnergySampling_; // bivariate (2D) sampling instance using
                                  // accept-reject sampling
 
 public:
-  explicit BivariateDistributionParticle(
+  explicit CustomDistributionParticle(
       const BivariateDistribution<NumericType> &angleEnergyDistribution) {
     // initialize sampling instances with custom distribution
     directionNEnergySampling_.setPDF(angleEnergyDistribution.pdf,
@@ -91,9 +105,10 @@ public:
     auto sample = directionNEnergySampling_.sample(rngState);
 
     assert(sample[1] >= -90. && sample[1] <= 90.);
-    NumericType theta = constants::degToRad(sample[1]);
     energy_ = sample[0];
+    theta_ = sample[1];
 
+    NumericType theta = constants::degToRad(sample[1]);
     Vec3D<NumericType> direction{0., 0., 0.};
     if constexpr (D == 2) {
       direction[0] = std::sin(theta);
@@ -107,6 +122,21 @@ public:
     }
 
     return direction;
+  }
+
+  void logData(viennaray::DataLog<NumericType> &log) override {
+    constexpr int num_e = 50;
+    constexpr int num_theta = 50;
+
+    NumericType t = (theta_ + 15) / 30.;
+    int theta_bin = static_cast<int>(t * num_theta);
+    theta_bin = std::clamp(theta_bin, 0, num_theta - 1);
+
+    NumericType e = (energy_ - 10) / (60 - 10);
+    int e_bin = static_cast<int>(e * num_e);
+    e_bin = std::clamp(e_bin, 0, num_e - 1);
+
+    log.data[0][theta_bin * num_e + e_bin] += 1; // increment bin
   }
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -188,7 +218,7 @@ public:
 
 int main(int argc, char *argv[]) {
 
-  Logger::setLogLevel(LogLevel::INFO);
+  Logger::setLogLevel(LogLevel::DEBUG);
   using NumericType = double;
   constexpr int D = 2;
 
@@ -212,13 +242,14 @@ int main(int argc, char *argv[]) {
   auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
   model->setVelocityField(velField);
   auto distribution = loadDistributionFromFile<NumericType>(filename);
-  auto particle =
-      std::make_unique<BivariateDistributionParticle<NumericType, D>>(
-          distribution);
-  model->insertNextParticleType(particle);
+  auto particle = std::make_unique<CustomDistributionParticle<NumericType, D>>(
+      distribution);
+  model->insertNextParticleType(particle, 50 * 50); // 50x50 data log size
 
   // Run the process
-  Process<NumericType, D>(domain, model, 2.0).apply();
+  Process<NumericType, D> p(domain, model, .1);
+  p.apply();
+  p.writeParticleDataLogs("particle_data.txt");
 
   domain->saveVolumeMesh("customParticleDistribution");
 

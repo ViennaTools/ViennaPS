@@ -56,7 +56,7 @@ public:
 
     for (std::size_t i = 0; i < particleDataLogs.size(); i++) {
       if (!particleDataLogs[i].data.empty()) {
-        file << "particle" << i << "_data ";
+        file << "particle" << i << "_data\n";
         for (std::size_t j = 0; j < particleDataLogs[i].data[0].size(); j++) {
           file << particleDataLogs[i].data[0][j] << " ";
         }
