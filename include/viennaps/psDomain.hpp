@@ -385,6 +385,12 @@ public:
   // [min, max][x, y, z]
   auto getBoundingBox() const {
     std::array<Vec3D<NumericType>, 2> boundingBox;
+    if (levelSets_.empty()) {
+      Logger::getInstance()
+          .addWarning("No Level-Sets in domain. Returning empty bounding box.")
+          .print();
+      return boundingBox;
+    }
     auto mesh = viennals::Mesh<NumericType>::New();
     viennals::ToDiskMesh<NumericType, D>(levelSets_.back(), mesh).apply();
     boundingBox[0] = mesh->minimumExtent;
@@ -398,8 +404,8 @@ public:
   }
 
   void print(std::ostream &out = std::cout, bool hrle = false) const {
-    out << "Process Simulation Domain:\n";
-    out << "******************************\n";
+    constexpr char *separator = "*****************************************\n";
+    out << "Process Simulation Domain:\n" << separator;
     out << "Number of Level-Sets: " << levelSets_.size() << "\n";
     if (materialMap_) {
       out << "Materials:\n";
@@ -413,13 +419,13 @@ public:
     }
     auto bb = getBoundingBox();
     out << "Bounding Box: [" << bb[0][0] << ", " << bb[0][1] << ", " << bb[0][2]
-        << "] - [" << bb[1][0] << ", " << bb[1][1] << ", " << bb[1][2] << "]\n";
-    out << "******************************\n";
+        << "] - [" << bb[1][0] << ", " << bb[1][1] << ", " << bb[1][2] << "]\n"
+        << separator;
     if (hrle) {
       for (auto &ls : levelSets_) {
         ls->print();
       }
-      out << "******************************\n";
+      out << separator;
     }
     if (!metaData_.empty()) {
       out << "Meta Data:\n";
@@ -430,8 +436,8 @@ public:
         }
         out << "\n";
       }
+      out << separator;
     }
-    out << "******************************" << std::endl;
   }
 
   // Save the level set as a VTK file.

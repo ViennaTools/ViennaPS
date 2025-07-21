@@ -1819,7 +1819,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Get the boundary conditions of the domain.")
       .def("getMetaData", &Domain<T, D>::getMetaData,
            "Get meta data (e.g. process data) stored in the domain")
-      .def("print", &Domain<T, D>::print)
+      .def(
+          "print",
+          [](Domain<T, D> &self, bool hrle) { self.print(std::cout, hrle); },
+          "Print the domain information.", pybind11::arg("hrleInfo") = false)
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
@@ -2112,7 +2115,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Get the bounding box of the domain.")
       .def("getBoundaryConditions", &Domain<T, 3>::getBoundaryConditions,
            "Get the boundary conditions of the domain.")
-      .def("print", &Domain<T, 3>::print)
+      .def(
+          "print",
+          [](Domain<T, 3> &self, bool hrle) { self.print(std::cout, hrle); },
+          "Print the domain information.", pybind11::arg("hrleInfo") = false)
       .def("saveLevelSetMesh", &Domain<T, 3>::saveLevelSetMesh,
            pybind11::arg("filename"), pybind11::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
