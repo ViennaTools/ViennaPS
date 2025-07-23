@@ -21,7 +21,7 @@ import re
 import argparse
 import sys
 from scipy.optimize import curve_fit
-from scipy import stats
+from scipy.stats import vonmises
 from scipy.ndimage import gaussian_filter
 from scipy.signal import find_peaks
 
@@ -49,8 +49,8 @@ def read_tecplot_data(filename, thetaKey, energyKey, zone_lines_max=2):
 
         if mode == 0:
             for var in re.findall(r'"([^\"]+)"', line):
-                if var not in (thetaKey, energyKey):
-                    var = var.split()[0]  # take only the first part
+                # if var not in (thetaKey, energyKey):
+                #     var = var.split()[0]  # take only the first part
                 variables.append(var)
                 data_dict[var] = []
         elif mode == 1:
@@ -156,7 +156,7 @@ def fit_data(
         return f / np.max(f)
 
     def _vonMises(t, kappa):
-        f = stats.vonmises.pdf(t, kappa=kappa, loc=0, scale=np.pi / 2)
+        f = vonmises.pdf(t, kappa=kappa, loc=0, scale=np.pi / 2)
         if useSin:
             f = np.abs(np.sin(t) * f)
         return f / np.max(f)
@@ -698,7 +698,7 @@ class TecplotGUI(ttk.Frame):
     def open_options(self):
         win = tk.Toplevel(self)
         win.title("Options")
-        win.geometry("300x470")
+        win.geometry("300x500")
         win.resizable(False, False)
 
         # Keys
