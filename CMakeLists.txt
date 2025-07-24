@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.6.1)
+  VERSION 4.0.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
-option(VIENNAPS_USE_GPU "Enable GPU support" ON)
+option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 option(VIENNAPS_FORCE_GPU "Require GPU support" OFF)
 
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)

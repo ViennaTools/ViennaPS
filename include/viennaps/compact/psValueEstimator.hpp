@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2025 TU Wien
+
 #pragma once
 
 #include <optional>
@@ -32,7 +35,8 @@ public:
 
   void setData(ConstPtr passedData) {
     data = passedData;
-    dataChanged = true;
+    dataChanged = true; // SPDX-License-Identifier: GPL-3.0-only
+                        // Copyright (C) 2025 TU Wien
   }
 
   virtual bool initialize() { return true; }

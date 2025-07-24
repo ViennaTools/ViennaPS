@@ -1,0 +1,2 @@
+ViennaPS is licensed under the GNU GPL v3.0 only.
+Some optional components (e.g. GPU acceleration via NVIDIA OptiX) require additional dependencies that are not covered by the GPL and must be obtained separately. These features are disabled in the official PyPI distribution.

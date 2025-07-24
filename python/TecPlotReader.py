@@ -1,5 +1,9 @@
 ##############################################################
 # TecPlotReader.py
+#
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2025 TU Wien
+#
 # A GUI and batch exporter for Tecplot particle distribution data.
 # It allows users to visualize and save particle distributions
 # from Tecplot files, with options for trimming and selecting variables.

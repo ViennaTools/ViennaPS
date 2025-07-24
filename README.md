@@ -29,6 +29,9 @@ To use ViennaPS in C++, clone the repository and follow the installation steps b
 
 For full documentation, visit [ViennaPS Documentation](https://viennatools.github.io/ViennaPS/).
 
+> [!NOTE]  
+> The PyPI distribution of ViennaPS does **not include optional GPU acceleration via NVIDIA OptiX** due to licensing incompatibility. This functionality must be built manually after accepting the OptiX license from NVIDIA.
+
 ## Releases
 Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
 
@@ -62,6 +65,8 @@ ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org
 * [ViennaCS](https://github.com/ViennaTools/viennacs)
 
 * [pybind11](https://github.com/pybind/pybind11) (2.12.0+, only for building Python libs)
+
+All third-party libraries are GPL-3.0-compatible and are not redistributed with ViennaPS. Please refer to their respective repositories for full license texts.
 
 The CMake configuration automatically checks if the dependencies are installed.
 If the dependencies are not found on the system, they will be built from source. To use local installations of the dependencies, the `VIENNAPS_LOOKUP_DIRS` variable can be set to the installation path of the dependencies.
@@ -131,6 +136,11 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 ## GPU Acceleration (Experimental)
 
 As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental and may not work on all systems. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/).
+
+ViennaPS supports GPU acceleration via NVIDIA OptiX.
+Due to licensing restrictions, OptiX is not included in this repository.
+Users must obtain OptiX SDK from NVIDIA and accept its terms.
+These features are also disabled in the official PyPI distribution.
 
 ## Basic Examples
 
@@ -253,4 +263,5 @@ http://www.iue.tuwien.ac.at/
 
 License
 --------------------------
-See file LICENSE in the base directory.
+ViennaPS is licensed under the GNU GPL v3.0-only.  
+See [LICENSE](./LICENSE) for full terms and [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md) for third-party dependency licenses.

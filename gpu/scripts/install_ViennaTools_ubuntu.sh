@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# This script optionally installs GPU acceleration support for ViennaPS via NVIDIA OptiX.
+# 
+# ⚠️ WARNING:
+# OptiX is licensed under a proprietary license by NVIDIA and is NOT covered by the GPL-3.0 license of ViennaPS.
+# You must accept the NVIDIA OptiX license separately to use GPU features.
+#
+# Do NOT redistribute any binaries built with OptiX unless you have explicit permission from NVIDIA.
+# See: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement
+
 # This script installs the ViennaTools package on Ubuntu 24.04 with GPU support.
 # It attempts to install the required dependencies on the system, therefore sudo privileges are required.
 
@@ -8,6 +17,14 @@ if [ -z "$BASH_VERSION" ]; then
     echo "This script must be run with bash. Please run it using: bash install_ViennaTools_ubuntu.sh <-v|--verbose>"
     exit 1
 fi
+
+echo "⚠️  Optional GPU support via NVIDIA OptiX is not covered by the GPL license."
+echo "    You must accept the NVIDIA OptiX license: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement"
+read -p "Do you accept the license terms and wish to proceed with GPU support? [y/N] " yn
+case $yn in
+    [Yy]* ) echo "Continuing with GPU installation...";;
+    * ) echo "Skipping GPU support."; exit 0;;
+esac
 
 # Check if verbose mode is enabled
 verbose_flag=""
