@@ -21,7 +21,9 @@ import re
 import argparse
 import sys
 from scipy.optimize import curve_fit
-from scipy import stats
+from scipy.stats import vonmises
+from scipy.ndimage import gaussian_filter
+from scipy.signal import find_peaks
 
 
 # --- Data Handling Functions ---
@@ -47,8 +49,8 @@ def read_tecplot_data(filename, thetaKey, energyKey, zone_lines_max=2):
 
         if mode == 0:
             for var in re.findall(r'"([^\"]+)"', line):
-                if var not in (thetaKey, energyKey):
-                    var = var.split()[0]  # take only the first part
+                # if var not in (thetaKey, energyKey):
+                #     var = var.split()[0]  # take only the first part
                 variables.append(var)
                 data_dict[var] = []
         elif mode == 1:
@@ -145,6 +147,7 @@ def fit_data(
     vm=False,
     alpha=0.0,
     beta=2.0,
+    n_gauss=None,
 ):
     def _powerCos(t, power):
         f = np.cos(t) ** power
@@ -153,20 +156,88 @@ def fit_data(
         return f / np.max(f)
 
     def _vonMises(t, kappa):
-        f = stats.vonmises.pdf(t, kappa=kappa, loc=0, scale=np.pi / 2)
+        f = vonmises.pdf(t, kappa=kappa, loc=0, scale=np.pi / 2)
         if useSin:
             f = np.abs(np.sin(t) * f)
         return f / np.max(f)
 
-    def _gaussian(x, mu, sigma):
-        f = np.exp(-((x - mu) ** 2) / (2 * sigma**2))
-        return f / np.max(f)
+    def _sum_of_gaussians(x, *params):
+        """Sum of N zero-baseline Gaussians."""
+        y = np.zeros_like(x)
+        n = len(params) // 3
+        for i in range(n):
+            amp, mu, sigma = params[3 * i : 3 * i + 3]
+            y += amp * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
+        return y
+
+    def _fit_n_gaussians(energy, pdf, prominence=None, distance=None, num_gauss=None):
+        offset = pdf.min()
+        y = pdf - offset
+        span = energy.max() - energy.min()
+
+        # detect peaks for initial centers
+        peaks, _ = find_peaks(
+            y, prominence=prominence or (y.max() * 0.1), distance=distance or 2
+        )
+        peak_heights = y[peaks]
+        peak_mus = energy[peaks]
+
+        # pick up to num_gauss strongest peaks
+        if num_gauss is None:
+            num_gauss = len(peaks)
+        if len(peaks) >= num_gauss:
+            idx = np.argsort(peak_heights)[-num_gauss:]
+            init_mus = list(peak_mus[idx])
+            init_amps = list(peak_heights[idx])
+        else:
+            # use all found peaks
+            init_mus = list(peak_mus)
+            init_amps = list(peak_heights)
+            # fill missing with evenly spaced guesses
+            needed = num_gauss - len(init_mus)
+            grid_mus = np.linspace(
+                energy.min() + span / (2 * num_gauss),
+                energy.max() - span / (2 * num_gauss),
+                num_gauss,
+            )
+            for gm in grid_mus:
+                if len(init_mus) >= num_gauss:
+                    break
+                # avoid duplicates
+                if all(abs(gm - m0) > span / (2 * num_gauss) for m0 in init_mus):
+                    init_mus.append(gm)
+                    init_amps.append(y.max() * 0.5)
+            # if still short, pad at center
+            while len(init_mus) < num_gauss:
+                init_mus.append(energy.mean())
+                init_amps.append(y.max() * 0.5)
+
+        # common sigma guess
+        init_sigmas = [span / (4 * num_gauss)] * num_gauss
+
+        # build p0 = [amp1, mu1, sigma1, amp2, mu2, sigma2, ...]
+        p0 = []
+        for A, M, S in zip(init_amps, init_mus, init_sigmas):
+            p0 += [A, M, S]
+
+        # fit
+        popt, _ = curve_fit(_sum_of_gaussians, energy, y, p0=p0)
+
+        # parse results
+        fits = []
+        for i in range(num_gauss):
+            amp = popt[3 * i]
+            mu = popt[3 * i + 1]
+            sigma = popt[3 * i + 2]
+            fits.append({"amp": amp, "mu": mu, "sigma": sigma})
+
+        return fits, popt, offset
 
     angle_fit = _vonMises if vm else _powerCos
     angle_param = "Kappa" if vm else "Power"
 
-    def dist_fit(t, e, p, mu, sigma):
-        return angle_fit(t, p) * _gaussian(e, mu, sigma)
+    def dist_fit(t, e, p, gauss_p, offset):
+        return angle_fit(t, p) * (_sum_of_gaussians(e, *gauss_p) + offset)
 
     dist, energy = trim_data(data_dict[key], data_dict[energyKey], eps)
     theta = data_dict[thetaKey]
@@ -278,10 +349,11 @@ def fit_data(
     dist_t = np.sum(dist, axis=1)
     t_max = np.max(dist_t)
     if t_max > 0:
-        mu_0 = np.trapezoid(dist_t * energy, x=energy)
-        popt_g, _ = curve_fit(
-            _gaussian, energy, dist_t / t_max, bounds=([0, 0], [100, 50]), p0=[mu_0, 5]
-        )
+        fits, popt_g, offset = _fit_n_gaussians(energy, dist_t, num_gauss=n_gauss)
+        for i, fit in enumerate(fits):
+            print(
+                f"Gaussian {i}: amp={fit['amp']:.4f}, mu={fit['mu']:.2f}, sigma={fit['sigma']:.2f}"
+            )
     else:
         return -1
 
@@ -290,32 +362,58 @@ def fit_data(
         plt.plot(energy, dist_t, label="Cumulative Distribution")
         plt.plot(
             energy_fit,
-            _gaussian(energy_fit, *popt_g) * t_max,
+            _sum_of_gaussians(energy_fit, *popt_g) + offset,
             label="Gaussian Fit",
         )
         plt.xlabel(energyKey)
         plt.ylabel("Cumulative Distribution")
-        plt.title(f"Gaussian Fit: mu={popt_g[0]:.2f}, sigma={popt_g[1]:.2f}")
         plt.legend()
 
-    print(
-        f"{angle_param} {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}"
-    )
-
     tt, ee = np.meshgrid(theta_fit, energy_fit)
-    d = dist_fit(np.deg2rad(tt), ee, popt_p[1], popt_g[0], popt_g[1])
+    d = dist_fit(np.deg2rad(tt), ee, popt_p[1], popt_g, offset)
     plt.figure()
     plt.pcolormesh(tt, ee, d, shading="auto")
     plt.colorbar(label="Distribution")
     plt.xlabel(thetaKey)
     plt.ylabel(energyKey)
-    plt.title(
-        f"{angle_param} {popt_p[1]:.2f}, Gaussian mu {popt_g[0]:.2f}, sigma {popt_g[1]:.2f}"
-    )
+    plt.title(f"{angle_param} {popt_p[1]:.2f}")
     plt.tight_layout()
     plt.show()
 
     return 0
+
+
+def smooth_and_downsample(pdf2d, energies, angles, sigma=(1, 1), new_shape=(50, 50)):
+    """
+    Smooth a 2D PDF and downsample its grid.
+
+    Args:
+      pdf2d      : 2D array, shape (n_energy, n_angle).
+      energies   : 1D array of length n_energy.
+      angles     : 1D array of length n_angle.
+      sigma      : tuple (sigma_energy, sigma_angle) for Gaussian smoothing.
+      new_shape  : tuple (n_new_energy, n_new_angle).
+
+    Returns:
+      new_pdf        : 2D array, shape new_shape.
+      new_energies   : 1D array, length n_new_energy.
+      new_angles     : 1D array, length n_new_angle.
+    """
+    # 1) Smooth with a Gaussian filter
+    smooth = gaussian_filter(pdf2d, sigma=sigma)
+
+    # 2) Pick new indices by linear spacing
+    n_e, n_a = pdf2d.shape
+    n_e2, n_a2 = new_shape
+    idx_e = np.linspace(0, n_e - 1, n_e2).astype(int)
+    idx_a = np.linspace(0, n_a - 1, n_a2).astype(int)
+
+    # 3) Downsample both PDF and axes
+    new_pdf = smooth[np.ix_(idx_e, idx_a)]
+    new_energies = energies[idx_e]
+    new_angles = angles[idx_a]
+
+    return new_pdf, new_energies, new_angles
 
 
 def save_data(data_dict, key, thetaKey, energyKey, eps, outname):
@@ -325,6 +423,15 @@ def save_data(data_dict, key, thetaKey, energyKey, eps, outname):
         f.write(" ".join(map(str, e)) + "\n")
         f.write(" ".join(map(str, data_dict[thetaKey])) + "\n")
         for row in d:
+            f.write(" ".join(map(str, row)) + "\n")
+
+
+def save_dist(dist, theta, energy, outname, key="Particle Distribution"):
+    with open(outname, "w") as f:
+        f.write(f"# {key}\n")
+        f.write(" ".join(map(str, energy)) + "\n")
+        f.write(" ".join(map(str, theta)) + "\n")
+        for row in dist:
             f.write(" ".join(map(str, row)) + "\n")
 
 
@@ -354,6 +461,7 @@ class TecplotGUI(ttk.Frame):
         self.fit_function = tk.StringVar(value="powerCosine")
         self.fit_alpha = tk.DoubleVar(value=0.0)
         self.fit_beta = tk.DoubleVar(value=2.0)
+        self.fit_n_gauss = tk.IntVar(value=0)
         self.path_fn = ""
 
         # File input
@@ -370,14 +478,15 @@ class TecplotGUI(ttk.Frame):
         frame_main = ttk.Frame(self)
         ttk.Label(frame_main, text="Select Variable:").grid(row=0, column=0)
         self.listbox = tk.Listbox(
-            frame_main, background="gray", selectmode=tk.SINGLE, foreground="black"
+            frame_main,
+            selectmode=tk.SINGLE,
         )
         self.listbox.grid(row=1, column=0, padx=5, rowspan=6)
 
         # Trim eps
         ttk.Label(frame_main, text="Trim eps:").grid(row=1, column=1, padx=5)
         self.entry_eps = ttk.Entry(frame_main, width=10)
-        self.entry_eps.insert(0, "1e-4")
+        self.entry_eps.insert(0, "0")
         self.entry_eps.grid(row=2, column=1, padx=5)
 
         # Buttons
@@ -461,15 +570,92 @@ class TecplotGUI(ttk.Frame):
             filetypes=[("Text files", "*.txt"), ("All files", "*")],
         )
         if out:
-            save_data(
-                self.data,
-                key,
-                self.entry_theta.get(),
-                self.entry_energy.get(),
-                eps,
-                out,
+            # open new window with save options
+            win = tk.Toplevel(self)
+            win.title("Save Options")
+            win.geometry("300x200")
+            win.resizable(False, False)
+
+            t_dist, t_energy = trim_data(self.data[key], self.data[self.tk_energy], eps)
+
+            ttk.Label(win, text="Energy Resolution:").grid(
+                row=1, column=0, padx=5, pady=5
             )
-            messagebox.showinfo("Saved", f"Data saved to {out}")
+            e_res = ttk.Entry(win, width=20)
+            e_res.grid(row=1, column=1, padx=5, pady=5)
+            e_res.insert(0, str(len(t_energy)))
+            e_res.config(state="disabled")
+            ttk.Label(win, text="Theta Resolution:").grid(
+                row=2, column=0, padx=5, pady=5
+            )
+            e_theta = ttk.Entry(win, width=20)
+            e_theta.grid(row=2, column=1, padx=5, pady=5)
+            e_theta.insert(0, str(len(self.data[self.tk_theta])))
+            e_theta.config(state="disabled")
+
+            sigma_entry = ttk.Entry(win, width=20)
+            smooth_var = tk.BooleanVar()
+
+            def _toggle_entry():
+                state = "normal" if smooth_var.get() else "disabled"
+                sigma_entry.config(state=state)
+                e_res.config(state=state)
+                e_theta.config(state=state)
+
+            ttk.Label(win, text="Smooth Data").grid(row=0, column=0, padx=5, pady=5)
+            ttk.Checkbutton(win, variable=smooth_var, command=_toggle_entry).grid(
+                row=0, column=1, padx=5, pady=5
+            )
+            ttk.Label(win, text="Smoothing Sigma:").grid(
+                row=3, column=0, padx=5, pady=5
+            )
+            sigma_entry.grid(row=3, column=1, padx=5, pady=5)
+            sigma_entry.insert(0, "1.0")  # default sigma for smoothing
+            sigma_entry.config(state="disabled")
+
+            def _on_save():
+                try:
+                    e_res_val = int(e_res.get())
+                    t_res_val = int(e_theta.get())
+                    sigma_val = float(sigma_entry.get()) if smooth_var.get() else None
+                except ValueError as ve:
+                    messagebox.showerror("Error", f"Invalid input: {ve}")
+                    return
+
+                if sigma_val is not None:
+                    # Smooth and downsample the data
+                    smoothed_data, new_energy, new_theta = smooth_and_downsample(
+                        t_dist,
+                        t_energy,
+                        self.data[self.tk_theta],
+                        sigma=(sigma_val, sigma_val),
+                        new_shape=(e_res_val, t_res_val),
+                    )
+
+                    save_dist(
+                        smoothed_data,
+                        new_theta,
+                        new_energy,
+                        out,
+                        key=f"{key}",
+                    )
+                else:
+                    save_dist(
+                        t_dist,
+                        self.data[self.tk_theta],
+                        t_energy,
+                        out,
+                        key=f"{key}",
+                    )
+                win.destroy()
+                messagebox.showinfo("Saved", f"Data saved to {out}")
+
+            ttk.Button(win, text="Save", command=_on_save).grid(row=4, column=0, pady=5)
+            ttk.Button(win, text="Close", command=win.destroy).grid(
+                row=4, column=1, pady=5
+            )
+            win.transient(self)  # make it modal
+            win.grab_set()  # block interaction with parent window
 
     def on_fit(self):
         sel = self.listbox.curselection()
@@ -489,6 +675,9 @@ class TecplotGUI(ttk.Frame):
         else:
             messagebox.showerror("Error", "Unknown fit function selected.")
             return
+        n_gauss = self.fit_n_gauss.get()
+        if n_gauss <= 0:
+            n_gauss = None
         res = fit_data(
             self.data,
             key,
@@ -501,6 +690,7 @@ class TecplotGUI(ttk.Frame):
             vm=vm,
             alpha=self.fit_alpha.get(),
             beta=self.fit_beta.get(),
+            n_gauss=n_gauss,
         )
         if res == -1:
             messagebox.showerror("Error", "Failed to fit data.")
@@ -508,7 +698,7 @@ class TecplotGUI(ttk.Frame):
     def open_options(self):
         win = tk.Toplevel(self)
         win.title("Options")
-        win.geometry("300x470")
+        win.geometry("300x500")
         win.resizable(False, False)
 
         # Keys
@@ -555,18 +745,21 @@ class TecplotGUI(ttk.Frame):
         ttk.Label(frame_fit, text="Beta:").grid(row=4, column=0)
         entry_beta = ttk.Entry(frame_fit, textvariable=self.fit_beta, width=20)
         entry_beta.grid(row=4, column=1)
+        ttk.Label(frame_fit, text="Gaussians:").grid(row=5, column=0)
+        entry_n_gauss = ttk.Entry(frame_fit, textvariable=self.fit_n_gauss, width=20)
+        entry_n_gauss.grid(row=5, column=1)
         chk_fit_sin = ttk.Checkbutton(
             frame_fit,
             text="Use Sine in Fit",
             variable=self.fit_use_sin,
         )
-        chk_fit_sin.grid(row=5, columnspan=2, pady=5)
+        chk_fit_sin.grid(row=6, columnspan=2, pady=5)
         chk_fit_verbose = ttk.Checkbutton(
             frame_fit,
             text="Show All Plots",
             variable=self.fit_verbose,
         )
-        chk_fit_verbose.grid(row=6, columnspan=2, pady=5)
+        chk_fit_verbose.grid(row=7, columnspan=2, pady=5)
         frame_fit.pack(pady=10)
 
         # Done button to close
