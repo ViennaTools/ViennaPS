@@ -76,3 +76,30 @@ Table of compatibility between ViennaPS and ViennaLS versions:
 | Local Build      | PyPI              | No &#10060;   |
 | PyPI             | Local Build       | No &#10060;   |
 | PyPI             | PyPI              | Yes &#9989;    |
+
+
+## Windows Python DLL ImportError
+
+If you see the following error when importing the ViennaPS Python package:
+
+```
+ImportError: DLL load failed while importing viennaps2d: The specified module could not be found.
+```
+
+This usually means that a required shared library (`.dll`) is missing. The most common cause on Windows is a missing OpenMP runtime.
+
+### Solution
+
+Make sure the **OpenMP runtime** is available on your system. Specifically, the file `libomp140.x86_64.dll` must be accessible through your system `PATH`.
+
+You can get it from:
+
+* Visual Studio (in `debug_nonredist` folder)
+* Prebuilt LLVM distributions for Windows
+
+After downloading or locating the DLL:
+
+* Either copy it into the folder containing `viennaps2d.cp*.pyd`
+* Or add the folder containing the DLL to your system `PATH`
+
+Once the DLL is accessible, the import should work correctly.
