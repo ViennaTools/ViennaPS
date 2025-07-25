@@ -145,27 +145,25 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
 
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
-  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)                                    
-  target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp"
-                                      "lib/specializationsModels.cpp"
-                                      "lib/specializationsGeometries.cpp")
+  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)
+  target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp" "lib/specializationsModels.cpp"
+                                     "lib/specializationsGeometries.cpp")
 
-  set_target_properties(${LIB_NAME} PROPERTIES
-    VERSION    ${PROJECT_VERSION}           # full x.y.z appears in filename
-    SOVERSION  ${PROJECT_VERSION_MAJOR}     # major version for SONAME
-    WINDOWS_EXPORT_ALL_SYMBOLS ON
-  )
+  set_target_properties(
+    ${LIB_NAME}
+    PROPERTIES VERSION ${PROJECT_VERSION} # full x.y.z appears in filename
+               SOVERSION ${PROJECT_VERSION_MAJOR} # major version for SONAME
+               WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
   target_link_libraries(${PROJECT_NAME} INTERFACE ${LIB_NAME})
   target_compile_definitions(${PROJECT_NAME} INTERFACE VIENNAPS_USE_PRECOMPILED)
 
-  install(TARGETS 
-    ${LIB_NAME}
+  install(
+    TARGETS ${LIB_NAME}
     EXPORT ViennaPSTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-  )
+    RUNTIME DESTINATION bin)
 endif()
 
 # --------------------------------------------------------------------------------------------------------
@@ -220,7 +218,6 @@ packageProject(
   VERSION ${PROJECT_VERSION}
   BINARY_DIR ${PROJECT_BINARY_DIR}
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
-  INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
-  RUNTIME_DESTINATION /
+  INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION} RUNTIME_DESTINATION /
   COMPATIBILITY SameMajorVersion
   DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")
