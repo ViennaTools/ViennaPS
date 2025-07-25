@@ -141,7 +141,7 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
     set(VIENNAPS_LINKAGE STATIC)
   endif()
 
-  set(LIB_NAME "ViennaPSLib")
+  set(LIB_NAME "viennaps")
   add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
 
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
