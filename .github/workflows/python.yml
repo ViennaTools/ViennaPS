@@ -82,6 +82,7 @@ jobs:
           path: venv
 
   package:
+    if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' }}
     strategy:
       fail-fast: false
 

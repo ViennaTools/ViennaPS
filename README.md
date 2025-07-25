@@ -94,7 +94,8 @@ cd ViennaPS
 pip install .
 ```
 
-> Some features of the ViennaPS Python module require the ViennaLS Python module. It is therefore recommended to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
+> Some features of the ViennaPS Python module depend on the ViennaLS Python module. You’ll need to install ViennaLS separately — instructions are available in the [ViennaLS GitHub repository](https://github.com/ViennaTools/ViennaLS).
+> Note: A locally built ViennaPS Python module is typically not compatible with the ViennaLS package from PyPI. For details and troubleshooting, see [this guide](https://viennatools.github.io/ViennaPS/inst/troubleshooting.html#python-importerror).
 
 ## Using the Python package
 
@@ -251,6 +252,9 @@ Contact us via: viennatools@iue.tuwien.ac.at
 ViennaPS was developed under the aegis of the 'Institute for Microelectronics' at the 'TU Wien'.
 http://www.iue.tuwien.ac.at/
 
-License
---------------------------
-See file LICENSE in the base directory.
+## License
+
+ViennaPS is licensed under the [MIT License](./LICENSE).
+
+Some third-party libraries used by ViennaPS are under their own permissive licenses (MIT, BSD, Apache-2.0).  
+See [`THIRD_PARTY_LICENSES.md`](./THIRD_PARTY_LICENSES.md) for details.
