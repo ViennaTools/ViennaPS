@@ -10,6 +10,11 @@ nav_order: 8
 #include <psProcess.hpp>
 ```
 ---
+
+![]({% link assets/images/process.png %})
+
+---
+
 The `Process` class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also contains the necessary methods for configuring these attributes. Upon setting these parameters, the `apply()` method is employed to execute the process,.
 
 __Example usage:__

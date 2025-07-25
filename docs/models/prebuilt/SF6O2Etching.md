@@ -3,7 +3,7 @@ layout: default
 title: SF<sub>6</sub>O<sub>2</sub> Etching
 parent: Pre-Built Models
 grand_parent: Process Models
-nav_order: 6
+nav_order: 7
 sf6o2: SF<sub>6</sub>O<sub>2</sub>
 ---
 <script>

@@ -34,9 +34,11 @@ In ViennaPS, smart pointers are utilized to pass domains, models, and other esse
 __Example:__
 
 ```c++
+using namespace viennaps;
+
 // Creating a new domain
-auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+auto domain = SmartPointer<Domain<NumericType, D>>::New();
 
 // Using a pre-built model
-auto model = psSmartPointer<psIsotropicProcess<NumericType, D>>::New(/*pass constructor arguments*/);
+auto model = SmartPointer<IsotropicProcess<NumericType, D>>::New(/*pass constructor arguments*/);
 ```

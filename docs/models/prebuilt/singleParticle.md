@@ -90,6 +90,8 @@ model = vps.SingleParticleProcess(materialRates=rates, stickingProbability=0.1, 
 {% endraw %}
 </details>
 
+![]({% link assets/images/sticking_exponent.png %})
+
 ## Related Examples
 
 * [Trench Deposition](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDeposition)

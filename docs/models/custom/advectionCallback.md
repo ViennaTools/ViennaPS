@@ -11,5 +11,7 @@ nav_order: 5
 
 ---
 
-Coming soon
+Provides functions that execute before and after each surface movement step, allowing for additional processing or adjustments.  
+
+More details coming soon
 {: .label .label-yellow}

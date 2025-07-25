@@ -39,3 +39,5 @@ Here $\Phi_M$ describes the entire structure $\mathcal{M}$, and the other LS fun
 When inserting a new LS into the domain, an automatic wrapping process ensues. This process involves enveloping all existing Level-Sets through a Boolean operation, specifically a union with the topmost LS. It's worth noting, though, that this default behavior is not obligatory. In instances where a specialized domain structure is desired, users have the option to circumvent this automatic wrapping mechanism. 
 
 ---
+
+![]({% link assets/images/fullGrid.png %})
