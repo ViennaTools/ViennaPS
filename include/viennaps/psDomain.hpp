@@ -404,7 +404,8 @@ public:
   }
 
   void print(std::ostream &out = std::cout, bool hrle = false) const {
-    constexpr char *separator = "*****************************************\n";
+    constexpr std::string_view separator =
+        "*****************************************\n";
     out << "Process Simulation Domain:\n" << separator;
     out << "Number of Level-Sets: " << levelSets_.size() << "\n";
     if (materialMap_) {
