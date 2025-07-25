@@ -1,5 +1,6 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
 #include "psProcessModelBase.hpp"
 
 #include <lsConcepts.hpp>
@@ -54,5 +55,7 @@ public:
     source = passedSource;
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(ProcessModel)
 
 } // namespace viennaps

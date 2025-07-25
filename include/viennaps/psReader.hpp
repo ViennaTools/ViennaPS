@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <fstream>
 #include <string>
@@ -150,5 +151,7 @@ public:
     return domain;
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Reader)
 
 } // namespace viennaps

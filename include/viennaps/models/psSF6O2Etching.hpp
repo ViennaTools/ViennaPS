@@ -164,4 +164,6 @@ private:
   PlasmaEtchingParameters<NumericType> params;
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(SF6O2Etching)
+
 } // namespace viennaps

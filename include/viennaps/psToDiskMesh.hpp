@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <lsToDiskMesh.hpp>
 
@@ -51,5 +52,7 @@ public:
     meshConverter.apply();
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(ToDiskMesh)
 
 } // namespace viennaps

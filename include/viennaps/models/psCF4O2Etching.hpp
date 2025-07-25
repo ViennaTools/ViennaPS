@@ -673,4 +673,6 @@ private:
   CF4O2Parameters<NumericType> params;
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(CF4O2Etching)
+
 } // namespace viennaps

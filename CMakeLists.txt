@@ -8,6 +8,9 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
+option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" ON)
+option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
+
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 option(VIENNAPS_FORCE_GPU "Require GPU support" OFF)
 
@@ -128,6 +131,44 @@ target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTo
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
 
 # --------------------------------------------------------------------------------------------------------
+# Setup Shared/Static Library
+# --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_PRECOMPILE_HEADERS)
+  set(VIENNAPS_LINKAGE SHARED)
+
+  if(VIENNAPS_STATIC_BUILD)
+    set(VIENNAPS_LINKAGE STATIC)
+  endif()
+
+  set(LIB_NAME "ViennaPSLib")
+  add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
+
+  target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
+  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)                                    
+  target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp"
+                                      "lib/specializationsModels.cpp"
+                                      "lib/specializationsGeometries.cpp")
+
+  set_target_properties(${LIB_NAME} PROPERTIES
+    VERSION    ${PROJECT_VERSION}           # full x.y.z appears in filename
+    SOVERSION  ${PROJECT_VERSION_MAJOR}     # major version for SONAME
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+  )
+
+  target_link_libraries(${PROJECT_NAME} INTERFACE ${LIB_NAME})
+  target_compile_definitions(${PROJECT_NAME} INTERFACE VIENNAPS_USE_PRECOMPILED)
+
+  install(TARGETS 
+    ${LIB_NAME}
+    EXPORT ViennaPSTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+  )
+endif()
+
+# --------------------------------------------------------------------------------------------------------
 # Setup Examples
 # --------------------------------------------------------------------------------------------------------
 
@@ -180,5 +221,6 @@ packageProject(
   BINARY_DIR ${PROJECT_BINARY_DIR}
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
+  RUNTIME_DESTINATION /
   COMPATIBILITY SameMajorVersion
   DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")

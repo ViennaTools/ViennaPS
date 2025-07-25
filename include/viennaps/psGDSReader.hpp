@@ -6,6 +6,7 @@
 
 #include "psGDSGeometry.hpp"
 #include "psGDSUtils.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <vcLogger.hpp>
 
@@ -649,5 +650,7 @@ private:
     }
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(GDSReader)
 
 } // namespace viennaps

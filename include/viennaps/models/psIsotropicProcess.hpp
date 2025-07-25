@@ -102,4 +102,6 @@ private:
   using ProcessModel<NumericType, D>::processMetaData;
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(IsotropicProcess)
+
 } // namespace viennaps

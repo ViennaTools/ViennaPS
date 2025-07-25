@@ -95,4 +95,6 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(MakeTrench)
+
 } // namespace viennaps

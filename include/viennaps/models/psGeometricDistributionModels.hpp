@@ -97,4 +97,7 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(SphereDistribution)
+PS_PRECOMPILE_PRECISION_DIMENSION(BoxDistribution)
+
 } // namespace viennaps

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
 #include "psUtil.hpp"
+
 #include <hrleGrid.hpp>
 #include <vcLogger.hpp>
 
@@ -176,5 +178,7 @@ public:
     }
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(DomainSetup)
 
 } // namespace viennaps

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <lsExtrude.hpp>
 #include <lsToMesh.hpp>
@@ -95,4 +96,7 @@ public:
     }
   }
 };
+
+PS_PRECOMPILE_PRECISION(Extrude)
+
 } // namespace viennaps

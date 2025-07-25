@@ -63,4 +63,6 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(MakePlane)
+
 } // namespace viennaps

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <fstream>
 #include <string>
@@ -127,5 +128,7 @@ public:
     fout.close();
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Writer)
 
 } // namespace viennaps

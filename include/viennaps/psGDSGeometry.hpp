@@ -2,6 +2,7 @@
 
 #include "psGDSMaskProximity.hpp"
 #include "psGDSUtils.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsCheck.hpp>
@@ -565,5 +566,7 @@ private:
   NumericType beamDelta;
   int gridRefinement = 4;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(GDSGeometry)
 
 } // namespace viennaps

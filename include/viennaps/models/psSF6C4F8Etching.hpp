@@ -161,4 +161,6 @@ private:
   using ProcessModel<NumericType, D>::processMetaData;
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(SF6C4F8Etching)
+
 } // namespace viennaps

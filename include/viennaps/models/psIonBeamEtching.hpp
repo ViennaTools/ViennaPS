@@ -95,7 +95,8 @@ public:
     NumericType yield = params_.yieldFunction(theta);
 
     localData.getVectorData(0)[primID] +=
-        std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
+        std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
+                 NumericType(0.)) *
         yield;
 
     if (params_.redepositionRate > 0.)
@@ -123,7 +124,7 @@ public:
     if (params_.redepositionRate > 0.) {
       redepositionWeight_ =
           std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
-                   0.) *
+                   NumericType(0.)) *
           params_.yieldFunction(incAngle);
     }
 
@@ -252,5 +253,7 @@ private:
   std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(IonBeamEtching)
 
 } // namespace viennaps

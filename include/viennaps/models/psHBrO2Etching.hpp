@@ -162,4 +162,6 @@ private:
   PlasmaEtchingParameters<NumericType> params;
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(HBrO2Etching)
+
 } // namespace viennaps

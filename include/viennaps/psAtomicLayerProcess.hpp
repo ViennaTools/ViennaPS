@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
 #include "psUtil.hpp"
@@ -489,5 +490,7 @@ private:
   NumericType coverageTimeStep_ = 1.;
   std::vector<NumericType> desorptionRates_;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(AtomicLayerProcess)
 
 } // namespace viennaps

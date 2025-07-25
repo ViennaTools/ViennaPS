@@ -246,4 +246,6 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(TEOSDeposition)
+
 } // namespace viennaps

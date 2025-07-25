@@ -25,8 +25,8 @@ template <typename NumericType> class GDSMaskProximity {
 
 public:
   GDSMaskProximity(DomainType2D inputLS, int delta,
-                   const std::vector<double> &sigmas,
-                   const std::vector<double> &weights)
+                   const std::vector<NumericType> &sigmas,
+                   const std::vector<NumericType> &weights)
       : inputLevelSet(inputLS), deltaRatio(delta), sigmas(sigmas),
         weights(weights) {
     assert(sigmas.size() == weights.size());
@@ -35,7 +35,7 @@ public:
   }
 
   void apply() {
-    for (double sigma : sigmas)
+    for (auto sigma : sigmas)
       blurredGrids.push_back(applyGaussianBlur(sigma));
 
     finalGrid = combineExposures();
@@ -117,7 +117,7 @@ public:
   }
 
 private:
-  std::vector<double> sigmas, weights;
+  std::vector<NumericType> sigmas, weights;
   int deltaRatio;
 
   DomainType2D inputLevelSet;
@@ -135,18 +135,18 @@ private:
 
     exposureMap.resize(gridSizeY, std::vector<NumericType>(gridSizeX, 0.0));
 
-    viennahrle::DenseIterator<typename ls::Domain<double, 2>::DomainType> it(
-        inputLevelSet->getDomain());
+    viennahrle::DenseIterator<typename ls::Domain<NumericType, 2>::DomainType>
+        it(inputLevelSet->getDomain());
     for (; !it.isFinished(); ++it) {
       auto idx = it.getIndices();
-      double val = it.getValue();
+      NumericType val = it.getValue();
       int x = idx[0] - minIdx[0];
       int y = idx[1] - minIdx[1];
       exposureMap[y][x] = (val < 0.) ? 1.0 : 0.0; // Binary mask
     }
   }
 
-  Grid2D applyGaussianBlur(double sigma) {
+  Grid2D applyGaussianBlur(NumericType sigma) {
     if (exposureMap.empty() || exposureMap[0].empty()) {
       std::cerr << "Error: input grid is empty!" << std::endl;
       return {};
@@ -163,7 +163,7 @@ private:
     const double fineDelta = coarseDelta / deltaRatio;
 
     // Create output exposure grid on the fine grid
-    Grid2D output(fineSizeY, std::vector<double>(fineSizeX, 0.0));
+    Grid2D output(fineSizeY, std::vector<NumericType>(fineSizeX, 0.0));
 
     // Kernel size based on fine grid resolution
     int kernelSize =
@@ -216,13 +216,13 @@ private:
   Grid2D combineExposures() {
     auto fineGridSizeY = gridSizeY * deltaRatio;
     auto fineGridSizeX = gridSizeX * deltaRatio;
-    Grid2D output(fineGridSizeY, std::vector<double>(fineGridSizeX, 0.0));
-    double maxValue = 0.0;
+    Grid2D output(fineGridSizeY, std::vector<NumericType>(fineGridSizeX, 0.0));
+    NumericType maxValue = 0.0;
 
     // Step 1: Compute the weighted sum and find max value in one pass
     for (int y = 0; y < fineGridSizeY; ++y) {
       for (int x = 0; x < fineGridSizeX; ++x) {
-        double combinedValue = 0.0;
+        NumericType combinedValue = 0.0;
         for (size_t i = 0; i < blurredGrids.size(); ++i) {
           combinedValue += weights[i] * blurredGrids[i][y][x];
         }

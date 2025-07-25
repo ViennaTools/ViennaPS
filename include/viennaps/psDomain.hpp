@@ -2,6 +2,7 @@
 
 #include "psDomainSetup.hpp"
 #include "psMaterials.hpp"
+#include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
 
 #include <lsBooleanOperation.hpp>
@@ -20,6 +21,11 @@
 #include <vcSmartPointer.hpp>
 
 namespace viennaps {
+
+inline constexpr std::string_view version = "3.6.1";
+inline constexpr int versionMajor = static_cast<int>(version[0] - '0');
+inline constexpr int versionMinor = static_cast<int>(version[2] - '0');
+inline constexpr int versionPatch = static_cast<int>(version[4] - '0');
 
 using namespace viennacore;
 
@@ -87,7 +93,6 @@ public:
   Domain(NumericType gridDelta, NumericType xExtent,
          BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : setup_(gridDelta, xExtent, 0.0, boundary) {
-    static_assert(D == 2, "Domain setup only valid for 2D.");
     initMetaData();
   }
 
@@ -564,5 +569,7 @@ private:
 
 template <class NumericType, int D>
 MetaDataLevel Domain<NumericType, D>::useMetaData = MetaDataLevel::NONE;
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Domain)
 
 } // namespace viennaps
