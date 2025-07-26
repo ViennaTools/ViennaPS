@@ -10,7 +10,7 @@
 #include <functional>
 #include <random>
 
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
 #include <Python.h>
 #endif
 

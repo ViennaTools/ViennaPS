@@ -218,7 +218,7 @@ public:
       int pulseCounter = 0;
 
       while (time < pulseTime_) {
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
         if (PyErr_CheckSignals() != 0)
           throw pybind11::error_already_set();
 #endif

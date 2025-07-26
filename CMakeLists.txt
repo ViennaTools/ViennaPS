@@ -8,7 +8,7 @@ project(
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
-option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" ON)
+option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
 option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
 
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
@@ -99,9 +99,10 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 1.4.4
+  GIT_TAG remove-force-GPU
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}" "VIENNACORE_FORCE_GPU ${VIENNAPS_FORCE_GPU}")
+  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMAddPackage(
   NAME PackageProject
@@ -118,6 +119,7 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 4.4.0
+  GIT_TAG update-precompiled
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -218,6 +220,6 @@ packageProject(
   VERSION ${PROJECT_VERSION}
   BINARY_DIR ${PROJECT_BINARY_DIR}
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
-  INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION} RUNTIME_DESTINATION /
+  INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION} 
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")
+  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS;OpenMP")

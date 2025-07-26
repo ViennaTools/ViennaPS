@@ -353,7 +353,7 @@ public:
     while (remainingTime > 0.) {
       // We need additional signal handling when running the C++ code from the
       // Python bindings to allow interrupts in the Python scripts
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
       if (PyErr_CheckSignals() != 0)
         throw pybind11::error_already_set();
 #endif
@@ -711,7 +711,7 @@ protected:
       for (unsigned iteration = 0; iteration < maxIterations_; ++iteration) {
         // We need additional signal handling when running the C++ code from
         // the Python bindings to allow interrupts in the Python scripts
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
         if (PyErr_CheckSignals() != 0)
           throw pybind11::error_already_set();
 #endif

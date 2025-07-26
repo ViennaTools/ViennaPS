@@ -4,7 +4,7 @@
 */
 
 #define PYBIND11_DETAILED_ERROR_MESSAGES
-#define VIENNAPS_PYTHON_BUILD
+#define VIENNATOOLS_PYTHON_BUILD
 
 // correct module name macro
 #define TOKENPASTE_INTERNAL(x, y, z) x##y##z
@@ -360,6 +360,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                                                  pybind11::module_local())
       .def_static("setLogLevel", &Logger::setLogLevel)
       .def_static("getLogLevel", &Logger::getLogLevel)
+      .def_static("setLogFile", &Logger::setLogFile)
+      .def_static("appendToLogFile", &Logger::appendToLogFile)
+      .def_static("closeLogFile", &Logger::closeLogFile)
       .def_static("getInstance", &Logger::getInstance,
                   pybind11::return_value_policy::reference)
       .def("addDebug", &Logger::addDebug)
@@ -372,7 +375,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("addWarning", &Logger::addWarning)
       .def("addError", &Logger::addError, pybind11::arg("s"),
            pybind11::arg("shouldAbort") = true)
-      .def("print", [](Logger &instance) { instance.print(std::cout); });
+      .def("print", [](Logger &instance) {
+        instance.print(std::cout);
+        if (instance.hasError()) {
+          // Handle error case
+          throw std::runtime_error("ViennaPS encountered an error.");
+        }
+      });
 
   /****************************************************************************
    *                               MODEL FRAMEWORK                            *
