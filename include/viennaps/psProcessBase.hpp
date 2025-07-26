@@ -411,7 +411,7 @@ public:
                                                         prevStepCoverages);
 
             Logger::getInstance()
-                .addTiming("Top-down flux calculation", rtTimer)
+                .addTiming("Flux calculation", rtTimer)
                 .print();
 
             coverageCalculationReps++;

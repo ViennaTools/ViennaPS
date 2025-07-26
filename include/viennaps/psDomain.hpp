@@ -174,7 +174,7 @@ public:
   // instead.
   void insertNextLevelSet(lsDomainType levelSet,
                           bool wrapLowerLevelSet = true) {
-    if (levelSets_.empty()) {
+    if (levelSets_.empty() && setup_.gridDelta() == 0.0) {
       setup_.init(levelSet->getGrid());
       initMetaData();
     }
