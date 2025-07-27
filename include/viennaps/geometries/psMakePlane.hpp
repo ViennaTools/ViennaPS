@@ -48,8 +48,8 @@ public:
     if (add_) {
       if (!domain_->getLevelSets().back()) {
         Logger::getInstance()
-            .addWarning("MakePlane: Plane can only be added to already "
-                        "existing geometry.")
+            .addError("MakePlane: Plane can only be added to already "
+                      "existing geometry.")
             .print();
         return;
       }

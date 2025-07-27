@@ -46,14 +46,14 @@ public:
   void apply() {
     if (!levelSet) {
       Logger::getInstance()
-          .addWarning("No level set passed to SurfacePointValuesToLevelSet.")
+          .addError("No level set passed to SurfacePointValuesToLevelSet.")
           .print();
       return;
     }
 
     if (!mesh) {
       Logger::getInstance()
-          .addWarning("No mesh passed to SurfacePointValuesToLevelSet.")
+          .addError("No mesh passed to SurfacePointValuesToLevelSet.")
           .print();
       return;
     }

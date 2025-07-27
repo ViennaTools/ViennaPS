@@ -49,7 +49,7 @@ public:
     // check domain
     if (domain == nullptr) {
       Logger::getInstance()
-          .addWarning("No domain was passed to Writer. Not writing.")
+          .addError("No domain was passed to Writer. Not writing.")
           .print();
       return;
     }
@@ -57,7 +57,7 @@ public:
     // check filename
     if (fileName.empty()) {
       Logger::getInstance()
-          .addWarning("No file name specified for Writer. Not writing.")
+          .addError("No file name specified for Writer. Not writing.")
           .print();
       return;
     }

@@ -56,14 +56,14 @@ protected:
 
     if (processModel_->getParticleTypes().empty()) {
       Logger::getInstance()
-          .addWarning("No particle types in process model: " + name)
+          .addError("No particle types in process model: " + name)
           .print();
       return false;
     }
 
     if (processModel_->getPipelineFileName().empty()) {
       Logger::getInstance()
-          .addWarning("No pipeline in process model: " + name)
+          .addError("No pipeline in process model: " + name)
           .print();
       return false;
     }

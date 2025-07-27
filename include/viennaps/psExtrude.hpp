@@ -60,12 +60,12 @@ public:
   void apply() {
     if (inputDomain == nullptr) {
       Logger::getInstance()
-          .addWarning("No input domain supplied to Extrude! Not converting.")
+          .addError("No input domain supplied to Extrude.")
           .print();
     }
     if (outputDomain == nullptr) {
       Logger::getInstance()
-          .addWarning("No output domain supplied to Extrude! Not converting.")
+          .addError("No output domain supplied to Extrude.")
           .print();
       return;
     }

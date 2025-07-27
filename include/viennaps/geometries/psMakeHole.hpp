@@ -74,7 +74,7 @@ public:
     if constexpr (D != 3) {
       Logger::getInstance()
           .addWarning("MakeHole: Hole geometry can only be created in 3D! "
-                      "Falling back to trench geometry.")
+                      "Using trench geometry instead.")
           .print();
       bool halfTrench =
           shape_ == HoleShape::Half || shape_ == HoleShape::Quarter;

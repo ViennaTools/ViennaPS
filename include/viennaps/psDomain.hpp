@@ -225,7 +225,7 @@ public:
   void duplicateTopLevelSet(const Material material) {
     if (levelSets_.empty()) {
       Logger::getInstance()
-          .addWarning("Trying to duplicate non-existing Level-Set in domain.")
+          .addError("Cannot duplicate Level-Set in empty domain.")
           .print();
       return;
     }
@@ -267,7 +267,8 @@ public:
   void removeLevelSet(unsigned int idx, bool removeWrapped = true) {
     if (idx >= levelSets_.size()) {
       Logger::getInstance()
-          .addWarning("Trying to remove non-existing Level-Set from domain.")
+          .addError("Cannot remove Level-Set at index " + std::to_string(idx) +
+                    ". Index out of bounds.")
           .print();
       return;
     }

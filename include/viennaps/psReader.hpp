@@ -55,7 +55,7 @@ public:
     // check filename
     if (fileName.empty()) {
       Logger::getInstance()
-          .addWarning("No file name specified for Reader. Not reading.")
+          .addError("No file name specified for Reader. Not reading.")
           .print();
       return domain;
     }
@@ -64,7 +64,7 @@ public:
     std::ifstream fin(fileName, std::ios::binary);
     if (!fin.good()) {
       Logger::getInstance()
-          .addWarning("Could not open file: " + fileName)
+          .addError("Could not open file: " + fileName)
           .print();
       return domain;
     }
@@ -74,7 +74,7 @@ public:
     fin.read(identifier, 8);
     if (std::string(identifier).compare(0, 8, "psDomain")) {
       Logger::getInstance()
-          .addWarning(
+          .addError(
               "Reading domain from stream failed. Header could not be found.")
           .print();
       return domain;
@@ -85,9 +85,9 @@ public:
     fin.read(&formatVersion, 1);
     if (formatVersion > 0) { // Update this when version changes
       Logger::getInstance()
-          .addWarning("Reading domain of version " +
-                      std::to_string(formatVersion) +
-                      " with reader of version 0 failed.")
+          .addError("Reading domain of version " +
+                    std::to_string(formatVersion) +
+                    " with reader of version 0 failed.")
           .print();
       return domain;
     }

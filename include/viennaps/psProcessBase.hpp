@@ -145,7 +145,7 @@ public:
 
     if (!model_->useFluxEngine()) {
       Logger::getInstance()
-          .addWarning("Process model '" + name + "' does not use flux engine.")
+          .addError("Process model '" + name + "' does not use flux engine.")
           .print();
       return nullptr;
     }
@@ -239,14 +239,14 @@ public:
 
     if (!model_->getSurfaceModel()) {
       Logger::getInstance()
-          .addWarning("No surface model passed to Process.")
+          .addError("No surface model passed to Process.")
           .print();
       return;
     }
 
     if (!model_->getVelocityField()) {
       Logger::getInstance()
-          .addWarning("No velocity field passed to Process.")
+          .addError("No velocity field passed to Process.")
           .print();
       return;
     }
@@ -585,18 +585,18 @@ public:
 protected:
   bool checkModelAndDomain() const {
     if (!domain_) {
-      Logger::getInstance().addWarning("No domain passed to Process.").print();
+      Logger::getInstance().addError("No domain passed to Process.").print();
       return false;
     }
 
     if (domain_->getLevelSets().empty()) {
-      Logger::getInstance().addWarning("No level sets in domain.").print();
+      Logger::getInstance().addError("No level sets in domain.").print();
       return false;
     }
 
     if (!model_) {
       Logger::getInstance()
-          .addWarning("No process model passed to Process.")
+          .addError("No process model passed to Process.")
           .print();
       return false;
     }
