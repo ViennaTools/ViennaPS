@@ -116,7 +116,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.6.1")
+  CPMAddPackage("gh:viennatools/viennaps@3.7.0")
   ```
 
 * With a local installation
@@ -165,9 +165,9 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/tren
   <img src="assets/deposition.svg" width=700 style="background-color:white;">
 </div>
 
-### SF<sub>6</sub>O<sub>2</sub> Hole Etching
+### SF<sub>6</sub>/O<sub>2</sub> Hole Etching
 
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching) demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching) demonstrates a hole etching process with a SF<sub>6</sub>/O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
 
 The image presents the results of different flux configurations, as tested in _testFluxes.py_. Each structure represents a variation in flux conditions, leading to differences in hole shape, depth, and profile characteristics. The variations highlight the influence of ion and neutral fluxes on the etching process.
 

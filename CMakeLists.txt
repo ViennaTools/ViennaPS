@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.6.1)
+  VERSION 3.7.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -12,7 +12,6 @@ option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
 option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
 
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
-option(VIENNAPS_FORCE_GPU "Require GPU support" OFF)
 
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
@@ -220,6 +219,6 @@ packageProject(
   VERSION ${PROJECT_VERSION}
   BINARY_DIR ${PROJECT_BINARY_DIR}
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
-  INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION} 
+  INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
   DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS;OpenMP")
