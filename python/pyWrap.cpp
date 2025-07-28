@@ -352,8 +352,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("ERROR", LogLevel::ERROR)
       .value("WARNING", LogLevel::WARNING)
       .value("INFO", LogLevel::INFO)
-      .value("TIMING", LogLevel::TIMING)
       .value("INTERMEDIATE", LogLevel::INTERMEDIATE)
+      .value("TIMING", LogLevel::TIMING)
       .value("DEBUG", LogLevel::DEBUG);
 
   pybind11::class_<Logger, SmartPointer<Logger>>(module, "Logger",
@@ -375,13 +375,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("addWarning", &Logger::addWarning)
       .def("addError", &Logger::addError, pybind11::arg("s"),
            pybind11::arg("shouldAbort") = true)
-      .def("print", [](Logger &instance) {
-        instance.print(std::cout);
-        if (instance.hasError()) {
-          // Handle error case
-          throw std::runtime_error("ViennaPS encountered an error.");
-        }
-      });
+      .def("print", [](Logger &instance) { instance.print(std::cout); });
 
   /****************************************************************************
    *                               MODEL FRAMEWORK                            *

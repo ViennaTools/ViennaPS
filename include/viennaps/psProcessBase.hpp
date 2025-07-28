@@ -380,6 +380,7 @@ public:
       // update coverages and calculate coverage delta metric
       if (useCoverages) {
         coverages = surfaceModel->getCoverages();
+        // copy coverages of the previous step to compare with the current
         auto prevStepCoverages =
             viennals::PointData<NumericType>::New(*coverages);
 
@@ -437,7 +438,7 @@ public:
         translationField_->buildKdTree(points);
 
       // print debug output
-      if (logLevel >= 4) {
+      if (logLevel >= 3) {
         if (velocities)
           diskMesh_->getCellData().insertNextScalarData(*velocities,
                                                         "velocities");
