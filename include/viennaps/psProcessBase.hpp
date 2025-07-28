@@ -437,7 +437,7 @@ public:
       if (velocityField->getTranslationFieldOptions() == 2)
         translationField_->buildKdTree(points);
 
-      // print debug output
+      // write intermediate output
       if (logLevel >= 3) {
         if (velocities)
           diskMesh_->getCellData().insertNextScalarData(*velocities,
@@ -528,8 +528,8 @@ public:
       previousTimeStep = advectionKernel.getAdvectedTime();
       if (previousTimeStep == std::numeric_limits<NumericType>::max()) {
         Logger::getInstance()
-            .addInfo("Process halted: Surface velocities are zero across the "
-                     "entire surface.")
+            .addWarning("Process stopped early: Velocities are zero across the "
+                        "entire surface.")
             .print();
         remainingTime = 0.;
         break;
