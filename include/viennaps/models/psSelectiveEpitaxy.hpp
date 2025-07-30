@@ -63,7 +63,7 @@ public:
   // the corresponding rates.
   SelectiveEpitaxy(
       const std::vector<std::pair<Material, NumericType>> pMaterials,
-      NumericType r111 = 0.5, NumericType r100 = 1.)
+      const NumericType r111 = 0.5, const NumericType r100 = 1.)
       : materials(pMaterials) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();

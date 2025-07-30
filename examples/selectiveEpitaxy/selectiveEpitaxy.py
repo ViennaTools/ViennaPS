@@ -22,39 +22,11 @@ params = vps.ReadConfigFile(args.filename)
 geometry = vps.Domain(
     gridDelta=params["gridDelta"], xExtent=params["xExtent"], yExtent=params["yExtent"]
 )
-vps.MakePlane(
-    domain=geometry, height=0.0, material=vps.Material.Si, addToExisting=False
+vps.MakeFin(
+    domain=geometry,
+    finWidth=params["finWidth"],
+    finHeight=params["finHeight"],
 ).apply()
-
-fin = vps.ls.Domain(geometry.getLevelSets()[-1])
-
-if args.dim == 3:
-    vps.ls.MakeGeometry(
-        fin,
-        vps.ls.Box(
-            [
-                -params["finWidth"] / 2.0,
-                -params["finLength"] / 2.0,
-                -params["gridDelta"],
-            ],
-            [params["finWidth"] / 2.0, params["finLength"] / 2.0, params["finHeight"]],
-        ),
-    ).apply()
-else:
-    vps.ls.MakeGeometry(
-        fin,
-        vps.ls.Box(
-            [
-                -params["finWidth"] / 2.0,
-                -params["gridDelta"],
-            ],
-            [params["finWidth"] / 2.0, params["finHeight"]],
-        ),
-    ).apply()
-
-geometry.applyBooleanOperation(fin, vps.ls.BooleanOperationEnum.UNION)
-
-geometry.saveVolumeMesh("fin")
 
 vps.MakePlane(
     domain=geometry,
@@ -66,23 +38,23 @@ vps.MakePlane(
 # copy top layer to capture deposition
 geometry.duplicateTopLevelSet(vps.Material.SiGe)
 
-model = vps.AnisotropicProcess(
-    materials=[
+model = vps.SelectiveEpitaxy(
+    materialRates=[
         (vps.Material.Si, params["epitaxyRate"]),
         (vps.Material.SiGe, params["epitaxyRate"]),
     ],
 )
 
-process = vps.Process()
-process.setDomain(geometry)
-process.setProcessModel(model)
-process.setProcessDuration(params["processTime"])
-process.setIntegrationScheme(
-    vps.ls.IntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+advectionParams = vps.AdvectionParameters()
+advectionParams.integrationScheme = (
+    vps.IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
-geometry.saveVolumeMesh("initial")
+process = vps.Process(geometry, model, params["processTime"])
+process.setAdvectionParameters(advectionParams)
+
+geometry.saveVolumeMesh("initial_fin")
 
 process.apply()
 
-geometry.saveVolumeMesh("final")
+geometry.saveVolumeMesh("final_fin")

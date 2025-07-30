@@ -39,8 +39,7 @@ int main(int argc, char *argv[]) {
   auto model = ps::SmartPointer<ps::SelectiveEpitaxy<NumericType, D>>::New(
       std::vector<std::pair<ps::Material, NumericType>>{
           {ps::Material::Si, params.get("epitaxyRate")},
-          {ps::Material::SiGe, params.get("epitaxyRate")}},
-      params.get("R111"), params.get("R100"));
+          {ps::Material::SiGe, params.get("epitaxyRate")}});
 
   ps::AdvectionParameters<NumericType> advectionParams;
   advectionParams.integrationScheme =

@@ -54,7 +54,6 @@
 #include <psVelocityField.hpp>
 
 // models
-#include <models/psAnisotropicProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -68,10 +67,12 @@
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psSelectiveEpitaxy.hpp>
 #include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 #include <models/psTEOSPECVD.hpp>
+#include <models/psWetEtching.hpp>
 
 // visualization
 #include <psToDiskMesh.hpp>
@@ -1422,21 +1423,31 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("topHeight"), pybind11::arg("centerWidth"),
           pybind11::arg("stabilityFactor"));
 
-  // Anisotropic Process
-  pybind11::class_<AnisotropicProcess<T, D>,
-                   SmartPointer<AnisotropicProcess<T, D>>>(
-      module, "AnisotropicProcess", processModel)
-      .def(pybind11::init(&SmartPointer<AnisotropicProcess<T, D>>::New<
+  // Wet Etching Process
+  pybind11::class_<WetEtching<T, D>, SmartPointer<WetEtching<T, D>>>(
+      module, "WetEtching", processModel)
+      .def(pybind11::init(&SmartPointer<WetEtching<T, D>>::New<
                           const std::vector<std::pair<Material, T>>>),
-           pybind11::arg("materials"))
-      .def(pybind11::init(&SmartPointer<AnisotropicProcess<T, D>>::New<
+           pybind11::arg("materialRates"))
+      .def(pybind11::init(&SmartPointer<WetEtching<T, D>>::New<
                           const std::array<T, 3> &, const std::array<T, 3> &,
                           const T, const T, const T, const T,
                           const std::vector<std::pair<Material, T>>>),
            pybind11::arg("direction100"), pybind11::arg("direction010"),
            pybind11::arg("rate100"), pybind11::arg("rate110"),
            pybind11::arg("rate111"), pybind11::arg("rate311"),
-           pybind11::arg("materials"));
+           pybind11::arg("materialRates"));
+
+  // Selective Epitaxy Process
+  pybind11::class_<SelectiveEpitaxy<T, D>,
+                   SmartPointer<SelectiveEpitaxy<T, D>>>(
+      module, "SelectiveEpitaxy", processModel)
+      .def(
+          pybind11::init(
+              &SmartPointer<SelectiveEpitaxy<T, D>>::New<
+                  const std::vector<std::pair<Material, T>>, const T, const T>),
+          pybind11::arg("materialRates"), pybind11::arg("rate111") = 0.5,
+          pybind11::arg("rate100") = 1.0);
 
   // Single Particle ALD
   pybind11::class_<SingleParticleALD<T, D>,

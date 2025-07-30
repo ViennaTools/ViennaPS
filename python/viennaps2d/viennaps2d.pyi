@@ -23,23 +23,6 @@ class AdvectionParameters:
     velocityOutput: bool
     def __init__(self) -> None: ...
 
-class AnisotropicProcess(ProcessModel):
-    @overload
-    def __init__(
-        self, materials: collections.abc.Sequence[tuple[Material, typing.SupportsFloat]]
-    ) -> None: ...
-    @overload
-    def __init__(
-        self,
-        direction100,
-        direction010,
-        rate100: typing.SupportsFloat,
-        rate110: typing.SupportsFloat,
-        rate111: typing.SupportsFloat,
-        rate311: typing.SupportsFloat,
-        materials: collections.abc.Sequence[tuple[Material, typing.SupportsFloat]],
-    ) -> None: ...
-
 class AtomicLayerProcess:
     def __init__(self) -> None: ...
     def apply(self) -> None: ...
@@ -1295,6 +1278,14 @@ class SF6O2Etching(ProcessModel):
     def getParameters(self) -> PlasmaEtchingParameters: ...
     def setParameters(self, arg0: PlasmaEtchingParameters) -> None: ...
 
+class SelectiveEpitaxy(ProcessModel):
+    def __init__(
+        self,
+        materialRates: collections.abc.Sequence[tuple[Material, typing.SupportsFloat]],
+        rate111: typing.SupportsFloat = ...,
+        rate100: typing.SupportsFloat = ...,
+    ) -> None: ...
+
 class SingleParticleALD(ProcessModel):
     def __init__(
         self,
@@ -1390,6 +1381,24 @@ class ToDiskMesh:
     def __init__(self) -> None: ...
     def setDomain(self, arg0: Domain) -> None: ...
     def setMesh(self, arg0: viennals2d.viennals2d.Mesh) -> None: ...
+
+class WetEtching(ProcessModel):
+    @overload
+    def __init__(
+        self,
+        materialRates: collections.abc.Sequence[tuple[Material, typing.SupportsFloat]],
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        direction100,
+        direction010,
+        rate100: typing.SupportsFloat,
+        rate110: typing.SupportsFloat,
+        rate111: typing.SupportsFloat,
+        rate311: typing.SupportsFloat,
+        materialRates: collections.abc.Sequence[tuple[Material, typing.SupportsFloat]],
+    ) -> None: ...
 
 class Writer:
     @overload
