@@ -51,7 +51,7 @@ model = vps.WetEtching(
     rate110=r110,
     rate111=r111,
     rate311=r311,
-    materials=[(vps.Material.Si, -1.0)],
+    materialRates=[(vps.Material.Si, -1.0)],
 )
 
 process = vps.Process()

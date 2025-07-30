@@ -43,6 +43,8 @@ model = vps.SelectiveEpitaxy(
         (vps.Material.Si, params["epitaxyRate"]),
         (vps.Material.SiGe, params["epitaxyRate"]),
     ],
+    rate111=params["R111"],
+    rate100=params["R100"],
 )
 
 advectionParams = vps.AdvectionParameters()

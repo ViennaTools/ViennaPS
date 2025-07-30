@@ -39,11 +39,15 @@ int main(int argc, char *argv[]) {
   auto model = ps::SmartPointer<ps::SelectiveEpitaxy<NumericType, D>>::New(
       std::vector<std::pair<ps::Material, NumericType>>{
           {ps::Material::Si, params.get("epitaxyRate")},
-          {ps::Material::SiGe, params.get("epitaxyRate")}});
+          {ps::Material::SiGe, params.get("epitaxyRate")}},
+      params.get("R111"), params.get("R100"));
 
   ps::AdvectionParameters<NumericType> advectionParams;
   advectionParams.integrationScheme =
       viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  // advectionParams.velocityOutput = true;
+  lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,
+                                              1>::setMaxDissipation(1000);
 
   ps::Process<NumericType, D> process(geometry, model,
                                       params.get("processTime"));

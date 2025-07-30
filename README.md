@@ -193,13 +193,20 @@ This comparison highlights the trade-offs between computational efficiency and p
   <img src="assets/bosch_process.png" width=700 style="background-color:white;">
 </div>
 
+### Wet Etching
 
-### Anisotropic Processes
-
-In the anisotropic process model, the etch or deposition rates are dependent on the crystallographic directions of the surface. This enables the accurate modeling of intricate processes like [epitaxial growth](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) or [anisotropic wet etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching). Basic examples, illustrating these processes are provided with the library and shown below.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching) demonstrates the wet etching process, specifically focusing on the cantilever structure. The simulation captures the etching dynamics and the influence of crystallographic directions on the etch profile.
 
 <div align="center">
-  <img src="assets/anisotropic_process.svg" width=700 style="background-color:white;">
+  <img src="assets/wet_etching.png" width=700 style="background-color:white;">
+</div>
+
+### Selective Epitaxy
+
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) demonstrates the selective epitaxy process, focusing on the growth of SiGe on a Si substrate. Similar to wet etching, the process is influenced by crystallographic directions, which can be adjusted in the __config.txt__ file. The simulation captures the growth dynamics and the resulting SiGe structure.
+
+<div align="center">
+  <img src="assets/epitaxy.png" width=700 style="background-color:white;">
 </div>
 
 ### Redeposition During Selective Etching
