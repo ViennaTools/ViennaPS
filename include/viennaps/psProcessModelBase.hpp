@@ -26,7 +26,8 @@ public:
 
   virtual void initialize(SmartPointer<Domain<NumericType, D>> domain,
                           const NumericType processDuration) {}
-  virtual void reset() {}
+  virtual void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                        const NumericType processedDuration) {}
   virtual bool useFluxEngine() { return false; }
 
   auto getSurfaceModel() const { return surfaceModel; }

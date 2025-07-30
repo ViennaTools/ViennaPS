@@ -44,7 +44,7 @@ vps.MakePlane(geometry, 0.0, vps.Material.Si, True).apply()
 geometry.saveSurfaceMesh("initialGeometry.vtp", True)
 
 # wet etch process
-model = vps.AnisotropicProcess(
+model = vps.WetEtching(
     direction100=direction100,
     direction010=direction010,
     rate100=r100,

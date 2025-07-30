@@ -1,5 +1,5 @@
 #include <geometries/psMakePlane.hpp>
-#include <models/psAnisotropicProcess.hpp>
+#include <models/psWetEtching.hpp>
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
@@ -61,8 +61,8 @@ int main(int argc, char **argv) {
 
   geometry->saveSurfaceMesh("initialGeometry.vtp");
 
-  // Anisotropic wet etching process model
-  auto model = ps::SmartPointer<ps::AnisotropicProcess<NumericType, D>>::New(
+  // Wet etching process model
+  auto model = ps::SmartPointer<ps::WetEtching<NumericType, D>>::New(
       direction100, direction010, r100, r110, r111, r311,
       std::vector<std::pair<ps::Material, NumericType>>{
           {ps::Material::Si, -1.}});

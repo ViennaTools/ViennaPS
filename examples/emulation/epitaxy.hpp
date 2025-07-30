@@ -54,7 +54,7 @@ public:
 };
 } // namespace impl
 
-// Model for an anisotropic process, like selective epitaxy or wet etching.
+// Model for selective epitaxy process.
 template <typename NumericType, int D>
 class SelectiveEpitaxy : public ProcessModel<NumericType, D> {
 public:

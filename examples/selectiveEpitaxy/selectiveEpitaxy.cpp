@@ -1,13 +1,15 @@
+#include <geometries/psMakeFin.hpp>
+#include <geometries/psMakeHole.hpp>
 #include <geometries/psMakePlane.hpp>
-#include <models/psAnisotropicProcess.hpp>
+#include <models/psIsotropicProcess.hpp>
+#include <models/psSelectiveEpitaxy.hpp>
 #include <psProcess.hpp>
 
 namespace ps = viennaps;
-namespace ls = viennals;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   // Parse the parameters
   ps::util::Parameters params;
@@ -20,28 +22,13 @@ int main(int argc, char *argv[]) {
 
   auto geometry = ps::Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
-  // substrate
-  ps::MakePlane<NumericType, D>(geometry, 0., ps::Material::Si, false).apply();
-  // create fin on substrate
-  {
-    auto fin =
-        ps::SmartPointer<ls::Domain<NumericType, D>>::New(geometry->getGrid());
-    NumericType minPoint[3] = {-params.get("finWidth") / 2.,
-                               -params.get("finLength") / 2.,
-                               -params.get("gridDelta")};
-    NumericType maxPoint[3] = {params.get("finWidth") / 2.,
-                               params.get("finLength") / 2.,
-                               params.get("finHeight")};
-    if constexpr (D == 2) {
-      minPoint[1] = -params.get("gridDelta");
-      maxPoint[1] = params.get("finHeight");
-    }
-    ls::MakeGeometry<NumericType, D>(
-        fin, ps::SmartPointer<ls::Box<NumericType, D>>::New(minPoint, maxPoint))
-        .apply();
-    geometry->applyBooleanOperation(fin, viennals::BooleanOperationEnum::UNION);
-  }
 
+  // substrate
+  ps::MakeFin<NumericType, D>(geometry, params.get("finWidth"),
+                              params.get("finHeight"))
+      .apply();
+
+  // oxide layer
   ps::MakePlane<NumericType, D>(geometry, params.get("oxideHeight"),
                                 ps::Material::SiO2, true)
       .apply();
@@ -49,21 +36,36 @@ int main(int argc, char *argv[]) {
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet(ps::Material::SiGe);
 
-  auto model = ps::SmartPointer<ps::AnisotropicProcess<NumericType, D>>::New(
+  auto model = ps::SmartPointer<ps::SelectiveEpitaxy<NumericType, D>>::New(
       std::vector<std::pair<ps::Material, NumericType>>{
           {ps::Material::Si, params.get("epitaxyRate")},
-          {ps::Material::SiGe, params.get("epitaxyRate")}});
+          {ps::Material::SiGe, params.get("epitaxyRate")}},
+      params.get("R111"), params.get("R100"));
 
-  ps::Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
-  process.setProcessDuration(params.get("processTime"));
-  process.setIntegrationScheme(
-      ls::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+  ps::AdvectionParameters<NumericType> advectionParams;
+  advectionParams.integrationScheme =
+      viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
 
-  geometry->saveVolumeMesh("initial");
+  ps::Process<NumericType, D> process(geometry, model,
+                                      params.get("processTime"));
+  process.setAdvectionParameters(advectionParams);
+
+  geometry->saveVolumeMesh("initial_fin");
 
   process.apply();
 
-  geometry->saveVolumeMesh("final");
+  geometry->saveVolumeMesh("final_fin");
+
+  geometry->clear();
+  ps::MakeTrench(geometry, params.get("finWidth"), 0., 0.,
+                 params.get("finHeight"), 0., false, ps::Material::Si,
+                 ps::Material::SiO2)
+      .apply();
+  geometry->duplicateTopLevelSet(ps::Material::SiGe);
+
+  geometry->saveVolumeMesh("initial_trench");
+
+  process.apply();
+
+  geometry->saveVolumeMesh("final_trench");
 }

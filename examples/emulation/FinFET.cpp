@@ -1,8 +1,8 @@
 #include <geometries/psMakePlane.hpp>
-#include <models/psAnisotropicProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
+#include <models/psSelectiveEpitaxy.hpp>
 #include <psDomain.hpp>
 #include <psPlanarize.hpp>
 #include <psProcess.hpp>
@@ -10,8 +10,6 @@
 #include <psWriter.hpp>
 
 #include <lsReader.hpp>
-
-#include "epitaxy.hpp"
 
 using namespace viennaps;
 
@@ -69,7 +67,7 @@ int main() {
 
   // Double patterning processes
   { // DP-Depo
-    std::cout << "DP-Depo ...";
+    std::cout << "DP-Depo ..." << std::flush;
     const NumericType thickness = 4; // nm
     domain->duplicateTopLevelSet(Material::Metal);
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
@@ -79,7 +77,7 @@ int main() {
   writeSurface(domain);
 
   { // DP-Patterning
-    std::cout << "DP-Patterning ...";
+    std::cout << "DP-Patterning ..." << std::flush;
     const NumericType etchDepth = 6; // nm
     auto dist = SmartPointer<BoxDistribution<double, D>>::New(
         std::array<NumericType, D>{-gridDelta, -gridDelta, -etchDepth},
@@ -96,7 +94,7 @@ int main() {
 
   // pattern si
   {
-    std::cout << "Si-Patterning ...";
+    std::cout << "Si-Patterning ..." << std::flush;
     const NumericType etchDepth = 90.; // nm
     Vec3D<NumericType> direction = {0, 0, 1};
     auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(
@@ -113,7 +111,7 @@ int main() {
 
   // deposit STI material
   {
-    std::cout << "STI Deposition ...";
+    std::cout << "STI Deposition ..." << std::flush;
     const NumericType thickness = 35; // nm
     domain->duplicateTopLevelSet(Material::SiO2);
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
@@ -128,7 +126,7 @@ int main() {
 
   // pattern STI material
   {
-    std::cout << "STI Patterning ...";
+    std::cout << "STI Patterning ..." << std::flush;
     auto dist = IsotropicProcessGeometric::New(-35, gridDelta,
                                                domain->getLevelSets().front());
     Process<NumericType, D>(domain, dist).apply();
@@ -139,7 +137,7 @@ int main() {
 
   // deposit gate material
   {
-    std::cout << "Gate Deposition HfO2 ...";
+    std::cout << "Gate Deposition HfO2 ..." << std::flush;
     const NumericType thickness = 2;              // nm
     domain->duplicateTopLevelSet(Material::HfO2); // add layer
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
@@ -149,7 +147,7 @@ int main() {
   writeSurface(domain);
 
   {
-    std::cout << "Gate Deposition PolySi ...";
+    std::cout << "Gate Deposition PolySi ..." << std::flush;
     const NumericType thickness = 104;              // nm
     domain->duplicateTopLevelSet(Material::PolySi); // add layer
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
@@ -176,7 +174,7 @@ int main() {
 
   // gate patterning
   {
-    std::cout << "Dummy Gate Patterning ...";
+    std::cout << "Dummy Gate Patterning ..." << std::flush;
     Vec3D<NumericType> direction = {0, 0, 1};
     std::vector<Material> masks = {Material::Mask, Material::Si,
                                    Material::SiO2};
@@ -194,7 +192,7 @@ int main() {
 
   // Spacer Deposition and Etch
   { // spacer depo
-    std::cout << "Spacer Deposition ...";
+    std::cout << "Spacer Deposition ..." << std::flush;
     const NumericType thickness = 10;              // nm
     domain->duplicateTopLevelSet(Material::Si3N4); // add layer
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
@@ -204,7 +202,7 @@ int main() {
   writeSurface(domain);
 
   { // spacer etch
-    std::cout << "Spacer Etch ...";
+    std::cout << "Spacer Etch ..." << std::flush;
     auto ls = domain->getLevelSets()[domain->getLevelSets().size() - 2];
     auto dist = SmartPointer<BoxDistribution<double, D>>::New(
         std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, gridDelta, ls);
@@ -216,7 +214,7 @@ int main() {
 
   // isotropic etch (fin-release)
   {
-    std::cout << "Fin-Release ...";
+    std::cout << "Fin-Release ..." << std::flush;
     std::vector<Material> masks = {Material::PolySi, Material::SiO2,
                                    Material::Si3N4};
     auto model =
@@ -232,38 +230,22 @@ int main() {
 
   // source/drain epitaxy
   {
-    std::cout << "S/D Epitaxy ...";
+    std::cout << "S/D Epitaxy ..." << std::flush;
     domain->duplicateTopLevelSet(Material::SiGe);
-
-    auto maskLayer = LevelSetType::New(domain->getLevelSets().back());
-    viennals::BooleanOperation(
-        maskLayer, domain->getLevelSets().front(),
-        viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-        .apply();
-
-    auto tmpEpiDomain = DomainType::New();
-    tmpEpiDomain->insertNextLevelSetAsMaterial(maskLayer, Material::Mask);
-    tmpEpiDomain->insertNextLevelSetAsMaterial(domain->getLevelSets().back(),
-                                               Material::SiGe, false);
-
-    auto levelSets = tmpEpiDomain->getLevelSets();
-    viennals::PrepareStencilLocalLaxFriedrichs(levelSets, {false, true});
 
     AdvectionParameters<NumericType> advectionParams;
     advectionParams.integrationScheme =
         viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
-
     lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,
                                                 1>::setMaxDissipation(1000);
 
     std::vector<std::pair<Material, NumericType>> material = {
-        {Material::SiGe, -1.}};
+        {Material::Si, 1.}, {Material::SiGe, 1.}};
     auto model = SmartPointer<SelectiveEpitaxy<NumericType, D>>::New(material);
-    Process<NumericType, D> proc(tmpEpiDomain, model, 14.);
+    Process<NumericType, D> proc(domain, model, 14.);
     proc.setAdvectionParameters(advectionParams);
     proc.apply();
 
-    viennals::FinalizeStencilLocalLaxFriedrichs(levelSets);
     std::cout << " done" << std::endl;
   }
   writeSurface(domain);
@@ -271,7 +253,7 @@ int main() {
 
   // deposit dielectric
   {
-    std::cout << "Dielectric Deposition ...";
+    std::cout << "Dielectric Deposition ..." << std::flush;
     const NumericType thickness = 50;                   // nm
     domain->duplicateTopLevelSet(Material::Dielectric); // add layer
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
@@ -291,7 +273,7 @@ int main() {
 
   // now deposit TiN and PolySi as replacement gate
   {
-    std::cout << "Gate Deposition TiN ...";
+    std::cout << "Gate Deposition TiN ..." << std::flush;
     const NumericType thickness = 4;             // nm
     domain->duplicateTopLevelSet(Material::TiN); // add layer
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
@@ -301,7 +283,7 @@ int main() {
   writeSurface(domain);
 
   {
-    std::cout << "Gate Deposition PolySi ...";
+    std::cout << "Gate Deposition PolySi ..." << std::flush;
     const NumericType thickness = 40;               // nm
     domain->duplicateTopLevelSet(Material::PolySi); // add layer
     auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);

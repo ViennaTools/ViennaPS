@@ -1,7 +1,6 @@
 #include <psProcessModel.hpp>
 #include <vcTestAsserts.hpp>
 
-#include <models/psAnisotropicProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psDirectionalProcess.hpp>
 #include <models/psFluorocarbonEtching.hpp>
@@ -11,6 +10,7 @@
 #include <models/psSF6O2Etching.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
+#include <models/psWetEtching.hpp>
 
 namespace viennacore {
 
@@ -21,7 +21,9 @@ template <class NumericType, int D> void RunTest() {
   units::Length::getInstance().setUnit("nm");
 
   // default constructors
-  { auto model = SmartPointer<ProcessModel<NumericType, D>>::New(); }
+  {
+    auto model = SmartPointer<ProcessModel<NumericType, D>>::New();
+  }
 
   // fluorocarbon etching
   {
@@ -96,9 +98,9 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(model->getParticleTypes().size() == 2);
   }
 
-  // anisotropic model
+  // wet etching model
   {
-    auto model = SmartPointer<AnisotropicProcess<NumericType, D>>::New(
+    auto model = SmartPointer<WetEtching<NumericType, D>>::New(
         std::vector<std::pair<Material, NumericType>>{});
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());

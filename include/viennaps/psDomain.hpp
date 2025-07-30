@@ -372,6 +372,10 @@ public:
   // Returns a vector with all Level-Sets in the domain.
   auto &getLevelSets() const { return levelSets_; }
 
+  auto getNumberOfLevelSets() const {
+    return static_cast<unsigned int>(levelSets_.size());
+  }
+
   // Returns the material map which contains the specified material for each
   // Level-Set in the domain.
   auto &getMaterialMap() const { return materialMap_; }

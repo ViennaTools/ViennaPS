@@ -12,7 +12,7 @@ using namespace viennacore;
 namespace impl {
 
 template <class NumericType, int D>
-class AnisotropicVelocityField : public VelocityField<NumericType, D> {
+class WetEtchingVelocityField : public VelocityField<NumericType, D> {
   static Vec3D<NumericType> ScaleImpl(const NumericType pF,
                                       const Vec3D<NumericType> &pT) {
     return Vec3D<NumericType>{pF * pT[0], pF * pT[1], pF * pT[2]};
@@ -26,7 +26,7 @@ class AnisotropicVelocityField : public VelocityField<NumericType, D> {
   const std::vector<std::pair<Material, NumericType>> &materials;
 
 public:
-  AnisotropicVelocityField(
+  WetEtchingVelocityField(
       const Vec3D<NumericType> &direction100,
       const Vec3D<NumericType> &direction010, const NumericType passedR100,
       const NumericType passedR110, const NumericType passedR111,
@@ -47,8 +47,8 @@ public:
   NumericType getScalarVelocity(const Vec3D<NumericType> & /*coordinate*/,
                                 int material, const Vec3D<NumericType> &nv,
                                 unsigned long /*pointID*/) override {
-    for (auto epitaxyMaterial : materials) {
-      if (MaterialMap::isMaterial(material, epitaxyMaterial.first)) {
+    for (auto etchingMaterial : materials) {
+      if (MaterialMap::isMaterial(material, etchingMaterial.first)) {
         if (std::abs(Norm(nv) - 1.) > 1e-4)
           return 0.;
 
@@ -79,11 +79,11 @@ public:
                      N[0];
         }
 
-        return velocity * epitaxyMaterial.second;
+        return velocity * etchingMaterial.second;
       }
     }
 
-    // not an epitaxy material
+    // not an etching material
     return 0.;
   }
 
@@ -93,14 +93,13 @@ public:
 };
 } // namespace impl
 
-// Model for an anisotropic process, like selective epitaxy or wet etching.
+// Model for a wet etching process.
 template <typename NumericType, int D>
-class AnisotropicProcess : public ProcessModel<NumericType, D> {
+class WetEtching : public ProcessModel<NumericType, D> {
 public:
-  // The constructor expects the materials where epitaxy is allowed including
+  // The constructor expects the materials where etching is allowed including
   // the corresponding rates.
-  AnisotropicProcess(
-      const std::vector<std::pair<Material, NumericType>> pMaterials)
+  WetEtching(const std::vector<std::pair<Material, NumericType>> pMaterials)
       : materials(pMaterials) {
     if constexpr (D == 2) {
       direction100 = Vec3D<NumericType>{0., 1., 0.};
@@ -112,12 +111,11 @@ public:
     initialize();
   }
 
-  AnisotropicProcess(
-      const Vec3D<NumericType> &passedDir100,
-      const Vec3D<NumericType> &passedDir010, const NumericType passedR100,
-      const NumericType passedR110, const NumericType passedR111,
-      const NumericType passedR311,
-      const std::vector<std::pair<Material, NumericType>> pMaterials)
+  WetEtching(const Vec3D<NumericType> &passedDir100,
+             const Vec3D<NumericType> &passedDir010,
+             const NumericType passedR100, const NumericType passedR110,
+             const NumericType passedR111, const NumericType passedR311,
+             const std::vector<std::pair<Material, NumericType>> pMaterials)
       : direction100(passedDir100), direction010(passedDir010),
         r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
         materials(pMaterials) {
@@ -131,12 +129,12 @@ private:
 
     // velocity field
     auto velField =
-        SmartPointer<impl::AnisotropicVelocityField<NumericType, D>>::New(
+        SmartPointer<impl::WetEtchingVelocityField<NumericType, D>>::New(
             direction100, direction010, r100, r110, r111, r311, materials);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->setProcessName("AnisotropicProcess");
+    this->setProcessName("WetEtching");
 
     // store process data
     processMetaData["r100"] = {r100};
@@ -167,6 +165,6 @@ private:
   using ProcessModel<NumericType, D>::processMetaData;
 };
 
-PS_PRECOMPILE_PRECISION_DIMENSION(AnisotropicProcess)
+PS_PRECOMPILE_PRECISION_DIMENSION(WetEtching)
 
 } // namespace viennaps

@@ -246,7 +246,10 @@ public:
     }
   }
 
-  void reset() final { firstInit = false; }
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) final {
+    firstInit = false;
+  }
 
 private:
   bool firstInit = false;

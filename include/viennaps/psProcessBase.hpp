@@ -546,6 +546,7 @@ public:
     }
 
     processTime_ = processDuration_ - remainingTime;
+    model_->finalize(domain_, processTime_);
     processTimer.finish();
 
     if (static_cast<int>(domain_->useMetaData) > 1) {
@@ -578,7 +579,6 @@ public:
                      processTimer.totalDuration * 1e-9)
           .print();
     }
-    model_->reset();
     if (useCoverages && logLevel >= 5)
       covMetricFile.close();
   }

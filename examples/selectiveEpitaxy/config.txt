@@ -1,15 +1,17 @@
 # Config file for a selective epitaxy example
 # Domain
-gridDelta=0.2
-xExtent=40.0
-yExtent=80.0
+gridDelta=0.4
+xExtent=30.0
+yExtent=20.0
 
 # Geometry
 finWidth=7.0   
 finHeight=12.0
-finLength=60.0
 oxideHeight=3.0
+etchTime = 4.0
 
 # Process
 processTime=5.
-epitaxyRate=15.
+epitaxyRate=1.
+R100=1.0
+R111=0.5
