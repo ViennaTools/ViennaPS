@@ -14,13 +14,11 @@ namespace viennaps {
 
 using namespace viennacore;
 
-/**
- * @brief Writer class for serializing and writing a psDomain to a file
- *
- * This class handles serializing a Process Simulation Domain (psDomain) to a
- * binary file. The file format (.vpsd - ViennaPS Domain) contains all
- * levelSets, cell data, material mappings and domain setup information.
- */
+///  @brief Writer class for serializing and writing a Domain to a file
+///
+///  This class handles serializing a Process Simulation Domain (Domain) to a
+///  binary file. The file format (.vpsd - ViennaPS Domain) contains all
+///  levelSets, cell data, material mappings and domain setup information.
 template <class NumericType, int D> class Writer {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;

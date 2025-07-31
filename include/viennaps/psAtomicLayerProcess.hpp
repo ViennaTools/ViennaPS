@@ -120,7 +120,7 @@ public:
 
     checkInput();
 
-    /* ---------- Process Setup --------- */
+    // ---------- Process Setup ---------
     Timer processTimer;
     processTimer.start();
 
@@ -150,7 +150,7 @@ public:
       advectionKernel.insertNextLevelSet(dom);
     }
 
-    /* --------- Setup for ray tracing ----------- */
+    // --------- Setup for ray tracing -----------
 
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     viennaray::Trace<NumericType, D> rayTracer;

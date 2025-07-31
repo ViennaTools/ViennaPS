@@ -179,7 +179,7 @@ private:
   void parseUnits() {
     userUnits = readEightByteReal();
     units = readEightByteReal();
-    units = units * 1.0e6; /*in micron*/
+    units = units * 1.0e6; // in microns
   }
 
   void parseStructureName() {
@@ -569,7 +569,6 @@ private:
         break;
 
       case GDS::RecordNumbers::Reserved: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::Format: // ignore
@@ -583,7 +582,6 @@ private:
         break;
 
       case GDS::RecordNumbers::EndMasks: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::LibDirSize: // ignore
@@ -602,43 +600,33 @@ private:
         break;
 
       case GDS::RecordNumbers::Border: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::SoftFence: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::HardFence: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::SoftWire: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::HardWire: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::PathPort: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::NodePort: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::UserConstraint: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::SpacerError: // ignore
-        /* Empty */
         break;
 
       case GDS::RecordNumbers::Contact: // ignore
-        /* Empty */
         break;
 
       default:

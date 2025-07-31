@@ -47,7 +47,7 @@ public:
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material,
-                                const Vec3D<NumericType> & /*normalVector*/,
+                                const Vec3D<NumericType> &normalVector,
                                 unsigned long pointId) override {
     if (isMaskMaterial(material))
       return 0.;
@@ -85,8 +85,8 @@ public:
   int getTranslationFieldOptions() const override { return 0; }
 
   void prepare(SmartPointer<Domain<NumericType, D>> domain,
-               SmartPointer<std::vector<NumericType>> /*velocities*/,
-               const NumericType /*processTime*/) override {
+               SmartPointer<std::vector<NumericType>> velocities,
+               const NumericType processTime) override {
     visibilities.clear();
 
     auto surfaceLS = domain->getLevelSets().back();

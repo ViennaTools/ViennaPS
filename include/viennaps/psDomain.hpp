@@ -37,18 +37,16 @@ enum class MetaDataLevel {
                // parameters, ray tracing parameters, etc.)
 };
 
-/**
-  This class represents all materials in the simulation domain.
-  It contains Level-Sets for an accurate surface representation
-  and a cell-based structure for the storage of volume information.
-  These structures are used depending on the process applied to the material.
-  Processes may use one of either structure or both.
-
-  Level-Sets in the domain automatically wrap all lower domains when inserted.
-  If specified, each Level-Set is assigned a specific material,
-  which can be used in a process to implement material specific rates or
-  similar.
-*/
+// This class represents all materials in the simulation domain.
+// It contains Level-Sets for an accurate surface representation
+// and a cell-based structure for the storage of volume information.
+// These structures are used depending on the process applied to the material.
+// Processes may use one of either structure or both.
+//
+// Level-Sets in the domain automatically wrap all lower domains when inserted.
+// If specified, each Level-Set is assigned a specific material,
+// which can be used in a process to implement material specific rates or
+// similar.
 template <class NumericType, int D> class Domain {
 public:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;

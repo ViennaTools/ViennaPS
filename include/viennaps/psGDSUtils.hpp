@@ -33,7 +33,7 @@ enum class ElementType {
 };
 
 enum class RecordNumbers {
-  Header, /* 0 */
+  Header, // 0
   BgnLib,
   LibName,
   Units,
@@ -43,7 +43,7 @@ enum class RecordNumbers {
   EndStr,
   Boundary,
   Path,
-  SRef, /* 10 */
+  SRef, // 10
   ARef,
   Text,
   Layer,
@@ -53,7 +53,7 @@ enum class RecordNumbers {
   EndEl,
   SName,
   ColRow,
-  TextNode, /* 20 */
+  TextNode, // 20
   Node,
   TextType,
   Presentation,
@@ -63,7 +63,7 @@ enum class RecordNumbers {
   Mag,
   Angle,
   UInteger,
-  UString, /* 30 */
+  UString, // 30
   RefLibs,
   Fonts,
   PathType,
@@ -73,7 +73,7 @@ enum class RecordNumbers {
   StrType,
   ElFlags,
   ElKey,
-  LinkType, /* 40 */
+  LinkType, // 40
   LinkKeys,
   NodeType,
   PropAttr,
@@ -83,7 +83,7 @@ enum class RecordNumbers {
   Plex,
   BgnExtn,
   EndExtn,
-  TapeNum, /* 50 */
+  TapeNum, // 50
   TapeCode,
   StrClass,
   Reserved,
@@ -93,7 +93,7 @@ enum class RecordNumbers {
   LibDirSize,
   SrfName,
   LibSecur,
-  Border, /* 60 */
+  Border, // 60
   SoftFence,
   HardFence,
   SoftWire,
@@ -102,7 +102,7 @@ enum class RecordNumbers {
   NodePort,
   UserConstraint,
   SpacerError,
-  Contact /* 69 */
+  Contact // 69
 };
 
 template <class T> struct Element {

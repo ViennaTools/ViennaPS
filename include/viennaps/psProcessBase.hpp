@@ -35,7 +35,7 @@ public:
   // Set the process domain.
   void setDomain(DomainType domain) { domain_ = domain; }
 
-  /* ----- Process parameters ----- */
+  // ----- Process parameters -----
 
   // Set the duration of the process.
   void setProcessDuration(NumericType duration) { processDuration_ = duration; }
@@ -45,7 +45,7 @@ public:
   // time step according to the CFL condition.
   NumericType getProcessDuration() const { return processTime_; }
 
-  /* ----- Ray tracing parameters ----- */
+  // ----- Ray tracing parameters -----
 
   // Set the number of iterations to initialize the coverages.
   void setMaxCoverageInitIterations(unsigned maxIt) { maxIterations_ = maxIt; }
@@ -97,7 +97,7 @@ public:
 
   auto &getRayTracingParameters() { return rayTracingParams_; }
 
-  /* ----- Advection parameters ----- */
+  // ----- Advection parameters -----
 
   // Set the integration scheme for solving the level-set equation.
   // Possible integration schemes are specified in
@@ -131,7 +131,7 @@ public:
 
   auto &getAdvectionParameters() { return advectionParams_; }
 
-  /* ----- Process execution ----- */
+  // ----- Process execution -----
 
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
@@ -210,7 +210,7 @@ public:
 
   // Run the process.
   void apply() {
-    /* ---------- Check input --------- */
+    // Check input
     if (!checkModelAndDomain())
       return;
 
@@ -260,7 +260,7 @@ public:
                                      // metadata)
       domain_->addMetaData(model_->getProcessMetaData());
     }
-    /* ------ Process Setup ------ */
+    // ------ Process Setup ------
     const unsigned int logLevel = Logger::getLogLevel();
     Timer processTimer;
     processTimer.start();

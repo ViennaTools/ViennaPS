@@ -10,12 +10,9 @@
 
 </div>
 
-ViennaPS is a header-only C++ library for simulating microelectronic fabrication processes. It combines surface and volume representations with advanced level-set methods and Monte Carlo flux calculations, powered by high-performance ray tracing. Users can develop custom models, use pre-configured physical models, or leverage emulation for flexible and efficient process simulations.
+ViennaPS is a header-only C++ library for simulating microelectronic fabrication processes. It combines surface and volume representations with advanced level-set methods and Monte Carlo flux calculations, powered by high-performance ray tracing. Users can develop custom models, use pre-configured physical models, or use fast emulation models for flexible and efficient process development.
 
 ViennaPS is designed to be easily integrated into existing C++ projects and provides Python bindings for seamless use in Python environments. The library is under active development and is continuously improved to meet the evolving needs of process simulation in microelectronics.
-
-> [!NOTE]  
-> ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
 ## Quick Start  
 
@@ -30,6 +27,10 @@ To use ViennaPS in C++, clone the repository and follow the installation steps b
 For full documentation, visit [ViennaPS Documentation](https://viennatools.github.io/ViennaPS/).
 
 ## Releases
+
+> [!NOTE]  
+> ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
+
 Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
 
 ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org/project/ViennaPS/) for most platforms.  
@@ -81,7 +82,7 @@ cmake -B build && cmake --build build
 cmake --install build --prefix "/path/to/your/custom/install/"
 ```
 
-This will install the necessary headers and CMake files to the specified path. If `--prefix` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
+This will install the necessary headers and CMake files to the specified path. If `--prefix` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` on Linux-based systems.
 
 ## Building the Python package
 

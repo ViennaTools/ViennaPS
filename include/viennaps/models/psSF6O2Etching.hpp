@@ -17,9 +17,9 @@ namespace viennaps {
 
 using namespace viennacore;
 
-/// Model for etching Si in a SF6/O2 plasma. The model is based on the paper by
-/// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
-/// DOI: https://doi.org/10.1116/1.1830495
+// Model for etching Si in a SF6/O2 plasma. The model is based on work by
+// Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
+// DOI: https://doi.org/10.1116/1.1830495
 template <typename NumericType, int D>
 class SF6O2Etching : public ProcessModel<NumericType, D> {
 public:
@@ -30,8 +30,8 @@ public:
 
   // All flux values are in units 1e15 / cm²
   SF6O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType meanEnergy /* eV */,
-               const NumericType sigmaEnergy /* eV */, // 5 parameters
+               const double oxygenFlux, const NumericType meanEnergy,
+               const NumericType sigmaEnergy,
                const NumericType ionExponent = 300.,
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth =

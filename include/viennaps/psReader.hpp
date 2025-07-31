@@ -17,12 +17,10 @@ namespace viennaps {
 
 using namespace viennacore;
 
-/**
- * @brief Reader class for deserializing a psDomain from a file
- *
- * This class handles reading a Process Simulation Domain (psDomain) from a
- * binary file previously created with psWriter.
- */
+/// @brief Reader class for deserializing a Domain from a file
+///
+/// This class handles reading a Process Simulation Domain (Domain) from a
+/// binary file previously created with psWriter.
 template <class NumericType, int D> class Reader {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
@@ -46,10 +44,10 @@ public:
     fileName = std::move(passedFileName);
   }
 
-  SmartPointer<Domain<NumericType, D>> apply() {
-    // Create new domain if none was provided
-    if (domain == nullptr) {
-      domain = SmartPointer<Domain<NumericType, D>>::New();
+  void apply() {
+    if (!domain) {
+      Logger::getInstance().addError("No domain was passed to Reader.").print();
+      return;
     }
 
     // check filename
@@ -57,7 +55,7 @@ public:
       Logger::getInstance()
           .addError("No file name specified for Reader. Not reading.")
           .print();
-      return domain;
+      return;
     }
 
     // Open file for reading
@@ -66,7 +64,7 @@ public:
       Logger::getInstance()
           .addError("Could not open file: " + fileName)
           .print();
-      return domain;
+      return;
     }
 
     // Check identifier
@@ -77,7 +75,7 @@ public:
           .addError(
               "Reading domain from stream failed. Header could not be found.")
           .print();
-      return domain;
+      return;
     }
 
     // Check format version
@@ -89,7 +87,7 @@ public:
                     std::to_string(formatVersion) +
                     " with reader of version 0 failed.")
           .print();
-      return domain;
+      return;
     }
 
     // Clear existing domain data
@@ -148,7 +146,6 @@ public:
     }
 
     fin.close();
-    return domain;
   }
 };
 

@@ -44,9 +44,9 @@ public:
     directions[2] = CrossProduct(directions[0], directions[1]);
   }
 
-  NumericType getScalarVelocity(const Vec3D<NumericType> & /*coordinate*/,
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material, const Vec3D<NumericType> &nv,
-                                unsigned long /*pointID*/) override {
+                                unsigned long pointID) override {
     for (auto etchingMaterial : materials) {
       if (MaterialMap::isMaterial(material, etchingMaterial.first)) {
         if (std::abs(Norm(nv) - 1.) > 1e-4)

@@ -600,8 +600,8 @@ public:
   // All flux values are in units 1e15 / cm²
   CF4O2Etching(const double ionFlux, const double etchantFlux,
                const double oxygenFlux, const double polymerFlux,
-               const NumericType meanEnergy /* eV */,
-               const NumericType sigmaEnergy /* eV */, // 5 parameters
+               const NumericType meanEnergy,  // eV
+               const NumericType sigmaEnergy, // eV
                const NumericType ionExponent = 300.,
                const NumericType oxySputterYield = 2.,
                const NumericType polySputterYield = 2.,

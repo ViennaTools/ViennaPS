@@ -29,9 +29,9 @@ public:
       : R111(r111), R100(r100), materials(passedmaterials),
         factor((R100 - R111) / (high - low)) {}
 
-  NumericType getScalarVelocity(const Vec3D<NumericType> & /*coordinate*/,
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material, const Vec3D<NumericType> &nv,
-                                unsigned long /*pointID*/) override {
+                                unsigned long pointID) override {
     for (auto epitaxyMaterial : materials) {
       if (MaterialMap::isMaterial(material, epitaxyMaterial.first)) {
         double vel = std::max(std::abs(nv[0]), std::abs(nv[D - 1]));
