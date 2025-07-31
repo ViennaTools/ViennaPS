@@ -50,8 +50,8 @@ int main(int argc, char **argv) {
 
   auto mask = gds_mask->layerToLevelSet(1,             // layer in GDS file
                                         0,             // base z position
-                                        4 * gridDelta, // mask height
-                                        true,          // invert mask
+                                        4 * gridDelta, // height
+                                        true,          // invert
                                         false          // blur
   );
 

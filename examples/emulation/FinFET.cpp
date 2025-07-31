@@ -18,7 +18,7 @@ using NumericType = double;
 using LevelSetType = SmartPointer<viennals::Domain<NumericType, D>>;
 using DomainType = SmartPointer<Domain<NumericType, D>>;
 using IsotropicProcessGeometric = SmartPointer<SphereDistribution<double, D>>;
-constexpr bool volumeOutput = true;
+constexpr bool volumeOutput = false;
 
 void writeVolume(DomainType domain) {
   if (!volumeOutput)
@@ -232,12 +232,12 @@ int main() {
   {
     std::cout << "S/D Epitaxy ..." << std::flush;
     domain->duplicateTopLevelSet(Material::SiGe);
-
+    Logger::setLogLevel(LogLevel::INFO);
     AdvectionParameters<NumericType> advectionParams;
     advectionParams.integrationScheme =
         viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
     lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,
-                                                1>::setMaxDissipation(1000);
+                                                1>::setMaxDissipation(100);
 
     std::vector<std::pair<Material, NumericType>> material = {
         {Material::Si, 1.}, {Material::SiGe, 1.}};
