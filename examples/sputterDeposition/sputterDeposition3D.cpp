@@ -43,17 +43,10 @@ int main(int argc, char **argv) {
   }
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
-
-  MakeHole<NumericType, D>(geometry, params.get("gridDelta"),
-                           params.get("xExtent"), params.get("yExtent"),
-                           params.get("holeRadius"), params.get("holeDepth"),
-                           params.get("taperingAngle"), 0.0, /* baseHeight */
-                           false,          /* periodicBoundary */
-                           false,          /* makeMask */
-                           Material::Si,   /* material */
-                           HoleShape::Full /* HoleShape */
-                           )
+  auto geometry = Domain<NumericType, D>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  MakeHole<NumericType, D>(geometry, params.get("holeRadius"),
+                           params.get("holeDepth"), params.get("taperingAngle"))
       .apply();
 
   geometry->saveVolumeMesh("Hole");

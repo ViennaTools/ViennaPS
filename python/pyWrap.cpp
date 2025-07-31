@@ -1522,9 +1522,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Hole
   pybind11::enum_<HoleShape>(module, "HoleShape")
-      .value("Full", HoleShape::Full)
-      .value("Half", HoleShape::Half)
-      .value("Quarter", HoleShape::Quarter);
+      .value("FULL", HoleShape::FULL)
+      .value("HALF", HoleShape::HALF)
+      .value("QUARTER", HoleShape::QUARTER);
 
   pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
       .def(pybind11::init<DomainType, T, T, T, T, T, HoleShape, Material,
@@ -1533,7 +1533,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("holeDepth"), pybind11::arg("holeTaperAngle") = 0.,
            pybind11::arg("maskHeight") = 0.,
            pybind11::arg("maskTaperAngle") = 0.,
-           pybind11::arg("holeShape") = HoleShape::Full,
+           pybind11::arg("holeShape") = HoleShape::FULL,
            pybind11::arg("material") = Material::Si,
            pybind11::arg("maskMaterial") = Material::Mask)
       .def(pybind11::init<DomainType, T, T, T, T, T, T, T, bool, bool,
@@ -1546,7 +1546,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
            pybind11::arg("material") = Material::Si,
-           pybind11::arg("holeShape") = HoleShape::Full)
+           pybind11::arg("holeShape") = HoleShape::FULL)
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
   // Fin

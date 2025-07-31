@@ -31,11 +31,13 @@ int main(int argc, char **argv) {
   NumericType exponent = 500.;
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New();
+  auto geometry = Domain<NumericType, D>::New();
   MakeHole<NumericType, D>(geometry, gridDelta, xExtent, yExtent, holeRadius,
-                           maskHeight, taperAngle, 0 /* base height */,
-                           false /* periodic boundary */, true /*create mask*/,
-                           Material::Si, HoleShape::Half)
+                           maskHeight, taperAngle,
+                           0,     // base height
+                           false, // periodic boundary
+                           true,  // create mask
+                           Material::Si, HoleShape::HALF)
       .apply();
 
   auto rateFunction = [](const std::vector<NumericType> &flux,
@@ -51,7 +53,7 @@ int main(int argc, char **argv) {
     model->addIonParticle(exponent, 60, 90, 75);
     model->setRateFunction(rateFunction);
 
-    auto copy = SmartPointer<Domain<NumericType, D>>::New(geometry);
+    auto copy = Domain<NumericType, D>::New(geometry);
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setIntegrationScheme(integrationScheme);
@@ -69,7 +71,7 @@ int main(int argc, char **argv) {
         SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(exponent);
     model->setRateFunction(rateFunction);
 
-    auto copy = SmartPointer<Domain<NumericType, D>>::New(geometry);
+    auto copy = Domain<NumericType, D>::New(geometry);
 
     gpu::Process<NumericType, D> process(context, copy, model, processDuration);
     process.setIntegrationScheme(integrationScheme);

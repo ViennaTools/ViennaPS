@@ -8,7 +8,7 @@ namespace viennacore {
 using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  auto domain = Domain<NumericType, D>::New();
 
   MakePlane<NumericType, D>(domain, 1., 10., 10., 1., true, Material::Si)
       .apply();

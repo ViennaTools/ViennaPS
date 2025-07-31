@@ -11,11 +11,11 @@ template <class NumericType, int D> void RunTest() {
 #ifdef _OPENMP
   omp_set_num_threads(1);
 #endif
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  auto domain = Domain<NumericType, D>::New();
 
   // Test with HoleShape::Full
   MakeHole<NumericType, D>(domain, 1.0, 10., 10., 2.5, 5., 10., 1., false, true,
-                           Material::Si, HoleShape::Full)
+                           Material::Si, HoleShape::FULL)
       .apply();
 
   VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
@@ -27,7 +27,7 @@ template <class NumericType, int D> void RunTest() {
   //   // Test with HoleShape::Quarter
   domain->clear(); // Reset the domain for a new test
   MakeHole<NumericType, D>(domain, .5, 10., 10., 2.5, 5., 10., 1., false, true,
-                           Material::Si, HoleShape::Quarter)
+                           Material::Si, HoleShape::QUARTER)
       .apply();
 
   VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
@@ -39,7 +39,7 @@ template <class NumericType, int D> void RunTest() {
   // Test with HoleShape::Half
   domain->clear(); // Reset the domain for a new test
   MakeHole<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false, true,
-                           Material::Si, HoleShape::Half)
+                           Material::Si, HoleShape::HALF)
       .apply();
 
   VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
@@ -50,7 +50,7 @@ template <class NumericType, int D> void RunTest() {
   // Logger::setLogLevel(LogLevel::DEBUG);
 
   domain->setup(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
-  MakeHole<NumericType, D>(domain, 2.5, 3., 10, 3., 10., HoleShape::Quarter,
+  MakeHole<NumericType, D>(domain, 2.5, 3., 10, 3., 10., HoleShape::QUARTER,
                            Material::Si)
       .apply();
   // domain->saveSurfaceMesh("hole" + std::to_string(D) + "D");

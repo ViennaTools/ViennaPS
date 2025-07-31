@@ -15,8 +15,8 @@ auto GenerateMask(const NumericType bumpWidth, const NumericType bumpHeight,
   static_assert(D == 2, "Only 2D geometry supported for now.");
   const NumericType bumpSpacing = bumpWidth * (1. - bumpDuty) / bumpDuty;
   const NumericType xExtent = numBumps * bumpWidth / bumpDuty;
-  auto domain = SmartPointer<Domain<NumericType, D>>::New(
-      gridDelta, xExtent, BoundaryType::PERIODIC_BOUNDARY);
+  auto domain = Domain<NumericType, D>::New(gridDelta, xExtent,
+                                            BoundaryType::PERIODIC_BOUNDARY);
 
   MakePlane<NumericType, D>(domain, 0., Material::SiO2).apply();
 

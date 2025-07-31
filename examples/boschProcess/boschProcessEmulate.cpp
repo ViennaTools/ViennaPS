@@ -80,10 +80,11 @@ int main(int argc, char **argv) {
   }
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+  auto geometry = Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
-                             0.0 /* trenchDepth */, 0.0 /* trenchTaperAngle */,
+                             0.0, // trenchDepth
+                             0.0, // trenchTaperAngle
                              params.get("maskHeight"))
       .apply();
 

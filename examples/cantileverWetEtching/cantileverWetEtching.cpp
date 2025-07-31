@@ -48,9 +48,12 @@ int main(int argc, char **argv) {
   ps::GDSReader<NumericType, D>(gds_mask, maskFileName)
       .apply(); // read GDS file
 
-  auto mask = gds_mask->layerToLevelSet(
-      1 /*layer in GDS file*/, 0 /*base z position*/,
-      4 * gridDelta /*mask height*/, true /*invert mask*/, false /*blur*/);
+  auto mask = gds_mask->layerToLevelSet(1,             // layer in GDS file
+                                        0,             // base z position
+                                        4 * gridDelta, // mask height
+                                        true,          // invert mask
+                                        false          // blur
+  );
 
   // Set up domain
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();

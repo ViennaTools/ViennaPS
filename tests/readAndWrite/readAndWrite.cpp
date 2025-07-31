@@ -110,7 +110,7 @@ template <class T> bool test3DHoleWriteAndRead() {
   viennaps::MakeHole<T, D>(domain, holeRadius, holeDepth, taperAngle,
                            10.0,                      // maskHeight
                            2.0,                       // maskTaperAngle
-                           viennaps::HoleShape::Full, // full hole
+                           viennaps::HoleShape::FULL, // full hole
                            viennaps::Material::Si, viennaps::Material::SiO2)
       .apply();
 

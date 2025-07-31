@@ -7,7 +7,7 @@ using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
 
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  auto domain = Domain<NumericType, D>::New();
   auto model = SmartPointer<ProcessModel<NumericType, D>>::New();
 
   // constructors

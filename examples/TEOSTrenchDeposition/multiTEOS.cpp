@@ -20,24 +20,21 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+  auto geometry = ps::Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
-  ps::MakeTrench<NumericType, D>(geometry,
-                                 params.get("trenchWidth") /*trench width*/,
-                                 params.get("trenchHeight") /*trench height*/,
-                                 params.get("taperAngle") /* tapering angle */)
+  ps::MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                                 params.get("trenchHeight"),
+                                 params.get("taperAngle"))
       .apply();
 
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet(ps::Material::SiO2);
 
-  // process model encompasses surface model and particle types
+  // process model with surface model and particle types
   auto model = ps::SmartPointer<ps::TEOSDeposition<NumericType, D>>::New(
-      params.get("stickingProbabilityP1") /*particle sticking probability*/,
-      params.get("depositionRateP1") /*process deposition rate*/,
-      params.get("reactionOrderP1") /*process reaction order*/,
-      params.get("stickingProbabilityP2"), params.get("depositionRateP2"),
-      params.get("reactionOrderP2"));
+      params.get("stickingProbabilityP1"), params.get("depositionRateP1"),
+      params.get("reactionOrderP1"), params.get("stickingProbabilityP2"),
+      params.get("depositionRateP2"), params.get("reactionOrderP2"));
 
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
