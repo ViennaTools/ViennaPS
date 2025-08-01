@@ -1,5 +1,7 @@
 #pragma once
 
+#include "psUtil.hpp"
+
 #include <lsAdvect.hpp>
 #include <rayTrace.hpp>
 #include <vcLogger.hpp>
@@ -32,6 +34,12 @@ template <typename NumericType, int D> struct RayTracingParameters {
         static_cast<NumericType>(smoothingNeighbors)};
     return metaData;
   }
+
+  auto toMetaDataString() const {
+    return "\nRaysPerPoint: " + std::to_string(raysPerPoint) +
+           "\nDiskRadius: " + std::to_string(diskRadius) +
+           "\nSmoothingNeighbors: " + std::to_string(smoothingNeighbors);
+  }
 };
 
 template <typename NumericType> struct AdvectionParameters {
@@ -50,6 +58,16 @@ template <typename NumericType> struct AdvectionParameters {
     metaData["TimeStepRatio"] = {timeStepRatio};
     metaData["DissipationAlpha"] = {dissipationAlpha};
     return metaData;
+  }
+
+  auto toMetaDataString() const {
+    return "\nIntegrationScheme: " +
+           util::convertIntegrationSchemeToString(integrationScheme) +
+           "\nTimeStepRatio: " + std::to_string(timeStepRatio) +
+           "\nDissipationAlpha: " + std::to_string(dissipationAlpha) +
+           "\nCheckDissipation: " + util::boolString(checkDissipation) +
+           "\nVelocityOutput: " + util::boolString(velocityOutput) +
+           "\nIgnoreVoids: " + util::boolString(ignoreVoids);
   }
 };
 

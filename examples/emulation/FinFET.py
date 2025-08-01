@@ -195,12 +195,11 @@ writeVolume(domain)
 # source/drain epitaxy
 print("S/D Epitaxy ...", end="", flush=True)
 domain.duplicateTopLevelSet(ps.Material.SiGe)
-ps.Logger.setLogLevel(ps.LogLevel.INFO)
 advectionParams = ps.AdvectionParameters()
 advectionParams.integrationScheme = (
     ps.IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
-ps.ls.StencilLocalLaxFriedrichsScalar.setMaxDissipation(100)
+ps.StencilLocalLaxFriedrichsScalar.setMaxDissipation(1000)
 material = [
     (ps.Material.Si, 1.0),
     (ps.Material.SiGe, 1.0),

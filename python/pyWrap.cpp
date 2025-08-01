@@ -1616,7 +1616,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("ignoreFluxBoundaries",
                      &RayTracingParameters<T, D>::ignoreFluxBoundaries)
       .def_readwrite("smoothingNeighbors",
-                     &RayTracingParameters<T, D>::smoothingNeighbors);
+                     &RayTracingParameters<T, D>::smoothingNeighbors)
+      .def("toMetaData", &RayTracingParameters<T, D>::toMetaData,
+           "Convert the ray tracing parameters to a metadata dict.")
+      .def("toMetaDataString", &RayTracingParameters<T, D>::toMetaDataString,
+           "Convert the ray tracing parameters to a metadata string.");
 
   // AdvectionParameters
   pybind11::class_<AdvectionParameters<T>>(module, "AdvectionParameters")
@@ -1629,7 +1633,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("checkDissipation",
                      &AdvectionParameters<T>::checkDissipation)
       .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
-      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
+      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids)
+      .def("toMetaData", &AdvectionParameters<T>::toMetaData,
+           "Convert the advection parameters to a metadata dict.")
+      .def("toMetaDataString", &AdvectionParameters<T>::toMetaDataString,
+           "Convert the advection parameters to a metadata string.");
+
+  pybind11::class_<lsInternal::StencilLocalLaxFriedrichsScalar<T, D, 1>>(
+      module, "StencilLocalLaxFriedrichsScalar", pybind11::module_local())
+      .def_static(
+          "setMaxDissipation",
+          &lsInternal::StencilLocalLaxFriedrichsScalar<T, D,
+                                                       1>::setMaxDissipation,
+          pybind11::arg("maxDissipation"));
 
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")

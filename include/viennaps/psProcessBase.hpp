@@ -307,6 +307,20 @@ public:
       initFluxEngine();
     }
 
+    if (logLevel >= 5) {
+      // debug output
+      std::stringstream ss;
+      ss << "Process: " << name << "\n"
+         << "Grid Delta: " << gridDelta << "\n"
+         << "Process Duration: " << processDuration_ << "\n"
+         << "Advection Parameters: " << advectionParams_.toMetaDataString()
+         << "\n";
+      if (useFluxEngine)
+        ss << "Ray Tracing Parameters: " << rayTracingParams_.toMetaDataString()
+           << "\n";
+      Logger::getInstance().addDebug(ss.str()).print();
+    }
+
     // Determine whether advection callback is used
     const bool useAdvectionCallback = advectionCallback != nullptr;
     if (useAdvectionCallback) {

@@ -55,6 +55,35 @@ convertIntegrationScheme(const std::string &s) {
       "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER");
 }
 
+[[nodiscard]] inline std::string
+convertIntegrationSchemeToString(viennals::IntegrationSchemeEnum scheme) {
+  switch (scheme) {
+  case viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER:
+    return "ENGQUIST_OSHER_1ST_ORDER";
+  case viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER:
+    return "ENGQUIST_OSHER_2ND_ORDER";
+  case viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER:
+    return "LAX_FRIEDRICHS_1ST_ORDER";
+  case viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER:
+    return "LAX_FRIEDRICHS_2ND_ORDER";
+  case viennals::IntegrationSchemeEnum::
+      LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER:
+    return "LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER";
+  case viennals::IntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+    return "LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
+  case viennals::IntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+    return "LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER";
+  case viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+    return "LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
+  case viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+    return "LOCAL_LAX_FRIEDRICHS_2ND_ORDER";
+  case viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+    return "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
+  default:
+    throw std::invalid_argument("Unknown integration scheme.");
+  }
+}
+
 [[nodiscard]] inline viennaray::BoundaryCondition convertBoundaryCondition(
     viennals::BoundaryConditionEnum originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
