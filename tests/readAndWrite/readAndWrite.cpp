@@ -134,8 +134,10 @@ template <class T> bool test3DHoleWriteAndRead() {
   }
 
   // Read the domain back from file
+  auto readDomain = viennaps::Domain<T, D>::New();
   viennaps::Reader<T, D> reader(testFileName);
-  auto readDomain = reader.apply();
+  reader.setDomain(readDomain);
+  reader.apply();
 
   // Write meshes for visualization
   readDomain->saveSurfaceMesh("readHole3D-surfaceMesh");
@@ -220,8 +222,10 @@ int main() {
   }
 
   // Read the domain back from file
+  auto readDomain = viennaps::Domain<NumericType, D>::New();
   viennaps::Reader<NumericType, D> reader(testFileName);
-  auto readDomain = reader.apply();
+  reader.setDomain(readDomain);
+  reader.apply();
 
   // Write meshes for visualization
   readDomain->saveSurfaceMesh("readDomain-surfaceMesh");
