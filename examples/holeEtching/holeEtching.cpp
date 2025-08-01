@@ -30,9 +30,10 @@ int main(int argc, char *argv[]) {
   auto geometry = Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   MakeHole<NumericType, D>(geometry, params.get("holeRadius"),
-                           0.0 /* holeDepth */, 0.0 /* holeTaperAngle */,
+                           0.0, // holeDepth
+                           0.0, // holeTaperAngle
                            params.get("maskHeight"), params.get("taperAngle"),
-                           HoleShape::Half)
+                           HoleShape::HALF)
       .apply();
 
   // use pre-defined model SF6O2 etching model

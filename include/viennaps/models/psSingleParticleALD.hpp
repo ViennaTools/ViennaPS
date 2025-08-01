@@ -72,7 +72,7 @@ public:
            ev_ * Coverage->at(i)) *
           dt_ / s0_;
 
-      Coverage->at(i) = std::min(Coverage->at(i), 1.);
+      Coverage->at(i) = std::min(Coverage->at(i), NumericType(1.0));
     }
   }
 };
@@ -159,5 +159,7 @@ public:
     this->setProcessName("SingleParticleALD");
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(SingleParticleALD)
 
 } // namespace viennaps

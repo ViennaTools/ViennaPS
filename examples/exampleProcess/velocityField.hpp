@@ -9,8 +9,8 @@ class VelocityField : public viennaps::VelocityField<T, D> {
 public:
   VelocityField() = default;
 
-  T getScalarVelocity(const viennaps::Vec3D<T> & /*coordinate*/, int material,
-                      const viennaps::Vec3D<T> & /*normalVector*/,
+  T getScalarVelocity(const viennaps::Vec3D<T> &coordinate, int material,
+                      const viennaps::Vec3D<T> &normalVector,
                       unsigned long pointID) override {
     // implement material specific etching/deposition here
     T velocity = 0.;

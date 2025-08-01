@@ -27,7 +27,8 @@ int main(int argc, char *argv[]) {
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"),
       ps::BoundaryType::PERIODIC_BOUNDARY);
   ps::MakeFin<NumericType, D>(geometry, params.get("finWidth"),
-                              0.0 /*finHeight*/, 0.0 /*finTaperAngle*/,
+                              0.0, // finHeight
+                              0.0, // finTaperAngle
                               params.get("maskHeight"))
       .apply();
 

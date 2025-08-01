@@ -10,12 +10,9 @@
 
 </div>
 
-ViennaPS is a header-only C++ library for simulating microelectronic fabrication processes. It combines surface and volume representations with advanced level-set methods and Monte Carlo flux calculations, powered by high-performance ray tracing. Users can develop custom models, use pre-configured physical models, or leverage emulation for flexible and efficient process simulations.
+ViennaPS is a header-only C++ library for simulating microelectronic fabrication processes. It combines surface and volume representations with advanced level-set methods and Monte Carlo flux calculations, powered by high-performance ray tracing. Users can develop custom models, use pre-configured physical models, or use fast emulation models for flexible and efficient process development.
 
 ViennaPS is designed to be easily integrated into existing C++ projects and provides Python bindings for seamless use in Python environments. The library is under active development and is continuously improved to meet the evolving needs of process simulation in microelectronics.
-
-> [!NOTE]  
-> ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
 
 ## Quick Start  
 
@@ -30,6 +27,10 @@ To use ViennaPS in C++, clone the repository and follow the installation steps b
 For full documentation, visit [ViennaPS Documentation](https://viennatools.github.io/ViennaPS/).
 
 ## Releases
+
+> [!NOTE]  
+> ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
+
 Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
 
 ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org/project/ViennaPS/) for most platforms.  
@@ -81,7 +82,7 @@ cmake -B build && cmake --build build
 cmake --install build --prefix "/path/to/your/custom/install/"
 ```
 
-This will install the necessary headers and CMake files to the specified path. If `--prefix` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` . 
+This will install the necessary headers and CMake files to the specified path. If `--prefix` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` on Linux-based systems.
 
 ## Building the Python package
 
@@ -116,7 +117,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.6.1")
+  CPMAddPackage("gh:viennatools/viennaps@3.7.0")
   ```
 
 * With a local installation
@@ -165,9 +166,9 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/tren
   <img src="assets/deposition.svg" width=700 style="background-color:white;">
 </div>
 
-### SF<sub>6</sub>O<sub>2</sub> Hole Etching
+### SF<sub>6</sub>/O<sub>2</sub> Hole Etching
 
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching) demonstrates a hole etching process with a SF<sub>6</sub>O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching) demonstrates a hole etching process with a SF<sub>6</sub>/O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
 
 The image presents the results of different flux configurations, as tested in _testFluxes.py_. Each structure represents a variation in flux conditions, leading to differences in hole shape, depth, and profile characteristics. The variations highlight the influence of ion and neutral fluxes on the etching process.
 
@@ -193,13 +194,20 @@ This comparison highlights the trade-offs between computational efficiency and p
   <img src="assets/bosch_process.png" width=700 style="background-color:white;">
 </div>
 
+### Wet Etching
 
-### Anisotropic Processes
-
-In the anisotropic process model, the etch or deposition rates are dependent on the crystallographic directions of the surface. This enables the accurate modeling of intricate processes like [epitaxial growth](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) or [anisotropic wet etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching). Basic examples, illustrating these processes are provided with the library and shown below.
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching) demonstrates the wet etching process, specifically focusing on the cantilever structure. The simulation captures the etching dynamics and the influence of crystallographic directions on the etch profile.
 
 <div align="center">
-  <img src="assets/anisotropic_process.svg" width=700 style="background-color:white;">
+  <img src="assets/wet_etching.png" width=700 style="background-color:white;">
+</div>
+
+### Selective Epitaxy
+
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) demonstrates the selective epitaxy process, focusing on the growth of SiGe on a Si substrate. Similar to wet etching, the process is influenced by crystallographic directions, which can be adjusted in the __config.txt__ file. The simulation captures the growth dynamics and the resulting SiGe structure.
+
+<div align="center">
+  <img src="assets/epitaxy.png" width=700 style="background-color:white;">
 </div>
 
 ### Redeposition During Selective Etching

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsMakeGeometry.hpp>
@@ -40,5 +41,7 @@ public:
         plane, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Planarize)
 
 } // namespace viennaps

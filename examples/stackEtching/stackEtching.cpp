@@ -27,18 +27,19 @@ int main(int argc, char *argv[]) {
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // geometry setup
-  auto geometry = SmartPointer<Domain<NumericType, D>>::New(
+  auto geometry = Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
-  MakeStack<NumericType, D>(
-      geometry, params.get<int>("numLayers"), params.get("layerHeight"),
-      params.get("substrateHeight"), 0.0 /*holeRadius*/,
-      params.get("trenchWidth"), params.get("maskHeight"), false /*halfStack*/)
+  MakeStack<NumericType, D>(geometry, params.get<int>("numLayers"),
+                            params.get("layerHeight"),
+                            params.get("substrateHeight"),
+                            0.0, // holeRadius
+                            params.get("trenchWidth"), params.get("maskHeight"))
       .apply();
 
   // copy top layer for deposition
   geometry->duplicateTopLevelSet(Material::Polymer);
 
-  // use pre-defined model Fluorocarbon etching model
+  // use pre-defined Fluorocarbon etching model
   auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(
       params.get("ionFlux"), params.get("etchantFlux"), params.get("polyFlux"),
       params.get("meanIonEnergy"), params.get("sigmaIonEnergy"),
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
   geometry->saveVolumeMesh("final");
 
   std::cout << "Extruding to 3D ..." << std::endl;
-  auto extruded = SmartPointer<Domain<NumericType, 3>>::New();
+  auto extruded = Domain<NumericType, 3>::New();
   Vec2D<NumericType> extrudeExtent{-20., 20.};
   Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
                        {viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,

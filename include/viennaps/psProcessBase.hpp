@@ -35,7 +35,7 @@ public:
   // Set the process domain.
   void setDomain(DomainType domain) { domain_ = domain; }
 
-  /* ----- Process parameters ----- */
+  // ----- Process parameters -----
 
   // Set the duration of the process.
   void setProcessDuration(NumericType duration) { processDuration_ = duration; }
@@ -45,7 +45,7 @@ public:
   // time step according to the CFL condition.
   NumericType getProcessDuration() const { return processTime_; }
 
-  /* ----- Ray tracing parameters ----- */
+  // ----- Ray tracing parameters -----
 
   // Set the number of iterations to initialize the coverages.
   void setMaxCoverageInitIterations(unsigned maxIt) { maxIterations_ = maxIt; }
@@ -97,7 +97,7 @@ public:
 
   auto &getRayTracingParameters() { return rayTracingParams_; }
 
-  /* ----- Advection parameters ----- */
+  // ----- Advection parameters -----
 
   // Set the integration scheme for solving the level-set equation.
   // Possible integration schemes are specified in
@@ -131,7 +131,7 @@ public:
 
   auto &getAdvectionParameters() { return advectionParams_; }
 
-  /* ----- Process execution ----- */
+  // ----- Process execution -----
 
   // A single flux calculation is performed on the domain surface. The result is
   // stored as point data on the nodes of the mesh.
@@ -145,7 +145,7 @@ public:
 
     if (!model_->useFluxEngine()) {
       Logger::getInstance()
-          .addWarning("Process model '" + name + "' does not use flux engine.")
+          .addError("Process model '" + name + "' does not use flux engine.")
           .print();
       return nullptr;
     }
@@ -210,7 +210,7 @@ public:
 
   // Run the process.
   void apply() {
-    /* ---------- Check input --------- */
+    // Check input
     if (!checkModelAndDomain())
       return;
 
@@ -239,14 +239,14 @@ public:
 
     if (!model_->getSurfaceModel()) {
       Logger::getInstance()
-          .addWarning("No surface model passed to Process.")
+          .addError("No surface model passed to Process.")
           .print();
       return;
     }
 
     if (!model_->getVelocityField()) {
       Logger::getInstance()
-          .addWarning("No velocity field passed to Process.")
+          .addError("No velocity field passed to Process.")
           .print();
       return;
     }
@@ -260,7 +260,7 @@ public:
                                      // metadata)
       domain_->addMetaData(model_->getProcessMetaData());
     }
-    /* ------ Process Setup ------ */
+    // ------ Process Setup ------
     const unsigned int logLevel = Logger::getLogLevel();
     Timer processTimer;
     processTimer.start();
@@ -305,6 +305,20 @@ public:
     const bool useFluxEngine = model_->useFluxEngine();
     if (useFluxEngine) {
       initFluxEngine();
+    }
+
+    if (logLevel >= 5) {
+      // debug output
+      std::stringstream ss;
+      ss << "Process: " << name << "\n"
+         << "Grid Delta: " << gridDelta << "\n"
+         << "Process Duration: " << processDuration_ << "\n"
+         << "Advection Parameters: " << advectionParams_.toMetaDataString()
+         << "\n";
+      if (useFluxEngine)
+        ss << "Ray Tracing Parameters: " << rayTracingParams_.toMetaDataString()
+           << "\n";
+      Logger::getInstance().addDebug(ss.str()).print();
     }
 
     // Determine whether advection callback is used
@@ -353,7 +367,7 @@ public:
     while (remainingTime > 0.) {
       // We need additional signal handling when running the C++ code from the
       // Python bindings to allow interrupts in the Python scripts
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
       if (PyErr_CheckSignals() != 0)
         throw pybind11::error_already_set();
 #endif
@@ -380,6 +394,7 @@ public:
       // update coverages and calculate coverage delta metric
       if (useCoverages) {
         coverages = surfaceModel->getCoverages();
+        // copy coverages of the previous step to compare with the current
         auto prevStepCoverages =
             viennals::PointData<NumericType>::New(*coverages);
 
@@ -411,7 +426,7 @@ public:
                                                         prevStepCoverages);
 
             Logger::getInstance()
-                .addTiming("Top-down flux calculation", rtTimer)
+                .addTiming("Flux calculation", rtTimer)
                 .print();
 
             coverageCalculationReps++;
@@ -436,8 +451,8 @@ public:
       if (velocityField->getTranslationFieldOptions() == 2)
         translationField_->buildKdTree(points);
 
-      // print debug output
-      if (logLevel >= 4) {
+      // write intermediate output
+      if (logLevel >= 3) {
         if (velocities)
           diskMesh_->getCellData().insertNextScalarData(*velocities,
                                                         "velocities");
@@ -527,8 +542,8 @@ public:
       previousTimeStep = advectionKernel.getAdvectedTime();
       if (previousTimeStep == std::numeric_limits<NumericType>::max()) {
         Logger::getInstance()
-            .addInfo("Process halted: Surface velocities are zero across the "
-                     "entire surface.")
+            .addWarning("Process stopped early: Velocities are zero across the "
+                        "entire surface.")
             .print();
         remainingTime = 0.;
         break;
@@ -545,6 +560,7 @@ public:
     }
 
     processTime_ = processDuration_ - remainingTime;
+    model_->finalize(domain_, processTime_);
     processTimer.finish();
 
     if (static_cast<int>(domain_->useMetaData) > 1) {
@@ -577,7 +593,6 @@ public:
                      processTimer.totalDuration * 1e-9)
           .print();
     }
-    model_->reset();
     if (useCoverages && logLevel >= 5)
       covMetricFile.close();
   }
@@ -585,18 +600,18 @@ public:
 protected:
   bool checkModelAndDomain() const {
     if (!domain_) {
-      Logger::getInstance().addWarning("No domain passed to Process.").print();
+      Logger::getInstance().addError("No domain passed to Process.").print();
       return false;
     }
 
     if (domain_->getLevelSets().empty()) {
-      Logger::getInstance().addWarning("No level sets in domain.").print();
+      Logger::getInstance().addError("No level sets in domain.").print();
       return false;
     }
 
     if (!model_) {
       Logger::getInstance()
-          .addWarning("No process model passed to Process.")
+          .addError("No process model passed to Process.")
           .print();
       return false;
     }
@@ -711,7 +726,7 @@ protected:
       for (unsigned iteration = 0; iteration < maxIterations_; ++iteration) {
         // We need additional signal handling when running the C++ code from
         // the Python bindings to allow interrupts in the Python scripts
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
         if (PyErr_CheckSignals() != 0)
           throw pybind11::error_already_set();
 #endif

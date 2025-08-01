@@ -731,4 +731,6 @@ private:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(FluorocarbonEtching)
+
 } // namespace viennaps

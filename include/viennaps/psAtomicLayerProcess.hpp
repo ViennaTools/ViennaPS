@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
 #include "psUtil.hpp"
@@ -119,7 +120,7 @@ public:
 
     checkInput();
 
-    /* ---------- Process Setup --------- */
+    // ---------- Process Setup ---------
     Timer processTimer;
     processTimer.start();
 
@@ -149,7 +150,7 @@ public:
       advectionKernel.insertNextLevelSet(dom);
     }
 
-    /* --------- Setup for ray tracing ----------- */
+    // --------- Setup for ray tracing -----------
 
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     viennaray::Trace<NumericType, D> rayTracer;
@@ -217,7 +218,7 @@ public:
       int pulseCounter = 0;
 
       while (time < pulseTime_) {
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
         if (PyErr_CheckSignals() != 0)
           throw pybind11::error_already_set();
 #endif
@@ -489,5 +490,7 @@ private:
   NumericType coverageTimeStep_ = 1.;
   std::vector<NumericType> desorptionRates_;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(AtomicLayerProcess)
 
 } // namespace viennaps

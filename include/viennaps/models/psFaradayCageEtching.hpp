@@ -20,7 +20,8 @@ template <typename NumericType> struct FaradayCageParameters {
   auto toProcessMetaData() const {
     std::unordered_map<std::string, std::vector<NumericType>> processData =
         ibeParams.toProcessMetaData();
-    processData["Cage Angle"] = {cageAngle * M_PI / 180.};
+    processData["Cage Angle"] = {static_cast<NumericType>(cageAngle * M_PI) /
+                                 static_cast<NumericType>(180.)};
     return processData;
   }
 };
@@ -257,12 +258,17 @@ public:
     firstInit = true;
   }
 
-  void reset() override final { firstInit = false; }
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) final {
+    firstInit = false;
+  }
 
 private:
   bool firstInit = false;
   std::vector<Material> maskMaterials_;
   FaradayCageParameters<NumericType> params_;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(FaradayCageEtching)
 
 } // namespace viennaps

@@ -146,4 +146,6 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(MakeStack)
+
 } // namespace viennaps

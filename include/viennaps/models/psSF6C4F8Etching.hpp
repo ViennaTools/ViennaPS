@@ -31,8 +31,7 @@ public:
 
   // All flux values are in units 1e15 / cm²
   SF6C4F8Etching(const double ionFlux, const double etchantFlux,
-                 const NumericType meanEnergy /* eV */,
-                 const NumericType sigmaEnergy /* eV */, // 4 parameters
+                 const NumericType meanEnergy, const NumericType sigmaEnergy,
                  const NumericType ionExponent = 300.,
                  const NumericType etchStopDepth =
                      std::numeric_limits<NumericType>::lowest()) {
@@ -160,5 +159,7 @@ private:
   PlasmaEtchingParameters<NumericType> params;
   using ProcessModel<NumericType, D>::processMetaData;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(SF6C4F8Etching)
 
 } // namespace viennaps

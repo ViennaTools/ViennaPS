@@ -329,4 +329,6 @@ private:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(MultiParticleProcess)
+
 } // namespace viennaps

@@ -33,14 +33,14 @@ public:
   }
 
   virtual SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) {
     return nullptr;
   }
 
   virtual void
-  updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+  updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
                   const std::vector<NumericType> &materialIds) {}
 
   // non-virtual functions

@@ -1,5 +1,5 @@
 #include <geometries/psMakePlane.hpp>
-#include <models/psAnisotropicProcess.hpp>
+#include <models/psWetEtching.hpp>
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
@@ -48,9 +48,12 @@ int main(int argc, char **argv) {
   ps::GDSReader<NumericType, D>(gds_mask, maskFileName)
       .apply(); // read GDS file
 
-  auto mask = gds_mask->layerToLevelSet(
-      1 /*layer in GDS file*/, 0 /*base z position*/,
-      4 * gridDelta /*mask height*/, true /*invert mask*/, false /*blur*/);
+  auto mask = gds_mask->layerToLevelSet(1,             // layer in GDS file
+                                        0,             // base z position
+                                        4 * gridDelta, // height
+                                        true,          // invert
+                                        false          // blur
+  );
 
   // Set up domain
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
@@ -61,8 +64,8 @@ int main(int argc, char **argv) {
 
   geometry->saveSurfaceMesh("initialGeometry.vtp");
 
-  // Anisotropic wet etching process model
-  auto model = ps::SmartPointer<ps::AnisotropicProcess<NumericType, D>>::New(
+  // Wet etching process model
+  auto model = ps::SmartPointer<ps::WetEtching<NumericType, D>>::New(
       direction100, direction010, r100, r110, r111, r311,
       std::vector<std::pair<ps::Material, NumericType>>{
           {ps::Material::Si, -1.}});

@@ -15,7 +15,7 @@ template <class NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
 
   {
-    auto domain = SmartPointer<Domain<NumericType, D>>::New();
+    auto domain = Domain<NumericType, D>::New();
     MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
                                true, Material::Si)
         .apply();
@@ -36,7 +36,7 @@ template <class NumericType, int D> void RunTest() {
   }
 
   {
-    auto domain = SmartPointer<Domain<NumericType, D>>::New();
+    auto domain = Domain<NumericType, D>::New();
     MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
                                true, Material::Si)
         .apply();
@@ -58,7 +58,7 @@ template <class NumericType, int D> void RunTest() {
   }
 
   {
-    auto domain = SmartPointer<Domain<NumericType, D>>::New();
+    auto domain = Domain<NumericType, D>::New();
     MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
                                true, Material::Si)
         .apply();

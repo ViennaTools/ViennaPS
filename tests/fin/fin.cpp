@@ -8,7 +8,7 @@ namespace viennacore {
 using namespace viennaps;
 
 template <class NumericType, int D> void RunTest() {
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  auto domain = Domain<NumericType, D>::New();
 
   // Logger::setLogLevel(LogLevel::DEBUG);
 

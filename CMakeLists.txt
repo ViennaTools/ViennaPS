@@ -2,14 +2,16 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.6.1)
+  VERSION 3.7.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
+option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
+option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
+
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
-option(VIENNAPS_FORCE_GPU "Require GPU support" OFF)
 
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
@@ -95,10 +97,10 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.4.4
+  VERSION 1.5.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}" "VIENNACORE_FORCE_GPU ${VIENNAPS_FORCE_GPU}")
+  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMAddPackage(
   NAME PackageProject
@@ -107,25 +109,61 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 3.4.1
+  VERSION 3.4.2
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 4.4.0
+  VERSION 4.5.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
   NAME ViennaCS
-  VERSION 1.1.0
+  VERSION 1.1.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Shared/Static Library
+# --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_PRECOMPILE_HEADERS)
+  set(VIENNAPS_LINKAGE SHARED)
+
+  if(VIENNAPS_STATIC_BUILD)
+    set(VIENNAPS_LINKAGE STATIC)
+  endif()
+
+  set(LIB_NAME "viennaps")
+  add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
+
+  target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
+  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)
+  target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp" "lib/specializationsModels.cpp"
+                                     "lib/specializationsGeometries.cpp")
+
+  set_target_properties(
+    ${LIB_NAME}
+    PROPERTIES VERSION ${PROJECT_VERSION} # full x.y.z appears in filename
+               SOVERSION ${PROJECT_VERSION_MAJOR} # major version for SONAME
+               WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+  target_link_libraries(${PROJECT_NAME} INTERFACE ${LIB_NAME})
+  target_compile_definitions(${PROJECT_NAME} INTERFACE VIENNAPS_USE_PRECOMPILED)
+
+  install(
+    TARGETS ${LIB_NAME}
+    EXPORT ViennaPSTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin)
+endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Examples
@@ -181,4 +219,4 @@ packageProject(
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")
+  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS;OpenMP")

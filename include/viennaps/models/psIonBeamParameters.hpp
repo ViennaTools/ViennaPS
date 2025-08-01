@@ -39,9 +39,13 @@ template <typename NumericType> struct IBEParameters {
     processData["Threshold Energy"] = {thresholdEnergy};
     processData["Exponent"] = {exponent};
     processData["n_l"] = {n_l};
-    processData["Inflect Angle"] = {inflectAngle * M_PI / 180.};
-    processData["Min Angle"] = {minAngle * M_PI / 180.};
-    processData["Tilt Angle"] = {tiltAngle * M_PI / 180.};
+    processData["Inflect Angle"] = {
+        static_cast<NumericType>(inflectAngle * M_PI) /
+        static_cast<NumericType>(180.)};
+    processData["Min Angle"] = {static_cast<NumericType>(minAngle * M_PI) /
+                                static_cast<NumericType>(180.)};
+    processData["Tilt Angle"] = {static_cast<NumericType>(tiltAngle * M_PI) /
+                                 static_cast<NumericType>(180.)};
 
     if (redepositionRate > 0) {
       processData["Redeposition Threshold"] = {redepositionThreshold};

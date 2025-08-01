@@ -26,7 +26,7 @@ int main() {
   // velocity field
   auto velField = ps::SmartPointer<VelocityField<NumericType, D>>::New();
 
-  /* ------------- Geometry setup (ViennaLS) ------------ */
+  // ------------- Geometry setup (ViennaLS) ------------
   auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   {
     NumericType extent = 8;

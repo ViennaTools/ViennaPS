@@ -15,7 +15,7 @@ template <class NumericType> auto Trench() {
   NumericType depth = 25.;
 
   using namespace viennaps;
-  auto domain = SmartPointer<Domain<NumericType, DIM>>::New();
+  auto domain = Domain<NumericType, DIM>::New();
   MakeTrench<NumericType, DIM>(domain, GRID_DELTA, xExtent, yExtent, width,
                                depth, 0., GRID_DELTA / 2., false, true,
                                Material::Si)
@@ -30,7 +30,7 @@ template <class NumericType> auto Hole() {
   NumericType depth = 25.;
 
   using namespace viennaps;
-  auto domain = SmartPointer<Domain<NumericType, DIM>>::New();
+  auto domain = Domain<NumericType, DIM>::New();
   MakeHole<NumericType, DIM>(domain, GRID_DELTA, xExtent, yExtent, radius,
                              depth, 0., GRID_DELTA / 2., false, true,
                              Material::Si)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psDomain.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <fstream>
 #include <string>
@@ -13,13 +14,11 @@ namespace viennaps {
 
 using namespace viennacore;
 
-/**
- * @brief Writer class for serializing and writing a psDomain to a file
- *
- * This class handles serializing a Process Simulation Domain (psDomain) to a
- * binary file. The file format (.vpsd - ViennaPS Domain) contains all
- * levelSets, cell data, material mappings and domain setup information.
- */
+///  @brief Writer class for serializing and writing a Domain to a file
+///
+///  This class handles serializing a Process Simulation Domain (Domain) to a
+///  binary file. The file format (.vpsd - ViennaPS Domain) contains all
+///  levelSets, cell data, material mappings and domain setup information.
 template <class NumericType, int D> class Writer {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
@@ -48,7 +47,7 @@ public:
     // check domain
     if (domain == nullptr) {
       Logger::getInstance()
-          .addWarning("No domain was passed to Writer. Not writing.")
+          .addError("No domain was passed to Writer. Not writing.")
           .print();
       return;
     }
@@ -56,7 +55,7 @@ public:
     // check filename
     if (fileName.empty()) {
       Logger::getInstance()
-          .addWarning("No file name specified for Writer. Not writing.")
+          .addError("No file name specified for Writer. Not writing.")
           .print();
       return;
     }
@@ -127,5 +126,7 @@ public:
     fout.close();
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Writer)
 
 } // namespace viennaps

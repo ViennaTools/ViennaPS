@@ -4,7 +4,7 @@
 */
 
 #define PYBIND11_DETAILED_ERROR_MESSAGES
-#define VIENNAPS_PYTHON_BUILD
+#define VIENNATOOLS_PYTHON_BUILD
 
 // correct module name macro
 #define TOKENPASTE_INTERNAL(x, y, z) x##y##z
@@ -54,7 +54,6 @@
 #include <psVelocityField.hpp>
 
 // models
-#include <models/psAnisotropicProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -68,10 +67,12 @@
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>
+#include <models/psSelectiveEpitaxy.hpp>
 #include <models/psSingleParticleALD.hpp>
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 #include <models/psTEOSPECVD.hpp>
+#include <models/psWetEtching.hpp>
 
 // visualization
 #include <psToDiskMesh.hpp>
@@ -352,14 +353,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("ERROR", LogLevel::ERROR)
       .value("WARNING", LogLevel::WARNING)
       .value("INFO", LogLevel::INFO)
-      .value("TIMING", LogLevel::TIMING)
       .value("INTERMEDIATE", LogLevel::INTERMEDIATE)
+      .value("TIMING", LogLevel::TIMING)
       .value("DEBUG", LogLevel::DEBUG);
 
   pybind11::class_<Logger, SmartPointer<Logger>>(module, "Logger",
                                                  pybind11::module_local())
       .def_static("setLogLevel", &Logger::setLogLevel)
       .def_static("getLogLevel", &Logger::getLogLevel)
+      .def_static("setLogFile", &Logger::setLogFile)
+      .def_static("appendToLogFile", &Logger::appendToLogFile)
+      .def_static("closeLogFile", &Logger::closeLogFile)
       .def_static("getInstance", &Logger::getInstance,
                   pybind11::return_value_policy::reference)
       .def("addDebug", &Logger::addDebug)
@@ -1419,21 +1423,31 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("topHeight"), pybind11::arg("centerWidth"),
           pybind11::arg("stabilityFactor"));
 
-  // Anisotropic Process
-  pybind11::class_<AnisotropicProcess<T, D>,
-                   SmartPointer<AnisotropicProcess<T, D>>>(
-      module, "AnisotropicProcess", processModel)
-      .def(pybind11::init(&SmartPointer<AnisotropicProcess<T, D>>::New<
+  // Wet Etching Process
+  pybind11::class_<WetEtching<T, D>, SmartPointer<WetEtching<T, D>>>(
+      module, "WetEtching", processModel)
+      .def(pybind11::init(&SmartPointer<WetEtching<T, D>>::New<
                           const std::vector<std::pair<Material, T>>>),
-           pybind11::arg("materials"))
-      .def(pybind11::init(&SmartPointer<AnisotropicProcess<T, D>>::New<
+           pybind11::arg("materialRates"))
+      .def(pybind11::init(&SmartPointer<WetEtching<T, D>>::New<
                           const std::array<T, 3> &, const std::array<T, 3> &,
                           const T, const T, const T, const T,
                           const std::vector<std::pair<Material, T>>>),
            pybind11::arg("direction100"), pybind11::arg("direction010"),
            pybind11::arg("rate100"), pybind11::arg("rate110"),
            pybind11::arg("rate111"), pybind11::arg("rate311"),
-           pybind11::arg("materials"));
+           pybind11::arg("materialRates"));
+
+  // Selective Epitaxy Process
+  pybind11::class_<SelectiveEpitaxy<T, D>,
+                   SmartPointer<SelectiveEpitaxy<T, D>>>(
+      module, "SelectiveEpitaxy", processModel)
+      .def(
+          pybind11::init(
+              &SmartPointer<SelectiveEpitaxy<T, D>>::New<
+                  const std::vector<std::pair<Material, T>>, const T, const T>),
+          pybind11::arg("materialRates"), pybind11::arg("rate111") = 0.5,
+          pybind11::arg("rate100") = 1.0);
 
   // Single Particle ALD
   pybind11::class_<SingleParticleALD<T, D>,
@@ -1508,9 +1522,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Hole
   pybind11::enum_<HoleShape>(module, "HoleShape")
-      .value("Full", HoleShape::Full)
-      .value("Half", HoleShape::Half)
-      .value("Quarter", HoleShape::Quarter);
+      .value("FULL", HoleShape::FULL)
+      .value("HALF", HoleShape::HALF)
+      .value("QUARTER", HoleShape::QUARTER);
 
   pybind11::class_<MakeHole<T, D>>(module, "MakeHole")
       .def(pybind11::init<DomainType, T, T, T, T, T, HoleShape, Material,
@@ -1519,7 +1533,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("holeDepth"), pybind11::arg("holeTaperAngle") = 0.,
            pybind11::arg("maskHeight") = 0.,
            pybind11::arg("maskTaperAngle") = 0.,
-           pybind11::arg("holeShape") = HoleShape::Full,
+           pybind11::arg("holeShape") = HoleShape::FULL,
            pybind11::arg("material") = Material::Si,
            pybind11::arg("maskMaterial") = Material::Mask)
       .def(pybind11::init<DomainType, T, T, T, T, T, T, T, bool, bool,
@@ -1532,7 +1546,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            pybind11::arg("periodicBoundary") = false,
            pybind11::arg("makeMask") = false,
            pybind11::arg("material") = Material::Si,
-           pybind11::arg("holeShape") = HoleShape::Full)
+           pybind11::arg("holeShape") = HoleShape::FULL)
       .def("apply", &MakeHole<T, D>::apply, "Create a hole geometry.");
 
   // Fin
@@ -1602,7 +1616,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("ignoreFluxBoundaries",
                      &RayTracingParameters<T, D>::ignoreFluxBoundaries)
       .def_readwrite("smoothingNeighbors",
-                     &RayTracingParameters<T, D>::smoothingNeighbors);
+                     &RayTracingParameters<T, D>::smoothingNeighbors)
+      .def("toMetaData", &RayTracingParameters<T, D>::toMetaData,
+           "Convert the ray tracing parameters to a metadata dict.")
+      .def("toMetaDataString", &RayTracingParameters<T, D>::toMetaDataString,
+           "Convert the ray tracing parameters to a metadata string.");
 
   // AdvectionParameters
   pybind11::class_<AdvectionParameters<T>>(module, "AdvectionParameters")
@@ -1615,7 +1633,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("checkDissipation",
                      &AdvectionParameters<T>::checkDissipation)
       .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
-      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids);
+      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids)
+      .def("toMetaData", &AdvectionParameters<T>::toMetaData,
+           "Convert the advection parameters to a metadata dict.")
+      .def("toMetaDataString", &AdvectionParameters<T>::toMetaDataString,
+           "Convert the advection parameters to a metadata string.");
+
+  pybind11::class_<lsInternal::StencilLocalLaxFriedrichsScalar<T, D, 1>>(
+      module, "StencilLocalLaxFriedrichsScalar", pybind11::module_local())
+      .def_static(
+          "setMaxDissipation",
+          &lsInternal::StencilLocalLaxFriedrichsScalar<T, D,
+                                                       1>::setMaxDissipation,
+          pybind11::arg("maxDissipation"));
 
   // AtomicLayerProcess
   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")

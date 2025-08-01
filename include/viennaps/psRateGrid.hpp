@@ -7,6 +7,8 @@
 
 #include <compact/psCSVReader.hpp>
 
+#include "psPreCompileMacros.hpp"
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -254,5 +256,7 @@ private:
     return (wSum > 0) ? wrSum / wSum : 0.0;
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(RateGrid)
 
 } // namespace viennaps

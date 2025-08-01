@@ -28,8 +28,8 @@ public:
 
   // All flux values are in units 1e15 / cm²
   HBrO2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType meanEnergy /* eV */,
-               const NumericType sigmaEnergy /* eV */, // 5 parameters
+               const double oxygenFlux, const NumericType meanEnergy,
+               const NumericType sigmaEnergy,
                const NumericType ionExponent = 300.,
                const NumericType oxySputterYield = 2.,
                const NumericType etchStopDepth =
@@ -161,5 +161,7 @@ private:
 
   PlasmaEtchingParameters<NumericType> params;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(HBrO2Etching)
 
 } // namespace viennaps

@@ -347,4 +347,6 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(OxideRegrowth)
+
 } // namespace viennaps

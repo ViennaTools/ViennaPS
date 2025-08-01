@@ -60,7 +60,7 @@ public:
   void setMaterialAtIdx(std::size_t idx, const Material material) {
     if (idx >= size()) {
       Logger::getInstance()
-          .addWarning("Setting material with out-of-bounds index.")
+          .addError("Setting material with out-of-bounds index.")
           .print();
     }
     map_->setMaterialId(idx, static_cast<int>(material));

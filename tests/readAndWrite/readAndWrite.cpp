@@ -110,7 +110,7 @@ template <class T> bool test3DHoleWriteAndRead() {
   viennaps::MakeHole<T, D>(domain, holeRadius, holeDepth, taperAngle,
                            10.0,                      // maskHeight
                            2.0,                       // maskTaperAngle
-                           viennaps::HoleShape::Full, // full hole
+                           viennaps::HoleShape::FULL, // full hole
                            viennaps::Material::Si, viennaps::Material::SiO2)
       .apply();
 
@@ -134,8 +134,10 @@ template <class T> bool test3DHoleWriteAndRead() {
   }
 
   // Read the domain back from file
+  auto readDomain = viennaps::Domain<T, D>::New();
   viennaps::Reader<T, D> reader(testFileName);
-  auto readDomain = reader.apply();
+  reader.setDomain(readDomain);
+  reader.apply();
 
   // Write meshes for visualization
   readDomain->saveSurfaceMesh("readHole3D-surfaceMesh");
@@ -220,8 +222,10 @@ int main() {
   }
 
   // Read the domain back from file
+  auto readDomain = viennaps::Domain<NumericType, D>::New();
   viennaps::Reader<NumericType, D> reader(testFileName);
-  auto readDomain = reader.apply();
+  reader.setDomain(readDomain);
+  reader.apply();
 
   // Write meshes for visualization
   readDomain->saveSurfaceMesh("readDomain-surfaceMesh");

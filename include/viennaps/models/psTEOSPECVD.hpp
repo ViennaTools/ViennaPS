@@ -130,4 +130,6 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(TEOSPECVD)
+
 } // namespace viennaps

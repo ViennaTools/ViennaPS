@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
+#include "../psPreCompileMacros.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsFromSurfaceMesh.hpp>
@@ -216,5 +217,7 @@ private:
     viennals::VTKWriter<NumericType>(mesh, name_ + name).apply();
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(GeometryFactory)
 
 } // namespace viennaps

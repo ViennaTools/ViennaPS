@@ -2,6 +2,7 @@
 
 #include "psDomainSetup.hpp"
 #include "psMaterials.hpp"
+#include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
 
 #include <lsBooleanOperation.hpp>
@@ -21,6 +22,11 @@
 
 namespace viennaps {
 
+inline constexpr std::string_view version = "3.6.1";
+inline constexpr int versionMajor = static_cast<int>(version[0] - '0');
+inline constexpr int versionMinor = static_cast<int>(version[2] - '0');
+inline constexpr int versionPatch = static_cast<int>(version[4] - '0');
+
 using namespace viennacore;
 
 enum class MetaDataLevel {
@@ -31,18 +37,16 @@ enum class MetaDataLevel {
                // parameters, ray tracing parameters, etc.)
 };
 
-/**
-  This class represents all materials in the simulation domain.
-  It contains Level-Sets for an accurate surface representation
-  and a cell-based structure for the storage of volume information.
-  These structures are used depending on the process applied to the material.
-  Processes may use one of either structure or both.
-
-  Level-Sets in the domain automatically wrap all lower domains when inserted.
-  If specified, each Level-Set is assigned a specific material,
-  which can be used in a process to implement material specific rates or
-  similar.
-*/
+// This class represents all materials in the simulation domain.
+// It contains Level-Sets for an accurate surface representation
+// and a cell-based structure for the storage of volume information.
+// These structures are used depending on the process applied to the material.
+// Processes may use one of either structure or both.
+//
+// Level-Sets in the domain automatically wrap all lower domains when inserted.
+// If specified, each Level-Set is assigned a specific material,
+// which can be used in a process to implement material specific rates or
+// similar.
 template <class NumericType, int D> class Domain {
 public:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
@@ -87,7 +91,6 @@ public:
   Domain(NumericType gridDelta, NumericType xExtent,
          BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : setup_(gridDelta, xExtent, 0.0, boundary) {
-    static_assert(D == 2, "Domain setup only valid for 2D.");
     initMetaData();
   }
 
@@ -169,7 +172,7 @@ public:
   // instead.
   void insertNextLevelSet(lsDomainType levelSet,
                           bool wrapLowerLevelSet = true) {
-    if (levelSets_.empty()) {
+    if (levelSets_.empty() && setup_.gridDelta() == 0.0) {
       setup_.init(levelSet->getGrid());
       initMetaData();
     }
@@ -220,7 +223,7 @@ public:
   void duplicateTopLevelSet(const Material material) {
     if (levelSets_.empty()) {
       Logger::getInstance()
-          .addWarning("Trying to duplicate non-existing Level-Set in domain.")
+          .addError("Cannot duplicate Level-Set in empty domain.")
           .print();
       return;
     }
@@ -262,7 +265,8 @@ public:
   void removeLevelSet(unsigned int idx, bool removeWrapped = true) {
     if (idx >= levelSets_.size()) {
       Logger::getInstance()
-          .addWarning("Trying to remove non-existing Level-Set from domain.")
+          .addError("Cannot remove Level-Set at index " + std::to_string(idx) +
+                    ". Index out of bounds.")
           .print();
       return;
     }
@@ -365,6 +369,10 @@ public:
 
   // Returns a vector with all Level-Sets in the domain.
   auto &getLevelSets() const { return levelSets_; }
+
+  auto getNumberOfLevelSets() const {
+    return static_cast<unsigned int>(levelSets_.size());
+  }
 
   // Returns the material map which contains the specified material for each
   // Level-Set in the domain.
@@ -564,5 +572,7 @@ private:
 
 template <class NumericType, int D>
 MetaDataLevel Domain<NumericType, D>::useMetaData = MetaDataLevel::NONE;
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Domain)
 
 } // namespace viennaps

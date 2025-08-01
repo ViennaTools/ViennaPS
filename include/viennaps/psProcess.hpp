@@ -1,5 +1,6 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
 #include "psProcessBase.hpp"
 #include "psProcessModel.hpp"
 #include "psTranslationField.hpp"
@@ -229,5 +230,7 @@ private:
   viennaray::Trace<NumericType, D> rayTracer;
   std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Process)
 
 } // namespace viennaps

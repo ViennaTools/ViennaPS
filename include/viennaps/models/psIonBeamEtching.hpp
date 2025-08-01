@@ -10,7 +10,7 @@
 #include <functional>
 #include <random>
 
-#ifdef VIENNAPS_PYTHON_BUILD
+#ifdef VIENNATOOLS_PYTHON_BUILD
 #include <Python.h>
 #endif
 
@@ -95,7 +95,8 @@ public:
     NumericType yield = params_.yieldFunction(theta);
 
     localData.getVectorData(0)[primID] +=
-        std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy), 0.) *
+        std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
+                 NumericType(0.)) *
         yield;
 
     if (params_.redepositionRate > 0.)
@@ -123,7 +124,7 @@ public:
     if (params_.redepositionRate > 0.) {
       redepositionWeight_ =
           std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
-                   0.) *
+                   NumericType(0.)) *
           params_.yieldFunction(incAngle);
     }
 
@@ -245,12 +246,17 @@ public:
     }
   }
 
-  void reset() final { firstInit = false; }
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) final {
+    firstInit = false;
+  }
 
 private:
   bool firstInit = false;
   std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(IonBeamEtching)
 
 } // namespace viennaps

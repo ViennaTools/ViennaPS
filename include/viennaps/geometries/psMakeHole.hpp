@@ -8,7 +8,7 @@
 
 namespace viennaps {
 
-enum class HoleShape { Full, Half, Quarter };
+enum class HoleShape { FULL, HALF, QUARTER };
 
 using namespace viennacore;
 
@@ -45,7 +45,7 @@ template <class NumericType, int D> class MakeHole {
 public:
   MakeHole(psDomainType domain, NumericType holeRadius, NumericType holeDepth,
            NumericType holeTaperAngle = 0., NumericType maskHeight = 0.,
-           NumericType maskTaperAngle = 0., HoleShape shape = HoleShape::Full,
+           NumericType maskTaperAngle = 0., HoleShape shape = HoleShape::FULL,
            Material material = Material::Si,
            Material maskMaterial = Material::Mask)
       : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
@@ -58,7 +58,7 @@ public:
            NumericType yExtent, NumericType holeRadius, NumericType holeDepth,
            NumericType taperAngle = 0., NumericType baseHeight = 0.,
            bool periodicBoundary = false, bool makeMask = false,
-           Material material = Material::Si, HoleShape shape = HoleShape::Full)
+           Material material = Material::Si, HoleShape shape = HoleShape::FULL)
       : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         holeRadius_(holeRadius), holeDepth_(makeMask ? 0 : holeDepth),
         holeTaperAngle_(makeMask ? 0 : taperAngle),
@@ -74,10 +74,10 @@ public:
     if constexpr (D != 3) {
       Logger::getInstance()
           .addWarning("MakeHole: Hole geometry can only be created in 3D! "
-                      "Falling back to trench geometry.")
+                      "Using trench geometry instead.")
           .print();
       bool halfTrench =
-          shape_ == HoleShape::Half || shape_ == HoleShape::Quarter;
+          shape_ == HoleShape::HALF || shape_ == HoleShape::QUARTER;
       MakeTrench<NumericType, D>(domain_, 2 * holeRadius_, holeDepth_,
                                  holeTaperAngle_, maskHeight_, maskTaperAngle_,
                                  halfTrench, material_)
@@ -91,17 +91,17 @@ public:
     auto &setup = domain_->getSetup();
 
     if (setup.hasPeriodicBoundary() &&
-        (shape_ == HoleShape::Half || shape_ == HoleShape::Quarter)) {
+        (shape_ == HoleShape::HALF || shape_ == HoleShape::QUARTER)) {
       Logger::getInstance()
-          .addWarning("MakeHole: 'Half' or 'Quarter' shapes do not support "
+          .addWarning("MakeHole: 'HALF' or 'QUARTER' shapes do not support "
                       "periodic boundaries! Creating full hole.")
           .print();
-      shape_ = HoleShape::Full;
+      shape_ = HoleShape::FULL;
     }
 
-    if (shape_ == HoleShape::Half) {
+    if (shape_ == HoleShape::HALF) {
       setup.halveXAxis();
-    } else if (shape_ == HoleShape::Quarter) {
+    } else if (shape_ == HoleShape::QUARTER) {
       setup.halveXAxis();
       setup.halveYAxis();
     }
@@ -131,5 +131,7 @@ public:
     }
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(MakeHole)
 
 } // namespace viennaps

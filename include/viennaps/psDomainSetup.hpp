@@ -1,6 +1,8 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
 #include "psUtil.hpp"
+
 #include <hrleGrid.hpp>
 #include <vcLogger.hpp>
 
@@ -40,7 +42,7 @@ public:
       : gridDelta_(gridDelta) {
     if (xExtent <= 0.0) {
       Logger::getInstance()
-          .addWarning("Invalid 'x' extent for domain setup.")
+          .addError("Invalid 'x' extent for domain setup.")
           .print();
     }
 
@@ -50,7 +52,7 @@ public:
     if constexpr (D == 3) {
       if (yExtent <= 0.0) {
         Logger::getInstance()
-            .addWarning("Invalid 'y' extent for domain setup.")
+            .addError("Invalid 'y' extent for domain setup.")
             .print();
       }
       bounds_[2] = -yExtent / 2.;
@@ -176,5 +178,7 @@ public:
     }
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(DomainSetup)
 
 } // namespace viennaps

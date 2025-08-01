@@ -65,17 +65,18 @@ if(VIENNAPS_USE_GPU)
 
   # Include pipeline files
   set(generated_files) # Empty list variable
-  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/PlasmaEtchingPipeline.cu")
-  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/SingleParticlePipeline.cu")
-  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/MultiParticlePipeline.cu")
-  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/FaradayCagePipeline.cu")
-  generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/IonBeamPipeline.cu")
+  file(GLOB files "${VIENNAPS_PIPELINE_DIR}/*.cu")
+  foreach(file ${files})
+    get_filename_component(filename ${file} NAME)
+    generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/${filename}")
+  endforeach()
+  # Generate CUDA kernels
   generate_kernel(viennaps3d generated_files ${VIENNARAY_CUDA_KERNELS})
 
   # Include ViennaPS GPU and OptiX headers
   target_sources(viennaps3d PRIVATE ${generated_files})
   target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
-                                                ${OptiX_INCLUDE} ${CUDA_INCLUDE_DIRS})
+                                                ${OptiX_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS})
   target_link_libraries(viennaps3d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
   target_compile_definitions(viennaps3d PRIVATE VIENNAPS_USE_GPU)
   target_compile_definitions(viennaps3d
