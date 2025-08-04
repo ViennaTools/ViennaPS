@@ -5,6 +5,7 @@
 #include "psProcessModel.hpp"
 #include "psProcessParams.hpp"
 #include "psTranslationField.hpp"
+#include "psUnits.hpp"
 #include "psUtil.hpp"
 
 #include <lsAdvect.hpp>

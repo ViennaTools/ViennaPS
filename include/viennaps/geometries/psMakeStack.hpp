@@ -38,7 +38,7 @@ public:
   MakeStack(psDomainType domain, int numLayers, NumericType layerHeight,
             NumericType substrateHeight, NumericType holeRadius,
             NumericType trenchWidth, NumericType maskHeight,
-            NumericType taperAngle, bool halfStack = false,
+            NumericType taperAngle = 0.0, bool halfStack = false,
             Material maskMaterial = Material::Mask)
       : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         numLayers_(numLayers), layerHeight_(layerHeight),
