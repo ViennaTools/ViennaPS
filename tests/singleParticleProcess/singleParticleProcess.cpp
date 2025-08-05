@@ -27,7 +27,7 @@ template <class NumericType, int D> void RunTest() {
                    2);
     VC_TEST_ASSERT(model->getParticleTypes().size() == 1);
 
-    Process<NumericType, D>(domain, model, 2.).apply();
+    Process<NumericType, D>(domain, model, 1.).apply();
 
     VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
     VC_TEST_ASSERT(domain->getMaterialMap());
@@ -50,7 +50,7 @@ template <class NumericType, int D> void RunTest() {
                    2);
     VC_TEST_ASSERT(model->getParticleTypes().size() == 1);
 
-    Process<NumericType, D>(domain, model, 2.).apply();
+    Process<NumericType, D>(domain, model, 1.).apply();
 
     VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
     VC_TEST_ASSERT(domain->getMaterialMap());
