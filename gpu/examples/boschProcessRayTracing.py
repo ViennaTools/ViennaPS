@@ -28,9 +28,9 @@ vps.Logger.setLogLevel(vps.LogLevel.ERROR)
 
 # Map the shape string to the corresponding vps.HoleShape enum
 shape_map = {
-    "Full": vps.HoleShape.Full,
-    "Half": vps.HoleShape.Half,
-    "Quarter": vps.HoleShape.Quarter,
+    "Full": vps.HoleShape.FULL,
+    "Half": vps.HoleShape.HALF,
+    "Quarter": vps.HoleShape.QUARTER,
 }
 
 hole_shape_str = params.get("holeShape", "Full").strip()

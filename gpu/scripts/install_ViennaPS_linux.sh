@@ -73,7 +73,7 @@ fi
 source $venv_dir/bin/activate
 
 # Check if ViennaLS Python package is installed
-viennals_version_required="4.4.0"
+viennals_version_required="4.5.0"
 if ! pip show ViennaLS &> /dev/null; then
     echo "ViennaLS Python package is not installed. Local ViennaLS build is required."
     read -r -p "Enter the path to the ViennaLS directory (e.g., /path/to/ViennaLS, press enter to download): " viennals_dir
@@ -117,7 +117,7 @@ if [ "$viennaps_dir" != "ViennaPS" ]; then
 fi
 
 # Install ViennaPS with GPU support (using gcc-12 and g++-12)
-OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_FORCE_GPU=ON pip install . $verbose_flag
+OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_USE_GPU=ON pip install . $verbose_flag
 
 echo "Installation complete. To activate the virtual environment, run:"
 echo "source $venv_dir/bin/activate"

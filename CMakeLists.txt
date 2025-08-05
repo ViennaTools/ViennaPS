@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.7.0)
+  VERSION 3.7.1)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -128,6 +128,7 @@ CPMFindPackage(
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
+target_compile_definitions(${PROJECT_NAME} INTERFACE VIENNAPS_VERSION="${PROJECT_VERSION}")
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Shared/Static Library
