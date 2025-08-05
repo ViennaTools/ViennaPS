@@ -4,27 +4,29 @@ layout: default
 nav_order: 1
 ---
 
-# ViennaPS
+<!-- # ViennaPS
 {: .fs-10 }
 
 Process Simulation Library
-{: .fs-6 .fw-300 }
+{: .fs-6 .fw-300 } -->
+
+![]({% link assets/images/banner.png %})
 
 [Get started now]({% link inst/index.md %}){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View it on GitHub](https://github.com/ViennaTools/ViennaPS){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
-ViennaPS is a header-only C++ library for simulating microelectronic fabrication processes. It combines surface and volume representations with advanced level-set methods and Monte Carlo flux calculations, powered by high-performance ray tracing. Users can develop custom models, use pre-configured physical models, or leverage emulation for flexible and efficient process simulations.
+ViennaPS is a header-only C++ library for topography simulation in microelectronic fabrication processes. It models the evolution of 2D and 3D surfaces during etching, deposition, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation. This allows accurate, feature-scale simulation of complex fabrication geometries.
 
-ViennaPS is designed to be easily integrated into existing C++ projects and provides Python bindings for seamless use in Python environments. The library is under active development and is continuously improved to meet the evolving needs of process simulation in microelectronics.
+ViennaPS supports both physical process models and fast emulation approaches, enabling flexible and efficient development of semiconductor processes. It can be easily integrated into existing C++ projects and also provides Python bindings for use in Python-based workflows. The library is actively developed and continuously improved to address the needs of process and topography simulation in microelectronics.
 
 {: .note }
 > ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know on [GitHub][ViennaPS issues] or contact us directly at [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.at)!
 
-This documentation serves as your comprehensive guide to understanding, implementing, and harnessing the capabilities of our process simulation library. Whether you are a seasoned researcher seeking to refine your simulations or an engineer aiming to optimize real-world processes, this library provides a versatile and robust platform to meet your diverse needs.
+This documentation is your guide to using and getting the most out of our process simulation library. Whether you're a researcher looking to improve your simulation workflows or an engineer working to optimize fabrication processes, this library offers a flexible and powerful platform to support your work.
 
-Throughout this documentation, you will find detailed explanations, practical examples, and best practices to effectively utilize the library. We aim to empower users with the knowledge and tools necessary to simulate a wide range of processes accurately and efficiently, making informed decisions and driving innovation in the field.
+Inside, you'll find clear explanations, practical examples, and recommended workflows to help you use the library effectively. Our goal is to give you the knowledge and tools needed to accurately simulate a wide range of fabrication processes, enabling better insights, informed decisions, and innovation in the field.
 
 ## Contributing
 
@@ -46,7 +48,7 @@ Contact us via: [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.
 
 ## License 
 
-See file [LICENSE](https://github.com/ViennaTools/ViennaPS/blob/master/LICENSE) in the base directory.
+ViennaPS is licensed under the [MIT License](https://github.com/ViennaTools/ViennaPS/blob/master/LICENSE).
 
 [ViennaPS repo]: https://github.com/ViennaTools/ViennaPS
 [ViennaPS issues]: https://github.com/ViennaTools/ViennaPS/issues

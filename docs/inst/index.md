@@ -77,7 +77,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.1.0")
+  CPMAddPackage("gh:viennatools/viennaps@3.7.0")
   ```
 
 * With a local installation
@@ -89,3 +89,12 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
     find_package(ViennaPS)
     target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
     ```
+
+### Shared Library
+In order to save build time during development, dynamically linked shared libraries can be used if ViennaPS was built with them. This is done by precompiling the most common template specialisations. In order to use shared libraries, use
+
+```bash
+cmake -B build -DVIENNALS_PRECOMPILE_HEADERS=ON
+```
+
+If ViennaPS was built with shared libraries and you use ViennaPS in your project (see above), CMake will automatically link them to your project.
