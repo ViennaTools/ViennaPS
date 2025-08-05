@@ -98,11 +98,9 @@ else()
 endif()
 
 target_compile_definitions(
-  viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2 -DVIENNAPS_MODULE_NAME=viennaps2d
-                     -DVIENNAPS_VERSION=${CMAKE_PROJECT_VERSION})
+  viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2 -DVIENNAPS_MODULE_NAME=viennaps2d)
 target_compile_definitions(
-  viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3 -DVIENNAPS_MODULE_NAME=viennaps3d
-                     -DVIENNAPS_VERSION=${CMAKE_PROJECT_VERSION})
+  viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3 -DVIENNAPS_MODULE_NAME=viennaps3d)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Lib-Folder
