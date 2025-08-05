@@ -157,6 +157,21 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleALD");
+
+    this->processMetaData["stickingProbability"] =
+        std::vector<NumericType>{stickingProbability};
+    this->processMetaData["numCycles"] =
+        std::vector<NumericType>{static_cast<NumericType>(numCycles)};
+    this->processMetaData["growthPerCycle"] =
+        std::vector<NumericType>{growthPerCycle};
+    this->processMetaData["totalCycles"] =
+        std::vector<NumericType>{static_cast<NumericType>(totalCycles)};
+    this->processMetaData["coverageTimeStep"] =
+        std::vector<NumericType>{coverageTimeStep};
+    this->processMetaData["evaporationFlux"] = std::vector<NumericType>{evFlux};
+    this->processMetaData["incomingFlux"] = std::vector<NumericType>{inFlux};
+    this->processMetaData["s0"] = std::vector<NumericType>{s0};
+    this->processMetaData["gasMeanFreePath"] = std::vector<NumericType>{gasMFP};
   }
 };
 

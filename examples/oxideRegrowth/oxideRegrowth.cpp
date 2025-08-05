@@ -37,8 +37,10 @@ int main(int argc, char **argv) {
   ps::MakeStack<NumericType, D>(domain, params.get<int>("numLayers"),
                                 params.get("layerHeight"),
                                 params.get("substrateHeight"),
-                                0., // holeRadius
-                                params.get("trenchWidth"))
+                                0.0, // holeRadius
+                                params.get("trenchWidth"),
+                                0.0 // maskHeight
+                                )
       .apply();
   // copy top layer for deposition
   domain->duplicateTopLevelSet(ps::Material::Polymer);
