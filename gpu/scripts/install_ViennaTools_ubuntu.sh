@@ -132,7 +132,7 @@ cd ..
 
 # Install ViennaPS with GPU support (using gcc-12 and g++-12)
 cd ViennaPS
-OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_FORCE_GPU=ON pip install . $verbose_flag
+OptiX_INSTALL_DIR=$optix_dir CC=gcc-12 CXX=g++-12 CMAKE_ARGS=-DVIENNAPS_USE_GPU=ON pip install . $verbose_flag
 cd ..
 
 echo "Installation complete. To activate the virtual environment, run:"

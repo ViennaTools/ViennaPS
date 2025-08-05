@@ -59,7 +59,7 @@ for i in range(len(yo2)):
         holeDepth=0.0,
         maskHeight=maskHeight,
         maskTaperAngle=taperAngle,
-        holeShape=vps.HoleShape.Half,
+        holeShape=vps.HoleShape.HALF,
     ).apply()
 
     rayParams = vps.RayTracingParameters()
