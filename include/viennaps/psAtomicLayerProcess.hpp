@@ -139,6 +139,7 @@ public:
     auto surfaceModel = pModel_->getSurfaceModel();
     auto velocityField = pModel_->getVelocityField();
     const NumericType gridDelta = pDomain_->getGrid().getGridDelta();
+    auto const logLevel = Logger::getLogLevel();
 
     auto diskMesh = viennals::Mesh<NumericType>::New();
     auto translator = SmartPointer<TranslatorType>::New();
@@ -200,7 +201,6 @@ public:
       rayTracer.setPrimaryDirection(primaryDirection.value());
     }
 
-    auto logLevel = Logger::getLogLevel();
     if (logLevel >= 5) {
       // debug output
       std::stringstream ss;
@@ -239,15 +239,15 @@ public:
       meshConverter.apply();
       auto numPoints = diskMesh->nodes.size();
       surfaceModel->initializeCoverages(numPoints);
-      auto fluxes = viennals::PointData<NumericType>::New();
+
       auto const materialIds =
           *diskMesh->getCellData().getScalarData("MaterialIds");
       auto const points = diskMesh->getNodes();
-
       auto normals = *diskMesh->getCellData().getVectorData("Normals");
       rayTracer.setGeometry(points, normals, gridDelta);
       rayTracer.setMaterialIds(materialIds);
 
+      auto fluxes = viennals::PointData<NumericType>::New();
       NumericType time = 0.;
       int pulseCounter = 0;
 
@@ -277,11 +277,6 @@ public:
         fluxes->clear();
         std::size_t particleIdx = 0;
         for (auto &particle : pModel_->getParticleTypes()) {
-          int dataLogSize = pModel_->getParticleLogSize(particleIdx);
-          if (dataLogSize > 0) {
-            rayTracer.getDataLog().data.resize(1);
-            rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
-          }
           rayTracer.setParticleType(particle);
           rayTracer.apply();
 
@@ -293,7 +288,7 @@ public:
 
             // normalize fluxes
             rayTracer.normalizeFlux(flux);
-            rayTracer.smoothFlux(flux);
+            rayTracer.smoothFlux(flux, rayTracingParams_.smoothingNeighbors);
             fluxes->insertNextScalarData(std::move(flux),
                                          localData.getVectorDataLabel(i));
           }
@@ -305,8 +300,8 @@ public:
         moveRayDataToPointData(surfaceModel->getCoverages(), rayTraceCoverages);
         surfaceModel->updateCoverages(fluxes, materialIds);
 
-        // print debug output
-        if (Logger::getLogLevel() >= 3) {
+        // print intermediate output
+        if (logLevel >= 3) {
           for (size_t idx = 0; idx < fluxes->getScalarDataSize(); idx++) {
             auto label = fluxes->getScalarDataLabel(idx);
             diskMesh->getCellData().insertNextScalarData(
@@ -323,7 +318,8 @@ public:
         }
 
         time += coverageTimeStep_;
-        if (Logger::getLogLevel() >= 2) {
+
+        if (logLevel >= 2) {
           std::stringstream stream;
           stream << std::fixed << std::setprecision(4) << "Pulse time: " << time
                  << " / " << pulseTime_ << " " << units::Time::toShortString();
@@ -339,7 +335,7 @@ public:
               .print();
         }
 
-        auto purgeRates = viennals::PointData<NumericType>::New();
+        auto purgeFluxes = viennals::PointData<NumericType>::New();
 
         viennaray::Trace<NumericType, D> purgeTracer;
         purgeTracer.setSourceDirection(rayTracingParams_.sourceDirection);
@@ -366,37 +362,37 @@ public:
           purgeTracer.setParticleType(particle);
           purgeTracer.apply();
 
-          // fill up rates vector with rates from this particle type
-          auto const numRates = particle->getLocalDataLabels().size();
+          auto const numFluxes = particle->getLocalDataLabels().size();
           auto &localData = purgeTracer.getLocalData();
-          for (int i = 0; i < numRates; ++i) {
-            auto rate = std::move(localData.getVectorData(i));
-            purgeTracer.smoothFlux(rate);
-            purgeRates->insertNextScalarData(std::move(rate),
-                                             localData.getVectorDataLabel(i));
+          for (int i = 0; i < numFluxes; ++i) {
+            auto flux = std::move(localData.getVectorData(i));
+            purgeTracer.smoothFlux(flux, rayTracingParams_.smoothingNeighbors);
+            purgeFluxes->insertNextScalarData(std::move(flux),
+                                              localData.getVectorDataLabel(i));
           }
 
           ++particleIdx;
         }
 
-        surfaceModel->updateCoverages(purgeRates, materialIds);
+        surfaceModel->updateCoverages(purgeFluxes, materialIds);
 
       } // end of purge pulse
 
-      // get velocities
+      // calculate velocities
       auto velocities =
           surfaceModel->calculateVelocities(fluxes, points, materialIds);
       pModel_->getVelocityField()->prepare(pDomain_, velocities, 0.);
       if (pModel_->getVelocityField()->getTranslationFieldOptions() == 2)
         transField->buildKdTree(points);
 
-      // print debug output
-      if (Logger::getLogLevel() >= 4) {
+      // print intermediate output
+      if (logLevel >= 3) {
         diskMesh->getCellData().insertNextScalarData(*velocities, "velocities");
         printDiskMesh(diskMesh, name + "_" + std::to_string(counter) + ".vtp");
         counter++;
       }
 
+      // move surface
       advectionKernel.apply();
     }
 
