@@ -161,4 +161,10 @@ template <class NumericType, int D> void RunTest() {
 
 } // namespace viennacore
 
-int main() { VC_RUN_ALL_TESTS }
+int main() {
+  std::cout << "Running ViennaPS version: " << viennaps::version << std::endl;
+  std::cout << "Major: " << viennaps::versionMajor
+            << ", Minor: " << viennaps::versionMinor
+            << ", Patch: " << viennaps::versionPatch << std::endl;
+  VC_RUN_ALL_TESTS
+}

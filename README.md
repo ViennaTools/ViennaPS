@@ -10,9 +10,9 @@
 
 </div>
 
-ViennaPS is a header-only C++ library for simulating microelectronic fabrication processes. It combines surface and volume representations with advanced level-set methods and Monte Carlo flux calculations, powered by high-performance ray tracing. Users can develop custom models, use pre-configured physical models, or use fast emulation models for flexible and efficient process development.
+ViennaPS is a header-only C++ library for topography simulation in microelectronic fabrication processes. It models the evolution of 2D and 3D surfaces during etching, deposition, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation. This allows accurate, feature-scale simulation of complex fabrication geometries.
 
-ViennaPS is designed to be easily integrated into existing C++ projects and provides Python bindings for seamless use in Python environments. The library is under active development and is continuously improved to meet the evolving needs of process simulation in microelectronics.
+ViennaPS supports both physical process models and fast emulation approaches, enabling flexible and efficient development of semiconductor processes. It can be easily integrated into existing C++ projects and also provides Python bindings for use in Python-based workflows. The library is actively developed and continuously improved to address the needs of process and topography simulation in microelectronics.
 
 ## Quick Start  
 
@@ -70,7 +70,7 @@ If the dependencies are not found on the system, they will be built from source.
 ## Installing
 
 > [!NOTE]  
-> __For more detailed installation instructions and troubleshooting tips, please refer to the ViennaPS [documentation](https://viennatools.github.io/ViennaPS/inst/).__
+> __For more detailed installation instructions and troubleshooting tips, have a look at the ViennaPS [documentation](https://viennatools.github.io/ViennaPS/inst/).__
 
 ViennaPS is a header-only library, so no formal installation is required. However, following the steps below helps organize and manage dependencies more effectively:
 
@@ -117,7 +117,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.7.0")
+  CPMAddPackage("gh:viennatools/viennaps@3.7.1")
   ```
 
 * With a local installation
@@ -129,6 +129,16 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
     find_package(ViennaPS)
     target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
     ```
+
+### Shared Library
+
+In order to save build time during development, dynamically linked shared libraries can be used if ViennaPS was built with them. This is done by precompiling the most common template specialisations. In order to use shared libraries, use
+
+```bash
+cmake -B build -DVIENNALS_PRECOMPILE_HEADERS=ON
+```
+
+If ViennaPS was built with shared libraries and you use ViennaPS in your project (see above), CMake will automatically link them to your project.
 
 ## GPU Acceleration (Experimental)
 

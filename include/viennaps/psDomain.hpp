@@ -22,7 +22,7 @@
 
 namespace viennaps {
 
-inline constexpr std::string_view version = "3.6.1";
+inline constexpr std::string_view version = VIENNAPS_VERSION;
 inline constexpr int versionMajor = static_cast<int>(version[0] - '0');
 inline constexpr int versionMinor = static_cast<int>(version[2] - '0');
 inline constexpr int versionPatch = static_cast<int>(version[4] - '0');
@@ -560,6 +560,12 @@ private:
 
   void initMetaData() {
     if (static_cast<int>(useMetaData) > 0) {
+      metaData_["Version"] =
+          std::vector<NumericType>{static_cast<NumericType>(versionMajor),
+                                   static_cast<NumericType>(versionMinor),
+                                   static_cast<NumericType>(versionPatch)};
+      metaData_["Domain Type"] =
+          std::vector<NumericType>{static_cast<NumericType>(D)};
       metaData_["Grid Delta"] = std::vector<NumericType>{setup_.gridDelta()};
       std::vector<NumericType> boundaryConds(D);
       for (int i = 0; i < D; i++) {
