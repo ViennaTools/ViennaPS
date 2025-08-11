@@ -3,7 +3,7 @@ layout: default
 title: SF<sub>6</sub>O<sub>2</sub> Etching
 parent: Pre-Built Models
 grand_parent: Process Models
-nav_order: 7
+nav_order: 5
 sf6o2: SF<sub>6</sub>O<sub>2</sub>
 ---
 <script>
@@ -138,36 +138,38 @@ SF6O2Etching(const double ionFlux, const double etchantFlux,
              const NumericType oxySputterYield = 2.,
              const NumericType etchStopDepth =
                    std::numeric_limits<NumericType>::lowest())
-SF6O2Etching(const SF6O2Parameters<NumericType> &parameters)
+SF6O2Etching(const PlasmaEtchingParameters<NumericType> &parameters)
+
+// static function to get default parameters
+static PlasmaEtchingParameters<NumericType> defaultParameters()
 ```
 
 
-Users can access and modify all detailed parameters by creating a `SF6O2Parameters` struct, which encapsulates the following values:
+Users can access and modify all detailed parameters by creating a `PlasmaEtchingParameters` struct, which encapsulates the following relevant values:
 
 {: .note}
 > All flux values are units 10<sup>15</sup> / cm<sup>2</sup> /s<sup>2</sup>.
 
-| Parameter           | Description                                            | Default Value          |
-|---------------------|--------------------------------------------------------|------------------------|
+| Parameter             | Description                                          | Default Value          |
+|-----------------------|------------------------------------------------------|------------------------|
 | `ionFlux`             | Ion flux                                             | 12.0                   |
 | `etchantFlux`         | Etchant flux                                         | 1800.0                 |
-| `oxygenFlux`          | Oxygen flux                                          | 100.0                  |
-| `beta_F`              | Sticking probability map for fluorine                | 0.7 (on Si and Mask)   |
-| `beta_O`              | Sticking probability map for oxygen                  | 1.0 (on Si and Mask)   |
+| `passivationFlux`     | Oxygen flux                                          | 100.0                  |
+| `beta_E`              | Sticking probability map for fluorine                | 0.7 (on Si and Mask)   |
+| `beta_P`              | Sticking probability map for oxygen                  | 1.0 (on Si and Mask)   |
 | `etchStopDepth`       | Depth at which etching stops                         | -inf                   |
-| `fluxIncludeSticking` | Include the effective sticking probability when accumlating fluxes, Required more iterations to reach coverage convergence | `false` |
 | `Mask.rho`            | Mask density (10<sup>22</sup> atoms/cm³)               | 500.0                  |
 | `Mask.Eth_sp`         | Mask sputtering threshold energy (eV)                  | 20.0                   |
 | `Mask.A_sp`           | Mask sputtering coefficient                            | 0.0139                 |
 | `Mask.B_sp`           | Mask sputtering coefficient                            | 9.3                    |
-| `Si.rho`              | Silicon density (10<sup>22</sup> atoms/cm³)            | 5.02                   |
-| `Si.Eth_sp`           | Silicon sputtering threshold energy (eV)               | 20.0                   |
-| `Si.Eth_ie`           | Silicon ion enhanced etching threshold energy (eV)     | 15.0                    |
-| `Si.A_sp`             | Silicon sputtering coefficient                         | 0.0337                 |
-| `Si.B_sp`             | Silicon sputtering coefficient                         | 9.3                    |
-| `Si.A_ie`             | Silicon ion enhanced etching coefficient               | 7.0                 |
-| `Si.k_sigma`          | Silicon chemical etch rate coefficient (10<sup>15</sup> /cm² /s) | 300.         |
-| `Si.beta_sigma`       | Silicon oxygen recombination coefficient (10<sup>15</sup> /cm² /s) | 0.05       |
+| `Substrate.rho`       | Silicon density (10<sup>22</sup> atoms/cm³)            | 5.02                   |
+| `Substrate.Eth_sp`    | Silicon sputtering threshold energy (eV)               | 20.0                   |
+| `Substrate.Eth_ie`    | Silicon ion enhanced etching threshold energy (eV)     | 15.0                    |
+| `Substrate.A_sp`      | Silicon sputtering coefficient                         | 0.0337                 |
+| `Substrate.B_sp`      | Silicon sputtering coefficient                         | 9.3                    |
+| `Substrate.A_ie`      | Silicon ion enhanced etching coefficient               | 7.0                 |
+| `Substrate.k_sigma`   | Silicon chemical etch rate coefficient (10<sup>15</sup> /cm² /s) | 300.         |
+| `Substrate.beta_sigma`| Silicon oxygen recombination coefficient (10<sup>15</sup> /cm² /s) | 0.05       |
 | `Passivation.Eth_ie`  | Passivation ion enhanced etching threshold energy (eV) | 10.0                    |
 | `Passivation.A_ie`    | Passivation ion enhanced etching coefficient           | 3.0              |
 | `Ions.meanEnergy`     | Mean ion energy (eV)                                   | 100.0                  |
@@ -189,7 +191,7 @@ C++
 ```c++
 // namespace viennaps
 ...
-SF6O2Parameters<NumericType> parameters;
+auto parameters = SF6O2Etching<NumericType, D>::defaultParameters();
 parameters.ionFlux = 10.;
 parameters.Mask.rho = 500.;
 
@@ -205,7 +207,7 @@ Python
 </summary>
 ```python
 ...
-parameters = vps.SF6O2Parameters()
+parameters = vps.SF6O2Etching.defaultParameters()
 parameters.ionFlux = 10.
 parameters.Mask.rho = 500.
 

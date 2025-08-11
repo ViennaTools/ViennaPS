@@ -3,7 +3,7 @@ layout: default
 title: Single Particle Process
 parent: Pre-Built Models
 grand_parent: Process Models
-nav_order: 4
+nav_order: 3
 ---
 
 # Single Particle Process
@@ -43,8 +43,9 @@ SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
 |----------------------------|--------------------------------------------------------|------------------------|
 | `rate`                     | Default rate of the single particle process, if no material specific rates are defined   | 1.0              |
 | `stickingProbability`      | Sticking probability of particles                      | 1.0                    |
-| `sourceDistributionPower`  | Power of the power cosine source distribution          | 1.0                    |
-| `maskMaterial`             | Mask material                       | `Material::None`       |
+| `sourceDistributionPower`  | Exponent of the power cosine source distribution          | 1.0                    |
+| `maskMaterial`             | Mask material(s)                       | `Material::Undefined`       |
+| `materialRates`            | Map between material and rate for specific materials | `{}`            |
 
 Rates can also be specified for specific materials using a map between material and rate.
 

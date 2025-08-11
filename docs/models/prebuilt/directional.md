@@ -3,7 +3,7 @@ layout: default
 title: Directional Process
 parent: Pre-Built Models
 grand_parent: Process Models
-nav_order: 3
+nav_order: 2
 ---
 
 # Directional Process
@@ -14,7 +14,7 @@ nav_order: 3
 ```
 ---
 
-The Directional Process Model simulates anisotropic material removal or deposition in semiconductor fabrication processes. It models etching where material removal occurs preferentially in a specified direction, influenced by both directional and isotropic velocity components.
+The directional process model emulates anisotropic material removal or deposition. It models etching where material removal occurs preferentially in a specified direction, influenced by both directional and isotropic velocity components.
 
 ```c++
 // namespace viennaps

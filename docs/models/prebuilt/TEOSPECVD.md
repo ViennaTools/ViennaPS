@@ -1,9 +1,9 @@
 ---
 layout: default
-title: TEOSPECVD Process
+title: TEOS PE CVD Process
 parent: Pre-Built Models
 grand_parent: Process Models
-nav_order: 6
+nav_order: 7
 ---
 <script>
 MathJax = {
@@ -35,21 +35,21 @@ The sticking probability of the TEOS precursor radicals and the ions can be spec
 ## Implementation
 
 ```c++
-TEOSPECVD(const NumericType pRadicalSticking, const NumericType pRadicalRate,
-          const NumericType pIonRate, const NumericType pIonExponent,
-          const NumericType pIonSticking = 1.,
-          const NumericType pRadicalOrder = 1.,
-          const NumericType pIonOrder = 1.,
-          const NumericType pIonMinAngle = 0.)
+TEOSPECVD(const NumericType radicalSticking, const NumericType radicalRate,
+          const NumericType ionRate, const NumericType ionExponent,
+          const NumericType ionSticking = 1.,
+          const NumericType radicalOrder = 1.,
+          const NumericType ionOrder = 1.,
+          const NumericType ionMinAngle = 0.)
 ```
 
 | Parameter                  | Description                                            | Default Value          |
 |----------------------------|--------------------------------------------------------|------------------------|
-| `pRadicalSticking`         | Sticking probability of the TEOS precursor radicals    | 1.0                    |
-| `pRadicalRate`             | Rate of the TEOS precursor radicals                    | 1.0                    |
-| `pIonRate`                 | Rate of the ions                                       | 1.0                    |
-| `pIonExponent`             | Exponent power cosine source distribution of the ions  | 1.0                    |
-| `pIonSticking`             | Sticking probability of the ions                       | 1.0                    |
-| `pRadicalOrder`            | Reaction order of the TEOS precursor radicals          | 1.0                    |
-| `pIonOrder`                | Reaction order of the ions                             | 1.0                    |
-| `pIonMinAngle`             | Minimum specular reflection angle of the ions          | 0.0                    |
+| `radicalSticking`         | Sticking probability of the TEOS precursor radicals    | 1.0                    |
+| `radicalRate`             | Rate of the TEOS precursor radicals                    | 1.0                    |
+| `ionRate`                 | Rate of the ions                                       | 1.0                    |
+| `ionExponent`             | Exponent power cosine source distribution of the ions  | 1.0                    |
+| `ionSticking`             | Sticking probability of the ions                       | 1.0                    |
+| `radicalOrder`            | Reaction order of the TEOS precursor radicals          | 1.0                    |
+| `ionOrder`                | Reaction order of the ions                             | 1.0                    |
+| `ionMinAngle`             | Minimum specular reflection angle of the ions          | 0.0                    |

@@ -14,11 +14,11 @@ nav_order: 1
 ```
 ---
 
-An isotropic etching or deposition process initiates across all materials in the domain, excluding the masking material, which is by default set to `Material::None`. The default setting means, that the process unfolds uniformly across all materials within the domain. When the rate is less than 0, the material undergoes etching. Conversely, when the rate exceeds 0, material deposition occurs in accordance with the material of the top level set. If you want to deposit a new material, make sure to call the function `duplicateTopLevelSet` in your domain instance.
+An isotropic etching or deposition process applies to all materials in the domain except the mask material, which defaults to `Material::Undefined` (no mask). A negative rate etches the material, while a positive rate deposits the material of the top level set. To deposit a different material, call `duplicateTopLevelSet` on the domain before running the process.
 
 ```c++
 psIsotropicProcess(const NumericType rate,
-                   const Material maskMaterial = Material::None)
+                   const Material maskMaterial = Material::Undefined)
 ```
 
 | Parameter | Description | Type |
