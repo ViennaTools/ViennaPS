@@ -128,16 +128,16 @@ template <typename NumericType, int D>
 class SingleParticleALD : public ProcessModel<NumericType, D> {
 public:
   SingleParticleALD(
-      const NumericType stickingProbability, // particle sticking probability
-      const int numCycles, // number of cycles to simulate in one advection step
-      const NumericType growthPerCycle, // growth per cycle
-      const int totalCycles,            // total number of cycles
-      const NumericType
-          coverageTimeStep,     // time step for solving the coverage equation
-      const NumericType evFlux, // evaporation flux
-      const NumericType inFlux, // incoming flux
-      const NumericType s0,     // saturation coverage
-      const NumericType gasMFP  // mean free path of the particles in the gas
+      NumericType stickingProbability, // particle sticking probability
+      int numCycles, // number of cycles to simulate in one advection step
+      NumericType growthPerCycle, // growth per cycle
+      int totalCycles,            // total number of cycles
+      NumericType
+          coverageTimeStep, // time step for solving the coverage equation
+      NumericType evFlux,   // evaporation flux
+      NumericType inFlux,   // incoming flux
+      NumericType s0,       // saturation coverage
+      NumericType gasMFP    // mean free path of the particles in the gas
   ) {
     auto particle =
         std::make_unique<impl::SingleParticleALDParticle<NumericType, D>>(

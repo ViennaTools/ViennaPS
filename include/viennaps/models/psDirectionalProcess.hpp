@@ -160,7 +160,7 @@ public:
   DirectionalProcess(const Vec3D<NumericType> &direction,
                      NumericType directionalVelocity,
                      NumericType isotropicVelocity = 0.,
-                     const Material maskMaterial = Material::Mask,
+                     Material maskMaterial = Material::Mask,
                      bool calculateVisibility = true) {
     std::vector<RateSet> rateSets;
     rateSets.emplace_back(direction, directionalVelocity, isotropicVelocity,

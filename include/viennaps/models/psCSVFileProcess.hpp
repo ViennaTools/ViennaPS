@@ -144,8 +144,8 @@ template <typename NumericType, int D>
 class CSVFileProcess : public ProcessModel<NumericType, D> {
 public:
   CSVFileProcess(const std::string &ratesFile, const Vec3D<NumericType> &dir,
-                 const Vec2D<NumericType> &off, const NumericType isoScale = 0.,
-                 const NumericType dirScale = 1.,
+                 const Vec2D<NumericType> &off, NumericType isoScale = 0.,
+                 NumericType dirScale = 1.,
                  const std::vector<Material> &masks = {Material::Mask},
                  bool calcVis = true) {
 

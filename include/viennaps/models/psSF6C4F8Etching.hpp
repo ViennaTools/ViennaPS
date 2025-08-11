@@ -30,11 +30,10 @@ public:
   }
 
   // All flux values are in units 1e15 / cm²
-  SF6C4F8Etching(const double ionFlux, const double etchantFlux,
-                 const NumericType meanEnergy, const NumericType sigmaEnergy,
-                 const NumericType ionExponent = 300.,
-                 const NumericType etchStopDepth =
-                     std::numeric_limits<NumericType>::lowest()) {
+  SF6C4F8Etching(
+      double ionFlux, double etchantFlux, NumericType meanEnergy,
+      NumericType sigmaEnergy, NumericType ionExponent = 300.,
+      NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest()) {
     params = defaultParameters();
     params.ionFlux = ionFlux;
     params.etchantFlux = etchantFlux;

@@ -16,8 +16,7 @@ class SingleTEOSSurfaceModel : public SurfaceModel<NumericType> {
   const NumericType reactionOrder;
 
 public:
-  SingleTEOSSurfaceModel(const NumericType passedRate,
-                         const NumericType passedOrder)
+  SingleTEOSSurfaceModel(NumericType passedRate, NumericType passedOrder)
       : depositionRate(passedRate), reactionOrder(passedOrder) {}
 
   SmartPointer<std::vector<NumericType>>
@@ -28,8 +27,8 @@ public:
     auto particleFlux = rates->getScalarData("particleFlux");
     std::vector<NumericType> velocity(particleFlux->size(), 0.);
 
-    for (std::size_t i = 0; i < velocity.size(); i++) {
-      // calculate surface velocity based on particle flux
+#pragma omp parallel for
+    for (size_t i = 0; i < velocity.size(); i++) {
       velocity[i] =
           depositionRate * std::pow(particleFlux->at(i), reactionOrder);
     }
@@ -68,10 +67,8 @@ class MultiTEOSSurfaceModel : public SurfaceModel<NumericType> {
   const NumericType reactionOrderP2;
 
 public:
-  MultiTEOSSurfaceModel(const NumericType passedRateP1,
-                        const NumericType passedOrderP1,
-                        const NumericType passedRateP2,
-                        const NumericType passedOrderP2)
+  MultiTEOSSurfaceModel(NumericType passedRateP1, NumericType passedOrderP1,
+                        NumericType passedRateP2, NumericType passedOrderP2)
       : depositionRateP1(passedRateP1), reactionOrderP1(passedOrderP1),
         depositionRateP2(passedRateP2), reactionOrderP2(passedOrderP2) {}
 
@@ -79,20 +76,19 @@ public:
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIDs) override {
-    // define the surface reaction here
     auto particleFluxP1 = rates->getScalarData("particleFluxP1");
     auto particleFluxP2 = rates->getScalarData("particleFluxP2");
 
     std::vector<NumericType> velocity(particleFluxP1->size(), 0.);
 
-    for (std::size_t i = 0; i < velocity.size(); i++) {
-      // calculate surface velocity based on particle fluxes
+#pragma omp parallel for
+    for (size_t i = 0; i < velocity.size(); i++) {
       velocity[i] =
           depositionRateP1 * std::pow(particleFluxP1->at(i), reactionOrderP1) +
           depositionRateP2 * std::pow(particleFluxP2->at(i), reactionOrderP2);
     }
 
-    return SmartPointer<std::vector<NumericType>>::New(velocity);
+    return SmartPointer<std::vector<NumericType>>::New(std::move(velocity));
   }
 };
 
@@ -102,8 +98,8 @@ class SingleTEOSParticle
     : public viennaray::Particle<SingleTEOSParticle<NumericType, D>,
                                  NumericType> {
 public:
-  SingleTEOSParticle(const NumericType pStickingProbability,
-                     const NumericType pReactionOrder,
+  SingleTEOSParticle(NumericType pStickingProbability,
+                     NumericType pReactionOrder,
                      const std::string &pDataLabel = "particleFlux")
       : stickingProbability(pStickingProbability),
         reactionOrder(pReactionOrder), dataLabel(pDataLabel) {}
@@ -154,8 +150,7 @@ class MultiTEOSParticle
     : public viennaray::Particle<MultiTEOSParticle<NumericType, D>,
                                  NumericType> {
 public:
-  MultiTEOSParticle(const NumericType pStickingProbability,
-                    const std::string &pLabel)
+  MultiTEOSParticle(NumericType pStickingProbability, const std::string &pLabel)
       : stickingProbability(pStickingProbability), dataLabel(pLabel) {}
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -190,58 +185,58 @@ private:
 template <class NumericType, int D>
 class TEOSDeposition : public ProcessModel<NumericType, D> {
 public:
-  TEOSDeposition(const NumericType pStickingP1, const NumericType pRateP1,
-                 const NumericType pOrderP1, const NumericType pStickingP2 = 0.,
-                 const NumericType pRateP2 = 0.,
-                 const NumericType pOrderP2 = 0.) {
+  TEOSDeposition(NumericType stickingProbabilityP1, NumericType rateP1,
+                 NumericType orderP1, NumericType stickingProbabilityP2 = 0.,
+                 NumericType rateP2 = 0., NumericType orderP2 = 0.) {
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
     this->setVelocityField(velField);
 
-    if (pRateP2 == 0.) {
-      // use single particle model
+    if (rateP2 == 0.) {
+      // single particle model
 
       // particle
       auto particle =
           std::make_unique<impl::SingleTEOSParticle<NumericType, D>>(
-              pStickingP1, pOrderP1);
+              stickingProbabilityP1, orderP1);
 
       // surface model
       auto surfModel =
-          SmartPointer<impl::SingleTEOSSurfaceModel<NumericType>>::New(
-              pRateP1, pOrderP1);
+          SmartPointer<impl::SingleTEOSSurfaceModel<NumericType>>::New(rateP1,
+                                                                       orderP1);
 
       this->setSurfaceModel(surfModel);
       this->insertNextParticleType(particle);
       this->setProcessName("SingleTEOSParticleTEOS");
 
-      this->processMetaData["StickingProbability"] = {pStickingP1};
-      this->processMetaData["Rate"] = {pRateP1};
-      this->processMetaData["Order"] = {pOrderP1};
+      this->processMetaData["StickingProbability"] = {stickingProbabilityP1};
+      this->processMetaData["Rate"] = {rateP1};
+      this->processMetaData["Order"] = {orderP1};
     } else {
-      // use multi (two) particle model
+      // multi (two) particle model
 
       // particles
       auto particle1 =
           std::make_unique<impl::MultiTEOSParticle<NumericType, D>>(
-              pStickingP1, "particleFluxP1");
+              stickingProbabilityP1, "particleFluxP1");
       auto particle2 =
           std::make_unique<impl::MultiTEOSParticle<NumericType, D>>(
-              pStickingP2, "particleFluxP2");
+              stickingProbabilityP2, "particleFluxP2");
 
       // surface model
       auto surfModel =
           SmartPointer<impl::MultiTEOSSurfaceModel<NumericType>>::New(
-              pRateP1, pOrderP1, pRateP2, pOrderP2);
+              rateP1, orderP1, rateP2, orderP2);
 
       this->setSurfaceModel(surfModel);
       this->insertNextParticleType(particle1);
       this->insertNextParticleType(particle2);
       this->setProcessName("MultiTEOSParticleTEOS");
 
-      this->processMetaData["StickingProbability"] = {pStickingP1, pStickingP2};
-      this->processMetaData["Rate"] = {pRateP1, pRateP2};
-      this->processMetaData["Order"] = {pOrderP1, pOrderP2};
+      this->processMetaData["StickingProbability"] = {stickingProbabilityP1,
+                                                      stickingProbabilityP2};
+      this->processMetaData["Rate"] = {rateP1, rateP2};
+      this->processMetaData["Order"] = {orderP1, orderP2};
     }
   }
 };

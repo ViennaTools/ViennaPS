@@ -18,8 +18,7 @@ class SingleParticleSurfaceModel : public viennaps::SurfaceModel<NumericType> {
 
 public:
   SingleParticleSurfaceModel(
-      const NumericType rate,
-      const std::unordered_map<Material, NumericType> &mask)
+      NumericType rate, const std::unordered_map<Material, NumericType> &mask)
       : rate_(rate), materialRates_(mask) {}
 
   SmartPointer<std::vector<NumericType>>
@@ -31,7 +30,8 @@ public:
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("particleFlux");
 
-    for (std::size_t i = 0; i < velocity->size(); i++) {
+#pragma omp parallel for
+    for (size_t i = 0; i < velocity->size(); i++) {
       if (auto matRate =
               materialRates_.find(MaterialMap::mapToMaterial(materialIds[i]));
           matRate == materialRates_.end()) {
