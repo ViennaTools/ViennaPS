@@ -4,10 +4,11 @@ ViennaPS
 ========
 
 ViennaPS is a header-only C++ process simulation library,
-which includes surface and volume representations, 
-a ray tracer, and physical models for the simulation of 
+which includes surface and volume representations,
+a ray tracer, and physical models for the simulation of
 microelectronic fabrication processes.
 """
+
 from __future__ import annotations
 import sys as sys
 import viennals3d as ls
@@ -97,26 +98,121 @@ from viennaps3d.viennaps3d import ray
 from viennaps3d.viennaps3d import setNumThreads
 from viennaps3d.viennaps3d import util
 from . import viennaps3d
-__all__: list[str] = ['AdvectionCallback', 'AdvectionParameters', 'AtomicLayerProcess', 'BoundaryType', 'BoxDistribution', 'CF4O2Etching', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CSVFileProcess', 'D', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FaradayCageParameters', 'FluorocarbonEtching', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluorocarbonParametersMask', 'FluorocarbonParametersPolymer', 'FluorocarbonParametersSi', 'FluorocarbonParametersSi3N4', 'FluorocarbonParametersSiO2', 'GDSGeometry', 'GDSReader', 'GeometryFactory', 'HBrO2Etching', 'HoleShape', 'IBEParameters', 'IntegrationScheme', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'Length', 'LengthUnit', 'LogLevel', 'Logger', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'Material', 'MaterialMap', 'MetaDataLevel', 'MultiParticleProcess', 'NormalizationType', 'OxideRegrowth', 'Planarize', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'Process', 'ProcessModel', 'ProcessParams', 'RateGrid', 'RateSet', 'RayTracingParameters', 'ReadConfigFile', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'Time', 'TimeUnit', 'ToDiskMesh', 'WetEtching', 'Writer', 'constants', 'gpu', 'ls', 'ptxPath', 'ray', 'setNumThreads', 'sys', 'util', 'version', 'viennaps3d']
+
+__all__: list[str] = [
+    "AdvectionCallback",
+    "AdvectionParameters",
+    "AtomicLayerProcess",
+    "BoundaryType",
+    "BoxDistribution",
+    "CF4O2Etching",
+    "CF4O2Parameters",
+    "CF4O2ParametersIons",
+    "CF4O2ParametersMask",
+    "CF4O2ParametersPassivation",
+    "CF4O2ParametersSi",
+    "CF4O2ParametersSiGe",
+    "CSVFileProcess",
+    "D",
+    "DenseCellSet",
+    "DirectionalProcess",
+    "Domain",
+    "DomainSetup",
+    "FaradayCageEtching",
+    "FaradayCageParameters",
+    "FluorocarbonEtching",
+    "FluorocarbonParameters",
+    "FluorocarbonParametersIons",
+    "FluorocarbonParametersMask",
+    "FluorocarbonParametersPolymer",
+    "FluorocarbonParametersSi",
+    "FluorocarbonParametersSi3N4",
+    "FluorocarbonParametersSiO2",
+    "GDSGeometry",
+    "GDSReader",
+    "GeometryFactory",
+    "HBrO2Etching",
+    "HoleShape",
+    "IBEParameters",
+    "IntegrationScheme",
+    "Interpolation",
+    "IonBeamEtching",
+    "IsotropicProcess",
+    "Length",
+    "LengthUnit",
+    "LogLevel",
+    "Logger",
+    "MakeFin",
+    "MakeHole",
+    "MakePlane",
+    "MakeStack",
+    "MakeTrench",
+    "Material",
+    "MaterialMap",
+    "MetaDataLevel",
+    "MultiParticleProcess",
+    "NormalizationType",
+    "OxideRegrowth",
+    "Planarize",
+    "PlasmaEtchingParameters",
+    "PlasmaEtchingParametersIons",
+    "PlasmaEtchingParametersMask",
+    "PlasmaEtchingParametersPassivation",
+    "PlasmaEtchingParametersPolymer",
+    "PlasmaEtchingParametersSubstrate",
+    "Process",
+    "ProcessModel",
+    "ProcessParams",
+    "RateGrid",
+    "RateSet",
+    "RayTracingParameters",
+    "ReadConfigFile",
+    "Reader",
+    "SF6C4F8Etching",
+    "SF6O2Etching",
+    "SelectiveEpitaxy",
+    "SingleParticleALD",
+    "SingleParticleProcess",
+    "SphereDistribution",
+    "StencilLocalLaxFriedrichsScalar",
+    "TEOSDeposition",
+    "TEOSPECVD",
+    "Time",
+    "TimeUnit",
+    "ToDiskMesh",
+    "WetEtching",
+    "Writer",
+    "constants",
+    "gpu",
+    "ls",
+    "ptxPath",
+    "ray",
+    "setNumThreads",
+    "sys",
+    "util",
+    "version",
+    "viennaps3d",
+]
+
 def ReadConfigFile(fileName: str):
     """
     Read a config file in the ViennaPS standard config file format.
-    
+
         Parameters
         ----------
         fileName: str
                     Name of the config file.
-        
+
         Returns
         -------
         dict
             A dictionary containing the parameters from the config file.
-        
+
     """
-def _module_ptx_path():
-    ...
-def _windows_dll_path():
-    ...
+
+def _module_ptx_path(): ...
+def _windows_dll_path(): ...
+
 D: int = 3
-ptxPath: str = ''
-version: str = '"3.7.1"'
+ptxPath: str = ""
+version: str = '"3.7.2"'

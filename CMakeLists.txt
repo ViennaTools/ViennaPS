@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.7.1)
+  VERSION 3.7.2)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
