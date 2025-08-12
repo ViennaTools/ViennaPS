@@ -1,6 +1,13 @@
-import mypy.stubgen as stubgen
 import sys
 import argparse
+
+try:
+    import pybind11_stubgen as stubgen
+except ImportError:
+    print(
+        "pybind11-stubgen is not installed. Please install it using 'pip install pybind11-stubgen'."
+    )
+    sys.exit(1)
 
 
 if __name__ == "__main__":
@@ -13,15 +20,6 @@ if __name__ == "__main__":
     # Don't create __pycache__ directory
     sys.dont_write_bytecode = True
 
-    # Initialize the stubgen parser options
-    options = stubgen.parse_options(
-        [
-            "-o",
-            args.dir,
-            "-p",
-            "viennaps" + str(args.D) + "d",
-        ]
-    )
+    package_name = "viennaps" + str(args.D) + "d"
 
-    # Generate the stubs
-    stubgen.generate_stubs(options)
+    stubgen.main([package_name, "-o", args.dir, "--ignore-all-errors"])

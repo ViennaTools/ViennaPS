@@ -62,7 +62,7 @@ ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org
 
 * [ViennaCS](https://github.com/ViennaTools/viennacs)
 
-* [pybind11](https://github.com/pybind/pybind11) (2.12.0+, only for building Python libs)
+* [pybind11](https://github.com/pybind/pybind11) (3.0.0+, only for building Python libs)
 
 The CMake configuration automatically checks if the dependencies are installed.
 If the dependencies are not found on the system, they will be built from source. To use local installations of the dependencies, the `VIENNAPS_LOOKUP_DIRS` variable can be set to the installation path of the dependencies.
