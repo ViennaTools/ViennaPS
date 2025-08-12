@@ -1,4 +1,4 @@
-import mypy.stubgen as stubgen
+import pybind11_stubgen as stubgen
 import sys
 import argparse
 
@@ -13,15 +13,9 @@ if __name__ == "__main__":
     # Don't create __pycache__ directory
     sys.dont_write_bytecode = True
 
-    # Initialize the stubgen parser options
-    options = stubgen.parse_options(
-        [
-            "-o",
-            args.dir,
-            "-p",
-            "viennaps" + str(args.D) + "d",
-        ]
-    )
-
-    # Generate the stubs
-    stubgen.generate_stubs(options)
+    if args.D == 2:
+        stubgen.main(["viennaps2d", "-o", args.dir, "--ignore-all-errors"])
+    elif args.D == 3:
+        stubgen.main(["viennaps3d", "-o", args.dir, "--ignore-all-errors"])
+    else:
+        raise ValueError("Dimension D must be either 2 or 3.")
