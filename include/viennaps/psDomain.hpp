@@ -201,7 +201,7 @@ public:
       initMetaData();
     }
     if (std::abs(levelSet->getGrid().getGridDelta() - setup_.gridDelta()) >
-        1e-6) {
+        GRID_DELTA_TOLERANCE) {
       Logger::getInstance()
           .addError("Grid delta of Level-Set does not match domain grid "
                     "delta.")
@@ -491,8 +491,9 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string fileName,
-                      double wrappingLayerEpsilon = 1e-2) const {
+  void
+  saveVolumeMesh(std::string fileName,
+                 double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
     viennals::WriteVisualizationMesh<NumericType, D> writer;
     writer.setFileName(fileName);
     writer.setWrappingLayerEpsilon(wrappingLayerEpsilon);
@@ -505,8 +506,9 @@ public:
     writer.apply();
   }
 
-  void saveHullMesh(std::string fileName,
-                    double wrappingLayerEpsilon = 1e-2) const {
+  void
+  saveHullMesh(std::string fileName,
+               double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
     viennals::WriteVisualizationMesh<NumericType, D> writer;
     writer.setFileName(fileName);
     writer.setWrappingLayerEpsilon(wrappingLayerEpsilon);
@@ -576,6 +578,10 @@ private:
       metaData_["Boundary Conditions"] = boundaryConds;
     }
   }
+
+private:
+  static constexpr double GRID_DELTA_TOLERANCE = 1e-6;
+  static constexpr double DEFAULT_WRAPPING_EPSILON = 1e-2;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(Domain)
