@@ -559,12 +559,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                const std::unordered_map<std::string, std::vector<T>> &>(
                &Domain<T, D>::addMetaData),
            "Add metadata to the domain.")
-      // static
-      .def_static("enableMetaData", &Domain<T, D>::enableMetaData,
-                  "Enable adding meta data from processes to domain.",
-                  pybind11::arg("level") = MetaDataLevel::PROCESS)
-      .def_static("disableMetaData", &Domain<T, D>::disableMetaData,
-                  "Disable adding meta data to domain.");
+      .def("enableMetaData", &Domain<T, D>::enableMetaData,
+           "Enable adding meta data from processes to domain.",
+           pybind11::arg("level") = MetaDataLevel::PROCESS)
+      .def("disableMetaData", &Domain<T, D>::disableMetaData,
+           "Disable adding meta data to domain.")
+      .def("getMetaDataLevel", &Domain<T, D>::getMetaDataLevel,
+           "Get the current meta data level of the domain.");
 
 #if VIENNAPS_PYTHON_DIMENSION < 3
   // wrap a 3D domain in 2D mode to be used with psExtrude

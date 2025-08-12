@@ -34,7 +34,7 @@ public:
 
   void apply() override {
     if (dist) {
-      if (static_cast<int>(domain->useMetaData) > 1) {
+      if (static_cast<int>(domain->getMetaDataLevel()) > 1) {
         domain->clearMetaData();
         domain->addMetaData(this->processData);
       }

@@ -58,13 +58,13 @@ public:
   using Setup = DomainSetup<NumericType, D>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
-  static MetaDataLevel useMetaData;
 
 private:
   Setup setup_;
   lsDomainsType levelSets_;
   csDomainType cellSet_ = nullptr;
   MaterialMapType materialMap_ = nullptr;
+  MetaDataLevel metaDataLevel_ = MetaDataLevel::NONE;
   MetaDataType metaData_;
 
 public:
@@ -127,12 +127,14 @@ public:
     initMetaData();
   }
 
-  static void
-  enableMetaData(const MetaDataLevel level = MetaDataLevel::PROCESS) {
-    useMetaData = level;
+  // Meta data management functions
+  void enableMetaData(const MetaDataLevel level = MetaDataLevel::PROCESS) {
+    metaDataLevel_ = level;
   }
 
-  static void disableMetaData() { useMetaData = MetaDataLevel::NONE; }
+  void disableMetaData() { metaDataLevel_ = MetaDataLevel::NONE; }
+
+  auto getMetaDataLevel() const { return metaDataLevel_; }
 
   // Create a deep copy of all Level-Sets and the Cell-Set from the passed
   // domain.
@@ -559,7 +561,7 @@ private:
   }
 
   void initMetaData() {
-    if (static_cast<int>(useMetaData) > 0) {
+    if (static_cast<int>(metaDataLevel_) > 0) {
       metaData_["Version"] =
           std::vector<NumericType>{static_cast<NumericType>(versionMajor),
                                    static_cast<NumericType>(versionMinor),
@@ -575,9 +577,6 @@ private:
     }
   }
 };
-
-template <class NumericType, int D>
-MetaDataLevel Domain<NumericType, D>::useMetaData = MetaDataLevel::NONE;
 
 PS_PRECOMPILE_PRECISION_DIMENSION(Domain)
 

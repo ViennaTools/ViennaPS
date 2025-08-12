@@ -126,7 +126,7 @@ public:
 
     pModel_->initialize(pDomain_, 0.);
     auto name = pModel_->getProcessName().value_or("default");
-    if (static_cast<int>(pDomain_->useMetaData) > 1) {
+    if (static_cast<int>(pDomain_->getMetaDataLevel()) > 1) {
       pDomain_->clearMetaData(false); // clear previous metadata (without domain
       // metadata)
       pDomain_->addMetaData(pModel_->getProcessMetaData());
