@@ -177,7 +177,7 @@ Individual examples can also be build by calling `make` in their respective buil
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDeposition) focuses on a particle deposition process within a trench geometry. By default, the simulation presents a 2D representation of the trench. Nevertheless, users have the flexibility to conduct 3D simulations by adjusting the value of the constant _D_ in __trenchDeposition.cpp__ to 3. Customization of process and geometry parameters is achieved through the __config.txt__ file. The accompanying image illustrates instances of the trench deposition process, showcasing variations in the particle sticking probability _s_.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/deposition.svg" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/deposition.png" width=700 style="background-color:white;">
 </div>
 
 ### SF<sub>6</sub>/O<sub>2</sub> Hole Etching
