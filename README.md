@@ -2,6 +2,12 @@
 
 <img src="assets/ViennaPS_title.png" width=500>
 
+<picture>
+  <source srcset="assets/ViennaPS_title-dark.png" media="(prefers-color-scheme: dark)">
+  <source srcset="assets/ViennaPS_title.png" media="(prefers-color-scheme: light)">
+  <img src="assets/ViennaPS_title.png" alt="ViennaPS Logo">
+</picture>
+
 ---
  
 [![🐍 Build Bindings](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml/badge.svg)](https://github.com/ViennaTools/ViennaPS/actions/workflows/python.yml)
