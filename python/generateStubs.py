@@ -13,9 +13,6 @@ if __name__ == "__main__":
     # Don't create __pycache__ directory
     sys.dont_write_bytecode = True
 
-    if args.D == 2:
-        stubgen.main(["viennaps2d", "-o", args.dir, "--ignore-all-errors"])
-    elif args.D == 3:
-        stubgen.main(["viennaps3d", "-o", args.dir, "--ignore-all-errors"])
-    else:
-        raise ValueError("Dimension D must be either 2 or 3.")
+    package_name = "viennaps" + str(args.D) + "d"
+
+    stubgen.main([package_name, "-o", args.dir, "--ignore-all-errors"])
