@@ -63,7 +63,7 @@ public:
   // the corresponding rates.
   SelectiveEpitaxy(
       const std::vector<std::pair<Material, NumericType>> pMaterials,
-      const NumericType r111 = 0.5, const NumericType r100 = 1.)
+      NumericType rate111 = 0.5, NumericType rate100 = 1.)
       : materials(pMaterials) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
@@ -71,7 +71,7 @@ public:
     // velocity field
     auto velField =
         SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
-            materials, r111, r100);
+            materials, rate111, rate100);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

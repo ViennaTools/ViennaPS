@@ -79,12 +79,14 @@ public:
       spRate->resize(numPoints);
       chRate->resize(numPoints);
     }
+
     bool stop = false;
 
+#pragma omp parallel for reduction(|| : stop)
     for (size_t i = 0; i < numPoints; ++i) {
-      if (coordinates[i][D - 1] < params.etchStopDepth) {
+      if (coordinates[i][D - 1] < params.etchStopDepth || stop) {
         stop = true;
-        break;
+        continue; // skip points below etch stop depth
       }
 
       const auto sputterRate = ionSputterFlux->at(i) * params.ionFlux;
@@ -173,6 +175,7 @@ public:
     auto cCoverage = coverages->getScalarData("cCoverage");
     cCoverage->resize(numPoints);
 
+#pragma omp parallel for
     for (size_t i = 0; i < numPoints; ++i) {
       auto Gb_e = etchantFlux->at(i) * params.etchantFlux;
       auto Gb_o = oxygenFlux.at(i) * params.oxygenFlux;
@@ -598,15 +601,13 @@ public:
   CF4O2Etching() { initializeModel(); }
 
   // All flux values are in units 1e15 / cm²
-  CF4O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const double polymerFlux,
-               const NumericType meanEnergy,  // eV
-               const NumericType sigmaEnergy, // eV
-               const NumericType ionExponent = 300.,
-               const NumericType oxySputterYield = 2.,
-               const NumericType polySputterYield = 2.,
-               const NumericType etchStopDepth =
-                   std::numeric_limits<NumericType>::lowest()) {
+  CF4O2Etching(
+      double ionFlux, double etchantFlux, double oxygenFlux, double polymerFlux,
+      NumericType meanEnergy,  // eV
+      NumericType sigmaEnergy, // eV
+      NumericType ionExponent = 300., NumericType oxySputterYield = 2.,
+      NumericType polySputterYield = 2.,
+      NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest()) {
     params.ionFlux = ionFlux;
     params.etchantFlux = etchantFlux;
     params.oxygenFlux = oxygenFlux;

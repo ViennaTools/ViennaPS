@@ -99,8 +99,8 @@ class WetEtching : public ProcessModel<NumericType, D> {
 public:
   // The constructor expects the materials where etching is allowed including
   // the corresponding rates.
-  WetEtching(const std::vector<std::pair<Material, NumericType>> pMaterials)
-      : materials(pMaterials) {
+  WetEtching(const std::vector<std::pair<Material, NumericType>> materialRates)
+      : materials(materialRates) {
     if constexpr (D == 2) {
       direction100 = Vec3D<NumericType>{0., 1., 0.};
       direction010 = Vec3D<NumericType>{1., 0., -1.};
@@ -112,13 +112,11 @@ public:
   }
 
   WetEtching(const Vec3D<NumericType> &passedDir100,
-             const Vec3D<NumericType> &passedDir010,
-             const NumericType passedR100, const NumericType passedR110,
-             const NumericType passedR111, const NumericType passedR311,
-             const std::vector<std::pair<Material, NumericType>> pMaterials)
-      : direction100(passedDir100), direction010(passedDir010),
-        r100(passedR100), r110(passedR110), r111(passedR111), r311(passedR311),
-        materials(pMaterials) {
+             const Vec3D<NumericType> &passedDir010, NumericType rate100,
+             NumericType rate110, NumericType rate111, NumericType rate311,
+             const std::vector<std::pair<Material, NumericType>> materialRates)
+      : direction100(passedDir100), direction010(passedDir010), r100(rate100),
+        r110(rate110), r111(rate111), r311(rate311), materials(materialRates) {
     initialize();
   }
 

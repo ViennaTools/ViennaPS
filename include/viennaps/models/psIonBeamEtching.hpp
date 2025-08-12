@@ -44,7 +44,8 @@ public:
         ((std::sqrt(params_.meanEnergy) - std::sqrt(params_.thresholdEnergy)) *
          params_.yieldFunction(std::cos(params_.tiltAngle * M_PI / 180.)));
 
-    for (std::size_t i = 0; i < velocity->size(); i++) {
+#pragma omp parallel for
+    for (size_t i = 0; i < velocity->size(); i++) {
       if (!isMaskMaterial(materialIds[i])) {
         NumericType rate = params_.planeWaferRate;
         if (auto material = MaterialMap::mapToMaterial(materialIds[i]);

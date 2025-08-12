@@ -803,10 +803,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // TEOS Deposition
   pybind11::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
       module, "TEOSDeposition", processModel)
-      .def(pybind11::init(
-               &SmartPointer<TEOSDeposition<T, D>>::New<
-                   const T /*st1*/, const T /*rate1*/, const T /*order1*/,
-                   const T /*st2*/, const T /*rate2*/, const T /*order2*/>),
+      .def(pybind11::init(&SmartPointer<TEOSDeposition<T, D>>::New<
+                          T /*st1*/, T /*rate1*/, T /*order1*/, T /*st2*/,
+                          T /*rate2*/, T /*order2*/>),
            pybind11::arg("stickingProbabilityP1"), pybind11::arg("rateP1"),
            pybind11::arg("orderP1"),
            pybind11::arg("stickingProbabilityP2") = 0.,
@@ -815,18 +814,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // TEOS PE-CVD
   pybind11::class_<TEOSPECVD<T, D>, SmartPointer<TEOSPECVD<T, D>>>(
       module, "TEOSPECVD", processModel)
-      .def(
-          pybind11::init(&SmartPointer<TEOSPECVD<T, D>>::New<
-                         const T /*stR*/, const T /*rateR*/, const T /*orderR*/,
-                         const T /*stI*/, const T /*rateI*/, const T /*orderI*/,
-                         const T /*exponentI*/, const T /*minAngleIon*/>),
-          pybind11::arg("stickingProbabilityRadical"),
-          pybind11::arg("depositionRateRadical"),
-          pybind11::arg("depositionRateIon"), pybind11::arg("exponentIon"),
-          pybind11::arg("stickingProbabilityIon") = 1.,
-          pybind11::arg("reactionOrderRadical") = 1.,
-          pybind11::arg("reactionOrderIon") = 1.,
-          pybind11::arg("minAngleIon") = 0.);
+      .def(pybind11::init(
+               &SmartPointer<TEOSPECVD<T, D>>::New<
+                   T /*stR*/, T /*rateR*/, T /*orderR*/, T /*stI*/, T /*rateI*/,
+                   T /*orderI*/, T /*exponentI*/, T /*minAngleIon*/>),
+           pybind11::arg("stickingProbabilityRadical"),
+           pybind11::arg("depositionRateRadical"),
+           pybind11::arg("depositionRateIon"), pybind11::arg("exponentIon"),
+           pybind11::arg("stickingProbabilityIon") = 1.,
+           pybind11::arg("reactionOrderRadical") = 1.,
+           pybind11::arg("reactionOrderIon") = 1.,
+           pybind11::arg("minAngleIon") = 0.);
 
   // Plasma Etching Parameters
   pybind11::class_<PlasmaEtchingParameters<T>::MaskType>(
@@ -912,12 +910,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<SF6O2Etching<T, D>, SmartPointer<SF6O2Etching<T, D>>>(
       module, "SF6O2Etching", processModel)
       .def(pybind11::init<>())
-      .def(pybind11::init(
-               &SmartPointer<SF6O2Etching<T, D>>::New<
-                   const double /*ionFlux*/, const double /*etchantFlux*/,
-                   const double /*oxygenFlux*/, const T /*meanIonEnergy*/,
-                   const T /*sigmaIonEnergy*/, const T /*ionExponent*/,
-                   const T /*oxySputterYield*/, const T /*etchStopDepth*/>),
+      .def(pybind11::init(&SmartPointer<SF6O2Etching<T, D>>::New<
+                          double /*ionFlux*/, double /*etchantFlux*/,
+                          double /*oxygenFlux*/, T /*meanIonEnergy*/,
+                          T /*sigmaIonEnergy*/, T /*ionExponent*/,
+                          T /*oxySputterYield*/, T /*etchStopDepth*/>),
            pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
            pybind11::arg("oxygenFlux"), pybind11::arg("meanIonEnergy") = 100.,
            pybind11::arg("sigmaIonEnergy") = 10.,
@@ -936,12 +933,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<HBrO2Etching<T, D>, SmartPointer<HBrO2Etching<T, D>>>(
       module, "HBrO2Etching", processModel)
       .def(pybind11::init<>())
-      .def(pybind11::init(
-               &SmartPointer<HBrO2Etching<T, D>>::New<
-                   const double /*ionFlux*/, const double /*etchantFlux*/,
-                   const double /*oxygenFlux*/, const T /*meanIonEnergy*/,
-                   const T /*sigmaIonEnergy*/, const T /*ionExponent*/,
-                   const T /*oxySputterYield*/, const T /*etchStopDepth*/>),
+      .def(pybind11::init(&SmartPointer<HBrO2Etching<T, D>>::New<
+                          double /*ionFlux*/, double /*etchantFlux*/,
+                          double /*oxygenFlux*/, T /*meanIonEnergy*/,
+                          T /*sigmaIonEnergy*/, T /*ionExponent*/,
+                          T /*oxySputterYield*/, T /*etchStopDepth*/>),
            pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
            pybind11::arg("oxygenFlux"), pybind11::arg("meanIonEnergy") = 100.,
            pybind11::arg("sigmaIonEnergy") = 10.,
@@ -960,15 +956,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<SF6C4F8Etching<T, D>, SmartPointer<SF6C4F8Etching<T, D>>>(
       module, "SF6C4F8Etching", processModel)
       .def(pybind11::init<>())
-      .def(
-          pybind11::init(&SmartPointer<SF6C4F8Etching<T, D>>::New<
-                         const double /*ionFlux*/, const double /*etchantFlux*/,
-                         const T /*meanEnergy*/, const T /*sigmaEnergy*/,
-                         const T /*ionExponent*/, const T /*etchStopDepth*/>),
-          pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
-          pybind11::arg("meanEnergy"), pybind11::arg("sigmaEnergy"),
-          pybind11::arg("ionExponent") = 300.,
-          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+      .def(pybind11::init(
+               &SmartPointer<SF6C4F8Etching<T, D>>::New<
+                   double /*ionFlux*/, double /*etchantFlux*/, T /*meanEnergy*/,
+                   T /*sigmaEnergy*/, T /*ionExponent*/, T /*etchStopDepth*/>),
+           pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
+           pybind11::arg("meanEnergy"), pybind11::arg("sigmaEnergy"),
+           pybind11::arg("ionExponent") = 300.,
+           pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
       .def(pybind11::init(&SmartPointer<SF6C4F8Etching<T, D>>::New<
                           const PlasmaEtchingParameters<T> &>),
            pybind11::arg("parameters"))
@@ -1050,13 +1045,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<CF4O2Etching<T, D>, SmartPointer<CF4O2Etching<T, D>>>(
       module, "CF4O2Etching", processModel)
       .def(pybind11::init<>())
-      .def(pybind11::init(
-               &SmartPointer<CF4O2Etching<T, D>>::New<
-                   const double /*ionFlux*/, const double /*etchantFlux*/,
-                   const double /*oxygenFlux*/, const double /*polymerFlux*/,
-                   const T /*meanIonEnergy*/, const T /*sigmaIonEnergy*/,
-                   const T /*ionExponent*/, const T /*oxySputterYield*/,
-                   const T /*polySputterYield*/, const T /*etchStopDepth*/>),
+      .def(pybind11::init(&SmartPointer<CF4O2Etching<T, D>>::New<
+                          double /*ionFlux*/, double /*etchantFlux*/,
+                          double /*oxygenFlux*/, double /*polymerFlux*/,
+                          T /*meanIonEnergy*/, T /*sigmaIonEnergy*/,
+                          T /*ionExponent*/, T /*oxySputterYield*/,
+                          T /*polySputterYield*/, T /*etchStopDepth*/>),
            pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
            pybind11::arg("oxygenFlux"), pybind11::arg("polymerFlux"),
            pybind11::arg("meanIonEnergy") = 100.,
@@ -1158,17 +1152,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                    SmartPointer<FluorocarbonEtching<T, D>>>(
       module, "FluorocarbonEtching", processModel)
       .def(pybind11::init<>())
-      .def(
-          pybind11::init(&SmartPointer<FluorocarbonEtching<T, D>>::New<
-                         const double /*ionFlux*/, const double /*etchantFlux*/,
-                         const double /*polyFlux*/, T /*meanEnergy*/,
-                         const T /*sigmaEnergy*/, const T /*ionExponent*/,
-                         const T /*deltaP*/, const T /*etchStopDepth*/>),
-          pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
-          pybind11::arg("polyFlux"), pybind11::arg("meanIonEnergy") = 100.,
-          pybind11::arg("sigmaIonEnergy") = 10.,
-          pybind11::arg("ionExponent") = 100., pybind11::arg("deltaP") = 0.,
-          pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+      .def(pybind11::init(
+               &SmartPointer<FluorocarbonEtching<T, D>>::New<
+                   double /*ionFlux*/, double /*etchantFlux*/,
+                   double /*polyFlux*/, T /*meanEnergy*/, T /*sigmaEnergy*/,
+                   T /*ionExponent*/, T /*deltaP*/, T /*etchStopDepth*/>),
+           pybind11::arg("ionFlux"), pybind11::arg("etchantFlux"),
+           pybind11::arg("polyFlux"), pybind11::arg("meanIonEnergy") = 100.,
+           pybind11::arg("sigmaIonEnergy") = 10.,
+           pybind11::arg("ionExponent") = 100., pybind11::arg("deltaP") = 0.,
+           pybind11::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
       .def(pybind11::init(&SmartPointer<FluorocarbonEtching<T, D>>::New<
                           const FluorocarbonParameters<T> &>),
            pybind11::arg("parameters"))
@@ -1252,8 +1245,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Expose RateSet struct to Python
   pybind11::class_<DirectionalProcess<T, D>::RateSet>(module, "RateSet")
-      .def(pybind11::init<const Vec3D<T> &, const T, const T,
-                          const std::vector<Material> &, const bool>(),
+      .def(pybind11::init<const Vec3D<T> &, T, T, const std::vector<Material> &,
+                          bool>(),
            pybind11::arg("direction") = Vec3D<T>{0., 0., 0.},
            pybind11::arg("directionalVelocity") = 0.,
            pybind11::arg("isotropicVelocity") = 0.,
@@ -1275,7 +1268,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<DirectionalProcess<T, D>,
                    SmartPointer<DirectionalProcess<T, D>>>(
       module, "DirectionalProcess", processModel)
-      .def(pybind11::init<const Vec3D<T> &, T, T, const Material, bool>(),
+      .def(pybind11::init<const Vec3D<T> &, T, T, Material, bool>(),
            pybind11::arg("direction"), pybind11::arg("directionalVelocity"),
            pybind11::arg("isotropicVelocity") = 0.,
            pybind11::arg("maskMaterial") = Material::Mask,
@@ -1410,18 +1403,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // Oxide Regrowth
   pybind11::class_<OxideRegrowth<T, D>, SmartPointer<OxideRegrowth<T, D>>>(
       module, "OxideRegrowth", processModel)
-      .def(
-          pybind11::init(&SmartPointer<OxideRegrowth<T, D>>::New<
-                         const T, const T, const T, const T, const T, const T,
-                         const T, const T, const T, const T, const T, const T>),
-          pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),
-          pybind11::arg("redepositionRate"),
-          pybind11::arg("redepositionThreshold"),
-          pybind11::arg("redepositionTimeInt"),
-          pybind11::arg("diffusionCoefficient"), pybind11::arg("sinkStrength"),
-          pybind11::arg("scallopVelocity"), pybind11::arg("centerVelocity"),
-          pybind11::arg("topHeight"), pybind11::arg("centerWidth"),
-          pybind11::arg("stabilityFactor"));
+      .def(pybind11::init(
+               &SmartPointer<OxideRegrowth<T, D>>::New<T, T, T, T, T, T, T, T,
+                                                       T, T, T, T>),
+           pybind11::arg("nitrideEtchRate"), pybind11::arg("oxideEtchRate"),
+           pybind11::arg("redepositionRate"),
+           pybind11::arg("redepositionThreshold"),
+           pybind11::arg("redepositionTimeInt"),
+           pybind11::arg("diffusionCoefficient"), pybind11::arg("sinkStrength"),
+           pybind11::arg("scallopVelocity"), pybind11::arg("centerVelocity"),
+           pybind11::arg("topHeight"), pybind11::arg("centerWidth"),
+           pybind11::arg("stabilityFactor"));
 
   // Wet Etching Process
   pybind11::class_<WetEtching<T, D>, SmartPointer<WetEtching<T, D>>>(
@@ -1430,9 +1422,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                           const std::vector<std::pair<Material, T>>>),
            pybind11::arg("materialRates"))
       .def(pybind11::init(&SmartPointer<WetEtching<T, D>>::New<
-                          const std::array<T, 3> &, const std::array<T, 3> &,
-                          const T, const T, const T, const T,
-                          const std::vector<std::pair<Material, T>>>),
+                          const std::array<T, 3> &, const std::array<T, 3> &, T,
+                          T, T, T, const std::vector<std::pair<Material, T>>>),
            pybind11::arg("direction100"), pybind11::arg("direction010"),
            pybind11::arg("rate100"), pybind11::arg("rate110"),
            pybind11::arg("rate111"), pybind11::arg("rate311"),
@@ -1442,20 +1433,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   pybind11::class_<SelectiveEpitaxy<T, D>,
                    SmartPointer<SelectiveEpitaxy<T, D>>>(
       module, "SelectiveEpitaxy", processModel)
-      .def(
-          pybind11::init(
-              &SmartPointer<SelectiveEpitaxy<T, D>>::New<
-                  const std::vector<std::pair<Material, T>>, const T, const T>),
-          pybind11::arg("materialRates"), pybind11::arg("rate111") = 0.5,
-          pybind11::arg("rate100") = 1.0);
+      .def(pybind11::init(&SmartPointer<SelectiveEpitaxy<T, D>>::New<
+                          const std::vector<std::pair<Material, T>>, T, T>),
+           pybind11::arg("materialRates"), pybind11::arg("rate111") = 0.5,
+           pybind11::arg("rate100") = 1.0);
 
   // Single Particle ALD
   pybind11::class_<SingleParticleALD<T, D>,
                    SmartPointer<SingleParticleALD<T, D>>>(
       module, "SingleParticleALD", processModel)
-      .def(pybind11::init(&SmartPointer<SingleParticleALD<T, D>>::New<
-                          const T, const T, const T, const T, const T, const T,
-                          const T, const T, const T>),
+      .def(pybind11::init(
+               &SmartPointer<SingleParticleALD<T, D>>::New<T, T, T, T, T, T, T,
+                                                           T, T>),
            pybind11::arg("stickingProbability"), pybind11::arg("numCycles"),
            pybind11::arg("growthPerCycle"), pybind11::arg("totalCycles"),
            pybind11::arg("coverageTimeStep"), pybind11::arg("evFlux"),

@@ -56,7 +56,7 @@ class SphereDistribution : public ProcessModel<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
-  SphereDistribution(const NumericType radius, const NumericType gridDelta,
+  SphereDistribution(NumericType radius, NumericType gridDelta,
                      LSPtr mask = nullptr) {
     auto dist = SmartPointer<
         viennals::SphereDistribution<viennahrle::CoordType, D>>::New(radius,
@@ -79,7 +79,7 @@ class BoxDistribution : public ProcessModel<NumericType, D> {
 
 public:
   BoxDistribution(const std::array<viennahrle::CoordType, 3> &halfAxes,
-                  const NumericType gridDelta, LSPtr mask = nullptr) {
+                  NumericType gridDelta, LSPtr mask = nullptr) {
     auto dist =
         SmartPointer<viennals::BoxDistribution<viennahrle::CoordType, D>>::New(
             halfAxes, gridDelta);

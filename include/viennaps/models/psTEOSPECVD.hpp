@@ -17,10 +17,8 @@ class PECVDSurfaceModel : public SurfaceModel<NumericType> {
   const NumericType ionReactionOrder_;
 
 public:
-  PECVDSurfaceModel(const NumericType radicalRate,
-                    const NumericType radicalReactionOrder,
-                    const NumericType ionRate,
-                    const NumericType ionReactionOrder)
+  PECVDSurfaceModel(NumericType radicalRate, NumericType radicalReactionOrder,
+                    NumericType ionRate, NumericType ionReactionOrder)
       : radicalRate_(radicalRate), radicalReactionOrder_(radicalReactionOrder),
         ionRate_(ionRate), ionReactionOrder_(ionReactionOrder) {}
 
@@ -34,7 +32,8 @@ public:
 
     std::vector<NumericType> velocity(particleFluxRadical->size(), 0.);
 
-    for (std::size_t i = 0; i < velocity.size(); i++) {
+#pragma omp parallel for
+    for (size_t i = 0; i < velocity.size(); i++) {
       // calculate surface velocity based on particle fluxes
       velocity[i] =
           radicalRate_ *
@@ -94,12 +93,10 @@ private:
 template <class NumericType, int D>
 class TEOSPECVD : public ProcessModel<NumericType, D> {
 public:
-  TEOSPECVD(const NumericType radicalSticking, const NumericType radicalRate,
-            const NumericType ionRate, const NumericType ionExponent,
-            const NumericType ionSticking = 1.,
-            const NumericType radicalOrder = 1.,
-            const NumericType ionOrder = 1.,
-            const NumericType ionMinAngle = 0.) {
+  TEOSPECVD(NumericType radicalSticking, NumericType radicalRate,
+            NumericType ionRate, NumericType ionExponent,
+            NumericType ionSticking = 1., NumericType radicalOrder = 1.,
+            NumericType ionOrder = 1., NumericType ionMinAngle = 0.) {
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
     this->setVelocityField(velField);

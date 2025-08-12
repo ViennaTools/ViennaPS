@@ -304,17 +304,14 @@ private:
 template <class NumericType, int D>
 class OxideRegrowth : public ProcessModel<NumericType, D> {
 public:
-  OxideRegrowth(const NumericType nitrideEtchRate,
-                const NumericType oxideEtchRate,
-                const NumericType redepositionRate,
-                const NumericType reDepositionThreshold,
-                const NumericType redepositionTimeInt,
-                const NumericType diffusionCoefficient,
-                const NumericType sinkStrength,
-                const NumericType scallopVelocity,
-                const NumericType centerVelocity, const NumericType topHeight,
-                const NumericType centerWidth, // 11 parameters
-                const NumericType timeStabilityFactor = 0.245) {
+  OxideRegrowth(NumericType nitrideEtchRate, NumericType oxideEtchRate,
+                NumericType redepositionRate, NumericType reDepositionThreshold,
+                NumericType redepositionTimeInt,
+                NumericType diffusionCoefficient, NumericType sinkStrength,
+                NumericType scallopVelocity, NumericType centerVelocity,
+                NumericType topHeight,
+                NumericType centerWidth, // 11 parameters
+                NumericType timeStabilityFactor = 0.245) {
 
     auto velocityField =
         SmartPointer<impl::SelectiveEtchingVelocityField<NumericType, D>>::New(

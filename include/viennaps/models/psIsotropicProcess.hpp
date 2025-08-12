@@ -45,8 +45,8 @@ public:
 template <typename NumericType, int D>
 class IsotropicProcess : public ProcessModel<NumericType, D> {
 public:
-  IsotropicProcess(const NumericType isotropicRate,
-                   const Material maskMaterial = Material::Undefined) {
+  IsotropicProcess(NumericType isotropicRate,
+                   Material maskMaterial = Material::Undefined) {
     std::vector<std::pair<int, NumericType>> materialRates;
     if (maskMaterial != Material::Undefined) {
       materialRates.emplace_back(static_cast<int>(maskMaterial), 0.);
@@ -54,7 +54,7 @@ public:
     setup(isotropicRate, std::move(materialRates));
   }
 
-  IsotropicProcess(const NumericType isotropicRate,
+  IsotropicProcess(NumericType isotropicRate,
                    const std::vector<Material> &maskMaterials) {
     std::vector<std::pair<int, NumericType>> materialRates;
     for (const auto &mat : maskMaterials) {
@@ -64,7 +64,7 @@ public:
   }
 
   IsotropicProcess(std::unordered_map<Material, NumericType> materialRates,
-                   const NumericType defaultRate = 0.) {
+                   NumericType defaultRate = 0.) {
     std::vector<std::pair<int, NumericType>> rates;
     for (const auto &[mat, rate] : materialRates) {
       rates.emplace_back(static_cast<int>(mat), rate);

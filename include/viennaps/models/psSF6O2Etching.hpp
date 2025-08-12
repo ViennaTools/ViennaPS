@@ -29,13 +29,11 @@ public:
   }
 
   // All flux values are in units 1e15 / cm²
-  SF6O2Etching(const double ionFlux, const double etchantFlux,
-               const double oxygenFlux, const NumericType meanEnergy,
-               const NumericType sigmaEnergy,
-               const NumericType ionExponent = 300.,
-               const NumericType oxySputterYield = 2.,
-               const NumericType etchStopDepth =
-                   std::numeric_limits<NumericType>::lowest()) {
+  SF6O2Etching(
+      double ionFlux, double etchantFlux, double oxygenFlux,
+      NumericType meanEnergy, NumericType sigmaEnergy,
+      NumericType ionExponent = 300., NumericType oxySputterYield = 2.,
+      NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest()) {
     params = defaultParameters();
     params.ionFlux = ionFlux;
     params.etchantFlux = etchantFlux;
@@ -48,13 +46,13 @@ public:
     initializeModel();
   }
 
-  SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
-      : params(pParams) {
+  SF6O2Etching(const PlasmaEtchingParameters<NumericType> &parameters)
+      : params(parameters) {
     initializeModel();
   }
 
-  void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
-    params = pParams;
+  void setParameters(const PlasmaEtchingParameters<NumericType> &parameters) {
+    params = parameters;
     initializeModel();
   }
 

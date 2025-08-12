@@ -82,12 +82,19 @@ public:
       spRate->resize(numPoints);
       chRate->resize(numPoints);
     }
+
     bool stop = false;
 
+    // The etch rate is calculated in nm/s
+    const double unitConversion =
+        units::Time::getInstance().convertSecond() /
+        units::Length::getInstance().convertNanometer();
+
+#pragma omp parallel for reduction(|| : stop)
     for (size_t i = 0; i < numPoints; ++i) {
-      if (coordinates[i][D - 1] < params.etchStopDepth) {
+      if (coordinates[i][D - 1] < params.etchStopDepth || stop) {
         stop = true;
-        break;
+        continue;
       }
 
       const auto sputterRate = ionSputterFlux[i] * params.ionFlux;
@@ -95,11 +102,6 @@ public:
           eCoverage->at(i) * ionEnhancedFlux[i] * params.ionFlux;
       const auto chemicalRate =
           params.Substrate.k_sigma * eCoverage->at(i) / 4.;
-
-      // The etch rate is calculated in nm/s
-      const double unitConversion =
-          units::Time::getInstance().convertSecond() /
-          units::Length::getInstance().convertNanometer();
 
       if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
         etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
@@ -172,6 +174,7 @@ public:
     auto pCoverage = coverages->getScalarData("pCoverage");
     pCoverage->resize(numPoints);
 
+#pragma omp parallel for
     for (size_t i = 0; i < numPoints; ++i) {
       auto Gb_E = etchantFlux->at(i) * params.etchantFlux;
       auto Gb_P = passivationFlux->at(i) * params.passivationFlux;

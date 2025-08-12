@@ -237,8 +237,6 @@ public:
     const auto pCoverage = coverages->getScalarData("pCoverage");
     const auto peCoverage = coverages->getScalarData("peCoverage");
 
-    bool etchStop = false;
-
     // save the etch rate components for visualization
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
                              *chRate = nullptr;
@@ -256,10 +254,13 @@ public:
         units::Time::getInstance().convertSecond() /
         units::Length::getInstance().convertNanometer();
 
+    bool etchStop = false;
+
+#pragma omp parallel for reduction(|| : etchStop)
     for (std::size_t i = 0; i < numPoints; ++i) {
-      if (coordinates[i][D - 1] <= p.etchStopDepth) {
+      if (coordinates[i][D - 1] <= p.etchStopDepth || etchStop) {
         etchStop = true;
-        break;
+        continue;
       }
 
       auto matId = MaterialMap::mapToMaterial(materialIds[i]);
@@ -361,7 +362,8 @@ public:
     pCoverage->resize(numPoints);
     peCoverage->resize(numPoints);
 
-    // pe coverage
+// pe coverage
+#pragma omp parallel for
     for (std::size_t i = 0; i < numPoints; ++i) {
       if (etchantFlux->at(i) == 0.) {
         peCoverage->at(i) = 0.;
@@ -374,6 +376,7 @@ public:
     }
 
     // polymer coverage
+#pragma omp parallel for
     for (std::size_t i = 0; i < numPoints; ++i) {
       if (polyFlux->at(i) < eps) {
         pCoverage->at(i) = 0.;
@@ -388,6 +391,7 @@ public:
     }
 
     // etchant coverage
+#pragma omp parallel for
     for (std::size_t i = 0; i < numPoints; ++i) {
       if (pCoverage->at(i) < 1.) {
         if (etchantFlux->at(i) == 0.) {
@@ -664,13 +668,11 @@ template <typename NumericType, int D>
 class FluorocarbonEtching : public ProcessModel<NumericType, D> {
 public:
   FluorocarbonEtching() { initialize(); }
-  FluorocarbonEtching(const double ionFlux, const double etchantFlux,
-                      const double polyFlux, const NumericType meanEnergy,
-                      const NumericType sigmaEnergy,
-                      const NumericType exponent = 100.,
-                      const NumericType deltaP = 0.,
-                      const NumericType etchStopDepth =
-                          std::numeric_limits<NumericType>::lowest()) {
+  FluorocarbonEtching(
+      double ionFlux, double etchantFlux, double polyFlux,
+      NumericType meanEnergy, NumericType sigmaEnergy,
+      NumericType exponent = 100., NumericType deltaP = 0.,
+      NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest()) {
     params_.ionFlux = ionFlux;
     params_.etchantFlux = etchantFlux;
     params_.polyFlux = polyFlux;
