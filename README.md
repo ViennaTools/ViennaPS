@@ -1,9 +1,9 @@
 <div align="center">
 
 <picture>
-  <source srcset="https://raw.githubusercontent.com/ViennaTools/ViennaPS/banner/assets/ViennaPS_title-dark.png" media="(prefers-color-scheme: dark)">
-  <source srcset="https://raw.githubusercontent.com/ViennaTools/ViennaPS/banner/assets/ViennaPS_title.png" media="(prefers-color-scheme: light)">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/banner/assets/ViennaPS_title.png" alt="ViennaPS" width=500>
+  <source srcset="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/ViennaPS_title-dark.png" media="(prefers-color-scheme: dark)">
+  <source srcset="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/ViennaPS_title.png" media="(prefers-color-scheme: light)">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/ViennaPS_title.png" alt="ViennaPS" width=500>
 </picture>
 
 ---
