@@ -1,9 +1,9 @@
 <div align="center">
 
 <picture>
-  <source srcset="assets/ViennaPS_title-dark.png" media="(prefers-color-scheme: dark)">
-  <source srcset="assets/ViennaPS_title.png" media="(prefers-color-scheme: light)">
-  <img src="assets/ViennaPS_title.png" alt="ViennaPS" width=500>
+  <source srcset="https://raw.githubusercontent.com/ViennaTools/ViennaPS/banner/assets/ViennaPS_title-dark.png" media="(prefers-color-scheme: dark)">
+  <source srcset="https://raw.githubusercontent.com/ViennaTools/ViennaPS/banner/assets/ViennaPS_title.png" media="(prefers-color-scheme: light)">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/banner/assets/ViennaPS_title.png" alt="ViennaPS" width=500>
 </picture>
 
 ---
@@ -177,7 +177,7 @@ Individual examples can also be build by calling `make` in their respective buil
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDeposition) focuses on a particle deposition process within a trench geometry. By default, the simulation presents a 2D representation of the trench. Nevertheless, users have the flexibility to conduct 3D simulations by adjusting the value of the constant _D_ in __trenchDeposition.cpp__ to 3. Customization of process and geometry parameters is achieved through the __config.txt__ file. The accompanying image illustrates instances of the trench deposition process, showcasing variations in the particle sticking probability _s_.
 
 <div align="center">
-  <img src="assets/deposition.svg" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/deposition.svg" width=700 style="background-color:white;">
 </div>
 
 ### SF<sub>6</sub>/O<sub>2</sub> Hole Etching
@@ -191,7 +191,7 @@ The image presents the results of different flux configurations, as tested in _t
 > The images shown here were generated using **ViennaPS v3.6.0**.
 
 <div align="center">
-  <img src="assets/sf6o2_results.png" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/sf6o2_results.png" width=700 style="background-color:white;">
 </div>
 
 ### Bosch Process
@@ -205,7 +205,7 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/bosc
 This comparison highlights the trade-offs between computational efficiency and physical accuracy in DRIE simulations.
 
 <div align="center">
-  <img src="assets/bosch_process.png" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/bosch_process.png" width=700 style="background-color:white;">
 </div>
 
 ### Wet Etching
@@ -213,7 +213,7 @@ This comparison highlights the trade-offs between computational efficiency and p
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching) demonstrates the wet etching process, specifically focusing on the cantilever structure. The simulation captures the etching dynamics and the influence of crystallographic directions on the etch profile.
 
 <div align="center">
-  <img src="assets/wet_etching.png" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/wet_etching.png" width=700 style="background-color:white;">
 </div>
 
 ### Selective Epitaxy
@@ -221,7 +221,7 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cant
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) demonstrates the selective epitaxy process, focusing on the growth of SiGe on a Si substrate. Similar to wet etching, the process is influenced by crystallographic directions, which can be adjusted in the __config.txt__ file. The simulation captures the growth dynamics and the resulting SiGe structure.
 
 <div align="center">
-  <img src="assets/epitaxy.png" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/epitaxy.png" width=700 style="background-color:white;">
 </div>
 
 ### Redeposition During Selective Etching
@@ -229,7 +229,7 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/sele
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxideRegrowth) demonstrates capturing etching byproducts and the subsequent redeposition during a selective etching process in a Si<sub>3</sub>N<sub>4</sub>/SiO<sub>2</sub> stack. The etching byproducts are captured in a cell set description of the etching plasma. To model the dynamics of these etching byproducts, a convection-diffusion equation is solved on the cell set using finite differences. The redeposition is then captured by adding up the byproducts in every step and using this information to generate a velocity field on the etched surface. 
 
 <div align="center">
-  <img src="assets/redeposition.gif" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/redeposition.gif" width=700 style="background-color:white;">
 </div>
 
 ### GDS Mask Import Example
@@ -237,7 +237,7 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxid
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSReader) tests the full GDS mask import, blurring, rotation, scaling, and flipping as well as the level set conversion pipeline. Shown below is the result after applying proximity correction and extrusion on a simple test.
 
 <div align="center">
-  <img src="assets/masks.png" width=1200 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/masks.png" width=1200 style="background-color:white;">
 </div>
 
 
