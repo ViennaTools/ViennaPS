@@ -1,6 +1,13 @@
-import pybind11_stubgen as stubgen
 import sys
 import argparse
+
+try:
+    import pybind11_stubgen as stubgen
+except ImportError:
+    print(
+        "pybind11-stubgen is not installed. Please install it using 'pip install pybind11-stubgen'."
+    )
+    sys.exit(1)
 
 
 if __name__ == "__main__":
