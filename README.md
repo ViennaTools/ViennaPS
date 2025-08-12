@@ -1,6 +1,6 @@
 <div align="center">
 
-![](assets/ViennaPS_title.png)
+<img src="assets/ViennaPS_title.png" width=700>
 
 <h1>ViennaPS - Process Simulation Library</h1>
 
