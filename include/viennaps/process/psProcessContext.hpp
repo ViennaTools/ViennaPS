@@ -14,7 +14,7 @@ template <typename NumericType, int D> struct ProcessContext {
   // Process parameters
   NumericType processDuration = 0.0;
   NumericType processTime = 0.0;
-  NumericType remainingTime = 0.0;
+  NumericType previousTimeStep = 0.0;
 
   // Configuration
   AdvectionParameters<NumericType> advectionParams;
@@ -22,11 +22,6 @@ template <typename NumericType, int D> struct ProcessContext {
   unsigned maxIterations = std::numeric_limits<unsigned>::max();
   NumericType coverageDeltaThreshold = 0.0;
   bool coveragesInitialized = false;
-
-  // Runtime state
-  SmartPointer<viennals::Mesh<NumericType>> diskMesh;
-  SmartPointer<TranslationField<NumericType, D>> translationField;
-  std::unique_ptr<std::ofstream> covMetricFile;
 
   // Computed flags (derived from model state)
   struct Flags {
@@ -44,6 +39,11 @@ template <typename NumericType, int D> struct ProcessContext {
     flags.useProcessParams =
         model->getSurfaceModel() &&
         model->getSurfaceModel()->getProcessParameters() != nullptr;
+  }
+
+  void resetTime() {
+    processTime = 0.0;
+    previousTimeStep = 0.0;
   }
 
   std::string getProcessName() const {

@@ -8,7 +8,10 @@
 #include "psFluxProcessStrategy.hpp"
 #include "psGeometricProcessStrategy.hpp"
 
-#include "psFluxEngine.hpp"
+// Flux engines
+#include "psCPUDiskEngine.hpp"
+
+#include "../psProcessModelBase.hpp"
 
 namespace viennaps {
 
@@ -20,6 +23,12 @@ private:
 
 public:
   Process() { initializeStrategies(); }
+  Process(SmartPointer<Domain<NumericType, D>> domain,
+          SmartPointer<ProcessModelBase<NumericType, D>> model,
+          NumericType processDuration = 0.)
+      : context_{domain, model, processDuration} {
+    initializeStrategies();
+  }
 
   void apply() {
     if (!checkModelAndDomain())
@@ -38,6 +47,7 @@ public:
     }
 
     // Execute strategy
+    context_.resetTime(); // Reset process time and previous time step
     auto result = strategy->execute(context_);
     handleProcessResult(result);
   }
@@ -49,16 +59,8 @@ private:
         std::make_unique<GeometricProcessStrategy<NumericType, D>>());
     strategies_.push_back(
         std::make_unique<CallbackOnlyStrategy<NumericType, D>>());
-
-    // Surface strategy needs additional components
-    auto advectionHandler =
-        std::make_unique<AdvectionHandler<NumericType, D>>();
-    auto fluxCalculator = createFluxCalculator(); // Factory method
-    auto coverageManager = std::make_unique<CoverageManager<NumericType, D>>();
-
-    strategies_.push_back(std::make_unique<FluxProcessStrategy<NumericType, D>>(
-        std::move(advectionHandler), std::move(fluxCalculator),
-        std::move(coverageManager)));
+    strategies_.push_back(
+        std::make_unique<AnalyticProcessStrategy<NumericType, D>>());
   }
 
   ProcessStrategy<NumericType, D> *findStrategy() {
@@ -80,14 +82,17 @@ private:
       break;
     case ProcessResult::USER_INTERRUPTED:
       Logger::getInstance().addInfo("Process interrupted by user.").print();
+#ifdef VIENNATOOLS_PYTHON_BUILD
+      throw pybind11::error_already_set();
+#endif
       break;
       // Handle other results...
     }
   }
 
-  // Factory method for creating flux calculators (can be overridden by derived
+  // Factory method for creating flux engines (can be overridden by derived
   // classes)
-  std::unique_ptr<FluxEngine<NumericType, D>> createFluxCalculator() {
+  std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() {
     switch (fluxEngineType_) {
     case FluxEngineType::CPU_Disk:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
@@ -95,6 +100,27 @@ private:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
       return nullptr;
     }
+  }
+
+  bool checkModelAndDomain() const {
+    if (!context_.domain) {
+      Logger::getInstance().addError("No domain passed to Process.").print();
+      return false;
+    }
+
+    if (context_.domain->getLevelSets().empty()) {
+      Logger::getInstance().addError("No level sets in domain.").print();
+      return false;
+    }
+
+    if (!context_.model) {
+      Logger::getInstance()
+          .addError("No process model passed to Process.")
+          .print();
+      return false;
+    }
+
+    return true;
   }
 };
 

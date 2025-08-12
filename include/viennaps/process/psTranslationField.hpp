@@ -91,6 +91,8 @@ public:
     }
   }
 
+  auto const getTranslationMethod() const { return translationMethod_; }
+
 private:
   SmartPointer<TranslatorType> translator_;
   KDTree<NumericType, Vec3D<NumericType>> kdTree_;

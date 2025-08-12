@@ -4,15 +4,9 @@
 
 namespace viennaps {
 
-enum class FluxEngineType {
-  CPU_Disk,
-  GPU_Triangle,
-  GPU_Disk,
-  GPU_LevelSet
-}
+enum class FluxEngineType { CPU_Disk, GPU_Triangle, GPU_Disk, GPU_LevelSet };
 
-template <typename NumericType, int D>
-class FluxEngine {
+template <typename NumericType, int D> class FluxEngine {
 public:
   FluxEngine(ProcessContext<NumericType, D> &context) : context_(context) {
     // Initialize the flux engine with the provided context
