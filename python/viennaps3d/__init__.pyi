@@ -118,5 +118,5 @@ def _module_ptx_path():
 def _windows_dll_path():
     ...
 D: int = 3
-ptxPath: str = '/home/reiter/Code/ViennaPS/.venv/lib/python3.12/site-packages/viennaps3d/ptx'
+ptxPath: str = ''
 version: str = '"3.7.1"'
