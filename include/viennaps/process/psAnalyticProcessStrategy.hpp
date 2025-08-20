@@ -13,6 +13,8 @@ private:
   viennacore::Timer<> callbackTimer_;
 
 public:
+  DEFINE_CLASS_NAME(AnalyticProcessStrategy)
+
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
     // Validate required components
     if (auto result = validateContext(context);
@@ -27,10 +29,6 @@ public:
 
     // Main processing loop
     return executeProcessingLoop(context);
-  }
-
-  std::string getStrategyName() const override {
-    return "AnalyticProcessStrategy";
   }
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {

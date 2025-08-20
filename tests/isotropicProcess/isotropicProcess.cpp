@@ -1,8 +1,8 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psIsotropicProcess.hpp>
 
+#include <process/psProcess.hpp>
 #include <psDomain.hpp>
-#include <psProcess.hpp>
 
 #include <lsTestAsserts.hpp>
 #include <vcTestAsserts.hpp>

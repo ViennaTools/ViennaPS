@@ -7,6 +7,8 @@ namespace viennaps {
 template <typename NumericType, int D>
 class CallbackOnlyStrategy : public ProcessStrategy<NumericType, D> {
 public:
+  DEFINE_CLASS_NAME(CallbackOnlyStrategy)
+
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
     if (context.flags.useAdvectionCallback) {
       auto callback = context.model->getAdvectionCallback();
@@ -19,10 +21,6 @@ public:
     }
 
     return ProcessResult::SUCCESS;
-  }
-
-  std::string getStrategyName() const override {
-    return "CallbackOnlyStrategy";
   }
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {

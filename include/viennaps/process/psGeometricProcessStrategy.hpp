@@ -7,6 +7,8 @@ namespace viennaps {
 template <typename NumericType, int D>
 class GeometricProcessStrategy : public ProcessStrategy<NumericType, D> {
 public:
+  DEFINE_CLASS_NAME(GeometricProcessStrategy)
+
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
     Logger::getInstance().addInfo("Applying geometric model...").print();
 
@@ -15,10 +17,6 @@ public:
     geometricModel->apply();
 
     return ProcessResult::SUCCESS;
-  }
-
-  std::string getStrategyName() const override {
-    return "GeometricProcessStrategy";
   }
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {

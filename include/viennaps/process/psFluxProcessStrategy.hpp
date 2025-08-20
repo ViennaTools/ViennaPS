@@ -10,18 +10,15 @@ namespace viennaps {
 template <typename NumericType, int D>
 class FluxProcessStrategy : public ProcessStrategy<NumericType, D> {
 private:
-  std::unique_ptr<AdvectionHandler<NumericType, D>> advectionHandler_;
+  AdvectionHandler<NumericType, D> advectionHandler_;
+  CoverageManager<NumericType, D> coverageManager_;
   std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine_;
-  std::unique_ptr<CoverageManager<NumericType, D>> coverageManager_;
 
 public:
-  FluxProcessStrategy(
-      std::unique_ptr<AdvectionHandler<NumericType, D>> advectionHandler,
-      std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine,
-      std::unique_ptr<CoverageManager<NumericType, D>> coverageManager)
-      : advectionHandler_(std::move(advectionHandler)),
-        fluxEngine_(std::move(fluxEngine)),
-        coverageManager_(std::move(coverageManager)) {}
+  DEFINE_CLASS_NAME(FluxProcessStrategy)
+
+  FluxProcessStrategy(std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine)
+      : fluxEngine_(std::move(fluxEngine)) {}
 
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
     // Validate required components
@@ -33,14 +30,6 @@ public:
     // Setup phase
     if (auto result = setupProcess(context); result != ProcessResult::SUCCESS) {
       return result;
-    }
-
-    // Initialize coverages if needed
-    if (context.flags.useCoverages) {
-      if (auto result = coverageManager_->initializeCoverages(context);
-          result != ProcessResult::SUCCESS) {
-        return result;
-      }
     }
 
     // Main processing loop
@@ -76,15 +65,25 @@ private:
 
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
     // Initialize advection handler
-    if (auto result = advectionHandler_->initialize(context);
+    if (auto result = advectionHandler_.initialize(context);
         result != ProcessResult::SUCCESS) {
       return result;
     }
 
-    // Initialize flux engine if needed
+    // Initialize flux engine
     if (auto result = fluxEngine_->initialize(context);
         result != ProcessResult::SUCCESS) {
       return result;
+    }
+
+    // Try to initialize coverages if needed
+    auto result = coverageManager_.initializeCoverages(context);
+    if (result == ProcessResult::SUCCESS) {
+      Logger::getInstance().addInfo("Using coverages.").print();
+      context.flags.useCoverages = true;
+    } else if (result == ProcessResult::CONVERGENCE_FAILURE) {
+      Logger::getInstance().addError("Failed to initialize coverages.").print();
+      return ProcessResult::CONVERGENCE_FAILURE;
     }
 
     return ProcessResult::SUCCESS;
