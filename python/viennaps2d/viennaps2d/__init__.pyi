@@ -12,6 +12,7 @@ from . import ray
 from . import util
 
 __all__: list[str] = [
+    "AdvancedSingleParticleProcess",
     "AdvectionCallback",
     "AdvectionParameters",
     "AtomicLayerProcess",
@@ -99,6 +100,18 @@ __all__: list[str] = [
     "util",
     "version",
 ]
+
+class AdvancedSingleParticleProcess(ProcessModel):
+    def __init__(
+        self,
+        materialRates: collections.abc.Mapping[Material, typing.SupportsFloat],
+        materialSticking: collections.abc.Mapping[Material, typing.SupportsFloat],
+        defaultRate: typing.SupportsFloat = 1.0,
+        defaultStickingProbability: typing.SupportsFloat = 1.0,
+        sourceDistributionPower: typing.SupportsFloat = 1.0,
+        meanFreePath: typing.SupportsFloat = -1.0,
+        fluxIncludeSticking: bool = False,
+    ) -> None: ...
 
 class AdvectionCallback:
     domain: Domain

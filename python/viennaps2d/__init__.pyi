@@ -14,6 +14,7 @@ import sys as sys
 import viennals2d as ls
 from viennals2d.viennals2d import BoundaryConditionEnum as BoundaryType
 from viennals2d.viennals2d import IntegrationSchemeEnum as IntegrationScheme
+from viennaps2d.viennaps2d import AdvancedSingleParticleProcess
 from viennaps2d.viennaps2d import AdvectionCallback
 from viennaps2d.viennaps2d import AdvectionParameters
 from viennaps2d.viennaps2d import AtomicLayerProcess
@@ -101,6 +102,7 @@ from viennaps2d.viennaps2d import util
 from . import viennaps2d
 
 __all__: list[str] = [
+    "AdvancedSingleParticleProcess",
     "AdvectionCallback",
     "AdvectionParameters",
     "AtomicLayerProcess",

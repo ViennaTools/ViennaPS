@@ -14,6 +14,7 @@ import sys as sys
 import viennals3d as ls
 from viennals3d.viennals3d import BoundaryConditionEnum as BoundaryType
 from viennals3d.viennals3d import IntegrationSchemeEnum as IntegrationScheme
+from viennaps3d.viennaps3d import AdvancedSingleParticleProcess
 from viennaps3d.viennaps3d import AdvectionCallback
 from viennaps3d.viennaps3d import AdvectionParameters
 from viennaps3d.viennaps3d import AtomicLayerProcess
@@ -93,13 +94,13 @@ from viennaps3d.viennaps3d import ToDiskMesh
 from viennaps3d.viennaps3d import WetEtching
 from viennaps3d.viennaps3d import Writer
 from viennaps3d.viennaps3d import constants
-from viennaps3d.viennaps3d import gpu
 from viennaps3d.viennaps3d import ray
 from viennaps3d.viennaps3d import setNumThreads
 from viennaps3d.viennaps3d import util
 from . import viennaps3d
 
 __all__: list[str] = [
+    "AdvancedSingleParticleProcess",
     "AdvectionCallback",
     "AdvectionParameters",
     "AtomicLayerProcess",
@@ -183,7 +184,6 @@ __all__: list[str] = [
     "WetEtching",
     "Writer",
     "constants",
-    "gpu",
     "ls",
     "ptxPath",
     "ray",
@@ -214,5 +214,7 @@ def _module_ptx_path(): ...
 def _windows_dll_path(): ...
 
 D: int = 3
-ptxPath: str = ""
+ptxPath: str = (
+    "/home/reiter/Code/ViennaPS/.venv/lib/python3.12/site-packages/viennaps3d/ptx"
+)
 version: str = '"3.7.2"'

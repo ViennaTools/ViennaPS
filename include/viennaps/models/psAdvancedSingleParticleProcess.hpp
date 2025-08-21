@@ -85,21 +85,22 @@ class AdvancedSingleParticleProcess : public ProcessModel<NumericType, D> {
 public:
   AdvancedSingleParticleProcess(
       std::unordered_map<Material, NumericType> materialRates,
-      std::unordered_map<Material, NumericType> stickingProbabilitys,
+      std::unordered_map<Material, NumericType> materialSticking,
       NumericType defaultRate = 1., NumericType defaultStickingProbability = 1.,
       NumericType sourceDistributionPower = 1., NumericType meanFreePath = -1.,
       bool fluxIncludeSticking = false) {
 
-    std::vector<std::pair<int, NumericType>> materialSticking;
-    for (const auto &pair : stickingProbabilitys) {
-      materialSticking.emplace_back(static_cast<int>(pair.first), pair.second);
+    std::vector<std::pair<int, NumericType>> materialStickingVec;
+    for (const auto &pair : materialSticking) {
+      materialStickingVec.emplace_back(static_cast<int>(pair.first),
+                                       pair.second);
     }
 
     // particles
     auto particle =
         std::make_unique<impl::SingleParticleExtended<NumericType, D>>(
-            materialSticking, stickingProbability, sourceDistributionPower,
-            meanFreePath, fluxIncludeSticking);
+            materialStickingVec, defaultStickingProbability,
+            sourceDistributionPower, meanFreePath, fluxIncludeSticking);
 
     // surface model
     auto surfModel =
@@ -130,11 +131,8 @@ public:
                               " Rate"] = std::vector<NumericType>{pair.second};
       }
     }
-    if (!stickingProbabilitys.empty()) {
-      for (const auto &pair : stickingProbabilitys) {
-        if (pair.first == Material::Undefined)
-          continue; // skip undefined material
-
+    if (!materialSticking.empty()) {
+      for (const auto &pair : materialSticking) {
         this->processMetaData[MaterialMap::getMaterialName(pair.first) +
                               " Sticking Probability"] =
             std::vector<NumericType>{pair.second};

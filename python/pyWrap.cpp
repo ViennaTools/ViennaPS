@@ -55,6 +55,7 @@
 #include <psVelocityField.hpp>
 
 // models
+#include <models/psAdvancedSingleParticleProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -957,6 +958,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
            pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
            pybind11::arg("sourceExponent"));
+
+  // Advanced Single Particle Process
+  pybind11::class_<AdvancedSingleParticleProcess<T, D>,
+                   SmartPointer<AdvancedSingleParticleProcess<T, D>>>(
+      module, "AdvancedSingleParticleProcess", processModel)
+      .def(pybind11::init<std::unordered_map<Material, T>,
+                          std::unordered_map<Material, T>, T, T, T, T, bool>(),
+           pybind11::arg("materialRates"), pybind11::arg("materialSticking"),
+           pybind11::arg("defaultRate") = 1.0,
+           pybind11::arg("defaultStickingProbability") = 1.0,
+           pybind11::arg("sourceDistributionPower") = 1.0,
+           pybind11::arg("meanFreePath") = -1.0,
+           pybind11::arg("fluxIncludeSticking") = false);
 
   // Multi Particle Process
   pybind11::class_<MultiParticleProcess<T, D>,
