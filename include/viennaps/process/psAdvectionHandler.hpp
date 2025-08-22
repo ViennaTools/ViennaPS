@@ -1,8 +1,6 @@
 #pragma once
 
 #include "psProcessContext.hpp"
-#include "psProcessStrategy.hpp"
-
 #include "psTranslationField.hpp"
 
 #include <lsAdvect.hpp>
@@ -13,23 +11,25 @@ namespace viennaps {
 
 template <typename NumericType, int D> class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
+  SmartPointer<TranslationField<NumericType, D>> translationField_ = nullptr;
   viennacore::Timer<> timer_;
   unsigned long lsVelCounter = 0;
 
 public:
   ProcessResult initialize(const ProcessContext<NumericType, D> &context) {
     // Initialize advection handler with context
-    auto translationField = SmartPointer<TranslationField<NumericType, D>>::New(
+    translationField_ = SmartPointer<TranslationField<NumericType, D>>::New(
         context.model->getVelocityField(), context.domain->getMaterialMap());
 
-    if (translationField->getTranslationMethod() != 0) {
+    auto translationMethod = translationField_->getTranslationMethod();
+    if (translationMethod > 2 || translationMethod < 0) {
       Logger::getInstance()
-          .addWarning("Velocity field translation method is not set to 0.")
+          .addWarning("Translation field method not supported.")
           .print();
       return ProcessResult::INVALID_INPUT;
     }
 
-    advectionKernel_.setVelocityField(translationField);
+    advectionKernel_.setVelocityField(translationField_);
     advectionKernel_.setIntegrationScheme(
         context.advectionParams.integrationScheme);
     advectionKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
@@ -40,6 +40,9 @@ public:
     advectionKernel_.setIgnoreVoids(context.advectionParams.ignoreVoids);
     advectionKernel_.setCheckDissipation(
         context.advectionParams.checkDissipation);
+    // normals vectors are only necessary for analytical velocity fields
+    if (translationMethod > 0)
+      advectionKernel_.setCalculateNormalVectors(false);
 
     for (auto &dom : context.domain->getLevelSets()) {
       advectionKernel_.insertNextLevelSet(dom);
@@ -85,6 +88,11 @@ public:
   }
 
   auto &getTimer() const { return timer_; }
+
+  auto &getTranslationField() const {
+    assert(translationField_ != nullptr);
+    return translationField_;
+  }
 };
 
 } // namespace viennaps

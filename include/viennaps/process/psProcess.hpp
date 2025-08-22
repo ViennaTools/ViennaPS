@@ -45,6 +45,9 @@ public:
           .print();
       return;
     }
+    Logger::getInstance()
+        .addDebug("Using strategy: " + std::string(strategy->name()))
+        .print();
 
     // Execute strategy
     context_.resetTime(); // Reset process time and previous time step
@@ -61,6 +64,8 @@ private:
         std::make_unique<CallbackOnlyStrategy<NumericType, D>>());
     strategies_.push_back(
         std::make_unique<AnalyticProcessStrategy<NumericType, D>>());
+    strategies_.push_back(std::make_unique<FluxProcessStrategy<NumericType, D>>(
+        createFluxEngine()));
   }
 
   ProcessStrategy<NumericType, D> *findStrategy() {
@@ -85,6 +90,9 @@ private:
 #ifdef VIENNATOOLS_PYTHON_BUILD
       throw pybind11::error_already_set();
 #endif
+      break;
+    case ProcessResult::FAILURE:
+      Logger::getInstance().addError("Process failed.").print();
       break;
       // Handle other results...
     }

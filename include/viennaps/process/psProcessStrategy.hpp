@@ -9,16 +9,6 @@
 
 namespace viennaps {
 
-enum class ProcessResult {
-  SUCCESS,
-  INVALID_INPUT,
-  EARLY_TERMINATION,
-  CONVERGENCE_FAILURE,
-  USER_INTERRUPTED,
-  FAILURE,
-  NOT_IMPLEMENTED
-};
-
 template <typename NumericType, int D> class ProcessStrategy {
 public:
   virtual ~ProcessStrategy() = default;

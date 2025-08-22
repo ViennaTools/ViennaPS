@@ -16,20 +16,188 @@ class CPUDiskEngine final : public FluxEngine<NumericType, D> {
   using DomainType = SmartPointer<Domain<NumericType, D>>;
 
 public:
-  CPUDiskEngine(ProcessContext<NumericType, D> &context)
-      : FluxEngine<NumericType, D>(context) {}
+  ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
+    auto model =
+        std::dynamic_pointer_cast<ProcessModel<NumericType, D>>(context.model);
+    if (!model) {
+      Logger::getInstance().addError("Invalid process model.").print();
+      return ProcessResult::INVALID_INPUT;
+    }
+    return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult initialize(ProcessContext<NumericType, D> &context) final {
+    // Map the domain boundary to the ray tracing boundaries
+    viennaray::BoundaryCondition rayBoundaryCondition[D];
+    if (context.rayTracingParams.ignoreFluxBoundaries) {
+      for (unsigned i = 0; i < D; ++i)
+        rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
+    } else {
+      for (unsigned i = 0; i < D; ++i)
+        rayBoundaryCondition[i] = util::convertBoundaryCondition(
+            context.domain->getGrid().getBoundaryConditions(i));
+    }
+    rayTracer_.setBoundaryConditions(rayBoundaryCondition);
+    rayTracer_.setSourceDirection(context.rayTracingParams.sourceDirection);
+    rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
+    rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
+    rayTracer_.setCalculateFlux(false);
+
+    auto model =
+        std::dynamic_pointer_cast<ProcessModel<NumericType, D>>(context.model);
+
+    if (auto source = model->getSource()) {
+      rayTracer_.setSource(source);
+      Logger::getInstance().addInfo("Using custom source.").print();
+    }
+    if (auto primaryDirection = model->getPrimaryDirection()) {
+      Logger::getInstance()
+          .addInfo("Using primary direction: " +
+                   util::arrayToString(primaryDirection.value()))
+          .print();
+      rayTracer_.setPrimaryDirection(primaryDirection.value());
+    }
+
+    // initialize particle data logs
+    particleDataLogs_.resize(model->getParticleTypes().size());
+    for (std::size_t i = 0; i < model->getParticleTypes().size(); i++) {
+      if (int logSize = model->getParticleLogSize(i); logSize > 0) {
+        particleDataLogs_[i].data.resize(1);
+        particleDataLogs_[i].data[0].resize(logSize);
+      }
+    }
+
+    return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
+    auto &diskMesh = context.diskMesh;
+    assert(diskMesh != nullptr);
+
+    auto points = diskMesh->getNodes();
+    auto normals = *diskMesh->getCellData().getVectorData("Normals");
+    auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+
+    if (context.rayTracingParams.diskRadius == 0.) {
+      rayTracer_.setGeometry(points, normals,
+                             context.domain->getGrid().getGridDelta());
+    } else {
+      rayTracer_.setGeometry(points, normals,
+                             context.domain->getGrid().getGridDelta(),
+                             context.rayTracingParams.diskRadius);
+    }
+    rayTracer_.setMaterialIds(materialIds);
+
+    return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult
+  calculateFluxes(ProcessContext<NumericType, D> &context,
+                  viennacore::SmartPointer<viennals::PointData<NumericType>>
+                      &fluxes) final {
+    viennaray::TracingData<NumericType> rayTracingData;
+    auto surfaceModel = context.model->getSurfaceModel();
+
+    // move coverages to the ray tracer
+    if (context.flags.useCoverages) {
+      rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
+    }
+
+    if (context.flags.useProcessParams) {
+      // store scalars in addition to coverages
+      auto processParams = surfaceModel->getProcessParameters();
+      NumericType numParams = processParams->getScalarData().size();
+      rayTracingData.setNumberOfScalarData(numParams);
+      for (size_t i = 0; i < numParams; ++i) {
+        rayTracingData.setScalarData(i, processParams->getScalarData(i),
+                                     processParams->getScalarDataLabel(i));
+      }
+    }
+
+    if (context.flags.useCoverages || context.flags.useProcessParams)
+      rayTracer_.setGlobalData(rayTracingData);
+
+    runRayTracer(context, fluxes);
+
+    // move coverages back in the model
+    if (context.flags.useCoverages)
+      moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
+
+    return ProcessResult::SUCCESS;
+  }
+
+private:
+  void runRayTracer(ProcessContext<NumericType, D> const &context,
+                    SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+    assert(fluxes != nullptr);
+    fluxes->clear();
+
+    auto model =
+        std::dynamic_pointer_cast<ProcessModel<NumericType, D>>(context.model);
+
+    unsigned particleIdx = 0;
+    for (auto &particle : model->getParticleTypes()) {
+      int dataLogSize = model->getParticleLogSize(particleIdx);
+      if (dataLogSize > 0) {
+        rayTracer_.getDataLog().data.resize(1);
+        rayTracer_.getDataLog().data[0].resize(dataLogSize, 0.);
+      }
+      rayTracer_.setParticleType(particle);
+      rayTracer_.apply();
+
+      // fill up fluxes vector with fluxes from this particle type
+      auto &localData = rayTracer_.getLocalData();
+      int numFluxes = particle->getLocalDataLabels().size();
+      for (int i = 0; i < numFluxes; ++i) {
+        auto flux = std::move(localData.getVectorData(i));
+
+        // normalize and smooth
+        rayTracer_.normalizeFlux(flux,
+                                 context.rayTracingParams.normalizationType);
+        if (context.rayTracingParams.smoothingNeighbors > 0)
+          rayTracer_.smoothFlux(flux,
+                                context.rayTracingParams.smoothingNeighbors);
+
+        fluxes->insertNextScalarData(std::move(flux),
+                                     localData.getVectorDataLabel(i));
+      }
+
+      if (dataLogSize > 0) {
+        particleDataLogs_[particleIdx].merge(rayTracer_.getDataLog());
+      }
+      ++particleIdx;
+    }
+  }
+
+  static viennaray::TracingData<NumericType> movePointDataToRayData(
+      SmartPointer<viennals::PointData<NumericType>> pointData) {
+    viennaray::TracingData<NumericType> rayData;
+    const auto numData = pointData->getScalarDataSize();
+    rayData.setNumberOfVectorData(numData);
+    for (size_t i = 0; i < numData; ++i) {
+      auto label = pointData->getScalarDataLabel(i);
+      rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
+                            label);
+    }
+
+    return std::move(rayData);
+  }
+
+  static void moveRayDataToPointData(
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      viennaray::TracingData<NumericType> &rayData) {
+    pointData->clear();
+    const auto numData = rayData.getVectorData().size();
+    for (size_t i = 0; i < numData; ++i)
+      pointData->insertNextScalarData(std::move(rayData.getVectorData(i)),
+                                      rayData.getVectorDataLabel(i));
+  }
+
+private:
+  viennaray::Trace<NumericType, D> rayTracer_;
+  std::vector<viennaray::DataLog<NumericType>> particleDataLogs_;
 
   /*
-void setRayTracingDiskRadius(NumericType radius) {
-rayTracingParams_.diskRadius = radius;
-if (rayTracingParams_.diskRadius < 0.) {
-  Logger::getInstance()
-      .addWarning("Disk radius must be positive. Using default value.")
-      .print();
-  rayTracingParams_.diskRadius = 0.;
-}
-}
-
 void writeParticleDataLogs(const std::string &fileName) {
 std::ofstream file(fileName.c_str());
 
@@ -45,166 +213,13 @@ for (std::size_t i = 0; i < particleDataLogs.size(); i++) {
 
 file.close();
 }
-
-protected:
-static viennaray::TracingData<NumericType> movePointDataToRayData(
-  SmartPointer<viennals::PointData<NumericType>> pointData) {
-viennaray::TracingData<NumericType> rayData;
-const auto numData = pointData->getScalarDataSize();
-rayData.setNumberOfVectorData(numData);
-for (size_t i = 0; i < numData; ++i) {
-  auto label = pointData->getScalarDataLabel(i);
-  rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
-                        label);
-}
-
-return std::move(rayData);
-}
-
-static void moveRayDataToPointData(
-  SmartPointer<viennals::PointData<NumericType>> pointData,
-  viennaray::TracingData<NumericType> &rayData) {
-pointData->clear();
-const auto numData = rayData.getVectorData().size();
-for (size_t i = 0; i < numData; ++i)
-  pointData->insertNextScalarData(std::move(rayData.getVectorData(i)),
-                                  rayData.getVectorDataLabel(i));
-}
-
-bool checkInput() override { return true; }
-
-void initialize() override {
-// Map the domain boundary to the ray tracing boundaries
-viennaray::BoundaryCondition rayBoundaryCondition[D];
-if (rayTracingParams_.ignoreFluxBoundaries) {
-  for (unsigned i = 0; i < D; ++i)
-    rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
-} else {
-  for (unsigned i = 0; i < D; ++i)
-    rayBoundaryCondition[i] = util::convertBoundaryCondition(
-        domain_->getGrid().getBoundaryConditions(i));
-}
-rayTracer.setBoundaryConditions(rayBoundaryCondition);
-rayTracer.setSourceDirection(rayTracingParams_.sourceDirection);
-rayTracer.setNumberOfRaysPerPoint(rayTracingParams_.raysPerPoint);
-rayTracer.setUseRandomSeeds(rayTracingParams_.useRandomSeeds);
-rayTracer.setCalculateFlux(false);
-
-if (auto source = processModel_->getSource()) {
-  rayTracer.setSource(source);
-  Logger::getInstance().addInfo("Using custom source.").print();
-}
-if (auto primaryDirection = processModel_->getPrimaryDirection()) {
-  Logger::getInstance()
-      .addInfo("Using primary direction: " +
-               util::arrayToString(primaryDirection.value()))
-      .print();
-  rayTracer.setPrimaryDirection(primaryDirection.value());
-}
-
-// initialize particle data logs
-particleDataLogs.resize(processModel_->getParticleTypes().size());
-for (std::size_t i = 0; i < processModel_->getParticleTypes().size(); i++) {
-  if (int logSize = processModel_->getParticleLogSize(i); logSize > 0) {
-    particleDataLogs[i].data.resize(1);
-    particleDataLogs[i].data[0].resize(logSize);
-  }
-}
-}
-
-void updateSurface() override {
-assert(diskMesh_ != nullptr);
-auto points = diskMesh_->getNodes();
-auto normals = *diskMesh_->getCellData().getVectorData("Normals");
-auto materialIds = *diskMesh_->getCellData().getScalarData("MaterialIds");
-
-if (rayTracingParams_.diskRadius == 0.) {
-  rayTracer.setGeometry(points, normals, domain_->getGrid().getGridDelta());
-} else {
-  rayTracer.setGeometry(points, normals, domain_->getGrid().getGridDelta(),
-                        rayTracingParams_.diskRadius);
-}
-rayTracer.setMaterialIds(materialIds);
-}
-
 SmartPointer<viennals::PointData<NumericType>> calculateFluxes() override {
 
-viennaray::TracingData<NumericType> rayTracingData;
-auto surfaceModel = this->model_->getSurfaceModel();
 
-// move coverages to the ray tracer
-if (useCoverages) {
-  rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
-}
-
-if (useProcessParams) {
-  // store scalars in addition to coverages
-  auto processParams = surfaceModel->getProcessParameters();
-  NumericType numParams = processParams->getScalarData().size();
-  rayTracingData.setNumberOfScalarData(numParams);
-  for (size_t i = 0; i < numParams; ++i) {
-    rayTracingData.setScalarData(i, processParams->getScalarData(i),
-                                 processParams->getScalarDataLabel(i));
-  }
-}
-
-if (useCoverages || useProcessParams)
-  rayTracer.setGlobalData(rayTracingData);
-
-auto fluxes = runRayTracer();
-
-// move coverages back in the model
-if (useCoverages)
-  moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
-
-return fluxes;
 }
 
 private:
-SmartPointer<viennals::PointData<NumericType>> runRayTracer() {
-auto fluxes = viennals::PointData<NumericType>::New();
-unsigned particleIdx = 0;
-for (auto &particle : processModel_->getParticleTypes()) {
-  int dataLogSize = processModel_->getParticleLogSize(particleIdx);
-  if (dataLogSize > 0) {
-    rayTracer.getDataLog().data.resize(1);
-    rayTracer.getDataLog().data[0].resize(dataLogSize, 0.);
-  }
-  rayTracer.setParticleType(particle);
-  rayTracer.apply();
 
-  // fill up fluxes vector with fluxes from this particle type
-  auto &localData = rayTracer.getLocalData();
-  int numFluxes = particle->getLocalDataLabels().size();
-  for (int i = 0; i < numFluxes; ++i) {
-    auto flux = std::move(localData.getVectorData(i));
-
-    // normalize and smooth
-    rayTracer.normalizeFlux(flux, rayTracingParams_.normalizationType);
-    if (rayTracingParams_.smoothingNeighbors > 0)
-      rayTracer.smoothFlux(flux, rayTracingParams_.smoothingNeighbors);
-
-    fluxes->insertNextScalarData(std::move(flux),
-                                 localData.getVectorDataLabel(i));
-  }
-
-  if (dataLogSize > 0) {
-    particleDataLogs[particleIdx].merge(rayTracer.getDataLog());
-  }
-  ++particleIdx;
-}
-return fluxes;
-}
-
-private:
-// Members
-using ProcessBase<NumericType, D>::domain_;
-using ProcessBase<NumericType, D>::rayTracingParams_;
-using ProcessBase<NumericType, D>::diskMesh_;
-
-SmartPointer<ProcessModel<NumericType, D>> processModel_;
-viennaray::Trace<NumericType, D> rayTracer;
-std::vector<viennaray::DataLog<NumericType>> particleDataLogs;
 */
 };
 

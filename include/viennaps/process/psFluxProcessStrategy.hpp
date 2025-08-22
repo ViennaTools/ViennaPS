@@ -5,14 +5,22 @@
 #include "psFluxEngine.hpp"
 #include "psProcessStrategy.hpp"
 
+#include <lsToDiskMesh.hpp>
+
 namespace viennaps {
 
 template <typename NumericType, int D>
 class FluxProcessStrategy : public ProcessStrategy<NumericType, D> {
+  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
+
 private:
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;
   std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine_;
+
+  viennals::ToDiskMesh<NumericType, D> meshGenerator_;
+  SmartPointer<TranslatorType> translator_ = nullptr;
+  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ = nullptr;
 
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
@@ -33,13 +41,13 @@ public:
     }
 
     // Main processing loop
-    return executeProcessingLoop(context);
+    return ProcessResult::SUCCESS;
+    // return executeProcessingLoop(context);
   }
-
-  std::string getStrategyName() const override { return "FluxProcessStrategy"; }
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.processDuration > 0.0 && !context.flags.isGeometric &&
+           context.flags.useFluxEngine &&
            context.model->getSurfaceModel() != nullptr &&
            context.model->getVelocityField() != nullptr;
   }
@@ -70,20 +78,47 @@ private:
       return result;
     }
 
+    // Initialize disk mesh generator
+    context.diskMesh = viennals::Mesh<NumericType>::New();
+    meshGenerator_.setMesh(context.diskMesh);
+    for (auto &dom : context.domain->getLevelSets()) {
+      meshGenerator_.insertNextLevelSet(dom);
+    }
+
+    // Initialize translator
+    auto translationField = advectionHandler_.getTranslationField();
+    auto translationMethod = translationField->getTranslationMethod();
+    if (translationMethod == 0) {
+      Logger::getInstance()
+          .addError("Translation method can not be 0 for flux-based processes.")
+          .print();
+      return ProcessResult::INVALID_INPUT;
+    } else if (translationMethod == 1) {
+      translator_ = SmartPointer<TranslatorType>::New();
+      meshGenerator_.setTranslator(translator_);
+      translationField->setTranslator(translator_);
+    } else if (translationMethod == 2) {
+      kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      translationField->setKdTree(kdTree_);
+    }
+
+    // Run mesh generator to create disk mesh
+    meshGenerator_.apply();
+
     // Initialize flux engine
+    if (auto result = fluxEngine_->checkInput(context);
+        result != ProcessResult::SUCCESS) {
+      return result;
+    }
     if (auto result = fluxEngine_->initialize(context);
         result != ProcessResult::SUCCESS) {
       return result;
     }
 
     // Try to initialize coverages if needed
-    auto result = coverageManager_.initializeCoverages(context);
-    if (result == ProcessResult::SUCCESS) {
+    if (coverageManager_.initializeCoverages(context)) {
       Logger::getInstance().addInfo("Using coverages.").print();
       context.flags.useCoverages = true;
-    } else if (result == ProcessResult::CONVERGENCE_FAILURE) {
-      Logger::getInstance().addError("Failed to initialize coverages.").print();
-      return ProcessResult::CONVERGENCE_FAILURE;
     }
 
     return ProcessResult::SUCCESS;

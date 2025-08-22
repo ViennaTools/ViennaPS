@@ -6,6 +6,16 @@
 
 namespace viennaps {
 
+enum class ProcessResult {
+  SUCCESS,
+  INVALID_INPUT,
+  EARLY_TERMINATION,
+  CONVERGENCE_FAILURE,
+  USER_INTERRUPTED,
+  FAILURE,
+  NOT_IMPLEMENTED
+};
+
 template <typename NumericType, int D> struct ProcessContext {
   // Core components
   SmartPointer<Domain<NumericType, D>> domain;
@@ -22,6 +32,10 @@ template <typename NumericType, int D> struct ProcessContext {
   unsigned maxIterations = std::numeric_limits<unsigned>::max();
   NumericType coverageDeltaThreshold = 0.0;
   bool coveragesInitialized = false;
+
+  // Simulation state
+  unsigned currentIteration = 0;
+  SmartPointer<viennals::Mesh<NumericType>> diskMesh;
 
   // Computed flags (derived from model state)
   struct Flags {

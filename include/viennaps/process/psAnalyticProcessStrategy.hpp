@@ -33,7 +33,8 @@ public:
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.processDuration > 0.0 && !context.flags.isGeometric &&
-           context.model->getVelocityField() != nullptr;
+           context.model->getVelocityField() != nullptr &&
+           !context.flags.useFluxEngine;
   }
 
 private:
@@ -54,6 +55,7 @@ private:
         result != ProcessResult::SUCCESS) {
       return result;
     }
+    context.currentIteration = 0;
 
     return ProcessResult::SUCCESS;
   }
@@ -111,6 +113,8 @@ private:
         return ProcessResult::EARLY_TERMINATION;
       }
     }
+
+    context.currentIteration++;
 
     return ProcessResult::SUCCESS;
   }
