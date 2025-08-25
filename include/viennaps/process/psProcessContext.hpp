@@ -42,6 +42,7 @@ template <typename NumericType, int D> struct ProcessContext {
     bool useProcessParams = false;
     bool useCoverages = false;
     bool isGeometric = false;
+    bool isALP = false;
   } flags;
 
   void updateFlags() {
