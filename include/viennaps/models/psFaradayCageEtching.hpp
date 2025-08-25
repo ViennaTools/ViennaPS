@@ -254,6 +254,7 @@ public:
     this->insertNextParticleType(particle);
     this->setProcessName("FaradayCageEtching");
     this->processMetaData = params_.toProcessMetaData();
+    this->hasGPU = true;
 
     firstInit = true;
   }

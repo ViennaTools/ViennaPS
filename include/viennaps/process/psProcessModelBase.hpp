@@ -20,6 +20,7 @@ protected:
   SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
   std::unordered_map<std::string, std::vector<NumericType>> processMetaData;
+  bool hasGPU = false;
 
 public:
   virtual ~ProcessModelBase() = default;
@@ -36,6 +37,7 @@ public:
   auto getVelocityField() const { return velocityField; }
   auto getProcessName() const { return processName; }
   auto getProcessMetaData() const { return processMetaData; }
+  auto hasGPUImplementation() const { return hasGPU; }
 
   void setProcessName(const std::string &name) { processName = name; }
 
