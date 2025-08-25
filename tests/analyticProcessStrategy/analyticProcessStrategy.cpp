@@ -332,4 +332,4 @@ template <class NumericType, int D> void RunTest() {
 
 } // namespace viennacore
 
-int main() { VC_RUN_2D_TESTS }
+int main() { VC_RUN_ALL_TESTS }
