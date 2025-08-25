@@ -43,6 +43,7 @@ template <typename NumericType, int D> struct ProcessContext {
     bool useCoverages = false;
     bool isGeometric = false;
     bool isALP = false;
+    bool isAnalytic = false;
   } flags;
 
   void updateFlags() {
@@ -52,6 +53,9 @@ template <typename NumericType, int D> struct ProcessContext {
     flags.useProcessParams =
         model->getSurfaceModel() &&
         model->getSurfaceModel()->getProcessParameters() != nullptr;
+    flags.isAnalytic =
+        model->getVelocityField() &&
+        model->getVelocityField()->getTranslationFieldOptions() == 0;
   }
 
   void resetTime() {

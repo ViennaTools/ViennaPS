@@ -4,6 +4,7 @@
 #include "psMaterials.hpp"
 #include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
+#include "psVersion.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -21,11 +22,6 @@
 #include <vcSmartPointer.hpp>
 
 namespace viennaps {
-
-inline constexpr std::string_view version = VIENNAPS_VERSION;
-inline constexpr int versionMajor = static_cast<int>(version[0] - '0');
-inline constexpr int versionMinor = static_cast<int>(version[2] - '0');
-inline constexpr int versionPatch = static_cast<int>(version[4] - '0');
 
 using namespace viennacore;
 

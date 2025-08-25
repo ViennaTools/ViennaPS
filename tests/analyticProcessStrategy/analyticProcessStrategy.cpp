@@ -1,5 +1,5 @@
 #include <process/psAnalyticProcessStrategy.hpp>
-#include <psProcessModelBase.hpp>
+#include <process/psProcessModelBase.hpp>
 #include <psVelocityField.hpp>
 
 #include <geometries/psMakePlane.hpp>

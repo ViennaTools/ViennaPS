@@ -79,6 +79,10 @@ public:
     context_.resetTime(); // Reset process time and previous time step
     auto result = strategy->execute(context_);
     handleProcessResult(result);
+
+    if (static_cast<int>(context_.domain->getMetaDataLevel()) >=
+        static_cast<int>(MetaDataLevel::PROCESS))
+      context_.domain->addMetaData(context_.model->getProcessMetaData());
   }
 
 private:

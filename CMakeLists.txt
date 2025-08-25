@@ -86,6 +86,13 @@ endif()
 # Include directories
 # --------------------------------------------------------------------------------------------------------
 
+# Generate version header
+configure_file(
+  "${PROJECT_SOURCE_DIR}/cmake/psVersion.hpp.in"
+  "${PROJECT_SOURCE_DIR}/include/viennaps/psVersion.hpp"
+  @ONLY
+)
+
 target_include_directories(
   ${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/viennaps>
                             $<INSTALL_INTERFACE:include/viennaps-${PROJECT_VERSION}>)
@@ -128,7 +135,6 @@ CPMFindPackage(
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
-target_compile_definitions(${PROJECT_NAME} INTERFACE VIENNAPS_VERSION="${PROJECT_VERSION}")
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Shared/Static Library

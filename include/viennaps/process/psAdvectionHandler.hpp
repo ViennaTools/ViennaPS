@@ -13,7 +13,7 @@ template <typename NumericType, int D> class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
   SmartPointer<TranslationField<NumericType, D>> translationField_ = nullptr;
   viennacore::Timer<> timer_;
-  unsigned long lsVelCounter = 0;
+  unsigned lsVelOutputCounter = 0;
 
 public:
   ProcessResult initialize(const ProcessContext<NumericType, D> &context) {
@@ -78,7 +78,8 @@ public:
                                        mesh)
           .apply();
       viennals::VTKWriter<NumericType>(
-          mesh, "ls_velocities_" + std::to_string(lsVelCounter++) + ".vtp")
+          mesh,
+          "ls_velocities_" + std::to_string(lsVelOutputCounter++) + ".vtp")
           .apply();
     }
 

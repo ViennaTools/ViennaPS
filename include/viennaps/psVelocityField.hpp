@@ -33,7 +33,7 @@ public:
   }
 
   // translation field options
-  // 0: do not translate level set ID to surface ID
+  // 0: do not translate level set ID to surface ID (analytic velocity field)
   // 1: use unordered map to translate level set ID to surface ID
   // 2: use kd-tree to translate level set ID to surface ID
   [[nodiscard]] virtual int getTranslationFieldOptions() const { return 1; }

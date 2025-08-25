@@ -46,7 +46,7 @@ public:
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.processDuration > 0.0 && !context.flags.isGeometric &&
-           context.flags.useFluxEngine;
+           !context.flags.isAnalytic && context.flags.useFluxEngine;
   }
 
 private:
