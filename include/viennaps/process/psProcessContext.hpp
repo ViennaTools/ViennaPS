@@ -22,16 +22,14 @@ template <typename NumericType, int D> struct ProcessContext {
   SmartPointer<ProcessModelBase<NumericType, D>> model;
 
   // Process parameters
-  NumericType processDuration = 0.0;
-  NumericType processTime = 0.0;
-  NumericType previousTimeStep = 0.0;
+  double processDuration = 0.0;
+  double processTime = 0.0;
+  double timeStep = 0.0;
 
   // Configuration
-  AdvectionParameters<NumericType> advectionParams;
-  RayTracingParameters<NumericType, D> rayTracingParams;
-  unsigned maxIterations = std::numeric_limits<unsigned>::max();
-  NumericType coverageDeltaThreshold = 0.0;
-  bool coveragesInitialized = false;
+  AdvectionParameters advectionParams;
+  RayTracingParameters<D> rayTracingParams;
+  CoverageParameters coverageParams;
 
   // Simulation state
   unsigned currentIteration = 0;
@@ -57,7 +55,8 @@ template <typename NumericType, int D> struct ProcessContext {
 
   void resetTime() {
     processTime = 0.0;
-    previousTimeStep = 0.0;
+    timeStep = 0.0;
+    currentIteration = 0;
   }
 
   std::string getProcessName() const {

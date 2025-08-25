@@ -14,24 +14,23 @@ using namespace viennacore;
 
 using IntegrationScheme = viennals::IntegrationSchemeEnum;
 
-template <typename NumericType, int D> struct RayTracingParameters {
+template <int D> struct RayTracingParameters {
   viennaray::TraceDirection sourceDirection =
       D == 3 ? viennaray::TraceDirection::POS_Z
              : viennaray::TraceDirection::POS_Y;
   viennaray::NormalizationType normalizationType =
       viennaray::NormalizationType::SOURCE;
   unsigned raysPerPoint = 1000;
-  NumericType diskRadius = 0.;
+  double diskRadius = 0.;
   bool useRandomSeeds = true;
   bool ignoreFluxBoundaries = false;
   int smoothingNeighbors = 1;
 
   auto toMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> metaData;
-    metaData["RaysPerPoint"] = {static_cast<NumericType>(raysPerPoint)};
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["RaysPerPoint"] = {static_cast<double>(raysPerPoint)};
     metaData["DiskRadius"] = {diskRadius};
-    metaData["SmoothingNeighbors"] = {
-        static_cast<NumericType>(smoothingNeighbors)};
+    metaData["SmoothingNeighbors"] = {static_cast<double>(smoothingNeighbors)};
     return metaData;
   }
 
@@ -42,19 +41,18 @@ template <typename NumericType, int D> struct RayTracingParameters {
   }
 };
 
-template <typename NumericType> struct AdvectionParameters {
+struct AdvectionParameters {
   IntegrationScheme integrationScheme =
       IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER;
-  NumericType timeStepRatio = 0.4999;
-  NumericType dissipationAlpha = 1.0;
+  double timeStepRatio = 0.4999;
+  double dissipationAlpha = 1.0;
   bool checkDissipation = true;
   bool velocityOutput = false;
   bool ignoreVoids = false;
 
   auto toMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> metaData;
-    metaData["IntegrationScheme"] = {
-        static_cast<NumericType>(integrationScheme)};
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["IntegrationScheme"] = {static_cast<double>(integrationScheme)};
     metaData["TimeStepRatio"] = {timeStepRatio};
     metaData["DissipationAlpha"] = {dissipationAlpha};
     return metaData;
@@ -69,6 +67,12 @@ template <typename NumericType> struct AdvectionParameters {
            "\nVelocityOutput: " + util::boolString(velocityOutput) +
            "\nIgnoreVoids: " + util::boolString(ignoreVoids);
   }
+};
+
+struct CoverageParameters {
+  double coverageDeltaThreshold = 0.0;
+  unsigned maxIterations = std::numeric_limits<unsigned>::max();
+  bool initialized = false;
 };
 
 template <typename NumericType> class ProcessParams {

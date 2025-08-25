@@ -17,15 +17,10 @@ public:
 
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
     // Validate required components
-    if (auto result = validateContext(context);
-        result != ProcessResult::SUCCESS) {
-      return result;
-    }
+    PROCESS_CHECK(validateContext(context));
 
     // Setup phase
-    if (auto result = setupProcess(context); result != ProcessResult::SUCCESS) {
-      return result;
-    }
+    PROCESS_CHECK(setupProcess(context));
 
     // Main processing loop
     return executeProcessingLoop(context);
@@ -33,7 +28,6 @@ public:
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.processDuration > 0.0 && !context.flags.isGeometric &&
-           context.model->getVelocityField() != nullptr &&
            !context.flags.useFluxEngine;
   }
 
@@ -51,10 +45,7 @@ private:
 
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
     // Initialize advection handler
-    if (auto result = advectionHandler_.initialize(context);
-        result != ProcessResult::SUCCESS) {
-      return result;
-    }
+    PROCESS_CHECK(advectionHandler_.initialize(context));
     context.currentIteration = 0;
 
     return ProcessResult::SUCCESS;
@@ -72,10 +63,7 @@ private:
 #endif
 
       // Process one time step
-      if (auto result = processTimeStep(context);
-          result != ProcessResult::SUCCESS) {
-        return result;
-      }
+      PROCESS_CHECK(processTimeStep(context));
     }
 
     // Finalize process
@@ -98,14 +86,8 @@ private:
       }
     }
 
-    // 3. Perform advection
-    auto advectionResult = advectionHandler_.performAdvection(context);
-    if (advectionResult.first != ProcessResult::SUCCESS) {
-      return advectionResult.first;
-    }
-
-    // 4. Update process time
-    context.processTime += advectionResult.second;
+    // 3. Perform advection, update processTime
+    PROCESS_CHECK(advectionHandler_.performAdvection(context));
 
     // 5. Apply advection callbacks (post)
     if (context.flags.useAdvectionCallback) {

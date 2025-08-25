@@ -7,6 +7,14 @@
   static constexpr std::string_view kName = #CLASS;                            \
   std::string_view name() const noexcept override { return kName; }
 
+#define PROCESS_CHECK(expr)                                                    \
+  {                                                                            \
+    auto result = (expr);                                                      \
+    if (result != ProcessResult::SUCCESS) {                                    \
+      return result;                                                           \
+    }                                                                          \
+  }
+
 namespace viennaps {
 
 template <typename NumericType, int D> class ProcessStrategy {

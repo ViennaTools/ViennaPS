@@ -57,12 +57,10 @@ public:
     context.model->initialize(context.domain, context.processTime);
   }
 
-  std::pair<ProcessResult, NumericType>
-  performAdvection(const ProcessContext<NumericType, D> &context) {
+  ProcessResult performAdvection(ProcessContext<NumericType, D> &context) {
     // Perform the advection step
 
-    if (context.processTime + context.previousTimeStep >
-        context.processDuration) {
+    if (context.processTime + context.timeStep > context.processDuration) {
       // adjust time step near end
       advectionKernel_.setAdvectionTime(context.processDuration -
                                         context.processTime);
@@ -84,9 +82,59 @@ public:
           .apply();
     }
 
-    return {ProcessResult::SUCCESS, advectionKernel_.getAdvectedTime()};
+    context.timeStep = advectionKernel_.getAdvectedTime();
+    context.processTime += context.timeStep;
+
+    return ProcessResult::SUCCESS;
   }
 
+  ProcessResult copyCoveragesToLevelSet(
+      const ProcessContext<NumericType, D> &context,
+      SmartPointer<std::unordered_map<unsigned long, unsigned long>> const
+          &translator) {
+    // Move coverages to the top level set
+    auto topLS = context.domain->getLevelSets().back();
+    auto coverages = context.model->getSurfaceModel()->getCoverages();
+    assert(coverages != nullptr);
+    assert(translator != nullptr);
+
+    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
+      auto covName = coverages->getScalarDataLabel(i);
+      std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
+      auto cov = coverages->getScalarData(covName);
+      for (const auto iter : *translator.get()) {
+        levelSetData[iter.first] = cov->at(iter.second);
+      }
+      if (auto data = topLS->getPointData().getScalarData(covName, true);
+          data != nullptr) {
+        *data = std::move(levelSetData);
+      } else {
+        topLS->getPointData().insertNextScalarData(std::move(levelSetData),
+                                                   covName);
+      }
+    }
+
+    return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult updateCoveragesFromAdvectedSurface(
+      const ProcessContext<NumericType, D> &context,
+      SmartPointer<std::unordered_map<unsigned long, unsigned long>> const
+          &translator) {
+    // Update coverages from the advected surface
+    auto topLS = context.domain->getLevelSets().back();
+    auto coverages = context.model->getSurfaceModel()->getCoverages();
+    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
+      auto covName = coverages->getScalarDataLabel(i);
+      auto levelSetData = topLS->getPointData().getScalarData(covName);
+      auto covData = coverages->getScalarData(covName);
+      covData->resize(translator->size());
+      for (const auto it : *translator.get()) {
+        covData->at(it.second) = levelSetData->at(it.first);
+      }
+    }
+    return ProcessResult::SUCCESS;
+  }
   auto &getTimer() const { return timer_; }
 
   auto &getTranslationField() const {

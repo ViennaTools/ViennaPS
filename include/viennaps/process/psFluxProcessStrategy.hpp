@@ -22,6 +22,10 @@ private:
   SmartPointer<TranslatorType> translator_ = nullptr;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ = nullptr;
 
+  // Timers
+  viennacore::Timer<> callbackTimer_;
+  viennacore::Timer<> fluxTimer_;
+
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
 
@@ -30,26 +34,18 @@ public:
 
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
     // Validate required components
-    if (auto result = validateContext(context);
-        result != ProcessResult::SUCCESS) {
-      return result;
-    }
+    PROCESS_CHECK(validateContext(context));
 
     // Setup phase
-    if (auto result = setupProcess(context); result != ProcessResult::SUCCESS) {
-      return result;
-    }
+    PROCESS_CHECK(setupProcess(context));
 
     // Main processing loop
-    return ProcessResult::SUCCESS;
-    // return executeProcessingLoop(context);
+    return executeProcessingLoop(context);
   }
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.processDuration > 0.0 && !context.flags.isGeometric &&
-           context.flags.useFluxEngine &&
-           context.model->getSurfaceModel() != nullptr &&
-           context.model->getVelocityField() != nullptr;
+           context.flags.useFluxEngine;
   }
 
 private:
@@ -73,10 +69,7 @@ private:
 
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
     // Initialize advection handler
-    if (auto result = advectionHandler_.initialize(context);
-        result != ProcessResult::SUCCESS) {
-      return result;
-    }
+    PROCESS_CHECK(advectionHandler_.initialize(context));
 
     // Initialize disk mesh generator
     context.diskMesh = viennals::Mesh<NumericType>::New();
@@ -93,7 +86,8 @@ private:
           .addError("Translation method can not be 0 for flux-based processes.")
           .print();
       return ProcessResult::INVALID_INPUT;
-    } else if (translationMethod == 1) {
+    } else if (translationMethod == 1 || context.flags.useCoverages) {
+      // translator is also needed for coverage advection
       translator_ = SmartPointer<TranslatorType>::New();
       meshGenerator_.setTranslator(translator_);
       translationField->setTranslator(translator_);
@@ -102,24 +96,9 @@ private:
       translationField->setKdTree(kdTree_);
     }
 
-    // Run mesh generator to create disk mesh
-    meshGenerator_.apply();
-
     // Initialize flux engine
-    if (auto result = fluxEngine_->checkInput(context);
-        result != ProcessResult::SUCCESS) {
-      return result;
-    }
-    if (auto result = fluxEngine_->initialize(context);
-        result != ProcessResult::SUCCESS) {
-      return result;
-    }
-
-    // Try to initialize coverages if needed
-    if (coverageManager_.initializeCoverages(context)) {
-      Logger::getInstance().addInfo("Using coverages.").print();
-      context.flags.useCoverages = true;
-    }
+    PROCESS_CHECK(fluxEngine_->checkInput(context));
+    PROCESS_CHECK(fluxEngine_->initialize(context));
 
     return ProcessResult::SUCCESS;
   }
@@ -128,97 +107,242 @@ private:
     Timer processTimer;
     processTimer.start();
 
-    context.remainingTime = context.processDuration;
-    size_t counter = 0;
+    // Try to initialize coverages
+    meshGenerator_.apply();
+    if (coverageManager_.initializeCoverages(context)) {
+      context.flags.useCoverages = true;
+      Logger::getInstance().addInfo("Using coverages.").print();
 
-    while (context.remainingTime > 0.) {
-// Check for user interruption
+      if (context.coverageParams.initialized) {
+        Logger::getInstance().addInfo("Coverages already initialized.").print();
+      } else {
+        coverageInitIterations(context);
+      }
+    }
+
+    context.resetTime();
+
+    while (context.processTime < context.processDuration) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
+      // Check for user interruption
       if (PyErr_CheckSignals() != 0)
-        return ProcessResult::USER_INTERRUPTED;
+        return throw pybind11::error_already_set();
 #endif
 
       // Process one time step
-      auto result = processTimeStep(context, counter);
-      if (result != ProcessResult::SUCCESS) {
-        return result;
-      }
+      PROCESS_CHECK(processTimeStep(context));
 
-      counter++;
+      context.currentIteration++;
     }
 
     // Finalize process
-    context.processTime = context.processDuration - context.remainingTime;
     context.model->finalize(context.domain, context.processTime);
 
     processTimer.finish();
-    logProcessingTimes(context, processTimer);
+    // logProcessingTimes(context, processTimer);
 
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult processTimeStep(ProcessContext<NumericType, D> &context,
-                                size_t counter) {
-    // 1. Prepare advection
-    advectionHandler_->prepareAdvection(context);
+  ProcessResult processTimeStep(ProcessContext<NumericType, D> &context) {
+    // Prepare advection (expand level set based on integration scheme)
+    advectionHandler_.prepareAdvection(context);
 
-    // 2. Update surface for flux calculation
-    if (auto result = fluxEngine_->updateSurface(context);
-        result != ProcessResult::SUCCESS) {
-      return result;
-    }
+    // Update surface for flux calculation
+    PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
-    // 3. Calculate fluxes if needed
-    SmartPointer<viennals::PointData<NumericType>> fluxes;
-    {
-      auto result = fluxEngine_->calculateFluxes(context);
-      if (result.first != ProcessResult::SUCCESS) {
-        return result.first;
-      }
-      fluxes = result.second;
-    }
+    // Calculate fluxes
+    auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+    fluxTimer_.start();
+    PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+    fluxTimer_.finish();
+    Logger::getInstance().addTiming("Flux calculation", fluxTimer_).print();
 
-    // 4. Update coverages if needed
+    // Update coverages if needed
     if (context.flags.useCoverages) {
-      auto result = coverageManager_->updateCoverages(context, fluxes);
-      if (result != ProcessResult::SUCCESS) {
-        return result;
-      }
+      updateCoverages(context, fluxes);
     }
 
-    // 5. Calculate velocities
+    // Calculate velocities in model
     auto velocities = calculateVelocities(context, fluxes);
+    context.model->getVelocityField()->prepare(context.domain, velocities,
+                                               context.processTime);
 
-    // 6. Apply advection callbacks (pre)
+    // Apply advection callbacks (pre)
     if (context.flags.useAdvectionCallback) {
       if (!applyPreAdvectionCallback(context)) {
         return ProcessResult::EARLY_TERMINATION;
       }
     }
 
-    // 7. Perform advection
-    auto advectionResult = advectionHandler_->performAdvection(context);
-    if (advectionResult.first != ProcessResult::SUCCESS) {
-      return advectionResult.first;
+    // Move coverages to level set to propagate them during advection
+    if (context.flags.useCoverages) {
+      PROCESS_CHECK(
+          advectionHandler_.copyCoveragesToLevelSet(context, translator_));
     }
 
-    // 8. Apply advection callbacks (post)
+    outputIntermediateResults(context, velocities, fluxes);
+
+    // Perform advection, updates processTime, reduces level set to width 1
+    PROCESS_CHECK(advectionHandler_.performAdvection(context));
+
+    // Update coverages from advected surface
+    if (context.flags.useCoverages) {
+      PROCESS_CHECK(advectionHandler_.updateCoveragesFromAdvectedSurface(
+          context, translator_));
+    }
+
+    // Apply advection callbacks (post)
     if (context.flags.useAdvectionCallback) {
-      if (!applyPostAdvectionCallback(context, advectionResult.second)) {
+      if (!applyPostAdvectionCallback(context)) {
         return ProcessResult::EARLY_TERMINATION;
       }
     }
 
-    // 9. Update remaining time
-    context.remainingTime -= advectionResult.second;
-
-    // 10. Output intermediate results if needed
-    outputIntermediateResults(context, counter);
-
     return ProcessResult::SUCCESS;
   }
 
-  // Additional helper methods...
+  void outputIntermediateResults(
+      const ProcessContext<NumericType, D> &context,
+      SmartPointer<std::vector<NumericType>> &velocities,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+    if (Logger::getLogLevel() >= 3) {
+      auto surfaceModel = context.model->getSurfaceModel();
+      context.diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                           "velocities");
+      if (context.flags.useCoverages) {
+        mergeScalarData(context.diskMesh->getCellData(),
+                        surfaceModel->getCoverages());
+      }
+      if (auto surfaceData = surfaceModel->getSurfaceData())
+        mergeScalarData(context.diskMesh->getCellData(), surfaceData);
+      mergeScalarData(context.diskMesh->getCellData(), fluxes);
+      viennals::VTKWriter<NumericType>(
+          context.diskMesh, context.getProcessName() + "_" +
+                                std::to_string(context.currentIteration) +
+                                ".vtp")
+          .apply();
+      if (context.domain->getCellSet()) {
+        context.domain->getCellSet()->writeVTU(
+            context.getProcessName() + "_cellSet_" +
+            std::to_string(context.currentIteration) + ".vtu");
+      }
+    }
+  }
+
+  bool applyPreAdvectionCallback(ProcessContext<NumericType, D> &context) {
+    callbackTimer_.start();
+    bool result = context.model->getAdvectionCallback()->applyPreAdvect(
+        context.processTime);
+    callbackTimer_.finish();
+    return result;
+  }
+
+  bool applyPostAdvectionCallback(ProcessContext<NumericType, D> &context) {
+    callbackTimer_.start();
+    bool result = context.model->getAdvectionCallback()->applyPostAdvect(
+        context.processTime);
+    callbackTimer_.finish();
+    return result;
+  }
+
+  SmartPointer<std::vector<NumericType>>
+  calculateVelocities(const ProcessContext<NumericType, D> &context,
+                      SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+    auto const &points = context.diskMesh->getNodes();
+    assert(points.size() > 0);
+    auto const &materialIds =
+        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+    return context.model->getSurfaceModel()->calculateVelocities(fluxes, points,
+                                                                 materialIds);
+  }
+
+  void updateCoverages(ProcessContext<NumericType, D> &context,
+                       SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+    auto surfaceModel = context.model->getSurfaceModel();
+    assert(surfaceModel != nullptr);
+    assert(surfaceModel->getCoverages() != nullptr);
+
+    assert(context.diskMesh != nullptr);
+    assert(context.diskMesh->getCellData().getScalarData("MaterialIds") !=
+           nullptr);
+    auto const &materialIds =
+        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+
+    surfaceModel->updateCoverages(fluxes, materialIds);
+  }
+
+  void coverageInitIterations(ProcessContext<NumericType, D> &context) {
+
+    const auto name = context.model->getProcessName().value_or("default");
+    auto &maxIterations = context.coverageParams.maxIterations;
+    if (maxIterations == std::numeric_limits<unsigned>::max() &&
+        context.coverageParams.coverageDeltaThreshold == 0.) {
+      maxIterations = 10;
+      Logger::getInstance()
+          .addWarning("No coverage initialization parameters set. Using " +
+                      std::to_string(maxIterations) +
+                      " initialization iterations.")
+          .print();
+    }
+
+    Timer timer;
+    timer.start();
+    Logger::getInstance().addInfo("Initializing coverages ... ").print();
+
+    for (unsigned iteration = 0; iteration < maxIterations; ++iteration) {
+#ifdef VIENNATOOLS_PYTHON_BUILD
+      // Check for user interruption
+      if (PyErr_CheckSignals() != 0)
+        throw pybind11::error_already_set();
+#endif
+      // save current coverages to compare with the new ones
+      coverageManager_.saveCoverages(context);
+
+      auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+      fluxEngine_->calculateFluxes(context, fluxes);
+
+      updateCoverages(context, fluxes);
+
+      if (Logger::getLogLevel() >= 3) {
+        auto coverages = context.model->getSurfaceModel()->getCoverages();
+        mergeScalarData(context.diskMesh->getCellData(), coverages);
+        mergeScalarData(context.diskMesh->getCellData(), fluxes);
+        if (auto surfaceData =
+                context.model->getSurfaceModel()->getSurfaceData())
+          mergeScalarData(context.diskMesh->getCellData(), surfaceData);
+        viennals::VTKWriter(context.diskMesh, name + "_covInit_" +
+                                                  std::to_string(iteration) +
+                                                  ".vtp")
+            .apply();
+      }
+
+      Logger::getInstance()
+          .addInfo("Iteration: " + std::to_string(iteration + 1))
+          .print();
+
+      if (coverageManager_.checkCoveragesConvergence(context)) {
+        Logger::getInstance()
+            .addInfo("Coverages converged after " +
+                     std::to_string(iteration + 1) + " iterations.")
+            .print();
+        break;
+      }
+    }
+    context.coverageParams.initialized = true;
+    timer.finish();
+    Logger::getInstance().addTiming("Coverage initialization", timer).print();
+  }
+
+  static void
+  mergeScalarData(viennals::PointData<NumericType> &scalarData,
+                  SmartPointer<viennals::PointData<NumericType>> dataToInsert) {
+    int numScalarData = dataToInsert->getScalarDataSize();
+    for (int i = 0; i < numScalarData; i++) {
+      scalarData.insertReplaceScalarData(*dataToInsert->getScalarData(i),
+                                         dataToInsert->getScalarDataLabel(i));
+    }
+  }
 };
 
 } // namespace viennaps
