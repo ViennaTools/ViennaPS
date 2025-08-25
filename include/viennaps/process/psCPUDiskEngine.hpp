@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psFluxEngine.hpp"
+#include "psProcessModel.hpp"
 
 namespace viennaps {
 
@@ -20,7 +21,7 @@ public:
     auto model =
         std::dynamic_pointer_cast<ProcessModel<NumericType, D>>(context.model);
     if (!model) {
-      Logger::getInstance().addError("Invalid process model.").print();
+      Logger::getInstance().addWarning("Invalid process model.").print();
       return ProcessResult::INVALID_INPUT;
     }
     return ProcessResult::SUCCESS;

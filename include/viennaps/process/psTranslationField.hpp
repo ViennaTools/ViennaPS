@@ -65,6 +65,11 @@ public:
     kdTree_ = kdTree;
   }
 
+  void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
+    kdTree_->setPoints(points);
+    kdTree_->build();
+  }
+
   void translateLsId(unsigned long &lsId,
                      const Vec3D<NumericType> &coordinate) const {
     switch (translationMethod_) {

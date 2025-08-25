@@ -7,9 +7,9 @@
 #include <vector>
 
 #include <lsCalculateVisibilities.hpp>
+#include <process/psProcessModel.hpp>
 #include <psDomain.hpp>
 #include <psMaterials.hpp>
-#include <psProcessModel.hpp>
 #include <psRateGrid.hpp>
 #include <psSurfaceModel.hpp>
 

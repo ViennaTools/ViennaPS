@@ -1,7 +1,6 @@
 #pragma once
 
 #include "psProcessContext.hpp"
-#include <memory>
 
 #define DEFINE_CLASS_NAME(CLASS)                                               \
   static constexpr std::string_view kName = #CLASS;                            \

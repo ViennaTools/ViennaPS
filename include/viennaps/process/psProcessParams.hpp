@@ -1,6 +1,6 @@
 #pragma once
 
-#include "psUtil.hpp"
+#include "../psUtil.hpp"
 
 #include <lsAdvect.hpp>
 #include <rayTrace.hpp>

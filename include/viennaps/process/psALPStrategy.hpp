@@ -10,11 +10,11 @@ public:
   DEFINE_CLASS_NAME(ALPStrategy)
 
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
-    return ProcessResult::FAILURE;
+    return ProcessResult::NOT_IMPLEMENTED;
   }
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
-    return context.processDuration == 0.0 && !context.flags.isGeometric;
+    return context.flag.isALP;
   }
 };
 

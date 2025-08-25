@@ -1,8 +1,8 @@
 #pragma once
 
+#include "process/psProcessModelBase.hpp"
+#include "process/psProcessParams.hpp"
 #include "process/psTranslationField.hpp"
-#include "psProcessModelBase.hpp"
-#include "psProcessParams.hpp"
 #include "psUnits.hpp"
 
 #include <lsAdvect.hpp>
@@ -91,7 +91,7 @@ public:
   void disableRandomSeeds() { rayTracingParams_.useRandomSeeds = false; }
 
   void setRayTracingParameters(
-      const RayTracingParameters<NumericType, D> &passedRayTracingParams) {
+      const RayTracingParameters<D> &passedRayTracingParams) {
     rayTracingParams_ = passedRayTracingParams;
   }
 
@@ -124,8 +124,8 @@ public:
     advectionParams_.timeStepRatio = cfl;
   }
 
-  void setAdvectionParameters(
-      const AdvectionParameters<NumericType> &passedAdvectionParams) {
+  void
+  setAdvectionParameters(const AdvectionParameters &passedAdvectionParams) {
     advectionParams_ = passedAdvectionParams;
   }
 
@@ -818,8 +818,8 @@ protected:
   NumericType coverageDeltaThreshold_ = 0.;
   bool coveragesInitialized_ = false;
 
-  AdvectionParameters<NumericType> advectionParams_;
-  RayTracingParameters<NumericType, D> rayTracingParams_;
+  AdvectionParameters advectionParams_;
+  RayTracingParameters<D> rayTracingParams_;
 
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_ = nullptr;
   SmartPointer<TranslationField<NumericType, D>> translationField_ = nullptr;
