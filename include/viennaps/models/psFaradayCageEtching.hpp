@@ -2,8 +2,8 @@
 
 #include "psIonBeamEtching.hpp"
 
+#include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
 
 #include <functional>
 #include <random>

@@ -1,15 +1,13 @@
 #include <geometries/psMakeHole.hpp>
-#include <psProcess.hpp>
-#include <psUtil.hpp>
-
 #include <models/psCSVFileProcess.hpp>
+#include <process/psProcess.hpp>
+#include <process/psVelocityField.hpp>
+#include <psMaterials.hpp>
+#include <psUtil.hpp>
 
 using namespace viennaps;
 constexpr int D = 3;
 using NumericType = double;
-
-#include <psMaterials.hpp>
-#include <psVelocityField.hpp>
 
 void runDeposition(SmartPointer<CSVFileProcess<NumericType, D>> &depoModel,
                    SmartPointer<Domain<NumericType, D>> &domain,

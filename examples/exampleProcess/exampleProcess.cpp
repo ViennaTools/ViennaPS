@@ -1,8 +1,8 @@
 #include <geometries/psMakeHole.hpp>
 #include <lsMakeGeometry.hpp>
 
-#include <psProcess.hpp>
-#include <psProcessModel.hpp>
+#include <process/psProcess.hpp>
+#include <process/psProcessModel.hpp>
 
 #include "particles.hpp"
 #include "surfaceModel.hpp"

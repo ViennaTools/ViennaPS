@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../process/psProcessModel.hpp"
+#include "../process/psSurfaceModel.hpp"
+#include "../process/psVelocityField.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
-#include "../psSurfaceModel.hpp"
-#include "../psVelocityField.hpp"
 
 #include <vcSmartPointer.hpp>
 

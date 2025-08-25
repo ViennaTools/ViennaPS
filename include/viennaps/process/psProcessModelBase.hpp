@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../psDomain.hpp"
 #include "psAdvectionCallback.hpp"
-#include "psDomain.hpp"
 #include "psGeometricModel.hpp"
 #include "psSurfaceModel.hpp"
 #include "psVelocityField.hpp"

@@ -1,8 +1,6 @@
 #pragma once
 
-#include "psDomain.hpp"
-
-#include <vcSmartPointer.hpp>
+#include "../psDomain.hpp"
 
 namespace viennaps {
 

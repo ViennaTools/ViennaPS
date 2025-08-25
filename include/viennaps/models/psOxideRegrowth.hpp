@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../psAdvectionCallback.hpp"
-#include "../psProcessModel.hpp"
+#include "../process/psAdvectionCallback.hpp"
+#include "../process/psProcessModel.hpp"
 #include "../psToDiskMesh.hpp"
 
 #include <csDenseCellSet.hpp>

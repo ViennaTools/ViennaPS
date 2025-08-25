@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psSurfaceModel.hpp>
+#include <process/psSurfaceModel.hpp>
 
 template <typename NumericType>
 class SurfaceModel : public viennaps::SurfaceModel<NumericType> {

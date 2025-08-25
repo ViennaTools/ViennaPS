@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psProcessModel.hpp>
+#include "../process/psProcessModel.hpp"
 
 namespace viennaps {
 

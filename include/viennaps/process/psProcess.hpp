@@ -11,8 +11,6 @@
 // Flux engines
 #include "psCPUDiskEngine.hpp"
 
-#include "../psProcessModelBase.hpp"
-
 namespace viennaps {
 
 template <typename NumericType, int D> class Process {

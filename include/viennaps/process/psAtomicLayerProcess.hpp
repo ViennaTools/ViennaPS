@@ -487,8 +487,8 @@ private:
   DomainType pDomain_;
   SmartPointer<ProcessModel<NumericType, D>> pModel_;
 
-  AdvectionParameters<NumericType> advectionParams_;
-  RayTracingParameters<NumericType, D> rayTracingParams_;
+  AdvectionParameters advectionParams_;
+  RayTracingParameters<D> rayTracingParams_;
 
   unsigned int numCycles_ = 0;
   NumericType pulseTime_ = 0.;

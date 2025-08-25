@@ -4,7 +4,7 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
-#include "../psProcessModel.hpp"
+#include "../process/psProcessModel.hpp"
 #include "../psUnits.hpp"
 
 #include "psCF4O2Parameters.hpp"

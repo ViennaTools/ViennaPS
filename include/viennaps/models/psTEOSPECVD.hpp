@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../psProcessModel.hpp"
+#include "../process/psProcessModel.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>

@@ -6,12 +6,13 @@
 #include <string>
 #include <vector>
 
+#include "../process/psProcessModel.hpp"
+#include "../process/psSurfaceModel.hpp"
+#include "../psDomain.hpp"
+#include "../psMaterials.hpp"
+#include "../psRateGrid.hpp"
+
 #include <lsCalculateVisibilities.hpp>
-#include <process/psProcessModel.hpp>
-#include <psDomain.hpp>
-#include <psMaterials.hpp>
-#include <psRateGrid.hpp>
-#include <psSurfaceModel.hpp>
 
 namespace viennaps {
 

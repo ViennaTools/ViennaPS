@@ -5,8 +5,8 @@
 #include <lsGeometricAdvect.hpp>
 #include <lsGeometricAdvectDistributions.hpp>
 
-#include "../psGeometricModel.hpp"
-#include "../psProcessModel.hpp"
+#include "../process/psGeometricModel.hpp"
+#include "../process/psProcessModel.hpp"
 
 namespace viennaps {
 

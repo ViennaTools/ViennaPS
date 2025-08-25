@@ -1,6 +1,6 @@
 #pragma once
 
-#include "psDomain.hpp"
+#include "../psDomain.hpp"
 #include "psProcessModelBase.hpp"
 #include "psProcessParams.hpp"
 

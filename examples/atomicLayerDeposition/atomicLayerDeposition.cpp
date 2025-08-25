@@ -1,6 +1,6 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psSingleParticleALD.hpp>
-#include <psAtomicLayerProcess.hpp>
+#include <process/psAtomicLayerProcess.hpp>
 #include <psConstants.hpp>
 #include <psDomain.hpp>
 #include <psPlanarize.hpp>

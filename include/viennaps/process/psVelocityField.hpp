@@ -1,8 +1,6 @@
 #pragma once
 
-#include "psDomain.hpp"
-
-#include <vector>
+#include "../psDomain.hpp"
 
 namespace viennaps {
 
