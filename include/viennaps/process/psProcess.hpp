@@ -19,7 +19,7 @@ template <typename NumericType, int D> class Process {
 private:
   ProcessContext<NumericType, D> context_;
   std::vector<std::unique_ptr<ProcessStrategy<NumericType, D>>> strategies_;
-  FluxEngineType fluxEngineType_ = FluxEngineType::CPU_Disk;
+  FluxEngineType fluxEngineType_ = FluxEngineType::CPU_DISK;
 
 public:
   Process() { initializeStrategies(); }
@@ -29,6 +29,32 @@ public:
       : context_{domain, model, processDuration} {
     initializeStrategies();
   }
+
+  void setDomain(SmartPointer<Domain<NumericType, D>> domain) {
+    context_.domain = domain;
+  }
+
+  void setProcessModel(SmartPointer<ProcessModelBase<NumericType, D>> model) {
+    context_.model = model;
+  }
+
+  void setProcessDuration(double duration) {
+    context_.processDuration = duration;
+  }
+
+  void setRayTracingParameters(const RayTracingParameters<D> &params) {
+    context_.rayTracingParams = params;
+  }
+
+  void setAdvectionParameters(const AdvectionParameters &params) {
+    context_.advectionParams = params;
+  }
+
+  void setCoverageParameters(const CoverageParameters &params) {
+    context_.coverageParams = params;
+  }
+
+  void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
 
   void apply() {
     if (!checkModelAndDomain())
@@ -102,7 +128,7 @@ private:
   // classes)
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() {
     switch (fluxEngineType_) {
-    case FluxEngineType::CPU_Disk:
+    case FluxEngineType::CPU_DISK:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();

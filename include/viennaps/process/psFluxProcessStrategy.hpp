@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../psUnits.hpp"
 #include "psAdvectionHandler.hpp"
 #include "psCoverageManager.hpp"
 #include "psFluxEngine.hpp"
@@ -77,6 +78,27 @@ private:
     for (auto &dom : context.domain->getLevelSets()) {
       meshGenerator_.insertNextLevelSet(dom);
     }
+    if (context.domain->getMaterialMap() &&
+        context.domain->getMaterialMap()->size() ==
+            context.domain->getLevelSets().size()) {
+      meshGenerator_.setMaterialMap(
+          context.domain->getMaterialMap()->getMaterialMap());
+    }
+
+    // Try to initialize coverages
+    meshGenerator_.apply();
+    if (!context.coverageParams.initialized) {
+      if (coverageManager_.initializeCoverages(context)) {
+        context.flags.useCoverages = true;
+        Logger::getInstance().addInfo("Using coverages.").print();
+      }
+
+      if (!translator_)
+        translator_ = SmartPointer<TranslatorType>::New();
+      meshGenerator_.setTranslator(translator_);
+    } else {
+      Logger::getInstance().addInfo("Coverages already initialized.").print();
+    }
 
     // Initialize translator
     auto translationField = advectionHandler_.getTranslationField();
@@ -86,10 +108,9 @@ private:
           .addError("Translation method can not be 0 for flux-based processes.")
           .print();
       return ProcessResult::INVALID_INPUT;
-    } else if (translationMethod == 1 || context.flags.useCoverages) {
-      // translator is also needed for coverage advection
-      translator_ = SmartPointer<TranslatorType>::New();
-      meshGenerator_.setTranslator(translator_);
+    } else if (translationMethod == 1) {
+      if (!translator_)
+        translator_ = SmartPointer<TranslatorType>::New();
       translationField->setTranslator(translator_);
     } else if (translationMethod == 2) {
       kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
@@ -107,17 +128,8 @@ private:
     Timer processTimer;
     processTimer.start();
 
-    // Try to initialize coverages
-    meshGenerator_.apply();
-    if (coverageManager_.initializeCoverages(context)) {
-      context.flags.useCoverages = true;
-      Logger::getInstance().addInfo("Using coverages.").print();
-
-      if (context.coverageParams.initialized) {
-        Logger::getInstance().addInfo("Coverages already initialized.").print();
-      } else {
-        coverageInitIterations(context);
-      }
+    if (!context.coverageParams.initialized) {
+      coverageInitIterations(context);
     }
 
     context.resetTime();
@@ -126,7 +138,7 @@ private:
 #ifdef VIENNATOOLS_PYTHON_BUILD
       // Check for user interruption
       if (PyErr_CheckSignals() != 0)
-        return throw pybind11::error_already_set();
+        return ProcessResult::USER_INTERRUPTED;
 #endif
 
       // Process one time step
@@ -149,6 +161,7 @@ private:
     advectionHandler_.prepareAdvection(context);
 
     // Update surface for flux calculation
+    updateState(context);
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
     // Calculate fluxes
@@ -188,6 +201,7 @@ private:
 
     // Update coverages from advected surface
     if (context.flags.useCoverages) {
+      meshGenerator_.apply();
       PROCESS_CHECK(advectionHandler_.updateCoveragesFromAdvectedSurface(
           context, translator_));
     }
@@ -197,6 +211,14 @@ private:
       if (!applyPostAdvectionCallback(context)) {
         return ProcessResult::EARLY_TERMINATION;
       }
+    }
+
+    if (Logger::getLogLevel() >= 2) {
+      std::stringstream stream;
+      stream << std::fixed << std::setprecision(4)
+             << "Process time: " << context.processTime << " / "
+             << context.processDuration << " " << units::Time::toShortString();
+      Logger::getInstance().addInfo(stream.str()).print();
     }
 
     return ProcessResult::SUCCESS;
@@ -272,6 +294,17 @@ private:
     surfaceModel->updateCoverages(fluxes, materialIds);
   }
 
+  void updateState(ProcessContext<NumericType, D> &context) {
+    meshGenerator_.apply();
+
+    auto translationMethod =
+        advectionHandler_.getTranslationField()->getTranslationMethod();
+    if (translationMethod == 2) {
+      kdTree_->setPoints(context.diskMesh->getNodes());
+      kdTree_->build();
+    }
+  }
+
   void coverageInitIterations(ProcessContext<NumericType, D> &context) {
 
     const auto name = context.model->getProcessName().value_or("default");
@@ -290,6 +323,7 @@ private:
     timer.start();
     Logger::getInstance().addInfo("Initializing coverages ... ").print();
 
+    fluxEngine_->updateSurface(context);
     for (unsigned iteration = 0; iteration < maxIterations; ++iteration) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
       // Check for user interruption

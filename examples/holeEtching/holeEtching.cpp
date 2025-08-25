@@ -1,7 +1,7 @@
 #include <geometries/psMakeHole.hpp>
 #include <models/psSF6O2Etching.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 using namespace viennaps;
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
                            0.0, // holeDepth
                            0.0, // holeTaperAngle
                            params.get("maskHeight"), params.get("taperAngle"),
-                           HoleShape::HALF)
+                           HoleShape::QUARTER)
       .apply();
 
   // use pre-defined model SF6O2 etching model
@@ -49,15 +49,24 @@ int main(int argc, char *argv[]) {
   modelParams.etchStopDepth = params.get("etchStopDepth");
   auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
+  CoverageParameters coverageParams;
+  coverageParams.coverageDeltaThreshold = 1e-4;
+
+  RayTracingParameters<D> rayTracingParams;
+  rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
+
+  AdvectionParameters advectionParams;
+  advectionParams.integrationScheme = util::convertIntegrationScheme(
+      params.get<std::string>("integrationScheme"));
+
   // process setup
   Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setCoverageDeltaThreshold(1e-4);
-  process.setNumberOfRaysPerPoint(params.get<unsigned>("raysPerPoint"));
   process.setProcessDuration(params.get("processTime"));
-  process.setIntegrationScheme(util::convertIntegrationScheme(
-      params.get<std::string>("integrationScheme")));
+  process.setCoverageParameters(coverageParams);
+  process.setRayTracingParameters(rayTracingParams);
+  process.setAdvectionParameters(advectionParams);
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

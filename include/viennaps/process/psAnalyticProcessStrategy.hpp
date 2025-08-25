@@ -28,7 +28,8 @@ public:
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.processDuration > 0.0 && !context.flags.isGeometric &&
-           !context.flags.useFluxEngine;
+           !context.flags.useFluxEngine &&
+           context.model->getVelocityField() != nullptr;
   }
 
 private:
@@ -76,20 +77,24 @@ private:
   }
 
   ProcessResult processTimeStep(ProcessContext<NumericType, D> &context) {
-    // 1. Prepare advection
+    // Prepare advection based on integration scheme
     advectionHandler_.prepareAdvection(context);
 
-    // 2. Apply advection callbacks (pre)
+    // Apply advection callbacks (pre)
     if (context.flags.useAdvectionCallback) {
       if (!applyPreAdvectionCallback(context)) {
         return ProcessResult::EARLY_TERMINATION;
       }
     }
 
-    // 3. Perform advection, update processTime
+    // Prepare velocity field (no fluxes for analytic processes)
+    context.model->getVelocityField()->prepare(context.domain, nullptr,
+                                               context.processTime);
+
+    // Perform advection, update processTime
     PROCESS_CHECK(advectionHandler_.performAdvection(context));
 
-    // 5. Apply advection callbacks (post)
+    // Apply advection callbacks (post)
     if (context.flags.useAdvectionCallback) {
       if (!applyPostAdvectionCallback(context)) {
         return ProcessResult::EARLY_TERMINATION;

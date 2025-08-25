@@ -1,14 +1,14 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psSingleParticleProcess.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
   // Parse the parameters
   ps::util::Parameters params;

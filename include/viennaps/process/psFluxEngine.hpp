@@ -4,7 +4,13 @@
 
 namespace viennaps {
 
-enum class FluxEngineType { CPU_Disk, GPU_Triangle, GPU_Disk, GPU_LevelSet };
+enum class FluxEngineType {
+  // Platform, Surface representation
+  CPU_DISK,     // CPU, Disk-based
+  GPU_TRIANGLE, // GPU, Triangle-based
+  // GPU_DISK,   // GPU, Disk-based
+  // GPU_LEVEL_SET // Future implementations
+};
 
 template <typename NumericType, int D> class FluxEngine {
 public:
