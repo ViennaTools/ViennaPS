@@ -11,17 +11,13 @@ namespace viennaps {
 
 template <typename NumericType, int D> class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
-  SmartPointer<TranslationField<NumericType, D>> translationField_ = nullptr;
   viennacore::Timer<> timer_;
   unsigned lsVelOutputCounter = 0;
 
 public:
   ProcessResult initialize(const ProcessContext<NumericType, D> &context) {
     // Initialize advection handler with context
-    translationField_ = SmartPointer<TranslationField<NumericType, D>>::New(
-        context.model->getVelocityField(), context.domain->getMaterialMap());
-
-    auto translationMethod = translationField_->getTranslationMethod();
+    auto translationMethod = context.translationField->getTranslationMethod();
     if (translationMethod > 2 || translationMethod < 0) {
       Logger::getInstance()
           .addWarning("Translation field method not supported.")
@@ -29,7 +25,7 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
-    advectionKernel_.setVelocityField(translationField_);
+    advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setIntegrationScheme(
         context.advectionParams.integrationScheme);
     advectionKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
@@ -137,11 +133,6 @@ public:
     return ProcessResult::SUCCESS;
   }
   auto &getTimer() const { return timer_; }
-
-  auto &getTranslationField() const {
-    assert(translationField_ != nullptr);
-    return translationField_;
-  }
 };
 
 } // namespace viennaps

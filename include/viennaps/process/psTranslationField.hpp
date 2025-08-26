@@ -65,6 +65,8 @@ public:
     kdTree_ = kdTree;
   }
 
+  auto &getKdTree() { return kdTree_; }
+
   void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
     kdTree_->setPoints(points);
     kdTree_->build();

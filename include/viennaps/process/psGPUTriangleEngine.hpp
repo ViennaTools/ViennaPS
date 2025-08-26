@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef VIENNACORE_COMPILE_GPU
-#define VIENNACORE_COMPILE_GPU
-#endif
 #ifdef VIENNACORE_COMPILE_GPU
 
 #include "../psDomain.hpp"
@@ -22,7 +19,7 @@
 #include <psgPointToElementData.hpp>
 #include <psgProcessModel.hpp>
 
-namespace viennaps::gpu {
+namespace viennaps {
 
 using namespace viennacore;
 
@@ -34,7 +31,7 @@ class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
-  GPUTriangleEngine(Context &deviceContext)
+  GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
@@ -65,6 +62,8 @@ public:
   }
 
   ProcessResult initialize(ProcessContext<NumericType, D> &context) final {
+    auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
+        context.model);
     if (!rayTracerInitialized_) {
       // Check for periodic boundary conditions
       bool periodicBoundary = false;
@@ -83,10 +82,8 @@ public:
         }
       }
 
-      auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
-          context.model);
       rayTracer_.setPipeline(model->getPipelineFileName(),
-                             deviceContext_.modulePath);
+                             deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       rayTracer_.setPeriodicBoundary(periodicBoundary);
@@ -97,38 +94,40 @@ public:
     }
     rayTracer_.setParameters(model->getProcessDataDPtr());
     rayTracerInitialized_ = true;
+
+    return ProcessResult::SUCCESS;
   }
 
   ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
     surfaceMesh_ = viennals::Mesh<float>::New();
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
-    CreateSurfaceMesh<NumericType, float, D>(
+    gpu::CreateSurfaceMesh<NumericType, float, D>(
         context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_)
         .apply();
 
     auto mesh =
-        CreateTriangleMesh(context.domain->getGridDelta(), surfaceMesh_);
+        gpu::CreateTriangleMesh(context.domain->getGridDelta(), surfaceMesh_);
     rayTracer_.setGeometry(mesh);
 
     auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
         context.model);
     if (model->useMaterialIds()) {
       auto const &pointMaterialIds =
-          *diskMesh_->getCellData().getScalarData("MaterialIds");
+          *context.diskMesh->getCellData().getScalarData("MaterialIds");
       std::vector<int> elementMaterialIds;
-      auto &pointKdTree = translationField_->getKdTree();
-      if (pointKdTree.getNumberOfPoints() != diskMesh_->nodes.size()) {
-        pointKdTree.setPoints(diskMesh_->nodes);
-        pointKdTree.build();
+      auto &pointKdTree = context.translationField->getKdTree();
+      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
+        pointKdTree->setPoints(context.diskMesh->nodes);
+        pointKdTree->build();
       }
-      PointToElementDataSingle<NumericType, NumericType, int, float>(
-          pointMaterialIds, elementMaterialIds, pointKdTree, surfaceMesh_)
+      gpu::PointToElementDataSingle<NumericType, NumericType, int, float>(
+          pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setMaterialIds(elementMaterialIds);
     }
 
-    assert(diskMesh_->nodes.size() > 0);
+    assert(context.diskMesh->nodes.size() > 0);
     assert(!surfaceMesh_->nodes.empty());
 
     return ProcessResult::SUCCESS;
@@ -141,23 +140,21 @@ public:
 
     auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
         context.model);
-    const auto name = model->getProcessName().value_or("default");
-    const auto logLevel = Logger::getLogLevel();
 
     CudaBuffer d_coverages; // device buffer for coverages
     if (context.flags.useCoverages) {
       auto coverages = model->getSurfaceModel()->getCoverages();
       assert(coverages);
       assert(context.diskMesh);
-      assert(translationField_);
+      assert(context.translationField);
       auto numCov = coverages->getScalarDataSize();
-      auto &pointKdTree = translationField_->getKdTree();
-      if (pointKdTree.getNumberOfPoints() != diskMesh_->nodes.size()) {
-        pointKdTree.setPoints(diskMesh_->nodes);
-        pointKdTree.build();
+      auto &pointKdTree = context.translationField->getKdTree();
+      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
+        pointKdTree->setPoints(context.diskMesh->nodes);
+        pointKdTree->build();
       }
-      PointToElementData<NumericType, float>(d_coverages, coverages,
-                                             pointKdTree, surfaceMesh_)
+      gpu::PointToElementData<NumericType, float>(d_coverages, coverages,
+                                                  *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setElementData(d_coverages, numCov);
     }
@@ -166,27 +163,27 @@ public:
     rayTracer_.apply();
 
     // extract fluxes on points
-    ElementToPointData<NumericType, float>(
+    gpu::ElementToPointData<NumericType, float>(
         rayTracer_.getResults(), fluxes, rayTracer_.getParticles(),
-        elementKdTree_, diskMesh_, surfaceMesh_,
-        domain_->getGridDelta() * context.rayTracingParams.smoothingNeighbors)
+        elementKdTree_, context.diskMesh, surfaceMesh_,
+        context.domain->getGridDelta() *
+            context.rayTracingParams.smoothingNeighbors)
         .apply();
 
     // output
-    if (logLevel >= static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+    if (Logger::getLogLevel() >=
+        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
       if (context.flags.useCoverages) {
-        {
-          auto coverages = model->getSurfaceModel()->getCoverages();
-          downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
-                            surfaceMesh_->getElements<3>().size());
-        }
-        downloadResultsToPointData(surfaceMesh_->getCellData());
-        static unsigned iterations = 0;
-        viennals::VTKWriter<float>(surfaceMesh_,
-                                   name + "_flux_" +
-                                       std::to_string(iterations++) + ".vtp")
-            .apply();
+        auto coverages = model->getSurfaceModel()->getCoverages();
+        downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
+                          surfaceMesh_->getElements<3>().size());
       }
+      downloadResultsToPointData(surfaceMesh_->getCellData());
+      static unsigned iterations = 0;
+      viennals::VTKWriter<float>(surfaceMesh_,
+                                 context.getProcessName() + "_flux_" +
+                                     std::to_string(iterations++) + ".vtp")
+          .apply();
 
       if (context.flags.useCoverages) {
         d_coverages.free();
@@ -245,7 +242,7 @@ private:
   }
 
 private:
-  Context &deviceContext_;
+  std::shared_ptr<DeviceContext> deviceContext_;
   viennaray::gpu::Trace<NumericType, D> rayTracer_;
 
   KDTreeType elementKdTree_;
@@ -254,6 +251,6 @@ private:
   bool rayTracerInitialized_ = false;
 };
 
-} // namespace viennaps::gpu
+} // namespace viennaps
 
 #endif

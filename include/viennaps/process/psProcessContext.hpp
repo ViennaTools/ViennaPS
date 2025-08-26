@@ -3,6 +3,7 @@
 #include "../psDomain.hpp"
 #include "psProcessModelBase.hpp"
 #include "psProcessParams.hpp"
+#include "psTranslationField.hpp"
 
 namespace viennaps {
 
@@ -34,6 +35,7 @@ template <typename NumericType, int D> struct ProcessContext {
   // Simulation state
   unsigned currentIteration = 0;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh;
+  SmartPointer<TranslationField<NumericType, D>> translationField;
 
   // Computed flags (derived from model state)
   struct Flags {

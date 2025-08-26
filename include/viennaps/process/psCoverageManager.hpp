@@ -9,6 +9,12 @@ template <typename NumericType, int D> class CoverageManager {
   SmartPointer<viennals::PointData<NumericType>> previousCoverages_;
 
 public:
+  CoverageManager() = default;
+  ~CoverageManager() {
+    if (covMetricFile_.is_open())
+      covMetricFile_.close();
+  }
+
   bool
   initializeCoverages(ProcessContext<NumericType, D> const &context) const {
     // Initialize coverage information based on the current context
@@ -37,6 +43,7 @@ public:
     assert(
         deltaMetric.size() ==
         context.model->getSurfaceModel()->getCoverages()->getScalarDataSize());
+    logMetric(deltaMetric);
 
     std::stringstream stream;
     stream << std::setprecision(4) << std::fixed;
@@ -55,7 +62,7 @@ public:
   }
 
 private:
-  std::vector<NumericType> calculateCoverageDeltaMetric(
+  static std::vector<NumericType> calculateCoverageDeltaMetric(
       SmartPointer<viennals::PointData<NumericType>> updated,
       SmartPointer<viennals::PointData<NumericType>> previous) {
 
@@ -75,7 +82,6 @@ private:
       delta[i] /= updatedData->size();
     }
 
-    logMetric(delta);
     return delta;
   }
 
@@ -83,7 +89,11 @@ private:
     if (Logger::getLogLevel() < 5)
       return;
 
+    if (!covMetricFile_.is_open()) {
+      covMetricFile_.open("coverage_metrics.txt");
+    }
     assert(covMetricFile_.is_open());
+
     for (auto val : metric) {
       covMetricFile_ << val << ";";
     }

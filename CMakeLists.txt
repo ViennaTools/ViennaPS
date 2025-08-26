@@ -87,11 +87,8 @@ endif()
 # --------------------------------------------------------------------------------------------------------
 
 # Generate version header
-configure_file(
-  "${PROJECT_SOURCE_DIR}/cmake/psVersion.hpp.in"
-  "${PROJECT_SOURCE_DIR}/include/viennaps/psVersion.hpp"
-  @ONLY
-)
+configure_file("${PROJECT_SOURCE_DIR}/cmake/psVersion.hpp.in"
+               "${PROJECT_SOURCE_DIR}/include/viennaps/psVersion.hpp" @ONLY)
 
 target_include_directories(
   ${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/viennaps>
@@ -105,6 +102,7 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 1.5.1
+  GIT_TAG context-update
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -117,6 +115,7 @@ CPMAddPackage(
 CPMFindPackage(
   NAME ViennaRay
   VERSION 3.4.2
+  GIT_TAG context-update
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")

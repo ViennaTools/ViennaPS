@@ -44,6 +44,11 @@ private:
   }
 
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
+    context.translationField =
+        SmartPointer<TranslationField<NumericType, D>>::New(
+            context.model->getVelocityField(),
+            context.domain->getMaterialMap());
+
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));
     context.currentIteration = 0;

@@ -46,7 +46,8 @@ public:
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.processDuration > 0.0 && !context.flags.isGeometric &&
-           !context.flags.isAnalytic && context.flags.useFluxEngine;
+           !context.flags.isAnalytic && context.flags.useFluxEngine &&
+           !context.flags.isALP;
   }
 
 private:
@@ -69,9 +70,6 @@ private:
   }
 
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
-    // Initialize advection handler
-    PROCESS_CHECK(advectionHandler_.initialize(context));
-
     // Initialize disk mesh generator
     context.diskMesh = viennals::Mesh<NumericType>::New();
     meshGenerator_.setMesh(context.diskMesh);
@@ -100,22 +98,31 @@ private:
       Logger::getInstance().addInfo("Coverages already initialized.").print();
     }
 
-    // Initialize translator
-    auto translationField = advectionHandler_.getTranslationField();
-    auto translationMethod = translationField->getTranslationMethod();
+    // Initialize translation field. Converts points ids from level set points
+    // to surface points
+    context.translationField =
+        SmartPointer<TranslationField<NumericType, D>>::New(
+            context.model->getVelocityField(),
+            context.domain->getMaterialMap());
+
+    auto translationMethod = context.translationField->getTranslationMethod();
     if (translationMethod == 0) {
       Logger::getInstance()
-          .addError("Translation method can not be 0 for flux-based processes.")
+          .addWarning(
+              "Translation method can not be 0 for flux-based processes.")
           .print();
       return ProcessResult::INVALID_INPUT;
     } else if (translationMethod == 1) {
       if (!translator_)
         translator_ = SmartPointer<TranslatorType>::New();
-      translationField->setTranslator(translator_);
+      context.translationField->setTranslator(translator_);
     } else if (translationMethod == 2) {
       kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
-      translationField->setKdTree(kdTree_);
+      context.translationField->setKdTree(kdTree_);
     }
+
+    // Initialize advection handler
+    PROCESS_CHECK(advectionHandler_.initialize(context));
 
     // Initialize flux engine
     PROCESS_CHECK(fluxEngine_->checkInput(context));
@@ -128,7 +135,7 @@ private:
     Timer processTimer;
     processTimer.start();
 
-    if (!context.coverageParams.initialized) {
+    if (context.flags.useCoverages && !context.coverageParams.initialized) {
       coverageInitIterations(context);
     }
 
@@ -225,10 +232,11 @@ private:
   }
 
   void outputIntermediateResults(
-      const ProcessContext<NumericType, D> &context,
+      ProcessContext<NumericType, D> &context,
       SmartPointer<std::vector<NumericType>> &velocities,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) {
     if (Logger::getLogLevel() >= 3) {
+      auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
       context.diskMesh->getCellData().insertNextScalarData(*velocities,
                                                            "velocities");
@@ -240,14 +248,13 @@ private:
         mergeScalarData(context.diskMesh->getCellData(), surfaceData);
       mergeScalarData(context.diskMesh->getCellData(), fluxes);
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.getProcessName() + "_" +
-                                std::to_string(context.currentIteration) +
-                                ".vtp")
+          context.diskMesh,
+          name + "_" + std::to_string(context.currentIteration) + ".vtp")
           .apply();
       if (context.domain->getCellSet()) {
         context.domain->getCellSet()->writeVTU(
-            context.getProcessName() + "_cellSet_" +
-            std::to_string(context.currentIteration) + ".vtu");
+            name + "_cellSet_" + std::to_string(context.currentIteration) +
+            ".vtu");
       }
     }
   }
@@ -297,8 +304,8 @@ private:
   void updateState(ProcessContext<NumericType, D> &context) {
     meshGenerator_.apply();
 
-    auto translationMethod =
-        advectionHandler_.getTranslationField()->getTranslationMethod();
+    auto const translationMethod =
+        context.translationField->getTranslationMethod();
     if (translationMethod == 2) {
       kdTree_->setPoints(context.diskMesh->getNodes());
       kdTree_->build();
@@ -307,7 +314,7 @@ private:
 
   void coverageInitIterations(ProcessContext<NumericType, D> &context) {
 
-    const auto name = context.model->getProcessName().value_or("default");
+    const auto name = context.getProcessName();
     auto &maxIterations = context.coverageParams.maxIterations;
     if (maxIterations == std::numeric_limits<unsigned>::max() &&
         context.coverageParams.coverageDeltaThreshold == 0.) {

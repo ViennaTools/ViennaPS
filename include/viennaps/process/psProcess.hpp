@@ -10,6 +10,7 @@
 
 // Flux engines
 #include "psCPUDiskEngine.hpp"
+#include "psGPUTriangleEngine.hpp"
 
 namespace viennaps {
 
@@ -20,13 +21,11 @@ private:
   FluxEngineType fluxEngineType_ = FluxEngineType::CPU_DISK;
 
 public:
-  Process() { initializeStrategies(); }
+  Process() = default;
   Process(SmartPointer<Domain<NumericType, D>> domain,
           SmartPointer<ProcessModelBase<NumericType, D>> model,
           NumericType processDuration = 0.)
-      : context_{domain, model, processDuration} {
-    initializeStrategies();
-  }
+      : context_{domain, model, processDuration} {}
 
   void setDomain(SmartPointer<Domain<NumericType, D>> domain) {
     context_.domain = domain;
@@ -60,6 +59,8 @@ public:
 
     // Update context with current state
     context_.updateFlags();
+
+    initializeStrategies();
 
     // Find appropriate strategy
     auto strategy = findStrategy();
@@ -119,6 +120,9 @@ private:
       throw pybind11::error_already_set();
 #endif
       break;
+    case ProcessResult::INVALID_INPUT:
+      Logger::getInstance().addError("Invalid input for process.").print();
+      break;
     case ProcessResult::FAILURE:
       Logger::getInstance().addError("Process failed.").print();
       break;
@@ -126,12 +130,21 @@ private:
     }
   }
 
-  // Factory method for creating flux engines (can be overridden by derived
-  // classes)
+  // Factory method for creating flux engines
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() {
     switch (fluxEngineType_) {
     case FluxEngineType::CPU_DISK:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
+    case FluxEngineType::GPU_TRIANGLE:
+#ifdef VIENNACORE_COMPILE_GPU
+      return std::make_unique<GPUTriangleEngine<NumericType, D>>(
+          DeviceContext::getContextFromRegistry(gpuDeviceId_));
+#else
+      Logger::getInstance()
+          .addError("GPU support not compiled in ViennaCore.")
+          .print();
+      return nullptr;
+#endif
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
       return nullptr;
@@ -158,6 +171,10 @@ private:
 
     return true;
   }
+#ifdef VIENNACORE_COMPILE_GPU
+private:
+  unsigned int gpuDeviceId_ = 0;
+#endif
 };
 
 } // namespace viennaps

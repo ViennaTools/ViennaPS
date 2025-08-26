@@ -106,7 +106,7 @@ extern "C" __global__ void __closesthit__Ion() {
     // ------------- SURFACE COLLISION ------------- //
     float flux = prd->rayWeight;
     if (params->B_sp >= 0.f) {
-      flux *= (1 + params->B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+      flux *= (1.f + params->B_sp * (1.f - cosTheta * cosTheta)) * cosTheta;
     }
 
     if (params->meanEnergy > 0.f) {
@@ -117,7 +117,7 @@ extern "C" __global__ void __closesthit__Ion() {
 
     // ------------- REFLECTION ------------- //
 
-    float sticking = 1.;
+    float sticking = 1.f;
     if (incomingAngle > params->thetaRMin)
       sticking = 1.f - min((incomingAngle - params->thetaRMin) /
                                (params->thetaRMax - params->thetaRMin),
@@ -126,10 +126,11 @@ extern "C" __global__ void __closesthit__Ion() {
 
     if (params->meanEnergy > 0.f) {
       float Eref_peak;
-      float A = 1. / (1. + params->n * (M_PI_2 / params->inflectAngle - 1.));
+      float A =
+          1.f / (1.f + params->n * (M_PI_2f / params->inflectAngle - 1.f));
       if (incomingAngle >= params->inflectAngle) {
-        Eref_peak = (1 - (1 - A) * (M_PI_2 - incomingAngle) /
-                             (M_PI_2 - params->inflectAngle));
+        Eref_peak = (1.f - (1.f - A) * (M_PI_2f - incomingAngle) /
+                               (M_PI_2f - params->inflectAngle));
       } else {
         Eref_peak = A * powf(incomingAngle / params->inflectAngle, params->n);
       }
@@ -177,7 +178,7 @@ extern "C" __global__ void __raygen__Ion() {
     do {
       prd.energy = getNormalDistRand(&prd.RNGstate) * params->sigmaEnergy +
                    params->meanEnergy;
-    } while (prd.energy <= 0.);
+    } while (prd.energy <= 0.f);
   } else {
     prd.energy = std::numeric_limits<float>::max();
   }

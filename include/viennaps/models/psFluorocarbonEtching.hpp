@@ -6,7 +6,6 @@
 #include "../psMaterials.hpp"
 #include "../psUnits.hpp"
 
-
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 

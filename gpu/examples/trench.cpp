@@ -1,7 +1,6 @@
 #include <geometries/psMakeTrench.hpp>
-
 #include <models/psgMultiParticleProcess.hpp>
-#include <psgProcess.hpp>
+#include <process/psProcess.hpp>
 
 using namespace viennaps;
 
@@ -10,10 +9,9 @@ int main(int argc, char **argv) {
   omp_set_num_threads(16);
   constexpr int D = 3;
   using NumericType = double;
-  Logger::setLogLevel(LogLevel::INFO);
+  Logger::setLogLevel(LogLevel::DEBUG);
 
-  Context context;
-  context.create();
+  auto context = DeviceContext::createContext();
 
   constexpr NumericType gridDelta = 1.0;
   constexpr NumericType extent = 50.;
@@ -39,14 +37,13 @@ int main(int argc, char **argv) {
         return mat == Material::Mask ? 0. : -flux[0] * rate;
       });
 
-  RayTracingParameters<NumericType, D> rayTracingParams;
+  RayTracingParameters<D> rayTracingParams;
   rayTracingParams.smoothingNeighbors = 2;
   rayTracingParams.raysPerPoint = 3000;
 
-  gpu::Process<NumericType, D> process(context, domain, model, time);
+  Process<NumericType, D> process(domain, model, time);
   process.setRayTracingParameters(rayTracingParams);
-  process.disableRandomSeeds();
-
+  process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
   process.apply();
 
   domain->saveSurfaceMesh("trench_etch.vtp");

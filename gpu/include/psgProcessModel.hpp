@@ -4,7 +4,7 @@
 
 #include <raygParticle.hpp>
 
-#include <psProcessModelBase.hpp>
+#include <process/psProcessModelBase.hpp>
 
 namespace viennaps::gpu {
 
