@@ -5,11 +5,10 @@
 #include "../psDomain.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessBase.hpp"
+#include "psProcessModel.hpp"
 
 #include <vcContext.hpp>
 
-#include <lsAdvect.hpp>
-#include <lsDomain.hpp>
 #include <lsMesh.hpp>
 
 #include <raygTrace.hpp>
@@ -17,7 +16,6 @@
 #include <psgCreateSurfaceMesh.hpp>
 #include <psgElementToPointData.hpp>
 #include <psgPointToElementData.hpp>
-#include <psgProcessModel.hpp>
 
 namespace viennaps {
 

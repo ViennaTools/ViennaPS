@@ -97,6 +97,7 @@ private:
     } else {
       Logger::getInstance().addInfo("Coverages already initialized.").print();
     }
+    context.model->getSurfaceModel()->initializeSurfaceData(context.diskMesh->nodes.size());
 
     // Initialize translation field. Converts points ids from level set points
     // to surface points

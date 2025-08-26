@@ -59,7 +59,7 @@ extern "C" __global__ void __closesthit__ion() {
     if (cosTheta <= 0.5f)
       f_ie_theta = max(3.f - 6.f * angle / M_PIf, 0.f);
     float f_sp_theta =
-        max((1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta, 0.f);
+        max((1.f + B_sp * (1 - cosTheta * cosTheta)) * cosTheta, 0.f);
 
     float sqrtE = sqrtf(prd->energy);
     float Y_sp = A_sp * max(sqrtE - sqrtf(Eth_sp), 0.f) * f_sp_theta;
@@ -83,11 +83,11 @@ extern "C" __global__ void __closesthit__ion() {
     // Small incident angles are reflected with the energy fraction centered at
     // 0
     float Eref_peak = 0.f;
-    float A = 1. / (1. + params->Ions.n_l *
-                             (M_PI_2f / params->Ions.inflectAngle - 1.));
+    float A = 1.f / (1.f + params->Ions.n_l *
+                               (M_PI_2f / params->Ions.inflectAngle - 1.f));
     if (angle >= params->Ions.inflectAngle) {
-      Eref_peak = 1 - (1 - A) * (M_PI_2f - angle) /
-                          (M_PI_2f - params->Ions.inflectAngle);
+      Eref_peak = 1.f - (1.f - A) * (M_PI_2f - angle) /
+                            (M_PI_2f - params->Ions.inflectAngle);
     } else {
       Eref_peak = A * pow(angle / params->Ions.inflectAngle, params->Ions.n_l);
     }
@@ -99,7 +99,7 @@ extern "C" __global__ void __closesthit__ion() {
                   Eref_peak * prd->energy;
     } while (newEnergy > prd->energy || newEnergy <= 0.f);
 
-    float sticking = 1.;
+    float sticking = 1.f;
     if (angle > params->Ions.thetaRMin) {
       sticking =
           1.f - max(min((angle - params->Ions.thetaRMin) /

@@ -172,6 +172,9 @@ private:
     return true;
   }
 #ifdef VIENNACORE_COMPILE_GPU
+public:
+  void setDeviceId(unsigned id) { gpuDeviceId_ = id; }
+
 private:
   unsigned int gpuDeviceId_ = 0;
 #endif
