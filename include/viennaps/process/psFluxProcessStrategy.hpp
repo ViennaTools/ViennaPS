@@ -49,6 +49,29 @@ public:
            !context.flags.isALP;
   }
 
+  ProcessResult calculateFlux(ProcessContext<NumericType, D> &context) {
+    // Validate required components
+    PROCESS_CHECK(validateContext(context));
+
+    // Setup phase
+    PROCESS_CHECK(setupProcess(context));
+
+    if (context.flags.useCoverages) {
+      coverageInitIterations(context);
+    }
+
+    updateState(context);
+    PROCESS_CHECK(fluxEngine_->updateSurface(context));
+
+    // Calculate fluxes only
+    auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+    PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+
+    mergeScalarData(context.diskMesh->getCellData(), fluxes);
+
+    return ProcessResult::SUCCESS;
+  }
+
 private:
   ProcessResult validateContext(const ProcessContext<NumericType, D> &context) {
     if (!context.model->getSurfaceModel()) {

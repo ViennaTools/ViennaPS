@@ -49,8 +49,7 @@ public:
   using lsDomainsType = std::vector<lsDomainType>;
   using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
   using MaterialMapType = SmartPointer<MaterialMap>;
-  using MetaDataType =
-      std::unordered_map<std::string, std::vector<NumericType>>;
+  using MetaDataType = std::unordered_map<std::string, std::vector<double>>;
   using Setup = DomainSetup<NumericType, D>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
@@ -352,8 +351,8 @@ public:
     metaData_[key] = values;
   }
 
-  void addMetaData(const std::string &key, NumericType value) {
-    metaData_[key] = std::vector<NumericType>{value};
+  void addMetaData(const std::string &key, double value) {
+    metaData_[key] = std::vector<double>{value};
   }
 
   void addMetaData(const MetaDataType &metaData) {
@@ -560,16 +559,14 @@ private:
 
   void initMetaData() {
     if (static_cast<int>(metaDataLevel_) > 0) {
-      metaData_["Version"] =
-          std::vector<NumericType>{static_cast<NumericType>(versionMajor),
-                                   static_cast<NumericType>(versionMinor),
-                                   static_cast<NumericType>(versionPatch)};
-      metaData_["Domain Type"] =
-          std::vector<NumericType>{static_cast<NumericType>(D)};
-      metaData_["Grid Delta"] = std::vector<NumericType>{setup_.gridDelta()};
-      std::vector<NumericType> boundaryConds(D);
+      metaData_["Version"] = std::vector<double>{
+          static_cast<double>(versionMajor), static_cast<double>(versionMinor),
+          static_cast<double>(versionPatch)};
+      metaData_["Domain Type"] = std::vector<double>{static_cast<double>(D)};
+      metaData_["Grid Delta"] = std::vector<double>{setup_.gridDelta()};
+      std::vector<double> boundaryConds(D);
       for (int i = 0; i < D; i++) {
-        boundaryConds[i] = static_cast<NumericType>(setup_.boundaryCons()[i]);
+        boundaryConds[i] = static_cast<double>(setup_.boundaryCons()[i]);
       }
       metaData_["Boundary Conditions"] = boundaryConds;
     }

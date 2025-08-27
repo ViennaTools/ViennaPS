@@ -86,8 +86,23 @@ public:
   }
 
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
-    // TODO
-    return nullptr;
+    if (!checkInput())
+      return nullptr;
+
+    context_.updateFlags();
+    const auto name = context_.getProcessName();
+    if (!context_.flags.useFluxEngine) {
+      Logger::getInstance()
+          .addError("Process model '" + name + "' does not use flux engine.")
+          .print();
+      return nullptr;
+    }
+
+    auto strategy = std::make_unique<FluxProcessStrategy<NumericType, D>>(
+        createFluxEngine());
+    strategy->calculateFlux(context_);
+
+    return context_.diskMesh;
   }
 
 private:
