@@ -12,7 +12,7 @@ add_gpu_executable(waveguideGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/waveguid
 add_dependencies(ViennaPS-GPU_Examples waveguideGPU)
 
 add_gpu_executable(trenchGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/trench.cpp
-                   ${VIENNAPS_PIPELINE_DIR}/MultiParticlePipeline.cu)
+                   ${VIENNAPS_PIPELINE_DIR}/SingleParticlePipeline.cu)
 add_dependencies(ViennaPS-GPU_Examples trenchGPU)
 
 add_gpu_executable(holeCompare target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp

@@ -30,6 +30,9 @@ public:
   virtual void finalize(SmartPointer<Domain<NumericType, D>> domain,
                         const NumericType processedDuration) {}
   virtual bool useFluxEngine() { return false; }
+  virtual SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() {
+    return nullptr;
+  }
 
   auto getSurfaceModel() const { return surfaceModel; }
   auto getAdvectionCallback() const { return advectionCallback; }
@@ -37,7 +40,6 @@ public:
   auto getVelocityField() const { return velocityField; }
   auto getProcessName() const { return processName; }
   auto getProcessMetaData() const { return processMetaData; }
-  auto hasGPUImplementation() const { return hasGPU; }
 
   void setProcessName(const std::string &name) { processName = name; }
 

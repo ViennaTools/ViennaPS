@@ -54,7 +54,7 @@ public:
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
 
   void apply() {
-    if (!checkModelAndDomain())
+    if (!checkInput())
       return;
 
     // Update context with current state
@@ -151,7 +151,7 @@ private:
     }
   }
 
-  bool checkModelAndDomain() const {
+  bool checkInput() {
     if (!context_.domain) {
       Logger::getInstance().addError("No domain passed to Process.").print();
       return false;
@@ -167,6 +167,26 @@ private:
           .addError("No process model passed to Process.")
           .print();
       return false;
+    }
+
+    if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE) {
+      auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
+          context_.model);
+      if (!model) {
+        auto gpuModel = context_.model->getGPUModel();
+        if (gpuModel) {
+          Logger::getInstance()
+              .addDebug("Switching to GPU-compatible process model.")
+              .print();
+          context_.model = gpuModel;
+        } else {
+          Logger::getInstance()
+              .addWarning(
+                  "No GPU implementation available for this process model.")
+              .print();
+          return false;
+        }
+      }
     }
 
     return true;

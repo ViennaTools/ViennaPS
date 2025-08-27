@@ -7,10 +7,7 @@
 #include <rayParticle.hpp>
 #include <raySource.hpp>
 
-#ifdef VIENNACORE_COMPILE_GPU
-#include <raygParticle.hpp>
 #include <vcCudaBuffer.hpp>
-#endif
 
 namespace viennaps {
 

@@ -151,6 +151,7 @@ private:
     this->setVelocityField(velField);
 
     this->setProcessName("SF6O2Etching");
+    this->hasGPU = true;
 
     this->processMetaData = params.toProcessMetaData();
     // add units

@@ -37,12 +37,18 @@ public:
                std::move(materialRates));
   }
 
+  SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
+                        NumericType rate, NumericType stickingProbability,
+                        NumericType sourceExponent) {
+    initialize(rate, stickingProbability, sourceExponent,
+               std::move(materialRates));
+  }
+
 private:
   void initialize(NumericType rate, NumericType stickingProbability,
                   NumericType sourceExponent,
                   std::unordered_map<Material, NumericType> &&materialRates) {
     // particles
-
     viennaray::gpu::Particle<NumericType> particle{
         .name = "SingleParticle",
         .sticking = stickingProbability,

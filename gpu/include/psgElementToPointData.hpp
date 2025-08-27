@@ -2,8 +2,8 @@
 
 #include <lsMesh.hpp>
 
+#include <rayParticle.hpp>
 #include <raygIndexMap.hpp>
-#include <raygParticle.hpp>
 
 #include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>

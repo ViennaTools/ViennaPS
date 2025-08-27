@@ -5,7 +5,7 @@
 #include <psMaterials.hpp>
 
 #include <models/psgPipelineParameters.hpp>
-#include <psgProcessModel.hpp>
+#include <process/psProcessModel.hpp>
 
 namespace viennaps::gpu {
 

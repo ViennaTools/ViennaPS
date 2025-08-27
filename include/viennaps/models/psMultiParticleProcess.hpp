@@ -242,6 +242,7 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
+    this->hasGPU = true;
   }
 
   void addNeutralParticle(NumericType stickingProbability,

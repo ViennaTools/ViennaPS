@@ -2,7 +2,7 @@
 
 #include <models/psSF6O2Etching.hpp>
 #include <process/psProcessModel.hpp>
-#include <raygParticle.hpp>
+#include <rayParticle.hpp>
 
 namespace viennaps::gpu {
 

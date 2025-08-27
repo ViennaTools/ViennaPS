@@ -1,5 +1,5 @@
 #include <geometries/psMakeTrench.hpp>
-#include <models/psgMultiParticleProcess.hpp>
+#include <models/psSingleParticleProcess.hpp>
 #include <process/psProcess.hpp>
 
 using namespace viennaps;
@@ -30,12 +30,14 @@ int main(int argc, char **argv) {
       .apply();
   domain->saveSurfaceMesh("trench_initial.vtp");
 
-  auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New();
-  model->addIonParticle(exponent, 70, 90, 75);
-  model->setRateFunction(
-      [rate](const std::vector<NumericType> &flux, Material mat) {
-        return mat == Material::Mask ? 0. : -flux[0] * rate;
-      });
+  auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(
+      -rate, sticking, exponent, Material::Mask);
+
+  // model->addIonParticle(exponent, 70, 90, 75);
+  // model->setRateFunction(
+  //     [rate](const std::vector<NumericType> &flux, Material mat) {
+  //       return mat == Material::Mask ? 0. : -flux[0] * rate;
+  //     });
 
   RayTracingParameters<D> rayTracingParams;
   rayTracingParams.smoothingNeighbors = 2;
