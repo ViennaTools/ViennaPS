@@ -160,7 +160,18 @@ private:
     context.model->finalize(context.domain, context.processTime);
 
     processTimer.finish();
-    // logProcessingTimes(context, processTimer);
+    logProcessingTimes(context, processTimer);
+
+    if (static_cast<int>(context.domain->getMetaDataLevel()) > 1) {
+      context.domain->addMetaData("ProcessTime", context.processTime);
+    }
+    if (static_cast<int>(context.domain->getMetaDataLevel()) > 2) {
+      context.domain->addMetaData(context.advectionParams.toMetaData());
+      context.domain->addMetaData(context.rayTracingParams.toMetaData());
+      if (context.flags.useCoverages) {
+        context.domain->addMetaData(context.coverageParams.toMetaData());
+      }
+    }
 
     return ProcessResult::SUCCESS;
   }
@@ -384,6 +395,24 @@ private:
     for (int i = 0; i < numScalarData; i++) {
       scalarData.insertReplaceScalarData(*dataToInsert->getScalarData(i),
                                          dataToInsert->getScalarDataLabel(i));
+    }
+  }
+
+  void logProcessingTimes(const ProcessContext<NumericType, D> &context,
+                          const viennacore::Timer<> &processTimer) {
+    Logger::getInstance()
+        .addTiming("\nProcess " + context.getProcessName(),
+                   processTimer.currentDuration * 1e-9)
+        .addTiming("Surface advection total time",
+                   advectionHandler_.getTimer().totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .print();
+    if (context.flags.useAdvectionCallback) {
+      Logger::getInstance()
+          .addTiming("Advection callback total time",
+                     callbackTimer_.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
     }
   }
 };

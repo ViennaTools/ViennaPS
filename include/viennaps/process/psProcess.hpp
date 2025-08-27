@@ -80,8 +80,9 @@ public:
     handleProcessResult(result);
 
     if (static_cast<int>(context_.domain->getMetaDataLevel()) >=
-        static_cast<int>(MetaDataLevel::PROCESS))
+        static_cast<int>(MetaDataLevel::PROCESS)) {
       context_.domain->addMetaData(context_.model->getProcessMetaData());
+    }
   }
 
 private:

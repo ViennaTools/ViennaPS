@@ -100,8 +100,8 @@ public:
 
 private:
   // Helper function to calculate triangle center
-  std::array<NumericType, 3> calculateElementCenter(
-      const std::array<std::size_t, 3> &elementIndices) const {
+  std::array<NumericType, 3>
+  calculateElementCenter(const std::array<unsigned, 3> &elementIndices) const {
     const auto &nodes = surfaceMesh_->nodes;
     constexpr NumericType oneThird = NumericType(1) / NumericType(3);
 
@@ -150,8 +150,8 @@ public:
 
 private:
   // Helper function to calculate triangle center
-  std::array<NumericType, 3> calculateElementCenter(
-      const std::array<std::size_t, 3> &elementIndices) const {
+  std::array<NumericType, 3>
+  calculateElementCenter(const std::array<unsigned, 3> &elementIndices) const {
     const auto &nodes = surfaceMesh_->nodes;
     constexpr NumericType oneThird = NumericType(1) / NumericType(3);
 

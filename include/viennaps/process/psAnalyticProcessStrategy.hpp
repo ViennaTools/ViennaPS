@@ -77,6 +77,13 @@ private:
     processTimer.finish();
     logProcessingTimes(context, processTimer);
 
+    if (static_cast<int>(context.domain->getMetaDataLevel()) > 1) {
+      context.domain->addMetaData("ProcessTime", context.processTime);
+    }
+    if (static_cast<int>(context.domain->getMetaDataLevel()) > 2) {
+      context.domain->addMetaData(context.advectionParams.toMetaData());
+    }
+
     return ProcessResult::SUCCESS;
   }
 

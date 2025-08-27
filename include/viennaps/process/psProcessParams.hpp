@@ -20,24 +20,30 @@ template <int D> struct RayTracingParameters {
              : viennaray::TraceDirection::POS_Y;
   viennaray::NormalizationType normalizationType =
       viennaray::NormalizationType::SOURCE;
-  unsigned raysPerPoint = 1000;
-  double diskRadius = 0.;
-  bool useRandomSeeds = true;
   bool ignoreFluxBoundaries = false;
+  bool useRandomSeeds = true;
+  unsigned raysPerPoint = 1000;
   int smoothingNeighbors = 1;
+  double diskRadius = 0.;
+  double minNodeDistanceFactor =
+      0.05; // factor of grid delta to determine min. node distance for triange
+            // mesh generation
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
     metaData["RaysPerPoint"] = {static_cast<double>(raysPerPoint)};
-    metaData["DiskRadius"] = {diskRadius};
     metaData["SmoothingNeighbors"] = {static_cast<double>(smoothingNeighbors)};
+    metaData["DiskRadius"] = {diskRadius};
+    metaData["MinNodeDistanceFactor"] = {minNodeDistanceFactor};
     return metaData;
   }
 
   auto toMetaDataString() const {
     return "\nRaysPerPoint: " + std::to_string(raysPerPoint) +
            "\nDiskRadius: " + std::to_string(diskRadius) +
-           "\nSmoothingNeighbors: " + std::to_string(smoothingNeighbors);
+           "\nSmoothingNeighbors: " + std::to_string(smoothingNeighbors) +
+           "\nMinNodeDistanceFactor: " + std::to_string(minNodeDistanceFactor) +
+           "\nUseRandomSeeds: " + util::boolString(useRandomSeeds);
   }
 };
 
@@ -73,6 +79,19 @@ struct CoverageParameters {
   double coverageDeltaThreshold = 0.0;
   unsigned maxIterations = std::numeric_limits<unsigned>::max();
   bool initialized = false;
+
+  auto toMetaData() const {
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["CoverageDeltaThreshold"] = {coverageDeltaThreshold};
+    metaData["MaxIterations"] = {static_cast<double>(maxIterations)};
+    return metaData;
+  }
+
+  auto toMetaDataString() const {
+    return "\nCoverageDeltaThreshold: " +
+           std::to_string(coverageDeltaThreshold) +
+           "\nMaxIterations: " + std::to_string(maxIterations);
+  }
 };
 
 template <typename NumericType> class ProcessParams {

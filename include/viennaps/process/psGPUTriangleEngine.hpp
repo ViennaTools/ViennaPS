@@ -101,7 +101,8 @@ public:
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
     gpu::CreateSurfaceMesh<NumericType, float, D>(
-        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_)
+        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
+        1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
 
     auto mesh =
