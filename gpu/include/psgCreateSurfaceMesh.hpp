@@ -199,7 +199,8 @@ public:
 
           // look for existing surface node
           viennahrle::Index<D> d(cellIt.getIndices());
-          d += viennahrle::BitMaskToIndex<D>(p0);
+          auto p0B = viennahrle::BitMaskToIndex<D>(p0);
+          d += p0B;
 
           nodeIt = nodes[dir].find(d);
           if (nodeIt != nodes[dir].end()) {
@@ -212,9 +213,7 @@ public:
               if (z != dir) {
                 // TODO might not need BitMaskToVector here, just check if z
                 // bit is set
-                cc[z] =
-                    static_cast<MeshNT>(cellIt.getIndices(z) +
-                                        viennahrle::BitMaskToIndex<D>(p0)[z]);
+                cc[z] = static_cast<MeshNT>(cellIt.getIndices(z) + p0B[z]);
               } else {
                 auto d0 = static_cast<MeshNT>(cellIt.getCorner(p0).getValue());
                 auto d1 = static_cast<MeshNT>(cellIt.getCorner(p1).getValue());
@@ -268,12 +267,14 @@ public:
           auto normal = calculateNormal(mesh->nodes[nod_numbers[0]],
                                         mesh->nodes[nod_numbers[1]],
                                         mesh->nodes[nod_numbers[2]]);
-          LsNT norm = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] +
-                                normal[2] * normal[2]);
-          if (norm > epsilon) {
+          auto n2 = normal[0] * normal[0] + normal[1] * normal[1] +
+                    normal[2] * normal[2];
+          if (n2 > epsilon) {
             mesh->insertNextElement(nod_numbers); // insert new surface element
+            MeshNT invn =
+                static_cast<MeshNT>(1.) / std::sqrt(static_cast<MeshNT>(n2));
             for (int d = 0; d < D; d++) {
-              normal[d] /= norm;
+              normal[d] *= invn;
             }
             normals.push_back(normal);
 
@@ -298,6 +299,8 @@ public:
     }
 
     mesh->cellData.insertNextVectorData(normals, "Normals");
+    mesh->nodes.shrink_to_fit();
+    mesh->triangles.shrink_to_fit();
 
     if (buildKdTreeFlag) {
       kdTree->setPoints(triangleCenters);
@@ -306,8 +309,8 @@ public:
   }
 
 private:
-  static bool inline triangleMisformed(
-      const std::array<unsigned, D> &nod_numbers) {
+  static inline bool
+  triangleMisformed(const std::array<unsigned, D> &nod_numbers) noexcept {
     if constexpr (D == 3) {
       return nod_numbers[0] == nod_numbers[1] ||
              nod_numbers[0] == nod_numbers[2] ||
@@ -317,9 +320,9 @@ private:
     }
   }
 
-  static inline Vec3D<MeshNT> calculateNormal(const Vec3D<MeshNT> &nodeA,
-                                              const Vec3D<MeshNT> &nodeB,
-                                              const Vec3D<MeshNT> &nodeC) {
+  static inline Vec3D<MeshNT>
+  calculateNormal(const Vec3D<MeshNT> &nodeA, const Vec3D<MeshNT> &nodeB,
+                  const Vec3D<MeshNT> &nodeC) noexcept {
     return CrossProduct(nodeB - nodeA, nodeC - nodeA);
   }
 };

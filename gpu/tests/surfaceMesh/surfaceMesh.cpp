@@ -56,5 +56,18 @@ int main() {
   findMinElementSize(surfaceMesh);
   viennals::VTKWriter<float>(surfaceMesh, "surfaceMeshCheck.vtp").apply();
 
+  surfaceMesh->clear();
+  auto kdTree = SmartPointer<KDTree<float, std::array<float, 3>>>::New();
+  timer.start();
+  gpu::CreateSurfaceMesh<float, float, 3>(domain->getLevelSets().back(),
+                                          surfaceMesh, kdTree, 1e-12, 0.05)
+      .apply();
+  timer.finish();
+  std::cout << "Surface mesh creation (with kd-tree) took: "
+            << timer.currentDuration / 1e6 << " milliseconds." << std::endl;
+  std::cout << "Number of surface elements: " << surfaceMesh->triangles.size()
+            << std::endl;
+  findMinElementSize(surfaceMesh);
+
   return 0;
 }
