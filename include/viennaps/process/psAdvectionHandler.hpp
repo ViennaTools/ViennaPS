@@ -66,8 +66,6 @@ public:
     advectionKernel_.apply();
     timer_.finish();
 
-    Logger::getInstance().addTiming("Surface advection", timer_).print();
-
     if (context.advectionParams.velocityOutput) {
       auto mesh = viennals::Mesh<NumericType>::New();
       viennals::ToMesh<NumericType, D>(context.domain->getLevelSets().back(),

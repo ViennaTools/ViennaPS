@@ -8,7 +8,8 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
+  ps::Logger::setLogLevel(ps::LogLevel::TIMING);
 
   // Parse the parameters
   ps::util::Parameters params;

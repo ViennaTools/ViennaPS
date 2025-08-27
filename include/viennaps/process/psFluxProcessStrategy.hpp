@@ -25,7 +25,6 @@ private:
 
   // Timers
   viennacore::Timer<> callbackTimer_;
-  viennacore::Timer<> fluxTimer_;
 
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
@@ -186,10 +185,7 @@ private:
 
     // Calculate fluxes
     auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-    fluxTimer_.start();
     PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
-    fluxTimer_.finish();
-    Logger::getInstance().addTiming("Flux calculation", fluxTimer_).print();
 
     // Update coverages if needed
     if (context.flags.useCoverages) {
@@ -371,10 +367,6 @@ private:
             .apply();
       }
 
-      Logger::getInstance()
-          .addInfo("Iteration: " + std::to_string(iteration + 1))
-          .print();
-
       if (coverageManager_.checkCoveragesConvergence(context)) {
         Logger::getInstance()
             .addInfo("Coverages converged after " +
@@ -405,6 +397,9 @@ private:
                    processTimer.currentDuration * 1e-9)
         .addTiming("Surface advection total time",
                    advectionHandler_.getTimer().totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .addTiming("Flux engine total time",
+                   fluxEngine_->getTimer().totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
         .print();
     if (context.flags.useAdvectionCallback) {

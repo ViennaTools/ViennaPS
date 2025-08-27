@@ -2,6 +2,8 @@
 
 #include "psProcessContext.hpp"
 
+#include <vcTimer.hpp>
+
 namespace viennaps {
 
 enum class FluxEngineType {
@@ -13,6 +15,9 @@ enum class FluxEngineType {
 };
 
 template <typename NumericType, int D> class FluxEngine {
+protected:
+  viennacore::Timer<> timer_;
+
 public:
   virtual ~FluxEngine() = default;
 
@@ -28,6 +33,8 @@ public:
   virtual ProcessResult calculateFluxes(
       ProcessContext<NumericType, D> &context,
       viennacore::SmartPointer<viennals::PointData<NumericType>> &fluxes) = 0;
+
+  auto &getTimer() const { return timer_; }
 };
 
 } // namespace viennaps

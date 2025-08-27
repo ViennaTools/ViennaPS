@@ -68,6 +68,8 @@ public:
   auto &getKdTree() { return kdTree_; }
 
   void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
+    if (!kdTree_)
+      kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
     kdTree_->setPoints(points);
     kdTree_->build();
   }

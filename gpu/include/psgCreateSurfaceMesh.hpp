@@ -12,34 +12,35 @@ namespace viennaps::gpu {
 
 using namespace viennacore;
 
-template <class NumericType>
 viennaray::gpu::TriangleMesh
-CreateTriangleMesh(const NumericType gridDelta,
+CreateTriangleMesh(const float gridDelta,
                    SmartPointer<viennals::Mesh<float>> &mesh) {
   viennaray::gpu::TriangleMesh triangleMesh;
 
-  if constexpr (std::is_same_v<NumericType, float>) {
-    triangleMesh.gridDelta = gridDelta;
-    triangleMesh.vertices = mesh->nodes;
-    triangleMesh.minimumExtent = mesh->minimumExtent;
-    triangleMesh.maximumExtent = mesh->maximumExtent;
-  } else {
-    triangleMesh.gridDelta = static_cast<float>(gridDelta);
-    const auto &nodes = mesh->nodes;
-    triangleMesh.vertices.resize(nodes.size());
-#pragma omp parallel for schedule(static)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)nodes.size(); i++) {
-#pragma omp simd
-      for (int d = 0; d < 3; d++)
-        triangleMesh.vertices[i][d] = static_cast<float>(nodes[i][d]);
-    }
-    triangleMesh.minimumExtent = {static_cast<float>(mesh->minimumExtent[0]),
-                                  static_cast<float>(mesh->minimumExtent[1]),
-                                  static_cast<float>(mesh->minimumExtent[2])};
-    triangleMesh.maximumExtent = {static_cast<float>(mesh->maximumExtent[0]),
-                                  static_cast<float>(mesh->maximumExtent[1]),
-                                  static_cast<float>(mesh->maximumExtent[2])};
-  }
+  // if constexpr (std::is_same_v<NumericType, float>) {
+  triangleMesh.gridDelta = gridDelta;
+  triangleMesh.vertices = mesh->nodes;
+  triangleMesh.minimumExtent = mesh->minimumExtent;
+  triangleMesh.maximumExtent = mesh->maximumExtent;
+  //   } else {
+  //     triangleMesh.gridDelta = static_cast<float>(gridDelta);
+  //     const auto &nodes = mesh->nodes;
+  //     triangleMesh.vertices.resize(nodes.size());
+  // #pragma omp parallel for schedule(static)
+  //     for (ptrdiff_t i = 0; i < (ptrdiff_t)nodes.size(); i++) {
+  // #pragma omp simd
+  //       for (int d = 0; d < 3; d++)
+  //         triangleMesh.vertices[i][d] = static_cast<float>(nodes[i][d]);
+  //     }
+  //     triangleMesh.minimumExtent =
+  //     {static_cast<float>(mesh->minimumExtent[0]),
+  //                                   static_cast<float>(mesh->minimumExtent[1]),
+  //                                   static_cast<float>(mesh->minimumExtent[2])};
+  //     triangleMesh.maximumExtent =
+  //     {static_cast<float>(mesh->maximumExtent[0]),
+  //                                   static_cast<float>(mesh->maximumExtent[1]),
+  //                                   static_cast<float>(mesh->maximumExtent[2])};
+  //   }
 
   triangleMesh.triangles = mesh->triangles;
 

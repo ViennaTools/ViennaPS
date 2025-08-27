@@ -1,7 +1,7 @@
 #include <lsAdvect.hpp>
 #include <lsToDiskMesh.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 
 #include <psgCreateSurfaceMesh.hpp>
 #include <psgElementToPointData.hpp>
@@ -25,13 +25,12 @@ int main() {
   std::ofstream file("GPU_Benchmark.txt");
   file << "Sticking;Meshing;Tracing;Postprocessing;Advection\n";
 
-  Context context;
-  context.create();
+  auto context = DeviceContext::createContext();
 
   viennaray::gpu::Trace<NumericType, D> tracer(context);
   tracer.setNumberOfRaysPerPoint(3000);
   tracer.setUseRandomSeeds(false);
-  tracer.setPipeline("SingleParticlePipeline", context.modulePath);
+  tracer.setPipeline("SingleParticlePipeline", context->modulePath);
 
   auto particle = viennaray::gpu::Particle<NumericType>();
   particle.name = "SingleParticle";

@@ -1,7 +1,7 @@
 #include <lsAdvect.hpp>
 #include <lsToDiskMesh.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <rayTrace.hpp>
 
 #include "BenchmarkGeometry.hpp"

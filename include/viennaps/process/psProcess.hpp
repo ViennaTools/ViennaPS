@@ -85,6 +85,11 @@ public:
     }
   }
 
+  SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
+    // TODO
+    return nullptr;
+  }
+
 private:
   void initializeStrategies() {
     // Add strategies in priority order

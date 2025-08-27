@@ -33,8 +33,7 @@ int main() {
   file << "\n";
 #endif
 
-  Context context;
-  context.create();
+  auto context = DeviceContext::createContext();
 
   auto domain = MAKE_GEO<NumericType>();
 
@@ -66,7 +65,7 @@ int main() {
     std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
               << std::endl;
 
-    tracer.setPipeline("SingleParticlePipeline", context.modulePath);
+    tracer.setPipeline("SingleParticlePipeline", context->modulePath);
 #ifdef COUNT_RAYS
     int rayCount = 0;
     tracer.setParameters(rayCount);

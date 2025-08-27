@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::DEBUG);
+  Logger::setLogLevel(LogLevel::TIMING);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
   // geometry setup
   auto geometry = Domain<NumericType, D>::New(
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  geometry->enableMetaData();
   MakeHole<NumericType, D>(geometry, params.get("holeRadius"),
                            0.0, // holeDepth
                            0.0, // holeTaperAngle

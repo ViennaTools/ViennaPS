@@ -4,7 +4,6 @@
 
 #include "../psDomain.hpp"
 #include "psFluxEngine.hpp"
-#include "psProcessBase.hpp"
 #include "psProcessModel.hpp"
 
 #include <vcContext.hpp>
@@ -97,6 +96,7 @@ public:
   }
 
   ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
+    this->timer_.start();
     surfaceMesh_ = viennals::Mesh<float>::New();
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
@@ -105,8 +105,8 @@ public:
         1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
 
-    auto mesh =
-        gpu::CreateTriangleMesh(context.domain->getGridDelta(), surfaceMesh_);
+    auto mesh = gpu::CreateTriangleMesh(
+        static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
     rayTracer_.setGeometry(mesh);
 
     auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
@@ -128,6 +128,7 @@ public:
 
     assert(context.diskMesh->nodes.size() > 0);
     assert(!surfaceMesh_->nodes.empty());
+    this->timer_.finish();
 
     return ProcessResult::SUCCESS;
   }
@@ -137,6 +138,7 @@ public:
                   viennacore::SmartPointer<viennals::PointData<NumericType>>
                       &fluxes) final {
 
+    this->timer_.start();
     auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
         context.model);
 
@@ -188,6 +190,7 @@ public:
         d_coverages.free();
       }
     }
+    this->timer_.finish();
 
     return ProcessResult::SUCCESS;
   }

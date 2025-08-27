@@ -72,6 +72,7 @@ public:
   }
 
   ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
+    this->timer_.start();
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
 
@@ -88,6 +89,7 @@ public:
                              context.rayTracingParams.diskRadius);
     }
     rayTracer_.setMaterialIds(materialIds);
+    this->timer_.finish();
 
     return ProcessResult::SUCCESS;
   }
@@ -96,6 +98,7 @@ public:
   calculateFluxes(ProcessContext<NumericType, D> &context,
                   viennacore::SmartPointer<viennals::PointData<NumericType>>
                       &fluxes) final {
+    this->timer_.start();
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
 
@@ -123,6 +126,7 @@ public:
     // move coverages back in the model
     if (context.flags.useCoverages)
       moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
+    this->timer_.finish();
 
     return ProcessResult::SUCCESS;
   }
