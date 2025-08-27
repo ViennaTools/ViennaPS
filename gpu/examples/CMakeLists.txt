@@ -5,7 +5,8 @@ add_custom_target(ViennaPS-GPU_Examples ALL)
 add_gpu_executable(holeGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/hole.cpp
                    ${VIENNAPS_PIPELINE_DIR}/PlasmaEtchingPipeline.cu)
 add_dependencies(ViennaPS-GPU_Examples holeGPU)
-configure_file(${CMAKE_SOURCE_DIR}/examples/holeEtching/config.txt ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/examples/holeEtching/config.txt
+               ${CMAKE_CURRENT_BINARY_DIR}/config.txt COPYONLY)
 
 add_gpu_executable(waveguideGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/waveguide.cpp
                    ${VIENNAPS_PIPELINE_DIR}/FaradayCagePipeline.cu)
