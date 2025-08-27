@@ -27,10 +27,11 @@ CreateTriangleMesh(const NumericType gridDelta,
     triangleMesh.gridDelta = static_cast<float>(gridDelta);
     const auto &nodes = mesh->nodes;
     triangleMesh.vertices.resize(nodes.size());
-    for (size_t i = 0; i < nodes.size(); i++) {
-      triangleMesh.vertices[i] = {static_cast<float>(nodes[i][0]),
-                                  static_cast<float>(nodes[i][1]),
-                                  static_cast<float>(nodes[i][2])};
+#pragma omp parallel for schedule(static)
+    for (ptrdiff_t i = 0; i < (ptrdiff_t)nodes.size(); i++) {
+#pragma omp simd
+      for (int d = 0; d < 3; d++)
+        triangleMesh.vertices[i][d] = static_cast<float>(nodes[i][d]);
     }
     triangleMesh.minimumExtent = {static_cast<float>(mesh->minimumExtent[0]),
                                   static_cast<float>(mesh->minimumExtent[1]),
@@ -56,40 +57,35 @@ template <class LsNT, class MeshNT = LsNT, int D = 3> class CreateSurfaceMesh {
   SmartPointer<kdTreeType> kdTree = nullptr;
 
   const MeshNT epsilon;
+  MeshNT minNodeDistanceFactor = 0.05;
 
-  bool checkNodeDistance = true;
+  struct I3 {
+    int x, y, z;
+    bool operator==(const I3 &o) const {
+      return x == o.x && y == o.y && z == o.z;
+    }
+  };
 
-  struct compareNodes {
-    bool operator()(const Vec3D<MeshNT> &nodeA,
-                    const Vec3D<MeshNT> &nodeB) const {
-      if (nodeA[0] < nodeB[0] - minNodeDistance)
-        return true;
-      if (nodeA[0] > nodeB[0] + minNodeDistance)
-        return false;
-
-      if (nodeA[1] < nodeB[1] - minNodeDistance)
-        return true;
-      if (nodeA[1] > nodeB[1] + minNodeDistance)
-        return false;
-
-      if (nodeA[2] < nodeB[2] - minNodeDistance)
-        return true;
-      if (nodeA[2] > nodeB[2] + minNodeDistance)
-        return false;
-
-      return false;
+  struct I3Hash {
+    size_t operator()(const I3 &k) const {
+      // 64-bit mix
+      uint64_t a = (uint64_t)(uint32_t)k.x;
+      uint64_t b = (uint64_t)(uint32_t)k.y;
+      uint64_t c = (uint64_t)(uint32_t)k.z;
+      uint64_t h = a * 0x9E3779B185EBCA87ULL;
+      h ^= b + 0xC2B2AE3D27D4EB4FULL + (h << 6) + (h >> 2);
+      h ^= c + 0x165667B19E3779F9ULL + (h << 6) + (h >> 2);
+      return (size_t)h;
     }
   };
 
 public:
-  static MeshNT minNodeDistance;
-
   CreateSurfaceMesh(SmartPointer<lsDomainType> passedLevelSet,
                     SmartPointer<viennals::Mesh<MeshNT>> passedMesh,
                     SmartPointer<kdTreeType> passedKdTree = nullptr,
-                    double eps = 1e-12, bool checkNodeDist = true)
+                    double eps = 1e-12, double minNodeDistFactor = 0.05)
       : levelSet(passedLevelSet), mesh(passedMesh), kdTree(passedKdTree),
-        epsilon(eps), checkNodeDistance(checkNodeDist) {}
+        epsilon(eps), minNodeDistanceFactor(minNodeDistFactor) {}
 
   void apply() {
     if (levelSet == nullptr) {
@@ -110,35 +106,51 @@ public:
     mesh->minimumExtent = Vec3D<MeshNT>{std::numeric_limits<MeshNT>::max(),
                                         std::numeric_limits<MeshNT>::max(),
                                         std::numeric_limits<MeshNT>::max()};
-    mesh->maximumExtent = Vec3D<MeshNT>{std::numeric_limits<MeshNT>::min(),
-                                        std::numeric_limits<MeshNT>::min(),
-                                        std::numeric_limits<MeshNT>::min()};
+    mesh->maximumExtent = Vec3D<MeshNT>{std::numeric_limits<MeshNT>::lowest(),
+                                        std::numeric_limits<MeshNT>::lowest(),
+                                        std::numeric_limits<MeshNT>::lowest()};
 
-    const unsigned int corner0[12] = {0, 1, 2, 0, 4, 5, 6, 4, 0, 1, 3, 2};
-    const unsigned int corner1[12] = {1, 3, 3, 2, 5, 7, 7, 6, 4, 5, 7, 6};
-    const unsigned int direction[12] = {0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 2, 2};
+    constexpr unsigned int corner0[12] = {0, 1, 2, 0, 4, 5, 6, 4, 0, 1, 3, 2};
+    constexpr unsigned int corner1[12] = {1, 3, 3, 2, 5, 7, 7, 6, 4, 5, 7, 6};
+    constexpr unsigned int direction[12] = {0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 2, 2};
 
     // test if level set function consists of at least 2 layers of
     // defined grid points
     if (levelSet->getLevelSetWidth() < 2) {
       Logger::getInstance()
           .addWarning(
-              "Level-set is less than 2 layers wide. Export might fail!")
+              "Level-set is less than 2 layers wide. Expanding to 2 layers.")
           .print();
+      viennals::Expand<LsNT, D>(levelSet, 2).apply();
     }
 
     typedef std::map<viennahrle::Index<D>, unsigned> nodeContainerType;
 
     nodeContainerType nodes[D];
-    minNodeDistance = gridDelta * 0.01;
-    std::map<Vec3D<MeshNT>, unsigned, compareNodes> nodeCoordinates;
+    const MeshNT minNodeDistance = gridDelta * minNodeDistanceFactor;
+    std::unordered_map<I3, unsigned, I3Hash> nodeIdByBin;
 
     typename nodeContainerType::iterator nodeIt;
 
     std::vector<Vec3D<LsNT>> triangleCenters;
     std::vector<Vec3D<MeshNT>> normals;
+
+    // Estimate triangle count and reserve memory
+    size_t estimatedTriangles = levelSet->getDomain().getNumberOfPoints() / 4;
+    triangleCenters.reserve(estimatedTriangles);
+    normals.reserve(estimatedTriangles);
+    mesh->triangles.reserve(estimatedTriangles);
+    mesh->nodes.reserve(estimatedTriangles * 4);
+    nodeIdByBin.reserve(estimatedTriangles * 4);
+
     const bool buildKdTreeFlag = kdTree != nullptr;
-    const bool checkNodeFlag = checkNodeDistance;
+    const bool checkNodeFlag = minNodeDistanceFactor > 0;
+
+    auto quantize = [&](const Vec3D<MeshNT> &p) -> I3 {
+      const MeshNT inv = MeshNT(1) / minNodeDistance;
+      return {(int)std::llround(p[0] * inv), (int)std::llround(p[1] * inv),
+              (int)std::llround(p[2] * inv)};
+    };
 
     // iterate over all active surface points
     for (viennahrle::ConstSparseCellIterator<hrleDomainType> cellIt(
@@ -154,7 +166,7 @@ public:
 
       unsigned signs = 0;
       for (int i = 0; i < (1 << D); i++) {
-        if (cellIt.getCorner(i).getValue() >= MeshNT(0))
+        if (cellIt.getCorner(i).getValue() >= LsNT(0))
           signs |= (1 << i);
       }
 
@@ -165,9 +177,12 @@ public:
         continue;
 
       // for each element
-      const int *Triangles =
-          (D == 2) ? lsInternal::MarchingCubes::polygonize2d(signs)
-                   : lsInternal::MarchingCubes::polygonize3d(signs);
+      const int *Triangles;
+      if constexpr (D == 2) {
+        Triangles = lsInternal::MarchingCubes::polygonize2d(signs);
+      } else {
+        Triangles = lsInternal::MarchingCubes::polygonize3d(signs);
+      }
 
       for (; Triangles[0] != -1; Triangles += D) {
         std::array<unsigned, D> nod_numbers;
@@ -224,10 +239,10 @@ public:
 
             int nodeIdx = -1;
             if (checkNodeFlag) {
-              auto checkNode = nodeCoordinates.find(cc);
-              if (checkNode != nodeCoordinates.end()) {
-                nodeIdx = checkNode->second;
-              }
+              auto q = quantize(cc);
+              auto it = nodeIdByBin.find(q);
+              if (it != nodeIdByBin.end())
+                nodeIdx = it->second;
             }
             if (nodeIdx >= 0) {
               nod_numbers[n] = nodeIdx;
@@ -236,7 +251,8 @@ public:
               nod_numbers[n] =
                   mesh->insertNextNode(cc); // insert new surface node
               nodes[dir][d] = nod_numbers[n];
-              nodeCoordinates[cc] = nod_numbers[n];
+              if (checkNodeFlag)
+                nodeIdByBin.emplace(quantize(cc), nod_numbers[n]);
 
               for (int a = 0; a < D; a++) {
                 if (cc[a] < mesh->minimumExtent[a])
@@ -289,6 +305,7 @@ public:
     }
   }
 
+private:
   static bool inline triangleMisformed(
       const std::array<unsigned, D> &nod_numbers) {
     if constexpr (D == 3) {
@@ -300,19 +317,11 @@ public:
     }
   }
 
-  Vec3D<MeshNT> calculateNormal(const Vec3D<MeshNT> &nodeA,
-                                const Vec3D<MeshNT> &nodeB,
-                                const Vec3D<MeshNT> &nodeC) {
-    Vec3D<MeshNT> U{nodeB[0] - nodeA[0], nodeB[1] - nodeA[1],
-                    nodeB[2] - nodeA[2]};
-    Vec3D<MeshNT> V{nodeC[0] - nodeA[0], nodeC[1] - nodeA[1],
-                    nodeC[2] - nodeA[2]};
-    return {U[1] * V[2] - U[2] * V[1], U[2] * V[0] - U[0] * V[2],
-            U[0] * V[1] - U[1] * V[0]};
+  static inline Vec3D<MeshNT> calculateNormal(const Vec3D<MeshNT> &nodeA,
+                                              const Vec3D<MeshNT> &nodeB,
+                                              const Vec3D<MeshNT> &nodeC) {
+    return CrossProduct(nodeB - nodeA, nodeC - nodeA);
   }
 };
-
-template <class LsNT, class MeshNT, int D>
-MeshNT CreateSurfaceMesh<LsNT, MeshNT, D>::minNodeDistance = 0.1;
 
 } // namespace viennaps::gpu
