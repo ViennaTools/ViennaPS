@@ -3,6 +3,7 @@
 #include "psProcessContext.hpp"
 
 // Process strategies
+#include "psALPStrategy.hpp"
 #include "psAnalyticProcessStrategy.hpp"
 #include "psCallbackOnlyStrategy.hpp"
 #include "psFluxProcessStrategy.hpp"
@@ -49,6 +50,11 @@ public:
 
   void setCoverageParameters(const CoverageParameters &params) {
     context_.coverageParams = params;
+  }
+
+  void
+  setAtomicLayerProcessParameters(const AtomicLayerProcessParameters &params) {
+    context_.atomicLayerParams = params;
   }
 
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
@@ -116,6 +122,8 @@ private:
         std::make_unique<AnalyticProcessStrategy<NumericType, D>>());
     strategies_.push_back(std::make_unique<FluxProcessStrategy<NumericType, D>>(
         createFluxEngine()));
+    strategies_.push_back(
+        std::make_unique<ALPStrategy<NumericType, D>>(createFluxEngine()));
   }
 
   ProcessStrategy<NumericType, D> *findStrategy() {
@@ -147,7 +155,6 @@ private:
     case ProcessResult::FAILURE:
       Logger::getInstance().addError("Process failed.").print();
       break;
-      // Handle other results...
     }
   }
 

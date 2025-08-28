@@ -14,10 +14,6 @@
 
 #include <vcContext.hpp>
 
-// #ifndef COUNT_RAYS
-// #define COUNT_RAYS
-// #endif
-
 using namespace viennaray::gpu;
 
 /*  launch parameters in constant memory, filled in by optix upon
@@ -25,7 +21,7 @@ using namespace viennaray::gpu;
     optixLaunch) */
 extern "C" __constant__ LaunchParams launchParams;
 
-extern "C" __global__ void __closesthit__SingleParticle() {
+extern "C" __global__ void __closesthit__SingleParticleALD() {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
@@ -36,9 +32,14 @@ extern "C" __global__ void __closesthit__SingleParticle() {
       reflectFromBoundary(prd, sbtData);
     }
   } else {
+    float *data = (float *)sbtData->cellData;
     const unsigned int primID = optixGetPrimitiveIndex();
     atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight);
-    prd->rayWeight -= prd->rayWeight * launchParams.sticking;
+
+    const auto &coverage = data[primID];
+    const float Seff = launchParams.sticking * max(1.f - coverage, 0.f);
+    prd->rayWeight -= prd->rayWeight * Seff;
+
     if (prd->rayWeight > launchParams.rayWeightThreshold)
       diffuseReflection(prd);
   }
@@ -48,14 +49,14 @@ extern "C" __global__ void __closesthit__SingleParticle() {
 // miss program that gets called for any ray that did not have a
 // valid intersection
 // ------------------------------------------------------------------------------
-extern "C" __global__ void __miss__SingleParticle() {
+extern "C" __global__ void __miss__SingleParticleALD() {
   getPRD<PerRayData>()->rayWeight = 0.f;
 }
 
 //------------------------------------------------------------------------------
 // ray gen program - entry point
 //------------------------------------------------------------------------------
-extern "C" __global__ void __raygen__SingleParticle() {
+extern "C" __global__ void __raygen__SingleParticleALD() {
   const uint3 idx = optixGetLaunchIndex();
   const uint3 dims = optixGetLaunchDimensions();
   const int linearLaunchIndex =
@@ -87,9 +88,5 @@ extern "C" __global__ void __raygen__SingleParticle() {
                1,                             // SBT stride
                0,                             // missSBTIndex
                u0, u1);
-#ifdef COUNT_RAYS
-    int *counter = reinterpret_cast<int *>(launchParams.customData);
-    atomicAdd(counter, 1);
-#endif
   }
 }

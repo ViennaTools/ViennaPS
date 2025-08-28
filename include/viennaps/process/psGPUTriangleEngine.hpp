@@ -43,14 +43,14 @@ public:
     const auto name = context.model->getProcessName().value_or("default");
     if (model->getParticleTypes().empty()) {
       Logger::getInstance()
-          .addError("No particle types in process model: " + name)
+          .addWarning("No particle types in process model: " + name)
           .print();
       return ProcessResult::INVALID_INPUT;
     }
 
     if (model->getPipelineFileName().empty()) {
       Logger::getInstance()
-          .addError("No pipeline in process model: " + name)
+          .addWarning("No pipeline in process model: " + name)
           .print();
       return ProcessResult::INVALID_INPUT;
     }

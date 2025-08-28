@@ -47,6 +47,10 @@ public:
     return ProcessResult::SUCCESS;
   }
 
+  void setAdvectionTime(double time) {
+    advectionKernel_.setAdvectionTime(time);
+  }
+
   void prepareAdvection(const ProcessContext<NumericType, D> &context) {
     // Prepare for advection step
     advectionKernel_.prepareLS();

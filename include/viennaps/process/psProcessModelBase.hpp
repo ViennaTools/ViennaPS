@@ -20,7 +20,9 @@ protected:
   SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
   std::unordered_map<std::string, std::vector<NumericType>> processMetaData;
-  bool hasGPU = false;
+
+  bool hasGPU = false; // indicates whether a GPU version of the model exists
+  bool isALP = false;  // indicates whether the model is an atomic layer process
 
 public:
   virtual ~ProcessModelBase() = default;
@@ -40,6 +42,8 @@ public:
   auto getVelocityField() const { return velocityField; }
   auto getProcessName() const { return processName; }
   auto getProcessMetaData() const { return processMetaData; }
+  auto isALPModel() const { return isALP; }
+  auto hasGPUModel() const { return hasGPU; }
 
   void setProcessName(const std::string &name) { processName = name; }
 

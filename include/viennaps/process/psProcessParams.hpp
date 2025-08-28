@@ -94,6 +94,29 @@ struct CoverageParameters {
   }
 };
 
+struct AtomicLayerProcessParameters {
+  unsigned numCycles = 1;
+  double pulseTime = 1.0;
+  double coverageTimeStep = 1.0;
+  double purgePulseTime = 0.0;
+
+  auto toMetaData() const {
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["NumCycles"] = {static_cast<double>(numCycles)};
+    metaData["PulseTime"] = {pulseTime};
+    metaData["CoverageTimeStep"] = {coverageTimeStep};
+    metaData["PurgePulseTime"] = {purgePulseTime};
+    return metaData;
+  }
+
+  auto toMetaDataString() const {
+    return "\nNumCycles: " + std::to_string(numCycles) +
+           "\nPulseTime: " + std::to_string(pulseTime) +
+           "\nCoverageTimeStep: " + std::to_string(coverageTimeStep) +
+           "\nPurgePulseTime: " + std::to_string(purgePulseTime);
+  }
+};
+
 template <typename NumericType> class ProcessParams {
 private:
   std::vector<NumericType> scalarData;

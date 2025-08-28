@@ -31,6 +31,7 @@ template <typename NumericType, int D> struct ProcessContext {
   AdvectionParameters advectionParams;
   RayTracingParameters<D> rayTracingParams;
   CoverageParameters coverageParams;
+  AtomicLayerProcessParameters atomicLayerParams;
 
   // Simulation state
   unsigned currentIteration = 0;
@@ -43,9 +44,9 @@ template <typename NumericType, int D> struct ProcessContext {
     bool useAdvectionCallback = false;
     bool useProcessParams = false;
     bool useCoverages = false;
-    bool isGeometric = false;
     bool isALP = false;
     bool isAnalytic = false;
+    bool isGeometric = false;
   } flags;
 
   void updateFlags() {
@@ -58,6 +59,8 @@ template <typename NumericType, int D> struct ProcessContext {
     flags.isAnalytic =
         model->getVelocityField() &&
         model->getVelocityField()->getTranslationFieldOptions() == 0;
+    flags.isALP = model->isALPModel();
+    flags.useCoverages = flags.isALP || flags.useCoverages;
   }
 
   void resetTime() {
