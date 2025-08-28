@@ -1,3 +1,4 @@
+#include <process/psProcess.hpp>
 #include <psAtomicLayerProcess.hpp>
 #include <psDomain.hpp>
 #include <psDomainSetup.hpp>
@@ -5,7 +6,6 @@
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
-#include <psProcess.hpp>
 #include <psProcessModel.hpp>
 #include <psRateGrid.hpp>
 #include <psReader.hpp>

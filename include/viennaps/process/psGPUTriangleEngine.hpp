@@ -33,8 +33,9 @@ public:
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
 
-    auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
-        context.model);
+    auto model =
+        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+            context.model);
     if (!model) {
       Logger::getInstance().addWarning("Invalid GPU process model.").print();
       return ProcessResult::INVALID_INPUT;
@@ -59,8 +60,9 @@ public:
   }
 
   ProcessResult initialize(ProcessContext<NumericType, D> &context) final {
-    auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
-        context.model);
+    auto model =
+        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+            context.model);
     if (!rayTracerInitialized_) {
       // Check for periodic boundary conditions
       bool periodicBoundary = false;
@@ -109,8 +111,9 @@ public:
         static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
     rayTracer_.setGeometry(mesh);
 
-    auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
-        context.model);
+    auto model =
+        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+            context.model);
     if (model->useMaterialIds()) {
       auto const &pointMaterialIds =
           *context.diskMesh->getCellData().getScalarData("MaterialIds");
@@ -139,8 +142,9 @@ public:
                       &fluxes) final {
 
     this->timer_.start();
-    auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
-        context.model);
+    auto model =
+        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+            context.model);
 
     CudaBuffer d_coverages; // device buffer for coverages
     if (context.flags.useCoverages) {

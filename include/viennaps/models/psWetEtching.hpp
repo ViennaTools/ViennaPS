@@ -95,7 +95,7 @@ public:
 
 // Model for a wet etching process.
 template <typename NumericType, int D>
-class WetEtching : public ProcessModel<NumericType, D> {
+class WetEtching : public ProcessModelCPU<NumericType, D> {
 public:
   // The constructor expects the materials where etching is allowed including
   // the corresponding rates.
@@ -160,7 +160,7 @@ private:
   NumericType r311 = 0.0300166666667;
 
   std::vector<std::pair<Material, NumericType>> materials;
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(WetEtching)

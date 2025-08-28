@@ -18,8 +18,8 @@ class CPUDiskEngine final : public FluxEngine<NumericType, D> {
 
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
-    auto model =
-        std::dynamic_pointer_cast<ProcessModel<NumericType, D>>(context.model);
+    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
+        context.model);
     if (!model) {
       Logger::getInstance().addWarning("Invalid process model.").print();
       return ProcessResult::INVALID_INPUT;
@@ -44,8 +44,8 @@ public:
     rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
     rayTracer_.setCalculateFlux(false);
 
-    auto model =
-        std::dynamic_pointer_cast<ProcessModel<NumericType, D>>(context.model);
+    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
+        context.model);
 
     if (auto source = model->getSource()) {
       rayTracer_.setSource(source);
@@ -137,8 +137,8 @@ private:
     assert(fluxes != nullptr);
     fluxes->clear();
 
-    auto model =
-        std::dynamic_pointer_cast<ProcessModel<NumericType, D>>(context.model);
+    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
+        context.model);
 
     unsigned particleIdx = 0;
     for (auto &particle : model->getParticleTypes()) {

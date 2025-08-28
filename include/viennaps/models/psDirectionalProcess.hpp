@@ -153,7 +153,7 @@ protected:
 
 /// Directional rate with multiple rate sets and masking materials.
 template <typename NumericType, int D>
-class DirectionalProcess : public ProcessModel<NumericType, D> {
+class DirectionalProcess : public ProcessModelCPU<NumericType, D> {
 public:
   using RateSet = impl::RateSet<NumericType>;
 
@@ -230,7 +230,7 @@ private:
     }
   }
 
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(DirectionalProcess)

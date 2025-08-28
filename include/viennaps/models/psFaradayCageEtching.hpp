@@ -186,7 +186,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class FaradayCageEtching : public ProcessModel<NumericType, D> {
+class FaradayCageEtching : public ProcessModelCPU<NumericType, D> {
 public:
   FaradayCageEtching() = default;
 

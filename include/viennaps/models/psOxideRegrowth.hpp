@@ -302,7 +302,7 @@ private:
 // The selective etching model works in accordance with the geometry generated
 // by psMakeStack
 template <class NumericType, int D>
-class OxideRegrowth : public ProcessModel<NumericType, D> {
+class OxideRegrowth : public ProcessModelCPU<NumericType, D> {
 public:
   OxideRegrowth(NumericType nitrideEtchRate, NumericType oxideEtchRate,
                 NumericType redepositionRate, NumericType reDepositionThreshold,

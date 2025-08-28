@@ -1,6 +1,6 @@
 #include <geometries/psMakeTrench.hpp>
+#include <process/psProcess.hpp>
 #include <psConstants.hpp>
-#include <psProcess.hpp>
 #include <rayParticle.hpp>
 #include <vcSampling.hpp>
 
@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
   MakeTrench<NumericType, D>(domain, 4.0, 0.0, 0.0, 1.0).apply();
 
   // Set up the process model with custom particle distribution
-  auto model = SmartPointer<ProcessModel<NumericType, D>>::New();
+  auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New();
   model->setProcessName("CustomParticleDistribution");
   auto surfaceModel = SmartPointer<CustomSurfaceModel<NumericType>>::New();
   model->setSurfaceModel(surfaceModel);
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
   // Run the process
   Process<NumericType, D> p(domain, model, .1);
   p.apply();
-  p.writeParticleDataLogs("particle_data.txt");
+  // p.writeParticleDataLogs("particle_data.txt");
 
   domain->saveVolumeMesh("customParticleDistribution");
 

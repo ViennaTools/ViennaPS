@@ -55,7 +55,7 @@ public:
 
 // Model for selective epitaxy process.
 template <typename NumericType, int D>
-class SelectiveEpitaxy : public ProcessModel<NumericType, D> {
+class SelectiveEpitaxy : public ProcessModelCPU<NumericType, D> {
 public:
   // The constructor expects the materials where epitaxy is allowed including
   // the corresponding rates.

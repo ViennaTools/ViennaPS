@@ -2,7 +2,6 @@
 
 #include <models/psIonBeamEtching.hpp>
 #include <process/psProcess.hpp>
-#include <process/psProcessParams.hpp>
 #include <psConstants.hpp>
 
 using namespace viennaps;

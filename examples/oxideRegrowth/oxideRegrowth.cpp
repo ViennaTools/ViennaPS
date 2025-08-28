@@ -1,5 +1,5 @@
 #include <geometries/psMakeStack.hpp>
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 
 #include <models/psOxideRegrowth.hpp>
 

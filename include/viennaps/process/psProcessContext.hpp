@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../psDomain.hpp"
-#include "psProcessModelBase.hpp"
+#include "psProcessModel.hpp"
 #include "psProcessParams.hpp"
 #include "psTranslationField.hpp"
 
@@ -61,6 +61,21 @@ template <typename NumericType, int D> struct ProcessContext {
         model->getVelocityField()->getTranslationFieldOptions() == 0;
     flags.isALP = model->isALPModel();
     flags.useCoverages = flags.isALP || flags.useCoverages;
+  }
+
+  void printFlags() const {
+    std::stringstream stream;
+    stream << "Process Context Flags:" << "\n  isGeometric: "
+           << util::boolString(flags.isGeometric)
+           << "\n  useFluxEngine: " << util::boolString(flags.useFluxEngine)
+           << "\n  useAdvectionCallback: "
+           << util::boolString(flags.useAdvectionCallback)
+           << "\n  useProcessParams: "
+           << util::boolString(flags.useProcessParams)
+           << "\n  useCoverages: " << util::boolString(flags.useCoverages)
+           << "\n  isALP: " << util::boolString(flags.isALP)
+           << "\n  isAnalytic: " << util::boolString(flags.isAnalytic);
+    Logger::getInstance().addDebug(stream.str()).print();
   }
 
   void resetTime() {

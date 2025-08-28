@@ -12,7 +12,7 @@ namespace viennaps::gpu {
 using namespace viennacore;
 
 template <typename NumericType, int D>
-class MultiParticleProcess final : public ProcessModel<NumericType, D> {
+class MultiParticleProcess final : public ProcessModelGPU<NumericType, D> {
 public:
   MultiParticleProcess() {
     // surface model

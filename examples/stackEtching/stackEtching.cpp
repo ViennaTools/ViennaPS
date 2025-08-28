@@ -1,8 +1,8 @@
 #include <geometries/psMakeStack.hpp>
 #include <models/psFluorocarbonEtching.hpp>
 
+#include <process/psProcess.hpp>
 #include <psExtrude.hpp>
-#include <psProcess.hpp>
 
 using namespace viennaps;
 
@@ -45,15 +45,21 @@ int main(int argc, char *argv[]) {
       params.get("meanIonEnergy"), params.get("sigmaIonEnergy"),
       params.get("ionExponent"));
 
+  AdvectionParameters advectionParams;
+  advectionParams.integrationScheme =
+      IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  advectionParams.timeStepRatio = 0.25;
+
+  CoverageParameters coverageParams;
+  coverageParams.maxIterations = 10;
+
   // process setup
   Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("processTime"));
-  process.setMaxCoverageInitIterations(10);
-  process.setTimeStepRatio(0.25);
-  process.setIntegrationScheme(
-      viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+  process.setAdvectionParameters(advectionParams);
+  process.setCoverageParameters(coverageParams);
 
   // print initial surface
   geometry->saveVolumeMesh("initial");

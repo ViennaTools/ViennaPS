@@ -1,8 +1,8 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psTEOSDeposition.hpp>
 
+#include <process/psProcess.hpp>
 #include <psDomain.hpp>
-#include <psProcess.hpp>
 #include <psUtil.hpp>
 
 namespace ps = viennaps;
@@ -36,10 +36,13 @@ int main(int argc, char **argv) {
       params.get("reactionOrderP1"), params.get("stickingProbabilityP2"),
       params.get("depositionRateP2"), params.get("reactionOrderP2"));
 
+  ps::RayTracingParameters<D> rayParams;
+  rayParams.raysPerPoint = params.get<unsigned>("numRaysPerPoint");
+
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setNumberOfRaysPerPoint(params.get<unsigned>("numRaysPerPoint"));
+  process.setRayTracingParameters(rayParams);
   process.setProcessDuration(params.get("processTime"));
 
   geometry->saveVolumeMesh("MulitTEOS_initial");

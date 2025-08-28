@@ -2,7 +2,7 @@
 #include <models/psDirectionalProcess.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 using namespace viennaps;

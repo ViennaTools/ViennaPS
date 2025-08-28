@@ -1,8 +1,8 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psDirectionalProcess.hpp>
 #include <models/psIsotropicProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psPlanarize.hpp>
-#include <psProcess.hpp>
 
 #include <models/psgFaradayCageEtching.hpp>
 #include <psgProcess.hpp>

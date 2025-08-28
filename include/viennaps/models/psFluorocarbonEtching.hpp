@@ -665,7 +665,7 @@ public:
 } // namespace impl
 
 template <typename NumericType, int D>
-class FluorocarbonEtching : public ProcessModel<NumericType, D> {
+class FluorocarbonEtching : public ProcessModelCPU<NumericType, D> {
 public:
   FluorocarbonEtching() { initialize(); }
   FluorocarbonEtching(

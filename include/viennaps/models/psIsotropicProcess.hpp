@@ -43,7 +43,7 @@ public:
 
 /// Isotropic etching with one masking material.
 template <typename NumericType, int D>
-class IsotropicProcess : public ProcessModel<NumericType, D> {
+class IsotropicProcess : public ProcessModelCPU<NumericType, D> {
 public:
   IsotropicProcess(NumericType isotropicRate,
                    Material maskMaterial = Material::Undefined) {
@@ -99,7 +99,7 @@ private:
     }
   }
 
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(IsotropicProcess)

@@ -1,7 +1,7 @@
 #include <geometries/psMakeFin.hpp>
 #include <models/psFaradayCageEtching.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 namespace ps = viennaps;
@@ -39,14 +39,19 @@ int main(int argc, char *argv[]) {
   auto model = ps::SmartPointer<ps::FaradayCageEtching<NumericType, D>>::New(
       maskMaterials, cageParams);
 
+  ps::AdvectionParameters advectionParams;
+  advectionParams.integrationScheme =
+      ps::IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+
+  ps::RayTracingParameters<D> rayParams;
+  rayParams.raysPerPoint = params.get<int>("raysPerPoint");
   // process setup
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setNumberOfRaysPerPoint(params.get<unsigned>("raysPerPoint"));
   process.setProcessDuration(params.get("etchTime"));
-  process.setIntegrationScheme(
-      ps::IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+  process.setRayTracingParameters(rayParams);
+  process.setAdvectionParameters(advectionParams);
 
   // print initial surface
   geometry->saveHullMesh("initial.vtp");

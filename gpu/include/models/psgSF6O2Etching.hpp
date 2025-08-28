@@ -13,7 +13,7 @@ using namespace viennacore;
 /// DOI: https://doi.org/10.1116/1.1830495
 /// The resulting rate is in units of um / s.
 template <typename NumericType, int D>
-class SF6O2Etching final : public ProcessModel<NumericType, D> {
+class SF6O2Etching final : public ProcessModelGPU<NumericType, D> {
 public:
   explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams) {

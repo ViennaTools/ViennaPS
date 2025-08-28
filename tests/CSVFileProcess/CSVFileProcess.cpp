@@ -2,8 +2,8 @@
 #include <geometries/psMakeTrench.hpp>
 #include <lsTestAsserts.hpp>
 #include <models/psCSVFileProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psDomain.hpp>
-#include <psProcess.hpp>
 #include <vcTestAsserts.hpp>
 
 #include <filesystem>

@@ -142,7 +142,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class CSVFileProcess : public ProcessModel<NumericType, D> {
+class CSVFileProcess : public ProcessModelCPU<NumericType, D> {
 public:
   CSVFileProcess(const std::string &ratesFile, const Vec3D<NumericType> &dir,
                  const Vec2D<NumericType> &off, NumericType isoScale = 0.,

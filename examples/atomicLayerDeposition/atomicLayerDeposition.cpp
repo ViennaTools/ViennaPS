@@ -63,12 +63,11 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    params.readConfigFile("config.txt");
-    // std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    // return 1;
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
   }
 
-  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   makeT(domain, params.get("gridDelta"), params.get("openingDepth"),

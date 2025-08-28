@@ -35,6 +35,7 @@ public:
       viennacore::SmartPointer<viennals::PointData<NumericType>> &fluxes) = 0;
 
   auto &getTimer() const { return timer_; }
+  void resetTimer() { timer_.reset(); }
 };
 
 } // namespace viennaps

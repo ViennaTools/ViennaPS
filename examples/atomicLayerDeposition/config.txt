@@ -4,7 +4,7 @@
 gridDelta = 0.2
 openingDepth = 0.5
 openingWidth = 90
-gapLength = 400
+gapLength = 800
 gapHeight = 0.5
 gapWidth = 10000
 xPad = 0.5
@@ -30,7 +30,7 @@ evFlux = 0 # 6.5 # 1e19
 s0 = 3.36
 
 # Simulation
-numRaysPerPoint = 100
+numRaysPerPoint = 1000
 rngSeed = 15123512
 
 outputFile = arts_220_c8.txt

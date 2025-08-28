@@ -52,7 +52,7 @@ public:
 };
 
 template <typename NumericType, int D>
-class SphereDistribution : public ProcessModel<NumericType, D> {
+class SphereDistribution : public ProcessModelCPU<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
@@ -74,7 +74,7 @@ public:
 };
 
 template <typename NumericType, int D>
-class BoxDistribution : public ProcessModel<NumericType, D> {
+class BoxDistribution : public ProcessModelCPU<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:

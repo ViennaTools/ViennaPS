@@ -65,6 +65,7 @@ public:
 
     // Update context with current state
     context_.updateFlags();
+    context_.printFlags();
 
     initializeStrategies();
 
@@ -198,8 +199,9 @@ private:
     }
 
     if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE) {
-      auto model = std::dynamic_pointer_cast<gpu::ProcessModel<NumericType, D>>(
-          context_.model);
+      auto model =
+          std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+              context_.model);
       if (!model) {
         auto gpuModel = context_.model->getGPUModel();
         if (gpuModel) {

@@ -25,6 +25,7 @@
 #include <pybind11/stl_bind.h>
 
 // all header files which define API functions
+#include <process/psProcess.hpp>
 #include <psAtomicLayerProcess.hpp>
 #include <psConstants.hpp>
 #include <psDomain.hpp>
@@ -33,7 +34,6 @@
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
-#include <psProcess.hpp>
 #include <psRateGrid.hpp>
 #include <psReader.hpp>
 #include <psUnits.hpp>

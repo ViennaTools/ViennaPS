@@ -135,6 +135,7 @@ public:
     return ProcessResult::SUCCESS;
   }
   auto &getTimer() const { return timer_; }
+  void resetTimer() { timer_.reset(); }
 };
 
 } // namespace viennaps

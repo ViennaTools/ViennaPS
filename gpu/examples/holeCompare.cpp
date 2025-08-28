@@ -1,6 +1,6 @@
 #include <geometries/psMakeHole.hpp>
 #include <models/psMultiParticleProcess.hpp>
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 
 #include <vcContext.hpp>
 

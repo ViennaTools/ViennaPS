@@ -1,6 +1,10 @@
 #pragma once
 
-#include "psProcessModelBase.hpp"
+#include "../psDomain.hpp"
+#include "psAdvectionCallback.hpp"
+#include "psGeometricModel.hpp"
+#include "psSurfaceModel.hpp"
+#include "psVelocityField.hpp"
 
 #include <lsConcepts.hpp>
 
@@ -15,8 +19,65 @@ using namespace viennacore;
 
 /// The process model combines all models (particle types, surface model,
 /// geometric model, advection callback)
+template <typename NumericType, int D> class ProcessModelBase {
+protected:
+  SmartPointer<SurfaceModel<NumericType>> surfaceModel = nullptr;
+  SmartPointer<AdvectionCallback<NumericType, D>> advectionCallback = nullptr;
+  SmartPointer<GeometricModel<NumericType, D>> geometricModel = nullptr;
+  SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
+  std::optional<std::string> processName = std::nullopt;
+  std::unordered_map<std::string, std::vector<NumericType>> processMetaData;
+
+  bool hasGPU = false; // indicates whether a GPU version of the model exists
+  bool isALP = false;  // indicates whether the model is an atomic layer process
+
+public:
+  virtual ~ProcessModelBase() = default;
+
+  virtual void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                          const NumericType processDuration) {}
+  virtual void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                        const NumericType processedDuration) {}
+  virtual bool useFluxEngine() { return false; }
+  virtual SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() {
+    return nullptr;
+  }
+
+  auto getSurfaceModel() const { return surfaceModel; }
+  auto getAdvectionCallback() const { return advectionCallback; }
+  auto getGeometricModel() const { return geometricModel; }
+  auto getVelocityField() const { return velocityField; }
+  auto getProcessName() const { return processName; }
+  auto getProcessMetaData() const { return processMetaData; }
+  auto isALPModel() const { return isALP; }
+  auto hasGPUModel() const { return hasGPU; }
+
+  void setProcessName(const std::string &name) { processName = name; }
+
+  void
+  setSurfaceModel(SmartPointer<SurfaceModel<NumericType>> passedSurfaceModel) {
+    surfaceModel = passedSurfaceModel;
+  }
+
+  void setAdvectionCallback(
+      SmartPointer<AdvectionCallback<NumericType, D>> passedAdvectionCallback) {
+    advectionCallback = passedAdvectionCallback;
+  }
+
+  void setGeometricModel(
+      SmartPointer<GeometricModel<NumericType, D>> passedGeometricModel) {
+    geometricModel = passedGeometricModel;
+  }
+
+  void setVelocityField(
+      SmartPointer<VelocityField<NumericType, D>> passedVelocityField) {
+    velocityField = passedVelocityField;
+  }
+};
+
+/// Process model for CPU-based particle tracing (or no particle tracing)
 template <typename NumericType, int D>
-class ProcessModel : public ProcessModelBase<NumericType, D> {
+class ProcessModelCPU : public ProcessModelBase<NumericType, D> {
 protected:
   std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
       particles;
@@ -65,12 +126,9 @@ namespace viennaps::gpu {
 using namespace viennacore;
 
 template <class NumericType, int D>
-class ProcessModel : public ProcessModelBase<NumericType, D> {
+class ProcessModelGPU : public ProcessModelBase<NumericType, D> {
 private:
-  using ParticleTypeList = std::vector<viennaray::gpu::Particle<NumericType>>;
-
-  ParticleTypeList particles;
-  std::optional<std::string> processName = std::nullopt;
+  std::vector<viennaray::gpu::Particle<NumericType>> particles;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
   std::string pipelineFileName;
   bool materialIds = false;
@@ -79,11 +137,11 @@ public:
   CudaBuffer processData;
   auto &getParticleTypes() { return particles; }
   auto getProcessDataDPtr() const { return processData.dPointer(); }
-  bool useFluxEngine() override { return particles.size() > 0; }
   bool useMaterialIds() const { return materialIds; }
   void setUseMaterialIds(bool passedMaterialIds) {
     materialIds = passedMaterialIds;
   }
+  bool useFluxEngine() override { return particles.size() > 0; }
 
   void setPipelineFileName(const std::string &fileName) {
     pipelineFileName = fileName;

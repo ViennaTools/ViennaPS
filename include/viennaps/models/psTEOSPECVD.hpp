@@ -91,7 +91,7 @@ private:
 } // namespace impl
 
 template <class NumericType, int D>
-class TEOSPECVD : public ProcessModel<NumericType, D> {
+class TEOSPECVD : public ProcessModelCPU<NumericType, D> {
 public:
   TEOSPECVD(NumericType radicalSticking, NumericType radicalRate,
             NumericType ionRate, NumericType ionExponent,

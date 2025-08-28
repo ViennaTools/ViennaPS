@@ -1,4 +1,4 @@
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <vcTestAsserts.hpp>
 
 namespace viennacore {
@@ -8,7 +8,7 @@ using namespace viennaps;
 template <class NumericType, int D> void RunTest() {
 
   auto domain = Domain<NumericType, D>::New();
-  auto model = SmartPointer<ProcessModel<NumericType, D>>::New();
+  auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New();
 
   // constructors
   { Process<NumericType, D> process; }

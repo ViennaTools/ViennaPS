@@ -74,6 +74,9 @@ public:
 
 private:
   ProcessResult validateContext(const ProcessContext<NumericType, D> &context) {
+
+    context.model->initialize(context.domain, context.processTime);
+
     if (!context.model->getSurfaceModel()) {
       Logger::getInstance()
           .addError("No surface model passed to Process.")
@@ -151,6 +154,11 @@ private:
     // Initialize flux engine
     PROCESS_CHECK(fluxEngine_->checkInput(context));
     PROCESS_CHECK(fluxEngine_->initialize(context));
+
+    // reset timers
+    callbackTimer_.reset();
+    fluxEngine_->resetTimer();
+    advectionHandler_.resetTimer();
 
     return ProcessResult::SUCCESS;
   }

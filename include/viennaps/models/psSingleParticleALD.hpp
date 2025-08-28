@@ -125,7 +125,7 @@ public:
 } // namespace impl
 
 template <typename NumericType, int D>
-class SingleParticleALD : public ProcessModel<NumericType, D> {
+class SingleParticleALD : public ProcessModelCPU<NumericType, D> {
 public:
   SingleParticleALD(
       NumericType stickingProbability, // particle sticking probability

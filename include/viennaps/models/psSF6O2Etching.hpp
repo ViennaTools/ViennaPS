@@ -21,7 +21,7 @@ using namespace viennacore;
 // Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
 // DOI: https://doi.org/10.1116/1.1830495
 template <typename NumericType, int D>
-class SF6O2Etching : public ProcessModel<NumericType, D> {
+class SF6O2Etching : public ProcessModelCPU<NumericType, D> {
 public:
   SF6O2Etching() {
     params = defaultParameters();

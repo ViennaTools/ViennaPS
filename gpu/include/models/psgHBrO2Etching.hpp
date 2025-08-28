@@ -11,7 +11,7 @@ using namespace viennacore;
 
 /// Model for etching Si in a HBr/O2 plasma.
 template <typename NumericType, int D>
-class HBrO2Etching final : public ProcessModel<NumericType, D> {
+class HBrO2Etching final : public ProcessModelGPU<NumericType, D> {
 public:
   explicit HBrO2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams) {

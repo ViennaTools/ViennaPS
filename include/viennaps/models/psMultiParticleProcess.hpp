@@ -228,7 +228,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class MultiParticleProcess : public ProcessModel<NumericType, D> {
+class MultiParticleProcess : public ProcessModelCPU<NumericType, D> {
 public:
   MultiParticleProcess() {
     // surface model
@@ -308,7 +308,7 @@ public:
 
 private:
   std::vector<std::string> fluxDataLabels_;
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 
   void addStickingData(NumericType stickingProbability) {
     if (processMetaData.find("StickingProbability") == processMetaData.end()) {

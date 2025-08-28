@@ -596,7 +596,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class CF4O2Etching final : public ProcessModel<NumericType, D> {
+class CF4O2Etching final : public ProcessModelCPU<NumericType, D> {
 public:
   CF4O2Etching() { initializeModel(); }
 

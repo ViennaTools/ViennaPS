@@ -88,8 +88,7 @@ private:
 namespace gpu {
 
 template <typename NumericType, int D>
-class SingleParticleProcess final
-    : public ::viennaps::gpu::ProcessModel<NumericType, D> {
+class SingleParticleProcess final : public ProcessModelGPU<NumericType, D> {
 public:
   SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
                         NumericType rate, NumericType stickingProbability,
@@ -136,7 +135,7 @@ public:
 // Etching or deposition based on a single particle model with diffuse
 // reflections.
 template <typename NumericType, int D>
-class SingleParticleProcess : public ProcessModel<NumericType, D> {
+class SingleParticleProcess : public ProcessModelCPU<NumericType, D> {
   NumericType rate_ = 1.;
   NumericType stickingProbability_ = 1.;
   NumericType sourceDistributionPower_ = 1.;

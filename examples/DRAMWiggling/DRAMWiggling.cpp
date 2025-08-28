@@ -1,6 +1,6 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psHBrO2Etching.hpp>
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 #include <psDomain.hpp>
@@ -55,15 +55,25 @@ int main(int argc, char **argv) {
   modelParams.Ions.n_l = 200;
   auto model = SmartPointer<HBrO2Etching<NumericType, D>>::New(modelParams);
 
+  // Advection parameters
+  AdvectionParameters advectionParams;
+  advectionParams.integrationScheme = util::convertIntegrationScheme(
+      params.get<std::string>("integrationScheme"));
+
+  RayTracingParameters<D> rayParams;
+  rayParams.raysPerPoint = params.get<int>("raysPerPoint");
+
+  CoverageParameters coverageParams;
+  coverageParams.coverageDeltaThreshold = params.get("coverageDeltaThreshold");
+
   // Process setup
   Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setCoverageDeltaThreshold(1e-4);
-  process.setNumberOfRaysPerPoint(static_cast<int>(params.get("raysPerPoint")));
   process.setProcessDuration(params.get("processTime"));
-  process.setIntegrationScheme(util::convertIntegrationScheme(
-      params.get<std::string>("integrationScheme")));
+  process.setAdvectionParameters(advectionParams);
+  process.setRayTracingParameters(rayParams);
+  process.setCoverageParameters(coverageParams);
 
   // print initial surface
   geometry->saveSurfaceMesh("DRAM_Initial.vtp");

@@ -7,7 +7,7 @@
 namespace viennaps::gpu {
 
 template <typename NumericType, int D>
-class SingleParticleProcess final : public ProcessModel<NumericType, D> {
+class SingleParticleProcess final : public ProcessModelCPU<NumericType, D> {
 public:
   explicit SingleParticleProcess(NumericType rate = 1.,
                                  NumericType stickingProbability = 1.,

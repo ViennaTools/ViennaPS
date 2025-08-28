@@ -177,7 +177,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class IonBeamEtching : public ProcessModel<NumericType, D> {
+class IonBeamEtching : public ProcessModelCPU<NumericType, D> {
 public:
   IonBeamEtching() = default;
 
@@ -251,6 +251,8 @@ public:
                 const NumericType processedDuration) final {
     firstInit = false;
   }
+
+  bool useFluxEngine() final { return true; }
 
 private:
   bool firstInit = false;
