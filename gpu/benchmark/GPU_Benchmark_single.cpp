@@ -13,11 +13,11 @@ using namespace viennaps;
 // #define COUNT_RAYS
 
 int main() {
-  omp_set_num_threads(1);
+  omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = DIM;
 
-  viennacore::Logger::setLogLevel(viennacore::LogLevel::WARNING);
+  Logger::setLogLevel(LogLevel::WARNING);
 
   constexpr int numRuns = 10;
   constexpr NumericType sticking = 0.1f;
@@ -52,7 +52,8 @@ int main() {
     file << sticking << ";";
 
     viennaray::gpu::Trace<NumericType, D> tracer(context);
-    tracer.setNumberOfRaysPerPoint(3000);
+    // tracer.setNumberOfRaysPerPoint(3000);
+    tracer.setNumberOfRaysFixed(50000000);
     tracer.setUseRandomSeeds(false);
 
     Timer timer;
@@ -60,6 +61,8 @@ int main() {
     diskMesher.apply();
     surfMesher.apply();
     auto mesh = gpu::CreateTriangleMesh(GRID_DELTA, surfMesh);
+    std::cout << "Number of surface triangles: " << surfMesh->triangles.size()
+              << std::endl;
     timer.finish();
     file << timer.currentDuration << ";";
     std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
@@ -67,8 +70,9 @@ int main() {
 
     tracer.setPipeline("SingleParticlePipeline", context->modulePath);
 #ifdef COUNT_RAYS
-    int rayCount = 0;
-    tracer.setParameters(rayCount);
+    gpu::CudaBuffer counterBuffer;
+    counterBuffer.allocInit(1 * sizeof(int), 0);
+    tracer.setParameters(counterBuffer.dPointer());
 #endif
 
     auto particle = viennaray::gpu::Particle<NumericType>();
@@ -120,8 +124,8 @@ int main() {
     }
 
 #ifdef COUNT_RAYS
-    auto &buffer = tracer.getParameterBuffer();
-    buffer.download(&rayCount, 1);
+    int rayCount = 0;
+    counterBuffer.download(&rayCount, 1);
     std::cout << "Number of rays: " << rayCount << std::endl;
     file << ";" << rayCount << "\n";
 #else

@@ -14,7 +14,9 @@
 
 #include <vcContext.hpp>
 
+// #ifndef COUNT_RAYS
 // #define COUNT_RAYS
+// #endif
 
 using namespace viennaray::gpu;
 
@@ -88,7 +90,6 @@ extern "C" __global__ void __raygen__SingleParticle() {
                RAY_TYPE_COUNT,                // SBT stride
                SURFACE_RAY_TYPE,              // missSBTIndex
                u0, u1);
-
 #ifdef COUNT_RAYS
     int *counter = reinterpret_cast<int *>(launchParams.customData);
     atomicAdd(counter, 1);

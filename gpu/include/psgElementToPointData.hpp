@@ -117,7 +117,6 @@ public:
         NumericType value = NumericType(0);
 
         if (numClosePoints > 0) {
-          // Use weights for interpolation
           auto weightsCopy = weights;
 
           // Discard outliers if enabled
@@ -153,16 +152,6 @@ public:
   }
 
 private:
-  template <class AT, class BT, std::size_t D>
-  AT DotProductNT(const std::array<AT, D> &pVecA,
-                  const std::array<BT, D> &pVecB) {
-    AT dot = 0;
-    for (size_t i = 0; i < D; ++i) {
-      dot += pVecA[i] * pVecB[i];
-    }
-    return dot;
-  }
-
   // Helper function to find min/max values and their indices
   struct MinMaxInfo {
     NumericType min1, min2, max1, max2;
@@ -240,6 +229,16 @@ private:
         weightsCopy[info.maxIdx1] = NumericType(0);
       }
     }
+  }
+
+  template <class AT, class BT, std::size_t D>
+  AT DotProductNT(const std::array<AT, D> &pVecA,
+                  const std::array<BT, D> &pVecB) {
+    AT dot = 0;
+    for (size_t i = 0; i < D; ++i) {
+      dot += pVecA[i] * pVecB[i];
+    }
+    return dot;
   }
 };
 
