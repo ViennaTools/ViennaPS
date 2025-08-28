@@ -51,7 +51,6 @@ private:
 
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));
-    context.currentIteration = 0;
 
     return ProcessResult::SUCCESS;
   }
@@ -69,6 +68,8 @@ private:
 
       // Process one time step
       PROCESS_CHECK(processTimeStep(context));
+
+      context.currentIteration++;
     }
 
     // Finalize process
@@ -112,7 +113,13 @@ private:
       }
     }
 
-    context.currentIteration++;
+    if (Logger::getLogLevel() >= 2) {
+      std::stringstream stream;
+      stream << std::fixed << std::setprecision(4)
+             << "Process time: " << context.processTime << " / "
+             << context.processDuration << " " << units::Time::toShortString();
+      Logger::getInstance().addInfo(stream.str()).print();
+    }
 
     return ProcessResult::SUCCESS;
   }

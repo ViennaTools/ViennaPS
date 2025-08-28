@@ -171,8 +171,6 @@ private:
       coverageInitIterations(context);
     }
 
-    context.resetTime();
-
     while (context.processTime < context.processDuration) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
       // Check for user interruption

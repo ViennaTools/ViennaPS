@@ -198,6 +198,7 @@ private:
       return false;
     }
 
+#ifdef VIENNACORE_COMPILE_GPU
     if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE) {
       auto model =
           std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
@@ -218,6 +219,7 @@ private:
         }
       }
     }
+#endif
 
     return true;
   }

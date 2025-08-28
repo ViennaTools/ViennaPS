@@ -15,7 +15,7 @@ template <typename NumericType, int D> class AdvectionHandler {
   unsigned lsVelOutputCounter = 0;
 
 public:
-  ProcessResult initialize(const ProcessContext<NumericType, D> &context) {
+  ProcessResult initialize(ProcessContext<NumericType, D> &context) {
     // Initialize advection handler with context
     auto translationMethod = context.translationField->getTranslationMethod();
     if (translationMethod > 2 || translationMethod < 0) {
@@ -25,6 +25,7 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
+    advectionKernel_.setAdvectionTime(0.);
     advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setIntegrationScheme(
         context.advectionParams.integrationScheme);
@@ -43,6 +44,8 @@ public:
     for (auto &dom : context.domain->getLevelSets()) {
       advectionKernel_.insertNextLevelSet(dom);
     }
+
+    context.resetTime();
 
     return ProcessResult::SUCCESS;
   }

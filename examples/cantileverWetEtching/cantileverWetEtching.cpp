@@ -10,6 +10,7 @@ namespace ps = viennaps;
 int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   // set number threads to be used
   omp_set_num_threads(16);
