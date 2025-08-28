@@ -59,14 +59,7 @@ public:
       rayTracer_.setPrimaryDirection(primaryDirection.value());
     }
 
-    // initialize particle data logs
-    particleDataLogs_.resize(model->getParticleTypes().size());
-    for (std::size_t i = 0; i < model->getParticleTypes().size(); i++) {
-      if (int logSize = model->getParticleLogSize(i); logSize > 0) {
-        particleDataLogs_[i].data.resize(1);
-        particleDataLogs_[i].data[0].resize(logSize);
-      }
-    }
+    model->initializeParticleDataLogs();
 
     return ProcessResult::SUCCESS;
   }
@@ -167,9 +160,7 @@ private:
                                      localData.getVectorDataLabel(i));
       }
 
-      if (dataLogSize > 0) {
-        particleDataLogs_[particleIdx].merge(rayTracer_.getDataLog());
-      }
+      model->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
       ++particleIdx;
     }
   }
@@ -200,32 +191,6 @@ private:
 
 private:
   viennaray::Trace<NumericType, D> rayTracer_;
-  std::vector<viennaray::DataLog<NumericType>> particleDataLogs_;
-
-  /*
-void writeParticleDataLogs(const std::string &fileName) {
-std::ofstream file(fileName.c_str());
-
-for (std::size_t i = 0; i < particleDataLogs.size(); i++) {
-  if (!particleDataLogs[i].data.empty()) {
-    file << "particle" << i << "_data\n";
-    for (std::size_t j = 0; j < particleDataLogs[i].data[0].size(); j++) {
-      file << particleDataLogs[i].data[0][j] << " ";
-    }
-    file << "\n";
-  }
-}
-
-file.close();
-}
-SmartPointer<viennals::PointData<NumericType>> calculateFluxes() override {
-
-
-}
-
-private:
-
-*/
 };
 
 } // namespace viennaps

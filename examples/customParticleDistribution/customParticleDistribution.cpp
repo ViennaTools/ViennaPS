@@ -249,7 +249,8 @@ int main(int argc, char *argv[]) {
   // Run the process
   Process<NumericType, D> p(domain, model, .1);
   p.apply();
-  // p.writeParticleDataLogs("particle_data.txt");
+
+  model->writeParticleDataLogs("particle_data.txt");
 
   domain->saveVolumeMesh("customParticleDistribution");
 

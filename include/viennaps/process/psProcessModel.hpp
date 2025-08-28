@@ -84,6 +84,7 @@ protected:
   SmartPointer<viennaray::Source<NumericType>> source = nullptr;
   std::vector<int> particleLogSize;
   std::optional<Vec3D<NumericType>> primaryDirection = std::nullopt;
+  std::vector<viennaray::DataLog<NumericType>> particleDataLogs_;
 
 public:
   auto &getParticleTypes() { return particles; }
@@ -97,6 +98,39 @@ public:
 
   int getParticleLogSize(std::size_t particleIdx) const {
     return particleLogSize[particleIdx];
+  }
+
+  void initializeParticleDataLogs() {
+    particleDataLogs_.resize(particles.size());
+    for (std::size_t i = 0; i < particles.size(); i++) {
+      if (int logSize = particleLogSize[i]; logSize > 0) {
+        particleDataLogs_[i].data.resize(1);
+        particleDataLogs_[i].data[0].resize(logSize);
+      }
+    }
+  }
+
+  void mergeParticleData(viennaray::DataLog<NumericType> &log,
+                         size_t particleIdx) {
+    if (particleIdx < particleDataLogs_.size()) {
+      particleDataLogs_[particleIdx].merge(log);
+    }
+  }
+
+  void writeParticleDataLogs(const std::string &fileName) {
+    std::ofstream file(fileName.c_str());
+
+    for (std::size_t i = 0; i < particleDataLogs_.size(); i++) {
+      if (!particleDataLogs_[i].data.empty()) {
+        file << "particle" << i << "_data\n";
+        for (std::size_t j = 0; j < particleDataLogs_[i].data[0].size(); j++) {
+          file << particleDataLogs_[i].data[0][j] << " ";
+        }
+        file << "\n";
+      }
+    }
+
+    file.close();
   }
 
   virtual void
