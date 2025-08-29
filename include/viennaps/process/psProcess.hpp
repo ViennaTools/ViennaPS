@@ -23,6 +23,7 @@ private:
 
 public:
   Process() = default;
+  Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {}
   Process(SmartPointer<Domain<NumericType, D>> domain,
           SmartPointer<ProcessModelBase<NumericType, D>> model,
           NumericType processDuration = 0.)

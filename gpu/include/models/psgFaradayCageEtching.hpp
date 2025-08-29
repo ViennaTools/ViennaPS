@@ -1,7 +1,7 @@
 #pragma once
 
-#include <psgProcessModel.hpp>
-#include <raygParticle.hpp>
+#include <process/psProcessModel.hpp>
+#include <rayParticle.hpp>
 
 #include <vcVectorType.hpp>
 

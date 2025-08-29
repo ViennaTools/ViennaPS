@@ -34,7 +34,7 @@ set(PYBIND11_FINDPYTHON ON)
 
 CPMFindPackage(
   NAME pybind11
-  VERSION 2.12.0
+  VERSION 3.0.0
   GIT_REPOSITORY "https://github.com/pybind/pybind11")
 
 # --------------------------------------------------------------------------------------------------------
@@ -59,6 +59,9 @@ viennacore_setup_binding(viennaps2d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 set(LSNAME "viennals3d")
 viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
 
+target_link_libraries(viennaps3d PRIVATE ViennaPS)
+target_link_libraries(viennaps2d PRIVATE ViennaPS)
+
 if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps3d'")
   include("../cmake/generate_ptx.cmake")
@@ -75,16 +78,9 @@ if(VIENNAPS_USE_GPU)
 
   # Include ViennaPS GPU and OptiX headers
   target_sources(viennaps3d PRIVATE ${generated_files})
-  target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE} ${VIENNARAY_GPU_INCLUDE}
-                                                ${OptiX_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(viennaps3d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
-  target_compile_definitions(viennaps3d PRIVATE VIENNAPS_USE_GPU)
+  target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE} ${VIENNARAY_GPU_INCLUDE})
   target_compile_definitions(viennaps3d
                              PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
-
-  # We have to include the CUDA headers for the 2D version as well because ViennaCore uses them in the Logger
-  target_include_directories(viennaps2d PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(viennaps2d PRIVATE ViennaPS ${VIENNACORE_GPU_LIBS})
 
   add_custom_command(
     TARGET viennaps3d
@@ -92,9 +88,6 @@ if(VIENNAPS_USE_GPU)
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${VIENNACORE_PTX_DIR}"
             "${CMAKE_SOURCE_DIR}/python/viennaps3d/ptx"
     COMMENT "Copying .ptx and .optixir files to Python package directory")
-else()
-  target_link_libraries(viennaps3d PRIVATE ViennaPS)
-  target_link_libraries(viennaps2d PRIVATE ViennaPS)
 endif()
 
 target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2

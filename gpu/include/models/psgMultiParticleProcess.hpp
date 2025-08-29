@@ -1,11 +1,10 @@
 #pragma once
 
 #include <models/psMultiParticleProcess.hpp>
-#include <psConstants.hpp>
-#include <psMaterials.hpp>
-
 #include <models/psgPipelineParameters.hpp>
 #include <process/psProcessModel.hpp>
+#include <psConstants.hpp>
+#include <psMaterials.hpp>
 
 namespace viennaps::gpu {
 

@@ -141,7 +141,7 @@ def install_viennals(
 
 
 def install_viennaps(
-    pip_path: Path, viennaps_dir: Path, optix_dir: Path, verbose: bool
+    pip_path: Path, viennaps_dir: Path, optix_dir: Path | None, verbose: bool
 ):
     if not viennaps_dir.exists():
         sys.exit(f"ViennaPS directory not found: {viennaps_dir}")
@@ -152,9 +152,17 @@ def install_viennaps(
     env = os.environ.copy()
     env["CC"] = f"gcc-{REQUIRED_GCC}"
     env["CXX"] = f"g++-{REQUIRED_GCC}"
-    env["OptiX_INSTALL_DIR"] = str(optix_dir)
+
     # GPU on
-    env["CMAKE_ARGS"] = "-DVIENNAPS_USE_GPU=ON"
+    cmake_args = ["-DVIENNAPS_USE_GPU=ON"]
+
+    if optix_dir is not None:
+        env["OptiX_INSTALL_DIR"] = str(optix_dir)
+    else:
+        # Auto-download OptiX headers
+        cmake_args.append("-DVIENNACORE_FETCH_OPTIX=ON")
+
+    env["CMAKE_ARGS"] = " ".join(cmake_args)
     cmd = [str(pip_path), "install", "."]
     if verbose:
         cmd.append("-v")
@@ -189,7 +197,7 @@ def main():
     parser.add_argument(
         "--optix",
         default=None,
-        help="Path to OptiX installation directory (else read from OptiX_INSTALL_DIR or prompt).",
+        help="Path to OptiX installation directory (optional - will auto-download OptiX headers if not provided).",
     )
     args = parser.parse_args()
 
@@ -200,19 +208,22 @@ def main():
     # OptiX dir
     optix_dir = args.optix or os.environ.get("OptiX_INSTALL_DIR")
     if not optix_dir:
-        # prompt
-        try:
-            optix_dir = input(
-                "Please enter the path to the OptiX directory (e.g., /path/to/OptiX): "
-            ).strip()
-        except EOFError:
-            optix_dir = ""
-    if not optix_dir:
-        sys.exit("No OptiX directory provided. Set --optix or OptiX_INSTALL_DIR.")
-    optix_dir = Path(optix_dir).expanduser().resolve()
-    if not optix_dir.exists():
-        sys.exit(f"OptiX directory not found: {optix_dir}")
-    print(f"Using OptiX at: {optix_dir}")
+        print("No OptiX directory provided. Will auto-download OptiX headers.")
+        print("\nWARNING: OptiX uses a different license than ViennaPS.")
+        print(
+            "By proceeding with auto-download, you agree to the NVIDIA OptiX license terms."
+        )
+        print(
+            "Please review the OptiX license at: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement"
+        )
+        print("If you do not agree, abort now (Ctrl+C).")
+        input("Press Enter to continue...")
+        optix_dir = None
+    else:
+        optix_dir = Path(optix_dir).expanduser().resolve()
+        if not optix_dir.exists():
+            sys.exit(f"OptiX directory not found: {optix_dir}")
+        print(f"Using OptiX at: {optix_dir}")
 
     # venv
     venv_dir = Path(args.venv).expanduser().resolve()
