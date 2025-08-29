@@ -1,5 +1,5 @@
 #include <geometries/psMakeHole.hpp>
-#include <models/psgSF6O2Etching.hpp>
+#include <models/psSF6O2Etching.hpp>
 #include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
@@ -51,8 +51,7 @@ int main(int argc, char **argv) {
   modelParams.Passivation.A_ie = params.get("A_O");
   modelParams.Substrate.A_ie = params.get("A_Si");
   modelParams.etchStopDepth = params.get("etchStopDepth");
-  auto model =
-      SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(modelParams);
+  auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
   RayTracingParameters<D> rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");

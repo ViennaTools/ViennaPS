@@ -11,7 +11,11 @@
 #include <rayParticle.hpp>
 #include <raySource.hpp>
 
+#ifdef VIENNACORE_COMPILE_GPU
 #include <vcCudaBuffer.hpp>
+#endif
+
+#include <vcLogger.hpp>
 
 namespace viennaps {
 
@@ -40,6 +44,9 @@ public:
                         const NumericType processedDuration) {}
   virtual bool useFluxEngine() { return false; }
   virtual SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() {
+    Logger::getInstance()
+        .addWarning("Cannot convert CPU model to GPU model.")
+        .print();
     return nullptr;
   }
 

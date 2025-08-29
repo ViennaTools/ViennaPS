@@ -91,9 +91,8 @@
 #include <vcCudaBuffer.hpp>
 
 #include <models/psgFaradayCageEtching.hpp>
-#include <models/psgHBrO2Etching.hpp>
+#include <models/psgIonBeamEtching.hpp>
 #include <models/psgMultiParticleProcess.hpp>
-#include <models/psgSF6O2Etching.hpp>
 #endif
 
 using namespace viennaps;

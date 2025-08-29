@@ -15,41 +15,46 @@ using namespace viennacore;
 
 extern "C" __constant__ LaunchParams launchParams;
 
-__constant__ float minAngle = 5 * M_PIf / 180.;
-__constant__ float yieldFac = 1.075;
-__constant__ float tiltAngle = 60.f;
-
 extern "C" __global__ void __closesthit__ion() {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary) {
     applyPeriodicBoundary(prd, sbtData);
-    // if (launchParams.periodicBoundary)
-    // {
-    //   applyPeriodicBoundary(prd, sbtData);
-    // }
-    // else
-    // {
-    //   reflectFromBoundary(prd);
-    // }
   } else {
     const unsigned int primID = optixGetPrimitiveIndex();
     Vec3Df geomNormal = computeNormal(sbtData, primID);
     float cosTheta = -DotProduct(prd->dir, geomNormal);
     cosTheta = max(min(cosTheta, 1.f), 0.f);
-    // float incAngle = acosf(max(min(cosTheta, 1.f), 0.f));
-    float yield = (yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
+
+    viennaps::gpu::impl::IonParams *params =
+        (viennaps::gpu::impl::IonParams *)launchParams.customData;
+    auto geomNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
+    float cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
+    float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
+
+    // ------------- SURFACE COLLISION ------------- //
+    float yield = (params->yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
                    0.65 * cosTheta * cosTheta * cosTheta) /
-                  (yieldFac - 0.9);
+                  (params->yieldFac - 0.9);
 
-    atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight * yield);
+    atomicAdd(&launchParams.resultBuffer[getIdx(0, launchParams)],
+              prd->rayWeight * yield);
 
-    // ---------- REFLECTION ------------ //
-    prd->rayWeight -= prd->rayWeight * launchParams.sticking;
-    // conedCosineReflection(prd, (float)(M_PIf / 2.f - min(incAngle,
-    // minAngle)), geomNormal);
-    specularReflection(prd);
+    // ------------- REFLECTION ------------- //
+
+    float sticking = 1.f;
+    if (incomingAngle > params->thetaRMin) {
+      sticking = 1.f - min((incomingAngle - params->thetaRMin) /
+                               (params->thetaRMax - params->thetaRMin),
+                           1.f);
+    }
+    prd->rayWeight -= prd->rayWeight * sticking;
+
+    if (prd->rayWeight > launchParams.rayWeightThreshold) {
+      conedCosineReflection(prd, geomNormal,
+                            M_PI_2f - min(incomingAngle, params->minAngle));
+    }
   }
 }
 

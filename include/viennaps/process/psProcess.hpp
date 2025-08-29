@@ -201,6 +201,13 @@ private:
 
 #ifdef VIENNACORE_COMPILE_GPU
     if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE) {
+      if (D == 2) {
+        Logger::getInstance()
+            .addError("GPU-Triangle flux engine not supported in 2D.")
+            .print();
+        return false;
+      }
+
       auto model =
           std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
               context_.model);
