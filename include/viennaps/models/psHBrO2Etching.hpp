@@ -17,6 +17,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
+#ifdef VIENNACORE_COMPILE_GPU
 namespace gpu {
 /// GPU Version of the HBr/O2 plasma etching model
 template <typename NumericType, int D>
@@ -87,6 +88,7 @@ private:
   PlasmaEtchingParameters<float> deviceParams;
 };
 } // namespace gpu
+#endif
 
 /// Model for etching Si in a HBr/O2 plasma.
 template <typename NumericType, int D>
@@ -125,9 +127,11 @@ public:
     initializeModel();
   }
 
+#ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
     return SmartPointer<gpu::HBrO2Etching<NumericType, D>>::New(params);
   }
+#endif
 
   PlasmaEtchingParameters<NumericType> &getParameters() { return params; }
 

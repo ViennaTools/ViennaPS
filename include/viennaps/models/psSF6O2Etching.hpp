@@ -17,6 +17,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
+#ifdef VIENNACORE_COMPILE_GPU
 namespace gpu {
 /// GPU Version of the SF6/O2 plasma etching model
 template <typename NumericType, int D>
@@ -87,6 +88,7 @@ private:
   PlasmaEtchingParameters<float> deviceParams;
 };
 } // namespace gpu
+#endif
 
 // Model for etching Si in a SF6/O2 plasma. The model is based on work by
 // Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
@@ -122,9 +124,11 @@ public:
     initializeModel();
   }
 
+#ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
     return SmartPointer<gpu::SF6O2Etching<NumericType, D>>::New(params);
   }
+#endif
 
   void setParameters(const PlasmaEtchingParameters<NumericType> &parameters) {
     params = parameters;
