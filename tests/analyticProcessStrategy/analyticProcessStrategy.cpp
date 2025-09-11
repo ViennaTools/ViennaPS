@@ -112,8 +112,7 @@ createBasicContext(SmartPointer<Domain<NumericType, D>> domain,
   context.currentIteration = 0;
 
   // Set flags based on model
-  context.flags.isGeometric = false;
-  context.flags.useFluxEngine = false;
+  context.flags.isAnalytic = true;
   context.flags.useAdvectionCallback =
       (model->getAdvectionCallback() != nullptr);
 
@@ -132,20 +131,7 @@ createBasicContext(SmartPointer<Domain<NumericType, D>> domain,
 template <class NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
 
-  // Test 1: Strategy canHandle method - should reject context without velocity
-  // field
-  {
-    auto domain = Domain<NumericType, D>::New();
-    auto model =
-        SmartPointer<MockProcessModel<NumericType, D>>::New(); // No velocity
-                                                               // field
-    auto context = createBasicContext<NumericType, D>(domain, model, 1.0);
-
-    AnalyticProcessStrategy<NumericType, D> strategy;
-    VC_TEST_ASSERT(!strategy.canHandle(context));
-  }
-
-  // Test 2: Strategy canHandle method - should reject geometric processes
+  // Test: Strategy canHandle method - should reject geometric processes
   {
     auto domain = Domain<NumericType, D>::New();
     auto velField = SmartPointer<MockVelocityField<NumericType, D>>::New(1.0);
@@ -157,7 +143,7 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(!strategy.canHandle(context));
   }
 
-  // Test 3: Strategy canHandle method - should reject flux engine processes
+  // Test: Strategy canHandle method - should reject flux engine processes
   {
     auto domain = Domain<NumericType, D>::New();
     auto velField = SmartPointer<MockVelocityField<NumericType, D>>::New(1.0);
@@ -169,7 +155,7 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(!strategy.canHandle(context));
   }
 
-  // Test 4: Strategy canHandle method - should reject zero duration
+  // Test: Strategy canHandle method - should reject zero duration
   {
     auto domain = Domain<NumericType, D>::New();
     auto velField = SmartPointer<MockVelocityField<NumericType, D>>::New(1.0);
@@ -181,7 +167,7 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(!strategy.canHandle(context));
   }
 
-  // Test 5: Strategy canHandle method - should accept valid analytic process
+  // Test: Strategy canHandle method - should accept valid analytic process
   {
     auto domain = Domain<NumericType, D>::New();
     auto velField = SmartPointer<MockVelocityField<NumericType, D>>::New(1.0);

@@ -264,6 +264,8 @@ public:
     firstInit = false;
   }
 
+  bool useFluxEngine() override final { return true; }
+
 private:
   bool firstInit = false;
   std::vector<Material> maskMaterials_;

@@ -22,12 +22,16 @@ private:
   FluxEngineType fluxEngineType_ = FluxEngineType::CPU_DISK;
 
 public:
-  Process() = default;
-  Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {}
+  Process() { initializeStrategies(); }
+  Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {
+    initializeStrategies();
+  }
   Process(SmartPointer<Domain<NumericType, D>> domain,
           SmartPointer<ProcessModelBase<NumericType, D>> model,
           NumericType processDuration = 0.)
-      : context_{domain, model, processDuration} {}
+      : context_{domain, model, processDuration} {
+    initializeStrategies();
+  }
 
   void setDomain(SmartPointer<Domain<NumericType, D>> domain) {
     context_.domain = domain;
@@ -58,7 +62,10 @@ public:
     context_.atomicLayerParams = params;
   }
 
-  void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
+  void setFluxEngineType(FluxEngineType type) {
+    fluxEngineType_ = type;
+    initializeStrategies(); // reinitialize strategies to update flux engine
+  }
 
   void apply() {
     if (!checkInput())
@@ -67,8 +74,6 @@ public:
     // Update context with current state
     context_.updateFlags();
     context_.printFlags();
-
-    initializeStrategies();
 
     // Find appropriate strategy
     auto strategy = findStrategy();
@@ -115,6 +120,7 @@ public:
 
 private:
   void initializeStrategies() {
+    strategies_.clear();
     // Add strategies in priority order
     strategies_.push_back(
         std::make_unique<GeometricProcessStrategy<NumericType, D>>());
