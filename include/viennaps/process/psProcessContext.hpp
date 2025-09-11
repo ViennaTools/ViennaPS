@@ -65,8 +65,8 @@ template <typename NumericType, int D> struct ProcessContext {
 
   void printFlags() const {
     std::stringstream stream;
-    stream << "Process Context Flags:" << "\n  isGeometric: "
-           << util::boolString(flags.isGeometric)
+    stream << "Process Context Flags:";
+    stream << "\n  isGeometric: " << util::boolString(flags.isGeometric)
            << "\n  useFluxEngine: " << util::boolString(flags.useFluxEngine)
            << "\n  useAdvectionCallback: "
            << util::boolString(flags.useAdvectionCallback)
