@@ -198,8 +198,8 @@ endif()
 if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
   message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
-  target_include_directories(
-    ${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/include>)
+  target_include_directories(${PROJECT_NAME}
+                             INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/include>)
 else()
   message(STATUS "[ViennaPS] Disabled GPU Support")
   set(VIENNAPS_USE_GPU OFF)
