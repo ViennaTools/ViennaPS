@@ -145,7 +145,7 @@ private:
                                        direction010[2]};
     for (const auto &material : materials) {
       processMetaData[MaterialMap::getMaterialName(material.first) + " Rate"] =
-          std::vector<NumericType>{material.second};
+          std::vector<double>{material.second};
     }
   }
 

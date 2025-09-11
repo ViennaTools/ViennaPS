@@ -1,6 +1,6 @@
 #include <process/psAnalyticProcessStrategy.hpp>
-#include <process/psProcessModelBase.hpp>
-#include <psVelocityField.hpp>
+#include <process/psProcessModel.hpp>
+#include <process/psVelocityField.hpp>
 
 #include <geometries/psMakePlane.hpp>
 #include <psDomain.hpp>

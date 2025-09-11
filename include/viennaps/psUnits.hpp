@@ -1,5 +1,10 @@
 #pragma once
 
+#include <vcLogger.hpp>
+
+#include <stdexcept>
+#include <string>
+
 namespace viennaps::units {
 
 class Length {

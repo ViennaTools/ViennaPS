@@ -69,7 +69,7 @@ public:
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
-    this->processMetaData["Radius"] = std::vector<NumericType>{radius};
+    this->processMetaData["Radius"] = std::vector<double>{radius};
   }
 };
 
@@ -90,10 +90,9 @@ public:
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");
-    this->processMetaData["HalfAxes"] =
-        std::vector<NumericType>{static_cast<NumericType>(halfAxes[0]),
-                                 static_cast<NumericType>(halfAxes[1]),
-                                 static_cast<NumericType>(halfAxes[2])};
+    this->processMetaData["HalfAxes"] = std::vector<double>{
+        static_cast<double>(halfAxes[0]), static_cast<double>(halfAxes[1]),
+        static_cast<double>(halfAxes[2])};
   }
 };
 

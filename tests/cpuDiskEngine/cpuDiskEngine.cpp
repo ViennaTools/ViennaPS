@@ -1,7 +1,7 @@
 #include <process/psCPUDiskEngine.hpp>
 #include <process/psProcessModel.hpp>
+#include <process/psSurfaceModel.hpp>
 #include <psDomain.hpp>
-#include <psSurfaceModel.hpp>
 
 #include <geometries/psMakePlane.hpp>
 
@@ -116,7 +116,7 @@ public:
 
 // Mock process model for testing
 template <typename NumericType, int D>
-class MockProcessModel : public ProcessModel<NumericType, D> {
+class MockProcessModel : public ProcessModelCPU<NumericType, D> {
 public:
   MockProcessModel() {
     // Create mock surface model

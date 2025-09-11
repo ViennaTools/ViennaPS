@@ -1,5 +1,5 @@
 #include <process/psCallbackOnlyStrategy.hpp>
-#include <psProcessModelBase.hpp>
+#include <process/psProcessModel.hpp>
 
 #include <geometries/psMakePlane.hpp>
 #include <psDomain.hpp>

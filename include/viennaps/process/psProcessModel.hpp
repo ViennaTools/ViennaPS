@@ -30,7 +30,7 @@ protected:
   SmartPointer<GeometricModel<NumericType, D>> geometricModel = nullptr;
   SmartPointer<VelocityField<NumericType, D>> velocityField = nullptr;
   std::optional<std::string> processName = std::nullopt;
-  std::unordered_map<std::string, std::vector<NumericType>> processMetaData;
+  std::unordered_map<std::string, std::vector<double>> processMetaData;
 
   bool hasGPU = false; // indicates whether a GPU version of the model exists
   bool isALP = false;  // indicates whether the model is an atomic layer process

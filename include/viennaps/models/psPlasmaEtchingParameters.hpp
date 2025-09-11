@@ -85,7 +85,7 @@ template <typename NumericType> struct PlasmaEtchingParameters {
   } Ions;
 
   auto toProcessMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> processData;
+    std::unordered_map<std::string, std::vector<double>> processData;
 
     processData["Ion Flux"] = {ionFlux};
     processData["Etchant Flux"] = {etchantFlux};

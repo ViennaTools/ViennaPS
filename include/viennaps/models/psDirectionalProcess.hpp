@@ -209,10 +209,10 @@ private:
     this->setProcessName("DirectionalProcess");
 
     // Store process data
-    processMetaData["DirectionalVelocity"] = std::vector<NumericType>();
-    processMetaData["IsotropicVelocity"] = std::vector<NumericType>();
-    processMetaData["MaskMaterials"] = std::vector<NumericType>();
-    processMetaData["CalculateVisibility"] = std::vector<NumericType>();
+    processMetaData["DirectionalVelocity"] = std::vector<double>();
+    processMetaData["IsotropicVelocity"] = std::vector<double>();
+    processMetaData["MaskMaterials"] = std::vector<double>();
+    processMetaData["CalculateVisibility"] = std::vector<double>();
     int i = 0;
     for (const auto &rateSet : rateSets) {
       processMetaData["DirectionalVelocity"].push_back(
@@ -220,13 +220,12 @@ private:
       processMetaData["IsotropicVelocity"].push_back(rateSet.isotropicVelocity);
       for (const auto &maskMaterial : rateSet.maskMaterials) {
         processMetaData["MaskMaterials"].push_back(
-            static_cast<NumericType>(maskMaterial));
+            static_cast<double>(maskMaterial));
       }
       processMetaData["CalculateVisibility"].push_back(
-          static_cast<NumericType>(rateSet.calculateVisibility ? 1 : 0));
-      processMetaData["Direction " + std::to_string(i++)] =
-          std::vector<NumericType>{rateSet.direction[0], rateSet.direction[1],
-                                   rateSet.direction[2]};
+          static_cast<double>(rateSet.calculateVisibility ? 1 : 0));
+      processMetaData["Direction " + std::to_string(i++)] = std::vector<double>{
+          rateSet.direction[0], rateSet.direction[1], rateSet.direction[2]};
     }
   }
 

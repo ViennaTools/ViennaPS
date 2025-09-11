@@ -1,6 +1,6 @@
+#include <process/psGeometricModel.hpp>
 #include <process/psGeometricProcessStrategy.hpp>
-#include <psGeometricModel.hpp>
-#include <psProcessModelBase.hpp>
+#include <process/psProcessModel.hpp>
 
 #include <geometries/psMakePlane.hpp>
 #include <psDomain.hpp>

@@ -114,17 +114,17 @@ public:
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
 
-    this->processMetaData["Default Rate"] = std::vector<NumericType>{rate};
+    this->processMetaData["Default Rate"] = std::vector<double>{rate};
     this->processMetaData["Sticking Probability"] =
-        std::vector<NumericType>{stickingProbability};
+        std::vector<double>{stickingProbability};
     this->processMetaData["Source Exponent"] =
-        std::vector<NumericType>{sourceExponent};
+        std::vector<double>{sourceExponent};
     if (!materialRates.empty()) {
       for (const auto &pair : materialRates) {
         if (pair.first == Material::Undefined)
           continue;
         this->processMetaData[MaterialMap::getMaterialName(pair.first) +
-                              " Rate"] = std::vector<NumericType>{pair.second};
+                              " Rate"] = std::vector<double>{pair.second};
       }
     }
   }
@@ -198,18 +198,18 @@ private:
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
 
-    this->processMetaData["Default Rate"] = std::vector<NumericType>{rate_};
+    this->processMetaData["Default Rate"] = std::vector<double>{rate_};
     this->processMetaData["Sticking Probability"] =
-        std::vector<NumericType>{stickingProbability_};
+        std::vector<double>{stickingProbability_};
     this->processMetaData["Source Exponent"] =
-        std::vector<NumericType>{sourceDistributionPower_};
+        std::vector<double>{sourceDistributionPower_};
     if (!materialRates_.empty()) {
       for (const auto &pair : materialRates_) {
         if (pair.first == Material::Undefined)
           continue; // skip undefined material
 
         this->processMetaData[MaterialMap::getMaterialName(pair.first) +
-                              " Rate"] = std::vector<NumericType>{pair.second};
+                              " Rate"] = std::vector<double>{pair.second};
       }
     }
   }

@@ -9,7 +9,7 @@ using namespace viennacore;
 template <typename NumericType, int D> class GeometricModel {
 protected:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
-  std::unordered_map<std::string, std::vector<NumericType>> processData;
+  std::unordered_map<std::string, std::vector<double>> processData;
 
 public:
   virtual ~GeometricModel() = default;

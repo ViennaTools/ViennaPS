@@ -312,8 +312,7 @@ private:
 
   void addStickingData(NumericType stickingProbability) {
     if (processMetaData.find("StickingProbability") == processMetaData.end()) {
-      processMetaData["StickingProbability"] =
-          std::vector<NumericType>{stickingProbability};
+      addMetaData("StickingProbability", stickingProbability);
     } else {
       processMetaData["StickingProbability"].push_back(stickingProbability);
     }
@@ -322,11 +321,15 @@ private:
   void addIonData(std::vector<std::pair<std::string, NumericType>> data) {
     for (const auto &pair : data) {
       if (processMetaData.find(pair.first) == processMetaData.end()) {
-        processMetaData[pair.first] = std::vector<NumericType>{pair.second};
+        addMetaData(pair.first + " Rate", pair.second);
       } else {
         processMetaData[pair.first].push_back(pair.second);
       }
     }
+  }
+
+  inline void addMetaData(const std::string &key, double value) {
+    processMetaData[key] = std::vector<double>{value};
   }
 };
 

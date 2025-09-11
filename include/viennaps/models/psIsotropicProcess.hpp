@@ -88,18 +88,20 @@ private:
     this->setProcessName("IsotropicProcess");
 
     // store process data
-    processMetaData["IsotropicRate"] = std::vector<NumericType>{rate};
+    addMetaData("IsotropicRate", rate);
     if (!materialRates.empty()) {
-      processMetaData["MaterialRates"] = std::vector<NumericType>{};
       for (const auto &materialRate : materialRates) {
-        processMetaData["Material"].push_back(
-            static_cast<NumericType>(materialRate.first));
-        processMetaData["MaterialRates"].push_back(materialRate.second);
+        addMetaData("Rate " + MaterialMap::getMaterialName(materialRate.first),
+                    materialRate.second);
       }
     }
   }
 
   using ProcessModelCPU<NumericType, D>::processMetaData;
+
+  inline void addMetaData(const std::string &key, double value) {
+    processMetaData[key] = std::vector<double>{value};
+  }
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(IsotropicProcess)

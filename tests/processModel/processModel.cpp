@@ -1,4 +1,4 @@
-#include <psProcessModel.hpp>
+#include <process/psProcessModel.hpp>
 #include <vcTestAsserts.hpp>
 
 #include <models/psCF4O2Etching.hpp>
