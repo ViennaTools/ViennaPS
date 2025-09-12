@@ -1,14 +1,14 @@
 import numpy as np
-import viennaps3d as vps
+import viennaps.d3 as psd
+import viennaps as ps
 
-vps.setNumThreads(16)
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
+ps.setNumThreads(16)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
 
-vps.Length.setUnit("um")
-vps.Time.setUnit("min")
+ps.Length.setUnit("um")
+ps.Time.setUnit("min")
 
-context = vps.gpu.Context()
-context.create(modulePath=vps.ptxPath)
+ps.gpu.Context.createContext()
 
 # hole geometry parameters
 gridDelta = 0.03  # um
@@ -25,7 +25,7 @@ A_O = [2, 2, 2, 1, 1]
 yo2 = [0.44, 0.5, 0.56, 0.62, 0]
 
 # etching model parameters
-params = vps.SF6O2Etching.defaultParameters()
+params = psd.SF6O2Etching.defaultParameters()
 params.Substrate.A_ie = 5.0
 params.Substrate.Eth_ie = 15.0
 
@@ -42,44 +42,51 @@ params.Mask.rho = params.Substrate.rho * 10.0
 
 # simulation parameters
 processDuration = 3  # min
-integrationScheme = vps.IntegrationScheme.ENGQUIST_OSHER_2ND_ORDER
+integrationScheme = ps.IntegrationScheme.ENGQUIST_OSHER_2ND_ORDER
 numberOfRaysPerPoint = int(1000)
 
 for i in range(len(yo2)):
 
     # geometry setup, all units in um
-    geometry = vps.Domain(
+    geometry = psd.Domain(
         gridDelta=gridDelta,
         xExtent=extent,
         yExtent=extent,
     )
-    vps.MakeHole(
+    psd.MakeHole(
         domain=geometry,
         holeRadius=holeRadius,
         holeDepth=0.0,
         maskHeight=maskHeight,
         maskTaperAngle=taperAngle,
-        holeShape=vps.HoleShape.HALF,
+        holeShape=ps.HoleShape.HALF,
     ).apply()
 
-    rayParams = vps.RayTracingParameters()
+    rayParams = ps.RayTracingParameters()
     rayParams.smoothingNeighbors = 2
     rayParams.raysPerPoint = numberOfRaysPerPoint
 
-    process = vps.gpu.Process(context)
+    advectionParams = ps.AdvectionParameters()
+    advectionParams.integrationScheme = integrationScheme
+
+    coverageParams = ps.CoverageParameters()
+    coverageParams.maxIterations = 20
+    coverageParams.coverageDeltaThreshold = 1e-4
+
+    process = psd.Process()
     process.setDomain(geometry)
-    process.setMaxCoverageInitIterations(20)
-    process.setCoverageDeltaThreshold(1e-4)
     process.setProcessDuration(processDuration)
-    process.setIntegrationScheme(integrationScheme)
     process.setRayTracingParameters(rayParams)
+    process.setAdvectionParameters(advectionParams)
+    process.setCoverageParameters(coverageParams)
+    process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
     params.ionFlux = ionFlux[i]
     params.etchantFlux = etchantFlux[i]
     params.passivationFlux = oxygenFlux[i]
     params.Passivation.A_ie = A_O[i]
 
-    model = vps.gpu.SF6O2Etching(params)
+    model = psd.SF6O2Etching(params)
 
     process.setProcessModel(model)
     process.apply()

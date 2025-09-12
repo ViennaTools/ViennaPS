@@ -17,12 +17,14 @@ from . import util
 
 __all__: list[str] = [
     "AdvectionParameters",
+    "AtomicLayerProcessParameters",
     "CF4O2Parameters",
     "CF4O2ParametersIons",
     "CF4O2ParametersMask",
     "CF4O2ParametersPassivation",
     "CF4O2ParametersSi",
     "CF4O2ParametersSiGe",
+    "CoverageParameters",
     "Extrude",
     "FaradayCageParameters",
     "FluorocarbonParameters",
@@ -32,6 +34,7 @@ __all__: list[str] = [
     "FluorocarbonParametersSi",
     "FluorocarbonParametersSi3N4",
     "FluorocarbonParametersSiO2",
+    "FluxEngineType",
     "HoleShape",
     "IBEParameters",
     "Length",
@@ -85,6 +88,35 @@ class AdvectionParameters:
     def timeStepRatio(self) -> float: ...
     @timeStepRatio.setter
     def timeStepRatio(self, arg0: typing.SupportsFloat) -> None: ...
+
+class AtomicLayerProcessParameters:
+    def __init__(self) -> None: ...
+    def toMetaData(self) -> dict[str, list[float]]:
+        """
+        Convert the ALD process parameters to a metadata dict.
+        """
+
+    def toMetaDataString(self) -> str:
+        """
+        Convert the ALD process parameters to a metadata string.
+        """
+
+    @property
+    def coverageTimeStep(self) -> float: ...
+    @coverageTimeStep.setter
+    def coverageTimeStep(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
+    def numCycles(self) -> int: ...
+    @numCycles.setter
+    def numCycles(self, arg0: typing.SupportsInt) -> None: ...
+    @property
+    def pulseTime(self) -> float: ...
+    @pulseTime.setter
+    def pulseTime(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
+    def purgePulseTime(self) -> float: ...
+    @purgePulseTime.setter
+    def purgePulseTime(self, arg0: typing.SupportsFloat) -> None: ...
 
 class CF4O2Parameters:
     Ions: CF4O2ParametersIons
@@ -278,6 +310,27 @@ class CF4O2ParametersSiGe:
     def x(self) -> float: ...
     @x.setter
     def x(self, arg0: typing.SupportsFloat) -> None: ...
+
+class CoverageParameters:
+    def __init__(self) -> None: ...
+    def toMetaData(self) -> dict[str, list[float]]:
+        """
+        Convert the coverage parameters to a metadata dict.
+        """
+
+    def toMetaDataString(self) -> str:
+        """
+        Convert the coverage parameters to a metadata string.
+        """
+
+    @property
+    def coverageDeltaThreshold(self) -> float: ...
+    @coverageDeltaThreshold.setter
+    def coverageDeltaThreshold(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
+    def maxIterations(self) -> int: ...
+    @maxIterations.setter
+    def maxIterations(self, arg0: typing.SupportsInt) -> None: ...
 
 class Extrude:
     @typing.overload
@@ -547,6 +600,18 @@ class FluorocarbonParametersSiO2:
     def rho(self) -> float: ...
     @rho.setter
     def rho(self, arg0: typing.SupportsFloat) -> None: ...
+
+class FluxEngineType(enum.IntEnum):
+    CPU_DISK: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.CPU_DISK: 0>
+    GPU_TRIANGLE: typing.ClassVar[
+        FluxEngineType
+    ]  # value = <FluxEngineType.GPU_TRIANGLE: 1>
+    @classmethod
+    def __new__(cls, value): ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 
 class HoleShape(enum.IntEnum):
     FULL: typing.ClassVar[HoleShape]  # value = <HoleShape.FULL: 0>

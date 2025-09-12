@@ -16,15 +16,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.def("setNumThreads", &omp_set_num_threads);
 
   // Logger
-  pybind11::class_<Logger, SmartPointer<Logger>>(module, "Logger",
-                                                 pybind11::module_local())
+  py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())
       .def_static("setLogLevel", &Logger::setLogLevel)
       .def_static("getLogLevel", &Logger::getLogLevel)
       .def_static("setLogFile", &Logger::setLogFile)
       .def_static("appendToLogFile", &Logger::appendToLogFile)
       .def_static("closeLogFile", &Logger::closeLogFile)
       .def_static("getInstance", &Logger::getInstance,
-                  pybind11::return_value_policy::reference)
+                  py::return_value_policy::reference)
       .def("addDebug", &Logger::addDebug)
       .def("addTiming", (Logger & (Logger::*)(const std::string &, double)) &
                             Logger::addTiming)
@@ -33,13 +32,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                Logger::addTiming)
       .def("addInfo", &Logger::addInfo)
       .def("addWarning", &Logger::addWarning)
-      .def("addError", &Logger::addError, pybind11::arg("s"),
-           pybind11::arg("shouldAbort") = true)
+      .def("addError", &Logger::addError, py::arg("s"),
+           py::arg("shouldAbort") = true)
       .def("print", [](Logger &instance) { instance.print(std::cout); });
 
   // Material enum
-  pybind11::native_enum<Material>(module, "Material", "enum.IntEnum",
-                                  "Material types for domain and level sets.")
+  py::native_enum<Material>(module, "Material", "enum.IntEnum",
+                            "Material types for domain and level sets.")
       .value("Undefined", Material::Undefined) // -1
       .value("Mask", Material::Mask)           // 0
       .value("Si", Material::Si)
@@ -64,11 +63,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .finalize();
 
   // MaterialMap
-  pybind11::class_<MaterialMap, SmartPointer<MaterialMap>>(module,
-                                                           "MaterialMap")
-      .def(pybind11::init<>())
+  py::class_<MaterialMap, SmartPointer<MaterialMap>>(module, "MaterialMap")
+      .def(py::init<>())
       .def("insertNextMaterial", &MaterialMap::insertNextMaterial,
-           pybind11::arg("material") = Material::Undefined)
+           py::arg("material") = Material::Undefined)
       .def("getMaterialAtIdx", &MaterialMap::getMaterialAtIdx)
       .def("getMaterialMap", &MaterialMap::getMaterialMap)
       .def("size", &MaterialMap::size)
@@ -79,15 +77,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Get the name of a material.");
 
   // Meta Data Enum
-  pybind11::native_enum<MetaDataLevel>(module, "MetaDataLevel", "enum.IntEnum")
+  py::native_enum<MetaDataLevel>(module, "MetaDataLevel", "enum.IntEnum")
       .value("NONE", MetaDataLevel::NONE)
       .value("GRID", MetaDataLevel::GRID)
       .value("PROCESS", MetaDataLevel::PROCESS)
       .value("FULL", MetaDataLevel::FULL)
       .finalize();
 
-  // Hole
-  pybind11::native_enum<HoleShape>(module, "HoleShape", "enum.IntEnum")
+  // HoleShape Enum
+  py::native_enum<HoleShape>(module, "HoleShape", "enum.IntEnum")
       .value("FULL", HoleShape::FULL)
       .value("HALF", HoleShape::HALF)
       .value("QUARTER", HoleShape::QUARTER)
@@ -99,8 +97,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Units
   // Length
-  pybind11::native_enum<decltype(units::Length::METER)>(module, "LengthUnit",
-                                                        "enum.IntEnum")
+  py::native_enum<decltype(units::Length::METER)>(module, "LengthUnit",
+                                                  "enum.IntEnum")
       .value("METER", units::Length::METER)
       .value("CENTIMETER", units::Length::CENTIMETER)
       .value("MILLIMETER", units::Length::MILLIMETER)
@@ -110,11 +108,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("UNDEFINED", units::Length::UNDEFINED)
       .finalize();
 
-  pybind11::class_<units::Length>(module, "Length")
-      .def_static("setUnit", pybind11::overload_cast<const std::string &>(
+  py::class_<units::Length>(module, "Length")
+      .def_static("setUnit", py::overload_cast<const std::string &>(
                                  &units::Length::setUnit))
       .def_static("getInstance", &units::Length::getInstance,
-                  pybind11::return_value_policy::reference)
+                  py::return_value_policy::reference)
       .def("convertMeter", &units::Length::convertMeter)
       .def("convertCentimeter", &units::Length::convertCentimeter)
       .def("convertMillimeter", &units::Length::convertMillimeter)
@@ -125,19 +123,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toShortString", &units::Length::toShortString);
 
   // Time
-  pybind11::native_enum<decltype(units::Time::MINUTE)>(module, "TimeUnit",
-                                                       "enum.IntEnum")
+  py::native_enum<decltype(units::Time::MINUTE)>(module, "TimeUnit",
+                                                 "enum.IntEnum")
       .value("MINUTE", units::Time::MINUTE)
       .value("SECOND", units::Time::SECOND)
       .value("MILLISECOND", units::Time::MILLISECOND)
       .value("UNDEFINED", units::Time::UNDEFINED)
       .finalize();
 
-  pybind11::class_<units::Time>(module, "Time")
-      .def_static("setUnit", pybind11::overload_cast<const std::string &>(
-                                 &units::Time::setUnit))
+  py::class_<units::Time>(module, "Time")
+      .def_static("setUnit",
+                  py::overload_cast<const std::string &>(&units::Time::setUnit))
       .def_static("getInstance", &units::Time::getInstance,
-                  pybind11::return_value_policy::reference)
+                  py::return_value_policy::reference)
       .def("convertMinute", &units::Time::convertMinute)
       .def("convertSecond", &units::Time::convertSecond)
       .def("convertMillisecond", &units::Time::convertMillisecond)
@@ -145,9 +143,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toShortString", &units::Time::toShortString);
 
   // ProcessParams
-  pybind11::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(
-      module, "ProcessParams")
-      .def(pybind11::init<>())
+  py::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(module,
+                                                               "ProcessParams")
+      .def(py::init<>())
       .def("insertNextScalar", &ProcessParams<T>::insertNextScalar)
       .def("getScalarData",
            (T & (ProcessParams<T>::*)(int)) & ProcessParams<T>::getScalarData)
@@ -164,26 +162,26 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getScalarDataLabel", &ProcessParams<T>::getScalarDataLabel);
 
   // Plasma Etching Parameters
-  pybind11::class_<PlasmaEtchingParameters<T>::MaskType>(
+  py::class_<PlasmaEtchingParameters<T>::MaskType>(
       module, "PlasmaEtchingParametersMask")
-      .def(pybind11::init<>())
+      .def(py::init<>())
       .def_readwrite("rho", &PlasmaEtchingParameters<T>::MaskType::rho)
       .def_readwrite("A_sp", &PlasmaEtchingParameters<T>::MaskType::A_sp)
       .def_readwrite("B_sp", &PlasmaEtchingParameters<T>::MaskType::B_sp)
       .def_readwrite("Eth_sp", &PlasmaEtchingParameters<T>::MaskType::Eth_sp);
 
-  pybind11::class_<PlasmaEtchingParameters<T>::PolymerType>(
+  py::class_<PlasmaEtchingParameters<T>::PolymerType>(
       module, "PlasmaEtchingParametersPolymer")
-      .def(pybind11::init<>())
+      .def(py::init<>())
       .def_readwrite("rho", &PlasmaEtchingParameters<T>::PolymerType::rho)
       .def_readwrite("A_sp", &PlasmaEtchingParameters<T>::PolymerType::A_sp)
       .def_readwrite("B_sp", &PlasmaEtchingParameters<T>::PolymerType::B_sp)
       .def_readwrite("Eth_sp",
                      &PlasmaEtchingParameters<T>::PolymerType::Eth_sp);
 
-  pybind11::class_<PlasmaEtchingParameters<T>::MaterialType>(
+  py::class_<PlasmaEtchingParameters<T>::MaterialType>(
       module, "PlasmaEtchingParametersSubstrate")
-      .def(pybind11::init<>())
+      .def(py::init<>())
       .def_readwrite("rho", &PlasmaEtchingParameters<T>::MaterialType::rho)
       .def_readwrite("k_sigma",
                      &PlasmaEtchingParameters<T>::MaterialType::k_sigma)
@@ -202,17 +200,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   //  .def_readwrite("theta_g_ie",
   //  &PlasmaEtchingParameters<T>::MaterialType::theta_g_ie);
 
-  pybind11::class_<PlasmaEtchingParameters<T>::PassivationType>(
+  py::class_<PlasmaEtchingParameters<T>::PassivationType>(
       module, "PlasmaEtchingParametersPassivation")
-      .def(pybind11::init<>())
+      .def(py::init<>())
       .def_readwrite("Eth_ie",
                      &PlasmaEtchingParameters<T>::PassivationType::Eth_ie)
       .def_readwrite("A_ie",
                      &PlasmaEtchingParameters<T>::PassivationType::A_ie);
 
-  pybind11::class_<PlasmaEtchingParameters<T>::IonType>(
-      module, "PlasmaEtchingParametersIons")
-      .def(pybind11::init<>())
+  py::class_<PlasmaEtchingParameters<T>::IonType>(module,
+                                                  "PlasmaEtchingParametersIons")
+      .def(py::init<>())
       .def_readwrite("meanEnergy",
                      &PlasmaEtchingParameters<T>::IonType::meanEnergy)
       .def_readwrite("sigmaEnergy",
@@ -227,9 +225,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("thetaRMax",
                      &PlasmaEtchingParameters<T>::IonType::thetaRMax);
 
-  pybind11::class_<PlasmaEtchingParameters<T>>(module,
-                                               "PlasmaEtchingParameters")
-      .def(pybind11::init<>())
+  py::class_<PlasmaEtchingParameters<T>>(module, "PlasmaEtchingParameters")
+      .def(py::init<>())
       .def_readwrite("ionFlux", &PlasmaEtchingParameters<T>::ionFlux)
       .def_readwrite("etchantFlux", &PlasmaEtchingParameters<T>::etchantFlux)
       .def_readwrite("passivationFlux",
@@ -244,14 +241,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Ions", &PlasmaEtchingParameters<T>::Ions);
 
   // CF4O2 Parameters
-  pybind11::class_<CF4O2Parameters<T>::MaskType>(module, "CF4O2ParametersMask")
-      .def(pybind11::init<>())
+  py::class_<CF4O2Parameters<T>::MaskType>(module, "CF4O2ParametersMask")
+      .def(py::init<>())
       .def_readwrite("rho", &CF4O2Parameters<T>::MaskType::rho)
       .def_readwrite("A_sp", &CF4O2Parameters<T>::MaskType::A_sp)
       .def_readwrite("Eth_sp", &CF4O2Parameters<T>::MaskType::Eth_sp);
 
-  pybind11::class_<CF4O2Parameters<T>::SiType>(module, "CF4O2ParametersSi")
-      .def(pybind11::init<>())
+  py::class_<CF4O2Parameters<T>::SiType>(module, "CF4O2ParametersSi")
+      .def(py::init<>())
       .def_readwrite("rho", &CF4O2Parameters<T>::SiType::rho)
       .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiType::k_sigma)
       .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiType::beta_sigma)
@@ -260,8 +257,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Eth_ie", &CF4O2Parameters<T>::SiType::Eth_ie)
       .def_readwrite("A_ie", &CF4O2Parameters<T>::SiType::A_ie);
 
-  pybind11::class_<CF4O2Parameters<T>::SiGeType>(module, "CF4O2ParametersSiGe")
-      .def(pybind11::init<>())
+  py::class_<CF4O2Parameters<T>::SiGeType>(module, "CF4O2ParametersSiGe")
+      .def(py::init<>())
       .def_readwrite("x", &CF4O2Parameters<T>::SiGeType::x)
       .def_readwrite("rho", &CF4O2Parameters<T>::SiGeType::rho)
       .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiGeType::k_sigma)
@@ -272,16 +269,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("A_ie", &CF4O2Parameters<T>::SiGeType::A_ie)
       .def("k_sigma_SiGe", &CF4O2Parameters<T>::SiGeType::k_sigma_SiGe);
 
-  pybind11::class_<CF4O2Parameters<T>::PassivationType>(
-      module, "CF4O2ParametersPassivation")
-      .def(pybind11::init<>())
+  py::class_<CF4O2Parameters<T>::PassivationType>(module,
+                                                  "CF4O2ParametersPassivation")
+      .def(py::init<>())
       .def_readwrite("Eth_O_ie", &CF4O2Parameters<T>::PassivationType::Eth_O_ie)
       .def_readwrite("Eth_C_ie", &CF4O2Parameters<T>::PassivationType::Eth_C_ie)
       .def_readwrite("A_O_ie", &CF4O2Parameters<T>::PassivationType::A_O_ie)
       .def_readwrite("A_C_ie", &CF4O2Parameters<T>::PassivationType::A_C_ie);
 
-  pybind11::class_<CF4O2Parameters<T>::IonType>(module, "CF4O2ParametersIons")
-      .def(pybind11::init<>())
+  py::class_<CF4O2Parameters<T>::IonType>(module, "CF4O2ParametersIons")
+      .def(py::init<>())
       .def_readwrite("meanEnergy", &CF4O2Parameters<T>::IonType::meanEnergy)
       .def_readwrite("sigmaEnergy", &CF4O2Parameters<T>::IonType::sigmaEnergy)
       .def_readwrite("exponent", &CF4O2Parameters<T>::IonType::exponent)
@@ -289,8 +286,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("n_l", &CF4O2Parameters<T>::IonType::n_l)
       .def_readwrite("minAngle", &CF4O2Parameters<T>::IonType::minAngle);
 
-  pybind11::class_<CF4O2Parameters<T>>(module, "CF4O2Parameters")
-      .def(pybind11::init<>())
+  py::class_<CF4O2Parameters<T>>(module, "CF4O2Parameters")
+      .def(py::init<>())
       .def_readwrite("ionFlux", &CF4O2Parameters<T>::ionFlux)
       .def_readwrite("etchantFlux", &CF4O2Parameters<T>::etchantFlux)
       .def_readwrite("oxygenFlux", &CF4O2Parameters<T>::oxygenFlux)
@@ -312,9 +309,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Ions", &CF4O2Parameters<T>::Ions);
 
   // Fluorocarbon Parameters
-  pybind11::class_<FluorocarbonParameters<T>::MaskType>(
-      module, "FluorocarbonParametersMask")
-      .def(pybind11::init<>())
+  py::class_<FluorocarbonParameters<T>::MaskType>(module,
+                                                  "FluorocarbonParametersMask")
+      .def(py::init<>())
       .def_readwrite("rho", &FluorocarbonParameters<T>::MaskType::rho)
       .def_readwrite("beta_p", &FluorocarbonParameters<T>::MaskType::beta_p)
       .def_readwrite("beta_e", &FluorocarbonParameters<T>::MaskType::beta_e)
@@ -322,9 +319,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("B_sp", &FluorocarbonParameters<T>::MaskType::B_sp)
       .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::MaskType::Eth_sp);
 
-  pybind11::class_<FluorocarbonParameters<T>::SiO2Type>(
-      module, "FluorocarbonParametersSiO2")
-      .def(pybind11::init<>())
+  py::class_<FluorocarbonParameters<T>::SiO2Type>(module,
+                                                  "FluorocarbonParametersSiO2")
+      .def(py::init<>())
       .def_readwrite("rho", &FluorocarbonParameters<T>::SiO2Type::rho)
       .def_readwrite("E_a", &FluorocarbonParameters<T>::SiO2Type::E_a)
       .def_readwrite("K", &FluorocarbonParameters<T>::SiO2Type::K)
@@ -334,9 +331,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::SiO2Type::Eth_sp)
       .def_readwrite("A_ie", &FluorocarbonParameters<T>::SiO2Type::A_ie);
 
-  pybind11::class_<FluorocarbonParameters<T>::Si3N4Type>(
+  py::class_<FluorocarbonParameters<T>::Si3N4Type>(
       module, "FluorocarbonParametersSi3N4")
-      .def(pybind11::init<>())
+      .def(py::init<>())
       .def_readwrite("rho", &FluorocarbonParameters<T>::Si3N4Type::rho)
       .def_readwrite("E_a", &FluorocarbonParameters<T>::Si3N4Type::E_a)
       .def_readwrite("K", &FluorocarbonParameters<T>::Si3N4Type::K)
@@ -346,9 +343,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::Si3N4Type::Eth_sp)
       .def_readwrite("A_ie", &FluorocarbonParameters<T>::Si3N4Type::A_ie);
 
-  pybind11::class_<FluorocarbonParameters<T>::SiType>(
-      module, "FluorocarbonParametersSi")
-      .def(pybind11::init<>())
+  py::class_<FluorocarbonParameters<T>::SiType>(module,
+                                                "FluorocarbonParametersSi")
+      .def(py::init<>())
       .def_readwrite("rho", &FluorocarbonParameters<T>::SiType::rho)
       .def_readwrite("E_a", &FluorocarbonParameters<T>::SiType::E_a)
       .def_readwrite("K", &FluorocarbonParameters<T>::SiType::K)
@@ -358,16 +355,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::SiType::Eth_sp)
       .def_readwrite("A_ie", &FluorocarbonParameters<T>::SiType::A_ie);
 
-  pybind11::class_<FluorocarbonParameters<T>::PolymerType>(
+  py::class_<FluorocarbonParameters<T>::PolymerType>(
       module, "FluorocarbonParametersPolymer")
-      .def(pybind11::init<>())
+      .def(py::init<>())
       .def_readwrite("rho", &FluorocarbonParameters<T>::PolymerType::rho)
       .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::PolymerType::Eth_ie)
       .def_readwrite("A_ie", &FluorocarbonParameters<T>::PolymerType::A_ie);
 
-  pybind11::class_<FluorocarbonParameters<T>::IonType>(
-      module, "FluorocarbonParametersIons")
-      .def(pybind11::init<>())
+  py::class_<FluorocarbonParameters<T>::IonType>(module,
+                                                 "FluorocarbonParametersIons")
+      .def(py::init<>())
       .def_readwrite("meanEnergy",
                      &FluorocarbonParameters<T>::IonType::meanEnergy)
       .def_readwrite("sigmaEnergy",
@@ -378,8 +375,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("n_l", &FluorocarbonParameters<T>::IonType::n_l)
       .def_readwrite("minAngle", &FluorocarbonParameters<T>::IonType::minAngle);
 
-  pybind11::class_<FluorocarbonParameters<T>>(module, "FluorocarbonParameters")
-      .def(pybind11::init<>())
+  py::class_<FluorocarbonParameters<T>>(module, "FluorocarbonParameters")
+      .def(py::init<>())
       .def_readwrite("ionFlux", &FluorocarbonParameters<T>::ionFlux)
       .def_readwrite("etchantFlux", &FluorocarbonParameters<T>::etchantFlux)
       .def_readwrite("polyFlux", &FluorocarbonParameters<T>::polyFlux)
@@ -393,8 +390,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Ions", &FluorocarbonParameters<T>::Ions);
 
   // Ion Beam Etching Parameters
-  pybind11::class_<IBEParameters<T>>(module, "IBEParameters")
-      .def(pybind11::init<>())
+  py::class_<IBEParameters<T>>(module, "IBEParameters")
+      .def(py::init<>())
       .def_readwrite("planeWaferRate", &IBEParameters<T>::planeWaferRate)
       .def_readwrite("materialPlaneWaferRate",
                      &IBEParameters<T>::materialPlaneWaferRate)
@@ -412,8 +409,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("redepositionRate", &IBEParameters<T>::redepositionRate);
 
   // Faraday Cage Etching
-  pybind11::class_<FaradayCageParameters<T>>(module, "FaradayCageParameters")
-      .def(pybind11::init<>())
+  py::class_<FaradayCageParameters<T>>(module, "FaradayCageParameters")
+      .def(py::init<>())
       .def_readwrite("ibeParams", &FaradayCageParameters<T>::ibeParams)
       .def_readwrite("cageAngle", &FaradayCageParameters<T>::cageAngle);
 
@@ -440,15 +437,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // ***************************************************************************
 
   // Normalization Enum
-  pybind11::native_enum<viennaray::NormalizationType>(
-      module, "NormalizationType", "enum.IntEnum")
+  py::native_enum<viennaray::NormalizationType>(module, "NormalizationType",
+                                                "enum.IntEnum")
       .value("SOURCE", viennaray::NormalizationType::SOURCE)
       .value("MAX", viennaray::NormalizationType::MAX)
       .finalize();
 
+  // Flux Engine Type Enum
+  py::native_enum<FluxEngineType>(module, "FluxEngineType", "enum.IntEnum")
+      .value("CPU_DISK", FluxEngineType::CPU_DISK)
+      .value("GPU_TRIANGLE", FluxEngineType::GPU_TRIANGLE)
+      .finalize();
+
   // RayTracingParameters
-  pybind11::class_<RayTracingParameters>(module, "RayTracingParameters")
-      .def(pybind11::init<>())
+  py::class_<RayTracingParameters>(module, "RayTracingParameters")
+      .def(py::init<>())
       .def_readwrite("normalizationType",
                      &RayTracingParameters::normalizationType)
       .def_readwrite("raysPerPoint", &RayTracingParameters::raysPerPoint)
@@ -464,8 +467,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Convert the ray tracing parameters to a metadata string.");
 
   // AdvectionParameters
-  pybind11::class_<AdvectionParameters>(module, "AdvectionParameters")
-      .def(pybind11::init<>())
+  py::class_<AdvectionParameters>(module, "AdvectionParameters")
+      .def(py::init<>())
       .def_readwrite("integrationScheme",
                      &AdvectionParameters::integrationScheme)
       .def_readwrite("timeStepRatio", &AdvectionParameters::timeStepRatio)
@@ -477,6 +480,32 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Convert the advection parameters to a metadata dict.")
       .def("toMetaDataString", &AdvectionParameters::toMetaDataString,
            "Convert the advection parameters to a metadata string.");
+
+  // CoverageParameters
+  py::class_<CoverageParameters>(module, "CoverageParameters")
+      .def(py::init<>())
+      .def_readwrite("coverageDeltaThreshold",
+                     &CoverageParameters::coverageDeltaThreshold)
+      .def_readwrite("maxIterations", &CoverageParameters::maxIterations)
+      .def("toMetaData", &CoverageParameters::toMetaData,
+           "Convert the coverage parameters to a metadata dict.")
+      .def("toMetaDataString", &CoverageParameters::toMetaDataString,
+           "Convert the coverage parameters to a metadata string.");
+
+  // AtomicLayerProcessParameters
+  py::class_<AtomicLayerProcessParameters>(module,
+                                           "AtomicLayerProcessParameters")
+      .def(py::init<>())
+      .def_readwrite("numCycles", &AtomicLayerProcessParameters::numCycles)
+      .def_readwrite("pulseTime", &AtomicLayerProcessParameters::pulseTime)
+      .def_readwrite("coverageTimeStep",
+                     &AtomicLayerProcessParameters::coverageTimeStep)
+      .def_readwrite("purgePulseTime",
+                     &AtomicLayerProcessParameters::purgePulseTime)
+      .def("toMetaData", &AtomicLayerProcessParameters::toMetaData,
+           "Convert the ALD process parameters to a metadata dict.")
+      .def("toMetaDataString", &AtomicLayerProcessParameters::toMetaDataString,
+           "Convert the ALD process parameters to a metadata string.");
 
   //   ***************************************************************************
   //                                  OTHER
@@ -519,15 +548,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   bindApi<3>(m3);
 
   // Extrude domain (2D to 3D)
-  pybind11::class_<Extrude<T>>(module, "Extrude")
-      .def(pybind11::init())
-      .def(pybind11::init<SmartPointer<Domain<T, 2>> &,
-                          SmartPointer<Domain<T, 3>> &, std::array<T, 2>,
-                          const int,
-                          std::array<viennals::BoundaryConditionEnum, 3>>(),
-           pybind11::arg("inputDomain"), pybind11::arg("outputDomain"),
-           pybind11::arg("extent"), pybind11::arg("extrudeDimension"),
-           pybind11::arg("boundaryConditions"))
+  py::class_<Extrude<T>>(module, "Extrude")
+      .def(py::init())
+      .def(py::init<SmartPointer<Domain<T, 2>> &, SmartPointer<Domain<T, 3>> &,
+                    std::array<T, 2>, const int,
+                    std::array<viennals::BoundaryConditionEnum, 3>>(),
+           py::arg("inputDomain"), py::arg("outputDomain"), py::arg("extent"),
+           py::arg("extrudeDimension"), py::arg("boundaryConditions"))
       .def("setInputDomain", &Extrude<T>::setInputDomain,
            "Set the input domain to be extruded.")
       .def("setOutputDomain", &Extrude<T>::setOutputDomain,
@@ -538,8 +565,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setExtrudeDimension", &Extrude<T>::setExtrudeDimension,
            "Set which index of the added dimension (x: 0, y: 1, z: 2).")
       .def("setBoundaryConditions",
-           pybind11::overload_cast<
-               std::array<viennals::BoundaryConditionEnum, 3>>(
+           py::overload_cast<std::array<viennals::BoundaryConditionEnum, 3>>(
                &Extrude<T>::setBoundaryConditions),
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &Extrude<T>::apply, "Run the extrusion.");
@@ -551,9 +577,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 #ifdef VIENNACORE_COMPILE_GPU
   auto m_gpu = module.def_submodule("gpu", "GPU support functions.");
 
-  pybind11::class_<DeviceContext, std::shared_ptr<DeviceContext>>(m_gpu,
-                                                                  "Context")
-      .def(pybind11::init())
+  py::class_<std::filesystem::path>(m_gpu, "Path").def(py::init<std::string>());
+  py::implicitly_convertible<std::string, std::filesystem::path>();
+
+  py::class_<DeviceContext, std::shared_ptr<DeviceContext>>(m_gpu, "Context")
+      .def(py::init())
       //  .def_readwrite("modulePath", &Context::modulePath)
       //  .def_readwrite("moduleNames", &Context::moduleNames)
       //  .def_readwrite("cuda", &Context::cuda, "Cuda context.")
@@ -563,23 +591,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       //  .def("getModule", &Context::getModule)
       .def_static("createContext", &DeviceContext::createContext,
                   "Create a new context.",
-                  pybind11::arg("modulePath") = VIENNACORE_KERNELS_PATH,
-                  pybind11::arg("deviceID") = 0,
-                  pybind11::arg("registerInGlobal") = true)
+                  py::arg("modulePath") = VIENNACORE_KERNELS_PATH,
+                  py::arg("deviceID") = 0, py::arg("registerInGlobal") = true)
       .def_static("getContextFromRegistry",
                   &DeviceContext::getContextFromRegistry,
                   "Get a context from the global registry by device ID.",
-                  pybind11::arg("deviceID") = 0)
+                  py::arg("deviceID") = 0)
       .def_static(
           "hasContextInRegistry", &DeviceContext::hasContextInRegistry,
           "Check if a context exists in the global registry by device ID.",
-          pybind11::arg("deviceID") = 0)
+          py::arg("deviceID") = 0)
       .def_static("getRegisteredDeviceIDs",
                   &DeviceContext::getRegisteredDeviceIDs,
                   "Get a list of all device IDs with registered contexts.")
       .def("create", &DeviceContext::create, "Create a new context.",
-           pybind11::arg("modulePath") = VIENNACORE_KERNELS_PATH,
-           pybind11::arg("deviceID") = 0)
+           py::arg("modulePath") = VIENNACORE_KERNELS_PATH,
+           py::arg("deviceID") = 0)
       .def("destroy", &DeviceContext::destroy, "Destroy the context.")
       .def("addModule", &DeviceContext::addModule,
            "Add a module to the context.")

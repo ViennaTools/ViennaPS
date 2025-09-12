@@ -7,7 +7,8 @@
 #####################################################################
 
 from argparse import ArgumentParser
-import viennaps3d as vps
+import viennaps.d3 as psd
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -18,30 +19,29 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-context = vps.gpu.Context()
-context.create()
+ps.gpu.Context.createContext()
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.ReadConfigFile(args.filename)
 
 # print only error output surfaces during the process
-vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+ps.Logger.setLogLevel(ps.LogLevel.ERROR)
 
-# Map the shape string to the corresponding vps.HoleShape enum
+# Map the shape string to the corresponding ps.HoleShape enum
 shape_map = {
-    "Full": vps.HoleShape.FULL,
-    "Half": vps.HoleShape.HALF,
-    "Quarter": vps.HoleShape.QUARTER,
+    "Full": ps.HoleShape.FULL,
+    "Half": ps.HoleShape.HALF,
+    "Quarter": ps.HoleShape.QUARTER,
 }
 
 hole_shape_str = params.get("holeShape", "Full").strip()
 
 # geometry setup, all units in um
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeHole(
+psd.MakeHole(
     domain=geometry,
     holeRadius=params["holeRadius"],
     holeDepth=0.0,
@@ -50,15 +50,15 @@ vps.MakeHole(
     holeShape=shape_map[hole_shape_str],
 ).apply()
 
-depoModel = vps.gpu.MultiParticleProcess()
+depoModel = psd.gpu.MultiParticleProcess()
 depoModel.addNeutralParticle(params["stickingDep"])
 depoModel.addIonParticle(params["ionSourceExponent"])
 
-etchModel = vps.gpu.MultiParticleProcess()
+etchModel = psd.gpu.MultiParticleProcess()
 materialStickingEtch = {
-    vps.Material.Si: params["stickingEtchSubs"],
-    vps.Material.Mask: params["stickingEtchMask"],
-    vps.Material.Polymer: params["stickingEtchPoly"],
+    ps.Material.Si: params["stickingEtchSubs"],
+    ps.Material.Mask: params["stickingEtchMask"],
+    ps.Material.Polymer: params["stickingEtchPoly"],
 }
 etchModel.addNeutralParticle(materialStickingEtch, defaultStickingProbability=1.0)
 etchModel.addIonParticle(params["ionSourceExponent"])
@@ -110,11 +110,11 @@ def rateFunctionDep(fluxes, material):
 # Custom rate function for the etch model
 def rateFunctionEtch(fluxes, material):
     rate = 0.0
-    if material == vps.Material.Mask:
+    if material == ps.Material.Mask:
         rate = fluxes[1] * ionEtchRateMask + fluxes[0] * neuEtchRateMask
-    if material == vps.Material.Polymer:
+    if material == ps.Material.Polymer:
         rate = fluxes[1] * ionEtchRatePoly + fluxes[0] * neuEtchRatePoly
-    if material == vps.Material.Si:
+    if material == ps.Material.Si:
         rate = fluxes[1] * ionEtchRateSubs + fluxes[0] * neuEtchRateSubs
     return rate
 
@@ -122,14 +122,25 @@ def rateFunctionEtch(fluxes, material):
 depoModel.setRateFunction(rateFunctionDep)
 etchModel.setRateFunction(rateFunctionEtch)
 
-depoProcess = vps.gpu.Process(context, geometry, depoModel, params["depTime"])
-depoProcess.setTimeStepRatio(0.2)
-etchProcess = vps.gpu.Process(context, geometry, etchModel, params["etchTime"])
-etchProcess.setTimeStepRatio(0.2)
+advectionParams = ps.AdvectionParameters()
+advectionParams.timeStepRatio = 0.2
+
+rayTracingParams = ps.RayTracingParameters()
+rayTracingParams.smoothingNeighbors = 2
+
+depoProcess = psd.Process(geometry, depoModel, params["depTime"])
+depoProcess.setAdvectionParameters(advectionParams)
+depoProcess.setRayTracingParameters(rayTracingParams)
+depoProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
+
+etchProcess = psd.Process(geometry, etchModel, params["etchTime"])
+etchProcess.setAdvectionParameters(advectionParams)
+etchProcess.setRayTracingParameters(rayTracingParams)
+etchProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 geometry.saveSurfaceMesh("initial.vtp", True)
 
-geometry.duplicateTopLevelSet(vps.Material.Polymer)
+geometry.duplicateTopLevelSet(ps.Material.Polymer)
 
 numCycles = int(params["numCycles"])
 print(f"---------------------------")

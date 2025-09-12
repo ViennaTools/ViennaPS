@@ -1,10 +1,9 @@
-import viennaps3d.viennaps3d.gpu as gpu
-import viennaps3d as vps
+import viennaps.d3 as psd
+import viennaps as ps
 
-vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
 
-context = gpu.Context()
-context.create()
+context = ps.gpu.Context.createContext()
 
 # Create a trench
 gridDelta = 1.0
@@ -12,8 +11,8 @@ extent = 50.0
 trenchWidth = 15.0
 maskHeight = 40.0
 
-domain = vps.Domain()
-vps.MakeTrench(
+domain = psd.Domain()
+psd.MakeTrench(
     domain=domain,
     gridDelta=gridDelta,
     xExtent=extent,
@@ -24,7 +23,7 @@ vps.MakeTrench(
     taperingAngle=0.0,
     periodicBoundary=False,
     makeMask=False,
-    material=vps.Material.Si,
+    material=ps.Material.Si,
 ).apply()
 domain.saveSurfaceMesh("trench_initial.vtp")
 
@@ -34,17 +33,18 @@ rate = 1.0
 exponent = 1.0
 
 # Create a trench depo model
-model = gpu.SingleParticleProcess(rate, sticking, exponent)
+model = psd.SingleParticleProcess(rate, sticking, exponent)
 
-rtParams = vps.RayTracingParameters()
+rtParams = ps.RayTracingParameters()
 rtParams.smoothingNeighbors = 2
-rtParams.raysPerPoint = 1000
+rtParams.raysPerPoint = 5000
 
-process = gpu.Process(context)
+process = psd.Process()
 process.setDomain(domain)
 process.setProcessModel(model)
 process.setProcessDuration(time)
 process.setRayTracingParameters(rtParams)
+process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 process.apply()
 

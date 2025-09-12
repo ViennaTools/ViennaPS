@@ -5,12 +5,12 @@ GPU support functions.
 from __future__ import annotations
 import typing
 
-__all__: list[str] = ["Context"]
+__all__: list[str] = ["Context", "Path"]
 
 class Context:
     @staticmethod
     def createContext(
-        modulePath: ... = "/home/reiter/Code/ViennaPS/build/lib/ptx",
+        modulePath: Path = "/home/reiter/Code/ViennaPS/build/lib/ptx",
         deviceID: typing.SupportsInt = 0,
         registerInGlobal: bool = True,
     ) -> Context:
@@ -44,7 +44,7 @@ class Context:
 
     def create(
         self,
-        modulePath: ... = "/home/reiter/Code/ViennaPS/build/lib/ptx",
+        modulePath: Path = "/home/reiter/Code/ViennaPS/build/lib/ptx",
         deviceID: typing.SupportsInt = 0,
     ) -> None:
         """
@@ -69,3 +69,6 @@ class Context:
 
     @deviceID.setter
     def deviceID(self, arg0: typing.SupportsInt) -> None: ...
+
+class Path:
+    def __init__(self, arg0: str) -> None: ...

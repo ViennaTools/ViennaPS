@@ -1134,12 +1134,14 @@ class Process:
         Set the advection parameters for the process.
         """
 
-    def setAtomicLayerProcessParameters(self, arg0: ...) -> None:
+    def setAtomicLayerProcessParameters(
+        self, arg0: viennaps._core.AtomicLayerProcessParameters
+    ) -> None:
         """
         Set the atomic layer parameters for the process.
         """
 
-    def setCoverageParameters(self, arg0: ...) -> None:
+    def setCoverageParameters(self, arg0: viennaps._core.CoverageParameters) -> None:
         """
         Set the coverage parameters for the process.
         """
@@ -1147,6 +1149,11 @@ class Process:
     def setDomain(self, arg0: Domain) -> None:
         """
         Set the process domain.
+        """
+
+    def setFluxEngineType(self, arg0: viennaps._core.FluxEngineType) -> None:
+        """
+        Set the flux engine type (CPU or GPU).
         """
 
     def setProcessDuration(self, arg0: typing.SupportsFloat) -> None:

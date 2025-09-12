@@ -1233,6 +1233,8 @@ template <int D> void bindApi(py::module &module) {
            "model.")
       .def("setProcessDuration", &Process<T, D>::setProcessDuration,
            "Set the process duration.")
+      .def("setFluxEngineType", &Process<T, D>::setFluxEngineType,
+           "Set the flux engine type (CPU or GPU).")
       .def("setAdvectionParameters", &Process<T, D>::setAdvectionParameters,
            "Set the advection parameters for the process.")
       .def("setRayTracingParameters", &Process<T, D>::setRayTracingParameters,
