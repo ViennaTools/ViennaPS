@@ -1,11 +1,9 @@
 #include <geometries/psMakeHole.hpp>
 #include <models/psMultiParticleProcess.hpp>
+#include <models/psgMultiParticleProcess.hpp>
 #include <process/psProcess.hpp>
 
 #include <vcContext.hpp>
-
-#include <models/psgIonBeamEtching.hpp>
-#include <psgProcess.hpp>
 
 using namespace viennaps;
 
@@ -23,12 +21,12 @@ int main(int argc, char **argv) {
   NumericType maskHeight = 1.2;
   NumericType taperAngle = 1.193;
 
-  NumericType processDuration = 2.;
-  auto integrationScheme =
-      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER;
-  int raysPerPoint = 1000;
-
+  NumericType processDuration = 1.5;
   NumericType exponent = 500.;
+  AdvectionParameters advParams;
+  advParams.integrationScheme = IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER;
+  RayTracingParameters<D> rtParams;
+  rtParams.raysPerPoint = 1000;
 
   // geometry setup
   auto geometry = Domain<NumericType, D>::New();
@@ -48,34 +46,36 @@ int main(int argc, char **argv) {
   };
 
   // CPU
-  if constexpr (false) {
+  if constexpr (true) {
     auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
-    model->addIonParticle(exponent, 60, 90, 75);
+    model->addIonParticle(exponent, 80, 90, 75);
     model->setRateFunction(rateFunction);
 
     auto copy = Domain<NumericType, D>::New(geometry);
 
     Process<NumericType, D> process(copy, model, processDuration);
-    process.setIntegrationScheme(integrationScheme);
-    process.setNumberOfRaysPerPoint(raysPerPoint);
+    process.setAdvectionParameters(advParams);
+    process.setRayTracingParameters(rtParams);
     process.apply();
 
     copy->saveSurfaceMesh("cpu_result.vtp", true);
   }
 
   {
-    Context context;
-    context.create();
+    DeviceContext::createContext();
 
-    auto model =
-        SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(exponent);
+    auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New();
     model->setRateFunction(rateFunction);
+    model->addIonParticle(exponent, 80, 90, 75);
 
     auto copy = Domain<NumericType, D>::New(geometry);
 
-    gpu::Process<NumericType, D> process(context, copy, model, processDuration);
-    process.setIntegrationScheme(integrationScheme);
-    process.setNumberOfRaysPerPoint(raysPerPoint * 10);
+    Process<NumericType, D> process(copy, model, processDuration);
+    process.setAdvectionParameters(advParams);
+    rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
+    rtParams.smoothingNeighbors = 2.;
+    process.setRayTracingParameters(rtParams);
+    process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
     process.apply();
 
     copy->saveSurfaceMesh("gpu_result.vtp", true);
