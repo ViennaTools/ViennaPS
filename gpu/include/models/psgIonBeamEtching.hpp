@@ -16,9 +16,8 @@ public:
 
     // surface model
     fluxDataLabels_.emplace_back("particleFlux");
-    auto surfModel =
-        SmartPointer<impl::MultiParticleSurfaceModel<NumericType, D>>::New(
-            fluxDataLabels_);
+    auto surfModel = SmartPointer<::viennaps::impl::MultiParticleSurfaceModel<
+        NumericType, D>>::New(fluxDataLabels_);
 
     // velocity field
     auto velField =
@@ -37,7 +36,7 @@ public:
                                             const Material &)>
                       rateFunction) {
     auto surfModel = std::dynamic_pointer_cast<
-        impl::MultiParticleSurfaceModel<NumericType, D>>(
+        ::viennaps::impl::MultiParticleSurfaceModel<NumericType, D>>(
         this->getSurfaceModel());
     surfModel->rateFunction_ = rateFunction;
   }
