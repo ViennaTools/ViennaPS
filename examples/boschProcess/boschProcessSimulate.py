@@ -9,24 +9,26 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
+import viennaps as ps
+
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    import viennaps.d3 as psd
 
-vps.Logger.setLogLevel(vps.LogLevel.ERROR)
-params = vps.ReadConfigFile(args.filename)
-vps.setNumThreads(16)
+ps.Logger.setLogLevel(ps.LogLevel.ERROR)
+params = ps.ReadConfigFile(args.filename)
+ps.setNumThreads(16)
 
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeTrench(
+psd.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=0.0,
@@ -34,31 +36,31 @@ vps.MakeTrench(
 ).apply()
 
 # Isotropic deposition model
-depoModel = vps.SingleParticleProcess(
+depoModel = psd.SingleParticleProcess(
     rate=params["depositionThickness"],
     stickingProbability=params["depositionStickingProbability"],
 )
 
 # Deposition removal model
-depoRemoval = vps.SingleParticleProcess(
+depoRemoval = psd.SingleParticleProcess(
     rate=-params["depositionThickness"],
     stickingProbability=1.0,
     sourceExponent=params["ionSourceExponent"],
-    maskMaterial=vps.Material.Mask,
+    maskMaterial=ps.Material.Mask,
 )
 
 # Etch model
-etchModel = vps.MultiParticleProcess()
+etchModel = psd.MultiParticleProcess()
 etchModel.addNeutralParticle(params["neutralStickingProbability"])
 etchModel.addIonParticle(sourcePower=params["ionSourceExponent"], thetaRMin=60.0)
 
 
 # Custom rate function for the etch model
 def rateFunction(fluxes, material):
-    if material == vps.Material.Mask:
+    if material == ps.Material.Mask:
         return 0.0
     rate = fluxes[1] * params["ionRate"]
-    if material == vps.Material.Si:
+    if material == ps.Material.Si:
         rate += fluxes[0] * params["neutralRate"]
     return rate
 
@@ -72,16 +74,16 @@ n = 0
 def runProcess(model, name, time=1.0):
     global n
     print("  - {} - ".format(name))
-    vps.Process(geometry, model, time).apply()
+    psd.Process(geometry, model, time).apply()
     geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
     n += 1
 
 
 def cleanup(threshold=1.0):
-    expand = vps.IsotropicProcess(threshold)
-    vps.Process(geometry, expand, 1).apply()
-    shrink = vps.IsotropicProcess(-threshold)
-    vps.Process(geometry, shrink, 1).apply()
+    expand = psd.IsotropicProcess(threshold)
+    psd.Process(geometry, expand, 1).apply()
+    shrink = psd.IsotropicProcess(-threshold)
+    psd.Process(geometry, shrink, 1).apply()
 
 
 numCycles = int(params["numCycles"])
@@ -96,7 +98,7 @@ for i in range(numCycles):
     print("Cycle {}".format(i + 1))
 
     # Deposit a layer of polymer
-    geometry.duplicateTopLevelSet(vps.Material.Polymer)
+    geometry.duplicateTopLevelSet(ps.Material.Polymer)
     runProcess(depoModel, "Deposition")
 
     # Remove the polymer layer

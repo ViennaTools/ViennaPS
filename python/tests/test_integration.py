@@ -1,18 +1,19 @@
 try:
-    import viennaps2d
+    import viennaps
 except ImportError:
     print("ERROR: Python bindings for viennaps2d are not available")
     exit()
 
-import viennaps2d as vps
+import viennaps.d2 as vpsd
+import viennaps as vps
 
 
 def test_process_with_domain():
     """Test process application with domain"""
     print("Testing Process with Domain...")
 
-    domain = vps.Domain()
-    process = vps.Process()
+    domain = vpsd.Domain()
+    process = vpsd.Process()
 
     # Test process application without proper setup (should fail)
     try:
@@ -29,12 +30,12 @@ def test_complete_workflow():
     vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
     # Create components
-    domain = vps.Domain()
-    process = vps.Process()
+    domain = vpsd.Domain()
+    process = vpsd.Process()
 
     # Try to create a model and add it to process
     try:
-        model = vps.SF6O2Etching()
+        model = vpsd.SF6O2Etching()
         # If successful, try to add to process
         print("Model created, attempting to configure process...")
     except RuntimeError as e:
@@ -49,7 +50,7 @@ def test_error_handling():
 
     # Test various error scenarios
     test_cases = [
-        lambda: vps.Process().apply(),  # Process without setup
+        lambda: vpsd.Process().apply(),  # Process without setup
     ]
 
     for i, test_case in enumerate(test_cases):

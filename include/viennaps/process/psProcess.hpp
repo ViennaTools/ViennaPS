@@ -171,16 +171,23 @@ private:
     switch (fluxEngineType_) {
     case FluxEngineType::CPU_DISK:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
-    case FluxEngineType::GPU_TRIANGLE:
+    case FluxEngineType::GPU_TRIANGLE: {
 #ifdef VIENNACORE_COMPILE_GPU
-      return std::make_unique<GPUTriangleEngine<NumericType, D>>(
-          DeviceContext::getContextFromRegistry(gpuDeviceId_));
+      auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
+      if (!deviceContext) {
+        Logger::getInstance()
+            .addError("No valid GPU device context found.")
+            .print();
+        return nullptr;
+      }
+      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
 #else
       Logger::getInstance()
           .addError("GPU support not compiled in ViennaCore.")
           .print();
       return nullptr;
 #endif
+    }
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
       return nullptr;

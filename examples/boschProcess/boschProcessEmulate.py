@@ -9,24 +9,28 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
+import viennaps as ps
+
 # switch between 2D and 3D mode
 if args.dim == 2:
+    D = 2
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    import viennaps.d2 as psd
 else:
+    D = 3
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    import viennaps.d3 as psd
 
-vps.Logger.setLogLevel(vps.LogLevel.ERROR)
-params = vps.ReadConfigFile(args.filename)
-vps.setNumThreads(16)
+ps.Logger.setLogLevel(ps.LogLevel.ERROR)
+params = ps.ReadConfigFile(args.filename)
+ps.setNumThreads(16)
 
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeTrench(
+psd.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=0.0,
@@ -35,30 +39,30 @@ vps.MakeTrench(
 
 
 direction = [0.0, 0.0, 0.0]
-direction[vps.D - 1] = -1.0
+direction[D - 1] = -1.0
 
 # Geometric advection model for deposition
-depoModel = vps.SphereDistribution(
+depoModel = psd.SphereDistribution(
     radius=params["depositionThickness"], gridDelta=params["gridDelta"]
 )
 
 # Define purely directional rate for depo removal
-etchDir = vps.RateSet(
+etchDir = ps.RateSet(
     direction=direction,
     directionalVelocity=-(params["depositionThickness"] + params["gridDelta"] / 2.0),
     isotropicVelocity=0.0,
-    maskMaterials=[vps.Material.Mask],
+    maskMaterials=[ps.Material.Mask],
 )
-depoRemoval = vps.DirectionalProcess(rateSets=[etchDir])
+depoRemoval = psd.DirectionalProcess(rateSets=[etchDir])
 
 # Define isotropic + direction rate for etching of substrate
-etchIso = vps.RateSet(
+etchIso = ps.RateSet(
     direction=direction,
     directionalVelocity=params["ionRate"],
     isotropicVelocity=params["neutralRate"],
-    maskMaterials=[vps.Material.Mask, vps.Material.Polymer],
+    maskMaterials=[ps.Material.Mask, ps.Material.Polymer],
 )
-etchModel = vps.DirectionalProcess(rateSets=[etchIso])
+etchModel = psd.DirectionalProcess(rateSets=[etchIso])
 etchTime = params["etchTime"]
 
 n = 0
@@ -67,16 +71,16 @@ n = 0
 def runProcess(model, name, time=1.0):
     global n
     print("  - {} - ".format(name))
-    vps.Process(geometry, model, time).apply()
+    psd.Process(geometry, model, time).apply()
     geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 
 
 def cleanup(threshold=1.0):
-    expand = vps.IsotropicProcess(threshold)
-    vps.Process(geometry, expand, 1).apply()
-    shrink = vps.IsotropicProcess(-threshold)
-    vps.Process(geometry, shrink, 1).apply()
+    expand = psd.IsotropicProcess(threshold)
+    psd.Process(geometry, expand, 1).apply()
+    shrink = psd.IsotropicProcess(-threshold)
+    psd.Process(geometry, shrink, 1).apply()
 
 
 numCycles = int(params["numCycles"])
@@ -91,7 +95,7 @@ for i in range(numCycles):
     print("Cycle {}".format(i + 1))
 
     # Deposit a layer of polymer
-    geometry.duplicateTopLevelSet(vps.Material.Polymer)
+    geometry.duplicateTopLevelSet(ps.Material.Polymer)
     runProcess(depoModel, "Deposition")
 
     # Remove the polymer layer
