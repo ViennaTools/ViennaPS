@@ -34,10 +34,10 @@ extern "C" __global__ void __closesthit__SingleParticleALD() {
   } else {
     float *data = (float *)sbtData->cellData;
     const unsigned int primID = optixGetPrimitiveIndex();
-    atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight);
-
     const auto &coverage = data[primID];
     const float Seff = launchParams.sticking * max(1.f - coverage, 0.f);
+
+    atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight);
     prd->rayWeight -= prd->rayWeight * Seff;
 
     if (prd->rayWeight > launchParams.rayWeightThreshold)

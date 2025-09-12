@@ -17,5 +17,10 @@ add_gpu_executable(trenchGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/trench.cpp
 add_dependencies(ViennaPS-GPU_Examples trenchGPU)
 
 add_gpu_executable(holeCompare target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp
-                   ${VIENNAPS_PIPELINE_DIR}/IonBeamPipeline.cu)
+                   ${VIENNAPS_PIPELINE_DIR}/MultiParticlePipeline.cu)
 add_dependencies(ViennaPS-GPU_Examples holeCompare)
+
+add_gpu_executable(
+  atomicLayerDepositionGPU target_name ${CMAKE_CURRENT_SOURCE_DIR}/atomicLayerDeposition.cpp
+  ${VIENNAPS_PIPELINE_DIR}/SingleParticleALDPipeline.cu)
+add_dependencies(ViennaPS-GPU_Examples atomicLayerDepositionGPU)

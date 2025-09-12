@@ -150,9 +150,9 @@ private:
 
     processMetaData = params.toProcessMetaData();
     // add units
-    processMetaData["Units"] = std::vector<NumericType>{
-        static_cast<NumericType>(units::Length::getInstance().getUnit()),
-        static_cast<NumericType>(units::Time::getInstance().getUnit())};
+    processMetaData["Units"] = std::vector<double>{
+        static_cast<double>(units::Length::getInstance().getUnit()),
+        static_cast<double>(units::Time::getInstance().getUnit())};
   }
 
   PlasmaEtchingParameters<NumericType> params;

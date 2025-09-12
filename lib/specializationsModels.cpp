@@ -21,25 +21,42 @@
 namespace viennaps {
 
 // Precompile specializations for process models
-PRECOMPILE_SPECIALIZE(CF4O2Etching)
+// Emulation Models
 PRECOMPILE_SPECIALIZE(CSVFileProcess)
 PRECOMPILE_SPECIALIZE(DirectionalProcess)
-PRECOMPILE_SPECIALIZE(FaradayCageEtching)
-PRECOMPILE_SPECIALIZE(FluorocarbonEtching)
-PRECOMPILE_SPECIALIZE(HBrO2Etching)
-PRECOMPILE_SPECIALIZE(IonBeamEtching)
 PRECOMPILE_SPECIALIZE(IsotropicProcess)
-PRECOMPILE_SPECIALIZE(MultiParticleProcess)
-PRECOMPILE_SPECIALIZE(OxideRegrowth)
-PRECOMPILE_SPECIALIZE(SF6C4F8Etching)
+
+// Geometric Models
+PRECOMPILE_SPECIALIZE(BoxDistribution)
+PRECOMPILE_SPECIALIZE(SphereDistribution)
+
+// Plasma Etching Models
+PRECOMPILE_SPECIALIZE(CF4O2Etching)
+PRECOMPILE_SPECIALIZE(HBrO2Etching)
 PRECOMPILE_SPECIALIZE(SF6O2Etching)
-PRECOMPILE_SPECIALIZE(SelectiveEpitaxy)
-PRECOMPILE_SPECIALIZE(SingleParticleALD)
+PRECOMPILE_SPECIALIZE(SF6C4F8Etching)
+PRECOMPILE_SPECIALIZE(FluorocarbonEtching)
+
+// Flux Based Models
 PRECOMPILE_SPECIALIZE(SingleParticleProcess)
+PRECOMPILE_SPECIALIZE(MultiParticleProcess)
+
+// TEOS Models
 PRECOMPILE_SPECIALIZE(TEOSDeposition)
 PRECOMPILE_SPECIALIZE(TEOSPECVD)
+
+// Ion Beam Etching Models
+PRECOMPILE_SPECIALIZE(FaradayCageEtching)
+PRECOMPILE_SPECIALIZE(IonBeamEtching)
+
+// Crystal Anisotropy Models
+PRECOMPILE_SPECIALIZE(SelectiveEpitaxy)
 PRECOMPILE_SPECIALIZE(WetEtching)
-PRECOMPILE_SPECIALIZE(SphereDistribution)
-PRECOMPILE_SPECIALIZE(BoxDistribution)
+
+// Atomic Layer Processing Models
+PRECOMPILE_SPECIALIZE(SingleParticleALD)
+
+// Other Models
+PRECOMPILE_SPECIALIZE(OxideRegrowth)
 
 } // namespace viennaps

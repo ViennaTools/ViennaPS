@@ -25,13 +25,12 @@
 #include <pybind11/stl_bind.h>
 
 // all header files which define API functions
-#include <process/psProcess.hpp>
+#include <gds/psGDSGeometry.hpp>
+#include <gds/psGDSReader.hpp>
 #include <psConstants.hpp>
 #include <psDomain.hpp>
 #include <psDomainSetup.hpp>
 #include <psExtrude.hpp>
-#include <psGDSGeometry.hpp>
-#include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
 #include <psRateGrid.hpp>
 #include <psReader.hpp>
@@ -48,6 +47,7 @@
 
 // model framework
 #include <process/psAdvectionCallback.hpp>
+#include <process/psProcess.hpp>
 #include <process/psProcessModel.hpp>
 #include <process/psProcessParams.hpp>
 #include <process/psSurfaceModel.hpp>

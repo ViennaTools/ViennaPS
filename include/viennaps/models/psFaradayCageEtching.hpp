@@ -18,10 +18,9 @@ template <typename NumericType> struct FaradayCageParameters {
   NumericType cageAngle = 0; // degree
 
   auto toProcessMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> processData =
+    std::unordered_map<std::string, std::vector<double>> processData =
         ibeParams.toProcessMetaData();
-    processData["Cage Angle"] = {static_cast<NumericType>(cageAngle * M_PI) /
-                                 static_cast<NumericType>(180.)};
+    processData["Cage Angle"] = {(cageAngle * M_PI) / 180.};
     return processData;
   }
 };

@@ -1,6 +1,9 @@
 #pragma once
 
+#include "psgPipelineParameters.hpp"
+
 #include <process/psProcessModel.hpp>
+#include <psConstants.hpp>
 #include <rayParticle.hpp>
 
 #include <vcVectorType.hpp>
@@ -53,8 +56,8 @@ public:
                      NumericType sourceDistributionPower, NumericType cageAngle,
                      NumericType tiltAngle) {
 
-    float cosTilt = cosf(tiltAngle * M_PIf / 180.);
-    float sinTilt = sinf(tiltAngle * M_PIf / 180.);
+    float cosTilt = cosf(tiltAngle * M_PIf / 180.f);
+    float sinTilt = sinf(tiltAngle * M_PIf / 180.f);
     float cage_x = cosf(cageAngle * M_PIf / 180.f);
     float cage_y = sinf(cageAngle * M_PIf / 180.f);
 
@@ -87,6 +90,14 @@ public:
     this->setVelocityField(velField);
     this->setProcessName("FaradayCageEtching");
     this->setPipelineFileName("FaradayCagePipeline");
+
+    impl::IonParams params;
+    params.thetaRMin = constants::degToRad(70);
+    params.thetaRMax = constants::degToRad(90);
+    params.minAngle = constants::degToRad(80);
+    params.inflectAngle = constants::degToRad(89);
+    params.n = 10;
+    this->processData.allocUploadSingle(params);
 
     // meta data
     this->processMetaData["PWR"] = {rate};
