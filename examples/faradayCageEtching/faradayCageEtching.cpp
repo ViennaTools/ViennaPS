@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   advectionParams.integrationScheme =
       ps::IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
 
-  ps::RayTracingParameters<D> rayParams;
+  ps::RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");
   // process setup
   ps::Process<NumericType, D> process;

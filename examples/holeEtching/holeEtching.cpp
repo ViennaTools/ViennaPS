@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   CoverageParameters coverageParams;
   coverageParams.coverageDeltaThreshold = 1e-4;
 
-  RayTracingParameters<D> rayTracingParams;
+  RayTracingParameters rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
 
   AdvectionParameters advectionParams;

@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
   modelParams.etchStopDepth = params.get("etchStopDepth");
   auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
-  RayTracingParameters<D> rayTracingParams;
+  RayTracingParameters rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
   rayTracingParams.smoothingNeighbors = 2;
 

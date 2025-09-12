@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
       viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
   advParams.timeStepRatio = 0.25;
 
-  RayTracingParameters<D> rayTracingParams;
+  RayTracingParameters rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
   rayTracingParams.smoothingNeighbors = 1;
 

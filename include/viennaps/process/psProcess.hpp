@@ -45,7 +45,7 @@ public:
     context_.processDuration = duration;
   }
 
-  void setRayTracingParameters(const RayTracingParameters<D> &params) {
+  void setRayTracingParameters(const RayTracingParameters &params) {
     context_.rayTracingParams = params;
   }
 

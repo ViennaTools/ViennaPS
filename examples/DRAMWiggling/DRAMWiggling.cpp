@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   advectionParams.integrationScheme = util::convertIntegrationScheme(
       params.get<std::string>("integrationScheme"));
 
-  RayTracingParameters<D> rayParams;
+  RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");
 
   CoverageParameters coverageParams;

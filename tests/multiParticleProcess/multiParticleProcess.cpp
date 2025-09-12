@@ -37,7 +37,7 @@ template <class NumericType, int D> void RunTest() {
           return material == Material::Si ? -(fluxes[0] + fluxes[1]) : 0;
         });
 
-    RayTracingParameters<D> rayParams;
+    RayTracingParameters rayParams;
     rayParams.raysPerPoint = 10;
 
     Process<NumericType, D> process(domain, model, 1.);

@@ -41,7 +41,8 @@ CPMFindPackage(
 # Constants
 # --------------------------------------------------------------------------------------------------------
 
-set(VIENNAPS_PYTHON_MODULE_NAME "viennaps")
+set(VIENNAPS_PYTHON_PACKAGE_NAME viennaps)
+set(VIENNAPS_PYTHON_MODULE_NAME _core)
 set(VIENNAPS_LIBRARY_OUTPUT_DIR ${CMAKE_BINARY_DIR})
 
 if(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
@@ -53,17 +54,20 @@ endif()
 # Setup Bindings
 # --------------------------------------------------------------------------------------------------------
 
-set(LSNAME "viennals2d")
-viennacore_setup_binding(viennaps2d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
+pybind11_add_module(${VIENNAPS_PYTHON_MODULE_NAME} pyWrap.cpp)
+target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ViennaPS)
+target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
+                           PRIVATE VIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME})
 
-set(LSNAME "viennals3d")
-viennacore_setup_binding(viennaps3d ${VIENNAPS_LIBRARY_OUTPUT_DIR})
-
-target_link_libraries(viennaps3d PRIVATE ViennaPS)
-target_link_libraries(viennaps2d PRIVATE ViennaPS)
+# Put the built .so in build/<pkg> for convenience
+set_target_properties(
+  ${VIENNAPS_PYTHON_MODULE_NAME}
+  PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}"
+             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}"
+             ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}")
 
 if(VIENNAPS_USE_GPU)
-  message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps3d'")
+  message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps' python package")
   include("../cmake/generate_ptx.cmake")
 
   # Include pipeline files
@@ -71,42 +75,51 @@ if(VIENNAPS_USE_GPU)
   file(GLOB files "${VIENNAPS_PIPELINE_DIR}/*.cu")
   foreach(file ${files})
     get_filename_component(filename ${file} NAME)
-    generate_pipeline(viennaps3d generated_files "${VIENNAPS_PIPELINE_DIR}/${filename}")
+    generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
+                      "${VIENNAPS_PIPELINE_DIR}/${filename}")
   endforeach()
   # Generate CUDA kernels
-  generate_kernel(viennaps3d generated_files ${VIENNARAY_CUDA_KERNELS})
+  generate_kernel(${VIENNAPS_PYTHON_MODULE_NAME} generated_files ${VIENNARAY_CUDA_KERNELS})
 
   # Include ViennaPS GPU and OptiX headers
-  target_sources(viennaps3d PRIVATE ${generated_files})
-  target_include_directories(viennaps3d PRIVATE ${VIENNAPS_GPU_INCLUDE} ${VIENNARAY_GPU_INCLUDE})
-  target_compile_definitions(viennaps3d
+  target_sources(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${generated_files})
+  target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${VIENNAPS_GPU_INCLUDE}
+                                                                    ${VIENNARAY_GPU_INCLUDE})
+  target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                              PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
 
   add_custom_command(
-    TARGET viennaps3d
+    TARGET ${VIENNAPS_PYTHON_MODULE_NAME}
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${VIENNACORE_PTX_DIR}"
-            "${CMAKE_SOURCE_DIR}/python/viennaps3d/ptx"
+            "${CMAKE_SOURCE_DIR}/python/${VIENNAPS_PYTHON_MODULE_NAME}/ptx"
     COMMENT "Copying .ptx and .optixir files to Python package directory")
 endif()
 
-target_compile_definitions(viennaps2d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=2
-                                              -DVIENNAPS_MODULE_NAME=viennaps2d)
-target_compile_definitions(viennaps3d PRIVATE -DVIENNAPS_PYTHON_DIMENSION=3
-                                              -DVIENNAPS_MODULE_NAME=viennaps3d)
+# Install into site-packages/<pkg>/  (RELATIVE path!)
+install(
+  TARGETS ${VIENNAPS_PYTHON_MODULE_NAME}
+  LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+  RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+  ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+
+# Package files
+install(FILES ${CMAKE_SOURCE_DIR}/python/__init__.py DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+
+add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME})
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Lib-Folder
 # --------------------------------------------------------------------------------------------------------
 
-set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/viennaps.libs")
+set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}.libs")
 
 # Not required for both targets, one will suffice
-viennacore_setup_embree_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
-viennacore_setup_vtk_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
-viennacore_setup_tbb_env(viennaps3d "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
 
 install(
-  DIRECTORY "${VIENNAPS_LIB_FOLDER}"
+  DIRECTORY ${VIENNAPS_LIB_FOLDER}
   DESTINATION .
   OPTIONAL)

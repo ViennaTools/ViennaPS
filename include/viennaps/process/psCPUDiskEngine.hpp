@@ -38,8 +38,12 @@ public:
         rayBoundaryCondition[i] = util::convertBoundaryCondition(
             context.domain->getGrid().getBoundaryConditions(i));
     }
+    if constexpr (D == 2) {
+      rayTracer_.setSourceDirection(viennaray::TraceDirection::POS_Y);
+    } else {
+      rayTracer_.setSourceDirection(viennaray::TraceDirection::POS_Z);
+    }
     rayTracer_.setBoundaryConditions(rayBoundaryCondition);
-    rayTracer_.setSourceDirection(context.rayTracingParams.sourceDirection);
     rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
     rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
     rayTracer_.setCalculateFlux(false);

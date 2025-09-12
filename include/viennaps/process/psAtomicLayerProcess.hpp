@@ -488,7 +488,7 @@ private:
   SmartPointer<ProcessModelCPU<NumericType, D>> pModel_;
 
   AdvectionParameters advectionParams_;
-  RayTracingParameters<D> rayTracingParams_;
+  RayTracingParameters rayTracingParams_;
 
   unsigned int numCycles_ = 0;
   NumericType pulseTime_ = 0.;
