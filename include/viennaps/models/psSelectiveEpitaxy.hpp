@@ -1,9 +1,7 @@
 #pragma once
 
+#include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
-
-#include <vcVectorType.hpp>
 
 namespace viennaps {
 
@@ -57,7 +55,7 @@ public:
 
 // Model for selective epitaxy process.
 template <typename NumericType, int D>
-class SelectiveEpitaxy : public ProcessModel<NumericType, D> {
+class SelectiveEpitaxy : public ProcessModelCPU<NumericType, D> {
 public:
   // The constructor expects the materials where epitaxy is allowed including
   // the corresponding rates.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../psProcessModel.hpp"
+#include "../process/psProcessModel.hpp"
 
 #include <rayParticle.hpp>
 
@@ -183,7 +183,7 @@ private:
 } // namespace impl
 
 template <class NumericType, int D>
-class TEOSDeposition : public ProcessModel<NumericType, D> {
+class TEOSDeposition : public ProcessModelCPU<NumericType, D> {
 public:
   TEOSDeposition(NumericType stickingProbabilityP1, NumericType rateP1,
                  NumericType orderP1, NumericType stickingProbabilityP2 = 0.,

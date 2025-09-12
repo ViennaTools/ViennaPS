@@ -1,7 +1,7 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psIonBeamEtching.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 using namespace viennaps;
@@ -48,12 +48,15 @@ int main(int argc, char *argv[]) {
   direction[D - 2] = std::sin(ibeParams.tiltAngle * M_PI / 180.);
   model->setPrimaryDirection(direction);
 
+  AdvectionParameters advectionParams;
+  advectionParams.integrationScheme =
+      viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+
   Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("processTime"));
-  process.setIntegrationScheme(
-      viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER);
+  process.setAdvectionParameters(advectionParams);
 
   geometry->saveHullMesh("initial");
 

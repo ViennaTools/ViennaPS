@@ -1,53 +1,49 @@
 #include <geometries/psMakeTrench.hpp>
+#include <models/psSingleParticleProcess.hpp>
+#include <process/psProcess.hpp>
+#include <psUtil.hpp>
 
-#include <models/psgMultiParticleProcess.hpp>
-#include <psgProcess.hpp>
+namespace ps = viennaps;
 
-using namespace viennaps;
-
-int main(int argc, char **argv) {
-
-  omp_set_num_threads(16);
-  constexpr int D = 3;
+int main(int argc, char *argv[]) {
   using NumericType = double;
-  Logger::setLogLevel(LogLevel::INFO);
+  constexpr int D = 3;
+  ps::Logger::setLogLevel(ps::LogLevel::TIMING);
 
-  Context context;
-  context.create();
+  ps::DeviceContext::createContext();
 
-  constexpr NumericType gridDelta = 1.0;
-  constexpr NumericType extent = 50.;
-  constexpr NumericType trenchWidth = 15.;
-  constexpr NumericType trenchHeight = 15.;
-  constexpr NumericType maskHeight = 40.;
+  // Parse the parameters
+  ps::util::Parameters params;
+  if (argc > 1) {
+    params.readConfigFile(argv[1]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+    return 1;
+  }
 
-  constexpr NumericType time = 30.;
-  constexpr NumericType sticking = 1.0;
-  constexpr NumericType rate = 1.0;
-  constexpr NumericType exponent = 100.;
-
-  auto domain =
-      SmartPointer<Domain<NumericType, D>>::New(gridDelta, extent, extent);
-  MakeTrench<NumericType, D>(domain, trenchWidth, trenchHeight, 0, maskHeight)
+  auto geometry = ps::Domain<NumericType, D>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  ps::MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                                 params.get("trenchHeight"),
+                                 params.get("taperAngle"))
       .apply();
-  domain->saveSurfaceMesh("trench_initial.vtp");
 
-  auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New();
-  model->addIonParticle(exponent, 70, 90, 75);
-  model->setRateFunction(
-      [rate](const std::vector<NumericType> &flux, Material mat) {
-        return mat == Material::Mask ? 0. : -flux[0] * rate;
-      });
+  // copy top layer to capture deposition
+  geometry->duplicateTopLevelSet(ps::Material::SiO2);
 
-  RayTracingParameters<NumericType, D> rayTracingParams;
-  rayTracingParams.smoothingNeighbors = 2;
-  rayTracingParams.raysPerPoint = 3000;
+  auto model = ps::SmartPointer<ps::SingleParticleProcess<NumericType, D>>::New(
+      params.get("rate"), params.get("stickingProbability"),
+      params.get("sourcePower"));
 
-  gpu::Process<NumericType, D> process(context, domain, model, time);
-  process.setRayTracingParameters(rayTracingParams);
-  process.disableRandomSeeds();
+  ps::Process<NumericType, D> process;
+  process.setDomain(geometry);
+  process.setProcessModel(model);
+  process.setProcessDuration(params.get("processTime"));
+  process.setFluxEngineType(ps::FluxEngineType::GPU_TRIANGLE);
+
+  geometry->saveHullMesh("initial");
 
   process.apply();
 
-  domain->saveSurfaceMesh("trench_etch.vtp");
+  geometry->saveHullMesh("final");
 }

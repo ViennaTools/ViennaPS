@@ -1,18 +1,17 @@
 #pragma once
 
 #include <models/psMultiParticleProcess.hpp>
+#include <models/psgPipelineParameters.hpp>
+#include <process/psProcessModel.hpp>
 #include <psConstants.hpp>
 #include <psMaterials.hpp>
-
-#include <models/psgPipelineParameters.hpp>
-#include <psgProcessModel.hpp>
 
 namespace viennaps::gpu {
 
 using namespace viennacore;
 
 template <typename NumericType, int D>
-class MultiParticleProcess final : public ProcessModel<NumericType, D> {
+class MultiParticleProcess final : public ProcessModelGPU<NumericType, D> {
 public:
   MultiParticleProcess() {
     // surface model

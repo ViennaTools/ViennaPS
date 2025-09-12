@@ -1,6 +1,6 @@
 #pragma once
 
-#include "psProcessParams.hpp"
+#include "process/psProcessParams.hpp"
 
 #include <lsPointData.hpp>
 #include <vcSmartPointer.hpp>

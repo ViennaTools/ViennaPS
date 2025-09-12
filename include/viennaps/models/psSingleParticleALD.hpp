@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psProcessModel.hpp>
+#include "../process/psProcessModel.hpp"
 
 namespace viennaps {
 
@@ -110,7 +110,7 @@ public:
     // H2O surface coverage
     const auto &phi = globalData->getVectorData(0)[primID];
     // Obtain the sticking probability
-    NumericType S_eff = beta * (1. - phi);
+    NumericType S_eff = beta * std::max(NumericType(1.) - phi, NumericType(0.));
 
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
@@ -125,7 +125,7 @@ public:
 } // namespace impl
 
 template <typename NumericType, int D>
-class SingleParticleALD : public ProcessModel<NumericType, D> {
+class SingleParticleALD : public ProcessModelCPU<NumericType, D> {
 public:
   SingleParticleALD(
       NumericType stickingProbability, // particle sticking probability
@@ -157,6 +157,7 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleALD");
+    this->isALP = true;
 
     this->processMetaData["stickingProbability"] =
         std::vector<NumericType>{stickingProbability};

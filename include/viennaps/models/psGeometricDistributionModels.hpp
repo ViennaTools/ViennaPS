@@ -5,8 +5,8 @@
 #include <lsGeometricAdvect.hpp>
 #include <lsGeometricAdvectDistributions.hpp>
 
-#include "../psGeometricModel.hpp"
-#include "../psProcessModel.hpp"
+#include "../process/psGeometricModel.hpp"
+#include "../process/psProcessModel.hpp"
 
 namespace viennaps {
 
@@ -34,7 +34,7 @@ public:
 
   void apply() override {
     if (dist) {
-      if (static_cast<int>(domain->useMetaData) > 1) {
+      if (static_cast<int>(domain->getMetaDataLevel()) > 1) {
         domain->clearMetaData();
         domain->addMetaData(this->processData);
       }
@@ -52,7 +52,7 @@ public:
 };
 
 template <typename NumericType, int D>
-class SphereDistribution : public ProcessModel<NumericType, D> {
+class SphereDistribution : public ProcessModelCPU<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
@@ -69,12 +69,12 @@ public:
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
-    this->processMetaData["Radius"] = std::vector<NumericType>{radius};
+    this->processMetaData["Radius"] = std::vector<double>{radius};
   }
 };
 
 template <typename NumericType, int D>
-class BoxDistribution : public ProcessModel<NumericType, D> {
+class BoxDistribution : public ProcessModelCPU<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
@@ -90,10 +90,9 @@ public:
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");
-    this->processMetaData["HalfAxes"] =
-        std::vector<NumericType>{static_cast<NumericType>(halfAxes[0]),
-                                 static_cast<NumericType>(halfAxes[1]),
-                                 static_cast<NumericType>(halfAxes[2])};
+    this->processMetaData["HalfAxes"] = std::vector<double>{
+        static_cast<double>(halfAxes[0]), static_cast<double>(halfAxes[1]),
+        static_cast<double>(halfAxes[2])};
   }
 };
 

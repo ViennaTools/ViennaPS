@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -228,7 +228,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class MultiParticleProcess : public ProcessModel<NumericType, D> {
+class MultiParticleProcess : public ProcessModelCPU<NumericType, D> {
 public:
   MultiParticleProcess() {
     // surface model
@@ -242,6 +242,7 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
+    this->hasGPU = true;
   }
 
   void addNeutralParticle(NumericType stickingProbability,
@@ -307,12 +308,11 @@ public:
 
 private:
   std::vector<std::string> fluxDataLabels_;
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 
   void addStickingData(NumericType stickingProbability) {
     if (processMetaData.find("StickingProbability") == processMetaData.end()) {
-      processMetaData["StickingProbability"] =
-          std::vector<NumericType>{stickingProbability};
+      addMetaData("StickingProbability", stickingProbability);
     } else {
       processMetaData["StickingProbability"].push_back(stickingProbability);
     }
@@ -321,11 +321,15 @@ private:
   void addIonData(std::vector<std::pair<std::string, NumericType>> data) {
     for (const auto &pair : data) {
       if (processMetaData.find(pair.first) == processMetaData.end()) {
-        processMetaData[pair.first] = std::vector<NumericType>{pair.second};
+        addMetaData(pair.first + " Rate", pair.second);
       } else {
         processMetaData[pair.first].push_back(pair.second);
       }
     }
+  }
+
+  inline void addMetaData(const std::string &key, double value) {
+    processMetaData[key] = std::vector<double>{value};
   }
 };
 

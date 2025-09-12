@@ -1,7 +1,7 @@
 #include <lsToDiskMesh.hpp>
 
 #include <models/psSingleParticleProcess.hpp>
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 
 #include <psgCreateSurfaceMesh.hpp>
 #include <psgElementToPointData.hpp>
@@ -47,8 +47,7 @@ int main() {
 
   const NumericType sticking = 0.1f;
 
-  Context context;
-  context.create();
+  auto context = DeviceContext::createContext();
 
   auto domain = MAKE_GEO<NumericType>();
 
@@ -72,7 +71,7 @@ int main() {
   auto mesh = gpu::CreateTriangleMesh(GRID_DELTA, surfMesh);
 
   tracer.setGeometry(mesh);
-  tracer.setPipeline("SingleParticlePipeline", context.modulePath);
+  tracer.setPipeline("SingleParticlePipeline", context->modulePath);
 
   auto particle = viennaray::gpu::Particle<NumericType>();
   particle.sticking = sticking;

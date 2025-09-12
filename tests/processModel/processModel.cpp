@@ -1,4 +1,4 @@
-#include <psProcessModel.hpp>
+#include <process/psProcessModel.hpp>
 #include <vcTestAsserts.hpp>
 
 #include <models/psCF4O2Etching.hpp>
@@ -21,7 +21,7 @@ template <class NumericType, int D> void RunTest() {
   units::Length::getInstance().setUnit("nm");
 
   // default constructors
-  { auto model = SmartPointer<ProcessModel<NumericType, D>>::New(); }
+  { auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New(); }
 
   // fluorocarbon etching
   {

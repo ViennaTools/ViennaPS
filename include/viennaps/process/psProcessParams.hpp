@@ -1,6 +1,6 @@
 #pragma once
 
-#include "psUtil.hpp"
+#include "../psUtil.hpp"
 
 #include <lsAdvect.hpp>
 #include <rayTrace.hpp>
@@ -14,47 +14,51 @@ using namespace viennacore;
 
 using IntegrationScheme = viennals::IntegrationSchemeEnum;
 
-template <typename NumericType, int D> struct RayTracingParameters {
+template <int D> struct RayTracingParameters {
   viennaray::TraceDirection sourceDirection =
       D == 3 ? viennaray::TraceDirection::POS_Z
              : viennaray::TraceDirection::POS_Y;
   viennaray::NormalizationType normalizationType =
       viennaray::NormalizationType::SOURCE;
-  unsigned raysPerPoint = 1000;
-  NumericType diskRadius = 0.;
-  bool useRandomSeeds = true;
   bool ignoreFluxBoundaries = false;
+  bool useRandomSeeds = true;
+  unsigned raysPerPoint = 1000;
   int smoothingNeighbors = 1;
+  double diskRadius = 0.;
+  double minNodeDistanceFactor =
+      0.05; // factor of grid delta to determine min. node distance for triange
+            // mesh generation
 
   auto toMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> metaData;
-    metaData["RaysPerPoint"] = {static_cast<NumericType>(raysPerPoint)};
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["RaysPerPoint"] = {static_cast<double>(raysPerPoint)};
+    metaData["SmoothingNeighbors"] = {static_cast<double>(smoothingNeighbors)};
     metaData["DiskRadius"] = {diskRadius};
-    metaData["SmoothingNeighbors"] = {
-        static_cast<NumericType>(smoothingNeighbors)};
+    metaData["MinNodeDistanceFactor"] = {minNodeDistanceFactor};
     return metaData;
   }
 
   auto toMetaDataString() const {
     return "\nRaysPerPoint: " + std::to_string(raysPerPoint) +
            "\nDiskRadius: " + std::to_string(diskRadius) +
-           "\nSmoothingNeighbors: " + std::to_string(smoothingNeighbors);
+           "\nSmoothingNeighbors: " + std::to_string(smoothingNeighbors) +
+           "\nMinNodeDistanceFactor: " + std::to_string(minNodeDistanceFactor) +
+           "\nUseRandomSeeds: " + util::boolString(useRandomSeeds);
   }
 };
 
-template <typename NumericType> struct AdvectionParameters {
+struct AdvectionParameters {
   IntegrationScheme integrationScheme =
       IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER;
-  NumericType timeStepRatio = 0.4999;
-  NumericType dissipationAlpha = 1.0;
+  double timeStepRatio = 0.4999;
+  double dissipationAlpha = 1.0;
   bool checkDissipation = true;
   bool velocityOutput = false;
   bool ignoreVoids = false;
 
   auto toMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> metaData;
-    metaData["IntegrationScheme"] = {
-        static_cast<NumericType>(integrationScheme)};
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["IntegrationScheme"] = {static_cast<double>(integrationScheme)};
     metaData["TimeStepRatio"] = {timeStepRatio};
     metaData["DissipationAlpha"] = {dissipationAlpha};
     return metaData;
@@ -68,6 +72,48 @@ template <typename NumericType> struct AdvectionParameters {
            "\nCheckDissipation: " + util::boolString(checkDissipation) +
            "\nVelocityOutput: " + util::boolString(velocityOutput) +
            "\nIgnoreVoids: " + util::boolString(ignoreVoids);
+  }
+};
+
+struct CoverageParameters {
+  double coverageDeltaThreshold = 0.0;
+  unsigned maxIterations = std::numeric_limits<unsigned>::max();
+  bool initialized = false;
+
+  auto toMetaData() const {
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["CoverageDeltaThreshold"] = {coverageDeltaThreshold};
+    metaData["MaxIterations"] = {static_cast<double>(maxIterations)};
+    return metaData;
+  }
+
+  auto toMetaDataString() const {
+    return "\nCoverageDeltaThreshold: " +
+           std::to_string(coverageDeltaThreshold) +
+           "\nMaxIterations: " + std::to_string(maxIterations);
+  }
+};
+
+struct AtomicLayerProcessParameters {
+  unsigned numCycles = 1;
+  double pulseTime = 1.0;
+  double coverageTimeStep = 1.0;
+  double purgePulseTime = 0.0;
+
+  auto toMetaData() const {
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["NumCycles"] = {static_cast<double>(numCycles)};
+    metaData["PulseTime"] = {pulseTime};
+    metaData["CoverageTimeStep"] = {coverageTimeStep};
+    metaData["PurgePulseTime"] = {purgePulseTime};
+    return metaData;
+  }
+
+  auto toMetaDataString() const {
+    return "\nNumCycles: " + std::to_string(numCycles) +
+           "\nPulseTime: " + std::to_string(pulseTime) +
+           "\nCoverageTimeStep: " + std::to_string(coverageTimeStep) +
+           "\nPurgePulseTime: " + std::to_string(purgePulseTime);
   }
 };
 

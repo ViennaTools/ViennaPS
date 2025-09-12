@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../process/psProcessModel.hpp"
+#include "../process/psSurfaceModel.hpp"
+#include "../process/psVelocityField.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
-#include "../psSurfaceModel.hpp"
-#include "../psVelocityField.hpp"
 
 #include <vcSmartPointer.hpp>
 
@@ -43,7 +43,7 @@ public:
 
 /// Isotropic etching with one masking material.
 template <typename NumericType, int D>
-class IsotropicProcess : public ProcessModel<NumericType, D> {
+class IsotropicProcess : public ProcessModelCPU<NumericType, D> {
 public:
   IsotropicProcess(NumericType isotropicRate,
                    Material maskMaterial = Material::Undefined) {
@@ -88,18 +88,20 @@ private:
     this->setProcessName("IsotropicProcess");
 
     // store process data
-    processMetaData["IsotropicRate"] = std::vector<NumericType>{rate};
+    addMetaData("IsotropicRate", rate);
     if (!materialRates.empty()) {
-      processMetaData["MaterialRates"] = std::vector<NumericType>{};
       for (const auto &materialRate : materialRates) {
-        processMetaData["Material"].push_back(
-            static_cast<NumericType>(materialRate.first));
-        processMetaData["MaterialRates"].push_back(materialRate.second);
+        addMetaData("Rate " + MaterialMap::getMaterialName(materialRate.first),
+                    materialRate.second);
       }
     }
   }
 
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
+
+  inline void addMetaData(const std::string &key, double value) {
+    processMetaData[key] = std::vector<double>{value};
+  }
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(IsotropicProcess)

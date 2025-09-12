@@ -4,6 +4,7 @@
 #include "psMaterials.hpp"
 #include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
+#include "psVersion.hpp"
 
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
@@ -21,11 +22,6 @@
 #include <vcSmartPointer.hpp>
 
 namespace viennaps {
-
-inline constexpr std::string_view version = VIENNAPS_VERSION;
-inline constexpr int versionMajor = static_cast<int>(version[0] - '0');
-inline constexpr int versionMinor = static_cast<int>(version[2] - '0');
-inline constexpr int versionPatch = static_cast<int>(version[4] - '0');
 
 using namespace viennacore;
 
@@ -53,18 +49,17 @@ public:
   using lsDomainsType = std::vector<lsDomainType>;
   using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
   using MaterialMapType = SmartPointer<MaterialMap>;
-  using MetaDataType =
-      std::unordered_map<std::string, std::vector<NumericType>>;
+  using MetaDataType = std::unordered_map<std::string, std::vector<double>>;
   using Setup = DomainSetup<NumericType, D>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
-  static MetaDataLevel useMetaData;
 
 private:
   Setup setup_;
   lsDomainsType levelSets_;
   csDomainType cellSet_ = nullptr;
   MaterialMapType materialMap_ = nullptr;
+  MetaDataLevel metaDataLevel_ = MetaDataLevel::NONE;
   MetaDataType metaData_;
 
 public:
@@ -127,12 +122,14 @@ public:
     initMetaData();
   }
 
-  static void
-  enableMetaData(const MetaDataLevel level = MetaDataLevel::PROCESS) {
-    useMetaData = level;
+  // Meta data management functions
+  void enableMetaData(const MetaDataLevel level = MetaDataLevel::PROCESS) {
+    metaDataLevel_ = level;
   }
 
-  static void disableMetaData() { useMetaData = MetaDataLevel::NONE; }
+  void disableMetaData() { metaDataLevel_ = MetaDataLevel::NONE; }
+
+  auto getMetaDataLevel() const { return metaDataLevel_; }
 
   // Create a deep copy of all Level-Sets and the Cell-Set from the passed
   // domain.
@@ -199,7 +196,7 @@ public:
       initMetaData();
     }
     if (std::abs(levelSet->getGrid().getGridDelta() - setup_.gridDelta()) >
-        1e-6) {
+        GRID_DELTA_TOLERANCE) {
       Logger::getInstance()
           .addError("Grid delta of Level-Set does not match domain grid "
                     "delta.")
@@ -354,8 +351,8 @@ public:
     metaData_[key] = values;
   }
 
-  void addMetaData(const std::string &key, NumericType value) {
-    metaData_[key] = std::vector<NumericType>{value};
+  void addMetaData(const std::string &key, double value) {
+    metaData_[key] = std::vector<double>{value};
   }
 
   void addMetaData(const MetaDataType &metaData) {
@@ -489,8 +486,9 @@ public:
   }
 
   // Save the domain as a volume mesh
-  void saveVolumeMesh(std::string fileName,
-                      double wrappingLayerEpsilon = 1e-2) const {
+  void
+  saveVolumeMesh(std::string fileName,
+                 double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
     viennals::WriteVisualizationMesh<NumericType, D> writer;
     writer.setFileName(fileName);
     writer.setWrappingLayerEpsilon(wrappingLayerEpsilon);
@@ -503,8 +501,9 @@ public:
     writer.apply();
   }
 
-  void saveHullMesh(std::string fileName,
-                    double wrappingLayerEpsilon = 1e-2) const {
+  void
+  saveHullMesh(std::string fileName,
+               double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
     viennals::WriteVisualizationMesh<NumericType, D> writer;
     writer.setFileName(fileName);
     writer.setWrappingLayerEpsilon(wrappingLayerEpsilon);
@@ -559,25 +558,24 @@ private:
   }
 
   void initMetaData() {
-    if (static_cast<int>(useMetaData) > 0) {
-      metaData_["Version"] =
-          std::vector<NumericType>{static_cast<NumericType>(versionMajor),
-                                   static_cast<NumericType>(versionMinor),
-                                   static_cast<NumericType>(versionPatch)};
-      metaData_["Domain Type"] =
-          std::vector<NumericType>{static_cast<NumericType>(D)};
-      metaData_["Grid Delta"] = std::vector<NumericType>{setup_.gridDelta()};
-      std::vector<NumericType> boundaryConds(D);
+    if (static_cast<int>(metaDataLevel_) > 0) {
+      metaData_["Version"] = std::vector<double>{
+          static_cast<double>(versionMajor), static_cast<double>(versionMinor),
+          static_cast<double>(versionPatch)};
+      metaData_["Domain Type"] = std::vector<double>{static_cast<double>(D)};
+      metaData_["Grid Delta"] = std::vector<double>{setup_.gridDelta()};
+      std::vector<double> boundaryConds(D);
       for (int i = 0; i < D; i++) {
-        boundaryConds[i] = static_cast<NumericType>(setup_.boundaryCons()[i]);
+        boundaryConds[i] = static_cast<double>(setup_.boundaryCons()[i]);
       }
       metaData_["Boundary Conditions"] = boundaryConds;
     }
   }
-};
 
-template <class NumericType, int D>
-MetaDataLevel Domain<NumericType, D>::useMetaData = MetaDataLevel::NONE;
+private:
+  static constexpr double GRID_DELTA_TOLERANCE = 1e-6;
+  static constexpr double DEFAULT_WRAPPING_EPSILON = 1e-2;
+};
 
 PS_PRECOMPILE_PRECISION_DIMENSION(Domain)
 

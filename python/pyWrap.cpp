@@ -25,7 +25,7 @@
 #include <pybind11/stl_bind.h>
 
 // all header files which define API functions
-#include <psAtomicLayerProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psConstants.hpp>
 #include <psDomain.hpp>
 #include <psDomainSetup.hpp>
@@ -33,7 +33,6 @@
 #include <psGDSGeometry.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
-#include <psProcess.hpp>
 #include <psRateGrid.hpp>
 #include <psReader.hpp>
 #include <psUnits.hpp>
@@ -48,11 +47,11 @@
 #include <geometries/psMakeTrench.hpp>
 
 // model framework
-#include <psAdvectionCallback.hpp>
-#include <psProcessModel.hpp>
-#include <psProcessParams.hpp>
-#include <psSurfaceModel.hpp>
-#include <psVelocityField.hpp>
+#include <process/psAdvectionCallback.hpp>
+#include <process/psProcessModel.hpp>
+#include <process/psProcessParams.hpp>
+#include <process/psSurfaceModel.hpp>
+#include <process/psVelocityField.hpp>
 
 // models
 #include <models/psCF4O2Etching.hpp>
@@ -87,17 +86,13 @@
 #include <vcLogger.hpp>
 
 // GPU
-#ifdef VIENNAPS_USE_GPU
+#ifdef VIENNACORE_COMPILE_GPU
 #include <vcContext.hpp>
 #include <vcCudaBuffer.hpp>
 
 #include <models/psgFaradayCageEtching.hpp>
-#include <models/psgHBrO2Etching.hpp>
+#include <models/psgIonBeamEtching.hpp>
 #include <models/psgMultiParticleProcess.hpp>
-#include <models/psgSF6O2Etching.hpp>
-#include <models/psgSingleParticleProcess.hpp>
-
-#include <psgProcess.hpp>
 #endif
 
 using namespace viennaps;
@@ -559,12 +554,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                const std::unordered_map<std::string, std::vector<T>> &>(
                &Domain<T, D>::addMetaData),
            "Add metadata to the domain.")
-      // static
-      .def_static("enableMetaData", &Domain<T, D>::enableMetaData,
-                  "Enable adding meta data from processes to domain.",
-                  pybind11::arg("level") = MetaDataLevel::PROCESS)
-      .def_static("disableMetaData", &Domain<T, D>::disableMetaData,
-                  "Disable adding meta data to domain.");
+      .def("enableMetaData", &Domain<T, D>::enableMetaData,
+           "Enable adding meta data from processes to domain.",
+           pybind11::arg("level") = MetaDataLevel::PROCESS)
+      .def("disableMetaData", &Domain<T, D>::disableMetaData,
+           "Disable adding meta data to domain.")
+      .def("getMetaDataLevel", &Domain<T, D>::getMetaDataLevel,
+           "Get the current meta data level of the domain.");
 
 #if VIENNAPS_PYTHON_DIMENSION < 3
   // wrap a 3D domain in 2D mode to be used with psExtrude
@@ -669,22 +665,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toShortString", &units::Time::toShortString);
 
   // ProcessModel
-  pybind11::class_<ProcessModel<T, D>, SmartPointer<ProcessModel<T, D>>>
+  pybind11::class_<ProcessModelCPU<T, D>, SmartPointer<ProcessModelCPU<T, D>>>
       processModel(module, "ProcessModel", pybind11::module_local());
 
   // constructors
   processModel
       .def(pybind11::init<>())
       // methods
-      .def("setProcessName", &ProcessModel<T, D>::setProcessName)
-      .def("getProcessName", &ProcessModel<T, D>::getProcessName)
-      //  .def("getSurfaceModel", &ProcessModel<T, D>::getSurfaceModel)
-      //  .def("getAdvectionCallback", &ProcessModel<T,
-      //  D>::getAdvectionCallback) .def("getGeometricModel", &ProcessModel<T,
-      //  D>::getGeometricModel) .def("getVelocityField", &ProcessModel<T,
-      //  D>::getVelocityField) .def("getParticleLogSize", &ProcessModel<T,
-      //  D>::getParticleLogSize) .def("getParticleTypes",
-      //       [](ProcessModel<T, D> &pm) {
+      .def("setProcessName", &ProcessModelCPU<T, D>::setProcessName)
+      .def("getProcessName", &ProcessModelCPU<T, D>::getProcessName)
+      //  .def("getSurfaceModel", &ProcessModelCPU<T, D>::getSurfaceModel)
+      //  .def("getAdvectionCallback", &ProcessModelCPU<T,
+      //  D>::getAdvectionCallback) .def("getGeometricModel",
+      //  &ProcessModelCPU<T, D>::getGeometricModel) .def("getVelocityField",
+      //  &ProcessModelCPU<T, D>::getVelocityField) .def("getParticleLogSize",
+      //  &ProcessModelCPU<T, D>::getParticleLogSize) .def("getParticleTypes",
+      //       [](ProcessModelCPU<T, D> &pm) {
       //         // Get smart pointer to vector of unique_ptr from the process
       //         // model
       //         auto &unique_ptrs = pm.getParticleTypes();
@@ -704,16 +700,17 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       //         return shared_ptrs;
       //       })
       //  .def("setSurfaceModel",
-      //       [](ProcessModel<T, D> &pm, SmartPointer<SurfaceModel<T>> &sm) {
+      //       [](ProcessModelCPU<T, D> &pm, SmartPointer<SurfaceModel<T>> &sm)
+      //       {
       //         pm.setSurfaceModel(sm);
       //       })
       //  .def("setAdvectionCallback",
-      //       [](ProcessModel<T, D> &pm,
+      //       [](ProcessModelCPU<T, D> &pm,
       //          SmartPointer<AdvectionCallback<T, D>> &ac) {
       //         pm.setAdvectionCallback(ac);
       //       })
       //  .def("insertNextParticleType",
-      //       [](ProcessModel<T, D> &pm,
+      //       [](ProcessModelCPU<T, D> &pm,
       //          SmartPointer<psParticle<D>> &passedParticle) {
       //         if (passedParticle) {
       //           auto particle =
@@ -724,17 +721,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       //  // IMPORTANT: here it may be needed to write this function for any
       //  // type of passed Particle
       //  .def("setGeometricModel",
-      //       [](ProcessModel<T, D> &pm, SmartPointer<GeometricModel<T, D>>
+      //       [](ProcessModelCPU<T, D> &pm, SmartPointer<GeometricModel<T, D>>
       //       &gm) {
       //         pm.setGeometricModel(gm);
       //       })
       //  .def("setVelocityField",
-      //       [](ProcessModel<T, D> &pm, SmartPointer<VelocityField<T, D>> &vf)
+      //       [](ProcessModelCPU<T, D> &pm, SmartPointer<VelocityField<T, D>>
+      //       &vf)
       //       {
       //         pm.setVelocityField(vf);
       //       })
-      .def("setPrimaryDirection", &ProcessModel<T, D>::setPrimaryDirection)
-      .def("getPrimaryDirection", &ProcessModel<T, D>::getPrimaryDirection);
+      .def("setPrimaryDirection", &ProcessModelCPU<T, D>::setPrimaryDirection)
+      .def("getPrimaryDirection", &ProcessModelCPU<T, D>::getPrimaryDirection);
 
   // AdvectionCallback
   pybind11::class_<AdvectionCallback<T, D>,
@@ -1511,7 +1509,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("interpolate", &RateGrid<T, D>::interpolate, pybind11::arg("coord"));
 
   // CSVFileProcess
-  pybind11::class_<CSVFileProcess<T, D>, ProcessModel<T, D>,
+  pybind11::class_<CSVFileProcess<T, D>, ProcessModelCPU<T, D>,
                    SmartPointer<CSVFileProcess<T, D>>>(module, "CSVFileProcess")
       .def(pybind11::init<const std::string &, const Vec3D<T> &,
                           const Vec2D<T> &, T, T, const std::vector<Material> &,
@@ -1782,40 +1780,37 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .finalize();
 
   // RayTracingParameters
-  pybind11::class_<RayTracingParameters<T, D>>(module, "RayTracingParameters")
+  pybind11::class_<RayTracingParameters<D>>(module, "RayTracingParameters")
       .def(pybind11::init<>())
       .def_readwrite("sourceDirection",
-                     &RayTracingParameters<T, D>::sourceDirection)
+                     &RayTracingParameters<D>::sourceDirection)
       .def_readwrite("normalizationType",
-                     &RayTracingParameters<T, D>::normalizationType)
-      .def_readwrite("raysPerPoint", &RayTracingParameters<T, D>::raysPerPoint)
-      .def_readwrite("diskRadius", &RayTracingParameters<T, D>::diskRadius)
-      .def_readwrite("useRandomSeeds",
-                     &RayTracingParameters<T, D>::useRandomSeeds)
+                     &RayTracingParameters<D>::normalizationType)
+      .def_readwrite("raysPerPoint", &RayTracingParameters<D>::raysPerPoint)
+      .def_readwrite("diskRadius", &RayTracingParameters<D>::diskRadius)
+      .def_readwrite("useRandomSeeds", &RayTracingParameters<D>::useRandomSeeds)
       .def_readwrite("ignoreFluxBoundaries",
-                     &RayTracingParameters<T, D>::ignoreFluxBoundaries)
+                     &RayTracingParameters<D>::ignoreFluxBoundaries)
       .def_readwrite("smoothingNeighbors",
-                     &RayTracingParameters<T, D>::smoothingNeighbors)
-      .def("toMetaData", &RayTracingParameters<T, D>::toMetaData,
+                     &RayTracingParameters<D>::smoothingNeighbors)
+      .def("toMetaData", &RayTracingParameters<D>::toMetaData,
            "Convert the ray tracing parameters to a metadata dict.")
-      .def("toMetaDataString", &RayTracingParameters<T, D>::toMetaDataString,
+      .def("toMetaDataString", &RayTracingParameters<D>::toMetaDataString,
            "Convert the ray tracing parameters to a metadata string.");
 
   // AdvectionParameters
-  pybind11::class_<AdvectionParameters<T>>(module, "AdvectionParameters")
+  pybind11::class_<AdvectionParameters>(module, "AdvectionParameters")
       .def(pybind11::init<>())
       .def_readwrite("integrationScheme",
-                     &AdvectionParameters<T>::integrationScheme)
-      .def_readwrite("timeStepRatio", &AdvectionParameters<T>::timeStepRatio)
-      .def_readwrite("dissipationAlpha",
-                     &AdvectionParameters<T>::dissipationAlpha)
-      .def_readwrite("checkDissipation",
-                     &AdvectionParameters<T>::checkDissipation)
-      .def_readwrite("velocityOutput", &AdvectionParameters<T>::velocityOutput)
-      .def_readwrite("ignoreVoids", &AdvectionParameters<T>::ignoreVoids)
-      .def("toMetaData", &AdvectionParameters<T>::toMetaData,
+                     &AdvectionParameters::integrationScheme)
+      .def_readwrite("timeStepRatio", &AdvectionParameters::timeStepRatio)
+      .def_readwrite("dissipationAlpha", &AdvectionParameters::dissipationAlpha)
+      .def_readwrite("checkDissipation", &AdvectionParameters::checkDissipation)
+      .def_readwrite("velocityOutput", &AdvectionParameters::velocityOutput)
+      .def_readwrite("ignoreVoids", &AdvectionParameters::ignoreVoids)
+      .def("toMetaData", &AdvectionParameters::toMetaData,
            "Convert the advection parameters to a metadata dict.")
-      .def("toMetaDataString", &AdvectionParameters<T>::toMetaDataString,
+      .def("toMetaDataString", &AdvectionParameters::toMetaDataString,
            "Convert the advection parameters to a metadata string.");
 
   pybind11::class_<lsInternal::StencilLocalLaxFriedrichsScalar<T, D, 1>>(
@@ -1827,55 +1822,60 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("maxDissipation"));
 
   // AtomicLayerProcess
-  pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
-      // constructors
-      .def(pybind11::init())
-      .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
-      .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>>(),
-           pybind11::arg("domain"), pybind11::arg("model"))
-      // methods
-      .def("apply", &AtomicLayerProcess<T, D>::apply, "Run the process.")
-      .def("setDomain", &AtomicLayerProcess<T, D>::setDomain,
-           "Set the process domain.")
-      .def("setProcessModel", &AtomicLayerProcess<T, D>::setProcessModel,
-           "Set the process model. This has to be a pre-configured process "
-           "model.")
-      .def("setPulseTime", &AtomicLayerProcess<T, D>::setPulseTime,
-           "Set the pulse time.")
-      .def("setSourceDirection", &AtomicLayerProcess<T, D>::setSourceDirection,
-           "Set source direction of the process.")
-      .def("setNumberOfRaysPerPoint",
-           &AtomicLayerProcess<T, D>::setNumberOfRaysPerPoint,
-           "Set the number of rays to traced for each particle in the process. "
-           "The number is per point in the process geometry.")
-      .def("setDesorptionRates", &AtomicLayerProcess<T, D>::setDesorptionRates,
-           "Set the desorption rate for each surface point.")
-      .def("setCoverageTimeStep",
-           &AtomicLayerProcess<T, D>::setCoverageTimeStep,
-           "Set the time step for the coverage calculation.")
-      .def("setIntegrationScheme",
-           &AtomicLayerProcess<T, D>::setIntegrationScheme,
-           "Set the integration scheme for solving the level-set equation. "
-           "Possible integration schemes are specified in "
-           "lsIntegrationSchemeEnum.")
-      .def("setNumCycles", &AtomicLayerProcess<T, D>::setNumCycles,
-           "Set the number of cycles for the process.")
-      .def("enableRandomSeeds", &AtomicLayerProcess<T, D>::enableRandomSeeds,
-           "Enable random seeds for the ray tracer. This will make the process "
-           "results non-deterministic.")
-      .def(
-          "disableRandomSeeds", &AtomicLayerProcess<T, D>::disableRandomSeeds,
-          "Disable random seeds for the ray tracer. This will make the process "
-          "results deterministic.");
+  //   pybind11::class_<AtomicLayerProcess<T, D>>(module, "AtomicLayerProcess")
+  //       // constructors
+  //       .def(pybind11::init())
+  //       .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
+  //       .def(pybind11::init<DomainType, SmartPointer<ProcessModelCPU<T,
+  //       D>>>(),
+  //            pybind11::arg("domain"), pybind11::arg("model"))
+  //       // methods
+  //       .def("apply", &AtomicLayerProcess<T, D>::apply, "Run the process.")
+  //       .def("setDomain", &AtomicLayerProcess<T, D>::setDomain,
+  //            "Set the process domain.")
+  //       .def("setProcessModel", &AtomicLayerProcess<T, D>::setProcessModel,
+  //            "Set the process model. This has to be a pre-configured process
+  //            " "model.")
+  //       .def("setPulseTime", &AtomicLayerProcess<T, D>::setPulseTime,
+  //            "Set the pulse time.")
+  //       .def("setSourceDirection", &AtomicLayerProcess<T,
+  //       D>::setSourceDirection,
+  //            "Set source direction of the process.")
+  //       .def("setNumberOfRaysPerPoint",
+  //            &AtomicLayerProcess<T, D>::setNumberOfRaysPerPoint,
+  //            "Set the number of rays to traced for each particle in the
+  //            process. " "The number is per point in the process geometry.")
+  //       .def("setDesorptionRates", &AtomicLayerProcess<T,
+  //       D>::setDesorptionRates,
+  //            "Set the desorption rate for each surface point.")
+  //       .def("setCoverageTimeStep",
+  //            &AtomicLayerProcess<T, D>::setCoverageTimeStep,
+  //            "Set the time step for the coverage calculation.")
+  //       .def("setIntegrationScheme",
+  //            &AtomicLayerProcess<T, D>::setIntegrationScheme,
+  //            "Set the integration scheme for solving the level-set equation.
+  //            " "Possible integration schemes are specified in "
+  //            "lsIntegrationSchemeEnum.")
+  //       .def("setNumCycles", &AtomicLayerProcess<T, D>::setNumCycles,
+  //            "Set the number of cycles for the process.")
+  //       .def("enableRandomSeeds", &AtomicLayerProcess<T,
+  //       D>::enableRandomSeeds,
+  //            "Enable random seeds for the ray tracer. This will make the
+  //            process " "results non-deterministic.")
+  //       .def(
+  //           "disableRandomSeeds", &AtomicLayerProcess<T,
+  //           D>::disableRandomSeeds, "Disable random seeds for the ray tracer.
+  //           This will make the process " "results deterministic.");
 
   // Process
   pybind11::class_<Process<T, D>>(module, "Process", pybind11::module_local())
       // constructors
       .def(pybind11::init())
       .def(pybind11::init<DomainType>(), pybind11::arg("domain"))
-      .def(pybind11::init<DomainType, SmartPointer<ProcessModel<T, D>>, T>(),
-           pybind11::arg("domain"), pybind11::arg("model"),
-           pybind11::arg("duration"))
+      .def(
+          pybind11::init<DomainType, SmartPointer<ProcessModelBase<T, D>>, T>(),
+          pybind11::arg("domain"), pybind11::arg("model"),
+          pybind11::arg("duration"))
       // methods
       .def("apply", &Process<T, D>::apply,
            //  pybind11::call_guard<pybind11::gil_scoped_release>(),
@@ -1889,62 +1889,74 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "model.")
       .def("setProcessDuration", &Process<T, D>::setProcessDuration,
            "Set the process duration.")
-      .def("setSourceDirection", &Process<T, D>::setSourceDirection,
-           "Set source direction of the process.")
-      .def("setNumberOfRaysPerPoint", &Process<T, D>::setNumberOfRaysPerPoint,
-           "Set the number of rays to traced for each particle in the process. "
-           "The number is per point in the process geometry.")
-      .def("setMaxCoverageInitIterations",
-           &Process<T, D>::setMaxCoverageInitIterations,
-           "Set the number of iterations to initialize the coverages.")
-      .def("setCoverageDeltaThreshold",
-           &Process<T, D>::setCoverageDeltaThreshold,
-           "Set the threshold for the coverage delta metric to reach "
-           "convergence.")
-      .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
-           "Set the integration scheme for solving the level-set equation. "
-           "Possible integration schemes are specified in "
-           "viennals::IntegrationSchemeEnum.")
-      .def("enableAdvectionVelocityOutput",
-           &Process<T, D>::enableAdvectionVelocityOutput,
-           "Enable the output of the advection velocity field on the ls-mesh.")
-      .def("disableAdvectionVelocityOutput",
-           &Process<T, D>::disableAdvectionVelocityOutput,
-           "Disable the output of the advection velocity field on the ls-mesh.")
-      .def("setTimeStepRatio", &Process<T, D>::setTimeStepRatio,
-           "Set the CFL condition to use during advection. The CFL condition "
-           "sets the maximum distance a surface can be moved during one "
-           "advection step. It MUST be below 0.5 to guarantee numerical "
-           "stability. Defaults to 0.4999.")
-      .def("enableFluxSmoothing", &Process<T, D>::enableFluxSmoothing,
-           "Enable flux smoothing. The flux at each surface point, calculated "
-           "by the ray tracer, is averaged over the surface point neighbors.")
-      .def("disableFluxSmoothing", &Process<T, D>::disableFluxSmoothing,
-           "Disable flux smoothing")
-      .def("setRayTracingDiskRadius", &Process<T, D>::setRayTracingDiskRadius,
-           "Set the radius of the disk used for ray tracing. This disk is used "
-           "for the intersection calculations at each surface point.")
-      .def("enableRandomSeeds", &Process<T, D>::enableRandomSeeds,
-           "Enable random seeds for the ray tracer. This will make the process "
-           "results non-deterministic.")
-      .def(
-          "disableRandomSeeds", &Process<T, D>::disableRandomSeeds,
-          "Disable random seeds for the ray tracer. This will make the process "
-          "results deterministic.")
-      .def("getProcessDuration", &Process<T, D>::getProcessDuration,
-           "Returns the duration of the recently run process. This duration "
-           "can sometimes slightly vary from the set process duration, due to "
-           "the maximum time step according to the CFL condition.")
+      //  .def("setSourceDirection", &Process<T, D>::setSourceDirection,
+      //       "Set source direction of the process.")
+      //  .def("setNumberOfRaysPerPoint", &Process<T,
+      //  D>::setNumberOfRaysPerPoint,
+      //       "Set the number of rays to traced for each particle in the
+      //       process. " "The number is per point in the process geometry.")
+      //  .def("setMaxCoverageInitIterations",
+      //       &Process<T, D>::setMaxCoverageInitIterations,
+      //       "Set the number of iterations to initialize the coverages.")
+      //  .def("setCoverageDeltaThreshold",
+      //       &Process<T, D>::setCoverageDeltaThreshold,
+      //       "Set the threshold for the coverage delta metric to reach "
+      //       "convergence.")
+      //  .def("setIntegrationScheme", &Process<T, D>::setIntegrationScheme,
+      //       "Set the integration scheme for solving the level-set equation. "
+      //       "Possible integration schemes are specified in "
+      //       "viennals::IntegrationSchemeEnum.")
+      //  .def("enableAdvectionVelocityOutput",
+      //       &Process<T, D>::enableAdvectionVelocityOutput,
+      //       "Enable the output of the advection velocity field on the
+      //       ls-mesh.")
+      //  .def("disableAdvectionVelocityOutput",
+      //       &Process<T, D>::disableAdvectionVelocityOutput,
+      //       "Disable the output of the advection velocity field on the
+      //       ls-mesh.")
+      //  .def("setTimeStepRatio", &Process<T, D>::setTimeStepRatio,
+      //       "Set the CFL condition to use during advection. The CFL condition
+      //       " "sets the maximum distance a surface can be moved during one "
+      //       "advection step. It MUST be below 0.5 to guarantee numerical "
+      //       "stability. Defaults to 0.4999.")
+      //  .def("enableFluxSmoothing", &Process<T, D>::enableFluxSmoothing,
+      //       "Enable flux smoothing. The flux at each surface point,
+      //       calculated " "by the ray tracer, is averaged over the surface
+      //       point neighbors.")
+      //  .def("disableFluxSmoothing", &Process<T, D>::disableFluxSmoothing,
+      //       "Disable flux smoothing")
+      //  .def("setRayTracingDiskRadius", &Process<T,
+      //  D>::setRayTracingDiskRadius,
+      //       "Set the radius of the disk used for ray tracing. This disk is
+      //       used " "for the intersection calculations at each surface
+      //       point.")
+      //  .def("enableRandomSeeds", &Process<T, D>::enableRandomSeeds,
+      //       "Enable random seeds for the ray tracer. This will make the
+      //       process " "results non-deterministic.")
+      //  .def(
+      //      "disableRandomSeeds", &Process<T, D>::disableRandomSeeds,
+      //      "Disable random seeds for the ray tracer. This will make the
+      //      process " "results deterministic.")
+      //  .def("getProcessDuration", &Process<T, D>::getProcessDuration,
+      //       "Returns the duration of the recently run process. This duration
+      //       " "can sometimes slightly vary from the set process duration, due
+      //       to " "the maximum time step according to the CFL condition.")
       .def("setAdvectionParameters", &Process<T, D>::setAdvectionParameters,
            "Set the advection parameters for the process.")
-      .def("getAdvectionParameters", &Process<T, D>::getAdvectionParameters,
-           "Get the advection parameters for the process.",
-           pybind11::return_value_policy::reference)
+      //  .def("getAdvectionParameters", &Process<T, D>::getAdvectionParameters,
+      //       "Get the advection parameters for the process.",
+      //  pybind11::return_value_policy::reference)
       .def("setRayTracingParameters", &Process<T, D>::setRayTracingParameters,
            "Set the ray tracing parameters for the process.")
-      .def("getRayTracingParameters", &Process<T, D>::getRayTracingParameters,
-           "Get the ray tracing parameters for the process.",
-           pybind11::return_value_policy::reference);
+      //  .def("getRayTracingParameters", &Process<T,
+      //  D>::getRayTracingParameters,
+      //       "Get the ray tracing parameters for the process.",
+      //  pybind11::return_value_policy::reference);
+      .def("setCoverageParameters", &Process<T, D>::setCoverageParameters,
+           "Set the coverage parameters for the process.")
+      .def("setAtomicLayerProcessParameters",
+           &Process<T, D>::setAtomicLayerProcessParameters,
+           "Set the atomic layer parameters for the process.");
 
   // ***************************************************************************
   //                                   VISUALIZATION
@@ -2161,19 +2173,20 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   m_ray.def("ReflectionConedCosine", &viennaray::ReflectionConedCosine<T, D>,
             "Coned cosine reflection.");
 
-#ifdef VIENNAPS_USE_GPU
+#ifdef VIENNACORE_COMPILE_GPU
   auto m_gpu = module.def_submodule("gpu", "GPU accelerated functions.");
 
   // GPU ProcessModel
-  pybind11::class_<gpu::ProcessModel<T, D>,
-                   SmartPointer<gpu::ProcessModel<T, D>>>
-      processModel_gpu(m_gpu, "ProcessModel", pybind11::module_local());
+  pybind11::class_<gpu::ProcessModelGPU<T, D>,
+                   SmartPointer<gpu::ProcessModelGPU<T, D>>>
+      processModel_gpu(m_gpu, "ProcessModelGPU", pybind11::module_local());
 
   pybind11::class_<std::filesystem::path>(m_gpu, "Path")
       .def(pybind11::init<std::string>());
   pybind11::implicitly_convertible<std::string, std::filesystem::path>();
 
-  pybind11::class_<Context>(m_gpu, "Context")
+  pybind11::class_<DeviceContext, std::shared_ptr<DeviceContext>>(m_gpu,
+                                                                  "Context")
       .def(pybind11::init())
       //  .def_readwrite("modulePath", &Context::modulePath)
       //  .def_readwrite("moduleNames", &Context::moduleNames)
@@ -2182,36 +2195,39 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       //  .def_readwrite("deviceProps", &Context::deviceProps,
       //                 "Device properties.")
       //  .def("getModule", &Context::getModule)
-      .def("create", &Context::create, "Create a new context.",
+      .def_static("createContext", &DeviceContext::createContext,
+                  "Create a new context.",
+                  pybind11::arg("modulePath") = VIENNACORE_KERNELS_PATH,
+                  pybind11::arg("deviceID") = 0,
+                  pybind11::arg("registerInGlobal") = true)
+      .def_static("getContextFromRegistry",
+                  &DeviceContext::getContextFromRegistry,
+                  "Get a context from the global registry by device ID.",
+                  pybind11::arg("deviceID") = 0)
+      .def_static(
+          "hasContextInRegistry", &DeviceContext::hasContextInRegistry,
+          "Check if a context exists in the global registry by device ID.",
+          pybind11::arg("deviceID") = 0)
+      .def_static("getRegisteredDeviceIDs",
+                  &DeviceContext::getRegisteredDeviceIDs,
+                  "Get a list of all device IDs with registered contexts.")
+      .def("create", &DeviceContext::create, "Create a new context.",
            pybind11::arg("modulePath") = VIENNACORE_KERNELS_PATH,
            pybind11::arg("deviceID") = 0)
-      .def("destroy", &Context::destroy, "Destroy the context.")
-      .def("addModule", &Context::addModule, "Add a module to the context.")
-      .def("getModulePath", &Context::getModulePath, "Get the module path.")
-      .def_readwrite("deviceID", &Context::deviceID, "Device ID.");
+      .def("destroy", &DeviceContext::destroy, "Destroy the context.")
+      .def("addModule", &DeviceContext::addModule,
+           "Add a module to the context.")
+      .def("getModulePath", &DeviceContext::getModulePath,
+           "Get the module path.")
+      .def_readwrite("deviceID", &DeviceContext::deviceID, "Device ID.");
 
   pybind11::class_<gpu::SingleParticleProcess<T, D>,
                    SmartPointer<gpu::SingleParticleProcess<T, D>>>(
       m_gpu, "SingleParticleProcess", processModel_gpu,
       pybind11::module_local())
-      .def(pybind11::init([](const T rate, const T sticking, const T power,
-                             const Material mask) {
-             return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
-                 rate, sticking, power, mask);
-           }),
-           pybind11::arg("rate") = 1.,
-           pybind11::arg("stickingProbability") = 1.,
-           pybind11::arg("sourceExponent") = 1.,
-           pybind11::arg("maskMaterial") = Material::Undefined)
-      .def(pybind11::init([](const T rate, const T sticking, const T power,
-                             const std::vector<Material> mask) {
-             return SmartPointer<gpu::SingleParticleProcess<T, D>>::New(
-                 rate, sticking, power, mask);
-           }),
-           pybind11::arg("rate"), pybind11::arg("stickingProbability"),
-           pybind11::arg("sourceExponent"), pybind11::arg("maskMaterials"))
-      .def(pybind11::init<std::unordered_map<Material, T>, T, T>(),
-           pybind11::arg("materialRates"), pybind11::arg("stickingProbability"),
+      .def(pybind11::init<std::unordered_map<Material, T>, T, T, T>(),
+           pybind11::arg("materialRates"), pybind11::arg("rate"),
+           pybind11::arg("stickingProbability"),
            pybind11::arg("sourceExponent"));
 
   // Multi Particle Process
@@ -2268,82 +2284,5 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           pybind11::arg("rate"), pybind11::arg("stickingProbability"),
           pybind11::arg("power"), pybind11::arg("cageAngle"),
           pybind11::arg("tiltAngle"));
-
-  // GPU Process
-  pybind11::class_<gpu::Process<T, D>>(m_gpu, "Process",
-                                       pybind11::module_local())
-      // constructors
-      .def(pybind11::init<gpu::Context &>(), pybind11::arg("context"))
-      .def(pybind11::init<gpu::Context &, DomainType,
-                          SmartPointer<gpu::ProcessModel<T, D>>, T>(),
-           pybind11::arg("context"), pybind11::arg("domain"),
-           pybind11::arg("model"), pybind11::arg("duration"))
-      // methods
-      .def("apply", &gpu::Process<T, D>::apply, "Run the process.")
-      .def("calculateFlux", &gpu::Process<T, D>::calculateFlux,
-           "Perform a single-pass flux calculation.")
-      .def("setDomain", &gpu::Process<T, D>::setDomain,
-           "Set the process domain.")
-      .def("setProcessModel", &gpu::Process<T, D>::setProcessModel,
-           "Set the process model. This has to be a pre-configured process "
-           "model.")
-      .def("setProcessDuration", &gpu::Process<T, D>::setProcessDuration,
-           "Set the process duration.")
-      .def("setNumberOfRaysPerPoint",
-           &gpu::Process<T, D>::setNumberOfRaysPerPoint,
-           "Set the number of rays to traced for each particle in the process. "
-           "The number is per point in the process geometry.")
-      .def("setMaxCoverageInitIterations",
-           &gpu::Process<T, D>::setMaxCoverageInitIterations,
-           "Set the number of iterations to initialize the coverages.")
-      .def("setCoverageDeltaThreshold",
-           &gpu::Process<T, D>::setCoverageDeltaThreshold,
-           "Set the threshold for the coverage delta metric to reach "
-           "convergence.")
-      .def("setIntegrationScheme", &gpu::Process<T, D>::setIntegrationScheme,
-           "Set the integration scheme for solving the level-set equation. "
-           "Possible integration schemes are specified in "
-           "viennals::IntegrationSchemeEnum.")
-      .def("enableAdvectionVelocityOutput",
-           &gpu::Process<T, D>::enableAdvectionVelocityOutput,
-           "Enable the output of the advection velocity field on the ls-mesh.")
-      .def("disableAdvectionVelocityOutput",
-           &gpu::Process<T, D>::disableAdvectionVelocityOutput,
-           "Disable the output of the advection velocity field on the ls-mesh.")
-      .def("setTimeStepRatio", &gpu::Process<T, D>::setTimeStepRatio,
-           "Set the CFL condition to use during advection. The CFL condition "
-           "sets the maximum distance a surface can be moved during one "
-           "advection step. It MUST be below 0.5 to guarantee numerical "
-           "stability. Defaults to 0.4999.")
-      .def("enableFluxSmoothing", &gpu::Process<T, D>::enableFluxSmoothing,
-           "Enable flux smoothing. The flux at each surface point, calculated "
-           "by the ray tracer, is averaged over the surface point neighbors.")
-      .def("disableFluxSmoothing", &gpu::Process<T, D>::disableFluxSmoothing,
-           "Disable flux smoothing")
-      .def("enableRandomSeeds", &gpu::Process<T, D>::enableRandomSeeds,
-           "Enable random seeds for the ray tracer. This will make the process "
-           "results non-deterministic.")
-      .def(
-          "disableRandomSeeds", &gpu::Process<T, D>::disableRandomSeeds,
-          "Disable random seeds for the ray tracer. This will make the process "
-          "results deterministic.")
-      .def("getProcessDuration", &gpu::Process<T, D>::getProcessDuration,
-           "Returns the duration of the recently run process. This duration "
-           "can sometimes slightly vary from the set process duration, due to "
-           "the maximum time step according to the CFL condition.")
-      .def("setAdvectionParameters",
-           &gpu::Process<T, D>::setAdvectionParameters,
-           "Set the advection parameters for the process.")
-      .def("getAdvectionParameters",
-           &gpu::Process<T, D>::getAdvectionParameters,
-           "Get the advection parameters for the process.",
-           pybind11::return_value_policy::reference)
-      .def("setRayTracingParameters",
-           &gpu::Process<T, D>::setRayTracingParameters,
-           "Set the ray tracing parameters for the process.")
-      .def("getRayTracingParameters",
-           &gpu::Process<T, D>::getRayTracingParameters,
-           "Get the ray tracing parameters for the process.",
-           pybind11::return_value_policy::reference);
 #endif
 }

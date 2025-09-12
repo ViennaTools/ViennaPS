@@ -2,13 +2,16 @@
 
 #include <lsMesh.hpp>
 
+#include <rayParticle.hpp>
 #include <raygIndexMap.hpp>
-#include <raygParticle.hpp>
 
 #include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
 
+#include <algorithm>
+#include <cassert>
 #include <numeric>
+#include <stdexcept>
 
 namespace viennaps::gpu {
 
@@ -55,13 +58,13 @@ public:
 
   void apply() {
 
-    auto numData = indexMap_.getNumberOfData();
+    const auto numData = indexMap_.getNumberOfData();
     const auto &points = diskMesh_->nodes;
-    auto numPoints = points.size();
-    auto numElements = elementKdTree_->getNumberOfPoints();
-    auto normals = diskMesh_->cellData.getVectorData("Normals");
-    auto elementNormals = surfaceMesh_->cellData.getVectorData("Normals");
-    const float sqrdDist = conversionRadius_ * conversionRadius_;
+    const auto numPoints = points.size();
+    const auto numElements = elementKdTree_->getNumberOfPoints();
+    const auto normals = diskMesh_->cellData.getVectorData("Normals");
+    const auto elementNormals = surfaceMesh_->cellData.getVectorData("Normals");
+    const auto sqrdDist = conversionRadius_ * conversionRadius_;
 
     // retrieve data from device
     std::vector<MeshNT> elementData(numData * numElements);
@@ -73,28 +76,34 @@ public:
       std::vector<NumericType> data(numPoints, 0.);
       pointData_->insertNextScalarData(std::move(data), label);
     }
-    assert(pointData_->getScalarDataSize() == numData); // assert number of data
 
-#pragma omp parallel for
+    if (pointData_->getScalarDataSize() != numData) {
+      Logger::getInstance()
+          .addError("ElementToPointData: "
+                    "Number of data arrays does not match expected count")
+          .print();
+    }
+
+#pragma omp parallel for schedule(static)
     for (unsigned i = 0; i < numPoints; i++) {
 
+      // we have to use the squared distance here
       auto closePoints =
-          elementKdTree_->findNearestWithinRadius(points[i],
-                                                  sqrdDist)
-              .value(); // we have to use the squared distance here
+          elementKdTree_->findNearestWithinRadius(points[i], sqrdDist).value();
 
       std::vector<NumericType> weights(closePoints.size(), 0.);
 
       unsigned numClosePoints = 0;
-      for (int n = 0; n < closePoints.size(); n++) {
+      for (std::size_t n = 0; n < closePoints.size(); ++n) {
         const auto &p = closePoints[n];
-        assert(p.first < elementNormals->size());
+        assert(p.first < numElements);
 
-        auto weight = DotProductNT(normals->at(i), elementNormals->at(p.first));
+        const auto weight =
+            DotProductNT(normals->at(i), elementNormals->at(p.first));
 
-        if (weight > 1e-6 && !std::isnan(weight)) {
+        if (weight > NumericType(1e-6) && !std::isnan(weight)) {
           weights[n] = weight;
-          numClosePoints++;
+          ++numClosePoints;
         }
       }
 
@@ -104,93 +113,36 @@ public:
         nearestIdx = nearestPoint->first;
       }
 
-      for (unsigned j = 0; j < numData; j++) {
+      for (unsigned j = 0; j < numData; ++j) {
+        NumericType value = NumericType(0);
 
-        NumericType value = 0.;
-        auto weightsCopy = weights;
+        if (numClosePoints > 0) {
+          auto weightsCopy = weights;
 
-        if (numClosePoints > 0) { // perform weighted average
+          // Discard outliers if enabled
+          discardOutliers(weightsCopy, weights, closePoints, elementData, j,
+                          numElements, numClosePoints);
 
-          if (discard4 && numClosePoints > 4) { // Discard 2 min and max value
-            NumericType min1, min2, max1, max2;
-            min1 = min2 = std::numeric_limits<NumericType>::max();
-            max1 = max2 = 0.;
-            int minIdx1 = -1, minIdx2 = -1, maxIdx1 = -1, maxIdx2 = -1;
+          // Compute weighted average
+          const NumericType sum = std::accumulate(
+              weightsCopy.begin(), weightsCopy.end(), NumericType(0));
 
-            for (int k = 0; k < closePoints.size(); k++) {
-              if (weights[k] != 0.) {
-                unsigned elementIdx = closePoints[k].first + j * numElements;
-                if (elementData[elementIdx] < min1) {
-                  min2 = min1;
-                  minIdx2 = minIdx1;
-                  min1 = elementData[elementIdx];
-                  minIdx1 = k;
-                } else if (elementData[elementIdx] < min2) {
-                  min2 = elementData[elementIdx];
-                  minIdx2 = k;
-                }
-                if (elementData[elementIdx] > max1) {
-                  max2 = max1;
-                  maxIdx2 = maxIdx1;
-                  max1 = elementData[elementIdx];
-                  maxIdx1 = k;
-                } else if (elementData[elementIdx] > max2) {
-                  max2 = elementData[elementIdx];
-                  maxIdx2 = k;
-                }
+          if (sum > NumericType(0)) {
+            for (std::size_t k = 0; k < closePoints.size(); ++k) {
+              if (weightsCopy[k] > NumericType(0)) {
+                const unsigned elementIdx =
+                    closePoints[k].first + j * numElements;
+                value += weightsCopy[k] * elementData[elementIdx];
               }
             }
-
-            if (!(maxIdx1 == -1 || maxIdx2 == -1 || minIdx1 == -1 ||
-                  minIdx2 == -1)) {
-              // discard values by setting their weight to 0
-              weightsCopy[minIdx1] = 0.;
-              weightsCopy[minIdx2] = 0.;
-              weightsCopy[maxIdx1] = 0.;
-              weightsCopy[maxIdx2] = 0.;
-            }
-
-          } else if (discard2 &&
-                     numClosePoints > 2) { // Discard min and max value
-
-            NumericType minValue = std::numeric_limits<NumericType>::max();
-            NumericType maxValue = 0.;
-            int minIdx = -1; // in weights vector
-            int maxIdx = -1;
-
-            for (int k = 0; k < closePoints.size(); k++) {
-              if (weights[k] != 0.) {
-                unsigned elementIdx = closePoints[k].first + j * numElements;
-                if (elementData[elementIdx] < minValue) {
-                  minValue = elementData[elementIdx];
-                  minIdx = k;
-                }
-                if (elementData[elementIdx] > maxValue) {
-                  maxValue = elementData[elementIdx];
-                  maxIdx = k;
-                }
-              }
-            }
-            if (minIdx != -1 && maxIdx != -1) {
-              // discard values by setting their weight to 0
-              weightsCopy[minIdx] = 0.;
-              weightsCopy[maxIdx] = 0.;
-            }
+            value /= sum;
+          } else {
+            // Fallback if all weights were discarded
+            auto nearestPoint = elementKdTree_->findNearest(points[i]);
+            value = elementData[nearestPoint->first + j * numElements];
           }
-
-          NumericType sum =
-              std::accumulate(weightsCopy.begin(), weightsCopy.end(), 0.);
-          assert(sum != 0.);
-
-          for (int k = 0; k < closePoints.size(); k++) {
-            value += weightsCopy[k] *
-                     elementData[closePoints[k].first + j * numElements];
-          }
-
-          value /= sum;
-
         } else {
-          // fallback to nearest point
+          // Fallback to nearest point
           value = elementData[nearestIdx + j * numElements];
         }
 
@@ -200,6 +152,85 @@ public:
   }
 
 private:
+  // Helper function to find min/max values and their indices
+  struct MinMaxInfo {
+    NumericType min1, min2, max1, max2;
+    int minIdx1, minIdx2, maxIdx1, maxIdx2;
+
+    MinMaxInfo()
+        : min1(std::numeric_limits<NumericType>::max()),
+          min2(std::numeric_limits<NumericType>::max()), max1(0), max2(0),
+          minIdx1(-1), minIdx2(-1), maxIdx1(-1), maxIdx2(-1) {}
+  };
+
+  MinMaxInfo findMinMaxValues(
+      const std::vector<NumericType> &weights,
+      const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
+      const std::vector<MeshNT> &elementData, unsigned j,
+      unsigned numElements) {
+    MinMaxInfo info;
+
+    for (std::size_t k = 0; k < closePoints.size(); ++k) {
+      if (weights[k] != NumericType(0)) {
+        const unsigned elementIdx = closePoints[k].first + j * numElements;
+        const auto value = elementData[elementIdx];
+
+        // Update min values
+        if (value < info.min1) {
+          info.min2 = info.min1;
+          info.minIdx2 = info.minIdx1;
+          info.min1 = value;
+          info.minIdx1 = static_cast<int>(k);
+        } else if (value < info.min2) {
+          info.min2 = value;
+          info.minIdx2 = static_cast<int>(k);
+        }
+
+        // Update max values
+        if (value > info.max1) {
+          info.max2 = info.max1;
+          info.maxIdx2 = info.maxIdx1;
+          info.max1 = value;
+          info.maxIdx1 = static_cast<int>(k);
+        } else if (value > info.max2) {
+          info.max2 = value;
+          info.maxIdx2 = static_cast<int>(k);
+        }
+      }
+    }
+
+    return info;
+  }
+
+  void discardOutliers(
+      std::vector<NumericType> &weightsCopy,
+      const std::vector<NumericType> &weights,
+      const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
+      const std::vector<MeshNT> &elementData, unsigned j, unsigned numElements,
+      unsigned numClosePoints) {
+
+    if (discard4 && numClosePoints > 4) {
+      const auto info =
+          findMinMaxValues(weights, closePoints, elementData, j, numElements);
+
+      if (info.maxIdx1 != -1 && info.maxIdx2 != -1 && info.minIdx1 != -1 &&
+          info.minIdx2 != -1) {
+        weightsCopy[info.minIdx1] = NumericType(0);
+        weightsCopy[info.minIdx2] = NumericType(0);
+        weightsCopy[info.maxIdx1] = NumericType(0);
+        weightsCopy[info.maxIdx2] = NumericType(0);
+      }
+    } else if (discard2 && numClosePoints > 2) {
+      const auto info =
+          findMinMaxValues(weights, closePoints, elementData, j, numElements);
+
+      if (info.minIdx1 != -1 && info.maxIdx1 != -1) {
+        weightsCopy[info.minIdx1] = NumericType(0);
+        weightsCopy[info.maxIdx1] = NumericType(0);
+      }
+    }
+  }
+
   template <class AT, class BT, std::size_t D>
   AT DotProductNT(const std::array<AT, D> &pVecA,
                   const std::array<BT, D> &pVecB) {

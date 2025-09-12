@@ -3,9 +3,9 @@
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psSelectiveEpitaxy.hpp>
+#include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psPlanarize.hpp>
-#include <psProcess.hpp>
 #include <psReader.hpp>
 #include <psWriter.hpp>
 
@@ -219,9 +219,11 @@ int main() {
                                    Material::Si3N4};
     auto model =
         SmartPointer<IsotropicProcess<NumericType, D>>::New(-1., masks);
+    AdvectionParameters advectionParams;
+    advectionParams.integrationScheme =
+        viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
     Process<NumericType, D> process(domain, model, 5.);
-    process.setIntegrationScheme(
-        viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER);
+    process.setAdvectionParameters(advectionParams);
     process.apply();
     std::cout << " done" << std::endl;
   }
@@ -233,7 +235,7 @@ int main() {
     std::cout << "S/D Epitaxy ..." << std::flush;
     domain->duplicateTopLevelSet(Material::SiGe);
     Logger::setLogLevel(LogLevel::INFO);
-    AdvectionParameters<NumericType> advectionParams;
+    AdvectionParameters advectionParams;
     advectionParams.integrationScheme =
         viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
     lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,

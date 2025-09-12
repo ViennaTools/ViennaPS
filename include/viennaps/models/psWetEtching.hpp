@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
 
 #include <vcVectorType.hpp>
 
@@ -95,7 +95,7 @@ public:
 
 // Model for a wet etching process.
 template <typename NumericType, int D>
-class WetEtching : public ProcessModel<NumericType, D> {
+class WetEtching : public ProcessModelCPU<NumericType, D> {
 public:
   // The constructor expects the materials where etching is allowed including
   // the corresponding rates.
@@ -145,7 +145,7 @@ private:
                                        direction010[2]};
     for (const auto &material : materials) {
       processMetaData[MaterialMap::getMaterialName(material.first) + " Rate"] =
-          std::vector<NumericType>{material.second};
+          std::vector<double>{material.second};
     }
   }
 
@@ -160,7 +160,7 @@ private:
   NumericType r311 = 0.0300166666667;
 
   std::vector<std::pair<Material, NumericType>> materials;
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(WetEtching)

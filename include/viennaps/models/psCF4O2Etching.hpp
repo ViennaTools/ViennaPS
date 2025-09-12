@@ -4,7 +4,7 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
-#include "../psProcessModel.hpp"
+#include "../process/psProcessModel.hpp"
 #include "../psUnits.hpp"
 
 #include "psCF4O2Parameters.hpp"
@@ -596,7 +596,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class CF4O2Etching final : public ProcessModel<NumericType, D> {
+class CF4O2Etching final : public ProcessModelCPU<NumericType, D> {
 public:
   CF4O2Etching() { initializeModel(); }
 
@@ -666,9 +666,9 @@ private:
       this->insertNextParticleType(polymer);
 
     this->processMetaData = params.toProcessMetaData();
-    this->processMetaData["Units"] = std::vector<NumericType>{
-        static_cast<NumericType>(units::Length::getInstance().getUnit()),
-        static_cast<NumericType>(units::Time::getInstance().getUnit())};
+    this->processMetaData["Units"] = std::vector<double>{
+        static_cast<double>(units::Length::getInstance().getUnit()),
+        static_cast<double>(units::Time::getInstance().getUnit())};
   }
 
   CF4O2Parameters<NumericType> params;

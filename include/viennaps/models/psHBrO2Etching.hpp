@@ -4,11 +4,11 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
+#include "../process/psProcessModel.hpp"
+#include "../process/psSurfaceModel.hpp"
+#include "../process/psVelocityField.hpp"
 #include "../psConstants.hpp"
-#include "../psProcessModel.hpp"
-#include "../psSurfaceModel.hpp"
 #include "../psUnits.hpp"
-#include "../psVelocityField.hpp"
 
 #include "psPlasmaEtching.hpp"
 #include "psPlasmaEtchingParameters.hpp"
@@ -17,9 +17,82 @@ namespace viennaps {
 
 using namespace viennacore;
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+/// GPU Version of the HBr/O2 plasma etching model
+template <typename NumericType, int D>
+class HBrO2Etching final : public ProcessModelGPU<NumericType, D> {
+public:
+  explicit HBrO2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
+      : params(pParams), deviceParams(pParams.convertToFloat()) {
+    initializeModel();
+  }
+
+  ~HBrO2Etching() override { this->processData.free(); }
+
+private:
+  void initializeModel() {
+    // particles
+    viennaray::gpu::Particle<NumericType> ion;
+    ion.name = "ion"; // name for shader programs postfix
+    ion.dataLabels.push_back("ionSputterFlux");
+    ion.dataLabels.push_back("ionEnhancedFlux");
+    ion.dataLabels.push_back("ionEnhancedPassivationFlux");
+    ion.sticking = 0.f;
+    ion.cosineExponent = params.Ions.exponent;
+
+    viennaray::gpu::Particle<NumericType> etchant;
+    etchant.name = "neutral";
+    etchant.dataLabels.push_back("etchantFlux");
+    etchant.cosineExponent = 1.f;
+    etchant.materialSticking = params.beta_E;
+
+    viennaray::gpu::Particle<NumericType> oxygen;
+    oxygen.name = "neutral";
+    oxygen.dataLabels.push_back("passivationFlux");
+    oxygen.cosineExponent = 1.f;
+    oxygen.materialSticking = params.beta_P;
+
+    // surface model
+    auto surfModel = SmartPointer<
+        viennaps::impl::PlasmaEtchingSurfaceModel<NumericType, D>>::New(params);
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("HBrO2Etching");
+    this->getParticleTypes().clear();
+
+    this->insertNextParticleType(ion);
+    this->insertNextParticleType(etchant);
+    this->insertNextParticleType(oxygen);
+    this->setPipelineFileName("PlasmaEtchingPipeline");
+
+    this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
+    this->processData.upload(&deviceParams, 1);
+
+    this->setUseMaterialIds(true);
+    this->processMetaData = params.toProcessMetaData();
+  }
+
+  void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
+    params = pParams;
+    deviceParams = pParams.convertToFloat();
+    this->processData.upload(&deviceParams, 1);
+  }
+
+private:
+  PlasmaEtchingParameters<NumericType> params;
+  PlasmaEtchingParameters<float> deviceParams;
+};
+} // namespace gpu
+#endif
+
 /// Model for etching Si in a HBr/O2 plasma.
 template <typename NumericType, int D>
-class HBrO2Etching : public ProcessModel<NumericType, D> {
+class HBrO2Etching : public ProcessModelCPU<NumericType, D> {
 public:
   HBrO2Etching() {
     params = defaultParameters();
@@ -53,6 +126,12 @@ public:
     params = pParams;
     initializeModel();
   }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
+    return SmartPointer<gpu::HBrO2Etching<NumericType, D>>::New(params);
+  }
+#endif
 
   PlasmaEtchingParameters<NumericType> &getParameters() { return params; }
 
@@ -149,6 +228,7 @@ private:
     this->setVelocityField(velField);
 
     this->setProcessName("HBrO2Etching");
+    this->hasGPU = true;
 
     this->processMetaData = params.toProcessMetaData();
     // add units

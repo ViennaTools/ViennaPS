@@ -1,8 +1,8 @@
 #include <geometries/psMakeHole.hpp>
 #include <lsMakeGeometry.hpp>
 
-#include <psProcess.hpp>
-#include <psProcessModel.hpp>
+#include <process/psProcess.hpp>
+#include <process/psProcessModel.hpp>
 
 #include "particles.hpp"
 #include "surfaceModel.hpp"
@@ -90,7 +90,7 @@ int main() {
 
   domain->saveSurfaceMesh("initial.vtp");
 
-  auto model = ps::SmartPointer<ps::ProcessModel<NumericType, D>>::New();
+  auto model = ps::SmartPointer<ps::ProcessModelCPU<NumericType, D>>::New();
   model->insertNextParticleType(particle);
   model->setSurfaceModel(surfModel);
   model->setVelocityField(velField);

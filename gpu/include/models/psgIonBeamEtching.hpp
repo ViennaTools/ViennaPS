@@ -1,13 +1,13 @@
 #pragma once
 
 #include <models/psMultiParticleProcess.hpp>
-#include <psgProcessModel.hpp>
-#include <raygParticle.hpp>
+
+#include <rayParticle.hpp>
 
 namespace viennaps::gpu {
 
 template <typename NumericType, int D>
-class IonBeamEtching final : public ProcessModel<NumericType, D> {
+class IonBeamEtching final : public ProcessModelGPU<NumericType, D> {
 public:
   explicit IonBeamEtching(NumericType exponent) {
     viennaray::gpu::Particle<NumericType> particle{

@@ -9,7 +9,7 @@
 
 #include <models/psSF6O2Etching.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <vcUtil.hpp>
 
 namespace ps = viennaps;

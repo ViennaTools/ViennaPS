@@ -2,8 +2,8 @@
 
 #include "psIonBeamEtching.hpp"
 
+#include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
 
 #include <functional>
 #include <random>
@@ -186,7 +186,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class FaradayCageEtching : public ProcessModel<NumericType, D> {
+class FaradayCageEtching : public ProcessModelCPU<NumericType, D> {
 public:
   FaradayCageEtching() = default;
 
@@ -254,6 +254,7 @@ public:
     this->insertNextParticleType(particle);
     this->setProcessName("FaradayCageEtching");
     this->processMetaData = params_.toProcessMetaData();
+    this->hasGPU = true;
 
     firstInit = true;
   }
@@ -262,6 +263,8 @@ public:
                 const NumericType processedDuration) final {
     firstInit = false;
   }
+
+  bool useFluxEngine() override final { return true; }
 
 private:
   bool firstInit = false;

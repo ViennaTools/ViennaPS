@@ -11,5 +11,6 @@ struct IonParams {
   float thresholdEnergy = 0.f;
   float inflectAngle = 0.f;
   float n = 0.f;
+  float yieldFac = 0.f;
 };
 } // namespace viennaps::gpu::impl

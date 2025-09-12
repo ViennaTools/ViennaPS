@@ -2,7 +2,7 @@
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psSingleParticleProcess.hpp>
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 using namespace viennaps;

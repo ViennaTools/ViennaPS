@@ -14,7 +14,9 @@
 
 #include <vcContext.hpp>
 
+// #ifndef COUNT_RAYS
 // #define COUNT_RAYS
+// #endif
 
 using namespace viennaray::gpu;
 
@@ -22,9 +24,6 @@ using namespace viennaray::gpu;
     optixLaunch (this gets filled in from the buffer we pass to
     optixLaunch) */
 extern "C" __constant__ LaunchParams launchParams;
-
-// for this simple example, we have a single ray type
-enum { SURFACE_RAY_TYPE = 0, RAY_TYPE_COUNT };
 
 extern "C" __global__ void __closesthit__SingleParticle() {
   const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
@@ -84,11 +83,10 @@ extern "C" __global__ void __raygen__SingleParticle() {
                0.0f,                                            // rayTime
                OptixVisibilityMask(255),
                OPTIX_RAY_FLAG_DISABLE_ANYHIT, // OPTIX_RAY_FLAG_NONE,
-               SURFACE_RAY_TYPE,              // SBT offset
-               RAY_TYPE_COUNT,                // SBT stride
-               SURFACE_RAY_TYPE,              // missSBTIndex
+               0,                             // SBT offset
+               1,                             // SBT stride
+               0,                             // missSBTIndex
                u0, u1);
-
 #ifdef COUNT_RAYS
     int *counter = reinterpret_cast<int *>(launchParams.customData);
     atomicAdd(counter, 1);

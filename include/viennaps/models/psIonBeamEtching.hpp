@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
 #include "psIonBeamParameters.hpp"
 
 #include <rayParticle.hpp>
@@ -177,7 +177,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class IonBeamEtching : public ProcessModel<NumericType, D> {
+class IonBeamEtching : public ProcessModelCPU<NumericType, D> {
 public:
   IonBeamEtching() = default;
 
@@ -251,6 +251,8 @@ public:
                 const NumericType processedDuration) final {
     firstInit = false;
   }
+
+  bool useFluxEngine() final { return true; }
 
 private:
   bool firstInit = false;

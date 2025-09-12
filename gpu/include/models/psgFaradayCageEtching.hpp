@@ -1,7 +1,7 @@
 #pragma once
 
-#include <psgProcessModel.hpp>
-#include <raygParticle.hpp>
+#include <process/psProcessModel.hpp>
+#include <rayParticle.hpp>
 
 #include <vcVectorType.hpp>
 
@@ -46,7 +46,7 @@ public:
 // Etching or deposition based on a single particle model with diffuse
 // reflections.
 template <typename NumericType, int D>
-class FaradayCageEtching final : public ProcessModel<NumericType, D> {
+class FaradayCageEtching final : public ProcessModelGPU<NumericType, D> {
 public:
   // Angles in degrees
   FaradayCageEtching(NumericType rate, NumericType stickingProbability,

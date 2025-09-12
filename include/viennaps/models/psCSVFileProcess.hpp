@@ -6,12 +6,13 @@
 #include <string>
 #include <vector>
 
+#include "../process/psProcessModel.hpp"
+#include "../process/psSurfaceModel.hpp"
+#include "../psDomain.hpp"
+#include "../psMaterials.hpp"
+#include "../psRateGrid.hpp"
+
 #include <lsCalculateVisibilities.hpp>
-#include <psDomain.hpp>
-#include <psMaterials.hpp>
-#include <psProcessModel.hpp>
-#include <psRateGrid.hpp>
-#include <psSurfaceModel.hpp>
 
 namespace viennaps {
 
@@ -141,7 +142,7 @@ private:
 } // namespace impl
 
 template <typename NumericType, int D>
-class CSVFileProcess : public ProcessModel<NumericType, D> {
+class CSVFileProcess : public ProcessModelCPU<NumericType, D> {
 public:
   CSVFileProcess(const std::string &ratesFile, const Vec3D<NumericType> &dir,
                  const Vec2D<NumericType> &off, NumericType isoScale = 0.,

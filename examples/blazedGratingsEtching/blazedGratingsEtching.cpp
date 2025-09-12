@@ -1,9 +1,8 @@
 #include "blazedGratingsGeometry.hpp"
 
 #include <models/psIonBeamEtching.hpp>
+#include <process/psProcess.hpp>
 #include <psConstants.hpp>
-#include <psProcess.hpp>
-#include <psProcessParams.hpp>
 
 using namespace viennaps;
 
@@ -29,12 +28,12 @@ int main(int argc, char **argv) {
       params.get("gridDelta"));
   geometry->saveSurfaceMesh("initial");
 
-  AdvectionParameters<NumericType> advParams;
+  AdvectionParameters advParams;
   advParams.integrationScheme =
       viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
   advParams.timeStepRatio = 0.25;
 
-  RayTracingParameters<NumericType, D> rayTracingParams;
+  RayTracingParameters<D> rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
   rayTracingParams.smoothingNeighbors = 1;
 

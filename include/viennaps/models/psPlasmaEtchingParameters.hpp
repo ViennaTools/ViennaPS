@@ -85,7 +85,7 @@ template <typename NumericType> struct PlasmaEtchingParameters {
   } Ions;
 
   auto toProcessMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> processData;
+    std::unordered_map<std::string, std::vector<double>> processData;
 
     processData["Ion Flux"] = {ionFlux};
     processData["Etchant Flux"] = {etchantFlux};
@@ -145,6 +145,59 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     }
 
     return processData;
+  }
+
+  PlasmaEtchingParameters<float> convertToFloat() const {
+    PlasmaEtchingParameters<float> pParams;
+    if constexpr (std::is_same_v<NumericType, float>) {
+      pParams = *this;
+    } else {
+      pParams.ionFlux = static_cast<float>(ionFlux);
+      pParams.etchantFlux = static_cast<float>(etchantFlux);
+      pParams.passivationFlux = static_cast<float>(passivationFlux);
+
+      for (auto &pair : beta_E) {
+        pParams.beta_E[pair.first] = static_cast<float>(pair.second);
+      }
+      for (auto &pair : beta_P) {
+        pParams.beta_P[pair.first] = static_cast<float>(pair.second);
+      }
+
+      pParams.etchStopDepth = static_cast<float>(etchStopDepth);
+
+      pParams.Mask.A_sp = static_cast<float>(Mask.A_sp);
+      pParams.Mask.B_sp = static_cast<float>(Mask.B_sp);
+      pParams.Mask.Eth_sp = static_cast<float>(Mask.Eth_sp);
+      pParams.Mask.rho = static_cast<float>(Mask.rho);
+
+      pParams.Polymer.A_sp = static_cast<float>(Polymer.A_sp);
+      pParams.Polymer.B_sp = static_cast<float>(Polymer.B_sp);
+      pParams.Polymer.Eth_sp = static_cast<float>(Polymer.Eth_sp);
+      pParams.Polymer.rho = static_cast<float>(Polymer.rho);
+
+      pParams.Substrate.A_ie = static_cast<float>(Substrate.A_ie);
+      pParams.Substrate.A_sp = static_cast<float>(Substrate.A_sp);
+      pParams.Substrate.B_ie = static_cast<float>(Substrate.B_ie);
+      pParams.Substrate.B_sp = static_cast<float>(Substrate.B_sp);
+      pParams.Substrate.Eth_ie = static_cast<float>(Substrate.Eth_ie);
+      pParams.Substrate.Eth_sp = static_cast<float>(Substrate.Eth_sp);
+      pParams.Substrate.k_sigma = static_cast<float>(Substrate.k_sigma);
+      pParams.Substrate.beta_sigma = static_cast<float>(Substrate.beta_sigma);
+      pParams.Substrate.rho = static_cast<float>(Substrate.rho);
+
+      pParams.Passivation.A_ie = static_cast<float>(Passivation.A_ie);
+      pParams.Passivation.Eth_ie = static_cast<float>(Passivation.Eth_ie);
+
+      pParams.Ions.exponent = static_cast<float>(Ions.exponent);
+      pParams.Ions.meanEnergy = static_cast<float>(Ions.meanEnergy);
+      pParams.Ions.sigmaEnergy = static_cast<float>(Ions.sigmaEnergy);
+      pParams.Ions.inflectAngle = static_cast<float>(Ions.inflectAngle);
+      pParams.Ions.n_l = static_cast<float>(Ions.n_l);
+      pParams.Ions.minAngle = static_cast<float>(Ions.minAngle);
+      pParams.Ions.thetaRMin = static_cast<float>(Ions.thetaRMin);
+      pParams.Ions.thetaRMax = static_cast<float>(Ions.thetaRMax);
+    }
+    return pParams;
   }
 };
 

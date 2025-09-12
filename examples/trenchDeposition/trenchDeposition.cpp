@@ -1,7 +1,7 @@
 #include <geometries/psMakeTrench.hpp>
 #include <models/psSingleParticleProcess.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
 namespace ps = viennaps;
@@ -9,6 +9,7 @@ namespace ps = viennaps;
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
+  ps::Logger::setLogLevel(ps::LogLevel::TIMING);
 
   // Parse the parameters
   ps::util::Parameters params;

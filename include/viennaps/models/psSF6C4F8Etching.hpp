@@ -4,11 +4,11 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
+#include "../process/psProcessModel.hpp"
+#include "../process/psSurfaceModel.hpp"
+#include "../process/psVelocityField.hpp"
 #include "../psConstants.hpp"
-#include "../psProcessModel.hpp"
-#include "../psSurfaceModel.hpp"
 #include "../psUnits.hpp"
-#include "../psVelocityField.hpp"
 
 #include "psPlasmaEtching.hpp"
 #include "psPlasmaEtchingParameters.hpp"
@@ -22,7 +22,7 @@ using namespace viennacore;
 /// by a separate process and etched by sputtering similarly to the mask
 /// material. No passivation occurs in this model.
 template <typename NumericType, int D>
-class SF6C4F8Etching : public ProcessModel<NumericType, D> {
+class SF6C4F8Etching : public ProcessModelCPU<NumericType, D> {
 public:
   SF6C4F8Etching() {
     params = defaultParameters();
@@ -156,7 +156,7 @@ private:
   }
 
   PlasmaEtchingParameters<NumericType> params;
-  using ProcessModel<NumericType, D>::processMetaData;
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(SF6C4F8Etching)

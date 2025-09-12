@@ -1,5 +1,10 @@
 #pragma once
 
+#include <vcLogger.hpp>
+
+#include <stdexcept>
+#include <string>
+
 namespace viennaps::units {
 
 class Length {
@@ -66,11 +71,15 @@ public:
     case ANGSTROM:
       return 1e-10;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Length unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Length unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return 0.;
@@ -91,11 +100,15 @@ public:
     case ANGSTROM:
       return 1e-8;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Length unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Length unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return 0.;
@@ -116,11 +129,15 @@ public:
     case ANGSTROM:
       return 1e-7;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Length unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Length unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return 0.;
@@ -141,11 +158,15 @@ public:
     case ANGSTROM:
       return 1e-4;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Length unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Length unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return 0.;
@@ -166,11 +187,15 @@ public:
     case ANGSTROM:
       return 1e-1;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Length unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Length unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return 0.;
@@ -191,11 +216,15 @@ public:
     case ANGSTROM:
       return 1.;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Length unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Length unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return 0.;
@@ -218,7 +247,9 @@ public:
     case UNDEFINED:
       return "";
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return "error-length-unit";
@@ -241,7 +272,9 @@ public:
     case UNDEFINED:
       return "";
     default:
-      Logger::getInstance().addError("Invalid length unit.").print();
+      viennacore::Logger::getInstance()
+          .addError("Invalid length unit.")
+          .print();
     }
 
     return "error-length-unit";
@@ -293,11 +326,13 @@ public:
     case MILLISECOND:
       return 1. / 60000.;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Time unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Time unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid time unit.").print();
+      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
     }
 
     return 0.;
@@ -312,11 +347,13 @@ public:
     case MILLISECOND:
       return 1e-3;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Time unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Time unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid time unit.").print();
+      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
     }
 
     return 0.;
@@ -331,11 +368,13 @@ public:
     case MILLISECOND:
       return 1.;
     case UNDEFINED: {
-      Logger::getInstance().addWarning("Time unit is not defined.").print();
+      viennacore::Logger::getInstance()
+          .addWarning("Time unit is not defined.")
+          .print();
       return 1.;
     }
     default:
-      Logger::getInstance().addError("Invalid time unit.").print();
+      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
     }
 
     return 0.;
@@ -352,7 +391,7 @@ public:
     case UNDEFINED:
       return "";
     default:
-      Logger::getInstance().addError("Invalid time unit.").print();
+      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
     }
 
     return "error-time-unit";
@@ -369,7 +408,7 @@ public:
     case UNDEFINED:
       return "";
     default:
-      Logger::getInstance().addError("Invalid time unit.").print();
+      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
     }
 
     return "error-time-unit";

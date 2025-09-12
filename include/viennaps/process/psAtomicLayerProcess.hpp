@@ -66,14 +66,14 @@ public:
   // Constructor for a process with a pre-configured process model.
   AtomicLayerProcess(
       DomainType domain,
-      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel)
+      SmartPointer<ProcessModelCPU<NumericType, D>> passedProcessModel)
       : pDomain_(domain), pModel_(passedProcessModel) {}
 
   // Set the process model. This can be either a pre-configured process model or
   // a custom process model. A custom process model must interface the
   // ProcessModel class.
   void setProcessModel(
-      SmartPointer<ProcessModel<NumericType, D>> passedProcessModel) {
+      SmartPointer<ProcessModelCPU<NumericType, D>> passedProcessModel) {
     pModel_ = passedProcessModel;
   }
 
@@ -126,7 +126,7 @@ public:
 
     pModel_->initialize(pDomain_, 0.);
     auto name = pModel_->getProcessName().value_or("default");
-    if (static_cast<int>(pDomain_->useMetaData) > 1) {
+    if (static_cast<int>(pDomain_->getMetaDataLevel()) > 1) {
       pDomain_->clearMetaData(false); // clear previous metadata (without domain
       // metadata)
       pDomain_->addMetaData(pModel_->getProcessMetaData());
@@ -485,10 +485,10 @@ private:
   }
 
   DomainType pDomain_;
-  SmartPointer<ProcessModel<NumericType, D>> pModel_;
+  SmartPointer<ProcessModelCPU<NumericType, D>> pModel_;
 
-  AdvectionParameters<NumericType> advectionParams_;
-  RayTracingParameters<NumericType, D> rayTracingParams_;
+  AdvectionParameters advectionParams_;
+  RayTracingParameters<D> rayTracingParams_;
 
   unsigned int numCycles_ = 0;
   NumericType pulseTime_ = 0.;

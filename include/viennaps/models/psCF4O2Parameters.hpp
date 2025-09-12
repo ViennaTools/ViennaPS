@@ -99,7 +99,7 @@ template <typename NumericType> struct CF4O2Parameters {
   } Ions;
 
   auto toProcessMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> metaData;
+    std::unordered_map<std::string, std::vector<double>> metaData;
 
     // put everything into the meta data
     metaData["ionFlux"] = {ionFlux};

@@ -1,7 +1,7 @@
 #include <lsAdvect.hpp>
 #include <lsToDiskMesh.hpp>
 
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 #include <rayTrace.hpp>
 
 #include "BenchmarkGeometry.hpp"
@@ -9,12 +9,12 @@
 using namespace viennaps;
 
 int main() {
-  omp_set_num_threads(1);
+  omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = DIM;
 
-  int numRuns = 1;
-  const NumericType sticking = 0.5f;
+  int numRuns = 10;
+  const NumericType sticking = 0.1f;
   std::ofstream file("CPU_Benchmark_single.txt");
   file << "Sticking;Meshing;Tracing;Postprocessing;NumberOfTraces\n";
 
@@ -24,7 +24,8 @@ int main() {
   viennals::ToDiskMesh<NumericType, D> mesher(mesh);
 
   viennaray::Trace<NumericType, D> tracer;
-  tracer.setNumberOfRaysPerPoint(3000);
+  // tracer.setNumberOfRaysPerPoint(3000);
+  tracer.setNumberOfRaysFixed(50000000);
   tracer.setUseRandomSeeds(false);
 
   for (const auto ls : domain->getLevelSets()) {
@@ -45,6 +46,7 @@ int main() {
     file << timer.currentDuration << ";";
     std::cout << "Meshing time: " << timer.currentDuration * 1e-6 << " ms"
               << std::endl;
+    std::cout << "Number of surface disks: " << mesh->nodes.size() << std::endl;
 
     const auto &materialIds = *mesh->getCellData().getScalarData("MaterialIds");
     const auto &normals = *mesh->getCellData().getVectorData("Normals");
@@ -70,6 +72,7 @@ int main() {
               << " ms" << std::endl;
 
     file << info.totalRaysTraced << "\n";
+    std::cout << "Number of rays: " << info.totalRaysTraced << std::endl;
 
     mesh->getCellData().insertNextScalarData(flux, "flux");
     viennals::VTKWriter<NumericType>(mesh, "CPU_SingleParticleFlux_disk.vtp")

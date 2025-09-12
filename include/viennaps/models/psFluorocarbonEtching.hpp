@@ -2,8 +2,8 @@
 
 #include <cmath>
 
+#include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
-#include "../psProcessModel.hpp"
 #include "../psUnits.hpp"
 
 #include <rayParticle.hpp>
@@ -123,56 +123,55 @@ template <typename NumericType> struct FluorocarbonParameters {
   static constexpr double kB = 8.617333262 * 1e-5; // eV / K
 
   auto toProcessMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> processData;
+    std::unordered_map<std::string, std::vector<double>> processData;
 
-    processData["ionFlux"] = std::vector<NumericType>{ionFlux};
-    processData["etchantFlux"] = std::vector<NumericType>{etchantFlux};
-    processData["polymerFlux"] = std::vector<NumericType>{polyFlux};
-    processData["delta_p"] = std::vector<NumericType>{delta_p};
-    processData["etchStopDepth"] = std::vector<NumericType>{etchStopDepth};
-    processData["temperature"] = std::vector<NumericType>{temperature};
-    processData["k_ie"] = std::vector<NumericType>{k_ie};
-    processData["k_ev"] = std::vector<NumericType>{k_ev};
-    processData["beta_pe"] = std::vector<NumericType>{beta_pe};
-    processData["beta_p"] = std::vector<NumericType>{beta_p};
-    processData["beta_e"] = std::vector<NumericType>{beta_e};
-    processData["Mask Rho"] = std::vector<NumericType>{Mask.rho};
-    processData["Mask Beta_P"] = std::vector<NumericType>{Mask.beta_p};
-    processData["Mask Beta_E"] = std::vector<NumericType>{Mask.beta_e};
-    processData["Mask A_sp"] = std::vector<NumericType>{Mask.A_sp};
-    processData["Mask B_sp"] = std::vector<NumericType>{Mask.B_sp};
-    processData["Mask E_th_sp"] = std::vector<NumericType>{Mask.Eth_sp};
-    processData["SiO2 Rho"] = std::vector<NumericType>{SiO2.rho};
-    processData["SiO2 E_th_sp"] = std::vector<NumericType>{SiO2.Eth_sp};
-    processData["SiO2 E_th_ie"] = std::vector<NumericType>{SiO2.Eth_ie};
-    processData["SiO2 A_Sp"] = std::vector<NumericType>{SiO2.A_sp};
-    processData["SiO2 B_sp"] = std::vector<NumericType>{SiO2.B_sp};
-    processData["SiO2 K"] = std::vector<NumericType>{SiO2.K};
-    processData["SiO2 E_a"] = std::vector<NumericType>{SiO2.E_a};
-    processData["Polymer Rho"] = std::vector<NumericType>{Polymer.rho};
-    processData["Polymer E_th_ie"] = std::vector<NumericType>{Polymer.Eth_ie};
-    processData["Polymer A_ie"] = std::vector<NumericType>{Polymer.A_ie};
-    processData["Si3N4 Rho"] = std::vector<NumericType>{Si3N4.rho};
-    processData["Si3N4 E_th_sp"] = std::vector<NumericType>{Si3N4.Eth_sp};
-    processData["Si3N4 E_th_ie"] = std::vector<NumericType>{Si3N4.Eth_ie};
-    processData["Si3N4 A_Sp"] = std::vector<NumericType>{Si3N4.A_sp};
-    processData["Si3N4 B_sp"] = std::vector<NumericType>{Si3N4.B_sp};
-    processData["Si3N4 K"] = std::vector<NumericType>{Si3N4.K};
-    processData["Si3N4 EA"] = std::vector<NumericType>{Si3N4.E_a};
-    processData["Si Rho"] = std::vector<NumericType>{Si.rho};
-    processData["Si E_th_sp"] = std::vector<NumericType>{Si.Eth_sp};
-    processData["Si E_th_ie"] = std::vector<NumericType>{Si.Eth_ie};
-    processData["Si A_Sp"] = std::vector<NumericType>{Si.A_sp};
-    processData["Si B_sp"] = std::vector<NumericType>{Si.B_sp};
-    processData["Si K"] = std::vector<NumericType>{Si.K};
-    processData["Si E_a"] = std::vector<NumericType>{Si.E_a};
-    processData["Ion MeanEnergy"] = std::vector<NumericType>{Ions.meanEnergy};
-    processData["Ion SigmaEnergy"] = std::vector<NumericType>{Ions.sigmaEnergy};
-    processData["Ion Exponent"] = std::vector<NumericType>{Ions.exponent};
-    processData["Ion InflectAngle"] =
-        std::vector<NumericType>{Ions.inflectAngle};
-    processData["Ion n_k"] = std::vector<NumericType>{Ions.n_l};
-    processData["Ion MinAngle"] = std::vector<NumericType>{Ions.minAngle};
+    processData["ionFlux"] = std::vector<double>{ionFlux};
+    processData["etchantFlux"] = std::vector<double>{etchantFlux};
+    processData["polymerFlux"] = std::vector<double>{polyFlux};
+    processData["delta_p"] = std::vector<double>{delta_p};
+    processData["etchStopDepth"] = std::vector<double>{etchStopDepth};
+    processData["temperature"] = std::vector<double>{temperature};
+    processData["k_ie"] = std::vector<double>{k_ie};
+    processData["k_ev"] = std::vector<double>{k_ev};
+    processData["beta_pe"] = std::vector<double>{beta_pe};
+    processData["beta_p"] = std::vector<double>{beta_p};
+    processData["beta_e"] = std::vector<double>{beta_e};
+    processData["Mask Rho"] = std::vector<double>{Mask.rho};
+    processData["Mask Beta_P"] = std::vector<double>{Mask.beta_p};
+    processData["Mask Beta_E"] = std::vector<double>{Mask.beta_e};
+    processData["Mask A_sp"] = std::vector<double>{Mask.A_sp};
+    processData["Mask B_sp"] = std::vector<double>{Mask.B_sp};
+    processData["Mask E_th_sp"] = std::vector<double>{Mask.Eth_sp};
+    processData["SiO2 Rho"] = std::vector<double>{SiO2.rho};
+    processData["SiO2 E_th_sp"] = std::vector<double>{SiO2.Eth_sp};
+    processData["SiO2 E_th_ie"] = std::vector<double>{SiO2.Eth_ie};
+    processData["SiO2 A_Sp"] = std::vector<double>{SiO2.A_sp};
+    processData["SiO2 B_sp"] = std::vector<double>{SiO2.B_sp};
+    processData["SiO2 K"] = std::vector<double>{SiO2.K};
+    processData["SiO2 E_a"] = std::vector<double>{SiO2.E_a};
+    processData["Polymer Rho"] = std::vector<double>{Polymer.rho};
+    processData["Polymer E_th_ie"] = std::vector<double>{Polymer.Eth_ie};
+    processData["Polymer A_ie"] = std::vector<double>{Polymer.A_ie};
+    processData["Si3N4 Rho"] = std::vector<double>{Si3N4.rho};
+    processData["Si3N4 E_th_sp"] = std::vector<double>{Si3N4.Eth_sp};
+    processData["Si3N4 E_th_ie"] = std::vector<double>{Si3N4.Eth_ie};
+    processData["Si3N4 A_Sp"] = std::vector<double>{Si3N4.A_sp};
+    processData["Si3N4 B_sp"] = std::vector<double>{Si3N4.B_sp};
+    processData["Si3N4 K"] = std::vector<double>{Si3N4.K};
+    processData["Si3N4 EA"] = std::vector<double>{Si3N4.E_a};
+    processData["Si Rho"] = std::vector<double>{Si.rho};
+    processData["Si E_th_sp"] = std::vector<double>{Si.Eth_sp};
+    processData["Si E_th_ie"] = std::vector<double>{Si.Eth_ie};
+    processData["Si A_Sp"] = std::vector<double>{Si.A_sp};
+    processData["Si B_sp"] = std::vector<double>{Si.B_sp};
+    processData["Si K"] = std::vector<double>{Si.K};
+    processData["Si E_a"] = std::vector<double>{Si.E_a};
+    processData["Ion MeanEnergy"] = std::vector<double>{Ions.meanEnergy};
+    processData["Ion SigmaEnergy"] = std::vector<double>{Ions.sigmaEnergy};
+    processData["Ion Exponent"] = std::vector<double>{Ions.exponent};
+    processData["Ion InflectAngle"] = std::vector<double>{Ions.inflectAngle};
+    processData["Ion n_k"] = std::vector<double>{Ions.n_l};
+    processData["Ion MinAngle"] = std::vector<double>{Ions.minAngle};
 
     return processData;
   }
@@ -665,7 +664,7 @@ public:
 } // namespace impl
 
 template <typename NumericType, int D>
-class FluorocarbonEtching : public ProcessModel<NumericType, D> {
+class FluorocarbonEtching : public ProcessModelCPU<NumericType, D> {
 public:
   FluorocarbonEtching() { initialize(); }
   FluorocarbonEtching(
@@ -727,9 +726,9 @@ private:
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
     this->processMetaData = params_.toProcessMetaData();
-    this->processMetaData["Units"] = std::vector<NumericType>{
-        static_cast<NumericType>(units::Length::getInstance().getUnit()),
-        static_cast<NumericType>(units::Time::getInstance().getUnit())};
+    this->processMetaData["Units"] = std::vector<double>{
+        static_cast<double>(units::Length::getInstance().getUnit()),
+        static_cast<double>(units::Time::getInstance().getUnit())};
   }
 };
 

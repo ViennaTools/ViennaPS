@@ -2,8 +2,8 @@
 #include <models/psDirectionalProcess.hpp>
 
 #include <lsTestAsserts.hpp>
+#include <process/psProcess.hpp>
 #include <psDomain.hpp>
-#include <psProcess.hpp>
 #include <vcTestAsserts.hpp>
 
 namespace viennacore {

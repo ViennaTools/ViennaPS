@@ -1,15 +1,16 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psWetEtching.hpp>
+#include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
-#include <psProcess.hpp>
 
 namespace ps = viennaps;
 
 int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   // set number threads to be used
   omp_set_num_threads(16);
@@ -70,12 +71,15 @@ int main(int argc, char **argv) {
       std::vector<std::pair<ps::Material, NumericType>>{
           {ps::Material::Si, -1.}});
 
+  ps::AdvectionParameters advectionParams;
+  advectionParams.integrationScheme =
+      viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(5. * 60.); // 5 minutes of etching
-  process.setIntegrationScheme(
-      viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+  process.setAdvectionParameters(advectionParams);
 
   for (int n = 0; n < minutes; n++) {
     process.apply(); // run process

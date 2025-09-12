@@ -3,7 +3,7 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psSelectiveEpitaxy.hpp>
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 
 namespace ps = viennaps;
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
           {ps::Material::SiGe, params.get("epitaxyRate")}},
       params.get("R111"), params.get("R100"));
 
-  ps::AdvectionParameters<NumericType> advectionParams;
+  ps::AdvectionParameters advectionParams;
   advectionParams.integrationScheme =
       viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   // advectionParams.velocityOutput = true;
