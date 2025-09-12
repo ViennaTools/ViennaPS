@@ -160,19 +160,19 @@ public:
     this->isALP = true;
 
     this->processMetaData["stickingProbability"] =
-        std::vector<NumericType>{stickingProbability};
+        std::vector<double>{stickingProbability};
     this->processMetaData["numCycles"] =
-        std::vector<NumericType>{static_cast<NumericType>(numCycles)};
+        std::vector<double>{static_cast<double>(numCycles)};
     this->processMetaData["growthPerCycle"] =
-        std::vector<NumericType>{growthPerCycle};
+        std::vector<double>{growthPerCycle};
     this->processMetaData["totalCycles"] =
-        std::vector<NumericType>{static_cast<NumericType>(totalCycles)};
+        std::vector<double>{static_cast<double>(totalCycles)};
     this->processMetaData["coverageTimeStep"] =
-        std::vector<NumericType>{coverageTimeStep};
-    this->processMetaData["evaporationFlux"] = std::vector<NumericType>{evFlux};
-    this->processMetaData["incomingFlux"] = std::vector<NumericType>{inFlux};
-    this->processMetaData["s0"] = std::vector<NumericType>{s0};
-    this->processMetaData["gasMeanFreePath"] = std::vector<NumericType>{gasMFP};
+        std::vector<double>{coverageTimeStep};
+    this->processMetaData["evaporationFlux"] = std::vector<double>{evFlux};
+    this->processMetaData["incomingFlux"] = std::vector<double>{inFlux};
+    this->processMetaData["s0"] = std::vector<double>{s0};
+    this->processMetaData["gasMeanFreePath"] = std::vector<double>{gasMFP};
   }
 };
 

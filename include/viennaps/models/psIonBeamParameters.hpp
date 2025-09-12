@@ -26,7 +26,7 @@ template <typename NumericType> struct IBEParameters {
   NumericType redepositionRate = 0.0;
 
   auto toProcessMetaData() const {
-    std::unordered_map<std::string, std::vector<NumericType>> processData;
+    std::unordered_map<std::string, std::vector<double>> processData;
 
     processData["Plane Wafer Rate"] = {planeWaferRate};
     for (const auto &pair : materialPlaneWaferRate) {
@@ -39,13 +39,9 @@ template <typename NumericType> struct IBEParameters {
     processData["Threshold Energy"] = {thresholdEnergy};
     processData["Exponent"] = {exponent};
     processData["n_l"] = {n_l};
-    processData["Inflect Angle"] = {
-        static_cast<NumericType>(inflectAngle * M_PI) /
-        static_cast<NumericType>(180.)};
-    processData["Min Angle"] = {static_cast<NumericType>(minAngle * M_PI) /
-                                static_cast<NumericType>(180.)};
-    processData["Tilt Angle"] = {static_cast<NumericType>(tiltAngle * M_PI) /
-                                 static_cast<NumericType>(180.)};
+    processData["Inflect Angle"] = {(inflectAngle * M_PI) / 180.};
+    processData["Min Angle"] = {(minAngle * M_PI) / 180.};
+    processData["Tilt Angle"] = {(tiltAngle * M_PI) / 180.};
 
     if (redepositionRate > 0) {
       processData["Redeposition Threshold"] = {redepositionThreshold};

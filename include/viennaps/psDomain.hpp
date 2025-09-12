@@ -346,8 +346,7 @@ public:
   // the value is a vector of NumericType values.
   // This can be used to store additional information about the domain, such as
   // simulation parameters, process information, or any other relevant data.
-  void addMetaData(const std::string &key,
-                   const std::vector<NumericType> &values) {
+  void addMetaData(const std::string &key, const std::vector<double> &values) {
     metaData_[key] = values;
   }
 
