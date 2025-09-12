@@ -10,14 +10,16 @@ parser.add_argument("filename")
 args = parser.parse_args()
 
 # switch between 2D and 3D mode
+import viennaps
+
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    import viennaps.d2 as vps
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    import viennaps.d3 as vps
 
-params = vps.ReadConfigFile(args.filename)
+params = viennaps.ReadConfigFile(args.filename)
 
 geometry = vps.Domain(
     gridDelta=params["gridDelta"],
@@ -31,7 +33,7 @@ vps.MakeTrench(
     trenchTaperAngle=params["taperAngle"],
 ).apply()
 
-geometry.duplicateTopLevelSet(vps.Material.SiO2)
+geometry.duplicateTopLevelSet(viennaps.Material.SiO2)
 
 model = vps.SingleParticleProcess(
     stickingProbability=params["stickingProbability"],

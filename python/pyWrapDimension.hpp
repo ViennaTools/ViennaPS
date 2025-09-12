@@ -452,9 +452,13 @@ template <int D> void bindApi(py::module &module) {
    *                               MODEL FRAMEWORK                            *
    ****************************************************************************/
 
+  // ProcessModelBase
+  py::class_<ProcessModelBase<T, D>, SmartPointer<ProcessModelBase<T, D>>>
+      processModelBase(module, "ProcessModelBase");
+
   // ProcessModel
   py::class_<ProcessModelCPU<T, D>, SmartPointer<ProcessModelCPU<T, D>>>
-      processModel(module, "ProcessModel", py::module_local());
+      processModel(module, "ProcessModel", processModelBase);
 
   // constructors
   processModel
@@ -702,7 +706,7 @@ template <int D> void bindApi(py::module &module) {
   // Single Particle Process
   py::class_<SingleParticleProcess<T, D>,
              SmartPointer<SingleParticleProcess<T, D>>>(
-      module, "SingleParticleProcess", processModel, py::module_local())
+      module, "SingleParticleProcess", processModel)
       .def(py::init([](const T rate, const T sticking, const T power,
                        const Material mask) {
              return SmartPointer<SingleParticleProcess<T, D>>::New(
@@ -1388,11 +1392,11 @@ template <int D> void bindApi(py::module &module) {
   // GPU ProcessModel
   py::class_<gpu::ProcessModelGPU<T, D>,
              SmartPointer<gpu::ProcessModelGPU<T, D>>>
-      processModel_gpu(m_gpu, "ProcessModelGPU", py::module_local());
+      processModel_gpu(m_gpu, "ProcessModelGPU", processModelBase);
 
   py::class_<gpu::SingleParticleProcess<T, D>,
              SmartPointer<gpu::SingleParticleProcess<T, D>>>(
-      m_gpu, "SingleParticleProcess", processModel_gpu, py::module_local())
+      m_gpu, "SingleParticleProcess", processModel_gpu)
       .def(py::init<std::unordered_map<Material, T>, T, T, T>(),
            py::arg("materialRates"), py::arg("rate"),
            py::arg("stickingProbability"), py::arg("sourceExponent"));
@@ -1400,7 +1404,7 @@ template <int D> void bindApi(py::module &module) {
   // Multi Particle Process
   py::class_<gpu::MultiParticleProcess<T, D>,
              SmartPointer<gpu::MultiParticleProcess<T, D>>>(
-      m_gpu, "MultiParticleProcess", processModel_gpu, py::module_local())
+      m_gpu, "MultiParticleProcess", processModel_gpu)
       .def(py::init())
       .def("addNeutralParticle",
            py::overload_cast<T, const std::string &>(
@@ -1425,26 +1429,25 @@ template <int D> void bindApi(py::module &module) {
 
   // SF6O2 Etching
   py::class_<gpu::SF6O2Etching<T, D>, SmartPointer<gpu::SF6O2Etching<T, D>>>(
-      m_gpu, "SF6O2Etching", processModel_gpu, py::module_local())
-      .def(py::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::New<
+      m_gpu, "SF6O2Etching", processModel_gpu)
+      .def(py::init(&SmartPointer<gpu::SF6O2Etching<T, D>>::template New<
                     const PlasmaEtchingParameters<T> &>),
            py::arg("parameters"));
 
   // HBrO2 Etching
   py::class_<gpu::HBrO2Etching<T, D>, SmartPointer<gpu::HBrO2Etching<T, D>>>(
-      m_gpu, "HBrO2Etching", processModel_gpu, py::module_local())
-      .def(py::init(&SmartPointer<gpu::HBrO2Etching<T, D>>::New<
+      m_gpu, "HBrO2Etching", processModel_gpu)
+      .def(py::init(&SmartPointer<gpu::HBrO2Etching<T, D>>::template New<
                     const PlasmaEtchingParameters<T> &>),
            py::arg("parameters"));
 
   // Faraday Cage Etching
   py::class_<gpu::FaradayCageEtching<T, D>,
              SmartPointer<gpu::FaradayCageEtching<T, D>>>(
-      m_gpu, "FaradayCageEtching", processModel_gpu, py::module_local())
-      .def(
-          py::init(
-              &SmartPointer<gpu::FaradayCageEtching<T, D>>::New<T, T, T, T, T>),
-          py::arg("rate"), py::arg("stickingProbability"), py::arg("power"),
-          py::arg("cageAngle"), py::arg("tiltAngle"));
+      m_gpu, "FaradayCageEtching", processModel_gpu)
+      .def(py::init(&SmartPointer<gpu::FaradayCageEtching<T, D>>::template New<
+                    T, T, T, T, T>),
+           py::arg("rate"), py::arg("stickingProbability"), py::arg("power"),
+           py::arg("cageAngle"), py::arg("tiltAngle"));
 #endif
 }
