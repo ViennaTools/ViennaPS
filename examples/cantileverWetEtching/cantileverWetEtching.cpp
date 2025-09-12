@@ -1,8 +1,8 @@
+#include <gds/psGDSReader.hpp>
 #include <geometries/psMakePlane.hpp>
 #include <models/psWetEtching.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
-#include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
 
 namespace ps = viennaps;

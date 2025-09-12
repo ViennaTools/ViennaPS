@@ -1,4 +1,4 @@
-#include <psGDSReader.hpp>
+#include <gds/psGDSReader.hpp>
 #include <vcTestAsserts.hpp>
 
 namespace viennacore {

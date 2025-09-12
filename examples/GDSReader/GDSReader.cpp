@@ -1,6 +1,5 @@
+#include <gds/psGDSReader.hpp>
 #include <psDomain.hpp>
-#include <psGDSReader.hpp>
-#include <psMaterials.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;

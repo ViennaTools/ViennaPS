@@ -1,11 +1,9 @@
 #include <geometries/psMakePlane.hpp>
 #include <models/psDirectionalProcess.hpp>
 #include <models/psIsotropicProcess.hpp>
+#include <models/psgFaradayCageEtching.hpp>
 #include <process/psProcess.hpp>
 #include <psPlanarize.hpp>
-
-#include <models/psgFaradayCageEtching.hpp>
-#include <psgProcess.hpp>
 
 namespace ps = viennaps;
 namespace ls = viennals;
@@ -172,22 +170,30 @@ void clean(ps::SmartPointer<ps::Domain<NumericType, D>> geometry,
   {
     auto model = ps::SmartPointer<ps::IsotropicProcess<NumericType, D>>::New(
         -1., ps::Material::Mask);
+
+    ps::AdvectionParameters advParams;
+    advParams.timeStepRatio = 0.1;
+
     ps::Process<NumericType, D> process;
     process.setDomain(geometry);
     process.setProcessModel(model);
     process.setProcessDuration(smoothingSize);
-    process.setTimeStepRatio(0.1);
+    process.setAdvectionParameters(advParams);
     process.apply();
   }
 
   {
     auto model = ps::SmartPointer<ps::IsotropicProcess<NumericType, D>>::New(
         1., ps::Material::Mask);
+
+    ps::AdvectionParameters advParams;
+    advParams.timeStepRatio = 0.1;
+
     ps::Process<NumericType, D> process;
     process.setDomain(geometry);
     process.setProcessModel(model);
     process.setProcessDuration(smoothingSize);
-    process.setTimeStepRatio(0.1);
+    process.setAdvectionParameters(advParams);
     process.apply();
   }
 }
@@ -197,8 +203,7 @@ int main(int argc, char *argv[]) {
   constexpr int D = 3;
   ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
-  ps::Context context;
-  context.create();
+  ps::DeviceContext::createContext();
   omp_set_num_threads(16);
   std::cout << "Using " << omp_get_max_threads() << " threads" << std::endl;
 
@@ -286,13 +291,18 @@ int main(int argc, char *argv[]) {
             cageAngle, tiltAngle);
 
     // process setup
-    ps::gpu::Process<NumericType, D> process(context, geometry, model,
-                                             timePerAngle);
-    process.setNumberOfRaysPerPoint(params.get<int>("raysPerPoint"));
-    process.setIntegrationScheme(
-        viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER);
-    // process.setSmoothFlux(params.get("smoothFlux"));
-    // process.setTimeStepRatio(params.get("timeStepRatio"));
+    ps::RayTracingParameters<D> rtParams;
+    rtParams.raysPerPoint = params.get<int>("raysPerPoint");
+    rtParams.smoothingNeighbors = 2;
+
+    ps::AdvectionParameters advParams;
+    advParams.integrationScheme =
+        viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+
+    ps::Process<NumericType, D> process(geometry, model, timePerAngle);
+    process.setRayTracingParameters(rtParams);
+    process.setAdvectionParameters(advParams);
+    process.setFluxEngineType(ps::FluxEngineType::GPU_TRIANGLE);
 
     // run the process
     process.apply();
@@ -301,11 +311,12 @@ int main(int argc, char *argv[]) {
     auto copy = ps::SmartPointer<ps::Domain<NumericType, D>>::New(geometry);
     clean<NumericType, D>(copy, params.get("smoothingSize"));
     {
-      ps::RayTracingParameters<NumericType, D> rayParams;
+      ps::RayTracingParameters<D> rayParams;
       rayParams.raysPerPoint = params.get<int>("raysPerPoint") * 2;
       rayParams.smoothingNeighbors = 2;
-      ps::gpu::Process<NumericType, D> visProcess(context, copy, model, 0.);
+      ps::Process<NumericType, D> visProcess(copy, model, 0.);
       visProcess.setRayTracingParameters(rayParams);
+      visProcess.setFluxEngineType(ps::FluxEngineType::GPU_TRIANGLE);
 
       auto fluxMesh = visProcess.calculateFlux();
 

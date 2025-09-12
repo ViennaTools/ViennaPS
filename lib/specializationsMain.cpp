@@ -1,10 +1,10 @@
+#include <gds/psGDSGeometry.hpp>
+#include <gds/psGDSReader.hpp>
 #include <process/psProcess.hpp>
 #include <process/psProcessModel.hpp>
 #include <psDomain.hpp>
 #include <psDomainSetup.hpp>
 #include <psExtrude.hpp>
-#include <psGDSGeometry.hpp>
-#include <psGDSReader.hpp>
 #include <psPlanarize.hpp>
 #include <psRateGrid.hpp>
 #include <psReader.hpp>

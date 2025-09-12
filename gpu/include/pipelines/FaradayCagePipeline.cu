@@ -8,6 +8,8 @@
 #include <raygSBTRecords.hpp>
 #include <raygSource.hpp>
 
+#include <models/psgPipelineParameters.hpp>
+
 #include <vcContext.hpp>
 
 using namespace viennaray::gpu;
@@ -26,23 +28,22 @@ extern "C" __global__ void __closesthit__ion() {
     Vec3Df geomNormal = computeNormal(sbtData, primID);
     float cosTheta = -DotProduct(prd->dir, geomNormal);
     cosTheta = max(min(cosTheta, 1.f), 0.f);
+    const float incomingAngle = acosf(cosTheta);
 
     viennaps::gpu::impl::IonParams *params =
         (viennaps::gpu::impl::IonParams *)launchParams.customData;
-    auto geomNormal = computeNormal(sbtData, optixGetPrimitiveIndex());
-    float cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
-    float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
 
     // ------------- SURFACE COLLISION ------------- //
-    float yield = (params->yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
-                   0.65 * cosTheta * cosTheta * cosTheta) /
-                  (params->yieldFac - 0.9);
+    float yield = 1.f;
+    if (params->yieldFac >= 0.f) {
+      yield = (params->yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
+               0.65 * cosTheta * cosTheta * cosTheta) /
+              (params->yieldFac - 0.9);
+    }
 
-    atomicAdd(&launchParams.resultBuffer[getIdx(0, launchParams)],
-              prd->rayWeight * yield);
+    atomicAdd(&launchParams.resultBuffer[primID], prd->rayWeight * yield);
 
     // ------------- REFLECTION ------------- //
-
     float sticking = 1.f;
     if (incomingAngle > params->thetaRMin) {
       sticking = 1.f - min((incomingAngle - params->thetaRMin) /
