@@ -147,6 +147,24 @@ private:
       rayTracer_.setParticleType(particle);
       rayTracer_.apply();
 
+      auto info = rayTracer_.getRayTraceInfo();
+
+      if (Logger::getLogLevel() >= 5) {
+        Logger::getInstance()
+            .addDebug(
+                "Particle " + std::to_string(particleIdx) +
+                "\n\tRays Traced: " + std::to_string(info.totalRaysTraced) +
+                "\n\tDisk Hits: " + std::to_string(info.totalDiskHits) +
+                "\n\tNon-Geometry Hits: " +
+                std::to_string(info.nonGeometryHits) +
+                "\n\tGeometry Hits: " + std::to_string(info.geometryHits) +
+                "\n\tParticle Hits: " + std::to_string(info.particleHits) +
+                (info.warning
+                     ? "\n\tWarning during ray tracing."
+                     : (info.error ? "\n\tError during ray tracing." : "")))
+            .print();
+      }
+
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();

@@ -8,27 +8,30 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
+import viennaps as ps
+
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    import viennaps.d3 as psd
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.ReadConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
+ps.Logger.setLogLevel(ps.LogLevel.DEBUG)
+ps.setNumThreads(16)
 
 # geometry setup, all units in um
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
-    boundary=vps.BoundaryType.PERIODIC_BOUNDARY,
+    boundary=ps.BoundaryType.PERIODIC_BOUNDARY,
 )
-vps.MakeFin(
+psd.MakeFin(
     domain=geometry,
     finWidth=params["finWidth"],
     finHeight=0.0,
@@ -36,25 +39,27 @@ vps.MakeFin(
 ).apply()
 
 # use pre-defined etching model
-parameters = vps.FaradayCageParameters()
+parameters = ps.FaradayCageParameters()
 parameters.cageAngle = params["cageAngle"]
 parameters.ibeParams.tiltAngle = params["tiltAngle"]
-mask = [vps.Material.Mask]
+mask = [ps.Material.Mask]
 
-model = vps.FaradayCageEtching(mask, parameters)
+model = psd.FaradayCageEtching(mask, parameters)
 
 # process setup
-process = vps.Process()
+process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["etchTime"])  # seconds
+
+print("Single Flux:")
+mesh = process.calculateFlux()
 
 # print initial surface
 geometry.saveHullMesh(filename="initial")
 
 # run the process
-process.apply()
+# process.apply()
 
 # print final surface
 geometry.saveHullMesh(filename="final")

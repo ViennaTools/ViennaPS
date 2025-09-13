@@ -111,42 +111,47 @@ public:
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &rngState) override {
 
-    // Small incident angles are reflected with the energy fraction centered at
-    // 0
-    NumericType incAngle = std::acos(-DotProduct(rayDir, geomNormal));
-    NumericType Eref_peak;
-    if (incAngle >= inflectAngle_) {
-      Eref_peak =
-          1. - (1. - A_) * (M_PI_2 - incAngle) / (M_PI_2 - inflectAngle_);
-    } else {
-      Eref_peak = A_ * std::pow(incAngle / inflectAngle_, params_.n_l);
-    }
+    // // Small incident angles are reflected with the energy fraction centered
+    // at
+    // // 0
+    // NumericType incAngle = std::acos(std::clamp(
+    //     -DotProduct(rayDir, geomNormal), NumericType(0), NumericType(1)));
+    // NumericType Eref_peak;
+    // if (incAngle >= inflectAngle_) {
+    //   Eref_peak =
+    //       1. - (1. - A_) * (M_PI_2 - incAngle) / (M_PI_2 - inflectAngle_);
+    // } else {
+    //   Eref_peak = A_ * std::pow(incAngle / inflectAngle_, params_.n_l);
+    // }
 
-    if (params_.redepositionRate > 0.) {
-      redepositionWeight_ =
-          std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
-                   NumericType(0.)) *
-          params_.yieldFunction(incAngle);
-    }
+    // if (params_.redepositionRate > 0.) {
+    //   redepositionWeight_ =
+    //       std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
+    //                NumericType(0.)) *
+    //       params_.yieldFunction(incAngle);
+    // }
 
-    // Gaussian distribution around the Eref_peak scaled by the particle energy
-    NumericType newEnergy;
-    std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
-                                                     0.1 * energy_);
-    do {
-      newEnergy = normalDist(rngState);
-    } while (newEnergy > energy_ || newEnergy < 0.);
+    // // Gaussian distribution around the Eref_peak scaled by the particle
+    // energy NumericType newEnergy = Eref_peak * energy_;
+    // std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
+    //                                                  0.1 * energy_);
+    // do {
+    //   newEnergy = normalDist(rngState);
+    // } while (newEnergy > energy_ || newEnergy < 0.);
 
-    if (newEnergy > params_.thresholdEnergy ||
-        redepositionWeight_ > params_.redepositionThreshold) {
-      energy_ = newEnergy;
-      auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, rngState, M_PI_2 - std::min(incAngle, minAngle_));
-      return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
-    } else {
-      return std::pair<NumericType, Vec3D<NumericType>>{
-          1., Vec3D<NumericType>{0., 0., 0.}};
-    }
+    // if (newEnergy > params_.thresholdEnergy ||
+    //     redepositionWeight_ > params_.redepositionThreshold) {
+    //   energy_ = newEnergy;
+    //   auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
+    //       rayDir, geomNormal, rngState, M_PI_2 - std::min(incAngle,
+    //       minAngle_));
+    //   return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
+    // } else {
+    //   return std::pair<NumericType, Vec3D<NumericType>>{
+    //       1., Vec3D<NumericType>{0., 0., 0.}};
+    // }
+    return std::pair<NumericType, Vec3D<NumericType>>{
+        1., Vec3D<NumericType>{0., 0., 0.}};
   }
 
   void initNew(RNG &rngState) override {

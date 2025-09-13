@@ -163,6 +163,14 @@ private:
     case ProcessResult::FAILURE:
       Logger::getInstance().addError("Process failed.").print();
       break;
+    case ProcessResult::NOT_IMPLEMENTED:
+      Logger::getInstance()
+          .addError("Process feature not implemented.")
+          .print();
+      break;
+    case ProcessResult::CONVERGENCE_FAILURE:
+      Logger::getInstance().addError("Process failed to converge.").print();
+      break;
     }
   }
 

@@ -960,7 +960,7 @@ template <int D> void bindApi(py::module &module) {
       .def("setInterpolationMode",
            static_cast<void (RateGrid<T, D>::*)(
                typename RateGrid<T, D>::Interpolation)>(
-               &RateGrid<T, D>::template setInterpolationMode),
+               &RateGrid<T, D>::setInterpolationMode),
            py::arg("mode"))
       .def(
           "setInterpolationMode",

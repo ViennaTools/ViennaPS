@@ -31,7 +31,7 @@ boundaryConds = [
     ps.BoundaryType.INFINITE_BOUNDARY,
 ]
 bounds = [0.0, 90.0, 0.0, 100.0, 0.0, 70.0]  # in nanometers
-gridDelta = 1.79
+gridDelta = 0.79
 
 domain = psd.Domain(bounds, boundaryConds, gridDelta)
 
