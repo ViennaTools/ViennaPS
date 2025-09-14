@@ -75,6 +75,6 @@ boundaryConds = [
     vps.ls.BoundaryConditionEnum.INFINITE_BOUNDARY,
 ]
 
-vps.Extrude(geometry, extruded, extrudeExtent, 0, boundaryConds).apply()
+vps.Extrude(geometry, extruded, extrudeExtent, 1, boundaryConds).apply()
 
 extruded.saveHullMesh("final_extruded")

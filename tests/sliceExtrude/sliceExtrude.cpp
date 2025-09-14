@@ -21,6 +21,7 @@ int main() {
   extruder.setInputDomain(domain2D);
   extruder.setOutputDomain(domain3D);
   extruder.setExtent({0.0, yExtent});
+  extruder.setExtrusionAxis(1); // Extrude along y-axis
   extruder.setBoundaryConditions({BoundaryType::REFLECTIVE_BOUNDARY,
                                   BoundaryType::REFLECTIVE_BOUNDARY,
                                   BoundaryType::INFINITE_BOUNDARY});
