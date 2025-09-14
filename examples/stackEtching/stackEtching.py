@@ -1,4 +1,4 @@
-import viennaps2d as vps
+import viennaps as vps
 from argparse import ArgumentParser
 
 # parse config file name
@@ -19,12 +19,12 @@ vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])
 
 # Geometry setup
-geometry = vps.Domain(
+geometry = vps.d2.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeStack(
+vps.d2.MakeStack(
     domain=geometry,
     numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
@@ -36,7 +36,7 @@ vps.MakeStack(
 
 geometry.duplicateTopLevelSet(vps.Material.Polymer)
 
-model = vps.FluorocarbonEtching(
+model = vps.d2.FluorocarbonEtching(
     ionFlux=params["ionFlux"],
     etchantFlux=params["etchantFlux"],
     polyFlux=params["polyFlux"],
@@ -45,13 +45,18 @@ model = vps.FluorocarbonEtching(
     ionExponent=params["ionExponent"],
 )
 
-process = vps.Process()
+covParams = vps.CoverageParameters()
+covParams.maxIterations = 10
+
+advParams = vps.AdvectionParameters()
+advParams.integrationScheme = vps.IntegrationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+
+process = vps.d2.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
-process.setMaxCoverageInitIterations(10)
-process.setTimeStepRatio(0.25)
-process.setIntegrationScheme(vps.IntegrationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER)
+process.setCoverageParameters(covParams)
+process.setAdvectionParameters(advParams)
 
 # print initial surface
 geometry.saveVolumeMesh("initial")
@@ -62,7 +67,7 @@ process.apply()
 geometry.saveVolumeMesh("final")
 
 print("Extruding to 3D ...")
-extruded = vps.Domain3D()
+extruded = vps.d3.Domain()
 extrudeExtent = [-20.0, 20.0]
 boundaryConds = [
     vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,

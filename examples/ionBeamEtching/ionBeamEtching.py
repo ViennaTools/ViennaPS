@@ -10,24 +10,26 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
+import viennaps as ps
+
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    import viennaps.d3 as psd
 
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
+ps.Logger.setLogLevel(ps.LogLevel.INTERMEDIATE)
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeTrench(
+psd.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchDepth"],
@@ -35,9 +37,9 @@ vps.MakeTrench(
 ).apply()
 
 # copy top layer to capture deposition
-geometry.duplicateTopLevelSet(vps.Material.Polymer)
+geometry.duplicateTopLevelSet(ps.Material.Polymer)
 
-ibeParams = vps.IBEParameters()
+ibeParams = ps.IBEParameters()
 ibeParams.tiltAngle = params["angle"]
 ibeParams.exponent = params["exponent"]
 
@@ -48,8 +50,8 @@ ibeParams.thresholdEnergy = params["thresholdEnergy"]
 ibeParams.redepositionRate = params["redepositionRate"]
 ibeParams.planeWaferRate = params["planeWaferRate"]
 
-model = vps.IonBeamEtching(
-    maskMaterials=[vps.Material.Mask],
+model = psd.IonBeamEtching(
+    maskMaterials=[ps.Material.Mask],
     parameters=ibeParams,
 )
 
@@ -58,11 +60,14 @@ direction[args.dim - 1] = -np.cos(ibeParams.tiltAngle * np.pi / 180.0)
 direction[args.dim - 2] = np.sin(ibeParams.tiltAngle * np.pi / 180.0)
 model.setPrimaryDirection(direction)
 
-process = vps.Process()
+advParams = ps.AdvectionParameters()
+advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
+
+process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
-process.setIntegrationScheme(vps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER)
+process.setAdvectionParameters(advParams)
 
 geometry.saveHullMesh("initial")
 

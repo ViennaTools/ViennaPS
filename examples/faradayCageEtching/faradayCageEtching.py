@@ -21,7 +21,7 @@ else:
 params = ps.ReadConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
-ps.Logger.setLogLevel(ps.LogLevel.DEBUG)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
 ps.setNumThreads(16)
 
 # geometry setup, all units in um
@@ -52,14 +52,11 @@ process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["etchTime"])  # seconds
 
-print("Single Flux:")
-mesh = process.calculateFlux()
-
 # print initial surface
 geometry.saveHullMesh(filename="initial")
 
 # run the process
-# process.apply()
+process.apply()
 
 # print final surface
 geometry.saveHullMesh(filename="final")

@@ -504,7 +504,7 @@ class Domain:
         Get the bounding box of the domain.
         """
 
-    def getCellSet(self) -> ...:
+    def getCellSet(self) -> DenseCellSet:
         """
         Get the cell set.
         """
@@ -1112,7 +1112,10 @@ class Process:
     def __init__(self, domain: Domain) -> None: ...
     @typing.overload
     def __init__(
-        self, domain: Domain, model: ProcessModelBase, duration: typing.SupportsFloat
+        self,
+        domain: Domain,
+        model: ProcessModelBase,
+        duration: typing.SupportsFloat = 0.0,
     ) -> None: ...
     def apply(self) -> None:
         """

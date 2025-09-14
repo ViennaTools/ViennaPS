@@ -319,6 +319,118 @@ public:
 // }
 
 template <int D> void bindApi(py::module &module) {
+
+  // ***************************************************************************
+  //                      Dense Cell Set from ViennaCS
+  // ***************************************************************************
+  py::class_<viennacs::DenseCellSet<T, D>,
+             SmartPointer<viennacs::DenseCellSet<T, D>>>(module, "DenseCellSet")
+      .def(py::init())
+      .def("fromLevelSets", &viennacs::DenseCellSet<T, D>::fromLevelSets,
+           py::arg("levelSets"), py::arg("materialMap") = nullptr,
+           py::arg("depth") = 0.)
+      .def("getBoundingBox", &viennacs::DenseCellSet<T, D>::getBoundingBox)
+      .def(
+          "addScalarData",
+          [](viennacs::DenseCellSet<T, D> &cellSet, std::string name,
+             T initValue) {
+            cellSet.addScalarData(name, initValue);
+            // discard return value
+          },
+          "Add a scalar value to be stored and modified in each cell.")
+      .def("getDepth", &viennacs::DenseCellSet<T, D>::getDepth,
+           "Get the depth of the cell set.")
+      .def("getGridDelta", &viennacs::DenseCellSet<T, D>::getGridDelta,
+           "Get the cell size.")
+      .def("getNodes", &viennacs::DenseCellSet<T, D>::getNodes,
+           "Get the nodes of the cell set which correspond to the corner "
+           "points of the cells.")
+      .def("getNode", &viennacs::DenseCellSet<T, D>::getNode,
+           "Get the node at the given index.")
+      .def("getElements", &viennacs::DenseCellSet<T, D>::getElements,
+           "Get elements (cells). The indicies in the elements correspond to "
+           "the corner nodes.")
+      .def("getElement", &viennacs::DenseCellSet<T, D>::getElement,
+           "Get the element at the given index.")
+      .def("getSurface", &viennacs::DenseCellSet<T, D>::getSurface,
+           "Get the surface level-set.")
+      .def("getCellGrid", &viennacs::DenseCellSet<T, D>::getCellGrid,
+           "Get the underlying mesh of the cell set.")
+      .def("getNumberOfCells", &viennacs::DenseCellSet<T, D>::getNumberOfCells,
+           "Get the number of cells.")
+      .def("getFillingFraction",
+           &viennacs::DenseCellSet<T, D>::getFillingFraction,
+           "Get the filling fraction of the cell containing the point.")
+      .def("getFillingFractions",
+           &viennacs::DenseCellSet<T, D>::getFillingFractions,
+           "Get the filling fractions of all cells.")
+      .def("getAverageFillingFraction",
+           &viennacs::DenseCellSet<T, D>::getAverageFillingFraction,
+           "Get the average filling at a point in some radius.")
+      .def("getCellCenter", &viennacs::DenseCellSet<T, D>::getCellCenter,
+           "Get the center of a cell with given index")
+      .def("getScalarData", &viennacs::DenseCellSet<T, D>::getScalarData,
+           "Get the data stored at each cell. WARNING: This function only "
+           "returns a copy of the data")
+      .def("getScalarDataLabels",
+           &viennacs::DenseCellSet<T, D>::getScalarDataLabels,
+           "Get the labels of the scalar data stored in the cell set.")
+      .def("getIndex", &viennacs::DenseCellSet<T, D>::getIndex,
+           "Get the index of the cell containing the given point.")
+      .def("setCellSetPosition",
+           &viennacs::DenseCellSet<T, D>::setCellSetPosition,
+           "Set whether the cell set should be created below (false) or above "
+           "(true) the surface.")
+      .def(
+          "setCoverMaterial", &viennacs::DenseCellSet<T, D>::setCoverMaterial,
+          "Set the material of the cells which are above or below the surface.")
+      .def("setPeriodicBoundary",
+           &viennacs::DenseCellSet<T, D>::setPeriodicBoundary,
+           "Enable periodic boundary conditions in specified dimensions.")
+      .def("setFillingFraction",
+           py::overload_cast<const int, const T>(
+               &viennacs::DenseCellSet<T, D>::setFillingFraction),
+           "Sets the filling fraction at given cell index.")
+      .def("setFillingFraction",
+           py::overload_cast<const std::array<T, 3> &, const T>(
+               &viennacs::DenseCellSet<T, D>::setFillingFraction),
+           "Sets the filling fraction for cell which contains given point.")
+      .def("addFillingFraction",
+           py::overload_cast<const int, const T>(
+               &viennacs::DenseCellSet<T, D>::addFillingFraction),
+           "Add to the filling fraction at given cell index.")
+      .def("addFillingFraction",
+           py::overload_cast<const std::array<T, 3> &, const T>(
+               &viennacs::DenseCellSet<T, D>::addFillingFraction),
+           "Add to the filling fraction for cell which contains given point.")
+      .def("addFillingFractionInMaterial",
+           &viennacs::DenseCellSet<T, D>::addFillingFractionInMaterial,
+           "Add to the filling fraction for cell which contains given point "
+           "only if the cell has the specified material ID.")
+      .def("writeVTU", &viennacs::DenseCellSet<T, D>::writeVTU,
+           "Write the cell set as .vtu file")
+      .def("writeCellSetData", &viennacs::DenseCellSet<T, D>::writeCellSetData,
+           "Save cell set data in simple text format.")
+      .def("readCellSetData", &viennacs::DenseCellSet<T, D>::readCellSetData,
+           "Read cell set data from text.")
+      .def("clear", &viennacs::DenseCellSet<T, D>::clear,
+           "Clear the filling fractions.")
+      .def("updateMaterials", &viennacs::DenseCellSet<T, D>::updateMaterials,
+           "Update the material IDs of the cell set. This function should be "
+           "called if the level sets, the cell set is made out of, have "
+           "changed. This does not work if the surface of the volume has "
+           "changed. In this case, call the function 'updateSurface' first.")
+      .def("updateSurface", &viennacs::DenseCellSet<T, D>::updateSurface,
+           "Updates the surface of the cell set. The new surface should be "
+           "below the old surface as this function can only remove cells from "
+           "the cell set.")
+      .def("buildNeighborhood",
+           &viennacs::DenseCellSet<T, D>::buildNeighborhood,
+           "Generate fast neighbor access for each cell.",
+           py::arg("forceRebuild") = false)
+      .def("getNeighbors", &viennacs::DenseCellSet<T, D>::getNeighbors,
+           "Get the neighbor indices for a cell.");
+
   /****************************************************************************
    *                               DOMAIN                                    *
    ****************************************************************************/
@@ -587,117 +699,6 @@ template <int D> void bindApi(py::module &module) {
   //       .def("getLocalDataLabels", &psParticle<D>::getLocalDataLabels)
   //       .def("getSourceDistributionPower",
   //            &psParticle<D>::getSourceDistributionPower);
-
-  // ***************************************************************************
-  //                      Dense Cell Set from ViennaCS
-  // ***************************************************************************
-  py::class_<viennacs::DenseCellSet<T, D>,
-             SmartPointer<viennacs::DenseCellSet<T, D>>>(module, "DenseCellSet")
-      .def(py::init())
-      .def("fromLevelSets", &viennacs::DenseCellSet<T, D>::fromLevelSets,
-           py::arg("levelSets"), py::arg("materialMap") = nullptr,
-           py::arg("depth") = 0.)
-      .def("getBoundingBox", &viennacs::DenseCellSet<T, D>::getBoundingBox)
-      .def(
-          "addScalarData",
-          [](viennacs::DenseCellSet<T, D> &cellSet, std::string name,
-             T initValue) {
-            cellSet.addScalarData(name, initValue);
-            // discard return value
-          },
-          "Add a scalar value to be stored and modified in each cell.")
-      .def("getDepth", &viennacs::DenseCellSet<T, D>::getDepth,
-           "Get the depth of the cell set.")
-      .def("getGridDelta", &viennacs::DenseCellSet<T, D>::getGridDelta,
-           "Get the cell size.")
-      .def("getNodes", &viennacs::DenseCellSet<T, D>::getNodes,
-           "Get the nodes of the cell set which correspond to the corner "
-           "points of the cells.")
-      .def("getNode", &viennacs::DenseCellSet<T, D>::getNode,
-           "Get the node at the given index.")
-      .def("getElements", &viennacs::DenseCellSet<T, D>::getElements,
-           "Get elements (cells). The indicies in the elements correspond to "
-           "the corner nodes.")
-      .def("getElement", &viennacs::DenseCellSet<T, D>::getElement,
-           "Get the element at the given index.")
-      .def("getSurface", &viennacs::DenseCellSet<T, D>::getSurface,
-           "Get the surface level-set.")
-      .def("getCellGrid", &viennacs::DenseCellSet<T, D>::getCellGrid,
-           "Get the underlying mesh of the cell set.")
-      .def("getNumberOfCells", &viennacs::DenseCellSet<T, D>::getNumberOfCells,
-           "Get the number of cells.")
-      .def("getFillingFraction",
-           &viennacs::DenseCellSet<T, D>::getFillingFraction,
-           "Get the filling fraction of the cell containing the point.")
-      .def("getFillingFractions",
-           &viennacs::DenseCellSet<T, D>::getFillingFractions,
-           "Get the filling fractions of all cells.")
-      .def("getAverageFillingFraction",
-           &viennacs::DenseCellSet<T, D>::getAverageFillingFraction,
-           "Get the average filling at a point in some radius.")
-      .def("getCellCenter", &viennacs::DenseCellSet<T, D>::getCellCenter,
-           "Get the center of a cell with given index")
-      .def("getScalarData", &viennacs::DenseCellSet<T, D>::getScalarData,
-           "Get the data stored at each cell. WARNING: This function only "
-           "returns a copy of the data")
-      .def("getScalarDataLabels",
-           &viennacs::DenseCellSet<T, D>::getScalarDataLabels,
-           "Get the labels of the scalar data stored in the cell set.")
-      .def("getIndex", &viennacs::DenseCellSet<T, D>::getIndex,
-           "Get the index of the cell containing the given point.")
-      .def("setCellSetPosition",
-           &viennacs::DenseCellSet<T, D>::setCellSetPosition,
-           "Set whether the cell set should be created below (false) or above "
-           "(true) the surface.")
-      .def(
-          "setCoverMaterial", &viennacs::DenseCellSet<T, D>::setCoverMaterial,
-          "Set the material of the cells which are above or below the surface.")
-      .def("setPeriodicBoundary",
-           &viennacs::DenseCellSet<T, D>::setPeriodicBoundary,
-           "Enable periodic boundary conditions in specified dimensions.")
-      .def("setFillingFraction",
-           py::overload_cast<const int, const T>(
-               &viennacs::DenseCellSet<T, D>::setFillingFraction),
-           "Sets the filling fraction at given cell index.")
-      .def("setFillingFraction",
-           py::overload_cast<const std::array<T, 3> &, const T>(
-               &viennacs::DenseCellSet<T, D>::setFillingFraction),
-           "Sets the filling fraction for cell which contains given point.")
-      .def("addFillingFraction",
-           py::overload_cast<const int, const T>(
-               &viennacs::DenseCellSet<T, D>::addFillingFraction),
-           "Add to the filling fraction at given cell index.")
-      .def("addFillingFraction",
-           py::overload_cast<const std::array<T, 3> &, const T>(
-               &viennacs::DenseCellSet<T, D>::addFillingFraction),
-           "Add to the filling fraction for cell which contains given point.")
-      .def("addFillingFractionInMaterial",
-           &viennacs::DenseCellSet<T, D>::addFillingFractionInMaterial,
-           "Add to the filling fraction for cell which contains given point "
-           "only if the cell has the specified material ID.")
-      .def("writeVTU", &viennacs::DenseCellSet<T, D>::writeVTU,
-           "Write the cell set as .vtu file")
-      .def("writeCellSetData", &viennacs::DenseCellSet<T, D>::writeCellSetData,
-           "Save cell set data in simple text format.")
-      .def("readCellSetData", &viennacs::DenseCellSet<T, D>::readCellSetData,
-           "Read cell set data from text.")
-      .def("clear", &viennacs::DenseCellSet<T, D>::clear,
-           "Clear the filling fractions.")
-      .def("updateMaterials", &viennacs::DenseCellSet<T, D>::updateMaterials,
-           "Update the material IDs of the cell set. This function should be "
-           "called if the level sets, the cell set is made out of, have "
-           "changed. This does not work if the surface of the volume has "
-           "changed. In this case, call the function 'updateSurface' first.")
-      .def("updateSurface", &viennacs::DenseCellSet<T, D>::updateSurface,
-           "Updates the surface of the cell set. The new surface should be "
-           "below the old surface as this function can only remove cells from "
-           "the cell set.")
-      .def("buildNeighborhood",
-           &viennacs::DenseCellSet<T, D>::buildNeighborhood,
-           "Generate fast neighbor access for each cell.",
-           py::arg("forceRebuild") = false)
-      .def("getNeighbors", &viennacs::DenseCellSet<T, D>::getNeighbors,
-           "Get the neighbor indices for a cell.");
 
   // ***************************************************************************
   //                                  MODELS
@@ -1219,7 +1220,7 @@ template <int D> void bindApi(py::module &module) {
       .def(py::init())
       .def(py::init<DomainType>(), py::arg("domain"))
       .def(py::init<DomainType, SmartPointer<ProcessModelBase<T, D>>, T>(),
-           py::arg("domain"), py::arg("model"), py::arg("duration"))
+           py::arg("domain"), py::arg("model"), py::arg("duration") = 0.)
       // methods
       .def("apply", &Process<T, D>::apply,
            //  py::call_guard<py::gil_scoped_release>(),

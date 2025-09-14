@@ -6,39 +6,41 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
+import viennaps as ps
+
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    import viennaps.d3 as psd
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.ReadConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
 
-vps.Length.setUnit(params["lengthUnit"])
-vps.Time.setUnit(params["timeUnit"])
+ps.Length.setUnit(params["lengthUnit"])
+ps.Time.setUnit(params["timeUnit"])
 
 # geometry setup, all units in um
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeHole(
+psd.MakeHole(
     domain=geometry,
     holeRadius=params["holeRadius"],
     holeDepth=0.0,
     maskHeight=params["maskHeight"],
     maskTaperAngle=params["taperAngle"],
-    holeShape=vps.HoleShape.Half,
+    holeShape=ps.HoleShape.HALF,
 ).apply()
 
 # use pre-defined model SF6O2 etching model
-modelParams = vps.SF6O2Etching.defaultParameters()
+modelParams = psd.SF6O2Etching.defaultParameters()
 modelParams.ionFlux = params["ionFlux"]
 modelParams.etchantFlux = params["etchantFlux"]
 modelParams.passivationFlux = params["oxygenFlux"]
@@ -48,18 +50,25 @@ modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Passivation.A_ie = params["A_O"]
 modelParams.Substrate.A_ie = params["A_Si"]
 modelParams.etchStopDepth = params["etchStopDepth"]
-model = vps.SF6O2Etching(modelParams)
+model = psd.SF6O2Etching(modelParams)
+
+covParams = ps.CoverageParameters()
+covParams.maxIterations = 20
+
+rayParams = ps.RayTracingParameters()
+rayParams.raysPerPoint = int(params["raysPerPoint"])
+
+advParams = ps.AdvectionParameters()
+advParams.integrationScheme = ps.util.convertIntegrationScheme(
+    params["integrationScheme"]
+)
 
 # process setup
-process = vps.Process()
-process.setDomain(geometry)
-process.setProcessModel(model)
-process.setMaxCoverageInitIterations(20)
-process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
+process = psd.Process(geometry, model)
 process.setProcessDuration(params["processTime"])  # seconds
-process.setIntegrationScheme(
-    vps.util.convertIntegrationScheme(params["integrationScheme"])
-)
+process.setCoverageParameters(covParams)
+process.setRayTracingParameters(rayParams)
+process.setAdvectionParameters(advParams)
 
 # print initial surface
 geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)

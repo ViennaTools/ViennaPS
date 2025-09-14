@@ -1,10 +1,13 @@
 # Create a SiGe stack geometry with SiO2 mask
 
-import viennaps2d as vps
-import viennals2d as vls
+import viennaps.d2 as psd
+import viennaps as ps
+import viennals.d2 as lsd
+from viennals import BooleanOperationEnum
 
-def CreateGeometry(paramDict: dict):
-    domain = vps.Domain()
+
+def CreateGeometry(paramDict: dict) -> psd.Domain:
+    domain = psd.Domain()
 
     totalHeight = paramDict["numLayers"] * paramDict["layerHeight"]
     extent = (
@@ -14,41 +17,43 @@ def CreateGeometry(paramDict: dict):
     )
     bounds = [-extent / 2, extent / 2, -1, 1]
     boundaryConds = [
-        vls.BoundaryConditionEnum.PERIODIC_BOUNDARY,
-        vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
+        ps.BoundaryType.PERIODIC_BOUNDARY,
+        ps.BoundaryType.INFINITE_BOUNDARY,
     ]
 
     normal = [0, 1]
     origin = [0, 0]
 
     # substrate plane
-    plane = vls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    vls.MakeGeometry(plane, vls.Plane(origin, normal)).apply()
-    domain.insertNextLevelSetAsMaterial(levelSet = plane, material = vps.Material.Si, wrapLowerLevelSet = True)
+    plane = lsd.Domain(bounds, boundaryConds, paramDict["gridDelta"])
+    lsd.MakeGeometry(plane, lsd.Plane(origin, normal)).apply()
+    domain.insertNextLevelSetAsMaterial(
+        levelSet=plane, material=ps.Material.Si, wrapLowerLevelSet=True
+    )
 
     # alternating layers
     for i in range(paramDict["numLayers"]):
         origin[1] += paramDict["layerHeight"]
-        plane = vls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-        vls.MakeGeometry(plane, vls.Plane(origin, normal)).apply()
+        plane = lsd.Domain(bounds, boundaryConds, paramDict["gridDelta"])
+        lsd.MakeGeometry(plane, lsd.Plane(origin, normal)).apply()
         if i % 2 == 0:
-            domain.insertNextLevelSetAsMaterial(plane, vps.Material.SiGe)
+            domain.insertNextLevelSetAsMaterial(plane, ps.Material.SiGe)
         else:
-            domain.insertNextLevelSetAsMaterial(plane, vps.Material.Si)
+            domain.insertNextLevelSetAsMaterial(plane, ps.Material.Si)
 
     # SiO2 mask
     maskPosY = totalHeight + paramDict["maskHeight"]
     origin[1] = maskPosY
-    mask = vls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    vls.MakeGeometry(mask, vls.Plane(origin, normal)).apply()
-    domain.insertNextLevelSetAsMaterial(mask, vps.Material.SiO2)
+    mask = lsd.Domain(bounds, boundaryConds, paramDict["gridDelta"])
+    lsd.MakeGeometry(mask, lsd.Plane(origin, normal)).apply()
+    domain.insertNextLevelSetAsMaterial(mask, ps.Material.SiO2)
 
     # mask
     maskPosY = totalHeight + paramDict["maskHeight"] + 5 * paramDict["gridDelta"]
     origin[1] = maskPosY
-    etchMask = vls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    vls.MakeGeometry(etchMask, vls.Plane(origin, normal)).apply()
-    domain.insertNextLevelSetAsMaterial(etchMask, vps.Material.Mask)
+    etchMask = lsd.Domain(bounds, boundaryConds, paramDict["gridDelta"])
+    lsd.MakeGeometry(etchMask, lsd.Plane(origin, normal)).apply()
+    domain.insertNextLevelSetAsMaterial(etchMask, ps.Material.Mask)
 
     # left right space
     minPoint = [
@@ -59,26 +64,24 @@ def CreateGeometry(paramDict: dict):
         -extent / 2 + paramDict["lateralSpacing"],
         maskPosY + paramDict["gridDelta"],
     ]
-    box = vls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    vls.MakeGeometry(box, vls.Box(minPoint, maxPoint)).apply()
-    domain.applyBooleanOperation(box, vls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
+    box = lsd.Domain(bounds, boundaryConds, paramDict["gridDelta"])
+    lsd.MakeGeometry(box, lsd.Box(minPoint, maxPoint)).apply()
+    domain.applyBooleanOperation(box, BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
     minPoint[0] = extent / 2 - paramDict["lateralSpacing"]
     maxPoint[0] = extent / 2 + paramDict["gridDelta"]
-    vls.MakeGeometry(box, vls.Box(minPoint, maxPoint)).apply()
-    domain.applyBooleanOperation(box, vls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
+    lsd.MakeGeometry(box, lsd.Box(minPoint, maxPoint)).apply()
+    domain.applyBooleanOperation(box, BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
     xpos = -extent / 2 + paramDict["lateralSpacing"] + paramDict["maskWidth"]
     for i in range(paramDict["numPillars"]):
         minPoint[0] = xpos
         maxPoint[0] = xpos + paramDict["trenchWidthTop"]
-        vls.MakeGeometry(box, vls.Box(minPoint, maxPoint)).apply()
-        domain.applyBooleanOperation(
-            box, vls.BooleanOperationEnum.RELATIVE_COMPLEMENT
-        )
+        lsd.MakeGeometry(box, lsd.Box(minPoint, maxPoint)).apply()
+        domain.applyBooleanOperation(box, BooleanOperationEnum.RELATIVE_COMPLEMENT)
         xpos += paramDict["maskWidth"] + paramDict["trenchWidthTop"]
 
-    vps.Logger.setLogLevel(vps.LogLevel.WARNING)
+    ps.Logger.setLogLevel(ps.LogLevel.WARNING)
 
     # trench etching
     direction = [0, -1, 0]
@@ -87,14 +90,14 @@ def CreateGeometry(paramDict: dict):
         * (paramDict["trenchWidthTop"] - paramDict["trenchWidthBottom"])
         / (paramDict["numLayers"] * paramDict["layerHeight"] + paramDict["maskHeight"])
     )
-    processModel = vps.DirectionalProcess(direction, -1, isoVel, vps.Material.Mask)
+    processModel = psd.DirectionalProcess(direction, -1, isoVel, ps.Material.Mask)
 
     time = (
         paramDict["numLayers"] * paramDict["layerHeight"]
         + paramDict["maskHeight"]
         + paramDict["overEtch"]
     )
-    vps.Process(domain, processModel, time).apply()
+    psd.Process(domain, processModel, time).apply()
 
     # remove trench etching mask
     domain.removeTopLevelSet()
