@@ -13,18 +13,16 @@ template <class NumericType> class Extrude {
   SmartPointer<Domain<NumericType, 2>> inputDomain;
   SmartPointer<Domain<NumericType, 3>> outputDomain;
   Vec2D<NumericType> extent{NumericType(0)};
-  int extrudeDim = 0;
-  std::array<viennals::BoundaryConditionEnum, 3> boundaryConds = {};
+  std::array<BoundaryType, 3> boundaryConds = {};
 
 public:
   Extrude() = default;
   Extrude(SmartPointer<Domain<NumericType, 2>> &passedInputDomain,
           SmartPointer<Domain<NumericType, 3>> &passedOutputDomain,
-          const Vec2D<NumericType> &passedExtent, const int passedExtrudeDim,
-          std::array<viennals::BoundaryConditionEnum, 3> passedBoundaryConds)
+          const Vec2D<NumericType> &passedExtent,
+          std::array<BoundaryType, 3> passedBoundaryConds)
       : inputDomain(passedInputDomain), outputDomain(passedOutputDomain),
-        extent(passedExtent), extrudeDim(passedExtrudeDim),
-        boundaryConds(passedBoundaryConds) {}
+        extent(passedExtent), boundaryConds(passedBoundaryConds) {}
 
   void setInputDomain(SmartPointer<Domain<NumericType, 2>> passedInputDomain) {
     inputDomain = passedInputDomain;
@@ -39,11 +37,6 @@ public:
   // Set the min and max extent in the extruded dimension
   void setExtent(const Vec2D<NumericType> &passedExtent) {
     extent = passedExtent;
-  }
-
-  // Set which index of the added dimension (x: 0, y: 1, z: 2)
-  void setExtrudeDimension(const int passedExtrudeDim) {
-    extrudeDim = passedExtrudeDim;
   }
 
   void setBoundaryConditions(
@@ -76,7 +69,7 @@ public:
     for (std::size_t i = 0; i < inputDomain->getLevelSets().size(); i++) {
       auto tmpLS = viennals::Domain<NumericType, 3>::New();
       viennals::Extrude<NumericType>(inputDomain->getLevelSets().at(i), tmpLS,
-                                     extent, extrudeDim, boundaryConds)
+                                     extent, boundaryConds)
           .apply();
 
       if (Logger::getLogLevel() >= 5) {
