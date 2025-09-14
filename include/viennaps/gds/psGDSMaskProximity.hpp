@@ -72,10 +72,10 @@ public:
 
   double exposureAt(double xReal, double yReal) {
     const double delta = inputLevelSet->getGrid().getGridDelta() / deltaRatio;
-    auto boundaryConds_ = inputLevelSet->getGrid().getBoundaryConditions();
+    auto boundaryConds = inputLevelSet->getGrid().getBoundaryConditions();
 
-    double xExpId = (xReal) / delta;
-    double yExpId = (yReal) / delta;
+    double xExpId = xReal / delta;
+    double yExpId = yReal / delta;
 
     int x0 = static_cast<int>(std::floor(xExpId));
     int x1 = x0 + 1;
@@ -89,7 +89,7 @@ public:
     double dy = yExpId - y0;
 
     // Check if all four points are in-bounds
-    if (x0 > 0 && x0 < maxX && y0 > 0 && y0 < maxY) {
+    if (x0 >= 0 && x0 <= maxX && y0 >= 0 && y0 <= maxY) {
       double v00 = finalGrid[y0][x0];
       double v10 = finalGrid[y0][x1];
       double v01 = finalGrid[y1][x0];
@@ -102,7 +102,7 @@ public:
     // Handle boundary condition fallback
     auto getSafeValue = [&](int x, int y) -> double {
       int tx = x, ty = y;
-      if (!applyBoundaryCondition(tx, ty, maxX, maxY, boundaryConds_))
+      if (!applyBoundaryCondition(tx, ty, maxX, maxY, boundaryConds))
         return 0.0;
       return finalGrid[ty][tx];
     };

@@ -88,9 +88,11 @@ public:
     // Create a 3D level set from the 2D level set and return it
     auto GDSLevelSet = getMaskLevelSet(layer, blurLayer);
     viennals::Check<NumericType, 2>(GDSLevelSet).apply();
-    auto levelSet = lsDomainType::New(bounds_, boundaryConds_, gridDelta_);
+    auto levelSet =
+        lsDomainType::New(bounds_, boundaryConds_.data(), gridDelta_);
     viennals::Extrude<NumericType>(
-        GDSLevelSet, levelSet, {baseHeight - gridDelta_, height + gridDelta_})
+        GDSLevelSet, levelSet, {baseHeight - gridDelta_, height + gridDelta_},
+        2, boundaryConds_)
         .apply();
 
     if (mask) {
@@ -126,6 +128,14 @@ public:
         levelSet, topLS, viennals::BooleanOperationEnum::INTERSECT)
         .apply();
 
+    if (Logger::getLogLevel() >= 5) {
+      auto mesh = viennals::Mesh<NumericType>::New();
+      viennals::ToMesh<NumericType, D>(levelSet, mesh).apply();
+      viennals::VTKWriter<NumericType>(mesh, "GDS_layer_" +
+                                                 std::to_string(layer) + ".vtp")
+          .apply();
+    }
+
     return levelSet;
   }
 
@@ -137,29 +147,33 @@ public:
 
     // exposureGrid is the final blurred grid to be used for SDF calculation
     // auto exposureGrid = proximity.getExposedGrid();
-    if (lsInternal::Logger::getLogLevel() >= 2)
+    if (lsInternal::Logger::getLogLevel() >= 5)
       proximity.saveGridToCSV("finalGrid.csv");
 
     PointType pointData;
-    const std::vector<std::pair<int, int>> directions = {
+    constexpr std::array<std::pair<int, int>, 4> directions = {{
         {-1, 0}, {1, 0}, {0, -1}, {0, 1} // 4-neighbor stencil
-    };
+    }};
 
     // Calculate grid bounds
-    const int xStart = std::floor(minBounds[0] / gridDelta_);
-    const int xEnd = std::ceil(maxBounds[0] / gridDelta_);
-    const int yStart = std::floor(minBounds[1] / gridDelta_);
-    const int yEnd = std::ceil(maxBounds[1] / gridDelta_);
+    const int xStart =
+        std::floor((minBounds[0] - boundaryPadding[0]) / gridDelta_);
+    const int xEnd =
+        std::ceil((maxBounds[0] + boundaryPadding[0]) / gridDelta_);
+    const int yStart =
+        std::floor((minBounds[1] - boundaryPadding[1]) / gridDelta_);
+    const int yEnd =
+        std::ceil((maxBounds[1] + boundaryPadding[1]) / gridDelta_);
 
     for (int y = yStart; y <= yEnd; ++y) {
       for (int x = xStart; x <= xEnd; ++x) {
 
-        double xReal = x * gridDelta_ - bounds_[0];
-        double yReal = y * gridDelta_ - bounds_[2];
+        double xReal = x * gridDelta_ + (boundaryPadding[0] - minBounds[0]);
+        double yReal = y * gridDelta_ + (boundaryPadding[1] - minBounds[1]);
 
         double current = proximity.exposureAt(xReal, yReal);
         // Check if current is on the contour
-        if (current == threshold) {
+        if (std::abs(current - threshold) < thresholdEps) {
           IndexType pos;
           pos[0] = x;
           pos[1] = y;
@@ -169,18 +183,19 @@ public:
 
         double minDist = std::numeric_limits<double>::max();
         int bestNx = -1, bestNy = -1;
+        bool found = false;
 
         for (auto [dy, dx] : directions) {
           int nx = x + dx;
           int ny = y + dy;
-          double nxReal = nx * gridDelta_ - bounds_[0];
-          double nyReal = ny * gridDelta_ - bounds_[2];
+          double nxReal = nx * gridDelta_ + (boundaryPadding[0] - minBounds[0]);
+          double nyReal = ny * gridDelta_ + (boundaryPadding[1] - minBounds[1]);
 
           double neighbor = proximity.exposureAt(nxReal, nyReal);
 
           // Check if neighbor is on the contour
           // If so, skip checks and add neighbor when it becomes "current"
-          if (neighbor == threshold)
+          if (std::abs(neighbor - threshold) < thresholdEps)
             break;
 
           // Check if neighbor is on opposite side of the contour
@@ -192,10 +207,11 @@ public:
               minDist = dist;
               bestNx = nx;
               bestNy = ny;
+              found = true;
             }
           }
         }
-        if ((minDist < 1.0) && (bestNx >= 0.) && (bestNy >= 0.)) {
+        if ((minDist < 1.0) && found) {
           double sdfCurrent = minDist; // * gridDelta_;
           IndexType pos;
           pos[0] = x;
@@ -205,6 +221,25 @@ public:
         }
       }
     }
+
+    auto mesh = viennals::Mesh<NumericType>::New();
+    mesh->nodes.reserve(pointData.size());
+    mesh->getCellData().insertNextScalarData(
+        std::vector<NumericType>(pointData.size(), 0.0), "SDF");
+    auto data = mesh->getCellData().getScalarData(0);
+    int ii = 0;
+    for (const auto &p : pointData) {
+
+      mesh->nodes.push_back(Vec3D<NumericType>{p.first[0] * gridDelta_,
+                                               p.first[1] * gridDelta_, 0});
+
+      mesh->insertNextVertex(
+          {static_cast<unsigned int>(mesh->nodes.size() - 1)});
+      data->at(ii) = p.second;
+      ii++;
+    }
+    viennals::VTKWriter<NumericType>(mesh, "blurredLSGrid.vtp").apply();
+
     return pointData;
   }
 
@@ -233,7 +268,7 @@ public:
     blur = true;
   }
 
-  void printBound() const {
+  void printBounds() const {
     std::cout << "Geometry: (" << minBounds[0] << ", " << minBounds[1]
               << ") - (" << maxBounds[0] << ", " << maxBounds[1] << ")"
               << std::endl;
@@ -460,7 +495,7 @@ private:
   lsDomainType2D getMaskLevelSet(const int16_t layer, bool blurLayer = true) {
 
     const bool blurring = blurLayer && blur;
-    auto GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_,
+    auto GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_.data(),
                                            blurring ? beamDelta : gridDelta_);
 
     for (auto &str : structures) { // loop over all structures
@@ -537,10 +572,18 @@ private:
 
     if (blurring) {
       lsDomainType2D maskLS =
-          lsDomainType2D::New(bounds_, boundaryConds_, gridDelta_);
+          lsDomainType2D::New(bounds_, boundaryConds_.data(), gridDelta_);
       PointType pointData = applyBlur(GDSLevelSet);
       maskLS->insertPoints(pointData);
       maskLS->finalize(2);
+
+      if (Logger::getLogLevel() >= 5) {
+        auto mesh = viennals::Mesh<NumericType>::New();
+        viennals::ToMesh<NumericType, 2>(maskLS, mesh).apply();
+        viennals::VTKWriter<NumericType>(
+            mesh, "GDS_layer_blurred_" + std::to_string(layer) + ".vtp")
+            .apply();
+      }
       // viennals::Expand<double, 2>(maskLS, 2).apply();
       return maskLS;
     }
@@ -555,9 +598,9 @@ private:
 
   double bounds_[6] = {};
   NumericType gridDelta_ = 1.;
-  BoundaryType boundaryConds_[3] = {BoundaryType::REFLECTIVE_BOUNDARY,
-                                    BoundaryType::REFLECTIVE_BOUNDARY,
-                                    BoundaryType::INFINITE_BOUNDARY};
+  std::array<BoundaryType, 3> boundaryConds_ = {
+      BoundaryType::REFLECTIVE_BOUNDARY, BoundaryType::REFLECTIVE_BOUNDARY,
+      BoundaryType::INFINITE_BOUNDARY};
 
   bool blur = false;
   std::vector<NumericType> sigmas;
@@ -565,6 +608,8 @@ private:
   NumericType threshold;
   NumericType beamDelta;
   int gridRefinement = 4;
+
+  constexpr static double thresholdEps = 1e-5;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(GDSGeometry)

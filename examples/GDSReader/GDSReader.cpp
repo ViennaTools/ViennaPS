@@ -23,11 +23,12 @@ int main(int argc, char **argv) {
 
   auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(
       gridDelta, boundaryConds);
+  mask->setBoundaryPadding(0.1, 0.1);
   mask->addBlur({forwardSigma, backsSigma}, // Gaussian sigmas
                 {0.8, 0.2},                 // Weights
                 0.5,                        // Threshold
                 exposureDelta);             // Exposure grid delta
-  ps::GDSReader<NumericType, D>(mask, "myTest.gds").apply();
+  ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
 
   // geometry setup
   auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
@@ -44,23 +45,23 @@ int main(int argc, char **argv) {
   geometry->insertNextLevelSetAsMaterial(plane, ps::Material::Si);
   geometry->saveSurfaceMesh("Substrate.vtp");
 
-  auto layer0 = mask->layerToLevelSet(0, 0.0, 0.1);
-  geometry->insertNextLevelSetAsMaterial(layer0, ps::Material::Mask);
+  auto layer0 = mask->layerToLevelSet(0, 0.0, 0.1, false, false); // no blur
+  geometry->insertNextLevelSetAsMaterial(layer0, ps::Material::SiGe);
 
-  auto layer1 = mask->layerToLevelSet(1, -0.1, 0.3);
+  auto layer1 = mask->layerToLevelSet(1, 0.0, 0.3, false, false); // no blur
   geometry->insertNextLevelSetAsMaterial(layer1, ps::Material::SiO2);
 
-  auto layer2 = mask->layerToLevelSet(2, 0., 0.15, false, false); // no blur
+  auto layer2 = mask->layerToLevelSet(2, 0., 0.05, false, true); // no blur
   geometry->insertNextLevelSetAsMaterial(layer2, ps::Material::Si3N4);
 
-  auto layer3 = mask->layerToLevelSet(3, 0, 0.25);
-  geometry->insertNextLevelSetAsMaterial(layer3, ps::Material::Cu);
+  //   auto layer3 = mask->layerToLevelSet(3, 0, 0.25);
+  //   geometry->insertNextLevelSetAsMaterial(layer3, ps::Material::Cu);
 
-  auto layer4 = mask->layerToLevelSet(4, 0, 0.4, false, false); // no blur
-  geometry->insertNextLevelSetAsMaterial(layer4, ps::Material::W);
+  //   auto layer4 = mask->layerToLevelSet(4, 0, 0.4, false, false); // no blur
+  //   geometry->insertNextLevelSetAsMaterial(layer4, ps::Material::W);
 
-  auto layer5 = mask->layerToLevelSet(5, 0, 0.2);
-  geometry->insertNextLevelSetAsMaterial(layer5, ps::Material::PolySi);
+  //   auto layer5 = mask->layerToLevelSet(5, 0, 0.2);
+  //   geometry->insertNextLevelSetAsMaterial(layer5, ps::Material::PolySi);
 
   geometry->saveSurfaceMesh("Geometry.vtp");
 
