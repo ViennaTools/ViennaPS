@@ -10,7 +10,6 @@ microelectronic fabrication processes.
 """
 
 from __future__ import annotations
-import sys as sys
 import sys as _sys
 import viennals as ls
 from viennals._core import BoundaryConditionEnum as BoundaryType
@@ -104,7 +103,6 @@ __all__: list[str] = [
     "ProcessParams",
     "RateSet",
     "RayTracingParameters",
-    "readConfigFile",
     "Time",
     "TimeUnit",
     "constants",
@@ -112,13 +110,19 @@ __all__: list[str] = [
     "d3",
     "gpu",
     "ls",
+    "mode",
     "ptxPath",
+    "readConfigFile",
+    "setDimension",
     "setNumThreads",
-    "sys",
     "util",
     "version",
 ]
 
+def __dir__(): ...
+def __getattr__(name): ...
+def _module_ptx_path(): ...
+def _windows_dll_path(): ...
 def readConfigFile(fileName: str):
     """
     Read a config file in the ViennaPS standard config file format.
@@ -135,12 +139,19 @@ def readConfigFile(fileName: str):
 
     """
 
-def __dir__(): ...
-def __getattr__(name): ...
-def _module_ptx_path(): ...
-def _windows_dll_path(): ...
+def setDimension(d: int):
+    """
+    Set the dimension of the simulation (2 or 3).
+
+        Parameters
+        ----------
+        d: int
+            Dimension of the simulation (2 or 3).
+
+    """
 
 __version__: str = "4.0.0"
+mode: int = 2
 ptxPath: str = ""
 version: str = "4.0.0"
 _C = _core
