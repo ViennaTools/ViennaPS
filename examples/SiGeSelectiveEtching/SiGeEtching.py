@@ -21,7 +21,7 @@ paramDict = {
 geometry = CreateGeometry(paramDict)
 
 config_file = "config_CF4O2.txt"
-params = ps.ReadConfigFile(config_file)
+params = ps.readConfigFile(config_file)
 
 ps.Logger.setLogLevel(ps.LogLevel.INFO)
 

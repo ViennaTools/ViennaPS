@@ -51,10 +51,26 @@ d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
 ptxPath = _module_ptx_path()
+mode = 2  # default dimension is 2D
+
+
+def setDimension(d: int):
+    """Set the dimension of the simulation (2 or 3).
+
+    Parameters
+    ----------
+    d: int
+        Dimension of the simulation (2 or 3).
+    """
+    global mode
+    if d == 2 or d == 3:
+        mode = d
+    else:
+        raise ValueError("Dimension must be 2 or 3.")
 
 
 # Config file reader helper function
-def ReadConfigFile(fileName: str):
+def readConfigFile(fileName: str):
     """Read a config file in the ViennaPS standard config file format.
 
     Parameters
@@ -91,7 +107,12 @@ def ReadConfigFile(fileName: str):
 
 # forward any other (common) names to _core (PEP 562)
 def __getattr__(name):
-    return getattr(_C, name)
+    try:
+        a = getattr(_C, name)
+    except AttributeError:
+        m = d2 if mode == 2 else d3
+        a = getattr(m, name)
+    return a
 
 
 def __dir__():

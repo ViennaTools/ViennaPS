@@ -2,7 +2,7 @@ import viennaps as ps
 import viennals as ls
 
 
-params = ps.ReadConfigFile("config.txt")
+params = ps.readConfigFile("config.txt")
 geometry = ps.d2.Domain()
 
 # Create the geometry

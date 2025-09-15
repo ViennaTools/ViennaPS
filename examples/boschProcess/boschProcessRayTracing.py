@@ -19,7 +19,7 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 # print only error output surfaces during the process
 ps.Logger.setLogLevel(ps.LogLevel.ERROR)

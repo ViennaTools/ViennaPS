@@ -7,7 +7,6 @@
 #####################################################################
 
 from argparse import ArgumentParser
-import viennaps.d3 as psd
 import viennaps as ps
 
 # parse config file name and simulation dimension
@@ -15,13 +14,14 @@ parser = ArgumentParser(
     prog="boschProcess",
     description="Run a Bosch process on a trench geometry.",
 )
-parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
+parser.add_argument("-D", "-DIM", dest="dim", type=int, default=3)
 parser.add_argument("filename")
 args = parser.parse_args()
 
+ps.setDimension(args.dim)
 ps.gpu.Context.createContext()
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 # print only error output surfaces during the process
 ps.Logger.setLogLevel(ps.LogLevel.ERROR)
@@ -36,12 +36,12 @@ shape_map = {
 hole_shape_str = params.get("holeShape", "Full").strip()
 
 # geometry setup, all units in um
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-psd.MakeHole(
+ps.MakeHole(
     domain=geometry,
     holeRadius=params["holeRadius"],
     holeDepth=0.0,
@@ -50,11 +50,11 @@ psd.MakeHole(
     holeShape=shape_map[hole_shape_str],
 ).apply()
 
-depoModel = psd.gpu.MultiParticleProcess()
+depoModel = ps.d3.gpu.MultiParticleProcess()
 depoModel.addNeutralParticle(params["stickingDep"])
 depoModel.addIonParticle(params["ionSourceExponent"])
 
-etchModel = psd.gpu.MultiParticleProcess()
+etchModel = ps.d3.gpu.MultiParticleProcess()
 materialStickingEtch = {
     ps.Material.Si: params["stickingEtchSubs"],
     ps.Material.Mask: params["stickingEtchMask"],
@@ -128,12 +128,12 @@ advectionParams.timeStepRatio = 0.2
 rayTracingParams = ps.RayTracingParameters()
 rayTracingParams.smoothingNeighbors = 2
 
-depoProcess = psd.Process(geometry, depoModel, params["depTime"])
+depoProcess = ps.Process(geometry, depoModel, params["depTime"])
 depoProcess.setAdvectionParameters(advectionParams)
 depoProcess.setRayTracingParameters(rayTracingParams)
 depoProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
-etchProcess = psd.Process(geometry, etchModel, params["etchTime"])
+etchProcess = ps.Process(geometry, etchModel, params["etchTime"])
 etchProcess.setAdvectionParameters(advectionParams)
 etchProcess.setRayTracingParameters(rayTracingParams)
 etchProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)

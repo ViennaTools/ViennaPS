@@ -20,7 +20,7 @@ else:
     print("Running 3D simulation.")
     import viennaps.d3 as psd
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 NUM_THREADS = 12
 TIME_STABILITY_FACTOR = 0.245 if args.dim == 2 else 0.145

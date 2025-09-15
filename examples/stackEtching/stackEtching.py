@@ -13,7 +13,7 @@ args = parser.parse_args()
 vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 # Parse process parameters
-params = vps.ReadConfigFile(args.filename)
+params = vps.readConfigFile(args.filename)
 
 vps.Length.setUnit(params["lengthUnit"])
 vps.Time.setUnit(params["timeUnit"])

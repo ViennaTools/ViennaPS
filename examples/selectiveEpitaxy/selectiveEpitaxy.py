@@ -19,7 +19,7 @@ else:
     print("Running 3D simulation.")
     psd = ps.d3
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 geometry = psd.Domain(
     gridDelta=params["gridDelta"], xExtent=params["xExtent"], yExtent=params["yExtent"]

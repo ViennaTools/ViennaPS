@@ -18,7 +18,7 @@ else:
     print("Running 3D simulation.")
     psd = ps.d3
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
 ps.Logger.setLogLevel(ps.LogLevel.INFO)

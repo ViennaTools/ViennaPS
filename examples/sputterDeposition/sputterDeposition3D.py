@@ -27,7 +27,7 @@ ps.Logger.setLogLevel(ps.LogLevel.ERROR)
 ps.setNumThreads(16)
 
 # Load config
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 # Optional rate profile plot
 if args.visualize:

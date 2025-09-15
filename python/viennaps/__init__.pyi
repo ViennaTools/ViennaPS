@@ -104,7 +104,7 @@ __all__: list[str] = [
     "ProcessParams",
     "RateSet",
     "RayTracingParameters",
-    "ReadConfigFile",
+    "readConfigFile",
     "Time",
     "TimeUnit",
     "constants",
@@ -119,7 +119,7 @@ __all__: list[str] = [
     "version",
 ]
 
-def ReadConfigFile(fileName: str):
+def readConfigFile(fileName: str):
     """
     Read a config file in the ViennaPS standard config file format.
 

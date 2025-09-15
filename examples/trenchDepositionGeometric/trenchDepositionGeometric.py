@@ -1,31 +1,30 @@
 from argparse import ArgumentParser
 import viennaps as ps
 
-# parse config file name
+# parse config file name and simulation dimension
 parser = ArgumentParser(
-    prog="trenchDepositionGeometric",
-    description="Run a geometric deposition process on a trench geometry.",
+    prog="trenchDeposition",
+    description="Run a deposition process on a trench geometry.",
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-# switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    psd = ps.d2
+    ps.setDimension(2)
 else:
     print("Running 3D simulation.")
-    psd = ps.d3
+    ps.setDimension(3)
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-psd.MakeTrench(
+ps.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
@@ -36,12 +35,12 @@ psd.MakeTrench(
 # copy top layer to capture deposition
 geometry.duplicateTopLevelSet(ps.Material.SiO2)
 
-model = psd.SphereDistribution(
+model = ps.SphereDistribution(
     radius=params["layerThickness"], gridDelta=params["gridDelta"]
 )
 
 geometry.saveHullMesh("initial")
 
-psd.Process(geometry, model, 0.0).apply()
+ps.Process(geometry, model, 0.0).apply()
 
 geometry.saveHullMesh("final")

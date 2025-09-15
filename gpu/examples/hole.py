@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-import viennaps.d3 as psd
 import viennaps as ps
 
 # parse config file name and simulation dimension
@@ -7,7 +6,8 @@ parser = ArgumentParser(prog="hole", description="Run a hole etching process.")
 parser.add_argument("filename")
 args = parser.parse_args()
 
-params = ps.ReadConfigFile(args.filename)
+ps.setDimension(3)
+params = ps.readConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
 ps.Logger.setLogLevel(ps.LogLevel.INFO)
@@ -19,12 +19,12 @@ ps.Time.setUnit(params["timeUnit"])
 ps.gpu.Context.createContext()
 
 # geometry setup, all units in um
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-psd.MakeHole(
+ps.MakeHole(
     domain=geometry,
     holeRadius=params["holeRadius"],
     holeDepth=0.0,
@@ -34,7 +34,7 @@ psd.MakeHole(
 ).apply()
 
 # use pre-defined model SF6O2 etching model
-modelParams = psd.SF6O2Etching.defaultParameters()
+modelParams = ps.SF6O2Etching.defaultParameters()
 modelParams.ionFlux = params["ionFlux"]
 modelParams.etchantFlux = params["etchantFlux"]
 modelParams.passivationFlux = params["oxygenFlux"]
@@ -44,7 +44,7 @@ modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Passivation.A_ie = params["A_O"]
 modelParams.Substrate.A_ie = params["A_Si"]
 modelParams.etchStopDepth = params["etchStopDepth"]
-model = psd.SF6O2Etching(modelParams)
+model = ps.SF6O2Etching(modelParams)
 
 rayTracingParams = ps.RayTracingParameters()
 rayTracingParams.smoothingNeighbors = 2
@@ -56,7 +56,7 @@ advectionParams.integrationScheme = ps.util.convertIntegrationScheme(
 )
 
 # process setup
-process = psd.Process()
+process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])  # seconds

@@ -17,7 +17,7 @@ boundaryConds = [
     ps.BoundaryType.INFINITE_BOUNDARY,
 ]
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 mask = psd.GDSGeometry(gridDelta, boundaryConds)
 mask.setBoundaryPadding(0.1, 0.1)

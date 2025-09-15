@@ -22,7 +22,7 @@ else:
     psd = ps.d3
 
 ps.Logger.setLogLevel(ps.LogLevel.ERROR)
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 ps.setNumThreads(16)
 
 geometry = psd.Domain(

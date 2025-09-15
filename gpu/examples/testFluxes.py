@@ -1,8 +1,8 @@
 import numpy as np
-import viennaps.d3 as psd
 import viennaps as ps
 
 ps.setNumThreads(16)
+ps.setDimension(3)
 ps.Logger.setLogLevel(ps.LogLevel.INFO)
 
 ps.Length.setUnit("um")
@@ -25,7 +25,7 @@ A_O = [2, 2, 2, 1, 1]
 yo2 = [0.44, 0.5, 0.56, 0.62, 0]
 
 # etching model parameters
-params = psd.SF6O2Etching.defaultParameters()
+params = ps.SF6O2Etching.defaultParameters()
 params.Substrate.A_ie = 5.0
 params.Substrate.Eth_ie = 15.0
 
@@ -48,12 +48,12 @@ numberOfRaysPerPoint = int(1000)
 for i in range(len(yo2)):
 
     # geometry setup, all units in um
-    geometry = psd.Domain(
+    geometry = ps.Domain(
         gridDelta=gridDelta,
         xExtent=extent,
         yExtent=extent,
     )
-    psd.MakeHole(
+    ps.MakeHole(
         domain=geometry,
         holeRadius=holeRadius,
         holeDepth=0.0,
@@ -73,7 +73,7 @@ for i in range(len(yo2)):
     coverageParams.maxIterations = 20
     coverageParams.coverageDeltaThreshold = 1e-4
 
-    process = psd.Process()
+    process = ps.Process()
     process.setDomain(geometry)
     process.setProcessDuration(processDuration)
     process.setRayTracingParameters(rayParams)
@@ -86,7 +86,7 @@ for i in range(len(yo2)):
     params.passivationFlux = oxygenFlux[i]
     params.Passivation.A_ie = A_O[i]
 
-    model = psd.SF6O2Etching(params)
+    model = ps.SF6O2Etching(params)
 
     process.setProcessModel(model)
     process.apply()

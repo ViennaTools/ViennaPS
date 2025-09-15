@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import numpy as np
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -10,26 +11,24 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-import viennaps as ps
-
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as psd
+    ps.setDimension(2)
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as psd
+    ps.setDimension(3)
 
 ps.Logger.setLogLevel(ps.LogLevel.INTERMEDIATE)
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-psd.MakeTrench(
+ps.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchDepth"],
@@ -50,7 +49,7 @@ ibeParams.thresholdEnergy = params["thresholdEnergy"]
 ibeParams.redepositionRate = params["redepositionRate"]
 ibeParams.planeWaferRate = params["planeWaferRate"]
 
-model = psd.IonBeamEtching(
+model = ps.IonBeamEtching(
     maskMaterials=[ps.Material.Mask],
     parameters=ibeParams,
 )
@@ -63,7 +62,7 @@ model.setPrimaryDirection(direction)
 advParams = ps.AdvectionParameters()
 advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
 
-process = psd.Process()
+process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])

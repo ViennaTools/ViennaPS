@@ -1,7 +1,7 @@
-import viennaps.d3 as psd
 import viennaps as ps
 
 ps.Logger.setLogLevel(ps.LogLevel.INFO)
+ps.setDimension(3)
 
 context = ps.gpu.Context.createContext()
 
@@ -11,8 +11,8 @@ extent = 50.0
 trenchWidth = 15.0
 maskHeight = 40.0
 
-domain = psd.Domain()
-psd.MakeTrench(
+domain = ps.Domain()
+ps.MakeTrench(
     domain=domain,
     gridDelta=gridDelta,
     xExtent=extent,
@@ -33,13 +33,13 @@ rate = 1.0
 exponent = 1.0
 
 # Create a trench depo model
-model = psd.SingleParticleProcess(rate, sticking, exponent)
+model = ps.SingleParticleProcess(rate, sticking, exponent)
 
 rtParams = ps.RayTracingParameters()
 rtParams.smoothingNeighbors = 2
 rtParams.raysPerPoint = 5000
 
-process = psd.Process()
+process = ps.Process()
 process.setDomain(domain)
 process.setProcessModel(model)
 process.setProcessDuration(time)

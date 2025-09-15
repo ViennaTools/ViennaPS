@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(prog="holeEtching", description="Run a hole etching process.")
@@ -6,17 +7,15 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-import viennaps as ps
-
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as psd
+    ps.setDimension(2)
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as psd
+    ps.setDimension(3)
 
-params = ps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 # print intermediate output surfaces during the process
 ps.Logger.setLogLevel(ps.LogLevel.INFO)
@@ -25,12 +24,12 @@ ps.Length.setUnit(params["lengthUnit"])
 ps.Time.setUnit(params["timeUnit"])
 
 # geometry setup, all units in um
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-psd.MakeHole(
+ps.MakeHole(
     domain=geometry,
     holeRadius=params["holeRadius"],
     holeDepth=0.0,
@@ -40,7 +39,7 @@ psd.MakeHole(
 ).apply()
 
 # use pre-defined model SF6O2 etching model
-modelParams = psd.SF6O2Etching.defaultParameters()
+modelParams = ps.SF6O2Etching.defaultParameters()
 modelParams.ionFlux = params["ionFlux"]
 modelParams.etchantFlux = params["etchantFlux"]
 modelParams.passivationFlux = params["oxygenFlux"]
@@ -50,7 +49,7 @@ modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Passivation.A_ie = params["A_O"]
 modelParams.Substrate.A_ie = params["A_Si"]
 modelParams.etchStopDepth = params["etchStopDepth"]
-model = psd.SF6O2Etching(modelParams)
+model = ps.SF6O2Etching(modelParams)
 
 covParams = ps.CoverageParameters()
 covParams.maxIterations = 20
@@ -64,7 +63,7 @@ advParams.integrationScheme = ps.util.convertIntegrationScheme(
 )
 
 # process setup
-process = psd.Process(geometry, model)
+process = ps.Process(geometry, model)
 process.setProcessDuration(params["processTime"])  # seconds
 process.setCoverageParameters(covParams)
 process.setRayTracingParameters(rayParams)
