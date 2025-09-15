@@ -551,9 +551,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   py::class_<Extrude<T>>(module, "Extrude")
       .def(py::init())
       .def(py::init<SmartPointer<Domain<T, 2>> &, SmartPointer<Domain<T, 3>> &,
-                    std::array<T, 2>, std::array<BoundaryType, 3>>(),
+                    std::array<T, 2>, int, std::array<BoundaryType, 3>>(),
            py::arg("inputDomain"), py::arg("outputDomain"), py::arg("extent"),
-           py::arg("boundaryConditions"))
+           py::arg("extrusionAxis"), py::arg("boundaryConditions"))
       .def("setInputDomain", &Extrude<T>::setInputDomain,
            "Set the input domain to be extruded.")
       .def("setOutputDomain", &Extrude<T>::setOutputDomain,
@@ -561,6 +561,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "the extruded domain.")
       .def("setExtent", &Extrude<T>::setExtent,
            "Set the min and max extent in the extruded dimension.")
+      .def("setExtrusionAxis", &Extrude<T>::setExtrusionAxis,
+           "Set the axis along which to extrude (0, 1, or 2).")
       .def("setBoundaryConditions",
            py::overload_cast<std::array<BoundaryType, 3>>(
                &Extrude<T>::setBoundaryConditions),
