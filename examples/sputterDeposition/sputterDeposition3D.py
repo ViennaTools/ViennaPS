@@ -17,11 +17,9 @@ import viennaps as ps
 # Select dimension module
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as psd
-
+ps.setDimension(args.dim)
 # Setup logging and threads
 ps.Logger.setLogLevel(ps.LogLevel.ERROR)
 ps.setNumThreads(16)
@@ -43,20 +41,16 @@ if args.visualize:
     )
 
 # Geometry setup
-geometry = psd.Domain()
-psd.MakeHole(
-    domain=geometry,
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+ps.MakeHole(
+    domain=geometry,
     holeRadius=params["holeRadius"],
     holeDepth=params["holeDepth"],
-    taperingAngle=params["taperingAngle"],
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=False,
-    material=ps.Material.Si,
-    holeShape=ps.HoleShape.FULL,
+    holeTaperAngle=params["taperingAngle"],
 ).apply()
 
 geometry.saveVolumeMesh("Hole")
@@ -71,7 +65,7 @@ offset[0] = params["offsetX"]
 offset[1] = params["offsetY"]
 
 # CSV-based deposition model
-depoModel = psd.CSVFileProcess(
+depoModel = ps.CSVFileProcess(
     ratesFile=params["ratesFile"].strip(),
     direction=direction,
     offset=offset,
@@ -100,7 +94,7 @@ n += 1
 
 for i in range(numCycles):
     print(f"Cycle {i + 1}")
-    psd.Process(geometry, depoModel, params["depositionTime"]).apply()
+    ps.Process(geometry, depoModel, params["depositionTime"]).apply()
     geometry.saveSurfaceMesh(f"{filename_prefix}{n}.vtp")
     n += 1
 

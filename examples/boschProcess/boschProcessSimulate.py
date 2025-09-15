@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -9,26 +10,23 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-import viennaps as ps
-
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    psd = ps.d2
 else:
     print("Running 3D simulation.")
-    psd = ps.d3
+ps.setDimension(args.dim)
 
 ps.Logger.setLogLevel(ps.LogLevel.ERROR)
 params = ps.readConfigFile(args.filename)
 ps.setNumThreads(16)
 
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-psd.MakeTrench(
+ps.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=0.0,
@@ -36,13 +34,13 @@ psd.MakeTrench(
 ).apply()
 
 # Isotropic deposition model
-depoModel = psd.SingleParticleProcess(
+depoModel = ps.SingleParticleProcess(
     rate=params["depositionThickness"],
     stickingProbability=params["depositionStickingProbability"],
 )
 
 # Deposition removal model
-depoRemoval = psd.SingleParticleProcess(
+depoRemoval = ps.SingleParticleProcess(
     rate=-params["depositionThickness"],
     stickingProbability=1.0,
     sourceExponent=params["ionSourceExponent"],
@@ -50,7 +48,7 @@ depoRemoval = psd.SingleParticleProcess(
 )
 
 # Etch model
-etchModel = psd.MultiParticleProcess()
+etchModel = ps.MultiParticleProcess()
 etchModel.addNeutralParticle(params["neutralStickingProbability"])
 etchModel.addIonParticle(sourcePower=params["ionSourceExponent"], thetaRMin=60.0)
 
@@ -74,16 +72,16 @@ n = 0
 def runProcess(model, name, time=1.0):
     global n
     print("  - {} - ".format(name))
-    psd.Process(geometry, model, time).apply()
+    ps.Process(geometry, model, time).apply()
     geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
     n += 1
 
 
 def cleanup(threshold=1.0):
-    expand = psd.IsotropicProcess(threshold)
-    psd.Process(geometry, expand, 1).apply()
-    shrink = psd.IsotropicProcess(-threshold)
-    psd.Process(geometry, shrink, 1).apply()
+    expand = ps.IsotropicProcess(threshold)
+    ps.Process(geometry, expand, 1).apply()
+    shrink = ps.IsotropicProcess(-threshold)
+    ps.Process(geometry, shrink, 1).apply()
 
 
 numCycles = int(params["numCycles"])

@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -9,28 +10,25 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-import viennaps as ps
-
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    psd = ps.d2
 else:
     print("Running 3D simulation.")
-    psd = ps.d3
+ps.setDimension(args.dim)
 
 params = ps.readConfigFile(args.filename)
 
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"], xExtent=params["xExtent"], yExtent=params["yExtent"]
 )
-psd.MakeFin(
+ps.MakeFin(
     domain=geometry,
     finWidth=params["finWidth"],
     finHeight=params["finHeight"],
 ).apply()
 
-psd.MakePlane(
+ps.MakePlane(
     domain=geometry,
     height=params["oxideHeight"],
     material=ps.Material.SiO2,
@@ -40,7 +38,7 @@ psd.MakePlane(
 # copy top layer to capture deposition
 geometry.duplicateTopLevelSet(ps.Material.SiGe)
 
-model = psd.SelectiveEpitaxy(
+model = ps.SelectiveEpitaxy(
     materialRates=[
         (ps.Material.Si, params["epitaxyRate"]),
         (ps.Material.SiGe, params["epitaxyRate"]),
@@ -54,7 +52,7 @@ advectionParams.integrationScheme = (
     ps.IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
-process = psd.Process(geometry, model, params["processTime"])
+process = ps.Process(geometry, model, params["processTime"])
 process.setAdvectionParameters(advectionParams)
 
 geometry.saveVolumeMesh("initial_fin")

@@ -45,6 +45,7 @@ private:
   }
 
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
+    context.model->initialize(context.domain, context.processTime);
     context.translationField =
         SmartPointer<TranslationField<NumericType, D>>::New(
             context.model->getVelocityField(),
@@ -91,6 +92,7 @@ private:
 
   ProcessResult processTimeStep(ProcessContext<NumericType, D> &context) {
     // Prepare advection based on integration scheme
+    // Initialize model
     advectionHandler_.prepareAdvection(context);
 
     // Apply advection callbacks (pre)

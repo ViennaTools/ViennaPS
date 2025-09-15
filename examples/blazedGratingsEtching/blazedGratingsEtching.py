@@ -1,5 +1,3 @@
-import viennaps.d2 as psd
-import viennals.d2 as lsd
 import viennaps as ps
 import numpy as np
 from argparse import ArgumentParser
@@ -35,13 +33,13 @@ numBumps = int(params["numBumps"])
 bumpSpacing = bumpWidth * (1.0 - bumpDuty) / bumpDuty
 xExtent = numBumps * bumpWidth / bumpDuty
 
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=xExtent,
     boundary=ps.BoundaryType.PERIODIC_BOUNDARY,
 )
-psd.MakePlane(domain=geometry, height=0.0, material=ps.Material.SiO2).apply()
-mask = lsd.Domain(geometry.getGrid())
+ps.MakePlane(domain=geometry, height=0.0, material=ps.Material.SiO2).apply()
+mask = ps.ls.Domain(geometry.getGrid())
 
 mesh = ps.ls.Mesh()
 offset = -xExtent / 2.0 + bumpSpacing + bumpWidth / 2.0
@@ -55,14 +53,14 @@ for i in range(1, numNodes):
 mesh.insertNextLine([numNodes - 1, 0])
 
 for i in range(numBumps):
-    tip = lsd.Domain(geometry.getGrid())
-    lsd.FromSurfaceMesh(tip, mesh).apply()
+    tip = ps.ls.Domain(geometry.getGrid())
+    ps.ls.FromSurfaceMesh(tip, mesh).apply()
     ps.ls.TransformMesh(
         mesh=mesh,
         transform=ps.ls.TransformEnum.TRANSLATION,
         transformVector=[bumpSpacing + bumpWidth, 0, 0],
     ).apply()
-    lsd.BooleanOperation(mask, tip, ps.ls.BooleanOperationEnum.UNION).apply()
+    ps.ls.BooleanOperation(mask, tip, ps.ls.BooleanOperationEnum.UNION).apply()
 
 geometry.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
 geometry.saveSurfaceMesh("initial", True)
@@ -94,7 +92,7 @@ ibeParams.meanEnergy = params["meanEnergy"]
 ibeParams.materialPlaneWaferRate = {ps.Material.SiO2: 1, ps.Material.Mask: 1 / 11}
 ibeParams.yieldFunction = yieldFunction
 
-model = psd.IonBeamEtching()
+model = ps.IonBeamEtching()
 
 # ----- ANSGM Etch ----- #
 angle = params["phi1"]
@@ -105,7 +103,7 @@ ibeParams.tiltAngle = angle
 model.setPrimaryDirection(direction)
 model.setParameters(ibeParams)
 
-process = psd.Process(geometry, model, 0.0)
+process = ps.Process(geometry, model, 0.0)
 process.setAdvectionParameters(advectionParams)
 process.setRayTracingParameters(rayTracingParams)
 

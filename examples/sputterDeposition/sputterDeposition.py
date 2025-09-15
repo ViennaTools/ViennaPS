@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # Argument parsing
 parser = ArgumentParser(
@@ -12,15 +13,12 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-import viennaps as ps
-
 # Select dimension module
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as psd
+ps.setDimension(args.dim)
 
 # Setup
 ps.Logger.setLogLevel(ps.LogLevel.ERROR)
@@ -40,19 +38,16 @@ if args.visualize:
     )
 
 # Geometry setup
-geometry = psd.Domain()
-psd.MakeTrench(
-    domain=geometry,
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
-    trenchWidth=params["trenchWidth"],
-    trenchDepth=params["trenchDepth"],
-    taperingAngle=params["taperingAngle"],
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=False,
-    material=ps.Material.Si,
+)
+ps.MakeHole(
+    domain=geometry,
+    holeRadius=params["holeRadius"],
+    holeDepth=params["holeDepth"],
+    holeTaperAngle=params["taperingAngle"],
 ).apply()
 
 geometry.saveVolumeMesh("Trench")
@@ -66,7 +61,7 @@ offset = [0.0, 0.0]
 offset[0] = params["offsetX"]
 
 # Create CSV-based deposition process
-depoModel = psd.CSVFileProcess(
+depoModel = ps.CSVFileProcess(
     ratesFile=params["ratesFile"].strip(),
     direction=direction,
     offset=offset,
@@ -95,7 +90,7 @@ n += 1
 
 for i in range(numCycles):
     print(f"Cycle {i + 1}")
-    psd.Process(geometry, depoModel, params["depositionTime"]).apply()
+    ps.Process(geometry, depoModel, params["depositionTime"]).apply()
     geometry.saveSurfaceMesh(f"{filename_prefix}{n}.vtp")
     n += 1
 

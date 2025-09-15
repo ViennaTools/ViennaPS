@@ -1,8 +1,6 @@
-import viennaps.d3 as psd
 import viennaps as ps
-import viennals.d3 as vls
-from viennals import BooleanOperationEnum
 
+ps.setDimension(3)
 ps.Logger.setLogLevel(ps.LogLevel.ERROR)
 n = 0
 
@@ -15,25 +13,25 @@ boundaryConds = [
 ]
 gridDelta = 0.71
 
-domain = psd.Domain(bounds, boundaryConds, gridDelta)
-psd.MakePlane(domain, 10.0, ps.Material.SiO2).apply()
+domain = ps.Domain(bounds, boundaryConds, gridDelta)
+ps.MakePlane(domain, 10.0, ps.Material.SiO2).apply()
 
 # Epi Fin growth
 print("Epi Fin growth ...")
-growth = psd.IsotropicProcess(1.0)
+growth = ps.IsotropicProcess(1.0)
 domain.duplicateTopLevelSet(ps.Material.Si)
-psd.Process(domain, growth, 7.0).apply()
+ps.Process(domain, growth, 7.0).apply()
 
 domain.duplicateTopLevelSet(ps.Material.SiGe)
-psd.Process(domain, growth, 8.0).apply()
+ps.Process(domain, growth, 8.0).apply()
 
 domain.duplicateTopLevelSet(ps.Material.Si)
-psd.Process(domain, growth, 7.0).apply()
+ps.Process(domain, growth, 7.0).apply()
 
 # Add double patterning mask
 print("Adding double patterning mask ...")
-mask = vls.Domain(bounds, boundaryConds, gridDelta)
-geo = vls.MakeGeometry(mask, vls.Box([25.0, -10.0, 31.9], [45.0, 110.0, 60.0]))
+mask = ps.ls.Domain(bounds, boundaryConds, gridDelta)
+geo = ps.ls.MakeGeometry(mask, ps.ls.Box([25.0, -10.0, 31.9], [45.0, 110.0, 60.0]))
 geo.setIgnoreBoundaryConditions(True)
 geo.apply()
 
@@ -43,16 +41,16 @@ n += 1
 
 # Double patterning
 domain.duplicateTopLevelSet(ps.Material.Metal)
-psd.Process(domain, growth, 15.0).apply()
+ps.Process(domain, growth, 15.0).apply()
 
-directional = psd.DirectionalProcess(
+directional = ps.DirectionalProcess(
     direction=[0.0, 0.0, -1.0],
     directionalVelocity=-1.0,
     isotropicVelocity=0.0,
     maskMaterial=[ps.Material.Si, ps.Material.Mask],
     calculateVisibility=False,
 )
-psd.Process(domain, directional, 20.0).apply()
+ps.Process(domain, directional, 20.0).apply()
 
 domain.removeMaterial(ps.Material.Mask)
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
@@ -60,14 +58,14 @@ n += 1
 
 # Pattern Si/SiGe/Si
 print("Patterning Si/SiGe/Si Stack ...")
-directional = psd.DirectionalProcess(
+directional = ps.DirectionalProcess(
     direction=[0.0, 0.0, -1.0],
     directionalVelocity=-1.0,
     isotropicVelocity=0.0,
     maskMaterial=ps.Material.Metal,
     calculateVisibility=False,
 )
-psd.Process(domain, directional, 30.0).apply()
+ps.Process(domain, directional, 30.0).apply()
 
 domain.removeMaterial(ps.Material.Metal)
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
@@ -76,31 +74,31 @@ n += 1
 # Deposit dummy gate material
 print("Depositing dummy gate material ...")
 domain.duplicateTopLevelSet(ps.Material.PolySi)
-psd.Process(domain, growth, 55.0).apply()
+ps.Process(domain, growth, 55.0).apply()
 
 # CMP at 80nm height
-psd.Planarize(domain, 80.0).apply()
+ps.Planarize(domain, 80.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
 
 # Dummy gate mask addition
 print("Adding dummy gate mask ...")
-mask = vls.Domain(bounds, boundaryConds, gridDelta)
-geo = vls.MakeGeometry(mask, vls.Box([-10, 30, 75], [80, 70, 80]))
+mask = ps.ls.Domain(bounds, boundaryConds, gridDelta)
+geo = ps.ls.MakeGeometry(mask, ps.ls.Box([-10, 30, 75], [80, 70, 80]))
 geo.setIgnoreBoundaryConditions(True)
 geo.apply()
 
-vls.BooleanOperation(
-    mask, domain.getLevelSets()[-2], BooleanOperationEnum.UNION
+ps.ls.BooleanOperation(
+    mask, domain.getLevelSets()[-2], ps.ls.BooleanOperationEnum.UNION
 ).apply()
 
-tmpDomain = psd.Domain()
+tmpDomain = ps.Domain()
 tmpDomain.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
 tmpDomain.insertNextLevelSetAsMaterial(domain.getLevelSets()[-1], ps.Material.PolySi)
 
-geometricEtch = psd.BoxDistribution([-gridDelta, -gridDelta, -80], gridDelta, mask)
-psd.Process(tmpDomain, geometricEtch, 1.0).apply()
+geometricEtch = ps.BoxDistribution([-gridDelta, -gridDelta, -80], gridDelta, mask)
+ps.Process(tmpDomain, geometricEtch, 1.0).apply()
 
 domain.removeMaterial(ps.Material.Mask)
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
@@ -109,11 +107,11 @@ n += 1
 # Spacer Deposition
 print("Depositing spacer material ...")
 domain.duplicateTopLevelSet(ps.Material.Si3N4)
-psd.Process(domain, growth, 12.0).apply()
+ps.Process(domain, growth, 12.0).apply()
 
 # Spacer patterning
 print("Patterning spacer ...")
-directional = psd.DirectionalProcess(
+directional = ps.DirectionalProcess(
     direction=[0.0, 0.0, 1.0],
     directionalVelocity=1.0,
     isotropicVelocity=-0.05,
@@ -125,7 +123,7 @@ directional = psd.DirectionalProcess(
     ],
     calculateVisibility=False,
 )
-psd.Process(domain, directional, 40.0).apply()
+ps.Process(domain, directional, 40.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
@@ -151,8 +149,8 @@ rateSet2 = ps.RateSet(
     ],
     calculateVisibility=False,
 )
-directional = psd.DirectionalProcess([rateSet1, rateSet2])
-psd.Process(domain, directional, 21.0).apply()
+directional = ps.DirectionalProcess([rateSet1, rateSet2])
+ps.Process(domain, directional, 21.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
@@ -160,11 +158,11 @@ n += 1
 # SD Epitaxy
 print("SD Epitaxy ...")
 domain.duplicateTopLevelSet(ps.Material.Metal)
-epitaxy = psd.IsotropicProcess(
+epitaxy = ps.IsotropicProcess(
     rate=1.0,
     maskMaterial=[ps.Material.PolySi, ps.Material.SiO2, ps.Material.Si3N4],
 )
-psd.Process(domain, epitaxy, 9.0).apply()
+ps.Process(domain, epitaxy, 9.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
@@ -172,9 +170,9 @@ n += 1
 # Dielectric deposition
 print("Depositing dielectric ...")
 domain.duplicateTopLevelSet(ps.Material.Dielectric)
-psd.Process(domain, growth, 35.0).apply()
+ps.Process(domain, growth, 35.0).apply()
 
-psd.Planarize(domain, 60).apply()
+ps.Planarize(domain, 60).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
@@ -187,7 +185,7 @@ n += 1
 
 # remove SiGe interlayer
 print("Removing SiGe interlayer ...")
-etch = psd.IsotropicProcess(
+etch = ps.IsotropicProcess(
     rate=-1.0,
     maskMaterial=[
         ps.Material.Si,
@@ -197,7 +195,7 @@ etch = psd.IsotropicProcess(
         ps.Material.Metal,
     ],
 )
-psd.Process(domain, etch, 10.0).apply()
+ps.Process(domain, etch, 10.0).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))
 n += 1
@@ -205,14 +203,14 @@ n += 1
 # gate dielectric, gate metal, gate contact deposition
 print("Depositing gate materials ...")
 domain.duplicateTopLevelSet(ps.Material.HfO2)
-psd.Process(domain, growth, 2.0).apply()
+ps.Process(domain, growth, 2.0).apply()
 
 domain.duplicateTopLevelSet(ps.Material.TiN)
-psd.Process(domain, growth, 4.0).apply()
+ps.Process(domain, growth, 4.0).apply()
 
 domain.duplicateTopLevelSet(ps.Material.PolySi)
-psd.Process(domain, growth, 20.0).apply()
+ps.Process(domain, growth, 20.0).apply()
 
-psd.Planarize(domain, 47.5).apply()
+ps.Planarize(domain, 47.5).apply()
 
 domain.saveVolumeMesh("StackedNanowire_" + str(n))

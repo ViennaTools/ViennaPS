@@ -51,7 +51,7 @@ d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
 ptxPath = _module_ptx_path()
-DEFAULT_DIM = 2  # default dimension is 2D
+PROXY_DIM = 2  # default dimension is 2D
 
 
 def setDimension(d: int):
@@ -62,9 +62,10 @@ def setDimension(d: int):
     d: int
         Dimension of the simulation (2 or 3).
     """
-    global DEFAULT_DIM
+    global PROXY_DIM
     if d == 2 or d == 3:
-        DEFAULT_DIM = d
+        PROXY_DIM = d
+        ls.setDimension(d)
     else:
         raise ValueError("Dimension must be 2 or 3.")
 
@@ -112,7 +113,7 @@ def __getattr__(name):
     except AttributeError as e_core:
         pass
     # 2) fallback to current default dimension
-    m = d2 if DEFAULT_DIM == 2 else d3
+    m = d2 if PROXY_DIM == 2 else d3
     try:
         return getattr(m, name)
     except AttributeError:

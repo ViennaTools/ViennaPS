@@ -115,19 +115,18 @@ public:
               viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
               .apply();
 
-          auto mesh = viennals::Mesh<NumericType>::New();
-          viennals::ToSurfaceMesh(lsCopy, mesh).apply();
-          viennals::VTKWriter<NumericType>(mesh, "SelectiveEpitaxyMask_" +
-                                                     std::to_string(i))
-              .apply();
+          // auto mesh = viennals::Mesh<NumericType>::New();
+          // viennals::ToSurfaceMesh(lsCopy, mesh).apply();
+          // viennals::VTKWriter<NumericType>(mesh, "SelectiveEpitaxyMask_" +
+          //                                            std::to_string(i))
+          //     .apply();
         }
       }
 
       domain->clear();
       domain->insertNextLevelSetAsMaterial(maskLayer, Material::Mask);
-#ifndef NDEBUG
-      domain->saveSurfaceMesh("SelectiveEpitaxyMask");
-#endif
+      if (Logger::getLogLevel() >= 5)
+        domain->saveSurfaceMesh("SelectiveEpitaxyMask");
       domain->insertNextLevelSetAsMaterial(domainCopy->getLevelSets().back(),
                                            topMaterial, false);
       levelSets = domain->getLevelSets();

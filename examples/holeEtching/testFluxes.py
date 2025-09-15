@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import numpy as np
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -8,17 +9,13 @@ parser = ArgumentParser(
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 args = parser.parse_args()
 
-import viennaps as ps
 
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as psd
-    import viennals.d2 as lsd
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as psd
-    import viennals.d3 as lsd
+ps.setDimension(args.dim)
 
 ps.setNumThreads(16)
 ps.Logger.setLogLevel(ps.LogLevel.INFO)
@@ -41,7 +38,7 @@ A_O = [2, 2, 2, 1, 1]
 yo2 = [0.44, 0.5, 0.56, 0.62, 0]
 
 # etching model parameters
-params = psd.SF6O2Etching.defaultParameters()
+params = ps.SF6O2Etching.defaultParameters()
 params.Substrate.A_ie = 5.0
 params.Substrate.Eth_ie = 15.0
 
@@ -72,12 +69,12 @@ covParams.coverageDeltaThreshold = 1e-4
 for i in range(len(yo2)):
 
     # geometry setup, all units in um
-    geometry = psd.Domain(
+    geometry = ps.Domain(
         gridDelta=gridDelta,
         xExtent=extent,
         yExtent=extent,
     )
-    psd.MakeHole(
+    ps.MakeHole(
         domain=geometry,
         holeRadius=holeRadius,
         holeDepth=0.0,
@@ -86,7 +83,7 @@ for i in range(len(yo2)):
         holeShape=ps.HoleShape.HALF,
     ).apply()
 
-    process = psd.Process()
+    process = ps.Process()
     process.setDomain(geometry)
     process.setProcessDuration(processDuration)
     process.setCoverageParameters(covParams)
@@ -98,7 +95,7 @@ for i in range(len(yo2)):
     params.passivationFlux = oxygenFlux[i]
     params.Passivation.A_ie = A_O[i]
 
-    model = psd.SF6O2Etching(params)
+    model = ps.SF6O2Etching(params)
 
     process.setProcessModel(model)
     process.apply()
@@ -106,7 +103,7 @@ for i in range(len(yo2)):
     # save mask
     mask = geometry.getLevelSets()[0]
     mesh = ps.ls.Mesh()
-    lsd.ToSurfaceMesh(mask, mesh).apply()
+    ps.ls.ToSurfaceMesh(mask, mesh).apply()
     ps.ls.VTKWriter(mesh, "mask_y{:.2f}.vtp".format(yo2[i])).apply()
 
     geometry.saveSurfaceMesh("hole_y{:.2f}.vtp".format(yo2[i]), True)

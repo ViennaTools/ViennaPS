@@ -1,5 +1,4 @@
 import viennaps as ps
-import viennaps.d2 as psd
 
 # Set log level
 ps.Logger.setLogLevel(ps.LogLevel.DEBUG)
@@ -16,7 +15,7 @@ boundaryConds = [
 ]
 
 # Create GDS geometry object
-mask = psd.GDSGeometry(gridDelta, boundaryConds)
+mask = ps.GDSGeometry(gridDelta, boundaryConds)
 
 # Add blur parameters
 mask.addBlur(
@@ -27,7 +26,7 @@ mask.addBlur(
 )
 
 # Load GDS file
-reader = psd.GDSReader(mask, "myTest.gds")
+reader = ps.GDSReader(mask, "myTest.gds")
 reader.apply()
 
 # Export unblurred mask layer

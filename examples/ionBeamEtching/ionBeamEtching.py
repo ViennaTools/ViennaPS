@@ -14,10 +14,9 @@ args = parser.parse_args()
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    ps.setDimension(2)
 else:
     print("Running 3D simulation.")
-    ps.setDimension(3)
+ps.setDimension(args.dim)
 
 ps.Logger.setLogLevel(ps.LogLevel.INTERMEDIATE)
 

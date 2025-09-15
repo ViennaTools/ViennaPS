@@ -1,7 +1,6 @@
-import viennaps.d3 as psd
-import viennals.d3 as lsd
 import viennaps as ps
 
+ps.setDimension(3)
 volumeOutput = False
 volumeNum = 0
 surfaceNum = 0
@@ -33,18 +32,18 @@ boundaryConds = [
 bounds = [0.0, 90.0, 0.0, 100.0, 0.0, 70.0]  # in nanometers
 gridDelta = 0.79
 
-domain = psd.Domain(bounds, boundaryConds, gridDelta)
+domain = ps.Domain(bounds, boundaryConds, gridDelta)
 
 # Initialise domain with a single silicon plane (at z=70 because it is 70 nm high)
-psd.MakePlane(domain, 70.0, ps.Material.Si).apply()
+ps.MakePlane(domain, 70.0, ps.Material.Si).apply()
 writeSurface(domain)
 
 
 # Add double patterning mask
-box = lsd.Domain(domain.getGrid())
+box = ps.ls.Domain(domain.getGrid())
 minPoints = [30.0, -10.0, 69.9]
 maxPoints = [60.0, 110.0, 90.0]
-geo = lsd.MakeGeometry(box, lsd.Box(minPoints, maxPoints)).apply()
+geo = ps.ls.MakeGeometry(box, ps.ls.Box(minPoints, maxPoints)).apply()
 domain.insertNextLevelSetAsMaterial(box, ps.Material.Mask)
 writeSurface(domain)
 
@@ -52,18 +51,18 @@ writeSurface(domain)
 print("Double patterning processes ...", end="", flush=True)
 thickness = 4.0  # nm
 domain.duplicateTopLevelSet(ps.Material.Metal)
-growth = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, growth, 0).apply()
+growth = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, growth, 0).apply()
 print(" done")
 writeSurface(domain)
 
 # DP-Patterning
 print("DP-Patterning ...", end="", flush=True)
 etchDepth = 6.0  # nm
-dist = psd.BoxDistribution(
+dist = ps.BoxDistribution(
     [-gridDelta, -gridDelta, -etchDepth], gridDelta, domain.getLevelSets()[0]
 )
-psd.Process(domain, dist, 0).apply()
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 
@@ -76,14 +75,14 @@ writeVolume(domain)
 print("Si-Patterning ...", end="", flush=True)
 etchDepth = 90.0  # nm
 direction = [0.0, 0.0, 1.0]
-model = psd.DirectionalProcess(
+model = ps.DirectionalProcess(
     direction=direction,
     directionalVelocity=1.1,
     isotropicVelocity=0.1,
     maskMaterial=ps.Material.Metal,
     calculateVisibility=False,
 )
-psd.Process(domain, model, etchDepth).apply()
+ps.Process(domain, model, etchDepth).apply()
 print(" done")
 writeVolume(domain)
 writeSurface(domain)
@@ -96,21 +95,21 @@ writeSurface(domain)
 print("STI Deposition ...", end="", flush=True)
 thickness = 35  # nm
 domain.duplicateTopLevelSet(ps.Material.SiO2)
-dist = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, dist, 0).apply()
+dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 
 # CMP at 80
-psd.Planarize(domain, 80.0).apply()
+ps.Planarize(domain, 80.0).apply()
 writeVolume(domain)
 
 # pattern STI material
 print("STI Patterning ...", end="", flush=True)
-dist = psd.SphereDistribution(
+dist = ps.SphereDistribution(
     radius=-35, gridDelta=gridDelta, mask=domain.getLevelSets()[0]
 )
-psd.Process(domain, dist, 0).apply()
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 writeVolume(domain)
@@ -119,27 +118,27 @@ writeVolume(domain)
 print("Gate Deposition HfO2 ...", end="", flush=True)
 thickness = 2.0  # nm
 domain.duplicateTopLevelSet(ps.Material.HfO2)
-dist = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, dist, 0).apply()
+dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 
 print("Gate Deposition PolySi ...", end="", flush=True)
 thickness = 104.0  # nm
 domain.duplicateTopLevelSet(ps.Material.PolySi)
-dist = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, dist, 0).apply()
+dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 
 # CMP at 150
-psd.Planarize(domain, 150.0).apply()
+ps.Planarize(domain, 150.0).apply()
 
 # dummy gate mask addition
-box = lsd.Domain(domain.getGrid())
+box = ps.ls.Domain(domain.getGrid())
 minPoint = [-10.0, 30.0, 145.0]
 maxPoint = [100.0, 70.0, 175.0]
-geo = lsd.MakeGeometry(box, lsd.Box(minPoint, maxPoint)).apply()
+geo = ps.ls.MakeGeometry(box, ps.ls.Box(minPoint, maxPoint)).apply()
 domain.insertNextLevelSetAsMaterial(box, ps.Material.Mask)
 writeSurface(domain)
 
@@ -147,14 +146,14 @@ writeSurface(domain)
 print("Dummy Gate Patterning ...", end="", flush=True)
 direction = [0.0, 0.0, 1.0]
 masks = [ps.Material.Mask, ps.Material.Si, ps.Material.SiO2]
-model = psd.DirectionalProcess(
+model = ps.DirectionalProcess(
     direction=direction,
     directionalVelocity=1.0,
     isotropicVelocity=0.0,
     maskMaterial=masks,
     calculateVisibility=False,
 )
-psd.Process(domain, model, 110.0).apply()
+ps.Process(domain, model, 110.0).apply()
 print(" done")
 writeSurface(domain)
 
@@ -167,18 +166,18 @@ writeVolume(domain)
 print("Spacer Deposition and Etch ...", end="", flush=True)
 thickness = 10.0  # nm
 domain.duplicateTopLevelSet(ps.Material.Si3N4)
-dist = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, dist, 0).apply()
+dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 
 # Spacer Etch
 print("Spacer Etch ...", end="", flush=True)
 ls = domain.getLevelSets()[-2]
-dist = psd.BoxDistribution(
+dist = ps.BoxDistribution(
     halfAxes=[-gridDelta, -gridDelta, -50], gridDelta=gridDelta, mask=ls
 )
-psd.Process(domain, dist, 0).apply()
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 writeVolume(domain)
@@ -186,10 +185,10 @@ writeVolume(domain)
 # isotropic etch (fin-release)
 print("Fin-Release ...", end="", flush=True)
 masks = [ps.Material.PolySi, ps.Material.SiO2, ps.Material.Si3N4]
-model = psd.IsotropicProcess(rate=-1.0, maskMaterial=masks)
+model = ps.IsotropicProcess(rate=-1.0, maskMaterial=masks)
 advParams = ps.AdvectionParameters()
 advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
-process = psd.Process(domain, model, 5.0)
+process = ps.Process(domain, model, 5.0)
 process.setAdvectionParameters(advParams)
 process.apply()
 print(" done")
@@ -203,13 +202,13 @@ advectionParams = ps.AdvectionParameters()
 advectionParams.integrationScheme = (
     ps.IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
-psd.StencilLocalLaxFriedrichsScalar.setMaxDissipation(1000)
+ps.StencilLocalLaxFriedrichsScalar.setMaxDissipation(1000)
 material = [
     (ps.Material.Si, 1.0),
     (ps.Material.SiGe, 1.0),
 ]
-model = psd.SelectiveEpitaxy(materialRates=material)
-process = psd.Process(domain, model, 14.0)
+model = ps.SelectiveEpitaxy(materialRates=material)
+process = ps.Process(domain, model, 14.0)
 process.setAdvectionParameters(advectionParams)
 process.apply()
 print(" done")
@@ -220,13 +219,13 @@ writeVolume(domain)
 print("Dielectric Deposition ...", end="", flush=True)
 thickness = 50.0  # nm
 domain.duplicateTopLevelSet(ps.Material.Dielectric)
-dist = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, dist, 0).apply()
+dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 
 # CMP at 90
-psd.Planarize(domain, 90.0).apply()
+ps.Planarize(domain, 90.0).apply()
 writeVolume(domain)
 
 # now remove gate and add new gate materials
@@ -238,20 +237,20 @@ writeVolume(domain)
 print("Gate Deposition TiN ...", end="", flush=True)
 thickness = 4.0  # nm
 domain.duplicateTopLevelSet(ps.Material.TiN)
-dist = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, dist, 0).apply()
+dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
 
 print("Gate Deposition PolySi ...", end="", flush=True)
 thickness = 40.0  # nm
 domain.duplicateTopLevelSet(ps.Material.PolySi)
-dist = psd.SphereDistribution(radius=thickness, gridDelta=gridDelta)
-psd.Process(domain, dist, 0).apply()
+dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+ps.Process(domain, dist, 0).apply()
 print(" done")
 
 # CMP at 90
-psd.Planarize(domain, 90.0).apply()
+ps.Planarize(domain, 90.0).apply()
 writeVolume(domain)
 
 domain.saveVolumeMesh("FinFET_Final", 0.05)

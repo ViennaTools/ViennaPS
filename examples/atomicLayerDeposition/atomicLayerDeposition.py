@@ -3,7 +3,7 @@ import viennals as ls
 
 
 params = ps.readConfigFile("config.txt")
-geometry = ps.d2.Domain()
+geometry = ps.Domain()
 
 # Create the geometry
 boundaryCons = [
@@ -18,27 +18,27 @@ bounds = [
     params["openingDepth"] + params["gapHeight"] + gridDelta,
 ]
 
-substrate = ls.d2.Domain(bounds, boundaryCons, gridDelta)
+substrate = ls.Domain(bounds, boundaryCons, gridDelta)
 normal = [0.0, 1.0]
 origin = [0.0, params["openingDepth"] + params["gapHeight"]]
-ls.d2.MakeGeometry(substrate, ls.d2.Plane(origin, normal)).apply()
+ls.MakeGeometry(substrate, ls.Plane(origin, normal)).apply()
 
 geometry.insertNextLevelSetAsMaterial(substrate, ps.Material.Si)
 
-vertBox = ls.d2.Domain(bounds, boundaryCons, gridDelta)
+vertBox = ls.Domain(bounds, boundaryCons, gridDelta)
 minPoint = [-gridDelta, 0.0]
 maxPoint = [
     params["openingWidth"] / 2.0,
     params["gapHeight"] + params["openingDepth"] + gridDelta,
 ]
-ls.d2.MakeGeometry(vertBox, ls.d2.Box(minPoint, maxPoint)).apply()
+ls.MakeGeometry(vertBox, ls.Box(minPoint, maxPoint)).apply()
 
 geometry.applyBooleanOperation(vertBox, ls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
-horiBox = ls.d2.Domain(bounds, boundaryCons, gridDelta)
+horiBox = ls.Domain(bounds, boundaryCons, gridDelta)
 minPoint = [params["openingWidth"] / 2.0 - gridDelta, 0.0]
 maxPoint = [params["openingWidth"] / 2.0 + params["gapLength"], params["gapHeight"]]
-ls.d2.MakeGeometry(horiBox, ls.d2.Box(minPoint, maxPoint)).apply()
+ls.MakeGeometry(horiBox, ls.Box(minPoint, maxPoint)).apply()
 geometry.applyBooleanOperation(horiBox, ls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
 geometry.saveVolumeMesh("SingleParticleALD_initial.vtu")

@@ -1,7 +1,6 @@
-import viennaps.d3 as psd
 import viennaps as ps
-import viennals.d3 as vls
 
+ps.setDimension(3)
 ps.Logger.setLogLevel(ps.LogLevel.DEBUG)
 
 gridDelta = 0.01
@@ -15,21 +14,21 @@ boundaryConds = [
     ps.BoundaryType.INFINITE_BOUNDARY,
 ]
 
-mask = psd.GDSGeometry(gridDelta, boundaryConds)
+mask = ps.GDSGeometry(gridDelta, boundaryConds)
 mask.addBlur([forwardSigma, backSigma], [0.8, 0.2], 0.5, exposureDelta)
 
-reader = psd.GDSReader(mask, "myTest.gds")
+reader = ps.GDSReader(mask, "myTest.gds")
 reader.apply()
 
 # Prepare geometry
 bounds = mask.getBounds()
-geometry = psd.Domain()
+geometry = ps.Domain()
 
 # Substrate plane
 origin = [0.0, 0.0, 0.0]
 normal = [0.0, 0.0, 1.0]
-substrate = vls.Domain(bounds, boundaryConds, gridDelta)
-vls.MakeGeometry(substrate, vls.Plane(origin, normal)).apply()
+substrate = ps.ls.Domain(bounds, boundaryConds, gridDelta)
+ps.ls.MakeGeometry(substrate, ps.ls.Plane(origin, normal)).apply()
 geometry.insertNextLevelSetAsMaterial(substrate, ps.Material.Si)
 
 # Insert GDS layers

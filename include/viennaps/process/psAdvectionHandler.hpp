@@ -25,6 +25,8 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
+    context.resetTime();
+
     advectionKernel_.setAdvectionTime(0.);
     advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setIntegrationScheme(
@@ -44,8 +46,6 @@ public:
     for (auto &dom : context.domain->getLevelSets()) {
       advectionKernel_.insertNextLevelSet(dom);
     }
-
-    context.resetTime();
 
     return ProcessResult::SUCCESS;
   }
