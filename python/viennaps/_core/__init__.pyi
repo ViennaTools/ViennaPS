@@ -7,10 +7,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
-from viennaps import d3
+import viennaps.d2
 import viennaps.d3
+from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
@@ -343,7 +343,7 @@ class Extrude:
         extent: typing.Annotated[
             collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"
         ],
-        extrudeDimension: typing.SupportsInt,
+        extrusionAxis: typing.SupportsInt,
         boundaryConditions: typing.Annotated[
             collections.abc.Sequence[viennals._core.BoundaryConditionEnum],
             "FixedSize(3)",
@@ -375,9 +375,9 @@ class Extrude:
         Set the min and max extent in the extruded dimension.
         """
 
-    def setExtrudeDimension(self, arg0: typing.SupportsInt) -> None:
+    def setExtrusionAxis(self, arg0: typing.SupportsInt) -> None:
         """
-        Set which index of the added dimension (x: 0, y: 1, z: 2).
+        Set the axis along which to extrude (0, 1, or 2).
         """
 
     def setInputDomain(self, arg0: viennaps.d2.Domain) -> None:

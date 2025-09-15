@@ -10,8 +10,8 @@ microelectronic fabrication processes.
 """
 
 from __future__ import annotations
-import sys as _sys
 import sys as sys
+import sys as _sys
 import viennals as ls
 from viennals._core import BoundaryConditionEnum as BoundaryType
 from viennals._core import IntegrationSchemeEnum as IntegrationScheme

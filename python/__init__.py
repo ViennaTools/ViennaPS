@@ -8,8 +8,6 @@ a ray tracer, and physical models for the simulation of
 microelectronic fabrication processes.
 """
 
-import sys
-
 
 def _windows_dll_path():
     import os

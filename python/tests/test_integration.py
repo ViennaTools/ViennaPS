@@ -1,7 +1,7 @@
 try:
     import viennaps
 except ImportError:
-    print("ERROR: Python bindings for viennaps2d are not available")
+    print("ERROR: Python bindings for viennaps are not available")
     exit()
 
 import viennaps.d2 as vpsd

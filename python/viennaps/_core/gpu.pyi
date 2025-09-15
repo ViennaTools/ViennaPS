@@ -10,7 +10,7 @@ __all__: list[str] = ["Context", "Path"]
 class Context:
     @staticmethod
     def createContext(
-        modulePath: Path = "/home/tobias/Documents/ViennaPS/build/lib/ptx",
+        modulePath: Path = "",
         deviceID: typing.SupportsInt = 0,
         registerInGlobal: bool = True,
     ) -> Context:
@@ -44,7 +44,7 @@ class Context:
 
     def create(
         self,
-        modulePath: Path = "/home/tobias/Documents/ViennaPS/build/lib/ptx",
+        modulePath: Path = "",
         deviceID: typing.SupportsInt = 0,
     ) -> None:
         """

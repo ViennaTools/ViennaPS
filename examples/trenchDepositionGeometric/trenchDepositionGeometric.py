@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name
 parser = ArgumentParser(
@@ -12,19 +13,19 @@ args = parser.parse_args()
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    psd = ps.d2
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    psd = ps.d3
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeTrench(
+psd.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
@@ -33,14 +34,14 @@ vps.MakeTrench(
 
 
 # copy top layer to capture deposition
-geometry.duplicateTopLevelSet(vps.Material.SiO2)
+geometry.duplicateTopLevelSet(ps.Material.SiO2)
 
-model = vps.SphereDistribution(
+model = psd.SphereDistribution(
     radius=params["layerThickness"], gridDelta=params["gridDelta"]
 )
 
 geometry.saveHullMesh("initial")
 
-vps.Process(geometry, model, 0.0).apply()
+psd.Process(geometry, model, 0.0).apply()
 
 geometry.saveHullMesh("final")

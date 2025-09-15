@@ -13,10 +13,10 @@ import viennaps as ps
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as psd
+    psd = ps.d2
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as psd
+    psd = ps.d3
 
 params = ps.ReadConfigFile(args.filename)
 

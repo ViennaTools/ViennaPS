@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -14,34 +15,34 @@ import viennaps
 
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as vps
+    psd = ps.d2
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as vps
+    psd = ps.d3
 
-params = viennaps.ReadConfigFile(args.filename)
+params = ps.ReadConfigFile(args.filename)
 
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeTrench(
+psd.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
     trenchTaperAngle=params["taperAngle"],
 ).apply()
 
-geometry.duplicateTopLevelSet(viennaps.Material.SiO2)
+geometry.duplicateTopLevelSet(ps.Material.SiO2)
 
-model = vps.SingleParticleProcess(
+model = psd.SingleParticleProcess(
     stickingProbability=params["stickingProbability"],
     sourceExponent=params["sourcePower"],
 )
 
 geometry.saveHullMesh("initial")
 
-vps.Process(geometry, model, params["processTime"]).apply()
+psd.Process(geometry, model, params["processTime"]).apply()
 
 geometry.saveHullMesh("final")

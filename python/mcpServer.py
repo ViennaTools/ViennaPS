@@ -44,6 +44,26 @@ def register_png(path: str) -> str:
 
 @mcp.tool
 def create_domain(gridDelta: float, xExtent: float, yExtent: float = 0.0, dim: int = 2):
+    """Create and store a ViennaPS domain for the current MCP session.
+
+    This initializes a 2D or 3D `viennaps` domain and stores it in the
+    session-scoped cache under the key `domain{dim}` (e.g. `domain2`, `domain3`).
+
+    Args:
+        gridDelta: Spatial grid spacing of the simulation domain.
+        xExtent: Physical extent in x-direction.
+        yExtent: Physical extent in y-direction. Required (must be > 0) when
+            `dim == 3`; ignored for 2D.
+        dim: Dimension of the domain. Must be 2 or 3.
+
+    Returns:
+        dict: {"ok": True} on success, otherwise {"ok": False, "error": str}.
+
+    Notes:
+        - For 2D, a `ps.d2.Domain` is created using `gridDelta` and `xExtent`.
+        - For 3D, a `ps.d3.Domain` is created using `gridDelta`, `xExtent`, and
+          `yExtent` (which must be > 0).
+    """
     ps.Logger.setLogLevel(ps.LogLevel.ERROR)
     if dim not in (2, 3):
         return {"ok": False, "error": "dim must be 2 or 3"}
@@ -60,6 +80,21 @@ def create_domain(gridDelta: float, xExtent: float, yExtent: float = 0.0, dim: i
 # "_volume.vtu" is appended automatically to the filename
 @mcp.tool
 def save_volume_mesh(path: str = "~/ViennaPS-Outputs/mesh", dim: int = 2):
+    """Save the current domain's volume mesh as VTU.
+
+    The suffix "_volume.vtu" is appended by ViennaPS automatically.
+
+    Args:
+        path: Output base path (without the "_volume.vtu" suffix). The path may
+            include `~` which will be expanded. Parent directories are created
+            if needed.
+        dim: Domain dimension to use (2 or 3).
+
+    Returns:
+        dict: {"ok": True, "path": str} with the absolute output path including
+        the appended "_volume.vtu" suffix on success, otherwise
+        {"ok": False, "error": str}.
+    """
     d = store()["domain" + str(dim)]
     full = _abs_out(path)
     try:
@@ -71,6 +106,18 @@ def save_volume_mesh(path: str = "~/ViennaPS-Outputs/mesh", dim: int = 2):
 
 @mcp.tool
 def save_surface_mesh(path: str = "~/ViennaPS-Outputs/surface.vtp", dim: int = 2):
+    """Save the current domain's surface mesh as VTP.
+
+    Args:
+        path: Output file path (e.g. "~/ViennaPS-Outputs/surface.vtp"). The path
+            may include `~` which will be expanded. Parent directories are
+            created if needed.
+        dim: Domain dimension to use (2 or 3).
+
+    Returns:
+        dict: {"ok": True, "path": str} with the absolute output path on
+        success, otherwise {"ok": False, "error": str}.
+    """
     d = store()["domain" + str(dim)]
     full = _abs_out(path)
     try:
@@ -91,7 +138,28 @@ def render_vtu_png(
     zoom: float = 1.0,
     scalar_array: str | None = None,
 ):
-    """Load VTU with VTK, render offscreen, save PNG, register as resource."""
+    """Render a VTU file offscreen using VTK and save a PNG preview.
+
+    The generated PNG is also registered as an MCP FileResource so clients can
+    display it. If `scalar_array` is provided and present in the VTU's point or
+    cell data, scalar coloring is enabled. For the array name "Material",
+    a discrete lookup table is applied with a small palette of categorical
+    colors.
+
+    Args:
+        vtu_path: Path to the input VTU (will be expanded and resolved).
+        png_path: Path to the output PNG (will be expanded and resolved).
+        width: Render width in pixels.
+        height: Render height in pixels.
+        azimuth: Camera azimuth (degrees).
+        elevation: Camera elevation (degrees).
+        zoom: Camera zoom factor.
+        scalar_array: Optional array name to color by (point or cell data).
+
+    Returns:
+        dict: {"png_path": str, "resource_uri": str} containing the absolute
+        PNG path and the registered resource URI.
+    """
     vtu_path = _abs_out(vtu_path)
     png_path = _abs_out(png_path)
 
@@ -214,7 +282,40 @@ def render_vtu_png(
     return {"png_path": png_path, "resource_uri": uri}
 
 
-# Geometry tools
+# ------------------------------------------------------------
+#                       Geometry tools
+# ------------------------------------------------------------
+
+
+def _convert_material_string(mat_str: str) -> ps.Material:
+    mat_str = mat_str.lower()
+    name_map = {
+        "undefined": ps.Material.Undefined,
+        "mask": ps.Material.Mask,
+        "si": ps.Material.Si,
+        "sio2": ps.Material.SiO2,
+        "si3n4": ps.Material.Si3N4,
+        "sin": ps.Material.SiN,
+        "sion": ps.Material.SiON,
+        "sic": ps.Material.SiC,
+        "sige": ps.Material.SiGe,
+        "polysi": ps.Material.PolySi,
+        "gan": ps.Material.GaN,
+        "w": ps.Material.W,
+        "al2o3": ps.Material.Al2O3,
+        "hfo2": ps.Material.HfO2,
+        "tin": ps.Material.TiN,
+        "cu": ps.Material.Cu,
+        "polymer": ps.Material.Polymer,
+        "dielectric": ps.Material.Dielectric,
+        "metal": ps.Material.Metal,
+        "air": ps.Material.Air,
+        "gas": ps.Material.GAS,
+    }
+    if mat_str in name_map:
+        return name_map[mat_str]
+    else:
+        raise ValueError(f"Unknown material string: {mat_str}")
 
 
 # --- params with robust material parsing ---
@@ -223,6 +324,8 @@ def _coerce_material(v):
         return v
     if isinstance(v, int):
         return ps.Material(v)
+    if isinstance(v, str):
+        return _convert_material_string(v)
     raise TypeError("material must be int|Material")
 
 
@@ -294,6 +397,28 @@ class MakeGeometryInput(BaseModel):
 
 @mcp.tool
 def create_geometry(payload: MakeGeometryInput):
+    """Create geometry primitives in the current session domain.
+
+    Applies one of the supported geometry builders to the active domain:
+    - plane: MakePlane(height=position, material)
+    - trench: MakeTrench with either mask (make_mask=True) or etched trench
+    - hole: MakeHole with either mask (make_mask=True) or etched hole
+
+    The `payload.spec` may be a parsed object or a JSON string with the shape:
+      {
+        "geometry_type": "plane"|"trench"|"hole",
+        "params": { ... }
+      }
+
+    For 2D use `dim=2` (default). For 3D use `dim=3`.
+
+    Args:
+        payload: A `MakeGeometryInput` instance with the geometry spec, and
+            target dimension.
+
+    Returns:
+        dict: {"ok": True} on success.
+    """
     d = store()["domain" + str(payload.dim)]
     spec = payload.spec
 
@@ -349,7 +474,9 @@ def create_geometry(payload: MakeGeometryInput):
     return {"ok": True}
 
 
-# Process tools
+# ------------------------------------------------------------
+#                      Process tools
+# ------------------------------------------------------------
 
 
 class IsotropicProcessParams(BaseModel):
@@ -407,6 +534,24 @@ class MakeProcessInput(BaseModel):
 
 @mcp.tool
 def run_process(payload: MakeProcessInput):
+    """Run a ViennaPS process on the current session domain.
+
+    Supported process specs (in `payload.spec`):
+    - isotropic: `IsotropicProcess(rate, maskMaterial)`
+    - singleParticle: `SingleParticleProcess(rate, stickingProbability,
+      sourceExponent, maskMaterial)`
+
+    If the specified `rate` is positive and `depo_material` is not
+    `Material.Undefined`, the top level set is duplicated to that deposition
+    material before running the process (enables deposition scenarios).
+
+    Args:
+        payload: A `MakeProcessInput` containing the process spec, duration in
+            seconds, and target dimension.
+
+    Returns:
+        dict: {"ok": True} on success, otherwise {"ok": False, "error": str}.
+    """
     d = store()["domain" + str(payload.dim)]
     spec = payload.spec
     duration = payload.duration
