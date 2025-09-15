@@ -58,23 +58,76 @@ from viennaps._core import constants
 from viennaps._core import gpu
 from viennaps._core import setNumThreads
 from viennaps._core import util
+from viennaps.d2 import AdvectionCallback
+from viennaps.d2 import BoxDistribution
+from viennaps.d2 import CF4O2Etching
+from viennaps.d2 import CSVFileProcess
+from viennaps.d2 import DenseCellSet
+from viennaps.d2 import DirectionalProcess
+from viennaps.d2 import Domain
+from viennaps.d2 import DomainSetup
+from viennaps.d2 import FaradayCageEtching
+from viennaps.d2 import FluorocarbonEtching
+from viennaps.d2 import GDSGeometry
+from viennaps.d2 import GDSReader
+from viennaps.d2 import GeometryFactory
+from viennaps.d2 import HBrO2Etching
+from viennaps.d2 import Interpolation
+from viennaps.d2 import IonBeamEtching
+from viennaps.d2 import IsotropicProcess
+from viennaps.d2 import MakeFin
+from viennaps.d2 import MakeHole
+from viennaps.d2 import MakePlane
+from viennaps.d2 import MakeStack
+from viennaps.d2 import MakeTrench
+from viennaps.d2 import MultiParticleProcess
+from viennaps.d2 import OxideRegrowth
+from viennaps.d2 import Planarize
+from viennaps.d2 import Process
+from viennaps.d2 import ProcessModel
+from viennaps.d2 import ProcessModelBase
+from viennaps.d2 import RateGrid
+from viennaps.d2 import Reader
+from viennaps.d2 import SF6C4F8Etching
+from viennaps.d2 import SF6O2Etching
+from viennaps.d2 import SelectiveEpitaxy
+from viennaps.d2 import SingleParticleALD
+from viennaps.d2 import SingleParticleProcess
+from viennaps.d2 import SphereDistribution
+from viennaps.d2 import StencilLocalLaxFriedrichsScalar
+from viennaps.d2 import TEOSDeposition
+from viennaps.d2 import TEOSPECVD
+from viennaps.d2 import ToDiskMesh
+from viennaps.d2 import WetEtching
+from viennaps.d2 import Writer
 from . import _core
 from . import d2
 from . import d3
 
 __all__: list[str] = [
+    "AdvectionCallback",
     "AdvectionParameters",
     "AtomicLayerProcessParameters",
     "BoundaryType",
+    "BoxDistribution",
+    "CF4O2Etching",
     "CF4O2Parameters",
     "CF4O2ParametersIons",
     "CF4O2ParametersMask",
     "CF4O2ParametersPassivation",
     "CF4O2ParametersSi",
     "CF4O2ParametersSiGe",
+    "CSVFileProcess",
     "CoverageParameters",
+    "DEFAULT_DIM",
+    "DenseCellSet",
+    "DirectionalProcess",
+    "Domain",
+    "DomainSetup",
     "Extrude",
+    "FaradayCageEtching",
     "FaradayCageParameters",
+    "FluorocarbonEtching",
     "FluorocarbonParameters",
     "FluorocarbonParametersIons",
     "FluorocarbonParametersMask",
@@ -83,34 +136,65 @@ __all__: list[str] = [
     "FluorocarbonParametersSi3N4",
     "FluorocarbonParametersSiO2",
     "FluxEngineType",
+    "GDSGeometry",
+    "GDSReader",
+    "GeometryFactory",
+    "HBrO2Etching",
     "HoleShape",
     "IBEParameters",
     "IntegrationScheme",
+    "Interpolation",
+    "IonBeamEtching",
+    "IsotropicProcess",
     "Length",
     "LengthUnit",
     "LogLevel",
     "Logger",
+    "MakeFin",
+    "MakeHole",
+    "MakePlane",
+    "MakeStack",
+    "MakeTrench",
     "Material",
     "MaterialMap",
     "MetaDataLevel",
+    "MultiParticleProcess",
     "NormalizationType",
+    "OxideRegrowth",
+    "Planarize",
     "PlasmaEtchingParameters",
     "PlasmaEtchingParametersIons",
     "PlasmaEtchingParametersMask",
     "PlasmaEtchingParametersPassivation",
     "PlasmaEtchingParametersPolymer",
     "PlasmaEtchingParametersSubstrate",
+    "Process",
+    "ProcessModel",
+    "ProcessModelBase",
     "ProcessParams",
+    "RateGrid",
     "RateSet",
     "RayTracingParameters",
+    "Reader",
+    "SF6C4F8Etching",
+    "SF6O2Etching",
+    "SelectiveEpitaxy",
+    "SingleParticleALD",
+    "SingleParticleProcess",
+    "SphereDistribution",
+    "StencilLocalLaxFriedrichsScalar",
+    "TEOSDeposition",
+    "TEOSPECVD",
     "Time",
     "TimeUnit",
+    "ToDiskMesh",
+    "WetEtching",
+    "Writer",
     "constants",
     "d2",
     "d3",
     "gpu",
     "ls",
-    "mode",
     "ptxPath",
     "readConfigFile",
     "setDimension",
@@ -150,8 +234,8 @@ def setDimension(d: int):
 
     """
 
+DEFAULT_DIM: int = 2
 __version__: str = "4.0.0"
-mode: int = 2
 ptxPath: str = ""
 version: str = "4.0.0"
 _C = _core

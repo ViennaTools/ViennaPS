@@ -51,7 +51,7 @@ d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
 ptxPath = _module_ptx_path()
-mode = 2  # default dimension is 2D
+DEFAULT_DIM = 2  # default dimension is 2D
 
 
 def setDimension(d: int):
@@ -62,9 +62,9 @@ def setDimension(d: int):
     d: int
         Dimension of the simulation (2 or 3).
     """
-    global mode
+    global DEFAULT_DIM
     if d == 2 or d == 3:
-        mode = d
+        DEFAULT_DIM = d
     else:
         raise ValueError("Dimension must be 2 or 3.")
 
@@ -105,15 +105,21 @@ def readConfigFile(fileName: str):
     return par_dict
 
 
-# forward any other (common) names to _core (PEP 562)
 def __getattr__(name):
+    # 1) common/top-level from _core
     try:
-        a = getattr(_C, name)
+        return getattr(_C, name)
+    except AttributeError as e_core:
+        pass
+    # 2) fallback to current default dimension
+    m = d2 if DEFAULT_DIM == 2 else d3
+    try:
+        return getattr(m, name)
     except AttributeError:
-        m = d2 if mode == 2 else d3
-        a = getattr(m, name)
-    return a
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        ) from e_core
 
 
 def __dir__():
-    return sorted(set(globals()) | set(dir(_C)))
+    return sorted(set(globals()) | set(dir(_C)) | set(dir(d2)) | set(dir(d3)))
