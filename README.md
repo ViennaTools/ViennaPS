@@ -99,21 +99,23 @@ cd ViennaPS
 pip install .
 ```
 
-> Some features of the ViennaPS Python module depend on the ViennaLS Python module. You’ll need to install ViennaLS separately — instructions are available in the [ViennaLS GitHub repository](https://github.com/ViennaTools/ViennaLS).
+> Some features of the ViennaPS Python module depend on the ViennaLS Python module. The ViennaLS is installed automatically as a dependency.
 > Note: A locally built ViennaPS Python module is typically not compatible with the ViennaLS package from PyPI. For details and troubleshooting, see [this guide](https://viennatools.github.io/ViennaPS/inst/troubleshooting.html#python-importerror).
 
 ## Using the Python package
 
-The 2D version of the library can be imported as follows:
+The ViennaPS Python package can be used by importing it in your Python scripts:
 ```python
-import viennaps2d as vps
+import viennaps as vps
 ```
 
-In order to switch to three dimensions, only the import needs to be changed:
-
+By default, ViennaPS operates in two dimensions. You can set the dimension using:
 ```python
-import viennaps3d as vps
+vps.setDimension(2)  # For 2D simulations
+vps.setDimension(3)  # For 3D simulations
 ```
+
+For more details and examples, refer to the official [documentation](https://viennatools.github.io/ViennaPS/).
 
 ## Integration in CMake projects
 
@@ -121,7 +123,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@3.8.0")
+  CPMAddPackage("gh:viennatools/viennaps@4.0.0")
   ```
 
 * With a local installation
@@ -146,14 +148,13 @@ If ViennaPS was built with shared libraries and you use ViennaPS in your project
 
 ## GPU Acceleration (Experimental)
 
-As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental and may not work on all systems. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/).
+As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental and may not work on all systems. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/gpu.html).
 
 ## Basic Examples
 
 ### Building
 
 The examples can be built using CMake:
-> __Important__: Make sure all dependencies are installed and have been built previously
 
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
@@ -165,7 +166,7 @@ cmake --build build
 
 The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
-cd examples/exampleName
+cd build/examples/exampleName
 ./exampleName.bat config.txt # (Windows)
 ./exampleName config.txt # (Other)
 ```

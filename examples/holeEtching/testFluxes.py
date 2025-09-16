@@ -89,6 +89,8 @@ for i in range(len(yo2)):
     process.setCoverageParameters(covParams)
     process.setRayTracingParameters(rayParams)
     process.setAdvectionParameters(advParams)
+    if ps.gpuAvailable() and args.dim == 3:
+        process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
     params.ionFlux = ionFlux[i]
     params.etchantFlux = etchantFlux[i]

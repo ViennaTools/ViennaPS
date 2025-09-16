@@ -18,6 +18,7 @@ parser.add_argument("filename")
 args = parser.parse_args()
 
 ps.setDimension(3)
+useGPU = ps.gpuAvailable()
 params = ps.readConfigFile(args.filename)
 
 # print only error output surfaces during the process
@@ -47,11 +48,12 @@ ps.MakeHole(
     holeShape=shape_map[hole_shape_str],
 ).apply()
 
-depoModel = ps.MultiParticleProcess()
+mod = ps.d3.gpu if useGPU else ps.d3
+depoModel = mod.MultiParticleProcess()
 depoModel.addNeutralParticle(params["stickingDep"])
 depoModel.addIonParticle(params["ionSourceExponent"])
 
-etchModel = ps.MultiParticleProcess()
+etchModel = mod.MultiParticleProcess()
 materialStickingEtch = {
     ps.Material.Si: params["stickingEtchSubs"],
     ps.Material.Mask: params["stickingEtchMask"],
@@ -124,9 +126,13 @@ advectionParams.timeStepRatio = 0.2
 
 depoProcess = ps.Process(geometry, depoModel, params["depTime"])
 depoProcess.setAdvectionParameters(advectionParams)
+if useGPU:
+    depoProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 etchProcess = ps.Process(geometry, etchModel, params["etchTime"])
 etchProcess.setAdvectionParameters(advectionParams)
+if useGPU:
+    etchProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 geometry.saveSurfaceMesh("initial.vtp", True)
 

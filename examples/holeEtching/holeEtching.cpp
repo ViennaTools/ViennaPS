@@ -67,6 +67,8 @@ int main(int argc, char *argv[]) {
   process.setCoverageParameters(coverageParams);
   process.setRayTracingParameters(rayTracingParams);
   process.setAdvectionParameters(advectionParams);
+  if constexpr (gpuAvailable() && D == 3)
+    process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

@@ -154,7 +154,6 @@ private:
             .addDebug(
                 "Particle " + std::to_string(particleIdx) +
                 "\n\tRays Traced: " + std::to_string(info.totalRaysTraced) +
-                "\n\tDisk Hits: " + std::to_string(info.totalDiskHits) +
                 "\n\tNon-Geometry Hits: " +
                 std::to_string(info.nonGeometryHits) +
                 "\n\tGeometry Hits: " + std::to_string(info.geometryHits) +

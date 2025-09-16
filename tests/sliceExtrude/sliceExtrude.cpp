@@ -6,7 +6,7 @@
 using namespace viennaps;
 
 int main() {
-  constexpr double gridDelta = 0.013;
+  constexpr double gridDelta = 0.023;
   constexpr double xExtent = 1.0;
   constexpr double yExtent = 1.0;
 

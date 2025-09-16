@@ -12,10 +12,9 @@ args = parser.parse_args()
 
 if args.dim == 2:
     print("Running 2D simulation.")
-    ps.setDimension(2)
 else:
     print("Running 3D simulation.")
-    ps.setDimension(3)
+ps.setDimension(args.dim)
 
 params = ps.readConfigFile(args.filename)
 
@@ -40,6 +39,13 @@ model = ps.SingleParticleProcess(
 
 geometry.saveHullMesh("initial")
 
-ps.Process(geometry, model, params["processTime"]).apply()
+process = ps.Process()
+process.setDomain(geometry)
+process.setProcessModel(model)
+process.setProcessDuration(params["processTime"])
+if ps.gpuAvailable() and args.dim == 3:
+    process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
+
+process.apply()
 
 geometry.saveHullMesh("final")

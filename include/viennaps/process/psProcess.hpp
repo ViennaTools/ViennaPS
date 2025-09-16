@@ -17,6 +17,12 @@
 
 namespace viennaps {
 
+#ifdef VIENNACORE_COMPILE_GPU
+inline constexpr bool gpuAvailable() { return true; }
+#else
+inline constexpr bool gpuAvailable() { return false; }
+#endif
+
 template <typename NumericType, int D> class Process {
 private:
   ProcessContext<NumericType, D> context_;
@@ -183,12 +189,26 @@ private:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
     case FluxEngineType::GPU_TRIANGLE: {
 #ifdef VIENNACORE_COMPILE_GPU
+      if constexpr (D == 2) {
+        Logger::getInstance()
+            .addError("GPU-Triangle flux engine not supported in 2D.")
+            .print();
+        return nullptr;
+      }
+
       auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
       if (!deviceContext) {
         Logger::getInstance()
-            .addError("No valid GPU device context found.")
+            .addInfo("Auto-generating GPU device context.")
             .print();
-        return nullptr;
+        deviceContext =
+            DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+        if (!deviceContext) {
+          Logger::getInstance()
+              .addError("Failed to create GPU device context.")
+              .print();
+          return nullptr;
+        }
       }
       return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
 #else
