@@ -52,6 +52,7 @@ from viennaps._core import PlasmaEtchingParametersSubstrate
 from viennaps._core import ProcessParams
 from viennaps._core import RateSet
 from viennaps._core import RayTracingParameters
+from viennaps._core import Slice
 from viennaps._core import Time
 from viennaps._core import TimeUnit
 from viennaps._core import constants
@@ -119,7 +120,6 @@ __all__: list[str] = [
     "CF4O2ParametersSiGe",
     "CSVFileProcess",
     "CoverageParameters",
-    "DEFAULT_DIM",
     "DenseCellSet",
     "DirectionalProcess",
     "Domain",
@@ -161,6 +161,7 @@ __all__: list[str] = [
     "MultiParticleProcess",
     "NormalizationType",
     "OxideRegrowth",
+    "PROXY_DIM",
     "Planarize",
     "PlasmaEtchingParameters",
     "PlasmaEtchingParametersIons",
@@ -181,6 +182,7 @@ __all__: list[str] = [
     "SelectiveEpitaxy",
     "SingleParticleALD",
     "SingleParticleProcess",
+    "Slice",
     "SphereDistribution",
     "StencilLocalLaxFriedrichsScalar",
     "TEOSDeposition",
@@ -234,7 +236,7 @@ def setDimension(d: int):
 
     """
 
-DEFAULT_DIM: int = 2
+PROXY_DIM: int = 2
 __version__: str = "4.0.0"
 ptxPath: str = ""
 version: str = "4.0.0"

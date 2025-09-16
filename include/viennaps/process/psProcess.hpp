@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../psPreCompileMacros.hpp"
+
 #include "psProcessContext.hpp"
 
 // Process strategies
@@ -260,5 +262,7 @@ private:
   unsigned int gpuDeviceId_ = 0;
 #endif
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Process)
 
 } // namespace viennaps

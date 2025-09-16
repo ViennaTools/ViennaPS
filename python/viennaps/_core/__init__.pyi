@@ -53,6 +53,7 @@ __all__: list[str] = [
     "ProcessParams",
     "RateSet",
     "RayTracingParameters",
+    "Slice",
     "Time",
     "TimeUnit",
     "constants",
@@ -1052,6 +1053,47 @@ class RayTracingParameters:
     def smoothingNeighbors(self) -> int: ...
     @smoothingNeighbors.setter
     def smoothingNeighbors(self, arg0: typing.SupportsInt) -> None: ...
+
+class Slice:
+    @typing.overload
+    def __init__(self) -> None: ...
+    @typing.overload
+    def __init__(
+        self,
+        inputDomain: viennaps.d3.Domain,
+        outputDomain: viennaps.d2.Domain,
+        sliceDimension: typing.SupportsInt,
+        slicePosition: typing.SupportsFloat,
+    ) -> None: ...
+    def apply(self) -> None:
+        """
+        Run the slicing.
+        """
+
+    def setInputDomain(self, arg0: viennaps.d3.Domain) -> None:
+        """
+        Set the input domain to be sliced.
+        """
+
+    def setOutputDomain(self, arg0: viennaps.d2.Domain) -> None:
+        """
+        Set the output domain. The 2D output domain will be overwritten by the sliced domain.
+        """
+
+    def setReflectX(self, arg0: bool) -> None:
+        """
+        Set whether to reflect the slice along the X axis.
+        """
+
+    def setSliceDimension(self, arg0: typing.SupportsInt) -> None:
+        """
+        Set the dimension along which to slice (0, 1).
+        """
+
+    def setSlicePosition(self, arg0: typing.SupportsFloat) -> None:
+        """
+        Set the position along the slice dimension at which to slice.
+        """
 
 class Time:
     @staticmethod

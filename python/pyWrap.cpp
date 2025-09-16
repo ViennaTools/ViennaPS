@@ -569,6 +569,26 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            "Set the boundary conditions in the extruded domain.")
       .def("apply", &Extrude<T>::apply, "Run the extrusion.");
 
+  // Slice domain (3D to 2D)
+  py::class_<Slice<T>>(module, "Slice")
+      .def(py::init())
+      .def(py::init<SmartPointer<Domain<T, 3>> &, SmartPointer<Domain<T, 2>> &,
+                    int, T>(),
+           py::arg("inputDomain"), py::arg("outputDomain"),
+           py::arg("sliceDimension"), py::arg("slicePosition"))
+      .def("setInputDomain", &Slice<T>::setInputDomain,
+           "Set the input domain to be sliced.")
+      .def("setOutputDomain", &Slice<T>::setOutputDomain,
+           "Set the output domain. The 2D output domain will be overwritten by "
+           "the sliced domain.")
+      .def("setSliceDimension", &Slice<T>::setSliceDimension,
+           "Set the dimension along which to slice (0, 1).")
+      .def("setSlicePosition", &Slice<T>::setSlicePosition,
+           "Set the position along the slice dimension at which to slice.")
+      .def("setReflectX", &Slice<T>::setReflectX,
+           "Set whether to reflect the slice along the X axis.")
+      .def("apply", &Slice<T>::apply, "Run the slicing.");
+
   // ***************************************************************************
   //                                 GPU SUPPORT
   // ***************************************************************************

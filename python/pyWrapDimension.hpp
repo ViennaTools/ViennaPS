@@ -28,6 +28,7 @@
 #include <psPlanarize.hpp>
 #include <psRateGrid.hpp>
 #include <psReader.hpp>
+#include <psSlice.hpp>
 #include <psUnits.hpp>
 #include <psVersion.hpp>
 #include <psWriter.hpp>
