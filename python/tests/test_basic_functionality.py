@@ -1,10 +1,11 @@
 try:
-    import viennaps2d
+    import viennaps
 except ImportError:
-    print("ERROR: Python bindings for viennaps2d are not available")
+    print("ERROR: Python bindings for viennaps are not available")
     exit()
 
-import viennaps2d as vps
+import viennaps.d2 as vpsd
+import viennaps as vps
 
 
 def test_logger():
@@ -20,7 +21,7 @@ def test_logger():
 def test_domain_creation():
     """Test domain creation and basic operations"""
     print("Testing Domain creation...")
-    domain = vps.Domain()
+    domain = vpsd.Domain()
     assert domain is not None
     print("Domain creation test passed")
 
@@ -28,7 +29,7 @@ def test_domain_creation():
 def test_process_creation():
     """Test process creation"""
     print("Testing Process creation...")
-    process = vps.Process()
+    process = vpsd.Process()
     assert process is not None
     print("Process creation test passed")
 

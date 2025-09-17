@@ -1,7 +1,8 @@
-import viennaps2d as vps
+import viennaps.d2 as psd
+import viennaps as ps
 from SiGeStackGeometry import CreateGeometry
 
-vps.setNumThreads(16)
+ps.setNumThreads(16)
 
 # create initial geometry
 paramDict = {
@@ -20,15 +21,15 @@ paramDict = {
 geometry = CreateGeometry(paramDict)
 
 config_file = "config_CF4O2.txt"
-params = vps.ReadConfigFile(config_file)
+params = ps.readConfigFile(config_file)
 
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
 
-vps.Length.setUnit(params["lengthUnit"])
-vps.Time.setUnit(params["timeUnit"])
+ps.Length.setUnit(params["lengthUnit"])
+ps.Time.setUnit(params["timeUnit"])
 
 # use pre-defined model CF4O2 etching model
-modelParams = vps.CF4O2Parameters()
+modelParams = ps.CF4O2Parameters()
 modelParams.ionFlux = params["ionFlux"]
 modelParams.etchantFlux = params["etchantFlux"]
 modelParams.oxygenFlux = params["oxygenFlux"]
@@ -40,47 +41,57 @@ modelParams.Passivation.A_C_ie = params["A_C"]
 
 # Use Material enum
 modelParams.gamma_F = {
-    vps.Material.Mask: 0.0,
-    vps.Material.Si: 0.1,
-    vps.Material.SiGe: 0.1
+    ps.Material.Mask: 0.0,
+    ps.Material.Si: 0.1,
+    ps.Material.SiGe: 0.1,
 }
 modelParams.gamma_F_oxidized = {
-    vps.Material.Mask: 0.0,
-    vps.Material.Si: 0.1,
-    vps.Material.SiGe: 0.1
+    ps.Material.Mask: 0.0,
+    ps.Material.Si: 0.1,
+    ps.Material.SiGe: 0.1,
 }
 modelParams.gamma_O = {
-    vps.Material.Mask: 0.0,
-    vps.Material.Si: 0.7,
-    vps.Material.SiGe: 0.7
+    ps.Material.Mask: 0.0,
+    ps.Material.Si: 0.7,
+    ps.Material.SiGe: 0.7,
 }
 modelParams.gamma_O_passivated = {
-    vps.Material.Mask: 0.0,
-    vps.Material.Si: 0.7,
-    vps.Material.SiGe: 0.7
+    ps.Material.Mask: 0.0,
+    ps.Material.Si: 0.7,
+    ps.Material.SiGe: 0.7,
 }
 modelParams.gamma_C = {
-    vps.Material.Mask: 0.0,
-    vps.Material.Si: 0.7,
-    vps.Material.SiGe: 0.7
+    ps.Material.Mask: 0.0,
+    ps.Material.Si: 0.7,
+    ps.Material.SiGe: 0.7,
 }
 modelParams.gamma_C_oxidized = {
-    vps.Material.Mask: 0.0,
-    vps.Material.Si: 0.7,
-    vps.Material.SiGe: 0.7
+    ps.Material.Mask: 0.0,
+    ps.Material.Si: 0.7,
+    ps.Material.SiGe: 0.7,
 }
 
-model = vps.CF4O2Etching(modelParams)
+model = psd.CF4O2Etching(modelParams)
 parameters = model.getParameters()
 
+covParams = ps.CoverageParameters()
+covParams.maxIterations = 20
+covParams.coverageDeltaThreshold = 1e-4
+
+rayParams = ps.RayTracingParameters()
+rayParams.raysPerPoint = int(params["raysPerPoint"])
+
+advParams = ps.AdvectionParameters()
+advParams.timeStepRatio = 0.2
+
 # process setup
-process = vps.Process()
+process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setCoverageDeltaThreshold(1e-4)
-process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
-process.setTimeStepRatio(0.2)
+process.setCoverageParameters(covParams)
+process.setRayTracingParameters(rayParams)
+process.setAdvectionParameters(advParams)
 
 # print initial surface
 geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)

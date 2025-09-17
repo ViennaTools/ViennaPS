@@ -38,8 +38,12 @@ public:
         rayBoundaryCondition[i] = util::convertBoundaryCondition(
             context.domain->getGrid().getBoundaryConditions(i));
     }
+    if constexpr (D == 2) {
+      rayTracer_.setSourceDirection(viennaray::TraceDirection::POS_Y);
+    } else {
+      rayTracer_.setSourceDirection(viennaray::TraceDirection::POS_Z);
+    }
     rayTracer_.setBoundaryConditions(rayBoundaryCondition);
-    rayTracer_.setSourceDirection(context.rayTracingParams.sourceDirection);
     rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
     rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
     rayTracer_.setCalculateFlux(false);
@@ -142,6 +146,23 @@ private:
       }
       rayTracer_.setParticleType(particle);
       rayTracer_.apply();
+
+      auto info = rayTracer_.getRayTraceInfo();
+
+      if (Logger::getLogLevel() >= 5) {
+        Logger::getInstance()
+            .addDebug(
+                "Particle " + std::to_string(particleIdx) +
+                "\n\tRays Traced: " + std::to_string(info.totalRaysTraced) +
+                "\n\tNon-Geometry Hits: " +
+                std::to_string(info.nonGeometryHits) +
+                "\n\tGeometry Hits: " + std::to_string(info.geometryHits) +
+                "\n\tParticle Hits: " + std::to_string(info.particleHits) +
+                (info.warning
+                     ? "\n\tWarning during ray tracing."
+                     : (info.error ? "\n\tError during ray tracing." : "")))
+            .print();
+      }
 
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();

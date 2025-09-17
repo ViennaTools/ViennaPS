@@ -8,7 +8,7 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
   ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   advectionParams.integrationScheme =
       ps::IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
 
-  ps::RayTracingParameters<D> rayParams;
+  ps::RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");
   // process setup
   ps::Process<NumericType, D> process;

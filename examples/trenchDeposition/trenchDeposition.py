@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -9,37 +10,42 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-# switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+ps.setDimension(args.dim)
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
-geometry = vps.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
-vps.MakeTrench(
+ps.MakeTrench(
     domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
     trenchTaperAngle=params["taperAngle"],
 ).apply()
 
-geometry.duplicateTopLevelSet(vps.Material.SiO2)
+geometry.duplicateTopLevelSet(ps.Material.SiO2)
 
-model = vps.SingleParticleProcess(
+model = ps.SingleParticleProcess(
     stickingProbability=params["stickingProbability"],
     sourceExponent=params["sourcePower"],
 )
 
 geometry.saveHullMesh("initial")
 
-vps.Process(geometry, model, params["processTime"]).apply()
+process = ps.Process()
+process.setDomain(geometry)
+process.setProcessModel(model)
+process.setProcessDuration(params["processTime"])
+if ps.gpuAvailable() and args.dim == 3:
+    process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
+
+process.apply()
 
 geometry.saveHullMesh("final")

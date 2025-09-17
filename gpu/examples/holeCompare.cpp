@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   NumericType exponent = 500.;
   AdvectionParameters advParams;
   advParams.integrationScheme = IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER;
-  RayTracingParameters<D> rtParams;
+  RayTracingParameters rtParams;
   rtParams.raysPerPoint = 1000;
 
   // geometry setup

@@ -1,17 +1,18 @@
 try:
-    import viennaps2d
+    import viennaps
 except ImportError:
-    print("ERROR: Python bindings for viennaps2d are not available")
+    print("ERROR: Python bindings for viennaps are not available")
     exit()
 
-import viennaps2d as vps
+import viennaps.d2 as vpsd
+import viennaps as vps
 
 
 def test_sf6o2_etching():
     """Test SF6O2 etching model"""
     print("Testing SF6O2Etching model...")
     try:
-        model = vps.SF6O2Etching()
+        model = vpsd.SF6O2Etching()
         print("SF6O2Etching model created successfully")
     except RuntimeError as e:
         print(f"Expected error for SF6O2Etching: {e}")
@@ -33,7 +34,7 @@ def test_other_models():
 
     for model_name in model_names:
         try:
-            model_class = getattr(vps, model_name)
+            model_class = getattr(vpsd, model_name)
             if callable(model_class):
                 print(f"Testing {model_name}...")
                 model = model_class()

@@ -1,14 +1,14 @@
-import viennaps2d as vps
-import viennals2d as vls
+import viennaps as ps
+import viennals as ls
 
 
-params = vps.ReadConfigFile("config.txt")
-geometry = vps.Domain()
+params = ps.readConfigFile("config.txt")
+geometry = ps.Domain()
 
 # Create the geometry
 boundaryCons = [
-    vls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.BoundaryConditionEnum.INFINITE_BOUNDARY,
+    ps.BoundaryType.REFLECTIVE_BOUNDARY,
+    ps.BoundaryType.INFINITE_BOUNDARY,
 ]
 gridDelta = params["gridDelta"]
 bounds = [
@@ -18,56 +18,61 @@ bounds = [
     params["openingDepth"] + params["gapHeight"] + gridDelta,
 ]
 
-substrate = vls.Domain(bounds, boundaryCons, gridDelta)
+substrate = ls.Domain(bounds, boundaryCons, gridDelta)
 normal = [0.0, 1.0]
 origin = [0.0, params["openingDepth"] + params["gapHeight"]]
-vls.MakeGeometry(substrate, vls.Plane(origin, normal)).apply()
+ls.MakeGeometry(substrate, ls.Plane(origin, normal)).apply()
 
-geometry.insertNextLevelSetAsMaterial(substrate, vps.Material.Si)
+geometry.insertNextLevelSetAsMaterial(substrate, ps.Material.Si)
 
-vertBox = vls.Domain(bounds, boundaryCons, gridDelta)
+vertBox = ls.Domain(bounds, boundaryCons, gridDelta)
 minPoint = [-gridDelta, 0.0]
 maxPoint = [
     params["openingWidth"] / 2.0,
     params["gapHeight"] + params["openingDepth"] + gridDelta,
 ]
-vls.MakeGeometry(vertBox, vls.Box(minPoint, maxPoint)).apply()
+ls.MakeGeometry(vertBox, ls.Box(minPoint, maxPoint)).apply()
 
-geometry.applyBooleanOperation(vertBox, vls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
+geometry.applyBooleanOperation(vertBox, ls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
-horiBox = vls.Domain(bounds, boundaryCons, gridDelta)
+horiBox = ls.Domain(bounds, boundaryCons, gridDelta)
 minPoint = [params["openingWidth"] / 2.0 - gridDelta, 0.0]
 maxPoint = [params["openingWidth"] / 2.0 + params["gapLength"], params["gapHeight"]]
-vls.MakeGeometry(horiBox, vls.Box(minPoint, maxPoint)).apply()
-geometry.applyBooleanOperation(horiBox, vls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
+ls.MakeGeometry(horiBox, ls.Box(minPoint, maxPoint)).apply()
+geometry.applyBooleanOperation(horiBox, ls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
 geometry.saveVolumeMesh("SingleParticleALD_initial.vtu")
 
-geometry.duplicateTopLevelSet(vps.Material.Al2O3)
+geometry.duplicateTopLevelSet(ps.Material.Al2O3)
 
-gasMFP = vps.constants.gasMeanFreePath(
+gasMFP = ps.constants.gasMeanFreePath(
     params["pressure"], params["temperature"], params["diameter"]
 )
 print("Mean free path: ", gasMFP, " um")
 
-model = vps.SingleParticleALD(
-    params["stickingProbability"],
-    params["numCycles"],
-    params["growthPerCycle"],
-    params["totalCycles"],
-    params["coverageTimeStep"],
-    params["evFlux"],
-    params["inFlux"],
-    params["s0"],
-    gasMFP,
+model = ps.d2.SingleParticleALD(
+    stickingProbability=params["stickingProbability"],
+    numCycles=int(params["numCycles"]),
+    growthPerCycle=params["growthPerCycle"],
+    totalCycles=int(params["totalCycles"]),
+    coverageTimeStep=params["coverageTimeStep"],
+    evFlux=params["evFlux"],
+    inFlux=params["inFlux"],
+    s0=params["s0"],
+    gasMFP=gasMFP,
 )
 
-ALP = vps.AtomicLayerProcess(geometry, model)
-ALP.setCoverageTimeStep(params["coverageTimeStep"])
-ALP.setPulseTime(params["pulseTime"])
-ALP.setNumCycles(int(params["numCycles"]))
-ALP.setNumberOfRaysPerPoint(int(params["numRaysPerPoint"]))
-ALP.disableRandomSeeds()
+alpParams = ps.AtomicLayerProcessParameters()
+alpParams.pulseTime = params["pulseTime"]
+alpParams.coverageTimeStep = params["coverageTimeStep"]
+alpParams.numCycles = int(params["numCycles"])
+
+rayParams = ps.RayTracingParameters()
+rayParams.raysPerPoint = int(params["numRaysPerPoint"])
+
+ALP = ps.d2.Process(geometry, model)
+ALP.setRayTracingParameters(rayParams)
+ALP.setAtomicLayerProcessParameters(alpParams)
 ALP.apply()
 
 ## TODO: Implement MeasureProfile in Python

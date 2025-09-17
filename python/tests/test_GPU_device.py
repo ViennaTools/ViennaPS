@@ -1,4 +1,4 @@
-import viennaps3d as vps
+import viennaps as vps
 
 vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
 

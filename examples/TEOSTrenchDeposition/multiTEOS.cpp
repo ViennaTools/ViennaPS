@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
       params.get("reactionOrderP1"), params.get("stickingProbabilityP2"),
       params.get("depositionRateP2"), params.get("reactionOrderP2"));
 
-  ps::RayTracingParameters<D> rayParams;
+  ps::RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<unsigned>("numRaysPerPoint");
 
   ps::Process<NumericType, D> process;

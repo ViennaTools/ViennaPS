@@ -291,7 +291,7 @@ int main(int argc, char *argv[]) {
             cageAngle, tiltAngle);
 
     // process setup
-    ps::RayTracingParameters<D> rtParams;
+    ps::RayTracingParameters rtParams;
     rtParams.raysPerPoint = params.get<int>("raysPerPoint");
     rtParams.smoothingNeighbors = 2;
 
@@ -311,7 +311,7 @@ int main(int argc, char *argv[]) {
     auto copy = ps::SmartPointer<ps::Domain<NumericType, D>>::New(geometry);
     clean<NumericType, D>(copy, params.get("smoothingSize"));
     {
-      ps::RayTracingParameters<D> rayParams;
+      ps::RayTracingParameters rayParams;
       rayParams.raysPerPoint = params.get<int>("raysPerPoint") * 2;
       rayParams.smoothingNeighbors = 2;
       ps::Process<NumericType, D> visProcess(copy, model, 0.);

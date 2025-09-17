@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../psPreCompileMacros.hpp"
+
 #include "psProcessContext.hpp"
 
 // Process strategies
@@ -14,6 +16,12 @@
 #include "psGPUTriangleEngine.hpp"
 
 namespace viennaps {
+
+#ifdef VIENNACORE_COMPILE_GPU
+inline constexpr bool gpuAvailable() { return true; }
+#else
+inline constexpr bool gpuAvailable() { return false; }
+#endif
 
 template <typename NumericType, int D> class Process {
 private:
@@ -45,7 +53,7 @@ public:
     context_.processDuration = duration;
   }
 
-  void setRayTracingParameters(const RayTracingParameters<D> &params) {
+  void setRayTracingParameters(const RayTracingParameters &params) {
     context_.rayTracingParams = params;
   }
 
@@ -163,6 +171,14 @@ private:
     case ProcessResult::FAILURE:
       Logger::getInstance().addError("Process failed.").print();
       break;
+    case ProcessResult::NOT_IMPLEMENTED:
+      Logger::getInstance()
+          .addError("Process feature not implemented.")
+          .print();
+      break;
+    case ProcessResult::CONVERGENCE_FAILURE:
+      Logger::getInstance().addError("Process failed to converge.").print();
+      break;
     }
   }
 
@@ -171,16 +187,37 @@ private:
     switch (fluxEngineType_) {
     case FluxEngineType::CPU_DISK:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
-    case FluxEngineType::GPU_TRIANGLE:
+    case FluxEngineType::GPU_TRIANGLE: {
 #ifdef VIENNACORE_COMPILE_GPU
-      return std::make_unique<GPUTriangleEngine<NumericType, D>>(
-          DeviceContext::getContextFromRegistry(gpuDeviceId_));
+      if constexpr (D == 2) {
+        Logger::getInstance()
+            .addError("GPU-Triangle flux engine not supported in 2D.")
+            .print();
+        return nullptr;
+      }
+
+      auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
+      if (!deviceContext) {
+        Logger::getInstance()
+            .addInfo("Auto-generating GPU device context.")
+            .print();
+        deviceContext =
+            DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+        if (!deviceContext) {
+          Logger::getInstance()
+              .addError("Failed to create GPU device context.")
+              .print();
+          return nullptr;
+        }
+      }
+      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
 #else
       Logger::getInstance()
           .addError("GPU support not compiled in ViennaCore.")
           .print();
       return nullptr;
 #endif
+    }
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
       return nullptr;
@@ -245,5 +282,7 @@ private:
   unsigned int gpuDeviceId_ = 0;
 #endif
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(Process)
 
 } // namespace viennaps

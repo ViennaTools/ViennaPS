@@ -1,4 +1,0 @@
-include README.md
-include LICENSE
-recursive-include python/viennaps3d/ptx *.ptx
-recursive-include python/viennaps3d/ptx *.optixir

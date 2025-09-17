@@ -3,26 +3,29 @@ from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
-    prog="oxideRegrowth", description="Model oxide regrowth during SiN etching in SiN/SiO2 stack."
+    prog="oxideRegrowth",
+    description="Model oxide regrowth during SiN etching in SiN/SiO2 stack.",
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
+import viennaps as ps
+
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    import viennaps.d3 as psd
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
 NUM_THREADS = 12
 TIME_STABILITY_FACTOR = 0.245 if args.dim == 2 else 0.145
 
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
+ps.Logger.setLogLevel(ps.LogLevel.INTERMEDIATE)
 
 # Check for config file argument
 if len(sys.argv) < 2:
@@ -33,43 +36,43 @@ if len(sys.argv) < 2:
 NumericType = float
 
 # Calculate stability factor
-diff_coeff = params.get("diffusionCoefficient")
-center_velocity = params.get("centerVelocity")
-scallop_velocity = params.get("scallopVelocity")
+diff_coeff = params["diffusionCoefficient"]
+center_velocity = params["centerVelocity"]
+scallop_velocity = params["scallopVelocity"]
 
 stability = 2 * diff_coeff / max(center_velocity, scallop_velocity)
 print(f"Stability: {stability}")
 
-if 0.5 * stability <= params.get("gridDelta"):
+if 0.5 * stability <= params["gridDelta"]:
     print("Unstable parameters. Reduce grid spacing!")
     sys.exit(-1)
 
 # Create domain
-geometry = vps.Domain(
+geometry = psd.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
 
 # Create stack geometry
-vps.MakeStack(
-    domain = geometry,
-    numLayers = int(params["numLayers"]),
+psd.MakeStack(
+    domain=geometry,
+    numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
     substrateHeight=params["substrateHeight"],
-    holeRadius = 0.0,  # holeRadius
-    trenchWidth = params["trenchWidth"],
+    holeRadius=0.0,  # holeRadius
+    trenchWidth=params["trenchWidth"],
     maskHeight=0.0,
 ).apply()
 
 # Duplicate top layer
-geometry.duplicateTopLevelSet(vps.Material.Polymer)
+geometry.duplicateTopLevelSet(ps.Material.Polymer)
 
 # Generate cell set above surface
 geometry.generateCellSet(
-    params.get("substrateHeight") + params.get("numLayers") * params.get("layerHeight") + 10.0,
-    vps.Material.GAS,
-    True
+    params["substrateHeight"] + params["numLayers"] * params["layerHeight"] + 10.0,
+    ps.Material.GAS,
+    True,
 )
 
 cell_set = geometry.getCellSet()
@@ -88,26 +91,26 @@ if args.dim == 3:
 cell_set.buildNeighborhood()
 
 # Create redeposition model
-model = vps.OxideRegrowth(
-    params.get("nitrideEtchRate") / 60.0,
-    params.get("oxideEtchRate") / 60.0,
-    params.get("redepositionRate"),
-    params.get("redepositionThreshold"),
-    params.get("redepositionTimeInt"),
+model = psd.OxideRegrowth(
+    params["nitrideEtchRate"] / 60.0,
+    params["oxideEtchRate"] / 60.0,
+    params["redepositionRate"],
+    params["redepositionThreshold"],
+    params["redepositionTimeInt"],
     diff_coeff,
-    params.get("sink"),
+    params["sink"],
     scallop_velocity,
     center_velocity,
-    params.get("substrateHeight") + params.get("numLayers") * params.get("layerHeight"),
-    params.get("trenchWidth"),
-    TIME_STABILITY_FACTOR
+    params["substrateHeight"] + params["numLayers"] * params["layerHeight"],
+    params["trenchWidth"],
+    TIME_STABILITY_FACTOR,
 )
 
 # Run process
-process = vps.Process()
+process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setProcessDuration(params.get("targetEtchDepth") / params.get("nitrideEtchRate") * 60.0)
+process.setProcessDuration(params["targetEtchDepth"] / params["nitrideEtchRate"] * 60.0)
 process.apply()
 
 # Save output mesh

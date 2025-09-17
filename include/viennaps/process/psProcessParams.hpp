@@ -14,10 +14,7 @@ using namespace viennacore;
 
 using IntegrationScheme = viennals::IntegrationSchemeEnum;
 
-template <int D> struct RayTracingParameters {
-  viennaray::TraceDirection sourceDirection =
-      D == 3 ? viennaray::TraceDirection::POS_Z
-             : viennaray::TraceDirection::POS_Y;
+struct RayTracingParameters {
   viennaray::NormalizationType normalizationType =
       viennaray::NormalizationType::SOURCE;
   bool ignoreFluxBoundaries = false;

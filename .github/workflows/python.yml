@@ -66,14 +66,14 @@ jobs:
           python -m venv venv
           ./venv/Scripts/activate.bat
           pip install .
-          python -c "import viennaps2d; print(viennaps2d.__doc__)"
+          python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 🐍 Build and check Python Module (Other)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python -m venv venv
           CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . # Alpine does not like LTO
-          ./venv/bin/python -c "import viennaps2d; print(viennaps2d.__doc__)"
+          ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v4

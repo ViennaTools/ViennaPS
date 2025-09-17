@@ -1,5 +1,6 @@
-import viennaps3d as ps
+import viennaps as ps
 
+ps.setDimension(3)
 volumeOutput = False
 volumeNum = 0
 surfaceNum = 0
@@ -185,8 +186,10 @@ writeVolume(domain)
 print("Fin-Release ...", end="", flush=True)
 masks = [ps.Material.PolySi, ps.Material.SiO2, ps.Material.Si3N4]
 model = ps.IsotropicProcess(rate=-1.0, maskMaterial=masks)
+advParams = ps.AdvectionParameters()
+advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
 process = ps.Process(domain, model, 5.0)
-process.setIntegrationScheme(ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER)
+process.setAdvectionParameters(advParams)
 process.apply()
 print(" done")
 writeSurface(domain)

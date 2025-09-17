@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 3.8.0)
+  VERSION 4.0.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -120,8 +120,7 @@ CPMFindPackage(
 
 CPMFindPackage(
   NAME ViennaLS
-  GIT_TAG master
-  VERSION 5.0.0
+  VERSION 5.0.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -171,6 +170,21 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
 endif()
 
 # --------------------------------------------------------------------------------------------------------
+# Setup GPU
+# --------------------------------------------------------------------------------------------------------
+
+# If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
+if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+  message(STATUS "[ViennaPS] Enabled GPU Support")
+  add_subdirectory(gpu)
+  target_include_directories(${PROJECT_NAME}
+                             INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/include>)
+else()
+  message(STATUS "[ViennaPS] Disabled GPU Support")
+  set(VIENNAPS_USE_GPU OFF)
+endif()
+
+# --------------------------------------------------------------------------------------------------------
 # Setup Examples
 # --------------------------------------------------------------------------------------------------------
 
@@ -188,21 +202,6 @@ if(VIENNAPS_BUILD_TESTS)
 
   enable_testing()
   add_subdirectory(tests)
-endif()
-
-# --------------------------------------------------------------------------------------------------------
-# Setup GPU
-# --------------------------------------------------------------------------------------------------------
-
-# If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
-if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
-  message(STATUS "[ViennaPS] Enabled GPU Support")
-  add_subdirectory(gpu)
-  target_include_directories(${PROJECT_NAME}
-                             INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/include>)
-else()
-  message(STATUS "[ViennaPS] Disabled GPU Support")
-  set(VIENNAPS_USE_GPU OFF)
 endif()
 
 # --------------------------------------------------------------------------------------------------------

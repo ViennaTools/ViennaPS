@@ -1,4 +1,5 @@
-import viennaps3d as vps
+import viennaps.d3 as psd
+import viennaps as ps
 from argparse import ArgumentParser
 
 # parse config file name and simulation dimension
@@ -11,35 +12,35 @@ args = parser.parse_args()
 
 gridDelta = 0.01 * (1.0 + 1e-12)
 boundaryConds = [
-    vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vps.ls.BoundaryConditionEnum.INFINITE_BOUNDARY,
+    ps.BoundaryType.REFLECTIVE_BOUNDARY,
+    ps.BoundaryType.REFLECTIVE_BOUNDARY,
+    ps.BoundaryType.INFINITE_BOUNDARY,
 ]
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
-mask = vps.GDSGeometry(gridDelta, boundaryConds)
+mask = psd.GDSGeometry(gridDelta, boundaryConds)
 mask.setBoundaryPadding(0.1, 0.1)
-reader = vps.GDSReader(mask, params["gdsFile"])
+reader = psd.GDSReader(mask, params["gdsFile"])
 reader.apply()
 
 # Prepare geometry
-geometry = vps.Domain()
+geometry = psd.Domain()
 
 # Insert GDS layers
 maskLS = mask.layerToLevelSet(0, 0.0, 0.18)
-geometry.insertNextLevelSetAsMaterial(maskLS, vps.Material.Mask)
+geometry.insertNextLevelSetAsMaterial(maskLS, ps.Material.Mask)
 
 # Add plane
-vps.MakePlane(geometry, 0.0, vps.Material.Si, True).apply()
+psd.MakePlane(geometry, 0.0, ps.Material.Si, True).apply()
 
 # print intermediate output surfaces during the process
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
 
-vps.Length.setUnit(params["lengthUnit"])
-vps.Time.setUnit(params["timeUnit"])
+ps.Length.setUnit(params["lengthUnit"])
+ps.Time.setUnit(params["timeUnit"])
 
-modelParams = vps.HBrO2Etching.defaultParameters()
+modelParams = psd.HBrO2Etching.defaultParameters()
 modelParams.ionFlux = params["ionFlux"]
 modelParams.etchantFlux = params["etchantFlux"]
 modelParams.passivationFlux = params["oxygenFlux"]
@@ -47,18 +48,27 @@ modelParams.Ions.meanEnergy = params["meanEnergy"]
 modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
 modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Ions.n_l = 200
-model = vps.HBrO2Etching(modelParams)
+model = psd.HBrO2Etching(modelParams)
+
+coverageParameters = ps.CoverageParameters()
+coverageParameters.maxIterations = 10
+
+rayTracingParams = ps.RayTracingParameters()
+rayTracingParams.raysPerPoint = int(params["raysPerPoint"])
+
+advectionParams = ps.AdvectionParameters()
+advectionParams.integrationScheme = ps.util.convertIntegrationScheme(
+    params["integrationScheme"]
+)
 
 # process setup
-process = vps.Process()
+process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setMaxCoverageInitIterations(10)
-process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
 process.setProcessDuration(params["processTime"])  # seconds
-process.setIntegrationScheme(
-    vps.util.convertIntegrationScheme(params["integrationScheme"])
-)
+process.setCoverageParameters(coverageParameters)
+process.setRayTracingParameters(rayTracingParams)
+process.setAdvectionParameters(advectionParams)
 
 # print initial surface
 geometry.saveSurfaceMesh(filename="DRAM_Initial.vtp", addMaterialIds=True)

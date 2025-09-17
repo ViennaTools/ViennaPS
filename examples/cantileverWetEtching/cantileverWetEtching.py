@@ -1,5 +1,6 @@
 # This example only works in 3D mode
-import viennaps3d as vps
+import viennaps.d3 as psd
+from viennaps import BoundaryType, Material, AdvectionParameters, IntegrationScheme
 
 maskFileName = "cantilever_mask.gds"
 
@@ -21,46 +22,49 @@ gridDelta = 5.0  # um
 
 # read GDS mask file
 boundaryConditions = [
-    vps.BoundaryType.REFLECTIVE_BOUNDARY,
-    vps.BoundaryType.REFLECTIVE_BOUNDARY,
-    vps.BoundaryType.INFINITE_BOUNDARY,
+    BoundaryType.REFLECTIVE_BOUNDARY,
+    BoundaryType.REFLECTIVE_BOUNDARY,
+    BoundaryType.INFINITE_BOUNDARY,
 ]
 
-gds_mask = vps.GDSGeometry(gridDelta)
+gds_mask = psd.GDSGeometry(gridDelta)
 gds_mask.setBoundaryConditions(boundaryConditions)
 gds_mask.setBoundaryPadding(x_add, y_add)
-vps.GDSReader(gds_mask, maskFileName).apply()
+psd.GDSReader(gds_mask, maskFileName).apply()
 
 # convert GDS geometry to level set
 mask = gds_mask.layerToLevelSet(1, 0.0, 4 * gridDelta, True, False)
 
 # set up domain
-geometry = vps.Domain()
-geometry.insertNextLevelSetAsMaterial(mask, vps.Material.Mask)
+geometry = psd.Domain()
+geometry.insertNextLevelSetAsMaterial(mask, Material.Mask)
 
 # create plane substrate under mask
-vps.MakePlane(geometry, 0.0, vps.Material.Si, True).apply()
+psd.MakePlane(geometry, 0.0, Material.Si, True).apply()
 
 geometry.saveSurfaceMesh("initialGeometry.vtp", True)
 
 # wet etch process
-model = vps.WetEtching(
+model = psd.WetEtching(
     direction100=direction100,
     direction010=direction010,
     rate100=r100,
     rate110=r110,
     rate111=r111,
     rate311=r311,
-    materialRates=[(vps.Material.Si, -1.0)],
+    materialRates=[(Material.Si, -1.0)],
 )
 
-process = vps.Process()
+advectionParams = AdvectionParameters()
+advectionParams.integrationScheme = (
+    IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+)
+
+process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(5.0 * 60.0)  # 5 minutes of etching
-process.setIntegrationScheme(
-    vps.IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
-)
+process.setAdvectionParameters(advectionParams)
 
 for n in range(minutes):
     # run process

@@ -29,7 +29,7 @@ template <typename NumericType, int D> struct ProcessContext {
 
   // Configuration
   AdvectionParameters advectionParams;
-  RayTracingParameters<D> rayTracingParams;
+  RayTracingParameters rayTracingParams;
   CoverageParameters coverageParams;
   AtomicLayerProcessParameters atomicLayerParams;
 

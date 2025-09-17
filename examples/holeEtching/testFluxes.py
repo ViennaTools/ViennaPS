@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import numpy as np
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -8,26 +9,22 @@ parser = ArgumentParser(
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 args = parser.parse_args()
 
+
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+ps.setDimension(args.dim)
 
-vps.setNumThreads(16)
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
+ps.setNumThreads(16)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
 
-vps.Length.setUnit("um")
-vps.Time.setUnit("min")
+ps.Length.setUnit("um")
+ps.Time.setUnit("min")
 
 # hole geometry parameters
-<<<<<<< HEAD
-gridDelta = 0.018  # um
-=======
 gridDelta = 0.03  # um
->>>>>>> ce5b5baa2fe8e160779b04fc0c74204adfdf6bc7
 extent = 1.5
 holeRadius = 0.175
 maskHeight = 1.2
@@ -41,7 +38,7 @@ A_O = [2, 2, 2, 1, 1]
 yo2 = [0.44, 0.5, 0.56, 0.62, 0]
 
 # etching model parameters
-params = vps.SF6O2Etching.defaultParameters()
+params = ps.SF6O2Etching.defaultParameters()
 params.Substrate.A_ie = 5.0
 params.Substrate.Eth_ie = 15.0
 
@@ -58,49 +55,58 @@ params.Mask.rho = params.Substrate.rho * 10.0
 
 # simulation parameters
 processDuration = 3  # min
-integrationScheme = vps.IntegrationScheme.ENGQUIST_OSHER_2ND_ORDER
-numberOfRaysPerPoint = int(1000)
+
+advParams = ps.AdvectionParameters()
+advParams.integrationScheme = ps.IntegrationScheme.ENGQUIST_OSHER_2ND_ORDER
+
+rayParams = ps.RayTracingParameters()
+rayParams.raysPerPoint = int(1000)
+
+covParams = ps.CoverageParameters()
+covParams.maxIterations = 20
+covParams.coverageDeltaThreshold = 1e-4
 
 for i in range(len(yo2)):
 
     # geometry setup, all units in um
-    geometry = vps.Domain(
+    geometry = ps.Domain(
         gridDelta=gridDelta,
         xExtent=extent,
         yExtent=extent,
     )
-    vps.MakeHole(
+    ps.MakeHole(
         domain=geometry,
         holeRadius=holeRadius,
         holeDepth=0.0,
         maskHeight=maskHeight,
         maskTaperAngle=taperAngle,
-        holeShape=vps.HoleShape.Half,
+        holeShape=ps.HoleShape.HALF,
     ).apply()
 
-    process = vps.Process()
+    process = ps.Process()
     process.setDomain(geometry)
-    process.setMaxCoverageInitIterations(20)
-    process.setCoverageDeltaThreshold(1e-4)
     process.setProcessDuration(processDuration)
-    process.setIntegrationScheme(integrationScheme)
-    process.setNumberOfRaysPerPoint(numberOfRaysPerPoint)
+    process.setCoverageParameters(covParams)
+    process.setRayTracingParameters(rayParams)
+    process.setAdvectionParameters(advParams)
+    if ps.gpuAvailable() and args.dim == 3:
+        process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
     params.ionFlux = ionFlux[i]
     params.etchantFlux = etchantFlux[i]
     params.passivationFlux = oxygenFlux[i]
     params.Passivation.A_ie = A_O[i]
 
-    model = vps.SF6O2Etching(params)
+    model = ps.SF6O2Etching(params)
 
     process.setProcessModel(model)
     process.apply()
 
     # save mask
     mask = geometry.getLevelSets()[0]
-    mesh = vps.ls.Mesh()
-    vps.ls.ToSurfaceMesh(mask, mesh).apply()
-    vps.ls.VTKWriter(mesh, "mask_y{:.2f}.vtp".format(yo2[i])).apply()
+    mesh = ps.ls.Mesh()
+    ps.ls.ToSurfaceMesh(mask, mesh).apply()
+    ps.ls.VTKWriter(mesh, "mask_y{:.2f}.vtp".format(yo2[i])).apply()
 
     geometry.saveSurfaceMesh("hole_y{:.2f}.vtp".format(yo2[i]), True)
     geometry.saveVolumeMesh("hole_y{:.2f}".format(yo2[i]))

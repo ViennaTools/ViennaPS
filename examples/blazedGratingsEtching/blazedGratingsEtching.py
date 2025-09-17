@@ -1,5 +1,4 @@
-import viennaps2d as vps
-import viennals2d as vls
+import viennaps as ps
 import numpy as np
 from argparse import ArgumentParser
 
@@ -11,20 +10,20 @@ parser = ArgumentParser(
 parser.add_argument("filename")
 args = parser.parse_args()
 
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
-params = vps.ReadConfigFile(args.filename)
+ps.Logger.setLogLevel(ps.LogLevel.INFO)
+params = ps.readConfigFile(args.filename)
 
 ########################################################################
 #                               WARNING                                #
 # This example in Python only works when using a single thread, i.e.   #
-# vps.setNumThreads(1). The reason is the yield function, which is     #
+# ps.setNumThreads(1). The reason is the yield function, which is      #
 # implemented in Python, but gets called from the C++ code by multiple #
 # multiple threads. The Python GIL (Global Interpreter Lock) prevents  #
 # the yield function from being called by multiple threads at the same #
 # time, leading to deadlocked threads.                                 #
 # It is therefore recommended to use the C++ API for this example.     #
 ########################################################################
-vps.setNumThreads(1)
+ps.setNumThreads(1)
 
 # ----- Geometry Generation ----- #
 bumpWidth = params["bumpWidth"]
@@ -34,15 +33,15 @@ numBumps = int(params["numBumps"])
 bumpSpacing = bumpWidth * (1.0 - bumpDuty) / bumpDuty
 xExtent = numBumps * bumpWidth / bumpDuty
 
-geometry = vps.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=xExtent,
-    boundary=vps.BoundaryType.PERIODIC_BOUNDARY,
+    boundary=ps.BoundaryType.PERIODIC_BOUNDARY,
 )
-vps.MakePlane(domain=geometry, height=0.0, material=vps.Material.SiO2).apply()
-mask = vls.Domain(geometry.getGrid())
+ps.MakePlane(domain=geometry, height=0.0, material=ps.Material.SiO2).apply()
+mask = ps.ls.Domain(geometry.getGrid())
 
-mesh = vls.Mesh()
+mesh = ps.ls.Mesh()
 offset = -xExtent / 2.0 + bumpSpacing + bumpWidth / 2.0
 numNodes = 100
 for i in range(numNodes):
@@ -54,24 +53,24 @@ for i in range(1, numNodes):
 mesh.insertNextLine([numNodes - 1, 0])
 
 for i in range(numBumps):
-    tip = vls.Domain(geometry.getGrid())
-    vls.FromSurfaceMesh(tip, mesh).apply()
-    vls.TransformMesh(
+    tip = ps.ls.Domain(geometry.getGrid())
+    ps.ls.FromSurfaceMesh(tip, mesh).apply()
+    ps.ls.TransformMesh(
         mesh=mesh,
-        transform=vls.TransformEnum.TRANSLATION,
+        transform=ps.ls.TransformEnum.TRANSLATION,
         transformVector=[bumpSpacing + bumpWidth, 0, 0],
     ).apply()
-    vls.BooleanOperation(mask, tip, vls.BooleanOperationEnum.UNION).apply()
+    ps.ls.BooleanOperation(mask, tip, ps.ls.BooleanOperationEnum.UNION).apply()
 
-geometry.insertNextLevelSetAsMaterial(mask, vps.Material.Mask)
+geometry.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
 geometry.saveSurfaceMesh("initial", True)
 
 # ----- Model Setup ----- #
-advectionParams = vps.AdvectionParameters()
-advectionParams.integrationScheme = vls.IntegrationSchemeEnum.LAX_FRIEDRICHS_2ND_ORDER
+advectionParams = ps.AdvectionParameters()
+advectionParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
 advectionParams.timeStepRatio = 0.25
 
-rayTracingParams = vps.RayTracingParameters()
+rayTracingParams = ps.RayTracingParameters()
 rayTracingParams.raysPerPoint = int(params["raysPerPoint"])
 rayTracingParams.smoothingNeighbors = 1
 
@@ -87,13 +86,13 @@ def yieldFunction(theta):
     ) / (yieldFactor - 0.9)
 
 
-ibeParams = vps.IBEParameters()
+ibeParams = ps.IBEParameters()
 ibeParams.exponent = params["exponent"]
 ibeParams.meanEnergy = params["meanEnergy"]
-ibeParams.materialPlaneWaferRate = {vps.Material.SiO2: 1, vps.Material.Mask: 1 / 11}
+ibeParams.materialPlaneWaferRate = {ps.Material.SiO2: 1, ps.Material.Mask: 1 / 11}
 ibeParams.yieldFunction = yieldFunction
 
-model = vps.IonBeamEtching()
+model = ps.IonBeamEtching()
 
 # ----- ANSGM Etch ----- #
 angle = params["phi1"]
@@ -104,7 +103,7 @@ ibeParams.tiltAngle = angle
 model.setPrimaryDirection(direction)
 model.setParameters(ibeParams)
 
-process = vps.Process(geometry, model, 0.0)
+process = ps.Process(geometry, model, 0.0)
 process.setAdvectionParameters(advectionParams)
 process.setRayTracingParameters(rayTracingParams)
 
