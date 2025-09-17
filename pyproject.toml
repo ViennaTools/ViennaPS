@@ -8,7 +8,7 @@ name = "ViennaPS"
 readme = "README.md"
 license = { file = "LICENSE" }
 description = "Topography simulation library for microelectronic fabrication processes"
-dependencies = ["ViennaLS>=5.0.0"]
+dependencies = ["ViennaLS>=5.0.1"]
 
 [project.urls]
 Homepage = "https://viennatools.github.io/ViennaPS/"
