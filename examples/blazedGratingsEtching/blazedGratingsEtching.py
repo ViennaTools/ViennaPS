@@ -104,8 +104,8 @@ model.setPrimaryDirection(direction)
 model.setParameters(ibeParams)
 
 process = ps.Process(geometry, model, 0.0)
-process.setAdvectionParameters(advectionParams)
-process.setRayTracingParameters(rayTracingParams)
+process.setParameters(advectionParams)
+process.setParameters(rayTracingParams)
 
 process.setProcessDuration(params["ANSGM_Depth"])
 process.apply()

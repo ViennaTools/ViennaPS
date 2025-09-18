@@ -178,7 +178,7 @@ void clean(ps::SmartPointer<ps::Domain<NumericType, D>> geometry,
     process.setDomain(geometry);
     process.setProcessModel(model);
     process.setProcessDuration(smoothingSize);
-    process.setAdvectionParameters(advParams);
+    process.setParameters(advParams);
     process.apply();
   }
 
@@ -193,7 +193,7 @@ void clean(ps::SmartPointer<ps::Domain<NumericType, D>> geometry,
     process.setDomain(geometry);
     process.setProcessModel(model);
     process.setProcessDuration(smoothingSize);
-    process.setAdvectionParameters(advParams);
+    process.setParameters(advParams);
     process.apply();
   }
 }
@@ -300,8 +300,8 @@ int main(int argc, char *argv[]) {
         viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
 
     ps::Process<NumericType, D> process(geometry, model, timePerAngle);
-    process.setRayTracingParameters(rtParams);
-    process.setAdvectionParameters(advParams);
+    process.setParameters(rtParams);
+    process.setParameters(advParams);
     process.setFluxEngineType(ps::FluxEngineType::GPU_TRIANGLE);
 
     // run the process
@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
       rayParams.raysPerPoint = params.get<int>("raysPerPoint") * 2;
       rayParams.smoothingNeighbors = 2;
       ps::Process<NumericType, D> visProcess(copy, model, 0.);
-      visProcess.setRayTracingParameters(rayParams);
+      visProcess.setParameters(rayParams);
       visProcess.setFluxEngineType(ps::FluxEngineType::GPU_TRIANGLE);
 
       auto fluxMesh = visProcess.calculateFlux();

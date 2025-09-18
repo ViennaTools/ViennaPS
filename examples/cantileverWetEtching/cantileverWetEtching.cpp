@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(5. * 60.); // 5 minutes of etching
-  process.setAdvectionParameters(advectionParams);
+  process.setParameters(advectionParams);
 
   for (int n = 0; n < minutes; n++) {
     process.apply(); // run process

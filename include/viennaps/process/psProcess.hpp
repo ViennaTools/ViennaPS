@@ -23,6 +23,9 @@ inline constexpr bool gpuAvailable() { return true; }
 inline constexpr bool gpuAvailable() { return false; }
 #endif
 
+template <typename T>
+constexpr bool always_false = false;
+
 template <typename NumericType, int D> class Process {
 private:
   ProcessContext<NumericType, D> context_;
@@ -53,21 +56,20 @@ public:
     context_.processDuration = duration;
   }
 
-  void setRayTracingParameters(const RayTracingParameters &params) {
-    context_.rayTracingParams = params;
-  }
-
-  void setAdvectionParameters(const AdvectionParameters &params) {
-    context_.advectionParams = params;
-  }
-
-  void setCoverageParameters(const CoverageParameters &params) {
-    context_.coverageParams = params;
-  }
-
-  void
-  setAtomicLayerProcessParameters(const AtomicLayerProcessParameters &params) {
-    context_.atomicLayerParams = params;
+  template <typename ParamType> 
+  void setParameters(const ParamType &params) {
+    if constexpr (std::is_same_v<ParamType, RayTracingParameters>) {
+      context_.rayTracingParams = params;
+    } else if constexpr (std::is_same_v<ParamType, AdvectionParameters>) {
+      context_.advectionParams = params;
+    } else if constexpr (std::is_same_v<ParamType, CoverageParameters>) {
+      context_.coverageParams = params;
+    } else if constexpr (std::is_same_v<ParamType, AtomicLayerProcessParameters>) {
+      context_.atomicLayerParams = params;
+    } else {
+      static_assert(always_false<ParamType>,
+                    "Unsupported parameter type for Process.");
+    }
   }
 
   void setFluxEngineType(FluxEngineType type) {

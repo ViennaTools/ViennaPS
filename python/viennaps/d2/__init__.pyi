@@ -1132,14 +1132,14 @@ class Process:
         Set the advection parameters for the process.
         """
 
-    def setAtomicLayerProcessParameters(
+    def setParameters(
         self, arg0: viennaps._core.AtomicLayerProcessParameters
     ) -> None:
         """
         Set the atomic layer parameters for the process.
         """
 
-    def setCoverageParameters(self, arg0: viennaps._core.CoverageParameters) -> None:
+    def setParameters(self, arg0: viennaps._core.CoverageParameters) -> None:
         """
         Set the coverage parameters for the process.
         """

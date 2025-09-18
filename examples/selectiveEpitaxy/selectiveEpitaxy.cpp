@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 
   ps::Process<NumericType, D> process(geometry, model,
                                       params.get("processTime"));
-  process.setAdvectionParameters(advectionParams);
+  process.setParameters(advectionParams);
 
   geometry->saveVolumeMesh("initial_fin");
 

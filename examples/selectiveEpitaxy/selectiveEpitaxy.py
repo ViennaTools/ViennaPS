@@ -53,7 +53,7 @@ advectionParams.integrationScheme = (
 )
 
 process = ps.Process(geometry, model, params["processTime"])
-process.setAdvectionParameters(advectionParams)
+process.setParameters(advectionParams)
 
 geometry.saveVolumeMesh("initial_fin")
 

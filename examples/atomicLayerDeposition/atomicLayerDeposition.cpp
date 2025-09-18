@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
   alpParams.coverageTimeStep = params.get("coverageTimeStep");
 
   ps::Process<NumericType, D> ALP(domain, model);
-  ALP.setAtomicLayerProcessParameters(alpParams);
+  ALP.setParameters(alpParams);
   ALP.apply();
 
   MeasureProfile<NumericType, D>(domain, params.get("gapHeight") / 2.)

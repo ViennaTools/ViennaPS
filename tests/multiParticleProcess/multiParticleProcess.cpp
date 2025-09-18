@@ -41,7 +41,7 @@ template <class NumericType, int D> void RunTest() {
     rayParams.raysPerPoint = 10;
 
     Process<NumericType, D> process(domain, model, 1.);
-    process.setRayTracingParameters(rayParams);
+    process.setParameters(rayParams);
     process.apply();
 
     LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);

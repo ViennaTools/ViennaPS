@@ -223,7 +223,7 @@ int main() {
     advectionParams.integrationScheme =
         viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
     Process<NumericType, D> process(domain, model, 5.);
-    process.setAdvectionParameters(advectionParams);
+    process.setParameters(advectionParams);
     process.apply();
     std::cout << " done" << std::endl;
   }
@@ -245,7 +245,7 @@ int main() {
         {Material::Si, 1.}, {Material::SiGe, 1.}};
     auto model = SmartPointer<SelectiveEpitaxy<NumericType, D>>::New(material);
     Process<NumericType, D> proc(domain, model, 14.);
-    proc.setAdvectionParameters(advectionParams);
+    proc.setParameters(advectionParams);
     proc.apply();
 
     std::cout << " done" << std::endl;

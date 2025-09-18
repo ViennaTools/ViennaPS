@@ -58,8 +58,8 @@ int main(int argc, char *argv[]) {
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("processTime"));
-  process.setAdvectionParameters(advectionParams);
-  process.setCoverageParameters(coverageParams);
+  process.setParameters(advectionParams);
+  process.setParameters(coverageParams);
 
   // print initial surface
   geometry->saveVolumeMesh("initial");

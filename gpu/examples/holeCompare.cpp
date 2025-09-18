@@ -54,8 +54,8 @@ int main(int argc, char **argv) {
     auto copy = Domain<NumericType, D>::New(geometry);
 
     Process<NumericType, D> process(copy, model, processDuration);
-    process.setAdvectionParameters(advParams);
-    process.setRayTracingParameters(rtParams);
+    process.setParameters(advParams);
+    process.setParameters(rtParams);
     process.apply();
 
     copy->saveSurfaceMesh("cpu_result.vtp", true);
@@ -71,10 +71,10 @@ int main(int argc, char **argv) {
     auto copy = Domain<NumericType, D>::New(geometry);
 
     Process<NumericType, D> process(copy, model, processDuration);
-    process.setAdvectionParameters(advParams);
+    process.setParameters(advParams);
     rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
     rtParams.smoothingNeighbors = 2.;
-    process.setRayTracingParameters(rtParams);
+    process.setParameters(rtParams);
     process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
     process.apply();
 

@@ -50,8 +50,8 @@ int main(int argc, char *argv[]) {
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("etchTime"));
-  process.setRayTracingParameters(rayParams);
-  process.setAdvectionParameters(advectionParams);
+  process.setParameters(rayParams);
+  process.setParameters(advectionParams);
 
   // print initial surface
   geometry->saveHullMesh("initial.vtp");

@@ -86,9 +86,9 @@ for i in range(len(yo2)):
     process = ps.Process()
     process.setDomain(geometry)
     process.setProcessDuration(processDuration)
-    process.setCoverageParameters(covParams)
-    process.setRayTracingParameters(rayParams)
-    process.setAdvectionParameters(advParams)
+    process.setParameters(covParams)
+    process.setParameters(rayParams)
+    process.setParameters(advParams)
     if ps.gpuAvailable() and args.dim == 3:
         process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 

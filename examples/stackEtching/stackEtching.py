@@ -55,8 +55,8 @@ process = vps.d2.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
-process.setCoverageParameters(covParams)
-process.setAdvectionParameters(advParams)
+process.setParameters(covParams)
+process.setParameters(advParams)
 
 # print initial surface
 geometry.saveVolumeMesh("initial")
