@@ -23,8 +23,7 @@ inline constexpr bool gpuAvailable() { return true; }
 inline constexpr bool gpuAvailable() { return false; }
 #endif
 
-template <typename T>
-constexpr bool always_false = false;
+template <typename T> constexpr bool always_false = false;
 
 template <typename NumericType, int D> class Process {
 private:
@@ -56,15 +55,15 @@ public:
     context_.processDuration = duration;
   }
 
-  template <typename ParamType> 
-  void setParameters(const ParamType &params) {
+  template <typename ParamType> void setParameters(const ParamType &params) {
     if constexpr (std::is_same_v<ParamType, RayTracingParameters>) {
       context_.rayTracingParams = params;
     } else if constexpr (std::is_same_v<ParamType, AdvectionParameters>) {
       context_.advectionParams = params;
     } else if constexpr (std::is_same_v<ParamType, CoverageParameters>) {
       context_.coverageParams = params;
-    } else if constexpr (std::is_same_v<ParamType, AtomicLayerProcessParameters>) {
+    } else if constexpr (std::is_same_v<ParamType,
+                                        AtomicLayerProcessParameters>) {
       context_.atomicLayerParams = params;
     } else {
       static_assert(always_false<ParamType>,
