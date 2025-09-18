@@ -57,6 +57,7 @@ from viennaps._core import Time
 from viennaps._core import TimeUnit
 from viennaps._core import constants
 from viennaps._core import gpu
+from viennaps._core import gpuAvailable
 from viennaps._core import setNumThreads
 from viennaps._core import util
 from viennaps.d2 import AdvectionCallback
@@ -196,6 +197,7 @@ __all__: list[str] = [
     "d2",
     "d3",
     "gpu",
+    "gpuAvailable",
     "ls",
     "ptxPath",
     "readConfigFile",

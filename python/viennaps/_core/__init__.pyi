@@ -7,8 +7,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
+import viennaps.d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -60,6 +60,7 @@ __all__: list[str] = [
     "d2",
     "d3",
     "gpu",
+    "gpuAvailable",
     "setNumThreads",
     "util",
     "version",
@@ -1122,6 +1123,11 @@ class TimeUnit(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
+
+def gpuAvailable() -> bool:
+    """
+    Check if ViennaPS was compiled with GPU support.
+    """
 
 def setNumThreads(arg0: typing.SupportsInt) -> None: ...
 

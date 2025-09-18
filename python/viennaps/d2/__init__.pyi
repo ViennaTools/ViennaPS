@@ -1127,23 +1127,6 @@ class Process:
         Perform a single-pass flux calculation.
         """
 
-    def setAdvectionParameters(self, arg0: viennaps._core.AdvectionParameters) -> None:
-        """
-        Set the advection parameters for the process.
-        """
-
-    def setParameters(
-        self, arg0: viennaps._core.AtomicLayerProcessParameters
-    ) -> None:
-        """
-        Set the atomic layer parameters for the process.
-        """
-
-    def setParameters(self, arg0: viennaps._core.CoverageParameters) -> None:
-        """
-        Set the coverage parameters for the process.
-        """
-
     def setDomain(self, arg0: Domain) -> None:
         """
         Set the process domain.
@@ -1154,6 +1137,32 @@ class Process:
         Set the flux engine type (CPU or GPU).
         """
 
+    @typing.overload
+    def setParameters(self, parameters: viennaps._core.AdvectionParameters) -> None:
+        """
+        Set the advection parameters for the process.
+        """
+
+    @typing.overload
+    def setParameters(self, parameters: viennaps._core.RayTracingParameters) -> None:
+        """
+        Set the ray tracing parameters for the process.
+        """
+
+    @typing.overload
+    def setParameters(self, parameters: viennaps._core.CoverageParameters) -> None:
+        """
+        Set the coverage parameters for the process.
+        """
+
+    @typing.overload
+    def setParameters(
+        self, parameters: viennaps._core.AtomicLayerProcessParameters
+    ) -> None:
+        """
+        Set the atomic layer parameters for the process.
+        """
+
     def setProcessDuration(self, arg0: typing.SupportsFloat) -> None:
         """
         Set the process duration.
@@ -1162,13 +1171,6 @@ class Process:
     def setProcessModel(self, arg0: ProcessModelBase) -> None:
         """
         Set the process model. This has to be a pre-configured process model.
-        """
-
-    def setRayTracingParameters(
-        self, arg0: viennaps._core.RayTracingParameters
-    ) -> None:
-        """
-        Set the ray tracing parameters for the process.
         """
 
 class ProcessModel(ProcessModelBase):
