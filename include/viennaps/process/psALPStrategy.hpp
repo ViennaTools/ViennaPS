@@ -109,6 +109,12 @@ private:
     PROCESS_CHECK(advectionHandler_.initialize(context));
     advectionHandler_.setAdvectionTime(1.0);
 
+    if (context.flags.useAdvectionCallback) {
+      Logger::getInstance()
+          .addWarning("Advection callbacks are not supported in ALP.")
+          .print();
+    }
+
     // Initialize flux engine
     PROCESS_CHECK(fluxEngine_->checkInput(context));
     PROCESS_CHECK(fluxEngine_->initialize(context));

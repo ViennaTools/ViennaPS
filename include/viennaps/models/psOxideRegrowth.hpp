@@ -179,10 +179,13 @@ public:
     return true;
   }
 
-  bool applyPostAdvect(const T advectedTime) override {
+  bool applyPostAdvect(const T processTime) override {
     auto &cellSet = domain->getCellSet();
     cellSet->updateMaterials();
     const auto gridDelta = cellSet->getGridDelta();
+
+    const T advectedTime = processTime - prevTime;
+    prevTime = processTime;
 
     // add byproducts
     for (size_t j = 0; j < nodes.size(); j++) {
@@ -296,6 +299,8 @@ private:
       sum->at(e) += data->at(e) * timeStep;
     }
   }
+
+  double prevTime = 0.;
 };
 } // namespace impl
 

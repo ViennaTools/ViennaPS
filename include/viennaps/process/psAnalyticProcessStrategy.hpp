@@ -54,6 +54,10 @@ private:
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));
 
+    if (context.flags.useAdvectionCallback) {
+      context.model->getAdvectionCallback()->setDomain(context.domain);
+    }
+
     return ProcessResult::SUCCESS;
   }
 
@@ -105,6 +109,15 @@ private:
     // Prepare velocity field (no fluxes for analytic processes)
     context.model->getVelocityField()->prepare(context.domain, nullptr,
                                                context.processTime);
+
+    if (Logger::getLogLevel() >= 3) {
+      if (context.domain->getCellSet()) {
+        auto const name = context.getProcessName();
+        context.domain->getCellSet()->writeVTU(
+            name + "_cellSet_" + std::to_string(context.currentIteration) +
+            ".vtu");
+      }
+    }
 
     // Perform advection, update processTime
     PROCESS_CHECK(advectionHandler_.performAdvection(context));

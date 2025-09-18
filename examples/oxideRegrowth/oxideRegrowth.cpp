@@ -74,11 +74,15 @@ int main(int argc, char **argv) {
           params.get("numLayers") * params.get("layerHeight"),
       params.get("trenchWidth"), timeStabilityFactor);
 
+  ps::AdvectionParameters advParams;
+  advParams.ignoreVoids = true;
+
   ps::Process<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("targetEtchDepth") /
                              params.get("nitrideEtchRate") * 60.);
+  process.setParameters(advParams);
   process.apply();
 
   domain->saveVolumeMesh("finalStack");
