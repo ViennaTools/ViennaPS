@@ -151,6 +151,10 @@ private:
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));
 
+    if (context.flags.useAdvectionCallback) {
+      context.model->getAdvectionCallback()->setDomain(context.domain);
+    }
+
     // Initialize flux engine
     PROCESS_CHECK(fluxEngine_->checkInput(context));
     PROCESS_CHECK(fluxEngine_->initialize(context));

@@ -125,12 +125,12 @@ advectionParams = ps.AdvectionParameters()
 advectionParams.timeStepRatio = 0.2
 
 depoProcess = ps.Process(geometry, depoModel, params["depTime"])
-depoProcess.setAdvectionParameters(advectionParams)
+depoProcess.setParameters(advectionParams)
 if useGPU:
     depoProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 etchProcess = ps.Process(geometry, etchModel, params["etchTime"])
-etchProcess.setAdvectionParameters(advectionParams)
+etchProcess.setParameters(advectionParams)
 if useGPU:
     etchProcess.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 

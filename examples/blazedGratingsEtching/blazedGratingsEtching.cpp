@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
   };
 
   Process<NumericType, D> process(geometry, model);
-  process.setAdvectionParameters(advParams);
-  process.setRayTracingParameters(rayTracingParams);
+  process.setParameters(advParams);
+  process.setParameters(rayTracingParams);
 
   // ANSGM Etch
   NumericType angle = params.get("phi1");

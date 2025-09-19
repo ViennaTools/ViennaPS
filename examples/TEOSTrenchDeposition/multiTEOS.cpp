@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
-  process.setRayTracingParameters(rayParams);
+  process.setParameters(rayParams);
   process.setProcessDuration(params.get("processTime"));
 
   geometry->saveVolumeMesh("MulitTEOS_initial");

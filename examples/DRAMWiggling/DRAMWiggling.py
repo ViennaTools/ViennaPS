@@ -66,9 +66,9 @@ process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])  # seconds
-process.setCoverageParameters(coverageParameters)
-process.setRayTracingParameters(rayTracingParams)
-process.setAdvectionParameters(advectionParams)
+process.setParameters(coverageParameters)
+process.setParameters(rayTracingParams)
+process.setParameters(advectionParams)
 
 # print initial surface
 geometry.saveSurfaceMesh(filename="DRAM_Initial.vtp", addMaterialIds=True)

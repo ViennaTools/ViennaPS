@@ -50,7 +50,7 @@ rayParams.raysPerPoint = int(params["numRaysPerPoint"])
 process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setRayTracingParameters(rayParams)
+process.setParameters(rayParams)
 process.setProcessDuration(params["processTime"])
 
 geometry.saveVolumeMesh("MultiTEOS_initial.vtp")

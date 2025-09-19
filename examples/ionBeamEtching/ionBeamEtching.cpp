@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("processTime"));
-  process.setAdvectionParameters(advectionParams);
+  process.setParameters(advectionParams);
 
   geometry->saveHullMesh("initial");
 

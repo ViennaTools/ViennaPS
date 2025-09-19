@@ -69,9 +69,9 @@ int main(int argc, char **argv) {
   process.setDomain(geometry);
   process.setProcessModel(model);
   process.setProcessDuration(params.get("processTime"));
-  process.setAdvectionParameters(advectionParams);
-  process.setRayTracingParameters(rayParams);
-  process.setCoverageParameters(coverageParams);
+  process.setParameters(advectionParams);
+  process.setParameters(rayParams);
+  process.setParameters(coverageParams);
 
   // print initial surface
   geometry->saveSurfaceMesh("DRAM_Initial.vtp");

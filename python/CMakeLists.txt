@@ -88,12 +88,8 @@ if(VIENNAPS_USE_GPU)
   target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                              PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
 
-  add_custom_command(
-    TARGET ${VIENNAPS_PYTHON_MODULE_NAME}
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${VIENNACORE_PTX_DIR}"
-            "${CMAKE_SOURCE_DIR}/python/${VIENNAPS_PYTHON_MODULE_NAME}/ptx"
-    COMMENT "Copying .ptx and .optixir files to Python package directory")
+  # Install PTX files
+  install(DIRECTORY "${VIENNACORE_PTX_DIR}/" DESTINATION "${VIENNAPS_PYTHON_PACKAGE_NAME}/ptx")
 endif()
 
 # Install into site-packages/<pkg>/  (RELATIVE path!)

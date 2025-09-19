@@ -71,8 +71,8 @@ rayParams = ps.RayTracingParameters()
 rayParams.raysPerPoint = int(params["numRaysPerPoint"])
 
 ALP = ps.d2.Process(geometry, model)
-ALP.setRayTracingParameters(rayParams)
-ALP.setAtomicLayerProcessParameters(alpParams)
+ALP.setParameters(rayParams)
+ALP.setParameters(alpParams)
 ALP.apply()
 
 ## TODO: Implement MeasureProfile in Python

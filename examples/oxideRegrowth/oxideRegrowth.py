@@ -15,10 +15,9 @@ import viennaps as ps
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps.d2 as psd
 else:
     print("Running 3D simulation.")
-    import viennaps.d3 as psd
+ps.setDimension(args.dim)
 
 params = ps.readConfigFile(args.filename)
 
@@ -48,14 +47,14 @@ if 0.5 * stability <= params["gridDelta"]:
     sys.exit(-1)
 
 # Create domain
-geometry = psd.Domain(
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
 )
 
 # Create stack geometry
-psd.MakeStack(
+ps.MakeStack(
     domain=geometry,
     numLayers=int(params["numLayers"]),
     layerHeight=params["layerHeight"],
@@ -91,7 +90,7 @@ if args.dim == 3:
 cell_set.buildNeighborhood()
 
 # Create redeposition model
-model = psd.OxideRegrowth(
+model = ps.OxideRegrowth(
     params["nitrideEtchRate"] / 60.0,
     params["oxideEtchRate"] / 60.0,
     params["redepositionRate"],
@@ -106,11 +105,15 @@ model = psd.OxideRegrowth(
     TIME_STABILITY_FACTOR,
 )
 
+advParams = ps.AdvectionParameters()
+advParams.ignoreVoids = True
+
 # Run process
-process = psd.Process()
+process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["targetEtchDepth"] / params["nitrideEtchRate"] * 60.0)
+process.setParameters(advParams)
 process.apply()
 
 # Save output mesh

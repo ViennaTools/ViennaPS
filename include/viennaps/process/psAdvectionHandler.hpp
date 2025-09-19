@@ -85,7 +85,15 @@ public:
     }
 
     context.timeStep = advectionKernel_.getAdvectedTime();
-    context.processTime += context.timeStep;
+    if (context.timeStep == std::numeric_limits<double>::max()) {
+      Logger::getInstance()
+          .addWarning(
+              "Process terminated early: Velocities are zero everywhere.")
+          .print();
+      context.processTime = context.processDuration;
+    } else {
+      context.processTime += context.timeStep;
+    }
 
     return ProcessResult::SUCCESS;
   }

@@ -189,7 +189,7 @@ model = ps.IsotropicProcess(rate=-1.0, maskMaterial=masks)
 advParams = ps.AdvectionParameters()
 advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
 process = ps.Process(domain, model, 5.0)
-process.setAdvectionParameters(advParams)
+process.setParameters(advParams)
 process.apply()
 print(" done")
 writeSurface(domain)
@@ -209,7 +209,7 @@ material = [
 ]
 model = ps.SelectiveEpitaxy(materialRates=material)
 process = ps.Process(domain, model, 14.0)
-process.setAdvectionParameters(advectionParams)
+process.setParameters(advectionParams)
 process.apply()
 print(" done")
 writeSurface(domain)

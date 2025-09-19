@@ -65,7 +65,7 @@ process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])
-process.setAdvectionParameters(advParams)
+process.setParameters(advParams)
 
 geometry.saveHullMesh("initial")
 

@@ -64,7 +64,7 @@ process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(5.0 * 60.0)  # 5 minutes of etching
-process.setAdvectionParameters(advectionParams)
+process.setParameters(advectionParams)
 
 for n in range(minutes):
     # run process

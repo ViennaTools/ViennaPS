@@ -1216,35 +1216,47 @@ template <int D> void bindApi(py::module &module) {
           py::arg("maxDissipation"));
 
   // Process
-  py::class_<Process<T, D>>(module, "Process", py::module_local())
+  using ProcessTD = Process<T, D>;
+  py::class_<ProcessTD>(module, "Process", py::module_local())
       // constructors
       .def(py::init())
       .def(py::init<DomainType>(), py::arg("domain"))
       .def(py::init<DomainType, SmartPointer<ProcessModelBase<T, D>>, T>(),
            py::arg("domain"), py::arg("model"), py::arg("duration") = 0.)
       // methods
-      .def("apply", &Process<T, D>::apply,
+      .def("apply", &ProcessTD::apply,
            //  py::call_guard<py::gil_scoped_release>(),
            "Run the process.")
-      .def("calculateFlux", &Process<T, D>::calculateFlux,
+      .def("calculateFlux", &ProcessTD::calculateFlux,
            //  py::call_guard<py::gil_scoped_release>(),
            "Perform a single-pass flux calculation.")
-      .def("setDomain", &Process<T, D>::setDomain, "Set the process domain.")
-      .def("setProcessModel", &Process<T, D>::setProcessModel,
+      .def("setDomain", &ProcessTD::setDomain, "Set the process domain.")
+      .def("setProcessModel", &ProcessTD::setProcessModel,
            "Set the process model. This has to be a pre-configured process "
            "model.")
-      .def("setProcessDuration", &Process<T, D>::setProcessDuration,
+      .def("setProcessDuration", &ProcessTD::setProcessDuration,
            "Set the process duration.")
-      .def("setFluxEngineType", &Process<T, D>::setFluxEngineType,
+      .def("setFluxEngineType", &ProcessTD::setFluxEngineType,
            "Set the flux engine type (CPU or GPU).")
-      .def("setAdvectionParameters", &Process<T, D>::setAdvectionParameters,
+      .def("setParameters",
+           (void(ProcessTD::*)(const AdvectionParameters &)) &
+               ProcessTD::template setParameters<AdvectionParameters>,
+           py::arg("parameters"),
            "Set the advection parameters for the process.")
-      .def("setRayTracingParameters", &Process<T, D>::setRayTracingParameters,
+      .def("setParameters",
+           (void(ProcessTD::*)(const RayTracingParameters &)) &
+               ProcessTD::template setParameters<RayTracingParameters>,
+           py::arg("parameters"),
            "Set the ray tracing parameters for the process.")
-      .def("setCoverageParameters", &Process<T, D>::setCoverageParameters,
+      .def("setParameters",
+           (void(ProcessTD::*)(const CoverageParameters &)) &
+               ProcessTD::template setParameters<CoverageParameters>,
+           py::arg("parameters"),
            "Set the coverage parameters for the process.")
-      .def("setAtomicLayerProcessParameters",
-           &Process<T, D>::setAtomicLayerProcessParameters,
+      .def("setParameters",
+           (void(ProcessTD::*)(const AtomicLayerProcessParameters &)) &
+               ProcessTD::template setParameters<AtomicLayerProcessParameters>,
+           py::arg("parameters"),
            "Set the atomic layer parameters for the process.");
 
   // ***************************************************************************
