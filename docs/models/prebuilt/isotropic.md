@@ -69,7 +69,7 @@ Python
 {: .label .label-green}
 </summary>
 ```python
-import viennaps2d as vps
+import viennaps as vps
 
 domain = vps.Domain()
 vps.MakeTrench(domain=domain,
@@ -138,7 +138,7 @@ Python
 {: .label .label-green}
 </summary>
 ```python
-import viennaps2d as vps
+import viennaps as vps
 
 domain = vps.Domain()
 vps.MakeTrench(domain=domain,

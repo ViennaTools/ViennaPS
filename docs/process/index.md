@@ -55,9 +55,9 @@ process.apply()
 ## Process Parameters
 
 {: .note }
-> Advanced process parameters, as described in this section are available from version 3.3.0
+> Advanced process parameters, as described in this section are available from version **4.0.0**
 
-Expert users can set specific parameter for the Level-Set integration and Ray Tracing flux calculation steps using the advanced parameters structs `AdvectionParameters` and `RayTracingParameters`. These parameter structs contain:
+Expert users can set specific parameter for the Level-Set integration and Ray Tracing flux calculation steps using the advanced parameters structs `AdvectionParameters`, `RayTracingParameters`, `CoverageParameters`, and `AtomicLayerProcessParameters`. These parameter structs contain:
 
 __AdvectionParameters:__
 
@@ -73,13 +73,28 @@ __RayTracingParameters:__
 
 | Parameter            | Type                        | Default Value                             | Description |
 |----------------------|---------------------------|-------------------------------------------|-------------|
-| `sourceDirection`    | `TraceDirection`          | `POS_Z` (if `D == 3`), `POS_Y` (otherwise) | Direction of the ray source. |
 | `normalizationType`  | `NormalizationType`       | `SOURCE`                                  | Type of normalization used. Other option `MAX`. |
 | `raysPerPoint`       | `unsigned`                | `1000`                                    | Number of rays to trace per point in the geometry. |
 | `diskRadius`        | `NumericType`             | `0`                                      | Radius of the disks in the ray tracing geometry. If this value is 0 the default disk radius is used, which is the minimum radius such that there are no holes in the geometry. |
 | `useRandomSeeds`     | `bool`                     | `true`                                    | Whether to use random seeds. |
 | `ignoreFluxBoundaries` | `bool`                 | `false`                                   | Whether to ignore boundary condtions during ray tracing. |
 | `smoothingNeighbors` | `int`                     | `1`                                       | Number of neighboring points used for smoothing the flux after ray tracing. |
+
+__CoverageParameters:__
+
+| Parameter                | Type         | Default Value | Description |
+|--------------------------|-------------|---------------|-------------|
+| `maxIterations`        | `unsigned`   | `10`          | The maximum number of iterations to initialize the coverages. If additionally the coverage delta threshold is set, the coverage initialization is considered converged if the coverage delta is below the threshold or the maximum number of iterations is reached. |
+| `coverageDeltaThreshold`       | `NumericType`| `0`           | Threshold for the coverage delta metric to reach convergence. If the coverage delta is below this threshold, the coverage initialization is considered converged. |
+
+__AtomicLayerProcessParameters:__
+
+| Parameter                | Type         | Default Value | Description |
+|--------------------------|-------------|---------------|-------------|
+| `numCycles`        | `unsigned`   | `1`          | The number of ALP cycles to perform. |
+| `pulseTime`       | `NumericType`| `1.0`         | The duration of each pulse. |
+| `coverageTimeStep`       | `NumericType`| `1.0`        | The time step used for coverage update. |
+| `purgePulseTime`       | `NumericType`| `0.0`         | The duration of each purge step. |
 
 __Example usage:__
 
@@ -101,8 +116,8 @@ tracingParams.raysPerPoint = 500
 tracingParams.smoothingNeighbors = 0 // disable flux smoothing
 
 Process<NumericType, D> process(myDomain, myModel, duration);
-process.setAdvectionParameters(advParams)
-process.setRayTracingParameters(tracingParams)
+process.setParameters(advParams)
+process.setParameters(tracingParams)
 process.apply();
 ...
 ```
@@ -125,8 +140,8 @@ tracingParams.raysPerPoint = 500
 tracingParams.smoothingNeighbors = 0 # disable flux smoothing
 
 process = vps.Process(myDomain, myModel, duration)
-process.setAdvectionParameters(advParams)
-process.setRayTracingParameters(tracingParams)
+process.setParameters(advParams)
+process.setParameters(tracingParams)
 process.apply()
 ...
 ```
@@ -169,14 +184,6 @@ void setProcessModel(SmartPointer<ProcessModel<NumericType, D>> passedProcessMod
 Sets the process model. This can be either a pre-configured process model or a custom process model. 
 
 ---
-### Set the source direction
-```c++
-void setSourceDirection(const viennaray::TraceDirection passedDirection)
-```
-Set the source direction, where the rays should be traced from. The passed direction parameter is using the enum `viennaray::TraceDirection` which contains the following values:
-`POS_X`, `NEG_X`, `POS_Y`, `NEG_Y`, `POS_Z`, `NEG_Z`.
-
----
 ### Set the process duration
 ```c++
 void setProcessDuration(NumericType passedDuration)
@@ -190,84 +197,17 @@ SmartPointer<viennals::Mesh<NumericType>> calculateFlux()
 ```
 Calculate the flux(es) for the current process. This function returns a smart pointer to a `viennals::Mesh<NumericType>` object containing the disk mesh and flux data.
 
----
-### Set the number of coverage initialization iterations
-```c++
-void setMaxCoverageInitIterations(unsigned numIter)
-```
-Set the maximum number of iterations to initialize the coverages. If additionally the coverage delta threshold is set, the coverage initialization is considered converged if the coverage delta is below the threshold or the maximum number of iterations is reached.
-
---- 
-### Set coverage delta threshold
-```c++
-void setCoverageDeltaThreshold(NumericType threshold)
-```
-Set the threshold for the coverage delta metric to reach convergence. If the coverage delta is below this threshold, the coverage initialization is considered converged. During a process, if the coverage delta is higher than this threshold, the flux calculation is repeated.
 
 ---
-### Set the advection parameters
+### Set parameters
 ```c++
-void setAdvectionParameters(const AdvectionParameters<NumericType>& passedAdvectionParameters)
+void setParameters(const AdvectionParameters<NumericType>& passedAdvectionParameters)
 ```
-Set the advection parameters for the level-set integration. The advection parameters are defined in the `AdvectionParameters` struct.
-
----
-### Set the ray tracing parameters
-```c++
-void setRayTracingParameters(const RayTracingParameters<NumericType, D>& passedRayTracingParameters)
-```
-Set the ray tracing parameters for the flux calculation. The ray tracing parameters are defined in the `RayTracingParameters` struct.
+Pass a parameters struct to set process parameters. Parameter structs can be of type `AdvectionParameters`, `RayTracingParameters`, or `CoverageParameters`.
 
 ---
 
 {: .note }
-> The following functions are used to set parameters in the `AdvectionParameters` and `RayTracingParameters` structs. 
-> From version **3.3.0**, it is recommended to use the `setAdvectionParameters` and `setRayTracingParameters` functions to set these parameters.
+> From version **4.0.0**, direct access to the parameter is deprecated. Use the parameter struct setter functions instead.
 
----
-### Set the number of rays to be traced
-```c++
-void setNumberOfRaysPerPoint(unsigned raysPerPoint)
-```
-Specify the number of rays to be traced for each particle throughout the process. The total count of rays is the product of this number and the number of points in the process geometry.
-
----
-### Enable or disable flux smoothing
-```c++
-void enableFluxSmoothing()
-void disableFluxSmoothing()
-```
-Toggle the option to enable or disable flux smoothing. When flux smoothing is activated, the flux at each surface point, computed by the ray tracer, undergoes averaging across the neighboring surface points. Per default, flux smoothing is enabled.
-
----
-### Enable or disable flux boundary conditions
-```c++
-void enableFluxBoundaries()
-void disableFluxBoundaries()
-```
-Toggle the option to enable or disable flux boundary conditions. When flux boundary conditions are disabled, particles are allowed to leave the domain without being reflected back into the domain. Per default, flux boundary conditions are enabled.
-
----
-### Enable or disable random seeds
-```c++
-void enableRandomSeeds()
-void disableRandomSeeds()
-```
-Toggle the option to enable or disable random seeds. When random seeds are enabled, the random number generator is seeded with a random value, making the results generally not perfectly reproducible. Per default, random seeds are enabled.
-
----
-### Set the integration scheme
-```c++
-void
-setIntegrationScheme(lsIntegrationSchemeEnum passedIntegrationScheme)
-```
-Set the integration scheme for solving the level-set equation.
-Possible integration schemes are specified in [`viennals::IntegrationSchemeEnum`](https://viennatools.github.io/ViennaLS/namespaceviennals.html#a939e6f11eed9a003a0723a255290377f).
-
----
-### Set the time step ratio
-```c++
-void setTimeStepRatio(NumericType cfl)
-```
-Set the CFL (Courant-Friedrichs-Levy) condition to use during surface advection in the level-set. The CFL condition defines the maximum distance a surface is allowed to move in a single advection step. It MUST be below 0.5 to guarantee numerical stability. Defaults to 0.4999.
 

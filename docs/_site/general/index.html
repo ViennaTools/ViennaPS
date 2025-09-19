@@ -2,6 +2,7 @@
 
 <span class="c1">// Creating a new domain</span>
 <span class="k">auto</span> <span class="n">domain</span> <span class="o">=</span> <span class="n">SmartPointer</span><span class="o">&lt;</span><span class="n">Domain</span><span class="o">&lt;</span><span class="n">NumericType</span><span class="p">,</span> <span class="n">D</span><span class="o">&gt;&gt;::</span><span class="n">New</span><span class="p">();</span>
+<span class="k">auto</span> <span class="n">domain</span> <span class="o">=</span> <span class="n">Domain</span><span class="o">&lt;</span><span class="n">NumericType</span><span class="p">,</span> <span class="n">D</span><span class="o">&gt;::</span><span class="n">New</span><span class="p">();</span> <span class="c1">// Shorter syntax but does the same</span>
 
 <span class="c1">// Using a pre-built model</span>
 <span class="k">auto</span> <span class="n">model</span> <span class="o">=</span> <span class="n">SmartPointer</span><span class="o">&lt;</span><span class="n">IsotropicProcess</span><span class="o">&lt;</span><span class="n">NumericType</span><span class="p">,</span> <span class="n">D</span><span class="o">&gt;&gt;::</span><span class="n">New</span><span class="p">(</span><span class="cm">/*pass constructor arguments*/</span><span class="p">);</span>

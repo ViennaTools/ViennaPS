@@ -38,6 +38,7 @@ using namespace viennaps;
 
 // Creating a new domain
 auto domain = SmartPointer<Domain<NumericType, D>>::New();
+auto domain = Domain<NumericType, D>::New(); // Shorter syntax but does the same
 
 // Using a pre-built model
 auto model = SmartPointer<IsotropicProcess<NumericType, D>>::New(/*pass constructor arguments*/);

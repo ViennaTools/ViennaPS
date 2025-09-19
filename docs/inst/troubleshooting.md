@@ -73,8 +73,8 @@ Table of compatibility between ViennaPS and ViennaLS versions:
 | ViennaPS Package | ViennaLS Package  | Compatible |
 |:------------------|:-------------------| :--------|
 | Local Build      | Local Build       | Yes &#9989;    |
-| Local Build      | PyPI              | No &#10060;   |
-| PyPI             | Local Build       | No &#10060;   |
+| Local Build      | PyPI              | No &#10060;    |
+| PyPI             | Local Build       | No &#10060;    |
 | PyPI             | PyPI              | Yes &#9989;    |
 
 
@@ -99,7 +99,7 @@ You can get it from:
 
 After downloading or locating the DLL:
 
-* Either copy it into the folder containing `viennaps2d.cp*.pyd`
+* Either copy it into the folder containing `_core.cp*.pyd`
 * Or add the folder containing the DLL to your system `PATH`
 
 Once the DLL is accessible, the import should work correctly.
