@@ -91,8 +91,9 @@ public:
     auto levelSet =
         lsDomainType::New(bounds_, boundaryConds_.data(), gridDelta_);
     viennals::Extrude<NumericType>(
-        GDSLevelSet, levelSet, {baseHeight - gridDelta_, height + gridDelta_},
-        2, boundaryConds_)
+        GDSLevelSet, levelSet,
+        {baseHeight - gridDelta_, baseHeight + height + gridDelta_}, 2,
+        boundaryConds_)
         .apply();
 
     if (mask) {

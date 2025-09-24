@@ -524,11 +524,17 @@ template <int D> void bindApi(py::module &module) {
           "print",
           [](Domain<T, D> &self, bool hrle) { self.print(std::cout, hrle); },
           "Print the domain information.", py::arg("hrleInfo") = false)
+      .def("getLevelSetMesh", &Domain<T, D>::getLevelSetMesh,
+           py::arg("width") = 1,
+           "Get the level set grids of layers in the domain.")
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            py::arg("filename"), py::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
+      .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
+           py::arg("addMaterialIds") = true,
+           "Get the surface mesh of the domain")
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
-           py::arg("filename"), py::arg("addMaterialIds") = false,
+           py::arg("filename"), py::arg("addMaterialIds") = true,
            "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh, py::arg("filename"),
            py::arg("wrappingLayerEpsilon") = 1e-2,
