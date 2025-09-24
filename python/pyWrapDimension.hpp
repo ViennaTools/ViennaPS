@@ -1245,22 +1245,22 @@ template <int D> void bindApi(py::module &module) {
       .def("setFluxEngineType", &ProcessTD::setFluxEngineType,
            "Set the flux engine type (CPU or GPU).")
       .def("setParameters",
-           (void (ProcessTD::*)(const AdvectionParameters &)) &
+           (void(ProcessTD::*)(const AdvectionParameters &)) &
                ProcessTD::template setParameters<AdvectionParameters>,
            py::arg("parameters"),
            "Set the advection parameters for the process.")
       .def("setParameters",
-           (void (ProcessTD::*)(const RayTracingParameters &)) &
+           (void(ProcessTD::*)(const RayTracingParameters &)) &
                ProcessTD::template setParameters<RayTracingParameters>,
            py::arg("parameters"),
            "Set the ray tracing parameters for the process.")
       .def("setParameters",
-           (void (ProcessTD::*)(const CoverageParameters &)) &
+           (void(ProcessTD::*)(const CoverageParameters &)) &
                ProcessTD::template setParameters<CoverageParameters>,
            py::arg("parameters"),
            "Set the coverage parameters for the process.")
       .def("setParameters",
-           (void (ProcessTD::*)(const AtomicLayerProcessParameters &)) &
+           (void(ProcessTD::*)(const AtomicLayerProcessParameters &)) &
                ProcessTD::template setParameters<AtomicLayerProcessParameters>,
            py::arg("parameters"),
            "Set the atomic layer parameters for the process.");
