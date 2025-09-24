@@ -458,11 +458,9 @@ public:
     }
   }
 
-  // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
-  void saveSurfaceMesh(std::string fileName, bool addMaterialIds = true) {
-
+  SmartPointer<viennals::Mesh<NumericType>>
+  getSurfaceMesh(bool addMaterialIds = true) const {
     auto mesh = viennals::Mesh<NumericType>::New();
-
     if (addMaterialIds) {
       viennals::ToDiskMesh<NumericType, D> meshConverter;
       meshConverter.setMesh(mesh);
@@ -479,6 +477,12 @@ public:
     }
 
     viennals::ToSurfaceMesh<NumericType, D>(levelSets_.back(), mesh).apply();
+    return mesh;
+  }
+
+  // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
+  void saveSurfaceMesh(std::string fileName, bool addMaterialIds = true) {
+    auto mesh = getSurfaceMesh(addMaterialIds);
     viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();

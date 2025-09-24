@@ -527,8 +527,11 @@ template <int D> void bindApi(py::module &module) {
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            py::arg("filename"), py::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
+      .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
+           py::arg("addMaterialIds") = true,
+           "Get the surface mesh of the domain")
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
-           py::arg("filename"), py::arg("addMaterialIds") = false,
+           py::arg("filename"), py::arg("addMaterialIds") = true,
            "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh, py::arg("filename"),
            py::arg("wrappingLayerEpsilon") = 1e-2,
@@ -1239,23 +1242,27 @@ template <int D> void bindApi(py::module &module) {
       .def("setFluxEngineType", &ProcessTD::setFluxEngineType,
            "Set the flux engine type (CPU or GPU).")
       .def("setParameters",
-           (void(ProcessTD::*)(const AdvectionParameters &)) &
-               ProcessTD::template setParameters<AdvectionParameters>,
+           (void (ProcessTD::*)(
+               const AdvectionParameters
+                   &))&ProcessTD::template setParameters<AdvectionParameters>,
            py::arg("parameters"),
            "Set the advection parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const RayTracingParameters &)) &
-               ProcessTD::template setParameters<RayTracingParameters>,
+           (void (ProcessTD::*)(
+               const RayTracingParameters
+                   &))&ProcessTD::template setParameters<RayTracingParameters>,
            py::arg("parameters"),
            "Set the ray tracing parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const CoverageParameters &)) &
-               ProcessTD::template setParameters<CoverageParameters>,
+           (void (ProcessTD::*)(
+               const CoverageParameters
+                   &))&ProcessTD::template setParameters<CoverageParameters>,
            py::arg("parameters"),
            "Set the coverage parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const AtomicLayerProcessParameters &)) &
-               ProcessTD::template setParameters<AtomicLayerProcessParameters>,
+           (void (ProcessTD::*)(
+               const AtomicLayerProcessParameters &))&ProcessTD::
+               template setParameters<AtomicLayerProcessParameters>,
            py::arg("parameters"),
            "Set the atomic layer parameters for the process.");
 
