@@ -21,12 +21,14 @@ template <class NumericType, int D> void RunTest() {
   units::Length::getInstance().setUnit("nm");
 
   // default constructors
-  { auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New(); }
+  {
+    auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New();
+  }
 
   // fluorocarbon etching
   {
-    auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(
-        1., 1., 1., 1., 1.);
+    auto params = FluorocarbonParameters<NumericType>();
+    auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(params);
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
     VC_TEST_ASSERT(model->getParticleTypes().size() == 3);

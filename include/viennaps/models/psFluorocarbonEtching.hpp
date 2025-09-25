@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "../process/psProcessModel.hpp"
+#include "../psConstants.hpp"
 #include "../psMaterials.hpp"
 #include "../psUnits.hpp"
 
@@ -22,6 +23,31 @@ using namespace viennacore;
 // Electrochemical Society 150(10) 2003 pp. 1896-1902
 
 template <typename NumericType> struct FluorocarbonParameters {
+
+  struct MaterialParameters {
+    // density
+    NumericType density = 2.2; // 1e22 atoms/cm³
+
+    // sticking
+    NumericType beta_p = 0.26;
+    NumericType beta_e = 0.9;
+
+    // sputtering coefficients
+    NumericType Eth_sp = 18.; // eV
+    NumericType Eth_ie = 4.;  // eV
+    NumericType A_sp = 0.0139;
+    NumericType B_sp = 9.3;
+    NumericType A_ie = 0.0361;
+
+    // chemical etching
+    NumericType K = 0.002789491704544977;
+    NumericType E_a = 0.168; // eV
+
+    Material id = Material::Undefined;
+  };
+
+  std::vector<MaterialParameters> materials;
+
   // fluxes in (1e15 /cm² /s)
   NumericType ionFlux = 56.;
   NumericType etchantFlux = 500.;
@@ -34,81 +60,6 @@ template <typename NumericType> struct FluorocarbonParameters {
   NumericType k_ie = 2.;
   NumericType k_ev = 2.;
 
-  NumericType beta_pe = 0.6;
-  NumericType beta_p = 0.26;
-  NumericType beta_e = 0.9;
-
-  // Mask
-  struct MaskType {
-    NumericType rho = 500.; // 1e22 atoms/cm³
-    NumericType beta_p = 0.01;
-    NumericType beta_e = 0.1;
-
-    NumericType A_sp = 0.0139;
-    NumericType B_sp = 9.3;
-    NumericType Eth_sp = 20.; // eV
-  } Mask;
-
-  // SiO2
-  struct SiO2Type {
-    // density
-    NumericType rho = 2.2; // 1e22 atoms/cm³
-
-    // sputtering coefficients
-    NumericType Eth_sp = 18.; // eV
-    NumericType Eth_ie = 4.;  // eV
-    NumericType A_sp = 0.0139;
-    NumericType B_sp = 9.3;
-    NumericType A_ie = 0.0361;
-
-    // chemical etching
-    NumericType K = 0.002789491704544977;
-    NumericType E_a = 0.168; // eV
-  } SiO2;
-
-  // Polymer
-  struct PolymerType {
-    NumericType rho = 2.; // 1e22 atoms/cm³
-
-    // sputtering coefficients
-    NumericType Eth_ie = 4.; // eV
-    NumericType A_ie = 0.0361 * 4;
-  } Polymer;
-
-  // Si3N4
-  struct Si3N4Type {
-    // density
-    NumericType rho = 2.3; // 1e22 atoms/cm³
-
-    // sputtering coefficients
-    NumericType Eth_sp = 18.; // eV
-    NumericType Eth_ie = 4.;  // eV
-    NumericType A_sp = 0.0139;
-    NumericType B_sp = 9.3;
-    NumericType A_ie = 0.0361;
-
-    // chemical etching
-    NumericType K = 0.002789491704544977;
-    NumericType E_a = 0.168; // eV
-  } Si3N4;
-
-  // Si
-  struct SiType {
-    // density
-    NumericType rho = 5.02; // 1e22 atoms/cm³
-
-    // sputtering coefficients
-    NumericType Eth_sp = 20.; // eV
-    NumericType Eth_ie = 4.;  // eV
-    NumericType A_sp = 0.0337;
-    NumericType B_sp = 9.3;
-    NumericType A_ie = 0.0361;
-
-    // chemical etching
-    NumericType K = 0.029997010728956663;
-    NumericType E_a = 0.108; // eV
-  } Si;
-
   struct IonType {
     NumericType meanEnergy = 100.; // eV
     NumericType sigmaEnergy = 10.; // eV
@@ -119,8 +70,22 @@ template <typename NumericType> struct FluorocarbonParameters {
     NumericType minAngle = 1.3962634;
   } Ions;
 
-  // fixed
-  static constexpr double kB = 8.617333262 * 1e-5; // eV / K
+  void addMaterial(const MaterialParameters &material) {
+    materials.push_back(material);
+  }
+
+  auto getMaterialParameters(const Material material) const
+      -> MaterialParameters {
+    for (const auto &m : materials) {
+      if (m.id == material)
+        return m;
+    }
+    Logger::getInstance()
+        .addError("Material " + MaterialMap::getMaterialName(material) +
+                  " not found in fluorocarbon parameters.")
+        .print();
+    return MaterialParameters{};
+  }
 
   auto toProcessMetaData() const {
     std::unordered_map<std::string, std::vector<double>> processData;
@@ -133,45 +98,25 @@ template <typename NumericType> struct FluorocarbonParameters {
     processData["temperature"] = std::vector<double>{temperature};
     processData["k_ie"] = std::vector<double>{k_ie};
     processData["k_ev"] = std::vector<double>{k_ev};
-    processData["beta_pe"] = std::vector<double>{beta_pe};
-    processData["beta_p"] = std::vector<double>{beta_p};
-    processData["beta_e"] = std::vector<double>{beta_e};
-    processData["Mask Rho"] = std::vector<double>{Mask.rho};
-    processData["Mask Beta_P"] = std::vector<double>{Mask.beta_p};
-    processData["Mask Beta_E"] = std::vector<double>{Mask.beta_e};
-    processData["Mask A_sp"] = std::vector<double>{Mask.A_sp};
-    processData["Mask B_sp"] = std::vector<double>{Mask.B_sp};
-    processData["Mask E_th_sp"] = std::vector<double>{Mask.Eth_sp};
-    processData["SiO2 Rho"] = std::vector<double>{SiO2.rho};
-    processData["SiO2 E_th_sp"] = std::vector<double>{SiO2.Eth_sp};
-    processData["SiO2 E_th_ie"] = std::vector<double>{SiO2.Eth_ie};
-    processData["SiO2 A_Sp"] = std::vector<double>{SiO2.A_sp};
-    processData["SiO2 B_sp"] = std::vector<double>{SiO2.B_sp};
-    processData["SiO2 K"] = std::vector<double>{SiO2.K};
-    processData["SiO2 E_a"] = std::vector<double>{SiO2.E_a};
-    processData["Polymer Rho"] = std::vector<double>{Polymer.rho};
-    processData["Polymer E_th_ie"] = std::vector<double>{Polymer.Eth_ie};
-    processData["Polymer A_ie"] = std::vector<double>{Polymer.A_ie};
-    processData["Si3N4 Rho"] = std::vector<double>{Si3N4.rho};
-    processData["Si3N4 E_th_sp"] = std::vector<double>{Si3N4.Eth_sp};
-    processData["Si3N4 E_th_ie"] = std::vector<double>{Si3N4.Eth_ie};
-    processData["Si3N4 A_Sp"] = std::vector<double>{Si3N4.A_sp};
-    processData["Si3N4 B_sp"] = std::vector<double>{Si3N4.B_sp};
-    processData["Si3N4 K"] = std::vector<double>{Si3N4.K};
-    processData["Si3N4 EA"] = std::vector<double>{Si3N4.E_a};
-    processData["Si Rho"] = std::vector<double>{Si.rho};
-    processData["Si E_th_sp"] = std::vector<double>{Si.Eth_sp};
-    processData["Si E_th_ie"] = std::vector<double>{Si.Eth_ie};
-    processData["Si A_Sp"] = std::vector<double>{Si.A_sp};
-    processData["Si B_sp"] = std::vector<double>{Si.B_sp};
-    processData["Si K"] = std::vector<double>{Si.K};
-    processData["Si E_a"] = std::vector<double>{Si.E_a};
     processData["Ion MeanEnergy"] = std::vector<double>{Ions.meanEnergy};
     processData["Ion SigmaEnergy"] = std::vector<double>{Ions.sigmaEnergy};
     processData["Ion Exponent"] = std::vector<double>{Ions.exponent};
     processData["Ion InflectAngle"] = std::vector<double>{Ions.inflectAngle};
     processData["Ion n_k"] = std::vector<double>{Ions.n_l};
     processData["Ion MinAngle"] = std::vector<double>{Ions.minAngle};
+    for (auto mat : materials) {
+      std::string prefix = MaterialMap::getMaterialName(mat.id) + " ";
+      processData[prefix + "density"] = std::vector<double>{mat.density};
+      processData[prefix + "beta_p"] = std::vector<double>{mat.beta_p};
+      processData[prefix + "beta_e"] = std::vector<double>{mat.beta_e};
+      processData[prefix + "Eth_sp"] = std::vector<double>{mat.Eth_sp};
+      processData[prefix + "Eth_ie"] = std::vector<double>{mat.Eth_ie};
+      processData[prefix + "A_sp"] = std::vector<double>{mat.A_sp};
+      processData[prefix + "B_sp"] = std::vector<double>{mat.B_sp};
+      processData[prefix + "A_ie"] = std::vector<double>{mat.A_ie};
+      processData[prefix + "K"] = std::vector<double>{mat.K};
+      processData[prefix + "E_a"] = std::vector<double>{mat.E_a};
+    }
 
     return processData;
   }
@@ -204,7 +149,7 @@ public:
   }
 
   void initializeSurfaceData(unsigned numGeometryPoints) override {
-    if (Logger::getLogLevel() > 3) {
+    if (Logger::getLogLevel() >= 3) {
       if (surfaceData == nullptr) {
         surfaceData = viennals::PointData<NumericType>::New();
       } else {
@@ -239,7 +184,7 @@ public:
     // save the etch rate components for visualization
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
                              *chRate = nullptr;
-    if (Logger::getLogLevel() > 3) {
+    if (Logger::getLogLevel() >= 3) {
       ieRate = surfaceData->getScalarData("ionEnhancedRate");
       spRate = surfaceData->getScalarData("sputterRate");
       chRate = surfaceData->getScalarData("chemicalRate");
@@ -263,68 +208,44 @@ public:
       }
 
       auto matId = MaterialMap::mapToMaterial(materialIds[i]);
-      if (matId == Material::Mask) {
-        etchRate[i] = (-1. / p.Mask.rho) * ionSputterFlux->at(i) * p.ionFlux *
-                      unitConversion;
-      } else if (pCoverage->at(i) >= 1.) {
+      if (pCoverage->at(i) >= 1.) {
+        auto polyParams = p.getMaterialParameters(Material::Polymer);
         // Deposition
         etchRate[i] =
-            (1 / p.Polymer.rho) *
-            std::max((polyFlux->at(i) * p.polyFlux * p.beta_p -
+            (1 / polyParams.density) *
+            std::max((polyFlux->at(i) * p.polyFlux * polyParams.beta_p -
                       ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
                      (NumericType)0) *
             unitConversion;
         assert(etchRate[i] >= 0 && "Negative deposition");
+      } else if (matId == Material::Mask) {
+        auto maskParams = p.getMaterialParameters(Material::Mask);
+        etchRate[i] = (-1. / maskParams.density) * ionSputterFlux->at(i) *
+                      p.ionFlux * unitConversion;
       } else if (matId == Material::Polymer) {
+        auto polyParams = p.getMaterialParameters(Material::Polymer);
         // Etching depo layer
         etchRate[i] =
-            std::min((1 / p.Polymer.rho) *
-                         (polyFlux->at(i) * p.polyFlux * p.beta_p -
+            std::min((1 / polyParams.density) *
+                         (polyFlux->at(i) * p.polyFlux * polyParams.beta_p -
                           ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
                      (NumericType)0) *
             unitConversion;
       } else {
-        NumericType density = 1.;
-        NumericType F_ev = 0.;
-        switch (matId) {
-        case Material::Si: {
-
-          density = -p.Si.rho;
-          F_ev = p.Si.K * p.etchantFlux *
-                 std::exp(-p.Si.E_a / (FluorocarbonParameters<NumericType>::kB *
-                                       p.temperature));
-          break;
-        }
-        case Material::SiO2: {
-
-          F_ev =
-              p.SiO2.K * p.etchantFlux *
-              std::exp(-p.SiO2.E_a / (FluorocarbonParameters<NumericType>::kB *
-                                      p.temperature));
-          density = -p.SiO2.rho;
-          break;
-        }
-        case Material::Si3N4: {
-
-          F_ev =
-              p.Si3N4.K * p.etchantFlux *
-              std::exp(-p.Si3N4.E_a / (FluorocarbonParameters<NumericType>::kB *
-                                       p.temperature));
-          density = -p.Si3N4.rho;
-          break;
-        }
-        default:
-          break;
-        }
+        auto matParams = p.getMaterialParameters(matId);
+        NumericType density = matParams.density;
+        NumericType F_ev =
+            matParams.K * p.etchantFlux *
+            std::exp(-matParams.E_a / (constants::kB * p.temperature));
 
         etchRate[i] =
-            (1 / density) *
+            -(1 / density) *
             (F_ev * eCoverage->at(i) +
              ionEnhancedFlux->at(i) * p.ionFlux * eCoverage->at(i) +
              ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i))) *
             unitConversion;
 
-        if (Logger::getLogLevel() > 3) {
+        if (Logger::getLogLevel() >= 3) {
           chRate->at(i) = F_ev * eCoverage->at(i);
           spRate->at(i) =
               ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i));
@@ -367,9 +288,11 @@ public:
       if (etchantFlux->at(i) == 0.) {
         peCoverage->at(i) = 0.;
       } else {
-        peCoverage->at(i) = (etchantFlux->at(i) * p.etchantFlux * p.beta_pe) /
-                            (etchantFlux->at(i) * p.etchantFlux * p.beta_pe +
-                             ionpeFlux->at(i) * p.ionFlux);
+        auto polyParams = p.getMaterialParameters(Material::Polymer);
+        peCoverage->at(i) =
+            (etchantFlux->at(i) * p.etchantFlux * polyParams.beta_e) /
+            (etchantFlux->at(i) * p.etchantFlux * polyParams.beta_e +
+             ionpeFlux->at(i) * p.ionFlux);
       }
       assert(!std::isnan(peCoverage->at(i)) && "peCoverage NaN");
     }
@@ -382,8 +305,10 @@ public:
       } else if (peCoverage->at(i) < eps || ionpeFlux->at(i) < eps) {
         pCoverage->at(i) = 1.;
       } else {
+        auto matParams =
+            p.getMaterialParameters(MaterialMap::mapToMaterial(materialIds[i]));
         pCoverage->at(i) =
-            (polyFlux->at(i) * p.polyFlux * p.beta_p) /
+            (polyFlux->at(i) * p.polyFlux * matParams.beta_p) /
             (ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i) + p.delta_p);
       }
       assert(!std::isnan(pCoverage->at(i)) && "pCoverage NaN");
@@ -396,34 +321,16 @@ public:
         if (etchantFlux->at(i) == 0.) {
           eCoverage->at(i) = 0;
         } else {
-          NumericType F_ev = 0.;
-          switch (MaterialMap::mapToMaterial(materialIds[i])) {
-          case Material::Si:
-            F_ev =
-                p.Si.K * p.etchantFlux *
-                std::exp(-p.Si.E_a / (FluorocarbonParameters<NumericType>::kB *
-                                      p.temperature));
-            break;
-          case Material::SiO2:
-            F_ev = p.SiO2.K * p.etchantFlux *
-                   std::exp(-p.SiO2.E_a /
-                            (FluorocarbonParameters<NumericType>::kB *
-                             p.temperature));
-            break;
-          case Material::Si3N4:
-            F_ev = p.Si3N4.K * p.etchantFlux *
-                   std::exp(-p.Si3N4.E_a /
-                            (FluorocarbonParameters<NumericType>::kB *
-                             p.temperature));
-            break;
-          default:
-            F_ev = 0.;
-          }
+          auto matParams = p.getMaterialParameters(
+              MaterialMap::mapToMaterial(materialIds[i]));
+          NumericType F_ev =
+              matParams.K * p.etchantFlux *
+              std::exp(-matParams.E_a / (constants::kB * p.temperature));
           eCoverage->at(i) =
-              (etchantFlux->at(i) * p.etchantFlux * p.beta_e *
+              (etchantFlux->at(i) * p.etchantFlux * matParams.beta_e *
                (1. - pCoverage->at(i))) /
               (p.k_ie * ionEnhancedFlux->at(i) * p.ionFlux + p.k_ev * F_ev +
-               etchantFlux->at(i) * p.etchantFlux * p.beta_e);
+               etchantFlux->at(i) * p.etchantFlux * matParams.beta_e);
         }
       } else {
         eCoverage->at(i) = 0.;
@@ -438,14 +345,18 @@ class FluorocarbonIon
     : public viennaray::Particle<FluorocarbonIon<NumericType, D>, NumericType> {
   const FluorocarbonParameters<NumericType> &p;
   const NumericType A;
-  const NumericType minEnergy;
+  NumericType minEnergy;
   NumericType E;
 
 public:
   FluorocarbonIon(const FluorocarbonParameters<NumericType> &parameters)
       : p(parameters),
-        A(1. / (1. + p.Ions.n_l * (M_PI_2 / p.Ions.inflectAngle - 1.))),
-        minEnergy(std::min({p.Si.Eth_ie, p.SiO2.Eth_ie, p.Si3N4.Eth_ie})) {}
+        A(1. / (1. + p.Ions.n_l * (M_PI_2 / p.Ions.inflectAngle - 1.))) {
+    minEnergy = std::numeric_limits<NumericType>::max();
+    for (auto m : p.materials) {
+      minEnergy = std::min(minEnergy, m.Eth_ie);
+    }
+  }
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
@@ -461,47 +372,13 @@ public:
     assert(cosTheta >= 0 && "Hit backside of disc");
     assert(cosTheta <= 1 + 4 && "Error in calculating cos theta");
 
-    NumericType A_sp = 0.;
-    NumericType B_sp = 1.;
-    NumericType A_ie = 0.;
-    NumericType Eth_sp = 1.;
-    NumericType Eth_ie = 1.;
-    switch (MaterialMap::mapToMaterial(materialId)) {
-    case Material::Si:
-      A_sp = p.Si.A_sp;
-      B_sp = p.Si.B_sp;
-      A_ie = p.Si.A_ie;
-      Eth_sp = p.Si.Eth_sp;
-      Eth_ie = p.Si.Eth_ie;
-      break;
-    case Material::SiO2:
-      A_sp = p.SiO2.A_sp;
-      B_sp = p.SiO2.B_sp;
-      A_ie = p.SiO2.A_ie;
-      Eth_sp = p.SiO2.Eth_sp;
-      Eth_ie = p.SiO2.Eth_ie;
-      break;
-    case Material::Si3N4:
-      A_sp = p.Si3N4.A_sp;
-      B_sp = p.Si3N4.B_sp;
-      A_ie = p.Si3N4.A_ie;
-      Eth_sp = p.Si3N4.Eth_sp;
-      Eth_ie = p.Si3N4.Eth_ie;
-      break;
-    case Material::Polymer:
-      A_sp = p.Polymer.A_ie;
-      B_sp = 1.;
-      A_ie = p.Polymer.A_ie;
-      Eth_sp = p.Polymer.Eth_ie;
-      Eth_ie = p.Polymer.Eth_ie;
-      break;
-    default:
-      A_sp = 0.;
-      B_sp = 0.;
-      A_ie = 0.;
-      Eth_sp = 0.;
-      Eth_ie = 0.;
-    }
+    auto matParams =
+        p.getMaterialParameters(MaterialMap::mapToMaterial(materialId));
+    NumericType A_sp = matParams.A_sp;
+    NumericType B_sp = matParams.B_sp;
+    NumericType A_ie = matParams.A_ie;
+    NumericType Eth_sp = matParams.Eth_sp;
+    NumericType Eth_ie = matParams.Eth_ie;
 
     const auto sqrtE = std::sqrt(E);
 
@@ -515,9 +392,10 @@ public:
         A_ie * std::max(sqrtE - std::sqrt(Eth_ie), (NumericType)0) * cosTheta;
 
     // polymer yield Y_p
+    auto polyParams = p.getMaterialParameters(Material::Polymer);
     localData.getVectorData(2)[primID] +=
-        p.Polymer.A_ie *
-        std::max(sqrtE - std::sqrt(p.Polymer.Eth_ie), (NumericType)0) *
+        polyParams.A_ie *
+        std::max(sqrtE - std::sqrt(polyParams.Eth_ie), (NumericType)0) *
         cosTheta;
   }
   std::pair<NumericType, Vec3D<NumericType>>
@@ -527,7 +405,8 @@ public:
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
 
-    // Small incident angles are reflected with the energy fraction centered at
+    // Small incident angles are reflected with the energy fraction centered
+    // at
     // 0
     NumericType incAngle = std::acos(-DotProduct(rayDir, geomNormal));
     NumericType Eref_peak;
@@ -537,7 +416,8 @@ public:
     } else {
       Eref_peak = A * std::pow(incAngle / p.Ions.inflectAngle, p.Ions.n_l);
     }
-    // Gaussian distribution around the Eref_peak scaled by the particle energy
+    // Gaussian distribution around the Eref_peak scaled by the particle
+    // energy
     NumericType newEnergy;
     std::normal_distribution<NumericType> normalDist(Eref_peak * E, 0.1 * E);
     do {
@@ -600,11 +480,9 @@ public:
     const auto &phi_p = globalData->getVectorData(1)[primID];
     const auto &phi_pe = globalData->getVectorData(2)[primID];
 
-    NumericType stick = 1.;
-    if (MaterialMap::isMaterial(materialId, Material::Mask))
-      stick = p.Mask.beta_p;
-    else
-      stick = p.beta_p;
+    auto matParams =
+        p.getMaterialParameters(MaterialMap::mapToMaterial(materialId));
+    NumericType stick = matParams.beta_p;
     stick *= std::max(1 - phi_e - phi_p, (NumericType)0);
     return std::pair<NumericType, Vec3D<NumericType>>{stick, direction};
   }
@@ -645,14 +523,10 @@ public:
     const auto &phi_p = globalData->getVectorData(1)[primID];
     const auto &phi_pe = globalData->getVectorData(2)[primID];
 
-    NumericType Seff;
-    if (MaterialMap::isMaterial(materialId, Material::Mask)) {
-      Seff = p.Mask.beta_p * std::max(1 - phi_e - phi_p, (NumericType)0);
-    } else if (MaterialMap::isMaterial(materialId, Material::Polymer)) {
-      Seff = p.beta_pe * std::max(1 - phi_pe, (NumericType)0);
-    } else {
-      Seff = p.beta_e * std::max(1 - phi_e - phi_p, (NumericType)0);
-    }
+    const auto matParams =
+        p.getMaterialParameters(MaterialMap::mapToMaterial(materialId));
+    NumericType Seff =
+        matParams.beta_e * std::max(1 - phi_e - phi_p, (NumericType)0);
 
     return std::pair<NumericType, Vec3D<NumericType>>{Seff, direction};
   }
@@ -666,28 +540,12 @@ public:
 template <typename NumericType, int D>
 class FluorocarbonEtching : public ProcessModelCPU<NumericType, D> {
 public:
-  FluorocarbonEtching() { initialize(); }
-  FluorocarbonEtching(
-      double ionFlux, double etchantFlux, double polyFlux,
-      NumericType meanEnergy, NumericType sigmaEnergy,
-      NumericType exponent = 100., NumericType deltaP = 0.,
-      NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest()) {
-    params_.ionFlux = ionFlux;
-    params_.etchantFlux = etchantFlux;
-    params_.polyFlux = polyFlux;
-    params_.Ions.meanEnergy = meanEnergy;
-    params_.Ions.sigmaEnergy = sigmaEnergy;
-    params_.Ions.exponent = exponent;
-    params_.delta_p = deltaP;
-    params_.etchStopDepth = etchStopDepth;
-    initialize();
-  }
-  FluorocarbonEtching(const FluorocarbonParameters<NumericType> &parameters)
+  explicit FluorocarbonEtching(
+      const FluorocarbonParameters<NumericType> &parameters)
       : params_(parameters) {
     initialize();
   }
 
-  FluorocarbonParameters<NumericType> &getParameters() { return params_; }
   void setParameters(const FluorocarbonParameters<NumericType> &parameters) {
     params_ = parameters;
     initialize();
@@ -701,6 +559,12 @@ private:
     if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
         units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
       Logger::getInstance().addError("Units have not been set.").print();
+    }
+
+    if (params_.materials.empty()) {
+      Logger::getInstance()
+          .addWarning("No materials have been set in the parameters.")
+          .print();
     }
 
     // particles

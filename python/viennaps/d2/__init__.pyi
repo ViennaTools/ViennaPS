@@ -650,23 +650,7 @@ class FaradayCageEtching(ProcessModel):
     def setParameters(self, arg0: viennaps._core.FaradayCageParameters) -> None: ...
 
 class FluorocarbonEtching(ProcessModel):
-    @typing.overload
-    def __init__(self) -> None: ...
-    @typing.overload
-    def __init__(
-        self,
-        ionFlux: typing.SupportsFloat,
-        etchantFlux: typing.SupportsFloat,
-        polyFlux: typing.SupportsFloat,
-        meanIonEnergy: typing.SupportsFloat = 100.0,
-        sigmaIonEnergy: typing.SupportsFloat = 10.0,
-        ionExponent: typing.SupportsFloat = 100.0,
-        deltaP: typing.SupportsFloat = 0.0,
-        etchStopDepth: typing.SupportsFloat = -1.7976931348623157e308,
-    ) -> None: ...
-    @typing.overload
     def __init__(self, parameters: viennaps._core.FluorocarbonParameters) -> None: ...
-    def getParameters(self) -> viennaps._core.FluorocarbonParameters: ...
     def setParameters(self, arg0: viennaps._core.FluorocarbonParameters) -> None: ...
 
 class GDSGeometry:

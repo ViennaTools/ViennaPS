@@ -870,21 +870,10 @@ template <int D> void bindApi(py::module &module) {
   py::class_<FluorocarbonEtching<T, D>,
              SmartPointer<FluorocarbonEtching<T, D>>>(
       module, "FluorocarbonEtching", processModel)
-      .def(py::init<>())
-      .def(py::init(&SmartPointer<FluorocarbonEtching<T, D>>::template New<
-                    double /*ionFlux*/, double /*etchantFlux*/,
-                    double /*polyFlux*/, T /*meanEnergy*/, T /*sigmaEnergy*/,
-                    T /*ionExponent*/, T /*deltaP*/, T /*etchStopDepth*/>),
-           py::arg("ionFlux"), py::arg("etchantFlux"), py::arg("polyFlux"),
-           py::arg("meanIonEnergy") = 100., py::arg("sigmaIonEnergy") = 10.,
-           py::arg("ionExponent") = 100., py::arg("deltaP") = 0.,
-           py::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
       .def(py::init(&SmartPointer<FluorocarbonEtching<T, D>>::template New<
                     const FluorocarbonParameters<T> &>),
            py::arg("parameters"))
-      .def("setParameters", &FluorocarbonEtching<T, D>::setParameters)
-      .def("getParameters", &FluorocarbonEtching<T, D>::getParameters,
-           py::return_value_policy::reference);
+      .def("setParameters", &FluorocarbonEtching<T, D>::setParameters);
 
   // Ion Beam Etching
   py::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
