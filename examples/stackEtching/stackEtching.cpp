@@ -40,10 +40,29 @@ int main(int argc, char *argv[]) {
   geometry->duplicateTopLevelSet(Material::Polymer);
 
   // use pre-defined Fluorocarbon etching model
-  auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(
-      params.get("ionFlux"), params.get("etchantFlux"), params.get("polyFlux"),
-      params.get("meanIonEnergy"), params.get("sigmaIonEnergy"),
-      params.get("ionExponent"));
+  auto parameters = FluorocarbonParameters<NumericType>();
+  parameters.addMaterial({.density = 2.2, .id = Material::SiO2});
+  parameters.addMaterial({.density = 2.,
+                          .beta_e = 0.6,
+                          .A_ie = 0.0361 * 2,
+                          .id = Material::Polymer});
+  parameters.addMaterial({.density = 2.3, .id = Material::Si3N4});
+  parameters.addMaterial({.density = 5.5, .id = Material::Si});
+  parameters.addMaterial({.density = 500.,
+                          .beta_e = 0.1,
+                          .beta_p = 0.01,
+                          .Eth_sp = 20.,
+                          .id = Material::Mask});
+
+  parameters.ionFlux = params.get("ionFlux");
+  parameters.etchantFlux = params.get("etchantFlux");
+  parameters.polyFlux = params.get("polyFlux");
+  parameters.Ions.meanEnergy = params.get("meanIonEnergy");
+  parameters.Ions.sigmaEnergy = params.get("sigmaIonEnergy");
+  parameters.Ions.exponent = params.get("ionExponent");
+
+  auto model =
+      SmartPointer<FluorocarbonEtching<NumericType, D>>::New(parameters);
 
   AdvectionParameters advectionParams;
   advectionParams.integrationScheme =

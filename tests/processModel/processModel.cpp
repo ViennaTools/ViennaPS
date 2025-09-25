@@ -25,8 +25,8 @@ template <class NumericType, int D> void RunTest() {
 
   // fluorocarbon etching
   {
-    auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(
-        1., 1., 1., 1., 1.);
+    auto params = FluorocarbonParameters<NumericType>();
+    auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(params);
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
     VC_TEST_ASSERT(model->getParticleTypes().size() == 3);

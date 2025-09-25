@@ -312,58 +312,30 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Ions", &CF4O2Parameters<T>::Ions);
 
   // Fluorocarbon Parameters
-  py::class_<FluorocarbonParameters<T>::MaskType>(module,
-                                                  "FluorocarbonParametersMask")
+  py::class_<FluorocarbonParameters<T>::MaterialParameters>(
+      module, "FluorocarbonMaterialParameters")
       .def(py::init<>())
-      .def_readwrite("rho", &FluorocarbonParameters<T>::MaskType::rho)
-      .def_readwrite("beta_p", &FluorocarbonParameters<T>::MaskType::beta_p)
-      .def_readwrite("beta_e", &FluorocarbonParameters<T>::MaskType::beta_e)
-      .def_readwrite("A_sp", &FluorocarbonParameters<T>::MaskType::A_sp)
-      .def_readwrite("B_sp", &FluorocarbonParameters<T>::MaskType::B_sp)
-      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::MaskType::Eth_sp);
-
-  py::class_<FluorocarbonParameters<T>::SiO2Type>(module,
-                                                  "FluorocarbonParametersSiO2")
-      .def(py::init<>())
-      .def_readwrite("rho", &FluorocarbonParameters<T>::SiO2Type::rho)
-      .def_readwrite("E_a", &FluorocarbonParameters<T>::SiO2Type::E_a)
-      .def_readwrite("K", &FluorocarbonParameters<T>::SiO2Type::K)
-      .def_readwrite("A_sp", &FluorocarbonParameters<T>::SiO2Type::A_sp)
-      .def_readwrite("B_sp", &FluorocarbonParameters<T>::SiO2Type::B_sp)
-      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::SiO2Type::Eth_ie)
-      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::SiO2Type::Eth_sp)
-      .def_readwrite("A_ie", &FluorocarbonParameters<T>::SiO2Type::A_ie);
-
-  py::class_<FluorocarbonParameters<T>::Si3N4Type>(
-      module, "FluorocarbonParametersSi3N4")
-      .def(py::init<>())
-      .def_readwrite("rho", &FluorocarbonParameters<T>::Si3N4Type::rho)
-      .def_readwrite("E_a", &FluorocarbonParameters<T>::Si3N4Type::E_a)
-      .def_readwrite("K", &FluorocarbonParameters<T>::Si3N4Type::K)
-      .def_readwrite("A_sp", &FluorocarbonParameters<T>::Si3N4Type::A_sp)
-      .def_readwrite("B_sp", &FluorocarbonParameters<T>::Si3N4Type::B_sp)
-      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::Si3N4Type::Eth_ie)
-      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::Si3N4Type::Eth_sp)
-      .def_readwrite("A_ie", &FluorocarbonParameters<T>::Si3N4Type::A_ie);
-
-  py::class_<FluorocarbonParameters<T>::SiType>(module,
-                                                "FluorocarbonParametersSi")
-      .def(py::init<>())
-      .def_readwrite("rho", &FluorocarbonParameters<T>::SiType::rho)
-      .def_readwrite("E_a", &FluorocarbonParameters<T>::SiType::E_a)
-      .def_readwrite("K", &FluorocarbonParameters<T>::SiType::K)
-      .def_readwrite("A_sp", &FluorocarbonParameters<T>::SiType::A_sp)
-      .def_readwrite("B_sp", &FluorocarbonParameters<T>::SiType::B_sp)
-      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::SiType::Eth_ie)
-      .def_readwrite("Eth_sp", &FluorocarbonParameters<T>::SiType::Eth_sp)
-      .def_readwrite("A_ie", &FluorocarbonParameters<T>::SiType::A_ie);
-
-  py::class_<FluorocarbonParameters<T>::PolymerType>(
-      module, "FluorocarbonParametersPolymer")
-      .def(py::init<>())
-      .def_readwrite("rho", &FluorocarbonParameters<T>::PolymerType::rho)
-      .def_readwrite("Eth_ie", &FluorocarbonParameters<T>::PolymerType::Eth_ie)
-      .def_readwrite("A_ie", &FluorocarbonParameters<T>::PolymerType::A_ie);
+      .def_readwrite("density",
+                     &FluorocarbonParameters<T>::MaterialParameters::density)
+      .def_readwrite("beta_p",
+                     &FluorocarbonParameters<T>::MaterialParameters::beta_p)
+      .def_readwrite("beta_e",
+                     &FluorocarbonParameters<T>::MaterialParameters::beta_e)
+      .def_readwrite("Eth_sp",
+                     &FluorocarbonParameters<T>::MaterialParameters::Eth_sp)
+      .def_readwrite("Eth_ie",
+                     &FluorocarbonParameters<T>::MaterialParameters::Eth_ie)
+      .def_readwrite("A_sp",
+                     &FluorocarbonParameters<T>::MaterialParameters::A_sp)
+      .def_readwrite("B_sp",
+                     &FluorocarbonParameters<T>::MaterialParameters::B_sp)
+      .def_readwrite("A_ie",
+                     &FluorocarbonParameters<T>::MaterialParameters::A_ie)
+      .def_readwrite("Eth_sp",
+                     &FluorocarbonParameters<T>::MaterialParameters::Eth_sp)
+      .def_readwrite("K", &FluorocarbonParameters<T>::MaterialParameters::K)
+      .def_readwrite("E_a", &FluorocarbonParameters<T>::MaterialParameters::E_a)
+      .def_readwrite("id", &FluorocarbonParameters<T>::MaterialParameters::id);
 
   py::class_<FluorocarbonParameters<T>::IonType>(module,
                                                  "FluorocarbonParametersIons")
@@ -380,16 +352,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   py::class_<FluorocarbonParameters<T>>(module, "FluorocarbonParameters")
       .def(py::init<>())
+      .def("addMaterial", &FluorocarbonParameters<T>::addMaterial,
+           py::arg("materialParameters"))
+      .def("getMaterialParameters",
+           &FluorocarbonParameters<T>::getMaterialParameters,
+           py::arg("material"))
       .def_readwrite("ionFlux", &FluorocarbonParameters<T>::ionFlux)
       .def_readwrite("etchantFlux", &FluorocarbonParameters<T>::etchantFlux)
       .def_readwrite("polyFlux", &FluorocarbonParameters<T>::polyFlux)
       .def_readwrite("delta_p", &FluorocarbonParameters<T>::delta_p)
       .def_readwrite("etchStopDepth", &FluorocarbonParameters<T>::etchStopDepth)
-      .def_readwrite("Mask", &FluorocarbonParameters<T>::Mask)
-      .def_readwrite("SiO2", &FluorocarbonParameters<T>::SiO2)
-      .def_readwrite("Si3N4", &FluorocarbonParameters<T>::Si3N4)
-      .def_readwrite("Si", &FluorocarbonParameters<T>::Si)
-      .def_readwrite("Polymer", &FluorocarbonParameters<T>::Polymer)
+      .def_readwrite("temperature", &FluorocarbonParameters<T>::temperature)
+      .def_readwrite("k_ie", &FluorocarbonParameters<T>::k_ie)
+      .def_readwrite("k_ev", &FluorocarbonParameters<T>::k_ev)
       .def_readwrite("Ions", &FluorocarbonParameters<T>::Ions);
 
   // Ion Beam Etching Parameters

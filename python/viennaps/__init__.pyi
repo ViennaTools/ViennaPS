@@ -26,13 +26,9 @@ from viennaps._core import CF4O2ParametersSiGe
 from viennaps._core import CoverageParameters
 from viennaps._core import Extrude
 from viennaps._core import FaradayCageParameters
+from viennaps._core import FluorocarbonMaterialParameters
 from viennaps._core import FluorocarbonParameters
 from viennaps._core import FluorocarbonParametersIons
-from viennaps._core import FluorocarbonParametersMask
-from viennaps._core import FluorocarbonParametersPolymer
-from viennaps._core import FluorocarbonParametersSi
-from viennaps._core import FluorocarbonParametersSi3N4
-from viennaps._core import FluorocarbonParametersSiO2
 from viennaps._core import FluxEngineType
 from viennaps._core import HoleShape
 from viennaps._core import IBEParameters
@@ -129,13 +125,9 @@ __all__: list[str] = [
     "FaradayCageEtching",
     "FaradayCageParameters",
     "FluorocarbonEtching",
+    "FluorocarbonMaterialParameters",
     "FluorocarbonParameters",
     "FluorocarbonParametersIons",
-    "FluorocarbonParametersMask",
-    "FluorocarbonParametersPolymer",
-    "FluorocarbonParametersSi",
-    "FluorocarbonParametersSi3N4",
-    "FluorocarbonParametersSiO2",
     "FluxEngineType",
     "GDSGeometry",
     "GDSReader",
