@@ -21,9 +21,7 @@ template <class NumericType, int D> void RunTest() {
   units::Length::getInstance().setUnit("nm");
 
   // default constructors
-  {
-    auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New();
-  }
+  { auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New(); }
 
   // fluorocarbon etching
   {
