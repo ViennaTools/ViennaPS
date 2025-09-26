@@ -9,9 +9,9 @@ using namespace viennaps;
 
 int main(int argc, char **argv) {
   using NumericType = float;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
-  Logger::setLogLevel(LogLevel::INFO);
+  Logger::setLogLevel(LogLevel::DEBUG);
   omp_set_num_threads(16);
 
   NumericType gridDelta = 0.025;
@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   NumericType maskHeight = 1.2;
   NumericType taperAngle = 1.193;
 
-  NumericType processDuration = 1.5;
+  NumericType processDuration = 0.5;
   NumericType exponent = 500.;
   AdvectionParameters advParams;
   advParams.integrationScheme = IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER;

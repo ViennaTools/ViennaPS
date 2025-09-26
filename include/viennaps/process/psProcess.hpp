@@ -13,6 +13,7 @@
 
 // Flux engines
 #include "psCPUDiskEngine.hpp"
+#include "psGPUDiskEngine.hpp"
 #include "psGPUTriangleEngine.hpp"
 
 namespace viennaps {
@@ -188,6 +189,30 @@ private:
     switch (fluxEngineType_) {
     case FluxEngineType::CPU_DISK:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
+    case FluxEngineType::GPU_DISK: {
+#ifdef VIENNACORE_COMPILE_GPU
+      auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
+      if (!deviceContext) {
+        Logger::getInstance()
+            .addInfo("Auto-generating GPU device context.")
+            .print();
+        deviceContext =
+            DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+        if (!deviceContext) {
+          Logger::getInstance()
+              .addError("Failed to create GPU device context.")
+              .print();
+          return nullptr;
+        }
+      }
+      return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);
+#else
+      Logger::getInstance()
+          .addError("GPU support not compiled in ViennaCore.")
+          .print();
+      return nullptr;
+#endif
+    }
     case FluxEngineType::GPU_TRIANGLE: {
 #ifdef VIENNACORE_COMPILE_GPU
       if constexpr (D == 2) {
@@ -246,6 +271,7 @@ private:
 #ifdef VIENNACORE_COMPILE_GPU
     if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE) {
       if (D == 2) {
+        // TODO: Fall back to 2D GPU Lines
         Logger::getInstance()
             .addError("GPU-Triangle flux engine not supported in 2D.")
             .print();
@@ -282,7 +308,7 @@ public:
 private:
   unsigned int gpuDeviceId_ = 0;
 #endif
-};
+}; // namespace viennaps
 
 PS_PRECOMPILE_PRECISION_DIMENSION(Process)
 
