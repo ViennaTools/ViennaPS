@@ -76,7 +76,7 @@ parameters = model.getParameters()
 
 covParams = ps.CoverageParameters()
 covParams.maxIterations = 20
-covParams.coverageDeltaThreshold = 1e-4
+covParams.tolerance = 1e-4
 
 rayParams = ps.RayTracingParameters()
 rayParams.raysPerPoint = int(params["raysPerPoint"])

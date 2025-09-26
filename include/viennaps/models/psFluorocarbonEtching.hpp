@@ -199,6 +199,8 @@ public:
         units::Length::getInstance().convertNanometer();
 
     bool etchStop = false;
+    const auto polyParams = p.getMaterialParameters(Material::Polymer);
+    const auto maskParams = p.getMaterialParameters(Material::Mask);
 
 #pragma omp parallel for reduction(|| : etchStop)
     for (std::size_t i = 0; i < numPoints; ++i) {
@@ -209,8 +211,7 @@ public:
 
       auto matId = MaterialMap::mapToMaterial(materialIds[i]);
       if (pCoverage->at(i) >= 1.) {
-        auto polyParams = p.getMaterialParameters(Material::Polymer);
-        // Deposition
+        // Polymer Deposition
         etchRate[i] =
             (1 / polyParams.density) *
             std::max((polyFlux->at(i) * p.polyFlux * polyParams.beta_p -
@@ -219,17 +220,17 @@ public:
             unitConversion;
         assert(etchRate[i] >= 0 && "Negative deposition");
       } else if (matId == Material::Mask) {
-        auto maskParams = p.getMaterialParameters(Material::Mask);
+        // Mask sputtering
         etchRate[i] = (-1. / maskParams.density) * ionSputterFlux->at(i) *
                       p.ionFlux * unitConversion;
       } else if (matId == Material::Polymer) {
         auto polyParams = p.getMaterialParameters(Material::Polymer);
         // Etching depo layer
         etchRate[i] =
-            std::min((1 / polyParams.density) *
+            std::min((1. / polyParams.density) *
                          (polyFlux->at(i) * p.polyFlux * polyParams.beta_p -
                           ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
-                     (NumericType)0) *
+                     0.) *
             unitConversion;
       } else {
         auto matParams = p.getMaterialParameters(matId);
@@ -239,7 +240,7 @@ public:
             std::exp(-matParams.E_a / (constants::kB * p.temperature));
 
         etchRate[i] =
-            -(1 / density) *
+            (-1. / density) *
             (F_ev * eCoverage->at(i) +
              ionEnhancedFlux->at(i) * p.ionFlux * eCoverage->at(i) +
              ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i))) *
@@ -282,13 +283,13 @@ public:
     pCoverage->resize(numPoints);
     peCoverage->resize(numPoints);
 
-// pe coverage
+    // pe coverage
+    const auto polyParams = p.getMaterialParameters(Material::Polymer);
 #pragma omp parallel for
     for (std::size_t i = 0; i < numPoints; ++i) {
       if (etchantFlux->at(i) == 0.) {
         peCoverage->at(i) = 0.;
       } else {
-        auto polyParams = p.getMaterialParameters(Material::Polymer);
         peCoverage->at(i) =
             (etchantFlux->at(i) * p.etchantFlux * polyParams.beta_e) /
             (etchantFlux->at(i) * p.etchantFlux * polyParams.beta_e +
@@ -345,14 +346,13 @@ class FluorocarbonIon
     : public viennaray::Particle<FluorocarbonIon<NumericType, D>, NumericType> {
   const FluorocarbonParameters<NumericType> &p;
   const NumericType A;
-  NumericType minEnergy;
+  NumericType minEnergy = std::numeric_limits<NumericType>::max();
   NumericType E;
 
 public:
   FluorocarbonIon(const FluorocarbonParameters<NumericType> &parameters)
       : p(parameters),
         A(1. / (1. + p.Ions.n_l * (M_PI_2 / p.Ions.inflectAngle - 1.))) {
-    minEnergy = std::numeric_limits<NumericType>::max();
     for (auto m : p.materials) {
       minEnergy = std::min(minEnergy, m.Eth_ie);
     }
@@ -370,15 +370,15 @@ public:
     const auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
-    assert(cosTheta <= 1 + 4 && "Error in calculating cos theta");
+    assert(cosTheta <= 1 + 1e-4 && "Error in calculating cos theta");
 
     auto matParams =
         p.getMaterialParameters(MaterialMap::mapToMaterial(materialId));
-    NumericType A_sp = matParams.A_sp;
-    NumericType B_sp = matParams.B_sp;
-    NumericType A_ie = matParams.A_ie;
-    NumericType Eth_sp = matParams.Eth_sp;
-    NumericType Eth_ie = matParams.Eth_ie;
+    const NumericType A_sp = matParams.A_sp;
+    const NumericType B_sp = matParams.B_sp;
+    const NumericType A_ie = matParams.A_ie;
+    const NumericType Eth_sp = matParams.Eth_sp;
+    const NumericType Eth_ie = matParams.Eth_ie;
 
     const auto sqrtE = std::sqrt(E);
 
@@ -392,10 +392,11 @@ public:
         A_ie * std::max(sqrtE - std::sqrt(Eth_ie), (NumericType)0) * cosTheta;
 
     // polymer yield Y_p
-    auto polyParams = p.getMaterialParameters(Material::Polymer);
+    if (matParams.id != Material::Polymer)
+      matParams = p.getMaterialParameters(Material::Polymer);
     localData.getVectorData(2)[primID] +=
-        polyParams.A_ie *
-        std::max(sqrtE - std::sqrt(polyParams.Eth_ie), (NumericType)0) *
+        matParams.A_ie *
+        std::max(sqrtE - std::sqrt(matParams.Eth_ie), (NumericType)0) *
         cosTheta;
   }
   std::pair<NumericType, Vec3D<NumericType>>
@@ -450,57 +451,16 @@ public:
 };
 
 template <typename NumericType, int D>
-class FluorocarbonPolymer
-    : public viennaray::Particle<FluorocarbonPolymer<NumericType, D>,
+class FluorocarbonNeutral
+    : public viennaray::Particle<FluorocarbonNeutral<NumericType, D>,
                                  NumericType> {
-  const FluorocarbonParameters<NumericType> &p;
+  const FluorocarbonParameters<NumericType> &p_;
+  const std::string label_;
 
 public:
-  FluorocarbonPolymer(const FluorocarbonParameters<NumericType> &parameters)
-      : p(parameters) {}
-  void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
-                        const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
-    // collect data for this hit
-    localData.getVectorData(0)[primID] += rayWeight;
-  }
-  std::pair<NumericType, Vec3D<NumericType>>
-  surfaceReflection(NumericType, const Vec3D<NumericType> &,
-                    const Vec3D<NumericType> &geomNormal,
-                    const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
-                    RNG &Rng) override final {
-    auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
-
-    const auto &phi_e = globalData->getVectorData(0)[primID];
-    const auto &phi_p = globalData->getVectorData(1)[primID];
-    const auto &phi_pe = globalData->getVectorData(2)[primID];
-
-    auto matParams =
-        p.getMaterialParameters(MaterialMap::mapToMaterial(materialId));
-    NumericType stick = matParams.beta_p;
-    stick *= std::max(1 - phi_e - phi_p, (NumericType)0);
-    return std::pair<NumericType, Vec3D<NumericType>>{stick, direction};
-  }
-  NumericType getSourceDistributionPower() const override final { return 1.; }
-  std::vector<std::string> getLocalDataLabels() const override final {
-    return {"polyFlux"};
-  }
-};
-
-template <typename NumericType, int D>
-class FluorocarbonEtchant
-    : public viennaray::Particle<FluorocarbonEtchant<NumericType, D>,
-                                 NumericType> {
-  const FluorocarbonParameters<NumericType> &p;
-
-public:
-  FluorocarbonEtchant(const FluorocarbonParameters<NumericType> &parameters)
-      : p(parameters) {}
+  FluorocarbonNeutral(const FluorocarbonParameters<NumericType> &parameters,
+                      const std::string &label)
+      : p_(parameters), label_(label) {}
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
                         const int,
@@ -521,18 +481,18 @@ public:
 
     const auto &phi_e = globalData->getVectorData(0)[primID];
     const auto &phi_p = globalData->getVectorData(1)[primID];
-    const auto &phi_pe = globalData->getVectorData(2)[primID];
+    NumericType Seff = std::max(1 - phi_e - phi_p, (NumericType)0);
 
-    const auto matParams =
-        p.getMaterialParameters(MaterialMap::mapToMaterial(materialId));
-    NumericType Seff =
-        matParams.beta_e * std::max(1 - phi_e - phi_p, (NumericType)0);
+    if (Seff > 0) {
+      Seff *= p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))
+                  .beta_e;
+    }
 
     return std::pair<NumericType, Vec3D<NumericType>>{Seff, direction};
   }
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
-    return {"etchantFlux"};
+    return {label_};
   }
 };
 } // namespace impl
@@ -569,10 +529,10 @@ private:
 
     // particles
     auto ion = std::make_unique<impl::FluorocarbonIon<NumericType, D>>(params_);
-    auto etchant =
-        std::make_unique<impl::FluorocarbonEtchant<NumericType, D>>(params_);
-    auto poly =
-        std::make_unique<impl::FluorocarbonPolymer<NumericType, D>>(params_);
+    auto etchant = std::make_unique<impl::FluorocarbonNeutral<NumericType, D>>(
+        params_, "etchantFlux");
+    auto poly = std::make_unique<impl::FluorocarbonNeutral<NumericType, D>>(
+        params_, "polyFlux");
 
     // surface model
     auto surfModel =

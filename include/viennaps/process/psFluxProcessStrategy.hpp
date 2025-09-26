@@ -359,7 +359,7 @@ private:
     const auto name = context.getProcessName();
     auto &maxIterations = context.coverageParams.maxIterations;
     if (maxIterations == std::numeric_limits<unsigned>::max() &&
-        context.coverageParams.coverageDeltaThreshold == 0.) {
+        context.coverageParams.tolerance == 0.) {
       maxIterations = 10;
       Logger::getInstance()
           .addWarning("No coverage initialization parameters set. Using " +

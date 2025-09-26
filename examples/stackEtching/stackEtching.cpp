@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
 
   CoverageParameters coverageParams;
   coverageParams.maxIterations = 10;
+  coverageParams.tolerance = 1e-4;
 
   // process setup
   Process<NumericType, D> process;
