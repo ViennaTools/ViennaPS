@@ -14,8 +14,6 @@
 
 #include <models/psgPipelineParameters.hpp>
 
-#include <sutil/vec_math.h>
-
 #include "CallableWrapper.cuh"
 
 #include <vcContext.hpp>
@@ -28,7 +26,8 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 enum { SURFACE_RAY_TYPE = 0, RAY_TYPE_COUNT };
 
 extern "C" __global__ void __intersection__() {
-  const HitSBTDiskData *sbtData = (const HitSBTDiskData *)optixGetSbtDataPointer();
+  const HitSBTDiskData *sbtData =
+      (const HitSBTDiskData *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   // Get the index of the AABB box that was hit
@@ -75,7 +74,8 @@ extern "C" __global__ void __intersection__() {
 }
 
 extern "C" __global__ void __closesthit__() {
-  const HitSBTDiskData *sbtData = (const HitSBTDiskData *)optixGetSbtDataPointer();
+  const HitSBTDiskData *sbtData =
+      (const HitSBTDiskData *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   const unsigned int primID = optixGetPrimitiveIndex();
@@ -111,9 +111,9 @@ extern "C" __global__ void __closesthit__() {
     }
 
     if (launchParams.periodicBoundary) {
-      applyPeriodicBoundary(prd, sbtData, launchParams.D);
+      applyPeriodicBoundaryDisk(prd, sbtData, launchParams.D);
     } else {
-      reflectFromBoundary(prd, sbtData, launchParams.D);
+      reflectFromBoundaryDisk(prd, sbtData, launchParams.D);
     }
   } else {
     // ------------- NEIGHBOR FILTERING --------------- //
@@ -169,14 +169,14 @@ extern "C" __global__ void __closesthit__() {
     unsigned callIdx;
 
     callIdx = callableIndex(launchParams.particleType, CallableSlot::COLLISION);
-    optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx, sbtData,
-                                                            prd);
+    optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx,
+                                                                sbtData, prd);
 
     // ------------- REFLECTION --------------- //
     callIdx =
         callableIndex(launchParams.particleType, CallableSlot::REFLECTION);
-    optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx, sbtData,
-                                                            prd);
+    optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx,
+                                                                sbtData, prd);
   }
 }
 
@@ -202,7 +202,7 @@ extern "C" __global__ void __raygen__() {
   unsigned callIdx =
       callableIndex(launchParams.particleType, CallableSlot::INIT);
   optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx, nullptr,
-                                                          &prd);
+                                                              &prd);
 
   // the values we store the PRD pointer in:
   uint32_t u0, u1;

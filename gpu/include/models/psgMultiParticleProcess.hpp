@@ -24,7 +24,8 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
-    this->setPipelineFileName("MultiParticlePipeline");
+    // this->setPipelineFileName("MultiParticlePipeline");
+    this->setPipelineFileName("GeneralDiskPipeline");
   }
 
   void addNeutralParticle(NumericType stickingProbability,

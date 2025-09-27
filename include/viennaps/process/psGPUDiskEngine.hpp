@@ -77,6 +77,7 @@ public:
       rayTracer_.setPipeline(model->getPipelineFileName(),
                              deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
+      // rayTracer_.setNumberOfRaysFixed(1);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       rayTracer_.setPeriodicBoundary(periodicBoundary);
       for (auto &particle : model->getParticleTypes()) {
@@ -97,7 +98,6 @@ public:
 
     auto points = diskMesh->getNodes();
     auto normals = *diskMesh->getCellData().getVectorData("Normals");
-    auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
 
     // TODO: make this conversion to float prettier
     auto convertToFloat = [](std::vector<Vec3D<NumericType>> &input) {
@@ -137,7 +137,15 @@ public:
     }
 
     rayTracer_.setGeometry(diskMeshRay);
-    rayTracer_.setMaterialIds(materialIds);
+
+    auto model =
+        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+            context.model);
+    if (model->useMaterialIds()) {
+      auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+      rayTracer_.setMaterialIds(materialIds);
+    }
+    assert(context.diskMesh->nodes.size() > 0);
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -190,9 +198,9 @@ public:
       }
       downloadResultsToPointData(context.diskMesh->getCellData());
       static unsigned iterations = 0;
-      viennals::VTKWriter<NumericType>(context.diskMesh,
-                                 context.getProcessName() + "_flux_" +
-                                     std::to_string(iterations++) + ".vtp")
+      viennals::VTKWriter<NumericType>(
+          context.diskMesh, context.getProcessName() + "_flux_" +
+                                std::to_string(iterations++) + ".vtp")
           .apply();
 
       if (context.flags.useCoverages) {

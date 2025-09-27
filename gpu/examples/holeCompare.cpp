@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
   using NumericType = float;
   constexpr int D = 2;
 
-  Logger::setLogLevel(LogLevel::DEBUG);
+  Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
 
   NumericType gridDelta = 0.025;
@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
+    rtParams.smoothingNeighbors = 1.;
     process.setParameters(rtParams);
     process.apply();
 
@@ -73,9 +74,9 @@ int main(int argc, char **argv) {
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
     rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
-    rtParams.smoothingNeighbors = 2.;
+    rtParams.smoothingNeighbors = 0.;
     process.setParameters(rtParams);
-    process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
+    process.setFluxEngineType(FluxEngineType::GPU_DISK);
     process.apply();
 
     copy->saveSurfaceMesh("gpu_result.vtp", true);
