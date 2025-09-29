@@ -20,13 +20,14 @@ multiNeutralCollision(viennaray::gpu::PerRayData *prd) {
   }
 }
 
+template <typename SBTData>
 __forceinline__ __device__ void
-multiNeutralReflection(const viennaray::gpu::HitSBTDiskData *sbtData,
+multiNeutralReflection(const SBTData *sbtData,
                        viennaray::gpu::PerRayData *prd) {
   int material = launchParams.materialIds[prd->primID];
   float sticking = launchParams.materialSticking[material];
   prd->rayWeight -= prd->rayWeight * sticking;
-  auto geoNormal = computeNormalDisk(sbtData, prd->primID);
+  auto geoNormal = computeNormal(sbtData, prd->primID);
   diffuseReflection(prd, geoNormal, launchParams.D);
 }
 
@@ -34,13 +35,13 @@ multiNeutralReflection(const viennaray::gpu::HitSBTDiskData *sbtData,
 // --- Ion particle
 //
 
+template <typename SBTData>
 __forceinline__ __device__ void
-multiIonCollision(const viennaray::gpu::HitSBTDiskData *sbtData,
-                  viennaray::gpu::PerRayData *prd) {
+multiIonCollision(const SBTData *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
   for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = computeNormalDisk(sbtData, prd->TIndex[i]);
+    auto geomNormal = computeNormal(sbtData, prd->TIndex[i]);
     auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
     float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
 
@@ -59,12 +60,12 @@ multiIonCollision(const viennaray::gpu::HitSBTDiskData *sbtData,
   }
 }
 
+template <typename SBTData>
 __forceinline__ __device__ void
-multiIonReflection(const viennaray::gpu::HitSBTDiskData *sbtData,
-                   viennaray::gpu::PerRayData *prd) {
+multiIonReflection(const SBTData *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  auto geomNormal = computeNormalDisk(sbtData, prd->primID);
+  auto geomNormal = computeNormal(sbtData, prd->primID);
   auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
   float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
 

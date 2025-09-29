@@ -111,9 +111,9 @@ extern "C" __global__ void __closesthit__() {
     }
 
     if (launchParams.periodicBoundary) {
-      applyPeriodicBoundaryDisk(prd, sbtData, launchParams.D);
+      applyPeriodicBoundary(prd, sbtData, launchParams.D);
     } else {
-      reflectFromBoundaryDisk(prd, sbtData, launchParams.D);
+      reflectFromBoundary(prd, sbtData, launchParams.D);
     }
   } else {
     // ------------- NEIGHBOR FILTERING --------------- //

@@ -9,7 +9,7 @@ using namespace viennaps;
 
 int main(int argc, char **argv) {
   using NumericType = float;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
@@ -55,11 +55,31 @@ int main(int argc, char **argv) {
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 1.;
+    rtParams.smoothingNeighbors = 0.;
     process.setParameters(rtParams);
     process.apply();
 
     copy->saveSurfaceMesh("cpu_result.vtp", true);
+  }
+
+  rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
+  {
+    DeviceContext::createContext();
+
+    auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New();
+    model->setRateFunction(rateFunction);
+    model->addIonParticle(exponent, 80, 90, 75);
+
+    auto copy = Domain<NumericType, D>::New(geometry);
+
+    Process<NumericType, D> process(copy, model, processDuration);
+    process.setParameters(advParams);
+    rtParams.smoothingNeighbors = 1.;
+    process.setParameters(rtParams);
+    process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
+    process.apply();
+
+    copy->saveSurfaceMesh("gpu_result_trig.vtp", true);
   }
 
   {
@@ -73,12 +93,11 @@ int main(int argc, char **argv) {
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
-    rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
     rtParams.smoothingNeighbors = 0.;
     process.setParameters(rtParams);
     process.setFluxEngineType(FluxEngineType::GPU_DISK);
     process.apply();
 
-    copy->saveSurfaceMesh("gpu_result.vtp", true);
+    copy->saveSurfaceMesh("gpu_result_disk.vtp", true);
   }
 }
