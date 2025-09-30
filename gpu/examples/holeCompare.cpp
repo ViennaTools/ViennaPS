@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 0.;
+    rtParams.smoothingNeighbors = 1.;
     process.setParameters(rtParams);
     process.apply();
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 1.;
+    rtParams.smoothingNeighbors = 2.;
     process.setParameters(rtParams);
     process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
     process.apply();
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 0.;
+    rtParams.smoothingNeighbors = 1.;
     process.setParameters(rtParams);
     process.setFluxEngineType(FluxEngineType::GPU_DISK);
     process.apply();

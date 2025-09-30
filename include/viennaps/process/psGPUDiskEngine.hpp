@@ -187,8 +187,8 @@ public:
 
     // run the ray tracer
     rayTracer_.apply();
-    // TODO: smooth fluxes here
-    downloadResultsToPointData(*fluxes);
+    downloadResultsToPointData(*fluxes,
+                               context.rayTracingParams.smoothingNeighbors);
 
     // output
     if (Logger::getLogLevel() >=
@@ -198,7 +198,8 @@ public:
         downloadCoverages(d_coverages, context.diskMesh->getCellData(),
                           coverages, context.diskMesh->getNodes().size());
       }
-      downloadResultsToPointData(context.diskMesh->getCellData());
+      downloadResultsToPointData(context.diskMesh->getCellData(),
+                                 context.rayTracingParams.smoothingNeighbors);
       static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
           context.diskMesh, context.getProcessName() + "_flux_" +
@@ -238,26 +239,22 @@ private:
     delete temp;
   }
 
-  void downloadResultsToPointData(viennals::PointData<NumericType> &pointData) {
+  void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
+                                  int smoothingNeighbors) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
-    auto valueBuffer = rayTracer_.getResults();
-    std::vector<float> tmpBuffer(numRates * numPoints);
-    valueBuffer.download(tmpBuffer.data(), numPoints * numRates);
     auto particles = rayTracer_.getParticles();
 
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        int tmpOffset = offset + dIdx;
+        std::vector<float> diskFlux(numPoints);
+        rayTracer_.getFlux(diskFlux.data(), pIdx, dIdx, smoothingNeighbors);
         auto name = particles[pIdx].dataLabels[dIdx];
 
-        std::vector<float> values(numPoints);
-        std::memcpy(values.data(), &tmpBuffer[tmpOffset * numPoints],
-                    numPoints * sizeof(float));
-
-        std::vector<NumericType> diskFluxCasted(values.begin(), values.end());
+        std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
+                                                diskFlux.end());
         pointData.insertReplaceScalarData(std::move(diskFluxCasted), name);
       }
       offset += particles[pIdx].dataLabels.size();
