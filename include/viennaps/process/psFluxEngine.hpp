@@ -11,7 +11,7 @@ enum class FluxEngineType {
   CPU_DISK,     // CPU, Disk-based
   GPU_TRIANGLE, // GPU, Triangle-based
   GPU_DISK,     // GPU, Disk-based
-  // GPU_LINES,  // GPU, Line-based
+  GPU_LINE,     // GPU, Line-based
   // GPU_LEVEL_SET // Future implementations
 };
 

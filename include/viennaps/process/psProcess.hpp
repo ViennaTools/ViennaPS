@@ -14,6 +14,7 @@
 // Flux engines
 #include "psCPUDiskEngine.hpp"
 #include "psGPUDiskEngine.hpp"
+#include "psGPULineEngine.hpp"
 #include "psGPUTriangleEngine.hpp"
 
 namespace viennaps {
@@ -189,8 +190,15 @@ private:
     switch (fluxEngineType_) {
     case FluxEngineType::CPU_DISK:
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
-    case FluxEngineType::GPU_DISK: {
-#ifdef VIENNACORE_COMPILE_GPU
+    case FluxEngineType::GPU_DISK:
+    case FluxEngineType::GPU_LINE:
+    case FluxEngineType::GPU_TRIANGLE: {
+#ifndef VIENNACORE_COMPILE_GPU
+      Logger::getInstance()
+          .addError("GPU support not compiled in ViennaCore.")
+          .print();
+      return nullptr;
+#else
       auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
       if (!deviceContext) {
         Logger::getInstance()
@@ -204,112 +212,94 @@ private:
               .print();
           return nullptr;
         }
-      }
-      return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);
-#else
-      Logger::getInstance()
-          .addError("GPU support not compiled in ViennaCore.")
-          .print();
-      return nullptr;
-#endif
-    }
-    case FluxEngineType::GPU_TRIANGLE: {
-#ifdef VIENNACORE_COMPILE_GPU
-      if constexpr (D == 2) {
-        Logger::getInstance()
-            .addError("GPU-Triangle flux engine not supported in 2D.")
-            .print();
-        return nullptr;
       }
 
-      auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
-      if (!deviceContext) {
-        Logger::getInstance()
-            .addInfo("Auto-generating GPU device context.")
-            .print();
-        deviceContext =
-            DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
-        if (!deviceContext) {
+      switch (fluxEngineType_) {
+      case FluxEngineType::GPU_DISK:
+        return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);
+      case FluxEngineType::GPU_LINE:
+        return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
+      case FluxEngineType::GPU_TRIANGLE:
+        if constexpr (D == 2) {
           Logger::getInstance()
-              .addError("Failed to create GPU device context.")
+              .addWarning("GPU-Triangle flux engine not supported in "
+                          "2D.\nFallback to GPU-Line engine.")
               .print();
-          return nullptr;
+          return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
         }
+        return std::make_unique<GPUTriangleEngine<NumericType, D>>(
+            deviceContext);
       }
-      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
-#else
-      Logger::getInstance()
-          .addError("GPU support not compiled in ViennaCore.")
-          .print();
-      return nullptr;
-#endif
     }
+#endif
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
       return nullptr;
     }
-  }
-
-  bool checkInput() {
-    if (!context_.domain) {
-      Logger::getInstance().addError("No domain passed to Process.").print();
-      return false;
     }
 
-    if (context_.domain->getLevelSets().empty()) {
-      Logger::getInstance().addError("No level sets in domain.").print();
-      return false;
-    }
+    bool checkInput() {
+      if (!context_.domain) {
+        Logger::getInstance().addError("No domain passed to Process.").print();
+        return false;
+      }
 
-    if (!context_.model) {
-      Logger::getInstance()
-          .addError("No process model passed to Process.")
-          .print();
-      return false;
-    }
+      if (context_.domain->getLevelSets().empty()) {
+        Logger::getInstance().addError("No level sets in domain.").print();
+        return false;
+      }
 
-#ifdef VIENNACORE_COMPILE_GPU
-    if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE) {
-      if (D == 2) {
-        // TODO: Fall back to 2D GPU Lines
+      if (!context_.model) {
         Logger::getInstance()
-            .addError("GPU-Triangle flux engine not supported in 2D.")
+            .addError("No process model passed to Process.")
             .print();
         return false;
       }
 
-      auto model =
-          std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
-              context_.model);
-      if (!model) {
-        auto gpuModel = context_.model->getGPUModel();
-        if (gpuModel) {
-          Logger::getInstance()
-              .addDebug("Switching to GPU-compatible process model.")
-              .print();
-          context_.model = gpuModel;
-        } else {
+#ifdef VIENNACORE_COMPILE_GPU
+      if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE ||
+          fluxEngineType_ == FluxEngineType::GPU_DISK ||
+          fluxEngineType_ == FluxEngineType::GPU_LINE) {
+        if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE && D == 2) {
           Logger::getInstance()
               .addWarning(
-                  "No GPU implementation available for this process model.")
+                  "GPU-Triangle flux engine not supported in 2D.\nFallback to "
+                  "GPU-Line engine.")
               .print();
-          return false;
+        }
+
+        auto model =
+            std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+                context_.model);
+        if (!model) {
+          auto gpuModel = context_.model->getGPUModel();
+          if (gpuModel) {
+            Logger::getInstance()
+                .addDebug("Switching to GPU-compatible process model.")
+                .print();
+            context_.model = gpuModel;
+          } else {
+            Logger::getInstance()
+                .addWarning(
+                    "No GPU implementation available for this process model.")
+                .print();
+            return false;
+          }
         }
       }
+#endif
+
+      return true;
     }
-#endif
-
-    return true;
-  }
 #ifdef VIENNACORE_COMPILE_GPU
-public:
-  void setDeviceId(unsigned id) { gpuDeviceId_ = id; }
+  public:
+    void setDeviceId(unsigned id) { gpuDeviceId_ = id; }
 
-private:
-  unsigned int gpuDeviceId_ = 0;
+  private:
+    unsigned int gpuDeviceId_ = 0;
 #endif
-}; // namespace viennaps
+  }; // namespace viennaps
 
-PS_PRECOMPILE_PRECISION_DIMENSION(Process)
+  PS_PRECOMPILE_PRECISION_DIMENSION(Process)
 
 } // namespace viennaps

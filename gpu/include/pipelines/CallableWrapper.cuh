@@ -51,6 +51,12 @@ extern "C" __device__ void __direct_callable__multiNeutralCollisionTriangle(
   multiNeutralCollision(prd);
 }
 
+extern "C" __device__ void __direct_callable__multiNeutralCollisionLine(
+    const viennaray::gpu::HitSBTLineData *sbtData,
+    viennaray::gpu::PerRayData *prd) {
+  multiNeutralCollision(prd);
+}
+
 extern "C" __device__ void __direct_callable__multiNeutralReflectionDisk(
     const viennaray::gpu::HitSBTDiskData *sbtData,
     viennaray::gpu::PerRayData *prd) {
@@ -59,6 +65,12 @@ extern "C" __device__ void __direct_callable__multiNeutralReflectionDisk(
 
 extern "C" __device__ void __direct_callable__multiNeutralReflectionTriangle(
     const viennaray::gpu::HitSBTData *sbtData,
+    viennaray::gpu::PerRayData *prd) {
+  multiNeutralReflection(sbtData, prd);
+}
+
+extern "C" __device__ void __direct_callable__multiNeutralReflectionLine(
+    const viennaray::gpu::HitSBTLineData *sbtData,
     viennaray::gpu::PerRayData *prd) {
   multiNeutralReflection(sbtData, prd);
 }
@@ -75,6 +87,12 @@ extern "C" __device__ void __direct_callable__multiIonCollisionTriangle(
   multiIonCollision(sbtData, prd);
 }
 
+extern "C" __device__ void __direct_callable__multiIonCollisionLine(
+    const viennaray::gpu::HitSBTLineData *sbtData,
+    viennaray::gpu::PerRayData *prd) {
+  multiIonCollision(sbtData, prd);
+}
+
 extern "C" __device__ void __direct_callable__multiIonReflectionDisk(
     const viennaray::gpu::HitSBTDiskData *sbtData,
     viennaray::gpu::PerRayData *prd) {
@@ -83,6 +101,12 @@ extern "C" __device__ void __direct_callable__multiIonReflectionDisk(
 
 extern "C" __device__ void __direct_callable__multiIonReflectionTriangle(
     const viennaray::gpu::HitSBTData *sbtData,
+    viennaray::gpu::PerRayData *prd) {
+  multiIonReflection(sbtData, prd);
+}
+
+extern "C" __device__ void __direct_callable__multiIonReflectionLine(
+    const viennaray::gpu::HitSBTLineData *sbtData,
     viennaray::gpu::PerRayData *prd) {
   multiIonReflection(sbtData, prd);
 }

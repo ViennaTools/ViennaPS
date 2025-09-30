@@ -9,5 +9,6 @@ add_custom_target(ViennaPS-GPU_Examples ALL)
 add_gpu_executable(holeCompare target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp
                   #  ${VIENNAPS_PIPELINE_DIR}/MultiParticlePipeline.cu
                    ${VIENNAPS_PIPELINE_DIR}/GeneralPipelineDisk.cu
-                   ${VIENNAPS_PIPELINE_DIR}/GeneralPipelineTriangle.cu)
+                   ${VIENNAPS_PIPELINE_DIR}/GeneralPipelineTriangle.cu
+                   ${VIENNAPS_PIPELINE_DIR}/GeneralPipelineLine.cu)
 add_dependencies(ViennaPS-GPU_Examples holeCompare)
