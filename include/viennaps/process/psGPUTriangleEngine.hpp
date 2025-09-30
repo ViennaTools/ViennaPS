@@ -10,7 +10,7 @@
 
 #include <lsMesh.hpp>
 
-#include <raygTrace.hpp>
+#include <raygTraceTriangle.hpp>
 
 #include <psgCreateSurfaceMesh.hpp>
 #include <psgElementToPointData.hpp>
@@ -251,7 +251,7 @@ private:
 
 private:
   std::shared_ptr<DeviceContext> deviceContext_;
-  viennaray::gpu::Trace<NumericType, D> rayTracer_;
+  viennaray::gpu::TraceTriangle<NumericType, D> rayTracer_;
 
   KDTreeType elementKdTree_;
   MeshType surfaceMesh_;

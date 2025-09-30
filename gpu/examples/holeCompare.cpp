@@ -9,7 +9,7 @@ using namespace viennaps;
 
 int main(int argc, char **argv) {
   using NumericType = float;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
   Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);

@@ -10,7 +10,7 @@
 
 #include <lsMesh.hpp>
 
-#include <raygTrace.hpp>
+#include <raygTraceDisk.hpp>
 
 namespace viennaps {
 
@@ -263,7 +263,7 @@ private:
 
 private:
   std::shared_ptr<DeviceContext> deviceContext_;
-  viennaray::gpu::Trace<NumericType, D> rayTracer_;
+  viennaray::gpu::TraceDisk<NumericType, D> rayTracer_;
 
   bool rayTracerInitialized_ = false;
 };
