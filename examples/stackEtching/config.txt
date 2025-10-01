@@ -19,7 +19,7 @@ timeUnit=s
 
 # fluxes in 1e15 atoms/cm3
 etchantFlux = 150
-polyFlux = 6
+polyFlux = 5
 ionFlux = 56
 
 meanIonEnergy = 100.

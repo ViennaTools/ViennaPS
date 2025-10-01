@@ -356,6 +356,7 @@ public:
     for (auto m : p.materials) {
       minEnergy = std::min(minEnergy, m.Eth_ie);
     }
+    assert(minEnergy < std::numeric_limits<NumericType>::max());
   }
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -428,7 +429,8 @@ public:
     if (newEnergy > minEnergy) {
       E = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-          rayDir, geomNormal, Rng, std::max(incAngle, p.Ions.minAngle));
+          rayDir, geomNormal, Rng,
+          M_PI_2 - std::min(incAngle, p.Ions.minAngle));
       return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
       return std::pair<NumericType, Vec3D<NumericType>>{
