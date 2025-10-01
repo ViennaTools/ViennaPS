@@ -536,6 +536,11 @@ class Domain:
         Get the domain setup.
         """
 
+    def getSurfaceMesh(self, addMaterialIds: bool = True) -> viennals._core.Mesh:
+        """
+        Get the surface mesh of the domain
+        """
+
     def insertNextLevelSet(
         self, levelset: viennals.d3.Domain, wrapLowerLevelSet: bool = True
     ) -> None:
