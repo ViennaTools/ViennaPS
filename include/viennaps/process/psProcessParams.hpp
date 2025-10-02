@@ -73,21 +73,20 @@ struct AdvectionParameters {
 };
 
 struct CoverageParameters {
-  double coverageDeltaThreshold = 0.0;
+  double tolerance = 0.0;
   unsigned maxIterations = std::numeric_limits<unsigned>::max();
   bool initialized = false;
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
-    metaData["CoverageDeltaThreshold"] = {coverageDeltaThreshold};
-    metaData["MaxIterations"] = {static_cast<double>(maxIterations)};
+    metaData["CoverageTolerance"] = {tolerance};
+    metaData["CoverageMaxIterations"] = {static_cast<double>(maxIterations)};
     return metaData;
   }
 
   auto toMetaDataString() const {
-    return "\nCoverageDeltaThreshold: " +
-           std::to_string(coverageDeltaThreshold) +
-           "\nMaxIterations: " + std::to_string(maxIterations);
+    return "\nCoverageTolerance: " + std::to_string(tolerance) +
+           "\nCoverageMaxIterations: " + std::to_string(maxIterations);
   }
 };
 

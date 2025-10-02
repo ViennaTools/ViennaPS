@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");
 
   CoverageParameters coverageParams;
-  coverageParams.coverageDeltaThreshold = params.get("coverageDeltaThreshold");
+  coverageParams.maxIterations = 10;
 
   // Process setup
   Process<NumericType, D> process;

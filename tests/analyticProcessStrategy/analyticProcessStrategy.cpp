@@ -28,8 +28,6 @@ public:
     return rate_;
   }
 
-  int getTranslationFieldOptions() const override { return 0; }
-
   void prepare(SmartPointer<Domain<NumericType, D>> domain,
                SmartPointer<std::vector<NumericType>> velocities,
                const NumericType processTime) override {

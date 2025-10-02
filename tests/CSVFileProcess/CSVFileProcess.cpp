@@ -94,8 +94,6 @@ template <typename NumericType, int D> void RunTest() {
 
       VC_TEST_ASSERT(model->getSurfaceModel());
       VC_TEST_ASSERT(model->getVelocityField());
-      VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
-                     0);
 
       Process<NumericType, D>(domain, model, 1.0).apply();
 

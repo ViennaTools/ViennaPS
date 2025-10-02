@@ -98,7 +98,7 @@ public:
             NumericType ionSticking = 1., NumericType radicalOrder = 1.,
             NumericType ionOrder = 1., NumericType ionMinAngle = 0.) {
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
     this->setVelocityField(velField);
 
     // particles

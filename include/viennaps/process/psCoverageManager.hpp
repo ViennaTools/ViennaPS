@@ -55,7 +55,7 @@ public:
     Logger::getInstance().addInfo(stream.str()).print();
 
     for (auto val : deltaMetric) {
-      if (val > context.coverageParams.coverageDeltaThreshold)
+      if (val > context.coverageParams.tolerance)
         return false;
     }
     return true;

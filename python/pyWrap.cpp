@@ -462,8 +462,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // CoverageParameters
   py::class_<CoverageParameters>(module, "CoverageParameters")
       .def(py::init<>())
-      .def_readwrite("coverageDeltaThreshold",
-                     &CoverageParameters::coverageDeltaThreshold)
+      .def_readwrite("tolerance", &CoverageParameters::tolerance)
       .def_readwrite("maxIterations", &CoverageParameters::maxIterations)
       .def("toMetaData", &CoverageParameters::toMetaData,
            "Convert the coverage parameters to a metadata dict.")

@@ -127,19 +127,13 @@ private:
 
     // Initialize translation field. Converts points ids from level set points
     // to surface points
+    const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
     context.translationField =
         SmartPointer<TranslationField<NumericType, D>>::New(
-            context.model->getVelocityField(),
-            context.domain->getMaterialMap());
+            context.model->getVelocityField(), context.domain->getMaterialMap(),
+            translationMethod);
 
-    auto translationMethod = context.translationField->getTranslationMethod();
-    if (translationMethod == 0) {
-      Logger::getInstance()
-          .addWarning(
-              "Translation method can not be 0 for flux-based processes.")
-          .print();
-      return ProcessResult::INVALID_INPUT;
-    } else if (translationMethod == 1) {
+    if (translationMethod == 1) {
       if (!translator_)
         translator_ = SmartPointer<TranslatorType>::New();
       context.translationField->setTranslator(translator_);
@@ -359,7 +353,7 @@ private:
     const auto name = context.getProcessName();
     auto &maxIterations = context.coverageParams.maxIterations;
     if (maxIterations == std::numeric_limits<unsigned>::max() &&
-        context.coverageParams.coverageDeltaThreshold == 0.) {
+        context.coverageParams.tolerance == 0.) {
       maxIterations = 10;
       Logger::getInstance()
           .addWarning("No coverage initialization parameters set. Using " +

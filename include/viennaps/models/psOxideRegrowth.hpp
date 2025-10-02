@@ -33,8 +33,6 @@ public:
     }
   }
 
-  int getTranslationFieldOptions() const override { return 0; }
-
 private:
   const NumericType rate;
   const NumericType oxide_rate;

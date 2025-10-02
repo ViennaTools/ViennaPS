@@ -48,8 +48,8 @@ private:
     context.model->initialize(context.domain, context.processTime);
     context.translationField =
         SmartPointer<TranslationField<NumericType, D>>::New(
-            context.model->getVelocityField(),
-            context.domain->getMaterialMap());
+            context.model->getVelocityField(), context.domain->getMaterialMap(),
+            0);
 
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));

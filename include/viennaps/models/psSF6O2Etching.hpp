@@ -58,7 +58,7 @@ private:
         viennaps::impl::PlasmaEtchingSurfaceModel<NumericType, D>>::New(params);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
@@ -226,7 +226,7 @@ private:
     this->setSurfaceModel(surfModel);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
     this->setVelocityField(velField);
 
     this->setProcessName("SF6O2Etching");

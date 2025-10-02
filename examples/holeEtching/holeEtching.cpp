@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
   CoverageParameters coverageParams;
-  coverageParams.coverageDeltaThreshold = 1e-4;
+  coverageParams.tolerance = 1e-4;
 
   RayTracingParameters rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");

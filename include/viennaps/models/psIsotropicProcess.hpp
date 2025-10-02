@@ -34,10 +34,6 @@ public:
 
     return rate_;
   }
-
-  // the translation field should be disabled when using a surface model
-  // which only depends on an analytic velocity field
-  int getTranslationFieldOptions() const override { return 0; }
 };
 } // namespace impl
 
