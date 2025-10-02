@@ -17,10 +17,24 @@ template <typename NumericType, int D> class AdvectionHandler {
 public:
   ProcessResult initialize(ProcessContext<NumericType, D> &context) {
     // Initialize advection handler with context
+    assert(context.translationField);
     auto translationMethod = context.translationField->getTranslationMethod();
     if (translationMethod > 2 || translationMethod < 0) {
       Logger::getInstance()
           .addWarning("Translation field method not supported.")
+          .print();
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    auto &intSchem = context.advectionParams.integrationScheme;
+    if (translationMethod == 1 &&
+        (intSchem != IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER &&
+         intSchem != IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER &&
+         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
+         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER)) {
+      Logger::getInstance()
+          .addWarning("Translation field method not supported in combination "
+                      "with integration scheme.")
           .print();
       return ProcessResult::INVALID_INPUT;
     }

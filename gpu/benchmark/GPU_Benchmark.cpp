@@ -52,9 +52,9 @@ int main() {
     viennals::Advect<NumericType, D> advectionKernel;
 
     auto velocityField =
-        SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+        SmartPointer<DefaultVelocityField<NumericType, D>>::New();
     auto translationField = SmartPointer<TranslationField<NumericType, D>>::New(
-        velocityField, domain->getMaterialMap());
+        velocityField, domain->getMaterialMap(), 1);
     advectionKernel.setVelocityField(translationField);
 
     for (const auto &ls : domain->getLevelSets()) {

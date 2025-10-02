@@ -22,8 +22,6 @@ template <class NumericType, int D> void RunTest() {
 
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
-    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
-                   2);
 
     model->addNeutralParticle(1.);
     VC_TEST_ASSERT(model->getParticleTypes().size() == 1);

@@ -56,9 +56,7 @@ template <typename NumericType, int D> struct ProcessContext {
     flags.useProcessParams =
         model->getSurfaceModel() &&
         model->getSurfaceModel()->getProcessParameters() != nullptr;
-    flags.isAnalytic =
-        model->getVelocityField() &&
-        model->getVelocityField()->getTranslationFieldOptions() == 0;
+    flags.isAnalytic = model->getVelocityField() && !model->useFluxEngine();
     flags.isALP = model->isALPModel();
     flags.useCoverages = flags.isALP || flags.useCoverages;
   }
@@ -86,6 +84,21 @@ template <typename NumericType, int D> struct ProcessContext {
 
   std::string getProcessName() const {
     return model->getProcessName().value_or("default");
+  }
+
+  bool needsExtendedVelocities() const {
+    return advectionParams.integrationScheme ==
+               IntegrationScheme::LAX_FRIEDRICHS_1ST_ORDER ||
+           advectionParams.integrationScheme ==
+               IntegrationScheme::LAX_FRIEDRICHS_2ND_ORDER ||
+           advectionParams.integrationScheme ==
+               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
+           advectionParams.integrationScheme ==
+               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_2ND_ORDER ||
+           advectionParams.integrationScheme ==
+               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER ||
+           advectionParams.integrationScheme ==
+               IntegrationScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   }
 };
 

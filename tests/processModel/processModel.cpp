@@ -21,7 +21,9 @@ template <class NumericType, int D> void RunTest() {
   units::Length::getInstance().setUnit("nm");
 
   // default constructors
-  { auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New(); }
+  {
+    auto model = SmartPointer<ProcessModelCPU<NumericType, D>>::New();
+  }
 
   // fluorocarbon etching
   {
@@ -102,8 +104,6 @@ template <class NumericType, int D> void RunTest() {
         std::vector<std::pair<Material, NumericType>>{});
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
-    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
-                   0);
   }
 }
 

@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
   model->setProcessName("CustomParticleDistribution");
   auto surfaceModel = SmartPointer<CustomSurfaceModel<NumericType>>::New();
   model->setSurfaceModel(surfaceModel);
-  auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+  auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
   model->setVelocityField(velField);
   auto distribution = loadDistributionFromFile<NumericType>(filename);
   auto particle = std::make_unique<CustomDistributionParticle<NumericType, D>>(

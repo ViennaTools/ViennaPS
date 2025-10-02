@@ -34,7 +34,7 @@ public:
   // 0: do not translate level set ID to surface ID (analytic velocity field)
   // 1: use unordered map to translate level set ID to surface ID
   // 2: use kd-tree to translate level set ID to surface ID
-  [[nodiscard]] virtual int getTranslationFieldOptions() const { return 1; }
+  // [[nodiscard]] virtual int getTranslationFieldOptions() const { return 1; }
 
   // Function to override for process-specific preparation
   virtual void
@@ -47,17 +47,12 @@ public:
 template <typename NumericType, int D>
 class DefaultVelocityField : public VelocityField<NumericType, D> {
 public:
-  explicit DefaultVelocityField(const int translationFieldOptions = 1)
-      : translationFieldOptions_(translationFieldOptions) {}
+  DefaultVelocityField() = default;
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &, int,
                                 const Vec3D<NumericType> &,
                                 unsigned long pointId) override {
     return velocities_->at(pointId);
-  }
-
-  [[nodiscard]] int getTranslationFieldOptions() const override {
-    return translationFieldOptions_;
   }
 
   void prepare(SmartPointer<Domain<NumericType, D>> domain,
@@ -68,7 +63,6 @@ public:
 
 private:
   SmartPointer<std::vector<NumericType>> velocities_;
-  const int translationFieldOptions_ = 1; // default: use map translator
 };
 
 } // namespace viennaps

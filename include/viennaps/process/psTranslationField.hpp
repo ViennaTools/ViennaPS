@@ -21,9 +21,9 @@ class TranslationField : public viennals::VelocityField<NumericType> {
 public:
   TranslationField(
       SmartPointer<::viennaps::VelocityField<NumericType, D>> velocityField,
-      SmartPointer<MaterialMap> const &materialMap)
+      SmartPointer<MaterialMap> const &materialMap, int translationMethod)
       : modelVelocityField_(velocityField), materialMap_(materialMap),
-        translationMethod_(velocityField->getTranslationFieldOptions()) {}
+        translationMethod_(translationMethod) {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material,

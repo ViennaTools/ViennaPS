@@ -242,7 +242,7 @@ public:
         params_.ibeParams, maskMaterials_);
 
     // velocity field
-    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New(2);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
     if (Logger::getLogLevel() >= 5)
       source->saveSourcePlane();
