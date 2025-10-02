@@ -25,6 +25,9 @@ using namespace viennacore;
 template <typename NumericType> struct FluorocarbonParameters {
 
   struct MaterialParameters {
+
+    Material id = Material::Undefined;
+
     // density
     NumericType density = 2.2; // 1e22 atoms/cm³
 
@@ -42,8 +45,6 @@ template <typename NumericType> struct FluorocarbonParameters {
     // chemical etching
     NumericType K = 0.002789491704544977;
     NumericType E_a = 0.168; // eV
-
-    Material id = Material::Undefined;
   };
 
   std::vector<MaterialParameters> materials;

@@ -41,18 +41,18 @@ int main(int argc, char *argv[]) {
 
   // use pre-defined Fluorocarbon etching model
   auto parameters = FluorocarbonParameters<NumericType>();
-  parameters.addMaterial({.density = 2.2, .id = Material::SiO2});
-  parameters.addMaterial({.density = 2.,
+  parameters.addMaterial({.id = Material::Si, .density = 5.5});
+  parameters.addMaterial({.id = Material::SiO2, .density = 2.2});
+  parameters.addMaterial({.id = Material::Si3N4, .density = 2.3});
+  parameters.addMaterial({.id = Material::Polymer,
+                          .density = 2.,
                           .beta_e = 0.6,
-                          .A_ie = 0.0361 * 2,
-                          .id = Material::Polymer});
-  parameters.addMaterial({.density = 2.3, .id = Material::Si3N4});
-  parameters.addMaterial({.density = 5.5, .id = Material::Si});
-  parameters.addMaterial({.density = 500.,
+                          .A_ie = 0.0361 * 2});
+  parameters.addMaterial({.id = Material::Mask,
+                          .density = 500.,
                           .beta_p = 0.01,
                           .beta_e = 0.1,
-                          .Eth_sp = 20.,
-                          .id = Material::Mask});
+                          .Eth_sp = 20.});
 
   parameters.ionFlux = params.get("ionFlux");
   parameters.etchantFlux = params.get("etchantFlux");
