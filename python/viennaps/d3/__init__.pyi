@@ -519,6 +519,13 @@ class Domain:
         Get the grid delta.
         """
 
+    def getLevelSetMesh(
+        self, width: typing.SupportsInt = 1
+    ) -> list[viennals._core.Mesh]:
+        """
+        Get the level set grids of layers in the domain.
+        """
+
     def getLevelSets(self) -> list[viennals.d3.Domain]: ...
     def getMaterialMap(self) -> viennaps._core.MaterialMap: ...
     def getMetaData(self) -> dict[str, list[float]]:
@@ -579,7 +586,7 @@ class Domain:
         """
 
     def saveLevelSets(self, filename: str) -> None: ...
-    def saveSurfaceMesh(self, filename: str, addMaterialIds: bool = False) -> None:
+    def saveSurfaceMesh(self, filename: str, addMaterialIds: bool = True) -> None:
         """
         Save the surface of the domain.
         """

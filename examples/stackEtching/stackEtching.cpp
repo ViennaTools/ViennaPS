@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
   parameters.addMaterial({.density = 2.3, .id = Material::Si3N4});
   parameters.addMaterial({.density = 5.5, .id = Material::Si});
   parameters.addMaterial({.density = 500.,
-                          .beta_e = 0.1,
                           .beta_p = 0.01,
+                          .beta_e = 0.1,
                           .Eth_sp = 20.,
                           .id = Material::Mask});
 
