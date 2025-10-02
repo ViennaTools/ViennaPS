@@ -75,15 +75,14 @@ template <typename NumericType> struct FluorocarbonParameters {
     materials.push_back(material);
   }
 
-  auto
-  getMaterialParameters(const Material material) const -> MaterialParameters {
+  MaterialParameters getMaterialParameters(const Material material) const {
     for (const auto &m : materials) {
       if (m.id == material)
         return m;
     }
     Logger::getInstance()
-        .addError("Material " + MaterialMap::getMaterialName(material) +
-                  " not found in fluorocarbon parameters.")
+        .addError("Material '" + MaterialMap::getMaterialName(material) +
+                  "' not found in fluorocarbon model parameters.")
         .print();
     return MaterialParameters{};
   }
