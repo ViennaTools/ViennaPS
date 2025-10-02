@@ -30,12 +30,6 @@ public:
     return 0;
   }
 
-  // translation field options
-  // 0: do not translate level set ID to surface ID (analytic velocity field)
-  // 1: use unordered map to translate level set ID to surface ID
-  // 2: use kd-tree to translate level set ID to surface ID
-  // [[nodiscard]] virtual int getTranslationFieldOptions() const { return 1; }
-
   // Function to override for process-specific preparation
   virtual void
   prepare(SmartPointer<Domain<NumericType, D>> domain, // process domain
