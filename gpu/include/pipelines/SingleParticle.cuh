@@ -21,7 +21,7 @@ singleNeutralCollision(viennaray::gpu::PerRayData *prd) {
 }
 
 __forceinline__ __device__ void
-singleNeutralReflection(const viennaray::gpu::HitSBTData *sbtData,
+singleNeutralReflection(const viennaray::gpu::HitSBTDataTriangle *sbtData,
                         viennaray::gpu::PerRayData *prd) {
   prd->rayWeight -= prd->rayWeight * launchParams.sticking;
   auto geoNormal = computeNormal(sbtData, prd->primID);

@@ -22,7 +22,7 @@ plasmaNeutralCollision(viennaray::gpu::PerRayData *prd) {
 }
 
 __forceinline__ __device__ void
-plasmaNeutralReflection(const viennaray::gpu::HitSBTData *sbtData,
+plasmaNeutralReflection(const viennaray::gpu::HitSBTDataTriangle *sbtData,
                         viennaray::gpu::PerRayData *prd) {
   float *data = (float *)sbtData->cellData;
   const auto &phi_E = data[prd->primID];
@@ -40,7 +40,7 @@ plasmaNeutralReflection(const viennaray::gpu::HitSBTData *sbtData,
 //
 
 __forceinline__ __device__ void
-plasmaIonCollision(const viennaray::gpu::HitSBTData *sbtData,
+plasmaIonCollision(const viennaray::gpu::HitSBTDataTriangle *sbtData,
                    viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
@@ -94,7 +94,7 @@ plasmaIonCollision(const viennaray::gpu::HitSBTData *sbtData,
 }
 
 __forceinline__ __device__ void
-plasmaIonReflection(const viennaray::gpu::HitSBTData *sbtData,
+plasmaIonReflection(const viennaray::gpu::HitSBTDataTriangle *sbtData,
                     viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(

@@ -26,8 +26,8 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 enum { SURFACE_RAY_TYPE = 0, RAY_TYPE_COUNT };
 
 extern "C" __global__ void __intersection__() {
-  const HitSBTLineData *sbtData =
-      (const HitSBTLineData *)optixGetSbtDataPointer();
+  const HitSBTDataLine *sbtData =
+      (const HitSBTDataLine *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   // Get the index of the AABB box that was hit
@@ -50,7 +50,7 @@ extern "C" __global__ void __intersection__() {
 
   if (valid) {
     // Collect all intersections and filter out overlapping lines in CH shader
-    if (!sbtData->isBoundary && prd->tempCount < MAX_NEIGHBORS) {
+    if (!sbtData->base.isBoundary && prd->tempCount < MAX_NEIGHBORS) {
       prd->tValues[prd->tempCount] = t;
       prd->primIDs[prd->tempCount] = primID;
       prd->tempCount++;
@@ -62,8 +62,8 @@ extern "C" __global__ void __intersection__() {
 }
 
 extern "C" __global__ void __closesthit__() {
-  const HitSBTLineData *sbtData =
-      (const HitSBTLineData *)optixGetSbtDataPointer();
+  const HitSBTDataLine *sbtData =
+      (const HitSBTDataLine *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   const unsigned int primID = optixGetPrimitiveIndex();
@@ -84,7 +84,7 @@ extern "C" __global__ void __closesthit__() {
     return;
   }
 
-  if (sbtData->isBoundary) {
+  if (sbtData->base.isBoundary) {
     prd->numBoundaryHits++;
     // This is effectively the miss shader
     if (primID == 2 || primID == 3) { // bottom or top - ymin or ymax
@@ -151,13 +151,13 @@ extern "C" __global__ void __closesthit__() {
     unsigned callIdx;
 
     callIdx = callableIndex(launchParams.particleType, CallableSlot::COLLISION);
-    optixDirectCall<void, const HitSBTLineData *, PerRayData *>(callIdx,
+    optixDirectCall<void, const HitSBTDataLine *, PerRayData *>(callIdx,
                                                                 sbtData, prd);
 
     // ------------- REFLECTION --------------- //
     callIdx =
         callableIndex(launchParams.particleType, CallableSlot::REFLECTION);
-    optixDirectCall<void, const HitSBTLineData *, PerRayData *>(callIdx,
+    optixDirectCall<void, const HitSBTDataLine *, PerRayData *>(callIdx,
                                                                 sbtData, prd);
   }
 }
@@ -183,7 +183,7 @@ extern "C" __global__ void __raygen__() {
 
   unsigned callIdx =
       callableIndex(launchParams.particleType, CallableSlot::INIT);
-  optixDirectCall<void, const HitSBTLineData *, PerRayData *>(callIdx, nullptr,
+  optixDirectCall<void, const HitSBTDataLine *, PerRayData *>(callIdx, nullptr,
                                                               &prd);
 
   // the values we store the PRD pointer in:

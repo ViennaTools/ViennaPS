@@ -23,7 +23,7 @@ extern "C" __constant__ LaunchParams launchParams;
 enum { SURFACE_RAY_TYPE = 0, RAY_TYPE_COUNT };
 
 extern "C" __global__ void __closesthit__Neutral() {
-  const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
+  const HitSBTDataTriangle *sbtData = (const HitSBTDataTriangle *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary) {
@@ -87,7 +87,7 @@ extern "C" __global__ void __raygen__Neutral() {
 }
 
 extern "C" __global__ void __closesthit__Ion() {
-  const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
+  const HitSBTDataTriangle *sbtData = (const HitSBTDataTriangle *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary) {

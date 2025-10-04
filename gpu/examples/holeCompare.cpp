@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   NumericType maskHeight = 1.2;
   NumericType taperAngle = 1.193;
 
-  NumericType processDuration = 0.5;
+  NumericType processDuration = 1.5;
   NumericType exponent = 500.;
   AdvectionParameters advParams;
   advParams.integrationScheme = IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER;
@@ -45,22 +45,22 @@ int main(int argc, char **argv) {
     return -flux[0];
   };
 
-  // CPU
-  if constexpr (true) {
-    auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
-    model->addIonParticle(exponent, 80, 90, 75);
-    model->setRateFunction(rateFunction);
+  // // CPU
+  // if constexpr (true) {
+  //   auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
+  //   model->addIonParticle(exponent, 80, 90, 75);
+  //   model->setRateFunction(rateFunction);
 
-    auto copy = Domain<NumericType, D>::New(geometry);
+  //   auto copy = Domain<NumericType, D>::New(geometry);
 
-    Process<NumericType, D> process(copy, model, processDuration);
-    process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 1.;
-    process.setParameters(rtParams);
-    process.apply();
+  //   Process<NumericType, D> process(copy, model, processDuration);
+  //   process.setParameters(advParams);
+  //   rtParams.smoothingNeighbors = 1.;
+  //   process.setParameters(rtParams);
+  //   process.apply();
 
-    copy->saveSurfaceMesh("cpu_result.vtp", true);
-  }
+  //   copy->saveSurfaceMesh("cpu_result.vtp", true);
+  // }
 
   rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
   {
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 
     Process<NumericType, D> process(copy, model, processDuration);
     process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 1.;
+    rtParams.smoothingNeighbors = 2.;
     process.setParameters(rtParams);
     process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
     process.apply();

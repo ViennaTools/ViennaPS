@@ -22,7 +22,7 @@ using namespace viennaray::gpu;
 extern "C" __constant__ LaunchParams launchParams;
 
 extern "C" __global__ void __closesthit__SingleParticleALD() {
-  const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
+  const HitSBTDataTriangle *sbtData = (const HitSBTDataTriangle *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary) {

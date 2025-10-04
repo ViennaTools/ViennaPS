@@ -18,7 +18,7 @@ using namespace viennacore;
 extern "C" __constant__ LaunchParams launchParams;
 
 extern "C" __global__ void __closesthit__ion() {
-  const HitSBTData *sbtData = (const HitSBTData *)optixGetSbtDataPointer();
+  const HitSBTDataTriangle *sbtData = (const HitSBTDataTriangle *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   if (sbtData->isBoundary) {

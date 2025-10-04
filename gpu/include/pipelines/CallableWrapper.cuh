@@ -24,13 +24,13 @@ extern "C" __device__ void __direct_callable__noop(void *, void *) {
 //
 
 // extern "C" __device__ void __direct_callable__singleNeutralCollision(
-//     const viennaray::gpu::HitSBTData *sbtData,
+//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
 //     viennaray::gpu::PerRayData *prd) {
 //   singleNeutralCollision(prd);
 // }
 
 // extern "C" __device__ void __direct_callable__singleNeutralReflection(
-//     const viennaray::gpu::HitSBTData *sbtData,
+//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
 //     viennaray::gpu::PerRayData *prd) {
 //   singleNeutralReflection(sbtData, prd);
 // }
@@ -39,75 +39,35 @@ extern "C" __device__ void __direct_callable__noop(void *, void *) {
 // --- MultParticle pipeline
 //
 
-extern "C" __device__ void __direct_callable__multiNeutralCollisionDisk(
-    const viennaray::gpu::HitSBTDiskData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
+// Avoid code duplication
+//  - functions have to be templated because computeNormal needs the SBTData
+//  type
+//  - passing the normal directly would work, but some functions also need
+//  sbtData->cellData
+//  - sbtData could be a void pointer and then cast inside each function using
+//  HitSBTDataBase
+
+extern "C" __device__ void
+__direct_callable__multiNeutralCollision(const void *sbtData,
+                                         viennaray::gpu::PerRayData *prd) {
   multiNeutralCollision(prd);
 }
 
-extern "C" __device__ void __direct_callable__multiNeutralCollisionTriangle(
-    const viennaray::gpu::HitSBTData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiNeutralCollision(prd);
-}
-
-extern "C" __device__ void __direct_callable__multiNeutralCollisionLine(
-    const viennaray::gpu::HitSBTLineData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiNeutralCollision(prd);
-}
-
-extern "C" __device__ void __direct_callable__multiNeutralReflectionDisk(
-    const viennaray::gpu::HitSBTDiskData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
+extern "C" __device__ void
+__direct_callable__multiNeutralReflection(const void *sbtData,
+                                          viennaray::gpu::PerRayData *prd) {
   multiNeutralReflection(sbtData, prd);
 }
 
-extern "C" __device__ void __direct_callable__multiNeutralReflectionTriangle(
-    const viennaray::gpu::HitSBTData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiNeutralReflection(sbtData, prd);
-}
-
-extern "C" __device__ void __direct_callable__multiNeutralReflectionLine(
-    const viennaray::gpu::HitSBTLineData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiNeutralReflection(sbtData, prd);
-}
-
-extern "C" __device__ void __direct_callable__multiIonCollisionDisk(
-    const viennaray::gpu::HitSBTDiskData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
+extern "C" __device__ void
+__direct_callable__multiIonCollision(const void *sbtData,
+                                     viennaray::gpu::PerRayData *prd) {
   multiIonCollision(sbtData, prd);
 }
 
-extern "C" __device__ void __direct_callable__multiIonCollisionTriangle(
-    const viennaray::gpu::HitSBTData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiIonCollision(sbtData, prd);
-}
-
-extern "C" __device__ void __direct_callable__multiIonCollisionLine(
-    const viennaray::gpu::HitSBTLineData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiIonCollision(sbtData, prd);
-}
-
-extern "C" __device__ void __direct_callable__multiIonReflectionDisk(
-    const viennaray::gpu::HitSBTDiskData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiIonReflection(sbtData, prd);
-}
-
-extern "C" __device__ void __direct_callable__multiIonReflectionTriangle(
-    const viennaray::gpu::HitSBTData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
-  multiIonReflection(sbtData, prd);
-}
-
-extern "C" __device__ void __direct_callable__multiIonReflectionLine(
-    const viennaray::gpu::HitSBTLineData *sbtData,
-    viennaray::gpu::PerRayData *prd) {
+extern "C" __device__ void
+__direct_callable__multiIonReflection(const void *sbtData,
+                                      viennaray::gpu::PerRayData *prd) {
   multiIonReflection(sbtData, prd);
 }
 
@@ -121,32 +81,32 @@ __direct_callable__multiIonInit(const void *, viennaray::gpu::PerRayData *prd) {
 //
 
 // extern "C" __device__ void __direct_callable__plasmaNeutralCollision(
-//     const viennaray::gpu::HitSBTData *sbtData,
+//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
 //     viennaray::gpu::PerRayData *prd) {
 //   plasmaNeutralCollision(prd);
 // }
 
 // extern "C" __device__ void __direct_callable__plasmaNeutralReflection(
-//     const viennaray::gpu::HitSBTData *sbtData,
+//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
 //     viennaray::gpu::PerRayData *prd) {
 //   plasmaNeutralReflection(sbtData, prd);
 // }
 
 // extern "C" __device__ void
-// __direct_callable__plasmaIonCollision(const viennaray::gpu::HitSBTData
-// *sbtData,
+// __direct_callable__plasmaIonCollision(const
+// viennaray::gpu::HitSBTDataTriangle *sbtData,
 //                                       viennaray::gpu::PerRayData *prd) {
 //   plasmaIonCollision(sbtData, prd);
 // }
 
 // extern "C" __device__ void __direct_callable__plasmaIonReflection(
-//     const viennaray::gpu::HitSBTData *sbtData,
+//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
 //     viennaray::gpu::PerRayData *prd) {
 //   plasmaIonReflection(sbtData, prd);
 // }
 
 // extern "C" __device__ void
-// __direct_callable__plasmaIonInit(const viennaray::gpu::HitSBTData *,
+// __direct_callable__plasmaIonInit(const viennaray::gpu::HitSBTDataTriangle *,
 //                                  viennaray::gpu::PerRayData *prd) {
 //   plasmaIonInit(prd);
 // }

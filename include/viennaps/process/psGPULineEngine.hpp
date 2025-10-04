@@ -79,7 +79,7 @@ public:
       }
 
       rayTracer_.setProcessName(
-          model->getProcessName().value_or("DefaultProcess"));
+          model->getProcessName().value_or("Undefined"));
       rayTracer_.setPipeline(model->getPipelineFileName(),
                              deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);

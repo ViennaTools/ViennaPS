@@ -26,8 +26,8 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 enum { SURFACE_RAY_TYPE = 0, RAY_TYPE_COUNT };
 
 extern "C" __global__ void __intersection__() {
-  const HitSBTDiskData *sbtData =
-      (const HitSBTDiskData *)optixGetSbtDataPointer();
+  const HitSBTDataDisk *sbtData =
+      (const HitSBTDataDisk *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   // Get the index of the AABB box that was hit
@@ -62,7 +62,7 @@ extern "C" __global__ void __intersection__() {
 
   if (valid) {
     // Collect all intersections and filter neighbors in CH shader
-    if (!sbtData->isBoundary && prd->tempCount < MAX_NEIGHBORS) {
+    if (!sbtData->base.isBoundary && prd->tempCount < MAX_NEIGHBORS) {
       prd->tValues[prd->tempCount] = t;
       prd->primIDs[prd->tempCount] = primID;
       prd->tempCount++;
@@ -74,8 +74,8 @@ extern "C" __global__ void __intersection__() {
 }
 
 extern "C" __global__ void __closesthit__() {
-  const HitSBTDiskData *sbtData =
-      (const HitSBTDiskData *)optixGetSbtDataPointer();
+  const HitSBTDataDisk *sbtData =
+      (const HitSBTDataDisk *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   const unsigned int primID = optixGetPrimitiveIndex();
@@ -96,7 +96,7 @@ extern "C" __global__ void __closesthit__() {
     return;
   }
 
-  if (sbtData->isBoundary) {
+  if (sbtData->base.isBoundary) {
     prd->numBoundaryHits++;
     // This is effectively the miss shader
     if (launchParams.D == 2 &&
@@ -169,13 +169,13 @@ extern "C" __global__ void __closesthit__() {
     unsigned callIdx;
 
     callIdx = callableIndex(launchParams.particleType, CallableSlot::COLLISION);
-    optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx,
+    optixDirectCall<void, const HitSBTDataDisk *, PerRayData *>(callIdx,
                                                                 sbtData, prd);
 
     // ------------- REFLECTION --------------- //
     callIdx =
         callableIndex(launchParams.particleType, CallableSlot::REFLECTION);
-    optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx,
+    optixDirectCall<void, const HitSBTDataDisk *, PerRayData *>(callIdx,
                                                                 sbtData, prd);
   }
 }
@@ -201,7 +201,7 @@ extern "C" __global__ void __raygen__() {
 
   unsigned callIdx =
       callableIndex(launchParams.particleType, CallableSlot::INIT);
-  optixDirectCall<void, const HitSBTDiskData *, PerRayData *>(callIdx, nullptr,
+  optixDirectCall<void, const HitSBTDataDisk *, PerRayData *>(callIdx, nullptr,
                                                               &prd);
 
   // the values we store the PRD pointer in:

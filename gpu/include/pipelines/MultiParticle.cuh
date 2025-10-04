@@ -6,6 +6,7 @@
 #include <raygReflection.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
+using namespace viennaray::gpu;
 
 //
 // --- Neutral particle
@@ -20,9 +21,8 @@ multiNeutralCollision(viennaray::gpu::PerRayData *prd) {
   }
 }
 
-template <typename SBTData>
 __forceinline__ __device__ void
-multiNeutralReflection(const SBTData *sbtData,
+multiNeutralReflection(const void *sbtData,
                        viennaray::gpu::PerRayData *prd) {
   int material = launchParams.materialIds[prd->primID];
   float sticking = launchParams.materialSticking[material];
@@ -35,9 +35,8 @@ multiNeutralReflection(const SBTData *sbtData,
 // --- Ion particle
 //
 
-template <typename SBTData>
 __forceinline__ __device__ void
-multiIonCollision(const SBTData *sbtData, viennaray::gpu::PerRayData *prd) {
+multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
   for (int i = 0; i < prd->ISCount; ++i) {
@@ -60,9 +59,8 @@ multiIonCollision(const SBTData *sbtData, viennaray::gpu::PerRayData *prd) {
   }
 }
 
-template <typename SBTData>
 __forceinline__ __device__ void
-multiIonReflection(const SBTData *sbtData, viennaray::gpu::PerRayData *prd) {
+multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
   auto geomNormal = computeNormal(sbtData, prd->primID);
