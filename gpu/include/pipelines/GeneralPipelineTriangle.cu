@@ -26,7 +26,8 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 enum { SURFACE_RAY_TYPE = 0, RAY_TYPE_COUNT };
 
 extern "C" __global__ void __closesthit__() {
-  const HitSBTDataTriangle *sbtData = (const HitSBTDataTriangle *)optixGetSbtDataPointer();
+  const HitSBTDataTriangle *sbtData =
+      (const HitSBTDataTriangle *)optixGetSbtDataPointer();
   PerRayData *prd = (PerRayData *)getPRD<PerRayData>();
 
   const unsigned int primID = optixGetPrimitiveIndex();
@@ -48,10 +49,10 @@ extern "C" __global__ void __closesthit__() {
     // }
     if (launchParams.periodicBoundary) {
       applyPeriodicBoundary<viennaray::gpu::HitSBTDataTriangle>(prd, sbtData,
-                                                        launchParams.D);
+                                                                launchParams.D);
     } else {
       reflectFromBoundary<viennaray::gpu::HitSBTDataTriangle>(prd, sbtData,
-                                                      launchParams.D);
+                                                              launchParams.D);
     }
   } else {
     prd->ISCount = 1;
@@ -61,15 +62,15 @@ extern "C" __global__ void __closesthit__() {
     unsigned callIdx;
 
     callIdx = callableIndex(launchParams.particleType, CallableSlot::COLLISION);
-    optixDirectCall<void, const viennaray::gpu::HitSBTDataTriangle *, PerRayData *>(
-        callIdx, sbtData, prd);
+    optixDirectCall<void, const viennaray::gpu::HitSBTDataTriangle *,
+                    PerRayData *>(callIdx, sbtData, prd);
 
     // ------------- REFLECTION --------------- //
 
     callIdx =
         callableIndex(launchParams.particleType, CallableSlot::REFLECTION);
-    optixDirectCall<void, const HitSBTDataTriangle *, PerRayData *>(callIdx, sbtData,
-                                                            prd);
+    optixDirectCall<void, const HitSBTDataTriangle *, PerRayData *>(
+        callIdx, sbtData, prd);
     prd->rayWeight = 0.f;
   }
 }

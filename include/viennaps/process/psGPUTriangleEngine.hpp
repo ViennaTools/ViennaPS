@@ -81,8 +81,8 @@ public:
         }
       }
 
-      rayTracer_.setProcessName(
-          model->getProcessName().value_or("Undefined"));
+      rayTracer_.setProcessName(model->getProcessName().value_or("Undefined"));
+      rayTracer_.setParticleCallableMap(model->getParticleCallableMap());
       rayTracer_.setPipeline(model->getPipelineFileName(),
                              deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
