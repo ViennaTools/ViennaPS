@@ -1,8 +1,10 @@
 #pragma once
 
-// #include "SingleParticle.cuh"
+#include "FaradayCage.cuh"
 #include "MultiParticle.cuh"
-// #include "PlasmaEtching.cuh"
+#include "PlasmaEtching.cuh"
+#include "SingleParticle.cuh"
+#include "SingleParticleALD.cuh"
 
 //
 // --- Direct Callables wrapper
@@ -23,29 +25,27 @@ extern "C" __device__ void __direct_callable__noop(void *, void *) {
 // --- SingleParticle pipeline
 //
 
-// extern "C" __device__ void __direct_callable__singleNeutralCollision(
-//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
-//     viennaray::gpu::PerRayData *prd) {
-//   singleNeutralCollision(prd);
-// }
+extern "C" __device__ void
+__direct_callable__singleNeutralCollision(const void *sbtData,
+                                          viennaray::gpu::PerRayData *prd) {
+  singleNeutralCollision(prd);
+}
 
-// extern "C" __device__ void __direct_callable__singleNeutralReflection(
-//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
-//     viennaray::gpu::PerRayData *prd) {
-//   singleNeutralReflection(sbtData, prd);
-// }
+extern "C" __device__ void
+__direct_callable__singleNeutralReflection(const void *sbtData,
+                                           viennaray::gpu::PerRayData *prd) {
+  singleNeutralReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__singleALDNeutralCollision(const void *sbtData,
+                                             viennaray::gpu::PerRayData *prd) {
+  singleALDNeutralCollision(sbtData, prd);
+}
 
 //
 // --- MultParticle pipeline
 //
-
-// Avoid code duplication
-//  - functions have to be templated because computeNormal needs the SBTData
-//  type
-//  - passing the normal directly would work, but some functions also need
-//  sbtData->cellData
-//  - sbtData could be a void pointer and then cast inside each function using
-//  HitSBTDataBase
 
 extern "C" __device__ void
 __direct_callable__multiNeutralCollision(const void *sbtData,
@@ -80,33 +80,48 @@ __direct_callable__multiIonInit(const void *, viennaray::gpu::PerRayData *prd) {
 // --- PlasmaEtching pipeline
 //
 
-// extern "C" __device__ void __direct_callable__plasmaNeutralCollision(
-//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
-//     viennaray::gpu::PerRayData *prd) {
-//   plasmaNeutralCollision(prd);
-// }
+extern "C" __device__ void
+__direct_callable__plasmaNeutralCollision(const void *sbtData,
+                                          viennaray::gpu::PerRayData *prd) {
+  plasmaNeutralCollision(prd);
+}
 
-// extern "C" __device__ void __direct_callable__plasmaNeutralReflection(
-//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
-//     viennaray::gpu::PerRayData *prd) {
-//   plasmaNeutralReflection(sbtData, prd);
-// }
+extern "C" __device__ void
+__direct_callable__plasmaNeutralReflection(const void *sbtData,
+                                           viennaray::gpu::PerRayData *prd) {
+  plasmaNeutralReflection(sbtData, prd);
+}
 
-// extern "C" __device__ void
-// __direct_callable__plasmaIonCollision(const
-// viennaray::gpu::HitSBTDataTriangle *sbtData,
-//                                       viennaray::gpu::PerRayData *prd) {
-//   plasmaIonCollision(sbtData, prd);
-// }
+extern "C" __device__ void
+__direct_callable__plasmaIonCollision(const void *sbtData,
+                                      viennaray::gpu::PerRayData *prd) {
+  plasmaIonCollision(sbtData, prd);
+}
 
-// extern "C" __device__ void __direct_callable__plasmaIonReflection(
-//     const viennaray::gpu::HitSBTDataTriangle *sbtData,
-//     viennaray::gpu::PerRayData *prd) {
-//   plasmaIonReflection(sbtData, prd);
-// }
+extern "C" __device__ void
+__direct_callable__plasmaIonReflection(const void *sbtData,
+                                       viennaray::gpu::PerRayData *prd) {
+  plasmaIonReflection(sbtData, prd);
+}
 
-// extern "C" __device__ void
-// __direct_callable__plasmaIonInit(const viennaray::gpu::HitSBTDataTriangle *,
-//                                  viennaray::gpu::PerRayData *prd) {
-//   plasmaIonInit(prd);
-// }
+extern "C" __device__ void
+__direct_callable__plasmaIonInit(const void *,
+                                 viennaray::gpu::PerRayData *prd) {
+  plasmaIonInit(prd);
+}
+
+//
+// --- FaradayCage pipeline
+//
+
+extern "C" __device__ void
+__direct_callable__faradayCollision(const void *sbtData,
+                                    viennaray::gpu::PerRayData *prd) {
+  faradayIonCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__faradayReflection(const void *sbtData,
+                                     viennaray::gpu::PerRayData *prd) {
+  faradayIonReflection(sbtData, prd);
+}

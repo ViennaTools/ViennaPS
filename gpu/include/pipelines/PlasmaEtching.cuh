@@ -3,8 +3,8 @@
 #include <vcContext.hpp>
 #include <vcVectorType.hpp>
 
-#include <raygReflection.hpp>
 #include <models/psPlasmaEtchingParameters.hpp>
+#include <raygReflection.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -22,9 +22,10 @@ plasmaNeutralCollision(viennaray::gpu::PerRayData *prd) {
 }
 
 __forceinline__ __device__ void
-plasmaNeutralReflection(const viennaray::gpu::HitSBTDataTriangle *sbtData,
-                        viennaray::gpu::PerRayData *prd) {
-  float *data = (float *)sbtData->cellData;
+plasmaNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
+  const HitSBTDataBase *baseData =
+      reinterpret_cast<const HitSBTDataBase *>(sbtData);
+  float *data = (float *)baseData->cellData;
   const auto &phi_E = data[prd->primID];
   const auto &phi_P = data[prd->primID + launchParams.numElements];
   int material = launchParams.materialIds[prd->primID];
@@ -40,8 +41,7 @@ plasmaNeutralReflection(const viennaray::gpu::HitSBTDataTriangle *sbtData,
 //
 
 __forceinline__ __device__ void
-plasmaIonCollision(const viennaray::gpu::HitSBTDataTriangle *sbtData,
-                   viennaray::gpu::PerRayData *prd) {
+plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
@@ -94,12 +94,11 @@ plasmaIonCollision(const viennaray::gpu::HitSBTDataTriangle *sbtData,
 }
 
 __forceinline__ __device__ void
-plasmaIonReflection(const viennaray::gpu::HitSBTDataTriangle *sbtData,
-                    viennaray::gpu::PerRayData *prd) {
+plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
-  auto geomNormal = computeNormalDisk(sbtData, prd->primID);
+  auto geomNormal = computeNormal(sbtData, prd->primID);
   auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
   float angle = acosf(max(min(cosTheta, 1.f), 0.f));
 
@@ -136,9 +135,9 @@ plasmaIonReflection(const viennaray::gpu::HitSBTDataTriangle *sbtData,
   float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
   if (newEnergy > minEnergy) {
     prd->energy = newEnergy;
-    conedCosineReflectionNew(prd, geomNormal,
-                             M_PI_2f - min(angle, params->Ions.minAngle),
-                             launchParams.D);
+    conedCosineReflection(prd, geomNormal,
+                          M_PI_2f - min(angle, params->Ions.minAngle),
+                          launchParams.D);
   } else {
     prd->energy = 0.f; // contineRay checks for >= 0
     // prd->rayWeight = 0.f; // Maybe add this?
@@ -149,8 +148,10 @@ __forceinline__ __device__ void plasmaIonInit(viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
+
+  float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
   do {
     prd->energy = getNormalDistRand(&prd->RNGstate) * params->Ions.sigmaEnergy +
                   params->Ions.meanEnergy;
-  } while (prd->energy <= 0.f);
+  } while (prd->energy < minEnergy);
 }

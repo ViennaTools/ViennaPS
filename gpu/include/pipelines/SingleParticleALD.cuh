@@ -12,17 +12,16 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 //
 
 __forceinline__ __device__ void
-singleNeutralCollision(viennaray::gpu::PerRayData *prd) {
+singleALDNeutralCollision(const void *sbtData,
+                          viennaray::gpu::PerRayData *prd) {
+  const HitSBTDataBase *baseData =
+      reinterpret_cast<const HitSBTDataBase *>(sbtData);
+  float *data = (float *)(baseData->cellData);
   for (int i = 0; i < prd->ISCount; ++i) {
+    const float coverage = data[prd->TIndex[i]];
+    const float Seff = launchParams.sticking * max(1.f - coverage, 0.f);
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
                                          prd->TIndex[i]],
-              prd->rayWeight);
+              prd->rayWeight * Seff);
   }
-}
-
-__forceinline__ __device__ void
-singleNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  prd->rayWeight -= prd->rayWeight * launchParams.sticking;
-  auto geoNormal = computeNormal(sbtData, prd->primID);
-  diffuseReflection(prd, geoNormal, launchParams.D);
 }
