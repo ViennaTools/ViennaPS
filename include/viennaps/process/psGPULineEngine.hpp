@@ -163,7 +163,7 @@ public:
       }
       rayTracer_.setMaterialIds(lineMaterialIds);
     }
-    assert(context.diskMesh_->nodes.size() > 0);
+    assert(context.diskMesh->nodes.size() > 0);
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -213,7 +213,7 @@ public:
       for (int i = 0; i < numCov; ++i) {
         std::vector<NumericType> temp = *(coverages->getScalarData(i));
         std::vector<float> tempCasted(temp.begin(), temp.end());
-        assert(tempCasted.size() == diskMesh_->getNodes().size());
+        assert(tempCasted.size() == diskMesh_.getNodes().size());
         for (int j = 0; j < elementCenters.size(); j++) {
           auto closestPoint = pointKdTree->findNearest(elementCenters[j]);
           cov[j + i * surfaceMesh_->lines.size()] =
