@@ -71,7 +71,6 @@ extern "C" __global__ void __closesthit__() {
         callableIndex(launchParams.particleType, CallableSlot::REFLECTION);
     optixDirectCall<void, const HitSBTDataTriangle *, PerRayData *>(
         callIdx, sbtData, prd);
-    prd->rayWeight = 0.f;
   }
 }
 
