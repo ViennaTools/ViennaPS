@@ -22,7 +22,7 @@ class GPUDiskEngine final : public FluxEngine<NumericType, D> {
 
 public:
   GPUDiskEngine(std::shared_ptr<DeviceContext> deviceContext)
-      : deviceContext_(deviceContext), rayTracer_(deviceContext, "Disk") {}
+      : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
 
@@ -74,7 +74,6 @@ public:
         }
       }
 
-      rayTracer_.setProcessName(model->getProcessName().value_or("Undefined"));
       rayTracer_.setParticleCallableMap(model->getParticleCallableMap());
       rayTracer_.setPipeline(model->getPipelineFileName(),
                              deviceContext_->modulePath);
