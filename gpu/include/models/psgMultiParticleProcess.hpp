@@ -6,7 +6,7 @@
 #include <psConstants.hpp>
 #include <psMaterials.hpp>
 
-#include <raygLaunchParams.hpp> // TODO: move callableConfig to separate file
+#include <raygCallableConfig.hpp>
 
 namespace viennaps::gpu {
 
@@ -27,6 +27,7 @@ public:
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
     this->setPipelineFileName("GeneralPipeline");
+    this->setCallableFileName("CallableWrapper");
     std::unordered_map<std::string, unsigned> pMap = {{"Neutral", 0},
                                                       {"Ion", 1}};
     std::vector<viennaray::gpu::CallableConfig> cMap = {

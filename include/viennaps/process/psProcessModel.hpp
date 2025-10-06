@@ -10,7 +10,7 @@
 
 #include <rayParticle.hpp>
 #include <raySource.hpp>
-#include <raygLaunchParams.hpp> // TODO: move callableConfig to separate file
+#include <raygCallableConfig.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
 #include <vcCudaBuffer.hpp>
@@ -173,6 +173,7 @@ private:
   std::vector<viennaray::gpu::Particle<NumericType>> particles;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
   std::string pipelineFileName;
+  std::string callableFileName;
   bool materialIds = false;
   std::unordered_map<std::string, unsigned> particleMap_;
   std::vector<viennaray::gpu::CallableConfig> callableMap_;
@@ -191,6 +192,11 @@ public:
     pipelineFileName = fileName;
   }
   auto getPipelineFileName() const { return pipelineFileName; }
+
+  void setCallableFileName(const std::string &fileName) {
+    callableFileName = fileName;
+  }
+  auto getCallableFileName() const { return callableFileName; }
 
   void insertNextParticleType(
       const viennaray::gpu::Particle<NumericType> &passedParticle) {

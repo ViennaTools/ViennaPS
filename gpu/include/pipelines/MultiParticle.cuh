@@ -3,7 +3,10 @@
 #include <vcContext.hpp>
 #include <vcVectorType.hpp>
 
+#include "raygLaunchParams.hpp"
 #include <raygReflection.hpp>
+
+#include <models/psgPipelineParameters.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 using namespace viennaray::gpu;
@@ -22,8 +25,7 @@ multiNeutralCollision(viennaray::gpu::PerRayData *prd) {
 }
 
 __forceinline__ __device__ void
-multiNeutralReflection(const void *sbtData,
-                       viennaray::gpu::PerRayData *prd) {
+multiNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   int material = launchParams.materialIds[prd->primID];
   float sticking = launchParams.materialSticking[material];
   prd->rayWeight -= prd->rayWeight * sticking;

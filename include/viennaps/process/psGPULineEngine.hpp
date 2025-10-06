@@ -81,6 +81,8 @@ public:
       rayTracer_.setParticleCallableMap(model->getParticleCallableMap());
       rayTracer_.setPipeline(model->getPipelineFileName(),
                              deviceContext_->modulePath);
+      rayTracer_.setCallables(model->getCallableFileName(),
+                              deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
       // rayTracer_.setNumberOfRaysFixed(1);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);

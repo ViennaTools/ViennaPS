@@ -3,7 +3,10 @@
 #include <vcContext.hpp>
 #include <vcVectorType.hpp>
 
+#include "raygLaunchParams.hpp"
 #include <raygReflection.hpp>
+
+#include <models/psgPipelineParameters.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 using namespace viennaray::gpu;
@@ -23,9 +26,9 @@ faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
     float yield = 1.f;
     if (params->yieldFac >= 0.f) {
-      yield = (params->yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
-               0.65 * cosTheta * cosTheta * cosTheta) /
-              (params->yieldFac - 0.9);
+      yield = (params->yieldFac * cosTheta - 1.55f * cosTheta * cosTheta +
+               0.65f * cosTheta * cosTheta * cosTheta) /
+              (params->yieldFac - 0.9f);
     }
 
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +

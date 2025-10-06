@@ -3,8 +3,10 @@
 #include <vcContext.hpp>
 #include <vcVectorType.hpp>
 
-#include <models/psPlasmaEtchingParameters.hpp>
+#include "raygLaunchParams.hpp"
 #include <raygReflection.hpp>
+
+#include <models/psPlasmaEtchingParameters.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 

@@ -1,4 +1,4 @@
-#pragma once
+// #pragma once
 
 #include "FaradayCage.cuh"
 #include "MultiParticle.cuh"
