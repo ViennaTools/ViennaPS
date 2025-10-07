@@ -33,7 +33,7 @@ include("../cmake/generate_ptx.cmake")
 if(VIENNAPS_BUILD_EXAMPLES)
   message(STATUS "[ViennaPS] Adding GPU Examples")
   add_subdirectory(examples)
-  # add_subdirectory(benchmark)
+  add_subdirectory(benchmark)
 endif(VIENNAPS_BUILD_EXAMPLES)
 
 # TODO: Add tests for GPU

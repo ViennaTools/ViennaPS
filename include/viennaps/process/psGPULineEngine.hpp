@@ -22,7 +22,7 @@ class GPULineEngine final : public FluxEngine<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
-  using MeshType = SmartPointer<viennals::Mesh<float>>;
+  using MeshType = SmartPointer<viennals::Mesh<NumericType>>;
 
 public:
   GPULineEngine(std::shared_ptr<DeviceContext> deviceContext)
@@ -282,7 +282,7 @@ private:
   }
 
   void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
-                                  SmartPointer<viennals::Mesh<float>> diskMesh,
+                                  SmartPointer<viennals::Mesh<NumericType>> diskMesh,
                                   int smoothingNeighbors) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
@@ -304,7 +304,7 @@ private:
           auto closestPoint = elementKdTree_->findNearest(diskMesh_.nodes[i]);
           diskFlux[i] = elementFlux[closestPoint->first];
         }
-        // TODO: maybe smooth disk fluxes here
+        // TODO: maybe smooth disk fluxes here additionally
 
         std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
                                                 diskFlux.end());
