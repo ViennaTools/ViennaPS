@@ -82,7 +82,8 @@ public:
         lsId = it->second;
       } else {
         Logger::getInstance()
-            .addError("Could not extend velocity from surface to LS point",
+            .addError("Could not extend velocity from surface (" +
+                          std::to_string(lsId) + ") to LS point",
                       false)
             .print();
       }
