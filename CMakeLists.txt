@@ -11,9 +11,9 @@ project(
 option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
 option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
 
-option(VIENNAPS_USE_GPU "Enable GPU support" ON)
+option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 
-option(VIENNAPS_BUILD_EXAMPLES "Build examples" ON)
+option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
 option(VIENNAPS_BUILD_PYTHON "Build python bindings" OFF)
@@ -111,6 +111,7 @@ CPMAddPackage(
   VERSION 1.13.0
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
+# TODO: use non local copy
 set(ViennaRay_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ViennaRay")
 CPMFindPackage(
   NAME ViennaRay

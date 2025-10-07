@@ -45,22 +45,22 @@ int main(int argc, char **argv) {
     return -flux[0];
   };
 
-  // // CPU
-  // if constexpr (true) {
-  //   auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
-  //   model->addIonParticle(exponent, 80, 90, 75);
-  //   model->setRateFunction(rateFunction);
+  // CPU
+  if constexpr (true) {
+    auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
+    model->addIonParticle(exponent, 80, 90, 75);
+    model->setRateFunction(rateFunction);
 
-  //   auto copy = Domain<NumericType, D>::New(geometry);
+    auto copy = Domain<NumericType, D>::New(geometry);
 
-  //   Process<NumericType, D> process(copy, model, processDuration);
-  //   process.setParameters(advParams);
-  //   rtParams.smoothingNeighbors = 1.;
-  //   process.setParameters(rtParams);
-  //   process.apply();
+    Process<NumericType, D> process(copy, model, processDuration);
+    process.setParameters(advParams);
+    rtParams.smoothingNeighbors = 1.;
+    process.setParameters(rtParams);
+    process.apply();
 
-  //   copy->saveSurfaceMesh("cpu_result.vtp", true);
-  // }
+    copy->saveSurfaceMesh("cpu_result.vtp", true);
+  }
 
   rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
   {

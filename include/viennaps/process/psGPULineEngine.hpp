@@ -281,9 +281,10 @@ private:
     delete temp;
   }
 
-  void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
-                                  SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-                                  int smoothingNeighbors) {
+  void
+  downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
+                             SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+                             int smoothingNeighbors) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     auto diskMesh_ = *diskMesh;

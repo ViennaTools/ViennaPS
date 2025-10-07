@@ -74,8 +74,8 @@ template <typename NumericType> struct FluorocarbonParameters {
     materials.push_back(material);
   }
 
-  auto getMaterialParameters(const Material material) const
-      -> MaterialParameters {
+  auto
+  getMaterialParameters(const Material material) const -> MaterialParameters {
     for (const auto &m : materials) {
       if (m.id == material)
         return m;
