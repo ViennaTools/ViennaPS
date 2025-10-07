@@ -78,6 +78,7 @@ public:
                      const Vec3D<NumericType> &coordinate) const {
     switch (translationMethod_) {
     case 1: {
+      assert(translator_->size() > 0);
       if (auto it = translator_->find(lsId); it != translator_->end()) {
         lsId = it->second;
       } else {

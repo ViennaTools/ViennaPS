@@ -19,6 +19,7 @@ struct RayTracingParameters {
       viennaray::NormalizationType::SOURCE;
   bool ignoreFluxBoundaries = false;
   bool useRandomSeeds = true;
+  unsigned rngSeed = 0;
   unsigned raysPerPoint = 1000;
   int smoothingNeighbors = 1;
   double diskRadius = 0.;

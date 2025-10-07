@@ -102,15 +102,11 @@ public:
     }
 
     T radius = 0;
-    // if (std::abs(initial[D - 1]) < gridDelta_) {
-    // radius = rate_;
-    // } else
     if (std::abs(initial[D - 1] + trenchDepth_) < gridDelta_) {
       radius = bottomMed_;
     } else {
       radius =
           a_ * std::pow(1. - std::abs(initial[D - 1]) / trenchDepth_, n_) + b_;
-      // radius = a_ * std::exp(-n_ * std::abs(initial[D - 1])) + b_;
     }
 
     if (std::abs(radius) <= gridDelta_) {

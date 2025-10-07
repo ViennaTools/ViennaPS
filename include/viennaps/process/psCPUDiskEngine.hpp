@@ -46,6 +46,8 @@ public:
     rayTracer_.setBoundaryConditions(rayBoundaryCondition);
     rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
     rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
+    if (!context.rayTracingParams.useRandomSeeds)
+      rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
     rayTracer_.setCalculateFlux(false);
 
     auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(

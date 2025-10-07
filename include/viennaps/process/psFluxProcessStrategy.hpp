@@ -127,8 +127,7 @@ private:
 
     // Initialize translation field. Converts points ids from level set points
     // to surface points
-    /// TODO: investigate why option 1 sometimes does not work
-    const int translationMethod =  2; // context.needsExtendedVelocities() ? 2 : 1;
+    const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
     context.translationField =
         SmartPointer<TranslationField<NumericType, D>>::New(
             context.model->getVelocityField(), context.domain->getMaterialMap(),
