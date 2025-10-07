@@ -585,11 +585,11 @@ template <int D> void bindApi(py::module &module) {
       // methods
       .def("setProcessName", &ProcessModelCPU<T, D>::setProcessName)
       .def("getProcessName", &ProcessModelCPU<T, D>::getProcessName)
-      //  .def("getSurfaceModel", &ProcessModelCPU<T, D>::getSurfaceModel)
-      //  .def("getAdvectionCallback", &ProcessModelCPU<T,
-      //  D>::getAdvectionCallback) .def("getGeometricModel",
-      //  &ProcessModelCPU<T, D>::getGeometricModel) .def("getVelocityField",
-      //  &ProcessModelCPU<T, D>::getVelocityField) .def("getParticleLogSize",
+      .def("getSurfaceModel", &ProcessModelCPU<T, D>::getSurfaceModel)
+      .def("getAdvectionCallback", &ProcessModelCPU<T, D>::getAdvectionCallback)
+      .def("getGeometricModel", &ProcessModelCPU<T, D>::getGeometricModel)
+      .def("getVelocityField", &ProcessModelCPU<T, D>::getVelocityField)
+      // .def("getParticleLogSize",
       //  &ProcessModelCPU<T, D>::getParticleLogSize) .def("getParticleTypes",
       //       [](ProcessModelCPU<T, D> &pm) {
       //         // Get smart pointer to vector of unique_ptr from the process
@@ -610,16 +610,8 @@ template <int D> void bindApi(py::module &module) {
       //         // Return the new vector of shared_ptr
       //         return shared_ptrs;
       //       })
-      //  .def("setSurfaceModel",
-      //       [](ProcessModelCPU<T, D> &pm, SmartPointer<SurfaceModel<T>> &sm)
-      //       {
-      //         pm.setSurfaceModel(sm);
-      //       })
-      //  .def("setAdvectionCallback",
-      //       [](ProcessModelCPU<T, D> &pm,
-      //          SmartPointer<AdvectionCallback<T, D>> &ac) {
-      //         pm.setAdvectionCallback(ac);
-      //       })
+      // IMPORTANT: here it may be needed to write this function for any
+      // type of passed Particle
       //  .def("insertNextParticleType",
       //       [](ProcessModelCPU<T, D> &pm,
       //          SmartPointer<psParticle<D>> &passedParticle) {
@@ -629,19 +621,25 @@ template <int D> void bindApi(py::module &module) {
       //           pm.insertNextParticleType(particle);
       //         }
       //       })
-      //  // IMPORTANT: here it may be needed to write this function for any
-      //  // type of passed Particle
-      //  .def("setGeometricModel",
-      //       [](ProcessModelCPU<T, D> &pm, SmartPointer<GeometricModel<T, D>>
-      //       &gm) {
-      //         pm.setGeometricModel(gm);
-      //       })
-      //  .def("setVelocityField",
-      //       [](ProcessModelCPU<T, D> &pm, SmartPointer<VelocityField<T, D>>
-      //       &vf)
-      //       {
-      //         pm.setVelocityField(vf);
-      //       })
+      .def("setSurfaceModel",
+           [](ProcessModelCPU<T, D> &pm, SmartPointer<SurfaceModel<T>> &sm) {
+             pm.setSurfaceModel(sm);
+           })
+      .def("setAdvectionCallback",
+           [](ProcessModelCPU<T, D> &pm,
+              SmartPointer<AdvectionCallback<T, D>> &ac) {
+             pm.setAdvectionCallback(ac);
+           })
+      .def("setGeometricModel",
+           [](ProcessModelCPU<T, D> &pm,
+              SmartPointer<GeometricModel<T, D>> &gm) {
+             pm.setGeometricModel(gm);
+           })
+      .def(
+          "setVelocityField",
+          [](ProcessModelCPU<T, D> &pm, SmartPointer<VelocityField<T, D>> &vf) {
+            pm.setVelocityField(vf);
+          })
       .def("setPrimaryDirection", &ProcessModelCPU<T, D>::setPrimaryDirection)
       .def("getPrimaryDirection", &ProcessModelCPU<T, D>::getPrimaryDirection);
 
@@ -1024,32 +1022,39 @@ template <int D> void bindApi(py::module &module) {
   // Sphere Distribution
   py::class_<SphereDistribution<T, D>, SmartPointer<SphereDistribution<T, D>>>(
       module, "SphereDistribution", processModel)
-      .def(py::init([](const T radius, const T gridDelta,
+      .def(py::init([](const T radius,
                        SmartPointer<viennals::Domain<T, D>> mask) {
-             return SmartPointer<SphereDistribution<T, D>>::New(
-                 radius, gridDelta, mask);
+             return SmartPointer<SphereDistribution<T, D>>::New(radius, mask);
            }),
-           py::arg("radius"), py::arg("gridDelta"), py::arg("mask"))
-      .def(py::init([](const T radius, const T gridDelta) {
-             return SmartPointer<SphereDistribution<T, D>>::New(
-                 radius, gridDelta, nullptr);
+           py::arg("radius"), py::arg("mask"))
+      .def(py::init([](const T radius) {
+             return SmartPointer<SphereDistribution<T, D>>::New(radius,
+                                                                nullptr);
            }),
-           py::arg("radius"), py::arg("gridDelta"));
+           py::arg("radius"));
 
   // Box Distribution
   py::class_<BoxDistribution<T, D>, SmartPointer<BoxDistribution<T, D>>>(
       module, "BoxDistribution", processModel)
-      .def(py::init([](const std::array<T, 3> &halfAxes, const T gridDelta,
+      .def(py::init([](const std::array<T, 3> &halfAxes,
                        SmartPointer<viennals::Domain<T, D>> mask) {
-             return SmartPointer<BoxDistribution<T, D>>::New(halfAxes,
-                                                             gridDelta, mask);
+             return SmartPointer<BoxDistribution<T, D>>::New(halfAxes, mask);
            }),
-           py::arg("halfAxes"), py::arg("gridDelta"), py::arg("mask"))
-      .def(py::init([](const std::array<T, 3> &halfAxes, const T gridDelta) {
-             return SmartPointer<BoxDistribution<T, D>>::New(
-                 halfAxes, gridDelta, nullptr);
+           py::arg("halfAxes"), py::arg("mask"))
+      .def(py::init([](const std::array<T, 3> &halfAxes) {
+             return SmartPointer<BoxDistribution<T, D>>::New(halfAxes, nullptr);
            }),
-           py::arg("halfAxes"), py::arg("gridDelta"));
+           py::arg("halfAxes"));
+
+  py::class_<GeometricTrenchDeposition<T, D>,
+             SmartPointer<GeometricTrenchDeposition<T, D>>>(
+      module, "GeometricTrenchDeposition", processModel)
+      .def(
+          py::init(&SmartPointer<GeometricTrenchDeposition<T, D>>::template New<
+                   T, T, T, T, T, T, T>),
+          py::arg("trenchWidth"), py::arg("trenchDepth"),
+          py::arg("depositionRate"), py::arg("bottomMed"), py::arg("a"),
+          py::arg("b"), py::arg("n"));
 
   // Oxide Regrowth
   py::class_<OxideRegrowth<T, D>, SmartPointer<OxideRegrowth<T, D>>>(

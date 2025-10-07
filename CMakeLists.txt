@@ -121,6 +121,7 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 5.0.1
+  GIT_TAG custom-geom-advect
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

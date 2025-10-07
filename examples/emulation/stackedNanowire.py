@@ -97,7 +97,7 @@ tmpDomain = ps.Domain()
 tmpDomain.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
 tmpDomain.insertNextLevelSetAsMaterial(domain.getLevelSets()[-1], ps.Material.PolySi)
 
-geometricEtch = ps.BoxDistribution([-gridDelta, -gridDelta, -80], gridDelta, mask)
+geometricEtch = ps.BoxDistribution([-gridDelta, -gridDelta, -80], mask)
 ps.Process(tmpDomain, geometricEtch, 1.0).apply()
 
 domain.removeMaterial(ps.Material.Mask)
