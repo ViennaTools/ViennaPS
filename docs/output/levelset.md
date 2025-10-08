@@ -12,10 +12,9 @@ nav_order: 1
 
 ## Saving the Domain
 
-Documentation Coming soon
-{: .label .label-yellow}
+Level sets within a domain can be saved in the **`.lvst`** file format, which stores the level-set grid and corresponding scalar values in a compact binary representation. These files can later be reloaded using the **`viennals::Reader`** class, allowing seamless continuation or reuse of previously generated geometries.
 
-## Visualization
+## Level Set Grid Export
 
 ViennaPS provides a feature enabling users to save the level set grid points explicitly for each material layer within the domain in the VTK file format. This export includes the level set value associated with each grid point. Users also have the option to specify a width parameter, determining the number of grid points around the zero level set. This functionality enhances the ability to analyze and visualize the level set information in a detailed and customizable manner.
 

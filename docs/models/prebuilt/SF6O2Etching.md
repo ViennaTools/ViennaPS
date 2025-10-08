@@ -74,7 +74,7 @@ Upon impact with the surface, an energy- and angle-dependent yield is computed, 
 \begin{equation}
     Y(E,\theta) = A\left(\sqrt{E} - \sqrt{E_{th}}\right)f(\theta),
 \end{equation}
-where $E$ denotes the particle energy and $\theta$ its incident angle. Here, $A$ represents a yield coefficient, and $E_{\text{th}}$ denotes the material's threshold energy for physical sputtering. The function $f(\theta)$, which characterizes the angle-dependence of the yield. For sputtering, the function is given by:
+where $E$ denotes the particle energy and $\theta$ its incident angle. Here, $A$ represents a yield coefficient, and $E_{\text{th}}$ denotes the material's threshold energy for physical sputtering. The function $f(\theta)$ characterizes the angle-dependence of the yield. For sputtering, the function is given by:
 \begin{equation}
     f(\theta) = (1 + B_{sp}(1-\cos^2(\theta)))\cos(\theta),
 \end{equation}

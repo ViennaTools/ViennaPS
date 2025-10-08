@@ -28,6 +28,3 @@ ps::Extrude<double>(domain2D, domain3D,
                      viennals::BoundaryConditionEnum::INFINITE_BOUNDARY}).apply();
 ``` 
 </details>
-
-{: .note}
-> Since the ViennaPS 2D and 3D libraries cannot be used together in Python, this feature is currently not available in the Python bindings.

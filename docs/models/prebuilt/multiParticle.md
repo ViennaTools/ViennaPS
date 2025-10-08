@@ -43,9 +43,9 @@ The ion sticking function is defined by the parameters $\theta_{min}$ and $\thet
 
 $$
     S(\theta) = \begin{cases}
-        0 & \text{if } \theta < \theta_{min} \\
-        1 & \text{if } \theta > \theta_{max} \\
-        \frac{\theta - \theta_{min}}{\theta_{max} - \theta_{min}} & \text{otherwise}
+        1 & \text{if } \theta < \theta_{min} \\
+        0 & \text{if } \theta > \theta_{max} \\
+        \frac{\theta_{max} - \theta}{\theta_{max} - \theta_{min}} & \text{otherwise}
     \end{cases}
 $$
 

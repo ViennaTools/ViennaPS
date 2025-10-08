@@ -28,7 +28,7 @@ The GPU ray tracing module is implemented using [**OptiX 8.0**](https://develope
 
 To make installation easier, we provide setup scripts:
 
-#### 1. `install_ViennaPS_linux.py` (prefer this script)
+### 1. `install_ViennaPS_linux.py` 
 
 - **Compatibility:** All Linux distributions  
 - **Functionality:**  
@@ -38,16 +38,7 @@ To make installation easier, we provide setup scripts:
 - **Limitations:**  
    - Assumes you have already installed dependencies like VTK and embree manually
 
-#### 2. `install_ViennaPS_linux.sh` (prefer `install_ViennaPS_linux.py`)
-
-- **Compatibility:** All Linux distributions  
-- **Functionality:**  
-  - Builds and installs **ViennaPS** locally  
-  - Checks for an existing local build of **ViennaLS**  
-- **Limitations:**  
-  - Assumes you have already installed dependencies like VTK and embree manually  
-
-#### 3. `install_ViennaTools_ubuntu.sh`
+### 2. `install_ViennaTools_ubuntu.sh`
 
 - **Compatibility:** **Ubuntu 24.04 only**  
 - **Functionality:**  

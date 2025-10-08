@@ -13,5 +13,9 @@ has_children: true
 ```
 ---
 
-In our simulation framework, the essential hub for all geometry details is the `Domain` class. This class is like a smart keeper of information, holding everything about the materials in the simulation domain. It uses level sets to show surfaces and material interfaces with great detail and organizes data in a cell-based structure for the underlying volumes. Depending on the specific process, it can use one or both of these methods. This flexibility ensures that the simulation can handle different processes accurately and efficiently.
+
+In ViennaPS, the central component for managing all geometric information is the **`Domain`** class. It encapsulates the complete material and geometry description of the simulation region. The `Domain` maintains **level sets** to represent surfaces and material interfaces with high accuracy, while also providing a **cell-based data structure** for volume information.
+
+Depending on the applied process, the framework can utilize either or both representations. 
+<!-- This design ensures that a wide range of processes—surface-based or volume-based—can be simulated accurately and efficiently within a unified domain structure. -->
 
