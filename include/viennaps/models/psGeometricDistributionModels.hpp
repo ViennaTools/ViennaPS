@@ -18,8 +18,8 @@ class SphereDistribution : public ProcessModelCPU<NumericType, D> {
 
 public:
   SphereDistribution(NumericType radius, LSPtr mask = nullptr) {
-    auto dist = SmartPointer<
-        viennals::SphereDistribution<viennahrle::CoordType, D>>::New(radius);
+    auto dist =
+        SmartPointer<viennals::SphereDistribution<NumericType, D>>::New(radius);
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
@@ -35,11 +35,10 @@ class BoxDistribution : public ProcessModelCPU<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
-  BoxDistribution(const std::array<viennahrle::CoordType, 3> &halfAxes,
+  BoxDistribution(const std::array<NumericType, 3> &halfAxes,
                   LSPtr mask = nullptr) {
     auto dist =
-        SmartPointer<viennals::BoxDistribution<viennahrle::CoordType, D>>::New(
-            halfAxes);
+        SmartPointer<viennals::BoxDistribution<NumericType, D>>::New(halfAxes);
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
@@ -60,8 +59,8 @@ public:
   CustomSphereDistribution(const std::vector<NumericType> &radii,
                            LSPtr mask = nullptr) {
     auto dist =
-        SmartPointer<viennals::CustomSphereDistribution<viennahrle::CoordType,
-                                                        D>>::New(radii);
+        SmartPointer<viennals::CustomSphereDistribution<NumericType, D>>::New(
+            radii);
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
@@ -161,9 +160,8 @@ public:
                             NumericType rate, NumericType bottomMed = 1.0,
                             NumericType a = 1.0, NumericType b = 1.0,
                             NumericType n = 1.0) {
-    auto dist =
-        SmartPointer<impl::TrenchDistribution<viennahrle::CoordType, D>>::New(
-            trenchWidth, trenchDepth, rate, bottomMed, a, b, n);
+    auto dist = SmartPointer<impl::TrenchDistribution<NumericType, D>>::New(
+        trenchWidth, trenchDepth, rate, bottomMed, a, b, n);
 
     auto geomModel = SmartPointer<GeometricModel<NumericType, D>>::New(dist);
 

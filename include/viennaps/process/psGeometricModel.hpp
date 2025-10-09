@@ -10,16 +10,15 @@ using namespace viennacore;
 
 template <typename NumericType, int D> class GeometricModel {
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
-  SmartPointer<viennals::GeometricAdvectDistribution<viennahrle::CoordType, D>>
-      dist = nullptr;
+  SmartPointer<viennals::GeometricAdvectDistribution<NumericType, D>> dist =
+      nullptr;
   SmartPointer<viennals::Domain<NumericType, D>> mask = nullptr;
 
 public:
   GeometricModel() = default;
 
   GeometricModel(
-      SmartPointer<
-          viennals::GeometricAdvectDistribution<viennahrle::CoordType, D>>
+      SmartPointer<viennals::GeometricAdvectDistribution<NumericType, D>>
           passedDist,
       SmartPointer<viennals::Domain<NumericType, D>> passedMask = nullptr)
       : dist(passedDist), mask(passedMask) {}
@@ -29,8 +28,7 @@ public:
   }
 
   void setDistribution(
-      SmartPointer<
-          viennals::GeometricAdvectDistribution<viennahrle::CoordType, D>>
+      SmartPointer<viennals::GeometricAdvectDistribution<NumericType, D>>
           passedDist) {
     dist = passedDist;
   }
