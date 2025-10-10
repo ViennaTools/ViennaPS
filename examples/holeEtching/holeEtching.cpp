@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::INTERMEDIATE);
+  Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -77,5 +77,6 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   // print final surface
-  geometry->saveSurfaceMesh(params.get<std::string>("outputFile"));
+  geometry->saveSurfaceMesh(params.get<std::string>("outputFile"), true, 0.01,
+                            true);
 }

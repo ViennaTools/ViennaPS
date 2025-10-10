@@ -51,7 +51,7 @@ modelParams.etchStopDepth = params["etchStopDepth"]
 model = ps.SF6O2Etching(modelParams)
 
 covParams = ps.CoverageParameters()
-covParams.maxIterations = 20
+covParams.tolerance = 1e-4
 
 rayParams = ps.RayTracingParameters()
 rayParams.raysPerPoint = int(params["raysPerPoint"])
@@ -71,10 +71,10 @@ if ps.gpuAvailable() and args.dim == 3:
     process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 # print initial surface
-geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="initial.vtp")
 
 # run the process
 process.apply()
 
 # print final surface
-geometry.saveSurfaceMesh(filename="final.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="final.vtp")

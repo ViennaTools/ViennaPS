@@ -532,10 +532,13 @@ template <int D> void bindApi(py::module &module) {
            "Save the level set grids of layers in the domain.")
       .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
            py::arg("addInterfaces") = false,
+           py::arg("wrappingLayerEpsilon") = 1e-2,
+           py::arg("boolMaterials") = false,
            "Get the surface mesh of the domain")
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
-           py::arg("filename"), py::arg("addInterfaces") = true,
-           "Save the surface of the domain.")
+           py::arg("filename"), py::arg("addInterfaces") = false,
+           py::arg("wrappingLayerEpsilon") = 1e-2,
+           py::arg("boolMaterials") = false, "Save the surface of the domain.")
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh, py::arg("filename"),
            py::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")

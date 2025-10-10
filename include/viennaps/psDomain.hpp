@@ -470,12 +470,21 @@ public:
   }
 
   SmartPointer<viennals::Mesh<NumericType>>
-  getSurfaceMesh(bool addInterfaces = false) const {
+  getSurfaceMesh(bool addInterfaces = false, double wrappingLayerEpsilon = 0.01,
+                 bool boolMaterials = false) const {
     auto mesh = viennals::Mesh<NumericType>::New();
     if (addInterfaces) {
-      viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(mesh);
-      for (auto &ls : levelSets_) {
-        meshConverter.insertNextLevelSet(ls);
+      viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(
+          mesh, 1e-12, wrappingLayerEpsilon);
+      for (unsigned i = 0; i < levelSets_.size(); i++) {
+        auto lsCopy = lsDomainType::New(levelSets_.at(i));
+        if (i > 0 && boolMaterials) {
+          viennals::BooleanOperation<NumericType, D>(
+              lsCopy, levelSets_.at(i - 1),
+              viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+              .apply();
+        }
+        meshConverter.insertNextLevelSet(lsCopy);
       }
       if (materialMap_)
         meshConverter.setMaterialMap(materialMap_->getMaterialMap());
@@ -487,9 +496,12 @@ public:
     return mesh;
   }
 
-  // Print the top Level-Set (surface) in a VTK file format (recommended: .vtp).
-  void saveSurfaceMesh(std::string fileName, bool addInterfaces = true) {
-    auto mesh = getSurfaceMesh(addInterfaces);
+  // Print the top Level-Set (surface) in a VTK file format (vtp).
+  void saveSurfaceMesh(std::string fileName, bool addInterfaces = true,
+                       double wrappingLayerEpsilon = 0.01,
+                       bool boolMaterials = false) const {
+    auto mesh =
+        getSurfaceMesh(addInterfaces, wrappingLayerEpsilon, boolMaterials);
     viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();

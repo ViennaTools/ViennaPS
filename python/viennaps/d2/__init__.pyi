@@ -542,7 +542,12 @@ class Domain:
         Get the domain setup.
         """
 
-    def getSurfaceMesh(self, addInterfaces: bool = False) -> viennals._core.Mesh:
+    def getSurfaceMesh(
+        self,
+        addInterfaces: bool = False,
+        wrappingLayerEpsilon: typing.SupportsFloat = 0.01,
+        boolMaterials: bool = False,
+    ) -> viennals._core.Mesh:
         """
         Get the surface mesh of the domain
         """
@@ -585,7 +590,13 @@ class Domain:
         """
 
     def saveLevelSets(self, filename: str) -> None: ...
-    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = True) -> None:
+    def saveSurfaceMesh(
+        self,
+        filename: str,
+        addInterfaces: bool = False,
+        wrappingLayerEpsilon: typing.SupportsFloat = 0.01,
+        boolMaterials: bool = False,
+    ) -> None:
         """
         Save the surface of the domain.
         """
