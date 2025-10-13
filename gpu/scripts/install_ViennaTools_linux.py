@@ -143,8 +143,13 @@ def get_package_manager(distro_id):
         return None
 
 
-def check_gcc_compilers(distro_id):
+def check_gcc_compilers(distro_id, gpu_enabled=True):
     """Check if GCC compilers are installed."""
+    # only necessary for GPU builds
+    if not gpu_enabled:
+        print("GPU build is disabled. Skipping GCC compiler check.")
+        return True
+
     # For Ubuntu, prefer gcc-12/g++-12, for others use default gcc/g++
     if distro_id == "ubuntu":
         compilers = ["gcc-12", "g++-12"]
@@ -552,7 +557,7 @@ def main():
     if not pkg_manager:
         sys.exit(1)
 
-    check_gcc_compilers(distro_id)
+    check_gcc_compilers(distro_id, args.gpu)
     check_cuda_version(args.gpu)
 
     # Get virtual environment directory
