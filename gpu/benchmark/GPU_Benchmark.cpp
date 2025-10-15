@@ -23,9 +23,10 @@ int main() {
 
   // constexpr std::array<NumericType, 10> sticking = {
   // 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.f};
-  const std::array<NumericType, 1> sticking = {1.f};
+  const std::array<NumericType, 1> sticking = {0.1f};
   const int processSteps = 10;
   const int raysPerPoint = 1000;
+  const int numRays = int(1.4e8);
 
   auto particle = viennaray::gpu::Particle<NumericType>();
   particle.name = "SingleParticle";
@@ -45,6 +46,7 @@ int main() {
 
     viennaray::gpu::TraceTriangle<NumericType, D> tracer(context);
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
+    tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setPipeline("GeneralPipeline", context->modulePath);
     tracer.setCallables("CallableWrapper", context->modulePath);
@@ -115,7 +117,7 @@ int main() {
         timer.start();
         advectionKernel.apply();
         timer.finish();
-        file << timer.currentDuration << "\n";
+        file << timer.currentDuration;
 
         file << tracer.getNumberOfRays() << "\n";
 
@@ -140,6 +142,7 @@ int main() {
 
     viennaray::gpu::TraceDisk<NumericType, D> tracer(context);
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
+    tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setPipeline("GeneralPipeline", context->modulePath);
     tracer.setCallables("CallableWrapper", context->modulePath);
@@ -232,7 +235,7 @@ int main() {
         timer.start();
         advectionKernel.apply();
         timer.finish();
-        file << timer.currentDuration << "\n";
+        file << timer.currentDuration;
 
         file << tracer.getNumberOfRays() << "\n";
 
@@ -257,6 +260,7 @@ int main() {
 
     viennaray::gpu::TraceLine<NumericType, D> tracer(context);
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
+    tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setPipeline("GeneralPipeline", context->modulePath);
     tracer.setCallables("CallableWrapper", context->modulePath);
@@ -359,7 +363,7 @@ int main() {
         timer.start();
         advectionKernel.apply();
         timer.finish();
-        file << timer.currentDuration << "\n";
+        file << timer.currentDuration;
 
         file << tracer.getNumberOfRays() << "\n";
 
