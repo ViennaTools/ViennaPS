@@ -141,8 +141,7 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
                           M_PI_2f - min(angle, params->Ions.minAngle),
                           launchParams.D);
   } else {
-    prd->energy = 0.f; // contineRay checks for >= 0
-    // prd->rayWeight = 0.f; // Maybe add this?
+    prd->energy = -1.f; // continueRay checks for >= 0
   }
 }
 
