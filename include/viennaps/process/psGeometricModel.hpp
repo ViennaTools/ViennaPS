@@ -47,6 +47,13 @@ public:
     viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),
                                               dist, mask)
         .apply();
+
+    for (int i = domain->getNumberOfLevelSets() - 1; i >= 0; --i) {
+      viennals::BooleanOperation<NumericType, D>(
+          domain->getLevelSets()[i], domain->getLevelSets().back(),
+          viennals::BooleanOperationEnum::INTERSECT)
+          .apply();
+    }
   }
 };
 
