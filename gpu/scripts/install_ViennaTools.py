@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 
 """
-This script installs the ViennaTools package on various Linux distributions with optional GPU support.
-It attempts to install the required dependencies on the system, therefore sudo privileges are required.
+This script installs the ViennaTools package on various Linux distributions and macOS with optional GPU support.
+It attempts to install the required dependencies on the system, therefore sudo privileges are required on Linux
+and Homebrew is required on macOS.
 
-Supported distributions:
+Supported platforms:
 - Ubuntu 20.04+, Debian 11+
 - Fedora 35+, Rocky Linux 8+, AlmaLinux 8+
 - Arch Linux, Manjaro
 - openSUSE Leap 15.3+, openSUSE Tumbleweed
+- macOS 12+ (with Homebrew)
 
 Features:
 - Optional GPU support (enabled by default, can be disabled with --no-gpu)
 - Version selection for both ViennaLS and ViennaPS (specific tags or master branch)
-- Automatic dependency management for multiple distributions
+- Automatic dependency management for multiple distributions and macOS
 - Virtual environment setup
 """
 
@@ -43,53 +45,84 @@ def run_command(cmd, shell=False, check=True, capture_output=False):
             print(f"stdout: {e.stdout}")
         if capture_output and e.stderr:
             print(f"stderr: {e.stderr}")
+        if capture_output:
+            return None
         return False
 
 
-def detect_linux_distribution():
-    """Detect the Linux distribution and version."""
-    try:
-        # Try to read /etc/os-release first (most modern distributions)
-        if os.path.exists("/etc/os-release"):
-            with open("/etc/os-release", "r") as f:
-                lines = f.readlines()
+def detect_os_platform():
+    """Detect the operating system platform and version."""
+    system = platform.system()
 
-            os_info = {}
-            for line in lines:
-                if "=" in line:
-                    key, value = line.strip().split("=", 1)
-                    os_info[key] = value.strip('"')
+    if system == "Darwin":  # macOS
+        version = platform.mac_ver()[0]
+        print(f"Detected platform: macOS {version}")
+        return "macos", version, f"macOS {version}"
 
-            distro_id = os_info.get("ID", "").lower()
-            distro_name = os_info.get("NAME", "")
-            version = os_info.get("VERSION_ID", "")
+    elif system == "Linux":
+        try:
+            # Try to read /etc/os-release first (most modern distributions)
+            if os.path.exists("/etc/os-release"):
+                with open("/etc/os-release", "r") as f:
+                    lines = f.readlines()
 
-            print(f"Detected distribution: {distro_name} {version}")
-            return distro_id, version, distro_name
+                os_info = {}
+                for line in lines:
+                    if "=" in line:
+                        key, value = line.strip().split("=", 1)
+                        os_info[key] = value.strip('"')
 
-        # Fallback to lsb_release
-        elif shutil.which("lsb_release"):
-            distro_id = run_command(["lsb_release", "-si"], capture_output=True).lower()
-            version = run_command(["lsb_release", "-sr"], capture_output=True)
-            distro_name = run_command(["lsb_release", "-sd"], capture_output=True)
+                distro_id = os_info.get("ID", "").lower()
+                distro_name = os_info.get("NAME", "")
+                version = os_info.get("VERSION_ID", "")
 
-            print(f"Detected distribution: {distro_name}")
-            return distro_id, version, distro_name
+                print(f"Detected distribution: {distro_name} {version}")
+                return distro_id, version, distro_name
 
-        else:
-            print(
-                "Could not detect Linux distribution. Please ensure /etc/os-release exists or lsb_release is installed."
-            )
+            # Fallback to lsb_release
+            elif shutil.which("lsb_release"):
+                distro_id_result = run_command(
+                    ["lsb_release", "-si"], capture_output=True
+                )
+                version_result = run_command(
+                    ["lsb_release", "-sr"], capture_output=True
+                )
+                distro_name_result = run_command(
+                    ["lsb_release", "-sd"], capture_output=True
+                )
+
+                if (
+                    isinstance(distro_id_result, str)
+                    and isinstance(version_result, str)
+                    and isinstance(distro_name_result, str)
+                ):
+                    distro_id = distro_id_result.lower()
+                    version = version_result
+                    distro_name = distro_name_result
+                    print(f"Detected distribution: {distro_name}")
+                    return distro_id, version, distro_name
+                else:
+                    raise Exception("Failed to get distribution info from lsb_release")
+
+            else:
+                print(
+                    "Could not detect Linux distribution. Please ensure /etc/os-release exists or lsb_release is installed."
+                )
+                sys.exit(1)
+
+        except Exception as e:
+            print(f"Failed to detect Linux distribution: {e}")
             sys.exit(1)
 
-    except Exception as e:
-        print(f"Failed to detect Linux distribution: {e}")
+    else:
+        print(f"Unsupported operating system: {system}")
+        print("This script supports Linux distributions and macOS only.")
         sys.exit(1)
 
 
-def check_distribution_support(distro_id, version):
-    """Check if the detected distribution is supported."""
-    supported_distros = {
+def check_platform_support(platform_id, version):
+    """Check if the detected platform is supported."""
+    supported_platforms = {
         "ubuntu": {"min_version": "24.04"},
         "debian": {"min_version": "11"},
         "fedora": {"min_version": "35"},
@@ -102,56 +135,67 @@ def check_distribution_support(distro_id, version):
         "opensuse-leap": {"min_version": "15.3"},
         "opensuse-tumbleweed": {"min_version": None},  # Rolling release
         "sles": {"min_version": "15"},
+        "macos": {"min_version": "12.0"},  # macOS Monterey and later
     }
 
-    if distro_id not in supported_distros:
-        print(f"Distribution '{distro_id}' is not officially supported.")
-        print("Supported distributions:", ", ".join(supported_distros.keys()))
+    if platform_id not in supported_platforms:
+        print(f"Platform '{platform_id}' is not officially supported.")
+        print("Supported platforms:", ", ".join(supported_platforms.keys()))
         response = input("Do you want to continue anyway? (y/N): ").strip().lower()
         if response != "y":
             sys.exit(1)
         return True
 
-    min_version = supported_distros[distro_id]["min_version"]
+    min_version = supported_platforms[platform_id]["min_version"]
     if min_version and version:
         try:
             # Simple version comparison (works for most cases)
             if float(version.split(".")[0]) < float(min_version.split(".")[0]):
                 print(
-                    f"Minimum supported version for {distro_id} is {min_version}, found {version}"
+                    f"Minimum supported version for {platform_id} is {min_version}, found {version}"
                 )
                 sys.exit(1)
         except (ValueError, IndexError):
-            print(f"Could not parse version {version} for {distro_id}")
+            print(f"Could not parse version {version} for {platform_id}")
 
-    print(f"Distribution {distro_id} {version} is supported.")
+    print(f"Platform {platform_id} {version} is supported.")
     return True
 
 
-def get_package_manager(distro_id):
-    """Determine the package manager for the distribution."""
-    if distro_id in ["ubuntu", "debian"]:
+def get_package_manager(platform_id):
+    """Determine the package manager for the platform."""
+    if platform_id in ["ubuntu", "debian"]:
         return "apt"
-    elif distro_id in ["fedora", "rocky", "almalinux", "rhel", "centos"]:
+    elif platform_id in ["fedora", "rocky", "almalinux", "rhel", "centos"]:
         return "dnf" if shutil.which("dnf") else "yum"
-    elif distro_id in ["arch", "manjaro"]:
+    elif platform_id in ["arch", "manjaro"]:
         return "pacman"
-    elif distro_id in ["opensuse-leap", "opensuse-tumbleweed", "sles"]:
+    elif platform_id in ["opensuse-leap", "opensuse-tumbleweed", "sles"]:
         return "zypper"
+    elif platform_id == "macos":
+        if shutil.which("brew"):
+            return "brew"
+        else:
+            print("Homebrew is required for macOS but not installed.")
+            print("Please install Homebrew from https://brew.sh/ and try again.")
+            sys.exit(1)
     else:
-        print(f"Unknown package manager for distribution: {distro_id}")
+        print(f"Unknown package manager for platform: {platform_id}")
         return None
 
 
-def check_gcc_compilers(distro_id, gpu_enabled=True):
-    """Check if GCC compilers are installed."""
+def check_gcc_compilers(platform_id, gpu_enabled=True):
+    """Check if compilers are installed."""
     # only necessary for GPU builds
     if not gpu_enabled:
-        print("GPU build is disabled. Skipping GCC compiler check.")
+        print("GPU build is disabled. Skipping compiler check.")
         return True
 
+    # For macOS, check for clang (from Xcode command line tools)
+    if platform_id == "macos":
+        compilers = ["clang", "clang++"]
     # For Ubuntu, prefer gcc-12/g++-12, for others use default gcc/g++
-    if distro_id == "ubuntu":
+    elif platform_id == "ubuntu":
         compilers = ["gcc-12", "g++-12"]
     else:
         compilers = ["gcc", "g++"]
@@ -159,7 +203,10 @@ def check_gcc_compilers(distro_id, gpu_enabled=True):
     missing = [comp for comp in compilers if not shutil.which(comp)]
     if missing:
         print(f"Required compilers not found: {', '.join(missing)}")
-        print("They will be installed with system dependencies.")
+        if platform_id == "macos":
+            print("They will be installed with Xcode command line tools.")
+        else:
+            print("They will be installed with system dependencies.")
     else:
         print(f"Found compilers: {', '.join(compilers)}")
 
@@ -180,6 +227,10 @@ def check_cuda_version(gpu_enabled):
 
     try:
         nvcc_output = run_command(["nvcc", "--version"], capture_output=True)
+        if not isinstance(nvcc_output, str):
+            print("Failed to get CUDA version information.")
+            sys.exit(1)
+
         # Extract version from output like "release 12.0, V12.0.76"
         for line in nvcc_output.split("\n"):
             if "release" in line:
@@ -199,33 +250,8 @@ def check_cuda_version(gpu_enabled):
         sys.exit(1)
 
 
-def get_optix_directory(gpu_enabled):
-    """Get OptiX directory from environment variable or user input if GPU is enabled."""
-    if not gpu_enabled:
-        print("GPU build is disabled. OptiX directory not required.")
-        return None
-
-    optix_dir = os.environ.get("OptiX_INSTALL_DIR")
-
-    if optix_dir:
-        print(f"Using OptiX directory from environment variable: {optix_dir}")
-        return optix_dir
-
-    optix_dir = input(
-        "Please enter the path to the OptiX directory (e.g., /path/to/Optix): "
-    ).strip()
-    if not optix_dir:
-        print(
-            "No OptiX directory specified. Please set the OptiX_INSTALL_DIR environment variable or provide a path."
-        )
-        sys.exit(1)
-
-    print(f"OptiX directory is set to: {optix_dir}")
-    return optix_dir
-
-
-def get_system_packages(distro_id, pkg_manager):
-    """Get system package names for the distribution."""
+def get_system_packages(platform_id, pkg_manager):
+    """Get system package names for the platform."""
     packages = {
         "apt": {
             "vtk": "libvtk9-dev",
@@ -233,7 +259,7 @@ def get_system_packages(distro_id, pkg_manager):
             "venv": "python3-venv",
             "build": ["build-essential", "cmake"],
             "compilers": (
-                ["gcc-12", "g++-12"] if distro_id == "ubuntu" else ["gcc", "g++"]
+                ["gcc-12", "g++-12"] if platform_id == "ubuntu" else ["gcc", "g++"]
             ),
         },
         "dnf": {
@@ -264,6 +290,13 @@ def get_system_packages(distro_id, pkg_manager):
             "build": ["gcc", "gcc-c++", "cmake", "make"],
             "compilers": ["gcc", "gcc-c++"],
         },
+        "brew": {
+            "vtk": "vtk",
+            "embree": "embree",
+            "venv": None,  # macOS Python includes venv by default
+            "build": ["cmake"],
+            "compilers": [],  # Xcode command line tools provide compilers
+        },
     }
 
     if pkg_manager not in packages:
@@ -273,35 +306,51 @@ def get_system_packages(distro_id, pkg_manager):
     pkg_list = []
     pkg_info = packages[pkg_manager]
 
-    # Add VTK (optional - may not be available on all distros)
-    try:
+    # Add VTK (optional - may not be available on all platforms)
+    if "vtk" in pkg_info and pkg_info["vtk"]:
         pkg_list.append(pkg_info["vtk"])
-    except KeyError:
-        print("VTK package not defined for this distribution")
+    else:
+        print("VTK package not defined for this platform")
 
-    # Add Embree (optional - may not be available on all distros)
-    try:
+    # Add Embree (optional - may not be available on all platforms)
+    if "embree" in pkg_info and pkg_info["embree"]:
         pkg_list.append(pkg_info["embree"])
-    except KeyError:
-        print("Embree package not defined for this distribution")
+    else:
+        print("Embree package not defined for this platform")
 
-    # Add Python venv support
-    pkg_list.append(pkg_info["venv"])
+    # Add Python venv support (if needed)
+    if "venv" in pkg_info and pkg_info["venv"]:
+        pkg_list.append(pkg_info["venv"])
 
     # Add build tools
-    pkg_list.extend(pkg_info["build"])
+    if "build" in pkg_info:
+        pkg_list.extend(pkg_info["build"])
 
     return pkg_list
 
 
-def install_system_dependencies(distro_id, pkg_manager):
+def install_system_dependencies(platform_id, pkg_manager):
     """Install system dependencies using the appropriate package manager."""
     print(f"Installing system dependencies using {pkg_manager}...")
 
-    packages = get_system_packages(distro_id, pkg_manager)
+    packages = get_system_packages(platform_id, pkg_manager)
     if not packages:
-        print("Could not determine packages for this distribution.")
+        print("Could not determine packages for this platform.")
         sys.exit(1)
+
+    # Special handling for macOS - check for Xcode command line tools first
+    if pkg_manager == "brew":
+        print("Checking for Xcode command line tools...")
+        try:
+            # Check if Xcode command line tools are installed
+            run_command(["xcode-select", "-p"], capture_output=True, check=True)
+            print("Xcode command line tools are already installed.")
+        except subprocess.CalledProcessError:
+            print("Installing Xcode command line tools...")
+            if not run_command(["xcode-select", "--install"]):
+                print("Failed to install Xcode command line tools.")
+                print("Please install them manually and try again.")
+                sys.exit(1)
 
     # Build install command based on package manager
     if pkg_manager == "apt":
@@ -317,6 +366,18 @@ def install_system_dependencies(distro_id, pkg_manager):
         cmd = ["sudo", "pacman", "-S", "--noconfirm"] + packages
     elif pkg_manager == "zypper":
         cmd = ["sudo", "zypper", "install", "-y"] + packages
+    elif pkg_manager == "brew":
+        # Set the environment var to avoid auto-upgrade
+        os.environ["HOMEBREW_NO_INSTALL_UPGRADE"] = "1"
+
+        # Homebrew doesn't need sudo and installs packages individually
+        for package in packages:
+            print(f"Installing {package}...")
+            if not run_command(["brew", "install", package]):
+                print(
+                    f"Failed to install {package}. It may already be installed or unavailable."
+                )
+        return
     else:
         print(f"Unsupported package manager: {pkg_manager}")
         sys.exit(1)
@@ -324,7 +385,7 @@ def install_system_dependencies(distro_id, pkg_manager):
     print(f"Installing packages: {', '.join(packages)}")
     if not run_command(cmd):
         print("Failed to install system dependencies.")
-        print("Some packages may not be available in your distribution's repositories.")
+        print("Some packages may not be available in your platform's repositories.")
         print("You may need to install VTK and Embree development packages manually.")
         response = input("Continue anyway? (y/N): ").strip().lower()
         if response != "y":
@@ -446,15 +507,16 @@ def setup_virtual_environment(venv_dir):
     return venv_path
 
 
-def activate_and_install_packages(
-    venv_path, optix_dir, verbose, gpu_enabled, distro_id
-):
+def activate_and_install_packages(venv_path, verbose, gpu_enabled, platform_id):
     """Install ViennaLS and ViennaPS packages."""
     # Set up environment variables
     env = os.environ.copy()
 
-    # Set compiler based on distribution
-    if distro_id == "ubuntu" and shutil.which("gcc-12"):
+    # Set compiler based on platform
+    if platform_id == "macos":
+        env["CC"] = "clang"
+        env["CXX"] = "clang++"
+    elif platform_id == "ubuntu" and shutil.which("gcc-12"):
         env["CC"] = "gcc-12"
         env["CXX"] = "g++-12"
     else:
@@ -468,7 +530,7 @@ def activate_and_install_packages(
     # Install ViennaLS
     print("Installing ViennaLS...")
     os.chdir("ViennaLS")
-    install_cmd = [str(pip_exe), "install", "."]
+    install_cmd = ["../" + str(pip_exe), "install", "."]
     if verbose:
         install_cmd.append("-v")
 
@@ -480,7 +542,6 @@ def activate_and_install_packages(
     # Install ViennaPS
     if gpu_enabled:
         print("Installing ViennaPS with GPU support...")
-        env["OptiX_INSTALL_DIR"] = optix_dir
         env["CMAKE_ARGS"] = "-DVIENNAPS_USE_GPU=ON"
     else:
         print("Installing ViennaPS (CPU-only)...")
@@ -489,7 +550,7 @@ def activate_and_install_packages(
 
     os.chdir("ViennaPS")
 
-    install_cmd = [str(pip_exe), "install", "."]
+    install_cmd = ["../" + str(pip_exe), "install", "."]
     if verbose:
         install_cmd.append("-v")
 
@@ -506,7 +567,7 @@ def activate_and_install_packages(
 def main():
     """Main installation function."""
     parser = argparse.ArgumentParser(
-        description="Install ViennaTools package on various Linux distributions"
+        description="Install ViennaTools package on Linux distributions and macOS"
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose mode"
@@ -549,42 +610,33 @@ def main():
     print(f"ViennaPS version: {args.viennaps_version}")
 
     # Check prerequisites
-    distro_id, version, distro_name = detect_linux_distribution()
-    check_distribution_support(distro_id, version)
+    platform_id, version, platform_name = detect_os_platform()
+    check_platform_support(platform_id, version)
 
     # Get package manager
-    pkg_manager = get_package_manager(distro_id)
+    pkg_manager = get_package_manager(platform_id)
     if not pkg_manager:
         sys.exit(1)
 
-    check_gcc_compilers(distro_id, args.gpu)
+    if platform_id == "macos" and args.gpu:
+        print("Warning: GPU support on macOS is not supported. Disabling GPU support.")
+        args.gpu = False
+
+    check_gcc_compilers(platform_id, args.gpu)
     check_cuda_version(args.gpu)
 
-    # Get virtual environment directory
-    venv_dir = input(
-        "Enter the path to the virtual environment directory (default: .venv): "
-    ).strip()
-    if not venv_dir:
-        venv_dir = ".venv"
-        print(f"No virtual environment directory specified. Using default: {venv_dir}")
-
-    # Get OptiX directory if GPU is enabled
-    optix_dir = get_optix_directory(args.gpu)
-
     # Install system dependencies
-    install_system_dependencies(distro_id, pkg_manager)
+    install_system_dependencies(platform_id, pkg_manager)
 
     # Set up ViennaTools directory and repositories
     original_dir = os.getcwd()
     setup_viennatools_directory(args.viennals_version, args.viennaps_version)
 
     # Set up virtual environment
-    venv_path = setup_virtual_environment(venv_dir)
+    venv_path = setup_virtual_environment(".venv")
 
     # Install packages
-    activate_and_install_packages(
-        venv_path, optix_dir, args.verbose, args.gpu, distro_id
-    )
+    activate_and_install_packages(venv_path, args.verbose, args.gpu, platform_id)
 
     # Return to original directory
     os.chdir(original_dir)
@@ -593,7 +645,8 @@ def main():
     print(
         f"Installation complete ({build_type}). To activate the virtual environment, run:"
     )
-    print(f"source ViennaTools/{venv_dir}/bin/activate")
+
+    print(f"source ViennaTools/.venv/bin/activate")
     print("To deactivate the virtual environment, run:")
     print("deactivate")
 
