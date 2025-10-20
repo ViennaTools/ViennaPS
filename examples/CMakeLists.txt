@@ -13,6 +13,4 @@ if(WIN32)
   viennacore_setup_tbb_env(ViennaPS_Examples ${VIENNAPS_ARTIFACTS_DIRECTORY})
 endif()
 
-# viennacore_add_subdirs(${CMAKE_CURRENT_LIST_DIR})
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/holeEtching)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/trenchDeposition)
+viennacore_add_subdirs(${CMAKE_CURRENT_LIST_DIR})
