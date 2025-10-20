@@ -158,9 +158,6 @@ def install_viennaps(
 
     if optix_dir is not None:
         env["OptiX_INSTALL_DIR"] = str(optix_dir)
-    else:
-        # Auto-download OptiX headers
-        cmake_args.append("-DVIENNACORE_FETCH_OPTIX=ON")
 
     env["CMAKE_ARGS"] = " ".join(cmake_args)
     cmd = [str(pip_path), "install", "."]
