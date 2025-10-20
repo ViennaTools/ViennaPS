@@ -3,12 +3,12 @@ requires = ["scikit-build-core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-version = "3.7.2"
+version = "3.7.3"
 name = "ViennaPS"
 readme = "README.md"
 license = { file = "LICENSE" }
 description = "Topography simulation library for microelectronic fabrication processes"
-dependencies = ["ViennaLS>=4.5.0"]
+dependencies = ["ViennaLS==4.5.0"]
 
 [project.urls]
 Homepage = "https://viennatools.github.io/ViennaPS/"

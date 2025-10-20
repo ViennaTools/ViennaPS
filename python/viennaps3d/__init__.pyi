@@ -215,4 +215,4 @@ def _windows_dll_path(): ...
 
 D: int = 3
 ptxPath: str = ""
-version: str = '"3.7.2"'
+version: str = '"3.7.3"'

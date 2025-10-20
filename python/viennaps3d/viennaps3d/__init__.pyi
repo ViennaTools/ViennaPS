@@ -2514,5 +2514,5 @@ class Writer:
 def setNumThreads(arg0: typing.SupportsInt) -> None: ...
 
 D: int = 3
-__version__: str = '"3.7.2"'
-version: str = '"3.7.2"'
+__version__: str = '"3.7.3"'
+version: str = '"3.7.3"'
