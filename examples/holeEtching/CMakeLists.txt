@@ -1,8 +1,7 @@
 project(holeEtching LANGUAGES CXX)
 
 if(VIENNAPS_USE_GPU)
-  add_gpu_executable(${PROJECT_NAME} target_name "${PROJECT_NAME}.cpp"
-                     ${VIENNAPS_PIPELINE_DIR}/PlasmaEtchingPipeline.cu)
+  add_gpu_executable(${PROJECT_NAME} target_name "${PROJECT_NAME}.cpp")
 else()
   add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cpp")
   target_link_libraries(${PROJECT_NAME} PRIVATE ViennaPS)
