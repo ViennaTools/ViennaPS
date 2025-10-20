@@ -71,13 +71,13 @@ process.setParameters(rayTracingParams)
 process.setParameters(advectionParams)
 
 # print initial surface
-geometry.saveSurfaceMesh(filename="DRAM_Initial.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="DRAM_Initial.vtp")
 
 numSteps = int(params["numSteps"])
 for i in range(numSteps):
     # run the process
     process.apply()
-    geometry.saveSurfaceMesh(filename=f"DRAM_Etched_{i + 1}.vtp", addMaterialIds=True)
+    geometry.saveSurfaceMesh(filename=f"DRAM_Etched_{i + 1}.vtp")
 
 # print final volume
 geometry.saveHullMesh("DRAM_Final")

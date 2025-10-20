@@ -42,6 +42,7 @@ public:
     context.resetTime();
 
     advectionKernel_.setAdvectionTime(0.);
+    advectionKernel_.setSingleStep(true);
     advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setIntegrationScheme(
         context.advectionParams.integrationScheme);

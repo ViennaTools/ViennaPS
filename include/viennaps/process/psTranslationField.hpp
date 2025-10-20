@@ -78,11 +78,13 @@ public:
                      const Vec3D<NumericType> &coordinate) const {
     switch (translationMethod_) {
     case 1: {
+      assert(translator_->size() > 0);
       if (auto it = translator_->find(lsId); it != translator_->end()) {
         lsId = it->second;
       } else {
         Logger::getInstance()
-            .addError("Could not extend velocity from surface to LS point",
+            .addError("Could not extend velocity from surface (" +
+                          std::to_string(lsId) + ") to LS point",
                       false)
             .print();
       }

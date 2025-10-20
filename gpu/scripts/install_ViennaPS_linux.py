@@ -9,7 +9,7 @@ from pathlib import Path
 
 REQUIRED_GCC = "12"
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.0.1"
+DEFAULT_VIENNALS_VERSION = "5.1.0"
 
 
 def run(cmd, **kwargs):
@@ -158,9 +158,6 @@ def install_viennaps(
 
     if optix_dir is not None:
         env["OptiX_INSTALL_DIR"] = str(optix_dir)
-    else:
-        # Auto-download OptiX headers
-        cmake_args.append("-DVIENNACORE_FETCH_OPTIX=ON")
 
     env["CMAKE_ARGS"] = " ".join(cmake_args)
     cmd = [str(pip_path), "install", "."]

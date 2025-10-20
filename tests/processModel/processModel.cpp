@@ -35,13 +35,14 @@ template <class NumericType, int D> void RunTest() {
 
   // geometric models
   {
-    auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(1., 1.);
+    NumericType radius = 1;
+    auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(radius);
     VC_TEST_ASSERT(model->getGeometricModel());
   }
 
   {
-    const std::array<double, 3> axes = {1.};
-    auto model = SmartPointer<BoxDistribution<NumericType, D>>::New(axes, 0.);
+    const std::array<NumericType, 3> axes = {1.};
+    auto model = SmartPointer<BoxDistribution<NumericType, D>>::New(axes);
     VC_TEST_ASSERT(model->getGeometricModel());
   }
 

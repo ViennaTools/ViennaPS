@@ -133,14 +133,12 @@ private:
             context.model->getVelocityField(), context.domain->getMaterialMap(),
             translationMethod);
 
-    if (translationMethod == 1) {
-      if (!translator_)
-        translator_ = SmartPointer<TranslatorType>::New();
-      context.translationField->setTranslator(translator_);
-    } else if (translationMethod == 2) {
+    if (!translator_)
+      translator_ = SmartPointer<TranslatorType>::New();
+    context.translationField->setTranslator(translator_);
+    if (!kdTree_)
       kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
-      context.translationField->setKdTree(kdTree_);
-    }
+    context.translationField->setKdTree(kdTree_);
 
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));

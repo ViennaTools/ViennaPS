@@ -24,6 +24,7 @@ __all__: list[str] = [
     "FluorocarbonEtching",
     "GDSGeometry",
     "GDSReader",
+    "GeometricTrenchDeposition",
     "GeometryFactory",
     "HBrO2Etching",
     "Interpolation",
@@ -70,7 +71,6 @@ class BoxDistribution(ProcessModel):
         halfAxes: typing.Annotated[
             collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
         ],
-        gridDelta: typing.SupportsFloat,
         mask: viennals.d3.Domain,
     ) -> None: ...
     @typing.overload
@@ -79,7 +79,6 @@ class BoxDistribution(ProcessModel):
         halfAxes: typing.Annotated[
             collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
         ],
-        gridDelta: typing.SupportsFloat,
     ) -> None: ...
 
 class CF4O2Etching(ProcessModel):
@@ -543,7 +542,12 @@ class Domain:
         Get the domain setup.
         """
 
-    def getSurfaceMesh(self, addMaterialIds: bool = True) -> viennals._core.Mesh:
+    def getSurfaceMesh(
+        self,
+        addInterfaces: bool = False,
+        wrappingLayerEpsilon: typing.SupportsFloat = 0.01,
+        boolMaterials: bool = False,
+    ) -> viennals._core.Mesh:
         """
         Get the surface mesh of the domain
         """
@@ -586,7 +590,13 @@ class Domain:
         """
 
     def saveLevelSets(self, filename: str) -> None: ...
-    def saveSurfaceMesh(self, filename: str, addMaterialIds: bool = True) -> None:
+    def saveSurfaceMesh(
+        self,
+        filename: str,
+        addInterfaces: bool = False,
+        wrappingLayerEpsilon: typing.SupportsFloat = 0.01,
+        boolMaterials: bool = False,
+    ) -> None:
         """
         Save the surface of the domain.
         """
@@ -757,6 +767,18 @@ class GDSReader:
         """
         Set the domain to be parsed in.
         """
+
+class GeometricTrenchDeposition(ProcessModel):
+    def __init__(
+        self,
+        trenchWidth: typing.SupportsFloat,
+        trenchDepth: typing.SupportsFloat,
+        depositionRate: typing.SupportsFloat,
+        bottomMed: typing.SupportsFloat,
+        a: typing.SupportsFloat,
+        b: typing.SupportsFloat,
+        n: typing.SupportsFloat,
+    ) -> None: ...
 
 class GeometryFactory:
     def __init__(
@@ -1175,11 +1197,21 @@ class Process:
         """
 
 class ProcessModel(ProcessModelBase):
+    @staticmethod
+    def setAdvectionCallback(*args, **kwargs) -> None: ...
+    @staticmethod
+    def setGeometricModel(*args, **kwargs) -> None: ...
+    @staticmethod
+    def setVelocityField(*args, **kwargs) -> None: ...
     def __init__(self) -> None: ...
+    def getAdvectionCallback(self) -> ...: ...
+    def getGeometricModel(self) -> ...: ...
     def getPrimaryDirection(
         self,
     ) -> typing.Annotated[list[float], "FixedSize(3)"] | None: ...
     def getProcessName(self) -> str | None: ...
+    def getSurfaceModel(self) -> ...: ...
+    def getVelocityField(self) -> ...: ...
     def setPrimaryDirection(
         self,
         arg0: typing.Annotated[
@@ -1187,6 +1219,7 @@ class ProcessModel(ProcessModelBase):
         ],
     ) -> None: ...
     def setProcessName(self, arg0: str) -> None: ...
+    def setSurfaceModel(self, arg0: ...) -> None: ...
 
 class ProcessModelBase:
     pass
@@ -1324,15 +1357,10 @@ class SingleParticleProcess(ProcessModel):
 class SphereDistribution(ProcessModel):
     @typing.overload
     def __init__(
-        self,
-        radius: typing.SupportsFloat,
-        gridDelta: typing.SupportsFloat,
-        mask: viennals.d3.Domain,
+        self, radius: typing.SupportsFloat, mask: viennals.d3.Domain
     ) -> None: ...
     @typing.overload
-    def __init__(
-        self, radius: typing.SupportsFloat, gridDelta: typing.SupportsFloat
-    ) -> None: ...
+    def __init__(self, radius: typing.SupportsFloat) -> None: ...
 
 class StencilLocalLaxFriedrichsScalar:
     @staticmethod

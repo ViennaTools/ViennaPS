@@ -94,12 +94,12 @@ process.setParameters(rayParams)
 process.setParameters(advParams)
 
 # print initial surface
-geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="initial.vtp")
 geometry.saveVolumeMesh("initial")
 
 # run the process
 process.apply()
 
 # print final surface
-geometry.saveSurfaceMesh(filename="final.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="final.vtp")
 geometry.saveVolumeMesh("final")

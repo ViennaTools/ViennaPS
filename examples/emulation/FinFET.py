@@ -51,7 +51,7 @@ writeSurface(domain)
 print("Double patterning processes ...", end="", flush=True)
 thickness = 4.0  # nm
 domain.duplicateTopLevelSet(ps.Material.Metal)
-growth = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+growth = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, growth, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -60,7 +60,7 @@ writeSurface(domain)
 print("DP-Patterning ...", end="", flush=True)
 etchDepth = 6.0  # nm
 dist = ps.BoxDistribution(
-    [-gridDelta, -gridDelta, -etchDepth], gridDelta, domain.getLevelSets()[0]
+    [-gridDelta, -gridDelta, -etchDepth], domain.getLevelSets()[0]
 )
 ps.Process(domain, dist, 0).apply()
 print(" done")
@@ -95,7 +95,7 @@ writeSurface(domain)
 print("STI Deposition ...", end="", flush=True)
 thickness = 35  # nm
 domain.duplicateTopLevelSet(ps.Material.SiO2)
-dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -106,9 +106,7 @@ writeVolume(domain)
 
 # pattern STI material
 print("STI Patterning ...", end="", flush=True)
-dist = ps.SphereDistribution(
-    radius=-35, gridDelta=gridDelta, mask=domain.getLevelSets()[0]
-)
+dist = ps.SphereDistribution(radius=-35, mask=domain.getLevelSets()[0])
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -118,7 +116,7 @@ writeVolume(domain)
 print("Gate Deposition HfO2 ...", end="", flush=True)
 thickness = 2.0  # nm
 domain.duplicateTopLevelSet(ps.Material.HfO2)
-dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -126,7 +124,7 @@ writeSurface(domain)
 print("Gate Deposition PolySi ...", end="", flush=True)
 thickness = 104.0  # nm
 domain.duplicateTopLevelSet(ps.Material.PolySi)
-dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -166,7 +164,7 @@ writeVolume(domain)
 print("Spacer Deposition and Etch ...", end="", flush=True)
 thickness = 10.0  # nm
 domain.duplicateTopLevelSet(ps.Material.Si3N4)
-dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -174,9 +172,7 @@ writeSurface(domain)
 # Spacer Etch
 print("Spacer Etch ...", end="", flush=True)
 ls = domain.getLevelSets()[-2]
-dist = ps.BoxDistribution(
-    halfAxes=[-gridDelta, -gridDelta, -50], gridDelta=gridDelta, mask=ls
-)
+dist = ps.BoxDistribution(halfAxes=[-gridDelta, -gridDelta, -50], mask=ls)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -219,7 +215,7 @@ writeVolume(domain)
 print("Dielectric Deposition ...", end="", flush=True)
 thickness = 50.0  # nm
 domain.duplicateTopLevelSet(ps.Material.Dielectric)
-dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -237,7 +233,7 @@ writeVolume(domain)
 print("Gate Deposition TiN ...", end="", flush=True)
 thickness = 4.0  # nm
 domain.duplicateTopLevelSet(ps.Material.TiN)
-dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -245,7 +241,7 @@ writeSurface(domain)
 print("Gate Deposition PolySi ...", end="", flush=True)
 thickness = 40.0  # nm
 domain.duplicateTopLevelSet(ps.Material.PolySi)
-dist = ps.SphereDistribution(radius=thickness, gridDelta=gridDelta)
+dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 

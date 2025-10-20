@@ -49,7 +49,7 @@ void deposit(SmartPointer<Domain<NumericType, D>> &domain,
   std::cout << "  - Deposition - " << std::endl;
   domain->duplicateTopLevelSet(Material::Polymer);
   auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(
-      depositionThickness, domain->getGridDelta());
+      depositionThickness);
   Process<NumericType, D>(domain, model).apply();
 }
 
