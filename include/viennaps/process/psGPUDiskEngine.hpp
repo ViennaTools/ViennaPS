@@ -10,25 +10,18 @@
 
 #include <lsMesh.hpp>
 
-#include <raygTraceTriangle.hpp>
-
-#include <psgCreateSurfaceMesh.hpp>
-#include <psgElementToPointData.hpp>
-#include <psgPointToElementData.hpp>
+#include <raygTraceDisk.hpp>
 
 namespace viennaps {
 
 using namespace viennacore;
 
 template <typename NumericType, int D>
-class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
+class GPUDiskEngine final : public FluxEngine<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
-  using KDTreeType =
-      SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
-  using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
-  GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
+  GPUDiskEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
@@ -103,38 +96,59 @@ public:
 
   ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
     this->timer_.start();
-    surfaceMesh_ = viennals::Mesh<float>::New();
-    if (!elementKdTree_)
-      elementKdTree_ = KDTreeType::New();
-    gpu::CreateSurfaceMesh<NumericType, float, D>(
-        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
-        1e-12, context.rayTracingParams.minNodeDistanceFactor)
-        .apply();
+    auto &diskMesh = context.diskMesh;
+    assert(diskMesh != nullptr);
 
-    auto mesh = gpu::CreateTriangleMesh(
-        static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
-    rayTracer_.setGeometry(mesh);
+    auto points = diskMesh->getNodes();
+    auto normals = *diskMesh->getCellData().getVectorData("Normals");
+
+    // TODO: make this conversion to float prettier
+    auto convertToFloat = [](std::vector<Vec3D<NumericType>> &input) {
+      std::vector<Vec3Df> output;
+      output.reserve(input.size());
+      for (const auto &vec : input) {
+        Vec3Df temp = {static_cast<float>(vec[0]), static_cast<float>(vec[1]),
+                       static_cast<float>(vec[2])};
+        output.emplace_back(temp);
+      }
+      return output;
+    };
+
+    std::vector<Vec3Df> fPoints = convertToFloat(points);
+    std::vector<Vec3Df> fNormals = convertToFloat(normals);
+    Vec3Df fMinExtent = {static_cast<float>(diskMesh->minimumExtent[0]),
+                         static_cast<float>(diskMesh->minimumExtent[1]),
+                         static_cast<float>(diskMesh->minimumExtent[2])};
+    Vec3Df fMaxExtent = {static_cast<float>(diskMesh->maximumExtent[0]),
+                         static_cast<float>(diskMesh->maximumExtent[1]),
+                         static_cast<float>(diskMesh->maximumExtent[2])};
+
+    viennaray::gpu::DiskMesh diskMeshRay{
+        .points = fPoints,
+        .normals = fNormals,
+        .minimumExtent = fMinExtent,
+        .maximumExtent = fMaxExtent,
+        .radius = 0.f,
+        .gridDelta = static_cast<float>(context.domain->getGridDelta())};
+
+    if (context.rayTracingParams.diskRadius == 0.) {
+      diskMeshRay.radius = static_cast<float>(context.domain->getGridDelta() *
+                                              rayInternal::DiskFactor<D>);
+    } else {
+      diskMeshRay.radius =
+          static_cast<float>(context.rayTracingParams.diskRadius);
+    }
+
+    rayTracer_.setGeometry(diskMeshRay);
 
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
             context.model);
     if (model->useMaterialIds()) {
-      auto const &pointMaterialIds =
-          *context.diskMesh->getCellData().getScalarData("MaterialIds");
-      std::vector<int> elementMaterialIds;
-      auto &pointKdTree = context.translationField->getKdTree();
-      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-        pointKdTree->setPoints(context.diskMesh->nodes);
-        pointKdTree->build();
-      }
-      gpu::PointToElementDataSingle<NumericType, NumericType, int, float>(
-          pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
-          .apply();
-      rayTracer_.setMaterialIds(elementMaterialIds);
+      auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+      rayTracer_.setMaterialIds(materialIds);
     }
-
     assert(context.diskMesh->nodes.size() > 0);
-    assert(!surfaceMesh_->nodes.empty());
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -155,43 +169,42 @@ public:
       auto coverages = model->getSurfaceModel()->getCoverages();
       assert(coverages);
       assert(context.diskMesh);
-      assert(context.translationField);
       auto numCov = coverages->getScalarDataSize();
-      auto &pointKdTree = context.translationField->getKdTree();
-      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-        pointKdTree->setPoints(context.diskMesh->nodes);
-        pointKdTree->build();
+      std::vector<float> cov(context.diskMesh->getNodes().size() * numCov, 0.f);
+
+      for (int i = 0; i < numCov; ++i) {
+        std::vector<NumericType> temp = *(coverages->getScalarData(i));
+        std::vector<float> tempCasted(temp.size());
+        std::transform(temp.begin(), temp.end(), tempCasted.begin(),
+                       [](NumericType val) { return static_cast<float>(val); });
+        assert(tempCasted.size() == context.diskMesh->getNodes().size());
+        std::copy(tempCasted.begin(), tempCasted.end(),
+                  cov.begin() + i * context.diskMesh->getNodes().size());
       }
-      gpu::PointToElementData<NumericType, float>(d_coverages, coverages,
-                                                  *pointKdTree, surfaceMesh_)
-          .apply();
+      d_coverages.allocUpload(cov);
+
       rayTracer_.setElementData(d_coverages, numCov);
     }
 
     // run the ray tracer
     rayTracer_.apply();
-
-    // extract fluxes on points
-    gpu::ElementToPointData<NumericType, float>(
-        rayTracer_.getResults(), fluxes, rayTracer_.getParticles(),
-        elementKdTree_, context.diskMesh, surfaceMesh_,
-        context.domain->getGridDelta() *
-            context.rayTracingParams.smoothingNeighbors)
-        .apply();
+    downloadResultsToPointData(*fluxes,
+                               context.rayTracingParams.smoothingNeighbors);
 
     // output
     if (Logger::getLogLevel() >=
         static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
       if (context.flags.useCoverages) {
         auto coverages = model->getSurfaceModel()->getCoverages();
-        downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
-                          surfaceMesh_->getElements<3>().size());
+        downloadCoverages(d_coverages, context.diskMesh->getCellData(),
+                          coverages, context.diskMesh->getNodes().size());
       }
-      downloadResultsToPointData(surfaceMesh_->getCellData());
+      downloadResultsToPointData(context.diskMesh->getCellData(),
+                                 context.rayTracingParams.smoothingNeighbors);
       static unsigned iterations = 0;
-      viennals::VTKWriter<float>(surfaceMesh_,
-                                 context.getProcessName() + "_flux_" +
-                                     std::to_string(iterations++) + ".vtp")
+      viennals::VTKWriter<NumericType>(
+          context.diskMesh, context.getProcessName() + "_flux_" +
+                                std::to_string(iterations++) + ".vtp")
           .apply();
 
       if (context.flags.useCoverages) {
@@ -206,7 +219,7 @@ public:
 private:
   static void
   downloadCoverages(CudaBuffer &d_coverages,
-                    viennals::PointData<float> &elementData,
+                    viennals::PointData<NumericType> &elementData,
                     SmartPointer<viennals::PointData<NumericType>> &coverages,
                     unsigned int numElements) {
 
@@ -219,33 +232,31 @@ private:
       std::vector<float> values(numElements);
       std::memcpy(values.data(), &temp[i * numElements],
                   numElements * sizeof(float));
-      elementData.insertReplaceScalarData(values, covName);
+
+      std::vector<NumericType> valuesCasted(values.begin(), values.end());
+      elementData.insertReplaceScalarData(std::move(valuesCasted), covName);
     }
 
     delete temp;
   }
 
-  void downloadResultsToPointData(viennals::PointData<float> &pointData) {
+  void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
+                                  int smoothingNeighbors) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
-    assert(numPoints == surfaceMesh_->getElements<3>().size());
-    auto valueBuffer = rayTracer_.getResults();
-    std::vector<float> tmpBuffer(numRates * numPoints);
-    valueBuffer.download(tmpBuffer.data(), numPoints * numRates);
     auto particles = rayTracer_.getParticles();
 
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        int tmpOffset = offset + dIdx;
+        std::vector<float> diskFlux(numPoints);
+        rayTracer_.getFlux(diskFlux.data(), pIdx, dIdx, smoothingNeighbors);
         auto name = particles[pIdx].dataLabels[dIdx];
 
-        std::vector<float> values(numPoints);
-        std::memcpy(values.data(), &tmpBuffer[tmpOffset * numPoints],
-                    numPoints * sizeof(float));
-
-        pointData.insertReplaceScalarData(std::move(values), name);
+        std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
+                                                diskFlux.end());
+        pointData.insertReplaceScalarData(std::move(diskFluxCasted), name);
       }
       offset += particles[pIdx].dataLabels.size();
     }
@@ -253,10 +264,7 @@ private:
 
 private:
   std::shared_ptr<DeviceContext> deviceContext_;
-  viennaray::gpu::TraceTriangle<NumericType, D> rayTracer_;
-
-  KDTreeType elementKdTree_;
-  MeshType surfaceMesh_;
+  viennaray::gpu::TraceDisk<NumericType, D> rayTracer_;
 
   bool rayTracerInitialized_ = false;
 };

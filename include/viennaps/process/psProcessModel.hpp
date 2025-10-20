@@ -10,6 +10,7 @@
 
 #include <rayParticle.hpp>
 #include <raySource.hpp>
+#include <raygCallableConfig.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
 #include <vcCudaBuffer.hpp>
@@ -172,7 +173,10 @@ private:
   std::vector<viennaray::gpu::Particle<NumericType>> particles;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
   std::string pipelineFileName;
+  std::string callableFileName;
   bool materialIds = false;
+  std::unordered_map<std::string, unsigned> particleMap_;
+  std::vector<viennaray::gpu::CallableConfig> callableMap_;
 
 public:
   CudaBuffer processData;
@@ -189,9 +193,27 @@ public:
   }
   auto getPipelineFileName() const { return pipelineFileName; }
 
+  void setCallableFileName(const std::string &fileName) {
+    callableFileName = fileName;
+  }
+  auto getCallableFileName() const { return callableFileName; }
+
   void insertNextParticleType(
       const viennaray::gpu::Particle<NumericType> &passedParticle) {
     particles.push_back(passedParticle);
+  }
+
+  void setParticleCallableMap(
+      const std::unordered_map<std::string, unsigned> &pMap,
+      const std::vector<viennaray::gpu::CallableConfig> &cMap) {
+    particleMap_ = pMap;
+    callableMap_ = cMap;
+  }
+
+  std::tuple<std::unordered_map<std::string, unsigned>,
+             std::vector<viennaray::gpu::CallableConfig>>
+  getParticleCallableMap() const {
+    return {particleMap_, callableMap_};
   }
 
   /// Set a primary direction for the source distribution (tilted distribution).

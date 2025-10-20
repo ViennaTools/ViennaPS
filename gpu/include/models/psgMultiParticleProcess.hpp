@@ -6,6 +6,8 @@
 #include <psConstants.hpp>
 #include <psMaterials.hpp>
 
+#include <raygCallableConfig.hpp>
+
 namespace viennaps::gpu {
 
 using namespace viennacore;
@@ -24,7 +26,22 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
-    this->setPipelineFileName("MultiParticlePipeline");
+    this->setPipelineFileName("GeneralPipeline");
+    this->setCallableFileName("CallableWrapper");
+    std::unordered_map<std::string, unsigned> pMap = {{"Neutral", 0},
+                                                      {"Ion", 1}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__multiNeutralCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__multiNeutralReflection"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__multiIonCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__multiIonReflection"},
+        {1, viennaray::gpu::CallableSlot::INIT,
+         "__direct_callable__multiIonInit"}};
+    this->setParticleCallableMap(pMap, cMap);
   }
 
   void addNeutralParticle(NumericType stickingProbability,
