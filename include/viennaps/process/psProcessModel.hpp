@@ -10,9 +10,9 @@
 
 #include <rayParticle.hpp>
 #include <raySource.hpp>
-#include <raygCallableConfig.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
+#include <raygCallableConfig.hpp>
 #include <vcCudaBuffer.hpp>
 #endif
 

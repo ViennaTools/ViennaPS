@@ -122,7 +122,6 @@ function(add_GPU_executable target_name_base target_name_var)
       ${cu_optix_source_files}
       ${cmake_options}
       OPTIONS
-      --relocatable-device-code true # needed for using DirectCallables
       ${options})
     list(APPEND generated_files ${generated_optixir_files})
   endif()
@@ -134,7 +133,6 @@ function(add_GPU_executable target_name_base target_name_var)
       ${cu_optix_source_files}
       ${cmake_options}
       OPTIONS
-      --relocatable-device-code true
       ${options})
     list(APPEND generated_files ${generated_ptx_files})
   endif()
