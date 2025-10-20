@@ -26,6 +26,7 @@ template <class NumericType, int D> void RunTest() {
   // fluorocarbon etching
   {
     auto params = FluorocarbonParameters<NumericType>();
+    params.addMaterial({Material::Polymer, 2.});
     auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New(params);
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
@@ -34,13 +35,14 @@ template <class NumericType, int D> void RunTest() {
 
   // geometric models
   {
-    auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(1., 1.);
+    NumericType radius = 1;
+    auto model = SmartPointer<SphereDistribution<NumericType, D>>::New(radius);
     VC_TEST_ASSERT(model->getGeometricModel());
   }
 
   {
-    const std::array<double, 3> axes = {1.};
-    auto model = SmartPointer<BoxDistribution<NumericType, D>>::New(axes, 0.);
+    const std::array<NumericType, 3> axes = {1.};
+    auto model = SmartPointer<BoxDistribution<NumericType, D>>::New(axes);
     VC_TEST_ASSERT(model->getGeometricModel());
   }
 
@@ -102,8 +104,6 @@ template <class NumericType, int D> void RunTest() {
         std::vector<std::pair<Material, NumericType>>{});
     VC_TEST_ASSERT(model->getSurfaceModel());
     VC_TEST_ASSERT(model->getVelocityField());
-    VC_TEST_ASSERT(model->getVelocityField()->getTranslationFieldOptions() ==
-                   0);
   }
 }
 

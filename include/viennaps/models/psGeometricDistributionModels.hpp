@@ -12,60 +12,17 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D, typename DistType>
-class GeometricDistributionModel : public GeometricModel<NumericType, D> {
-  static_assert(std::is_base_of_v<
-                viennals::GeometricAdvectDistribution<viennahrle::CoordType, D>,
-                DistType>);
-
-  using GeomDistPtr = SmartPointer<DistType>;
-  using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
-
-  using GeometricModel<NumericType, D>::domain;
-
-  GeomDistPtr dist = nullptr;
-  LSPtr mask = nullptr;
-
-public:
-  GeometricDistributionModel(GeomDistPtr passedDist) : dist(passedDist) {}
-
-  GeometricDistributionModel(GeomDistPtr passedDist, LSPtr passedMask)
-      : dist(passedDist), mask(passedMask) {}
-
-  void apply() override {
-    if (dist) {
-      if (static_cast<int>(domain->getMetaDataLevel()) > 1) {
-        domain->clearMetaData();
-        domain->addMetaData(this->processData);
-      }
-      if (mask) {
-        viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),
-                                                  dist, mask)
-            .apply();
-      } else {
-        viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),
-                                                  dist)
-            .apply();
-      }
-    }
-  }
-};
-
 template <typename NumericType, int D>
 class SphereDistribution : public ProcessModelCPU<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
-  SphereDistribution(NumericType radius, NumericType gridDelta,
-                     LSPtr mask = nullptr) {
-    auto dist = SmartPointer<
-        viennals::SphereDistribution<viennahrle::CoordType, D>>::New(radius,
-                                                                     gridDelta);
+  SphereDistribution(NumericType radius, LSPtr mask = nullptr) {
+    auto dist =
+        SmartPointer<viennals::SphereDistribution<NumericType, D>>::New(radius);
 
-    auto geomModel = SmartPointer<GeometricDistributionModel<
-        NumericType, D,
-        viennals::SphereDistribution<viennahrle::CoordType, D>>>::New(dist,
-                                                                      mask);
+    auto geomModel =
+        SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
@@ -78,15 +35,13 @@ class BoxDistribution : public ProcessModelCPU<NumericType, D> {
   using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
 
 public:
-  BoxDistribution(const std::array<viennahrle::CoordType, 3> &halfAxes,
-                  NumericType gridDelta, LSPtr mask = nullptr) {
+  BoxDistribution(const std::array<NumericType, 3> &halfAxes,
+                  LSPtr mask = nullptr) {
     auto dist =
-        SmartPointer<viennals::BoxDistribution<viennahrle::CoordType, D>>::New(
-            halfAxes, gridDelta);
+        SmartPointer<viennals::BoxDistribution<NumericType, D>>::New(halfAxes);
 
-    auto geomModel = SmartPointer<GeometricDistributionModel<
-        NumericType, D,
-        viennals::BoxDistribution<viennahrle::CoordType, D>>>::New(dist, mask);
+    auto geomModel =
+        SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");
@@ -96,7 +51,128 @@ public:
   }
 };
 
+template <typename NumericType, int D>
+class CustomSphereDistribution : public ProcessModelCPU<NumericType, D> {
+  using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
+
+public:
+  CustomSphereDistribution(const std::vector<NumericType> &radii,
+                           LSPtr mask = nullptr) {
+    auto dist =
+        SmartPointer<viennals::CustomSphereDistribution<NumericType, D>>::New(
+            radii);
+
+    auto geomModel =
+        SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
+
+    this->setGeometricModel(geomModel);
+    this->setProcessName("CustomSphereDistribution");
+  }
+};
+
+namespace impl {
+
+template <class T, int D>
+class TrenchDistribution : public viennals::GeometricAdvectDistribution<T, D> {
+
+  const T trenchWidth_;
+  const T trenchDepth_;
+
+  const T rate_;
+  const T bottomMed_;
+  const T a_, b_, n_;
+
+  T gridDelta_;
+
+public:
+  TrenchDistribution(const T trenchWidth, const T trenchDepth, const T rate,
+                     const T bottomMed = 1.0, const T a = 1.0, const T b = 1.0,
+                     const T n = 1.0)
+      : trenchWidth_(trenchWidth), trenchDepth_(trenchDepth), rate_(rate),
+        bottomMed_(bottomMed), a_(a), b_(b), n_(n) {}
+
+  T getSignedDistance(const Vec3D<viennahrle::CoordType> &initial,
+                      const Vec3D<viennahrle::CoordType> &candidate,
+                      unsigned long pointId) const override {
+    T distance = std::numeric_limits<T>::max();
+    Vec3D<viennahrle::CoordType> v{};
+    for (unsigned i = 0; i < D; ++i) {
+      v[i] = candidate[i] - initial[i];
+    }
+
+    T radius = 0;
+    if (std::abs(initial[D - 1] + trenchDepth_) < gridDelta_) {
+      radius = bottomMed_;
+    } else {
+      radius =
+          a_ * std::pow(1. - std::abs(initial[D - 1]) / trenchDepth_, n_) + b_;
+    }
+
+    if (std::abs(radius) <= gridDelta_) {
+      distance =
+          std::max(std::max(std::abs(v[0]), std::abs(v[1])), std::abs(v[2])) -
+          std::abs(radius);
+    } else {
+      for (unsigned i = 0; i < D; ++i) {
+        T y = (v[(i + 1) % D]);
+        T z = 0;
+        if constexpr (D == 3)
+          z = (v[(i + 2) % D]);
+        T x = radius * radius - y * y - z * z;
+        if (x < 0.)
+          continue;
+        T dirRadius = std::abs(v[i]) - std::sqrt(x);
+        if (std::abs(dirRadius) < std::abs(distance))
+          distance = dirRadius;
+      }
+    }
+    // return distance;
+    if (radius < 0) {
+      return -distance;
+    } else {
+      return distance;
+    }
+  }
+
+  std::array<viennahrle::CoordType, 6> getBounds() const override {
+    std::array<viennahrle::CoordType, 6> bounds = {};
+    for (unsigned i = 0; i < D; ++i) {
+      bounds[2 * i] = -rate_;
+      bounds[2 * i + 1] = rate_;
+    }
+    return bounds;
+  }
+
+  bool useSurfacePointId() const override { return true; }
+
+  void prepare(SmartPointer<viennals::Domain<T, D>> domain) override {
+    gridDelta_ = domain->getGrid().getGridDelta();
+  }
+};
+} // namespace impl
+
+template <typename NumericType, int D>
+class GeometricTrenchDeposition : public ProcessModelCPU<NumericType, D> {
+  using LSPtr = SmartPointer<viennals::Domain<NumericType, D>>;
+
+public:
+  GeometricTrenchDeposition(NumericType trenchWidth, NumericType trenchDepth,
+                            NumericType rate, NumericType bottomMed = 1.0,
+                            NumericType a = 1.0, NumericType b = 1.0,
+                            NumericType n = 1.0) {
+    auto dist = SmartPointer<impl::TrenchDistribution<NumericType, D>>::New(
+        trenchWidth, trenchDepth, rate, bottomMed, a, b, n);
+
+    auto geomModel = SmartPointer<GeometricModel<NumericType, D>>::New(dist);
+
+    this->setGeometricModel(geomModel);
+    this->setProcessName("GeometricTrenchDeposition");
+  }
+};
+
 PS_PRECOMPILE_PRECISION_DIMENSION(SphereDistribution)
 PS_PRECOMPILE_PRECISION_DIMENSION(BoxDistribution)
+PS_PRECOMPILE_PRECISION_DIMENSION(CustomSphereDistribution)
+PS_PRECOMPILE_PRECISION_DIMENSION(GeometricTrenchDeposition)
 
 } // namespace viennaps

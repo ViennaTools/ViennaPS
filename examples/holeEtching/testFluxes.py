@@ -64,7 +64,7 @@ rayParams.raysPerPoint = int(1000)
 
 covParams = ps.CoverageParameters()
 covParams.maxIterations = 20
-covParams.coverageDeltaThreshold = 1e-4
+covParams.tolerance = 1e-4
 
 for i in range(len(yo2)):
 

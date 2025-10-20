@@ -68,6 +68,7 @@ from viennaps.d2 import FaradayCageEtching
 from viennaps.d2 import FluorocarbonEtching
 from viennaps.d2 import GDSGeometry
 from viennaps.d2 import GDSReader
+from viennaps.d2 import GeometricTrenchDeposition
 from viennaps.d2 import GeometryFactory
 from viennaps.d2 import HBrO2Etching
 from viennaps.d2 import Interpolation
@@ -131,6 +132,7 @@ __all__: list[str] = [
     "FluxEngineType",
     "GDSGeometry",
     "GDSReader",
+    "GeometricTrenchDeposition",
     "GeometryFactory",
     "HBrO2Etching",
     "HoleShape",

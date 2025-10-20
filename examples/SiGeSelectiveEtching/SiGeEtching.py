@@ -76,7 +76,7 @@ parameters = model.getParameters()
 
 covParams = ps.CoverageParameters()
 covParams.maxIterations = 20
-covParams.coverageDeltaThreshold = 1e-4
+covParams.tolerance = 1e-4
 
 rayParams = ps.RayTracingParameters()
 rayParams.raysPerPoint = int(params["raysPerPoint"])
@@ -94,12 +94,12 @@ process.setParameters(rayParams)
 process.setParameters(advParams)
 
 # print initial surface
-geometry.saveSurfaceMesh(filename="initial.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="initial.vtp")
 geometry.saveVolumeMesh("initial")
 
 # run the process
 process.apply()
 
 # print final surface
-geometry.saveSurfaceMesh(filename="final.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="final.vtp")
 geometry.saveVolumeMesh("final")

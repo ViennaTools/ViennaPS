@@ -101,7 +101,8 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.6.0
+  VERSION 1.6.1
+  GIT_TAG main
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -111,19 +112,18 @@ CPMAddPackage(
   VERSION 1.13.0
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
-# TODO: use non local copy
-set(ViennaRay_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ViennaRay")
 CPMFindPackage(
   NAME ViennaRay
   VERSION 3.5.0
-  # GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
-  SOURCE_DIR ${ViennaRay_SOURCE_DIR}
+  GIT_TAG main
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 5.0.1
+  VERSION 5.1.0
+  GIT_TAG master
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

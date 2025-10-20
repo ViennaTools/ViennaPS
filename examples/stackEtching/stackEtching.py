@@ -80,6 +80,7 @@ model = vps.d2.FluorocarbonEtching(parameters)
 
 covParams = vps.CoverageParameters()
 covParams.maxIterations = 10
+covParams.tolerance = 1e-4
 
 advParams = vps.AdvectionParameters()
 advParams.integrationScheme = vps.IntegrationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER

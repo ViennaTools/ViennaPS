@@ -70,7 +70,7 @@ int main() {
     std::cout << "DP-Depo ..." << std::flush;
     const NumericType thickness = 4; // nm
     domain->duplicateTopLevelSet(Material::Metal);
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -81,7 +81,7 @@ int main() {
     const NumericType etchDepth = 6; // nm
     auto dist = SmartPointer<BoxDistribution<double, D>>::New(
         std::array<NumericType, D>{-gridDelta, -gridDelta, -etchDepth},
-        gridDelta, domain->getLevelSets().front());
+        domain->getLevelSets().front());
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -114,7 +114,7 @@ int main() {
     std::cout << "STI Deposition ..." << std::flush;
     const NumericType thickness = 35; // nm
     domain->duplicateTopLevelSet(Material::SiO2);
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -127,8 +127,8 @@ int main() {
   // pattern STI material
   {
     std::cout << "STI Patterning ..." << std::flush;
-    auto dist = IsotropicProcessGeometric::New(-35, gridDelta,
-                                               domain->getLevelSets().front());
+    auto dist =
+        IsotropicProcessGeometric::New(-35, domain->getLevelSets().front());
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -140,7 +140,7 @@ int main() {
     std::cout << "Gate Deposition HfO2 ..." << std::flush;
     const NumericType thickness = 2;              // nm
     domain->duplicateTopLevelSet(Material::HfO2); // add layer
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -150,7 +150,7 @@ int main() {
     std::cout << "Gate Deposition PolySi ..." << std::flush;
     const NumericType thickness = 104;              // nm
     domain->duplicateTopLevelSet(Material::PolySi); // add layer
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -195,7 +195,7 @@ int main() {
     std::cout << "Spacer Deposition ..." << std::flush;
     const NumericType thickness = 10;              // nm
     domain->duplicateTopLevelSet(Material::Si3N4); // add layer
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -205,7 +205,7 @@ int main() {
     std::cout << "Spacer Etch ..." << std::flush;
     auto ls = domain->getLevelSets()[domain->getLevelSets().size() - 2];
     auto dist = SmartPointer<BoxDistribution<double, D>>::New(
-        std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, gridDelta, ls);
+        std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, ls);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -258,7 +258,7 @@ int main() {
     std::cout << "Dielectric Deposition ..." << std::flush;
     const NumericType thickness = 50;                   // nm
     domain->duplicateTopLevelSet(Material::Dielectric); // add layer
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -278,7 +278,7 @@ int main() {
     std::cout << "Gate Deposition TiN ..." << std::flush;
     const NumericType thickness = 4;             // nm
     domain->duplicateTopLevelSet(Material::TiN); // add layer
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -288,7 +288,7 @@ int main() {
     std::cout << "Gate Deposition PolySi ..." << std::flush;
     const NumericType thickness = 40;               // nm
     domain->duplicateTopLevelSet(Material::PolySi); // add layer
-    auto dist = IsotropicProcessGeometric::New(thickness, gridDelta);
+    auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }

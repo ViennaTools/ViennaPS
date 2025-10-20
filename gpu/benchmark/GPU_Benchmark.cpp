@@ -97,10 +97,11 @@ int main() {
 
         tracer.setGeometry(mesh);
 
-        timer.start();
-        tracer.apply();
-        timer.finish();
-        file << timer.currentDuration << ";";
+    auto velocityField =
+        SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+    auto translationField = SmartPointer<TranslationField<NumericType, D>>::New(
+        velocityField, domain->getMaterialMap(), 1);
+    advectionKernel.setVelocityField(translationField);
 
         timer.start();
         auto pointData = viennals::PointData<NumericType>::New();

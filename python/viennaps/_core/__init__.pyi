@@ -9,8 +9,8 @@ import typing
 import viennals._core
 from viennaps import d2
 import viennaps.d2
-from viennaps import d3
 import viennaps.d3
+from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
@@ -322,13 +322,13 @@ class CoverageParameters:
         """
 
     @property
-    def coverageDeltaThreshold(self) -> float: ...
-    @coverageDeltaThreshold.setter
-    def coverageDeltaThreshold(self, arg0: typing.SupportsFloat) -> None: ...
-    @property
     def maxIterations(self) -> int: ...
     @maxIterations.setter
     def maxIterations(self, arg0: typing.SupportsInt) -> None: ...
+    @property
+    def tolerance(self) -> float: ...
+    @tolerance.setter
+    def tolerance(self, arg0: typing.SupportsFloat) -> None: ...
 
 class Extrude:
     @typing.overload

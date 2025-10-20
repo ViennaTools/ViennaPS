@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::INTERMEDIATE);
+  Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
   CoverageParameters coverageParams;
-  coverageParams.coverageDeltaThreshold = 1e-4;
+  coverageParams.tolerance = 1e-4;
 
   RayTracingParameters rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
@@ -77,5 +77,6 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   // print final surface
-  geometry->saveSurfaceMesh(params.get<std::string>("outputFile"));
+  geometry->saveSurfaceMesh(params.get<std::string>("outputFile"), true, 0.01,
+                            true);
 }

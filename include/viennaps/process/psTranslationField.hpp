@@ -21,9 +21,9 @@ class TranslationField : public viennals::VelocityField<NumericType> {
 public:
   TranslationField(
       SmartPointer<::viennaps::VelocityField<NumericType, D>> velocityField,
-      SmartPointer<MaterialMap> const &materialMap)
+      SmartPointer<MaterialMap> const &materialMap, int translationMethod)
       : modelVelocityField_(velocityField), materialMap_(materialMap),
-        translationMethod_(velocityField->getTranslationFieldOptions()) {}
+        translationMethod_(translationMethod) {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material,
@@ -78,11 +78,13 @@ public:
                      const Vec3D<NumericType> &coordinate) const {
     switch (translationMethod_) {
     case 1: {
+      assert(translator_->size() > 0);
       if (auto it = translator_->find(lsId); it != translator_->end()) {
         lsId = it->second;
       } else {
         Logger::getInstance()
-            .addError("Could not extend velocity from surface to LS point",
+            .addError("Could not extend velocity from surface (" +
+                          std::to_string(lsId) + ") to LS point",
                       false)
             .print();
       }
