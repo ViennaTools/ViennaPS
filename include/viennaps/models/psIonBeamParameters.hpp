@@ -30,8 +30,7 @@ template <typename NumericType> struct IBEParameters {
 
     processData["Plane Wafer Rate"] = {planeWaferRate};
     for (const auto &pair : materialPlaneWaferRate) {
-      processData[MaterialMap::getMaterialName(pair.first) + " PWR"] = {
-          pair.second};
+      processData[MaterialMap::toString(pair.first) + " PWR"] = {pair.second};
     }
 
     processData["Mean Energy"] = {meanEnergy};

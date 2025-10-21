@@ -81,7 +81,7 @@ template <typename NumericType> struct FluorocarbonParameters {
         return m;
     }
     Logger::getInstance()
-        .addError("Material '" + MaterialMap::getMaterialName(material) +
+        .addError("Material '" + MaterialMap::toString(material) +
                   "' not found in fluorocarbon model parameters.")
         .print();
     return MaterialParameters{};
@@ -105,7 +105,7 @@ template <typename NumericType> struct FluorocarbonParameters {
     processData["Ion n_k"] = std::vector<double>{Ions.n_l};
     processData["Ion MinAngle"] = std::vector<double>{Ions.minAngle};
     for (auto mat : materials) {
-      std::string prefix = MaterialMap::getMaterialName(mat.id) + " ";
+      std::string prefix = MaterialMap::toString(mat.id) + " ";
       processData[prefix + "density"] = std::vector<double>{mat.density};
       processData[prefix + "beta_p"] = std::vector<double>{mat.beta_p};
       processData[prefix + "beta_e"] = std::vector<double>{mat.beta_e};

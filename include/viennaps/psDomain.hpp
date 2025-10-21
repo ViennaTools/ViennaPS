@@ -417,8 +417,7 @@ public:
       out << "Materials:\n";
       for (std::size_t i = 0; i < materialMap_->size(); i++) {
         out << "\t" << i << ": "
-            << MaterialMap::getMaterialName(materialMap_->getMaterialAtIdx(i))
-            << "\n";
+            << MaterialMap::toString(materialMap_->getMaterialAtIdx(i)) << "\n";
       }
     } else {
       out << "No Material Map available.\n";

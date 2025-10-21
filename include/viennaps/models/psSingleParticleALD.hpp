@@ -163,13 +163,16 @@ public:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
-    this->setPipelineFileName("SingleParticleALDPipeline");
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleALD");
     this->isALP = true;
     this->hasGPU = true;
+
+    // Callables
+    /// TODO: Implement GPU callable functions for ALD particle-surface
+    /// interactions
 
     this->processMetaData["stickingProbability"] =
         std::vector<double>{stickingProbability};

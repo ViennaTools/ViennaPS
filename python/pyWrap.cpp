@@ -76,7 +76,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
       .def_static("isMaterial", &MaterialMap::isMaterial<T>)
-      .def_static("getMaterialName", &MaterialMap::getMaterialName<Material>,
+      .def_static("getMaterialName", &to_string<Material>,
                   "Get the name of a material.");
 
   // Meta Data Enum

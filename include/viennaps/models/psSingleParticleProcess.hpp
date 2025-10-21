@@ -131,8 +131,8 @@ public:
       for (const auto &pair : materialRates) {
         if (pair.first == Material::Undefined)
           continue;
-        this->processMetaData[MaterialMap::getMaterialName(pair.first) +
-                              " Rate"] = std::vector<double>{pair.second};
+        this->processMetaData[MaterialMap::toString(pair.first) + " Rate"] =
+            std::vector<double>{pair.second};
       }
     }
   }
@@ -217,8 +217,8 @@ private:
         if (pair.first == Material::Undefined)
           continue; // skip undefined material
 
-        this->processMetaData[MaterialMap::getMaterialName(pair.first) +
-                              " Rate"] = std::vector<double>{pair.second};
+        this->processMetaData[MaterialMap::toString(pair.first) + " Rate"] =
+            std::vector<double>{pair.second};
       }
     }
   }

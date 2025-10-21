@@ -136,28 +136,28 @@ template <typename NumericType> struct CF4O2Parameters {
 
     // sticking probabilities
     for (const auto &gamma : gamma_F) {
-      metaData["gamma_F_" + MaterialMap::getMaterialName(gamma.first)] = {
+      metaData["gamma_F_" + MaterialMap::toString(gamma.first)] = {
           gamma.second};
     }
     for (const auto &gamma : gamma_F_oxidized) {
-      metaData["gamma_F_oxidized_" +
-               MaterialMap::getMaterialName(gamma.first)] = {gamma.second};
+      metaData["gamma_F_oxidized_" + MaterialMap::toString(gamma.first)] = {
+          gamma.second};
     }
     for (const auto &gamma : gamma_O) {
-      metaData["gamma_O_" + MaterialMap::getMaterialName(gamma.first)] = {
+      metaData["gamma_O_" + MaterialMap::toString(gamma.first)] = {
           gamma.second};
     }
     for (const auto &gamma : gamma_O_passivated) {
-      metaData["gamma_O_passivated_" +
-               MaterialMap::getMaterialName(gamma.first)] = {gamma.second};
+      metaData["gamma_O_passivated_" + MaterialMap::toString(gamma.first)] = {
+          gamma.second};
     }
     for (const auto &gamma : gamma_C) {
-      metaData["gamma_C_" + MaterialMap::getMaterialName(gamma.first)] = {
+      metaData["gamma_C_" + MaterialMap::toString(gamma.first)] = {
           gamma.second};
     }
     for (const auto &gamma : gamma_C_oxidized) {
-      metaData["gamma_C_oxidized_" +
-               MaterialMap::getMaterialName(gamma.first)] = {gamma.second};
+      metaData["gamma_C_oxidized_" + MaterialMap::toString(gamma.first)] = {
+          gamma.second};
     }
 
     return metaData;

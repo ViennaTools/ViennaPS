@@ -230,8 +230,7 @@ public:
          << "\tPlane wafer rate: " << params_.planeWaferRate << "\n"
          << "\tMaterial plane wafer rate:\n";
       for (const auto &[mat, rate] : params_.materialPlaneWaferRate) {
-        ss << "\t    " << MaterialMap::getMaterialName(mat) << ": " << rate
-           << "\n";
+        ss << "\t    " << MaterialMap::toString(mat) << ": " << rate << "\n";
       }
       ss << "\tMean energy: " << params_.meanEnergy << " eV\n"
          << "\tSigma energy: " << params_.sigmaEnergy << " eV\n"
@@ -246,7 +245,7 @@ public:
          << "\tRedeposition rate: " << params_.redepositionRate << "\n"
          << "\tMask materials:\n";
       for (const auto &mat : maskMaterials_) {
-        ss << "\t    " << MaterialMap::getMaterialName(mat) << "\n";
+        ss << "\t    " << MaterialMap::toString(mat) << "\n";
       }
       Logger::getInstance().addDebug(ss.str()).print();
     }

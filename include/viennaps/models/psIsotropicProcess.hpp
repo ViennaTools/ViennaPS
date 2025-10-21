@@ -87,7 +87,8 @@ private:
     addMetaData("IsotropicRate", rate);
     if (!materialRates.empty()) {
       for (const auto &materialRate : materialRates) {
-        addMetaData("Rate " + MaterialMap::getMaterialName(materialRate.first),
+        addMetaData("Rate " + MaterialMap::toString(
+                                  static_cast<Material>(materialRate.first)),
                     materialRate.second);
       }
     }
