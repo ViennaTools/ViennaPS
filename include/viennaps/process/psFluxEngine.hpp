@@ -8,12 +8,30 @@ namespace viennaps {
 
 enum class FluxEngineType {
   // Platform, Surface representation
+  AUTO,         // Automatic selection
   CPU_DISK,     // CPU, Disk-based
   GPU_TRIANGLE, // GPU, Triangle-based
   GPU_DISK,     // GPU, Disk-based
   GPU_LINE,     // GPU, Line-based
   // GPU_LEVEL_SET // Future implementations
 };
+
+inline std::string to_string(FluxEngineType type) {
+  switch (type) {
+  case FluxEngineType::AUTO:
+    return "AUTO";
+  case FluxEngineType::CPU_DISK:
+    return "CPU_DISK";
+  case FluxEngineType::GPU_TRIANGLE:
+    return "GPU_TRIANGLE";
+  case FluxEngineType::GPU_DISK:
+    return "GPU_DISK";
+  case FluxEngineType::GPU_LINE:
+    return "GPU_LINE";
+  default:
+    return "UNKNOWN";
+  }
+}
 
 template <typename NumericType, int D> class FluxEngine {
 protected:

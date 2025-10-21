@@ -49,9 +49,9 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
-    if (model->getPipelineFileName().empty()) {
+    if (model->getCallableFileName().empty()) {
       Logger::getInstance()
-          .addWarning("No pipeline in process model: " + name)
+          .addWarning("No callables in process model: " + name)
           .print();
       return ProcessResult::INVALID_INPUT;
     }
@@ -82,8 +82,6 @@ public:
       }
 
       rayTracer_.setParticleCallableMap(model->getParticleCallableMap());
-      rayTracer_.setPipeline(model->getPipelineFileName(),
-                             deviceContext_->modulePath);
       rayTracer_.setCallables(model->getCallableFileName(),
                               deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);

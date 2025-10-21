@@ -9,7 +9,7 @@ namespace ps = viennaps;
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
-  ps::Logger::setLogLevel(ps::LogLevel::TIMING);
+  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
 
   // Parse the parameters
   ps::util::Parameters params;
@@ -34,12 +34,8 @@ int main(int argc, char *argv[]) {
       params.get("rate"), params.get("stickingProbability"),
       params.get("sourcePower"));
 
-  ps::Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
+  ps::Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("processTime"));
-  if constexpr (ps::gpuAvailable() && D == 3)
-    process.setFluxEngineType(ps::FluxEngineType::GPU_TRIANGLE);
 
   geometry->saveHullMesh("initial");
 

@@ -68,7 +68,6 @@ private:
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);
-    this->setPipelineFileName("PlasmaEtchingPipeline");
 
     this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
     this->processData.upload(&deviceParams, 1);
