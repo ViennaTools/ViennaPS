@@ -1,6 +1,5 @@
 project(DRAMWiggling LANGUAGES CXX)
 
-
 if(VIENNAPS_USE_GPU)
   add_gpu_executable(${PROJECT_NAME} target_name "${PROJECT_NAME}.cpp")
 else()
