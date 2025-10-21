@@ -78,8 +78,9 @@ public:
       rayTracer_.setCallables(model->getCallableFileName(),
                               deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
-      // rayTracer_.setNumberOfRaysFixed(1);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
+      if (!context.rayTracingParams.useRandomSeeds)
+        rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
       rayTracer_.setPeriodicBoundary(periodicBoundary);
       for (auto &particle : model->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
