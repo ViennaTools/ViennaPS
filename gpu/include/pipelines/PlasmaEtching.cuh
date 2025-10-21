@@ -3,7 +3,7 @@
 #include <vcContext.hpp>
 #include <vcVectorType.hpp>
 
-#include "raygLaunchParams.hpp"
+#include <raygLaunchParams.hpp>
 #include <raygReflection.hpp>
 
 #include <models/psPlasmaEtchingParameters.hpp>
