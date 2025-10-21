@@ -39,12 +39,8 @@ model = ps.SingleParticleProcess(
 
 geometry.saveHullMesh("initial")
 
-process = ps.Process()
-process.setDomain(geometry)
-process.setProcessModel(model)
+process = ps.Process(geometry, model)
 process.setProcessDuration(params["processTime"])
-if ps.gpuAvailable() and args.dim == 3:
-    process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 process.apply()
 

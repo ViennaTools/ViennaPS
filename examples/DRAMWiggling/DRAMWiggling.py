@@ -62,9 +62,7 @@ advectionParams.integrationScheme = ps.util.convertIntegrationScheme(
 )
 
 # process setup
-process = psd.Process()
-process.setDomain(geometry)
-process.setProcessModel(model)
+process = psd.Process(geometry, model)
 process.setProcessDuration(params["processTime"])  # seconds
 process.setParameters(coverageParameters)
 process.setParameters(rayTracingParams)
