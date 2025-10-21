@@ -62,7 +62,7 @@ public:
     float cage_y = sinf(cageAngle * M_PIf / 180.f);
 
     viennaray::gpu::Particle<NumericType> particle1{
-        .name = "ion",
+        .name = "Ion1",
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
         .direction =
@@ -71,12 +71,26 @@ public:
     this->insertNextParticleType(particle1);
 
     viennaray::gpu::Particle<NumericType> particle2{
-        .name = "ion",
+        .name = "Ion2",
         .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
         .direction =
             Vec3D<NumericType>{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}};
     this->insertNextParticleType(particle2);
+
+    // Callables
+    this->setCallableFileName("CallableWrapper");
+    std::unordered_map<std::string, unsigned> pMap = {{"Ion1", 0}, {"Ion2", 1}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__faradayCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__faradayReflection"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__faradayCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__faradayReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
 
     // surface model
     auto surfModel =
@@ -89,7 +103,6 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FaradayCageEtching");
-    this->setPipelineFileName("FaradayCagePipeline");
 
     impl::IonParams params;
     params.thetaRMin = constants::degToRad(70);
