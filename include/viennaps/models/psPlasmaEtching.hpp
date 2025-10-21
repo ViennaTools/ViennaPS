@@ -103,7 +103,7 @@ public:
       const auto chemicalRate =
           params.Substrate.k_sigma * eCoverage->at(i) / 4.;
 
-      if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
+      if (MaterialMap::isHardmask(materialIds[i])) {
         etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
         if (Logger::getLogLevel() > 3) {
           spRate->at(i) = sputterRate;
@@ -220,7 +220,7 @@ public:
     NumericType A_sp = params.Substrate.A_sp;
     NumericType B_sp = params.Substrate.B_sp;
     NumericType Eth_sp = params.Substrate.Eth_sp;
-    if (MaterialMap::isMaterial(materialId, Material::Mask)) {
+    if (MaterialMap::isHardmask(materialId)) {
       A_sp = params.Mask.A_sp;
       B_sp = params.Mask.B_sp;
       Eth_sp = params.Mask.Eth_sp;

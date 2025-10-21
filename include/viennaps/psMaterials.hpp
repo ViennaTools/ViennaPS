@@ -5,7 +5,9 @@
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 
+#include <array>
 #include <string>
+#include <string_view>
 
 namespace viennaps {
 
@@ -212,6 +214,10 @@ public:
   template <class T>
   static inline bool isMaterial(const T matId, const Material material) {
     return mapToMaterial(matId) == material;
+  }
+
+  template <class T> static inline bool isHardmask(const T matId) {
+    return categoryOf(mapToMaterial(matId)) == MaterialCategory::Hardmask;
   }
 
   static inline std::string toString(const Material matId) {

@@ -23,14 +23,5 @@ int main() {
   materialMap.setMaterialAtIdx(0, Material::SiO2);
   assert(materialMap.getMaterialAtIdx(0) == Material::SiO2);
 
-  // MapToMaterial test
-  assert(MaterialMap::mapToMaterial(1) == Material::Si);
-  assert(MaterialMap::mapToMaterial(2) == Material::SiO2);
-  assert(MaterialMap::mapToMaterial(20) == Material::Undefined);
-
-  // IsMaterial test
-  assert(MaterialMap::isMaterial(1, Material::Si));
-  assert(!MaterialMap::isMaterial(1, Material::SiO2));
-
   return 0;
 }

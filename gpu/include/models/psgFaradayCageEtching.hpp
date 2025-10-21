@@ -36,7 +36,7 @@ public:
     const NumericType norm = rate_ * .5 / std::cos(tiltAngle_ * M_PI / 180.);
 
     for (std::size_t i = 0; i < velocity->size(); i++) {
-      if (!MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
+      if (!MaterialMap::isHardmask(materialIds[i])) {
         velocity->at(i) = -flux->at(i) * norm;
       }
     }
