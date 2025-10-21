@@ -34,7 +34,7 @@ private:
   void initializeModel() {
     // particles
     viennaray::gpu::Particle<NumericType> ion;
-    ion.name = "ion"; // name for shader programs postfix
+    ion.name = "Ion"; // name for shader programs postfix
     ion.dataLabels.push_back("ionSputterFlux");
     ion.dataLabels.push_back("ionEnhancedFlux");
     ion.dataLabels.push_back("ionEnhancedPassivationFlux");
@@ -42,13 +42,13 @@ private:
     ion.cosineExponent = params.Ions.exponent;
 
     viennaray::gpu::Particle<NumericType> etchant;
-    etchant.name = "neutral";
+    etchant.name = "Etchant";
     etchant.dataLabels.push_back("etchantFlux");
     etchant.cosineExponent = 1.f;
     etchant.materialSticking = params.beta_E;
 
     viennaray::gpu::Particle<NumericType> oxygen;
-    oxygen.name = "neutral";
+    oxygen.name = "Oxygen";
     oxygen.dataLabels.push_back("passivationFlux");
     oxygen.cosineExponent = 1.f;
     oxygen.materialSticking = params.beta_P;
@@ -68,7 +68,26 @@ private:
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(oxygen);
-    this->setPipelineFileName("PlasmaEtchingPipeline");
+
+    std::unordered_map<std::string, unsigned> pMap = {
+        {"Ion", 0}, {"Etchant", 1}, {"Oxygen", 2}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__plasmaIonCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__plasmaIonReflection"},
+        {0, viennaray::gpu::CallableSlot::INIT,
+         "__direct_callable__plasmaIonInit"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__plasmaNeutralCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__plasmaNeutralReflection"},
+        {2, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__plasmaNeutralCollision"},
+        {2, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__plasmaNeutralReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
 
     this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
     this->processData.upload(&deviceParams, 1);

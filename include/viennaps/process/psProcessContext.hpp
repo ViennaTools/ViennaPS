@@ -64,15 +64,21 @@ template <typename NumericType, int D> struct ProcessContext {
   void printFlags() const {
     std::stringstream stream;
     stream << "Process Context Flags:";
-    stream << "\n  isGeometric: " << util::boolString(flags.isGeometric)
-           << "\n  useFluxEngine: " << util::boolString(flags.useFluxEngine)
-           << "\n  useAdvectionCallback: "
+    stream << "\n\tisGeometric: " << util::boolString(flags.isGeometric)
+           << "\n\tuseFluxEngine: " << util::boolString(flags.useFluxEngine)
+           << "\n\tuseAdvectionCallback: "
            << util::boolString(flags.useAdvectionCallback)
-           << "\n  useProcessParams: "
+           << "\n\tuseProcessParams: "
            << util::boolString(flags.useProcessParams)
-           << "\n  useCoverages: " << util::boolString(flags.useCoverages)
-           << "\n  isALP: " << util::boolString(flags.isALP)
-           << "\n  isAnalytic: " << util::boolString(flags.isAnalytic);
+           << "\n\tuseCoverages: " << util::boolString(flags.useCoverages)
+           << "\n\tisALP: " << util::boolString(flags.isALP)
+           << "\n\tisAnalytic: " << util::boolString(flags.isAnalytic);
+    if (model) {
+      stream << "\nProcess Name: "
+             << model->getProcessName().value_or("default");
+      stream << "\n\tHas GPU Model: " << util::boolString(model->hasGPUModel());
+    }
+
     Logger::getInstance().addDebug(stream.str()).print();
   }
 

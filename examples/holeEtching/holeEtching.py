@@ -67,8 +67,6 @@ process.setProcessDuration(params["processTime"])  # seconds
 process.setParameters(covParams)
 process.setParameters(rayParams)
 process.setParameters(advParams)
-if ps.gpuAvailable() and args.dim == 3:
-    process.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE)
 
 # print initial surface
 geometry.saveSurfaceMesh(filename="initial.vtp")

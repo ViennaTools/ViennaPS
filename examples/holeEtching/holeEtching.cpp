@@ -60,15 +60,11 @@ int main(int argc, char *argv[]) {
       params.get<std::string>("integrationScheme"));
 
   // process setup
-  Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
+  Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("processTime"));
   process.setParameters(coverageParams);
   process.setParameters(rayTracingParams);
   process.setParameters(advectionParams);
-  if constexpr (gpuAvailable() && D == 3)
-    process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
 
   // print initial surface
   geometry->saveSurfaceMesh("initial.vtp");

@@ -19,7 +19,7 @@ CreateTriangleMesh(const float gridDelta,
 
   // if constexpr (std::is_same_v<NumericType, float>) {
   triangleMesh.gridDelta = gridDelta;
-  triangleMesh.vertices = mesh->nodes;
+  triangleMesh.nodes = mesh->nodes;
   triangleMesh.minimumExtent = mesh->minimumExtent;
   triangleMesh.maximumExtent = mesh->maximumExtent;
   //   } else {

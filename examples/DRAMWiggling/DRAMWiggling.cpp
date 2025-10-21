@@ -65,10 +65,7 @@ int main(int argc, char **argv) {
   coverageParams.maxIterations = 10;
 
   // Process setup
-  Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
-  process.setProcessDuration(params.get("processTime"));
+  Process<NumericType, D> process(geometry, model, params.get("processTime"));
   process.setParameters(advectionParams);
   process.setParameters(rayParams);
   process.setParameters(coverageParams);

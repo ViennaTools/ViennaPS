@@ -172,7 +172,6 @@ class ProcessModelGPU : public ProcessModelBase<NumericType, D> {
 private:
   std::vector<viennaray::gpu::Particle<NumericType>> particles;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
-  std::string pipelineFileName;
   std::string callableFileName;
   bool materialIds = false;
   std::unordered_map<std::string, unsigned> particleMap_;
@@ -187,11 +186,6 @@ public:
     materialIds = passedMaterialIds;
   }
   bool useFluxEngine() override { return particles.size() > 0; }
-
-  void setPipelineFileName(const std::string &fileName) {
-    pipelineFileName = fileName;
-  }
-  auto getPipelineFileName() const { return pipelineFileName; }
 
   void setCallableFileName(const std::string &fileName) {
     callableFileName = fileName;

@@ -26,7 +26,8 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
-    this->setPipelineFileName("GeneralPipeline");
+
+    // Callables
     this->setCallableFileName("CallableWrapper");
     std::unordered_map<std::string, unsigned> pMap = {{"Neutral", 0},
                                                       {"Ion", 1}};

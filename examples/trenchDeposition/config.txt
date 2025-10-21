@@ -1,6 +1,6 @@
 # Config file for a trench deposition example process
 # Domain
-gridDelta=0.25
+gridDelta=0.24
 xExtent=10
 yExtent=10
 

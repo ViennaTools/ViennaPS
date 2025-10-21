@@ -113,7 +113,13 @@ function(add_GPU_executable target_name_base target_name_var)
     OPTIONS
     ${options})
 
-  # Create the rules to build the PTX and/or OPTIX files.
+  # Add the general pipelines and callable wrapper
+  list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineDisk.cu)
+  list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineTriangle.cu)
+  list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineLine.cu)
+  list(APPEND cu_optix_source_files ${VIENNAPS_GPU_INCLUDE}/pipelines/CallableWrapper.cu)
+
+  # Wrap OptiX pipeline files.
   if(VIENNAPS_GENERATE_OPTIXIR)
     cuda_wrap_srcs(
       ${target_name}

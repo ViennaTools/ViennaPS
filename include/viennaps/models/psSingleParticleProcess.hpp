@@ -108,11 +108,19 @@ public:
     auto velField =
         SmartPointer<::viennaps::DefaultVelocityField<NumericType, D>>::New();
 
-    this->setPipelineFileName("SingleParticlePipeline");
+    this->setCallableFileName("CallableWrapper");
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
+    this->hasGPU = true;
+    std::unordered_map<std::string, unsigned> pMap = {{"SingleParticle", 0}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__singleNeutralCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__singleNeutralReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
 
     this->processMetaData["Default Rate"] = std::vector<double>{rate};
     this->processMetaData["Sticking Probability"] =
@@ -123,8 +131,8 @@ public:
       for (const auto &pair : materialRates) {
         if (pair.first == Material::Undefined)
           continue;
-        this->processMetaData[MaterialMap::getMaterialName(pair.first) +
-                              " Rate"] = std::vector<double>{pair.second};
+        this->processMetaData[MaterialMap::toString(pair.first) + " Rate"] =
+            std::vector<double>{pair.second};
       }
     }
   }
@@ -197,6 +205,7 @@ private:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
+    this->hasGPU = true;
 
     this->processMetaData["Default Rate"] = std::vector<double>{rate_};
     this->processMetaData["Sticking Probability"] =
@@ -208,8 +217,8 @@ private:
         if (pair.first == Material::Undefined)
           continue; // skip undefined material
 
-        this->processMetaData[MaterialMap::getMaterialName(pair.first) +
-                              " Rate"] = std::vector<double>{pair.second};
+        this->processMetaData[MaterialMap::toString(pair.first) + " Rate"] =
+            std::vector<double>{pair.second};
       }
     }
   }

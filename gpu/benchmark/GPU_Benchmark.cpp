@@ -48,7 +48,6 @@ int main() {
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
-    tracer.setPipeline("GeneralPipeline", context->modulePath);
     tracer.setCallables("CallableWrapper", context->modulePath);
     tracer.setParticleCallableMap({pMap, cMap});
     tracer.insertNextParticle(particle);
@@ -146,7 +145,6 @@ int main() {
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
-    tracer.setPipeline("GeneralPipeline", context->modulePath);
     tracer.setCallables("CallableWrapper", context->modulePath);
     tracer.setParticleCallableMap({pMap, cMap});
     tracer.insertNextParticle(particle);
@@ -206,7 +204,7 @@ int main() {
                              static_cast<float>(diskMesh->maximumExtent[1]),
                              static_cast<float>(diskMesh->maximumExtent[2])};
         const viennaray::gpu::DiskMesh mesh{
-            .points = fPoints,
+            .nodes = fPoints,
             .normals = fNormals,
             .minimumExtent = fMinExtent,
             .maximumExtent = fMaxExtent,
@@ -225,7 +223,7 @@ int main() {
 
         timer.start();
         int smoothingNeighbors = 1;
-        std::vector<float> flux(mesh.points.size(), 0.);
+        std::vector<float> flux(mesh.nodes.size(), 0.);
         tracer.getFlux(flux.data(), 0, 0, smoothingNeighbors);
         std::vector<NumericType> fluxCasted(flux.begin(), flux.end());
         auto velocities =
@@ -264,7 +262,6 @@ int main() {
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
-    tracer.setPipeline("GeneralPipeline", context->modulePath);
     tracer.setCallables("CallableWrapper", context->modulePath);
     tracer.setParticleCallableMap({pMap, cMap});
     tracer.insertNextParticle(particle);

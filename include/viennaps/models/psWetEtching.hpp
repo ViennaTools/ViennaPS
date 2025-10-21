@@ -140,7 +140,7 @@ private:
     processMetaData["Direction010"] = {direction010[0], direction010[1],
                                        direction010[2]};
     for (const auto &material : materials) {
-      processMetaData[MaterialMap::getMaterialName(material.first) + " Rate"] =
+      processMetaData[MaterialMap::toString(material.first) + " Rate"] =
           std::vector<double>{material.second};
     }
   }

@@ -40,30 +40,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("print", [](Logger &instance) { instance.print(std::cout); });
 
   // Material enum
-  py::native_enum<Material>(module, "Material", "enum.IntEnum",
-                            "Material types for domain and level sets.")
-      .value("Undefined", Material::Undefined) // -1
-      .value("Mask", Material::Mask)           // 0
-      .value("Si", Material::Si)
-      .value("SiO2", Material::SiO2)
-      .value("Si3N4", Material::Si3N4) // 3
-      .value("SiN", Material::SiN)
-      .value("SiON", Material::SiON)
-      .value("SiC", Material::SiC)
-      .value("SiGe", Material::SiGe)
-      .value("PolySi", Material::PolySi) // 8
-      .value("GaN", Material::GaN)
-      .value("W", Material::W)
-      .value("Al2O3", Material::Al2O3)
-      .value("HfO2", Material::HfO2)
-      .value("TiN", Material::TiN) // 13
-      .value("Cu", Material::Cu)
-      .value("Polymer", Material::Polymer)
-      .value("Dielectric", Material::Dielectric)
-      .value("Metal", Material::Metal)
-      .value("Air", Material::Air) // 18
-      .value("GAS", Material::GAS)
-      .finalize();
+  auto matEnum =
+      py::native_enum<Material>(module, "Material", "enum.IntEnum",
+                                "Material types for domain and level sets");
+#define ENUM_BIND(id, sym, cat, dens, cond) matEnum.value(#sym, Material::sym);
+  MATERIAL_LIST(ENUM_BIND)
+#undef ENUM_BIND
+  matEnum.finalize();
 
   // MaterialMap
   py::class_<MaterialMap, SmartPointer<MaterialMap>>(module, "MaterialMap")
@@ -76,7 +59,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
       .def_static("isMaterial", &MaterialMap::isMaterial<T>)
-      .def_static("getMaterialName", &MaterialMap::getMaterialName<Material>,
+      .def_static("toString",
+                  py::overload_cast<const Material>(&MaterialMap::toString),
                   "Get the name of a material.");
 
   // Meta Data Enum
@@ -423,8 +407,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Flux Engine Type Enum
   py::native_enum<FluxEngineType>(module, "FluxEngineType", "enum.IntEnum")
+      .value("AUTO", FluxEngineType::AUTO)
       .value("CPU_DISK", FluxEngineType::CPU_DISK)
       .value("GPU_TRIANGLE", FluxEngineType::GPU_TRIANGLE)
+      .value("GPU_DISK", FluxEngineType::GPU_DISK)
+      .value("GPU_LINE", FluxEngineType::GPU_LINE)
       .finalize();
 
   // RayTracingParameters

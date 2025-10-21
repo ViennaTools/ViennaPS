@@ -40,7 +40,7 @@ template <class NumericType> struct RateSet {
     std::cout << "Isotropic Velocity: " << isotropicVelocity << std::endl;
     std::cout << "Mask Materials: ";
     for (const auto &mask : maskMaterials) {
-      std::cout << MaterialMap::getMaterialName(mask) << " ";
+      std::cout << MaterialMap::toString(mask) << " ";
     }
     std::cout << std::endl;
     std::cout << "Calculate Visibility: " << calculateVisibility << std::endl;

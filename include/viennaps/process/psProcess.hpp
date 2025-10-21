@@ -31,7 +31,7 @@ template <typename NumericType, int D> class Process {
 private:
   ProcessContext<NumericType, D> context_;
   std::vector<std::unique_ptr<ProcessStrategy<NumericType, D>>> strategies_;
-  FluxEngineType fluxEngineType_ = FluxEngineType::CPU_DISK;
+  FluxEngineType fluxEngineType_ = FluxEngineType::AUTO;
 
 public:
   Process() { initializeStrategies(); }
@@ -187,65 +187,111 @@ private:
 
   // Factory method for creating flux engines
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() {
-    switch (fluxEngineType_) {
-    case FluxEngineType::CPU_DISK:
-      return std::make_unique<CPUDiskEngine<NumericType, D>>();
-    case FluxEngineType::GPU_DISK:
-    case FluxEngineType::GPU_LINE:
-    case FluxEngineType::GPU_TRIANGLE: {
-#ifndef VIENNACORE_COMPILE_GPU
+    // Auto-select engine type if needed
+    if (fluxEngineType_ == FluxEngineType::AUTO) {
+      fluxEngineType_ = selectAutoFluxEngine();
       Logger::getInstance()
-          .addError("GPU support not compiled in ViennaCore.")
+          .addDebug("Auto-selected flux engine type: " +
+                    to_string(fluxEngineType_))
           .print();
-      return nullptr;
-#else
-      auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
-      if (!deviceContext) {
-        Logger::getInstance()
-            .addInfo("Auto-generating GPU device context.")
-            .print();
-        deviceContext =
-            DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
-        if (!deviceContext) {
-          Logger::getInstance()
-              .addError("Failed to create GPU device context.")
-              .print();
-          return nullptr;
-        }
-      }
+    }
 
-      switch (fluxEngineType_) {
-      case FluxEngineType::GPU_DISK:
-        return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);
-      case FluxEngineType::GPU_LINE:
-        if constexpr (D == 3) {
-          Logger::getInstance()
-              .addWarning("GPU-Line flux engine not supported in "
-                          "3D.\nFallback to GPU-Triangle engine.")
-              .print();
-          return std::make_unique<GPUTriangleEngine<NumericType, D>>(
-              deviceContext);
-        }
-        return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
-      case FluxEngineType::GPU_TRIANGLE:
-        if constexpr (D == 2) {
-          Logger::getInstance()
-              .addWarning("GPU-Triangle flux engine not supported in "
-                          "2D.\nFallback to GPU-Line engine.")
-              .print();
-          return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
-        }
+    // Create CPU engine
+    if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
+      return std::make_unique<CPUDiskEngine<NumericType, D>>();
+    }
+
+    // Create GPU engine
+    return createGPUFluxEngine();
+  }
+
+private:
+  FluxEngineType selectAutoFluxEngine() {
+    if (!context_.model) {
+      // Default to CPU disk engine if no model is set
+      return FluxEngineType::CPU_DISK;
+    }
+
+    if (gpuAvailable() && context_.model->hasGPUModel()) {
+      return (D == 2) ? FluxEngineType::GPU_DISK : FluxEngineType::GPU_TRIANGLE;
+    }
+
+    return FluxEngineType::CPU_DISK;
+  }
+
+  std::unique_ptr<FluxEngine<NumericType, D>> createGPUFluxEngine() {
+#ifndef VIENNACORE_COMPILE_GPU
+    Logger::getInstance()
+        .addError("GPU support not compiled in ViennaPS.")
+        .print();
+    return nullptr;
+#else
+    auto deviceContext = getOrCreateDeviceContext();
+    if (!deviceContext) {
+      return nullptr;
+    }
+
+    return createGPUEngineByType(deviceContext);
+#endif
+  }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  std::shared_ptr<DeviceContext> getOrCreateDeviceContext() {
+    auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
+    if (deviceContext) {
+      return deviceContext;
+    }
+
+    Logger::getInstance()
+        .addInfo("Auto-generating GPU device context.")
+        .print();
+
+    deviceContext =
+        DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+    if (!deviceContext) {
+      Logger::getInstance()
+          .addError("Failed to create GPU device context.")
+          .print();
+    }
+
+    return deviceContext;
+  }
+
+  std::unique_ptr<FluxEngine<NumericType, D>>
+  createGPUEngineByType(std::shared_ptr<DeviceContext> deviceContext) {
+    switch (fluxEngineType_) {
+    case FluxEngineType::GPU_DISK:
+      return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);
+
+    case FluxEngineType::GPU_LINE:
+      if constexpr (D == 3) {
+        Logger::getInstance()
+            .addWarning("GPU-Line flux engine not supported in 3D. "
+                        "Fallback to GPU-Triangle engine.")
+            .print();
         return std::make_unique<GPUTriangleEngine<NumericType, D>>(
             deviceContext);
       }
-#endif
-    }
+      return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
+
+    case FluxEngineType::GPU_TRIANGLE:
+      if constexpr (D == 2) {
+        Logger::getInstance()
+            .addWarning("GPU-Triangle flux engine not supported in 2D. "
+                        "Fallback to GPU-Line engine.")
+            .print();
+        return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
+      }
+      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
+
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
       return nullptr;
     }
   }
+#endif
 
+public:
   bool checkInput() {
     if (!context_.domain) {
       Logger::getInstance().addError("No domain passed to Process.").print();

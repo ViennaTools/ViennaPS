@@ -22,7 +22,6 @@ using namespace viennacore;
 
 template <typename NumericType, int D>
 class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
-  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;
@@ -49,9 +48,9 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
-    if (model->getPipelineFileName().empty()) {
+    if (model->getCallableFileName().empty()) {
       Logger::getInstance()
-          .addWarning("No pipeline in process model: " + name)
+          .addWarning("No callables in process model: " + name)
           .print();
       return ProcessResult::INVALID_INPUT;
     }
@@ -82,13 +81,12 @@ public:
       }
 
       rayTracer_.setParticleCallableMap(model->getParticleCallableMap());
-      rayTracer_.setPipeline(model->getPipelineFileName(),
-                             deviceContext_->modulePath);
       rayTracer_.setCallables(model->getCallableFileName(),
                               deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
-      // rayTracer_.setNumberOfRaysFixed(1);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
+      if (!context.rayTracingParams.useRandomSeeds)
+        rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
       rayTracer_.setPeriodicBoundary(periodicBoundary);
       for (auto &particle : model->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
