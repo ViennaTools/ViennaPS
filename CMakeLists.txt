@@ -114,7 +114,6 @@ CPMAddPackage(
 CPMFindPackage(
   NAME ViennaRay
   VERSION 3.6.0
-  GIT_TAG gpu-fixes
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -122,7 +121,6 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 5.1.0
-  GIT_TAG master
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
