@@ -19,7 +19,6 @@ using namespace viennacore;
 
 template <typename NumericType, int D>
 class GPULineEngine final : public FluxEngine<NumericType, D> {
-  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<NumericType>>;
@@ -106,8 +105,8 @@ public:
     if (!elementKdTree_) {
       elementKdTree_ = KDTreeType::New();
     }
-    viennals::ToSurfaceMesh<NumericType, D>(
-        context.domain->getLevelSets().back(), surfaceMesh_)
+    viennals::ToSurfaceMesh<NumericType, D>(context.domain->getSurface(),
+                                            surfaceMesh_)
         .apply();
 
     std::vector<Vec3D<NumericType>> elementCenters(surfaceMesh_->lines.size());

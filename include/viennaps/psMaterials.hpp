@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef __CUDACC__
 #include <lsMaterialMap.hpp>
+#endif
 
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
@@ -164,6 +166,7 @@ constexpr MaterialCategory categoryOf(Material m) { return info(m).category; }
 constexpr double density(Material m) { return info(m).density_gcm3; }
 constexpr bool isConductive(Material m) { return info(m).conductive; }
 
+#ifndef __CUDACC__
 /// A class that wraps the viennals MaterialMap class and provides a more user
 /// friendly interface. It also provides a mapping from the integer material id
 /// to the Material enum.
@@ -228,5 +231,6 @@ public:
     return std::string(to_string_view(mapToMaterial(matId)));
   }
 };
+#endif
 
 } // namespace viennaps

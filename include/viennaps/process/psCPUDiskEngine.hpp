@@ -12,10 +12,6 @@ using namespace viennacore;
 /// single callback function or a geometric advection is applied.
 template <typename NumericType, int D>
 class CPUDiskEngine final : public FluxEngine<NumericType, D> {
-  // Typedefs
-  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
-  using DomainType = SmartPointer<Domain<NumericType, D>>;
-
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
     auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(

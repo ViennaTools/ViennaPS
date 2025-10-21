@@ -7,6 +7,7 @@
 #include <raygReflection.hpp>
 
 #include <models/psPlasmaEtchingParameters.hpp>
+#include <psMaterials.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -56,12 +57,14 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     float A_sp = params->Substrate.A_sp;
     float B_sp = params->Substrate.B_sp;
     float Eth_sp = params->Substrate.Eth_sp;
-    if (material == 0) {
+    if (categoryOf(static_cast<viennaps::Material>(material)) ==
+        viennaps::MaterialCategory::Hardmask) {
       // mask
       A_sp = params->Mask.A_sp;
       B_sp = params->Mask.B_sp;
       Eth_sp = params->Mask.Eth_sp;
-    } else if (material == 15) {
+    } else if (static_cast<viennaps::Material>(material) ==
+               viennaps::Material::Polymer) {
       // polymer
       A_sp = params->Polymer.A_sp;
       B_sp = params->Polymer.B_sp;

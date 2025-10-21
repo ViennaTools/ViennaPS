@@ -22,7 +22,6 @@ using namespace viennacore;
 
 template <typename NumericType, int D>
 class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
-  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;

@@ -18,8 +18,6 @@ using namespace viennacore;
 
 template <typename NumericType, int D>
 class GPUDiskEngine final : public FluxEngine<NumericType, D> {
-  using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
-
 public:
   GPUDiskEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
@@ -102,7 +100,7 @@ public:
     auto normals = *diskMesh->getCellData().getVectorData("Normals");
 
     // TODO: make this conversion to float prettier
-    auto convertToFloat = [](std::vector<Vec3D<NumericType>> &input) {
+    auto convertToFloat = [](const std::vector<Vec3D<NumericType>> &input) {
       std::vector<Vec3Df> output;
       output.reserve(input.size());
       for (const auto &vec : input) {
@@ -113,8 +111,6 @@ public:
       return output;
     };
 
-    std::vector<Vec3Df> fPoints = convertToFloat(points);
-    std::vector<Vec3Df> fNormals = convertToFloat(normals);
     Vec3Df fMinExtent = {static_cast<float>(diskMesh->minimumExtent[0]),
                          static_cast<float>(diskMesh->minimumExtent[1]),
                          static_cast<float>(diskMesh->minimumExtent[2])};
@@ -122,16 +118,15 @@ public:
                          static_cast<float>(diskMesh->maximumExtent[1]),
                          static_cast<float>(diskMesh->maximumExtent[2])};
 
-    viennaray::gpu::DiskMesh diskMeshRay{
-        .nodes = fPoints,
-        .normals = fNormals,
-        .minimumExtent = fMinExtent,
-        .maximumExtent = fMaxExtent,
-        .radius = 0.f,
-        .gridDelta = static_cast<float>(context.domain->getGridDelta())};
+    viennaray::gpu::DiskMesh diskMeshRay;
+    diskMeshRay.nodes = convertToFloat(points);
+    diskMeshRay.normals = convertToFloat(normals);
+    diskMeshRay.minimumExtent = fMinExtent;
+    diskMeshRay.maximumExtent = fMaxExtent;
+    diskMeshRay.gridDelta = static_cast<float>(context.domain->getGridDelta());
 
     if (context.rayTracingParams.diskRadius == 0.) {
-      diskMeshRay.radius = static_cast<float>(context.domain->getGridDelta() *
+      diskMeshRay.radius = static_cast<float>(diskMeshRay.gridDelta *
                                               rayInternal::DiskFactor<D>);
     } else {
       diskMeshRay.radius =
