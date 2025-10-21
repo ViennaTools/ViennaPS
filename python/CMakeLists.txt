@@ -78,7 +78,7 @@ if(VIENNAPS_USE_GPU)
     generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
                       "${VIENNAPS_PIPELINE_DIR}/${filename}")
   endforeach()
-  
+
   # ViennaRay general pipelines
   generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
                     "${VIENNARAY_PIPELINE_DIR}/GeneralPipelineDisk.cu")
