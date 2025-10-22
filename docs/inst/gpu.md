@@ -24,9 +24,27 @@ The GPU ray tracing module is implemented using [**OptiX 8.0**](https://develope
 {: .note }
 > ViennaPS depends on ViennaLS. When building ViennaPS locally (especially with GPU support), **you must also build ViennaLS locally** from the same source. Using the PyPI version of ViennaLS is **not compatible** with a local ViennaPS build.
 
-## Python Bindngs Scripts
+---
 
-To make installation easier, we provide setup scripts:
+## Python Binding Installation
+
+For convenient setup, a helper script is provided. It builds **ViennaPS** and **ViennaLS** with GPU support directly from source inside the `ViennaTools` folder.
+
+Run:
+
+```sh
+wget https://raw.githubusercontent.com/ViennaTools/ViennaPS/refs/tags/v4.0.0/gpu/scripts/install_ViennaTools.py && python3 install_ViennaTools.py
+```
+
+The script performs the following steps:
+
+* Creates a virtual environment (`.venv`) in the `ViennaTools` directory.
+* Builds and installs **ViennaLS** and **ViennaPS** with GPU support enabled.
+* Installs required system dependencies (**VTK**, **Embree**).
+
+> **Note:** Installing system dependencies requires `sudo` privileges.
+
+There are two installation scripts available in the `gpu/scripts` directory, each with different compatibility and functionality:
 
 ### 1. `install_ViennaPS_linux.py` 
 
@@ -38,16 +56,32 @@ To make installation easier, we provide setup scripts:
 - **Limitations:**  
    - Assumes you have already installed dependencies like VTK and embree manually
 
-### 2. `install_ViennaTools_ubuntu.sh`
+### 2. `install_ViennaTools.py`
 
-- **Compatibility:** **Ubuntu 24.04 only**  
+- **Compatibility:** 
+  - Linux: Ubuntu 22.04+, Debian 11+, Fedora 35+, Rocky Linux 8+, AlmaLinux 8+, Arch Linux, Manjaro, openSUSE Leap 15.3+, openSUSE Tumbleweed
+  - macOS: macOS 12+ (Monterey and later) with Homebrew (only CPU support, no GPU)
+- **Prerequisites**:
+  - For Linux:
+    - `sudo` privileges for installing system packages
+    - Git
+    - Python 3.8+
+
+  - For macOS:
+    - [Homebrew](https://brew.sh/) package manager
+    - Xcode Command Line Tools (will be installed automatically if missing)
+    - Git (usually comes with Xcode Command Line Tools)
+    - Python 3.8+
 - **Functionality:**  
   - Installs all required dependencies: `VTK`, `embree`, and others using `apt`  
   - Builds and installs **ViennaLS** and **ViennaPS** in a local folder named `ViennaTools`  
   - Suitable for a fresh installation on Ubuntu systems  
-- **Advantages:**  
-  - Fully automated setup including all system dependencies  
-  - Ideal for users new to the ViennaTools ecosystem  
+- **Command Line Options**:
+  - `-v, --verbose`: Enable verbose output during installation
+  - `--gpu`: Enable GPU support (default: enabled)
+  - `--no-gpu`: Disable GPU support
+  - `--viennals-version VERSION`: Specify ViennaLS version (tag name or 'master')
+  - `--viennaps-version VERSION`: Specify ViennaPS version (tag name or 'master')
 
 ## CMake Configuration
 

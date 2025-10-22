@@ -24,8 +24,8 @@ MathJax = {
 ```
 ---
 
-Our model assumes that, in any complex plasma etch process, there are four fundamental types of particles:
-neutral, etchant, depositing polymer particles and ions. Due to the long etch times, compared to surface reaction time scales, we can safely assume that each of these substances’ concentrations will reach a steady state on the surface. Therefore, the surface coverages of all involved particle types $\phi_x$, where $x$ represents etchant (e), polymer (p), etchant on polymer (ep), and ions (i), are expressed by the following equations:
+Our model assumes that, in any complex plasma etch process, there are three fundamental types of particles:
+etchant, depositing polymer particles and ions. Due to the long etch times, compared to surface reaction time scales, we can safely assume that each of these substances’ concentrations will reach a steady state on the surface. Therefore, the surface coverages of all involved particle types $\phi_x$, where $x$ represents etchant (e), polymer (p), etchant on polymer (ep), and ions (i), are expressed by the following equations:
 \begin{equation}
   \frac{d \phi_e}{dt}=J_{e} S_{e}\left(1-\phi_{e}-\phi_{p}\right)-k_{i e} J_{i} Y_{ie} \phi_{e}-k_{e v} J_{e v} \phi_{e} \approx 0;
 \end{equation}
@@ -99,101 +99,192 @@ The ray's reflected direction is randomly chosen from a cone around the specular
 
 <img src="{% link assets/images/coned_specular.png %}" alt="drawing" width="500"/>
 
-## Implementation
+---
 
-The fluorocarbon etching process is implemented in the `psFluorocarbonEtching` class. To customize the parameters of the process, it is advised to create a new instance of the class and set the desired parameters in the parameter struct. The following example demonstrates how to create a new instance of the class and set the parameters of the process.
+## New parameterization (arbitrary materials)
+
+The **FluorocarbonParameters** struct now accepts an arbitrary set of materials.
+Each entry has full per-material reaction and transport properties.
+
+```c++
+/// C++
+template <typename NumericType>
+struct FluorocarbonParameters {
+  struct MaterialParameters {
+    Material id = Material::Undefined;
+
+    // density (1e22 atoms/cm³)
+    NumericType density = 2.2;
+
+    // sticking
+    NumericType beta_p = 0.26;
+    NumericType beta_e = 0.9;
+
+    // sputtering / ion-enhanced terms
+    NumericType Eth_sp = 18.; // eV
+    NumericType Eth_ie = 4.;  // eV
+    NumericType A_sp  = 0.0139;
+    NumericType B_sp  = 9.3;
+    NumericType A_ie  = 0.0361;
+
+    // chemical etching volatility
+    NumericType K   = 0.002789491704544977;
+    NumericType E_a = 0.168; // eV
+  };
+
+  std::vector<MaterialParameters> materials;
+
+  // fluxes (1e15 /cm² /s)
+  NumericType ionFlux     = 56.;
+  NumericType etchantFlux = 500.;
+  NumericType polyFlux    = 100.;
+
+  NumericType delta_p       = 1.;
+  NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
+
+  NumericType temperature = 300.; // K
+  NumericType k_ie = 2.;
+  NumericType k_ev = 2.;
+
+  struct IonType {
+    NumericType meanEnergy = 100.; // eV
+    NumericType sigmaEnergy = 10.; // eV
+    NumericType exponent = 500.;
+    NumericType inflectAngle = 1.55334303;
+    NumericType n_l = 10.;
+    NumericType minAngle = 1.3962634;
+  } Ions;
+
+  void addMaterial(const MaterialParameters &m) { materials.push_back(m); }
+
+  MaterialParameters getMaterialParameters(Material m) const; // lookup + error if missing
+};
+```
+
+**Key changes**
+
+* You can add **any** `Material` from the global enum and set per-material parameters.
+* Parameters are applied to the model via the **unified `setParameters(...)`** API on the process/model.
+* Direct field mutation on the process or model is deprecated.
 
 {: .note }
-> Time and length units have to be set before initializing the model. For details see [Units]({% link misc/units.md %}).
+Time and length units must be set before initializing the model. See [Units]({% link misc/units.md %}).
 
-<details markdown="1">
-<summary markdown="1">
-C++
-{: .label .label-blue}
-</summary>
+---
+
+## Usage
+
+### C++
+
 ```c++
-// namespace viennaps
-...
-auto model = SmartPointer<FluorocarbonEtching<NumericType, D>>::New();
-auto &parameters = model->getParameters();
-parameters.ionFlux = 10.; 
-parameters.Mask.rho = 500.;
-// this modifies a direct reference of the parameters
-...
-```
-</details>
+// Create model and parameter pack
+using T = double;
+auto model = SmartPointer<FluorocarbonEtching<T, 3>>::New();
 
-<details markdown="1">
-<summary markdown="1">
-Python
-{: .label .label-green}
-</summary>
+ps::FluorocarbonParameters<T> params;
+
+// Silicon
+ps::FluorocarbonParameters<T>::MaterialParameters si;
+si.id = ps::Material::Si;
+si.density = 5.5;      // example override
+params.addMaterial(si);
+
+// SiO2
+ps::FluorocarbonParameters<T>::MaterialParameters sio2;
+sio2.id = ps::Material::SiO2;
+sio2.density = 2.2;
+params.addMaterial(sio2);
+
+// Si3N4
+ps::FluorocarbonParameters<T>::MaterialParameters si3n4;
+si3n4.id = ps::Material::Si3N4;
+si3n4.density = 2.3;
+params.addMaterial(si3n4);
+
+// Polymer (passivation)
+ps::FluorocarbonParameters<T>::MaterialParameters pol;
+pol.id = ps::Material::Polymer;
+pol.density = 2.0;
+pol.beta_e = 0.6;
+pol.A_ie = 0.0361 * 2.0;
+params.addMaterial(pol);
+
+// Mask
+ps::FluorocarbonParameters<T>::MaterialParameters mask;
+mask.id = ps::Material::Mask;
+mask.density = 500.0;
+mask.beta_e = 0.1;
+mask.beta_p = 0.01;
+mask.Eth_sp = 20.0;
+params.addMaterial(mask);
+
+// Global flux and ion settings (optional overrides)
+params.ionFlux = 56.;
+params.etchantFlux = 500.;
+params.polyFlux = 100.;
+
+// Apply parameters via unified API
+model->setParameters(params);
+```
+
+### Python
+
 ```python
-...
+import viennaps as vps
+
 model = vps.FluorocarbonEtching()
-parameters = model.getParameters()
-parameters.ionFlux = 10.
-parameters.Mask.rho = 500.
-# this modifies a direct reference of the parameters
-...
+
+params = vps.FluorocarbonParameters()
+
+matSi = vps.FluorocarbonMaterialParameters()
+matSi.id = vps.Material.Si
+matSi.density = 5.5
+params.addMaterial(matSi)
+
+matSiO2 = vps.FluorocarbonMaterialParameters()
+matSiO2.id = vps.Material.SiO2
+matSiO2.density = 2.2
+params.addMaterial(matSiO2)
+
+matSi3N4 = vps.FluorocarbonMaterialParameters()
+matSi3N4.id = vps.Material.Si3N4
+matSi3N4.density = 2.3
+params.addMaterial(matSi3N4)
+
+matPoly = vps.FluorocarbonMaterialParameters()
+matPoly.id = vps.Material.Polymer
+matPoly.density = 2.0
+matPoly.beta_e = 0.6
+matPoly.A_ie = 0.0361 * 2.0
+params.addMaterial(matPoly)
+
+matMask = vps.FluorocarbonMaterialParameters()
+matMask.id = vps.Material.Mask
+matMask.density = 500.0
+matMask.beta_e = 0.1
+matMask.beta_p = 0.01
+matMask.Eth_sp = 20.0
+params.addMaterial(matMask)
+
+# Optional global settings
+params.ionFlux = 56.0
+params.etchantFlux = 500.0
+params.polyFlux = 100.0
+
+# Apply via unified API
+model.setParameters(params)
 ```
-</details>
 
-The strcut holds the following parameters:
+---
 
-| Parameter           | Description                                            | Default Value          |
-|---------------------|--------------------------------------------------------|------------------------|
-| `ionFlux`             | Ion flux (10<sup>15</sup> /cm² /s)                     | 56.0                   |
-| `etchantFlux`         | Etchant flux (10<sup>15</sup> /cm² /s)                 | 500.0                  |
-| `polyFlux`            | Polymer flux (10<sup>15</sup> /cm² /s)                 | 100.0                  |
-| `etchStopDepth`       | Depth at which etching stops                           | -inf |
-| `temperature`         | Temperature (K)                                        | 300.0                  |
-| `k_ie`                | Stoichiometric factor for ion enhanced etching         | 2.0                    |
-| `k_ev`                | Stoichiometric factor for chemical etching             | 2.0                    |
-| `beta_p`              | Polymer clean surface sticking probability             | 0.26                   |
-| `beta_e`              | Etchant clean surface sticking probability             | 0.9                    |
-| `beta_pe`             | Sticking probability for etchant on polymer            | 0.6                    |
-| `delta_p`             | Amount of polymer need to cause deposition of the surface| 1.0                    |
-| `Mask.rho`            | Mask density (10<sup>22</sup> atoms/cm³)               | 500.0                  |
-| `Mask.beta_p`         | Polymer clean surface sticking probability on mask material | 0.01                   |
-| `Mask.beta_e`         | Etchant clean surface sticking probability on mask material | 0.1                    |
-| `Mask.A_sp`           | Mask sputtering coefficient                            | 0.0139                 |
-| `Mask.B_sp`           | Mask yield coefficient                                 | 9.3                    |
-| `Mask.Eth_sp`         | Mask sputtering threshold energy (eV)                  | 20.0                   |
-| `SiO2.rho`            | SiO<sub>2</sub> density (10<sup>22</sup> atoms/cm³)    | 2.2                    |
-| `SiO2.Eth_sp`         | SiO<sub>2</sub> sputtering threshold energy (eV)       | 18.0                   |
-| `SiO2.Eth_ie`         | SiO<sub>2</sub> on enhanced etching threshold energy (eV)| 4.0                    |
-| `SiO2.A_sp`           | SiO<sub>2</sub> sputtering coefficient                 | 0.0139                 |
-| `SiO2.B_sp`           | SiO<sub>2</sub> yield coefficient                      | 9.3                    |
-| `SiO2.A_ie`           | SiO<sub>2</sub> ion enhanced etching coefficient       | 0.0361                 |
-| `SiO2.K`              | SiO<sub>2</sub> volatility parameter in evaporation flux | 0.002789491704544977   |
-| `SiO2.E_a`            | SiO<sub>2</sub> activation energy (eV)                 | 0.168                  |
-| `Polymer.rho`         | Polymer density (10<sup>22</sup> atoms/cm³)            | 2.0                    |
-| `Polymer.Eth_ie`      | Polymer ion enhanced etching threshold energy (eV)     | 4.0                    |
-| `Polymer.A_ie`        | Polymer ion enhanced etching coefficient               | 0.1444                 |
-| `Si3N4.rho`           | Si<sub>3</sub>N<sub>4</sub> density (10<sup>22</sup> atoms/cm³)| 2.3                    |
-| `Si3N4.Eth_sp`        | Si<sub>3</sub>N<sub>4</sub> sputtering threshold energy (eV)| 18.0                   |
-| `Si3N4.Eth_ie`        | Si<sub>3</sub>N<sub>4</sub> ion enhanced etching threshold energy (eV) | 4.0                    |
-| `Si3N4.A_sp`          | Si<sub>3</sub>N<sub>4</sub> sputtering coefficient     | 0.0139                 |
-| `Si3N4.B_sp`          | Si<sub>3</sub>N<sub>4</sub> yield coefficient          | 9.3                    |
-| `Si3N4.A_ie`          | Si<sub>3</sub>N<sub>4</sub> ion enhanced etching coefficient | 0.0361                 |
-| `Si3N4.K`             | Si<sub>3</sub>N<sub>4</sub> volatility parameter in evaporation flux | 0.002789491704544977  |
-| `Si3N4.E_a`           | Si<sub>3</sub>N<sub>4</sub> activation energy (eV)     | 0.168                  |
-| `Si.rho`              | Si density (10<sup>22</sup> atoms/cm³)                 | 5.02                   |
-| `Si.Eth_sp`           | Si sputtering threshold energy (eV)                    | 20.0                   |
-| `Si.Eth_ie`           | Si ion enhanced etching threshold energy (eV)          | 4.0                    |
-| `Si.A_sp`             | Si sputtering coefficient                              | 0.0337                 |
-| `Si.B_sp`             | Si yield coefficient                                   | 9.3                    |
-| `Si.A_ie`             | Si ion enhanced etching coefficient                    | 0.0361                 |
-| `Si.K`                | Si volatility parameter in evaporation flux            | 0.029997010728956663  |
-| `Si.E_a`              | Si activation energy (eV)                              | 0.108                  |
-| `Ions.meanEnergy`     | Mean ion energy (eV)                                   | 100.0                  |
-| `Ions.sigmaEnergy`    | Standard deviation of ion energy (eV)                  | 10.0                   |
-| `Ions.exponent`       | Exponent of power cosine source distribution of initial ion directions | 500.0                  |
-| `Ions.inflectAngle`   | Inflection angle                                       | 1.55334303             |
-| `Ions.n_l`            | Exponent of reflection power                           | 10.0                   |
-| `Ions.minAngle`       | Minimum cone angle for ion reflection                  | 1.3962634              |
+## Notes and tips
 
-## Related Examples
+* Add only the materials that appear in your stack. Unlisted materials will use defaults unless you define them.
+* Use the global `Material` enum introduced in the **Material Mapping** docs to ensure consistent IDs.
+* For multi-material stacks, tuning (K, E_a), thresholds, and sticking allows selective etching vs passivation.
+* The model works with any flux engine. Choose via `setFluxEngineType(...)` on the process using this model.
+
+## Related examples
 
 * [Stack Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/stackEtching)
+

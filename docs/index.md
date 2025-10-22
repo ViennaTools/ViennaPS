@@ -28,6 +28,47 @@ This documentation is your guide to using and getting the most out of our proces
 
 Inside, you'll find clear explanations, practical examples, and recommended workflows to help you use the library effectively. Our goal is to give you the knowledge and tools needed to accurately simulate a wide range of fabrication processes, enabling better insights, informed decisions, and innovation in the field.
 
+---
+
+> ⚙️ **ViennaPS v4.0.0 Released — Major Framework Update**
+>
+> This release introduces a complete rework of the process framework, unified Python bindings, and extended GPU and material support.
+
+## What's New
+
+### Core framework
+- Modular **flux engine** with new options: `AUTO` (default), `CPU_DISK`, `GPU_DISK`, `GPU_LINE`, `GPU_TRIANGLE`.
+- `AUTO` automatically selects CPU or GPU based on build and model support.
+- **AtomicLayerProcess** removed; ALD handled by standard `Process()`.
+- New parameter structs:
+  - `AtomicLayerProcessParameters`
+  - `CoverageParameters`
+  - `RayTracingParameters`
+  - `AdvectionParameters`
+- All parameter structs now use a single `setParameters()` function.
+
+### Python interface
+- Unified package: `viennaps` replaces `viennaps2d` and `viennaps3d`.
+- Dimension modules available under `viennaps.d2` and `viennaps.d3`.
+- Default dimension is 2D; can be changed via `viennaps.setDimension()`.
+
+### Models and simulation
+- Extended **material list** with common semiconductor materials.
+- **Fluorocarbon model** now supports arbitrary material combinations.
+- Fixed issue where **underlying materials** were not etched in geometric models.
+
+### I/O and utilities
+- Updated `saveSurfaceMesh()`:
+  - Removed `addMaterialIds`
+  - Added `addInterfaces` to export all material interfaces.
+- Improved extrusion and slicing functions.
+
+### Build system
+- GPU builds now **auto-download OptiX headers** if missing.
+- Updated CI, OpenMP handling, and dependencies.
+
+---
+
 ## Contributing
 
 If you want to contribute to ViennaPS, make sure to follow the [LLVM Coding guidelines](https://llvm.org/docs/CodingStandards.html).

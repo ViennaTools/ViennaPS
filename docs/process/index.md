@@ -6,34 +6,74 @@ nav_order: 8
 
 # Running a Process
 {: .fs-9 .fw-700}
+
 ```c++
 #include <psProcess.hpp>
 ```
----
 
 ![]({% link assets/images/process.png %})
 
 ---
 
-The `Process` class functions as the primary simulation interface, consolidating crucial elements such as the simulation domain, process model, process duration, and requisite ray-tracing parameters. This interface also contains the necessary methods for configuring these attributes. Upon setting these parameters, the `apply()` method is employed to execute the process,.
+The `Process` class is the main simulation interface. It holds the domain, the process model, the duration, and advanced parameters. Configure it, then call `apply()`.
 
-__Example usage:__
+## What’s new in 4.0.0
+
+* **Flux engine switch** on the process via `setFluxEngineType(...)`.
+
+  * Options: `AUTO` *(default)*, `CPU_DISK`, `GPU_DISK`, `GPU_LINE`, `GPU_TRIANGLE`.
+  * `AUTO` selects CPU or GPU based on build and model availability.
+* **Unified parameter API**: set all parameter structs via `setParameters(...)`.
+
+  * Supported structs: `AdvectionParameters`, `RayTracingParameters`, `CoverageParameters`, `AtomicLayerProcessParameters`.
+* **AtomicLayerProcess removed**. The standard `Process()` detects ALP behavior from the selected model.
+* **Python bindings unified**. Use `viennaps` (with `viennaps.d2` / `viennaps.d3`). Change default dimension via `viennaps.setDimension()`.
+
+---
+
+## Example usage
 
 <details markdown="1">
 <summary markdown="1">
 C++
 {: .label .label-blue}
 </summary>
+
 ```c++
 // namespace viennaps
-...
-Process<NumericType, D> process;
+using T = double;
+constexpr int D = 3;
+
+auto process = ps::Process<T, D>();
 process.setDomain(myDomain);
 process.setProcessModel(myModel);
-process.setProcessDuration(10.);
+process.setProcessDuration(10.0);
+
+// Flux engine selection
+process.setFluxEngineType(ps::FluxEngineType::AUTO);
+
+// Optional parameters
+ps::AdvectionParameters<T> adv;
+adv.timeStepRatio = 0.25;
+
+ps::RayTracingParameters<T, D> rt;
+rt.raysPerPoint = 500;
+
+ps::CoverageParameters<T> cov;
+cov.maxIterations = 10;
+
+ps::AtomicLayerProcessParameters<T> alp;
+alp.numCycles = 2;
+
+process.setParameters(adv);
+process.setParameters(rt);
+process.setParameters(cov);
+process.setParameters(alp);
+
+// Run
 process.apply();
-...
 ```
+
 </details>
 
 <details markdown="1">
@@ -41,173 +81,178 @@ process.apply();
 Python
 {: .label .label-green}
 </summary>
+
 ```python
-...
+import viennaps as vps
+
 process = vps.Process()
 process.setDomain(myDomain)
 process.setProcessModel(myModel)
-process.setProcessDuration(10.)
+process.setProcessDuration(10.0)
+
+# Flux engine selection
+process.setFluxEngineType(vps.FluxEngineType.AUTO)
+
+# Optional parameters
+adv = vps.AdvectionParameters()
+adv.timeStepRatio = 0.25
+
+rt = vps.RayTracingParameters()
+rt.raysPerPoint = 500
+
+cov = vps.CoverageParameters()
+cov.maxIterations = 10
+
+alp = vps.AtomicLayerProcessParameters()
+alp.numCycles = 2
+
+process.setParameters(adv)
+process.setParameters(rt)
+process.setParameters(cov)
+process.setParameters(alp)
+
 process.apply()
-...
 ```
+
 </details>
 
-## Process Parameters
+---
 
-{: .note }
-> Advanced process parameters, as described in this section are available from version **4.0.0**
+## Process parameters 
 
-Expert users can set specific parameter for the Level-Set integration and Ray Tracing flux calculation steps using the advanced parameters structs `AdvectionParameters`, `RayTracingParameters`, `CoverageParameters`, and `AtomicLayerProcessParameters`. These parameter structs contain:
+All advanced parameters are set via `setParameters(...)`.
 
-__AdvectionParameters:__
+### `AdvectionParameters`
 
-| Parameter            | Type         | Default Value                                      | Description |
-|----------------------|-------------|----------------------------------------------------|-------------|
-| `integrationScheme`  | `IntegrationSchemeEnum` | `ENGQUIST_OSHER_1ST_ORDER` | Integration scheme used for advection. For options see [here](https://viennatools.github.io/ViennaLS/namespaceviennals.html#a939e6f11eed9a003a0723a255290377f). |
-| `timeStepRatio`      | `NumericType` | `0.4999` | Ratio controlling the time step specified by the CFL condition. More [details](https://viennatools.github.io/ViennaLS/classviennals_1_1Advect.html#ad6aba52d0b3c5fb9fcb4e83da138573c) |
-| `dissipationAlpha`   | `NumericType` | `1.0` | Factor controlling dissipation in Lax-Friedrichs type integration schemes. |
-| `velocityOutput`     | `bool` | `false` | Whether to output velocity data for each advection step. |
-| `ignoreVoids`        | `bool` | `false` | Whether to ignore void regions. |
+| Field               | Type                    | Default                    | Description                        |
+| ------------------- | ----------------------- | -------------------------- | ---------------------------------- |
+| `integrationScheme` | `IntegrationScheme`     | `ENGQUIST_OSHER_1ST_ORDER` | Level-set integration scheme.      |
+| `timeStepRatio`     | `double`                | `0.4999`                   | CFL ratio.                         |
+| `dissipationAlpha`  | `double`                | `1.0`                      | Lax–Friedrichs dissipation factor. |
+| `checkDissipation`  | `bool`                  | `true`                     | Enable dissipation check.          |
+| `velocityOutput`    | `bool`                  | `false`                    | Write velocity per step.           |
+| `ignoreVoids`       | `bool`                  | `false`                    | Ignore void regions.               |
 
-__RayTracingParameters:__
+### `RayTracingParameters`
 
-| Parameter            | Type                        | Default Value                             | Description |
-|----------------------|---------------------------|-------------------------------------------|-------------|
-| `normalizationType`  | `NormalizationType`       | `SOURCE`                                  | Type of normalization used. Other option `MAX`. |
-| `raysPerPoint`       | `unsigned`                | `1000`                                    | Number of rays to trace per point in the geometry. |
-| `diskRadius`        | `NumericType`             | `0`                                      | Radius of the disks in the ray tracing geometry. If this value is 0 the default disk radius is used, which is the minimum radius such that there are no holes in the geometry. |
-| `useRandomSeeds`     | `bool`                     | `true`                                    | Whether to use random seeds. |
-| `ignoreFluxBoundaries` | `bool`                 | `false`                                   | Whether to ignore boundary condtions during ray tracing. |
-| `smoothingNeighbors` | `int`                     | `1`                                       | Number of neighboring points used for smoothing the flux after ray tracing. |
+| Field                  | Type                | Default  | Description                        |
+| ---------------------- | ------------------- | -------- | ---------------------------------- |
+| `normalizationType`    | `NormalizationType` | `SOURCE` | Normalization (`SOURCE` or `MAX`). |
+| `ignoreFluxBoundaries` | `bool`              | `false`  | Ignore BCs in tracing (CPU only).  |
+| `useRandomSeeds`       | `bool`              | `true`   | Random seeding.                    |
+| `rngSeed`              | `unsigned`          | `0`      | Fixed seed for the RNG.            |
+| `raysPerPoint`         | `unsigned`          | `1000`   | Rays per surface point.            |
+| `smoothingNeighbors`   | `int`               | `1`      | Post-trace flux smoothing.         |
+| `diskRadius`           | `double`            | `0`      | Disk radius; `0` = auto.           |
+| `minNodeDistanceFactor`| `double`           | `0.05`  | Factor for triangle mesh generation. A higher factor creates a coarser mesh. |
 
-__CoverageParameters:__
+### `CoverageParameters`
 
-| Parameter                | Type         | Default Value | Description |
-|--------------------------|-------------|---------------|-------------|
-| `maxIterations`        | `unsigned`   | `10`          | The maximum number of iterations to initialize the coverages. If additionally the coverage delta threshold is set, the coverage initialization is considered converged if the coverage delta is below the threshold or the maximum number of iterations is reached. |
-| `coverageDeltaThreshold`       | `NumericType`| `0`           | Threshold for the coverage delta metric to reach convergence. If the coverage delta is below this threshold, the coverage initialization is considered converged. |
+| Field                    | Type          | Default | Description                       |
+| ------------------------ | ------------- | ------- | --------------------------------- |
+| `maxIterations`          | `unsigned`    | `10`    | Max iterations for coverage init. |
+| `tolerance`              | `double`      | `0`     | Convergence threshold.            |
 
-__AtomicLayerProcessParameters:__
+### `AtomicLayerProcessParameters`
 
-| Parameter                | Type         | Default Value | Description |
-|--------------------------|-------------|---------------|-------------|
-| `numCycles`        | `unsigned`   | `1`          | The number of ALP cycles to perform. |
-| `pulseTime`       | `NumericType`| `1.0`         | The duration of each pulse. |
-| `coverageTimeStep`       | `NumericType`| `1.0`        | The time step used for coverage update. |
-| `purgePulseTime`       | `NumericType`| `0.0`         | The duration of each purge step. |
+| Field              | Type          | Default | Description           |
+| ------------------ | ------------- | ------- | --------------------- |
+| `numCycles`        | `unsigned`    | `1`     | Number of ALP cycles. |
+| `pulseTime`        | `double`      | `1.0`   | Pulse duration.       |
+| `coverageTimeStep` | `double`      | `1.0`   | Coverage update step. |
+| `purgePulseTime`   | `double`      | `0.0`   | Purge duration.       |
 
-__Example usage:__
+---
 
-<details markdown="1">
-<summary markdown="1">
-C++
-{: .label .label-blue}
-</summary>
+## Flux engine
+
+Select the flux computation method at runtime.
+
 ```c++
-// namespace viennaps
-...
-AdvectionParameters<NumericType> advParams;
-advParams.integrationScheme = viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER
-advParams.timeStepRatio = 0.25
-advParams.dissipationAlpha = 2.0
-
-RayTracingParameters<NumericType, D> tracingParams;
-tracingParams.raysPerPoint = 500
-tracingParams.smoothingNeighbors = 0 // disable flux smoothing
-
-Process<NumericType, D> process(myDomain, myModel, duration);
-process.setParameters(advParams)
-process.setParameters(tracingParams)
-process.apply();
-...
+// C++
+process.setFluxEngineType(ps::FluxEngineType::AUTO);       // default
+// or: CPU_DISK, GPU_DISK, GPU_LINE, GPU_TRIANGLE
 ```
-</details>
 
-<details markdown="1">
-<summary markdown="1">
-Python
-{: .label .label-green}
-</summary>
 ```python
-...
-advParams = vps.AdvectionParameters()
-advParams.integrationScheme = vps.ls.IntegrationSchemeEnum.LOCAL_LAX_FRIEDRICHS_2ND_ORDER
-advParams.timeStepRatio = 0.25
-advParams.dissipationAlpha = 2.0
-
-tracingParams = vps.RayTracingParameters()
-tracingParams.raysPerPoint = 500
-tracingParams.smoothingNeighbors = 0 # disable flux smoothing
-
-process = vps.Process(myDomain, myModel, duration)
-process.setParameters(advParams)
-process.setParameters(tracingParams)
-process.apply()
-...
+# Python
+process.setFluxEngineType(vps.FluxEngineType.AUTO)  # default
+# or: CPU_DISK, GPU_DISK, GPU_LINE, GPU_TRIANGLE
 ```
-</details>
 
-## Member Functions
-### Constructors
+`AUTO` chooses CPU or GPU based on the build and whether the selected model has a GPU implementation.
+
+---
+
+## Single-pass flux calculation
+
 ```c++
-// Default constructor
+SmartPointer<viennals::Mesh<NumericType>> calculateFlux()
+```
+
+Computes flux for the current configuration and returns a mesh with flux data.
+
+---
+
+## Member functions
+
+### Constructors
+
+```c++
+// Default
 Process()
-// Constructor from domain
+
+// From domain
 Process(SmartPointer<Domain<NumericType, D>> passedDomain)
-// Constructor from domain, process model, and duration, 
-// to apply simple processes
+
+// From domain, model, and duration
 template <typename ProcessModelType>
 Process(SmartPointer<Domain<NumericType, D>> passedDomain,
         SmartPointer<ProcessModelType> passedProcessModel,
         const NumericType passedDuration = 0.)
 ```
-In summary, these constructors provide different ways to create a `Process` object, allowing for flexibility depending on what data is available at the time of object creation.
-1. The first constructor is a default constructor. It's defined as `Process()` and it doesn't take any arguments. This constructor allows for the creation of a `Process` object without any initial values.
-2. The second constructor takes a single argument: a smart pointer to a `Domain` object. This constructor initializes the domain member variable of the `Process` class with the passed `Domain` object.
-3. The third constructor is a template constructor that takes three arguments: a smart pointer to a `Domain` object, a smart pointer to a `ProcessModelType` object, and a `NumericType` representing the process duration. This constructor initializes the domain and processDuration member variables with the passed values and also sets the model member variable to the dynamically cast ProcessModelType object. This allows the user to run a process from an anonymous object. For example:
-```cpp
-Process<NumericType, D>(myDomain, myModel, processDuration).apply()
-```
 
----
 ### Set the domain
-```cpp
+
+```c++
 void setDomain(SmartPointer<Domain<NumericType, D>> passedDomain)
 ```
-Sets the process domain. 
 
----
 ### Set the process model
+
 ```c++
 void setProcessModel(SmartPointer<ProcessModel<NumericType, D>> passedProcessModel)
 ```
-Sets the process model. This can be either a pre-configured process model or a custom process model. 
 
----
 ### Set the process duration
+
 ```c++
 void setProcessDuration(NumericType passedDuration)
 ```
-Specifies the duration of the process. If the process duration is set to 0, exclusively the advection callback `applyPreAdvect()` is executed on the domain. This feature is particularly useful for applying only a volume model without engaging in further simulation steps.
 
----
-### Single-Pass Flux Calculation
+### Set parameters (unified)
+
 ```c++
-SmartPointer<viennals::Mesh<NumericType>> calculateFlux()
+void setParameters(const AdvectionParameters<NumericType>&)
+void setParameters(const RayTracingParameters<NumericType, D>&)
+void setParameters(const CoverageParameters<NumericType>&)
+void setParameters(const AtomicLayerProcessParameters<NumericType>&)
 ```
-Calculate the flux(es) for the current process. This function returns a smart pointer to a `viennals::Mesh<NumericType>` object containing the disk mesh and flux data.
 
-
----
-### Set parameters
+### Set flux engine type
+        
 ```c++
-void setParameters(const AdvectionParameters<NumericType>& passedAdvectionParameters)
+void setFluxEngineType(FluxEngineType type)
 ```
-Pass a parameters struct to set process parameters. Parameter structs can be of type `AdvectionParameters`, `RayTracingParameters`, or `CoverageParameters`.
 
----
+### Run the process
+
+```c++
+void apply()
+```
+
 
 {: .note }
-> From version **4.0.0**, direct access to the parameter is deprecated. Use the parameter struct setter functions instead.
-
-
+Direct parameter field access is deprecated since **4.0.0**. Use the parameter structs with `setParameters(...)`.
+Atomic-layer behavior is handled by the selected model within `Process()`.
+The flux engine is selectable at runtime via `setFluxEngineType(...)`.
