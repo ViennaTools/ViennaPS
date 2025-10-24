@@ -66,6 +66,7 @@ public:
   void apply() {
     domain_->clear();
     domain_->getSetup().check();
+    geometryFactory_.setup(domain_->getSetup());
 
     if (maskHeight_ > 0.) {
       NumericType maskBase = substrateHeight_ + layerHeight_ * numLayers_;

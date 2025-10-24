@@ -5,7 +5,8 @@
 
 namespace viennacore {
 template <class NumericType, int D> void RunTest() {
-  auto domain = viennaps::Domain<NumericType, D>::New();
+  auto domain = viennaps::Domain<NumericType, D>::New(
+      1.0, 10., 10.0, viennaps::BoundaryType::REFLECTIVE_BOUNDARY);
 
   viennaps::GeometryFactory<NumericType, D> geo(domain->getSetup());
 

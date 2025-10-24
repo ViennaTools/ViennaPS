@@ -105,6 +105,7 @@ public:
       setup.halveXAxis();
       setup.halveYAxis();
     }
+    geometryFactory_.setup(setup);
 
     auto substrate = geometryFactory_.makeSubstrate(base_);
 

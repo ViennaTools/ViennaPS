@@ -42,6 +42,7 @@ public:
     domain_->setup(gridDelta, xExtent, yExtent,
                    periodicBoundary ? BoundaryType::PERIODIC_BOUNDARY
                                     : BoundaryType::REFLECTIVE_BOUNDARY);
+    geometryFactory_.setup(domain_->getSetup());
   }
 
   void apply() {

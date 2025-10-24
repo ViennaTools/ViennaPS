@@ -18,13 +18,15 @@ template <class NumericType, int D> class GeometryFactory {
 protected:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
 
-  const DomainSetup<D> setup_;
+  DomainSetup<D> setup_;
   const std::string name_;
 
 public:
   GeometryFactory(const DomainSetup<D> &domainSetup,
                   const std::string &name = "GeometryFactory")
       : setup_(domainSetup), name_(name) {}
+
+  void setup(const DomainSetup<D> &domainSetup) { setup_ = domainSetup; }
 
   lsDomainType makeSubstrate(NumericType base) const {
 
