@@ -438,23 +438,23 @@ template <int D> void bindApi(py::module &module) {
   using DomainType = SmartPointer<Domain<T, D>>;
 
   // Domain Setup
-  py::class_<DomainSetup<T, D>>(module, "DomainSetup")
+  py::class_<DomainSetup<D>>(module, "DomainSetup")
       .def(py::init<>())
-      .def(py::init<T, T, T, BoundaryType>(), py::arg("gridDelta"),
-           py::arg("xExtent"), py::arg("yExtent"),
+      .def(py::init<double, double, double, BoundaryType>(),
+           py::arg("gridDelta"), py::arg("xExtent"), py::arg("yExtent"),
            py::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY)
-      .def("grid", &DomainSetup<T, D>::grid)
-      .def("gridDelta", &DomainSetup<T, D>::gridDelta)
-      .def("bounds", &DomainSetup<T, D>::bounds)
-      .def("boundaryCons", &DomainSetup<T, D>::boundaryCons)
-      .def("xExtent", &DomainSetup<T, D>::xExtent)
-      .def("yExtent", &DomainSetup<T, D>::yExtent)
-      .def("hasPeriodicBoundary", &DomainSetup<T, D>::hasPeriodicBoundary)
-      .def("isValid", &DomainSetup<T, D>::isValid)
-      .def("print", &DomainSetup<T, D>::print)
-      .def("check", &DomainSetup<T, D>::check)
-      .def("halveXAxis", &DomainSetup<T, D>::halveXAxis)
-      .def("halveYAxis", &DomainSetup<T, D>::halveYAxis);
+      .def("grid", &DomainSetup<D>::grid)
+      .def("gridDelta", &DomainSetup<D>::gridDelta)
+      .def("bounds", &DomainSetup<D>::bounds)
+      .def("boundaryCons", &DomainSetup<D>::boundaryCons)
+      .def("xExtent", &DomainSetup<D>::xExtent)
+      .def("yExtent", &DomainSetup<D>::yExtent)
+      .def("hasPeriodicBoundary", &DomainSetup<D>::hasPeriodicBoundary)
+      .def("isValid", &DomainSetup<D>::isValid)
+      .def("print", &DomainSetup<D>::print)
+      .def("check", &DomainSetup<D>::check)
+      .def("halveXAxis", &DomainSetup<D>::halveXAxis)
+      .def("halveYAxis", &DomainSetup<D>::halveYAxis);
 
   // Domain
   py::class_<Domain<T, D>, DomainType>(module, "Domain")
@@ -479,11 +479,11 @@ template <int D> void bindApi(py::module &module) {
            }),
            py::arg("bounds"), py::arg("boundaryConditions"),
            py::arg("gridDelta") = 1.0)
-      .def(py::init(&DomainType::template New<const DomainSetup<T, D> &>),
+      .def(py::init(&DomainType::template New<const DomainSetup<D> &>),
            py::arg("setup"))
       // methods
       .def("setup",
-           py::overload_cast<const DomainSetup<T, D> &>(&Domain<T, D>::setup),
+           py::overload_cast<const DomainSetup<D> &>(&Domain<T, D>::setup),
            "Setup the domain.")
       .def("setup",
            py::overload_cast<T, T, T, BoundaryType>(&Domain<T, D>::setup),
@@ -503,7 +503,11 @@ template <int D> void bindApi(py::module &module) {
            "Duplicate the top level set. Should be used before a deposition "
            "process.")
       .def("removeTopLevelSet", &Domain<T, D>::removeTopLevelSet)
-      .def("applyBooleanOperation", &Domain<T, D>::applyBooleanOperation)
+      .def("applyBooleanOperation", &Domain<T, D>::applyBooleanOperation,
+           py::arg("levelSet"), py::arg("operation"),
+           py::arg("applyToAll") = true,
+           "Apply a boolean operation with the passed Level-Set to all (or top "
+           "only) Level-Sets in the domain.")
       .def("removeLevelSet", &Domain<T, D>::removeLevelSet)
       .def("removeMaterial", &Domain<T, D>::removeMaterial)
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
@@ -1108,7 +1112,7 @@ template <int D> void bindApi(py::module &module) {
 
   // Geometry Base
   py::class_<GeometryFactory<T, D>>(module, "GeometryFactory")
-      .def(py::init<const DomainSetup<T, D> &, const std::string &>(),
+      .def(py::init<const DomainSetup<D> &, const std::string &>(),
            py::arg("domainSetup"), py::arg("name") = "GeometryFactory")
       .def("makeMask", &GeometryFactory<T, D>::makeMask, py::arg("base"),
            py::arg("height"))

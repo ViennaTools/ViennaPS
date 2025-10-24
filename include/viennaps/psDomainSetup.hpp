@@ -11,8 +11,8 @@ namespace viennaps {
 using namespace viennacore;
 using BoundaryType = viennahrle::BoundaryType;
 
-template <class NumericType, int D> class DomainSetup {
-  NumericType gridDelta_;
+template <int D> class DomainSetup {
+  double gridDelta_;
   double bounds_[2 * D] = {0.};
   BoundaryType boundaryCons_[D] = {};
   viennahrle::Grid<D> grid_;
@@ -27,7 +27,7 @@ public:
   }
 
   DomainSetup(double bounds[2 * D], BoundaryType boundaryCons[D],
-              NumericType gridDelta)
+              double gridDelta)
       : gridDelta_(gridDelta) {
     for (int i = 0; i < D; i++) {
       bounds_[2 * i] = bounds[2 * i];
@@ -37,7 +37,7 @@ public:
     init();
   }
 
-  DomainSetup(NumericType gridDelta, NumericType xExtent, NumericType yExtent,
+  DomainSetup(double gridDelta, double xExtent, double yExtent,
               BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : gridDelta_(gridDelta) {
     if (xExtent <= 0.0) {
@@ -76,7 +76,7 @@ public:
     return grid_;
   }
 
-  NumericType gridDelta() const {
+  double gridDelta() const {
     check();
     return gridDelta_;
   }
@@ -99,9 +99,9 @@ public:
     return boundaryConsArray;
   }
 
-  NumericType xExtent() const { return bounds_[1] - bounds_[0]; }
+  double xExtent() const { return bounds_[1] - bounds_[0]; }
 
-  NumericType yExtent() const { return bounds_[3] - bounds_[2]; }
+  double yExtent() const { return bounds_[3] - bounds_[2]; }
 
   bool hasPeriodicBoundary() const {
     return boundaryCons_[0] == BoundaryType::PERIODIC_BOUNDARY ||
@@ -178,7 +178,5 @@ public:
     }
   }
 };
-
-PS_PRECOMPILE_PRECISION_DIMENSION(DomainSetup)
 
 } // namespace viennaps
