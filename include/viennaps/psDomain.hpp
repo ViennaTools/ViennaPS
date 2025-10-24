@@ -51,7 +51,7 @@ public:
   using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
   using MaterialMapType = SmartPointer<MaterialMap>;
   using MetaDataType = std::unordered_map<std::string, std::vector<double>>;
-  using Setup = DomainSetup<NumericType, D>;
+  using Setup = DomainSetup<D>;
 
   static constexpr char materialIdsLabel[] = "MaterialIds";
 
@@ -249,14 +249,21 @@ public:
   // Apply a boolean operation with the passed Level-Set to all
   // Level-Sets in the domain.
   void applyBooleanOperation(lsDomainType levelSet,
-                             viennals::BooleanOperationEnum operation) {
+                             viennals::BooleanOperationEnum operation,
+                             bool applyToAll = true) {
     if (levelSets_.empty()) {
       return;
     }
 
-    for (auto &layer : levelSets_) {
-      viennals::BooleanOperation<NumericType, D>(layer, levelSet, operation)
+    if (!applyToAll) {
+      viennals::BooleanOperation<NumericType, D>(levelSets_.back(), levelSet,
+                                                 operation)
           .apply();
+    } else {
+      for (auto &layer : levelSets_) {
+        viennals::BooleanOperation<NumericType, D>(layer, levelSet, operation)
+            .apply();
+      }
     }
   }
 

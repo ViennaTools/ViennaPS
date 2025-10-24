@@ -18,15 +18,17 @@ template <class NumericType, int D> class GeometryFactory {
 protected:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
 
-  const DomainSetup<NumericType, D> &setup_;
+  DomainSetup<D> setup_;
   const std::string name_;
 
 public:
-  GeometryFactory(const DomainSetup<NumericType, D> &domainSetup,
+  GeometryFactory(const DomainSetup<D> &domainSetup,
                   const std::string &name = "GeometryFactory")
       : setup_(domainSetup), name_(name) {}
 
-  lsDomainType makeSubstrate(NumericType base) {
+  void setup(const DomainSetup<D> &domainSetup) { setup_ = domainSetup; }
+
+  lsDomainType makeSubstrate(NumericType base) const {
 
     auto substrate = lsDomainType::New(setup_.grid());
 
@@ -46,7 +48,7 @@ public:
     return substrate;
   }
 
-  lsDomainType makeMask(NumericType base, NumericType height) {
+  lsDomainType makeMask(NumericType base, NumericType height) const {
     assert(setup_.isValid());
 
     auto mask = lsDomainType::New(setup_.grid());
@@ -80,7 +82,7 @@ public:
 
   lsDomainType makeCylinderStencil(std::array<NumericType, D> position,
                                    NumericType radius, NumericType height,
-                                   NumericType angle = 0.) {
+                                   NumericType angle = 0.) const {
     assert(setup_.isValid());
 
     auto cutout = lsDomainType::New(setup_.grid());
@@ -105,7 +107,7 @@ public:
   lsDomainType makeBoxStencil(std::array<NumericType, D> position,
                               NumericType width, NumericType height,
                               NumericType angle = 0.,
-                              NumericType length = -1.) {
+                              NumericType length = -1.) const {
     if (angle >= 90 || angle <= -90) {
       Logger::getInstance()
           .addError(name_ +
@@ -116,11 +118,8 @@ public:
     }
 
     auto cutout = lsDomainType::New(setup_.grid());
-    auto gridDelta = setup_.gridDelta();
-    auto yExt = setup_.yExtent() / 2 + gridDelta;
-    if (length > 0) {
-      yExt = length / 2;
-    }
+    const NumericType yExt =
+        length > 0 ? length / 2 : setup_.yExtent() / 2 + setup_.gridDelta();
 
     auto mesh = viennals::Mesh<NumericType>::New();
     const NumericType offSet = height * std::tan(angle * M_PI / 180.);
@@ -211,7 +210,7 @@ public:
   }
 
 private:
-  void saveSurfaceMesh(lsDomainType levelSet, const std::string &name) {
+  void saveSurfaceMesh(lsDomainType levelSet, const std::string &name) const {
     auto mesh = viennals::Mesh<NumericType>::New();
     viennals::ToSurfaceMesh<NumericType, D>(levelSet, mesh).apply();
     viennals::VTKWriter<NumericType>(mesh, name_ + name).apply();

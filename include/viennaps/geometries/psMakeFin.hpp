@@ -69,6 +69,7 @@ public:
   void apply() {
     domain_->clear(); // this does not clear the setup
     domain_->getSetup().check();
+    geometryFactory_.setup(domain_->getSetup());
 
     if (maskHeight_ > 0.) {
       auto position = std::array<NumericType, D>{0.};
