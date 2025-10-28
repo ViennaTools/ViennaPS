@@ -52,7 +52,7 @@ multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     }
 
     if (params->meanEnergy > 0.f) {
-      flux *= max(sqrtf(prd->energy) - sqrtf(params->thresholdEnergy), 0.f);
+      flux *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
     }
 
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
@@ -78,12 +78,13 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
   if (params->meanEnergy > 0.f) {
     float Eref_peak;
-    float A = 1.f / (1.f + params->n * (M_PI_2f / params->inflectAngle - 1.f));
+    float A =
+        1.f / (1.f + params->n_l * (M_PI_2f / params->inflectAngle - 1.f));
     if (incomingAngle >= params->inflectAngle) {
       Eref_peak = (1 - (1 - A) * (M_PI_2f - incomingAngle) /
                            (M_PI_2f - params->inflectAngle));
     } else {
-      Eref_peak = A * powf(incomingAngle / params->inflectAngle, params->n);
+      Eref_peak = A * powf(incomingAngle / params->inflectAngle, params->n_l);
     }
 
     float newEnergy;

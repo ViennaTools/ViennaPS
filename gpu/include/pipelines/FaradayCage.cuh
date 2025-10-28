@@ -19,17 +19,25 @@ __forceinline__ __device__ void
 faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  const bool yieldDefined = abs(params->aSum) > 0.f;
+
   for (int i = 0; i < prd->ISCount; ++i) {
     auto geomNormal = computeNormal(sbtData, prd->TIndex[i]);
-    auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
-    float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
+    auto cosTheta = __saturatef(
+        -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
     float yield = 1.f;
-    if (params->yieldFac >= 0.f) {
-      yield = (params->yieldFac * cosTheta - 1.55f * cosTheta * cosTheta +
-               0.65f * cosTheta * cosTheta * cosTheta) /
-              (params->yieldFac - 0.9f);
+    if (yieldDefined) {
+      float cosTheta2 = cosTheta * cosTheta;
+      yield = (params->a1 * cosTheta + params->a2 * cosTheta2 +
+               params->a3 * cosTheta2 * cosTheta +
+               params->a4 * cosTheta2 * cosTheta2) /
+              params->aSum;
     }
+
+    yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
+
+    yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
 
     // No index offset in result buffer, as we want to accumulate on the same
     // flux array

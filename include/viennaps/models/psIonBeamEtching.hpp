@@ -11,8 +11,9 @@
 #include <functional>
 #include <random>
 
-#ifdef VIENNATOOLS_PYTHON_BUILD
-#include <Python.h>
+#ifdef VIENNACORE_COMPILE_GPU
+#include <models/psgPipelineParameters.hpp>
+#include <raygCallableConfig.hpp>
 #endif
 
 namespace viennaps {
@@ -38,7 +39,10 @@ public:
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("ionFlux");
-    auto redeposition = rates->getScalarData("redepositionFlux");
+    std::vector<NumericType> redeposition(materialIds.size(), 0.);
+    if (params_.redepositionRate > 0.) {
+      redeposition = *rates->getScalarData("redepositionFlux");
+    }
 
     NumericType yield;
     NumericType theta = constants::degToRad(params_.tiltAngle);
@@ -70,7 +74,7 @@ public:
         }
 
         velocity->at(i) = -flux->at(i) * norm * rate;
-        velocity->at(i) += redeposition->at(i) * params_.redepositionRate;
+        velocity->at(i) += redeposition.at(i) * params_.redepositionRate;
       }
     }
 
@@ -179,7 +183,8 @@ public:
       Eref_peak = A_ * std::pow(theta / inflectAngle_, params_.n_l);
     }
 
-    // Gaussian distribution around the Eref_peak scaled by the particle energy
+    // Gaussian distribution around the Eref_peak scaled by the particle
+    // energy
     NumericType newEnergy = Eref_peak * energy_;
     std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
                                                      0.1 * energy_);
@@ -230,6 +235,133 @@ private:
 };
 } // namespace impl
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+
+template <typename NumericType, int D>
+class IonBeamEtching : public ProcessModelGPU<NumericType, D> {
+public:
+  IonBeamEtching() = default;
+
+  explicit IonBeamEtching(const std::vector<Material> &maskMaterial)
+      : maskMaterials_(maskMaterial) {}
+
+  IonBeamEtching(const std::vector<Material> &maskMaterial,
+                 const IBEParameters<NumericType> &params)
+      : maskMaterials_(maskMaterial), params_(params) {}
+
+  IBEParameters<NumericType> &getParameters() { return params_; }
+
+  void setParameters(const IBEParameters<NumericType> &params) {
+    params_ = params;
+  }
+
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) final {
+    if (firstInit)
+      return;
+
+    if (params_.redepositionRate > 0.) {
+      Logger::getInstance()
+          .addWarning(
+              "IonBeamEtching GPU process does not support redeposition. "
+              "Redeosition parameters will be ignored.")
+          .print();
+      params_.redepositionRate = 0.;
+    }
+
+    // particles
+    viennaray::gpu::Particle<NumericType> particle{
+        .name = "IBEIon", .cosineExponent = params_.exponent};
+    particle.dataLabels.push_back("ionFlux");
+
+    if (params_.tiltAngle != 0.) {
+      Vec3D<NumericType> direction{0., 0., 0.};
+      direction[0] = std::sin(constants::degToRad(params_.tiltAngle));
+      direction[D - 1] = -std::cos(constants::degToRad(params_.tiltAngle));
+      particle.direction = direction;
+      particle.useCustomDirection = true;
+    }
+
+    std::unordered_map<std::string, unsigned> pMap = {{"IBEIon", 0}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__IBECollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__IBEReflection"},
+        {0, viennaray::gpu::CallableSlot::INIT, "__direct_callable__IBEInit"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
+
+    impl::IonParams deviceParams;
+    deviceParams.thetaRMin =
+        static_cast<float>(constants::degToRad(params_.thetaRMin));
+    deviceParams.thetaRMax =
+        static_cast<float>(constants::degToRad(params_.thetaRMax));
+    deviceParams.meanEnergy = static_cast<float>(params_.meanEnergy);
+    deviceParams.sigmaEnergy = static_cast<float>(params_.sigmaEnergy);
+    deviceParams.thresholdEnergy = static_cast<float>(
+        std::sqrt(params_.thresholdEnergy)); // precompute sqrt
+    deviceParams.minAngle =
+        static_cast<float>(constants::degToRad(params_.minAngle));
+    deviceParams.inflectAngle =
+        static_cast<float>(constants::degToRad(params_.inflectAngle));
+    deviceParams.n_l = static_cast<float>(params_.n_l);
+    deviceParams.B_sp = 0.f; // not used in IBE
+    if (params_.cos4Yield.isDefined) {
+      deviceParams.a1 = static_cast<float>(params_.cos4Yield.a1);
+      deviceParams.a2 = static_cast<float>(params_.cos4Yield.a2);
+      deviceParams.a3 = static_cast<float>(params_.cos4Yield.a3);
+      deviceParams.a4 = static_cast<float>(params_.cos4Yield.a4);
+      deviceParams.aSum = static_cast<float>(params_.cos4Yield.aSum());
+    }
+
+    // upload process params
+    this->processData.alloc(sizeof(impl::IonParams));
+    this->processData.upload(&deviceParams, 1);
+
+    // surface model
+    auto surfModel =
+        SmartPointer<::viennaps::impl::IBESurfaceModel<NumericType>>::New(
+            params_, maskMaterials_);
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+
+    this->getParticleTypes().clear();
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->insertNextParticleType(particle);
+    this->setProcessName("IonBeamEtching");
+    this->processMetaData = params_.toProcessMetaData();
+    this->hasGPU = true;
+
+    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
+      Logger::getInstance()
+          .addDebug("Process parameters:" +
+                    util::metaDataToString(this->processMetaData))
+          .print();
+    }
+
+    firstInit = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) final {
+    firstInit = false;
+  }
+
+  bool useFluxEngine() final { return true; }
+
+private:
+  bool firstInit = false;
+  std::vector<Material> maskMaterials_;
+  IBEParameters<NumericType> params_;
+};
+
+} // namespace gpu
+#endif
+
 template <typename NumericType, int D>
 class IonBeamEtching : public ProcessModelCPU<NumericType, D> {
 public:
@@ -270,6 +402,7 @@ public:
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
     this->processMetaData = params_.toProcessMetaData();
+    this->hasGPU = true;
 
     if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
       Logger::getInstance()
@@ -287,6 +420,13 @@ public:
   }
 
   bool useFluxEngine() final { return true; }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
+    return SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
+        maskMaterials_, params_);
+  }
+#endif
 
 private:
   bool firstInit = false;

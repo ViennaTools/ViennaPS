@@ -53,7 +53,6 @@ public:
     particle.name = "Neutral";
     particle.sticking = stickingProbability;
     particle.dataLabels.push_back(dataLabel);
-    setDirection(particle);
     particle.materialSticking[static_cast<int>(Material::Undefined)] =
         1.; // this will initialize all to default sticking
 
@@ -74,7 +73,6 @@ public:
     particle.name = "Neutral";
     particle.sticking = defaultStickingProbability;
     particle.dataLabels.push_back(dataLabel);
-    setDirection(particle);
     for (auto &mat : materialSticking) {
       particle.materialSticking[static_cast<int>(mat.first)] = mat.second;
     }
@@ -145,6 +143,7 @@ private:
     if (direction.has_value()) {
       particle.direction = direction.value();
     }
+    particle.useCustomDirection = true;
   }
 
   void addStickingData(NumericType stickingProbability) {

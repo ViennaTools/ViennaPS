@@ -21,7 +21,8 @@ int main(int argc, char *argv[]) {
   }
 
   auto geometry = Domain<NumericType, D>::New(
-      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"),
+      BoundaryType::PERIODIC_BOUNDARY);
   MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
                              params.get("trenchDepth"),
                              0.0 /*trenchTaperAngle*/, params.get("maskHeight"))
@@ -52,11 +53,12 @@ int main(int argc, char *argv[]) {
   advectionParams.integrationScheme =
       viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
 
-  Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
+  Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("processTime"));
   process.setParameters(advectionParams);
+  process.setFluxEngineType(
+      FluxEngineType::CPU_DISK); // force CPU disk-based flux engine
+                                 // (redoposition support)
 
   geometry->saveHullMesh("initial");
 

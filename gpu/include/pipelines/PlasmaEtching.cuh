@@ -138,7 +138,8 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
   // Set the flag to stop tracing if the energy is below the threshold
   float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
-  if (newEnergy > minEnergy) {
+  if (newEnergy > minEnergy &&
+      prd->rayWeight > launchParams.rayWeightThreshold) {
     prd->energy = newEnergy;
     conedCosineReflection(prd, geomNormal,
                           M_PI_2f - min(angle, params->Ions.minAngle),
