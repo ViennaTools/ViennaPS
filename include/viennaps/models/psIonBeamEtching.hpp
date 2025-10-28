@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../process/psProcessModel.hpp"
+#include "../psConstants.hpp"
 #include "../psMaterials.hpp"
 #include "psIonBeamParameters.hpp"
 
@@ -39,10 +40,24 @@ public:
     auto flux = rates->getScalarData("ionFlux");
     auto redeposition = rates->getScalarData("redepositionFlux");
 
+    NumericType yield;
+    NumericType theta = constants::degToRad(params_.tiltAngle);
+    NumericType cosTheta = std::cos(theta);
+    if (params_.cos4Yield.isDefined) {
+      NumericType cosTheta2 = cosTheta * cosTheta;
+      yield =
+          (params_.cos4Yield.a1 * cosTheta + params_.cos4Yield.a2 * cosTheta2 +
+           params_.cos4Yield.a3 * cosTheta2 * cosTheta +
+           params_.cos4Yield.a4 * cosTheta2 * cosTheta2) /
+          params_.cos4Yield.aSum();
+    } else {
+      yield = params_.yieldFunction(theta);
+    }
+
     const NumericType norm =
         1. /
         ((std::sqrt(params_.meanEnergy) - std::sqrt(params_.thresholdEnergy)) *
-         params_.yieldFunction(std::cos(params_.tiltAngle * M_PI / 180.)));
+         yield);
 
 #pragma omp parallel for
     for (size_t i = 0; i < velocity->size(); i++) {
@@ -81,6 +96,10 @@ public:
       : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.),
         A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
+        sqrtThresholdEnergy_(std::sqrt(params.thresholdEnergy)),
+        thetaRMin_(params.thetaRMin * M_PI / 180.),
+        thetaRMax_(params.thetaRMax * M_PI / 180.),
+        aSum_(1. / params.cos4Yield.aSum()),
         normalDist_(params.meanEnergy, params.sigmaEnergy) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -91,13 +110,20 @@ public:
                         RNG &) override {
     auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
                                NumericType(1));
-    NumericType theta = std::acos(cosTheta);
-
-    NumericType yield = params_.yieldFunction(theta);
+    NumericType yield;
+    if (params_.cos4Yield.isDefined) {
+      NumericType cosTheta2 = cosTheta * cosTheta;
+      yield =
+          (params_.cos4Yield.a1 * cosTheta + params_.cos4Yield.a2 * cosTheta2 +
+           params_.cos4Yield.a3 * cosTheta2 * cosTheta +
+           params_.cos4Yield.a4 * cosTheta2 * cosTheta2) *
+          aSum_;
+    } else {
+      yield = params_.yieldFunction(std::acos(cosTheta));
+    }
 
     localData.getVectorData(0)[primID] +=
-        std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
-                 NumericType(0.)) *
+        std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
         yield;
 
     if (params_.redepositionRate > 0.)
@@ -111,47 +137,65 @@ public:
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &rngState) override {
 
-    // // Small incident angles are reflected with the energy fraction centered
-    // at
-    // // 0
-    // NumericType incAngle = std::acos(std::clamp(
-    //     -DotProduct(rayDir, geomNormal), NumericType(0), NumericType(1)));
-    // NumericType Eref_peak;
-    // if (incAngle >= inflectAngle_) {
-    //   Eref_peak =
-    //       1. - (1. - A_) * (M_PI_2 - incAngle) / (M_PI_2 - inflectAngle_);
-    // } else {
-    //   Eref_peak = A_ * std::pow(incAngle / inflectAngle_, params_.n_l);
-    // }
+    const NumericType cosTheta = std::clamp(-DotProduct(rayDir, geomNormal),
+                                            NumericType(0), NumericType(1));
+    const NumericType theta = std::acos(cosTheta);
 
-    // if (params_.redepositionRate > 0.) {
-    //   redepositionWeight_ =
-    //       std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
-    //                NumericType(0.)) *
-    //       params_.yieldFunction(incAngle);
-    // }
+    // Update redeposition weight
+    if (params_.redepositionRate > 0.) {
+      NumericType yield;
+      if (params_.cos4Yield.isDefined) {
+        NumericType cosTheta2 = cosTheta * cosTheta;
+        yield = (params_.cos4Yield.a1 * cosTheta +
+                 params_.cos4Yield.a2 * cosTheta2 +
+                 params_.cos4Yield.a3 * cosTheta2 * cosTheta +
+                 params_.cos4Yield.a4 * cosTheta2 * cosTheta2) *
+                aSum_;
+      } else {
+        yield = params_.yieldFunction(std::acos(cosTheta));
+      }
+      redepositionWeight_ =
+          std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
+          yield;
+    }
 
-    // // Gaussian distribution around the Eref_peak scaled by the particle
-    // energy NumericType newEnergy = Eref_peak * energy_;
-    // std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
-    //                                                  0.1 * energy_);
-    // do {
-    //   newEnergy = normalDist(rngState);
-    // } while (newEnergy > energy_ || newEnergy < 0.);
+    NumericType sticking = 1.;
+    if (theta > params_.thetaRMin) {
+      sticking = 1. - std::clamp((theta - params_.thetaRMin) /
+                                     (params_.thetaRMax - params_.thetaRMin),
+                                 NumericType(0), NumericType(1));
+    }
 
-    // if (newEnergy > params_.thresholdEnergy ||
-    //     redepositionWeight_ > params_.redepositionThreshold) {
-    //   energy_ = newEnergy;
-    //   auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-    //       rayDir, geomNormal, rngState, M_PI_2 - std::min(incAngle,
-    //       minAngle_));
-    //   return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
-    // } else {
-    //   return std::pair<NumericType, Vec3D<NumericType>>{
-    //       1., Vec3D<NumericType>{0., 0., 0.}};
-    // }
-    return std::pair<NumericType, Vec3D<NumericType>>{
-        1., Vec3D<NumericType>{0., 0., 0.}};
+    // Early exit: particle sticks and no redeposition
+    if (sticking >= 1. && redepositionWeight_ < params_.redepositionThreshold) {
+      return VIENNARAY_PARTICLE_STOP;
+    }
+
+    // Calculate new energy after reflection
+    NumericType Eref_peak;
+    if (theta >= inflectAngle_) {
+      Eref_peak = 1. - (1. - A_) * (M_PI_2 - theta) / (M_PI_2 - inflectAngle_);
+    } else {
+      Eref_peak = A_ * std::pow(theta / inflectAngle_, params_.n_l);
+    }
+
+    // Gaussian distribution around the Eref_peak scaled by the particle energy
+    NumericType newEnergy = Eref_peak * energy_;
+    std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
+                                                     0.1 * energy_);
+    do {
+      newEnergy = normalDist(rngState);
+    } while (newEnergy > energy_ || newEnergy < 0.);
+
+    if (newEnergy > params_.thresholdEnergy ||
+        redepositionWeight_ > params_.redepositionThreshold) {
+      energy_ = newEnergy;
+      auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
+          rayDir, geomNormal, rngState, M_PI_2 - std::min(theta, minAngle_));
+      return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
+    } else {
+      return VIENNARAY_PARTICLE_STOP;
+    }
   }
 
   void initNew(RNG &rngState) override {
@@ -174,9 +218,14 @@ private:
   NumericType redepositionWeight_;
 
   const IBEParameters<NumericType> &params_;
-  const NumericType inflectAngle_;
-  const NumericType minAngle_;
+  const NumericType inflectAngle_; // in rad
+  const NumericType minAngle_;     // in rad
   const NumericType A_;
+  const NumericType sqrtThresholdEnergy_;
+  const NumericType thetaRMin_; // in rad
+  const NumericType thetaRMax_; // in  rad
+  const NumericType aSum_;
+
   std::normal_distribution<NumericType> normalDist_;
 };
 } // namespace impl
@@ -218,37 +267,18 @@ public:
     this->particles.clear();
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->particles.clear();
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
     this->processMetaData = params_.toProcessMetaData();
-    firstInit = true;
 
     if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
-      std::stringstream ss;
-      ss << "Initialized IonBeamEtching with parameters:\n"
-         << "\tPlane wafer rate: " << params_.planeWaferRate << "\n"
-         << "\tMaterial plane wafer rate:\n";
-      for (const auto &[mat, rate] : params_.materialPlaneWaferRate) {
-        ss << "\t    " << MaterialMap::toString(mat) << ": " << rate << "\n";
-      }
-      ss << "\tMean energy: " << params_.meanEnergy << " eV\n"
-         << "\tSigma energy: " << params_.sigmaEnergy << " eV\n"
-         << "\tThreshold energy: " << params_.thresholdEnergy << " eV\n"
-         << "\tExponent: " << params_.exponent << "\n"
-         << "\tn_l: " << params_.n_l << "\n"
-         << "\tInflection angle: " << params_.inflectAngle << " degree\n"
-         << "\tMinimum angle: " << params_.minAngle << " degree\n"
-         << "\tTilt angle: " << params_.tiltAngle << " degree\n"
-         << "\tRedeposition threshold: " << params_.redepositionThreshold
-         << "\n"
-         << "\tRedeposition rate: " << params_.redepositionRate << "\n"
-         << "\tMask materials:\n";
-      for (const auto &mat : maskMaterials_) {
-        ss << "\t    " << MaterialMap::toString(mat) << "\n";
-      }
-      Logger::getInstance().addDebug(ss.str()).print();
+      Logger::getInstance()
+          .addDebug("Process parameters:" +
+                    util::metaDataToString(this->processMetaData))
+          .print();
     }
+
+    firstInit = true;
   }
 
   void finalize(SmartPointer<Domain<NumericType, D>> domain,

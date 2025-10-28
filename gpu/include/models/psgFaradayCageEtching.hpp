@@ -52,9 +52,8 @@ template <typename NumericType, int D>
 class FaradayCageEtching final : public ProcessModelGPU<NumericType, D> {
 public:
   // Angles in degrees
-  FaradayCageEtching(NumericType rate, NumericType stickingProbability,
-                     NumericType sourceDistributionPower, NumericType cageAngle,
-                     NumericType tiltAngle) {
+  FaradayCageEtching(NumericType rate, NumericType sourceDistributionPower,
+                     NumericType cageAngle, NumericType tiltAngle) {
 
     float cosTilt = cosf(tiltAngle * M_PIf / 180.f);
     float sinTilt = sinf(tiltAngle * M_PIf / 180.f);
@@ -63,16 +62,14 @@ public:
 
     viennaray::gpu::Particle<NumericType> particle1{
         .name = "Ion1",
-        .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
         .direction =
             Vec3D<NumericType>{-cage_y * cosTilt, cage_x * cosTilt, -sinTilt}};
-    particle1.dataLabels.push_back("particleFlux");
+    particle1.dataLabels.push_back("particleFlux"); // single flux array
     this->insertNextParticleType(particle1);
 
     viennaray::gpu::Particle<NumericType> particle2{
         .name = "Ion2",
-        .sticking = stickingProbability,
         .cosineExponent = sourceDistributionPower,
         .direction =
             Vec3D<NumericType>{cage_y * cosTilt, -cage_x * cosTilt, -sinTilt}};
@@ -111,6 +108,7 @@ public:
     params.inflectAngle = constants::degToRad(89);
     params.n = 10;
     this->processData.allocUploadSingle(params);
+    this->hasGPU = true;
 
     // meta data
     this->processMetaData["PWR"] = {rate};

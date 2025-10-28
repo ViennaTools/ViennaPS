@@ -10,7 +10,6 @@ parser = ArgumentParser(
 parser.add_argument("filename")
 args = parser.parse_args()
 
-ps.Logger.setLogLevel(ps.LogLevel.INFO)
 params = ps.readConfigFile(args.filename)
 
 ########################################################################

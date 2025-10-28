@@ -31,8 +31,9 @@ faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
               (params->yieldFac - 0.9f);
     }
 
-    atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+    // No index offset in result buffer, as we want to accumulate on the same
+    // flux array
+    atomicAdd(&launchParams.resultBuffer[prd->TIndex[i]],
               prd->rayWeight * yield);
   }
 }

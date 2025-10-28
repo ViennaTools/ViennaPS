@@ -11,8 +11,6 @@ int main(int argc, char **argv) {
   constexpr int D = 2;
   omp_set_num_threads(16);
 
-  Logger::setLogLevel(LogLevel::INFO);
-
   // Parse the parameters
   viennacore::util::Parameters params;
   if (argc > 1) {
@@ -45,12 +43,10 @@ int main(int argc, char **argv) {
   ibeParams.materialPlaneWaferRate[Material::Mask] = 1. / 11.;
   ibeParams.exponent = params.get("exponent");
   ibeParams.meanEnergy = params.get("meanEnergy");
-  ibeParams.yieldFunction = [yieldFac](NumericType theta) {
-    const auto cosTheta = std::cos(theta);
-    return (yieldFac * cosTheta - 1.55 * cosTheta * cosTheta +
-            0.65 * cosTheta * cosTheta * cosTheta) /
-           (yieldFac - 0.9);
-  };
+  ibeParams.cos4Yield.isDefined = true;
+  ibeParams.cos4Yield.a1 = yieldFac;
+  ibeParams.cos4Yield.a2 = -1.55;
+  ibeParams.cos4Yield.a3 = 0.65;
 
   Process<NumericType, D> process(geometry, model);
   process.setParameters(advParams);
