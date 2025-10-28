@@ -30,7 +30,7 @@ template <typename NumericType> struct IBEParameters {
 
   // Cos4 Yield function. Defined in DOI:10.1109/SISPAD62626.2024.10733316
   // equation (2)
-  struct {
+  struct cos4YieldType {
     NumericType a1 = 0, a2 = 0, a3 = 0, a4 = 0;
     bool isDefined = false;
     NumericType aSum() const { return a1 + a2 + a3 + a4; }

@@ -12,18 +12,6 @@ args = parser.parse_args()
 
 params = ps.readConfigFile(args.filename)
 
-########################################################################
-#                               WARNING                                #
-# This example in Python only works when using a single thread, i.e.   #
-# ps.setNumThreads(1). The reason is the yield function, which is      #
-# implemented in Python, but gets called from the C++ code by multiple #
-# multiple threads. The Python GIL (Global Interpreter Lock) prevents  #
-# the yield function from being called by multiple threads at the same #
-# time, leading to deadlocked threads.                                 #
-# It is therefore recommended to use the C++ API for this example.     #
-########################################################################
-ps.setNumThreads(1)
-
 # ----- Geometry Generation ----- #
 bumpWidth = params["bumpWidth"]
 bumpHeight = params["bumpHeight"]
@@ -73,23 +61,14 @@ rayTracingParams = ps.RayTracingParameters()
 rayTracingParams.raysPerPoint = int(params["raysPerPoint"])
 rayTracingParams.smoothingNeighbors = 1
 
-yieldFactor = params["yieldFactor"]
-
-
-def yieldFunction(theta):
-    cosTheta = np.cos(theta)
-    return (
-        yieldFactor * cosTheta
-        - 1.55 * cosTheta * cosTheta
-        + 0.65 * cosTheta * cosTheta * cosTheta
-    ) / (yieldFactor - 0.9)
-
-
 ibeParams = ps.IBEParameters()
 ibeParams.exponent = params["exponent"]
 ibeParams.meanEnergy = params["meanEnergy"]
 ibeParams.materialPlaneWaferRate = {ps.Material.SiO2: 1, ps.Material.Mask: 1 / 11}
-ibeParams.yieldFunction = yieldFunction
+ibeParams.cos4Yield.isDefined = True
+ibeParams.cos4Yield.a1 = params["yieldFactor"]
+ibeParams.cos4Yield.a2 = -1.55
+ibeParams.cos4Yield.a3 = 0.65
 
 model = ps.IonBeamEtching()
 
