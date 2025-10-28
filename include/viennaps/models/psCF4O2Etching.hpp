@@ -335,8 +335,7 @@ public:
           M_PI_2 - std::min(incAngle, params.Ions.minAngle));
       return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
     } else {
-      return std::pair<NumericType, Vec3D<NumericType>>{
-          1., Vec3D<NumericType>{0., 0., 0.}};
+      return VIENNARAY_PARTICLE_STOP;
     }
   }
   void initNew(RNG &rngState) override {

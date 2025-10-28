@@ -87,7 +87,6 @@
 #include <vcCudaBuffer.hpp>
 
 #include <models/psgFaradayCageEtching.hpp>
-#include <models/psgIonBeamEtching.hpp>
 #include <models/psgMultiParticleProcess.hpp>
 #endif
 
@@ -1463,6 +1462,21 @@ template <int D> void bindApi(py::module &module) {
       .def(py::init(&SmartPointer<gpu::HBrO2Etching<T, D>>::template New<
                     const PlasmaEtchingParameters<T> &>),
            py::arg("parameters"));
+
+  // Ion Beam Etching
+  py::class_<gpu::IonBeamEtching<T, D>,
+             SmartPointer<gpu::IonBeamEtching<T, D>>>(module, "IonBeamEtching",
+                                                      processModel)
+      .def(py::init<>())
+      .def(py::init(&SmartPointer<gpu::IonBeamEtching<T, D>>::template New<
+                    const std::vector<Material> &>),
+           py::arg("maskMaterials"))
+      .def(py::init(&SmartPointer<gpu::IonBeamEtching<T, D>>::template New<
+                    const std::vector<Material> &, const IBEParameters<T> &>),
+           py::arg("maskMaterials"), py::arg("parameters"))
+      .def("setParameters", &gpu::IonBeamEtching<T, D>::setParameters)
+      .def("getParameters", &gpu::IonBeamEtching<T, D>::getParameters,
+           py::return_value_policy::reference);
 
   // Faraday Cage Etching
   py::class_<gpu::FaradayCageEtching<T, D>,

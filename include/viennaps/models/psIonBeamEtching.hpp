@@ -277,7 +277,7 @@ public:
 
     if (params_.tiltAngle != 0.) {
       Vec3D<NumericType> direction{0., 0., 0.};
-      direction[0] = std::sin(constants::degToRad(params_.tiltAngle));
+      direction[D - 2] = std::sin(constants::degToRad(params_.tiltAngle));
       direction[D - 1] = -std::cos(constants::degToRad(params_.tiltAngle));
       particle.direction = direction;
       particle.useCustomDirection = true;
