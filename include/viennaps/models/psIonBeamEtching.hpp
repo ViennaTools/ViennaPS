@@ -27,6 +27,9 @@ class IBESurfaceModel : public SurfaceModel<NumericType> {
   const std::vector<Material> maskMaterials_;
 
 public:
+  constexpr static const char *fluxLabel = "ionFlux";
+  constexpr static const char *redepositionLabel = "redepositionFlux";
+
   IBESurfaceModel(const IBEParameters<NumericType> &params,
                   const std::vector<Material> &mask)
       : params_(params), maskMaterials_(mask) {}
@@ -38,10 +41,10 @@ public:
 
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
-    auto flux = rates->getScalarData("ionFlux");
+    auto flux = rates->getScalarData(fluxLabel);
     std::vector<NumericType> redeposition(materialIds.size(), 0.);
     if (params_.redepositionRate > 0.) {
-      redeposition = *rates->getScalarData("redepositionFlux");
+      redeposition = *rates->getScalarData(redepositionLabel);
     }
 
     NumericType yield;
@@ -216,7 +219,8 @@ public:
   }
 
   std::vector<std::string> getLocalDataLabels() const override {
-    return {"ionFlux", "redepositionFlux"};
+    return {IBESurfaceModel<NumericType>::fluxLabel,
+            IBESurfaceModel<NumericType>::redepositionLabel};
   }
 
 private:
@@ -248,9 +252,11 @@ public:
     // particles
     viennaray::gpu::Particle<NumericType> particle{
         .name = "IBEIon", .cosineExponent = params_.exponent};
-    particle.dataLabels.push_back("ionFlux");
+    particle.dataLabels.push_back(
+        ::viennaps::impl::IBESurfaceModel<NumericType>::fluxLabel);
     if (params_.redepositionRate > 0.) {
-      particle.dataLabels.push_back("redepositionFlux");
+      particle.dataLabels.push_back(
+          ::viennaps::impl::IBESurfaceModel<NumericType>::redepositionLabel);
     }
 
     if (params_.tiltAngle != 0.) {
@@ -261,6 +267,7 @@ public:
       particle.useCustomDirection = true;
     }
 
+    // Callables
     std::unordered_map<std::string, unsigned> pMap = {{"IBEIon", 0}};
     std::vector<viennaray::gpu::CallableConfig> cMap = {
         {0, viennaray::gpu::CallableSlot::COLLISION,
@@ -271,6 +278,7 @@ public:
     this->setParticleCallableMap(pMap, cMap);
     this->setCallableFileName("CallableWrapper");
 
+    // Parameters to upload to device
     impl::IonParams deviceParams;
     deviceParams.thetaRMin =
         static_cast<float>(constants::degToRad(params_.thetaRMin));

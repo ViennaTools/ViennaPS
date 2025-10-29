@@ -49,21 +49,19 @@ ibeParams.redepositionRate = params["redepositionRate"]
 ibeParams.planeWaferRate = params["planeWaferRate"]
 
 model = ps.IonBeamEtching(
-    maskMaterials=[ps.Material.Mask],
     parameters=ibeParams,
+    maskMaterials=[ps.Material.Mask],
 )
 
 direction = [0.0, 0.0, 0.0]
+direction[0] = np.sin(ibeParams.tiltAngle * np.pi / 180.0)
 direction[args.dim - 1] = -np.cos(ibeParams.tiltAngle * np.pi / 180.0)
-direction[args.dim - 2] = np.sin(ibeParams.tiltAngle * np.pi / 180.0)
 model.setPrimaryDirection(direction)
 
 advParams = ps.AdvectionParameters()
 advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
 
-process = ps.Process()
-process.setDomain(geometry)
-process.setProcessModel(model)
+process = ps.Process(geometry, model)
 process.setProcessDuration(params["processTime"])
 process.setParameters(advParams)
 

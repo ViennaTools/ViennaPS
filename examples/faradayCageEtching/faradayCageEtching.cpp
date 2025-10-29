@@ -8,7 +8,7 @@ namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
 
   ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
@@ -36,8 +36,9 @@ int main(int argc, char *argv[]) {
   ps::FaradayCageParameters<NumericType> cageParams;
   cageParams.ibeParams.tiltAngle = params.get("tiltAngle");
   cageParams.cageAngle = params.get("cageAngle");
+
   auto model = ps::SmartPointer<ps::FaradayCageEtching<NumericType, D>>::New(
-      maskMaterials, cageParams);
+      cageParams, maskMaterials);
 
   ps::AdvectionParameters advectionParams;
   advectionParams.integrationScheme =
@@ -45,10 +46,9 @@ int main(int argc, char *argv[]) {
 
   ps::RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");
+
   // process setup
-  ps::Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
+  ps::Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("etchTime"));
   process.setParameters(rayParams);
   process.setParameters(advectionParams);

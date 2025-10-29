@@ -108,7 +108,7 @@ public:
     params.sigmaEnergy = sigmaEnergy;
     params.thresholdEnergy = thresholdEnergy;
     params.inflectAngle = constants::degToRad(inflectAngle);
-    params.n = n;
+    params.n_l = n;
     this->processData.allocUploadSingle(params);
     this->insertNextParticleType(particle);
 

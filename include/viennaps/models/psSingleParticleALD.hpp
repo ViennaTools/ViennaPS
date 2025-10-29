@@ -8,7 +8,7 @@ using namespace viennacore;
 
 namespace impl {
 
-template <typename NumericType, int D>
+template <typename NumericType>
 class SingleParticleALDSurfaceModel : public SurfaceModel<NumericType> {
   using SurfaceModel<NumericType>::coverages;
 
@@ -157,8 +157,9 @@ public:
 
     // surface model
     auto surfModel =
-        SmartPointer<impl::SingleParticleALDSurfaceModel<NumericType, D>>::New(
-            coverageTimeStep, gpc, evFlux, inFlux, stickingProbability, s0);
+        SmartPointer<::viennaps::impl::SingleParticleALDSurfaceModel<
+            NumericType>>::New(coverageTimeStep, gpc, evFlux, inFlux,
+                               stickingProbability, s0);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -216,7 +217,7 @@ public:
 
     // surface model
     auto surfModel =
-        SmartPointer<impl::SingleParticleALDSurfaceModel<NumericType, D>>::New(
+        SmartPointer<impl::SingleParticleALDSurfaceModel<NumericType>>::New(
             coverageTimeStep, gpc, evFlux, inFlux, stickingProbability, s0);
 
     // velocity field

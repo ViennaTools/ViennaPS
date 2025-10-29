@@ -35,35 +35,20 @@ faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
               params->aSum;
     }
 
+    // threshold energy is in sqrt scale
     yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
 
-    yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
+    // In the Faraday cage pipeline, all particle write to the same result array
 
-    // No index offset in result buffer, as we want to accumulate on the same
     // flux array
     atomicAdd(&launchParams.resultBuffer[prd->TIndex[i]],
               prd->rayWeight * yield);
-  }
-}
 
-__forceinline__ __device__ void
-faradayIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  auto geomNormal = computeNormal(sbtData, prd->primID);
-  auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
-  float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
-
-  float sticking = 1.f;
-  if (incomingAngle > params->thetaRMin)
-    sticking = 1.f - min((incomingAngle - params->thetaRMin) /
-                             (params->thetaRMax - params->thetaRMin),
-                         1.f);
-  prd->rayWeight -= prd->rayWeight * sticking;
-
-  if (prd->rayWeight > launchParams.rayWeightThreshold) {
-    conedCosineReflection(prd, geomNormal,
-                          M_PI_2f - min(incomingAngle, params->minAngle),
-                          launchParams.D);
+    if (params->redepositionRate > 0.f) {
+      // redeposition array
+      atomicAdd(
+          &launchParams.resultBuffer[launchParams.numElements + prd->TIndex[i]],
+          prd->load);
+    }
   }
 }

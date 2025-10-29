@@ -456,8 +456,15 @@ class Domain:
         """
 
     def applyBooleanOperation(
-        self, arg0: viennals.d3.Domain, arg1: viennals._core.BooleanOperationEnum
-    ) -> None: ...
+        self,
+        levelSet: viennals.d3.Domain,
+        operation: viennals._core.BooleanOperationEnum,
+        applyToAll: bool = True,
+    ) -> None:
+        """
+        Apply a boolean operation with the passed Level-Set to all (or top only) Level-Sets in the domain.
+        """
+
     def clear(self) -> None: ...
     def clearMetaData(self, clearDomainData: bool = False) -> None:
         """
@@ -656,20 +663,11 @@ class DomainSetup:
     def yExtent(self) -> float: ...
 
 class FaradayCageEtching(ProcessModel):
-    @typing.overload
-    def __init__(self) -> None: ...
-    @typing.overload
-    def __init__(
-        self, maskMaterials: collections.abc.Sequence[viennaps._core.Material]
-    ) -> None: ...
-    @typing.overload
     def __init__(
         self,
-        maskMaterials: collections.abc.Sequence[viennaps._core.Material],
         parameters: viennaps._core.FaradayCageParameters,
+        maskMaterials: collections.abc.Sequence[viennaps._core.Material],
     ) -> None: ...
-    def getParameters(self) -> viennaps._core.FaradayCageParameters: ...
-    def setParameters(self, arg0: viennaps._core.FaradayCageParameters) -> None: ...
 
 class FluorocarbonEtching(ProcessModel):
     def __init__(self, parameters: viennaps._core.FluorocarbonParameters) -> None: ...
@@ -842,20 +840,11 @@ class Interpolation(enum.IntEnum):
         """
 
 class IonBeamEtching(ProcessModel):
-    @typing.overload
-    def __init__(self) -> None: ...
-    @typing.overload
-    def __init__(
-        self, maskMaterials: collections.abc.Sequence[viennaps._core.Material]
-    ) -> None: ...
-    @typing.overload
     def __init__(
         self,
-        maskMaterials: collections.abc.Sequence[viennaps._core.Material],
         parameters: viennaps._core.IBEParameters,
+        maskMaterials: collections.abc.Sequence[viennaps._core.Material],
     ) -> None: ...
-    def getParameters(self) -> viennaps._core.IBEParameters: ...
-    def setParameters(self, arg0: viennaps._core.IBEParameters) -> None: ...
 
 class IsotropicProcess(ProcessModel):
     @typing.overload

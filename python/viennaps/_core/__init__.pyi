@@ -7,10 +7,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
-from viennaps import d3
+import viennaps.d2
 import viennaps.d3
+from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
@@ -33,6 +33,7 @@ __all__: list[str] = [
     "FluxEngineType",
     "HoleShape",
     "IBEParameters",
+    "IBEParametersCos4Yield",
     "Length",
     "LengthUnit",
     "Logger",
@@ -536,8 +537,13 @@ class HoleShape(enum.IntEnum):
         """
 
 class IBEParameters:
-    yieldFunction: collections.abc.Callable[[typing.SupportsFloat], float]
+    cos4Yield: IBEParametersCos4Yield
     def __init__(self) -> None: ...
+    def toProcessMetaData(self) -> dict[str, list[float]]:
+        """
+        Convert the IBE parameters to a metadata dict.
+        """
+
     @property
     def exponent(self) -> float: ...
     @exponent.setter
@@ -581,6 +587,14 @@ class IBEParameters:
     @sigmaEnergy.setter
     def sigmaEnergy(self, arg0: typing.SupportsFloat) -> None: ...
     @property
+    def thetaRMax(self) -> float: ...
+    @thetaRMax.setter
+    def thetaRMax(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
+    def thetaRMin(self) -> float: ...
+    @thetaRMin.setter
+    def thetaRMin(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
     def thresholdEnergy(self) -> float: ...
     @thresholdEnergy.setter
     def thresholdEnergy(self, arg0: typing.SupportsFloat) -> None: ...
@@ -588,6 +602,27 @@ class IBEParameters:
     def tiltAngle(self) -> float: ...
     @tiltAngle.setter
     def tiltAngle(self, arg0: typing.SupportsFloat) -> None: ...
+
+class IBEParametersCos4Yield:
+    isDefined: bool
+    def __init__(self) -> None: ...
+    def aSum(self) -> float: ...
+    @property
+    def a1(self) -> float: ...
+    @a1.setter
+    def a1(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
+    def a2(self) -> float: ...
+    @a2.setter
+    def a2(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
+    def a3(self) -> float: ...
+    @a3.setter
+    def a3(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
+    def a4(self) -> float: ...
+    @a4.setter
+    def a4(self, arg0: typing.SupportsFloat) -> None: ...
 
 class Length:
     @staticmethod

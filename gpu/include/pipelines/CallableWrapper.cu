@@ -141,9 +141,3 @@ __direct_callable__faradayCollision(const void *sbtData,
                                     viennaray::gpu::PerRayData *prd) {
   faradayIonCollision(sbtData, prd);
 }
-
-extern "C" __device__ void
-__direct_callable__faradayReflection(const void *sbtData,
-                                     viennaray::gpu::PerRayData *prd) {
-  faradayIonReflection(sbtData, prd);
-}

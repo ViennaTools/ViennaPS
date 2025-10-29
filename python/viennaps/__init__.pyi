@@ -32,6 +32,7 @@ from viennaps._core import FluorocarbonParametersIons
 from viennaps._core import FluxEngineType
 from viennaps._core import HoleShape
 from viennaps._core import IBEParameters
+from viennaps._core import IBEParametersCos4Yield
 from viennaps._core import Length
 from viennaps._core import LengthUnit
 from viennaps._core import Logger
@@ -137,6 +138,7 @@ __all__: list[str] = [
     "HBrO2Etching",
     "HoleShape",
     "IBEParameters",
+    "IBEParametersCos4Yield",
     "IntegrationScheme",
     "Interpolation",
     "IonBeamEtching",
