@@ -882,31 +882,17 @@ template <int D> void bindApi(py::module &module) {
   // Ion Beam Etching
   py::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
       module, "IonBeamEtching", processModel)
-      .def(py::init<>())
       .def(py::init(&SmartPointer<IonBeamEtching<T, D>>::template New<
-                    const std::vector<Material> &>),
-           py::arg("maskMaterials"))
-      .def(py::init(&SmartPointer<IonBeamEtching<T, D>>::template New<
-                    const std::vector<Material> &, const IBEParameters<T> &>),
-           py::arg("maskMaterials"), py::arg("parameters"))
-      .def("setParameters", &IonBeamEtching<T, D>::setParameters)
-      .def("getParameters", &IonBeamEtching<T, D>::getParameters,
-           py::return_value_policy::reference);
+                    const IBEParameters<T> &, const std::vector<Material> &>),
+           py::arg("parameters"), py::arg("maskMaterials"));
 
   // Faraday Cage Etching
   py::class_<FaradayCageEtching<T, D>, SmartPointer<FaradayCageEtching<T, D>>>(
       module, "FaradayCageEtching", processModel)
-      .def(py::init<>())
       .def(py::init(&SmartPointer<FaradayCageEtching<T, D>>::template New<
+                    const FaradayCageParameters<T> &,
                     const std::vector<Material> &>),
-           py::arg("maskMaterials"))
-      .def(py::init(&SmartPointer<FaradayCageEtching<T, D>>::template New<
-                    const std::vector<Material> &,
-                    const FaradayCageParameters<T> &>),
-           py::arg("maskMaterials"), py::arg("parameters"))
-      .def("setParameters", &FaradayCageEtching<T, D>::setParameters)
-      .def("getParameters", &FaradayCageEtching<T, D>::getParameters,
-           py::return_value_policy::reference);
+           py::arg("parameters"), py::arg("maskMaterials"));
 
   // Isotropic Process
   py::class_<IsotropicProcess<T, D>, SmartPointer<IsotropicProcess<T, D>>>(
@@ -1465,26 +1451,19 @@ template <int D> void bindApi(py::module &module) {
 
   // Ion Beam Etching
   py::class_<gpu::IonBeamEtching<T, D>,
-             SmartPointer<gpu::IonBeamEtching<T, D>>>(module, "IonBeamEtching",
+             SmartPointer<gpu::IonBeamEtching<T, D>>>(m_gpu, "IonBeamEtching",
                                                       processModel)
-      .def(py::init<>())
       .def(py::init(&SmartPointer<gpu::IonBeamEtching<T, D>>::template New<
-                    const std::vector<Material> &>),
-           py::arg("maskMaterials"))
-      .def(py::init(&SmartPointer<gpu::IonBeamEtching<T, D>>::template New<
-                    const std::vector<Material> &, const IBEParameters<T> &>),
-           py::arg("maskMaterials"), py::arg("parameters"))
-      .def("setParameters", &gpu::IonBeamEtching<T, D>::setParameters)
-      .def("getParameters", &gpu::IonBeamEtching<T, D>::getParameters,
-           py::return_value_policy::reference);
+                    const IBEParameters<T> &, const std::vector<Material> &>),
+           py::arg("parameters"), py::arg("maskMaterials"));
 
   // Faraday Cage Etching
   py::class_<gpu::FaradayCageEtching<T, D>,
              SmartPointer<gpu::FaradayCageEtching<T, D>>>(
-      m_gpu, "FaradayCageEtching", processModel_gpu)
+      m_gpu, "FaradayCageEtching", processModel)
       .def(py::init(&SmartPointer<gpu::FaradayCageEtching<T, D>>::template New<
-                    T, T, T, T, T>),
-           py::arg("rate"), py::arg("stickingProbability"), py::arg("power"),
-           py::arg("cageAngle"), py::arg("tiltAngle"));
+                    const FaradayCageParameters<T> &,
+                    const std::vector<Material> &>),
+           py::arg("parameters"), py::arg("maskMaterials"));
 #endif
 }

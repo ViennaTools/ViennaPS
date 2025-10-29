@@ -127,6 +127,7 @@ public:
     }
 
     localData.getVectorData(0)[primID] +=
+        rayWeight *
         std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
         yield;
 
@@ -156,7 +157,7 @@ public:
                  params_.cos4Yield.a4 * cosTheta2 * cosTheta2) *
                 aSum_;
       } else {
-        yield = params_.yieldFunction(std::acos(cosTheta));
+        yield = params_.yieldFunction(theta);
       }
       redepositionWeight_ =
           std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
@@ -171,7 +172,7 @@ public:
     }
 
     // Early exit: particle sticks and no redeposition
-    if (sticking >= 1. && redepositionWeight_ < params_.redepositionThreshold) {
+    if (sticking >= 1. && redepositionWeight_ <= 0.) {
       return VIENNARAY_PARTICLE_STOP;
     }
 
@@ -185,7 +186,7 @@ public:
 
     // Gaussian distribution around the Eref_peak scaled by the particle
     // energy
-    NumericType newEnergy = Eref_peak * energy_;
+    NumericType newEnergy;
     std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
                                                      0.1 * energy_);
     do {
@@ -241,43 +242,20 @@ namespace gpu {
 template <typename NumericType, int D>
 class IonBeamEtching : public ProcessModelGPU<NumericType, D> {
 public:
-  IonBeamEtching() = default;
-
-  explicit IonBeamEtching(const std::vector<Material> &maskMaterial)
-      : maskMaterials_(maskMaterial) {}
-
-  IonBeamEtching(const std::vector<Material> &maskMaterial,
-                 const IBEParameters<NumericType> &params)
-      : maskMaterials_(maskMaterial), params_(params) {}
-
-  IBEParameters<NumericType> &getParameters() { return params_; }
-
-  void setParameters(const IBEParameters<NumericType> &params) {
-    params_ = params;
-  }
-
-  void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                  const NumericType processDuration) final {
-    if (firstInit)
-      return;
-
-    if (params_.redepositionRate > 0.) {
-      Logger::getInstance()
-          .addWarning(
-              "IonBeamEtching GPU process does not support redeposition. "
-              "Redeosition parameters will be ignored.")
-          .print();
-      params_.redepositionRate = 0.;
-    }
-
+  IonBeamEtching(const IBEParameters<NumericType> &params,
+                 const std::vector<Material> &maskMaterial)
+      : maskMaterials_(maskMaterial), params_(params) {
     // particles
     viennaray::gpu::Particle<NumericType> particle{
         .name = "IBEIon", .cosineExponent = params_.exponent};
     particle.dataLabels.push_back("ionFlux");
+    if (params_.redepositionRate > 0.) {
+      particle.dataLabels.push_back("redepositionFlux");
+    }
 
     if (params_.tiltAngle != 0.) {
       Vec3D<NumericType> direction{0., 0., 0.};
-      direction[D - 2] = std::sin(constants::degToRad(params_.tiltAngle));
+      direction[0] = std::sin(constants::degToRad(params_.tiltAngle));
       direction[D - 1] = -std::cos(constants::degToRad(params_.tiltAngle));
       particle.direction = direction;
       particle.useCustomDirection = true;
@@ -315,6 +293,10 @@ public:
       deviceParams.a4 = static_cast<float>(params_.cos4Yield.a4);
       deviceParams.aSum = static_cast<float>(params_.cos4Yield.aSum());
     }
+    deviceParams.redepositionRate =
+        static_cast<float>(params_.redepositionRate);
+    deviceParams.redepositionThreshold =
+        static_cast<float>(params_.redepositionThreshold);
 
     // upload process params
     this->processData.alloc(sizeof(impl::IonParams));
@@ -335,26 +317,9 @@ public:
     this->setProcessName("IonBeamEtching");
     this->processMetaData = params_.toProcessMetaData();
     this->hasGPU = true;
-
-    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
-      Logger::getInstance()
-          .addDebug("Process parameters:" +
-                    util::metaDataToString(this->processMetaData))
-          .print();
-    }
-
-    firstInit = true;
   }
-
-  void finalize(SmartPointer<Domain<NumericType, D>> domain,
-                const NumericType processedDuration) final {
-    firstInit = false;
-  }
-
-  bool useFluxEngine() final { return true; }
 
 private:
-  bool firstInit = false;
   std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };
@@ -365,25 +330,9 @@ private:
 template <typename NumericType, int D>
 class IonBeamEtching : public ProcessModelCPU<NumericType, D> {
 public:
-  IonBeamEtching() = default;
-
-  explicit IonBeamEtching(const std::vector<Material> &maskMaterial)
-      : maskMaterials_(maskMaterial) {}
-
-  IonBeamEtching(const std::vector<Material> &maskMaterial,
-                 const IBEParameters<NumericType> &params)
-      : maskMaterials_(maskMaterial), params_(params) {}
-
-  IBEParameters<NumericType> &getParameters() { return params_; }
-
-  void setParameters(const IBEParameters<NumericType> &params) {
-    params_ = params;
-  }
-
-  void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                  const NumericType processDuration) final {
-    if (firstInit)
-      return;
+  IonBeamEtching(const IBEParameters<NumericType> &params,
+                 const std::vector<Material> &maskMaterial)
+      : maskMaterials_(maskMaterial), params_(params) {
 
     // particles
     auto particle =
@@ -396,40 +345,22 @@ public:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
-    this->particles.clear();
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
     this->processMetaData = params_.toProcessMetaData();
     this->hasGPU = true;
-
-    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
-      Logger::getInstance()
-          .addDebug("Process parameters:" +
-                    util::metaDataToString(this->processMetaData))
-          .print();
-    }
-
-    firstInit = true;
   }
-
-  void finalize(SmartPointer<Domain<NumericType, D>> domain,
-                const NumericType processedDuration) final {
-    firstInit = false;
-  }
-
-  bool useFluxEngine() final { return true; }
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
     return SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
-        maskMaterials_, params_);
+        params_, maskMaterials_);
   }
 #endif
 
 private:
-  bool firstInit = false;
   std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };

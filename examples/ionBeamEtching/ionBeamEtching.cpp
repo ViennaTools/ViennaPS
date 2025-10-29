@@ -8,7 +8,7 @@ using namespace viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 2;
+  constexpr int D = 3;
   Logger::setLogLevel(LogLevel::INTERMEDIATE);
 
   // Parse the parameters
@@ -34,6 +34,8 @@ int main(int argc, char *argv[]) {
   IBEParameters<NumericType> ibeParams;
   ibeParams.tiltAngle = params.get("angle");
   ibeParams.exponent = params.get("exponent");
+  ibeParams.thetaRMin = 0.;
+  ibeParams.thetaRMax = 15.;
 
   ibeParams.meanEnergy = params.get("meanEnergy");
   ibeParams.sigmaEnergy = params.get("sigmaEnergy");
@@ -43,10 +45,10 @@ int main(int argc, char *argv[]) {
   ibeParams.planeWaferRate = params.get("planeWaferRate");
 
   auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New(
-      std::vector<Material>{Material::Mask}, ibeParams);
+      ibeParams, std::vector<Material>{Material::Mask});
   Vec3D<NumericType> direction{0., 0., 0.};
+  direction[0] = std::sin(ibeParams.tiltAngle * M_PI / 180.);
   direction[D - 1] = -std::cos(ibeParams.tiltAngle * M_PI / 180.);
-  direction[D - 2] = std::sin(ibeParams.tiltAngle * M_PI / 180.);
   model->setPrimaryDirection(direction);
 
   AdvectionParameters advectionParams;
@@ -56,9 +58,6 @@ int main(int argc, char *argv[]) {
   Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("processTime"));
   process.setParameters(advectionParams);
-  process.setFluxEngineType(
-      FluxEngineType::CPU_DISK); // force CPU disk-based flux engine
-                                 // (redoposition support)
 
   geometry->saveHullMesh("initial");
 

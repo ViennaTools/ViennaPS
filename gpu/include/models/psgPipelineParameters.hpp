@@ -12,6 +12,10 @@ struct IonParams {
   float sigmaEnergy = 0.f;
   float thresholdEnergy = 0.f; // sqrt(E_threshold)
 
+  // Redeposition
+  float redepositionRate = 0.f;
+  float redepositionThreshold = 0.1f;
+
   // Reflection Angular Distribution
   float minAngle = 0.f;     // in rad
   float inflectAngle = 0.f; // in rad
