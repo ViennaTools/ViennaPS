@@ -75,24 +75,13 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
                          1.f);
   prd->rayWeight -= prd->rayWeight * sticking;
 
+  if (prd->rayWeight < launchParams.rayWeightThreshold) {
+    return;
+  }
+
   if (params->meanEnergy > 0.f) {
-    float Eref_peak;
-    float A =
-        1.f / (1.f + params->n_l * (M_PI_2f / params->inflectAngle - 1.f));
-    if (incomingAngle >= params->inflectAngle) {
-      Eref_peak = (1 - (1 - A) * (M_PI_2f - incomingAngle) /
-                           (M_PI_2f - params->inflectAngle));
-    } else {
-      Eref_peak = A * powf(incomingAngle / params->inflectAngle, params->n_l);
-    }
-
-    float newEnergy;
-    do {
-      newEnergy = getNormalDistRand(&prd->RNGstate) * prd->energy * 0.1f +
-                  Eref_peak * prd->energy;
-    } while (newEnergy > prd->energy || newEnergy <= 0.f);
-
-    prd->energy = newEnergy;
+    viennaps::gpu::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
+                                      incomingAngle);
   }
 
   conedCosineReflection(prd, geomNormal,

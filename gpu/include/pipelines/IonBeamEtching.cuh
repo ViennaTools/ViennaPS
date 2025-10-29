@@ -87,30 +87,16 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
   }
 
   // Update energy
-  float Eref_peak;
-  float A = 1.f / (1.f + params->n_l * (M_PI_2f / params->inflectAngle - 1.f));
-  if (theta >= params->inflectAngle) {
-    Eref_peak =
-        1.f - (1.f - A) * (M_PI_2f - theta) / (M_PI_2f - params->inflectAngle);
-  } else {
-    Eref_peak = A * powf(theta / params->inflectAngle, params->n_l);
-  }
+  viennaps::gpu::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
+                                    theta);
 
-  // Gaussian distribution around the Eref_peak scaled by the particle energy
-  float newEnergy;
-  do {
-    newEnergy = getNormalDistRand(&prd->RNGstate) * prd->energy * 0.1f +
-                Eref_peak * prd->energy;
-  } while (newEnergy > prd->energy || newEnergy < 0.f);
-
-  if (newEnergy > params->thresholdEnergy * params->thresholdEnergy ||
+  if (prd->energy > params->thresholdEnergy * params->thresholdEnergy ||
       prd->load > params->redepositionThreshold) {
-    prd->energy = newEnergy;
     conedCosineReflection(prd, geomNormal,
                           M_PI_2f - min(theta, params->minAngle),
                           launchParams.D);
   } else {
-    prd->rayWeight = 0.f;
+    prd->rayWeight = 0.f; // terminate particle
   }
 }
 

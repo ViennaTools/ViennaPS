@@ -17,7 +17,7 @@ class MultiParticleProcess final : public ProcessModelGPU<NumericType, D> {
 public:
   MultiParticleProcess() {
     // surface model
-    auto surfModel = SmartPointer<viennaps::impl::MultiParticleSurfaceModel<
+    auto surfModel = SmartPointer<::viennaps::impl::MultiParticleSurfaceModel<
         NumericType, D>>::New(fluxDataLabels_);
 
     // velocity field
@@ -28,7 +28,6 @@ public:
     this->setProcessName("MultiParticleProcess");
 
     // Callables
-    this->setCallableFileName("CallableWrapper");
     std::unordered_map<std::string, unsigned> pMap = {{"Neutral", 0},
                                                       {"Ion", 1}};
     std::vector<viennaray::gpu::CallableConfig> cMap = {
@@ -43,6 +42,7 @@ public:
         {1, viennaray::gpu::CallableSlot::INIT,
          "__direct_callable__multiIonInit"}};
     this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
   }
 
   void addNeutralParticle(NumericType stickingProbability,

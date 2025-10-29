@@ -7,6 +7,7 @@
 #include <raygReflection.hpp>
 
 #include <models/psPlasmaEtchingParameters.hpp>
+#include <models/psgPipelineParameters.hpp>
 #include <psMaterials.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
@@ -104,48 +105,33 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
   auto geomNormal = computeNormal(sbtData, prd->primID);
-  auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
-  float angle = acosf(max(min(cosTheta, 1.f), 0.f));
-
-  // Small incident angles are reflected with the energy fraction centered at
-  // 0
-  float Eref_peak = 0.f;
-  float A = 1.f / (1.f + params->Ions.n_l *
-                             (M_PI_2f / params->Ions.inflectAngle - 1.f));
-  if (angle >= params->Ions.inflectAngle) {
-    Eref_peak = 1.f - (1.f - A) * (M_PI_2f - angle) /
-                          (M_PI_2f - params->Ions.inflectAngle);
-  } else {
-    Eref_peak = A * pow(angle / params->Ions.inflectAngle, params->Ions.n_l);
-  }
-
-  // Gaussian distribution around the Eref_peak scaled by the particle energy
-  float newEnergy;
-  do {
-    newEnergy = getNormalDistRand(&prd->RNGstate) * prd->energy * 0.1f +
-                Eref_peak * prd->energy;
-  } while (newEnergy > prd->energy || newEnergy < 0.f);
+  auto cosTheta = __saturatef(
+      -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
+  float angle = acosf(cosTheta);
 
   float sticking = 1.f;
   if (angle > params->Ions.thetaRMin) {
     sticking =
-        1.f - max(min((angle - params->Ions.thetaRMin) /
-                          (params->Ions.thetaRMax - params->Ions.thetaRMin),
-                      1.f),
-                  0.f);
+        1.f - __saturatef((angle - params->Ions.thetaRMin) /
+                          (params->Ions.thetaRMax - params->Ions.thetaRMin));
   }
   prd->rayWeight -= prd->rayWeight * sticking;
 
+  if (prd->rayWeight < launchParams.rayWeightThreshold) {
+    return;
+  }
+
+  viennaps::gpu::impl::updateEnergy(prd, params->Ions.inflectAngle,
+                                    params->Ions.n_l, angle);
+
   // Set the flag to stop tracing if the energy is below the threshold
   float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
-  if (newEnergy > minEnergy &&
-      prd->rayWeight > launchParams.rayWeightThreshold) {
-    prd->energy = newEnergy;
+  if (prd->energy > minEnergy) {
     conedCosineReflection(prd, geomNormal,
                           M_PI_2f - min(angle, params->Ions.minAngle),
                           launchParams.D);
   } else {
-    prd->energy = -1.f; // continueRay checks for >= 0
+    prd->rayWeight = 0.f; // terminate particle
   }
 }
 
