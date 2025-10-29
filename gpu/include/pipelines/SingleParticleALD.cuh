@@ -20,10 +20,10 @@ singleALDNeutralCollision(const void *sbtData,
       reinterpret_cast<const HitSBTDataBase *>(sbtData);
   float *data = (float *)(baseData->cellData);
   for (int i = 0; i < prd->ISCount; ++i) {
-    const float coverage = data[prd->TIndex[i]];
+    const float coverage = data[prd->primIDs[i]];
     const float Seff = launchParams.sticking * max(1.f - coverage, 0.f);
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               prd->rayWeight * Seff);
   }
 }

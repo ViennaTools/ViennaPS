@@ -9,7 +9,6 @@
 #include <models/psgPipelineParameters.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
-using namespace viennaray::gpu;
 
 //
 // --- Neutral particle
@@ -19,7 +18,7 @@ __forceinline__ __device__ void
 multiNeutralCollision(viennaray::gpu::PerRayData *prd) {
   for (int i = 0; i < prd->ISCount; ++i) {
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               prd->rayWeight);
   }
 }
@@ -42,7 +41,7 @@ multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
   for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = computeNormal(sbtData, prd->TIndex[i]);
+    auto geomNormal = computeNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
     float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
 
@@ -56,7 +55,7 @@ multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     }
 
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               flux);
   }
 }

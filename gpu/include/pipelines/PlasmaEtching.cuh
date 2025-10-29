@@ -19,7 +19,7 @@ __forceinline__ __device__ void
 plasmaNeutralCollision(viennaray::gpu::PerRayData *prd) {
   for (int i = 0; i < prd->ISCount; ++i) {
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               prd->rayWeight);
   }
 }
@@ -49,8 +49,8 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
   for (int i = 0; i < prd->ISCount; ++i) {
-    int material = launchParams.materialIds[prd->TIndex[i]];
-    auto geomNormal = computeNormal(sbtData, prd->TIndex[i]);
+    int material = launchParams.materialIds[prd->primIDs[i]];
+    auto geomNormal = computeNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
     float angle = acosf(max(min(cosTheta, 1.f), 0.f));
 
@@ -87,13 +87,13 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
                 f_ie_theta;
 
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               Y_sp * prd->rayWeight);
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               Y_Si * prd->rayWeight);
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(2, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               Y_P * prd->rayWeight);
   }
 }

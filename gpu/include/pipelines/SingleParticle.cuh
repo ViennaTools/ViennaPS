@@ -17,7 +17,7 @@ __forceinline__ __device__ void
 singleNeutralCollision(viennaray::gpu::PerRayData *prd) {
   for (int i = 0; i < prd->ISCount; ++i) {
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               prd->rayWeight);
   }
 }

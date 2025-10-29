@@ -21,7 +21,7 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
   const bool yieldDefined = abs(params->aSum) > 0.f;
 
   for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = computeNormal(sbtData, prd->TIndex[i]);
+    auto geomNormal = computeNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
@@ -39,13 +39,13 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
 
     // flux array
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->TIndex[i]],
+                                         prd->primIDs[i]],
               prd->rayWeight * yield);
 
     if (params->redepositionRate > 0.f) {
       // redeposition array
       atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
-                                           prd->TIndex[i]],
+                                           prd->primIDs[i]],
                 prd->load);
     }
   }

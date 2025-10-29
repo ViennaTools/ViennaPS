@@ -9,7 +9,6 @@
 #include <models/psgPipelineParameters.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
-using namespace viennaray::gpu;
 
 //
 // --- Ion particle
@@ -22,7 +21,7 @@ faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   const bool yieldDefined = abs(params->aSum) > 0.f;
 
   for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = computeNormal(sbtData, prd->TIndex[i]);
+    auto geomNormal = computeNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
@@ -41,14 +40,14 @@ faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     // In the Faraday cage pipeline, all particle write to the same result array
 
     // flux array
-    atomicAdd(&launchParams.resultBuffer[prd->TIndex[i]],
+    atomicAdd(&launchParams.resultBuffer[prd->primIDs[i]],
               prd->rayWeight * yield);
 
     if (params->redepositionRate > 0.f) {
       // redeposition array
-      atomicAdd(
-          &launchParams.resultBuffer[launchParams.numElements + prd->TIndex[i]],
-          prd->load);
+      atomicAdd(&launchParams
+                     .resultBuffer[launchParams.numElements + prd->primIDs[i]],
+                prd->load);
     }
   }
 }
