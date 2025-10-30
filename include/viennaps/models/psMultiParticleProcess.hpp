@@ -1,13 +1,15 @@
 #pragma once
 
 #include "../process/psProcessModel.hpp"
+#include "../psConstants.hpp"
 #include "../psMaterials.hpp"
+#include "psIonModelUtil.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <models/psgPipelineParameters.hpp>
+#include <psgPipelineParameters.hpp>
 #include <raygCallableConfig.hpp>
 #endif
 
@@ -107,28 +109,10 @@ public:
     auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
                                NumericType(1));
     NumericType incomingAngle = std::acos(cosTheta);
-    assert(incomingAngle <= M_PI_2 + 1e-6 && "Error in calculating angle");
-    assert(incomingAngle >= 0 && "Error in calculating angle");
 
     if (energy_ > 0.) {
-      // Small incident angles are reflected with the energy fraction centered
-      // at 0
-      NumericType Eref_peak;
-      if (incomingAngle >= inflectAngle_) {
-        Eref_peak = (1 - (1 - A_) * (M_PI_2 - incomingAngle) /
-                             (M_PI_2 - inflectAngle_));
-      } else {
-        Eref_peak = A_ * std::pow(incomingAngle / inflectAngle_, n_);
-      }
-      // Gaussian distribution around the Eref_peak scaled by the particle
-      // energy
-      NumericType newEnergy;
-      std::normal_distribution<NumericType> normalDist(energy_ * Eref_peak,
-                                                       0.1 * energy_);
-      do {
-        newEnergy = normalDist(rngState);
-      } while (newEnergy > energy_ || newEnergy < 0.);
-      energy_ = newEnergy;
+      energy_ = updateEnergy(rngState, newEnergy, incomingAngle, A_,
+                             inflectAngle_, n_);
     }
 
     NumericType sticking = 1.;
@@ -146,11 +130,8 @@ public:
   void initNew(RNG &rngState) override final {
     energy_ = -1.;
     if (meanEnergy_ > 0.) {
-      std::normal_distribution<NumericType> normalDist{meanEnergy_,
-                                                       sigmaEnergy_};
-      do {
-        energy_ = normalDist(rngState);
-      } while (energy_ <= 0.);
+      energy_ = initNormalDistEnergy(rngState, meanEnergy_, sigmaEnergy_,
+                                     NumericType(0.));
     }
   }
   NumericType getSourceDistributionPower() const override final {

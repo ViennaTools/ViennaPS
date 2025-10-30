@@ -35,10 +35,9 @@ int main(int argc, char **argv) {
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
   rayTracingParams.smoothingNeighbors = 1;
 
-  auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New();
   const NumericType yieldFac = params.get("yieldFactor");
 
-  auto &ibeParams = model->getParameters();
+  IBEParameters<NumericType> ibeParams;
   ibeParams.materialPlaneWaferRate[Material::SiO2] = 1.0;
   ibeParams.materialPlaneWaferRate[Material::Mask] = 1. / 11.;
   ibeParams.exponent = params.get("exponent");
@@ -47,6 +46,7 @@ int main(int argc, char **argv) {
   ibeParams.cos4Yield.a1 = yieldFac;
   ibeParams.cos4Yield.a2 = -1.55;
   ibeParams.cos4Yield.a3 = 0.65;
+  auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New(ibeParams);
 
   Process<NumericType, D> process(geometry, model);
   process.setParameters(advParams);

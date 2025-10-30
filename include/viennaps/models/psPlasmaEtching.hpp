@@ -10,6 +10,7 @@
 #include "../psConstants.hpp"
 #include "../psUnits.hpp"
 
+#include "psIonModelUtil.hpp"
 #include "psPlasmaEtchingParameters.hpp"
 
 namespace viennaps::impl {
@@ -275,23 +276,6 @@ public:
                                NumericType(1));
     NumericType incAngle = std::acos(cosTheta);
 
-    // Small incident angles are reflected with the energy fraction centered at
-    // 0
-    NumericType Eref_peak;
-    if (incAngle >= params.Ions.inflectAngle) {
-      Eref_peak = (1 - (1 - A_energy) * (M_PI_2 - incAngle) /
-                           (M_PI_2 - params.Ions.inflectAngle));
-    } else {
-      Eref_peak = A_energy * std::pow(incAngle / params.Ions.inflectAngle,
-                                      params.Ions.n_l);
-    }
-    // Gaussian distribution around the Eref_peak scaled by the particle energy
-    NumericType newEnergy;
-    std::normal_distribution<NumericType> normalDist(E * Eref_peak, 0.1 * E);
-    do {
-      newEnergy = normalDist(Rng);
-    } while (newEnergy > E || newEnergy < 0.);
-
     NumericType sticking = 1.;
     if (incAngle > params.Ions.thetaRMin) {
       sticking =
@@ -299,6 +283,13 @@ public:
                               (params.Ions.thetaRMax - params.Ions.thetaRMin),
                           NumericType(0.), NumericType(1.));
     }
+
+    if (sticking >= 1.) {
+      return VIENNARAY_PARTICLE_STOP;
+    }
+
+    NumericType newEnergy = updateEnergy(
+        Rng, E, incAngle, A_energy, params.Ions.inflectAngle, params.Ions.n_l);
 
     // Set the flag to stop tracing if the energy is below the threshold
     NumericType minEnergy =
@@ -314,11 +305,8 @@ public:
     }
   }
   void initNew(RNG &rngState) override final {
-    std::normal_distribution<NumericType> normalDist{params.Ions.meanEnergy,
-                                                     params.Ions.sigmaEnergy};
-    do {
-      E = normalDist(rngState);
-    } while (E <= 0.);
+    E = initNormalDistEnergy(rngState, params.Ions.meanEnergy,
+                             params.Ions.sigmaEnergy, NumericType(0.));
   }
   NumericType getSourceDistributionPower() const override final {
     return params.Ions.exponent;

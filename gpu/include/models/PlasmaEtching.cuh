@@ -7,8 +7,8 @@
 #include <raygReflection.hpp>
 
 #include <models/psPlasmaEtchingParameters.hpp>
-#include <models/psgPipelineParameters.hpp>
 #include <psMaterials.hpp>
+#include <psgPipelineParameters.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 

@@ -6,7 +6,7 @@
 #include "raygLaunchParams.hpp"
 #include <raygReflection.hpp>
 
-#include <models/psgPipelineParameters.hpp>
+#include <psgPipelineParameters.hpp>
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 

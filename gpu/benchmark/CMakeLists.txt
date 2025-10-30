@@ -3,13 +3,7 @@ project(ViennaPS-GPU_Benchmark)
 add_custom_target(ViennaPS-GPU_Benchmark ALL)
 
 add_gpu_executable(
-  GPU_Benchmark
-  target_name
-  ${CMAKE_CURRENT_SOURCE_DIR}/GPU_Benchmark.cpp
-  ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineTriangle.cu
-  ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineDisk.cu
-  ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineLine.cu
-  ${VIENNAPS_PIPELINE_DIR}/CallableWrapper.cu)
+  GPU_Benchmark target_name ${CMAKE_CURRENT_SOURCE_DIR}/GPU_Benchmark.cpp)
 add_dependencies(ViennaPS-GPU_Benchmark GPU_Benchmark)
 
 # add_gpu_executable(

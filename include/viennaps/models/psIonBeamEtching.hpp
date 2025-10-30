@@ -4,6 +4,7 @@
 #include "../psConstants.hpp"
 #include "../psMaterials.hpp"
 #include "psIonBeamParameters.hpp"
+#include "psIonModelUtil.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -12,7 +13,7 @@
 #include <random>
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <models/psgPipelineParameters.hpp>
+#include <psgPipelineParameters.hpp>
 #include <raygCallableConfig.hpp>
 #endif
 
@@ -180,21 +181,8 @@ public:
     }
 
     // Calculate new energy after reflection
-    NumericType Eref_peak;
-    if (theta >= inflectAngle_) {
-      Eref_peak = 1. - (1. - A_) * (M_PI_2 - theta) / (M_PI_2 - inflectAngle_);
-    } else {
-      Eref_peak = A_ * std::pow(theta / inflectAngle_, params_.n_l);
-    }
-
-    // Gaussian distribution around the Eref_peak scaled by the particle
-    // energy
-    NumericType newEnergy;
-    std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
-                                                     0.1 * energy_);
-    do {
-      newEnergy = normalDist(rngState);
-    } while (newEnergy > energy_ || newEnergy < 0.);
+    NumericType newEnergy =
+        updateEnergy(rngState, energy_, theta, A_, inflectAngle_, params_.n_l);
 
     if (newEnergy > params_.thresholdEnergy ||
         redepositionWeight_ > params_.redepositionThreshold) {
@@ -208,9 +196,9 @@ public:
   }
 
   void initNew(RNG &rngState) override {
-    do {
-      energy_ = normalDist_(rngState);
-    } while (energy_ < params_.thresholdEnergy);
+    energy_ =
+        initNormalDistEnergy(rngState, params_.meanEnergy, params_.sigmaEnergy,
+                             params_.thresholdEnergy);
     redepositionWeight_ = 0.;
   }
 
@@ -338,6 +326,9 @@ private:
 template <typename NumericType, int D>
 class IonBeamEtching : public ProcessModelCPU<NumericType, D> {
 public:
+  IonBeamEtching(const IBEParameters<NumericType> &params)
+      : IonBeamEtching(params, {}) {}
+
   IonBeamEtching(const IBEParameters<NumericType> &params,
                  const std::vector<Material> &maskMaterial)
       : maskMaterials_(maskMaterial), params_(params) {

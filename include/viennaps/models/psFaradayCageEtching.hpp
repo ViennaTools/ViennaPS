@@ -6,7 +6,7 @@
 #include "../psMaterials.hpp"
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <models/psgPipelineParameters.hpp>
+#include <psgPipelineParameters.hpp>
 #endif
 
 #include <functional>
