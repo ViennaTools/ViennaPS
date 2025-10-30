@@ -85,9 +85,6 @@
 #ifdef VIENNACORE_COMPILE_GPU
 #include <vcContext.hpp>
 #include <vcCudaBuffer.hpp>
-
-#include <models/psgFaradayCageEtching.hpp>
-#include <models/psgMultiParticleProcess.hpp>
 #endif
 
 using namespace viennaps;

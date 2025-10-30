@@ -111,8 +111,8 @@ public:
     NumericType incomingAngle = std::acos(cosTheta);
 
     if (energy_ > 0.) {
-      energy_ = updateEnergy(rngState, newEnergy, incomingAngle, A_,
-                             inflectAngle_, n_);
+      energy_ =
+          updateEnergy(rngState, energy_, incomingAngle, A_, inflectAngle_, n_);
     }
 
     NumericType sticking = 1.;
