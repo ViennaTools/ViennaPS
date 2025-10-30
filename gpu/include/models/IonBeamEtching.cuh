@@ -103,9 +103,8 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
 __forceinline__ __device__ void IBEInit(viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  do {
-    prd->energy = getNormalDistRand(&prd->RNGstate) * params->sigmaEnergy +
-                  params->meanEnergy;
-  } while (prd->energy < params->thresholdEnergy * params->thresholdEnergy);
+  viennaps::gpu::impl::initNormalDistEnergy(
+      prd, params->meanEnergy, params->sigmaEnergy,
+      params->thresholdEnergy * params->thresholdEnergy);
   prd->load = 0.f;
 }

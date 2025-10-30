@@ -94,10 +94,9 @@ __forceinline__ __device__ void multiIonInit(viennaray::gpu::PerRayData *prd) {
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
 
   if (params->meanEnergy > 0.f) {
-    do {
-      prd->energy = getNormalDistRand(&prd->RNGstate) * params->sigmaEnergy +
-                    params->meanEnergy;
-    } while (prd->energy <= 0.f);
+    viennaps::gpu::impl::initNormalDistEnergy(
+        prd, params->meanEnergy, params->sigmaEnergy,
+        params->thresholdEnergy * params->thresholdEnergy);
   } else {
     prd->energy = std::numeric_limits<float>::max();
   }

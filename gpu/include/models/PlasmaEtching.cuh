@@ -141,8 +141,6 @@ __forceinline__ __device__ void plasmaIonInit(viennaray::gpu::PerRayData *prd) {
           launchParams.customData);
 
   float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
-  do {
-    prd->energy = getNormalDistRand(&prd->RNGstate) * params->Ions.sigmaEnergy +
-                  params->Ions.meanEnergy;
-  } while (prd->energy < minEnergy);
+  viennaps::gpu::impl::initNormalDistEnergy(
+      prd, params->Ions.meanEnergy, params->Ions.sigmaEnergy, minEnergy);
 }
