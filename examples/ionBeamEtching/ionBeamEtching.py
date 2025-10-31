@@ -18,8 +18,6 @@ else:
     print("Running 3D simulation.")
 ps.setDimension(args.dim)
 
-ps.Logger.setLogLevel(ps.LogLevel.INTERMEDIATE)
-
 params = ps.readConfigFile(args.filename)
 
 geometry = ps.Domain(
@@ -40,6 +38,8 @@ geometry.duplicateTopLevelSet(ps.Material.Polymer)
 ibeParams = ps.IBEParameters()
 ibeParams.tiltAngle = params["angle"]
 ibeParams.exponent = params["exponent"]
+ibeParams.thetaRMin = 0.0
+ibeParams.thetaRMax = 15.0
 
 ibeParams.meanEnergy = params["meanEnergy"]
 ibeParams.sigmaEnergy = params["sigmaEnergy"]

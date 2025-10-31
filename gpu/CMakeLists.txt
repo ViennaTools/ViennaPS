@@ -22,9 +22,6 @@ endif()
 set(VIENNAPS_GPU_INCLUDE
     "${PROJECT_SOURCE_DIR}/include"
     CACHE STRING "Includes for ViennaPS GPU processing.")
-set(VIENNAPS_PIPELINE_DIR
-    "${PROJECT_SOURCE_DIR}/include/pipelines"
-    CACHE STRING "Pre-built pipelines for OptiX")
 set(VIENNAPS_CUDA_KERNELS
     ""
     CACHE STRING "ViennaPS CUDA kernel source files.")

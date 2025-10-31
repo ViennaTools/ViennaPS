@@ -174,6 +174,11 @@ public:
     // Callables
     /// TODO: Implement GPU callable functions for ALD particle-surface
     /// interactions
+    Logger::getInstance()
+        .addError("GPU SingleParticleALD model does not yet implement "
+                  "particle-surface "
+                  "interactions on the GPU. Using CPU implementations instead.")
+        .print();
 
     this->processMetaData["stickingProbability"] =
         std::vector<double>{stickingProbability};

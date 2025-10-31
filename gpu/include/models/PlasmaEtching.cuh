@@ -52,14 +52,14 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   for (int i = 0; i < prd->ISCount; ++i) {
     int material = launchParams.materialIds[prd->primIDs[i]];
     auto geomNormal = computeNormal(sbtData, prd->primIDs[i]);
-    auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
-    float angle = acosf(max(min(cosTheta, 1.f), 0.f));
+    auto cosTheta = __saturatef(
+        -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
+    float angle = acosf(cosTheta);
 
     float A_sp = params->Substrate.A_sp;
     float B_sp = params->Substrate.B_sp;
     float Eth_sp = params->Substrate.Eth_sp;
-    if (categoryOf(static_cast<viennaps::Material>(material)) ==
-        viennaps::MaterialCategory::Hardmask) {
+    if (static_cast<viennaps::Material>(material) == viennaps::Material::Mask) {
       // mask
       A_sp = params->Mask.A_sp;
       B_sp = params->Mask.B_sp;
