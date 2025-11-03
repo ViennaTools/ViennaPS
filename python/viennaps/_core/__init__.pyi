@@ -7,8 +7,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
@@ -1141,5 +1141,5 @@ def gpuAvailable() -> bool:
 
 def setNumThreads(arg0: typing.SupportsInt) -> None: ...
 
-__version__: str = "4.0.0"
-version: str = "4.0.0"
+__version__: str = "4.0.1"
+version: str = "4.0.1"

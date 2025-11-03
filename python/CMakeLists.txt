@@ -72,7 +72,7 @@ if(VIENNAPS_USE_GPU)
 
   # Include pipelines of models
   generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                      "${VIENNAPS_GPU_INCLUDE}/models/CallableWrapper.cu")
+                    "${VIENNAPS_GPU_INCLUDE}/models/CallableWrapper.cu")
 
   # ViennaRay general pipelines
   generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
