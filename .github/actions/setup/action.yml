@@ -31,3 +31,9 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
+
+    - name: 🐍 Install Python (macOS)
+      if: ${{ inputs.os == 'macos-latest' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
