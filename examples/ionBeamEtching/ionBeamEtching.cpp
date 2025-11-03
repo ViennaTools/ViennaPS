@@ -21,7 +21,8 @@ int main(int argc, char *argv[]) {
   }
 
   auto geometry = Domain<NumericType, D>::New(
-      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"),
+      BoundaryType::PERIODIC_BOUNDARY);
   MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
                              params.get("trenchDepth"),
                              0.0 /*trenchTaperAngle*/, params.get("maskHeight"))
@@ -33,6 +34,8 @@ int main(int argc, char *argv[]) {
   IBEParameters<NumericType> ibeParams;
   ibeParams.tiltAngle = params.get("angle");
   ibeParams.exponent = params.get("exponent");
+  ibeParams.thetaRMin = 0.;
+  ibeParams.thetaRMax = 15.;
 
   ibeParams.meanEnergy = params.get("meanEnergy");
   ibeParams.sigmaEnergy = params.get("sigmaEnergy");
@@ -42,19 +45,17 @@ int main(int argc, char *argv[]) {
   ibeParams.planeWaferRate = params.get("planeWaferRate");
 
   auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New(
-      std::vector<Material>{Material::Mask}, ibeParams);
+      ibeParams, std::vector<Material>{Material::Mask});
   Vec3D<NumericType> direction{0., 0., 0.};
+  direction[0] = std::sin(ibeParams.tiltAngle * M_PI / 180.);
   direction[D - 1] = -std::cos(ibeParams.tiltAngle * M_PI / 180.);
-  direction[D - 2] = std::sin(ibeParams.tiltAngle * M_PI / 180.);
   model->setPrimaryDirection(direction);
 
   AdvectionParameters advectionParams;
   advectionParams.integrationScheme =
       viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
 
-  Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
+  Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("processTime"));
   process.setParameters(advectionParams);
 

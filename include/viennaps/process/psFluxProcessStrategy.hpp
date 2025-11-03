@@ -91,6 +91,13 @@ private:
       return ProcessResult::INVALID_INPUT;
     }
 
+    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
+      Logger::getInstance()
+          .addDebug("Process parameters:" +
+                    util::metaDataToString(context.model->getProcessMetaData()))
+          .print();
+    }
+
     return ProcessResult::SUCCESS;
   }
 

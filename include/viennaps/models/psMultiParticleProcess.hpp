@@ -1,10 +1,17 @@
 #pragma once
 
 #include "../process/psProcessModel.hpp"
+#include "../psConstants.hpp"
 #include "../psMaterials.hpp"
+#include "psIonModelUtil.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
+
+#ifdef VIENNACORE_COMPILE_GPU
+#include <psgPipelineParameters.hpp>
+#include <raygCallableConfig.hpp>
+#endif
 
 #include <numeric>
 
@@ -102,35 +109,22 @@ public:
     auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
                                NumericType(1));
     NumericType incomingAngle = std::acos(cosTheta);
-    assert(incomingAngle <= M_PI_2 + 1e-6 && "Error in calculating angle");
-    assert(incomingAngle >= 0 && "Error in calculating angle");
-
-    if (energy_ > 0.) {
-      // Small incident angles are reflected with the energy fraction centered
-      // at 0
-      NumericType Eref_peak;
-      if (incomingAngle >= inflectAngle_) {
-        Eref_peak = (1 - (1 - A_) * (M_PI_2 - incomingAngle) /
-                             (M_PI_2 - inflectAngle_));
-      } else {
-        Eref_peak = A_ * std::pow(incomingAngle / inflectAngle_, n_);
-      }
-      // Gaussian distribution around the Eref_peak scaled by the particle
-      // energy
-      NumericType newEnergy;
-      std::normal_distribution<NumericType> normalDist(energy_ * Eref_peak,
-                                                       0.1 * energy_);
-      do {
-        newEnergy = normalDist(rngState);
-      } while (newEnergy > energy_ || newEnergy < 0.);
-      energy_ = newEnergy;
-    }
 
     NumericType sticking = 1.;
-    if (incomingAngle > thetaRMin_)
+    if (incomingAngle > thetaRMin_) {
       sticking = 1. - std::min((incomingAngle - thetaRMin_) /
                                    (thetaRMax_ - thetaRMin_),
                                NumericType(1.));
+    }
+
+    if (sticking >= 1.) {
+      return VIENNARAY_PARTICLE_STOP;
+    }
+
+    if (energy_ > 0.) {
+      energy_ =
+          updateEnergy(rngState, energy_, incomingAngle, A_, inflectAngle_, n_);
+    }
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
         rayDir, geomNormal, rngState,
@@ -139,13 +133,9 @@ public:
     return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
   }
   void initNew(RNG &rngState) override final {
-    energy_ = -1.;
     if (meanEnergy_ > 0.) {
-      std::normal_distribution<NumericType> normalDist{meanEnergy_,
-                                                       sigmaEnergy_};
-      do {
-        energy_ = normalDist(rngState);
-      } while (energy_ <= 0.);
+      energy_ = initNormalDistEnergy(rngState, meanEnergy_, sigmaEnergy_,
+                                     NumericType(0.));
     }
   }
   NumericType getSourceDistributionPower() const override final {
@@ -156,7 +146,7 @@ public:
   }
 
 private:
-  NumericType energy_;
+  NumericType energy_ = 0.;
 
   const NumericType sourcePower_;
 
@@ -173,7 +163,6 @@ private:
   const NumericType minAngle_;
   const NumericType A_;
   const NumericType n_;
-  std::normal_distribution<NumericType> normalDist_;
 
   const std::string dataLabel_;
 };
@@ -226,6 +215,166 @@ private:
   const std::string dataLabel_;
 };
 } // namespace impl
+
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+
+template <typename NumericType, int D>
+class MultiParticleProcess final : public ProcessModelGPU<NumericType, D> {
+public:
+  MultiParticleProcess() {
+    // surface model
+    auto surfModel = SmartPointer<::viennaps::impl::MultiParticleSurfaceModel<
+        NumericType, D>>::New(fluxDataLabels_);
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("MultiParticleProcess");
+
+    // Callables
+    std::unordered_map<std::string, unsigned> pMap = {{"Neutral", 0},
+                                                      {"Ion", 1}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__multiNeutralCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__multiNeutralReflection"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__multiIonCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__multiIonReflection"},
+        {1, viennaray::gpu::CallableSlot::INIT,
+         "__direct_callable__multiIonInit"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
+  }
+
+  void addNeutralParticle(NumericType stickingProbability,
+                          const std::string &label = "neutralFlux") {
+    std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
+    fluxDataLabels_.push_back(dataLabel);
+    viennaray::gpu::Particle<NumericType> particle;
+    particle.name = "Neutral";
+    particle.sticking = stickingProbability;
+    particle.dataLabels.push_back(dataLabel);
+    particle.materialSticking[static_cast<int>(Material::Undefined)] =
+        1.; // this will initialize all to default sticking
+
+    this->insertNextParticleType(particle);
+    this->setUseMaterialIds(true);
+
+    addStickingData(stickingProbability);
+  }
+
+  void
+  addNeutralParticle(std::unordered_map<Material, NumericType> materialSticking,
+                     NumericType defaultStickingProbability = 1.,
+                     const std::string &label = "neutralFlux") {
+    std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
+    fluxDataLabels_.push_back(dataLabel);
+
+    viennaray::gpu::Particle<NumericType> particle;
+    particle.name = "Neutral";
+    particle.sticking = defaultStickingProbability;
+    particle.dataLabels.push_back(dataLabel);
+    for (auto &mat : materialSticking) {
+      particle.materialSticking[static_cast<int>(mat.first)] = mat.second;
+    }
+
+    this->insertNextParticleType(particle);
+    this->setUseMaterialIds(true);
+
+    addStickingData(defaultStickingProbability);
+  }
+
+  void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
+                      NumericType thetaRMax = 90., NumericType minAngle = 80.,
+                      NumericType B_sp = -1., NumericType meanEnergy = 0.,
+                      NumericType sigmaEnergy = 0.,
+                      NumericType thresholdEnergy = 0.,
+                      NumericType inflectAngle = 0., NumericType n = 1,
+                      const std::string &label = "ionFlux") {
+    std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
+    fluxDataLabels_.push_back(dataLabel);
+
+    viennaray::gpu::Particle<NumericType> particle;
+    particle.name = "Ion";
+    particle.dataLabels.push_back(dataLabel);
+    setDirection(particle);
+    particle.cosineExponent = sourcePower;
+
+    impl::IonParams params;
+    params.thetaRMin = constants::degToRad(thetaRMin);
+    params.thetaRMax = constants::degToRad(thetaRMax);
+    params.minAngle = constants::degToRad(minAngle);
+    params.B_sp = B_sp;
+    params.meanEnergy = meanEnergy;
+    params.sigmaEnergy = sigmaEnergy;
+    params.thresholdEnergy = std::sqrt(thresholdEnergy);
+    params.inflectAngle = constants::degToRad(inflectAngle);
+    params.n_l = n;
+    this->processData.allocUploadSingle(params);
+    this->insertNextParticleType(particle);
+
+    addIonData({{"SourcePower", sourcePower},
+                {"MeanEnergy", meanEnergy},
+                {"SigmaEnergy", sigmaEnergy},
+                {"ThresholdEnergy", thresholdEnergy},
+                {"B_sp", B_sp},
+                {"ThetaRMin", thetaRMin},
+                {"ThetaRMax", thetaRMax},
+                {"InflectAngle", inflectAngle},
+                {"MinAngle", minAngle},
+                {"n", n}});
+  }
+
+  void
+  setRateFunction(std::function<NumericType(const std::vector<NumericType> &,
+                                            const Material &)>
+                      rateFunction) {
+    auto surfModel = std::dynamic_pointer_cast<
+        viennaps::impl::MultiParticleSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    surfModel->rateFunction_ = rateFunction;
+  }
+
+private:
+  std::vector<std::string> fluxDataLabels_;
+  using ProcessModelBase<NumericType, D>::processMetaData;
+
+  void setDirection(viennaray::gpu::Particle<NumericType> &particle) {
+    auto direction = this->getPrimaryDirection();
+    if (direction.has_value()) {
+      particle.direction = direction.value();
+    }
+    particle.useCustomDirection = true;
+  }
+
+  void addStickingData(NumericType stickingProbability) {
+    if (processMetaData.find("StickingProbability") == processMetaData.end()) {
+      processMetaData["StickingProbability"] =
+          std::vector<double>{stickingProbability};
+    } else {
+      processMetaData["StickingProbability"].push_back(stickingProbability);
+    }
+  }
+
+  void addIonData(std::vector<std::pair<std::string, NumericType>> data) {
+    for (const auto &pair : data) {
+      if (processMetaData.find(pair.first) == processMetaData.end()) {
+        processMetaData[pair.first] = std::vector<double>{pair.second};
+      } else {
+        processMetaData[pair.first].push_back(pair.second);
+      }
+    }
+  }
+};
+
+} // namespace gpu
+#endif
 
 template <typename NumericType, int D>
 class MultiParticleProcess : public ProcessModelCPU<NumericType, D> {

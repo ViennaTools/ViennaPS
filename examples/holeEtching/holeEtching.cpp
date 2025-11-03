@@ -10,7 +10,6 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -19,7 +18,8 @@ int main(int argc, char *argv[]) {
     params.readConfigFile(argv[1]);
   } else {
     std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    return 1;
+    // return 1;
+    params.readConfigFile("config.txt");
   }
 
   // set parameter units

@@ -70,14 +70,9 @@ if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps' python package")
   include("../cmake/generate_ptx.cmake")
 
-  # Include pipeline files
-  set(generated_files) # Empty list variable
-  file(GLOB files "${VIENNAPS_PIPELINE_DIR}/*.cu")
-  foreach(file ${files})
-    get_filename_component(filename ${file} NAME)
-    generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                      "${VIENNAPS_PIPELINE_DIR}/${filename}")
-  endforeach()
+  # Include pipelines of models
+  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
+                    "${VIENNAPS_GPU_INCLUDE}/models/CallableWrapper.cu")
 
   # ViennaRay general pipelines
   generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files

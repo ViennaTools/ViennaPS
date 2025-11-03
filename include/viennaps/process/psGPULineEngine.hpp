@@ -110,6 +110,7 @@ public:
         .apply();
 
     std::vector<Vec3D<NumericType>> elementCenters(surfaceMesh_->lines.size());
+    std::vector<Vec3Df> fLineNormals(surfaceMesh_->lines.size());
     for (int i = 0; i < surfaceMesh_->lines.size(); ++i) {
       Vec3D<NumericType> p0 = {
           surfaceMesh_->nodes[surfaceMesh_->lines[i][0]][0],
@@ -120,6 +121,14 @@ public:
           surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][1],
           surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][2]};
       elementCenters[i] = (p0 + p1) / NumericType(2);
+
+      Vec3D<NumericType> lineDir = p1 - p0;
+      Vec3D<NumericType> normal =
+          Vec3D<NumericType>{-lineDir[1], lineDir[0], 0};
+      Normalize(normal);
+      fLineNormals[i] =
+          Vec3Df{static_cast<float>(normal[0]), static_cast<float>(normal[1]),
+                 static_cast<float>(normal[2])};
     }
     elementKdTree_->setPoints(elementCenters);
     elementKdTree_->build();
@@ -139,7 +148,8 @@ public:
     float gridDelta = static_cast<float>(context.domain->getGridDelta());
 
     const viennaray::gpu::LineMesh lineMeshRay{
-        fNodes, surfaceMesh_->lines, fMinExtent, fMaxExtent, gridDelta};
+        fNodes,     surfaceMesh_->lines, fLineNormals,
+        fMinExtent, fMaxExtent,          gridDelta};
 
     rayTracer_.setGeometry(lineMeshRay);
 

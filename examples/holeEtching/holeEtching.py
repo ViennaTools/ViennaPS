@@ -55,6 +55,7 @@ covParams.tolerance = 1e-4
 
 rayParams = ps.RayTracingParameters()
 rayParams.raysPerPoint = int(params["raysPerPoint"])
+rayParams.smoothingNeighbors = 2
 
 advParams = ps.AdvectionParameters()
 advParams.integrationScheme = ps.util.convertIntegrationScheme(
@@ -75,4 +76,4 @@ geometry.saveSurfaceMesh(filename="initial.vtp")
 process.apply()
 
 # print final surface
-geometry.saveSurfaceMesh(filename="final.vtp")
+geometry.saveSurfaceMesh(filename="final.vtp", addInterfaces=True)

@@ -7,6 +7,8 @@
 #include "../psMaterials.hpp"
 #include "../psUnits.hpp"
 
+#include "psIonModelUtil.hpp"
+
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
@@ -407,24 +409,12 @@ public:
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
 
-    // Small incident angles are reflected with the energy fraction centered
-    // at
-    // 0
-    NumericType incAngle = std::acos(-DotProduct(rayDir, geomNormal));
-    NumericType Eref_peak;
-    if (incAngle >= p.Ions.inflectAngle) {
-      Eref_peak =
-          1. - (1. - A) * (M_PI_2 - incAngle) / (M_PI_2 - p.Ions.inflectAngle);
-    } else {
-      Eref_peak = A * std::pow(incAngle / p.Ions.inflectAngle, p.Ions.n_l);
-    }
-    // Gaussian distribution around the Eref_peak scaled by the particle
-    // energy
-    NumericType newEnergy;
-    std::normal_distribution<NumericType> normalDist(Eref_peak * E, 0.1 * E);
-    do {
-      newEnergy = normalDist(Rng);
-    } while (newEnergy > E || newEnergy < 0.);
+    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
+                               NumericType(1));
+    NumericType incAngle = std::acos(cosTheta);
+
+    NumericType newEnergy =
+        updateEnergy(Rng, E, incAngle, A, p.Ions.inflectAngle, p.Ions.n_l);
 
     if (newEnergy > minEnergy) {
       E = newEnergy;
@@ -433,16 +423,14 @@ public:
           M_PI_2 - std::min(incAngle, p.Ions.minAngle));
       return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
     } else {
-      return std::pair<NumericType, Vec3D<NumericType>>{
-          1., Vec3D<NumericType>{0., 0., 0.}};
+      return VIENNARAY_PARTICLE_STOP;
     }
   }
   void initNew(RNG &RNG) override final {
     std::normal_distribution<NumericType> normalDist{p.Ions.meanEnergy,
                                                      p.Ions.sigmaEnergy};
-    do {
-      E = normalDist(RNG);
-    } while (E < minEnergy);
+    E = initNormalDistEnergy(RNG, p.Ions.meanEnergy, p.Ions.sigmaEnergy,
+                             minEnergy);
   }
   NumericType getSourceDistributionPower() const override final {
     return p.Ions.exponent;

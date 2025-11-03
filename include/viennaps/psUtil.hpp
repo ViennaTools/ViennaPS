@@ -102,4 +102,16 @@ convertIntegrationSchemeToString(viennals::IntegrationSchemeEnum scheme) {
   }
   return viennaray::BoundaryCondition::IGNORE;
 }
+
+[[nodiscard]] inline std::string metaDataToString(
+    const std::unordered_map<std::string, std::vector<double>> &metaData) {
+  std::string result;
+  for (const auto &item : metaData) {
+    result += "\n" + item.first + ": ";
+    for (const auto &value : item.second) {
+      result += std::to_string(value) + " ";
+    }
+  }
+  return result;
+}
 }; // namespace viennacore::util

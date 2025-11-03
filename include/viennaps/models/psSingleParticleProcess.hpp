@@ -100,6 +100,15 @@ public:
         .cosineExponent = sourceExponent};
     particle.dataLabels.push_back("particleFlux");
 
+    std::unordered_map<std::string, unsigned> pMap = {{"SingleParticle", 0}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__singleNeutralCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__singleNeutralReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
+
     // surface model
     auto surfModel = SmartPointer<::viennaps::impl::SingleParticleSurfaceModel<
         NumericType, D>>::New(rate, materialRates);
@@ -108,19 +117,11 @@ public:
     auto velField =
         SmartPointer<::viennaps::DefaultVelocityField<NumericType, D>>::New();
 
-    this->setCallableFileName("CallableWrapper");
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleProcess");
     this->hasGPU = true;
-    std::unordered_map<std::string, unsigned> pMap = {{"SingleParticle", 0}};
-    std::vector<viennaray::gpu::CallableConfig> cMap = {
-        {0, viennaray::gpu::CallableSlot::COLLISION,
-         "__direct_callable__singleNeutralCollision"},
-        {0, viennaray::gpu::CallableSlot::REFLECTION,
-         "__direct_callable__singleNeutralReflection"}};
-    this->setParticleCallableMap(pMap, cMap);
 
     this->processMetaData["Default Rate"] = std::vector<double>{rate};
     this->processMetaData["Sticking Probability"] =

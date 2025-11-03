@@ -351,6 +351,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("k_ev", &FluorocarbonParameters<T>::k_ev)
       .def_readwrite("Ions", &FluorocarbonParameters<T>::Ions);
 
+  py::class_<IBEParameters<T>::cos4YieldType>(module, "IBEParametersCos4Yield")
+      .def(py::init<>())
+      .def_readwrite("a1", &IBEParameters<T>::cos4YieldType::a1)
+      .def_readwrite("a2", &IBEParameters<T>::cos4YieldType::a2)
+      .def_readwrite("a3", &IBEParameters<T>::cos4YieldType::a3)
+      .def_readwrite("a4", &IBEParameters<T>::cos4YieldType::a4)
+      .def_readwrite("isDefined", &IBEParameters<T>::cos4YieldType::isDefined)
+      .def("aSum", &IBEParameters<T>::cos4YieldType::aSum);
+
   // Ion Beam Etching Parameters
   py::class_<IBEParameters<T>>(module, "IBEParameters")
       .def(py::init<>())
@@ -360,15 +369,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("meanEnergy", &IBEParameters<T>::meanEnergy)
       .def_readwrite("sigmaEnergy", &IBEParameters<T>::sigmaEnergy)
       .def_readwrite("thresholdEnergy", &IBEParameters<T>::thresholdEnergy)
-      .def_readwrite("exponent", &IBEParameters<T>::exponent)
       .def_readwrite("n_l", &IBEParameters<T>::n_l)
       .def_readwrite("inflectAngle", &IBEParameters<T>::inflectAngle)
       .def_readwrite("minAngle", &IBEParameters<T>::minAngle)
       .def_readwrite("tiltAngle", &IBEParameters<T>::tiltAngle)
-      .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction)
+      .def_readwrite("exponent", &IBEParameters<T>::exponent)
+      //   .def_readwrite("yieldFunction", &IBEParameters<T>::yieldFunction) //
+      //   problem with GIL
+      .def_readwrite("cos4Yield", &IBEParameters<T>::cos4Yield)
+      .def_readwrite("thetaRMin", &IBEParameters<T>::thetaRMin)
+      .def_readwrite("thetaRMax", &IBEParameters<T>::thetaRMax)
       .def_readwrite("redepositionThreshold",
                      &IBEParameters<T>::redepositionThreshold)
-      .def_readwrite("redepositionRate", &IBEParameters<T>::redepositionRate);
+      .def_readwrite("redepositionRate", &IBEParameters<T>::redepositionRate)
+      .def("toProcessMetaData", &IBEParameters<T>::toProcessMetaData,
+           "Convert the IBE parameters to a metadata dict.");
 
   // Faraday Cage Etching
   py::class_<FaradayCageParameters<T>>(module, "FaradayCageParameters")

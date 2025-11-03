@@ -117,7 +117,7 @@ function(add_GPU_executable target_name_base target_name_var)
   list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineDisk.cu)
   list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineTriangle.cu)
   list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineLine.cu)
-  list(APPEND cu_optix_source_files ${VIENNAPS_GPU_INCLUDE}/pipelines/CallableWrapper.cu)
+  list(APPEND cu_optix_source_files ${VIENNAPS_GPU_INCLUDE}/models/CallableWrapper.cu)
 
   # Wrap OptiX pipeline files.
   if(VIENNAPS_GENERATE_OPTIXIR)

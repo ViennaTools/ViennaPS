@@ -8,6 +8,7 @@
 #include "../psUnits.hpp"
 
 #include "psCF4O2Parameters.hpp"
+#include "psIonModelUtil.hpp"
 
 namespace viennaps {
 
@@ -301,22 +302,8 @@ public:
         std::acos(std::max(std::min(cosTheta, static_cast<NumericType>(1.)),
                            static_cast<NumericType>(0.)));
 
-    // Small incident angles are reflected with the energy fraction centered at
-    // 0
-    NumericType Eref_peak;
-    if (incAngle >= params.Ions.inflectAngle) {
-      Eref_peak = (1 - (1 - A_energy) * (M_PI_2 - incAngle) /
-                           (M_PI_2 - params.Ions.inflectAngle));
-    } else {
-      Eref_peak = A_energy * std::pow(incAngle / params.Ions.inflectAngle,
-                                      params.Ions.n_l);
-    }
-    // Gaussian distribution around the Eref_peak scaled by the particle energy
-    NumericType NewEnergy;
-    std::normal_distribution<NumericType> normalDist(E * Eref_peak, 0.1 * E);
-    do {
-      NewEnergy = normalDist(Rng);
-    } while (NewEnergy > E || NewEnergy < 0.);
+    NumericType NewEnergy = updateEnergy(
+        Rng, E, incAngle, A_energy, params.Ions.inflectAngle, params.Ions.n_l);
 
     NumericType sticking = 0.;
     // NumericType sticking = 1.;
@@ -335,16 +322,12 @@ public:
           M_PI_2 - std::min(incAngle, params.Ions.minAngle));
       return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
     } else {
-      return std::pair<NumericType, Vec3D<NumericType>>{
-          1., Vec3D<NumericType>{0., 0., 0.}};
+      return VIENNARAY_PARTICLE_STOP;
     }
   }
   void initNew(RNG &rngState) override {
-    std::normal_distribution<NumericType> normalDist{params.Ions.meanEnergy,
-                                                     params.Ions.sigmaEnergy};
-    do {
-      E = normalDist(rngState);
-    } while (E <= 0.);
+    E = initNormalDistEnergy(rngState, params.Ions.meanEnergy,
+                             params.Ions.sigmaEnergy, NumericType(0.));
   }
   NumericType getSourceDistributionPower() const override {
     return params.Ions.exponent;

@@ -1,6 +1,7 @@
 // #pragma once
 
 #include "FaradayCage.cuh"
+#include "IonBeamEtching.cuh"
 #include "MultiParticle.cuh"
 #include "PlasmaEtching.cuh"
 #include "SingleParticle.cuh"
@@ -111,6 +112,27 @@ __direct_callable__plasmaIonInit(const void *,
 }
 
 //
+// --- IonBeamEtching pipeline
+//
+
+extern "C" __device__ void
+__direct_callable__IBECollision(const void *sbtData,
+                                viennaray::gpu::PerRayData *prd) {
+  IBECollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__IBEReflection(const void *sbtData,
+                                 viennaray::gpu::PerRayData *prd) {
+  IBEReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__IBEInit(const void *, viennaray::gpu::PerRayData *prd) {
+  IBEInit(prd);
+}
+
+//
 // --- FaradayCage pipeline
 //
 
@@ -118,10 +140,4 @@ extern "C" __device__ void
 __direct_callable__faradayCollision(const void *sbtData,
                                     viennaray::gpu::PerRayData *prd) {
   faradayIonCollision(sbtData, prd);
-}
-
-extern "C" __device__ void
-__direct_callable__faradayReflection(const void *sbtData,
-                                     viennaray::gpu::PerRayData *prd) {
-  faradayIonReflection(sbtData, prd);
 }

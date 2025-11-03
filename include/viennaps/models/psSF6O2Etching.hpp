@@ -89,10 +89,11 @@ private:
     this->setParticleCallableMap(pMap, cMap);
     this->setCallableFileName("CallableWrapper");
 
+    this->setUseMaterialIds(true);
     this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
     this->processData.upload(&deviceParams, 1);
+    this->hasGPU = true;
 
-    this->setUseMaterialIds(true);
     this->processMetaData = params.toProcessMetaData();
   }
 

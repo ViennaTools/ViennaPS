@@ -1,8 +1,10 @@
 #pragma once
 
 #include "../process/psProcessModel.hpp"
+#include "../psConstants.hpp"
 #include "../psMaterials.hpp"
 #include "psIonBeamParameters.hpp"
+#include "psIonModelUtil.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -10,8 +12,9 @@
 #include <functional>
 #include <random>
 
-#ifdef VIENNATOOLS_PYTHON_BUILD
-#include <Python.h>
+#ifdef VIENNACORE_COMPILE_GPU
+#include <psgPipelineParameters.hpp>
+#include <raygCallableConfig.hpp>
 #endif
 
 namespace viennaps {
@@ -25,6 +28,9 @@ class IBESurfaceModel : public SurfaceModel<NumericType> {
   const std::vector<Material> maskMaterials_;
 
 public:
+  constexpr static const char *fluxLabel = "ionFlux";
+  constexpr static const char *redepositionLabel = "redepositionFlux";
+
   IBESurfaceModel(const IBEParameters<NumericType> &params,
                   const std::vector<Material> &mask)
       : params_(params), maskMaterials_(mask) {}
@@ -36,13 +42,30 @@ public:
 
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
-    auto flux = rates->getScalarData("ionFlux");
-    auto redeposition = rates->getScalarData("redepositionFlux");
+    auto flux = rates->getScalarData(fluxLabel);
+    std::vector<NumericType> redeposition(materialIds.size(), 0.);
+    if (params_.redepositionRate > 0.) {
+      redeposition = *rates->getScalarData(redepositionLabel);
+    }
+
+    NumericType yield;
+    NumericType theta = constants::degToRad(params_.tiltAngle);
+    NumericType cosTheta = std::cos(theta);
+    if (params_.cos4Yield.isDefined) {
+      NumericType cosTheta2 = cosTheta * cosTheta;
+      yield =
+          (params_.cos4Yield.a1 * cosTheta + params_.cos4Yield.a2 * cosTheta2 +
+           params_.cos4Yield.a3 * cosTheta2 * cosTheta +
+           params_.cos4Yield.a4 * cosTheta2 * cosTheta2) /
+          params_.cos4Yield.aSum();
+    } else {
+      yield = params_.yieldFunction(theta);
+    }
 
     const NumericType norm =
         1. /
         ((std::sqrt(params_.meanEnergy) - std::sqrt(params_.thresholdEnergy)) *
-         params_.yieldFunction(std::cos(params_.tiltAngle * M_PI / 180.)));
+         yield);
 
 #pragma omp parallel for
     for (size_t i = 0; i < velocity->size(); i++) {
@@ -55,7 +78,7 @@ public:
         }
 
         velocity->at(i) = -flux->at(i) * norm * rate;
-        velocity->at(i) += redeposition->at(i) * params_.redepositionRate;
+        velocity->at(i) += redeposition.at(i) * params_.redepositionRate;
       }
     }
 
@@ -81,6 +104,10 @@ public:
       : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.),
         A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
+        sqrtThresholdEnergy_(std::sqrt(params.thresholdEnergy)),
+        thetaRMin_(params.thetaRMin * M_PI / 180.),
+        thetaRMax_(params.thetaRMax * M_PI / 180.),
+        aSum_(1. / params.cos4Yield.aSum()),
         normalDist_(params.meanEnergy, params.sigmaEnergy) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -91,13 +118,21 @@ public:
                         RNG &) override {
     auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
                                NumericType(1));
-    NumericType theta = std::acos(cosTheta);
-
-    NumericType yield = params_.yieldFunction(theta);
+    NumericType yield;
+    if (params_.cos4Yield.isDefined) {
+      NumericType cosTheta2 = cosTheta * cosTheta;
+      yield =
+          (params_.cos4Yield.a1 * cosTheta + params_.cos4Yield.a2 * cosTheta2 +
+           params_.cos4Yield.a3 * cosTheta2 * cosTheta +
+           params_.cos4Yield.a4 * cosTheta2 * cosTheta2) *
+          aSum_;
+    } else {
+      yield = params_.yieldFunction(std::acos(cosTheta));
+    }
 
     localData.getVectorData(0)[primID] +=
-        std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
-                 NumericType(0.)) *
+        rayWeight *
+        std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
         yield;
 
     if (params_.redepositionRate > 0.)
@@ -111,53 +146,59 @@ public:
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &rngState) override {
 
-    // // Small incident angles are reflected with the energy fraction centered
-    // at
-    // // 0
-    // NumericType incAngle = std::acos(std::clamp(
-    //     -DotProduct(rayDir, geomNormal), NumericType(0), NumericType(1)));
-    // NumericType Eref_peak;
-    // if (incAngle >= inflectAngle_) {
-    //   Eref_peak =
-    //       1. - (1. - A_) * (M_PI_2 - incAngle) / (M_PI_2 - inflectAngle_);
-    // } else {
-    //   Eref_peak = A_ * std::pow(incAngle / inflectAngle_, params_.n_l);
-    // }
+    const NumericType cosTheta = std::clamp(-DotProduct(rayDir, geomNormal),
+                                            NumericType(0), NumericType(1));
+    const NumericType theta = std::acos(cosTheta);
 
-    // if (params_.redepositionRate > 0.) {
-    //   redepositionWeight_ =
-    //       std::max(std::sqrt(energy_) - std::sqrt(params_.thresholdEnergy),
-    //                NumericType(0.)) *
-    //       params_.yieldFunction(incAngle);
-    // }
+    // Update redeposition weight
+    if (params_.redepositionRate > 0.) {
+      NumericType yield;
+      if (params_.cos4Yield.isDefined) {
+        NumericType cosTheta2 = cosTheta * cosTheta;
+        yield = (params_.cos4Yield.a1 * cosTheta +
+                 params_.cos4Yield.a2 * cosTheta2 +
+                 params_.cos4Yield.a3 * cosTheta2 * cosTheta +
+                 params_.cos4Yield.a4 * cosTheta2 * cosTheta2) *
+                aSum_;
+      } else {
+        yield = params_.yieldFunction(theta);
+      }
+      redepositionWeight_ =
+          std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
+          yield;
+    }
 
-    // // Gaussian distribution around the Eref_peak scaled by the particle
-    // energy NumericType newEnergy = Eref_peak * energy_;
-    // std::normal_distribution<NumericType> normalDist(Eref_peak * energy_,
-    //                                                  0.1 * energy_);
-    // do {
-    //   newEnergy = normalDist(rngState);
-    // } while (newEnergy > energy_ || newEnergy < 0.);
+    NumericType sticking = 1.;
+    if (theta > params_.thetaRMin) {
+      sticking = 1. - std::clamp((theta - params_.thetaRMin) /
+                                     (params_.thetaRMax - params_.thetaRMin),
+                                 NumericType(0), NumericType(1));
+    }
 
-    // if (newEnergy > params_.thresholdEnergy ||
-    //     redepositionWeight_ > params_.redepositionThreshold) {
-    //   energy_ = newEnergy;
-    //   auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-    //       rayDir, geomNormal, rngState, M_PI_2 - std::min(incAngle,
-    //       minAngle_));
-    //   return std::pair<NumericType, Vec3D<NumericType>>{0., direction};
-    // } else {
-    //   return std::pair<NumericType, Vec3D<NumericType>>{
-    //       1., Vec3D<NumericType>{0., 0., 0.}};
-    // }
-    return std::pair<NumericType, Vec3D<NumericType>>{
-        1., Vec3D<NumericType>{0., 0., 0.}};
+    // Early exit: particle sticks and no redeposition
+    if (sticking >= 1. && redepositionWeight_ <= 0.) {
+      return VIENNARAY_PARTICLE_STOP;
+    }
+
+    // Calculate new energy after reflection
+    NumericType newEnergy =
+        updateEnergy(rngState, energy_, theta, A_, inflectAngle_, params_.n_l);
+
+    if (newEnergy > params_.thresholdEnergy ||
+        redepositionWeight_ > params_.redepositionThreshold) {
+      energy_ = newEnergy;
+      auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
+          rayDir, geomNormal, rngState, M_PI_2 - std::min(theta, minAngle_));
+      return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
+    } else {
+      return VIENNARAY_PARTICLE_STOP;
+    }
   }
 
   void initNew(RNG &rngState) override {
-    do {
-      energy_ = normalDist_(rngState);
-    } while (energy_ < params_.thresholdEnergy);
+    energy_ =
+        initNormalDistEnergy(rngState, params_.meanEnergy, params_.sigmaEnergy,
+                             params_.thresholdEnergy);
     redepositionWeight_ = 0.;
   }
 
@@ -166,7 +207,8 @@ public:
   }
 
   std::vector<std::string> getLocalDataLabels() const override {
-    return {"ionFlux", "redepositionFlux"};
+    return {IBESurfaceModel<NumericType>::fluxLabel,
+            IBESurfaceModel<NumericType>::redepositionLabel};
   }
 
 private:
@@ -174,35 +216,122 @@ private:
   NumericType redepositionWeight_;
 
   const IBEParameters<NumericType> &params_;
-  const NumericType inflectAngle_;
-  const NumericType minAngle_;
+  const NumericType inflectAngle_; // in rad
+  const NumericType minAngle_;     // in rad
   const NumericType A_;
+  const NumericType sqrtThresholdEnergy_;
+  const NumericType thetaRMin_; // in rad
+  const NumericType thetaRMax_; // in  rad
+  const NumericType aSum_;
+
   std::normal_distribution<NumericType> normalDist_;
 };
 } // namespace impl
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+
+template <typename NumericType, int D>
+class IonBeamEtching : public ProcessModelGPU<NumericType, D> {
+public:
+  IonBeamEtching(const IBEParameters<NumericType> &params,
+                 const std::vector<Material> &maskMaterial)
+      : maskMaterials_(maskMaterial), params_(params) {
+    // particles
+    viennaray::gpu::Particle<NumericType> particle{
+        .name = "IBEIon", .cosineExponent = params_.exponent};
+    particle.dataLabels.push_back(
+        ::viennaps::impl::IBESurfaceModel<NumericType>::fluxLabel);
+    if (params_.redepositionRate > 0.) {
+      particle.dataLabels.push_back(
+          ::viennaps::impl::IBESurfaceModel<NumericType>::redepositionLabel);
+    }
+
+    if (params_.tiltAngle != 0.) {
+      Vec3D<NumericType> direction{0., 0., 0.};
+      direction[0] = std::sin(constants::degToRad(params_.tiltAngle));
+      direction[D - 1] = -std::cos(constants::degToRad(params_.tiltAngle));
+      particle.direction = direction;
+      particle.useCustomDirection = true;
+    }
+
+    // Callables
+    std::unordered_map<std::string, unsigned> pMap = {{"IBEIon", 0}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__IBECollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__IBEReflection"},
+        {0, viennaray::gpu::CallableSlot::INIT, "__direct_callable__IBEInit"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
+
+    // Parameters to upload to device
+    impl::IonParams deviceParams;
+    deviceParams.thetaRMin =
+        static_cast<float>(constants::degToRad(params_.thetaRMin));
+    deviceParams.thetaRMax =
+        static_cast<float>(constants::degToRad(params_.thetaRMax));
+    deviceParams.meanEnergy = static_cast<float>(params_.meanEnergy);
+    deviceParams.sigmaEnergy = static_cast<float>(params_.sigmaEnergy);
+    deviceParams.thresholdEnergy = static_cast<float>(
+        std::sqrt(params_.thresholdEnergy)); // precompute sqrt
+    deviceParams.minAngle =
+        static_cast<float>(constants::degToRad(params_.minAngle));
+    deviceParams.inflectAngle =
+        static_cast<float>(constants::degToRad(params_.inflectAngle));
+    deviceParams.n_l = static_cast<float>(params_.n_l);
+    deviceParams.B_sp = 0.f; // not used in IBE
+    if (params_.cos4Yield.isDefined) {
+      deviceParams.a1 = static_cast<float>(params_.cos4Yield.a1);
+      deviceParams.a2 = static_cast<float>(params_.cos4Yield.a2);
+      deviceParams.a3 = static_cast<float>(params_.cos4Yield.a3);
+      deviceParams.a4 = static_cast<float>(params_.cos4Yield.a4);
+      deviceParams.aSum = static_cast<float>(params_.cos4Yield.aSum());
+    }
+    deviceParams.redepositionRate =
+        static_cast<float>(params_.redepositionRate);
+    deviceParams.redepositionThreshold =
+        static_cast<float>(params_.redepositionThreshold);
+
+    // upload process params
+    this->processData.alloc(sizeof(impl::IonParams));
+    this->processData.upload(&deviceParams, 1);
+
+    // surface model
+    auto surfModel =
+        SmartPointer<::viennaps::impl::IBESurfaceModel<NumericType>>::New(
+            params_, maskMaterials_);
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+
+    this->getParticleTypes().clear();
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->insertNextParticleType(particle);
+    this->setProcessName("IonBeamEtching");
+    this->processMetaData = params_.toProcessMetaData();
+    this->hasGPU = true;
+  }
+
+private:
+  std::vector<Material> maskMaterials_;
+  IBEParameters<NumericType> params_;
+};
+
+} // namespace gpu
+#endif
+
 template <typename NumericType, int D>
 class IonBeamEtching : public ProcessModelCPU<NumericType, D> {
 public:
-  IonBeamEtching() = default;
+  IonBeamEtching(const IBEParameters<NumericType> &params)
+      : IonBeamEtching(params, {}) {}
 
-  explicit IonBeamEtching(const std::vector<Material> &maskMaterial)
-      : maskMaterials_(maskMaterial) {}
-
-  IonBeamEtching(const std::vector<Material> &maskMaterial,
-                 const IBEParameters<NumericType> &params)
-      : maskMaterials_(maskMaterial), params_(params) {}
-
-  IBEParameters<NumericType> &getParameters() { return params_; }
-
-  void setParameters(const IBEParameters<NumericType> &params) {
-    params_ = params;
-  }
-
-  void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                  const NumericType processDuration) final {
-    if (firstInit)
-      return;
+  IonBeamEtching(const IBEParameters<NumericType> &params,
+                 const std::vector<Material> &maskMaterial)
+      : maskMaterials_(maskMaterial), params_(params) {
 
     // particles
     auto particle =
@@ -215,51 +344,22 @@ public:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
-    this->particles.clear();
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
-    this->particles.clear();
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
     this->processMetaData = params_.toProcessMetaData();
-    firstInit = true;
-
-    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
-      std::stringstream ss;
-      ss << "Initialized IonBeamEtching with parameters:\n"
-         << "\tPlane wafer rate: " << params_.planeWaferRate << "\n"
-         << "\tMaterial plane wafer rate:\n";
-      for (const auto &[mat, rate] : params_.materialPlaneWaferRate) {
-        ss << "\t    " << MaterialMap::toString(mat) << ": " << rate << "\n";
-      }
-      ss << "\tMean energy: " << params_.meanEnergy << " eV\n"
-         << "\tSigma energy: " << params_.sigmaEnergy << " eV\n"
-         << "\tThreshold energy: " << params_.thresholdEnergy << " eV\n"
-         << "\tExponent: " << params_.exponent << "\n"
-         << "\tn_l: " << params_.n_l << "\n"
-         << "\tInflection angle: " << params_.inflectAngle << " degree\n"
-         << "\tMinimum angle: " << params_.minAngle << " degree\n"
-         << "\tTilt angle: " << params_.tiltAngle << " degree\n"
-         << "\tRedeposition threshold: " << params_.redepositionThreshold
-         << "\n"
-         << "\tRedeposition rate: " << params_.redepositionRate << "\n"
-         << "\tMask materials:\n";
-      for (const auto &mat : maskMaterials_) {
-        ss << "\t    " << MaterialMap::toString(mat) << "\n";
-      }
-      Logger::getInstance().addDebug(ss.str()).print();
-    }
+    this->hasGPU = true;
   }
 
-  void finalize(SmartPointer<Domain<NumericType, D>> domain,
-                const NumericType processedDuration) final {
-    firstInit = false;
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
+    return SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
+        params_, maskMaterials_);
   }
-
-  bool useFluxEngine() final { return true; }
+#endif
 
 private:
-  bool firstInit = false;
   std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };
