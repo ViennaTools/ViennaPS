@@ -110,16 +110,21 @@ public:
                                NumericType(1));
     NumericType incomingAngle = std::acos(cosTheta);
 
+    NumericType sticking = 1.;
+    if (incomingAngle > thetaRMin_) {
+      sticking = 1. - std::min((incomingAngle - thetaRMin_) /
+                                   (thetaRMax_ - thetaRMin_),
+                               NumericType(1.));
+    }
+
+    if (sticking >= 1.) {
+      return VIENNARAY_PARTICLE_STOP;
+    }
+
     if (energy_ > 0.) {
       energy_ =
           updateEnergy(rngState, energy_, incomingAngle, A_, inflectAngle_, n_);
     }
-
-    NumericType sticking = 1.;
-    if (incomingAngle > thetaRMin_)
-      sticking = 1. - std::min((incomingAngle - thetaRMin_) /
-                                   (thetaRMax_ - thetaRMin_),
-                               NumericType(1.));
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
         rayDir, geomNormal, rngState,
@@ -128,7 +133,6 @@ public:
     return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
   }
   void initNew(RNG &rngState) override final {
-    energy_ = -1.;
     if (meanEnergy_ > 0.) {
       energy_ = initNormalDistEnergy(rngState, meanEnergy_, sigmaEnergy_,
                                      NumericType(0.));
@@ -142,7 +146,7 @@ public:
   }
 
 private:
-  NumericType energy_;
+  NumericType energy_ = 0.;
 
   const NumericType sourcePower_;
 
@@ -159,7 +163,6 @@ private:
   const NumericType minAngle_;
   const NumericType A_;
   const NumericType n_;
-  std::normal_distribution<NumericType> normalDist_;
 
   const std::string dataLabel_;
 };

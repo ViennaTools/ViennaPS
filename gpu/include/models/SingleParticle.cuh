@@ -24,6 +24,6 @@ singleNeutralCollision(viennaray::gpu::PerRayData *prd) {
 __forceinline__ __device__ void
 singleNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   prd->rayWeight -= prd->rayWeight * launchParams.sticking;
-  auto geoNormal = computeNormal(sbtData, prd->primID);
+  auto geoNormal = getNormal(sbtData, prd->primID);
   diffuseReflection(prd, geoNormal, launchParams.D);
 }

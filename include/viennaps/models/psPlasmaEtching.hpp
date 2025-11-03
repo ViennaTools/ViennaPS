@@ -291,7 +291,6 @@ public:
     NumericType newEnergy = updateEnergy(
         Rng, E, incAngle, A_energy, params.Ions.inflectAngle, params.Ions.n_l);
 
-    // Set the flag to stop tracing if the energy is below the threshold
     NumericType minEnergy =
         std::min(params.Substrate.Eth_ie, params.Substrate.Eth_sp);
     if (newEnergy > minEnergy) {

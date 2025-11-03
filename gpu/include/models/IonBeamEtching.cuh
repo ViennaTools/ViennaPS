@@ -21,7 +21,7 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
   const bool yieldDefined = abs(params->aSum) > 0.f;
 
   for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = computeNormal(sbtData, prd->primIDs[i]);
+    auto geomNormal = getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
@@ -55,7 +55,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
                                               viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  auto geomNormal = computeNormal(sbtData, prd->primID);
+  auto geomNormal = getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
   float theta = acosf(cosTheta);

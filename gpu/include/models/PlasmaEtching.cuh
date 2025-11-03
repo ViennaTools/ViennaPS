@@ -36,7 +36,7 @@ plasmaNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   float sticking = launchParams.materialSticking[material];
   float Seff = sticking * max(1.f - phi_E - phi_P, 0.f);
   prd->rayWeight -= prd->rayWeight * Seff;
-  auto geoNormal = computeNormal(sbtData, prd->primID);
+  auto geoNormal = getNormal(sbtData, prd->primID);
   diffuseReflection(prd, geoNormal, launchParams.D);
 }
 
@@ -51,7 +51,7 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
           launchParams.customData);
   for (int i = 0; i < prd->ISCount; ++i) {
     int material = launchParams.materialIds[prd->primIDs[i]];
-    auto geomNormal = computeNormal(sbtData, prd->primIDs[i]);
+    auto geomNormal = getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
     float angle = acosf(cosTheta);
@@ -104,7 +104,7 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
-  auto geomNormal = computeNormal(sbtData, prd->primID);
+  auto geomNormal = getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
   float angle = acosf(cosTheta);
