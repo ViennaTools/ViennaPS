@@ -96,6 +96,8 @@ enum class MaterialCategory : uint8_t {
   X(88, Mn, Metal, 7.2, true)                                                  \
   X(89, MnO, Metal, 5.4, false)                                                \
   X(90, MnN, Metal, 6.1, false)                                                \
+  X(91, Au, Metal, 19.3, true)                                                 \
+  X(92, Cr, Metal, 7.19, true)                                                 \
   /* Silicides */                                                              \
   X(100, WSi2, Silicide, 9.3, true)                                            \
   X(101, TiSi2, Silicide, 4.0, true)                                           \
@@ -147,7 +149,7 @@ constexpr std::array<MaterialInfo, kMaterialMaxId + 1> kMaterialTable = [] {
   // default fill
   for (auto &e : t)
     e = {"Undefined", MaterialCategory::Generic, 0.0, false};
-    // populate
+  // populate
 #define FILL_ROW(id, sym, cat, dens, cond)                                     \
   t[id] = {#sym, MaterialCategory::cat, dens, cond};
   MATERIAL_LIST(FILL_ROW)
