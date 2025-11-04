@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../psCreateSurfaceMesh.hpp"
+#include "../psElementToPointData.hpp"
 #include "../psPointToElementData.hpp"
 
 #include "psFluxEngine.hpp"
@@ -150,6 +151,8 @@ private:
     auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
         context.model);
 
+    std::vector<std::vector<NumericType>> elementFluxes;
+
     unsigned particleIdx = 0;
     for (auto &particle : model->getParticleTypes()) {
       int dataLogSize = model->getParticleLogSize(particleIdx);
@@ -191,14 +194,23 @@ private:
         //                         context.rayTracingParams.smoothingNeighbors);
 
         /// TODO: element to point data mapping for CPU + smoothing
+        elementFluxes.push_back(std::move(flux));
 
-        fluxes->insertNextScalarData(std::move(flux),
-                                     localData.getVectorDataLabel(i));
+        // fluxes->insertNextScalarData(std::move(flux),
+        //                              localData.getVectorDataLabel(i));
       }
 
       model->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
       ++particleIdx;
     }
+
+    // map fluxes on points
+    ElementToPointData<NumericType, NumericType>(
+        elementFluxes, fluxes, model->getParticleTypes(), elementKdTree_,
+        context.diskMesh, surfaceMesh_,
+        context.domain->getGridDelta() *
+            context.rayTracingParams.smoothingNeighbors)
+        .apply();
   }
 
   static viennaray::TracingData<NumericType> PointDataToElementRayData(

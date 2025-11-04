@@ -4,6 +4,7 @@
 
 #include "../psCreateSurfaceMesh.hpp"
 #include "../psDomain.hpp"
+#include "../psElementToPointData.hpp"
 #include "../psPointToElementData.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
@@ -13,8 +14,6 @@
 #include <lsMesh.hpp>
 
 #include <raygTraceTriangle.hpp>
-
-#include <psgElementToPointData.hpp>
 
 namespace viennaps {
 

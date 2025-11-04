@@ -2,6 +2,7 @@
 
 #include <lsMesh.hpp>
 
+#include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
 #include <vcVectorType.hpp>
 
