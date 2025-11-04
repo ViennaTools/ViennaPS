@@ -43,7 +43,7 @@ inline double erfcinvApprox(double y) {
 
 inline double norm_inv_from_cdf(double p) {
   // Φ^{-1}(p) = -√2 * erfcinv(2p)
-  return -1.4142135623730951 * erfcinvApprox(2.0 * p);
+  return std::clamp(-1.4142135623730951 * erfcinvApprox(2.0 * p), 0.0, 1.0);
 }
 
 inline double Phi_from_x(double x) {

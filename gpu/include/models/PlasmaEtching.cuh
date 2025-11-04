@@ -60,13 +60,11 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     float B_sp = params->Substrate.B_sp;
     float Eth_sp = params->Substrate.Eth_sp;
     if (static_cast<viennaps::Material>(material) == viennaps::Material::Mask) {
-      // mask
       A_sp = params->Mask.A_sp;
       B_sp = params->Mask.B_sp;
       Eth_sp = params->Mask.Eth_sp;
     } else if (static_cast<viennaps::Material>(material) ==
                viennaps::Material::Polymer) {
-      // polymer
       A_sp = params->Polymer.A_sp;
       B_sp = params->Polymer.B_sp;
       Eth_sp = params->Polymer.Eth_sp;
@@ -80,12 +78,11 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
       f_ie_theta = max(3.f - 6.f * angle / M_PIf, 0.f);
 
     float sqrtE = sqrtf(prd->energy);
-    float Y_sp = A_sp * max(sqrtE - sqrtf(Eth_sp), 0.f) * f_sp_theta;
+    float Y_sp = A_sp * max(sqrtE - Eth_sp, 0.f) * f_sp_theta;
     float Y_Si = params->Substrate.A_ie *
-                 max(sqrtE - sqrtf(params->Substrate.Eth_ie), 0.f) * f_ie_theta;
+                 max(sqrtE - params->Substrate.Eth_ie, 0.f) * f_ie_theta;
     float Y_P = params->Passivation.A_ie *
-                max(sqrtE - sqrtf(params->Passivation.Eth_ie), 0.f) *
-                f_ie_theta;
+                max(sqrtE - params->Passivation.Eth_ie, 0.f) * f_ie_theta;
 
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
                                          prd->primIDs[i]],
@@ -124,7 +121,6 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::updateEnergy(prd, params->Ions.inflectAngle,
                                     params->Ions.n_l, angle);
 
-  // Set the flag to stop tracing if the energy is below the threshold
   float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
   if (prd->energy > minEnergy) {
     conedCosineReflection(prd, geomNormal,

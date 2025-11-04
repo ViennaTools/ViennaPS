@@ -304,8 +304,10 @@ public:
     }
   }
   void initNew(RNG &rngState) override final {
+    NumericType minEnergy =
+        std::min(params.Substrate.Eth_ie, params.Substrate.Eth_sp);
     E = initNormalDistEnergy(rngState, params.Ions.meanEnergy,
-                             params.Ions.sigmaEnergy, NumericType(0.));
+                             params.Ions.sigmaEnergy, minEnergy);
   }
   NumericType getSourceDistributionPower() const override final {
     return params.Ions.exponent;
