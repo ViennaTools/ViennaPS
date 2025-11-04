@@ -38,7 +38,7 @@ struct IonParams {
 
 __forceinline__ __device__ float norm_inv_from_cdf(float p) {
   // p in (0,1). Maps to N(0,1)
-  return -1.4142135623730951f * erfcinvf(2.0f * p);
+  return __saturatef(-1.4142135623730951f * erfcinvf(2.0f * p));
 }
 
 __forceinline__ __device__ float phi_from_x(float x) {

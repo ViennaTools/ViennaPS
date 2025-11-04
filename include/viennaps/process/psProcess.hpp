@@ -35,16 +35,12 @@ private:
   FluxEngineType fluxEngineType_ = FluxEngineType::AUTO;
 
 public:
-  Process() { initializeStrategies(); }
-  Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {
-    initializeStrategies();
-  }
+  Process() {}
+  Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {}
   Process(SmartPointer<Domain<NumericType, D>> domain,
           SmartPointer<ProcessModelBase<NumericType, D>> model,
           NumericType processDuration = 0.)
-      : context_{domain, model, processDuration} {
-    initializeStrategies();
-  }
+      : context_{domain, model, processDuration} {}
 
   void setDomain(SmartPointer<Domain<NumericType, D>> domain) {
     context_.domain = domain;
@@ -74,12 +70,12 @@ public:
     }
   }
 
-  void setFluxEngineType(FluxEngineType type) {
-    fluxEngineType_ = type;
-    initializeStrategies(); // reinitialize strategies to update flux engine
-  }
+  void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
 
   void apply() {
+
+    initializeStrategies();
+
     if (!checkInput())
       return;
 

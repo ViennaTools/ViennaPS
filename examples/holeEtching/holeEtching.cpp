@@ -18,8 +18,7 @@ int main(int argc, char *argv[]) {
     params.readConfigFile(argv[1]);
   } else {
     std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    // return 1;
-    params.readConfigFile("config.txt");
+    return 1;
   }
 
   // set parameter units

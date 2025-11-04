@@ -9,7 +9,6 @@ namespace ps = viennaps;
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
-  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
 
   // Parse the parameters
   ps::util::Parameters params;

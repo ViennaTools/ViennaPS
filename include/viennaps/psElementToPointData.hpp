@@ -326,6 +326,13 @@ protected:
     const auto numElements = elementData_[0].size();
 
     elementData.resize(numData * numElements);
+#pragma omp parallel for schedule(static)
+    for (unsigned i = 0; i < numData; ++i) {
+      unsigned offset = i * numElements;
+      for (unsigned j = 0; j < numElements; ++j) {
+        elementData[offset + j] = elementData_[i][j];
+      }
+    }
   }
 
 private:

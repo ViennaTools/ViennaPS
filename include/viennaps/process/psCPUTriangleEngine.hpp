@@ -118,7 +118,21 @@ public:
 
     // copy coverages to the ray tracer
     if (context.flags.useCoverages) {
-      rayTracingData = PointDataToElementRayData(surfaceModel->getCoverages());
+      auto &pointKdTree = context.translationField->getKdTree();
+      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
+        pointKdTree->setPoints(context.diskMesh->nodes);
+        pointKdTree->build();
+      }
+      // Coverages are copied to elementData so there is no need to move them
+      // back to the model
+      viennals::PointData<NumericType> elementData;
+      PointToElementData<NumericType, NumericType>(
+          elementData, surfaceModel->getCoverages(), *pointKdTree, surfaceMesh_,
+          Logger::getLogLevel() >=
+              static_cast<unsigned>(LogLevel::INTERMEDIATE))
+          .apply();
+      // Move data from PointData to TracingData
+      rayTracingData = MovePointDataToRayData(elementData);
     }
 
     if (context.flags.useProcessParams) {
@@ -136,6 +150,16 @@ public:
       rayTracer_.setGlobalData(rayTracingData);
 
     runRayTracer(context, fluxes);
+
+    // output
+    if (Logger::getLogLevel() >=
+        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+      static unsigned iterations = 0;
+      viennals::VTKWriter<NumericType>(
+          surfaceMesh_, context.getProcessName() + "_flux_" +
+                            std::to_string(iterations++) + ".vtp")
+          .apply();
+    }
 
     this->timer_.finish();
 
@@ -186,18 +210,18 @@ private:
       for (int i = 0; i < numFluxes; ++i) {
         auto flux = std::move(localData.getVectorData(i));
 
-        // normalize and smooth
+        // normalize
         rayTracer_.normalizeFlux(flux,
                                  context.rayTracingParams.normalizationType);
-        // if (context.rayTracingParams.smoothingNeighbors > 0)
-        //   rayTracer_.smoothFlux(flux,
-        //                         context.rayTracingParams.smoothingNeighbors);
 
-        /// TODO: element to point data mapping for CPU + smoothing
+        // output
+        if (Logger::getLogLevel() >=
+            static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+          surfaceMesh_->getCellData().insertReplaceScalarData(
+              flux, particle->getLocalDataLabels()[i]);
+        }
+
         elementFluxes.push_back(std::move(flux));
-
-        // fluxes->insertNextScalarData(std::move(flux),
-        //                              localData.getVectorDataLabel(i));
       }
 
       model->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
@@ -209,23 +233,21 @@ private:
         elementFluxes, fluxes, model->getParticleTypes(), elementKdTree_,
         context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *
-            context.rayTracingParams.smoothingNeighbors)
+            (context.rayTracingParams.smoothingNeighbors + 1))
         .apply();
   }
 
-  static viennaray::TracingData<NumericType> PointDataToElementRayData(
-      SmartPointer<viennals::PointData<NumericType>> pointData) {
-
-    /// TODO: implement proper data transfer
-
+  static viennaray::TracingData<NumericType>
+  MovePointDataToRayData(viennals::PointData<NumericType> &pointData) {
     viennaray::TracingData<NumericType> rayData;
-    // const auto numData = pointData->getScalarDataSize();
-    // rayData.setNumberOfVectorData(numData);
-    // for (size_t i = 0; i < numData; ++i) {
-    //   auto label = pointData->getScalarDataLabel(i);
-    //   rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
-    //                         label);
-    // }
+
+    const auto numData = pointData.getScalarDataSize();
+    rayData.setNumberOfVectorData(numData);
+    for (size_t i = 0; i < numData; ++i) {
+      auto label = pointData.getScalarDataLabel(i);
+      rayData.setVectorData(i, std::move(*pointData.getScalarData(label)),
+                            label);
+    }
 
     return std::move(rayData);
   }

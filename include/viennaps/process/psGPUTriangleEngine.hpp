@@ -173,7 +173,7 @@ public:
         rayTracer_.getResults(), fluxes, rayTracer_.getParticles(),
         elementKdTree_, context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *
-            context.rayTracingParams.smoothingNeighbors)
+            (context.rayTracingParams.smoothingNeighbors + 1))
         .apply();
 
     // output

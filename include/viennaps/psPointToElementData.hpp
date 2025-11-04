@@ -76,12 +76,6 @@ public:
 #ifndef NDEBUG
     surfaceMesh_->getCellData().insertReplaceScalarData(closestPoints,
                                                         "pointIds");
-    for (unsigned i = 0; i < numData; ++i) {
-      std::vector<MeshNT> tmp(elementData.begin() + i * numElements,
-                              elementData.begin() + (i + 1) * numElements);
-      surfaceMesh_->getCellData().insertReplaceScalarData(
-          std::move(tmp), pointData_.getScalarDataLabel(i));
-    }
 #endif
 
     finalizeData();
@@ -129,7 +123,7 @@ public:
 
   PointToElementData(viennals::PointData<NumericType> &elementData,
                      viennals::PointData<NumericType> &pointData,
-                     KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
+                     KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> &surfaceMesh,
                      bool insertToMesh = false)
       : PointToElementDataBase<NumericType, MeshNT>(pointData, pointKdTree,
