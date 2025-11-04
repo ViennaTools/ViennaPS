@@ -13,6 +13,7 @@
 
 // Flux engines
 #include "psCPUDiskEngine.hpp"
+#include "psCPUTriangleEngine.hpp"
 #include "psGPUDiskEngine.hpp"
 #include "psGPULineEngine.hpp"
 #include "psGPUTriangleEngine.hpp"
@@ -199,6 +200,16 @@ private:
     // Create CPU engine
     if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
+    } else if (fluxEngineType_ == FluxEngineType::CPU_TRIANGLE) {
+      if (D != 3) {
+        Logger::getInstance()
+            .addWarning(
+                "CPU-Triangle flux engine only supported in 3D. Fallback "
+                "to CPU-Disk engine.")
+            .print();
+        return std::make_unique<CPUDiskEngine<NumericType, D>>();
+      }
+      return std::make_unique<CPUTriangleEngine<NumericType, D>>();
     }
 
     // Create GPU engine

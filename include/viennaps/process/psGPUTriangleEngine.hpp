@@ -2,7 +2,9 @@
 
 #ifdef VIENNACORE_COMPILE_GPU
 
+#include "../psCreateSurfaceMesh.hpp"
 #include "../psDomain.hpp"
+#include "../psPointToElementData.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
@@ -12,9 +14,7 @@
 
 #include <raygTraceTriangle.hpp>
 
-#include <psgCreateSurfaceMesh.hpp>
 #include <psgElementToPointData.hpp>
-#include <psgPointToElementData.hpp>
 
 namespace viennaps {
 
@@ -104,7 +104,7 @@ public:
     surfaceMesh_ = viennals::Mesh<float>::New();
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
-    gpu::CreateSurfaceMesh<NumericType, float, D>(
+    CreateSurfaceMesh<NumericType, float, D>(
         context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
         1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
@@ -125,7 +125,7 @@ public:
         pointKdTree->setPoints(context.diskMesh->nodes);
         pointKdTree->build();
       }
-      gpu::PointToElementDataSingle<NumericType, NumericType, int, float>(
+      PointToElementDataSingle<NumericType, NumericType, int, float>(
           pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setMaterialIds(elementMaterialIds);

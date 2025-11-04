@@ -1,9 +1,12 @@
 #pragma once
 
+#include "../psCreateSurfaceMesh.hpp"
+#include "../psPointToElementData.hpp"
+
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
-#include <rayTraceDisk.hpp>
+#include <rayTraceTriangle.hpp>
 
 namespace viennaps {
 
@@ -13,7 +16,11 @@ using namespace viennacore;
 /// process model to a domain. Depending on the user inputs surface advection, a
 /// single callback function or a geometric advection is applied.
 template <typename NumericType, int D>
-class CPUDiskEngine final : public FluxEngine<NumericType, D> {
+class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
+  using KDTreeType =
+      SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
+  using MeshType = SmartPointer<viennals::Mesh<NumericType>>;
+
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
     auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
@@ -69,22 +76,32 @@ public:
 
   ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
     this->timer_.start();
-    auto &diskMesh = context.diskMesh;
-    assert(diskMesh != nullptr);
+    surfaceMesh_ = viennals::Mesh<NumericType>::New();
+    if (!elementKdTree_)
+      elementKdTree_ = KDTreeType::New();
+    CreateSurfaceMesh<NumericType, NumericType, D>(
+        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
+        1e-12, context.rayTracingParams.minNodeDistanceFactor)
+        .apply();
 
-    auto points = diskMesh->getNodes();
-    auto normals = *diskMesh->getCellData().getVectorData("Normals");
-    auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+    rayTracer_.setGeometry(surfaceMesh_->nodes, surfaceMesh_->triangles,
+                           context.domain->getGridDelta());
 
-    if (context.rayTracingParams.diskRadius == 0.) {
-      rayTracer_.setGeometry(points, normals,
-                             context.domain->getGrid().getGridDelta());
-    } else {
-      rayTracer_.setGeometry(points, normals,
-                             context.domain->getGrid().getGridDelta(),
-                             context.rayTracingParams.diskRadius);
+    auto const &pointMaterialIds =
+        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+    std::vector<int> elementMaterialIds;
+    auto &pointKdTree = context.translationField->getKdTree();
+    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
+      pointKdTree->setPoints(context.diskMesh->nodes);
+      pointKdTree->build();
     }
-    rayTracer_.setMaterialIds(materialIds);
+    PointToElementDataSingle<NumericType, NumericType, int, NumericType>(
+        pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
+        .apply();
+    rayTracer_.setMaterialIds(elementMaterialIds);
+
+    assert(context.diskMesh->nodes.size() > 0);
+    assert(!surfaceMesh_->nodes.empty());
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -98,9 +115,9 @@ public:
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
 
-    // move coverages to the ray tracer
+    // copy coverages to the ray tracer
     if (context.flags.useCoverages) {
-      rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
+      rayTracingData = PointDataToElementRayData(surfaceModel->getCoverages());
     }
 
     if (context.flags.useProcessParams) {
@@ -119,9 +136,6 @@ public:
 
     runRayTracer(context, fluxes);
 
-    // move coverages back in the model
-    if (context.flags.useCoverages)
-      moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -172,9 +186,11 @@ private:
         // normalize and smooth
         rayTracer_.normalizeFlux(flux,
                                  context.rayTracingParams.normalizationType);
-        if (context.rayTracingParams.smoothingNeighbors > 0)
-          rayTracer_.smoothFlux(flux,
-                                context.rayTracingParams.smoothingNeighbors);
+        // if (context.rayTracingParams.smoothingNeighbors > 0)
+        //   rayTracer_.smoothFlux(flux,
+        //                         context.rayTracingParams.smoothingNeighbors);
+
+        /// TODO: element to point data mapping for CPU + smoothing
 
         fluxes->insertNextScalarData(std::move(flux),
                                      localData.getVectorDataLabel(i));
@@ -185,32 +201,28 @@ private:
     }
   }
 
-  static viennaray::TracingData<NumericType> movePointDataToRayData(
+  static viennaray::TracingData<NumericType> PointDataToElementRayData(
       SmartPointer<viennals::PointData<NumericType>> pointData) {
+
+    /// TODO: implement proper data transfer
+
     viennaray::TracingData<NumericType> rayData;
-    const auto numData = pointData->getScalarDataSize();
-    rayData.setNumberOfVectorData(numData);
-    for (size_t i = 0; i < numData; ++i) {
-      auto label = pointData->getScalarDataLabel(i);
-      rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
-                            label);
-    }
+    // const auto numData = pointData->getScalarDataSize();
+    // rayData.setNumberOfVectorData(numData);
+    // for (size_t i = 0; i < numData; ++i) {
+    //   auto label = pointData->getScalarDataLabel(i);
+    //   rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
+    //                         label);
+    // }
 
     return std::move(rayData);
   }
 
-  static void moveRayDataToPointData(
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      viennaray::TracingData<NumericType> &rayData) {
-    pointData->clear();
-    const auto numData = rayData.getVectorData().size();
-    for (size_t i = 0; i < numData; ++i)
-      pointData->insertNextScalarData(std::move(rayData.getVectorData(i)),
-                                      rayData.getVectorDataLabel(i));
-  }
-
 private:
-  viennaray::TraceDisk<NumericType, D> rayTracer_;
+  viennaray::TraceTriangle<NumericType, D> rayTracer_;
+
+  KDTreeType elementKdTree_;
+  MeshType surfaceMesh_;
 };
 
 } // namespace viennaps

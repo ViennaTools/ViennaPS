@@ -10,8 +10,9 @@ enum class FluxEngineType {
   // Platform, Surface representation
   AUTO,         // Automatic selection
   CPU_DISK,     // CPU, Disk-based
-  GPU_TRIANGLE, // GPU, Triangle-based
+  CPU_TRIANGLE, // CPU, Triangle-based
   GPU_DISK,     // GPU, Disk-based
+  GPU_TRIANGLE, // GPU, Triangle-based
   GPU_LINE,     // GPU, Line-based
   // GPU_LEVEL_SET // Future implementations
 };
