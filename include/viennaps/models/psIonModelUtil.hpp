@@ -72,6 +72,16 @@ inline NumericType sampleTruncatedNormal(RNG &rng, NumericType mu,
   std::uniform_real_distribution<double> uni(Fa, Fb);
   const double p = uni(rng);
   const double z = norm_inv_from_cdf(p);
+#ifndef NDEBUG
+  const double energy = double(mu) + double(sigma) * z;
+  if (energy < double(L) || energy > double(U)) {
+    std::cout << "Sampled out-of-bounds truncated normal: " << energy
+              << " not in [" << L << ", " << U << "]" << std::endl;
+    std::cout << " mu: " << mu << ", sigma: " << sigma << ", a: " << a
+              << ", b: " << b << ", Fa: " << Fa << ", Fb: " << Fb
+              << ", p: " << p << ", z: " << z << std::endl;
+  }
+#endif
   return NumericType(double(mu) + double(sigma) * z);
 }
 
@@ -110,7 +120,14 @@ inline T initNormalDistEnergy(RNG &rng, T mean, T sigma, T threshold) {
   const T up = Phi_a + (T(1) - Phi_a) * u;
 
   const T z = norm_inv_from_cdf(up);
-  return mean + sigma * z;
+  const T energy_ = mean + sigma * z;
+#ifndef NDEBUG
+  if (energy_ < 0. || !std::isfinite(energy_)) {
+    std::cout << "Initialized invalid energy_: " << energy_ << std::endl;
+    std::cout << " u " << u << " up " << up << " z " << z << std::endl;
+  }
+#endif
+  return energy_;
 }
 
 } // namespace viennaps::impl

@@ -18,7 +18,8 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
                                              viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  const bool yieldDefined = abs(params->aSum) > 0.f;
+  const bool yieldDefined = abs(params->aSum) > 1e-6f;
+  const bool redepositionEnabled = params->redepositionRate > 0.f;
 
   for (int i = 0; i < prd->ISCount; ++i) {
     auto geomNormal = getNormal(sbtData, prd->primIDs[i]);
@@ -42,7 +43,7 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
                                          prd->primIDs[i]],
               prd->rayWeight * yield);
 
-    if (params->redepositionRate > 0.f) {
+    if (redepositionEnabled) {
       // redeposition array
       atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
                                            prd->primIDs[i]],

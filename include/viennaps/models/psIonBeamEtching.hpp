@@ -103,12 +103,11 @@ public:
   explicit IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
       : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.),
-        A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
+        A_(1. / (1. + params.n_l * (M_PI_2 / inflectAngle_ - 1.))),
         sqrtThresholdEnergy_(std::sqrt(params.thresholdEnergy)),
         thetaRMin_(params.thetaRMin * M_PI / 180.),
         thetaRMax_(params.thetaRMax * M_PI / 180.),
-        aSum_(1. / params.cos4Yield.aSum()),
-        normalDist_(params.meanEnergy, params.sigmaEnergy) {}
+        aSum_(1. / params.cos4Yield.aSum()) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -130,6 +129,15 @@ public:
       yield = params_.yieldFunction(std::acos(cosTheta));
     }
 
+    NumericType flux =
+        rayWeight *
+        std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
+        yield;
+    if (!std::isfinite(flux)) {
+      std::cout << "Non-finite flux computed in surfaceCollision: " << flux
+                << ", energy_: " << energy_ << ", rayWeight: " << rayWeight
+                << ", yield: " << yield << std::endl;
+    }
     localData.getVectorData(0)[primID] +=
         rayWeight *
         std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
@@ -223,8 +231,6 @@ private:
   const NumericType thetaRMin_; // in rad
   const NumericType thetaRMax_; // in  rad
   const NumericType aSum_;
-
-  std::normal_distribution<NumericType> normalDist_;
 };
 } // namespace impl
 

@@ -16,9 +16,6 @@ ps.setDimension(args.dim)
 
 params = ps.readConfigFile(args.filename)
 
-# print intermediate output surfaces during the process
-ps.Logger.setLogLevel(ps.LogLevel.INFO)
-
 ps.Length.setUnit(params["lengthUnit"])
 ps.Time.setUnit(params["timeUnit"])
 
