@@ -513,11 +513,14 @@ class FluorocarbonParametersIons:
 class FluxEngineType(enum.IntEnum):
     AUTO: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.AUTO: 0>
     CPU_DISK: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.CPU_DISK: 1>
+    CPU_TRIANGLE: typing.ClassVar[
+        FluxEngineType
+    ]  # value = <FluxEngineType.CPU_TRIANGLE: 2>
     GPU_DISK: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.GPU_DISK: 3>
-    GPU_LINE: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.GPU_LINE: 4>
+    GPU_LINE: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.GPU_LINE: 5>
     GPU_TRIANGLE: typing.ClassVar[
         FluxEngineType
-    ]  # value = <FluxEngineType.GPU_TRIANGLE: 2>
+    ]  # value = <FluxEngineType.GPU_TRIANGLE: 4>
     @classmethod
     def __new__(cls, value): ...
     def __format__(self, format_spec):
@@ -696,11 +699,13 @@ class Material(enum.IntEnum):
     Air: typing.ClassVar[Material]  # value = <Material.Air: 2>
     Al2O3: typing.ClassVar[Material]  # value = <Material.Al2O3: 31>
     AlN: typing.ClassVar[Material]  # value = <Material.AlN: 37>
+    Au: typing.ClassVar[Material]  # value = <Material.Au: 91>
     BN: typing.ClassVar[Material]  # value = <Material.BN: 39>
     BPSG: typing.ClassVar[Material]  # value = <Material.BPSG: 54>
     C: typing.ClassVar[Material]  # value = <Material.C: 50>
     Co: typing.ClassVar[Material]  # value = <Material.Co: 72>
     CoW: typing.ClassVar[Material]  # value = <Material.CoW: 85>
+    Cr: typing.ClassVar[Material]  # value = <Material.Cr: 92>
     Cu: typing.ClassVar[Material]  # value = <Material.Cu: 71>
     Dielectric: typing.ClassVar[Material]  # value = <Material.Dielectric: 4>
     GAS: typing.ClassVar[Material]  # value = <Material.GAS: 3>

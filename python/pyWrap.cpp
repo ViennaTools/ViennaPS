@@ -424,8 +424,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   py::native_enum<FluxEngineType>(module, "FluxEngineType", "enum.IntEnum")
       .value("AUTO", FluxEngineType::AUTO)
       .value("CPU_DISK", FluxEngineType::CPU_DISK)
-      .value("GPU_TRIANGLE", FluxEngineType::GPU_TRIANGLE)
+      .value("CPU_TRIANGLE", FluxEngineType::CPU_TRIANGLE)
       .value("GPU_DISK", FluxEngineType::GPU_DISK)
+      .value("GPU_TRIANGLE", FluxEngineType::GPU_TRIANGLE)
       .value("GPU_LINE", FluxEngineType::GPU_LINE)
       .finalize();
 
