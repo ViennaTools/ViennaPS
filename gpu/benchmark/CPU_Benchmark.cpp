@@ -175,7 +175,7 @@ int main() {
 
         // MESHING
         timer.start();
-        mesher.apply();
+        diskMesher.apply();
         surfMesher.apply();
         translationField->buildKdTree(diskMesh->nodes);
         tracer.setGeometry(surfMesh->nodes, surfMesh->triangles,
