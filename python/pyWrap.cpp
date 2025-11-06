@@ -148,6 +148,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                ProcessParams<T>::getScalarData)
       .def("getScalarDataLabel", &ProcessParams<T>::getScalarDataLabel);
 
+  // MaterialLayer struct for multi-layer geometries
+  py::class_<MaterialLayer<T>>(module, "MaterialLayer")
+      .def(py::init<T, T, T, Material, bool>(), py::arg("height"),
+           py::arg("width"), py::arg("taperAngle"), py::arg("material"),
+           py::arg("isMask"))
+      .def_readwrite("height", &MaterialLayer<T>::height, "Layer thickness")
+      .def_readwrite("width", &MaterialLayer<T>::width,
+                     "Width of cutout for this layer")
+      .def_readwrite("taperAngle", &MaterialLayer<T>::taperAngle,
+                     "Taper angle for cutout (degrees)")
+      .def_readwrite("material", &MaterialLayer<T>::material,
+                     "Material type for this layer")
+      .def_readwrite("isMask", &MaterialLayer<T>::isMask,
+                     "true: apply cutout (mask behavior), false: no cutout");
+
   // Plasma Etching Parameters
   py::class_<PlasmaEtchingParameters<T>::MaskType>(
       module, "PlasmaEtchingParametersMask")

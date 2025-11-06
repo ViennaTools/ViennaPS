@@ -1002,6 +1002,33 @@ class ProcessParams:
     def getScalarDataLabel(self, arg0: typing.SupportsInt) -> str: ...
     def insertNextScalar(self, arg0: typing.SupportsFloat, arg1: str) -> None: ...
 
+class MaterialLayer:
+    """
+    Defines a material layer with individual properties for multi-layer geometries.
+    """
+
+    height: float
+    width: float
+    taperAngle: float
+    material: Material
+    isMask: bool
+    def __init__(
+        self,
+        height: typing.SupportsFloat,
+        width: typing.SupportsFloat,
+        taperAngle: typing.SupportsFloat,
+        material: Material,
+        isMask: bool,
+    ) -> None:
+        """
+        Args:
+            height: Layer thickness
+            width: Width of cutout for this layer
+            taperAngle: Taper angle for cutout (degrees)
+            material: Material type for this layer
+            isMask: true: apply cutout (mask behavior), false: no cutout
+        """
+
 class RateSet:
     calculateVisibility: bool
     def __init__(

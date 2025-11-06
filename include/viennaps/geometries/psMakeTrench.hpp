@@ -9,6 +9,15 @@ namespace viennaps {
 
 using namespace viennacore;
 
+template <class NumericType> struct MaterialLayer {
+  NumericType height;     // Layer thickness
+  NumericType width;      // Width of cutout for this layer
+  NumericType taperAngle; // Taper angle for cutout (degrees)
+  Material material;      // Material type for this layer
+  bool isMask;            // true: apply cutout (mask behavior)
+                          // false: no cutout applied
+};
+
 /// Generates new a trench geometry extending in the z (3D) or y (2D) direction,
 /// centrally positioned at the origin with the total extent specified in the x
 /// and y directions. The trench configuration may include periodic boundaries
@@ -35,6 +44,8 @@ template <class NumericType, int D> class MakeTrench {
   const Material material_;
   const Material maskMaterial_ = Material::Mask;
 
+  std::vector<MaterialLayer<NumericType>> materialLayers_;
+
 public:
   MakeTrench(psDomainType domain, NumericType trenchWidth,
              NumericType trenchDepth, NumericType trenchTaperAngle = 0,
@@ -46,6 +57,17 @@ public:
         trenchTaperAngle_(trenchTaperAngle), maskHeight_(maskHeight),
         maskTaperAngle_(maskTaperAngle), base_(0.0), material_(material),
         maskMaterial_(maskMaterial) {
+    if (halfTrench)
+      domain_->getSetup().halveXAxis();
+  }
+
+  MakeTrench(psDomainType domain,
+             const std::vector<MaterialLayer<NumericType>> &materialLayers,
+             bool halfTrench = false)
+      : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
+        materialLayers_(materialLayers), trenchWidth_(0), trenchDepth_(0),
+        trenchTaperAngle_(0), maskHeight_(0), maskTaperAngle_(0), base_(0.0),
+        material_(Material::Si), maskMaterial_(Material::Mask) {
     if (halfTrench)
       domain_->getSetup().halveXAxis();
   }
@@ -71,27 +93,62 @@ public:
     domain_->getSetup().check();
     geometryFactory_.setup(domain_->getSetup());
 
-    if (maskHeight_ > 0.) {
-      auto mask = geometryFactory_.makeMask(base_ - eps_, maskHeight_);
-      domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
-      std::array<NumericType, D> position = {0.};
-      position[D - 1] = base_ - 2 * eps_;
-      auto cutout = geometryFactory_.makeBoxStencil(
-          position, trenchWidth_, maskHeight_ + 3 * eps_, -maskTaperAngle_);
-      domain_->applyBooleanOperation(
-          cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
-    }
+    if (!materialLayers_.empty()) {
+      // Multi-layer mode: create specified layers only
+      NumericType currentBase = base_ - eps_;
+      bool substrateCreated = false;
 
-    auto substrate = geometryFactory_.makeSubstrate(base_);
-    domain_->insertNextLevelSetAsMaterial(substrate, material_);
+      for (const auto &layer : materialLayers_) {
+        SmartPointer<viennals::Domain<NumericType, D>> layerGeometry;
 
-    if (trenchDepth_ > 0.) {
-      std::array<NumericType, D> position = {0.};
-      position[D - 1] = base_;
-      auto cutout = geometryFactory_.makeBoxStencil(
-          position, trenchWidth_, -trenchDepth_, -trenchTaperAngle_);
-      domain_->applyBooleanOperation(cutout,
-                                     viennals::BooleanOperationEnum::INTERSECT);
+        // Use makeSubstrate for the first non-mask layer (substrate)
+        if (!layer.isMask && !substrateCreated) {
+          layerGeometry =
+              geometryFactory_.makeSubstrate(currentBase + layer.height);
+          substrateCreated = true;
+        } else {
+          // Use makeMask for all other layers (finite slabs)
+          layerGeometry = geometryFactory_.makeMask(currentBase, layer.height);
+        }
+
+        domain_->insertNextLevelSetAsMaterial(layerGeometry, layer.material,
+                                              true);
+
+        if (layer.isMask) {
+          std::array<NumericType, D> position = {0.};
+          position[D - 1] = currentBase - eps_;
+          auto cutout = geometryFactory_.makeBoxStencil(position, layer.width,
+                                                        layer.height + 3 * eps_,
+                                                        -layer.taperAngle);
+          domain_->applyBooleanOperation(
+              cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
+        }
+        currentBase += layer.height;
+      }
+    } else {
+      // Single-layer mode: original behavior
+      if (maskHeight_ > 0.) {
+        auto mask = geometryFactory_.makeMask(base_ - eps_, maskHeight_);
+        domain_->insertNextLevelSetAsMaterial(mask, maskMaterial_);
+        std::array<NumericType, D> position = {0.};
+        position[D - 1] = base_ - 2 * eps_;
+        auto cutout = geometryFactory_.makeBoxStencil(
+            position, trenchWidth_, maskHeight_ + 3 * eps_, -maskTaperAngle_);
+        domain_->applyBooleanOperation(
+            cutout, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
+      }
+
+      auto substrate = geometryFactory_.makeSubstrate(base_);
+      domain_->insertNextLevelSetAsMaterial(substrate, material_);
+
+      if (trenchDepth_ > 0.) {
+        std::array<NumericType, D> position = {0.};
+        position[D - 1] = base_;
+        auto cutout = geometryFactory_.makeBoxStencil(
+            position, trenchWidth_, -trenchDepth_, -trenchTaperAngle_);
+        domain_->applyBooleanOperation(
+            cutout, viennals::BooleanOperationEnum::INTERSECT);
+      }
     }
   }
 };

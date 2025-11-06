@@ -1036,6 +1036,22 @@ class MakeTrench:
         makeMask: bool = False,
         material: viennaps._core.Material = ...,
     ) -> None: ...
+    @typing.overload
+    def __init__(
+        self,
+        domain: Domain,
+        materialLayers: collections.abc.Sequence[viennaps._core.MaterialLayer],
+        halfTrench: bool = False,
+    ) -> None:
+        """
+        Create a trench with multiple material layers.
+
+        Args:
+            domain: Domain to create the trench in
+            materialLayers: List of MaterialLayer objects defining each layer
+            halfTrench: If true, create half trench (symmetric along x-axis)
+        """
+
     def apply(self) -> None:
         """
         Create a trench geometry.

@@ -1134,6 +1134,9 @@ template <int D> void bindApi(py::module &module) {
            py::arg("taperingAngle") = 0., py::arg("baseHeight") = 0.,
            py::arg("periodicBoundary") = false, py::arg("makeMask") = false,
            py::arg("material") = Material::Si)
+      .def(py::init<DomainType, const std::vector<MaterialLayer<T>> &, bool>(),
+           py::arg("domain"), py::arg("materialLayers"),
+           py::arg("halfTrench") = false)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
 
   // Hole
