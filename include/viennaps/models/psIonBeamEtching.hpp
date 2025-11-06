@@ -129,21 +129,12 @@ public:
       yield = params_.yieldFunction(std::acos(cosTheta));
     }
 
-    NumericType flux =
-        rayWeight *
-        std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
-        yield;
-    if (!std::isfinite(flux)) {
-      std::cout << "Non-finite flux computed in surfaceCollision: " << flux
-                << ", energy_: " << energy_ << ", rayWeight: " << rayWeight
-                << ", yield: " << yield << std::endl;
-    }
     localData.getVectorData(0)[primID] +=
         rayWeight *
         std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
         yield;
 
-    if (params_.redepositionRate > 0.)
+    if (params_.redepositionRate > 0. && redepositionWeight_ > 0.)
       localData.getVectorData(1)[primID] += redepositionWeight_;
   }
 

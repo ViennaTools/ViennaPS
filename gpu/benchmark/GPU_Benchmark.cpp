@@ -50,8 +50,16 @@ int main() {
     // tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setCallables("CallableWrapper", context->modulePath);
-    tracer.setParticleCallableMap({pMap, cMap});
-    tracer.insertNextParticle(particle);
+    auto particleConfig = makeGPUParticle<NumericType, D>();
+    tracer.insertNextParticle(std::get<0>(particleConfig));
+    tracer.setParticleCallableMap(
+        {std::get<1>(particleConfig), std::get<2>(particleConfig)});
+    if constexpr (particleType == 1) {
+      auto deviceParams = getDeviceParams();
+      CudaBuffer deviceParamsBuffer;
+      deviceParamsBuffer.allocUploadSingle(deviceParams);
+      tracer.setParameters(deviceParamsBuffer.dPointer());
+    }
     tracer.prepareParticlePrograms();
 
     std::cout << "Starting Triangle Benchmark\n";
@@ -154,8 +162,16 @@ int main() {
     // tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setCallables("CallableWrapper", context->modulePath);
-    tracer.setParticleCallableMap({pMap, cMap});
-    tracer.insertNextParticle(particle);
+    auto particleConfig = makeGPUParticle<NumericType, D>();
+    tracer.insertNextParticle(std::get<0>(particleConfig));
+    tracer.setParticleCallableMap(
+        {std::get<1>(particleConfig), std::get<2>(particleConfig)});
+    if constexpr (particleType == 1) {
+      auto deviceParams = getDeviceParams();
+      CudaBuffer deviceParamsBuffer;
+      deviceParamsBuffer.allocUploadSingle(deviceParams);
+      tracer.setParameters(deviceParamsBuffer.dPointer());
+    }
     tracer.prepareParticlePrograms();
 
     std::cout << "Starting Disk Benchmark\n";

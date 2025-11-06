@@ -14,7 +14,6 @@ int main() {
   using NumericType = float;
   constexpr int D = DIM;
 
-  const NumericType cSticking = DEFAULT_STICKING;
   // const std::array<NumericType, 4> gridDeltaValues = {0.05f, 0.1f, 0.2f,
   // 0.4f};
   auto gridDeltaValues = linspace<NumericType, 6>(0.05f, 0.4f);
@@ -29,10 +28,7 @@ int main() {
     viennaray::TraceDisk<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setUseRandomSeeds(false);
-    auto particle =
-        std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(cSticking,
-                                                                     "flux");
-    tracer.setParticleType(particle);
+    tracer.setParticleType(makeCPUParticle<NumericType, D>());
 
     std::cout << "Starting Disk Benchmark\n";
 
@@ -129,9 +125,7 @@ int main() {
     viennaray::TraceTriangle<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setUseRandomSeeds(false);
-    auto particle =
-        std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(cSticking,
-                                                                     "flux");
+    auto particle = makeCPUParticle<NumericType, D>();
     std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
         particles;
     particles.push_back(particle->clone());
