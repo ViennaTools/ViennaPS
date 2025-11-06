@@ -1240,9 +1240,16 @@ class Reader:
     def __init__(self) -> None: ...
     @typing.overload
     def __init__(self, fileName: str) -> None: ...
+    @typing.overload
+    def __init__(self, domain: Domain, fileName: str) -> None: ...
     def apply(self) -> None:
         """
         Read the domain from the specified file.
+        """
+
+    def setDomain(self, arg0: Domain) -> None:
+        """
+        Set the domain to read into.
         """
 
     def setFileName(self, arg0: str) -> None:

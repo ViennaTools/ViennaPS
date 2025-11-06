@@ -1289,11 +1289,14 @@ template <int D> void bindApi(py::module &module) {
   py::class_<Reader<T, D>>(module, "Reader")
       .def(py::init<>())
       .def(py::init<std::string>(), py::arg("fileName"))
+      .def(py::init<SmartPointer<Domain<T, D>>, std::string>(),
+           py::arg("domain"), py::arg("fileName"))
+      .def("setDomain", &Reader<T, D>::setDomain,
+           "Set the domain to read into.")
       .def("setFileName", &Reader<T, D>::setFileName,
            "Set the input file name to read (should end with .vpsd).")
       .def("apply", &Reader<T, D>::apply,
-           "Read the domain from the specified file.",
-           py::return_value_policy::take_ownership);
+           "Read the domain from the specified file.");
 
   //   ***************************************************************************
   //                                  OTHER
