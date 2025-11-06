@@ -23,6 +23,8 @@ inline std::string to_string(FluxEngineType type) {
     return "AUTO";
   case FluxEngineType::CPU_DISK:
     return "CPU_DISK";
+  case FluxEngineType::CPU_TRIANGLE:
+    return "CPU_TRIANGLE";
   case FluxEngineType::GPU_TRIANGLE:
     return "GPU_TRIANGLE";
   case FluxEngineType::GPU_DISK:

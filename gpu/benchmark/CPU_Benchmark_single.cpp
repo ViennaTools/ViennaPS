@@ -4,7 +4,7 @@
 #include <process/psProcess.hpp>
 #include <rayTrace.hpp>
 
-#include "BenchmarkGeometry.hpp"
+#include "Benchmark.hpp"
 
 using namespace viennaps;
 
@@ -23,7 +23,7 @@ int main() {
   auto mesh = viennals::Mesh<NumericType>::New();
   viennals::ToDiskMesh<NumericType, D> mesher(mesh);
 
-  viennaray::Trace<NumericType, D> tracer;
+  viennaray::TraceDisk<NumericType, D> tracer;
   // tracer.setNumberOfRaysPerPoint(3000);
   tracer.setNumberOfRaysFixed(50000000);
   tracer.setUseRandomSeeds(false);
@@ -50,7 +50,7 @@ int main() {
 
     const auto &materialIds = *mesh->getCellData().getScalarData("MaterialIds");
     const auto &normals = *mesh->getCellData().getVectorData("Normals");
-    tracer.setGeometry(mesh->nodes, normals, GRID_DELTA);
+    tracer.setGeometry(mesh->nodes, normals, domain->getGridDelta());
     tracer.setMaterialIds(materialIds);
 
     timer.start();

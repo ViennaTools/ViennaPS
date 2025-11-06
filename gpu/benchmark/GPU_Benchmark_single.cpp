@@ -60,7 +60,7 @@ int main() {
     timer.start();
     diskMesher.apply();
     surfMesher.apply();
-    auto mesh = gpu::CreateTriangleMesh(GRID_DELTA, surfMesh);
+    auto mesh = gpu::CreateTriangleMesh(domain->getGridDelta(), surfMesh);
     std::cout << "Number of surface triangles: " << surfMesh->triangles.size()
               << std::endl;
     timer.finish();
