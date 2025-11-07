@@ -39,6 +39,25 @@ template <class NumericType, int D> void RunTest() {
 
     LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
   }
+
+  {
+    auto domain = Domain<NumericType, D>::New(
+        1.0, 30., 30., BoundaryType::REFLECTIVE_BOUNDARY);
+
+    std::vector<typename MakeTrench<NumericType, D>::MaterialLayer> layers = {
+        {10., 3., 5., Material::Si, false},
+        {5., 2., 10., Material::Mask, true},
+        {15., 4., 0., Material::SiO2, false}};
+
+    MakeTrench<NumericType, D>(domain, layers, false).apply();
+    domain->saveSurfaceMesh("trench_3_" + std::to_string(D) + "D");
+
+    VC_TEST_ASSERT(domain->getLevelSets().size() == 3);
+    VC_TEST_ASSERT(domain->getMaterialMap());
+    VC_TEST_ASSERT(domain->getMaterialMap()->size() == 3);
+
+    LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
+  }
 }
 
 } // namespace viennacore
