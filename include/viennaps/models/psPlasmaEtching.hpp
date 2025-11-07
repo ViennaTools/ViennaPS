@@ -182,11 +182,21 @@ public:
       auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
       auto GY_p = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
 
-      auto a = (params.Substrate.k_sigma + 2 * GY_ie) / Gb_E;
-      auto b = (params.Substrate.beta_sigma + GY_p) / Gb_P;
-
-      eCoverage->at(i) = Gb_E < 1e-6 ? 0. : 1 / (1 + (a * (1 + 1 / b)));
-      pCoverage->at(i) = Gb_P < 1e-6 ? 0. : 1 / (1 + (b * (1 + 1 / a)));
+      if (Gb_P < 1e-6) {
+        // No passivation case - avoid division by zero
+        eCoverage->at(i) = Gb_E < 1e-6 ? 0. : Gb_E / (Gb_E + params.Substrate.k_sigma + 2 * GY_ie);
+        pCoverage->at(i) = 0.;
+      } else if (Gb_E < 1e-6) {
+        // No etchant case - avoid division by zero
+        eCoverage->at(i) = 0.;
+        pCoverage->at(i) = Gb_P / (Gb_P + params.Substrate.beta_sigma + GY_p);
+      } else {
+        // Normal case with both fluxes present
+        auto a = (params.Substrate.k_sigma + 2 * GY_ie) / Gb_E;
+        auto b = (params.Substrate.beta_sigma + GY_p) / Gb_P;
+        eCoverage->at(i) = 1 / (1 + (a * (1 + 1 / b)));
+        pCoverage->at(i) = 1 / (1 + (b * (1 + 1 / a)));
+      }
     }
   }
 };
