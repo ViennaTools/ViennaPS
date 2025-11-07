@@ -9,15 +9,6 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType> struct MaterialLayer {
-  NumericType height;     // Layer thickness
-  NumericType width;      // Width of cutout for this layer
-  NumericType taperAngle; // Taper angle for cutout (degrees)
-  Material material;      // Material type for this layer
-  bool isMask;            // true: apply cutout (mask behavior)
-                          // false: no cutout applied
-};
-
 /// Generates new a trench geometry extending in the z (3D) or y (2D) direction,
 /// centrally positioned at the origin with the total extent specified in the x
 /// and y directions. The trench configuration may include periodic boundaries
@@ -27,6 +18,17 @@ template <class NumericType> struct MaterialLayer {
 /// exclusively to the bottom while the remaining portion adopts the mask
 /// material_.
 template <class NumericType, int D> class MakeTrench {
+public:
+  struct MaterialLayer {
+    NumericType height = 0.;          // Layer thickness
+    NumericType width = 0.;           // Width of cutout for this layer
+    NumericType taperAngle = 0.;      // Taper angle for cutout (degrees)
+    Material material = Material::Si; // Material type for this layer
+    bool isMask = false;              // true: apply cutout (mask behavior)
+                                      // false: no cutout applied
+  };
+
+private:
   using psDomainType = SmartPointer<Domain<NumericType, D>>;
 
   psDomainType domain_;
@@ -44,7 +46,7 @@ template <class NumericType, int D> class MakeTrench {
   const Material material_;
   const Material maskMaterial_ = Material::Mask;
 
-  std::vector<MaterialLayer<NumericType>> materialLayers_;
+  std::vector<MaterialLayer> materialLayers_;
 
 public:
   MakeTrench(psDomainType domain, NumericType trenchWidth,
@@ -62,7 +64,7 @@ public:
   }
 
   MakeTrench(psDomainType domain,
-             const std::vector<MaterialLayer<NumericType>> &materialLayers,
+             const std::vector<MaterialLayer> &materialLayers,
              bool halfTrench = false)
       : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
         materialLayers_(materialLayers), trenchWidth_(0), trenchDepth_(0),

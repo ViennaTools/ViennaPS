@@ -1121,7 +1121,26 @@ template <int D> void bindApi(py::module &module) {
            "Create a plane geometry or add plane to existing geometry.");
 
   // Trench
-  py::class_<MakeTrench<T, D>>(module, "MakeTrench")
+  py::class_<MakeTrench<T, D>> trench(module, "MakeTrench");
+
+  // MaterialLayer struct for multi-layer geometries
+  py::class_<typename MakeTrench<T, D>::MaterialLayer>(trench, "MaterialLayer")
+      .def(py::init<>())
+      .def(py::init<T, T, T, Material, bool>(), py::arg("height"),
+           py::arg("width"), py::arg("taperAngle"), py::arg("material"),
+           py::arg("isMask"))
+      .def_readwrite("height", &MakeTrench<T, D>::MaterialLayer::height,
+                     "Layer thickness")
+      .def_readwrite("width", &MakeTrench<T, D>::MaterialLayer::width,
+                     "Width of cutout for this layer")
+      .def_readwrite("taperAngle", &MakeTrench<T, D>::MaterialLayer::taperAngle,
+                     "Taper angle for cutout (degrees)")
+      .def_readwrite("material", &MakeTrench<T, D>::MaterialLayer::material,
+                     "Material type for this layer")
+      .def_readwrite("isMask", &MakeTrench<T, D>::MaterialLayer::isMask,
+                     "true: apply cutout (mask behavior), false: no cutout");
+
+  trench
       .def(py::init<DomainType, T, T, T, T, T, bool, Material, Material>(),
            py::arg("domain"), py::arg("trenchWidth"), py::arg("trenchDepth"),
            py::arg("trenchTaperAngle") = 0, py::arg("maskHeight") = 0,
@@ -1134,7 +1153,10 @@ template <int D> void bindApi(py::module &module) {
            py::arg("taperingAngle") = 0., py::arg("baseHeight") = 0.,
            py::arg("periodicBoundary") = false, py::arg("makeMask") = false,
            py::arg("material") = Material::Si)
-      .def(py::init<DomainType, const std::vector<MaterialLayer<T>> &, bool>(),
+      .def(py::init<
+               DomainType,
+               const std::vector<typename MakeTrench<T, D>::MaterialLayer> &,
+               bool>(),
            py::arg("domain"), py::arg("materialLayers"),
            py::arg("halfTrench") = false)
       .def("apply", &MakeTrench<T, D>::apply, "Create a trench geometry.");
@@ -1231,23 +1253,27 @@ template <int D> void bindApi(py::module &module) {
       .def("setFluxEngineType", &ProcessTD::setFluxEngineType,
            "Set the flux engine type (CPU or GPU).")
       .def("setParameters",
-           (void(ProcessTD::*)(const AdvectionParameters &)) &
-               ProcessTD::template setParameters<AdvectionParameters>,
+           (void (ProcessTD::*)(
+               const AdvectionParameters
+                   &))&ProcessTD::template setParameters<AdvectionParameters>,
            py::arg("parameters"),
            "Set the advection parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const RayTracingParameters &)) &
-               ProcessTD::template setParameters<RayTracingParameters>,
+           (void (ProcessTD::*)(
+               const RayTracingParameters
+                   &))&ProcessTD::template setParameters<RayTracingParameters>,
            py::arg("parameters"),
            "Set the ray tracing parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const CoverageParameters &)) &
-               ProcessTD::template setParameters<CoverageParameters>,
+           (void (ProcessTD::*)(
+               const CoverageParameters
+                   &))&ProcessTD::template setParameters<CoverageParameters>,
            py::arg("parameters"),
            "Set the coverage parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const AtomicLayerProcessParameters &)) &
-               ProcessTD::template setParameters<AtomicLayerProcessParameters>,
+           (void (ProcessTD::*)(
+               const AtomicLayerProcessParameters &))&ProcessTD::
+               template setParameters<AtomicLayerProcessParameters>,
            py::arg("parameters"),
            "Set the atomic layer parameters for the process.");
 
