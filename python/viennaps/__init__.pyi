@@ -37,7 +37,6 @@ from viennaps._core import Length
 from viennaps._core import LengthUnit
 from viennaps._core import Logger
 from viennaps._core import Material
-from viennaps._core import MaterialLayer
 from viennaps._core import MaterialMap
 from viennaps._core import MetaDataLevel
 from viennaps._core import NormalizationType
@@ -154,7 +153,6 @@ __all__: list[str] = [
     "MakeStack",
     "MakeTrench",
     "Material",
-    "MaterialLayer",
     "MaterialMap",
     "MetaDataLevel",
     "MultiParticleProcess",

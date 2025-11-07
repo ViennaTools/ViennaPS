@@ -1008,6 +1008,59 @@ class MakeStack:
         """
 
 class MakeTrench:
+    class MaterialLayer:
+        @typing.overload
+        def __init__(self) -> None: ...
+        @typing.overload
+        def __init__(
+            self,
+            height: typing.SupportsFloat,
+            width: typing.SupportsFloat,
+            taperAngle: typing.SupportsFloat,
+            material: viennaps._core.Material,
+            isMask: bool,
+        ) -> None: ...
+        @property
+        def height(self) -> float:
+            """
+            Layer thickness
+            """
+
+        @height.setter
+        def height(self, arg0: typing.SupportsFloat) -> None: ...
+        @property
+        def isMask(self) -> bool:
+            """
+            true: apply cutout (mask behavior), false: no cutout
+            """
+
+        @isMask.setter
+        def isMask(self, arg0: bool) -> None: ...
+        @property
+        def material(self) -> viennaps._core.Material:
+            """
+            Material type for this layer
+            """
+
+        @material.setter
+        def material(self, arg0: viennaps._core.Material) -> None: ...
+        @property
+        def taperAngle(self) -> float:
+            """
+            Taper angle for cutout (degrees)
+            """
+
+        @taperAngle.setter
+        def taperAngle(self, arg0: typing.SupportsFloat) -> None: ...
+        @property
+        def width(self) -> float:
+            """
+            Width of cutout for this layer
+            """
+
+        @width.setter
+        def width(self, arg0: typing.SupportsFloat) -> None: ...
+
     @typing.overload
     def __init__(
         self,
@@ -1040,18 +1093,9 @@ class MakeTrench:
     def __init__(
         self,
         domain: Domain,
-        materialLayers: collections.abc.Sequence[viennaps._core.MaterialLayer],
+        materialLayers: collections.abc.Sequence[MakeTrench.MaterialLayer],
         halfTrench: bool = False,
-    ) -> None:
-        """
-        Create a trench with multiple material layers.
-
-        Args:
-            domain: Domain to create the trench in
-            materialLayers: List of MaterialLayer objects defining each layer
-            halfTrench: If true, create half trench (symmetric along x-axis)
-        """
-
+    ) -> None: ...
     def apply(self) -> None:
         """
         Create a trench geometry.

@@ -9,8 +9,8 @@ import typing
 import viennals._core
 import viennaps.d2
 from viennaps import d2
-import viennaps.d3
 from viennaps import d3
+import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
@@ -696,11 +696,13 @@ class Material(enum.IntEnum):
     Air: typing.ClassVar[Material]  # value = <Material.Air: 2>
     Al2O3: typing.ClassVar[Material]  # value = <Material.Al2O3: 31>
     AlN: typing.ClassVar[Material]  # value = <Material.AlN: 37>
+    Au: typing.ClassVar[Material]  # value = <Material.Au: 91>
     BN: typing.ClassVar[Material]  # value = <Material.BN: 39>
     BPSG: typing.ClassVar[Material]  # value = <Material.BPSG: 54>
     C: typing.ClassVar[Material]  # value = <Material.C: 50>
     Co: typing.ClassVar[Material]  # value = <Material.Co: 72>
     CoW: typing.ClassVar[Material]  # value = <Material.CoW: 85>
+    Cr: typing.ClassVar[Material]  # value = <Material.Cr: 92>
     Cu: typing.ClassVar[Material]  # value = <Material.Cu: 71>
     Dielectric: typing.ClassVar[Material]  # value = <Material.Dielectric: 4>
     GAS: typing.ClassVar[Material]  # value = <Material.GAS: 3>
@@ -1001,33 +1003,6 @@ class ProcessParams:
     def getScalarDataIndex(self, arg0: str) -> int: ...
     def getScalarDataLabel(self, arg0: typing.SupportsInt) -> str: ...
     def insertNextScalar(self, arg0: typing.SupportsFloat, arg1: str) -> None: ...
-
-class MaterialLayer:
-    """
-    Defines a material layer with individual properties for multi-layer geometries.
-    """
-
-    height: float
-    width: float
-    taperAngle: float
-    material: Material
-    isMask: bool
-    def __init__(
-        self,
-        height: typing.SupportsFloat,
-        width: typing.SupportsFloat,
-        taperAngle: typing.SupportsFloat,
-        material: Material,
-        isMask: bool,
-    ) -> None:
-        """
-        Args:
-            height: Layer thickness
-            width: Width of cutout for this layer
-            taperAngle: Taper angle for cutout (degrees)
-            material: Material type for this layer
-            isMask: true: apply cutout (mask behavior), false: no cutout
-        """
 
 class RateSet:
     calculateVisibility: bool
