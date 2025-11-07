@@ -1,4 +1,5 @@
 #include <geometries/psMakeTrench.hpp>
+#include <lsRemoveStrayPoints.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psSingleParticleProcess.hpp>
@@ -58,12 +59,14 @@ void ash(SmartPointer<Domain<NumericType, D>> domain) {
   domain->removeTopLevelSet();
 }
 
-void cleanup(SmartPointer<Domain<NumericType, D>> domain,
-             NumericType threshold) {
-  auto expand = SmartPointer<IsotropicProcess<NumericType, D>>::New(threshold);
-  Process<NumericType, D>(domain, expand, 1.).apply();
-  auto shrink = SmartPointer<IsotropicProcess<NumericType, D>>::New(-threshold);
-  Process<NumericType, D>(domain, shrink, 1.).apply();
+void cleanup(SmartPointer<Domain<NumericType, D>> domain) {
+  auto surface = domain->getLevelSets().back();
+  viennals::BooleanOperation(surface, viennals::BooleanOperationEnum::INVERT)
+      .apply();
+  viennals::Expand(surface, 2).apply();
+  viennals::RemoveStrayPoints(surface).apply();
+  viennals::BooleanOperation(surface, viennals::BooleanOperationEnum::INVERT)
+      .apply();
 }
 
 int main(int argc, char **argv) {
@@ -107,9 +110,9 @@ int main(int argc, char **argv) {
     etch(geometry, params);
     geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
     ash(geometry);
+    cleanup(geometry);
     geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
   }
 
-  cleanup(geometry, params.get("gridDelta"));
   geometry->saveVolumeMesh(name + "final");
 }

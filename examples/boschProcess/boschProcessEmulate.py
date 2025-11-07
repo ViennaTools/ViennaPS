@@ -38,9 +38,7 @@ direction = [0.0, 0.0, 0.0]
 direction[args.dim - 1] = -1.0
 
 # Geometric advection model for deposition
-depoModel = ps.SphereDistribution(
-    radius=params["depositionThickness"], gridDelta=params["gridDelta"]
-)
+depoModel = ps.SphereDistribution(radius=params["depositionThickness"])
 
 # Define purely directional rate for depo removal
 etchDir = ps.RateSet(
@@ -72,11 +70,11 @@ def runProcess(model, name, time=1.0):
     n += 1
 
 
-def cleanup(threshold=1.0):
-    expand = ps.IsotropicProcess(threshold)
-    ps.Process(geometry, expand, 1).apply()
-    shrink = ps.IsotropicProcess(-threshold)
-    ps.Process(geometry, shrink, 1).apply()
+def cleanup():
+    surface = geometry.getLevelSets()[-1]
+    ps.ls.BooleanOperation(surface, ps.ls.BooleanOperationEnum.INVERT).apply()
+    ps.ls.RemoveStrayPoints(surface).apply()
+    ps.ls.BooleanOperation(surface, ps.ls.BooleanOperationEnum.INVERT).apply()
 
 
 numCycles = int(params["numCycles"])
@@ -102,7 +100,7 @@ for i in range(numCycles):
 
     # Ash (remove) the polymer
     geometry.removeTopLevelSet()
-    cleanup(params["gridDelta"])
+    cleanup()
     geometry.saveSurfaceMesh("boschProcessEmulate_{}".format(n))
     n += 1
 
