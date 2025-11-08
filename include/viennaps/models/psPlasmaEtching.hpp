@@ -184,7 +184,9 @@ public:
 
       if (Gb_P < 1e-6) {
         // No passivation case - avoid division by zero
-        eCoverage->at(i) = Gb_E < 1e-6 ? 0. : Gb_E / (Gb_E + params.Substrate.k_sigma + 2 * GY_ie);
+        eCoverage->at(i) =
+            Gb_E < 1e-6 ? 0.
+                        : Gb_E / (Gb_E + params.Substrate.k_sigma + 2 * GY_ie);
         pCoverage->at(i) = 0.;
       } else if (Gb_E < 1e-6) {
         // No etchant case - avoid division by zero
