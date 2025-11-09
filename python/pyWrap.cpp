@@ -438,6 +438,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("raysPerPoint", &RayTracingParameters::raysPerPoint)
       .def_readwrite("diskRadius", &RayTracingParameters::diskRadius)
       .def_readwrite("useRandomSeeds", &RayTracingParameters::useRandomSeeds)
+      .def_readwrite("rngSeed", &RayTracingParameters::rngSeed)
       .def_readwrite("ignoreFluxBoundaries",
                      &RayTracingParameters::ignoreFluxBoundaries)
       .def_readwrite("smoothingNeighbors",
