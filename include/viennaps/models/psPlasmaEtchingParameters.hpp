@@ -76,7 +76,7 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     NumericType sigmaEnergy = 10.; // eV
     NumericType exponent = 500.;
 
-    NumericType inflectAngle = 1.55334303;
+    NumericType inflectAngle = 1.55334303; // in rad
     NumericType n_l = 10.;
     NumericType minAngle = 1.3962634;
 

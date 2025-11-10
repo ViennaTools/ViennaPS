@@ -3,7 +3,7 @@
 #include "../psUtil.hpp"
 
 #include <lsAdvect.hpp>
-#include <rayTrace.hpp>
+#include <rayUtil.hpp>
 #include <vcLogger.hpp>
 
 #include <vector>

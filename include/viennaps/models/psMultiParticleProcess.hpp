@@ -106,8 +106,7 @@ public:
                     const int, const viennaray::TracingData<NumericType> *,
                     RNG &rngState) override final {
 
-    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
-                               NumericType(1));
+    auto cosTheta = getCosTheta(rayDir, geomNormal);
     NumericType incomingAngle = std::acos(cosTheta);
 
     NumericType sticking = 1.;

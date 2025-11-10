@@ -20,7 +20,6 @@ namespace viennaps {
 
 // Precompile specializations for commonly used classes
 PRECOMPILE_SPECIALIZE(Domain)
-PRECOMPILE_SPECIALIZE(DomainSetup)
 PRECOMPILE_SPECIALIZE(Process)
 PRECOMPILE_SPECIALIZE(Planarize)
 PRECOMPILE_SPECIALIZE(ProcessModelCPU)

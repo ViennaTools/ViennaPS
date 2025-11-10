@@ -3,7 +3,6 @@
 #include <lsMesh.hpp>
 
 #include <rayParticle.hpp>
-#include <raygIndexMap.hpp>
 
 #include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
@@ -13,15 +12,74 @@
 #include <numeric>
 #include <stdexcept>
 
-namespace viennaps::gpu {
+namespace viennaps {
 
 using namespace viennacore;
 
+class IndexMap {
+  std::vector<std::string> dataLabels;
+
+public:
+  IndexMap() = default;
+
+#ifdef VIENNACORE_COMPILE_GPU
+  template <class T>
+  explicit IndexMap(const std::vector<viennaray::gpu::Particle<T>> &particles) {
+    for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
+      for (size_t dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
+        dataLabels.push_back(particles[pIdx].dataLabels[dIdx]);
+      }
+    }
+  }
+#endif
+
+  template <class T>
+  explicit IndexMap(
+      const std::vector<std::unique_ptr<viennaray::AbstractParticle<T>>>
+          &particles) {
+    for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
+      auto labels = particles[pIdx]->getLocalDataLabels();
+      for (size_t dIdx = 0; dIdx < labels.size(); dIdx++) {
+        dataLabels.push_back(labels[dIdx]);
+      }
+    }
+  }
+
+  void insertNextDataLabel(std::string dataLabel) {
+    dataLabels.push_back(std::move(dataLabel));
+  }
+
+  std::size_t getIndex(const std::string &label) const {
+    for (std::size_t idx = 0; idx < dataLabels.size(); idx++) {
+      if (dataLabels[idx] == label) {
+        return idx;
+      }
+    }
+    assert(false && "Data label not found");
+    return 0;
+  }
+
+  [[nodiscard]] const std::string &getLabel(std::size_t idx) const {
+    assert(idx < dataLabels.size());
+    return dataLabels[idx];
+  }
+
+  std::size_t getNumberOfData() const { return dataLabels.size(); }
+
+  std::vector<std::string>::const_iterator begin() const {
+    return dataLabels.cbegin();
+  }
+
+  std::vector<std::string>::const_iterator end() const {
+    return dataLabels.cend();
+  }
+};
+
 template <typename NumericType, typename MeshNT = NumericType>
-class ElementToPointData {
-  CudaBuffer &d_elementData_;
+class ElementToPointDataBase {
+protected:
+  const IndexMap indexMap_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;
-  const viennaray::gpu::IndexMap indexMap_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
@@ -31,33 +89,18 @@ class ElementToPointData {
   static constexpr bool discard4 = true;
 
 public:
-  ElementToPointData(
-      CudaBuffer &d_elementData,
+  ElementToPointDataBase(
+      const IndexMap &indexMap,
       SmartPointer<viennals::PointData<NumericType>> pointData,
-      const std::vector<viennaray::gpu::Particle<NumericType>> &particles,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : d_elementData_(d_elementData), pointData_(pointData),
-        indexMap_(particles), elementKdTree_(elementKdTree),
-        diskMesh_(diskMesh), surfaceMesh_(surfMesh),
-        conversionRadius_(conversionRadius) {}
-
-  ElementToPointData(
-      CudaBuffer &d_elementData,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      const viennaray::gpu::IndexMap &indexMap,
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
-      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
-      const NumericType conversionRadius)
-      : d_elementData_(d_elementData), pointData_(pointData),
-        indexMap_(indexMap), elementKdTree_(elementKdTree), diskMesh_(diskMesh),
+      : indexMap_(indexMap), pointData_(pointData),
+        elementKdTree_(elementKdTree), diskMesh_(diskMesh),
         surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
 
   void apply() {
-
     const auto numData = indexMap_.getNumberOfData();
     const auto &points = diskMesh_->nodes;
     const auto numPoints = points.size();
@@ -67,8 +110,9 @@ public:
     const auto sqrdDist = conversionRadius_ * conversionRadius_;
 
     // retrieve data from device
-    std::vector<MeshNT> elementData(numData * numElements);
-    d_elementData_.download(elementData.data(), numData * numElements);
+    std::vector<MeshNT> elementData;
+    flattenElementData(elementData);
+    assert(elementData.size() == numData * numElements);
 
     // prepare point data container
     pointData_->clear();
@@ -150,6 +194,9 @@ public:
       }
     }
   }
+
+protected:
+  virtual void flattenElementData(std::vector<MeshNT> &elementData) const = 0;
 
 private:
   // Helper function to find min/max values and their indices
@@ -242,4 +289,101 @@ private:
   }
 };
 
-} // namespace viennaps::gpu
+template <typename NumericType, typename MeshNT = NumericType>
+class ElementToPointData : public ElementToPointDataBase<NumericType, MeshNT> {
+public:
+  ElementToPointData(
+      const std::vector<std::vector<MeshNT>> &elementData,
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      const IndexMap &indexMap,
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
+      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
+      const NumericType conversionRadius)
+      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+            indexMap, pointData, elementKdTree, diskMesh, surfMesh,
+            conversionRadius),
+        elementData_(elementData) {}
+
+  ElementToPointData(
+      const std::vector<std::vector<MeshNT>> &elementData,
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      const std::vector<
+          std::unique_ptr<viennaray::AbstractParticle<NumericType>>> &particles,
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
+      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
+      const NumericType conversionRadius)
+      : viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+            viennaps::IndexMap(particles), pointData, elementKdTree, diskMesh,
+            surfMesh, conversionRadius),
+        elementData_(elementData) {}
+
+protected:
+  void flattenElementData(std::vector<MeshNT> &elementData) const override {
+    const auto numData = elementData_.size();
+    assert(elementData_.size() > 0);
+    const auto numElements = elementData_[0].size();
+
+    elementData.resize(numData * numElements);
+#pragma omp parallel for schedule(static)
+    for (unsigned i = 0; i < numData; ++i) {
+      unsigned offset = i * numElements;
+      for (unsigned j = 0; j < numElements; ++j) {
+        elementData[offset + j] = elementData_[i][j];
+      }
+    }
+  }
+
+private:
+  const std::vector<std::vector<MeshNT>> &elementData_;
+};
+
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+template <typename NumericType, typename MeshNT = NumericType>
+class ElementToPointData : public ElementToPointDataBase<NumericType, MeshNT> {
+public:
+  ElementToPointData(
+      CudaBuffer &d_elementData,
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      const IndexMap &indexMap,
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
+      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
+      const NumericType conversionRadius)
+      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+            indexMap, pointData, elementKdTree, diskMesh, surfMesh,
+            conversionRadius),
+        d_elementData_(d_elementData) {}
+
+  ElementToPointData(
+      CudaBuffer &d_elementData,
+      SmartPointer<viennals::PointData<NumericType>> pointData,
+      const std::vector<viennaray::gpu::Particle<NumericType>> &particles,
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
+      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
+      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
+      const NumericType conversionRadius)
+      : viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+            viennaps::IndexMap(particles), pointData, elementKdTree, diskMesh,
+            surfMesh, conversionRadius),
+        d_elementData_(d_elementData) {}
+
+protected:
+  void flattenElementData(std::vector<MeshNT> &elementData) const override {
+    const auto numData = this->indexMap_.getNumberOfData();
+    const auto numElements = this->elementKdTree_->getNumberOfPoints();
+
+    // retrieve data from device
+    elementData.resize(numData * numElements);
+    d_elementData_.download(elementData.data(), numData * numElements);
+  }
+
+private:
+  CudaBuffer &d_elementData_;
+};
+} // namespace gpu
+#endif
+
+} // namespace viennaps

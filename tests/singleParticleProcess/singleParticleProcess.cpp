@@ -25,7 +25,9 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(model->getVelocityField());
     VC_TEST_ASSERT(model->getParticleTypes().size() == 1);
 
-    Process<NumericType, D>(domain, model, 1.).apply();
+    Process<NumericType, D> p(domain, model, 1.);
+    p.setFluxEngineType(FluxEngineType::CPU_DISK);
+    p.apply();
 
     VC_TEST_ASSERT(domain->getLevelSets().size() == 2);
     VC_TEST_ASSERT(domain->getMaterialMap());

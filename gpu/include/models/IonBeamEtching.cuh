@@ -18,10 +18,11 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
                                              viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  const bool yieldDefined = abs(params->aSum) > 0.f;
+  const bool yieldDefined = abs(params->aSum) > 1e-6f;
+  const bool redepositionEnabled = params->redepositionRate > 0.f;
 
   for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = getNormal(sbtData, prd->primIDs[i]);
+    auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
@@ -42,7 +43,7 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
                                          prd->primIDs[i]],
               prd->rayWeight * yield);
 
-    if (params->redepositionRate > 0.f) {
+    if (redepositionEnabled) {
       // redeposition array
       atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
                                            prd->primIDs[i]],
@@ -55,7 +56,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
                                               viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  auto geomNormal = getNormal(sbtData, prd->primID);
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
   float theta = acosf(cosTheta);
@@ -92,9 +93,9 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
 
   if (prd->energy > params->thresholdEnergy * params->thresholdEnergy ||
       prd->load > params->redepositionThreshold) {
-    conedCosineReflection(prd, geomNormal,
-                          M_PI_2f - min(theta, params->minAngle),
-                          launchParams.D);
+    viennaray::gpu::conedCosineReflection(
+        prd, geomNormal, M_PI_2f - min(theta, params->minAngle),
+        launchParams.D);
   } else {
     prd->rayWeight = 0.f; // terminate particle
   }

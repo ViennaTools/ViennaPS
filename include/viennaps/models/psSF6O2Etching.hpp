@@ -90,6 +90,7 @@ private:
     this->setCallableFileName("CallableWrapper");
 
     this->setUseMaterialIds(true);
+    precomputeSqrtEnergies();
     this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
     this->processData.upload(&deviceParams, 1);
     this->hasGPU = true;
@@ -100,12 +101,22 @@ private:
   void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
     params = pParams;
     deviceParams = pParams.convertToFloat();
+    precomputeSqrtEnergies();
     this->processData.upload(&deviceParams, 1);
   }
 
 private:
   PlasmaEtchingParameters<NumericType> params;
   PlasmaEtchingParameters<float> deviceParams;
+
+  void precomputeSqrtEnergies() {
+    deviceParams.Substrate.Eth_ie = std::sqrt(deviceParams.Substrate.Eth_ie);
+    deviceParams.Passivation.Eth_ie =
+        std::sqrt(deviceParams.Passivation.Eth_ie);
+    deviceParams.Substrate.Eth_sp = std::sqrt(deviceParams.Substrate.Eth_sp);
+    deviceParams.Mask.Eth_sp = std::sqrt(deviceParams.Mask.Eth_sp);
+    deviceParams.Polymer.Eth_sp = std::sqrt(deviceParams.Polymer.Eth_sp);
+  }
 };
 } // namespace gpu
 #endif

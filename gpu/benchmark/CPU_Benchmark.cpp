@@ -2,9 +2,10 @@
 #include <lsToDiskMesh.hpp>
 
 #include <process/psProcess.hpp>
-#include <rayTrace.hpp>
+#include <rayTraceDisk.hpp>
+#include <rayTraceTriangle.hpp>
 
-#include "BenchmarkGeometry.hpp"
+#include "Benchmark.hpp"
 
 using namespace viennaps;
 
@@ -13,79 +14,208 @@ int main() {
   using NumericType = float;
   constexpr int D = DIM;
 
-  const std::array<NumericType, 10> sticking = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f,
-                                                0.6f, 0.7f, 0.8f, 0.9f, 1.f};
-  // const std::array<NumericType, 1> sticking = {1.f};
-  const int processSteps = 10;
-  std::ofstream file("CPU_Benchmark.txt");
-  file << "Sticking;Meshing;Tracing;Postprocessing;Advection\n";
+  // const std::array<NumericType, 4> gridDeltaValues = {0.05f, 0.1f, 0.2f,
+  // 0.4f};
+  auto gridDeltaValues = linspace<NumericType, 6>(0.05f, 0.4f);
+  const int numRuns = 10;
+  const int raysPerPoint = 1000;
+  // const int numRays = int(1.4e8);
 
-  for (int i = 0; i < sticking.size(); i++) {
+  auto particle = makeCPUParticle<NumericType, D>();
+  std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
+      particles;
+  particles.push_back(particle->clone());
+  std::string fluxLabel = particleType == 0 ? "flux" : "ionFlux";
 
-    auto domain = MAKE_GEO<NumericType>();
+  { // Disk
+    std::ofstream file("CPU_Benchmark_Disk.txt");
+    file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
-    auto mesh = viennals::Mesh<NumericType>::New();
-    viennals::ToDiskMesh<NumericType, D> mesher(mesh);
-
-    viennaray::Trace<NumericType, D> tracer;
-    tracer.setNumberOfRaysPerPoint(3000);
+    viennaray::TraceDisk<NumericType, D> tracer;
+    tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setUseRandomSeeds(false);
-
-    viennals::Advect<NumericType, D> advectionKernel;
-
-    auto velocityField =
-        SmartPointer<DefaultVelocityField<NumericType, D>>::New();
-    auto translationField = SmartPointer<TranslationField<NumericType, D>>::New(
-        velocityField, domain->getMaterialMap(), 1);
-    advectionKernel.setVelocityField(translationField);
-
-    for (const auto ls : domain->getLevelSets()) {
-      mesher.insertNextLevelSet(ls);
-      advectionKernel.insertNextLevelSet(ls);
-    }
-
-    auto particle =
-        std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(
-            sticking[i], "flux");
     tracer.setParticleType(particle);
 
-    for (int j = 0; j < processSteps; j++) {
-      file << sticking[i] << ";";
+    std::cout << "Starting Disk Benchmark\n";
 
-      Timer timer;
-      timer.start();
-      mesher.apply();
-      translationField->buildKdTree(mesh->nodes);
-      timer.finish();
-      file << timer.currentDuration << ";";
+    for (int i = 0; i < gridDeltaValues.size(); i++) {
+      std::cout << "  Grid Delta: " << gridDeltaValues[i] << "\n";
+      auto domain = MAKE_GEO<NumericType>(gridDeltaValues[i]);
 
-      const auto &materialIds =
-          *mesh->getCellData().getScalarData("MaterialIds");
-      const auto &normals = *mesh->getCellData().getVectorData("Normals");
-      tracer.setGeometry(mesh->nodes, normals, GRID_DELTA);
-      tracer.setMaterialIds(materialIds);
+      auto diskMesh = viennals::Mesh<NumericType>::New();
+      auto translator = SmartPointer<TranslatorType>::New();
+      viennals::ToDiskMesh<NumericType, D> mesher(diskMesh);
+      mesher.setTranslator(translator);
 
-      timer.start();
-      tracer.apply();
-      timer.finish();
-      file << timer.currentDuration << ";";
+      viennals::Advect<NumericType, D> advectionKernel;
 
-      timer.start();
-      auto &flux = tracer.getLocalData().getVectorData("flux");
-      tracer.normalizeFlux(flux);
-      tracer.smoothFlux(flux);
-      auto velocities =
-          SmartPointer<std::vector<NumericType>>::New(std::move(flux));
-      velocityField->prepare(domain, velocities, 0.);
-      timer.finish();
-      file << timer.currentDuration << ";";
+      auto velocityField =
+          SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+      auto translationField =
+          SmartPointer<TranslationField<NumericType, D>>::New(
+              velocityField, domain->getMaterialMap(), 1);
+      translationField->setTranslator(translator);
+      advectionKernel.setVelocityField(translationField);
 
-      timer.start();
-      advectionKernel.apply();
-      timer.finish();
-      file << timer.currentDuration << "\n";
+      for (const auto ls : domain->getLevelSets()) {
+        mesher.insertNextLevelSet(ls);
+        advectionKernel.insertNextLevelSet(ls);
+      }
+
+      for (int j = 0; j < numRuns; j++) {
+        std::cout << "    Process Step: " << j + 1 << "\n";
+        advectionKernel.prepareLS();
+
+        Timer timer;
+
+        // MESHING
+        timer.start();
+        mesher.apply();
+        const auto &materialIds =
+            *diskMesh->getCellData().getScalarData("MaterialIds");
+        const auto &normals = *diskMesh->getCellData().getVectorData("Normals");
+        tracer.setGeometry(diskMesh->nodes, normals, domain->getGridDelta());
+        tracer.setMaterialIds(materialIds);
+        timer.finish();
+        file << timer.currentDuration << ";";
+
+        std::cout << "Meshing done\n";
+
+        // TRACING
+        timer.start();
+        tracer.apply();
+        timer.finish();
+        file << timer.currentDuration << ";";
+
+        std::cout << "Tracing done\n";
+
+        // POSTPROCESSING
+        timer.start();
+        auto &flux = tracer.getLocalData().getVectorData(fluxLabel);
+        tracer.normalizeFlux(flux);
+        int smoothingNeighbors = 1;
+        tracer.smoothFlux(flux, smoothingNeighbors);
+        auto velocities =
+            SmartPointer<std::vector<NumericType>>::New(std::move(flux));
+        velocityField->prepare(domain, velocities, 0.);
+        timer.finish();
+        file << timer.currentDuration << ";";
+
+        std::cout << "Postprocessing done\n";
+
+        // // ADVECTION
+        // timer.start();
+        // advectionKernel.apply();
+        // timer.finish();
+        // file << timer.currentDuration << ";";
+
+        file << gridDeltaValues[i] << "\n";
+      }
     }
+
+    file.close();
   }
 
-  file.close();
+  if (D == 3) { // Triangle
+    std::ofstream file("CPU_Benchmark_Triangle.txt");
+    file << "Meshing;Tracing;Postprocessing;GridDelta\n";
+
+    std::cout << "Starting Triangle Benchmark\n";
+
+    viennaray::TraceTriangle<NumericType, D> tracer;
+    tracer.setNumberOfRaysPerPoint(raysPerPoint);
+    tracer.setUseRandomSeeds(false);
+    tracer.setParticleType(particle);
+
+    for (int i = 0; i < gridDeltaValues.size(); i++) {
+      std::cout << "  Grid Delta: " << gridDeltaValues[i] << "\n";
+      auto domain = MAKE_GEO<NumericType>(gridDeltaValues[i]);
+
+      auto diskMesh = viennals::Mesh<NumericType>::New();
+      auto translator = SmartPointer<TranslatorType>::New();
+      viennals::ToDiskMesh<NumericType, D> diskMesher(diskMesh);
+      diskMesher.setTranslator(translator);
+
+      auto elementKdTree =
+          SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      auto surfMesh = viennals::Mesh<NumericType>::New();
+      CreateSurfaceMesh<NumericType, float, D> surfMesher(
+          domain->getLevelSets().back(), surfMesh, elementKdTree);
+
+      viennals::Advect<NumericType, D> advectionKernel;
+
+      auto velocityField =
+          SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+      auto translationField =
+          SmartPointer<TranslationField<NumericType, D>>::New(
+              velocityField, domain->getMaterialMap(), 1);
+      translationField->setTranslator(translator);
+      advectionKernel.setVelocityField(translationField);
+
+      for (const auto ls : domain->getLevelSets()) {
+        diskMesher.insertNextLevelSet(ls);
+        advectionKernel.insertNextLevelSet(ls);
+      }
+
+      for (int j = 0; j < numRuns; j++) {
+        std::cout << "    Process Step: " << j + 1 << "\n";
+        advectionKernel.prepareLS();
+
+        Timer timer;
+
+        // MESHING
+        timer.start();
+        diskMesher.apply();
+        surfMesher.apply();
+        translationField->buildKdTree(diskMesh->nodes);
+        tracer.setGeometry(surfMesh->nodes, surfMesh->triangles,
+                           domain->getGridDelta());
+        timer.finish();
+        file << timer.currentDuration << ";";
+
+        std::cout << "Meshing done\n";
+
+        // TRACING
+        timer.start();
+        tracer.apply();
+        timer.finish();
+        file << timer.currentDuration << ";";
+
+        std::cout << "Tracing done\n";
+
+        // POSTPROCESSING
+        timer.start();
+        auto pointData = viennals::PointData<NumericType>::New();
+        auto fluxResult = tracer.getLocalData().getVectorData(0);
+        tracer.normalizeFlux(fluxResult);
+        std::vector<std::vector<NumericType>> fluxResultVec;
+        fluxResultVec.push_back(std::move(fluxResult));
+        if constexpr (particleType == 1) {
+          fluxResult = tracer.getLocalData().getVectorData(1);
+          tracer.normalizeFlux(fluxResult);
+          fluxResultVec.push_back(std::move(fluxResult));
+        }
+        ElementToPointData<NumericType, float>(
+            fluxResultVec, pointData, particles, elementKdTree, diskMesh,
+            surfMesh, domain->getGridDelta() * 2.0f)
+            .apply();
+        auto velocities = SmartPointer<std::vector<NumericType>>::New(
+            std::move(*pointData->getScalarData(fluxLabel)));
+        velocityField->prepare(domain, velocities, 0.);
+        timer.finish();
+        file << timer.currentDuration << ";";
+
+        std::cout << "Postprocessing done\n";
+
+        // // ADVECTION
+        // timer.start();
+        // advectionKernel.apply();
+        // timer.finish();
+        // file << timer.currentDuration << ";";
+
+        file << gridDeltaValues[i] << "\n";
+      }
+    }
+    file.close();
+  }
 }

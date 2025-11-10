@@ -59,12 +59,15 @@ public:
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) final {
-    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
-                               NumericType(1));
+    auto cosTheta = getCosTheta(rayDir, geomNormal);
     NumericType incAngle = std::acos(cosTheta);
+
+    if (stickingProbability_ >= 1.0)
+      return VIENNARAY_PARTICLE_STOP;
 
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
         rayDir, geomNormal, Rng, std::max(incAngle, minAngle_));
+
     return std::pair<NumericType, Vec3D<NumericType>>{stickingProbability_,
                                                       direction};
   }

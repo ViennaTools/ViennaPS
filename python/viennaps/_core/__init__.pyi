@@ -7,8 +7,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
+import viennaps.d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -513,11 +513,14 @@ class FluorocarbonParametersIons:
 class FluxEngineType(enum.IntEnum):
     AUTO: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.AUTO: 0>
     CPU_DISK: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.CPU_DISK: 1>
+    CPU_TRIANGLE: typing.ClassVar[
+        FluxEngineType
+    ]  # value = <FluxEngineType.CPU_TRIANGLE: 2>
     GPU_DISK: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.GPU_DISK: 3>
-    GPU_LINE: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.GPU_LINE: 4>
+    GPU_LINE: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.GPU_LINE: 5>
     GPU_TRIANGLE: typing.ClassVar[
         FluxEngineType
-    ]  # value = <FluxEngineType.GPU_TRIANGLE: 2>
+    ]  # value = <FluxEngineType.GPU_TRIANGLE: 4>
     @classmethod
     def __new__(cls, value): ...
     def __format__(self, format_spec):
@@ -1063,6 +1066,10 @@ class RayTracingParameters:
     @raysPerPoint.setter
     def raysPerPoint(self, arg0: typing.SupportsInt) -> None: ...
     @property
+    def rngSeed(self) -> int: ...
+    @rngSeed.setter
+    def rngSeed(self, arg0: typing.SupportsInt) -> None: ...
+    @property
     def smoothingNeighbors(self) -> int: ...
     @smoothingNeighbors.setter
     def smoothingNeighbors(self, arg0: typing.SupportsInt) -> None: ...
@@ -1143,5 +1150,5 @@ def gpuAvailable() -> bool:
 
 def setNumThreads(arg0: typing.SupportsInt) -> None: ...
 
-__version__: str = "4.0.1"
-version: str = "4.0.1"
+__version__: str = "4.1.0"
+version: str = "4.1.0"

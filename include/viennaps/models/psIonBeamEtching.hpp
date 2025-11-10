@@ -103,12 +103,11 @@ public:
   explicit IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
       : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
         minAngle_(params.minAngle * M_PI / 180.),
-        A_(1. / (1. + params.n_l * (M_PI_2 / params.inflectAngle - 1.))),
+        A_(1. / (1. + params.n_l * (M_PI_2 / inflectAngle_ - 1.))),
         sqrtThresholdEnergy_(std::sqrt(params.thresholdEnergy)),
         thetaRMin_(params.thetaRMin * M_PI / 180.),
         thetaRMax_(params.thetaRMax * M_PI / 180.),
-        aSum_(1. / params.cos4Yield.aSum()),
-        normalDist_(params.meanEnergy, params.sigmaEnergy) {}
+        aSum_(1. / params.cos4Yield.aSum()) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -116,8 +115,7 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
                         RNG &) override {
-    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
-                               NumericType(1));
+    auto cosTheta = util::saturate(-DotProduct(rayDir, geomNormal));
     NumericType yield;
     if (params_.cos4Yield.isDefined) {
       NumericType cosTheta2 = cosTheta * cosTheta;
@@ -135,7 +133,7 @@ public:
         std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
         yield;
 
-    if (params_.redepositionRate > 0.)
+    if (params_.redepositionRate > 0. && redepositionWeight_ > 0.)
       localData.getVectorData(1)[primID] += redepositionWeight_;
   }
 
@@ -146,8 +144,7 @@ public:
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &rngState) override {
 
-    const NumericType cosTheta = std::clamp(-DotProduct(rayDir, geomNormal),
-                                            NumericType(0), NumericType(1));
+    const NumericType cosTheta = getCosTheta(rayDir, geomNormal);
     const NumericType theta = std::acos(cosTheta);
 
     // Update redeposition weight
@@ -170,9 +167,8 @@ public:
 
     NumericType sticking = 1.;
     if (theta > params_.thetaRMin) {
-      sticking = 1. - std::clamp((theta - params_.thetaRMin) /
-                                     (params_.thetaRMax - params_.thetaRMin),
-                                 NumericType(0), NumericType(1));
+      sticking = 1. - util::saturate((theta - params_.thetaRMin) /
+                                     (params_.thetaRMax - params_.thetaRMin));
     }
 
     // Early exit: particle sticks and no redeposition
@@ -223,8 +219,6 @@ private:
   const NumericType thetaRMin_; // in rad
   const NumericType thetaRMax_; // in  rad
   const NumericType aSum_;
-
-  std::normal_distribution<NumericType> normalDist_;
 };
 } // namespace impl
 

@@ -1,6 +1,6 @@
 #include <geometries/psMakeHole.hpp>
+#include <psCreateSurfaceMesh.hpp>
 #include <psDomain.hpp>
-#include <psgCreateSurfaceMesh.hpp>
 
 using namespace viennaps;
 
@@ -32,8 +32,8 @@ int main() {
   auto surfaceMesh = viennals::Mesh<float>::New();
   Timer timer;
   timer.start();
-  gpu::CreateSurfaceMesh<float, float, 3>(domain->getLevelSets().back(),
-                                          surfaceMesh, nullptr, 1e-12, 0.0)
+  CreateSurfaceMesh<float, float, 3>(domain->getLevelSets().back(), surfaceMesh,
+                                     nullptr, 1e-12, 0.0)
       .apply();
   timer.finish();
   std::cout << "Surface mesh creation (no check node dist) took: "
@@ -45,8 +45,8 @@ int main() {
   surfaceMesh->clear();
 
   timer.start();
-  gpu::CreateSurfaceMesh<float, float, 3>(domain->getLevelSets().back(),
-                                          surfaceMesh, nullptr, 1e-12, 0.05)
+  CreateSurfaceMesh<float, float, 3>(domain->getLevelSets().back(), surfaceMesh,
+                                     nullptr, 1e-12, 0.05)
       .apply();
   timer.finish();
   std::cout << "Surface mesh creation (with check node dist) took: "
@@ -59,8 +59,8 @@ int main() {
   surfaceMesh->clear();
   auto kdTree = SmartPointer<KDTree<float, std::array<float, 3>>>::New();
   timer.start();
-  gpu::CreateSurfaceMesh<float, float, 3>(domain->getLevelSets().back(),
-                                          surfaceMesh, kdTree, 1e-12, 0.05)
+  CreateSurfaceMesh<float, float, 3>(domain->getLevelSets().back(), surfaceMesh,
+                                     kdTree, 1e-12, 0.05)
       .apply();
   timer.finish();
   std::cout << "Surface mesh creation (with kd-tree) took: "

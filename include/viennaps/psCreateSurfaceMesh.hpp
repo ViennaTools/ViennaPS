@@ -4,14 +4,18 @@
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 
+#ifdef VIENNACORE_COMPILE_GPU
 #include <raygMesh.hpp>
+#endif
 
 #include <vcKDTree.hpp>
 
-namespace viennaps::gpu {
+namespace viennaps {
 
 using namespace viennacore;
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
 viennaray::gpu::TriangleMesh
 CreateTriangleMesh(const float gridDelta,
                    SmartPointer<viennals::Mesh<float>> &mesh) {
@@ -26,6 +30,8 @@ CreateTriangleMesh(const float gridDelta,
 
   return triangleMesh;
 }
+} // namespace gpu
+#endif
 
 template <class LsNT, class MeshNT = LsNT, int D = 3> class CreateSurfaceMesh {
 
@@ -308,4 +314,4 @@ private:
   }
 };
 
-} // namespace viennaps::gpu
+} // namespace viennaps

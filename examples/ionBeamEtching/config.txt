@@ -2,12 +2,12 @@
 # Domain
 gridDelta=0.1
 xExtent=10
-yExtent=10
+yExtent=1
 
 # Geometry
 trenchWidth=5
 maskHeight=1
-trenchDepth=10
+trenchDepth=5
 
 # Model
 meanEnergy=100
@@ -20,4 +20,4 @@ redepositionRate=0.05
 planeWaferRate=1.0
 angle=35.0
 
-processTime=3
+processTime=5

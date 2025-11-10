@@ -28,13 +28,6 @@ set(VIENNAPS_CUDA_KERNELS
 include("../cmake/generate_ptx.cmake")
 
 if(VIENNAPS_BUILD_EXAMPLES)
-  message(STATUS "[ViennaPS] Adding GPU Examples")
-  add_subdirectory(examples)
+  message(STATUS "[ViennaPS] Adding GPU Benchmarks")
   add_subdirectory(benchmark)
 endif(VIENNAPS_BUILD_EXAMPLES)
-
-# TODO: Add tests for GPU
-if(VIENNAPS_BUILD_TESTS)
-  message(STATUS "[ViennaPS] Adding GPU Tests")
-  add_subdirectory(tests)
-endif()

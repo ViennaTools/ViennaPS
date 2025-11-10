@@ -21,7 +21,7 @@ faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   const bool yieldDefined = abs(params->aSum) > 0.f;
 
   for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = getNormal(sbtData, prd->primIDs[i]);
+    auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
