@@ -21,6 +21,12 @@ int main() {
   const int raysPerPoint = 1000;
   // const int numRays = int(1.4e8);
 
+  auto particle = makeCPUParticle<NumericType, D>();
+  std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
+      particles;
+  particles.push_back(particle->clone());
+  std::string fluxLabel = particleType == 0 ? "flux" : "ionFlux";
+
   { // Disk
     std::ofstream file("CPU_Benchmark_Disk.txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
@@ -28,7 +34,7 @@ int main() {
     viennaray::TraceDisk<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setUseRandomSeeds(false);
-    tracer.setParticleType(makeCPUParticle<NumericType, D>());
+    tracer.setParticleType(particle);
 
     std::cout << "Starting Disk Benchmark\n";
 
@@ -73,15 +79,19 @@ int main() {
         timer.finish();
         file << timer.currentDuration << ";";
 
+        std::cout << "Meshing done\n";
+
         // TRACING
         timer.start();
         tracer.apply();
         timer.finish();
         file << timer.currentDuration << ";";
 
+        std::cout << "Tracing done\n";
+
         // POSTPROCESSING
         timer.start();
-        auto &flux = tracer.getLocalData().getVectorData("flux");
+        auto &flux = tracer.getLocalData().getVectorData(fluxLabel);
         tracer.normalizeFlux(flux);
         int smoothingNeighbors = 1;
         tracer.smoothFlux(flux, smoothingNeighbors);
@@ -91,6 +101,8 @@ int main() {
         timer.finish();
         file << timer.currentDuration << ";";
 
+        std::cout << "Postprocessing done\n";
+
         // // ADVECTION
         // timer.start();
         // advectionKernel.apply();
@@ -98,18 +110,6 @@ int main() {
         // file << timer.currentDuration << ";";
 
         file << gridDeltaValues[i] << "\n";
-
-        // if (j == numRuns - 1) {
-        //   auto mesh_surface =
-        //       viennals::SmartPointer<viennals::Mesh<NumericType>>::New();
-        //   viennals::ToSurfaceMesh<NumericType,
-        //   D>(domain->getLevelSets().back(),
-        //                                           mesh_surface)
-        //       .apply();
-        //   viennals::VTKWriter<NumericType>(
-        //       mesh_surface, "CPU_Benchmark_final_surface_disk.vtp")
-        //       .apply();
-        // }
       }
     }
 
@@ -125,10 +125,6 @@ int main() {
     viennaray::TraceTriangle<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     tracer.setUseRandomSeeds(false);
-    auto particle = makeCPUParticle<NumericType, D>();
-    std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
-        particles;
-    particles.push_back(particle->clone());
     tracer.setParticleType(particle);
 
     for (int i = 0; i < gridDeltaValues.size(); i++) {
@@ -177,11 +173,15 @@ int main() {
         timer.finish();
         file << timer.currentDuration << ";";
 
+        std::cout << "Meshing done\n";
+
         // TRACING
         timer.start();
         tracer.apply();
         timer.finish();
         file << timer.currentDuration << ";";
+
+        std::cout << "Tracing done\n";
 
         // POSTPROCESSING
         timer.start();
@@ -190,15 +190,22 @@ int main() {
         tracer.normalizeFlux(fluxResult);
         std::vector<std::vector<NumericType>> fluxResultVec;
         fluxResultVec.push_back(std::move(fluxResult));
+        if constexpr (particleType == 1) {
+          fluxResult = tracer.getLocalData().getVectorData(1);
+          tracer.normalizeFlux(fluxResult);
+          fluxResultVec.push_back(std::move(fluxResult));
+        }
         ElementToPointData<NumericType, float>(
             fluxResultVec, pointData, particles, elementKdTree, diskMesh,
             surfMesh, domain->getGridDelta() * 2.0f)
             .apply();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(
-            std::move(*pointData->getScalarData("flux")));
+            std::move(*pointData->getScalarData(fluxLabel)));
         velocityField->prepare(domain, velocities, 0.);
         timer.finish();
         file << timer.currentDuration << ";";
+
+        std::cout << "Postprocessing done\n";
 
         // // ADVECTION
         // timer.start();
@@ -207,21 +214,8 @@ int main() {
         // file << timer.currentDuration << ";";
 
         file << gridDeltaValues[i] << "\n";
-
-        // if (j == numRuns - 1) {
-        //   auto mesh_surface =
-        //       viennals::SmartPointer<viennals::Mesh<NumericType>>::New();
-        //   viennals::ToSurfaceMesh<NumericType,
-        //   D>(domain->getLevelSets().back(),
-        //                                           mesh_surface)
-        //       .apply();
-        //   viennals::VTKWriter<NumericType>(
-        //       mesh_surface, "CPU_Benchmark_final_surface_triangle.vtp")
-        //       .apply();
-        // }
       }
     }
-
     file.close();
   }
 }

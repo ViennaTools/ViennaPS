@@ -11,7 +11,7 @@
 #define DEFAULT_STICKING 0.1
 #define DIM 3
 
-constexpr int particleType = 1;
+constexpr int particleType = 0;
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
 template <class NumericType>
@@ -110,8 +110,7 @@ makeGPUParticle() {
     auto params_ = getIBEParameters<NumericType>();
     viennaray::gpu::Particle<NumericType> particle{
         .name = "IBEIon", .cosineExponent = params_.exponent};
-    particle.dataLabels.push_back(
-        viennaps::impl::IBESurfaceModel<NumericType>::fluxLabel);
+    particle.dataLabels.push_back("flux");
     if (params_.redepositionRate > 0.) {
       particle.dataLabels.push_back(
           viennaps::impl::IBESurfaceModel<NumericType>::redepositionLabel);
@@ -138,30 +137,26 @@ auto getDeviceParams() {
   auto params_ = getIBEParameters<float>();
   // Parameters to upload to device
   viennaps::gpu::impl::IonParams deviceParams;
-  deviceParams.thetaRMin =
-      static_cast<float>(viennaps::constants::degToRad(params_.thetaRMin));
-  deviceParams.thetaRMax =
-      static_cast<float>(viennaps::constants::degToRad(params_.thetaRMax));
-  deviceParams.meanEnergy = static_cast<float>(params_.meanEnergy);
-  deviceParams.sigmaEnergy = static_cast<float>(params_.sigmaEnergy);
+  deviceParams.thetaRMin = viennaps::constants::degToRad(params_.thetaRMin);
+  deviceParams.thetaRMax = viennaps::constants::degToRad(params_.thetaRMax);
+  deviceParams.meanEnergy = params_.meanEnergy;
+  deviceParams.sigmaEnergy = params_.sigmaEnergy;
   deviceParams.thresholdEnergy =
-      static_cast<float>(std::sqrt(params_.thresholdEnergy)); // precompute sqrt
-  deviceParams.minAngle =
-      static_cast<float>(viennaps::constants::degToRad(params_.minAngle));
+      std::sqrt(params_.thresholdEnergy); // precompute sqrt
+  deviceParams.minAngle = viennaps::constants::degToRad(params_.minAngle);
   deviceParams.inflectAngle =
-      static_cast<float>(viennaps::constants::degToRad(params_.inflectAngle));
-  deviceParams.n_l = static_cast<float>(params_.n_l);
+      viennaps::constants::degToRad(params_.inflectAngle);
+  deviceParams.n_l = params_.n_l;
   deviceParams.B_sp = 0.f; // not used in IBE
   if (params_.cos4Yield.isDefined) {
-    deviceParams.a1 = static_cast<float>(params_.cos4Yield.a1);
-    deviceParams.a2 = static_cast<float>(params_.cos4Yield.a2);
-    deviceParams.a3 = static_cast<float>(params_.cos4Yield.a3);
-    deviceParams.a4 = static_cast<float>(params_.cos4Yield.a4);
-    deviceParams.aSum = static_cast<float>(params_.cos4Yield.aSum());
+    deviceParams.a1 = params_.cos4Yield.a1;
+    deviceParams.a2 = params_.cos4Yield.a2;
+    deviceParams.a3 = params_.cos4Yield.a3;
+    deviceParams.a4 = params_.cos4Yield.a4;
+    deviceParams.aSum = params_.cos4Yield.aSum();
   }
-  deviceParams.redepositionRate = static_cast<float>(params_.redepositionRate);
-  deviceParams.redepositionThreshold =
-      static_cast<float>(params_.redepositionThreshold);
+  deviceParams.redepositionRate = params_.redepositionRate;
+  deviceParams.redepositionThreshold = params_.redepositionThreshold;
 
   return deviceParams;
 }

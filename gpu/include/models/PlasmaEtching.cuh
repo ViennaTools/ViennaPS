@@ -19,16 +19,17 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 __forceinline__ __device__ void
 plasmaNeutralCollision(viennaray::gpu::PerRayData *prd) {
   for (int i = 0; i < prd->ISCount; ++i) {
-    atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->primIDs[i]],
+    atomicAdd(&launchParams
+                   .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
+                                 prd->primIDs[i]],
               prd->rayWeight);
   }
 }
 
 __forceinline__ __device__ void
 plasmaNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  const HitSBTDataBase *baseData =
-      reinterpret_cast<const HitSBTDataBase *>(sbtData);
+  const viennaray::gpu::HitSBTDataBase *baseData =
+      reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
   float *data = (float *)baseData->cellData;
   const auto &phi_E = data[prd->primID];
   const auto &phi_P = data[prd->primID + launchParams.numElements];
@@ -36,8 +37,8 @@ plasmaNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   float sticking = launchParams.materialSticking[material];
   float Seff = sticking * max(1.f - phi_E - phi_P, 0.f);
   prd->rayWeight -= prd->rayWeight * Seff;
-  auto geoNormal = getNormal(sbtData, prd->primID);
-  diffuseReflection(prd, geoNormal, launchParams.D);
+  auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
 }
 
 //
@@ -51,7 +52,7 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
           launchParams.customData);
   for (int i = 0; i < prd->ISCount; ++i) {
     int material = launchParams.materialIds[prd->primIDs[i]];
-    auto geomNormal = getNormal(sbtData, prd->primIDs[i]);
+    auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
     float angle = acosf(cosTheta);
@@ -84,14 +85,17 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     float Y_P = params->Passivation.A_ie *
                 max(sqrtE - params->Passivation.Eth_ie, 0.f) * f_ie_theta;
 
-    atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->primIDs[i]],
+    atomicAdd(&launchParams
+                   .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
+                                 prd->primIDs[i]],
               Y_sp * prd->rayWeight);
-    atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
-                                         prd->primIDs[i]],
+    atomicAdd(&launchParams
+                   .resultBuffer[viennaray::gpu::getIdxOffset(1, launchParams) +
+                                 prd->primIDs[i]],
               Y_Si * prd->rayWeight);
-    atomicAdd(&launchParams.resultBuffer[getIdxOffset(2, launchParams) +
-                                         prd->primIDs[i]],
+    atomicAdd(&launchParams
+                   .resultBuffer[viennaray::gpu::getIdxOffset(2, launchParams) +
+                                 prd->primIDs[i]],
               Y_P * prd->rayWeight);
   }
 }
@@ -101,7 +105,7 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
-  auto geomNormal = getNormal(sbtData, prd->primID);
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
   float angle = acosf(cosTheta);
@@ -123,9 +127,9 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
   float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
   if (prd->energy > minEnergy) {
-    conedCosineReflection(prd, geomNormal,
-                          M_PI_2f - min(angle, params->Ions.minAngle),
-                          launchParams.D);
+    viennaray::gpu::conedCosineReflection(
+        prd, geomNormal, M_PI_2f - min(angle, params->Ions.minAngle),
+        launchParams.D);
   } else {
     prd->rayWeight = 0.f; // terminate particle
   }
