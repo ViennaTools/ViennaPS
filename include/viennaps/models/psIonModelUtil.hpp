@@ -11,8 +11,10 @@ namespace viennaps::impl {
 using namespace viennacore;
 
 template <class NumericType>
-inline getCosTheta(const Vec3D<NumericType> &rayDir,
-                   const Vec3D<NumericType> &geomNormal) {
+inline NumericType getCosTheta(const Vec3D<NumericType> &rayDir,
+                               const Vec3D<NumericType> &geomNormal) {
+  // Calculate the cosine of the angle between ray direction and surface normal
+  // and clamp it to [0,1] to avoid numerical issues
   return util::saturate(-DotProduct(rayDir, geomNormal));
 }
 
@@ -50,7 +52,7 @@ inline double erfcinvApprox(double y) {
 
 inline double norm_inv_from_cdf(double p) {
   // Φ^{-1}(p) = -√2 * erfcinv(2p)
-  return std::clamp(-1.4142135623730951 * erfcinvApprox(2.0 * p), 0.0, 1.0);
+  return util::saturate(-1.4142135623730951 * erfcinvApprox(2.0 * p));
 }
 
 inline double Phi_from_x(double x) {
@@ -81,7 +83,7 @@ inline NumericType sampleTruncatedNormal(RNG &rng, NumericType mu,
   const double z = norm_inv_from_cdf(p);
 #ifndef NDEBUG
   const double energy = double(mu) + double(sigma) * z;
-  if (energy < double(L) || energy > double(U)) {
+  if (energy < double(L) || energy > double(U) || !std::isfinite(energy)) {
     std::cout << "Sampled out-of-bounds truncated normal: " << energy
               << " not in [" << L << ", " << U << "]" << std::endl;
     std::cout << " mu: " << mu << ", sigma: " << sigma << ", a: " << a

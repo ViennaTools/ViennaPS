@@ -40,6 +40,7 @@ template <class NumericType, int D> void RunTest() {
 
     Process<NumericType, D> process(domain, model, 1.);
     process.setParameters(rayParams);
+    process.setFluxEngineType(FluxEngineType::CPU_DISK);
     process.apply();
 
     LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
