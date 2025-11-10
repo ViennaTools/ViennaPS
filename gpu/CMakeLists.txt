@@ -32,8 +32,3 @@ if(VIENNAPS_BUILD_EXAMPLES)
   add_subdirectory(benchmark)
 endif(VIENNAPS_BUILD_EXAMPLES)
 
-# TODO: Add tests for GPU
-if(VIENNAPS_BUILD_TESTS)
-  message(STATUS "[ViennaPS] Adding GPU Tests")
-  add_subdirectory(tests)
-endif()
