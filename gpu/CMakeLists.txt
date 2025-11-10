@@ -31,4 +31,3 @@ if(VIENNAPS_BUILD_EXAMPLES)
   message(STATUS "[ViennaPS] Adding GPU Benchmarks")
   add_subdirectory(benchmark)
 endif(VIENNAPS_BUILD_EXAMPLES)
-
