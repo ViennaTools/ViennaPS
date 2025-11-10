@@ -7,8 +7,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
+import viennaps.d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -1066,6 +1066,10 @@ class RayTracingParameters:
     @raysPerPoint.setter
     def raysPerPoint(self, arg0: typing.SupportsInt) -> None: ...
     @property
+    def rngSeed(self) -> int: ...
+    @rngSeed.setter
+    def rngSeed(self, arg0: typing.SupportsInt) -> None: ...
+    @property
     def smoothingNeighbors(self) -> int: ...
     @smoothingNeighbors.setter
     def smoothingNeighbors(self, arg0: typing.SupportsInt) -> None: ...
@@ -1146,5 +1150,5 @@ def gpuAvailable() -> bool:
 
 def setNumThreads(arg0: typing.SupportsInt) -> None: ...
 
-__version__: str = "4.0.1"
-version: str = "4.0.1"
+__version__: str = "4.1.0"
+version: str = "4.1.0"
