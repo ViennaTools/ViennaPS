@@ -82,7 +82,7 @@ jobs:
           path: venv
 
   package:
-    if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' }}
+    if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' || github.event_name == 'workflow_dispatch' }}
     strategy:
       fail-fast: false
 
