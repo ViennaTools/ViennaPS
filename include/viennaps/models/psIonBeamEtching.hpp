@@ -115,8 +115,7 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *,
                         RNG &) override {
-    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
-                               NumericType(1));
+    auto cosTheta = util::saturate(-DotProduct(rayDir, geomNormal));
     NumericType yield;
     if (params_.cos4Yield.isDefined) {
       NumericType cosTheta2 = cosTheta * cosTheta;
@@ -145,8 +144,7 @@ public:
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &rngState) override {
 
-    const NumericType cosTheta = std::clamp(-DotProduct(rayDir, geomNormal),
-                                            NumericType(0), NumericType(1));
+    const NumericType cosTheta = getCosTheta(rayDir, geomNormal);
     const NumericType theta = std::acos(cosTheta);
 
     // Update redeposition weight
@@ -169,9 +167,8 @@ public:
 
     NumericType sticking = 1.;
     if (theta > params_.thetaRMin) {
-      sticking = 1. - std::clamp((theta - params_.thetaRMin) /
-                                     (params_.thetaRMax - params_.thetaRMin),
-                                 NumericType(0), NumericType(1));
+      sticking = 1. - util::saturate((theta - params_.thetaRMin) /
+                                     (params_.thetaRMax - params_.thetaRMin));
     }
 
     // Early exit: particle sticks and no redeposition

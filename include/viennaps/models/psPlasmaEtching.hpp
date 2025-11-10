@@ -222,8 +222,7 @@ public:
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override final {
     // collect data for this hit
-    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
-                               NumericType(1));
+    auto cosTheta = getCosTheta(rayDir, geomNormal);
     NumericType angle = std::acos(cosTheta);
 
     assert(cosTheta >= 0 && "Hit backside of disc");
@@ -284,16 +283,14 @@ public:
                     const unsigned int primId, const int materialId,
                     const viennaray::TracingData<NumericType> *globalData,
                     RNG &Rng) override final {
-    auto cosTheta = std::clamp(-DotProduct(rayDir, geomNormal), NumericType(0),
-                               NumericType(1));
+    auto cosTheta = util::saturate(-DotProduct(rayDir, geomNormal));
     NumericType incAngle = std::acos(cosTheta);
 
     NumericType sticking = 1.;
     if (incAngle > params.Ions.thetaRMin) {
       sticking =
-          1. - std::clamp((incAngle - params.Ions.thetaRMin) /
-                              (params.Ions.thetaRMax - params.Ions.thetaRMin),
-                          NumericType(0.), NumericType(1.));
+          1. - util::saturate((incAngle - params.Ions.thetaRMin) /
+                              (params.Ions.thetaRMax - params.Ions.thetaRMin));
     }
 
     if (sticking >= 1.) {

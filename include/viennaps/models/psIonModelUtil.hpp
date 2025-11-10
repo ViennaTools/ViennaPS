@@ -4,10 +4,17 @@
 #include <random>
 
 #include <vcRNG.hpp>
+#include <vcUtil.hpp>
 
 namespace viennaps::impl {
 
 using namespace viennacore;
+
+template <class NumericType>
+inline getCosTheta(const Vec3D<NumericType> &rayDir,
+                   const Vec3D<NumericType> &geomNormal) {
+  return util::saturate(-DotProduct(rayDir, geomNormal));
+}
 
 inline double erfcinvApprox(double y) {
   // Approx by Mike Giles, accurate ~1e-9 in double. Domain y in (0,2).
