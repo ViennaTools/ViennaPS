@@ -101,12 +101,13 @@ class IBEIonWithRedeposition final
                                  NumericType> {
 public:
   explicit IBEIonWithRedeposition(const IBEParameters<NumericType> &params)
-      : params_(params), inflectAngle_(params.inflectAngle * M_PI / 180.),
-        minAngle_(params.minAngle * M_PI / 180.),
+      : params_(params),
+        inflectAngle_(constants::degToRad(params.inflectAngle)),
+        minAngle_(constants::degToRad(params.minAngle)),
         A_(1. / (1. + params.n_l * (M_PI_2 / inflectAngle_ - 1.))),
         sqrtThresholdEnergy_(std::sqrt(params.thresholdEnergy)),
-        thetaRMin_(params.thetaRMin * M_PI / 180.),
-        thetaRMax_(params.thetaRMax * M_PI / 180.),
+        thetaRMin_(constants::degToRad(params.thetaRMin)),
+        thetaRMax_(constants::degToRad(params.thetaRMax)),
         aSum_(1. / params.cos4Yield.aSum()) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
@@ -166,9 +167,9 @@ public:
     }
 
     NumericType sticking = 1.;
-    if (theta > params_.thetaRMin) {
-      sticking = 1. - util::saturate((theta - params_.thetaRMin) /
-                                     (params_.thetaRMax - params_.thetaRMin));
+    if (theta > thetaRMin_) {
+      sticking =
+          1. - util::saturate((theta - thetaRMin_) / (thetaRMax_ - thetaRMin_));
     }
 
     // Early exit: particle sticks and no redeposition
@@ -193,8 +194,7 @@ public:
 
   void initNew(RNG &rngState) override {
     energy_ =
-        initNormalDistEnergy(rngState, params_.meanEnergy, params_.sigmaEnergy,
-                             params_.thresholdEnergy);
+        initNormalDistEnergy(rngState, params_.meanEnergy, params_.sigmaEnergy);
     redepositionWeight_ = 0.;
   }
 

@@ -101,7 +101,7 @@ inline NumericType updateEnergy(RNG &rng, NumericType E, NumericType incAngle,
                                 const NumericType n_l) {
   // Small incident angles are reflected with the energy fraction centered at
   // 0
-  NumericType Eref_peak;
+  NumericType Eref_peak; // between 0 and 1
   if (incAngle >= inflectAngle) {
     Eref_peak = NumericType(1) - (NumericType(1) - A_energy) *
                                      (NumericType(M_PI_2) - incAngle) /
@@ -109,33 +109,75 @@ inline NumericType updateEnergy(RNG &rng, NumericType E, NumericType incAngle,
   } else {
     Eref_peak = A_energy * std::pow(incAngle / inflectAngle, n_l);
   }
-  // Normal distribution around the Eref_peak scaled by the particle energy
-  const NumericType mu = E * Eref_peak;
-  const NumericType sigma = NumericType(0.1) * E;
-  return sampleTruncatedNormal(rng, mu, sigma, NumericType(0) /*lower bound*/,
-                               E /*upper bound*/);
+
+  // Normal distribution around the Eref_peak
+  std::normal_distribution<NumericType> normalDist(Eref_peak * E, 0.1 * E);
+  NumericType newEnergy = normalDist(rng);
+  while (newEnergy < NumericType(0) || newEnergy > E) {
+    newEnergy = normalDist(rng);
+  }
+  return newEnergy;
+
+  //   const NumericType a = (NumericType(0) - Eref_peak) / sigma;
+  //   const NumericType b = (NumericType(1) - Eref_peak) / sigma;
+
+  //   const NumericType Fa = Phi_from_x(a);
+  //   const NumericType Fb = Phi_from_x(b);
+  //   const NumericType width = Fb - Fa;
+
+  //   // Guard extreme tails to avoid Fb==Fa
+  //   NumericType dist;
+  //   if (width <= NumericType(1e-7)) {
+  //     // pick midpoint in CDF space
+  //     const NumericType pmid = Fa + NumericType(0.5) * width;
+  //     dist = Eref_peak + sigma * norm_inv_from_cdf(pmid);
+  //   } else {
+  //     std::uniform_real_distribution<NumericType> uni(NumericType(0), width);
+  //     const NumericType p = uni(rng) + Fa;        // Fa + u*(Fb-Fa)
+  //     const NumericType z = norm_inv_from_cdf(p); // z in (a,b)
+  //     dist = Eref_peak + sigma * z;               // ∈ (0,1)
+  // #ifndef NDEBUG
+  //     if (dist < NumericType(0) || dist > NumericType(1) ||
+  //         !std::isfinite(double(dist))) {
+  //       std::cout << "Sampled out-of-bounds truncated normal: " << dist
+  //                 << " not in [" << NumericType(0) << ", " << NumericType(1)
+  //                 << "]" << std::endl;
+  //       std::cout << " mu: " << Eref_peak << ", sigma: " << sigma << ", a: "
+  //       << a
+  //                 << ", b: " << b << ", Fa: " << Fa << ", Fb: " << Fb
+  //                 << ", p: " << p << ", z: " << z << std::endl;
+  //     }
+  // #endif
+  //   }
+
+  //   return E * dist;
 }
 
-template <typename T>
-inline T initNormalDistEnergy(RNG &rng, T mean, T sigma, T threshold) {
+template <typename T> inline T initNormalDistEnergy(RNG &rng, T mean, T sigma) {
   if (sigma <= T(0))
     return mean;
 
-  const T a = (threshold - mean) / sigma;
-  const T Phi_a = Phi_from_x(a);
+  T energy_;
+  std::normal_distribution<T> normalDist(mean, sigma);
+  do {
+    energy_ = normalDist(rng);
+  } while (energy_ < T(0));
 
-  std::uniform_real_distribution<T> uni(T(0), T(1));
-  const T u = uni(rng);
-  const T up = Phi_a + (T(1) - Phi_a) * u;
+  //   const T a = (threshold - mean) / sigma;
+  //   const T Phi_a = Phi_from_x(a);
 
-  const T z = norm_inv_from_cdf(up);
-  const T energy_ = mean + sigma * z;
-#ifndef NDEBUG
-  if (energy_ < 0. || !std::isfinite(energy_)) {
-    std::cout << "Initialized invalid energy_: " << energy_ << std::endl;
-    std::cout << " u " << u << " up " << up << " z " << z << std::endl;
-  }
-#endif
+  //   std::uniform_real_distribution<T> uni(T(0), T(1));
+  //   const T u = uni(rng);
+  //   const T up = Phi_a + (T(1) - Phi_a) * u;
+
+  //   const T z = norm_inv_from_cdf(up);
+  //   const T energy_ = mean + sigma * z;
+  // #ifndef NDEBUG
+  //   if (energy_ < 0. || !std::isfinite(energy_)) {
+  //     std::cout << "Initialized invalid energy_: " << energy_ << std::endl;
+  //     std::cout << " u " << u << " up " << up << " z " << z << std::endl;
+  //   }
+  // #endif
   return energy_;
 }
 

@@ -426,10 +426,7 @@ public:
     }
   }
   void initNew(RNG &RNG) override final {
-    std::normal_distribution<NumericType> normalDist{p.Ions.meanEnergy,
-                                                     p.Ions.sigmaEnergy};
-    E = initNormalDistEnergy(RNG, p.Ions.meanEnergy, p.Ions.sigmaEnergy,
-                             minEnergy);
+    E = initNormalDistEnergy(RNG, p.Ions.meanEnergy, p.Ions.sigmaEnergy);
   }
   NumericType getSourceDistributionPower() const override final {
     return p.Ions.exponent;

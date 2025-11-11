@@ -116,9 +116,9 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
         1.f - __saturatef((angle - params->Ions.thetaRMin) /
                           (params->Ions.thetaRMax - params->Ions.thetaRMin));
   }
-  prd->rayWeight -= prd->rayWeight * sticking;
 
-  if (prd->rayWeight < launchParams.rayWeightThreshold) {
+  if (sticking >= 1.f) {
+    prd->rayWeight = 0.f;
     return;
   }
 
@@ -127,6 +127,7 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
   float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
   if (prd->energy > minEnergy) {
+    prd->rayWeight -= prd->rayWeight * sticking;
     viennaray::gpu::conedCosineReflection(
         prd, geomNormal, M_PI_2f - min(angle, params->Ions.minAngle),
         launchParams.D);
@@ -139,8 +140,6 @@ __forceinline__ __device__ void plasmaIonInit(viennaray::gpu::PerRayData *prd) {
   viennaps::PlasmaEtchingParameters<float> *params =
       reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
           launchParams.customData);
-
-  float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
-  viennaps::gpu::impl::initNormalDistEnergy(
-      prd, params->Ions.meanEnergy, params->Ions.sigmaEnergy, minEnergy);
+  viennaps::gpu::impl::initNormalDistEnergy(prd, params->Ions.meanEnergy,
+                                            params->Ions.sigmaEnergy);
 }

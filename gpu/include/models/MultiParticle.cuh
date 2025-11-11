@@ -68,17 +68,17 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
   auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
-  auto cosTheta = -viennacore::DotProduct(prd->dir, geomNormal);
-  float incomingAngle = acosf(max(min(cosTheta, 1.f), 0.f));
+  auto cosTheta = __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
+  float incomingAngle = acosf(cosTheta);
 
   float sticking = 1.f;
-  if (incomingAngle > params->thetaRMin)
-    sticking = 1.f - min((incomingAngle - params->thetaRMin) /
-                             (params->thetaRMax - params->thetaRMin),
-                         1.f);
-  prd->rayWeight -= prd->rayWeight * sticking;
+  if (incomingAngle > params->thetaRMin) {
+    sticking = 1.f - __saturatef((incomingAngle - params->thetaRMin) /
+                                 (params->thetaRMax - params->thetaRMin));
+  }
 
-  if (prd->rayWeight < launchParams.rayWeightThreshold) {
+  if (sticking >= 1.f) {
+    prd->rayWeight = 0.f;
     return;
   }
 
@@ -87,6 +87,7 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
                                       incomingAngle);
   }
 
+  prd->rayWeight -= prd->rayWeight * sticking;
   conedCosineReflection(prd, geomNormal,
                         M_PI_2f - min(incomingAngle, params->minAngle),
                         launchParams.D);
@@ -97,10 +98,9 @@ __forceinline__ __device__ void multiIonInit(viennaray::gpu::PerRayData *prd) {
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
 
   if (params->meanEnergy > 0.f) {
-    viennaps::gpu::impl::initNormalDistEnergy(
-        prd, params->meanEnergy, params->sigmaEnergy,
-        params->thresholdEnergy * params->thresholdEnergy);
+    viennaps::gpu::impl::initNormalDistEnergy(prd, params->meanEnergy,
+                                              params->sigmaEnergy);
   } else {
-    prd->energy = std::numeric_limits<float>::max();
+    prd->energy = 0.f;
   }
 }
