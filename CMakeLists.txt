@@ -114,6 +114,7 @@ CPMAddPackage(
 CPMFindPackage(
   NAME ViennaRay
   VERSION 3.7.1
+  GIT_TAG reflection-control
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")

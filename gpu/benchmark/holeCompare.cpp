@@ -1,103 +1,63 @@
 #include <geometries/psMakeHole.hpp>
-#include <models/psMultiParticleProcess.hpp>
-#include <models/psgMultiParticleProcess.hpp>
-#include <process/psProcess.hpp>
+#include <models/psSF6O2Etching.hpp>
+#include <models/psSingleParticleProcess.hpp>
 
-#include <vcContext.hpp>
+#include <process/psProcess.hpp>
+#include <psUtil.hpp>
 
 using namespace viennaps;
 
-int main(int argc, char **argv) {
-  using NumericType = float;
-  constexpr int D = 2;
+int main(int argc, char *argv[]) {
+  using NumericType = double;
+  constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(16);
 
-  NumericType gridDelta = 0.025;
-  NumericType xExtent = 1.0;
-  NumericType yExtent = 1.0;
-  NumericType holeRadius = 0.175;
-  NumericType maskHeight = 1.2;
-  NumericType taperAngle = 1.193;
-
-  NumericType processDuration = 1.5;
-  NumericType exponent = 500.;
-  AdvectionParameters advParams;
-  advParams.integrationScheme = IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER;
-  RayTracingParameters rtParams;
-  rtParams.raysPerPoint = 1000;
+  // set parameter units
+  units::Length::setUnit(units::Length::MICROMETER);
+  units::Time::setUnit(units::Time::MINUTE);
+  Logger::setLogLevel(LogLevel::INFO);
 
   // geometry setup
-  auto geometry = Domain<NumericType, D>::New();
-  MakeHole<NumericType, D>(geometry, gridDelta, xExtent, yExtent, holeRadius,
-                           maskHeight, taperAngle,
-                           0,     // base height
-                           false, // periodic boundary
-                           true,  // create mask
-                           Material::Si, HoleShape::HALF)
+  auto geometry = Domain<NumericType, D>::New(0.03, 1.2, 1.2);
+  MakeHole<NumericType, D>(geometry, 0.175,
+                           0.0, // holeDepth
+                           0.0, // holeTaperAngle
+                           1.2, 1.2, HoleShape::FULL)
       .apply();
 
-  auto rateFunction = [](const std::vector<NumericType> &flux,
-                         const Material &mat) -> NumericType {
-    if (MaterialMap::isMaterial(mat, Material::Mask))
-      return -flux[0] * 0.01;
-    return -flux[0];
-  };
+  auto modelParams = SF6O2Etching<NumericType, D>::defaultParameters();
+  modelParams.etchantFlux = 4.5e3;
+  modelParams.passivationFlux = 8e2;
+  modelParams.ionFlux = 10.0;
+  auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
-  // CPU
-  if constexpr (true) {
-    auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
-    model->addIonParticle(exponent, 80, 90, 75);
-    model->setRateFunction(rateFunction);
+  // auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(
+  //     -1.0, 1.0, 100.0, Material::Mask);
 
+  CoverageParameters coverageParams;
+  coverageParams.tolerance = 1e-4;
+
+  std::array<FluxEngineType, 4> fluxEngines = {
+      FluxEngineType::GPU_TRIANGLE, FluxEngineType::GPU_DISK,
+      FluxEngineType::CPU_TRIANGLE, FluxEngineType::CPU_DISK};
+
+  Timer timer;
+  for (const auto &fluxEngine : fluxEngines) {
     auto copy = Domain<NumericType, D>::New(geometry);
 
-    Process<NumericType, D> process(copy, model, processDuration);
-    process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 1.;
-    process.setParameters(rtParams);
+    Process<NumericType, D> process(copy, model);
+    process.setProcessDuration(1.0);
+    process.setParameters(coverageParams);
+    process.setFluxEngineType(fluxEngine);
+
+    timer.start();
     process.apply();
+    timer.finish();
 
-    copy->saveSurfaceMesh("cpu_result.vtp", true);
-  }
-
-  rtParams.raysPerPoint *= 10; // increase rays for GPU to reduce noise
-  {
-    DeviceContext::createContext();
-
-    auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New();
-    model->setRateFunction(rateFunction);
-    model->addIonParticle(exponent, 80, 90, 75);
-
-    auto copy = Domain<NumericType, D>::New(geometry);
-
-    Process<NumericType, D> process(copy, model, processDuration);
-    process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 2.;
-    process.setParameters(rtParams);
-    process.setFluxEngineType(FluxEngineType::GPU_TRIANGLE);
-    process.apply();
-
-    copy->saveSurfaceMesh("gpu_result_trig.vtp", true);
-  }
-
-  {
-    DeviceContext::createContext();
-
-    auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New();
-    model->setRateFunction(rateFunction);
-    model->addIonParticle(exponent, 80, 90, 75);
-
-    auto copy = Domain<NumericType, D>::New(geometry);
-
-    Process<NumericType, D> process(copy, model, processDuration);
-    process.setParameters(advParams);
-    rtParams.smoothingNeighbors = 1.;
-    process.setParameters(rtParams);
-    process.setFluxEngineType(FluxEngineType::GPU_DISK);
-    process.apply();
-
-    copy->saveSurfaceMesh("gpu_result_disk.vtp", true);
+    std::cout << "Flux Engine: " << to_string(fluxEngine)
+              << ", Time taken: " << timer.currentDuration / 1e9 << " s"
+              << std::endl;
+    copy->saveSurfaceMesh("result_PE_" + to_string(fluxEngine) + ".vtp");
   }
 }
