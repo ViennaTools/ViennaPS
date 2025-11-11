@@ -15,3 +15,6 @@ add_dependencies(ViennaPS-GPU_Benchmark CPU_Benchmark_single)
 
 add_gpu_executable(holeComparison target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp)
 add_dependencies(ViennaPS-GPU_Benchmark holeComparison)
+
+add_gpu_executable(holeComparisonGrid target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompareGrid.cpp)
+add_dependencies(ViennaPS-GPU_Benchmark holeComparisonGrid)
