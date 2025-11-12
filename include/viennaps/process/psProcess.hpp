@@ -78,15 +78,6 @@ public:
 
   void apply() {
 
-    // Auto-select engine type if needed
-    if (fluxEngineType_ == FluxEngineType::AUTO) {
-      fluxEngineType_ = selectAutoFluxEngine();
-      Logger::getInstance()
-          .addDebug("Auto-selected flux engine type: " +
-                    to_string(fluxEngineType_))
-          .print();
-    }
-
     if (!checkInput())
       return;
 
@@ -325,22 +316,26 @@ public:
       return false;
     }
 
+    // Auto-select engine type if needed
+    if (fluxEngineType_ == FluxEngineType::AUTO) {
+      fluxEngineType_ = selectAutoFluxEngine();
+      Logger::getInstance()
+          .addDebug("Auto-selected flux engine type: " +
+                    to_string(fluxEngineType_))
+          .print();
+    }
+
 #ifdef VIENNACORE_COMPILE_GPU
     if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE ||
         fluxEngineType_ == FluxEngineType::GPU_DISK ||
         fluxEngineType_ == FluxEngineType::GPU_LINE) {
-      if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE && D == 2) {
-        Logger::getInstance()
-            .addWarning(
-                "GPU-Triangle flux engine not supported in 2D.\nFallback to "
-                "GPU-Line engine.")
-            .print();
-      }
 
+      // Ensure process model has GPU implementation
       auto model =
           std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
               context_.model);
       if (!model) {
+        // Retry with GPU model if available
         auto gpuModel = context_.model->getGPUModel();
         if (gpuModel) {
           Logger::getInstance()

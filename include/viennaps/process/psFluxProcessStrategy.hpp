@@ -126,6 +126,33 @@ private:
             context.domain->getLevelSets().size()) {
       meshGenerator_.setMaterialMap(
           context.domain->getMaterialMap()->getMaterialMap());
+    } else {
+      Logger::getInstance()
+          .addWarning("No valid material map found in domain.")
+          .print();
+    }
+
+    // Initialize translation field. Converts points ids from level set points
+    // to surface points
+    const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
+    Logger::getInstance()
+        .addDebug("Using translation field method: " +
+                  std::to_string(translationMethod))
+        .print();
+    context.translationField =
+        SmartPointer<TranslationField<NumericType, D>>::New(
+            context.model->getVelocityField(), context.domain->getMaterialMap(),
+            translationMethod);
+    if (translationMethod == 1) {
+      if (!translator_)
+        translator_ = SmartPointer<TranslatorType>::New();
+      meshGenerator_.setTranslator(translator_);
+      context.translationField->setTranslator(translator_);
+    }
+    if (translationMethod == 2) {
+      if (!kdTree_)
+        kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      context.translationField->setKdTree(kdTree_);
     }
 
     // Try to initialize coverages
@@ -134,31 +161,17 @@ private:
       if (coverageManager_.initializeCoverages(context)) {
         context.flags.useCoverages = true;
         Logger::getInstance().addInfo("Using coverages.").print();
-      }
 
-      if (!translator_)
-        translator_ = SmartPointer<TranslatorType>::New();
-      meshGenerator_.setTranslator(translator_);
+        // Translator is needed to map coverage values to level set points
+        if (!translator_)
+          translator_ = SmartPointer<TranslatorType>::New();
+        meshGenerator_.setTranslator(translator_);
+      }
     } else {
       Logger::getInstance().addInfo("Coverages already initialized.").print();
     }
     context.model->getSurfaceModel()->initializeSurfaceData(
         context.diskMesh->nodes.size());
-
-    // Initialize translation field. Converts points ids from level set points
-    // to surface points
-    const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
-    context.translationField =
-        SmartPointer<TranslationField<NumericType, D>>::New(
-            context.model->getVelocityField(), context.domain->getMaterialMap(),
-            translationMethod);
-
-    if (!translator_)
-      translator_ = SmartPointer<TranslatorType>::New();
-    context.translationField->setTranslator(translator_);
-    if (!kdTree_)
-      kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
-    context.translationField->setKdTree(kdTree_);
 
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));
