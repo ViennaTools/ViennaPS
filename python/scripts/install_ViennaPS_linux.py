@@ -9,7 +9,7 @@ from pathlib import Path
 
 REQUIRED_GCC = "12"
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.1.0"
+DEFAULT_VIENNALS_VERSION = "5.1.1"
 
 
 def run(cmd, **kwargs):
@@ -133,8 +133,7 @@ def install_viennals(
         )
         if current != required_version:
             sys.exit(
-                "Version mismatch. Please uninstall and install the required version:\n"
-                f"  {pip_path} uninstall ViennaLS\n"
+                f"Version mismatch. Please change to the required version {required_version}.\n"
                 "Then re-run this script."
             )
         print("Proceeding with the currently installed ViennaLS.")
@@ -241,15 +240,21 @@ def main():
         if cwd.name == "ViennaPS":
             viennaps_dir = cwd
         else:
-            try:
-                entered = input(
-                    "Please enter the path to the ViennaPS directory: "
-                ).strip()
-            except EOFError:
-                entered = ""
-            if not entered:
-                sys.exit("No ViennaPS directory provided.")
-            viennaps_dir = Path(entered).expanduser().resolve()
+            # try location of this script
+            script_path = Path(__file__).resolve()
+            cwd = script_path.parent.parent
+            if cwd.name == "ViennaPS":
+                viennaps_dir = cwd
+            else:
+                try:
+                    entered = input(
+                        "Please enter the path to the ViennaPS directory: "
+                    ).strip()
+                except EOFError:
+                    entered = ""
+                if not entered:
+                    sys.exit("No ViennaPS directory provided.")
+                viennaps_dir = Path(entered).expanduser().resolve()
 
     # ViennaPS install
     install_viennaps(venv_pip, viennaps_dir, optix_dir, args.verbose)
