@@ -111,9 +111,8 @@ public:
 
     NumericType sticking = 1.;
     if (incomingAngle > thetaRMin_) {
-      sticking = 1. - std::min((incomingAngle - thetaRMin_) /
-                                   (thetaRMax_ - thetaRMin_),
-                               NumericType(1.));
+      sticking = 1. - util::saturate((incomingAngle - thetaRMin_) /
+                                     (thetaRMax_ - thetaRMin_));
     }
 
     if (sticking >= 1.) {
@@ -133,8 +132,7 @@ public:
   }
   void initNew(RNG &rngState) override final {
     if (meanEnergy_ > 0.) {
-      energy_ = initNormalDistEnergy(rngState, meanEnergy_, sigmaEnergy_,
-                                     NumericType(0.));
+      energy_ = initNormalDistEnergy(rngState, meanEnergy_, sigmaEnergy_);
     }
   }
   NumericType getSourceDistributionPower() const override final {
@@ -428,8 +426,9 @@ public:
     fluxDataLabels_.push_back(dataLabel);
     auto particle = std::make_unique<impl::IonParticle<NumericType, D>>(
         sourcePower, meanEnergy, sigmaEnergy, thresholdEnergy, B_sp,
-        thetaRMin * M_PI / 180., thetaRMax * M_PI / 180.,
-        inflectAngle * M_PI / 180., minAngle * M_PI / 180., n, dataLabel);
+        constants::degToRad(thetaRMin), constants::degToRad(thetaRMax),
+        constants::degToRad(inflectAngle), constants::degToRad(minAngle), n,
+        dataLabel);
     this->insertNextParticleType(particle);
 
     addIonData({{"SourcePower", sourcePower},

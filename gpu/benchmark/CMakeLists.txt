@@ -13,5 +13,8 @@ add_executable(CPU_Benchmark_single ${CMAKE_CURRENT_SOURCE_DIR}/CPU_Benchmark_si
 target_link_libraries(CPU_Benchmark_single ViennaPS)
 add_dependencies(ViennaPS-GPU_Benchmark CPU_Benchmark_single)
 
-# add_gpu_executable(compare_flux target_name ${CMAKE_CURRENT_SOURCE_DIR}/compare_flux.cpp)
-# add_dependencies(ViennaPS-GPU_Benchmark compare_flux)
+add_gpu_executable(holeComparison target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp)
+add_dependencies(ViennaPS-GPU_Benchmark holeComparison)
+
+add_gpu_executable(holeComparisonGrid target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompareGrid.cpp)
+add_dependencies(ViennaPS-GPU_Benchmark holeComparisonGrid)

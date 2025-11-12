@@ -327,7 +327,7 @@ public:
   }
   void initNew(RNG &rngState) override {
     E = initNormalDistEnergy(rngState, params.Ions.meanEnergy,
-                             params.Ions.sigmaEnergy, NumericType(0.));
+                             params.Ions.sigmaEnergy);
   }
   NumericType getSourceDistributionPower() const override {
     return params.Ions.exponent;

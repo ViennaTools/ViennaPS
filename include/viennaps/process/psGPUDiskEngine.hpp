@@ -76,6 +76,9 @@ public:
       rayTracer_.setCallables(model->getCallableFileName(),
                               deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
+      rayTracer_.setMaxBoundaryHits(context.rayTracingParams.maxBoundaryHits);
+      if (context.rayTracingParams.maxReflections > 0)
+        rayTracer_.setMaxReflections(context.rayTracingParams.maxReflections);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
@@ -96,8 +99,8 @@ public:
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
 
-    auto points = diskMesh->getNodes();
-    auto normals = *diskMesh->getCellData().getVectorData("Normals");
+    auto const &points = diskMesh->getNodes();
+    auto const &normals = *diskMesh->getCellData().getVectorData("Normals");
 
     // TODO: make this conversion to float prettier
     auto convertToFloat = [](const std::vector<Vec3D<NumericType>> &input) {
@@ -139,7 +142,8 @@ public:
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
             context.model);
     if (model->useMaterialIds()) {
-      auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
+      auto const &materialIds =
+          *diskMesh->getCellData().getScalarData("MaterialIds");
       rayTracer_.setMaterialIds(materialIds);
     }
     assert(context.diskMesh->nodes.size() > 0);
@@ -164,16 +168,14 @@ public:
       assert(coverages);
       assert(context.diskMesh);
       auto numCov = coverages->getScalarDataSize();
-      std::vector<float> cov(context.diskMesh->getNodes().size() * numCov, 0.f);
+      const auto numElements = context.diskMesh->getNodes().size();
+      std::vector<float> cov(numElements * numCov, 0.f);
 
       for (int i = 0; i < numCov; ++i) {
-        std::vector<NumericType> temp = *(coverages->getScalarData(i));
-        std::vector<float> tempCasted(temp.size());
-        std::transform(temp.begin(), temp.end(), tempCasted.begin(),
+        auto temp = coverages->getScalarData(i);
+        std::transform(temp->begin(), temp->end(),
+                       cov.begin() + i * numElements,
                        [](NumericType val) { return static_cast<float>(val); });
-        assert(tempCasted.size() == context.diskMesh->getNodes().size());
-        std::copy(tempCasted.begin(), tempCasted.end(),
-                  cov.begin() + i * context.diskMesh->getNodes().size());
       }
       d_coverages.allocUpload(cov);
 

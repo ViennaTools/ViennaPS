@@ -24,8 +24,10 @@ struct RayTracingParameters {
   int smoothingNeighbors = 1;
   double diskRadius = 0.;
   double minNodeDistanceFactor =
-      0.05; // factor of grid delta to determine min. node distance for triange
+      0.05; // factor of grid delta to determine min. node distance for triangle
             // mesh generation
+  unsigned maxBoundaryHits = 1000;
+  unsigned maxReflections = std::numeric_limits<unsigned>::max();
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
@@ -33,6 +35,9 @@ struct RayTracingParameters {
     metaData["SmoothingNeighbors"] = {static_cast<double>(smoothingNeighbors)};
     metaData["DiskRadius"] = {diskRadius};
     metaData["MinNodeDistanceFactor"] = {minNodeDistanceFactor};
+    metaData["MaxBoundaryHits"] = {static_cast<double>(maxBoundaryHits)};
+    metaData["MaxReflections"] = {static_cast<double>(maxReflections)};
+    metaData["RngSeed"] = {static_cast<double>(rngSeed)};
     return metaData;
   }
 

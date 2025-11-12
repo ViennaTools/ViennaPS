@@ -7,10 +7,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
-from viennaps import d3
+from viennaps import d2
 import viennaps.d3
+from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
@@ -1062,6 +1062,18 @@ class RayTracingParameters:
     @diskRadius.setter
     def diskRadius(self, arg0: typing.SupportsFloat) -> None: ...
     @property
+    def maxBoundaryHits(self) -> int: ...
+    @maxBoundaryHits.setter
+    def maxBoundaryHits(self, arg0: typing.SupportsInt) -> None: ...
+    @property
+    def maxReflections(self) -> int: ...
+    @maxReflections.setter
+    def maxReflections(self, arg0: typing.SupportsInt) -> None: ...
+    @property
+    def minNodeDistanceFactor(self) -> float: ...
+    @minNodeDistanceFactor.setter
+    def minNodeDistanceFactor(self, arg0: typing.SupportsFloat) -> None: ...
+    @property
     def raysPerPoint(self) -> int: ...
     @raysPerPoint.setter
     def raysPerPoint(self, arg0: typing.SupportsInt) -> None: ...
@@ -1150,5 +1162,5 @@ def gpuAvailable() -> bool:
 
 def setNumThreads(arg0: typing.SupportsInt) -> None: ...
 
-__version__: str = "4.1.0"
-version: str = "4.1.0"
+__version__: str = "4.1.1"
+version: str = "4.1.1"

@@ -80,10 +80,9 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
     sticking = 1.f - __saturatef((theta - params->thetaRMin) /
                                  (params->thetaRMax - params->thetaRMin));
   }
-  prd->rayWeight -= prd->rayWeight * sticking;
 
-  if (prd->rayWeight < launchParams.rayWeightThreshold &&
-      prd->load < params->redepositionThreshold) {
+  if (sticking >= 1. && prd->load <= 0.) {
+    prd->rayWeight = 0.f; // terminate particle
     return;
   }
 
@@ -93,6 +92,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
 
   if (prd->energy > params->thresholdEnergy * params->thresholdEnergy ||
       prd->load > params->redepositionThreshold) {
+    prd->rayWeight -= prd->rayWeight * sticking;
     viennaray::gpu::conedCosineReflection(
         prd, geomNormal, M_PI_2f - min(theta, params->minAngle),
         launchParams.D);
@@ -104,8 +104,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
 __forceinline__ __device__ void IBEInit(viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::IonParams *params =
       (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  viennaps::gpu::impl::initNormalDistEnergy(
-      prd, params->meanEnergy, params->sigmaEnergy,
-      params->thresholdEnergy * params->thresholdEnergy);
+  viennaps::gpu::impl::initNormalDistEnergy(prd, params->meanEnergy,
+                                            params->sigmaEnergy);
   prd->load = 0.f;
 }
