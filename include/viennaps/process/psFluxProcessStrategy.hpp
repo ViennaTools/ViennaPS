@@ -287,7 +287,7 @@ private:
       }
     }
 
-    if (Logger::getLogLevel() >= 2) {
+    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::INFO)) {
       std::stringstream stream;
       stream << std::fixed << std::setprecision(4)
              << "Process time: " << context.processTime << " / "
@@ -302,7 +302,8 @@ private:
       ProcessContext<NumericType, D> &context,
       SmartPointer<std::vector<NumericType>> &velocities,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) {
-    if (Logger::getLogLevel() >= 3) {
+    if (Logger::getLogLevel() >=
+        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
       context.diskMesh->getCellData().insertNextScalarData(*velocities,
