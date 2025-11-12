@@ -443,6 +443,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &RayTracingParameters::ignoreFluxBoundaries)
       .def_readwrite("smoothingNeighbors",
                      &RayTracingParameters::smoothingNeighbors)
+      .def_readwrite("minNodeDistanceFactor",
+                     &RayTracingParameters::minNodeDistanceFactor)
+      .def_readwrite("maxReflections", &RayTracingParameters::maxReflections)
+      .def_readwrite("maxBoundaryHits", &RayTracingParameters::maxBoundaryHits)
       .def("toMetaData", &RayTracingParameters::toMetaData,
            "Convert the ray tracing parameters to a metadata dict.")
       .def("toMetaDataString", &RayTracingParameters::toMetaDataString,

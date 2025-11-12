@@ -76,6 +76,9 @@ public:
       rayTracer_.setCallables(model->getCallableFileName(),
                               deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
+      rayTracer_.setMaxBoundaryHits(context.rayTracingParams.maxBoundaryHits);
+      if (context.rayTracingParams.maxReflections > 0)
+        rayTracer_.setMaxReflections(context.rayTracingParams.maxReflections);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
