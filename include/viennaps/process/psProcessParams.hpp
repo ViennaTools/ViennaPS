@@ -27,7 +27,7 @@ struct RayTracingParameters {
       0.05; // factor of grid delta to determine min. node distance for triangle
             // mesh generation
   unsigned maxBoundaryHits = 1000;
-  unsigned maxReflections = -1; //-1 means no limit
+  unsigned maxReflections = std::numeric_limits<unsigned>::max();
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
