@@ -29,6 +29,7 @@ private:
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
 
+  FluxProcessStrategy() {}
   FluxProcessStrategy(std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine)
       : fluxEngine_(std::move(fluxEngine)) {}
 
@@ -70,6 +71,17 @@ public:
     mergeScalarData(context.diskMesh->getCellData(), fluxes);
 
     return ProcessResult::SUCCESS;
+  }
+
+  bool requiresFluxEngine() const override {
+    if (!fluxEngine_)
+      return true;
+    return false;
+  }
+
+  void
+  setFluxEngine(std::unique_ptr<FluxEngine<NumericType, D>> engine) override {
+    fluxEngine_ = std::move(engine);
   }
 
 private:
