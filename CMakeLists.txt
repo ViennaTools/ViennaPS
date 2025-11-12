@@ -121,6 +121,7 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 5.1.0
+  GIT_TAG mesh-gen-clear
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 

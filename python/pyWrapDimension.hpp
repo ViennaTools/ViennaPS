@@ -1284,7 +1284,8 @@ template <int D> void bindApi(py::module &module) {
       .def("setDomain", &ToDiskMesh<T, D>::setDomain,
            "Set the domain in the mesh converter.")
       .def("setMesh", &ToDiskMesh<T, D>::setMesh,
-           "Set the mesh in the mesh converter");
+           "Set the mesh in the mesh converter")
+      .def("apply", &ToDiskMesh<T, D>::apply);
   // static assertion failed: Holder classes are only supported for
   //  custom types
   // .def("setTranslator", &ToDiskMesh<T, D>::setTranslator,

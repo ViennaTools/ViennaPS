@@ -116,6 +116,7 @@ private:
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
     // Initialize disk mesh generator
     context.diskMesh = viennals::Mesh<NumericType>::New();
+    meshGenerator_.clearLevelSets();
     meshGenerator_.setMesh(context.diskMesh);
     for (auto &dom : context.domain->getLevelSets()) {
       meshGenerator_.insertNextLevelSet(dom);
