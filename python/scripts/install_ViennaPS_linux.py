@@ -139,8 +139,38 @@ def install_viennals(
         print("Proceeding with the currently installed ViennaLS.")
 
 
+def get_viennaps_dir(viennaps_dir_arg: str | None) -> Path:
+    cwd = Path.cwd()
+    if viennaps_dir_arg:
+        viennaps_dir = Path(viennaps_dir_arg).expanduser().resolve()
+    else:
+        if cwd.name == "ViennaPS":
+            viennaps_dir = cwd
+        else:
+            # try location of this script
+            script_path = Path(__file__).resolve()
+            cwd = script_path.parent.parent
+            if cwd.name == "ViennaPS":
+                viennaps_dir = cwd
+            else:
+                try:
+                    entered = input(
+                        "Please enter the path to the ViennaPS directory: "
+                    ).strip()
+                except EOFError:
+                    entered = ""
+                if not entered:
+                    sys.exit("No ViennaPS directory provided.")
+                viennaps_dir = Path(entered).expanduser().resolve()
+    return viennaps_dir
+
+
 def install_viennaps(
-    pip_path: Path, viennaps_dir: Path, optix_dir: Path | None, verbose: bool
+    pip_path: Path,
+    viennaps_dir: Path,
+    optix_dir: Path | None,
+    debug_build: bool,
+    verbose: bool,
 ):
     if not viennaps_dir.exists():
         sys.exit(f"ViennaPS directory not found: {viennaps_dir}")
@@ -154,6 +184,11 @@ def install_viennaps(
 
     # GPU on
     cmake_args = ["-DVIENNAPS_USE_GPU=ON"]
+
+    if debug_build:
+        print("Enabling debug build.")
+        env["CMAKE_BUILD_TYPE"] = "Debug"
+        env["SKBUILD_CMAKE_BUILD_TYPE"] = "Debug"
 
     if optix_dir is not None:
         env["OptiX_INSTALL_DIR"] = str(optix_dir)
@@ -195,11 +230,22 @@ def main():
         default=None,
         help="Path to OptiX installation directory (optional - will auto-download OptiX headers if not provided).",
     )
+    parser.add_argument(
+        "--debug-build",
+        action="store_true",
+        help="Enable debug build.",
+    )
+    parser.add_argument(
+        "--skip-toolchain-check",
+        action="store_true",
+        help="Skip checking for required compilers and CUDA (use with caution).",
+    )
     args = parser.parse_args()
 
-    print("Checking toolchain...")
-    ensure_compilers()
-    ensure_cuda()
+    if not args.skip_toolchain_check:
+        print("Checking toolchain...")
+        ensure_compilers()
+        ensure_cuda()
 
     # OptiX dir
     optix_dir = args.optix or os.environ.get("OptiX_INSTALL_DIR")
@@ -233,31 +279,10 @@ def main():
     install_viennals(venv_pip, viennals_dir, args.viennals_version, args.verbose)
 
     # ViennaPS dir
-    cwd = Path.cwd()
-    if args.viennaps_dir:
-        viennaps_dir = Path(args.viennaps_dir).expanduser().resolve()
-    else:
-        if cwd.name == "ViennaPS":
-            viennaps_dir = cwd
-        else:
-            # try location of this script
-            script_path = Path(__file__).resolve()
-            cwd = script_path.parent.parent
-            if cwd.name == "ViennaPS":
-                viennaps_dir = cwd
-            else:
-                try:
-                    entered = input(
-                        "Please enter the path to the ViennaPS directory: "
-                    ).strip()
-                except EOFError:
-                    entered = ""
-                if not entered:
-                    sys.exit("No ViennaPS directory provided.")
-                viennaps_dir = Path(entered).expanduser().resolve()
+    viennaps_dir = get_viennaps_dir(args.viennaps_dir)
 
     # ViennaPS install
-    install_viennaps(venv_pip, viennaps_dir, optix_dir, args.verbose)
+    install_viennaps(venv_pip, viennaps_dir, optix_dir, args.debug_build, args.verbose)
 
     # Final info
     bindir = "Scripts" if os.name == "nt" else "bin"
