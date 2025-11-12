@@ -496,6 +496,20 @@ public:
         meshConverter.setMaterialMap(materialMap_->getMaterialMap());
       meshConverter.apply();
     } else {
+      // Add material IDs to surface point data
+      viennals::ToDiskMesh<NumericType, D> meshConverter;
+      meshConverter.setMesh(mesh);
+      if (materialMap_)
+        meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+      for (const auto ls : levelSets_) {
+        meshConverter.insertNextLevelSet(ls);
+      }
+      meshConverter.apply();
+
+      SurfacePointValuesToLevelSet<NumericType, D>(levelSets_.back(), mesh,
+                                                   {"MaterialIds"})
+          .apply();
+
       viennals::ToSurfaceMesh<NumericType, D>(levelSets_.back(), mesh).apply();
     }
 
