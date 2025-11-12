@@ -170,6 +170,7 @@ def install_viennaps(
     viennaps_dir: Path,
     optix_dir: Path | None,
     debug_build: bool,
+    gpu_build: bool,
     verbose: bool,
 ):
     if not viennaps_dir.exists():
@@ -183,7 +184,9 @@ def install_viennaps(
     env["CXX"] = f"g++-{REQUIRED_GCC}"
 
     # GPU on
-    cmake_args = ["-DVIENNAPS_USE_GPU=ON"]
+    cmake_args = []
+    if gpu_build:
+        cmake_args = ["-DVIENNAPS_USE_GPU=ON"]
 
     if debug_build:
         print("Enabling debug build.")
@@ -240,32 +243,40 @@ def main():
         action="store_true",
         help="Skip checking for required compilers and CUDA (use with caution).",
     )
+    parser.add_argument(
+        "--no-gpu",
+        action="store_true",
+        help="Disable GPU support.",
+    )
     args = parser.parse_args()
 
-    if not args.skip_toolchain_check:
+    if not args.skip_toolchain_check or not args.no_gpu:
         print("Checking toolchain...")
         ensure_compilers()
         ensure_cuda()
 
     # OptiX dir
-    optix_dir = args.optix or os.environ.get("OptiX_INSTALL_DIR")
-    if not optix_dir:
-        print("No OptiX directory provided. Will auto-download OptiX headers.")
-        print("\nWARNING: OptiX uses a different license than ViennaPS.")
-        print(
-            "By proceeding with auto-download, you agree to the NVIDIA OptiX license terms."
-        )
-        print(
-            "Please review the OptiX license at: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement"
-        )
-        print("If you do not agree, abort now (Ctrl+C).")
-        input("Press Enter to continue...")
-        optix_dir = None
+    if not args.no_gpu:
+        optix_dir = args.optix or os.environ.get("OptiX_INSTALL_DIR")
+        if not optix_dir:
+            print("No OptiX directory provided. Will auto-download OptiX headers.")
+            print("\nWARNING: OptiX uses a different license than ViennaPS.")
+            print(
+                "By proceeding with auto-download, you agree to the NVIDIA OptiX license terms."
+            )
+            print(
+                "Please review the OptiX license at: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement"
+            )
+            print("If you do not agree, abort now (Ctrl+C).")
+            input("Press Enter to continue...")
+            optix_dir = None
+        else:
+            optix_dir = Path(optix_dir).expanduser().resolve()
+            if not optix_dir.exists():
+                sys.exit(f"OptiX directory not found: {optix_dir}")
+            print(f"Using OptiX at: {optix_dir}")
     else:
-        optix_dir = Path(optix_dir).expanduser().resolve()
-        if not optix_dir.exists():
-            sys.exit(f"OptiX directory not found: {optix_dir}")
-        print(f"Using OptiX at: {optix_dir}")
+        optix_dir = None
 
     # venv
     venv_dir = Path(args.venv).expanduser().resolve()
@@ -282,7 +293,14 @@ def main():
     viennaps_dir = get_viennaps_dir(args.viennaps_dir)
 
     # ViennaPS install
-    install_viennaps(venv_pip, viennaps_dir, optix_dir, args.debug_build, args.verbose)
+    install_viennaps(
+        venv_pip,
+        viennaps_dir,
+        optix_dir,
+        args.debug_build,
+        not args.no_gpu,
+        args.verbose,
+    )
 
     # Final info
     bindir = "Scripts" if os.name == "nt" else "bin"
