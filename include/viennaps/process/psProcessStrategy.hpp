@@ -1,5 +1,6 @@
 #pragma once
 
+#include "psFluxEngine.hpp"
 #include "psProcessContext.hpp"
 
 #define DEFINE_CLASS_NAME(CLASS)                                               \
@@ -24,6 +25,9 @@ public:
   virtual bool
   canHandle(const ProcessContext<NumericType, D> &context) const = 0;
   virtual std::string_view name() const = 0;
+  virtual bool requiresFluxEngine() const { return false; }
+  virtual void
+  setFluxEngine(std::unique_ptr<FluxEngine<NumericType, D>> engine) {}
 };
 
 } // namespace viennaps

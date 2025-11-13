@@ -9,7 +9,7 @@ from pathlib import Path
 
 REQUIRED_GCC = "12"
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.1.0"
+DEFAULT_VIENNALS_VERSION = "5.1.1"
 
 
 def run(cmd, **kwargs):
@@ -133,15 +133,45 @@ def install_viennals(
         )
         if current != required_version:
             sys.exit(
-                "Version mismatch. Please uninstall and install the required version:\n"
-                f"  {pip_path} uninstall ViennaLS\n"
+                f"Version mismatch. Please change to the required version {required_version}.\n"
                 "Then re-run this script."
             )
         print("Proceeding with the currently installed ViennaLS.")
 
 
+def get_viennaps_dir(viennaps_dir_arg: str | None) -> Path:
+    cwd = Path.cwd()
+    if viennaps_dir_arg:
+        viennaps_dir = Path(viennaps_dir_arg).expanduser().resolve()
+    else:
+        if cwd.name == "ViennaPS":
+            viennaps_dir = cwd
+        else:
+            # try location of this script
+            script_path = Path(__file__).resolve()
+            cwd = script_path.parent.parent
+            if cwd.name == "ViennaPS":
+                viennaps_dir = cwd
+            else:
+                try:
+                    entered = input(
+                        "Please enter the path to the ViennaPS directory: "
+                    ).strip()
+                except EOFError:
+                    entered = ""
+                if not entered:
+                    sys.exit("No ViennaPS directory provided.")
+                viennaps_dir = Path(entered).expanduser().resolve()
+    return viennaps_dir
+
+
 def install_viennaps(
-    pip_path: Path, viennaps_dir: Path, optix_dir: Path | None, verbose: bool
+    pip_path: Path,
+    viennaps_dir: Path,
+    optix_dir: Path | None,
+    debug_build: bool,
+    gpu_build: bool,
+    verbose: bool,
 ):
     if not viennaps_dir.exists():
         sys.exit(f"ViennaPS directory not found: {viennaps_dir}")
@@ -154,7 +184,14 @@ def install_viennaps(
     env["CXX"] = f"g++-{REQUIRED_GCC}"
 
     # GPU on
-    cmake_args = ["-DVIENNAPS_USE_GPU=ON"]
+    cmake_args = []
+    if gpu_build:
+        cmake_args = ["-DVIENNAPS_USE_GPU=ON"]
+
+    if debug_build:
+        print("Enabling debug build.")
+        env["CMAKE_BUILD_TYPE"] = "Debug"
+        env["SKBUILD_CMAKE_BUILD_TYPE"] = "Debug"
 
     if optix_dir is not None:
         env["OptiX_INSTALL_DIR"] = str(optix_dir)
@@ -196,31 +233,50 @@ def main():
         default=None,
         help="Path to OptiX installation directory (optional - will auto-download OptiX headers if not provided).",
     )
+    parser.add_argument(
+        "--debug-build",
+        action="store_true",
+        help="Enable debug build.",
+    )
+    parser.add_argument(
+        "--skip-toolchain-check",
+        action="store_true",
+        help="Skip checking for required compilers and CUDA (use with caution).",
+    )
+    parser.add_argument(
+        "--no-gpu",
+        action="store_true",
+        help="Disable GPU support.",
+    )
     args = parser.parse_args()
 
-    print("Checking toolchain...")
-    ensure_compilers()
-    ensure_cuda()
+    if not args.skip_toolchain_check or not args.no_gpu:
+        print("Checking toolchain...")
+        ensure_compilers()
+        ensure_cuda()
 
     # OptiX dir
-    optix_dir = args.optix or os.environ.get("OptiX_INSTALL_DIR")
-    if not optix_dir:
-        print("No OptiX directory provided. Will auto-download OptiX headers.")
-        print("\nWARNING: OptiX uses a different license than ViennaPS.")
-        print(
-            "By proceeding with auto-download, you agree to the NVIDIA OptiX license terms."
-        )
-        print(
-            "Please review the OptiX license at: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement"
-        )
-        print("If you do not agree, abort now (Ctrl+C).")
-        input("Press Enter to continue...")
-        optix_dir = None
+    if not args.no_gpu:
+        optix_dir = args.optix or os.environ.get("OptiX_INSTALL_DIR")
+        if not optix_dir:
+            print("No OptiX directory provided. Will auto-download OptiX headers.")
+            print("\nWARNING: OptiX uses a different license than ViennaPS.")
+            print(
+                "By proceeding with auto-download, you agree to the NVIDIA OptiX license terms."
+            )
+            print(
+                "Please review the OptiX license at: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement"
+            )
+            print("If you do not agree, abort now (Ctrl+C).")
+            input("Press Enter to continue...")
+            optix_dir = None
+        else:
+            optix_dir = Path(optix_dir).expanduser().resolve()
+            if not optix_dir.exists():
+                sys.exit(f"OptiX directory not found: {optix_dir}")
+            print(f"Using OptiX at: {optix_dir}")
     else:
-        optix_dir = Path(optix_dir).expanduser().resolve()
-        if not optix_dir.exists():
-            sys.exit(f"OptiX directory not found: {optix_dir}")
-        print(f"Using OptiX at: {optix_dir}")
+        optix_dir = None
 
     # venv
     venv_dir = Path(args.venv).expanduser().resolve()
@@ -234,25 +290,17 @@ def main():
     install_viennals(venv_pip, viennals_dir, args.viennals_version, args.verbose)
 
     # ViennaPS dir
-    cwd = Path.cwd()
-    if args.viennaps_dir:
-        viennaps_dir = Path(args.viennaps_dir).expanduser().resolve()
-    else:
-        if cwd.name == "ViennaPS":
-            viennaps_dir = cwd
-        else:
-            try:
-                entered = input(
-                    "Please enter the path to the ViennaPS directory: "
-                ).strip()
-            except EOFError:
-                entered = ""
-            if not entered:
-                sys.exit("No ViennaPS directory provided.")
-            viennaps_dir = Path(entered).expanduser().resolve()
+    viennaps_dir = get_viennaps_dir(args.viennaps_dir)
 
     # ViennaPS install
-    install_viennaps(venv_pip, viennaps_dir, optix_dir, args.verbose)
+    install_viennaps(
+        venv_pip,
+        viennaps_dir,
+        optix_dir,
+        args.debug_build,
+        not args.no_gpu,
+        args.verbose,
+    )
 
     # Final info
     bindir = "Scripts" if os.name == "nt" else "bin"

@@ -35,12 +35,16 @@ private:
   FluxEngineType fluxEngineType_ = FluxEngineType::AUTO;
 
 public:
-  Process() {}
-  Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {}
+  Process() { initializeStrategies(); }
+  Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {
+    initializeStrategies();
+  }
   Process(SmartPointer<Domain<NumericType, D>> domain,
           SmartPointer<ProcessModelBase<NumericType, D>> model,
           NumericType processDuration = 0.)
-      : context_{domain, model, processDuration} {}
+      : context_{domain, model, processDuration} {
+    initializeStrategies();
+  }
 
   void setDomain(SmartPointer<Domain<NumericType, D>> domain) {
     context_.domain = domain;
@@ -74,8 +78,6 @@ public:
 
   void apply() {
 
-    initializeStrategies();
-
     if (!checkInput())
       return;
 
@@ -94,6 +96,13 @@ public:
     Logger::getInstance()
         .addDebug("Using strategy: " + std::string(strategy->name()))
         .print();
+
+    if (strategy->requiresFluxEngine()) {
+      Logger::getInstance()
+          .addDebug("Setting up flux engine for strategy.")
+          .print();
+      strategy->setFluxEngine(createFluxEngine());
+    }
 
     // Execute strategy
     context_.resetTime(); // Reset process time and previous time step
@@ -136,10 +145,9 @@ private:
         std::make_unique<CallbackOnlyStrategy<NumericType, D>>());
     strategies_.push_back(
         std::make_unique<AnalyticProcessStrategy<NumericType, D>>());
-    strategies_.push_back(std::make_unique<FluxProcessStrategy<NumericType, D>>(
-        createFluxEngine()));
     strategies_.push_back(
-        std::make_unique<ALPStrategy<NumericType, D>>(createFluxEngine()));
+        std::make_unique<FluxProcessStrategy<NumericType, D>>());
+    strategies_.push_back(std::make_unique<ALPStrategy<NumericType, D>>());
   }
 
   ProcessStrategy<NumericType, D> *findStrategy() {
@@ -184,15 +192,6 @@ private:
 
   // Factory method for creating flux engines
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() {
-    // Auto-select engine type if needed
-    if (fluxEngineType_ == FluxEngineType::AUTO) {
-      fluxEngineType_ = selectAutoFluxEngine();
-      Logger::getInstance()
-          .addDebug("Auto-selected flux engine type: " +
-                    to_string(fluxEngineType_))
-          .print();
-    }
-
     // Create CPU engine
     if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
@@ -317,22 +316,26 @@ public:
       return false;
     }
 
+    // Auto-select engine type if needed
+    if (fluxEngineType_ == FluxEngineType::AUTO) {
+      fluxEngineType_ = selectAutoFluxEngine();
+      Logger::getInstance()
+          .addDebug("Auto-selected flux engine type: " +
+                    to_string(fluxEngineType_))
+          .print();
+    }
+
 #ifdef VIENNACORE_COMPILE_GPU
     if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE ||
         fluxEngineType_ == FluxEngineType::GPU_DISK ||
         fluxEngineType_ == FluxEngineType::GPU_LINE) {
-      if (fluxEngineType_ == FluxEngineType::GPU_TRIANGLE && D == 2) {
-        Logger::getInstance()
-            .addWarning(
-                "GPU-Triangle flux engine not supported in 2D.\nFallback to "
-                "GPU-Line engine.")
-            .print();
-      }
 
+      // Ensure process model has GPU implementation
       auto model =
           std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
               context_.model);
       if (!model) {
+        // Retry with GPU model if available
         auto gpuModel = context_.model->getGPUModel();
         if (gpuModel) {
           Logger::getInstance()

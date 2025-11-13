@@ -24,6 +24,7 @@ private:
 public:
   DEFINE_CLASS_NAME(ALPStrategy)
 
+  ALPStrategy() {}
   ALPStrategy(std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine)
       : fluxEngine_(std::move(fluxEngine)) {}
 
@@ -40,6 +41,17 @@ public:
 
   bool canHandle(const ProcessContext<NumericType, D> &context) const override {
     return context.flags.isALP;
+  }
+
+  bool requiresFluxEngine() const override {
+    if (!fluxEngine_)
+      return true;
+    return false;
+  }
+
+  void
+  setFluxEngine(std::unique_ptr<FluxEngine<NumericType, D>> engine) override {
+    fluxEngine_ = std::move(engine);
   }
 
 private:
@@ -64,6 +76,7 @@ private:
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
     // Initialize disk mesh generator
     context.diskMesh = viennals::Mesh<NumericType>::New();
+    meshGenerator_.clearLevelSets();
     meshGenerator_.setMesh(context.diskMesh);
     for (auto &dom : context.domain->getLevelSets()) {
       meshGenerator_.insertNextLevelSet(dom);

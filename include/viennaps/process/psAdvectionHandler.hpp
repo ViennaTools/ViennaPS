@@ -41,7 +41,6 @@ public:
 
     context.resetTime();
 
-    advectionKernel_.setAdvectionTime(0.);
     advectionKernel_.setSingleStep(true);
     advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setIntegrationScheme(
@@ -58,6 +57,7 @@ public:
     if (translationMethod > 0)
       advectionKernel_.setCalculateNormalVectors(false);
 
+    advectionKernel_.clearLevelSets();
     for (auto &dom : context.domain->getLevelSets()) {
       advectionKernel_.insertNextLevelSet(dom);
     }
@@ -78,11 +78,9 @@ public:
   ProcessResult performAdvection(ProcessContext<NumericType, D> &context) {
     // Perform the advection step
 
-    if (context.processTime + context.timeStep > context.processDuration) {
-      // adjust time step near end
-      advectionKernel_.setAdvectionTime(context.processDuration -
-                                        context.processTime);
-    }
+    // Set the maximum advection time.
+    advectionKernel_.setAdvectionTime(context.processDuration -
+                                      context.processTime);
 
     timer_.start();
     advectionKernel_.apply();

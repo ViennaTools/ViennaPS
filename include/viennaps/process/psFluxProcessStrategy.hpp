@@ -29,6 +29,7 @@ private:
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
 
+  FluxProcessStrategy() {}
   FluxProcessStrategy(std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine)
       : fluxEngine_(std::move(fluxEngine)) {}
 
@@ -72,6 +73,17 @@ public:
     return ProcessResult::SUCCESS;
   }
 
+  bool requiresFluxEngine() const override {
+    if (!fluxEngine_)
+      return true;
+    return false;
+  }
+
+  void
+  setFluxEngine(std::unique_ptr<FluxEngine<NumericType, D>> engine) override {
+    fluxEngine_ = std::move(engine);
+  }
+
 private:
   ProcessResult validateContext(const ProcessContext<NumericType, D> &context) {
 
@@ -104,6 +116,7 @@ private:
   ProcessResult setupProcess(ProcessContext<NumericType, D> &context) {
     // Initialize disk mesh generator
     context.diskMesh = viennals::Mesh<NumericType>::New();
+    meshGenerator_.clearLevelSets();
     meshGenerator_.setMesh(context.diskMesh);
     for (auto &dom : context.domain->getLevelSets()) {
       meshGenerator_.insertNextLevelSet(dom);
@@ -113,6 +126,33 @@ private:
             context.domain->getLevelSets().size()) {
       meshGenerator_.setMaterialMap(
           context.domain->getMaterialMap()->getMaterialMap());
+    } else {
+      Logger::getInstance()
+          .addWarning("No valid material map found in domain.")
+          .print();
+    }
+
+    // Initialize translation field. Converts points ids from level set points
+    // to surface points
+    const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
+    Logger::getInstance()
+        .addDebug("Using translation field method: " +
+                  std::to_string(translationMethod))
+        .print();
+    context.translationField =
+        SmartPointer<TranslationField<NumericType, D>>::New(
+            context.model->getVelocityField(), context.domain->getMaterialMap(),
+            translationMethod);
+    if (translationMethod == 1) {
+      if (!translator_)
+        translator_ = SmartPointer<TranslatorType>::New();
+      meshGenerator_.setTranslator(translator_);
+      context.translationField->setTranslator(translator_);
+    }
+    if (translationMethod == 2) {
+      if (!kdTree_)
+        kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      context.translationField->setKdTree(kdTree_);
     }
 
     // Try to initialize coverages
@@ -121,31 +161,17 @@ private:
       if (coverageManager_.initializeCoverages(context)) {
         context.flags.useCoverages = true;
         Logger::getInstance().addInfo("Using coverages.").print();
-      }
 
-      if (!translator_)
-        translator_ = SmartPointer<TranslatorType>::New();
-      meshGenerator_.setTranslator(translator_);
+        // Translator is needed to map coverage values to level set points
+        if (!translator_)
+          translator_ = SmartPointer<TranslatorType>::New();
+        meshGenerator_.setTranslator(translator_);
+      }
     } else {
       Logger::getInstance().addInfo("Coverages already initialized.").print();
     }
     context.model->getSurfaceModel()->initializeSurfaceData(
         context.diskMesh->nodes.size());
-
-    // Initialize translation field. Converts points ids from level set points
-    // to surface points
-    const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
-    context.translationField =
-        SmartPointer<TranslationField<NumericType, D>>::New(
-            context.model->getVelocityField(), context.domain->getMaterialMap(),
-            translationMethod);
-
-    if (!translator_)
-      translator_ = SmartPointer<TranslatorType>::New();
-    context.translationField->setTranslator(translator_);
-    if (!kdTree_)
-      kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
-    context.translationField->setKdTree(kdTree_);
 
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));
@@ -261,7 +287,7 @@ private:
       }
     }
 
-    if (Logger::getLogLevel() >= 2) {
+    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::INFO)) {
       std::stringstream stream;
       stream << std::fixed << std::setprecision(4)
              << "Process time: " << context.processTime << " / "
@@ -276,7 +302,8 @@ private:
       ProcessContext<NumericType, D> &context,
       SmartPointer<std::vector<NumericType>> &velocities,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) {
-    if (Logger::getLogLevel() >= 3) {
+    if (Logger::getLogLevel() >=
+        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
       context.diskMesh->getCellData().insertNextScalarData(*velocities,

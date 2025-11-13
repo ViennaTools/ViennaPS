@@ -10,6 +10,7 @@ namespace viennaps {
 template <typename NumericType, int D>
 class AnalyticProcessStrategy : public ProcessStrategy<NumericType, D> {
 private:
+  viennals::ToDiskMesh<NumericType, D> meshConverter_;
   AdvectionHandler<NumericType, D> advectionHandler_;
   viennacore::Timer<> callbackTimer_;
 
@@ -56,6 +57,21 @@ private:
 
     if (context.flags.useAdvectionCallback) {
       context.model->getAdvectionCallback()->setDomain(context.domain);
+    }
+
+    // Set up disk mesh for intermediate output if requested
+    if (Logger::getLogLevel() >=
+        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+      context.diskMesh = viennals::Mesh<NumericType>::New();
+      meshConverter_.setMesh(context.diskMesh);
+      meshConverter_.clearLevelSets();
+      for (auto &dom : context.domain->getLevelSets()) {
+        meshConverter_.insertNextLevelSet(dom);
+      }
+      if (context.domain->getMaterialMap()) {
+        meshConverter_.setMaterialMap(
+            context.domain->getMaterialMap()->getMaterialMap());
+      }
     }
 
     return ProcessResult::SUCCESS;
@@ -110,13 +126,19 @@ private:
     context.model->getVelocityField()->prepare(context.domain, nullptr,
                                                context.processTime);
 
-    if (Logger::getLogLevel() >= 3) {
+    if (Logger::getLogLevel() >=
+        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+      auto const name = context.getProcessName();
       if (context.domain->getCellSet()) {
-        auto const name = context.getProcessName();
         context.domain->getCellSet()->writeVTU(
             name + "_cellSet_" + std::to_string(context.currentIteration) +
             ".vtu");
       }
+      meshConverter_.apply();
+      viennals::VTKWriter<NumericType>(
+          context.diskMesh,
+          name + "_" + std::to_string(context.currentIteration) + ".vtp")
+          .apply();
     }
 
     // Perform advection, update processTime
@@ -129,7 +151,7 @@ private:
       }
     }
 
-    if (Logger::getLogLevel() >= 2) {
+    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::INFO)) {
       std::stringstream stream;
       stream << std::fixed << std::setprecision(4)
              << "Process time: " << context.processTime << " / "
