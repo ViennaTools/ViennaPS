@@ -83,10 +83,41 @@ public:
     surfaceMesh_ = viennals::Mesh<NumericType>::New();
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
-    CreateSurfaceMesh<NumericType, NumericType, D>(
-        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
-        1e-12, context.rayTracingParams.minNodeDistanceFactor)
-        .apply();
+    if constexpr (D == 2) {
+      viennals::ToSurfaceMesh<NumericType, D>(
+          context.domain->getLevelSets().back(), surfaceMesh_)
+          .apply();
+      auto pointsTriangles = rayInternal::convertLinesToTriangles(
+          surfaceMesh_->nodes, surfaceMesh_->lines,
+          context.domain->getGridDelta());
+      surfaceMesh_->nodes = std::move(pointsTriangles.first);
+      surfaceMesh_->triangles = std::move(pointsTriangles.second);
+      std::vector<std::array<NumericType, 3>> triangleCenters;
+      std::vector<std::array<NumericType, 3>> normalVectors;
+      triangleCenters.reserve(surfaceMesh_->triangles.size());
+      normalVectors.reserve(surfaceMesh_->triangles.size());
+      for (const auto &tri : surfaceMesh_->triangles) {
+        const auto &v0 = surfaceMesh_->nodes[tri[0]];
+        const auto &v1 = surfaceMesh_->nodes[tri[1]];
+        const auto &v2 = surfaceMesh_->nodes[tri[2]];
+        std::array<NumericType, 3> center = {(v0[0] + v1[0] + v2[0]) / 3.0,
+                                             (v0[1] + v1[1] + v2[1]) / 3.0,
+                                             (v0[2] + v1[2] + v2[2]) / 3.0};
+        triangleCenters.push_back(center);
+        auto normal = CrossProduct(v1 - v0, v2 - v0);
+        auto length = Norm(normal);
+        normalVectors.push_back(normal / length);
+      }
+      surfaceMesh_->getCellData().insertReplaceVectorData(
+          std::move(normalVectors), "Normals");
+      elementKdTree_->setPoints(triangleCenters);
+      elementKdTree_->build();
+    } else {
+      CreateSurfaceMesh<NumericType, NumericType, D>(
+          context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
+          1e-12, context.rayTracingParams.minNodeDistanceFactor)
+          .apply();
+    }
 
     rayTracer_.setGeometry(surfaceMesh_->nodes, surfaceMesh_->triangles,
                            context.domain->getGridDelta());
@@ -95,6 +126,10 @@ public:
         *context.diskMesh->getCellData().getScalarData("MaterialIds");
     std::vector<int> elementMaterialIds;
     auto &pointKdTree = context.translationField->getKdTree();
+    if (!pointKdTree) {
+      pointKdTree = KDTreeType::New();
+      context.translationField->setKdTree(pointKdTree);
+    }
     if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
       pointKdTree->setPoints(context.diskMesh->nodes);
       pointKdTree->build();
@@ -156,7 +191,8 @@ public:
 
     // output
     if (Logger::getLogLevel() >=
-        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+            static_cast<unsigned>(LogLevel::INTERMEDIATE) &&
+        D == 3) {
       static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
           surfaceMesh_, context.getProcessName() + "_flux_" +
