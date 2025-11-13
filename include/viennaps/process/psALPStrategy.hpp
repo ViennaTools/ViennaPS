@@ -104,8 +104,6 @@ private:
             translationMethod);
 
     if (translationMethod == 1) {
-      if (!translator_)
-        translator_ = SmartPointer<TranslatorType>::New();
       context.translationField->setTranslator(translator_);
     } else if (translationMethod == 2) {
       kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
@@ -114,7 +112,8 @@ private:
 
     // Initialize advection handler
     PROCESS_CHECK(advectionHandler_.initialize(context));
-    advectionHandler_.setAdvectionTime(1.0);
+    advectionHandler_.disableSingleStep();
+    advectionHandler_.setAdvectionTime(1.0); // always advect for one time unit
 
     if (context.flags.useAdvectionCallback) {
       Logger::getInstance()
@@ -203,6 +202,7 @@ private:
             .addWarning(
                 "Purge pulses are not implemented yet. Skipping purge step.")
             .print();
+        /// TODO: Implement purge step
       }
 
       // Calculate velocities in model
@@ -238,6 +238,7 @@ private:
     processTimer.finish();
     logProcessingTimes(context, processTimer);
 
+    // Add metadata to domain
     if (static_cast<int>(context.domain->getMetaDataLevel()) > 1) {
       context.domain->addMetaData(context.atomicLayerParams.toMetaData());
     }

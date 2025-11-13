@@ -14,8 +14,8 @@ topSpace = 0.
 pulseTime = 0.1
 coverageTimeStep=0.01
 growthPerCycle = 0.000112
-numCycles=4
-totalCycles=400
+numCycles=10
+totalCycles=800
 
 # Reactor and gas 
 pressure = 0.1 # torr

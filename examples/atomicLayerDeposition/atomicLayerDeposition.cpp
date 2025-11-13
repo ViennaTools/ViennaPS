@@ -55,9 +55,6 @@ int main(int argc, char **argv) {
   using NumericType = double;
 
   omp_set_num_threads(16);
-  // #ifndef NDEBUG
-  //   omp_set_num_threads(1);
-  // #endif
 
   ps::util::Parameters params;
   if (argc > 1) {
@@ -66,8 +63,6 @@ int main(int argc, char **argv) {
     std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
     return 1;
   }
-
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
 
   auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
   makeT(domain, params.get("gridDelta"), params.get("openingDepth"),

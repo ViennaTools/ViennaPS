@@ -69,6 +69,8 @@ public:
     advectionKernel_.setAdvectionTime(time);
   }
 
+  void disableSingleStep() { advectionKernel_.setSingleStep(false); }
+
   void prepareAdvection(const ProcessContext<NumericType, D> &context) {
     // Prepare for advection step
     advectionKernel_.prepareLS();
@@ -79,8 +81,10 @@ public:
     // Perform the advection step
 
     // Set the maximum advection time.
-    advectionKernel_.setAdvectionTime(context.processDuration -
-                                      context.processTime);
+    if (!context.flags.isALP) {
+      advectionKernel_.setAdvectionTime(context.processDuration -
+                                        context.processTime);
+    }
 
     timer_.start();
     advectionKernel_.apply();
