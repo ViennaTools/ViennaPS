@@ -23,7 +23,7 @@ int main() {
   const NumericType cSticking = DEFAULT_STICKING;
   // const std::array<NumericType, 4> gridDeltaValues = {0.05f, 0.1f, 0.2f,
   // 0.4f};
-  auto gridDeltaValues = linspace<NumericType, 8>(0.04f, 0.4f);
+  auto gridDeltaValues = linspace<NumericType, 8>(0.01f, 0.4f);
   const int numRuns = 20;
   const int raysPerPoint = 1000;
   // const int numRays = int(1.4e8);

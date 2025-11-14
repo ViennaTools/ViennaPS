@@ -39,9 +39,9 @@ __direct_callable__singleNeutralReflection(const void *sbtData,
 }
 
 extern "C" __device__ void
-__direct_callable__singleALDNeutralCollision(const void *sbtData,
-                                             viennaray::gpu::PerRayData *prd) {
-  singleALDNeutralCollision(sbtData, prd);
+__direct_callable__singleALDNeutralReflection(const void *sbtData,
+                                              viennaray::gpu::PerRayData *prd) {
+  singleALDNeutralReflection(sbtData, prd);
 }
 
 //

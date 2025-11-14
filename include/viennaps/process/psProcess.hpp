@@ -204,19 +204,6 @@ private:
   }
 
 private:
-  FluxEngineType selectAutoFluxEngine() {
-    if (!context_.model) {
-      // Default to CPU disk engine if no model is set
-      return FluxEngineType::CPU_DISK;
-    }
-
-    if (gpuAvailable() && context_.model->hasGPUModel()) {
-      return (D == 2) ? FluxEngineType::GPU_DISK : FluxEngineType::GPU_TRIANGLE;
-    }
-
-    return FluxEngineType::CPU_DISK;
-  }
-
   std::unique_ptr<FluxEngine<NumericType, D>> createGPUFluxEngine() {
 #ifndef VIENNACORE_COMPILE_GPU
     Logger::getInstance()
@@ -301,9 +288,13 @@ public:
       return false;
     }
 
-    // Auto-select engine type if needed
+    // Auto-select engine type
     if (fluxEngineType_ == FluxEngineType::AUTO) {
-      fluxEngineType_ = selectAutoFluxEngine();
+      if (gpuAvailable() && context_.model->hasGPUModel()) {
+        fluxEngineType_ = FluxEngineType::GPU_TRIANGLE;
+      } else {
+        fluxEngineType_ = FluxEngineType::CPU_DISK;
+      }
       Logger::getInstance()
           .addDebug("Auto-selected flux engine type: " +
                     to_string(fluxEngineType_))

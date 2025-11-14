@@ -151,6 +151,10 @@ public:
           diskMesh->getCellData().getScalarData("MaterialIds");
       std::vector<int> lineMaterialIds(surfaceMesh_->lines.size());
       auto &pointKdTree = context.translationField->getKdTree();
+      if (!pointKdTree) {
+        pointKdTree = KDTreeType::New();
+        context.translationField->setKdTree(pointKdTree);
+      }
       if (pointKdTree->getNumberOfPoints() != diskMesh->nodes.size()) {
         pointKdTree->setPoints(diskMesh->nodes);
         pointKdTree->build();
@@ -199,6 +203,10 @@ public:
       assert(context.diskMesh);
       auto numCov = coverages->getScalarDataSize();
       auto &pointKdTree = context.translationField->getKdTree();
+      if (!pointKdTree) {
+        pointKdTree = KDTreeType::New();
+        context.translationField->setKdTree(pointKdTree);
+      }
       if (pointKdTree->getNumberOfPoints() != diskMesh.nodes.size()) {
         pointKdTree->setPoints(diskMesh.nodes);
         pointKdTree->build();

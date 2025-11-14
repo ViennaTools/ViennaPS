@@ -95,7 +95,6 @@ public:
                         viennaray::TracingData<NumericType> &localData,
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &Rng) override final {
-
     localData.getVectorData(0)[primID] += rayWeight;
   }
   std::pair<NumericType, Vec3D<NumericType>>
@@ -145,13 +144,24 @@ public:
       Logger::getInstance()
           .addWarning(
               "Mean free path > 0 specified for GPU SingleParticleALD model. "
-              "Currently only mean free path = 0 (ballistic transport) is "
-              "supported.")
+              "Currently only ballistic transport is supported.")
           .print();
+      gasMFP = -1;
     }
+
+    // particles
     viennaray::gpu::Particle<NumericType> particle{
-        .name = "SingleParticleALD", .sticking = stickingProbability};
+        .name = "SingleParticle", .sticking = stickingProbability};
     particle.dataLabels.push_back("ParticleFlux");
+
+    std::unordered_map<std::string, unsigned> pMap = {{"SingleParticle", 0}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__singleNeutralCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__singleALDNeutralReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
 
     NumericType gpc = totalCycles / numCycles * growthPerCycle;
 
@@ -170,15 +180,6 @@ public:
     this->setProcessName("SingleParticleALD");
     this->isALP = true;
     this->hasGPU = true;
-
-    // Callables
-    /// TODO: Implement GPU callable functions for ALD particle-surface
-    /// interactions
-    Logger::getInstance()
-        .addError("GPU SingleParticleALD model does not yet implement "
-                  "particle-surface "
-                  "interactions on the GPU. Using CPU implementations instead.")
-        .print();
 
     this->processMetaData["stickingProbability"] =
         std::vector<double>{stickingProbability};

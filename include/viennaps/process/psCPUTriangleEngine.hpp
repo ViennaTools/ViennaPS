@@ -168,6 +168,10 @@ public:
     // copy coverages to the ray tracer
     if (context.flags.useCoverages) {
       auto &pointKdTree = context.translationField->getKdTree();
+      if (!pointKdTree) {
+        pointKdTree = KDTreeType::New();
+        context.translationField->setKdTree(pointKdTree);
+      }
       if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
         pointKdTree->setPoints(context.diskMesh->nodes);
         pointKdTree->build();
