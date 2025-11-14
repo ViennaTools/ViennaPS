@@ -75,7 +75,8 @@ public:
   }
 };
 
-template <typename NumericType, typename MeshNT = NumericType>
+template <typename NumericType, typename MeshNT = NumericType, bool d2 = true,
+          bool d4 = true>
 class ElementToPointDataBase {
 protected:
   const IndexMap indexMap_;
@@ -85,8 +86,8 @@ protected:
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
   const NumericType conversionRadius_;
 
-  static constexpr bool discard2 = true;
-  static constexpr bool discard4 = true;
+  static constexpr bool discard2 = d2;
+  static constexpr bool discard4 = d4;
 
 public:
   ElementToPointDataBase(
@@ -289,8 +290,10 @@ private:
   }
 };
 
-template <typename NumericType, typename MeshNT = NumericType>
-class ElementToPointData : public ElementToPointDataBase<NumericType, MeshNT> {
+template <typename NumericType, typename MeshNT = NumericType, bool d2 = true,
+          bool d4 = true>
+class ElementToPointData
+    : public ElementToPointDataBase<NumericType, MeshNT, d2, d4> {
 public:
   ElementToPointData(
       const std::vector<std::vector<NumericType>> &elementData,
@@ -300,7 +303,7 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
             indexMap, pointData, elementKdTree, diskMesh, surfMesh,
             conversionRadius),
         elementData_(elementData) {}
@@ -314,7 +317,7 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+      : viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
             viennaps::IndexMap(particles), pointData, elementKdTree, diskMesh,
             surfMesh, conversionRadius),
         elementData_(elementData) {}
@@ -341,8 +344,10 @@ private:
 
 #ifdef VIENNACORE_COMPILE_GPU
 namespace gpu {
-template <typename NumericType, typename MeshNT = NumericType>
-class ElementToPointData : public ElementToPointDataBase<NumericType, MeshNT> {
+template <typename NumericType, typename MeshNT = NumericType, bool d2 = true,
+          bool d4 = true>
+class ElementToPointData
+    : public ElementToPointDataBase<NumericType, MeshNT, d2, d4> {
 public:
   ElementToPointData(
       CudaBuffer &d_elementData,
@@ -352,7 +357,7 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
             indexMap, pointData, elementKdTree, diskMesh, surfMesh,
             conversionRadius),
         d_elementData_(d_elementData) {}
@@ -365,7 +370,7 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : viennaps::ElementToPointDataBase<NumericType, MeshNT>(
+      : viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
             viennaps::IndexMap(particles), pointData, elementKdTree, diskMesh,
             surfMesh, conversionRadius),
         d_elementData_(d_elementData) {}

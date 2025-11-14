@@ -217,7 +217,7 @@ public:
     rayTracer_.apply();
 
     // extract fluxes on points
-    gpu::ElementToPointData<NumericType, float>(
+    gpu::ElementToPointData<NumericType, float, true, D == 3>(
         rayTracer_.getResults(), fluxes, rayTracer_.getParticles(),
         elementKdTree_, context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *

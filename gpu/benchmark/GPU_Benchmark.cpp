@@ -5,7 +5,7 @@
 
 #include <psCreateSurfaceMesh.hpp>
 #include <psElementToPointData.hpp>
-#include <raygMesh.hpp>
+#include <rayMesh.hpp>
 #include <raygTraceDisk.hpp>
 #include <raygTraceLine.hpp>
 #include <raygTraceTriangle.hpp>

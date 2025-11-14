@@ -191,7 +191,7 @@ public:
       elementCenters[i] = (p0 + p1) / NumericType(2);
     }
 
-    auto diskMesh_ = *context.diskMesh;
+    auto diskMesh = *context.diskMesh;
     CudaBuffer d_coverages; // device buffer for coverages
     if (context.flags.useCoverages) {
       auto coverages = model->getSurfaceModel()->getCoverages();
@@ -199,8 +199,8 @@ public:
       assert(context.diskMesh);
       auto numCov = coverages->getScalarDataSize();
       auto &pointKdTree = context.translationField->getKdTree();
-      if (pointKdTree->getNumberOfPoints() != diskMesh_.nodes.size()) {
-        pointKdTree->setPoints(diskMesh_.nodes);
+      if (pointKdTree->getNumberOfPoints() != diskMesh.nodes.size()) {
+        pointKdTree->setPoints(diskMesh.nodes);
         pointKdTree->build();
       }
 
@@ -213,7 +213,7 @@ public:
       for (int i = 0; i < numCov; ++i) {
         std::vector<NumericType> temp = *(coverages->getScalarData(i));
         std::vector<float> tempCasted(temp.begin(), temp.end());
-        assert(tempCasted.size() == diskMesh_.getNodes().size());
+        assert(tempCasted.size() == diskMesh.getNodes().size());
         for (int j = 0; j < elementCenters.size(); j++) {
           auto closestPoint = pointKdTree->findNearest(elementCenters[j]);
           cov[j + i * surfaceMesh_->lines.size()] =
@@ -227,7 +227,8 @@ public:
     // run the ray tracer
     rayTracer_.apply();
     downloadResultsToPointData(*fluxes, context.diskMesh,
-                               context.rayTracingParams.smoothingNeighbors);
+                               context.rayTracingParams.smoothingNeighbors,
+                               context.domain->getGridDelta());
 
     // output
     if (Logger::getLogLevel() >=
@@ -239,7 +240,8 @@ public:
       }
       downloadResultsToPointData(context.diskMesh->getCellData(),
                                  context.diskMesh,
-                                 context.rayTracingParams.smoothingNeighbors);
+                                 context.rayTracingParams.smoothingNeighbors,
+                                 context.domain->getGridDelta());
       static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
           context.diskMesh, context.getProcessName() + "_flux_" +
@@ -282,13 +284,70 @@ private:
   void
   downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
                              SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-                             int smoothingNeighbors) {
+                             int smoothingNeighbors, NumericType gridDelta) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
-    auto diskMesh_ = *diskMesh;
-    const auto numDisks = diskMesh_.nodes.size();
+    const auto numDisks = diskMesh->nodes.size();
     assert(numRates > 0);
     auto particles = rayTracer_.getParticles();
+    auto const &elementNormals =
+        *surfaceMesh_->getCellData().getVectorData("Normals");
+    auto const &normals = *diskMesh->getCellData().getVectorData("Normals");
+    const auto numElements = surfaceMesh_->lines.size();
+
+    NumericType conversionRadius = gridDelta * (smoothingNeighbors + 1);
+    conversionRadius *= conversionRadius; // use squared radius
+
+    std::vector<std::vector<std::pair<unsigned, NumericType>>> elementsToPoint;
+    elementsToPoint.reserve(numDisks);
+
+    for (int i = 0; i < numDisks; i++) {
+      auto closePoints =
+          elementKdTree_
+              ->findNearestWithinRadius(diskMesh->nodes[i], conversionRadius)
+              .value();
+
+      std::vector<std::pair<unsigned, NumericType>> closePointsArray;
+      std::vector<NumericType> weights(closePoints.size(), NumericType(0));
+
+      unsigned numClosePoints = 0;
+      for (std::size_t n = 0; n < closePoints.size(); ++n) {
+        const auto &p = closePoints[n];
+        assert(p.first < numElements);
+
+        const auto weight = DotProductNT(normals[i], elementNormals[p.first]);
+
+        if (weight > NumericType(1e-6) && !std::isnan(weight)) {
+          weights[n] = weight;
+          ++numClosePoints;
+        }
+      }
+
+      if (numClosePoints == 0) { // fallback to nearest point
+        auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
+        closePointsArray.emplace_back(nearestPoint->first, NumericType(1));
+      }
+
+      // Compute weighted average
+      const NumericType sum =
+          std::accumulate(weights.begin(), weights.end(), NumericType(0));
+
+      if (sum > NumericType(0)) {
+        for (std::size_t k = 0; k < closePoints.size(); ++k) {
+          if (weights[k] > NumericType(0)) {
+            closePointsArray.emplace_back(closePoints[k].first,
+                                          weights[k] / sum);
+          }
+        }
+      } else {
+        // Fallback if all weights were discarded
+        auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
+        closePointsArray.emplace_back(nearestPoint->first, NumericType(1));
+      }
+
+      elementsToPoint.push_back(closePointsArray);
+    }
+    assert(elementsToPoint.size() == numDisks);
 
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
@@ -297,17 +356,17 @@ private:
         auto name = particles[pIdx].dataLabels[dIdx];
 
         // convert line fluxes to disk fluxes
-        std::vector<float> diskFlux(numDisks, 0.f);
+        std::vector<NumericType> diskFlux(numDisks, 0.);
 
         for (int i = 0; i < numDisks; i++) {
-          auto closestPoint = elementKdTree_->findNearest(diskMesh_.nodes[i]);
-          diskFlux[i] = elementFlux[closestPoint->first];
+          for (const auto &elemPair : elementsToPoint[i]) {
+            diskFlux[i] +=
+                static_cast<NumericType>(elementFlux[elemPair.first]) *
+                elemPair.second;
+          }
         }
-        // TODO: maybe smooth disk fluxes here additionally
 
-        std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
-                                                diskFlux.end());
-        pointData.insertReplaceScalarData(std::move(diskFluxCasted), name);
+        pointData.insertReplaceScalarData(std::move(diskFlux), name);
       }
     }
   }
@@ -320,6 +379,16 @@ private:
   MeshType surfaceMesh_;
 
   bool rayTracerInitialized_ = false;
+
+  template <class AT, class BT, std::size_t Dim>
+  AT DotProductNT(const std::array<AT, Dim> &pVecA,
+                  const std::array<BT, Dim> &pVecB) {
+    AT dot = 0;
+    for (size_t i = 0; i < Dim; ++i) {
+      dot += pVecA[i] * pVecB[i];
+    }
+    return dot;
+  }
 };
 
 } // namespace viennaps
