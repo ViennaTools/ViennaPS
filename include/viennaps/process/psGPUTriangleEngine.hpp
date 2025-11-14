@@ -112,6 +112,7 @@ public:
         context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
         1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
+    assert(!surfaceMesh_->nodes.empty());
 
     viennaray::TriangleMesh triangleMesh;
 
@@ -122,6 +123,7 @@ public:
       lineMesh.nodes = surfaceMesh_->nodes;
       lineMesh.minimumExtent = surfaceMesh_->minimumExtent;
       lineMesh.maximumExtent = surfaceMesh_->maximumExtent;
+      assert(lineMesh.lines.size() > 0);
 
       triangleMesh = convertLinesToTriangles(lineMesh);
       assert(triangleMesh.triangles.size() > 0);
@@ -148,6 +150,7 @@ public:
     rayTracer_.setGeometry(triangleMesh);
 
     if constexpr (D == 2) {
+      surfaceMesh_->clear();
       surfaceMesh_->nodes = std::move(triangleMesh.nodes);
       surfaceMesh_->triangles = std::move(triangleMesh.triangles);
       surfaceMesh_->getCellData().insertReplaceVectorData(
@@ -230,7 +233,7 @@ public:
       if (context.flags.useCoverages) {
         auto coverages = model->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
-                          surfaceMesh_->getElements<3>().size());
+                          surfaceMesh_->template getElements<3>().size());
       }
       downloadResultsToPointData(surfaceMesh_->getCellData());
       static unsigned iterations = 0;
