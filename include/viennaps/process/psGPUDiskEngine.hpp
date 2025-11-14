@@ -104,12 +104,14 @@ public:
 
     // TODO: make this conversion to float prettier
     auto convertToFloat = [](const std::vector<Vec3D<NumericType>> &input) {
-      std::vector<Vec3Df> output;
-      output.reserve(input.size());
-      for (const auto &vec : input) {
-        Vec3Df temp = {static_cast<float>(vec[0]), static_cast<float>(vec[1]),
-                       static_cast<float>(vec[2])};
-        output.emplace_back(temp);
+      std::vector<Vec3Df> output(input.size());
+#pragma omp parallel for
+      for (std::int64_t i = 0; i < static_cast<std::int64_t>(input.size());
+           ++i) {
+        const auto &v = input[static_cast<std::size_t>(i)];
+        output[static_cast<std::size_t>(i)] =
+            Vec3Df{static_cast<float>(v[0]), static_cast<float>(v[1]),
+                   static_cast<float>(v[2])};
       }
       return output;
     };

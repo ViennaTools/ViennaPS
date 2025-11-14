@@ -28,12 +28,12 @@ template <class T, int D> void RunTest() {
   std::vector<viennaps::FluxEngineType> engineTypes = {
       viennaps::FluxEngineType::CPU_DISK,
       viennaps::FluxEngineType::CPU_TRIANGLE};
-  // #ifdef VIENNACORE_COMPILE_GPU
-  //   engineTypes.push_back(viennaps::FluxEngineType::GPU_DISK);
-  //   engineTypes.push_back(viennaps::FluxEngineType::GPU_TRIANGLE);
-  //   if constexpr (D == 2)
-  //     engineTypes.push_back(viennaps::FluxEngineType::GPU_LINE);
-  // #endif
+#ifdef VIENNACORE_COMPILE_GPU
+  engineTypes.push_back(viennaps::FluxEngineType::GPU_DISK);
+  engineTypes.push_back(viennaps::FluxEngineType::GPU_TRIANGLE);
+  if constexpr (D == 2)
+    engineTypes.push_back(viennaps::FluxEngineType::GPU_LINE);
+#endif
 
   auto model =
       viennaps::SmartPointer<viennaps::SingleParticleProcess<T, D>>::New(
@@ -53,9 +53,9 @@ template <class T, int D> void RunTest() {
 
     checkSurfaceHeight<T, D>(domain, 1.0);
 
-    domain->saveSurfaceMesh(
-        "fluxEngineTest_" + std::to_string(static_cast<int>(D)) + "D_" +
-        std::to_string(static_cast<int>(engineType)) + ".vtp");
+    domain->saveSurfaceMesh("fluxEngineTest_" +
+                            std::to_string(static_cast<int>(D)) + "D_" +
+                            viennaps::to_string(engineType) + ".vtp");
   }
 }
 

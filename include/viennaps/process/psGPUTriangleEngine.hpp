@@ -108,48 +108,53 @@ public:
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
 
+    CreateSurfaceMesh<NumericType, float, D>(
+        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
+        1e-12, context.rayTracingParams.minNodeDistanceFactor)
+        .apply();
+
+    viennaray::TriangleMesh triangleMesh;
+
     if constexpr (D == 2) {
-      //       viennals::ToSurfaceMesh<NumericType, D>(
-      //           context.domain->getLevelSets().back(), surfaceMesh_)
-      //           .apply();
-      //       auto pointsTriangles =
-      //       rayInternal::convertLinesToTriangles<NumericType>(
-      //           surfaceMesh_->nodes, surfaceMesh_->lines,
-      //           context.domain->getGridDelta());
-      //       surfaceMesh_->nodes = std::move(pointsTriangles.first);
-      //       surfaceMesh_->triangles = std::move(pointsTriangles.second);
-      //       std::vector<std::array<NumericType, 3>> triangleCenters(
-      //           surfaceMesh_->triangles.size());
-      //       std::vector<std::array<NumericType, 3>> normalVectors(
-      //           surfaceMesh_->triangles.size());
-      //       auto const &tri = surfaceMesh_->triangles;
-      // #pragma omp parallel for
-      //       for (int i = 0; i < surfaceMesh_->triangles.size(); ++i) {
-      //         const auto &v0 = surfaceMesh_->nodes[tri[i][0]];
-      //         const auto &v1 = surfaceMesh_->nodes[tri[i][1]];
-      //         const auto &v2 = surfaceMesh_->nodes[tri[i][2]];
-      //         triangleCenters[i] = {
-      //             static_cast<NumericType>((v0[0] + v1[0] + v2[0]) / 3.0),
-      //             static_cast<NumericType>((v0[1] + v1[1] + v2[1]) / 3.0),
-      //             static_cast<NumericType>((v0[2] + v1[2] + v2[2]) / 3.0)};
-      //         auto normal = CrossProduct(v1 - v0, v2 - v0);
-      //         auto length = Norm(normal);
-      //         normalVectors[i] = normal / length;
-      //       }
-      //       surfaceMesh_->getCellData().insertNextVectorData(std::move(normalVectors),
-      //                                                        "Normals");
-      //       elementKdTree_->setPoints(triangleCenters);
-      //       elementKdTree_->build();
+      viennaray::LineMesh lineMesh;
+      lineMesh.gridDelta = static_cast<float>(context.domain->getGridDelta());
+      lineMesh.lines = surfaceMesh_->lines;
+      lineMesh.nodes = surfaceMesh_->nodes;
+      lineMesh.minimumExtent = surfaceMesh_->minimumExtent;
+      lineMesh.maximumExtent = surfaceMesh_->maximumExtent;
+
+      triangleMesh = convertLinesToTriangles(lineMesh);
+      assert(triangleMesh.triangles.size() > 0);
+
+      std::vector<Vec3D<NumericType>> triangleCenters;
+      triangleCenters.reserve(triangleMesh.triangles.size());
+      for (const auto &tri : triangleMesh.triangles) {
+        Vec3D<NumericType> center = {0, 0, 0};
+        for (int i = 0; i < 3; ++i) {
+          center[0] += triangleMesh.nodes[tri[i]][0];
+          center[1] += triangleMesh.nodes[tri[i]][1];
+          center[2] += triangleMesh.nodes[tri[i]][2];
+        }
+        triangleCenters.push_back(center / static_cast<NumericType>(3.0));
+      }
+      assert(triangleCenters.size() > 0);
+      elementKdTree_->setPoints(triangleCenters);
+      elementKdTree_->build();
     } else {
-      CreateSurfaceMesh<NumericType, float, D>(
-          context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
-          1e-12, context.rayTracingParams.minNodeDistanceFactor)
-          .apply();
+      triangleMesh = CreateTriangleMesh(
+          static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
     }
 
-    auto mesh = CreateTriangleMesh(
-        static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
-    rayTracer_.setGeometry(mesh);
+    rayTracer_.setGeometry(triangleMesh);
+
+    if constexpr (D == 2) {
+      surfaceMesh_->nodes = std::move(triangleMesh.nodes);
+      surfaceMesh_->triangles = std::move(triangleMesh.triangles);
+      surfaceMesh_->getCellData().insertReplaceVectorData(
+          std::move(triangleMesh.normals), "Normals");
+      surfaceMesh_->minimumExtent = triangleMesh.minimumExtent;
+      surfaceMesh_->maximumExtent = triangleMesh.maximumExtent;
+    }
 
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(

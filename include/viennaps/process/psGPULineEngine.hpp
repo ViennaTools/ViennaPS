@@ -21,7 +21,7 @@ template <typename NumericType, int D>
 class GPULineEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
-  using MeshType = SmartPointer<viennals::Mesh<NumericType>>;
+  using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
   GPULineEngine(std::shared_ptr<DeviceContext> deviceContext)
@@ -106,59 +106,42 @@ public:
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
 
-    surfaceMesh_ = viennals::Mesh<NumericType>::New();
-    if (!elementKdTree_) {
+    if (!surfaceMesh_)
+      surfaceMesh_ = MeshType::New();
+    if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
-    }
-    viennals::ToSurfaceMesh<NumericType, D>(context.domain->getSurface(),
-                                            surfaceMesh_)
+
+    CreateSurfaceMesh<NumericType, float, D>(
+        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
+        1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
 
-    std::vector<Vec3D<NumericType>> elementCenters(surfaceMesh_->lines.size());
-    std::vector<Vec3Df> fLineNormals(surfaceMesh_->lines.size());
-    for (int i = 0; i < surfaceMesh_->lines.size(); ++i) {
-      Vec3D<NumericType> p0 = {
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][0]][0],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][0]][1],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][0]][2]};
-      Vec3D<NumericType> p1 = {
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][0],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][1],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][2]};
-      elementCenters[i] = (p0 + p1) / NumericType(2);
+    viennaray::LineMesh lineMesh(
+        surfaceMesh_->nodes, surfaceMesh_->lines,
+        static_cast<float>(context.domain->getGridDelta()));
+    // lines might have changed, so we need to update the surfaceMesh_ later
 
-      Vec3D<NumericType> lineDir = p1 - p0;
-      Vec3D<NumericType> normal =
-          Vec3D<NumericType>{-lineDir[1], lineDir[0], 0};
-      Normalize(normal);
-      fLineNormals[i] =
-          Vec3Df{static_cast<float>(normal[0]), static_cast<float>(normal[1]),
-                 static_cast<float>(normal[2])};
+    std::vector<Vec3D<NumericType>> elementCenters(lineMesh.lines.size());
+    for (int i = 0; i < lineMesh.lines.size(); ++i) {
+      auto const &p0 = lineMesh.nodes[lineMesh.lines[i][0]];
+      auto const &p1 = lineMesh.nodes[lineMesh.lines[i][1]];
+      auto center = (p0 + p1) / 2.f;
+      elementCenters[i] =
+          Vec3D<NumericType>{static_cast<NumericType>(center[0]),
+                             static_cast<NumericType>(center[1]),
+                             static_cast<NumericType>(center[2])};
     }
     elementKdTree_->setPoints(elementCenters);
     elementKdTree_->build();
 
-    std::vector<Vec3Df> fNodes(surfaceMesh_->nodes.size());
-    for (size_t i = 0; i < surfaceMesh_->nodes.size(); i++) {
-      fNodes[i] = {static_cast<float>(surfaceMesh_->nodes[i][0]),
-                   static_cast<float>(surfaceMesh_->nodes[i][1]),
-                   static_cast<float>(surfaceMesh_->nodes[i][2])};
-    }
-    Vec3Df fMinExtent = {static_cast<float>(diskMesh->minimumExtent[0]),
-                         static_cast<float>(diskMesh->minimumExtent[1]),
-                         static_cast<float>(diskMesh->minimumExtent[2])};
-    Vec3Df fMaxExtent = {static_cast<float>(diskMesh->maximumExtent[0]),
-                         static_cast<float>(diskMesh->maximumExtent[1]),
-                         static_cast<float>(diskMesh->maximumExtent[2])};
-    float gridDelta = static_cast<float>(context.domain->getGridDelta());
+    rayTracer_.setGeometry(lineMesh);
 
-    viennaray::LineMesh lineMeshRay;
-    lineMeshRay.lines = surfaceMesh_->lines;
-    lineMeshRay.nodes = std::move(fNodes);
-    lineMeshRay.gridDelta = gridDelta;
-    lineMeshRay.minimumExtent = fMinExtent;
-    lineMeshRay.maximumExtent = fMaxExtent;
-    rayTracer_.setGeometry(lineMeshRay);
+    surfaceMesh_->nodes = std::move(lineMesh.nodes);
+    surfaceMesh_->lines = std::move(lineMesh.lines);
+    surfaceMesh_->getCellData().insertReplaceVectorData(
+        std::move(lineMesh.normals), "Normals");
+    surfaceMesh_->minimumExtent = lineMesh.minimumExtent;
+    surfaceMesh_->maximumExtent = lineMesh.maximumExtent;
 
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(

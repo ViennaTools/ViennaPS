@@ -261,6 +261,9 @@ private:
     case FluxEngineType::GPU_DISK:
       return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);
 
+    case FluxEngineType::GPU_TRIANGLE:
+      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
+
     case FluxEngineType::GPU_LINE:
       if constexpr (D == 3) {
         Logger::getInstance()
@@ -271,16 +274,6 @@ private:
             deviceContext);
       }
       return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
-
-    case FluxEngineType::GPU_TRIANGLE:
-      if constexpr (D == 2) {
-        Logger::getInstance()
-            .addWarning("GPU-Triangle flux engine not supported in 2D. "
-                        "Fallback to GPU-Line engine.")
-            .print();
-        return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
-      }
-      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
 
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
