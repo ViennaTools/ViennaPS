@@ -16,8 +16,8 @@ int main() {
 
   // const std::array<NumericType, 4> gridDeltaValues = {0.05f, 0.1f, 0.2f,
   // 0.4f};
-  auto gridDeltaValues = linspace<NumericType, 6>(0.05f, 0.4f);
-  const int numRuns = 10;
+  auto gridDeltaValues = linspace<NumericType, 8>(0.04f, 0.4f);
+  const int numRuns = 20;
   const int raysPerPoint = 1000;
   // const int numRays = int(1.4e8);
 
@@ -116,7 +116,7 @@ int main() {
     file.close();
   }
 
-  if (D == 3) { // Triangle
+  { // Triangle
     std::ofstream file("CPU_Benchmark_Triangle.txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
@@ -139,8 +139,6 @@ int main() {
       auto elementKdTree =
           SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
       auto surfMesh = viennals::Mesh<NumericType>::New();
-      CreateSurfaceMesh<NumericType, float, D> surfMesher(
-          domain->getLevelSets().back(), surfMesh, elementKdTree);
 
       viennals::Advect<NumericType, D> advectionKernel;
 
@@ -166,22 +164,17 @@ int main() {
         // MESHING
         timer.start();
         diskMesher.apply();
-        surfMesher.apply();
         translationField->buildKdTree(diskMesh->nodes);
-        tracer.setGeometry(surfMesh->nodes, surfMesh->triangles,
-                           domain->getGridDelta());
+        setupTriangleGeometry<NumericType, D, decltype(tracer)>(
+            domain, surfMesh, elementKdTree, tracer);
         timer.finish();
         file << timer.currentDuration << ";";
-
-        std::cout << "Meshing done\n";
 
         // TRACING
         timer.start();
         tracer.apply();
         timer.finish();
         file << timer.currentDuration << ";";
-
-        std::cout << "Tracing done\n";
 
         // POSTPROCESSING
         timer.start();
@@ -204,8 +197,6 @@ int main() {
         velocityField->prepare(domain, velocities, 0.);
         timer.finish();
         file << timer.currentDuration << ";";
-
-        std::cout << "Postprocessing done\n";
 
         // // ADVECTION
         // timer.start();
