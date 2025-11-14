@@ -25,7 +25,9 @@ class GPULineEngine final : public FluxEngine<NumericType, D> {
 
 public:
   GPULineEngine(std::shared_ptr<DeviceContext> deviceContext)
-      : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
+      : deviceContext_(deviceContext), rayTracer_(deviceContext) {
+    assert(D == 2 && "GPULineEngine only supports 2D simulations.");
+  }
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
 
@@ -150,10 +152,12 @@ public:
                          static_cast<float>(diskMesh->maximumExtent[2])};
     float gridDelta = static_cast<float>(context.domain->getGridDelta());
 
-    const viennaray::gpu::LineMesh lineMeshRay{
-        fNodes,     surfaceMesh_->lines, fLineNormals,
-        fMinExtent, fMaxExtent,          gridDelta};
-
+    viennaray::LineMesh lineMeshRay;
+    lineMeshRay.lines = surfaceMesh_->lines;
+    lineMeshRay.nodes = std::move(fNodes);
+    lineMeshRay.gridDelta = gridDelta;
+    lineMeshRay.minimumExtent = fMinExtent;
+    lineMeshRay.maximumExtent = fMaxExtent;
     rayTracer_.setGeometry(lineMeshRay);
 
     auto model =

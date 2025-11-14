@@ -103,15 +103,51 @@ public:
 
   ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
     this->timer_.start();
-    surfaceMesh_ = viennals::Mesh<float>::New();
+    if (!surfaceMesh_)
+      surfaceMesh_ = MeshType::New();
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
-    CreateSurfaceMesh<NumericType, float, D>(
-        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
-        1e-12, context.rayTracingParams.minNodeDistanceFactor)
-        .apply();
 
-    auto mesh = gpu::CreateTriangleMesh(
+    if constexpr (D == 2) {
+      //       viennals::ToSurfaceMesh<NumericType, D>(
+      //           context.domain->getLevelSets().back(), surfaceMesh_)
+      //           .apply();
+      //       auto pointsTriangles =
+      //       rayInternal::convertLinesToTriangles<NumericType>(
+      //           surfaceMesh_->nodes, surfaceMesh_->lines,
+      //           context.domain->getGridDelta());
+      //       surfaceMesh_->nodes = std::move(pointsTriangles.first);
+      //       surfaceMesh_->triangles = std::move(pointsTriangles.second);
+      //       std::vector<std::array<NumericType, 3>> triangleCenters(
+      //           surfaceMesh_->triangles.size());
+      //       std::vector<std::array<NumericType, 3>> normalVectors(
+      //           surfaceMesh_->triangles.size());
+      //       auto const &tri = surfaceMesh_->triangles;
+      // #pragma omp parallel for
+      //       for (int i = 0; i < surfaceMesh_->triangles.size(); ++i) {
+      //         const auto &v0 = surfaceMesh_->nodes[tri[i][0]];
+      //         const auto &v1 = surfaceMesh_->nodes[tri[i][1]];
+      //         const auto &v2 = surfaceMesh_->nodes[tri[i][2]];
+      //         triangleCenters[i] = {
+      //             static_cast<NumericType>((v0[0] + v1[0] + v2[0]) / 3.0),
+      //             static_cast<NumericType>((v0[1] + v1[1] + v2[1]) / 3.0),
+      //             static_cast<NumericType>((v0[2] + v1[2] + v2[2]) / 3.0)};
+      //         auto normal = CrossProduct(v1 - v0, v2 - v0);
+      //         auto length = Norm(normal);
+      //         normalVectors[i] = normal / length;
+      //       }
+      //       surfaceMesh_->getCellData().insertNextVectorData(std::move(normalVectors),
+      //                                                        "Normals");
+      //       elementKdTree_->setPoints(triangleCenters);
+      //       elementKdTree_->build();
+    } else {
+      CreateSurfaceMesh<NumericType, float, D>(
+          context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
+          1e-12, context.rayTracingParams.minNodeDistanceFactor)
+          .apply();
+    }
+
+    auto mesh = CreateTriangleMesh(
         static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
     rayTracer_.setGeometry(mesh);
 
@@ -123,6 +159,10 @@ public:
           *context.diskMesh->getCellData().getScalarData("MaterialIds");
       std::vector<int> elementMaterialIds;
       auto &pointKdTree = context.translationField->getKdTree();
+      if (!pointKdTree) {
+        pointKdTree = KDTreeType::New();
+        context.translationField->setKdTree(pointKdTree);
+      }
       if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
         pointKdTree->setPoints(context.diskMesh->nodes);
         pointKdTree->build();

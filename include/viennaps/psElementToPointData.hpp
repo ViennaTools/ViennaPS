@@ -293,7 +293,7 @@ template <typename NumericType, typename MeshNT = NumericType>
 class ElementToPointData : public ElementToPointDataBase<NumericType, MeshNT> {
 public:
   ElementToPointData(
-      const std::vector<std::vector<MeshNT>> &elementData,
+      const std::vector<std::vector<NumericType>> &elementData,
       SmartPointer<viennals::PointData<NumericType>> pointData,
       const IndexMap &indexMap,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
@@ -306,7 +306,7 @@ public:
         elementData_(elementData) {}
 
   ElementToPointData(
-      const std::vector<std::vector<MeshNT>> &elementData,
+      const std::vector<std::vector<NumericType>> &elementData,
       SmartPointer<viennals::PointData<NumericType>> pointData,
       const std::vector<
           std::unique_ptr<viennaray::AbstractParticle<NumericType>>> &particles,
@@ -336,7 +336,7 @@ protected:
   }
 
 private:
-  const std::vector<std::vector<MeshNT>> &elementData_;
+  const std::vector<std::vector<NumericType>> &elementData_;
 };
 
 #ifdef VIENNACORE_COMPILE_GPU

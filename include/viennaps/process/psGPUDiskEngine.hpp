@@ -121,7 +121,7 @@ public:
                          static_cast<float>(diskMesh->maximumExtent[1]),
                          static_cast<float>(diskMesh->maximumExtent[2])};
 
-    viennaray::gpu::DiskMesh diskMeshRay;
+    viennaray::DiskMesh diskMeshRay;
     diskMeshRay.nodes = convertToFloat(points);
     diskMeshRay.normals = convertToFloat(normals);
     diskMeshRay.minimumExtent = fMinExtent;
