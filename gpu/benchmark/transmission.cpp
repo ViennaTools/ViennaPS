@@ -1,31 +1,38 @@
 #include <psCreateSurfaceMesh.hpp>
 #include <psDomain.hpp>
+#include <rayTraceDisk.hpp>
 #include <rayTraceTriangle.hpp>
+#include <raygTraceDisk.hpp>
 #include <raygTraceTriangle.hpp>
 
 constexpr int D = 3;
-using NumericType = double;
+using NumericType = float;
+
+template <class T> auto createCylinderLS(T gridDelta, T radius, T length) {
+  double bounds[2 * D] = {-1.0, 1.0, -1.0, 1.0, 0.0, length + gridDelta};
+  viennaps::BoundaryType boundaryConditions[D] = {
+      viennaps::BoundaryType::INFINITE_BOUNDARY,
+      viennaps::BoundaryType::INFINITE_BOUNDARY,
+      viennaps::BoundaryType::REFLECTIVE_BOUNDARY};
+  auto cylinder =
+      viennals::Domain<T, D>::New(bounds, boundaryConditions, gridDelta);
+  viennals::MakeGeometry<T, D>(
+      cylinder, viennals::Cylinder<T, D>::New(std::array<T, D>{0.0, 0.0, 0.0},
+                                              std::array<T, D>{0.0, 0.0, 1.0},
+                                              length + gridDelta * 2, radius))
+      .apply();
+  // inverst so normal points inward
+  viennals::BooleanOperation<T, D>(cylinder,
+                                   viennals::BooleanOperationEnum::INVERT)
+      .apply();
+  return cylinder;
+}
 
 auto createCylinderMesh(NumericType gridDelta, NumericType radius,
                         NumericType length) {
-  using namespace viennaps;
+  using namespace viennacore;
 
-  double bounds[2 * D] = {-1.0, 1.0, -1.0, 1.0, 0.0, length + gridDelta};
-  BoundaryType boundaryConditions[D] = {BoundaryType::INFINITE_BOUNDARY,
-                                        BoundaryType::INFINITE_BOUNDARY,
-                                        BoundaryType::REFLECTIVE_BOUNDARY};
-  auto cylinder = viennals::Domain<NumericType, D>::New(
-      bounds, boundaryConditions, gridDelta);
-  viennals::MakeGeometry<NumericType, D>(
-      cylinder, viennals::Cylinder<NumericType, D>::New(
-                    std::array<NumericType, D>{0.0, 0.0, 0.0},
-                    std::array<NumericType, D>{0.0, 0.0, 1.0},
-                    length + gridDelta * 2, radius))
-      .apply();
-  viennals::BooleanOperation<NumericType, D>(
-      cylinder, viennals::BooleanOperationEnum::INVERT)
-      .apply();
-
+  auto cylinder = createCylinderLS<NumericType>(gridDelta, radius, length);
   auto lsMesh = viennals::Mesh<float>::New();
   viennaps::CreateSurfaceMesh<NumericType, float, D>(cylinder, lsMesh).apply();
   std::vector<float> materialIds(lsMesh->triangles.size(), 0);
@@ -71,9 +78,36 @@ auto createCylinderMesh(NumericType gridDelta, NumericType radius,
   }
   lsMesh->getCellData().insertNextScalarData(materialIds, "MaterialIDs");
 
-  viennals::VTKWriter<float>(lsMesh, "cylinder.vtp").apply();
+  // viennals::VTKWriter<float>(lsMesh, "cylinder.vtp").apply();
 
   auto mesh = viennaps::CreateTriangleMesh(gridDelta, lsMesh);
+  return std::make_pair(mesh, materialIds);
+}
+
+auto createCylinderDiskMesh(NumericType gridDelta, NumericType radius,
+                            NumericType length) {
+  using namespace viennaps;
+
+  auto cylinder = createCylinderLS<float>(gridDelta, radius, length);
+  auto lsMesh = viennals::Mesh<float>::New();
+  viennals::ToDiskMesh<float, D>(cylinder, lsMesh).apply();
+
+  auto normals = lsMesh->getCellData().getVectorData("Normals");
+  auto materialIds = *lsMesh->getCellData().getScalarData("MaterialIds");
+
+  // add plane on bottom (z=0) with material id 1
+  lsMesh->insertNextNode(Vec3Df{0.0f, 0.0f, 0.0f});
+  materialIds.push_back(1);
+  normals->push_back(Vec3Df{0.0f, 0.0f, 1.0f});
+
+  lsMesh->insertNextNode(Vec3Df{0.0f, 0.0f, float(length)});
+  materialIds.push_back(2);
+  normals->push_back(Vec3Df{0.0f, 0.0f, -1.0f});
+
+  // viennals::VTKWriter<float>(lsMesh, "cylinder.vtp").apply();
+
+  viennaray::DiskMesh mesh(lsMesh->getNodes(), *normals, gridDelta);
+
   return std::make_pair(mesh, materialIds);
 }
 
@@ -167,12 +201,12 @@ std::array<NumericType, N> logSpace(NumericType start, NumericType end) {
 }
 
 int main() {
-  constexpr bool useGPU = false;
-  auto lengths = logSpace<21>(.01, 10000.0);
+  constexpr bool useGPU = true;
+  auto lengths = logSpace<20>(.01, 10000.0);
   // std::array<NumericType, 1> lengths = {100.0};
   constexpr NumericType radius = 10.0;
-  constexpr NumericType gridDelta = 1.0;
-  constexpr int nRays = int(1e8);
+  constexpr NumericType gridDelta = .5;
+  constexpr int nRays = int(1e7);
   std::vector<unsigned> counts(4, 0);
 
   if constexpr (useGPU) {
@@ -180,7 +214,7 @@ int main() {
     customDataBuffer.allocUpload(counts);
 
     auto context = viennacore::DeviceContext::createContext();
-    viennaray::gpu::TraceTriangle<NumericType, D> tracer(context);
+    viennaray::gpu::TraceDisk<NumericType, D> tracer(context);
 
     viennaray::gpu::Particle<NumericType> particle;
     particle.name = "Particle";
@@ -196,6 +230,7 @@ int main() {
         {0, viennaray::gpu::CallableSlot::INIT,
          "__direct_callable__transmissionTestInit"}};
 
+    tracer.setIgnoreBoundary(true);
     tracer.setRngSeed(42);
     tracer.setCallables("TransmissionTest", context->modulePath);
     tracer.setParticleCallableMap({pMap, cMap});
@@ -203,23 +238,26 @@ int main() {
     tracer.insertNextParticle(particle);
     tracer.prepareParticlePrograms();
 
-    std::ofstream logFile("transmission_log.txt");
+    std::ofstream logFile("transmission_log_disk_GPU.txt");
     logFile << "LR\tTransmission\tReflection\tHitsToTransmission\tHitsToReflect"
                "ion\n";
 
     for (auto length : lengths) {
       std::cout << "Length: " << length << std::endl;
       std::cout << "L/R: " << length / radius << std::endl;
-      auto [mesh, materialIds] = createCylinderMesh(gridDelta, radius, length);
-      tracer.setGeometry(mesh, length);
+      auto [mesh, materialIds] =
+          createCylinderDiskMesh(gridDelta, radius, length);
+      float offset = rayInternal::DiskFactor<3> * gridDelta * 2;
+      // float offset = gridDelta;
+      float sourceOffset = mesh.maximumExtent[2] + offset - length + 1e-4f;
+      tracer.setGeometry(mesh, -sourceOffset);
       tracer.setMaterialIds(materialIds);
 
       tracer.apply();
 
-      std::vector<float> results(mesh.triangles.size(), 0.f);
       for (int i = 0; i < 4; ++i) {
         counts[i] = 0;
-        tracer.getFlux(results.data(), 0, i);
+        auto results = tracer.getFlux(0, i);
         for (auto &v : results) {
           counts[i] += static_cast<unsigned>(v);
         }
@@ -239,7 +277,7 @@ int main() {
     logFile.close();
     customDataBuffer.free();
   } else {
-    viennaray::TraceTriangle<NumericType, D> tracer;
+    viennaray::TraceTriangle<float, D> tracer;
 
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     for (unsigned i = 0; i < D; ++i)
@@ -253,7 +291,7 @@ int main() {
     auto particle = std::make_unique<TransmissionParticle>();
     tracer.setParticleType(particle);
 
-    std::ofstream logFile("transmission_log_CPU.txt");
+    std::ofstream logFile("transmission_log_tri_CPU.txt");
     logFile << "LR\tTransmission\tReflection\tHitsToTransmission\tHitsToReflect"
                "ion\n";
 
@@ -262,6 +300,7 @@ int main() {
       std::cout << "L/R: " << length / radius << std::endl;
       auto [mesh, materialIds] = createCylinderMesh(gridDelta, radius, length);
       tracer.setGeometry(mesh);
+      // tracer.setGeometry(mesh.nodes, mesh.normals, gridDelta);
       tracer.setMaterialIds(materialIds);
 
       auto source = std::make_shared<TransmissionSource>(radius, length);

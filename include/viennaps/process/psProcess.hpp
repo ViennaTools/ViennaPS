@@ -99,7 +99,8 @@ public:
 
     if (strategy->requiresFluxEngine()) {
       Logger::getInstance()
-          .addDebug("Setting up flux engine for strategy.")
+          .addDebug("Setting up " + to_string(fluxEngineType_) +
+                    " flux engine for strategy.")
           .print();
       strategy->setFluxEngine(createFluxEngine());
     }

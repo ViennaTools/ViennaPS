@@ -186,6 +186,7 @@ public:
 
     // run the ray tracer
     rayTracer_.apply();
+    rayTracer_.normalizeResults();
     downloadResultsToPointData(*fluxes,
                                context.rayTracingParams.smoothingNeighbors);
 
@@ -248,8 +249,7 @@ private:
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        std::vector<float> diskFlux(numPoints);
-        rayTracer_.getFlux(diskFlux.data(), pIdx, dIdx, smoothingNeighbors);
+        auto diskFlux = rayTracer_.getFlux(pIdx, dIdx, smoothingNeighbors);
         auto name = particles[pIdx].dataLabels[dIdx];
 
         std::vector<NumericType> diskFluxCasted(diskFlux.begin(),

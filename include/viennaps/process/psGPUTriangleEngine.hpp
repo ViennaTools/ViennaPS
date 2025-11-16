@@ -222,6 +222,7 @@ public:
 
     // run the ray tracer
     rayTracer_.apply();
+    rayTracer_.normalizeResults();
 
     // extract fluxes on points
     gpu::ElementToPointData<NumericType, float, true, D == 3>(

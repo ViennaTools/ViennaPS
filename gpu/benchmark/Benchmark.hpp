@@ -327,8 +327,7 @@ void postProcessLineData(
 
   for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
     for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-      std::vector<float> elementFlux(numPoints);
-      rayTracer_.getFlux(elementFlux.data(), pIdx, dIdx, smoothingNeighbors);
+      auto elementFlux = rayTracer_.getFlux(pIdx, dIdx, smoothingNeighbors);
       auto name = particles[pIdx].dataLabels[dIdx];
 
       // convert line fluxes to disk fluxes
