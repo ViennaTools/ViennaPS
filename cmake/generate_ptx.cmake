@@ -84,7 +84,6 @@ function(add_GPU_executable target_name_base target_name_var)
   cuda_get_sources_and_options(source_files cmake_options options ${ARGN})
 
   # Isolate OBJ target files. NVCC should only process these files and leave PTX targets for NVRTC
-  set(cu_obj_source_files)
   set(cu_optix_source_files)
   foreach(file ${source_files})
     get_filename_component(_file_extension ${file} EXT)
