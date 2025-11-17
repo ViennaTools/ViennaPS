@@ -76,7 +76,7 @@ private:
         {1, viennaray::gpu::CallableSlot::COLLISION,
          "__direct_callable__plasmaNeutralCollision"},
         {1, viennaray::gpu::CallableSlot::REFLECTION,
-         "__direct_callable__plasmaNeutralReflection"}};
+         "__direct_callable__plasmaNeutralReflectionNoPassivation"}};
     this->setParticleCallableMap(pMap, cMap);
     this->setCallableFileName("CallableWrapper");
 

@@ -94,6 +94,12 @@ __direct_callable__plasmaNeutralReflection(const void *sbtData,
 }
 
 extern "C" __device__ void
+__direct_callable__plasmaNeutralReflectionNoPassivation(
+    const void *sbtData, viennaray::gpu::PerRayData *prd) {
+  plasmaNeutralReflectionNoPassivation(sbtData, prd);
+}
+
+extern "C" __device__ void
 __direct_callable__plasmaIonCollision(const void *sbtData,
                                       viennaray::gpu::PerRayData *prd) {
   plasmaIonCollision(sbtData, prd);
