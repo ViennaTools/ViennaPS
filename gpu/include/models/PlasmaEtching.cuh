@@ -41,6 +41,22 @@ plasmaNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
 }
 
+// Specialized neutral reflection for models without passivation (e.g., SF6C4F8)
+__forceinline__ __device__ void
+plasmaNeutralReflectionNoPassivation(const void *sbtData,
+                                      viennaray::gpu::PerRayData *prd) {
+  const viennaray::gpu::HitSBTDataBase *baseData =
+      reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
+  float *data = (float *)baseData->cellData;
+  const auto &phi_E = data[prd->primID];
+  int material = launchParams.materialIds[prd->primID];
+  float sticking = launchParams.materialSticking[material];
+  float Seff = sticking * max(1.f - phi_E, 0.f);
+  prd->rayWeight -= prd->rayWeight * Seff;
+  auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
+}
+
 //
 // --- Ion particle
 //

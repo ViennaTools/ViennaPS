@@ -17,6 +17,101 @@ namespace viennaps {
 
 using namespace viennacore;
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+/// GPU Version of the SF6/C4F8 plasma etching model
+template <typename NumericType, int D>
+class SF6C4F8Etching final : public ProcessModelGPU<NumericType, D> {
+public:
+  explicit SF6C4F8Etching(const PlasmaEtchingParameters<NumericType> &pParams)
+      : params(pParams), deviceParams(pParams.convertToFloat()) {
+    initializeModel();
+  }
+
+  ~SF6C4F8Etching() override { this->processData.free(); }
+
+private:
+  void initializeModel() {
+    // particles
+    viennaray::gpu::Particle<NumericType> ion;
+    ion.name = "Ion"; // name for shader programs postfix
+    ion.dataLabels.push_back("ionSputterFlux");
+    ion.dataLabels.push_back("ionEnhancedFlux");
+    ion.dataLabels.push_back("ionEnhancedPassivationFlux");
+    ion.sticking = 0.f;
+    ion.cosineExponent = params.Ions.exponent;
+
+    viennaray::gpu::Particle<NumericType> etchant;
+    etchant.name = "Etchant";
+    etchant.dataLabels.push_back("etchantFlux");
+    etchant.cosineExponent = 1.f;
+    etchant.materialSticking = params.beta_E;
+
+    // No oxygen/passivation particle for SF6C4F8
+
+    // surface model
+    auto surfModel = SmartPointer<
+        viennaps::impl::PlasmaEtchingSurfaceModel<NumericType, D>>::New(params);
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("SF6C4F8Etching");
+    this->getParticleTypes().clear();
+
+    this->insertNextParticleType(ion);
+    this->insertNextParticleType(etchant);
+
+    std::unordered_map<std::string, unsigned> pMap = {{"Ion", 0},
+                                                      {"Etchant", 1}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__plasmaIonCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__plasmaIonReflection"},
+        {0, viennaray::gpu::CallableSlot::INIT,
+         "__direct_callable__plasmaIonInit"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__plasmaNeutralCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__plasmaNeutralReflectionNoPassivation"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
+
+    this->setUseMaterialIds(true);
+    precomputeSqrtEnergies();
+    this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
+    this->processData.upload(&deviceParams, 1);
+    this->hasGPU = true;
+
+    this->processMetaData = params.toProcessMetaData();
+  }
+
+  void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
+    params = pParams;
+    deviceParams = pParams.convertToFloat();
+    precomputeSqrtEnergies();
+    this->processData.upload(&deviceParams, 1);
+  }
+
+private:
+  PlasmaEtchingParameters<NumericType> params;
+  PlasmaEtchingParameters<float> deviceParams;
+
+  void precomputeSqrtEnergies() {
+    deviceParams.Substrate.Eth_ie = std::sqrt(deviceParams.Substrate.Eth_ie);
+    deviceParams.Passivation.Eth_ie =
+        std::sqrt(deviceParams.Passivation.Eth_ie);
+    deviceParams.Substrate.Eth_sp = std::sqrt(deviceParams.Substrate.Eth_sp);
+    deviceParams.Mask.Eth_sp = std::sqrt(deviceParams.Mask.Eth_sp);
+    deviceParams.Polymer.Eth_sp = std::sqrt(deviceParams.Polymer.Eth_sp);
+  }
+};
+} // namespace gpu
+#endif
+
 /// Model for etching Si in a SF6/C4F8 plasma. This model extends the SF6O2
 /// etching model to include polymer etching. The polymer layer is deposited
 /// by a separate process and etched by sputtering similarly to the mask
@@ -49,6 +144,12 @@ public:
       : params(pParams) {
     initializeModel();
   }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
+    return SmartPointer<gpu::SF6C4F8Etching<NumericType, D>>::New(params);
+  }
+#endif
 
   void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
     params = pParams;
@@ -147,6 +248,7 @@ private:
     this->setVelocityField(velField);
 
     this->setProcessName("SF6C4F8Etching");
+    this->hasGPU = true;
 
     processMetaData = params.toProcessMetaData();
     // add units
