@@ -64,8 +64,8 @@ private:
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
 
-    std::unordered_map<std::string, unsigned> pMap = {
-        {"Ion", 0}, {"Etchant", 1}};
+    std::unordered_map<std::string, unsigned> pMap = {{"Ion", 0},
+                                                      {"Etchant", 1}};
     std::vector<viennaray::gpu::CallableConfig> cMap = {
         {0, viennaray::gpu::CallableSlot::COLLISION,
          "__direct_callable__plasmaIonCollision"},
