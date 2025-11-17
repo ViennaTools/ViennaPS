@@ -83,6 +83,8 @@ public:
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
       rayTracer_.setPeriodicBoundary(periodicBoundary);
+      rayTracer_.setIgnoreBoundary(
+          context.rayTracingParams.ignoreFluxBoundaries);
       for (auto &particle : model->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }

@@ -19,5 +19,6 @@ add_dependencies(ViennaPS-GPU_Benchmark holeComparison)
 add_gpu_executable(holeComparisonGrid target_name ${CMAKE_CURRENT_SOURCE_DIR}/holeCompareGrid.cpp)
 add_dependencies(ViennaPS-GPU_Benchmark holeComparisonGrid)
 
-add_gpu_executable(transmissionTest target_name ${CMAKE_CURRENT_SOURCE_DIR}/transmission.cpp TransmissionTest.cu)
+add_gpu_executable(transmissionTest target_name ${CMAKE_CURRENT_SOURCE_DIR}/transmission.cpp
+                   TransmissionTest.cu)
 add_dependencies(ViennaPS-GPU_Benchmark transmissionTest)
