@@ -157,8 +157,9 @@ private:
 
     // Try to initialize coverages
     meshGenerator_.apply();
-    if (!context.coverageParams.initialized) {
-      if (coverageManager_.initializeCoverages(context)) {
+    // Always reinitialize coverages to handle geometry changes between cycles
+    if (coverageManager_.initializeCoverages(context)) {
+      if (!context.coverageParams.initialized) {
         context.flags.useCoverages = true;
         Logger::getInstance().addInfo("Using coverages.").print();
 
@@ -166,9 +167,9 @@ private:
         if (!translator_)
           translator_ = SmartPointer<TranslatorType>::New();
         meshGenerator_.setTranslator(translator_);
+      } else {
+        Logger::getInstance().addInfo("Coverages reinitialized.").print();
       }
-    } else {
-      Logger::getInstance().addInfo("Coverages already initialized.").print();
     }
     context.model->getSurfaceModel()->initializeSurfaceData(
         context.diskMesh->nodes.size());
