@@ -19,7 +19,7 @@ int main() {
   auto gridDeltaValues = linspace<NumericType, 8>(0.01f, 0.4f);
   const int numRuns = 20;
   const int raysPerPoint = 1000;
-  // const int numRays = int(1.4e8);
+  const int numRays = int(1.4e8);
 
   auto particle = makeCPUParticle<NumericType, D>();
   std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
@@ -33,6 +33,8 @@ int main() {
 
     viennaray::TraceDisk<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
+    if (FIXED_RAYS)
+      tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
 
@@ -118,6 +120,8 @@ int main() {
 
     viennaray::TraceTriangle<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
+    if (FIXED_RAYS)
+      tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
 

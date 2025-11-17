@@ -10,6 +10,7 @@
 #define DEFAULT_GRID_DELTA 0.1
 #define DEFAULT_STICKING 0.1
 #define DIM 2
+#define FIXED_RAYS false
 
 constexpr int particleType = 1;
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;

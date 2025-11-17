@@ -11,12 +11,17 @@ template <class NumericType, int D, class ModelType>
 void runBenchmark(SmartPointer<Domain<NumericType, D>> geometry,
                   SmartPointer<ModelType> model,
                   const FluxEngineType fluxEngine,
-                  const std::string &outputFilename) {
+                  const std::string &outputFilename,
+                  const NumericType processDuration = 1.0) {
   auto copy = Domain<NumericType, D>::New(geometry);
 
+  CoverageParameters coverageParams;
+  coverageParams.tolerance = 1e-4;
+
   Process<NumericType, D> process(copy, model);
-  process.setProcessDuration(1.0);
+  process.setProcessDuration(processDuration);
   process.setFluxEngineType(fluxEngine);
+  process.setParameters(coverageParams);
 
   Timer timer;
   timer.start();
@@ -42,7 +47,7 @@ int main(int argc, char *argv[]) {
 
   constexpr std::array<FluxEngineType, 2> fluxEngines = {
       FluxEngineType::GPU_TRIANGLE, FluxEngineType::GPU_DISK};
-  constexpr std::array<NumericType, 3> gridDeltas = {0.03, 0.02, 0.01};
+  constexpr std::array<NumericType, 4> gridDeltas = {0.04, 0.02, 0.01, 0.005};
 
   {
     auto modelParams = SF6O2Etching<NumericType, D>::defaultParameters();
@@ -55,18 +60,19 @@ int main(int argc, char *argv[]) {
       auto gridDelta = gridDeltas[i];
       auto geometry = Domain<NumericType, D>::New(gridDelta, 1., 1.);
       MakeHole<NumericType, D>(geometry, 0.175, 0.0, 0.0, 1.2, 1.2,
-                               HoleShape::FULL)
+                               HoleShape::QUARTER)
           .apply();
 
       for (const auto &fluxEngine : fluxEngines) {
         runBenchmark<NumericType, D>(geometry, model, fluxEngine,
                                      "result_PE_" + to_string(fluxEngine) +
-                                         "_" + std::to_string(i) + ".vtp");
+                                         "_" + std::to_string(i) + ".vtp",
+                                     0.2);
       }
     }
   }
 
-  {
+  if constexpr (false) {
     IBEParameters<NumericType> ibeParams;
     ibeParams.cos4Yield.isDefined = true;
     ibeParams.cos4Yield.a1 = 1.075;

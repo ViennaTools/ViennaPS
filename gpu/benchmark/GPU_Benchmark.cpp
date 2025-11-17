@@ -26,7 +26,7 @@ int main() {
   auto gridDeltaValues = linspace<NumericType, 8>(0.01f, 0.4f);
   const int numRuns = 20;
   const int raysPerPoint = 1000;
-  // const int numRays = int(1.4e8);
+  const int numRays = int(1.4e8);
 
   auto context = DeviceContext::createContext();
 
@@ -42,7 +42,8 @@ int main() {
 
     viennaray::gpu::TraceTriangle<NumericType, D> tracer(context);
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
-    // tracer.setNumberOfRaysFixed(numRays);
+    if (FIXED_RAYS)
+      tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setCallables("CallableWrapper", context->modulePath);
     auto particleConfig = makeGPUParticle<NumericType, D>();
@@ -138,7 +139,8 @@ int main() {
 
     viennaray::gpu::TraceDisk<NumericType, D> tracer(context);
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
-    // tracer.setNumberOfRaysFixed(numRays);
+    if (FIXED_RAYS)
+      tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setCallables("CallableWrapper", context->modulePath);
     auto particleConfig = makeGPUParticle<NumericType, D>();

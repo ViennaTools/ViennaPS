@@ -5,8 +5,11 @@
 #include <raygTraceDisk.hpp>
 #include <raygTraceTriangle.hpp>
 
+// #define useDiskMesh
+
 constexpr int D = 3;
 using NumericType = float;
+constexpr bool useGPU = true;
 
 template <class T> auto createCylinderLS(T gridDelta, T radius, T length) {
   double bounds[2 * D] = {-1.0, 1.0, -1.0, 1.0, 0.0, length + gridDelta};
@@ -94,19 +97,24 @@ auto createCylinderDiskMesh(NumericType gridDelta, NumericType radius,
 
   auto normals = lsMesh->getCellData().getVectorData("Normals");
   auto materialIds = *lsMesh->getCellData().getScalarData("MaterialIds");
+  std::vector<float> radii(lsMesh->nodes.size(),
+                           gridDelta * rayInternal::DiskFactor<D>);
 
   // add plane on bottom (z=0) with material id 1
   lsMesh->insertNextNode(Vec3Df{0.0f, 0.0f, 0.0f});
   materialIds.push_back(1);
   normals->push_back(Vec3Df{0.0f, 0.0f, 1.0f});
+  radii.push_back(radius);
 
   lsMesh->insertNextNode(Vec3Df{0.0f, 0.0f, float(length)});
   materialIds.push_back(2);
   normals->push_back(Vec3Df{0.0f, 0.0f, -1.0f});
+  radii.push_back(radius);
 
   // viennals::VTKWriter<float>(lsMesh, "cylinder.vtp").apply();
 
   viennaray::DiskMesh mesh(lsMesh->getNodes(), *normals, gridDelta);
+  mesh.radii = std::move(radii);
 
   return std::make_pair(mesh, materialIds);
 }
@@ -201,7 +209,6 @@ std::array<NumericType, N> logSpace(NumericType start, NumericType end) {
 }
 
 int main() {
-  constexpr bool useGPU = true;
   auto lengths = logSpace<20>(.01, 10000.0);
   // std::array<NumericType, 1> lengths = {100.0};
   constexpr NumericType radius = 10.0;
@@ -214,7 +221,7 @@ int main() {
     customDataBuffer.allocUpload(counts);
 
     auto context = viennacore::DeviceContext::createContext();
-    viennaray::gpu::TraceDisk<NumericType, D> tracer(context);
+    viennaray::gpu::TraceTriangle<NumericType, D> tracer(context);
 
     viennaray::gpu::Particle<NumericType> particle;
     particle.name = "Particle";
@@ -238,17 +245,16 @@ int main() {
     tracer.insertNextParticle(particle);
     tracer.prepareParticlePrograms();
 
-    std::ofstream logFile("transmission_log_disk_GPU.txt");
+    std::ofstream logFile("transmission_log_tri_GPU.txt");
     logFile << "LR\tTransmission\tReflection\tHitsToTransmission\tHitsToReflect"
                "ion\n";
 
     for (auto length : lengths) {
       std::cout << "Length: " << length << std::endl;
       std::cout << "L/R: " << length / radius << std::endl;
-      auto [mesh, materialIds] =
-          createCylinderDiskMesh(gridDelta, radius, length);
-      float offset = rayInternal::DiskFactor<3> * gridDelta * 2;
-      // float offset = gridDelta;
+      auto [mesh, materialIds] = createCylinderMesh(gridDelta, radius, length);
+      // float offset = rayInternal::DiskFactor<3> * gridDelta * 2;
+      float offset = gridDelta;
       float sourceOffset = mesh.maximumExtent[2] + offset - length + 1e-4f;
       tracer.setGeometry(mesh, -sourceOffset);
       tracer.setMaterialIds(materialIds);
@@ -277,7 +283,12 @@ int main() {
     logFile.close();
     customDataBuffer.free();
   } else {
-    viennaray::TraceTriangle<float, D> tracer;
+
+#ifdef useDiskMesh
+    viennaray::TraceDisk<NumericType, D> tracer;
+#else
+    viennaray::TraceTriangle<NumericType, D> tracer;
+#endif
 
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     for (unsigned i = 0; i < D; ++i)
@@ -291,16 +302,20 @@ int main() {
     auto particle = std::make_unique<TransmissionParticle>();
     tracer.setParticleType(particle);
 
-    std::ofstream logFile("transmission_log_tri_CPU.txt");
+    std::ofstream logFile("transmission_log_disk_CPU.txt");
     logFile << "LR\tTransmission\tReflection\tHitsToTransmission\tHitsToReflect"
                "ion\n";
 
     for (auto length : lengths) {
       std::cout << "Length: " << length << std::endl;
       std::cout << "L/R: " << length / radius << std::endl;
+#ifdef useDiskMesh
+      auto [mesh, materialIds] =
+          createCylinderDiskMesh(gridDelta, radius, length);
+#else
       auto [mesh, materialIds] = createCylinderMesh(gridDelta, radius, length);
+#endif
       tracer.setGeometry(mesh);
-      // tracer.setGeometry(mesh.nodes, mesh.normals, gridDelta);
       tracer.setMaterialIds(materialIds);
 
       auto source = std::make_shared<TransmissionSource>(radius, length);
