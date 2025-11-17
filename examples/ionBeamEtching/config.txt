@@ -20,4 +20,4 @@ redepositionRate=0.05
 planeWaferRate=1.0
 angle=35.0
 
-processTime=5
+processTime=2

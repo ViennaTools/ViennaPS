@@ -83,6 +83,8 @@ public:
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
       rayTracer_.setPeriodicBoundary(periodicBoundary);
+      rayTracer_.setIgnoreBoundary(
+          context.rayTracingParams.ignoreFluxBoundaries);
       for (auto &particle : model->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }
@@ -104,12 +106,14 @@ public:
 
     // TODO: make this conversion to float prettier
     auto convertToFloat = [](const std::vector<Vec3D<NumericType>> &input) {
-      std::vector<Vec3Df> output;
-      output.reserve(input.size());
-      for (const auto &vec : input) {
-        Vec3Df temp = {static_cast<float>(vec[0]), static_cast<float>(vec[1]),
-                       static_cast<float>(vec[2])};
-        output.emplace_back(temp);
+      std::vector<Vec3Df> output(input.size());
+#pragma omp parallel for
+      for (std::int64_t i = 0; i < static_cast<std::int64_t>(input.size());
+           ++i) {
+        const auto &v = input[static_cast<std::size_t>(i)];
+        output[static_cast<std::size_t>(i)] =
+            Vec3Df{static_cast<float>(v[0]), static_cast<float>(v[1]),
+                   static_cast<float>(v[2])};
       }
       return output;
     };
@@ -121,7 +125,7 @@ public:
                          static_cast<float>(diskMesh->maximumExtent[1]),
                          static_cast<float>(diskMesh->maximumExtent[2])};
 
-    viennaray::gpu::DiskMesh diskMeshRay;
+    viennaray::DiskMesh diskMeshRay;
     diskMeshRay.nodes = convertToFloat(points);
     diskMeshRay.normals = convertToFloat(normals);
     diskMeshRay.minimumExtent = fMinExtent;
@@ -184,6 +188,7 @@ public:
 
     // run the ray tracer
     rayTracer_.apply();
+    rayTracer_.normalizeResults();
     downloadResultsToPointData(*fluxes,
                                context.rayTracingParams.smoothingNeighbors);
 
@@ -246,8 +251,7 @@ private:
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        std::vector<float> diskFlux(numPoints);
-        rayTracer_.getFlux(diskFlux.data(), pIdx, dIdx, smoothingNeighbors);
+        auto diskFlux = rayTracer_.getFlux(pIdx, dIdx, smoothingNeighbors);
         auto name = particles[pIdx].dataLabels[dIdx];
 
         std::vector<NumericType> diskFluxCasted(diskFlux.begin(),

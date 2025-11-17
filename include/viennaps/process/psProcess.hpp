@@ -99,7 +99,8 @@ public:
 
     if (strategy->requiresFluxEngine()) {
       Logger::getInstance()
-          .addDebug("Setting up flux engine for strategy.")
+          .addDebug("Setting up " + to_string(fluxEngineType_) +
+                    " flux engine for strategy.")
           .print();
       strategy->setFluxEngine(createFluxEngine());
     }
@@ -196,14 +197,6 @@ private:
     if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
     } else if (fluxEngineType_ == FluxEngineType::CPU_TRIANGLE) {
-      if (D != 3) {
-        Logger::getInstance()
-            .addWarning(
-                "CPU-Triangle flux engine only supported in 3D. Fallback "
-                "to CPU-Disk engine.")
-            .print();
-        return std::make_unique<CPUDiskEngine<NumericType, D>>();
-      }
       return std::make_unique<CPUTriangleEngine<NumericType, D>>();
     }
 
@@ -212,19 +205,6 @@ private:
   }
 
 private:
-  FluxEngineType selectAutoFluxEngine() {
-    if (!context_.model) {
-      // Default to CPU disk engine if no model is set
-      return FluxEngineType::CPU_DISK;
-    }
-
-    if (gpuAvailable() && context_.model->hasGPUModel()) {
-      return (D == 2) ? FluxEngineType::GPU_DISK : FluxEngineType::GPU_TRIANGLE;
-    }
-
-    return FluxEngineType::CPU_DISK;
-  }
-
   std::unique_ptr<FluxEngine<NumericType, D>> createGPUFluxEngine() {
 #ifndef VIENNACORE_COMPILE_GPU
     Logger::getInstance()
@@ -269,6 +249,9 @@ private:
     case FluxEngineType::GPU_DISK:
       return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);
 
+    case FluxEngineType::GPU_TRIANGLE:
+      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
+
     case FluxEngineType::GPU_LINE:
       if constexpr (D == 3) {
         Logger::getInstance()
@@ -279,16 +262,6 @@ private:
             deviceContext);
       }
       return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
-
-    case FluxEngineType::GPU_TRIANGLE:
-      if constexpr (D == 2) {
-        Logger::getInstance()
-            .addWarning("GPU-Triangle flux engine not supported in 2D. "
-                        "Fallback to GPU-Line engine.")
-            .print();
-        return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
-      }
-      return std::make_unique<GPUTriangleEngine<NumericType, D>>(deviceContext);
 
     default:
       Logger::getInstance().addError("Unsupported flux engine type.").print();
@@ -316,9 +289,13 @@ public:
       return false;
     }
 
-    // Auto-select engine type if needed
+    // Auto-select engine type
     if (fluxEngineType_ == FluxEngineType::AUTO) {
-      fluxEngineType_ = selectAutoFluxEngine();
+      if (gpuAvailable() && context_.model->hasGPUModel()) {
+        fluxEngineType_ = FluxEngineType::GPU_TRIANGLE;
+      } else {
+        fluxEngineType_ = FluxEngineType::CPU_DISK;
+      }
       Logger::getInstance()
           .addDebug("Auto-selected flux engine type: " +
                     to_string(fluxEngineType_))

@@ -1,6 +1,8 @@
 import viennaps as ps
 import viennals as ls
 
+ps.setDimension(2)
+ls.setDimension(2)
 
 params = ps.readConfigFile("config.txt")
 geometry = ps.Domain()
@@ -50,7 +52,7 @@ gasMFP = ps.constants.gasMeanFreePath(
 )
 print("Mean free path: ", gasMFP, " um")
 
-model = ps.d2.SingleParticleALD(
+model = ps.SingleParticleALD(
     stickingProbability=params["stickingProbability"],
     numCycles=int(params["numCycles"]),
     growthPerCycle=params["growthPerCycle"],
@@ -70,7 +72,7 @@ alpParams.numCycles = int(params["numCycles"])
 rayParams = ps.RayTracingParameters()
 rayParams.raysPerPoint = int(params["numRaysPerPoint"])
 
-ALP = ps.d2.Process(geometry, model)
+ALP = ps.Process(geometry, model)
 ALP.setParameters(rayParams)
 ALP.setParameters(alpParams)
 ALP.apply()

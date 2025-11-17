@@ -92,9 +92,7 @@ int main() {
               << std::endl;
 
     timer.start();
-    std::vector<NumericType> flux;
-    flux.resize(surfMesh->triangles.size());
-    tracer.getFlux(flux.data(), 0, 0);
+    auto flux = tracer.getFlux(0, 0);
     surfMesh->getCellData().insertNextScalarData(flux, "flux");
     auto pointData = viennals::PointData<NumericType>::New();
     gpu::ElementToPointData<NumericType>(tracer.getResults(), pointData,

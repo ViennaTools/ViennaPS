@@ -20,7 +20,7 @@ template <typename NumericType, int D>
 class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
-  using MeshType = SmartPointer<viennals::Mesh<NumericType>>;
+  using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
@@ -80,26 +80,72 @@ public:
 
   ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
     this->timer_.start();
-    surfaceMesh_ = viennals::Mesh<NumericType>::New();
+    if (!surfaceMesh_)
+      surfaceMesh_ = MeshType::New();
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
-    CreateSurfaceMesh<NumericType, NumericType, D>(
+
+    CreateSurfaceMesh<NumericType, float, D>(
         context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
         1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
 
-    rayTracer_.setGeometry(surfaceMesh_->nodes, surfaceMesh_->triangles,
-                           context.domain->getGridDelta());
+    viennaray::TriangleMesh triangleMesh;
+
+    if constexpr (D == 2) {
+      viennaray::LineMesh lineMesh;
+      lineMesh.gridDelta = static_cast<float>(context.domain->getGridDelta());
+      lineMesh.lines = surfaceMesh_->lines;
+      lineMesh.nodes = surfaceMesh_->nodes;
+      lineMesh.minimumExtent = surfaceMesh_->minimumExtent;
+      lineMesh.maximumExtent = surfaceMesh_->maximumExtent;
+
+      triangleMesh = convertLinesToTriangles(lineMesh);
+      assert(triangleMesh.triangles.size() > 0);
+
+      std::vector<Vec3D<NumericType>> triangleCenters;
+      triangleCenters.reserve(triangleMesh.triangles.size());
+      for (const auto &tri : triangleMesh.triangles) {
+        Vec3D<NumericType> center = {0, 0, 0};
+        for (int i = 0; i < 3; ++i) {
+          center[0] += triangleMesh.nodes[tri[i]][0];
+          center[1] += triangleMesh.nodes[tri[i]][1];
+          center[2] += triangleMesh.nodes[tri[i]][2];
+        }
+        triangleCenters.push_back(center / static_cast<NumericType>(3.0));
+      }
+      assert(triangleCenters.size() > 0);
+      elementKdTree_->setPoints(triangleCenters);
+      elementKdTree_->build();
+    } else {
+      triangleMesh = CreateTriangleMesh(
+          static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
+    }
+
+    rayTracer_.setGeometry(triangleMesh);
+
+    if constexpr (D == 2) {
+      surfaceMesh_->nodes = std::move(triangleMesh.nodes);
+      surfaceMesh_->triangles = std::move(triangleMesh.triangles);
+      surfaceMesh_->getCellData().insertReplaceVectorData(
+          std::move(triangleMesh.normals), "Normals");
+      surfaceMesh_->minimumExtent = triangleMesh.minimumExtent;
+      surfaceMesh_->maximumExtent = triangleMesh.maximumExtent;
+    }
 
     auto const &pointMaterialIds =
         *context.diskMesh->getCellData().getScalarData("MaterialIds");
     std::vector<int> elementMaterialIds;
     auto &pointKdTree = context.translationField->getKdTree();
+    if (!pointKdTree) {
+      pointKdTree = KDTreeType::New();
+      context.translationField->setKdTree(pointKdTree);
+    }
     if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
       pointKdTree->setPoints(context.diskMesh->nodes);
       pointKdTree->build();
     }
-    PointToElementDataSingle<NumericType, NumericType, int, NumericType>(
+    PointToElementDataSingle<NumericType, NumericType, int, float>(
         pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
         .apply();
     rayTracer_.setMaterialIds(elementMaterialIds);
@@ -122,6 +168,10 @@ public:
     // copy coverages to the ray tracer
     if (context.flags.useCoverages) {
       auto &pointKdTree = context.translationField->getKdTree();
+      if (!pointKdTree) {
+        pointKdTree = KDTreeType::New();
+        context.translationField->setKdTree(pointKdTree);
+      }
       if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
         pointKdTree->setPoints(context.diskMesh->nodes);
         pointKdTree->build();
@@ -129,7 +179,7 @@ public:
       // Coverages are copied to elementData so there is no need to move them
       // back to the model
       viennals::PointData<NumericType> elementData;
-      PointToElementData<NumericType, NumericType>(
+      PointToElementData<NumericType, float>(
           elementData, surfaceModel->getCoverages(), *pointKdTree, surfaceMesh_,
           Logger::getLogLevel() >=
               static_cast<unsigned>(LogLevel::INTERMEDIATE))
@@ -156,11 +206,12 @@ public:
 
     // output
     if (Logger::getLogLevel() >=
-        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+            static_cast<unsigned>(LogLevel::INTERMEDIATE) &&
+        D == 3) {
       static unsigned iterations = 0;
-      viennals::VTKWriter<NumericType>(
-          surfaceMesh_, context.getProcessName() + "_flux_" +
-                            std::to_string(iterations++) + ".vtp")
+      viennals::VTKWriter<float>(surfaceMesh_,
+                                 context.getProcessName() + "_flux_" +
+                                     std::to_string(iterations++) + ".vtp")
           .apply();
     }
 
@@ -220,8 +271,12 @@ private:
         // output
         if (Logger::getLogLevel() >=
             static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+          std::vector<float> debugFlux(flux.size());
+          for (size_t j = 0; j < flux.size(); ++j) {
+            debugFlux[j] = static_cast<float>(flux[j]);
+          }
           surfaceMesh_->getCellData().insertReplaceScalarData(
-              flux, particle->getLocalDataLabels()[i]);
+              std::move(debugFlux), particle->getLocalDataLabels()[i]);
         }
 
         elementFluxes.push_back(std::move(flux));
@@ -232,7 +287,7 @@ private:
     }
 
     // map fluxes on points
-    ElementToPointData<NumericType, NumericType>(
+    ElementToPointData<NumericType, float, true, D == 3>(
         elementFluxes, fluxes, model->getParticleTypes(), elementKdTree_,
         context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *

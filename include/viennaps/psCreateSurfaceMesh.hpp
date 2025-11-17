@@ -4,9 +4,7 @@
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 
-#ifdef VIENNACORE_COMPILE_GPU
-#include <raygMesh.hpp>
-#endif
+#include <rayMesh.hpp>
 
 #include <vcKDTree.hpp>
 
@@ -14,24 +12,20 @@ namespace viennaps {
 
 using namespace viennacore;
 
-#ifdef VIENNACORE_COMPILE_GPU
-namespace gpu {
-viennaray::gpu::TriangleMesh
+viennaray::TriangleMesh
 CreateTriangleMesh(const float gridDelta,
                    SmartPointer<viennals::Mesh<float>> &mesh) {
-  viennaray::gpu::TriangleMesh triangleMesh;
+  viennaray::TriangleMesh triangleMesh;
 
   triangleMesh.gridDelta = gridDelta;
+  triangleMesh.triangles = mesh->triangles;
   triangleMesh.nodes = mesh->nodes;
   triangleMesh.minimumExtent = mesh->minimumExtent;
   triangleMesh.maximumExtent = mesh->maximumExtent;
   triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
-  triangleMesh.triangles = mesh->triangles;
 
   return triangleMesh;
 }
-} // namespace gpu
-#endif
 
 template <class LsNT, class MeshNT = LsNT, int D = 3> class CreateSurfaceMesh {
 
@@ -122,13 +116,15 @@ public:
     std::vector<Vec3D<LsNT>> triangleCenters;
     std::vector<Vec3D<MeshNT>> normals;
 
-    // Estimate triangle count and reserve memory
-    size_t estimatedTriangles = levelSet->getDomain().getNumberOfPoints() / 4;
-    triangleCenters.reserve(estimatedTriangles);
-    normals.reserve(estimatedTriangles);
-    mesh->triangles.reserve(estimatedTriangles);
-    mesh->nodes.reserve(estimatedTriangles * 4);
-    nodeIdByBin.reserve(estimatedTriangles * 4);
+    if constexpr (D == 3) {
+      // Estimate triangle count and reserve memory
+      size_t estimatedTriangles = levelSet->getDomain().getNumberOfPoints() / 4;
+      triangleCenters.reserve(estimatedTriangles);
+      normals.reserve(estimatedTriangles);
+      mesh->triangles.reserve(estimatedTriangles);
+      mesh->nodes.reserve(estimatedTriangles * 4);
+      nodeIdByBin.reserve(estimatedTriangles * 4);
+    }
 
     const bool buildKdTreeFlag = kdTree != nullptr;
     const bool checkNodeFlag = minNodeDistanceFactor > 0;
@@ -250,35 +246,55 @@ public:
           }
         }
 
-        if (!triangleMisformed(nod_numbers)) {
-          auto normal = calculateNormal(mesh->nodes[nod_numbers[0]],
-                                        mesh->nodes[nod_numbers[1]],
-                                        mesh->nodes[nod_numbers[2]]);
-          auto n2 = normal[0] * normal[0] + normal[1] * normal[1] +
-                    normal[2] * normal[2];
-          if (n2 > epsilon) {
-            mesh->insertNextElement(nod_numbers); // insert new surface element
-            MeshNT invn =
-                static_cast<MeshNT>(1.) / std::sqrt(static_cast<MeshNT>(n2));
-            for (int d = 0; d < D; d++) {
-              normal[d] *= invn;
+        if constexpr (D == 2) {
+          if (nod_numbers[0] != nod_numbers[1]) {
+            auto const &p0 = mesh->nodes[nod_numbers[0]];
+            auto const &p1 = mesh->nodes[nod_numbers[1]];
+            auto const dd = p1 - p0;
+            auto normal = Vec3D<MeshNT>{-dd[1], dd[0], MeshNT(0)};
+            auto n2 = Norm2(normal);
+            if (n2 > epsilon) {
+              MeshNT invn =
+                  static_cast<MeshNT>(1.) / std::sqrt(static_cast<MeshNT>(n2));
+              for (int d = 0; d < D; d++) {
+                normal[d] *= invn;
+              }
+              normals.push_back(normal);
+              mesh->insertNextElement(
+                  nod_numbers); // insert new surface element
             }
-            normals.push_back(normal);
+          }
+        } else {
+          if (!triangleMisformed(nod_numbers)) {
+            auto normal = calculateNormal(mesh->nodes[nod_numbers[0]],
+                                          mesh->nodes[nod_numbers[1]],
+                                          mesh->nodes[nod_numbers[2]]);
+            auto n2 = Norm2(normal);
+            if (n2 > epsilon) {
+              mesh->insertNextElement(
+                  nod_numbers); // insert new surface element
+              MeshNT invn =
+                  static_cast<MeshNT>(1.) / std::sqrt(static_cast<MeshNT>(n2));
+              for (int d = 0; d < D; d++) {
+                normal[d] *= invn;
+              }
+              normals.push_back(normal);
 
-            if (buildKdTreeFlag) {
-              triangleCenters.push_back(
-                  {static_cast<LsNT>(mesh->nodes[nod_numbers[0]][0] +
-                                     mesh->nodes[nod_numbers[1]][0] +
-                                     mesh->nodes[nod_numbers[2]][0]) /
-                       static_cast<LsNT>(3.),
-                   static_cast<LsNT>(mesh->nodes[nod_numbers[0]][1] +
-                                     mesh->nodes[nod_numbers[1]][1] +
-                                     mesh->nodes[nod_numbers[2]][1]) /
-                       static_cast<LsNT>(3.),
-                   static_cast<LsNT>(mesh->nodes[nod_numbers[0]][2] +
-                                     mesh->nodes[nod_numbers[1]][2] +
-                                     mesh->nodes[nod_numbers[2]][2]) /
-                       static_cast<LsNT>(3.)});
+              if (buildKdTreeFlag) {
+                triangleCenters.push_back(
+                    {static_cast<LsNT>(mesh->nodes[nod_numbers[0]][0] +
+                                       mesh->nodes[nod_numbers[1]][0] +
+                                       mesh->nodes[nod_numbers[2]][0]) /
+                         static_cast<LsNT>(3.),
+                     static_cast<LsNT>(mesh->nodes[nod_numbers[0]][1] +
+                                       mesh->nodes[nod_numbers[1]][1] +
+                                       mesh->nodes[nod_numbers[2]][1]) /
+                         static_cast<LsNT>(3.),
+                     static_cast<LsNT>(mesh->nodes[nod_numbers[0]][2] +
+                                       mesh->nodes[nod_numbers[1]][2] +
+                                       mesh->nodes[nod_numbers[2]][2]) /
+                         static_cast<LsNT>(3.)});
+              }
             }
           }
         }
@@ -289,7 +305,7 @@ public:
     mesh->nodes.shrink_to_fit();
     mesh->triangles.shrink_to_fit();
 
-    if (buildKdTreeFlag) {
+    if (D == 3 && buildKdTreeFlag) {
       kdTree->setPoints(triangleCenters);
       kdTree->build();
     }

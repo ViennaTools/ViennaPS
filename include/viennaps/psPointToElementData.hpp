@@ -74,8 +74,9 @@ public:
     }
 
 #ifndef NDEBUG
-    surfaceMesh_->getCellData().insertReplaceScalarData(closestPoints,
-                                                        "pointIds");
+    assert(closestPoints.size() == numElements);
+    surfaceMesh_->getCellData().insertReplaceScalarData(
+        std::move(closestPoints), "pointIds");
 #endif
 
     finalizeData();

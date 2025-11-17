@@ -21,11 +21,13 @@ template <typename NumericType, int D>
 class GPULineEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
-  using MeshType = SmartPointer<viennals::Mesh<NumericType>>;
+  using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
   GPULineEngine(std::shared_ptr<DeviceContext> deviceContext)
-      : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
+      : deviceContext_(deviceContext), rayTracer_(deviceContext) {
+    assert(D == 2 && "GPULineEngine only supports 2D simulations.");
+  }
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
 
@@ -88,6 +90,8 @@ public:
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
       rayTracer_.setPeriodicBoundary(periodicBoundary);
+      rayTracer_.setIgnoreBoundary(
+          context.rayTracingParams.ignoreFluxBoundaries);
       for (auto &particle : model->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }
@@ -104,57 +108,42 @@ public:
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
 
-    surfaceMesh_ = viennals::Mesh<NumericType>::New();
-    if (!elementKdTree_) {
+    if (!surfaceMesh_)
+      surfaceMesh_ = MeshType::New();
+    if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
-    }
-    viennals::ToSurfaceMesh<NumericType, D>(context.domain->getSurface(),
-                                            surfaceMesh_)
+
+    CreateSurfaceMesh<NumericType, float, D>(
+        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
+        1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
 
-    std::vector<Vec3D<NumericType>> elementCenters(surfaceMesh_->lines.size());
-    std::vector<Vec3Df> fLineNormals(surfaceMesh_->lines.size());
-    for (int i = 0; i < surfaceMesh_->lines.size(); ++i) {
-      Vec3D<NumericType> p0 = {
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][0]][0],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][0]][1],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][0]][2]};
-      Vec3D<NumericType> p1 = {
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][0],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][1],
-          surfaceMesh_->nodes[surfaceMesh_->lines[i][1]][2]};
-      elementCenters[i] = (p0 + p1) / NumericType(2);
+    viennaray::LineMesh lineMesh(
+        surfaceMesh_->nodes, surfaceMesh_->lines,
+        static_cast<float>(context.domain->getGridDelta()));
+    // lines might have changed, so we need to update the surfaceMesh_ later
 
-      Vec3D<NumericType> lineDir = p1 - p0;
-      Vec3D<NumericType> normal =
-          Vec3D<NumericType>{-lineDir[1], lineDir[0], 0};
-      Normalize(normal);
-      fLineNormals[i] =
-          Vec3Df{static_cast<float>(normal[0]), static_cast<float>(normal[1]),
-                 static_cast<float>(normal[2])};
+    std::vector<Vec3D<NumericType>> elementCenters(lineMesh.lines.size());
+    for (int i = 0; i < lineMesh.lines.size(); ++i) {
+      auto const &p0 = lineMesh.nodes[lineMesh.lines[i][0]];
+      auto const &p1 = lineMesh.nodes[lineMesh.lines[i][1]];
+      auto center = (p0 + p1) / 2.f;
+      elementCenters[i] =
+          Vec3D<NumericType>{static_cast<NumericType>(center[0]),
+                             static_cast<NumericType>(center[1]),
+                             static_cast<NumericType>(center[2])};
     }
     elementKdTree_->setPoints(elementCenters);
     elementKdTree_->build();
 
-    std::vector<Vec3Df> fNodes(surfaceMesh_->nodes.size());
-    for (size_t i = 0; i < surfaceMesh_->nodes.size(); i++) {
-      fNodes[i] = {static_cast<float>(surfaceMesh_->nodes[i][0]),
-                   static_cast<float>(surfaceMesh_->nodes[i][1]),
-                   static_cast<float>(surfaceMesh_->nodes[i][2])};
-    }
-    Vec3Df fMinExtent = {static_cast<float>(diskMesh->minimumExtent[0]),
-                         static_cast<float>(diskMesh->minimumExtent[1]),
-                         static_cast<float>(diskMesh->minimumExtent[2])};
-    Vec3Df fMaxExtent = {static_cast<float>(diskMesh->maximumExtent[0]),
-                         static_cast<float>(diskMesh->maximumExtent[1]),
-                         static_cast<float>(diskMesh->maximumExtent[2])};
-    float gridDelta = static_cast<float>(context.domain->getGridDelta());
+    rayTracer_.setGeometry(lineMesh);
 
-    const viennaray::gpu::LineMesh lineMeshRay{
-        fNodes,     surfaceMesh_->lines, fLineNormals,
-        fMinExtent, fMaxExtent,          gridDelta};
-
-    rayTracer_.setGeometry(lineMeshRay);
+    surfaceMesh_->nodes = std::move(lineMesh.nodes);
+    surfaceMesh_->lines = std::move(lineMesh.lines);
+    surfaceMesh_->getCellData().insertReplaceVectorData(
+        std::move(lineMesh.normals), "Normals");
+    surfaceMesh_->minimumExtent = lineMesh.minimumExtent;
+    surfaceMesh_->maximumExtent = lineMesh.maximumExtent;
 
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
@@ -164,6 +153,10 @@ public:
           diskMesh->getCellData().getScalarData("MaterialIds");
       std::vector<int> lineMaterialIds(surfaceMesh_->lines.size());
       auto &pointKdTree = context.translationField->getKdTree();
+      if (!pointKdTree) {
+        pointKdTree = KDTreeType::New();
+        context.translationField->setKdTree(pointKdTree);
+      }
       if (pointKdTree->getNumberOfPoints() != diskMesh->nodes.size()) {
         pointKdTree->setPoints(diskMesh->nodes);
         pointKdTree->build();
@@ -204,7 +197,7 @@ public:
       elementCenters[i] = (p0 + p1) / NumericType(2);
     }
 
-    auto diskMesh_ = *context.diskMesh;
+    auto diskMesh = *context.diskMesh;
     CudaBuffer d_coverages; // device buffer for coverages
     if (context.flags.useCoverages) {
       auto coverages = model->getSurfaceModel()->getCoverages();
@@ -212,8 +205,12 @@ public:
       assert(context.diskMesh);
       auto numCov = coverages->getScalarDataSize();
       auto &pointKdTree = context.translationField->getKdTree();
-      if (pointKdTree->getNumberOfPoints() != diskMesh_.nodes.size()) {
-        pointKdTree->setPoints(diskMesh_.nodes);
+      if (!pointKdTree) {
+        pointKdTree = KDTreeType::New();
+        context.translationField->setKdTree(pointKdTree);
+      }
+      if (pointKdTree->getNumberOfPoints() != diskMesh.nodes.size()) {
+        pointKdTree->setPoints(diskMesh.nodes);
         pointKdTree->build();
       }
 
@@ -226,7 +223,7 @@ public:
       for (int i = 0; i < numCov; ++i) {
         std::vector<NumericType> temp = *(coverages->getScalarData(i));
         std::vector<float> tempCasted(temp.begin(), temp.end());
-        assert(tempCasted.size() == diskMesh_.getNodes().size());
+        assert(tempCasted.size() == diskMesh.getNodes().size());
         for (int j = 0; j < elementCenters.size(); j++) {
           auto closestPoint = pointKdTree->findNearest(elementCenters[j]);
           cov[j + i * surfaceMesh_->lines.size()] =
@@ -239,8 +236,10 @@ public:
 
     // run the ray tracer
     rayTracer_.apply();
+    rayTracer_.normalizeResults();
     downloadResultsToPointData(*fluxes, context.diskMesh,
-                               context.rayTracingParams.smoothingNeighbors);
+                               context.rayTracingParams.smoothingNeighbors,
+                               context.domain->getGridDelta());
 
     // output
     if (Logger::getLogLevel() >=
@@ -252,7 +251,8 @@ public:
       }
       downloadResultsToPointData(context.diskMesh->getCellData(),
                                  context.diskMesh,
-                                 context.rayTracingParams.smoothingNeighbors);
+                                 context.rayTracingParams.smoothingNeighbors,
+                                 context.domain->getGridDelta());
       static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
           context.diskMesh, context.getProcessName() + "_flux_" +
@@ -295,32 +295,88 @@ private:
   void
   downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
                              SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-                             int smoothingNeighbors) {
+                             int smoothingNeighbors, NumericType gridDelta) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
-    auto diskMesh_ = *diskMesh;
-    const auto numDisks = diskMesh_.nodes.size();
+    const auto numDisks = diskMesh->nodes.size();
     assert(numRates > 0);
     auto particles = rayTracer_.getParticles();
+    auto const &elementNormals =
+        *surfaceMesh_->getCellData().getVectorData("Normals");
+    auto const &normals = *diskMesh->getCellData().getVectorData("Normals");
+    const auto numElements = surfaceMesh_->lines.size();
+
+    NumericType conversionRadius = gridDelta * (smoothingNeighbors + 1);
+    conversionRadius *= conversionRadius; // use squared radius
+
+    std::vector<std::vector<std::pair<unsigned, NumericType>>> elementsToPoint;
+    elementsToPoint.reserve(numDisks);
+
+    for (int i = 0; i < numDisks; i++) {
+      auto closePoints =
+          elementKdTree_
+              ->findNearestWithinRadius(diskMesh->nodes[i], conversionRadius)
+              .value();
+
+      std::vector<std::pair<unsigned, NumericType>> closePointsArray;
+      std::vector<NumericType> weights(closePoints.size(), NumericType(0));
+
+      unsigned numClosePoints = 0;
+      for (std::size_t n = 0; n < closePoints.size(); ++n) {
+        const auto &p = closePoints[n];
+        assert(p.first < numElements);
+
+        const auto weight = DotProductNT(normals[i], elementNormals[p.first]);
+
+        if (weight > NumericType(1e-6) && !std::isnan(weight)) {
+          weights[n] = weight;
+          ++numClosePoints;
+        }
+      }
+
+      if (numClosePoints == 0) { // fallback to nearest point
+        auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
+        closePointsArray.emplace_back(nearestPoint->first, NumericType(1));
+      }
+
+      // Compute weighted average
+      const NumericType sum =
+          std::accumulate(weights.begin(), weights.end(), NumericType(0));
+
+      if (sum > NumericType(0)) {
+        for (std::size_t k = 0; k < closePoints.size(); ++k) {
+          if (weights[k] > NumericType(0)) {
+            closePointsArray.emplace_back(closePoints[k].first,
+                                          weights[k] / sum);
+          }
+        }
+      } else {
+        // Fallback if all weights were discarded
+        auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
+        closePointsArray.emplace_back(nearestPoint->first, NumericType(1));
+      }
+
+      elementsToPoint.push_back(closePointsArray);
+    }
+    assert(elementsToPoint.size() == numDisks);
 
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        std::vector<float> elementFlux(numPoints);
-        rayTracer_.getFlux(elementFlux.data(), pIdx, dIdx, smoothingNeighbors);
+        auto elementFlux = rayTracer_.getFlux(pIdx, dIdx, smoothingNeighbors);
         auto name = particles[pIdx].dataLabels[dIdx];
 
         // convert line fluxes to disk fluxes
-        std::vector<float> diskFlux(numDisks, 0.f);
+        std::vector<NumericType> diskFlux(numDisks, 0.);
 
         for (int i = 0; i < numDisks; i++) {
-          auto closestPoint = elementKdTree_->findNearest(diskMesh_.nodes[i]);
-          diskFlux[i] = elementFlux[closestPoint->first];
+          for (const auto &elemPair : elementsToPoint[i]) {
+            diskFlux[i] +=
+                static_cast<NumericType>(elementFlux[elemPair.first]) *
+                elemPair.second;
+          }
         }
-        // TODO: maybe smooth disk fluxes here additionally
 
-        std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
-                                                diskFlux.end());
-        pointData.insertReplaceScalarData(std::move(diskFluxCasted), name);
+        pointData.insertReplaceScalarData(std::move(diskFlux), name);
       }
     }
   }
@@ -333,6 +389,16 @@ private:
   MeshType surfaceMesh_;
 
   bool rayTracerInitialized_ = false;
+
+  template <class AT, class BT, std::size_t Dim>
+  AT DotProductNT(const std::array<AT, Dim> &pVecA,
+                  const std::array<BT, Dim> &pVecB) {
+    AT dot = 0;
+    for (size_t i = 0; i < Dim; ++i) {
+      dot += pVecA[i] * pVecB[i];
+    }
+    return dot;
+  }
 };
 
 } // namespace viennaps
