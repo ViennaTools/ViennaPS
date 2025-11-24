@@ -285,7 +285,7 @@ private:
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
     assert(numPoints == surfaceMesh_->getElements<3>().size());
-    auto valueBuffer = rayTracer_.getResults();
+    auto &valueBuffer = rayTracer_.getResults();
     std::vector<float> tmpBuffer(numRates * numPoints);
     valueBuffer.download(tmpBuffer.data(), numPoints * numRates);
     auto particles = rayTracer_.getParticles();

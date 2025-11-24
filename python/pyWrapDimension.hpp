@@ -511,6 +511,8 @@ template <int D> void bindApi(py::module &module) {
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
+      .def("getSurface", &Domain<T, D>::getSurface,
+           "Get the surface level set.")
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
       .def("getGrid", &Domain<T, D>::getGrid, "Get the grid")
       .def("getGridDelta", &Domain<T, D>::getGridDelta, "Get the grid delta.")

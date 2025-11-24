@@ -1,6 +1,6 @@
 #pragma once
 
-#include <raygRNG.hpp>
+#include <vcRNG.hpp>
 
 namespace viennaps::gpu::impl {
 struct IonParams {
@@ -64,7 +64,7 @@ __forceinline__ __device__ void updateEnergy(viennaray::gpu::PerRayData *prd,
 
   float newEnergy;
   do {
-    const float u = viennaray::gpu::getNormalDistRand(&prd->RNGstate);
+    const float u = viennacore::getNormalDistRand(&prd->RNGstate);
     newEnergy = prd->energy * (Eref_peak + sigma * u);
   } while (newEnergy < 0.f || newEnergy > prd->energy);
   prd->energy = newEnergy;
@@ -97,7 +97,7 @@ initNormalDistEnergy(viennaray::gpu::PerRayData *prd, const float mean,
     energy = mean;
   } else {
     do {
-      const float u = viennaray::gpu::getNormalDistRand(&prd->RNGstate);
+      const float u = viennacore::getNormalDistRand(&prd->RNGstate);
       energy = mean + sigma * u;
     } while (energy < 0.f);
   }
