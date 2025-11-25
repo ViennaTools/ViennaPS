@@ -22,6 +22,8 @@ MathJax = {
 ```c++
 #include <psTEOSPECVD.hpp>
 ```
+CPU only
+{: .label .label-yellow}
 ---
 
 The TEOS PE CVD process is a deposition process with an additional plasma-enhanced component, which supplies directional ions during the process. The process is specified by two particle species: the TEOS precursor radicals and the  ions. The depostion rate is controlled by a reaction order for both radicals and ions, where the final surface velocity $v$ follows:

@@ -23,6 +23,8 @@ MathJax = {
 ```c++
 #include <psMultiParticleProcess.hpp>
 ```
+GPU and CPU compatible
+{: .label .label-green}
 ---
 
 The multi particle process is a simple process model that simulates either etching or deposition, where an arbitrary number of particles can be specified. The particles can be neutral or ions, and the model can be used to simulate a wide range of processes. The rate equation for combining the fluxes of the particles has to be provided by the user. 

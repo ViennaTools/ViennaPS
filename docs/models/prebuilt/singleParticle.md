@@ -12,6 +12,8 @@ nav_order: 3
 ```c++
 #include <psSingleParticleProcess.hpp>
 ```
+GPU and CPU compatible
+{: .label .label-green}
 ---
 
 The single particle process is a simple process model that simulates either etching or deposition, assuming a single particle species. The process is specified by the rate, the particle sticking coefficient, and the exponent in the power cosine distribution of the initial particle directions. 

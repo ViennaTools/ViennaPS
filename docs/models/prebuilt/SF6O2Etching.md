@@ -23,6 +23,8 @@ MathJax = {
 ```c++
 #include <psSF6O2Etching.hpp>
 ```
+GPU and CPU compatible
+{: .label .label-green}
 ---
 
 The model for {{ page.sf6o2 }} etching of silicon is based on a model by Belen et al. [^1] and summarized here. For implementation details refer to [here](#implementation).

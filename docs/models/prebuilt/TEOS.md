@@ -22,6 +22,8 @@ MathJax = {
 ```c++
 #include <psTEOSDeposition.hpp>
 ```
+CPU only
+{: .label .label-yellow}
 ---
 
 The **TEOSDeposition** model simulates conformal deposition of silicon dioxide films from tetraethyl orthosilicate (TEOS) precursors.

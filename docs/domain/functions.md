@@ -103,7 +103,10 @@ Access the surface Level-Set, grid, bounding box, material map, and setup.
 
 ```cpp
 void saveLevelSetMesh(std::string fileName, int width = 1);
-void saveSurfaceMesh(std::string fileName, bool addMaterialIds = true);
+void saveSurfaceMesh(std::string fileName, bool addInterfaces = true,
+                     double wrappingLayerEpsilon = 0.01, bool boolMaterials = false);
+auto getSurfaceMesh(bool addInterfaces = false, double wrappingLayerEpsilon = 0.01,
+                    bool boolMaterials = false);
 void saveVolumeMesh(std::string fileName, double wrappingEps = 1e-2) const;
 void saveHullMesh(std::string fileName, double wrappingEps = 1e-2) const;
 void saveLevelSets(std::string prefix) const;

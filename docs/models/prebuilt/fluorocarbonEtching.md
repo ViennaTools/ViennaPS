@@ -22,6 +22,8 @@ MathJax = {
 ```c++
 #include <psFluorocarbonEtching.hpp>
 ```
+CPU only
+{: .label .label-yellow}
 ---
 
 Our model assumes that, in any complex plasma etch process, there are three fundamental types of particles:

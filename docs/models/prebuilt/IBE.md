@@ -12,6 +12,8 @@ nav_order: 9
 ```c++
 #include <psIonBeamEtching.hpp>
 ```
+GPU and CPU compatible
+{: .label .label-green}
 ---
 
 The **IonBeamEtching** model simulates anisotropic material removal by a directed ion beam, optionally including **redeposition** of sputtered material.

@@ -1,9 +1,10 @@
 # Build and dependencies folder
 build/
 dependencies/
-
+*.ipynb
 old_*
-
+*_old*
+.idea/
 *a.out
 install*
 *.vtk
