@@ -5,11 +5,16 @@
 #include <raygTraceDisk.hpp>
 #include <raygTraceTriangle.hpp>
 
-// #define useDiskMesh
+#define USE_DISK_MESH
+#ifdef USE_DISK_MESH
+#define FILE_POST "_disk"
+#else
+#define FILE_POST "_tri"
+#endif
 
 constexpr int D = 3;
 using NumericType = float;
-constexpr bool useGPU = true;
+constexpr bool useGPU = false;
 
 template <class T> auto createCylinderLS(T gridDelta, T radius, T length) {
   double bounds[2 * D] = {-1.0, 1.0, -1.0, 1.0, 0.0, length + gridDelta};
@@ -104,12 +109,12 @@ auto createCylinderDiskMesh(NumericType gridDelta, NumericType radius,
   lsMesh->insertNextNode(Vec3Df{0.0f, 0.0f, 0.0f});
   materialIds.push_back(1);
   normals->push_back(Vec3Df{0.0f, 0.0f, 1.0f});
-  radii.push_back(radius);
+  radii.push_back(radius * 1.5f); // make sure rays hit the plane
 
   lsMesh->insertNextNode(Vec3Df{0.0f, 0.0f, float(length)});
   materialIds.push_back(2);
   normals->push_back(Vec3Df{0.0f, 0.0f, -1.0f});
-  radii.push_back(radius);
+  radii.push_back(radius * 1.5f); // make sure rays hit the plane
 
   // viennals::VTKWriter<float>(lsMesh, "cylinder.vtp").apply();
 
@@ -209,7 +214,7 @@ std::array<NumericType, N> logSpace(NumericType start, NumericType end) {
 }
 
 int main() {
-  auto lengths = logSpace<20>(.01, 10000.0);
+  auto lengths = logSpace<25>(.01, 10000.0);
   // std::array<NumericType, 1> lengths = {100.0};
   constexpr NumericType radius = 10.0;
   constexpr NumericType gridDelta = .5;
@@ -217,8 +222,11 @@ int main() {
   std::vector<unsigned> counts(4, 0);
 
   if constexpr (useGPU) {
-    viennacore::CudaBuffer customDataBuffer;
-    customDataBuffer.allocUpload(counts);
+#ifdef USE_DISK_MESH
+    viennacore::Logger::getInstance()
+        .addError("No GPU disk mesh implementation")
+        .print();
+#endif
 
     auto context = viennacore::DeviceContext::createContext();
     viennaray::gpu::TraceTriangle<NumericType, D> tracer(context);
@@ -245,7 +253,10 @@ int main() {
     tracer.insertNextParticle(particle);
     tracer.prepareParticlePrograms();
 
-    std::ofstream logFile("transmission_log_tri_GPU.txt");
+    std::string fileName = "transmission_log_GPU";
+    fileName.append(FILE_POST);
+    fileName.append(".txt");
+    std::ofstream logFile(fileName);
     logFile << "LR\tTransmission\tReflection\tHitsToTransmission\tHitsToReflect"
                "ion\n";
 
@@ -281,10 +292,9 @@ int main() {
     }
 
     logFile.close();
-    customDataBuffer.free();
   } else {
 
-#ifdef useDiskMesh
+#ifdef USE_DISK_MESH
     viennaray::TraceDisk<NumericType, D> tracer;
 #else
     viennaray::TraceTriangle<NumericType, D> tracer;
@@ -302,14 +312,17 @@ int main() {
     auto particle = std::make_unique<TransmissionParticle>();
     tracer.setParticleType(particle);
 
-    std::ofstream logFile("transmission_log_disk_CPU.txt");
+    std::string fileName = "transmission_log_CPU";
+    fileName.append(FILE_POST);
+    fileName.append(".txt");
+    std::ofstream logFile(fileName);
     logFile << "LR\tTransmission\tReflection\tHitsToTransmission\tHitsToReflect"
                "ion\n";
 
     for (auto length : lengths) {
       std::cout << "Length: " << length << std::endl;
       std::cout << "L/R: " << length / radius << std::endl;
-#ifdef useDiskMesh
+#ifdef USE_DISK_MESH
       auto [mesh, materialIds] =
           createCylinderDiskMesh(gridDelta, radius, length);
 #else
@@ -322,6 +335,13 @@ int main() {
       tracer.setSource(source);
 
       tracer.apply();
+
+      // auto info = tracer.getRayTraceInfo();
+      // std::cout << "Non geo hits: " << info.nonGeometryHits << std::endl;
+      // std::cout << "Num rays: " << info.numRays << std::endl;
+      // std::cout << "Boundary hits: " << info.boundaryHits << std::endl;
+      // std::cout << "Reflections: " << info.reflections << std::endl;
+      // std::cout << "Rays terminated: " << info.raysTerminated << std::endl;
 
       auto &localData = tracer.getLocalData();
       counts[0] = static_cast<unsigned>(

@@ -549,6 +549,11 @@ class Domain:
         Get the domain setup.
         """
 
+    def getSurface(self) -> viennals.d2.Domain:
+        """
+        Get the surface level set.
+        """
+
     def getSurfaceMesh(
         self,
         addInterfaces: bool = False,
@@ -1446,6 +1451,7 @@ class ToDiskMesh:
     def __init__(self, domain: Domain, mesh: viennals._core.Mesh) -> None: ...
     @typing.overload
     def __init__(self) -> None: ...
+    def apply(self) -> None: ...
     def setDomain(self, arg0: Domain) -> None:
         """
         Set the domain in the mesh converter.

@@ -193,6 +193,11 @@ private:
 
   // Factory method for creating flux engines
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() {
+    assert(fluxEngineType_ != FluxEngineType::AUTO &&
+           "Flux engine type must be specified before creation.");
+    Logger::getInstance()
+        .addDebug("Creating flux engine of type: " + to_string(fluxEngineType_))
+        .print();
     // Create CPU engine
     if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
