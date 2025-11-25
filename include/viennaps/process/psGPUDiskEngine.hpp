@@ -207,11 +207,9 @@ public:
           context.diskMesh, context.getProcessName() + "_flux_" +
                                 std::to_string(iterations++) + ".vtp")
           .apply();
-
-      if (context.flags.useCoverages) {
-        d_coverages.free();
-      }
     }
+
+    d_coverages.free();
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;

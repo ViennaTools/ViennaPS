@@ -111,8 +111,8 @@ public:
       elementKdTree_ = KDTreeType::New();
 
     CreateSurfaceMesh<NumericType, float, D>(
-        context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
-        1e-12, context.rayTracingParams.minNodeDistanceFactor)
+        context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
+        context.rayTracingParams.minNodeDistanceFactor)
         .apply();
     assert(!surfaceMesh_->nodes.empty());
 
@@ -248,11 +248,9 @@ public:
                                  context.getProcessName() + "_flux_" +
                                      std::to_string(iterations++) + ".vtp")
           .apply();
-
-      if (context.flags.useCoverages) {
-        d_coverages.free();
-      }
     }
+
+    d_coverages.free();
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
