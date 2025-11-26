@@ -6,7 +6,6 @@
 #include "PlasmaEtching.cuh"
 #include "SingleParticle.cuh"
 #include "SingleParticleALD.cuh"
-#include "TestFlux.cuh"
 
 //
 // --- Direct Callables wrapper
@@ -147,12 +146,4 @@ extern "C" __device__ void
 __direct_callable__faradayCollision(const void *sbtData,
                                     viennaray::gpu::PerRayData *prd) {
   faradayIonCollision(sbtData, prd);
-}
-
-// --- TestFlux particle
-
-extern "C" __device__ void
-__direct_callable__testFluxCollision(const void *,
-                                     viennaray::gpu::PerRayData *prd) {
-  testFluxCollision(prd);
 }

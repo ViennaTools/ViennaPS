@@ -68,7 +68,6 @@
 #include <models/psSingleParticleProcess.hpp>
 #include <models/psTEOSDeposition.hpp>
 #include <models/psTEOSPECVD.hpp>
-#include <models/psTestFluxModel.hpp>
 #include <models/psWetEtching.hpp>
 
 // visualization
@@ -762,12 +761,6 @@ template <int D> void bindApi(py::module &module) {
            py::arg("inflectAngle") = 0., py::arg("n") = 1,
            py::arg("label") = "ionFlux")
       .def("setRateFunction", &MultiParticleProcess<T, D>::setRateFunction);
-
-  // Test Flux Model
-  py::class_<TestFluxModel<T, D>, SmartPointer<TestFluxModel<T, D>>>(
-      module, "TestFluxModel", processModel)
-      .def(py::init<T, T>(), py::arg("stickingProbability"),
-           py::arg("sourceExponent"));
 
   // TEOS Deposition
   py::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
@@ -1469,12 +1462,6 @@ template <int D> void bindApi(py::module &module) {
            py::arg("label") = "ionFlux")
       .def("setRateFunction",
            &gpu::MultiParticleProcess<T, D>::setRateFunction);
-
-  // Test Flux Model
-  py::class_<gpu::TestFluxModel<T, D>, SmartPointer<gpu::TestFluxModel<T, D>>>(
-      m_gpu, "TestFluxModel", processModel_gpu)
-      .def(py::init<T, T>(), py::arg("stickingProbability"),
-           py::arg("sourceExponent"));
 
   // SF6O2 Etching
   py::class_<gpu::SF6O2Etching<T, D>, SmartPointer<gpu::SF6O2Etching<T, D>>>(
