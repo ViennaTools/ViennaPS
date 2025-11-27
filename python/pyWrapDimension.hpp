@@ -506,6 +506,11 @@ template <int D> void bindApi(py::module &module) {
            "only) Level-Sets in the domain.")
       .def("removeLevelSet", &Domain<T, D>::removeLevelSet)
       .def("removeMaterial", &Domain<T, D>::removeMaterial)
+      .def("removeStrayPoints", &Domain<T, D>::removeStrayPoints)
+      .def("getNumberOfComponents", &Domain<T, D>::getNumberOfComponents,
+           "Get the number of connected components in the domain.")
+      .def("getNumberOfLevelSets", &Domain<T, D>::getNumberOfLevelSets,
+           "Get the number of level sets in the domain.")
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
       .def("generateCellSet", &Domain<T, D>::generateCellSet,

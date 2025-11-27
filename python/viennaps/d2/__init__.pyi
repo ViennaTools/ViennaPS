@@ -544,6 +544,16 @@ class Domain:
         Get the current meta data level of the domain.
         """
 
+    def getNumberOfComponents(self) -> int:
+        """
+        Get the number of connected components in the domain.
+        """
+
+    def getNumberOfLevelSets(self) -> int:
+        """
+        Get the number of level sets in the domain.
+        """
+
     def getSetup(self) -> DomainSetup:
         """
         Get the domain setup.
@@ -588,6 +598,7 @@ class Domain:
 
     def removeLevelSet(self, arg0: typing.SupportsInt, arg1: bool) -> None: ...
     def removeMaterial(self, arg0: viennaps._core.Material) -> None: ...
+    def removeStrayPoints(self) -> None: ...
     def removeTopLevelSet(self) -> None: ...
     def saveHullMesh(
         self, filename: str, wrappingLayerEpsilon: typing.SupportsFloat = 0.01
