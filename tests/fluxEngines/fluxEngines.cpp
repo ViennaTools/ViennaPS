@@ -40,22 +40,27 @@ template <class T, int D> void RunTest() {
           1.0, 1.0, 1.0);
 
   for (const auto &engineType : engineTypes) {
-    viennaps::SmartPointer<viennaps::Domain<T, D>> domain =
-        viennaps::Domain<T, D>::New(1.0, 10.0, 10.0);
+    std::cout << "Testing flux engine: " << viennaps::to_string(engineType)
+              << " in " << D << "D" << std::endl;
+    auto domain = viennaps::Domain<T, D>::New(1.0, 10.0, 10.0);
 
     viennaps::MakePlane<T, D>(domain, 0.0).apply();
+
+    viennaps::RayTracingParameters rayParams;
+    rayParams.rngSeed = 42;
 
     viennaps::Process<T, D> process(domain, model);
     process.setFluxEngineType(engineType);
     process.setProcessDuration(1.0);
+    process.setParameters(rayParams);
 
     process.apply();
-
-    checkSurfaceHeight<T, D>(domain, 1.0);
 
     domain->saveSurfaceMesh("fluxEngineTest_" +
                             std::to_string(static_cast<int>(D)) + "D_" +
                             viennaps::to_string(engineType) + ".vtp");
+
+    checkSurfaceHeight<T, D>(domain, 1.0);
   }
 }
 

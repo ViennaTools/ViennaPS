@@ -9,6 +9,7 @@
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsExpand.hpp>
+#include <lsRemoveStrayPoints.hpp>
 #include <lsToDiskMesh.hpp>
 #include <lsToMesh.hpp>
 #include <lsToMultiSurfaceMesh.hpp>
@@ -320,6 +321,48 @@ public:
         i -= 1;
       }
     }
+  }
+
+  void removeStrayPoints() {
+    auto &surface = getSurface();
+    viennals::BooleanOperation<NumericType, D>(
+        surface, viennals::BooleanOperationEnum::INVERT)
+        .apply();
+
+    viennals::Expand<NumericType, D>(surface, 3).apply();
+    viennals::RemoveStrayPoints<NumericType, D>(surface).apply();
+    viennals::Prune<NumericType, D>(surface).apply();
+
+    viennals::BooleanOperation<NumericType, D>(
+        surface, viennals::BooleanOperationEnum::INVERT)
+        .apply();
+
+    for (std::size_t i = 0; i < levelSets_.size() - 1; i++) {
+      viennals::BooleanOperation<NumericType, D>(
+          levelSets_.at(i), surface, viennals::BooleanOperationEnum::INTERSECT)
+          .apply();
+    }
+  }
+
+  std::size_t getNumberOfComponents() const {
+    if (levelSets_.empty()) {
+      Logger::getInstance()
+          .addWarning("No Level-Sets in domain. Returning 0 components.")
+          .print();
+      return 0;
+    }
+    auto &surface = getSurface();
+    viennals::BooleanOperation<NumericType, D>(
+        surface, viennals::BooleanOperationEnum::INVERT)
+        .apply();
+    viennals::MarkVoidPoints<NumericType, D> marker;
+    marker.setSaveComponentIds(true);
+    marker.setLevelSet(surface);
+    marker.apply();
+    viennals::BooleanOperation<NumericType, D>(
+        surface, viennals::BooleanOperationEnum::INVERT)
+        .apply();
+    return marker.getNumberOfComponents();
   }
 
   // Generate the Cell-Set from the Level-Sets in the domain. The Cell-Set can
