@@ -254,7 +254,8 @@ public:
                                  context.domain->getGridDelta());
       static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.getProcessName() + "_flux_" +
+          context.diskMesh, context.intermediateOutputPath +
+                                context.getProcessName() + "_flux_" +
                                 std::to_string(iterations++) + ".vtp")
           .apply();
     }

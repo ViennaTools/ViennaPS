@@ -202,8 +202,9 @@ public:
                                  context.rayTracingParams.smoothingNeighbors);
       static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.getProcessName() + "_flux_" +
-                                std::to_string(iterations++) + ".vtp")
+          context.intermediateOutputPath + context.diskMesh,
+          context.getProcessName() + "_flux_" + std::to_string(iterations++) +
+              ".vtp")
           .apply();
     }
 

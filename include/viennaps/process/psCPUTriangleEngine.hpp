@@ -207,7 +207,8 @@ public:
         D == 3) {
       static unsigned iterations = 0;
       viennals::VTKWriter<float>(surfaceMesh_,
-                                 context.getProcessName() + "_flux_" +
+                                 context.intermediateOutputPath +
+                                     context.getProcessName() + "_flux_" +
                                      std::to_string(iterations++) + ".vtp")
           .apply();
     }
