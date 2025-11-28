@@ -218,7 +218,7 @@ public:
             (1 / polyParams.density) *
             std::max((polyFlux->at(i) * p.polyFlux * polyParams.beta_p -
                       ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
-                     (NumericType)0) *
+                     static_cast<NumericType>(0)) *
             unitConversion;
         assert(etchRate[i] >= 0 && "Negative deposition");
       } else if (matId == Material::Mask) {
@@ -226,7 +226,6 @@ public:
         etchRate[i] = (-1. / maskParams.density) * ionSputterFlux->at(i) *
                       p.ionFlux * unitConversion;
       } else if (matId == Material::Polymer) {
-        auto polyParams = p.getMaterialParameters(Material::Polymer);
         // Etching depo layer
         etchRate[i] =
             std::min((1. / polyParams.density) *

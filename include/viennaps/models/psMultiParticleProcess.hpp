@@ -21,13 +21,12 @@ using namespace viennacore;
 
 namespace impl {
 template <typename NumericType, int D>
-class MultiParticleSurfaceModel : public viennaps::SurfaceModel<NumericType> {
+class MultiParticleSurfaceModel : public SurfaceModel<NumericType> {
 public:
   std::function<NumericType(const std::vector<NumericType> &, const Material &)>
       rateFunction_;
   std::vector<std::string> &fluxDataLabels_;
 
-public:
   MultiParticleSurfaceModel(std::vector<std::string> &fluxDataLabels)
       : fluxDataLabels_(fluxDataLabels) {
     rateFunction_ = [](const std::vector<NumericType> &fluxes,

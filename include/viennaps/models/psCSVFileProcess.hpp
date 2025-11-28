@@ -1,11 +1,5 @@
 #pragma once
 
-#include <fstream>
-#include <functional>
-#include <optional>
-#include <string>
-#include <vector>
-
 #include "../process/psProcessModel.hpp"
 #include "../process/psSurfaceModel.hpp"
 #include "../psDomain.hpp"
@@ -13,6 +7,10 @@
 #include "../psRateGrid.hpp"
 
 #include <lsCalculateVisibilities.hpp>
+
+#include <functional>
+#include <string>
+#include <vector>
 
 namespace viennaps {
 
@@ -32,10 +30,11 @@ public:
                         const NumericType dirScale = 1.,
                         const std::vector<Material> &masks = {Material::Mask},
                         bool calcVis = true)
-      : direction(dir), offset(off), isotropicScale(isoScale),
-        directionalScale(dirScale), maskMaterials(masks),
+      : offset(off), direction(dir),
         calculateVisibility(calcVis &&
-                            (dir[0] != 0. || dir[1] != 0. || dir[2] != 0.)) {
+                            (dir[0] != 0. || dir[1] != 0. || dir[2] != 0.)),
+        maskMaterials(masks), isotropicScale(isoScale),
+        directionalScale(dirScale) {
 
     if (!rateGrid.loadFromCSV(ratesFile)) {
       std::cerr << "Error: Failed to load rate grid from " << ratesFile
