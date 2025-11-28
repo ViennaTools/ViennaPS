@@ -544,6 +544,16 @@ class Domain:
         Get the current meta data level of the domain.
         """
 
+    def getNumberOfComponents(self) -> int:
+        """
+        Get the number of connected components in the domain.
+        """
+
+    def getNumberOfLevelSets(self) -> int:
+        """
+        Get the number of level sets in the domain.
+        """
+
     def getSetup(self) -> DomainSetup:
         """
         Get the domain setup.
@@ -588,6 +598,7 @@ class Domain:
 
     def removeLevelSet(self, arg0: typing.SupportsInt, arg1: bool) -> None: ...
     def removeMaterial(self, arg0: viennaps._core.Material) -> None: ...
+    def removeStrayPoints(self) -> None: ...
     def removeTopLevelSet(self) -> None: ...
     def saveHullMesh(
         self, filename: str, wrappingLayerEpsilon: typing.SupportsFloat = 0.01
@@ -1113,7 +1124,7 @@ class MultiParticleProcess(ProcessModel):
         sourcePower: typing.SupportsFloat,
         thetaRMin: typing.SupportsFloat = 0.0,
         thetaRMax: typing.SupportsFloat = 90.0,
-        minAngle: typing.SupportsFloat = 0.0,
+        minAngle: typing.SupportsFloat = 80.0,
         B_sp: typing.SupportsFloat = -1.0,
         meanEnergy: typing.SupportsFloat = 0.0,
         sigmaEnergy: typing.SupportsFloat = 0.0,
@@ -1212,6 +1223,11 @@ class Process:
     def setFluxEngineType(self, arg0: viennaps._core.FluxEngineType) -> None:
         """
         Set the flux engine type (CPU or GPU).
+        """
+
+    def setIntermediateOutputPath(self, path: str) -> None:
+        """
+        Set the path for intermediate output files during the process.
         """
 
     @typing.overload

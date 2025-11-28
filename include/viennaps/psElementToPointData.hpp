@@ -4,13 +4,13 @@
 
 #include <rayParticle.hpp>
 
+#include <utility>
 #include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <numeric>
-#include <stdexcept>
 
 namespace viennaps {
 
@@ -90,14 +90,15 @@ protected:
   static constexpr bool discard4 = d4;
 
 public:
+  virtual ~ElementToPointDataBase() = default;
   ElementToPointDataBase(
-      const IndexMap &indexMap,
+      IndexMap indexMap,
       SmartPointer<viennals::PointData<NumericType>> pointData,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : indexMap_(indexMap), pointData_(pointData),
+      : indexMap_(std::move(indexMap)), pointData_(pointData),
         elementKdTree_(elementKdTree), diskMesh_(diskMesh),
         surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
 
@@ -331,7 +332,7 @@ protected:
     elementData.resize(numData * numElements);
 #pragma omp parallel for schedule(static)
     for (unsigned i = 0; i < numData; ++i) {
-      unsigned offset = i * numElements;
+      const unsigned offset = i * numElements;
       for (unsigned j = 0; j < numElements; ++j) {
         elementData[offset + j] = elementData_[i][j];
       }

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <type_traits>
-
-#include <lsGeometricAdvect.hpp>
 #include <lsGeometricAdvectDistributions.hpp>
 
 #include "../process/psGeometricModel.hpp"

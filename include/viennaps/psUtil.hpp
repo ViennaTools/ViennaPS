@@ -3,16 +3,9 @@
 #include <lsAdvect.hpp>
 #include <lsDomain.hpp>
 #include <rayBoundary.hpp>
-#include <vcUtil.hpp>
 
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <optional>
 #include <regex>
-#include <sstream>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 
 // Use viennacore here to avoid conflicts with other namespaces

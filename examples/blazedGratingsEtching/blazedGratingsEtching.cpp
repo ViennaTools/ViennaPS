@@ -12,12 +12,17 @@ int main(int argc, char **argv) {
   omp_set_num_threads(16);
 
   // Parse the parameters
-  viennacore::util::Parameters params;
+  util::Parameters params;
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    return 1;
+    // Try default config file
+    params.readConfigFile("config.txt");
+    if (params.m.empty()) {
+      std::cout << "No configuration file provided!" << std::endl;
+      std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+      return 1;
+    }
   }
 
   auto geometry = GenerateMask<NumericType, D>(

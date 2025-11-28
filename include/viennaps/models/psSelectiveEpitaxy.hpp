@@ -24,8 +24,8 @@ public:
   EpitaxyVelocityField(
       const std::vector<std::pair<Material, NumericType>> &passedmaterials,
       NumericType r111, NumericType r100)
-      : R111(r111), R100(r100), materials(passedmaterials),
-        factor((R100 - R111) / (high - low)) {}
+      : R111(r111), R100(r100), factor((R100 - R111) / (high - low)),
+        materials(passedmaterials) {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material, const Vec3D<NumericType> &nv,

@@ -67,9 +67,9 @@ public:
              const std::vector<MaterialLayer> &materialLayers,
              bool halfTrench = false)
       : domain_(domain), geometryFactory_(domain->getSetup(), __func__),
-        materialLayers_(materialLayers), trenchWidth_(0), trenchDepth_(0),
-        trenchTaperAngle_(0), maskHeight_(0), maskTaperAngle_(0), base_(0.0),
-        material_(Material::Si), maskMaterial_(Material::Mask) {
+        trenchWidth_(0), trenchDepth_(0), trenchTaperAngle_(0), maskHeight_(0),
+        maskTaperAngle_(0), base_(0.0), material_(Material::Si),
+        materialLayers_(materialLayers) {
     if (halfTrench)
       domain_->getSetup().halveXAxis();
   }

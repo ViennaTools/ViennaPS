@@ -8,8 +8,6 @@
 
 #include <vcContext.hpp>
 
-#include <lsMesh.hpp>
-
 #include <raygTraceDisk.hpp>
 
 namespace viennaps {
@@ -19,10 +17,10 @@ using namespace viennacore;
 template <typename NumericType, int D>
 class GPUDiskEngine final : public FluxEngine<NumericType, D> {
 public:
-  GPUDiskEngine(std::shared_ptr<DeviceContext> deviceContext)
+  explicit GPUDiskEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
 
-  ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
+  ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
 
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
@@ -50,7 +48,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult initialize(ProcessContext<NumericType, D> &context) final {
+  ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
             context.model);
@@ -96,7 +94,8 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
+  ProcessResult
+  updateSurface(ProcessContext<NumericType, D> &context) override {
     this->timer_.start();
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
@@ -156,10 +155,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult
-  calculateFluxes(ProcessContext<NumericType, D> &context,
-                  viennacore::SmartPointer<viennals::PointData<NumericType>>
-                      &fluxes) final {
+  ProcessResult calculateFluxes(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
     auto model =
@@ -204,8 +202,9 @@ public:
                                  context.rayTracingParams.smoothingNeighbors);
       static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.getProcessName() + "_flux_" +
-                                std::to_string(iterations++) + ".vtp")
+          context.intermediateOutputPath + context.diskMesh,
+          context.getProcessName() + "_flux_" + std::to_string(iterations++) +
+              ".vtp")
           .apply();
     }
 

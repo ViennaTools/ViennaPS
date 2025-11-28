@@ -9,7 +9,6 @@
 #include <psgPipelineParameters.hpp>
 #endif
 
-#include <functional>
 #include <random>
 
 namespace viennaps {

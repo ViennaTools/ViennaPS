@@ -1,11 +1,8 @@
 #pragma once
 
 #include <rayParticle.hpp>
-#include <rayReflection.hpp>
-#include <rayUtil.hpp>
 
 #include "../process/psProcessModel.hpp"
-#include "../process/psSurfaceModel.hpp"
 #include "../process/psVelocityField.hpp"
 #include "../psConstants.hpp"
 #include "../psUnits.hpp"

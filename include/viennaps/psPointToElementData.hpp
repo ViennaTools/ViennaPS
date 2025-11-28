@@ -23,6 +23,7 @@ protected:
   const bool insertToMesh_ = false;
 
 public:
+  virtual ~PointToElementDataBase() = default;
   PointToElementDataBase(
       viennals::PointData<NumericType> &pointData,
       KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,

@@ -113,14 +113,14 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 3.8.2
+  VERSION 3.8.3
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMFindPackage(
   NAME ViennaLS
-  VERSION 5.2.0
+  VERSION 5.2.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -187,6 +187,8 @@ endif()
 # --------------------------------------------------------------------------------------------------------
 # Setup Examples
 # --------------------------------------------------------------------------------------------------------
+
+include("cmake/ViennaPSUtils.cmake")
 
 if(VIENNAPS_BUILD_EXAMPLES)
   message(STATUS "[ViennaPS] Building Examples")

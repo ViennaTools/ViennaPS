@@ -506,6 +506,11 @@ template <int D> void bindApi(py::module &module) {
            "only) Level-Sets in the domain.")
       .def("removeLevelSet", &Domain<T, D>::removeLevelSet)
       .def("removeMaterial", &Domain<T, D>::removeMaterial)
+      .def("removeStrayPoints", &Domain<T, D>::removeStrayPoints)
+      .def("getNumberOfComponents", &Domain<T, D>::getNumberOfComponents,
+           "Get the number of connected components in the domain.")
+      .def("getNumberOfLevelSets", &Domain<T, D>::getNumberOfLevelSets,
+           "Get the number of level sets in the domain.")
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
@@ -755,7 +760,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("label") = "neutralFlux")
       .def("addIonParticle", &MultiParticleProcess<T, D>::addIonParticle,
            py::arg("sourcePower"), py::arg("thetaRMin") = 0.,
-           py::arg("thetaRMax") = 90., py::arg("minAngle") = 0.,
+           py::arg("thetaRMax") = 90., py::arg("minAngle") = 80.,
            py::arg("B_sp") = -1., py::arg("meanEnergy") = 0.,
            py::arg("sigmaEnergy") = 0., py::arg("thresholdEnergy") = 0.,
            py::arg("inflectAngle") = 0., py::arg("n") = 1,
@@ -1254,6 +1259,9 @@ template <int D> void bindApi(py::module &module) {
            "Set the process duration.")
       .def("setFluxEngineType", &ProcessTD::setFluxEngineType,
            "Set the flux engine type (CPU or GPU).")
+      .def("setIntermediateOutputPath", &ProcessTD::setIntermediateOutputPath,
+           py::arg("path"),
+           "Set the path for intermediate output files during the process.")
       .def("setParameters",
            (void(ProcessTD::*)(const AdvectionParameters &)) &
                ProcessTD::template setParameters<AdvectionParameters>,

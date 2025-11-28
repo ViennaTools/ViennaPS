@@ -9,9 +9,6 @@
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
-#include <functional>
-#include <random>
-
 #ifdef VIENNACORE_COMPILE_GPU
 #include <psgPipelineParameters.hpp>
 #include <raygCallableConfig.hpp>

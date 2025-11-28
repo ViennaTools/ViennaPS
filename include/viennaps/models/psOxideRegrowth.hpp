@@ -23,14 +23,14 @@ public:
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate, int matId,
                                 const Vec3D<NumericType> &normalVector,
                                 unsigned long pointId) override {
-    auto material = MaterialMap::mapToMaterial(matId);
-    if (material == Material::Si3N4) {
+    if (const auto material = MaterialMap::mapToMaterial(matId);
+        material == Material::Si3N4) {
       return -rate;
     } else if (material == Material::SiO2) {
       return -oxide_rate;
-    } else {
-      return 0.;
     }
+
+    return 0.;
   }
 
 private:

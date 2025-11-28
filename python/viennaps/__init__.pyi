@@ -235,7 +235,7 @@ def setDimension(d: int):
     """
 
 PROXY_DIM: int = 2
-__version__: str = "4.1.1"
+__version__: str = "4.1.2"
 ptxPath: str = ""
-version: str = "4.1.1"
+version: str = "4.1.2"
 _C = _core

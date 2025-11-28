@@ -4,10 +4,7 @@
 #include <rayReflection.hpp>
 #include <rayUtil.hpp>
 
-#include "../process/psProcessModel.hpp"
 #include "../process/psSurfaceModel.hpp"
-#include "../process/psVelocityField.hpp"
-#include "../psConstants.hpp"
 #include "../psUnits.hpp"
 
 #include "psIonModelUtil.hpp"
@@ -24,7 +21,8 @@ public:
   using SurfaceModel<NumericType>::surfaceData;
   const PlasmaEtchingParameters<NumericType> &params;
 
-  PlasmaEtchingSurfaceModel(const PlasmaEtchingParameters<NumericType> &pParams)
+  explicit PlasmaEtchingSurfaceModel(
+      const PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {

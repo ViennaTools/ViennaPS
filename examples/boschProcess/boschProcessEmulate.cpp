@@ -55,14 +55,7 @@ void deposit(SmartPointer<Domain<NumericType, D>> &domain,
 
 void ash(SmartPointer<Domain<NumericType, D>> &domain) {
   domain->removeTopLevelSet();
-}
-
-void cleanup(SmartPointer<Domain<NumericType, D>> &domain,
-             NumericType threshold) {
-  auto expand = SmartPointer<IsotropicProcess<NumericType, D>>::New(threshold);
-  Process<NumericType, D>(domain, expand, 1.).apply();
-  auto shrink = SmartPointer<IsotropicProcess<NumericType, D>>::New(-threshold);
-  Process<NumericType, D>(domain, shrink, 1.).apply();
+  domain->removeStrayPoints();
 }
 
 int main(int argc, char **argv) {
@@ -75,8 +68,13 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    return 1;
+    // Try default config file
+    params.readConfigFile("config.txt");
+    if (params.m.empty()) {
+      std::cout << "No configuration file provided!" << std::endl;
+      std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+      return 1;
+    }
   }
 
   // geometry setup
@@ -109,6 +107,5 @@ int main(int argc, char **argv) {
     geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
   }
 
-  cleanup(geometry, params.get("gridDelta"));
   geometry->saveVolumeMesh("boschProcessEmulate_final");
 }

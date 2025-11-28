@@ -2,7 +2,6 @@
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
-#include <rayUtil.hpp>
 
 #include "../process/psProcessModel.hpp"
 #include "../psUnits.hpp"
