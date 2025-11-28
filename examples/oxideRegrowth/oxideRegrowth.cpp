@@ -18,8 +18,13 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     params.readConfigFile(argv[1]);
   } else {
-    std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
-    return 1;
+    // Try default config file
+    params.readConfigFile("config.txt");
+    if (params.m.empty()) {
+      std::cout << "No configuration file provided!" << std::endl;
+      std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+      return 1;
+    }
   }
 
   const NumericType stability =
