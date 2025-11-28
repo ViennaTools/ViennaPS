@@ -15,7 +15,7 @@ void etch(SmartPointer<Domain<NumericType, D>> domain,
   auto etchModel = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
   etchModel->addNeutralParticle(params.get("neutralStickingProbability"));
   etchModel->addIonParticle(params.get("ionSourceExponent"),
-                            90. /*no reflections*/);
+                            60.0 /*thetaRMin*/);
   const NumericType neutralRate = params.get("neutralRate");
   const NumericType ionRate = params.get("ionRate");
   etchModel->setRateFunction(

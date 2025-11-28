@@ -760,7 +760,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("label") = "neutralFlux")
       .def("addIonParticle", &MultiParticleProcess<T, D>::addIonParticle,
            py::arg("sourcePower"), py::arg("thetaRMin") = 0.,
-           py::arg("thetaRMax") = 90., py::arg("minAngle") = 0.,
+           py::arg("thetaRMax") = 90., py::arg("minAngle") = 80.,
            py::arg("B_sp") = -1., py::arg("meanEnergy") = 0.,
            py::arg("sigmaEnergy") = 0., py::arg("thresholdEnergy") = 0.,
            py::arg("inflectAngle") = 0., py::arg("n") = 1,

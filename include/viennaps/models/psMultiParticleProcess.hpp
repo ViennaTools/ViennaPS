@@ -229,6 +229,7 @@ public:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("MultiParticleProcess");
+    this->hasGPU = true;
 
     // Callables
     std::unordered_map<std::string, unsigned> pMap = {{"Neutral", 0},
@@ -246,6 +247,61 @@ public:
          "__direct_callable__multiIonInit"}};
     this->setParticleCallableMap(pMap, cMap);
     this->setCallableFileName("CallableWrapper");
+  }
+
+  MultiParticleProcess(
+      const std::vector<std::string> &fluxDataLabels,
+      std::unordered_map<std::string, NumericType> const &ionParams,
+      std::unordered_map<std::string, NumericType> const &neutralParams,
+      std::function<NumericType(const std::vector<NumericType> &,
+                                const Material &)>
+          rateFunction) {
+    // surface model
+    auto surfModel = SmartPointer<::viennaps::impl::MultiParticleSurfaceModel<
+        NumericType, D>>::New(fluxDataLabels_);
+    surfModel->rateFunction_ = rateFunction;
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("MultiParticleProcess");
+    this->hasGPU = true;
+
+    // Callables
+    std::unordered_map<std::string, unsigned> pMap = {{"Neutral", 0},
+                                                      {"Ion", 1}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__multiNeutralCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__multiNeutralReflection"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__multiIonCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__multiIonReflection"},
+        {1, viennaray::gpu::CallableSlot::INIT,
+         "__direct_callable__multiIonInit"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
+
+    for (auto const &label : fluxDataLabels) {
+      if (label.find("ion") != std::string::npos) {
+        assert(ionParams.size() > 0 &&
+               "Ion parameters must be provided when adding ion flux.");
+        addIonParticle(ionParams.at("SourcePower"), ionParams.at("ThetaRMin"),
+                       ionParams.at("ThetaRMax"), ionParams.at("MinAngle"),
+                       ionParams.at("B_sp"), ionParams.at("MeanEnergy"),
+                       ionParams.at("SigmaEnergy"),
+                       ionParams.at("ThresholdEnergy"),
+                       ionParams.at("InflectAngle"), ionParams.at("n"), label);
+      } else if (label.find("neutral") != std::string::npos) {
+        assert(neutralParams.size() > 0 &&
+               "Neutral parameters must be provided when adding neutral flux.");
+        addNeutralParticle(neutralParams.at("StickingProbability"), label);
+      }
+    }
   }
 
   void addNeutralParticle(NumericType stickingProbability,
@@ -337,6 +393,8 @@ public:
     surfModel->rateFunction_ = rateFunction;
   }
 
+  ~MultiParticleProcess() { this->processData.free(); }
+
 private:
   std::vector<std::string> fluxDataLabels_;
   using ProcessModelBase<NumericType, D>::processMetaData;
@@ -344,9 +402,15 @@ private:
   void setDirection(viennaray::gpu::Particle<NumericType> &particle) {
     auto direction = this->getPrimaryDirection();
     if (direction.has_value()) {
+      Logger::getInstance()
+          .addDebug("Using custom direction for ion particle: " +
+                    std::to_string(direction.value()[0]) + ", " +
+                    std::to_string(direction.value()[1]) + ", " +
+                    std::to_string(direction.value()[2]) + ")")
+          .print();
       particle.direction = direction.value();
+      particle.useCustomDirection = true;
     }
-    particle.useCustomDirection = true;
   }
 
   void addStickingData(NumericType stickingProbability) {
@@ -452,9 +516,28 @@ public:
     surfModel->rateFunction_ = rateFunction;
   }
 
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
+    if (ionParams_.empty() && neutralParams_.empty()) {
+      Logger::getInstance()
+          .addWarning(
+              "Cannot convert MultiParticleProcess to GPU model without any "
+              "particles added.")
+          .print();
+    }
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::MultiParticleSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    return SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New(
+        fluxDataLabels_, ionParams_, neutralParams_, surfModel->rateFunction_);
+  }
+#endif
+
 private:
   std::vector<std::string> fluxDataLabels_;
   using ProcessModelCPU<NumericType, D>::processMetaData;
+  std::unordered_map<std::string, NumericType> ionParams_;
+  std::unordered_map<std::string, NumericType> neutralParams_;
 
   void addStickingData(NumericType stickingProbability) {
     if (processMetaData.find("StickingProbability") == processMetaData.end()) {
@@ -462,6 +545,7 @@ private:
     } else {
       processMetaData["StickingProbability"].push_back(stickingProbability);
     }
+    neutralParams_["StickingProbability"] = stickingProbability;
   }
 
   void addIonData(std::vector<std::pair<std::string, NumericType>> data) {
@@ -471,6 +555,7 @@ private:
       } else {
         processMetaData[pair.first].push_back(pair.second);
       }
+      ionParams_[pair.first] = pair.second;
     }
   }
 

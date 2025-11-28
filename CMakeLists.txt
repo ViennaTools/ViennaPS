@@ -190,6 +190,8 @@ endif ()
 # Setup Examples
 # --------------------------------------------------------------------------------------------------------
 
+include("cmake/ViennaPSUtils.cmake")
+
 if (VIENNAPS_BUILD_EXAMPLES)
     message(STATUS "[ViennaPS] Building Examples")
     add_subdirectory(examples)

@@ -1119,7 +1119,7 @@ class MultiParticleProcess(ProcessModel):
         sourcePower: typing.SupportsFloat,
         thetaRMin: typing.SupportsFloat = 0.0,
         thetaRMax: typing.SupportsFloat = 90.0,
-        minAngle: typing.SupportsFloat = 0.0,
+        minAngle: typing.SupportsFloat = 80.0,
         B_sp: typing.SupportsFloat = -1.0,
         meanEnergy: typing.SupportsFloat = 0.0,
         sigmaEnergy: typing.SupportsFloat = 0.0,
