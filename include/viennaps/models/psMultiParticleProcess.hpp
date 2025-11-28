@@ -349,6 +349,14 @@ public:
                       NumericType thresholdEnergy = 0.,
                       NumericType inflectAngle = 0., NumericType n = 1,
                       const std::string &label = "ionFlux") {
+    if (ionCount_ > 0) {
+      Logger::getInstance()
+          .addWarning("GPU MultiParticleProcess currently only "
+                      "supports one ion particle type.")
+          .print();
+      return;
+    }
+
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
 
@@ -398,6 +406,7 @@ public:
 private:
   std::vector<std::string> fluxDataLabels_;
   using ProcessModelBase<NumericType, D>::processMetaData;
+  unsigned int ionCount_ = 0;
 
   void setDirection(viennaray::gpu::Particle<NumericType> &particle) {
     auto direction = this->getPrimaryDirection();
@@ -430,6 +439,7 @@ private:
         processMetaData[pair.first].push_back(pair.second);
       }
     }
+    ++ionCount_;
   }
 };
 
