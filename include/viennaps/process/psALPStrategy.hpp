@@ -9,10 +9,9 @@
 namespace viennaps {
 
 template <typename NumericType, int D>
-class ALPStrategy : public ProcessStrategy<NumericType, D> {
+class ALPStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
-private:
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;
   std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine_;
@@ -24,8 +23,8 @@ private:
 public:
   DEFINE_CLASS_NAME(ALPStrategy)
 
-  ALPStrategy() {}
-  ALPStrategy(std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine)
+  ALPStrategy() = default;
+  explicit ALPStrategy(std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine)
       : fluxEngine_(std::move(fluxEngine)) {}
 
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
@@ -55,7 +54,8 @@ public:
   }
 
 private:
-  ProcessResult validateContext(const ProcessContext<NumericType, D> &context) {
+  static ProcessResult
+  validateContext(const ProcessContext<NumericType, D> &context) {
     if (!context.model->getSurfaceModel()) {
       Logger::getInstance()
           .addError("No surface model passed to Atomic Layer Process.")
@@ -229,7 +229,7 @@ private:
       // Perform advection, updates processTime, reduces level set to width 1
       PROCESS_CHECK(advectionHandler_.performAdvection(context));
 
-      context.currentIteration++;
+      ++context.currentIteration;
     }
 
     // Finalize process
@@ -252,8 +252,8 @@ private:
 
   void outputIntermediateResults(
       ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes,
-      unsigned pulseIteration) {
+      SmartPointer<viennals::PointData<NumericType>> const &fluxes,
+      const unsigned pulseIteration) {
     if (Logger::getLogLevel() >= 3) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();

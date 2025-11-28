@@ -2,17 +2,15 @@
 
 #include "../psUnits.hpp"
 #include "psAdvectionHandler.hpp"
-#include "psCoverageManager.hpp"
 #include "psProcessStrategy.hpp"
 
 namespace viennaps {
 
 template <typename NumericType, int D>
-class AnalyticProcessStrategy : public ProcessStrategy<NumericType, D> {
-private:
+class AnalyticProcessStrategy final : public ProcessStrategy<NumericType, D> {
   viennals::ToDiskMesh<NumericType, D> meshConverter_;
   AdvectionHandler<NumericType, D> advectionHandler_;
-  viennacore::Timer<> callbackTimer_;
+  Timer<> callbackTimer_{};
 
 public:
   DEFINE_CLASS_NAME(AnalyticProcessStrategy)
@@ -34,7 +32,8 @@ public:
   }
 
 private:
-  ProcessResult validateContext(const ProcessContext<NumericType, D> &context) {
+  static ProcessResult
+  validateContext(const ProcessContext<NumericType, D> &context) {
     if (!context.model->getVelocityField()) {
       Logger::getInstance()
           .addWarning("No velocity field passed to Process.")
@@ -91,7 +90,7 @@ private:
       // Process one time step
       PROCESS_CHECK(processTimeStep(context));
 
-      context.currentIteration++;
+      ++context.currentIteration;
     }
 
     // Finalize process

@@ -11,10 +11,9 @@
 namespace viennaps {
 
 template <typename NumericType, int D>
-class FluxProcessStrategy : public ProcessStrategy<NumericType, D> {
+class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
-private:
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;
   std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine_;
@@ -23,13 +22,12 @@ private:
   SmartPointer<TranslatorType> translator_ = nullptr;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ = nullptr;
 
-  // Timers
-  viennacore::Timer<> callbackTimer_;
+  Timer<> callbackTimer_{};
 
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
 
-  FluxProcessStrategy() {}
+  FluxProcessStrategy() = default;
   FluxProcessStrategy(std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine)
       : fluxEngine_(std::move(fluxEngine)) {}
 
@@ -85,7 +83,8 @@ public:
   }
 
 private:
-  ProcessResult validateContext(const ProcessContext<NumericType, D> &context) {
+  static ProcessResult
+  validateContext(const ProcessContext<NumericType, D> &context) {
 
     context.model->initialize(context.domain, context.processTime);
 
@@ -132,7 +131,7 @@ private:
           .print();
     }
 
-    // Initialize translation field. Converts points ids from level set points
+    // Initialize translation field. Convert points ids from level set points
     // to surface points
     const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
     Logger::getInstance()
@@ -211,7 +210,7 @@ private:
       // Process one time step
       PROCESS_CHECK(processTimeStep(context));
 
-      context.currentIteration++;
+      ++context.currentIteration;
     }
 
     // Finalize process
@@ -302,7 +301,7 @@ private:
   void outputIntermediateResults(
       ProcessContext<NumericType, D> &context,
       SmartPointer<std::vector<NumericType>> &velocities,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+      const SmartPointer<viennals::PointData<NumericType>> &fluxes) {
     if (Logger::getLogLevel() >=
         static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
       auto const name = context.getProcessName();

@@ -160,7 +160,7 @@ private:
     return nullptr;
   }
 
-  void handleProcessResult(ProcessResult result) {
+  static void handleProcessResult(const ProcessResult result) {
     switch (result) {
     case ProcessResult::SUCCESS:
       // Handle success
@@ -227,7 +227,7 @@ private:
   }
 
 #ifdef VIENNACORE_COMPILE_GPU
-  std::shared_ptr<DeviceContext> getOrCreateDeviceContext() {
+  std::shared_ptr<DeviceContext> getOrCreateDeviceContext() const {
     auto deviceContext = DeviceContext::getContextFromRegistry(gpuDeviceId_);
     if (deviceContext) {
       return deviceContext;

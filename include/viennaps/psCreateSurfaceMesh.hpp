@@ -2,7 +2,6 @@
 
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
-#include <lsToSurfaceMesh.hpp>
 
 #include <rayMesh.hpp>
 
@@ -12,9 +11,9 @@ namespace viennaps {
 
 using namespace viennacore;
 
-viennaray::TriangleMesh
+inline viennaray::TriangleMesh
 CreateTriangleMesh(const float gridDelta,
-                   SmartPointer<viennals::Mesh<float>> &mesh) {
+                   const SmartPointer<viennals::Mesh<float>> &mesh) {
   viennaray::TriangleMesh triangleMesh;
 
   triangleMesh.gridDelta = gridDelta;

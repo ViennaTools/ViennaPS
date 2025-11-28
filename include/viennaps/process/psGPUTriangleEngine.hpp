@@ -29,7 +29,7 @@ public:
   GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
 
-  ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
+  ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
 
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
@@ -57,7 +57,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult initialize(ProcessContext<NumericType, D> &context) final {
+  ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
             context.model);
@@ -103,7 +103,8 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
+  ProcessResult
+  updateSurface(ProcessContext<NumericType, D> &context) override {
     this->timer_.start();
     if (!surfaceMesh_)
       surfaceMesh_ = MeshType::New();
@@ -190,10 +191,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult
-  calculateFluxes(ProcessContext<NumericType, D> &context,
-                  viennacore::SmartPointer<viennals::PointData<NumericType>>
-                      &fluxes) final {
+  ProcessResult calculateFluxes(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
     auto model =
@@ -240,7 +240,7 @@ public:
       if (context.flags.useCoverages) {
         auto coverages = model->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
-                          surfaceMesh_->template getElements<3>().size());
+                          surfaceMesh_->getElements<3>().size());
       }
       downloadResultsToPointData(surfaceMesh_->getCellData());
       static unsigned iterations = 0;

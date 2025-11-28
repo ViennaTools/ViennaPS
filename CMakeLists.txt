@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
-  ViennaPS
-  LANGUAGES CXX C
-  VERSION 4.1.2)
+        ViennaPS
+        LANGUAGES CXX C
+        VERSION 4.1.2)
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -24,8 +24,8 @@ option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish whe
 # --------------------------------------------------------------------------------------------------------
 
 set(VIENNAPS_LOOKUP_DIRS
-    ""
-    CACHE STRING "Directories to account for when searching installed dependencies")
+        ""
+        CACHE STRING "Directories to account for when searching installed dependencies")
 
 list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 
@@ -37,28 +37,28 @@ list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 #   link against the vtk-python libs
 # --------------------------------------------------------------------------------------------------------
 
-if(VIENNAPS_PACKAGE_PYTHON)
-  message(
-    STATUS
-      "[ViennaPS] Using remote packages due to 'VIENNAPS_PACKAGE_PYTHON', the build will take a long time!"
-  )
+if (VIENNAPS_PACKAGE_PYTHON)
+    message(
+            STATUS
+            "[ViennaPS] Using remote packages due to 'VIENNAPS_PACKAGE_PYTHON', the build will take a long time!"
+    )
 
-  # CIBUILDWHEEL is absolutely cursed and won't work when this is turned on.
-  # I don't know why...
-  if(NOT VIENNAPS_IS_CI)
-    set(CPM_DOWNLOAD_ALL ON)
-  endif()
+    # CIBUILDWHEEL is absolutely cursed and won't work when this is turned on.
+    # I don't know why...
+    if (NOT VIENNAPS_IS_CI)
+        set(CPM_DOWNLOAD_ALL ON)
+    endif ()
 
-  set(VIENNAPS_BUILD_PYTHON ON)
-endif()
+    set(VIENNAPS_BUILD_PYTHON ON)
+endif ()
 
-if(VIENNAPS_BUILD_PYTHON)
-  set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
-endif()
+if (VIENNAPS_BUILD_PYTHON)
+    set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
+endif ()
 
-if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:llvm /bigobj")
-endif()
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:llvm /bigobj")
+endif ()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Library
@@ -69,18 +69,18 @@ add_library(ViennaTools::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
 set_target_properties(
-  ${PROJECT_NAME}
-  PROPERTIES CXX_STANDARD 17
-             CXX_EXTENSIONS OFF
-             CXX_STANDARD_REQUIRED ON
-             WINDOWS_EXPORT_ALL_SYMBOLS ON)
+        ${PROJECT_NAME}
+        PROPERTIES CXX_STANDARD 17
+        CXX_EXTENSIONS OFF
+        CXX_STANDARD_REQUIRED ON
+        WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-if(MSVC)
-  # https://learn.microsoft.com/cpp/c-runtime-library/math-constants TODO: In case C++20 is adopted
-  # any time soon: https://cppreference.com/w/cpp/numeric/constants
+if (MSVC)
+    # https://learn.microsoft.com/cpp/c-runtime-library/math-constants TODO: In case C++20 is adopted
+    # any time soon: https://cppreference.com/w/cpp/numeric/constants
 
-  target_compile_definitions(${PROJECT_NAME} INTERFACE _USE_MATH_DEFINES=1)
-endif()
+    target_compile_definitions(${PROJECT_NAME} INTERFACE _USE_MATH_DEFINES=1)
+endif ()
 
 # --------------------------------------------------------------------------------------------------------
 # Include directories
@@ -88,11 +88,11 @@ endif()
 
 # Generate version header
 configure_file("${PROJECT_SOURCE_DIR}/cmake/psVersion.hpp.in"
-               "${PROJECT_SOURCE_DIR}/include/viennaps/psVersion.hpp" @ONLY)
+        "${PROJECT_SOURCE_DIR}/include/viennaps/psVersion.hpp" @ONLY)
 
 target_include_directories(
-  ${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/viennaps>
-                            $<INSTALL_INTERFACE:include/viennaps-${PROJECT_VERSION}>)
+        ${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/viennaps>
+        $<INSTALL_INTERFACE:include/viennaps-${PROJECT_VERSION}>)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Dependencies
@@ -100,130 +100,131 @@ target_include_directories(
 include("cmake/cpm.cmake")
 
 CPMAddPackage(
-  NAME ViennaCore
-  VERSION 1.7.0
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
+        NAME ViennaCore
+        VERSION 1.7.0
+        GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
+        EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+        OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMAddPackage(
-  NAME PackageProject
-  VERSION 1.13.0
-  GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
+        NAME PackageProject
+        VERSION 1.13.0
+        GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
 CPMFindPackage(
-  NAME ViennaRay
-  VERSION 3.8.2
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
+        NAME ViennaRay
+        VERSION 3.8.2
+        GIT_TAG test-boundaries
+        GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
+        EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+        OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMFindPackage(
-  NAME ViennaLS
-  VERSION 5.2.0
-  GIT_TAG num-components
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+        NAME ViennaLS
+        VERSION 5.2.0
+        GIT_TAG num-components
+        GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
+        EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMFindPackage(
-  NAME ViennaCS
-  VERSION 1.1.1
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+        NAME ViennaCS
+        VERSION 1.1.1
+        GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+        EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
-                                                ViennaTools::ViennaRay ViennaTools::ViennaCS)
+        ViennaTools::ViennaRay ViennaTools::ViennaCS)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Shared/Static Library
 # --------------------------------------------------------------------------------------------------------
 
-if(VIENNAPS_PRECOMPILE_HEADERS)
-  set(VIENNAPS_LINKAGE SHARED)
+if (VIENNAPS_PRECOMPILE_HEADERS)
+    set(VIENNAPS_LINKAGE SHARED)
 
-  if(VIENNAPS_STATIC_BUILD)
-    set(VIENNAPS_LINKAGE STATIC)
-  endif()
+    if (VIENNAPS_STATIC_BUILD)
+        set(VIENNAPS_LINKAGE STATIC)
+    endif ()
 
-  set(LIB_NAME "viennaps")
-  add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
+    set(LIB_NAME "viennaps")
+    add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
 
-  target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
-  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)
-  target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp" "lib/specializationsModels.cpp"
-                                     "lib/specializationsGeometries.cpp")
+    target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
+    target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)
+    target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp" "lib/specializationsModels.cpp"
+            "lib/specializationsGeometries.cpp")
 
-  set_target_properties(
-    ${LIB_NAME}
-    PROPERTIES VERSION ${PROJECT_VERSION} # full x.y.z appears in filename
-               SOVERSION ${PROJECT_VERSION_MAJOR} # major version for SONAME
-               WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    set_target_properties(
+            ${LIB_NAME}
+            PROPERTIES VERSION ${PROJECT_VERSION} # full x.y.z appears in filename
+            SOVERSION ${PROJECT_VERSION_MAJOR} # major version for SONAME
+            WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-  target_link_libraries(${PROJECT_NAME} INTERFACE ${LIB_NAME})
-  target_compile_definitions(${PROJECT_NAME} INTERFACE VIENNAPS_USE_PRECOMPILED)
+    target_link_libraries(${PROJECT_NAME} INTERFACE ${LIB_NAME})
+    target_compile_definitions(${PROJECT_NAME} INTERFACE VIENNAPS_USE_PRECOMPILED)
 
-  install(
-    TARGETS ${LIB_NAME}
-    EXPORT ViennaPSTargets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin)
-endif()
+    install(
+            TARGETS ${LIB_NAME}
+            EXPORT ViennaPSTargets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+            RUNTIME DESTINATION bin)
+endif ()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup GPU
 # --------------------------------------------------------------------------------------------------------
 
 # If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
-if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
-  message(STATUS "[ViennaPS] Enabled GPU Support")
-  add_subdirectory(gpu)
-  target_include_directories(${PROJECT_NAME}
-                             INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/include>)
-else()
-  message(STATUS "[ViennaPS] Disabled GPU Support")
-  set(VIENNAPS_USE_GPU OFF)
-endif()
+if (VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+    message(STATUS "[ViennaPS] Enabled GPU Support")
+    add_subdirectory(gpu)
+    target_include_directories(${PROJECT_NAME}
+            INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/include>)
+else ()
+    message(STATUS "[ViennaPS] Disabled GPU Support")
+    set(VIENNAPS_USE_GPU OFF)
+endif ()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Examples
 # --------------------------------------------------------------------------------------------------------
 
-if(VIENNAPS_BUILD_EXAMPLES)
-  message(STATUS "[ViennaPS] Building Examples")
-  add_subdirectory(examples)
-endif()
+if (VIENNAPS_BUILD_EXAMPLES)
+    message(STATUS "[ViennaPS] Building Examples")
+    add_subdirectory(examples)
+endif ()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Tests
 # --------------------------------------------------------------------------------------------------------
 
-if(VIENNAPS_BUILD_TESTS)
-  message(STATUS "[ViennaPS] Building Tests")
+if (VIENNAPS_BUILD_TESTS)
+    message(STATUS "[ViennaPS] Building Tests")
 
-  enable_testing()
-  add_subdirectory(tests)
-endif()
+    enable_testing()
+    add_subdirectory(tests)
+endif ()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Python Bindings
 # --------------------------------------------------------------------------------------------------------
 
-if(VIENNAPS_BUILD_PYTHON)
-  message(STATUS "[ViennaPS] Building Python Bindings")
-  add_subdirectory(python)
-  return()
-endif()
+if (VIENNAPS_BUILD_PYTHON)
+    message(STATUS "[ViennaPS] Building Python Bindings")
+    add_subdirectory(python)
+    return()
+endif ()
 
 # --------------------------------------------------------------------------------------------------------
 # Install Target
 # --------------------------------------------------------------------------------------------------------
 
 packageProject(
-  NAME ${PROJECT_NAME} NAMESPACE ViennaTools
-  VERSION ${PROJECT_VERSION}
-  BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
-  INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS;OpenMP")
+        NAME ${PROJECT_NAME} NAMESPACE ViennaTools
+        VERSION ${PROJECT_VERSION}
+        BINARY_DIR ${PROJECT_BINARY_DIR}
+        INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
+        INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+        DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS;OpenMP")

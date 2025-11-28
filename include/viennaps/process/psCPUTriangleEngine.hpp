@@ -13,9 +13,6 @@ namespace viennaps {
 
 using namespace viennacore;
 
-/// This class server as the main process tool, applying a user- or pre-defined
-/// process model to a domain. Depending on the user inputs surface advection, a
-/// single callback function or a geometric advection is applied.
 template <typename NumericType, int D>
 class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
@@ -23,7 +20,7 @@ class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
-  ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
+  ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
     auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
         context.model);
     if (!model) {
@@ -33,7 +30,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult initialize(ProcessContext<NumericType, D> &context) final {
+  ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
     // Map the domain boundary to the ray tracing boundaries
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     if (context.rayTracingParams.ignoreFluxBoundaries) {
@@ -78,7 +75,8 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
+  ProcessResult
+  updateSurface(ProcessContext<NumericType, D> &context) override {
     this->timer_.start();
     if (!surfaceMesh_)
       surfaceMesh_ = MeshType::New();
@@ -157,10 +155,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult
-  calculateFluxes(ProcessContext<NumericType, D> &context,
-                  viennacore::SmartPointer<viennals::PointData<NumericType>>
-                      &fluxes) final {
+  ProcessResult calculateFluxes(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
     this->timer_.start();
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();

@@ -10,7 +10,6 @@
 
 #include <lsMesh.hpp>
 
-#include <raygTrace.hpp>
 #include <raygTraceLine.hpp>
 
 namespace viennaps {
@@ -24,12 +23,12 @@ class GPULineEngine final : public FluxEngine<NumericType, D> {
   using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
-  GPULineEngine(std::shared_ptr<DeviceContext> deviceContext)
+  explicit GPULineEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {
     assert(D == 2 && "GPULineEngine only supports 2D simulations.");
   }
 
-  ProcessResult checkInput(ProcessContext<NumericType, D> &context) final {
+  ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
 
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
@@ -57,7 +56,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult initialize(ProcessContext<NumericType, D> &context) final {
+  ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
             context.model);
@@ -103,7 +102,8 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult updateSurface(ProcessContext<NumericType, D> &context) final {
+  ProcessResult
+  updateSurface(ProcessContext<NumericType, D> &context) override {
     this->timer_.start();
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
@@ -175,10 +175,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult
-  calculateFluxes(ProcessContext<NumericType, D> &context,
-                  viennacore::SmartPointer<viennals::PointData<NumericType>>
-                      &fluxes) final {
+  ProcessResult calculateFluxes(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
     this->timer_.start();
     auto model =
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
