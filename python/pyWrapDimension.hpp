@@ -1259,6 +1259,9 @@ template <int D> void bindApi(py::module &module) {
            "Set the process duration.")
       .def("setFluxEngineType", &ProcessTD::setFluxEngineType,
            "Set the flux engine type (CPU or GPU).")
+      .def("setIntermediateOutputPath", &ProcessTD::setIntermediateOutputPath,
+           py::arg("path"),
+           "Set the path for intermediate output files during the process.")
       .def("setParameters",
            (void(ProcessTD::*)(const AdvectionParameters &)) &
                ProcessTD::template setParameters<AdvectionParameters>,

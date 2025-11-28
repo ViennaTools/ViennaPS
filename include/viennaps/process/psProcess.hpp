@@ -20,6 +20,8 @@
 
 namespace viennaps {
 
+using namespace viennacore;
+
 #ifdef VIENNACORE_COMPILE_GPU
 inline constexpr bool gpuAvailable() { return true; }
 #else
@@ -75,6 +77,10 @@ public:
   }
 
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
+
+  void setIntermediateOutputPath(const std::string &path) {
+    context_.intermediateOutputPath = path;
+  }
 
   void apply() {
 
@@ -151,7 +157,7 @@ private:
     strategies_.push_back(std::make_unique<ALPStrategy<NumericType, D>>());
   }
 
-  ProcessStrategy<NumericType, D> *findStrategy() {
+  ProcessStrategy<NumericType, D> *findStrategy() const {
     for (auto &strategy : strategies_) {
       if (strategy->canHandle(context_)) {
         return strategy.get();
@@ -192,7 +198,7 @@ private:
   }
 
   // Factory method for creating flux engines
-  std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() {
+  std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() const {
     assert(fluxEngineType_ != FluxEngineType::AUTO &&
            "Flux engine type must be specified before creation.");
     Logger::getInstance()
@@ -210,7 +216,7 @@ private:
   }
 
 private:
-  std::unique_ptr<FluxEngine<NumericType, D>> createGPUFluxEngine() {
+  std::unique_ptr<FluxEngine<NumericType, D>> createGPUFluxEngine() const {
 #ifndef VIENNACORE_COMPILE_GPU
     Logger::getInstance()
         .addError("GPU support not compiled in ViennaPS.")
@@ -249,7 +255,7 @@ private:
   }
 
   std::unique_ptr<FluxEngine<NumericType, D>>
-  createGPUEngineByType(std::shared_ptr<DeviceContext> deviceContext) {
+  createGPUEngineByType(std::shared_ptr<DeviceContext> deviceContext) const {
     switch (fluxEngineType_) {
     case FluxEngineType::GPU_DISK:
       return std::make_unique<GPUDiskEngine<NumericType, D>>(deviceContext);

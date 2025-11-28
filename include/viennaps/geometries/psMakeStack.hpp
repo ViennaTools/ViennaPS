@@ -92,6 +92,7 @@ public:
                   "MakeStack: Trench width or hole radius must be greater "
                   "0 to create mask.")
               .print();
+          return;
         }
         auto cutout = geometryFactory_.makeBoxStencil(
             position, trenchWidth, maskHeight_ + 3 * eps_, -taperAngle_);

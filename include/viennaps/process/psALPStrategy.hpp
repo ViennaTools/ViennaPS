@@ -263,7 +263,7 @@ private:
       if (auto surfaceData = surfaceModel->getSurfaceData())
         mergeScalarData(context.diskMesh->getCellData(), surfaceData);
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, name + "_pulse_" +
+          context.diskMesh, context.intermediateOutputPath + name + "_pulse_" +
                                 std::to_string(context.currentIteration) + "_" +
                                 std::to_string(pulseIteration) + ".vtp")
           .apply();

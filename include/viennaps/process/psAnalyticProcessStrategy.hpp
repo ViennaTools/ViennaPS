@@ -130,13 +130,14 @@ private:
       auto const name = context.getProcessName();
       if (context.domain->getCellSet()) {
         context.domain->getCellSet()->writeVTU(
-            name + "_cellSet_" + std::to_string(context.currentIteration) +
-            ".vtu");
+            context.intermediateOutputPath + name + "_cellSet_" +
+            std::to_string(context.currentIteration) + ".vtu");
       }
       meshConverter_.apply();
       viennals::VTKWriter<NumericType>(
-          context.diskMesh,
-          name + "_" + std::to_string(context.currentIteration) + ".vtp")
+          context.diskMesh, context.intermediateOutputPath + name + "_" +
+                                std::to_string(context.currentIteration) +
+                                ".vtp")
           .apply();
     }
 

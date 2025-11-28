@@ -1225,6 +1225,11 @@ class Process:
         Set the flux engine type (CPU or GPU).
         """
 
+    def setIntermediateOutputPath(self, path: str) -> None:
+        """
+        Set the path for intermediate output files during the process.
+        """
+
     @typing.overload
     def setParameters(self, parameters: viennaps._core.AdvectionParameters) -> None:
         """

@@ -32,6 +32,7 @@ template <typename NumericType, int D> struct ProcessContext {
   RayTracingParameters rayTracingParams;
   CoverageParameters coverageParams;
   AtomicLayerProcessParameters atomicLayerParams;
+  std::string intermediateOutputPath = "";
 
   // Simulation state
   unsigned currentIteration = 0;

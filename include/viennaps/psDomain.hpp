@@ -344,7 +344,7 @@ public:
     }
   }
 
-  std::size_t getNumberOfComponents() const {
+  [[nodiscard]] std::size_t getNumberOfComponents() const {
     if (levelSets_.empty()) {
       Logger::getInstance()
           .addWarning("No Level-Sets in domain. Returning 0 components.")
@@ -412,34 +412,34 @@ public:
   }
 
   // Returns the top Level-Set (surface) in the domain.
-  auto &getSurface() const { return levelSets_.back(); }
+  [[nodiscard]] auto &getSurface() const { return levelSets_.back(); }
 
   // Returns a vector with all Level-Sets in the domain.
-  auto &getLevelSets() const { return levelSets_; }
+  [[nodiscard]] auto &getLevelSets() const { return levelSets_; }
 
-  auto getNumberOfLevelSets() const {
+  [[nodiscard]] auto getNumberOfLevelSets() const {
     return static_cast<unsigned int>(levelSets_.size());
   }
 
   // Returns the material map which contains the specified material for each
   // Level-Set in the domain.
-  auto &getMaterialMap() const { return materialMap_; }
+  [[nodiscard]] auto &getMaterialMap() const { return materialMap_; }
 
-  auto &getCellSet() const { return cellSet_; }
+  [[nodiscard]] auto &getCellSet() const { return cellSet_; }
 
   // Returns the underlying HRLE grid of the top Level-Set in the domain.
-  auto &getGrid() const { return setup_.grid(); }
+  [[nodiscard]] auto &getGrid() const { return setup_.grid(); }
 
-  auto getGridDelta() const { return setup_.gridDelta(); }
+  [[nodiscard]] auto getGridDelta() const { return setup_.gridDelta(); }
 
-  auto &getSetup() { return setup_; }
+  [[nodiscard]] auto &getSetup() { return setup_; }
 
-  auto getMetaData() const { return metaData_; }
+  [[nodiscard]] auto getMetaData() const { return metaData_; }
 
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
-  auto getBoundingBox() const {
-    std::array<Vec3D<NumericType>, 2> boundingBox;
+  [[nodiscard]] auto getBoundingBox() const {
+    std::array<viennacore::Vec3D<NumericType>, 2> boundingBox;
     if (levelSets_.empty()) {
       Logger::getInstance()
           .addWarning("No Level-Sets in domain. Returning empty bounding box.")

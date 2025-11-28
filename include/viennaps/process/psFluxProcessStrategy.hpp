@@ -316,13 +316,14 @@ private:
         mergeScalarData(context.diskMesh->getCellData(), surfaceData);
       mergeScalarData(context.diskMesh->getCellData(), fluxes);
       viennals::VTKWriter<NumericType>(
-          context.diskMesh,
-          name + "_" + std::to_string(context.currentIteration) + ".vtp")
+          context.diskMesh, context.intermediateOutputPath + name + "_" +
+                                std::to_string(context.currentIteration) +
+                                ".vtp")
           .apply();
       if (context.domain->getCellSet()) {
         context.domain->getCellSet()->writeVTU(
-            name + "_cellSet_" + std::to_string(context.currentIteration) +
-            ".vtu");
+            context.intermediateOutputPath + name + "_cellSet_" +
+            std::to_string(context.currentIteration) + ".vtu");
       }
     }
   }
