@@ -56,14 +56,7 @@ void deposit(SmartPointer<Domain<NumericType, D>> domain,
 
 void ash(SmartPointer<Domain<NumericType, D>> domain) {
   domain->removeTopLevelSet();
-}
-
-void cleanup(SmartPointer<Domain<NumericType, D>> domain,
-             NumericType threshold) {
-  auto expand = SmartPointer<IsotropicProcess<NumericType, D>>::New(threshold);
-  Process<NumericType, D>(domain, expand, 1.).apply();
-  auto shrink = SmartPointer<IsotropicProcess<NumericType, D>>::New(-threshold);
-  Process<NumericType, D>(domain, shrink, 1.).apply();
+  domain->removeStrayPoints();
 }
 
 int main(int argc, char **argv) {
@@ -110,6 +103,5 @@ int main(int argc, char **argv) {
     geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
   }
 
-  cleanup(geometry, params.get("gridDelta"));
   geometry->saveVolumeMesh(name + "final");
 }
