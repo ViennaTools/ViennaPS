@@ -34,9 +34,7 @@ public:
 
     for (const auto &row : rawData) {
       if (row.size() != D) {
-        Logger::getInstance()
-            .addWarning("RateGrid: Invalid number of columns in row!")
-            .print();
+        VIENNACORE_LOG_WARNING("RateGrid: Invalid number of columns in row.");
         continue;
       }
 

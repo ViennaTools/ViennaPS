@@ -72,10 +72,8 @@ public:
 
   void apply() {
     if constexpr (D != 3) {
-      Logger::getInstance()
-          .addWarning("MakeHole: Hole geometry can only be created in 3D! "
-                      "Using trench geometry instead.")
-          .print();
+      VIENNACORE_LOG_WARNING("MakeHole: Hole geometry can only be created in "
+                             "3D! Using trench geometry instead.");
       bool halfTrench =
           shape_ == HoleShape::HALF || shape_ == HoleShape::QUARTER;
       MakeTrench<NumericType, D>(domain_, 2 * holeRadius_, holeDepth_,
@@ -92,10 +90,9 @@ public:
 
     if (setup.hasPeriodicBoundary() &&
         (shape_ == HoleShape::HALF || shape_ == HoleShape::QUARTER)) {
-      Logger::getInstance()
-          .addWarning("MakeHole: 'HALF' or 'QUARTER' shapes do not support "
-                      "periodic boundaries! Creating full hole.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "MakeHole: 'HALF' or 'QUARTER' shapes do not support "
+          "periodic boundaries! Creating full hole.");
       shape_ = HoleShape::FULL;
     }
 

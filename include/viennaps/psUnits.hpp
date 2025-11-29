@@ -71,15 +71,11 @@ public:
     case ANGSTROM:
       return 1e-10;
     case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Length unit is not defined.")
-          .print();
+      VIENNACORE_LOG_WARNING("Length unit is not defined.");
       return 1.;
     }
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return 0.;
@@ -99,16 +95,11 @@ public:
       return 1e-7;
     case ANGSTROM:
       return 1e-8;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Length unit is not defined.")
-          .print();
+    case UNDEFINED:
+      VIENNACORE_LOG_WARNING("Length unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return 0.;
@@ -128,16 +119,11 @@ public:
       return 1e-6;
     case ANGSTROM:
       return 1e-7;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Length unit is not defined.")
-          .print();
+    case UNDEFINED:
+      VIENNACORE_LOG_WARNING("Length unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return 0.;
@@ -157,16 +143,11 @@ public:
       return 1e-3;
     case ANGSTROM:
       return 1e-4;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Length unit is not defined.")
-          .print();
+    case UNDEFINED:
+      VIENNACORE_LOG_WARNING("Length unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return 0.;
@@ -186,16 +167,11 @@ public:
       return 1.;
     case ANGSTROM:
       return 1e-1;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Length unit is not defined.")
-          .print();
+    case UNDEFINED:
+      VIENNACORE_LOG_WARNING("Length unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return 0.;
@@ -215,16 +191,11 @@ public:
       return 1e1;
     case ANGSTROM:
       return 1.;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Length unit is not defined.")
-          .print();
+    case UNDEFINED:
+      VIENNACORE_LOG_WARNING("Length unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return 0.;
@@ -247,9 +218,7 @@ public:
     case UNDEFINED:
       return "";
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return "error-length-unit";
@@ -272,9 +241,7 @@ public:
     case UNDEFINED:
       return "";
     default:
-      viennacore::Logger::getInstance()
-          .addError("Invalid length unit.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid length unit.");
     }
 
     return "error-length-unit";
@@ -301,8 +268,8 @@ public:
     } else if (unit == "millisecond" || unit == "ms") {
       unit_ = MILLISECOND;
     } else {
-      throw std::invalid_argument("The value must be one of the following: "
-                                  "second, minute, millisecond");
+      VIENNACORE_LOG_ERROR("The value must be one of the following: "
+                           "second, minute, millisecond");
     }
   }
 
@@ -325,14 +292,11 @@ public:
       return 1. / 60.;
     case MILLISECOND:
       return 1. / 60000.;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Time unit is not defined.")
-          .print();
+    case UNDEFINED:
+      VIENNACORE_LOG_WARNING("Time unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
+      VIENNACORE_LOG_ERROR("Invalid time unit.");
     }
 
     return 0.;
@@ -346,14 +310,11 @@ public:
       return 1.;
     case MILLISECOND:
       return 1e-3;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Time unit is not defined.")
-          .print();
+    case UNDEFINED:
+      VIENNACORE_LOG_WARNING("Time unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
+      VIENNACORE_LOG_ERROR("Invalid time unit.");
     }
 
     return 0.;
@@ -367,14 +328,12 @@ public:
       return 1e3;
     case MILLISECOND:
       return 1.;
-    case UNDEFINED: {
-      viennacore::Logger::getInstance()
-          .addWarning("Time unit is not defined.")
-          .print();
+    case UNDEFINED:
+
+      VIENNACORE_LOG_WARNING("Time unit is not defined.");
       return 1.;
-    }
     default:
-      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
+      VIENNACORE_LOG_ERROR("Invalid time unit.");
     }
 
     return 0.;
@@ -391,7 +350,7 @@ public:
     case UNDEFINED:
       return "";
     default:
-      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
+      VIENNACORE_LOG_ERROR("Invalid time unit.");
     }
 
     return "error-time-unit";
@@ -408,7 +367,7 @@ public:
     case UNDEFINED:
       return "";
     default:
-      viennacore::Logger::getInstance().addError("Invalid time unit.").print();
+      VIENNACORE_LOG_ERROR("Invalid time unit.");
     }
 
     return "error-time-unit";

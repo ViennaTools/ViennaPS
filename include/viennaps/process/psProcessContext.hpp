@@ -63,6 +63,9 @@ template <typename NumericType, int D> struct ProcessContext {
   }
 
   void printFlags() const {
+    if (!Logger::hasDebug())
+      return;
+
     std::stringstream stream;
     stream << "Process Context Flags:";
     stream << "\n\tisGeometric: " << util::boolString(flags.isGeometric)
@@ -79,8 +82,7 @@ template <typename NumericType, int D> struct ProcessContext {
              << model->getProcessName().value_or("default");
       stream << "\n\tHas GPU Model: " << util::boolString(model->hasGPUModel());
     }
-
-    Logger::getInstance().addDebug(stream.str()).print();
+    VIENNACORE_LOG_DEBUG(stream.str());
   }
 
   void resetTime() {

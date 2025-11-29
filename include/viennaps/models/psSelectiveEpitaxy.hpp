@@ -78,20 +78,17 @@ public:
       domainCopy = Domain<NumericType, D>::New(domain);
       const auto numLevelSets = domain->getNumberOfLevelSets();
       if (numLevelSets < 2) {
-        Logger::getInstance()
-            .addError("SelectiveEpitaxy: At least two Level-Sets are required "
-                      "for the selective epitaxy process.")
-            .print();
+        VIENNACORE_LOG_ERROR(
+            "SelectiveEpitaxy: At least two Level-Sets are required for the "
+            "selective epitaxy process.");
       }
 
       auto topMaterial =
           domain->getMaterialMap()->getMaterialAtIdx(numLevelSets - 1);
 
       if (!isEpitaxyMaterial(topMaterial)) {
-        Logger::getInstance()
-            .addError("SelectiveEpitaxy: The top material is not an epitaxy "
-                      "material.")
-            .print();
+        VIENNACORE_LOG_ERROR(
+            "SelectiveEpitaxy: The top material is not an epitaxy material.");
       }
 
       auto levelSets = domain->getLevelSets();
@@ -121,7 +118,7 @@ public:
 
       domain->clear();
       domain->insertNextLevelSetAsMaterial(maskLayer, Material::Mask);
-      if (Logger::getLogLevel() >= 5)
+      if (Logger::hasDebug())
         domain->saveSurfaceMesh("SelectiveEpitaxyMask");
       domain->insertNextLevelSetAsMaterial(domainCopy->getLevelSets().back(),
                                            topMaterial, false);

@@ -141,11 +141,9 @@ public:
       NumericType gasMFP    // mean free path of the particles in the gas
   ) {
     if (gasMFP > 0) {
-      Logger::getInstance()
-          .addWarning(
-              "Mean free path > 0 specified for GPU SingleParticleALD model. "
-              "Currently only ballistic transport is supported.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Mean free path > 0 specified for GPU SingleParticleALD model. "
+          "Currently only ballistic transport is supported.");
       gasMFP = -1;
     }
 

@@ -182,10 +182,9 @@ public:
     }
     levelSets_.push_back(levelSet);
     if (materialMap_) {
-      Logger::getInstance()
-          .addWarning("Inserting non-material specific Level-Set in domain "
-                      "with material mapping.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Inserting non-material specific Level-Set in domain with material "
+          "mapping.");
       materialMapCheck();
     }
   }
@@ -199,10 +198,8 @@ public:
     }
     if (std::abs(levelSet->getGrid().getGridDelta() - setup_.gridDelta()) >
         GRID_DELTA_TOLERANCE) {
-      Logger::getInstance()
-          .addError("Grid delta of Level-Set does not match domain grid "
-                    "delta.")
-          .print();
+      VIENNACORE_LOG_ERROR(
+          "Grid delta of Level-Set does not match domain grid delta.");
     }
     if (!levelSets_.empty() && wrapLowerLevelSet) {
       viennals::BooleanOperation<NumericType, D>(
@@ -221,9 +218,7 @@ public:
   // capture depositing material on top of the surface).
   void duplicateTopLevelSet(const Material material) {
     if (levelSets_.empty()) {
-      Logger::getInstance()
-          .addError("Cannot duplicate Level-Set in empty domain.")
-          .print();
+      VIENNACORE_LOG_ERROR("Cannot duplicate Level-Set in empty domain.");
       return;
     }
 
@@ -270,10 +265,8 @@ public:
 
   void removeLevelSet(unsigned int idx, bool removeWrapped = true) {
     if (idx >= levelSets_.size()) {
-      Logger::getInstance()
-          .addError("Cannot remove Level-Set at index " + std::to_string(idx) +
-                    ". Index out of bounds.")
-          .print();
+      VIENNACORE_LOG_ERROR("Cannot remove Level-Set at index " +
+                           std::to_string(idx) + ". Index out of bounds.");
       return;
     }
 
@@ -346,9 +339,8 @@ public:
 
   [[nodiscard]] std::size_t getNumberOfComponents() const {
     if (levelSets_.empty()) {
-      Logger::getInstance()
-          .addWarning("No Level-Sets in domain. Returning 0 components.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "No Level-Sets in domain. Returning 0 components.");
       return 0;
     }
     auto &surface = getSurface();
@@ -441,9 +433,8 @@ public:
   [[nodiscard]] auto getBoundingBox() const {
     std::array<viennacore::Vec3D<NumericType>, 2> boundingBox;
     if (levelSets_.empty()) {
-      Logger::getInstance()
-          .addWarning("No Level-Sets in domain. Returning empty bounding box.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "No Level-Sets in domain. Returning empty bounding box.");
       return boundingBox;
     }
     auto mesh = viennals::Mesh<NumericType>::New();
@@ -635,10 +626,8 @@ private:
       return;
 
     if (materialMap_->size() != levelSets_.size()) {
-      Logger::getInstance()
-          .addWarning("Size mismatch in material map and number of Level-Sets "
-                      "in domain.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Size mismatch in material map and number of Level-Sets in domain.");
     }
   }
 

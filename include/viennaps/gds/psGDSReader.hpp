@@ -162,17 +162,13 @@ private:
   void parseHeader() {
     short version;
     version = readTwoByteSignedInt();
-    Logger::getInstance()
-        .addDebug("GDS Version: " + std::to_string(version))
-        .print();
+    VIENNACORE_LOG_DEBUG("GDS Version: " + std::to_string(version));
   }
 
   void parseLibName() {
     char *str;
     str = readAsciiString();
-    Logger::getInstance()
-        .addDebug("GDS Library name: " + std::string(str))
-        .print();
+    VIENNACORE_LOG_DEBUG("GDS Library name: " + std::string(str));
     delete[] str;
   }
 
@@ -296,7 +292,7 @@ private:
   void parseFile() {
     filePtr = fopen(fileName.c_str(), "rb");
     if (!filePtr) {
-      Logger::getInstance().addError("Could not open GDS file.").print();
+      VIENNACORE_LOG_ERROR("Could not open GDS file.");
       return;
     }
 
@@ -469,9 +465,7 @@ private:
       case GDS::RecordNumbers::DataType: // unimportant and should be zero
         currentDataType = readTwoByteSignedInt();
         if (currentDataType != 0)
-          Logger::getInstance()
-              .addWarning("Unsupported argument in DATATYPE")
-              .print();
+          VIENNACORE_LOG_WARNING("Unsupported argument in DATATYPE");
         break;
 
       case GDS::RecordNumbers::Node: // ignore
@@ -630,9 +624,7 @@ private:
         break;
 
       default:
-        Logger::getInstance()
-            .addWarning("Unknown record type in GDS file.")
-            .print();
+        VIENNACORE_LOG_WARNING("Unknown record type in GDS file.");
         return;
       }
     }

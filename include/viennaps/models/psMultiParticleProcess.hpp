@@ -3,6 +3,7 @@
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
 #include "../psMaterials.hpp"
+#include "../psUtil.hpp"
 #include "psIonModelUtil.hpp"
 
 #include <rayParticle.hpp>
@@ -350,10 +351,8 @@ public:
                       NumericType inflectAngle = 0., NumericType n = 1,
                       const std::string &label = "ionFlux") {
     if (ionCount_ > 0) {
-      Logger::getInstance()
-          .addWarning("GPU MultiParticleProcess currently only "
-                      "supports one ion particle type.")
-          .print();
+      VIENNACORE_LOG_WARNING("GPU MultiParticleProcess currently only "
+                             "supports one ion particle type.");
       return;
     }
 
@@ -411,12 +410,8 @@ private:
   void setDirection(viennaray::gpu::Particle<NumericType> &particle) {
     auto direction = this->getPrimaryDirection();
     if (direction.has_value()) {
-      Logger::getInstance()
-          .addDebug("Using custom direction for ion particle: " +
-                    std::to_string(direction.value()[0]) + ", " +
-                    std::to_string(direction.value()[1]) + ", " +
-                    std::to_string(direction.value()[2]) + ")")
-          .print();
+      VIENNACORE_LOG_DEBUG("Using custom direction for ion particle: " +
+                           util::arrayToString(direction.value()));
       particle.direction = direction.value();
       particle.useCustomDirection = true;
     }
@@ -529,11 +524,10 @@ public:
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
     if (ionParams_.empty() && neutralParams_.empty()) {
-      Logger::getInstance()
-          .addWarning(
-              "Cannot convert MultiParticleProcess to GPU model without any "
-              "particles added.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Cannot convert MultiParticleProcess to GPU model without any "
+          "particles added.");
+      return nullptr;
     }
     auto surfModel = std::dynamic_pointer_cast<
         impl::MultiParticleSurfaceModel<NumericType, D>>(

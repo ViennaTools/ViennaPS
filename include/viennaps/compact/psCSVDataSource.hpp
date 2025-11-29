@@ -39,10 +39,8 @@ class CSVDataSource : public DataSource<NumericType> {
     if (v.has_value())
       positionalParameters.push_back(v.value());
     else {
-      Logger::getInstance()
-          .addWarning("Error while converting parameter '" + input +
-                      "' to numeric type.")
-          .print();
+      VIENNACORE_LOG_WARNING("Error while converting parameter '" + input +
+                             "' to numeric type.");
     }
   }
 
@@ -59,15 +57,12 @@ class CSVDataSource : public DataSource<NumericType> {
       if (v.has_value())
         namedParameters.insert({smatch[1], v.value()});
       else {
-        Logger::getInstance()
-            .addWarning("Error while converting value of parameter '" +
-                        std::string(smatch[1]) + "'")
-            .print();
+        VIENNACORE_LOG_WARNING("Error while converting value of parameter '" +
+                               std::string(smatch[1]) + "'.");
       }
     } else {
-      Logger::getInstance()
-          .addWarning("Error while parsing parameter line '" + input + "'")
-          .print();
+      VIENNACORE_LOG_WARNING("Error while parsing parameter line '" + input +
+                             "'");
     }
   }
 

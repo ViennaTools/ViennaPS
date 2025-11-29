@@ -57,16 +57,12 @@ private:
   static ProcessResult
   validateContext(const ProcessContext<NumericType, D> &context) {
     if (!context.model->getSurfaceModel()) {
-      Logger::getInstance()
-          .addError("No surface model passed to Atomic Layer Process.")
-          .print();
+      VIENNACORE_LOG_ERROR("No surface model passed to Atomic Layer Process.");
       return ProcessResult::INVALID_INPUT;
     }
 
     if (!context.model->getVelocityField()) {
-      Logger::getInstance()
-          .addError("No velocity field passed to Atomic Layer Process.")
-          .print();
+      VIENNACORE_LOG_ERROR("No velocity field passed to Atomic Layer Process.");
       return ProcessResult::INVALID_INPUT;
     }
 
@@ -116,16 +112,14 @@ private:
     advectionHandler_.setAdvectionTime(1.0); // always advect for one time unit
 
     if (context.flags.useAdvectionCallback) {
-      Logger::getInstance()
-          .addWarning("Advection callbacks are not supported in ALP.")
-          .print();
+      VIENNACORE_LOG_WARNING("Advection callbacks are not supported in ALP.");
     }
 
     // Initialize flux engine
     PROCESS_CHECK(fluxEngine_->checkInput(context));
     PROCESS_CHECK(fluxEngine_->initialize(context));
 
-    if (Logger::getLogLevel() >= 5) {
+    if (Logger::hasDebug()) {
       // debug output
       std::stringstream ss;
       ss << "Atomic Layer Process: " << context.getProcessName() << "\n"
@@ -151,10 +145,8 @@ private:
     const auto purgePulseTime = context.atomicLayerParams.purgePulseTime;
 
     for (int cycle = 0; cycle < numCycles; ++cycle) {
-      Logger::getInstance()
-          .addInfo("Cycle: " + std::to_string(cycle + 1) + "/" +
-                   std::to_string(numCycles))
-          .print();
+      VIENNACORE_LOG_INFO("Cycle: " + std::to_string(cycle + 1) + "/" +
+                          std::to_string(numCycles));
 
       // Prepare advection (expand level set based on integration scheme)
       advectionHandler_.prepareAdvection(context);
@@ -162,9 +154,7 @@ private:
       updateState(context);
       PROCESS_CHECK(fluxEngine_->updateSurface(context));
       if (!coverageManager_.initializeCoverages(context)) {
-        Logger::getInstance()
-            .addWarning("No coverages found in ALP model.")
-            .print();
+        VIENNACORE_LOG_WARNING("No coverages found in ALP model.");
         return ProcessResult::INVALID_INPUT;
       }
 
@@ -189,7 +179,7 @@ private:
         time += context.atomicLayerParams.coverageTimeStep;
         pulseIteration++;
 
-        if (Logger::getLogLevel() >= 2) {
+        if (Logger::hasInfo()) {
           std::stringstream stream;
           stream << std::fixed << std::setprecision(4) << "Pulse time: " << time
                  << " / " << pulseTime << " " << units::Time::toShortString();
@@ -198,10 +188,8 @@ private:
       }
 
       if (purgePulseTime > 0.) {
-        Logger::getInstance()
-            .addWarning(
-                "Purge pulses are not implemented yet. Skipping purge step.")
-            .print();
+        VIENNACORE_LOG_WARNING(
+            "Purge pulses are not implemented yet. Skipping purge step.");
         /// TODO: Implement purge step
       }
 
@@ -216,7 +204,7 @@ private:
       // re-initialized each cycle
 
       // print intermediate output
-      if (Logger::getLogLevel() >= 3) {
+      if (Logger::hasIntermediate()) {
         const auto name = context.getProcessName();
         context.diskMesh->getCellData().insertNextScalarData(*velocities,
                                                              "velocities");
@@ -254,7 +242,7 @@ private:
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> const &fluxes,
       const unsigned pulseIteration) {
-    if (Logger::getLogLevel() >= 3) {
+    if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
       mergeScalarData(context.diskMesh->getCellData(),
@@ -319,6 +307,8 @@ private:
 
   void logProcessingTimes(const ProcessContext<NumericType, D> &context,
                           const viennacore::Timer<> &processTimer) {
+    if (!Logger::hasTiming())
+      return;
     Logger::getInstance()
         .addTiming("\nProcess " + context.getProcessName(),
                    processTimer.currentDuration * 1e-9)

@@ -193,9 +193,8 @@ public:
 
   void setMaterialAtIdx(std::size_t idx, const Material material) {
     if (idx >= size()) {
-      Logger::getInstance()
-          .addError("Setting material with out-of-bounds index.")
-          .print();
+      VIENNACORE_LOG_ERROR("Setting material with out-of-bounds index.");
+      return;
     }
     map_->setMaterialId(idx, static_cast<int>(material));
   }

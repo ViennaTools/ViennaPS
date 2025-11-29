@@ -69,15 +69,11 @@ public:
 
   void apply() {
     if (levelSet == nullptr) {
-      Logger::getInstance()
-          .addError("No level set was passed to CreateSurfaceMesh.")
-          .print();
+      VIENNACORE_LOG_ERROR("No level set was passed to CreateSurfaceMesh.");
       return;
     }
     if (mesh == nullptr) {
-      Logger::getInstance()
-          .addError("No mesh was passed to CreateSurfaceMesh.")
-          .print();
+      VIENNACORE_LOG_ERROR("No mesh was passed to CreateSurfaceMesh.");
       return;
     }
 
@@ -97,10 +93,8 @@ public:
     // test if level set function consists of at least 2 layers of
     // defined grid points
     if (levelSet->getLevelSetWidth() < 2) {
-      Logger::getInstance()
-          .addWarning(
-              "Level-set is less than 2 layers wide. Expanding to 2 layers.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Level-set is less than 2 layers wide. Expanding to 2 layers.");
       viennals::Expand<LsNT, D>(levelSet, 2).apply();
     }
 

@@ -57,9 +57,7 @@ public:
         }
       }
     } else {
-      Logger::getInstance()
-          .addWarning("Couldn't open file '" + filename + "'")
-          .print();
+      VIENNACORE_LOG_WARNING("Couldn't open file '" + filename + "'");
       return {};
     }
     return {header};
@@ -92,11 +90,9 @@ public:
           if (valueOpt)
             a.push_back(valueOpt.value());
           else {
-            Logger::getInstance()
-                .addWarning("Error while reading line " +
-                            std::to_string(lineCount - 1) + " in '" + filename +
-                            "'")
-                .print();
+            VIENNACORE_LOG_WARNING("Error while reading line " +
+                                   std::to_string(lineCount - 1) + " in '" +
+                                   filename + "'");
             return {};
           }
           ++i;
@@ -107,11 +103,9 @@ public:
           numCols = i;
 
         if (i != numCols) {
-          Logger::getInstance()
-              .addWarning("Invalid number of columns in line " +
-                          std::to_string(lineCount - 1) + " in '" + filename +
-                          "'")
-              .print();
+          VIENNACORE_LOG_WARNING("Invalid number of columns in line " +
+                                 std::to_string(lineCount - 1) + " in '" +
+                                 filename + "'");
           return {};
         }
         data.push_back(a);
@@ -119,9 +113,7 @@ public:
       file.close();
       return data;
     } else {
-      Logger::getInstance()
-          .addWarning("Couldn't open file '" + filename + "'")
-          .print();
+      VIENNACORE_LOG_WARNING("Couldn't open file '" + filename + "'");
       return {};
     }
   }

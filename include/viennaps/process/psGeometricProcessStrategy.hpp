@@ -10,7 +10,7 @@ public:
   DEFINE_CLASS_NAME(GeometricProcessStrategy)
 
   ProcessResult execute(ProcessContext<NumericType, D> &context) override {
-    Logger::getInstance().addInfo("Applying geometric model...").print();
+    VIENNACORE_LOG_INFO("Applying geometric model...");
 
     if (static_cast<int>(context.domain->getMetaDataLevel()) > 1) {
       context.domain->clearMetaData();

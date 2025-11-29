@@ -8,6 +8,8 @@
 #include <lsMakeGeometry.hpp>
 #include <lsToSurfaceMesh.hpp>
 
+#include <vcLogger.hpp>
+
 #include <cmath>
 
 namespace viennaps {
@@ -41,7 +43,7 @@ public:
         substrate, viennals::Plane<NumericType, D>::New(origin, normal))
         .apply();
 
-    if (Logger::getInstance().getLogLevel() >= 5) {
+    if (Logger::hasDebug()) {
       saveSurfaceMesh(substrate, "_Substrate");
     }
 
@@ -73,7 +75,7 @@ public:
         mask, maskAdd, viennals::BooleanOperationEnum::INTERSECT)
         .apply();
 
-    if (Logger::getInstance().getLogLevel() >= 5) {
+    if (Logger::hasDebug()) {
       saveSurfaceMesh(mask, "_Mask");
     }
 
@@ -96,7 +98,7 @@ public:
                     position.data(), normal, height, radius, topRadius))
         .apply();
 
-    if (Logger::getInstance().getLogLevel() >= 5) {
+    if (Logger::hasDebug()) {
       static int count = 0;
       saveSurfaceMesh(cutout, "_Cylinder" + std::to_string(count++));
     }
@@ -109,12 +111,10 @@ public:
                               NumericType angle = 0.,
                               NumericType length = -1.) const {
     if (angle >= 90 || angle <= -90) {
-      Logger::getInstance()
-          .addError(name_ +
-                    ": Taper angle must be between -90 and 90 "
-                    "degrees: " +
-                    std::to_string(angle))
-          .print();
+      VIENNACORE_LOG_ERROR(name_ +
+                           ": Taper angle must be between -90 and 90 "
+                           "degrees: " +
+                           std::to_string(angle));
     }
 
     auto cutout = lsDomainType::New(setup_.grid());
@@ -201,7 +201,7 @@ public:
     }
     viennals::FromSurfaceMesh<NumericType, D>(cutout, mesh).apply();
 
-    if (Logger::getInstance().getLogLevel() >= 5) {
+    if (Logger::hasDebug()) {
       static int count = 0;
       saveSurfaceMesh(cutout, "_Box" + std::to_string(count++));
     }

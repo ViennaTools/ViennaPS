@@ -3,8 +3,6 @@
 #include "../psDomain.hpp"
 #include "psGeometryFactory.hpp"
 
-#include <vcLogger.hpp>
-
 namespace viennaps {
 
 using namespace viennacore;
@@ -48,10 +46,8 @@ public:
   void apply() {
     if (add_) {
       if (!domain_->getLevelSets().back()) {
-        Logger::getInstance()
-            .addError("MakePlane: Plane can only be added to already "
-                      "existing geometry.")
-            .print();
+        VIENNACORE_LOG_ERROR(
+            "MakePlane: No existing geometry to add plane to.");
         return;
       }
     } else {

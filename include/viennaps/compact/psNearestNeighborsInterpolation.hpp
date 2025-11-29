@@ -72,19 +72,15 @@ public:
 
   bool initialize() override {
     if (!data || (data && data->empty())) {
-      Logger::getInstance()
-          .addWarning(
-              "NearestNeighborsInterpolation: the provided data is empty.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "NearestNeighborsInterpolation: the provided data is empty.");
       return false;
     }
 
     if (data->at(0).size() != inputDim + outputDim) {
-      Logger::getInstance()
-          .addWarning("NearestNeighborsInterpolation: the sum of the provided "
-                      "InputDimension and OutputDimension does not match the "
-                      "dimension of the provided data.")
-          .print();
+      VIENNACORE_LOG_WARNING("NearestNeighborsInterpolation: the sum of the "
+                             "provided InputDimension and OutputDimension does "
+                             "not match the dimension of the provided data.");
       return false;
     }
 
@@ -106,9 +102,9 @@ public:
   std::optional<std::tuple<ItemType, NumericType>>
   estimate(const ItemType &input) override {
     if (input.size() != inputDim) {
-      Logger::getInstance()
-          .addWarning("NearestNeighborsInterpolation: No input data provided.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "NearestNeighborsInterpolation: the provided input has a different "
+          "dimensionality than expected.");
       return {};
     }
 

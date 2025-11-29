@@ -40,9 +40,7 @@ public:
               BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
       : gridDelta_(gridDelta) {
     if (xExtent <= 0.0) {
-      Logger::getInstance()
-          .addError("Invalid 'x' extent for domain setup.")
-          .print();
+      VIENNACORE_LOG_ERROR("Invalid 'x' extent for domain setup.");
     }
 
     bounds_[0] = -xExtent / 2.;
@@ -50,9 +48,7 @@ public:
 
     if constexpr (D == 3) {
       if (yExtent <= 0.0) {
-        Logger::getInstance()
-            .addError("Invalid 'y' extent for domain setup.")
-            .print();
+        VIENNACORE_LOG_ERROR("Invalid 'y' extent for domain setup.");
       }
       bounds_[2] = -yExtent / 2.;
       bounds_[3] = yExtent / 2.;
@@ -125,10 +121,8 @@ public:
   void halveXAxis() {
     check();
     if (hasPeriodicBoundary()) {
-      Logger::getInstance()
-          .addWarning("Half geometry cannot be created with "
-                      "periodic boundaries!")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Half geometry cannot be created with periodic boundaries.");
     } else {
       bounds_[0] = 0.0;
       init();
@@ -138,10 +132,8 @@ public:
   void halveYAxis() {
     check();
     if (hasPeriodicBoundary()) {
-      Logger::getInstance()
-          .addWarning("Half geometry cannot be created with "
-                      "periodic boundaries!")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Half geometry cannot be created with periodic boundaries.");
     } else {
       bounds_[2] = 0.0;
       init();
@@ -171,9 +163,7 @@ public:
   void check() const {
     if (!isValid()) {
       print();
-      Logger::getInstance()
-          .addError("Domain setup is not correctly initialized.")
-          .print();
+      VIENNACORE_LOG_ERROR("Domain setup is not correctly initialized.");
     }
   }
 };

@@ -58,9 +58,8 @@ public:
   // stored alongside the actual data (e.g. depth at which trench diameters were
   // captured)
   virtual std::vector<NumericType> getPositionalParameters() {
-    Logger::getInstance()
-        .addWarning("This data source does not support positional parameters.")
-        .print();
+    VIENNACORE_LOG_WARNING(
+        "This data source does not support positional parameters.");
     return {};
   }
   void setPositionalParameters(
@@ -70,9 +69,8 @@ public:
 
   // These optional parameters can also be named
   virtual std::unordered_map<std::string, NumericType> getNamedParameters() {
-    Logger::getInstance()
-        .addWarning("This data source does not support named parameters.")
-        .print();
+    VIENNACORE_LOG_WARNING(
+        "This data source does not support named parameters.");
     return {};
   }
 

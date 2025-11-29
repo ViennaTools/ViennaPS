@@ -146,9 +146,7 @@ public:
         return i;
       }
     }
-    Logger::getInstance()
-        .addError("Can not find scalar data label in ProcessParams.")
-        .print();
+    VIENNACORE_LOG_ERROR("Can not find scalar data label in ProcessParams.");
     return -1;
   }
 
@@ -156,10 +154,11 @@ public:
 
   const std::vector<NumericType> &getScalarData() const { return scalarData; }
   [[nodiscard]] std::string getScalarDataLabel(int i) const {
-    if (i >= scalarDataLabels.size())
-      Logger::getInstance()
-          .addError("Getting scalar data label in ProcessParams out of range.")
-          .print();
+    if (i >= scalarDataLabels.size()) {
+      VIENNACORE_LOG_ERROR(
+          "Getting scalar data label in ProcessParams out of range.");
+      return "";
+    }
     return scalarDataLabels[i];
   }
 };

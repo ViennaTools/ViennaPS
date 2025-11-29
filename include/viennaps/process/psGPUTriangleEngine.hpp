@@ -35,22 +35,18 @@ public:
         std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
             context.model);
     if (!model) {
-      Logger::getInstance().addWarning("Invalid GPU process model.").print();
+      VIENNACORE_LOG_WARNING("Invalid GPU process model.");
       return ProcessResult::INVALID_INPUT;
     }
 
     const auto name = context.model->getProcessName().value_or("default");
     if (model->getParticleTypes().empty()) {
-      Logger::getInstance()
-          .addWarning("No particle types in process model: " + name)
-          .print();
+      VIENNACORE_LOG_WARNING("No particle types in process model: " + name);
       return ProcessResult::INVALID_INPUT;
     }
 
     if (model->getCallableFileName().empty()) {
-      Logger::getInstance()
-          .addWarning("No callables in process model: " + name)
-          .print();
+      VIENNACORE_LOG_WARNING("No callables in process model: " + name);
       return ProcessResult::INVALID_INPUT;
     }
 
@@ -65,9 +61,7 @@ public:
       // Check for periodic boundary conditions
       bool periodicBoundary = false;
       if (context.rayTracingParams.ignoreFluxBoundaries) {
-        Logger::getInstance()
-            .addWarning("Ignoring flux boundaries not implemented on GPU.")
-            .print();
+        rayTracer_.setIgnoreBoundary(true);
       } else {
         const auto &grid = context.domain->getGrid();
         for (unsigned i = 0; i < D; ++i) {
@@ -235,8 +229,7 @@ public:
         .apply();
 
     // output
-    if (Logger::getLogLevel() >=
-        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+    if (Logger::hasIntermediate()) {
       if (context.flags.useCoverages) {
         auto coverages = model->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,

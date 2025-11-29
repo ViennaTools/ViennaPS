@@ -129,7 +129,7 @@ public:
         levelSet, topLS, viennals::BooleanOperationEnum::INTERSECT)
         .apply();
 
-    if (Logger::getLogLevel() >= 5) {
+    if (Logger::hasDebug()) {
       auto mesh = viennals::Mesh<NumericType>::New();
       viennals::ToMesh<NumericType, D>(levelSet, mesh).apply();
       viennals::VTKWriter<NumericType>(mesh, "GDS_layer_" +
@@ -148,7 +148,7 @@ public:
 
     // exposureGrid is the final blurred grid to be used for SDF calculation
     // auto exposureGrid = proximity.getExposedGrid();
-    if (lsInternal::Logger::getLogLevel() >= 5)
+    if (Logger::hasDebug())
       proximity.saveGridToCSV("finalGrid.csv");
 
     PointType pointData;
@@ -255,11 +255,9 @@ public:
     // illumination during Gaussians convolution
     gridRefinement = std::ceil(gridRefinement * beamDelta / gridDelta_);
 
-    Logger::getInstance()
-        .addInfo("gridDelta = " + std::to_string(gridDelta_) +
-                 ", beamDelta = " + std::to_string(beamDelta) +
-                 ", gridRefinement = " + std::to_string(gridRefinement))
-        .print();
+    VIENNACORE_LOG_INFO("gridDelta = " + std::to_string(gridDelta_) +
+                        ", beamDelta = " + std::to_string(beamDelta) +
+                        ", gridRefinement = " + std::to_string(gridRefinement));
 
     // Scale sigmas to represent geometry dimensions
     NumericType exposureDelta = beamDelta / gridRefinement;
@@ -314,12 +312,13 @@ private:
     for (auto &str : structures) {
       for (auto &sref : str.sRefs) {
         auto refStr = getStructure(sref.strName);
-        if (refStr)
+        if (refStr) {
+
           refStr->isRef = true;
-        else
-          Logger::getInstance()
-              .addWarning("Missing referenced structure: " + sref.strName)
-              .print();
+        } else {
+          VIENNACORE_LOG_WARNING("Missing referenced structure: " +
+                                 sref.strName);
+        }
       }
     }
   }
@@ -578,7 +577,7 @@ private:
       maskLS->insertPoints(pointData);
       maskLS->finalize(2);
 
-      if (Logger::getLogLevel() >= 5) {
+      if (Logger::hasDebug()) {
         auto mesh = viennals::Mesh<NumericType>::New();
         viennals::ToMesh<NumericType, 2>(maskLS, mesh).apply();
         viennals::VTKWriter<NumericType>(
