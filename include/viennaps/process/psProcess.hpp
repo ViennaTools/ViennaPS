@@ -94,20 +94,15 @@ public:
     // Find appropriate strategy
     auto strategy = findStrategy();
     if (!strategy) {
-      Logger::getInstance()
-          .addError("No suitable strategy found for process configuration.")
-          .print();
+      VIENNACORE_LOG_ERROR(
+          "No suitable strategy found for process configuration.");
       return;
     }
-    Logger::getInstance()
-        .addDebug("Using strategy: " + std::string(strategy->name()))
-        .print();
+    VIENNACORE_LOG_DEBUG("Using strategy: " + std::string(strategy->name()));
 
     if (strategy->requiresFluxEngine()) {
-      Logger::getInstance()
-          .addDebug("Setting up " + to_string(fluxEngineType_) +
-                    " flux engine for strategy.")
-          .print();
+      VIENNACORE_LOG_DEBUG("Setting up " + to_string(fluxEngineType_) +
+                           " flux engine for strategy.");
       strategy->setFluxEngine(createFluxEngine());
     }
 
@@ -129,9 +124,8 @@ public:
     context_.updateFlags();
     const auto name = context_.getProcessName();
     if (!context_.flags.useFluxEngine) {
-      Logger::getInstance()
-          .addError("Process model '" + name + "' does not use flux engine.")
-          .print();
+      VIENNACORE_LOG_ERROR("Process model '" + name +
+                           "' does not use flux engine.");
       return nullptr;
     }
 
@@ -172,27 +166,25 @@ private:
       // Handle success
       break;
     case ProcessResult::EARLY_TERMINATION:
-      Logger::getInstance().addInfo("Process terminated early.").print();
+      VIENNACORE_LOG_INFO("Process terminated early.");
       break;
     case ProcessResult::USER_INTERRUPTED:
-      Logger::getInstance().addInfo("Process interrupted by user.").print();
+      VIENNACORE_LOG_INFO("Process interrupted by user.");
 #ifdef VIENNATOOLS_PYTHON_BUILD
       throw pybind11::error_already_set();
 #endif
       break;
     case ProcessResult::INVALID_INPUT:
-      Logger::getInstance().addError("Invalid input for process.").print();
+      VIENNACORE_LOG_ERROR("Invalid input for process.");
       break;
     case ProcessResult::FAILURE:
-      Logger::getInstance().addError("Process failed.").print();
+      VIENNACORE_LOG_ERROR("Process failed.");
       break;
     case ProcessResult::NOT_IMPLEMENTED:
-      Logger::getInstance()
-          .addError("Process feature not implemented.")
-          .print();
+      VIENNACORE_LOG_ERROR("Process feature not implemented.");
       break;
     case ProcessResult::CONVERGENCE_FAILURE:
-      Logger::getInstance().addError("Process failed to converge.").print();
+      VIENNACORE_LOG_ERROR("Process failed to converge.");
       break;
     }
   }
@@ -201,9 +193,8 @@ private:
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() const {
     assert(fluxEngineType_ != FluxEngineType::AUTO &&
            "Flux engine type must be specified before creation.");
-    Logger::getInstance()
-        .addDebug("Creating flux engine of type: " + to_string(fluxEngineType_))
-        .print();
+    VIENNACORE_LOG_DEBUG("Creating flux engine of type: " +
+                         to_string(fluxEngineType_));
     // Create CPU engine
     if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
@@ -218,9 +209,7 @@ private:
 private:
   std::unique_ptr<FluxEngine<NumericType, D>> createGPUFluxEngine() const {
 #ifndef VIENNACORE_COMPILE_GPU
-    Logger::getInstance()
-        .addError("GPU support not compiled in ViennaPS.")
-        .print();
+    VIENNACORE_LOG_ERROR("GPU support not compiled in ViennaPS.");
     return nullptr;
 #else
     auto deviceContext = getOrCreateDeviceContext();
@@ -239,16 +228,12 @@ private:
       return deviceContext;
     }
 
-    Logger::getInstance()
-        .addInfo("Auto-generating GPU device context.")
-        .print();
+    VIENNACORE_LOG_INFO("Auto-generating GPU device context.");
 
     deviceContext =
         DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
     if (!deviceContext) {
-      Logger::getInstance()
-          .addError("Failed to create GPU device context.")
-          .print();
+      VIENNACORE_LOG_ERROR("Failed to create GPU device context.");
     }
 
     return deviceContext;
@@ -265,17 +250,15 @@ private:
 
     case FluxEngineType::GPU_LINE:
       if constexpr (D == 3) {
-        Logger::getInstance()
-            .addWarning("GPU-Line flux engine not supported in 3D. "
-                        "Fallback to GPU-Triangle engine.")
-            .print();
+        VIENNACORE_LOG_WARNING("GPU-Line flux engine not supported in 3D. "
+                               "Fallback to GPU-Triangle engine.");
         return std::make_unique<GPUTriangleEngine<NumericType, D>>(
             deviceContext);
       }
       return std::make_unique<GPULineEngine<NumericType, D>>(deviceContext);
 
     default:
-      Logger::getInstance().addError("Unsupported flux engine type.").print();
+      VIENNACORE_LOG_ERROR("Unsupported flux engine type.");
       return nullptr;
     }
   }
@@ -284,19 +267,17 @@ private:
 public:
   bool checkInput() {
     if (!context_.domain) {
-      Logger::getInstance().addError("No domain passed to Process.").print();
+      VIENNACORE_LOG_ERROR("No domain passed to Process.");
       return false;
     }
 
     if (context_.domain->getLevelSets().empty()) {
-      Logger::getInstance().addError("No level sets in domain.").print();
+      VIENNACORE_LOG_ERROR("No level sets in domain.");
       return false;
     }
 
     if (!context_.model) {
-      Logger::getInstance()
-          .addError("No process model passed to Process.")
-          .print();
+      VIENNACORE_LOG_ERROR("No process model passed to Process.");
       return false;
     }
 
@@ -307,10 +288,8 @@ public:
       } else {
         fluxEngineType_ = FluxEngineType::CPU_DISK;
       }
-      Logger::getInstance()
-          .addDebug("Auto-selected flux engine type: " +
-                    to_string(fluxEngineType_))
-          .print();
+      VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
+                           to_string(fluxEngineType_));
     }
 
 #ifdef VIENNACORE_COMPILE_GPU
@@ -326,15 +305,11 @@ public:
         // Retry with GPU model if available
         auto gpuModel = context_.model->getGPUModel();
         if (gpuModel) {
-          Logger::getInstance()
-              .addDebug("Switching to GPU-compatible process model.")
-              .print();
+          VIENNACORE_LOG_DEBUG("Switching to GPU-compatible process model.");
           context_.model = gpuModel;
         } else {
-          Logger::getInstance()
-              .addWarning(
-                  "No GPU implementation available for this process model.")
-              .print();
+          VIENNACORE_LOG_WARNING(
+              "No GPU implementation available for this process model.");
           return false;
         }
       }

@@ -45,16 +45,13 @@ public:
 
   void apply() {
     if (!levelSet) {
-      Logger::getInstance()
-          .addError("No level set passed to SurfacePointValuesToLevelSet.")
-          .print();
+      VIENNACORE_LOG_ERROR(
+          "No level set passed to SurfacePointValuesToLevelSet.");
       return;
     }
 
     if (!mesh) {
-      Logger::getInstance()
-          .addError("No mesh passed to SurfacePointValuesToLevelSet.")
-          .print();
+      VIENNACORE_LOG_ERROR("No mesh passed to SurfacePointValuesToLevelSet.");
       return;
     }
 

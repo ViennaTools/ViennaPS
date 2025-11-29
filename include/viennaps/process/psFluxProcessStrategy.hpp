@@ -89,25 +89,18 @@ private:
     context.model->initialize(context.domain, context.processTime);
 
     if (!context.model->getSurfaceModel()) {
-      Logger::getInstance()
-          .addError("No surface model passed to Process.")
-          .print();
+      VIENNACORE_LOG_ERROR("No surface model passed to Process.");
       return ProcessResult::INVALID_INPUT;
     }
 
     if (!context.model->getVelocityField()) {
-      Logger::getInstance()
-          .addError("No velocity field passed to Process.")
-          .print();
+      VIENNACORE_LOG_ERROR("No velocity field passed to Process.");
       return ProcessResult::INVALID_INPUT;
     }
 
-    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::DEBUG)) {
-      Logger::getInstance()
-          .addDebug("Process parameters:" +
-                    util::metaDataToString(context.model->getProcessMetaData()))
-          .print();
-    }
+    VIENNACORE_LOG_DEBUG(
+        "Process parameters:" +
+        util::metaDataToString(context.model->getProcessMetaData()));
 
     return ProcessResult::SUCCESS;
   }
@@ -126,18 +119,14 @@ private:
       meshGenerator_.setMaterialMap(
           context.domain->getMaterialMap()->getMaterialMap());
     } else {
-      Logger::getInstance()
-          .addWarning("No valid material map found in domain.")
-          .print();
+      VIENNACORE_LOG_WARNING("No valid material map found in domain.");
     }
 
     // Initialize translation field. Convert points ids from level set points
     // to surface points
     const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
-    Logger::getInstance()
-        .addDebug("Using translation field method: " +
-                  std::to_string(translationMethod))
-        .print();
+    VIENNACORE_LOG_DEBUG("Using translation field method: " +
+                         std::to_string(translationMethod));
     context.translationField =
         SmartPointer<TranslationField<NumericType, D>>::New(
             context.model->getVelocityField(), context.domain->getMaterialMap(),
@@ -160,14 +149,14 @@ private:
     if (coverageManager_.initializeCoverages(context)) {
       if (!context.coverageParams.initialized) {
         context.flags.useCoverages = true;
-        Logger::getInstance().addInfo("Using coverages.").print();
+        VIENNACORE_LOG_INFO("Using coverages.");
 
         // Translator is needed to map coverage values to level set points
         if (!translator_)
           translator_ = SmartPointer<TranslatorType>::New();
         meshGenerator_.setTranslator(translator_);
       } else {
-        Logger::getInstance().addInfo("Coverages reinitialized.").print();
+        VIENNACORE_LOG_INFO("Coverages reinitialized.");
       }
     }
     context.model->getSurfaceModel()->initializeSurfaceData(
@@ -287,7 +276,7 @@ private:
       }
     }
 
-    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::INFO)) {
+    if (Logger::hasInfo()) {
       std::stringstream stream;
       stream << std::fixed << std::setprecision(4)
              << "Process time: " << context.processTime << " / "
@@ -302,8 +291,7 @@ private:
       ProcessContext<NumericType, D> &context,
       SmartPointer<std::vector<NumericType>> &velocities,
       const SmartPointer<viennals::PointData<NumericType>> &fluxes) {
-    if (Logger::getLogLevel() >=
-        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+    if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
       context.diskMesh->getCellData().insertNextScalarData(*velocities,
@@ -388,16 +376,14 @@ private:
     if (maxIterations == std::numeric_limits<unsigned>::max() &&
         context.coverageParams.tolerance == 0.) {
       maxIterations = 10;
-      Logger::getInstance()
-          .addWarning("No coverage initialization parameters set. Using " +
-                      std::to_string(maxIterations) +
-                      " initialization iterations.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "No coverage initialization parameters set. Using " +
+          std::to_string(maxIterations) + " initialization iterations.");
     }
 
     Timer timer;
     timer.start();
-    Logger::getInstance().addInfo("Initializing coverages ... ").print();
+    VIENNACORE_LOG_INFO("Initializing coverages ...");
 
     fluxEngine_->updateSurface(context);
     for (unsigned iteration = 0; iteration < maxIterations; ++iteration) {
@@ -414,7 +400,7 @@ private:
 
       updateCoverages(context, fluxes);
 
-      if (Logger::getLogLevel() >= 3) {
+      if (Logger::hasIntermediate()) {
         auto coverages = context.model->getSurfaceModel()->getCoverages();
         mergeScalarData(context.diskMesh->getCellData(), coverages);
         mergeScalarData(context.diskMesh->getCellData(), fluxes);
@@ -428,16 +414,14 @@ private:
       }
 
       if (coverageManager_.checkCoveragesConvergence(context)) {
-        Logger::getInstance()
-            .addInfo("Coverages converged after " +
-                     std::to_string(iteration + 1) + " iterations.")
-            .print();
+        VIENNACORE_LOG_INFO("Coverages converged after " +
+                            std::to_string(iteration + 1) + " iterations.");
         break;
       }
     }
     context.coverageParams.initialized = true;
     timer.finish();
-    Logger::getInstance().addTiming("Coverage initialization", timer).print();
+    VIENNACORE_LOG_TIMING("Coverage initialization", timer);
   }
 
   static void
@@ -452,6 +436,9 @@ private:
 
   void logProcessingTimes(const ProcessContext<NumericType, D> &context,
                           const viennacore::Timer<> &processTimer) {
+    if (!Logger::hasTiming())
+      return;
+
     Logger::getInstance()
         .addTiming("\nProcess " + context.getProcessName(),
                    processTimer.currentDuration * 1e-9)

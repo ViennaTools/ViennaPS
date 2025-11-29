@@ -39,9 +39,9 @@ public:
 
   void apply() {
     if (!dist) {
-      Logger::getInstance()
-          .addError("No GeometricAdvectDistribution passed to GeometricModel.")
-          .print();
+      VIENNACORE_LOG_ERROR(
+          "No GeometricAdvectDistribution passed to GeometricModel.");
+      return;
     }
 
     viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),

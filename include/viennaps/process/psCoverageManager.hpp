@@ -52,7 +52,7 @@ public:
       stream << coverages->getScalarDataLabel(i) << ": " << deltaMetric[i]
              << "\t";
     }
-    Logger::getInstance().addInfo(stream.str()).print();
+    VIENNACORE_LOG_INFO(stream.str());
 
     for (auto val : deltaMetric) {
       if (val > context.coverageParams.tolerance)
@@ -86,7 +86,7 @@ private:
   }
 
   void logMetric(const std::vector<NumericType> &metric) {
-    if (Logger::getLogLevel() < 5)
+    if (!Logger::hasDebug())
       return;
 
     if (!covMetricFile_.is_open()) {

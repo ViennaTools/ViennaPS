@@ -48,14 +48,11 @@ public:
 
   void apply() {
     if (inputDomain == nullptr) {
-      Logger::getInstance()
-          .addError("No input domain supplied to Slice.")
-          .print();
+      VIENNACORE_LOG_ERROR("No input domain supplied to Slice.");
+      return;
     }
     if (outputDomain == nullptr) {
-      Logger::getInstance()
-          .addError("No output domain supplied to Slice.")
-          .print();
+      VIENNACORE_LOG_ERROR("No output domain supplied to Slice.");
       return;
     }
 
@@ -70,7 +67,7 @@ public:
 
       auto tmpLS = slicer.getSliceLevelSet();
 
-      if (Logger::getLogLevel() >= 5) {
+      if (Logger::hasDebug()) {
         auto mesh = viennals::Mesh<NumericType>::New();
         viennals::ToMesh<NumericType, 2>(tmpLS, mesh).apply();
         viennals::VTKWriter<NumericType>(mesh, "Slice_layer_" +

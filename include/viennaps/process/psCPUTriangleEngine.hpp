@@ -24,7 +24,7 @@ public:
     auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
         context.model);
     if (!model) {
-      Logger::getInstance().addWarning("Invalid process model.").print();
+      VIENNACORE_LOG_WARNING("Invalid process model.");
       return ProcessResult::INVALID_INPUT;
     }
     return ProcessResult::SUCCESS;
@@ -60,13 +60,11 @@ public:
 
     if (auto source = model->getSource()) {
       rayTracer_.setSource(source);
-      Logger::getInstance().addInfo("Using custom source.").print();
+      VIENNACORE_LOG_INFO("Using custom source.");
     }
     if (auto primaryDirection = model->getPrimaryDirection()) {
-      Logger::getInstance()
-          .addInfo("Using primary direction: " +
-                   util::arrayToString(primaryDirection.value()))
-          .print();
+      VIENNACORE_LOG_INFO("Using primary direction: " +
+                          util::arrayToString(primaryDirection.value()));
       rayTracer_.setPrimaryDirection(primaryDirection.value());
     }
 
@@ -178,8 +176,7 @@ public:
       viennals::PointData<NumericType> elementData;
       PointToElementData<NumericType, float>(
           elementData, surfaceModel->getCoverages(), *pointKdTree, surfaceMesh_,
-          Logger::getLogLevel() >=
-              static_cast<unsigned>(LogLevel::INTERMEDIATE))
+          Logger::hasIntermediate())
           .apply();
       // Move data from PointData to TracingData
       rayTracingData = MovePointDataToRayData(elementData);
@@ -202,9 +199,7 @@ public:
     runRayTracer(context, fluxes);
 
     // output
-    if (Logger::getLogLevel() >=
-            static_cast<unsigned>(LogLevel::INTERMEDIATE) &&
-        D == 3) {
+    if (Logger::hasIntermediate() && D == 3) {
       static unsigned iterations = 0;
       viennals::VTKWriter<float>(surfaceMesh_,
                                  context.intermediateOutputPath +
@@ -241,20 +236,14 @@ private:
 
       auto info = rayTracer_.getRayTraceInfo();
 
-      if (Logger::getLogLevel() >= 5) {
-        Logger::getInstance()
-            .addDebug(
-                "Particle " + std::to_string(particleIdx) +
-                "\n\tRays Traced: " + std::to_string(info.totalRaysTraced) +
-                "\n\tNon-Geometry Hits: " +
-                std::to_string(info.nonGeometryHits) +
-                "\n\tGeometry Hits: " + std::to_string(info.geometryHits) +
-                "\n\tParticle Hits: " + std::to_string(info.particleHits) +
-                (info.warning
-                     ? "\n\tWarning during ray tracing."
-                     : (info.error ? "\n\tError during ray tracing." : "")))
-            .print();
-      }
+      VIENNACORE_LOG_DEBUG(
+          "Particle " + std::to_string(particleIdx) +
+          "\n\tRays Traced: " + std::to_string(info.totalRaysTraced) +
+          "\n\tNon-Geometry Hits: " + std::to_string(info.nonGeometryHits) +
+          "\n\tGeometry Hits: " + std::to_string(info.geometryHits) +
+          "\n\tParticle Hits: " + std::to_string(info.particleHits) +
+          (info.warning ? "\n\tWarning during ray tracing."
+                        : (info.error ? "\n\tError during ray tracing." : "")));
 
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();
@@ -267,8 +256,7 @@ private:
                                  context.rayTracingParams.normalizationType);
 
         // output
-        if (Logger::getLogLevel() >=
-            static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+        if (Logger::hasIntermediate()) {
           std::vector<float> debugFlux(flux.size());
           for (size_t j = 0; j < flux.size(); ++j) {
             debugFlux[j] = static_cast<float>(flux[j]);

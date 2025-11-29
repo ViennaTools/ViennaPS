@@ -66,9 +66,8 @@ class RectilinearGridInterpolation : public ValueEstimator<NumericType, bool> {
           uniqueValues[axis].insert((start + i)->at(axis));
 
           if (rangeSize != i - tmp) {
-            Logger::getInstance()
-                .addWarning("Data is not arranged in a rectilinear grid!")
-                .print();
+            VIENNACORE_LOG_WARNING(
+                "Data is not arranged in a rectilinear grid!");
             equalSize = false;
             return false;
           }
@@ -93,20 +92,15 @@ public:
 
   bool initialize() override {
     if (!data || (data && data->empty())) {
-      Logger::getInstance()
-          .addWarning(
-              "RectilinearGridInterpolation: the provided data is empty.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "RectilinearGridInterpolation: the provided data is empty.");
       return false;
     }
 
     if (data->at(0).size() != inputDim + outputDim) {
-      Logger::getInstance()
-          .addWarning(
-              "psNearestNeighborsInterpolation: the sum of the provided "
-              "InputDimension and OutputDimension does not match the "
-              "dimension of the provided data.")
-          .print();
+      VIENNACORE_LOG_WARNING("RectilinearGridInterpolation: the sum of the "
+                             "provided InputDimension and OutputDimension does "
+                             "not match the dimension of the provided data.");
       return false;
     }
 
@@ -119,18 +113,16 @@ public:
     auto equalSize = rearrange(localData.begin(), localData.end(), 0, true);
 
     if (!equalSize) {
-      Logger::getInstance()
-          .addWarning("Data is not arranged in a rectilinear grid!")
-          .print();
+      VIENNACORE_LOG_WARNING("Data is not arranged in a rectilinear grid!");
       return false;
     }
 
     for (int i = 0; i < inputDim; ++i)
       if (uniqueValues[i].empty()) {
-        Logger::getInstance()
-            .addWarning("The grid has no values along dimension " +
-                        std::to_string(i))
-            .print();
+        VIENNACORE_LOG_WARNING(
+            "RectilinearGridInterpolation: The grid has no values along "
+            "dimension " +
+            std::to_string(i));
         return false;
       }
 

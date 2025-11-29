@@ -4,6 +4,7 @@
 
 #include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
+#include "../psUtil.hpp"
 
 #ifdef VIENNACORE_COMPILE_GPU
 #include <psgPipelineParameters.hpp>
@@ -54,14 +55,9 @@ public:
     if constexpr (D == 2)
       std::swap(direction[1], direction[2]);
 
-    if (Logger::getLogLevel() >= 5) {
-      Logger::getInstance()
-          .addDebug("FaradayCageEtching: Source direction 1: " +
-                    std::to_string(direction[0]) + " " +
-                    std::to_string(direction[1]) + " " +
-                    std::to_string(direction[2]))
-          .print();
-    }
+    VIENNACORE_LOG_DEBUG("FaradayCageEtching: Source direction 1: " +
+                         util::arrayToString(direction));
+
     orthoBasis1_ = rayInternal::getOrthonormalBasis(direction);
 
     direction[0] = cosTilt * cage_y;
@@ -70,14 +66,9 @@ public:
     if constexpr (D == 2)
       std::swap(direction[1], direction[2]);
 
-    if (Logger::getLogLevel() >= 5) {
-      Logger::getInstance()
-          .addDebug("FaradayCageEtching: Source direction 2: " +
-                    std::to_string(direction[0]) + " " +
-                    std::to_string(direction[1]) + " " +
-                    std::to_string(direction[2]))
-          .print();
-    }
+    VIENNACORE_LOG_DEBUG("FaradayCageEtching: Source direction 2: " +
+                         util::arrayToString(direction));
+
     orthoBasis2_ = rayInternal::getOrthonormalBasis(direction);
   }
 
@@ -339,7 +330,7 @@ public:
         params_.ibeParams.exponent);
     this->setSource(source);
 
-    if (Logger::getLogLevel() >= 5)
+    if (Logger::hasDebug())
       source->saveSourcePlane();
 
     if (firstInit)
@@ -352,10 +343,9 @@ public:
                         viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY)) ||
         (D == 2 && boundaryConditions[0] !=
                        viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY)) {
-      Logger::getInstance()
-          .addWarning("FaradayCageEtching: Periodic boundary conditions are "
-                      "required for the Faraday Cage Etching process.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "FaradayCageEtching: Periodic boundary conditions are required for "
+          "the Faraday Cage Etching process.");
     }
 
     firstInit = true;

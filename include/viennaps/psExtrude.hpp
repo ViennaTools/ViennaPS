@@ -58,14 +58,11 @@ public:
 
   void apply() {
     if (inputDomain == nullptr) {
-      Logger::getInstance()
-          .addError("No input domain supplied to Extrude.")
-          .print();
+      VIENNACORE_LOG_ERROR("No input domain supplied to Extrude.");
+      return;
     }
     if (outputDomain == nullptr) {
-      Logger::getInstance()
-          .addError("No output domain supplied to Extrude.")
-          .print();
+      VIENNACORE_LOG_ERROR("No output domain supplied to Extrude.");
       return;
     }
 
@@ -78,7 +75,7 @@ public:
                                      extent, extrusionAxis, boundaryConds)
           .apply();
 
-      if (Logger::getLogLevel() >= 5) {
+      if (Logger::hasDebug()) {
         auto mesh = viennals::Mesh<NumericType>::New();
         viennals::ToMesh<NumericType, 3>(tmpLS, mesh).apply();
         viennals::VTKWriter<NumericType>(mesh, "extrude_layer_" +

@@ -82,10 +82,8 @@ template <typename NumericType> struct FluorocarbonParameters {
       if (m.id == material)
         return m;
     }
-    Logger::getInstance()
-        .addError("Material '" + MaterialMap::toString(material) +
-                  "' not found in fluorocarbon model parameters.")
-        .print();
+    VIENNACORE_LOG_ERROR("Material '" + MaterialMap::toString(material) +
+                         "' not found in fluorocarbon model parameters.");
     return MaterialParameters{};
   }
 
@@ -151,7 +149,7 @@ public:
   }
 
   void initializeSurfaceData(unsigned numGeometryPoints) override {
-    if (Logger::getLogLevel() >= 3) {
+    if (Logger::hasIntermediate()) {
       if (surfaceData == nullptr) {
         surfaceData = viennals::PointData<NumericType>::New();
       } else {
@@ -186,7 +184,7 @@ public:
     // save the etch rate components for visualization
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
                              *chRate = nullptr;
-    if (Logger::getLogLevel() >= 3) {
+    if (Logger::hasIntermediate()) {
       ieRate = surfaceData->getScalarData("ionEnhancedRate");
       spRate = surfaceData->getScalarData("sputterRate");
       chRate = surfaceData->getScalarData("chemicalRate");
@@ -247,7 +245,7 @@ public:
              ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i))) *
             unitConversion;
 
-        if (Logger::getLogLevel() >= 3) {
+        if (Logger::hasIntermediate()) {
           chRate->at(i) = F_ev * eCoverage->at(i);
           spRate->at(i) =
               ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i));
@@ -260,7 +258,7 @@ public:
 
     if (etchStop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
-      Logger::getInstance().addInfo("Etch stop depth reached.").print();
+      VIENNACORE_LOG_INFO("Etch stop depth reached.");
     }
 
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
@@ -503,13 +501,11 @@ private:
     // check if units have been set
     if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
         units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
-      Logger::getInstance().addError("Units have not been set.").print();
+      VIENNACORE_LOG_ERROR("Units have not been set.");
     }
 
     if (params_.materials.empty()) {
-      Logger::getInstance()
-          .addWarning("No materials have been set in the parameters.")
-          .print();
+      VIENNACORE_LOG_WARNING("No materials have been set in the parameters.");
     }
 
     // particles
