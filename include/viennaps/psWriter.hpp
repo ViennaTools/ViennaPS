@@ -46,24 +46,19 @@ public:
   void apply() {
     // check domain
     if (domain == nullptr) {
-      Logger::getInstance()
-          .addError("No domain was passed to Writer. Not writing.")
-          .print();
+      VIENNACORE_LOG_ERROR("No domain was passed to Writer. Not writing.");
       return;
     }
 
     // check filename
     if (fileName.empty()) {
-      Logger::getInstance()
-          .addError("No file name specified for Writer. Not writing.")
-          .print();
+      VIENNACORE_LOG_ERROR("No file name specified for Writer. Not writing.");
       return;
     }
 
     if (fileName.find(".vpsd") != fileName.length() - 5) {
-      Logger::getInstance()
-          .addWarning("File name does not end in '.vpsd', appending it.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "File name does not end in '.vpsd', appending it.");
       fileName.append(".vpsd");
     }
 
@@ -118,9 +113,8 @@ public:
       // Serialize cell set
       // This would require implementing serialization for the cell set
       // For now, just include a placeholder for future implementation
-      Logger::getInstance()
-          .addWarning("CellSet serialization not yet implemented in psWriter.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "CellSet serialization not yet implemented in psWriter.");
     }
 
     fout.close();

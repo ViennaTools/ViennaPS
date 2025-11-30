@@ -109,6 +109,8 @@ inline NumericType updateEnergy(RNG &rng, NumericType E, NumericType incAngle,
   } else {
     Eref_peak = A_energy * std::pow(incAngle / inflectAngle, n_l);
   }
+  assert(Eref_peak >= NumericType(0) && Eref_peak <= NumericType(1) &&
+         "Eref_peak out of bounds");
 
   // Normal distribution around the Eref_peak
   std::normal_distribution<NumericType> normalDist(Eref_peak * E, 0.1 * E);

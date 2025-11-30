@@ -38,7 +38,7 @@ public:
   }
 
   void initializeSurfaceData(unsigned numGeometryPoints) override {
-    if (Logger::getLogLevel() > 3) {
+    if (Logger::hasIntermediate()) {
       if (surfaceData == nullptr) {
         surfaceData = viennals::PointData<NumericType>::New();
       } else {
@@ -71,7 +71,7 @@ public:
     // save the etch rate components for visualization
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
                              *chRate = nullptr;
-    if (Logger::getLogLevel() > 3) {
+    if (Logger::hasIntermediate()) {
       ieRate = surfaceData->getScalarData("ionEnhancedRate");
       spRate = surfaceData->getScalarData("sputterRate");
       chRate = surfaceData->getScalarData("chemicalRate");
@@ -110,7 +110,7 @@ public:
         etchRate[i] = -(1 / params.SiGe.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
-        if (Logger::getLogLevel() > 3) {
+        if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
           chRate->at(i) = chemicalRate;
@@ -122,7 +122,7 @@ public:
         etchRate[i] = -(1 / params.Si.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
-        if (Logger::getLogLevel() > 3) {
+        if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
           chRate->at(i) = chemicalRate;
@@ -130,7 +130,7 @@ public:
       } else { // Mask
                // if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
         etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
-        if (Logger::getLogLevel() > 3) {
+        if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
@@ -140,7 +140,7 @@ public:
 
     if (stop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
-      Logger::getInstance().addInfo("Etch stop depth reached.").print();
+      VIENNACORE_LOG_INFO("Etch stop depth reached.");
     }
 
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
@@ -620,7 +620,7 @@ private:
     // check if units have been set
     if (units::Length::getUnit() == units::Length::UNDEFINED ||
         units::Time::getUnit() == units::Time::UNDEFINED) {
-      Logger::getInstance().addError("Units have not been set.").print();
+      VIENNACORE_LOG_ERROR("Units have not been set.");
     }
 
     // particles

@@ -37,7 +37,7 @@ public:
   }
 
   void initializeSurfaceData(unsigned numGeometryPoints) override {
-    if (Logger::getLogLevel() > 3) {
+    if (Logger::hasIntermediate()) {
       if (surfaceData == nullptr) {
         surfaceData = viennals::PointData<NumericType>::New();
       } else {
@@ -73,7 +73,7 @@ public:
     // save the etch rate components for visualization
     std::vector<NumericType> *ieRate = nullptr, *spRate = nullptr,
                              *chRate = nullptr;
-    if (Logger::getLogLevel() > 3) {
+    if (Logger::hasIntermediate()) {
       ieRate = surfaceData->getScalarData("ionEnhancedRate");
       spRate = surfaceData->getScalarData("sputterRate");
       chRate = surfaceData->getScalarData("chemicalRate");
@@ -104,14 +104,14 @@ public:
 
       if (MaterialMap::isHardmask(materialIds[i])) {
         etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
-        if (Logger::getLogLevel() > 3) {
+        if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
       } else if (MaterialMap::isMaterial(materialIds[i], Material::Polymer)) {
         etchRate[i] = -(1 / params.Polymer.rho) * sputterRate * unitConversion;
-        if (Logger::getLogLevel() > 3) {
+        if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
@@ -120,7 +120,7 @@ public:
         etchRate[i] = -(1 / params.Substrate.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
-        if (Logger::getLogLevel() > 3) {
+        if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
           chRate->at(i) = chemicalRate;
@@ -130,7 +130,7 @@ public:
 
     if (stop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
-      Logger::getInstance().addInfo("Etch stop depth reached.").print();
+      VIENNACORE_LOG_INFO("Etch stop depth reached.");
     }
 
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));

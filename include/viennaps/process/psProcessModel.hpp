@@ -45,9 +45,7 @@ public:
                         const NumericType processedDuration) {}
   virtual bool useFluxEngine() { return false; }
   virtual SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() {
-    Logger::getInstance()
-        .addWarning("Cannot convert CPU model to GPU model.")
-        .print();
+    VIENNACORE_LOG_WARNING("Cannot convert CPU model to GPU model.");
     return nullptr;
   }
 

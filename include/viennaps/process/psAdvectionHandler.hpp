@@ -20,9 +20,7 @@ public:
     assert(context.translationField);
     auto translationMethod = context.translationField->getTranslationMethod();
     if (translationMethod > 2 || translationMethod < 0) {
-      Logger::getInstance()
-          .addWarning("Translation field method not supported.")
-          .print();
+      VIENNACORE_LOG_WARNING("Translation field method not supported.");
       return ProcessResult::INVALID_INPUT;
     }
 
@@ -32,10 +30,9 @@ public:
          intSchem != IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER &&
          intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
          intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER)) {
-      Logger::getInstance()
-          .addWarning("Translation field method not supported in combination "
-                      "with integration scheme.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Translation field method not supported in combination "
+          "with integration scheme.");
       return ProcessResult::INVALID_INPUT;
     }
 
@@ -103,10 +100,8 @@ public:
 
     context.timeStep = advectionKernel_.getAdvectedTime();
     if (context.timeStep == std::numeric_limits<double>::max()) {
-      Logger::getInstance()
-          .addWarning(
-              "Process terminated early: Velocities are zero everywhere.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Process terminated early: Velocities are zero everywhere.");
       context.processTime = context.processDuration;
     } else {
       context.processTime += context.timeStep;

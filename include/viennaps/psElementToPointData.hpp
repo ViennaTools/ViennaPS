@@ -124,10 +124,9 @@ public:
     }
 
     if (pointData_->getScalarDataSize() != numData) {
-      Logger::getInstance()
-          .addError("ElementToPointData: "
-                    "Number of data arrays does not match expected count")
-          .print();
+      VIENNACORE_LOG_ERROR(
+          "ElementToPointData: "
+          "Number of data arrays does not match expected count.");
     }
 
 #pragma omp parallel for schedule(static)

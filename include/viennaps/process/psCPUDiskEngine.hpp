@@ -16,7 +16,7 @@ public:
     auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
         context.model);
     if (!model) {
-      Logger::getInstance().addWarning("Invalid process model.").print();
+      VIENNACORE_LOG_WARNING("Invalid process model.");
       return ProcessResult::INVALID_INPUT;
     }
     return ProcessResult::SUCCESS;
@@ -52,13 +52,11 @@ public:
 
     if (auto source = model->getSource()) {
       rayTracer_.setSource(source);
-      Logger::getInstance().addInfo("Using custom source.").print();
+      VIENNACORE_LOG_INFO("Using custom source.");
     }
     if (auto primaryDirection = model->getPrimaryDirection()) {
-      Logger::getInstance()
-          .addInfo("Using primary direction: " +
-                   util::arrayToString(primaryDirection.value()))
-          .print();
+      VIENNACORE_LOG_INFO("Using primary direction: " +
+                          util::arrayToString(primaryDirection.value()));
       rayTracer_.setPrimaryDirection(primaryDirection.value());
     }
 
@@ -148,20 +146,14 @@ private:
 
       auto info = rayTracer_.getRayTraceInfo();
 
-      if (Logger::getLogLevel() >= 5) {
-        Logger::getInstance()
-            .addDebug(
-                "Particle " + std::to_string(particleIdx) +
-                "\n\tRays Traced: " + std::to_string(info.totalRaysTraced) +
-                "\n\tNon-Geometry Hits: " +
-                std::to_string(info.nonGeometryHits) +
-                "\n\tGeometry Hits: " + std::to_string(info.geometryHits) +
-                "\n\tParticle Hits: " + std::to_string(info.particleHits) +
-                (info.warning
-                     ? "\n\tWarning during ray tracing."
-                     : (info.error ? "\n\tError during ray tracing." : "")))
-            .print();
-      }
+      VIENNACORE_LOG_DEBUG(
+          "Particle " + std::to_string(particleIdx) +
+          "\n\tRays Traced: " + std::to_string(info.totalRaysTraced) +
+          "\n\tNon-Geometry Hits: " + std::to_string(info.nonGeometryHits) +
+          "\n\tGeometry Hits: " + std::to_string(info.geometryHits) +
+          "\n\tParticle Hits: " + std::to_string(info.particleHits) +
+          (info.warning ? "\n\tWarning during ray tracing."
+                        : (info.error ? "\n\tError during ray tracing." : "")));
 
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();

@@ -212,7 +212,7 @@ private:
     // check if units have been set
     if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
         units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
-      Logger::getInstance().addError("Units have not been set.").print();
+      VIENNACORE_LOG_ERROR("Units have not been set.");
     }
 
     // particles

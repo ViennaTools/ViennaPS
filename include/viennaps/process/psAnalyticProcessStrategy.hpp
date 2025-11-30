@@ -35,9 +35,7 @@ private:
   static ProcessResult
   validateContext(const ProcessContext<NumericType, D> &context) {
     if (!context.model->getVelocityField()) {
-      Logger::getInstance()
-          .addWarning("No velocity field passed to Process.")
-          .print();
+      VIENNACORE_LOG_WARNING("No velocity field passed to Process.");
       return ProcessResult::INVALID_INPUT;
     }
 
@@ -59,8 +57,7 @@ private:
     }
 
     // Set up disk mesh for intermediate output if requested
-    if (Logger::getLogLevel() >=
-        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+    if (Logger::hasIntermediate()) {
       context.diskMesh = viennals::Mesh<NumericType>::New();
       meshConverter_.setMesh(context.diskMesh);
       meshConverter_.clearLevelSets();
@@ -125,8 +122,7 @@ private:
     context.model->getVelocityField()->prepare(context.domain, nullptr,
                                                context.processTime);
 
-    if (Logger::getLogLevel() >=
-        static_cast<unsigned>(LogLevel::INTERMEDIATE)) {
+    if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       if (context.domain->getCellSet()) {
         context.domain->getCellSet()->writeVTU(
@@ -151,7 +147,7 @@ private:
       }
     }
 
-    if (Logger::getLogLevel() >= static_cast<unsigned>(LogLevel::INFO)) {
+    if (Logger::hasInfo()) {
       std::stringstream stream;
       stream << std::fixed << std::setprecision(4)
              << "Process time: " << context.processTime << " / "
@@ -180,6 +176,8 @@ private:
 
   void logProcessingTimes(const ProcessContext<NumericType, D> &context,
                           const viennacore::Timer<> &processTimer) {
+    if (!Logger::hasTiming())
+      return;
     Logger::getInstance()
         .addTiming("\nProcess " + context.getProcessName(),
                    processTimer.currentDuration * 1e-9)

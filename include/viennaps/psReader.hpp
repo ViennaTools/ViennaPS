@@ -46,24 +46,20 @@ public:
 
   void apply() {
     if (!domain) {
-      Logger::getInstance().addError("No domain was passed to Reader.").print();
+      VIENNACORE_LOG_ERROR("No domain was passed to Reader.");
       return;
     }
 
     // check filename
     if (fileName.empty()) {
-      Logger::getInstance()
-          .addError("No file name specified for Reader. Not reading.")
-          .print();
+      VIENNACORE_LOG_ERROR("No file name specified for Reader. Not reading.");
       return;
     }
 
     // Open file for reading
     std::ifstream fin(fileName, std::ios::binary);
     if (!fin.good()) {
-      Logger::getInstance()
-          .addError("Could not open file: " + fileName)
-          .print();
+      VIENNACORE_LOG_ERROR("Could not open file: " + fileName);
       return;
     }
 
@@ -71,10 +67,8 @@ public:
     char identifier[8];
     fin.read(identifier, 8);
     if (std::string(identifier).compare(0, 8, "psDomain")) {
-      Logger::getInstance()
-          .addError(
-              "Reading domain from stream failed. Header could not be found.")
-          .print();
+      VIENNACORE_LOG_ERROR(
+          "Reading domain from stream failed. Header could not be found.");
       return;
     }
 
@@ -82,11 +76,9 @@ public:
     char formatVersion;
     fin.read(&formatVersion, 1);
     if (formatVersion > 0) { // Update this when version changes
-      Logger::getInstance()
-          .addError("Reading domain of version " +
-                    std::to_string(formatVersion) +
-                    " with reader of version 0 failed.")
-          .print();
+      VIENNACORE_LOG_ERROR("Reading domain of version " +
+                           std::to_string(formatVersion) +
+                           " with reader of version 0 failed.");
       return;
     }
 
@@ -139,10 +131,8 @@ public:
       // Deserialize cell set
       // This would require implementing deserialization for the cell set
       // For now, just include a placeholder for future implementation
-      Logger::getInstance()
-          .addWarning(
-              "CellSet deserialization not yet implemented in psReader.")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "CellSet deserialization not yet implemented in psReader.");
     }
 
     fin.close();

@@ -5,8 +5,6 @@
 
 #include <lsBooleanOperation.hpp>
 
-#include <vcLogger.hpp>
-
 namespace viennaps {
 
 using namespace viennacore;

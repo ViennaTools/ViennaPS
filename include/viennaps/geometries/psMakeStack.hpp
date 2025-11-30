@@ -87,11 +87,9 @@ public:
           trenchWidth = 2 * holeRadius_;
         }
         if (trenchWidth == 0.) {
-          Logger::getInstance()
-              .addError(
-                  "MakeStack: Trench width or hole radius must be greater "
-                  "0 to create mask.")
-              .print();
+          VIENNACORE_LOG_ERROR(
+              "MakeStack: Trench width or hole radius must be greater "
+              "0 to create mask.");
           return;
         }
         auto cutout = geometryFactory_.makeBoxStencil(

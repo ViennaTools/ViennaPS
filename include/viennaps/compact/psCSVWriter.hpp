@@ -42,9 +42,7 @@ public:
 
   bool initialize() {
     if (filename.empty()) {
-      Logger::getInstance()
-          .addWarning("CSVWriter: No filename provided!")
-          .print();
+      VIENNACORE_LOG_WARNING("CSVWriter: No filename provided!");
       return false;
     }
     if (file.is_open())
@@ -65,9 +63,8 @@ public:
         }
       }
     } else {
-      Logger::getInstance()
-          .addWarning("CSVWriter: Error opening file '" + filename + "'")
-          .print();
+      VIENNACORE_LOG_WARNING("CSVWriter: Error opening file '" + filename +
+                             "'");
       return false;
     }
     initialized = true;
@@ -84,16 +81,12 @@ public:
       numCols = data.size();
 
     if (data.size() != numCols) {
-      Logger::getInstance()
-          .addWarning("Unexpected number of items in the provided row!")
-          .print();
+      VIENNACORE_LOG_WARNING("Unexpected number of items in the provided row!");
       return false;
     }
 
     if (!file.is_open()) {
-      Logger::getInstance()
-          .addWarning("Couldn't open file `" + filename + "`")
-          .print();
+      VIENNACORE_LOG_WARNING("Couldn't open file `" + filename + "`");
       return false;
     }
 
@@ -111,17 +104,14 @@ public:
       numCols = data.size();
 
     if (data.size() != numCols) {
-      Logger::getInstance()
-          .addWarning("Unexpected number of items in the provided row! (" +
-                      std::to_string(data.size()) + " instead of " +
-                      std::to_string(numCols) + ")")
-          .print();
+      VIENNACORE_LOG_WARNING(
+          "Unexpected number of items in the provided row! (" +
+          std::to_string(data.size()) + " instead of " +
+          std::to_string(numCols) + ")");
       return false;
     }
     if (!file.is_open()) {
-      Logger::getInstance()
-          .addWarning("Couldn't open file `" + filename + "`")
-          .print();
+      VIENNACORE_LOG_WARNING("Couldn't open file `" + filename + "`");
       return false;
     }
     file << join(data.begin(), data.end()) << '\n';
