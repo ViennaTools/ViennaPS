@@ -109,7 +109,6 @@ public:
     const auto numElements = elementKdTree_->getNumberOfPoints();
     const auto normals = diskMesh_->cellData.getVectorData("Normals");
     const auto elementNormals = surfaceMesh_->cellData.getVectorData("Normals");
-    const auto sqrdDist = conversionRadius_ * conversionRadius_;
 
     // retrieve data from device
     std::vector<MeshNT> elementData;
@@ -133,20 +132,22 @@ public:
     for (unsigned i = 0; i < numPoints; i++) {
 
       // we have to use the squared distance here
-      auto closePoints =
-          elementKdTree_->findNearestWithinRadius(points[i], sqrdDist).value();
+      auto closeElements =
+          elementKdTree_->findNearestWithinRadius(points[i], conversionRadius_)
+              .value();
 
-      std::vector<NumericType> weights(closePoints.size(), 0.);
+      std::vector<double> weights(closeElements.size(), 0.);
 
+      // compute weights based on normal alignment
       unsigned numClosePoints = 0;
-      for (std::size_t n = 0; n < closePoints.size(); ++n) {
-        const auto &p = closePoints[n];
+      for (std::size_t n = 0; n < closeElements.size(); ++n) {
+        const auto &p = closeElements[n];
         assert(p.first < numElements);
 
-        const auto weight =
+        const double weight =
             DotProductNT(normals->at(i), elementNormals->at(p.first));
 
-        if (weight > NumericType(1e-6) && !std::isnan(weight)) {
+        if (weight > 1e-6 && !std::isnan(weight)) {
           weights[n] = weight;
           ++numClosePoints;
         }
@@ -162,22 +163,22 @@ public:
         NumericType value = NumericType(0);
 
         if (numClosePoints > 0) {
-          auto weightsCopy = weights;
 
-          // Discard outliers if enabled
-          discardOutliers(weightsCopy, weights, closePoints, elementData, j,
-                          numElements, numClosePoints);
+          // Discard outlier values if enabled
+          const auto weightsCopy =
+              discardOutliers(weights, closeElements, elementData, j,
+                              numElements, numClosePoints);
 
           // Compute weighted average
-          const NumericType sum = std::accumulate(
-              weightsCopy.begin(), weightsCopy.end(), NumericType(0));
+          const double sum =
+              std::accumulate(weightsCopy.cbegin(), weightsCopy.cend(), 0.0);
 
-          if (sum > NumericType(0)) {
-            for (std::size_t k = 0; k < closePoints.size(); ++k) {
-              if (weightsCopy[k] > NumericType(0)) {
-                const unsigned elementIdx =
-                    closePoints[k].first + j * numElements;
-                value += weightsCopy[k] * elementData[elementIdx];
+          if (sum > 1e-6) {
+            for (std::size_t k = 0; k < closeElements.size(); ++k) {
+              if (weightsCopy[k] > 0.0) {
+                const unsigned flattIdx =
+                    closeElements[k].first + j * numElements;
+                value += weightsCopy[k] * elementData[flattIdx];
               }
             }
             value /= sum;
@@ -188,6 +189,7 @@ public:
           }
         } else {
           // Fallback to nearest point
+          assert(numClosePoints == 0);
           value = elementData[nearestIdx + j * numElements];
         }
 
@@ -211,15 +213,15 @@ private:
           minIdx1(-1), minIdx2(-1), maxIdx1(-1), maxIdx2(-1) {}
   };
 
-  MinMaxInfo findMinMaxValues(
-      const std::vector<NumericType> &weights,
+  static MinMaxInfo findMinMaxValues(
+      const std::vector<double> &weights,
       const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
       const std::vector<MeshNT> &elementData, unsigned j,
       unsigned numElements) {
     MinMaxInfo info;
 
     for (std::size_t k = 0; k < closePoints.size(); ++k) {
-      if (weights[k] != NumericType(0)) {
+      if (weights[k] > 0.0) {
         const unsigned elementIdx = closePoints[k].first + j * numElements;
         const auto value = elementData[elementIdx];
 
@@ -250,12 +252,14 @@ private:
     return info;
   }
 
-  void discardOutliers(
-      std::vector<NumericType> &weightsCopy,
-      const std::vector<NumericType> &weights,
+  static auto discardOutliers(
+      const std::vector<double> &weights,
       const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
       const std::vector<MeshNT> &elementData, unsigned j, unsigned numElements,
       unsigned numClosePoints) {
+
+    // copy weights to modify
+    auto weightsCopy = weights;
 
     if (discard4 && numClosePoints > 4) {
       const auto info =
@@ -263,20 +267,22 @@ private:
 
       if (info.maxIdx1 != -1 && info.maxIdx2 != -1 && info.minIdx1 != -1 &&
           info.minIdx2 != -1) {
-        weightsCopy[info.minIdx1] = NumericType(0);
-        weightsCopy[info.minIdx2] = NumericType(0);
-        weightsCopy[info.maxIdx1] = NumericType(0);
-        weightsCopy[info.maxIdx2] = NumericType(0);
+        weightsCopy[info.minIdx1] = 0.0;
+        weightsCopy[info.minIdx2] = 0.0;
+        weightsCopy[info.maxIdx1] = 0.0;
+        weightsCopy[info.maxIdx2] = 0.0;
       }
     } else if (discard2 && numClosePoints > 2) {
       const auto info =
           findMinMaxValues(weights, closePoints, elementData, j, numElements);
 
       if (info.minIdx1 != -1 && info.maxIdx1 != -1) {
-        weightsCopy[info.minIdx1] = NumericType(0);
-        weightsCopy[info.maxIdx1] = NumericType(0);
+        weightsCopy[info.minIdx1] = 0.0;
+        weightsCopy[info.maxIdx1] = 0.0;
       }
     }
+
+    return weightsCopy;
   }
 
   template <class AT, class BT, std::size_t D>

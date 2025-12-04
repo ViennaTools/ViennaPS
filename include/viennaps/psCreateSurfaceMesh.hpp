@@ -184,7 +184,7 @@ public:
           } else {
             // if node does not exist yet
             // calculate coordinate of new node
-            Vec3D<MeshNT> cc{}; // initialise with zeros
+            Vec3D<MeshNT> cc{0., 0., 0.}; // initialise with zeros
             for (int z = 0; z < D; z++) {
               if (z != dir) {
                 // TODO might not need BitMaskToVector here, just check if z
