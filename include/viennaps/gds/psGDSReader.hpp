@@ -20,6 +20,7 @@ template <typename NumericType, int D> class GDSReader {
   FILE *filePtr = nullptr;
   SmartPointer<GDSGeometry<NumericType, D>> geometry = nullptr;
   std::string fileName;
+  bool parseFlip = false;
 
 public:
   GDSReader() = default;
@@ -34,6 +35,8 @@ public:
   void setFileName(std::string passedFileName) {
     fileName = std::move(passedFileName);
   }
+
+  void setParseFlip(bool flip) { parseFlip = flip; }
 
   void apply() {
     parseFile();
@@ -246,9 +249,11 @@ private:
   }
 
   void parseXYRef() {
-    /// TODO: this sometimes yield true when it should not
-    // bool flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
     bool flipped = false;
+    if (parseFlip) {
+      /// TODO: this sometimes yield true when it should not
+      flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
+    }
 
     if (currentElement == GDS::ElementType::elSRef) {
       float X = units * (float)readFourByteSignedInt();
