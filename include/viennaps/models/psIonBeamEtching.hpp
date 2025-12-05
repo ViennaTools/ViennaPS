@@ -406,8 +406,10 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
-    return SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
+    auto model = SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
         params_, maskMaterials_);
+    model->setProcessName(this->getProcessName().value());
+    return model;
   }
 #endif
 

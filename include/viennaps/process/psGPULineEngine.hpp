@@ -246,11 +246,10 @@ public:
                                  context.diskMesh,
                                  context.rayTracingParams.smoothingNeighbors,
                                  context.domain->getGridDelta());
-      static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.intermediateOutputPath +
-                                context.getProcessName() + "_flux_" +
-                                std::to_string(iterations++) + ".vtp")
+          context.diskMesh,
+          context.intermediateOutputPath + context.getProcessName() + "_flux_" +
+              std::to_string(context.currentIteration) + ".vtp")
           .apply();
     }
 

@@ -144,7 +144,9 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
-    return SmartPointer<gpu::SF6C4F8Etching<NumericType, D>>::New(params);
+    auto model = SmartPointer<gpu::SF6C4F8Etching<NumericType, D>>::New(params);
+    model->setProcessName(this->getProcessName().value());
+    return model;
   }
 #endif
 

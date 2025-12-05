@@ -252,7 +252,7 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
-    auto gpuModel = SmartPointer<gpu::SingleParticleALD<NumericType, D>>::New(
+    auto model = SmartPointer<gpu::SingleParticleALD<NumericType, D>>::New(
         this->processMetaData["stickingProbability"][0],
         static_cast<int>(this->processMetaData["numCycles"][0]),
         this->processMetaData["growthPerCycle"][0],
@@ -262,7 +262,8 @@ public:
         this->processMetaData["incomingFlux"][0],
         this->processMetaData["s0"][0],
         this->processMetaData["gasMeanFreePath"][0]);
-    return gpuModel;
+    model->setProcessName(this->getProcessName().value());
+    return model;
   }
 #endif
 };

@@ -183,8 +183,10 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
-    return SmartPointer<gpu::SingleParticleProcess<NumericType, D>>::New(
+    auto model = SmartPointer<gpu::SingleParticleProcess<NumericType, D>>::New(
         materialRates_, rate_, stickingProbability_, sourceDistributionPower_);
+    model->setProcessName(this->getProcessName().value_or("default"));
+    return model;
   }
 #endif
 

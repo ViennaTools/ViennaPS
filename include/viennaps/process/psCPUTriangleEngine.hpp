@@ -200,11 +200,10 @@ public:
 
     // output
     if (Logger::hasIntermediate() && D == 3) {
-      static unsigned iterations = 0;
-      viennals::VTKWriter<float>(surfaceMesh_,
-                                 context.intermediateOutputPath +
-                                     context.getProcessName() + "_flux_" +
-                                     std::to_string(iterations++) + ".vtp")
+      viennals::VTKWriter<float>(
+          surfaceMesh_, context.intermediateOutputPath +
+                            context.getProcessName() + "_flux_" +
+                            std::to_string(context.currentIteration) + ".vtp")
           .apply();
     }
 

@@ -236,11 +236,10 @@ public:
                           surfaceMesh_->getElements<3>().size());
       }
       downloadResultsToPointData(surfaceMesh_->getCellData());
-      static unsigned iterations = 0;
-      viennals::VTKWriter<float>(surfaceMesh_,
-                                 context.intermediateOutputPath +
-                                     context.getProcessName() + "_flux_" +
-                                     std::to_string(iterations++) + ".vtp")
+      viennals::VTKWriter<float>(
+          surfaceMesh_, context.intermediateOutputPath +
+                            context.getProcessName() + "_flux_" +
+                            std::to_string(context.currentIteration) + ".vtp")
           .apply();
     }
 

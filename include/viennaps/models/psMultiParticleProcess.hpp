@@ -532,8 +532,10 @@ public:
     auto surfModel = std::dynamic_pointer_cast<
         impl::MultiParticleSurfaceModel<NumericType, D>>(
         this->getSurfaceModel());
-    return SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New(
+    auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New(
         fluxDataLabels_, ionParams_, neutralParams_, surfModel->rateFunction_);
+    model->setProcessName(this->getProcessName().value());
+    return model;
   }
 #endif
 
