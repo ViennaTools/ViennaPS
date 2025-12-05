@@ -9,7 +9,6 @@ using namespace viennaps;
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
-  Logger::setLogLevel(LogLevel::INTERMEDIATE);
 
   // Parse the parameters
   util::Parameters params;
@@ -41,6 +40,7 @@ int main(int argc, char *argv[]) {
   ibeParams.exponent = params.get("exponent");
   ibeParams.thetaRMin = 0.;
   ibeParams.thetaRMax = 15.;
+  ibeParams.rotatingWafer = true;
 
   ibeParams.meanEnergy = params.get("meanEnergy");
   ibeParams.sigmaEnergy = params.get("sigmaEnergy");

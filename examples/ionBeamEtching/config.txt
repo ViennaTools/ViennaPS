@@ -7,7 +7,7 @@ yExtent=1
 # Geometry
 trenchWidth=5
 maskHeight=1
-trenchDepth=5
+trenchDepth=1
 
 # Model
 meanEnergy=100

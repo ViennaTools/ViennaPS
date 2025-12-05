@@ -107,4 +107,53 @@ __forceinline__ __device__ void IBEInit(viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::initNormalDistEnergy(prd, params->meanEnergy,
                                             params->sigmaEnergy);
   prd->load = 0.f;
+
+  if (params->rotating) {
+    using namespace viennacore;
+
+    // 1) Sample wafer rotation angle
+    float4 u = curand_uniform4(&prd->RNGstate);
+    float phi_stage = 2.f * M_PIf * u.x;
+
+    // 2) Beam axis a (tilted by alpha from -z)
+    float sin_phi_stage, cos_phi_stage;
+    __sincosf(phi_stage, &sin_phi_stage, &cos_phi_stage);
+    float sin_alpha, cos_alpha;
+    __sincosf(params->tiltAngle, &sin_alpha, &cos_alpha);
+    Vec3Df a{sin_alpha * cos_phi_stage, sin_alpha * sin_phi_stage,
+             -cos_alpha}; // already unit length
+
+    // 3) Build basis (e1, e2, e3)
+    auto e3 = a;
+    auto h = (abs(e3[2]) < 0.9) ? Vec3Df{0, 0, 1} : Vec3Df{1, 0, 0};
+    auto e1 = h - e3 * DotProduct(h, e3);
+    Normalize(e1);
+    auto e2 = CrossProduct(e3, e1);
+
+    // 4) Sample power-cosine around e3
+    float cosTheta = powf(u.y, 1.f / (launchParams.cosineExponent + 1.f));
+    float sinTheta = sqrtf(max(0.f, 1.f - cosTheta * cosTheta));
+    float phi = 2.f * M_PIf * u.z;
+    float sin_phi, cos_phi;
+    __sincosf(phi, &sin_phi, &cos_phi);
+
+    float lx = sinTheta * cos_phi;
+    float ly = sinTheta * sin_phi;
+    float lz = cosTheta;
+
+    prd->dir = lx * e1 + ly * e2 + lz * e3;
+
+    // 5) ensure downward (toward wafer)
+    if (prd->dir[2] >= 0.f) {
+      prd->dir[0] = -prd->dir[0];
+      prd->dir[1] = -prd->dir[1];
+      prd->dir[2] = -prd->dir[2];
+    }
+
+    if (launchParams.D == 2) {
+      prd->dir[1] = prd->dir[2];
+      prd->dir[2] = 0.f;
+      Normalize(prd->dir);
+    }
+  }
 }

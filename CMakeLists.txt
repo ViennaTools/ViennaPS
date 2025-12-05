@@ -114,6 +114,7 @@ CPMAddPackage(
 CPMFindPackage(
   NAME ViennaRay
   VERSION 3.8.4
+  GIT_TAG cosine-exp
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
