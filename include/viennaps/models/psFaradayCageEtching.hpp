@@ -287,6 +287,8 @@ public:
     this->hasGPU = true;
   }
 
+  ~FaradayCageEtching() override { this->processData.free(); }
+
 private:
   FaradayCageParameters<NumericType> params_;
   std::vector<Material> maskMaterials_;
