@@ -234,11 +234,7 @@ public:
 
     levelSets_.pop_back();
     if (materialMap_) {
-      auto newMatMap = MaterialMapType::New();
-      for (std::size_t i = 0; i < levelSets_.size(); i++) {
-        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
-      }
-      materialMap_ = newMatMap;
+      materialMap_->removeMaterial();
     }
   }
 

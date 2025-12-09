@@ -182,6 +182,12 @@ public:
     map_->insertNextMaterial(static_cast<int>(material));
   }
 
+  void removeMaterial() {
+    if (map_) {
+      map_->removeLastMaterial();
+    }
+  }
+
   // Returns the material at the given index. If the index is out of bounds, it
   // returns Material::GAS.
   [[nodiscard]] Material getMaterialAtIdx(std::size_t idx) const {
