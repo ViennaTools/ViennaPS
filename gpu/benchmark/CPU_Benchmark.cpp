@@ -186,7 +186,7 @@ int main() {
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));
         }
-        ElementToPointData<NumericType, float>(
+        ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
             fluxResultVec, pointData, particles, elementKdTree, diskMesh,
             surfMesh, domain->getGridDelta() * 2.0f)
             .apply();

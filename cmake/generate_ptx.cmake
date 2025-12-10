@@ -12,6 +12,9 @@ function(generate_pipeline target_name generated_files_output)
   cuda_include_directories(${ViennaPS_SOURCE_DIR}/include/viennaps)
   cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
+  if(VIENNARAY_GPU_DOUBLE_PRECISION)
+    add_compile_definitions(VIENNARAY_GPU_DOUBLE_PRECISION)
+  endif()
 
   # Generate OptiX IR files if enabled
   if(VIENNAPS_GENERATE_OPTIXIR)
@@ -54,6 +57,9 @@ function(generate_kernel target_name generated_files_output)
   cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
+  if(VIENNARAY_GPU_DOUBLE_PRECISION)
+    add_compile_definitions(VIENNARAY_GPU_DOUBLE_PRECISION)
+  endif()
 
   cuda_wrap_srcs(
     ${target_name}
@@ -100,6 +106,9 @@ function(add_GPU_executable target_name_base target_name_var)
   cuda_include_directories(${ViennaPS_SOURCE_DIR}/include/viennaps)
   cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
+  if(VIENNARAY_GPU_DOUBLE_PRECISION)
+    add_compile_definitions(VIENNARAY_GPU_DOUBLE_PRECISION)
+  endif()
 
   # Create CUDA kernels
   cuda_wrap_srcs(
@@ -145,7 +154,7 @@ function(add_GPU_executable target_name_base target_name_var)
   # Here is where we create the rule to make the executable.  We define a target name and
   # list all the source files used to create the target.  In addition we also pass along
   # the cmake_options parsed out of the arguments.
-  message(STATUS "Adding target: ${target_name}")
+  message(STATUS "Adding GPU target: ${target_name}")
   add_executable(${target_name} ${source_files} ${generated_files} ${cmake_options})
   target_include_directories(${target_name} PRIVATE ${VIENNARAY_GPU_INCLUDE}
                                                     ${VIENNAPS_GPU_INCLUDE})

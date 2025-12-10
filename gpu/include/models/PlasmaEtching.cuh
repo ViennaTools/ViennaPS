@@ -22,7 +22,7 @@ plasmaNeutralCollision(viennaray::gpu::PerRayData *prd) {
     atomicAdd(&launchParams
                    .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
                                  prd->primIDs[i]],
-              prd->rayWeight);
+              (viennaray::gpu::ResultType)prd->rayWeight);
   }
 }
 

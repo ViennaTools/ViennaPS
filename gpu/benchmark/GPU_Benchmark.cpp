@@ -111,7 +111,7 @@ int main() {
         auto pointData = viennals::PointData<NumericType>::New();
         tracer.normalizeResults();
         // tracer.downloadResults();
-        gpu::ElementToPointData<NumericType, float>(
+        gpu::ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
             tracer.getResults(), pointData, tracer.getParticles(),
             elementKdTree, diskMesh, surfMesh, domain->getGridDelta() * 2.0f)
             .apply();
@@ -211,8 +211,9 @@ int main() {
         tracer.downloadResults();
         int smoothingNeighbors = 1;
         auto flux = tracer.getFlux(0, 0, smoothingNeighbors);
+        std::vector<NumericType> fluxNumeric(flux.begin(), flux.end());
         auto velocities =
-            SmartPointer<std::vector<NumericType>>::New(std::move(flux));
+            SmartPointer<std::vector<NumericType>>::New(std::move(fluxNumeric));
         velocityField->prepare(domain, velocities, 0.);
         timer.finish();
         file << timer.currentDuration << ";";

@@ -95,9 +95,9 @@ int main() {
     auto flux = tracer.getFlux(0, 0);
     surfMesh->getCellData().insertNextScalarData(flux, "flux");
     auto pointData = viennals::PointData<NumericType>::New();
-    gpu::ElementToPointData<NumericType>(tracer.getResults(), pointData,
-                                         tracer.getParticles(), elementKdTree,
-                                         diskMesh, surfMesh, GRID_DELTA)
+    gpu::ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
+        tracer.getResults(), pointData, tracer.getParticles(), elementKdTree,
+        diskMesh, surfMesh, GRID_DELTA)
         .apply();
     timer.finish();
     file << timer.currentDuration;

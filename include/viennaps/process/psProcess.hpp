@@ -303,6 +303,8 @@ public:
               context_.model);
       if (!model) {
         // Retry with GPU model if available
+        auto deviceContext =
+            getOrCreateDeviceContext(); // Ensure context exists
         auto gpuModel = context_.model->getGPUModel();
         if (gpuModel) {
           VIENNACORE_LOG_DEBUG("Switching to GPU-compatible process model.");

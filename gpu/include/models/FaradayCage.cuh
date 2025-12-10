@@ -41,13 +41,13 @@ faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
     // flux array
     atomicAdd(&launchParams.resultBuffer[prd->primIDs[i]],
-              prd->rayWeight * yield);
+              (viennaray::gpu::ResultType)prd->rayWeight * yield);
 
     if (params->redepositionRate > 0.f) {
       // redeposition array
       atomicAdd(&launchParams
                      .resultBuffer[launchParams.numElements + prd->primIDs[i]],
-                prd->load);
+                (viennaray::gpu::ResultType)prd->load);
     }
   }
 }
