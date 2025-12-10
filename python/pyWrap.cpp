@@ -462,6 +462,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("checkDissipation", &AdvectionParameters::checkDissipation)
       .def_readwrite("velocityOutput", &AdvectionParameters::velocityOutput)
       .def_readwrite("ignoreVoids", &AdvectionParameters::ignoreVoids)
+      .def_readwrite("adaptiveTimeStepping",
+                     &AdvectionParameters::adaptiveTimeStepping)
       .def("toMetaData", &AdvectionParameters::toMetaData,
            "Convert the advection parameters to a metadata dict.")
       .def("toMetaDataString", &AdvectionParameters::toMetaDataString,

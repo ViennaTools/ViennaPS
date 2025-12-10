@@ -51,6 +51,8 @@ public:
     advectionKernel_.setIgnoreVoids(context.advectionParams.ignoreVoids);
     advectionKernel_.setCheckDissipation(
         context.advectionParams.checkDissipation);
+    advectionKernel_.setAdaptiveTimeStepping(
+        context.advectionParams.adaptiveTimeStepping);
     // normals vectors are only necessary for analytical velocity fields
     if (translationMethod > 0)
       advectionKernel_.setCalculateNormalVectors(false);

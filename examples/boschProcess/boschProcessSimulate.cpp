@@ -8,9 +8,10 @@
 using namespace viennaps;
 constexpr int D = 2;
 using NumericType = double;
+const std::string name = "boschProcessSimulate_";
 
-void etch(SmartPointer<Domain<NumericType, D>> domain,
-          util::Parameters &params) {
+void etch(SmartPointer<Domain<NumericType, D>> domain, util::Parameters &params,
+          int &n) {
   std::cout << "  - Etching - " << std::endl;
   auto etchModel = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
   etchModel->addNeutralParticle(params.get("neutralStickingProbability"));
@@ -29,10 +30,11 @@ void etch(SmartPointer<Domain<NumericType, D>> domain,
         return rate;
       });
   Process<NumericType, D>(domain, etchModel, params.get("etchTime")).apply();
+  domain->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
 }
 
 void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
-                  util::Parameters &params) {
+                  util::Parameters &params, int &n) {
   std::cout << "  - Punching through - " << std::endl;
   NumericType depositionThickness = params.get("depositionThickness");
 
@@ -41,10 +43,11 @@ void punchThrough(SmartPointer<Domain<NumericType, D>> domain,
       -depositionThickness, 1. /* sticking */, params.get("ionSourceExponent"),
       Material::Mask);
   Process<NumericType, D>(domain, depoRemoval, 1.).apply();
+  domain->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
 }
 
 void deposit(SmartPointer<Domain<NumericType, D>> domain,
-             util::Parameters &params) {
+             util::Parameters &params, int &n) {
   std::cout << "  - Deposition - " << std::endl;
   NumericType depositionThickness = params.get("depositionThickness");
   NumericType depositionSticking = params.get("depositionStickingProbability");
@@ -52,11 +55,13 @@ void deposit(SmartPointer<Domain<NumericType, D>> domain,
   auto model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(
       depositionThickness, depositionSticking);
   Process<NumericType, D>(domain, model, 1.).apply();
+  domain->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
 }
 
-void ash(SmartPointer<Domain<NumericType, D>> domain) {
+void ash(SmartPointer<Domain<NumericType, D>> domain, int &n) {
   domain->removeTopLevelSet();
   domain->removeStrayPoints();
+  domain->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
 }
 
 int main(int argc, char **argv) {
@@ -87,25 +92,18 @@ int main(int argc, char **argv) {
                              params.get("maskHeight"))
       .apply();
 
-  const NumericType depositionThickness = params.get("depositionThickness");
   const int numCycles = params.get<int>("numCycles");
-  const std::string name = "boschProcessSimulate_";
 
   int n = 0;
   geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
-  etch(geometry, params);
-  geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
+  etch(geometry, params, n);
 
   for (int i = 0; i < numCycles; ++i) {
     std::cout << "Cycle " << i + 1 << std::endl;
-    deposit(geometry, params);
-    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
-    punchThrough(geometry, params);
-    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
-    etch(geometry, params);
-    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
-    ash(geometry);
-    geometry->saveSurfaceMesh(name + std::to_string(n++) + ".vtp");
+    deposit(geometry, params, n);
+    punchThrough(geometry, params, n);
+    etch(geometry, params, n);
+    ash(geometry, n);
   }
 
   geometry->saveVolumeMesh(name + "final");

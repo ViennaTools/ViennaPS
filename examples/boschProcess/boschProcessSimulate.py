@@ -65,23 +65,25 @@ def rateFunction(fluxes, material):
 
 etchModel.setRateFunction(rateFunction)
 etchTime = params["etchTime"]
-
 n = 0
 
 
-def runProcess(model, name, time=1.0):
+def saveGeometry(geometry):
     global n
+    geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n), addInterfaces=True)
+    n += 1
+
+
+def runProcess(model, name, time=1.0):
     print("  - {} - ".format(name))
     ps.Process(geometry, model, time).apply()
-    geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
-    n += 1
+    saveGeometry(geometry)
 
 
 numCycles = int(params["numCycles"])
 
 # Initial geometry
-geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
-n += 1
+saveGeometry(geometry)
 
 runProcess(etchModel, "Etching", etchTime)
 
@@ -101,8 +103,7 @@ for i in range(numCycles):
     # Ash (remove) the polymer
     geometry.removeTopLevelSet()
     geometry.removeStrayPoints()
-    geometry.saveSurfaceMesh("boschProcessSimulate_{}".format(n))
-    n += 1
+    saveGeometry(geometry)
 
 # save the final geometry
 geometry.saveVolumeMesh("boschProcessSimulate_final")

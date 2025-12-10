@@ -58,6 +58,7 @@ struct AdvectionParameters {
   bool checkDissipation = true;
   bool velocityOutput = false;
   bool ignoreVoids = false;
+  bool adaptiveTimeStepping = false;
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;

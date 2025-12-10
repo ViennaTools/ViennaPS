@@ -64,7 +64,7 @@ __all__: list[str] = [
 ]
 
 class AdvectionParameters:
-    checkDissipation: bool
+    adaptiveTimeStepping: bool
     ignoreVoids: bool
     integrationScheme: viennals._core.IntegrationSchemeEnum
     velocityOutput: bool
