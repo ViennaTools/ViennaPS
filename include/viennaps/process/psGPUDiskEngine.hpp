@@ -193,11 +193,10 @@ public:
       }
       downloadResultsToPointData(context.diskMesh->getCellData(),
                                  context.rayTracingParams.smoothingNeighbors);
-      static unsigned iterations = 0;
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.intermediateOutputPath +
-                                context.getProcessName() + "_flux_" +
-                                std::to_string(iterations++) + ".vtp")
+          context.diskMesh,
+          context.intermediateOutputPath + context.getProcessName() + "_flux_" +
+              std::to_string(context.currentIteration) + ".vtp")
           .apply();
     }
 

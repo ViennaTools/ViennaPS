@@ -105,7 +105,8 @@ public:
         sqrtThresholdEnergy_(std::sqrt(params.thresholdEnergy)),
         thetaRMin_(constants::degToRad(params.thetaRMin)),
         thetaRMax_(constants::degToRad(params.thetaRMax)),
-        aSum_(1. / params.cos4Yield.aSum()) {}
+        aSum_(1. / params.cos4Yield.aSum()),
+        tiltAngle_(constants::degToRad(params.tiltAngle)) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -195,6 +196,59 @@ public:
     redepositionWeight_ = 0.;
   }
 
+  Vec3D<NumericType> initNewWithDirection(RNG &rngState) override {
+    if (params_.rotatingWafer) {
+      // 1) Sample wafer rotation angle
+      std::uniform_real_distribution<NumericType> uniform;
+      NumericType phi_stage = 2. * M_PI * uniform(rngState);
+
+      // 2) Beam axis a (tilted by alpha from -z)
+      NumericType sin_phi_stage = std::sin(phi_stage),
+                  cos_phi_stage = std::cos(phi_stage);
+      NumericType sin_alpha = std::sin(tiltAngle_),
+                  cos_alpha = std::cos(tiltAngle_);
+      Vec3D<NumericType> a{sin_alpha * cos_phi_stage, sin_alpha * sin_phi_stage,
+                           -cos_alpha}; // already unit length
+
+      // 3) Build basis (e1, e2, e3)
+      auto e3 = a;
+      auto h = (abs(e3[2]) < 0.9) ? Vec3D<NumericType>{0, 0, 1}
+                                  : Vec3D<NumericType>{1, 0, 0};
+      auto e1 = h - e3 * DotProduct(h, e3);
+      Normalize(e1);
+      auto e2 = CrossProduct(e3, e1);
+
+      // 4) Sample power-cosine around e3
+      NumericType cosTheta =
+          std::pow(uniform(rngState), 1. / (params_.exponent + 1.));
+      NumericType sinTheta = std::sqrt(std::max(0., 1. - cosTheta * cosTheta));
+      NumericType phi = 2. * M_PI * uniform(rngState);
+
+      NumericType lx = sinTheta * std::cos(phi);
+      NumericType ly = sinTheta * std::sin(phi);
+      NumericType lz = cosTheta;
+
+      auto direction = lx * e1 + ly * e2 + lz * e3;
+
+      // 5) ensure downward (toward wafer)
+      if (direction[2] >= 0.f) {
+        direction[0] = -direction[0];
+        direction[1] = -direction[1];
+        direction[2] = -direction[2];
+      }
+
+      if constexpr (D == 2) {
+        direction[1] = direction[2];
+        direction[2] = 0.f;
+        Normalize(direction);
+      }
+
+      return direction;
+    } else {
+      return Vec3D<NumericType>{0, 0, 0};
+    }
+  }
+
   NumericType getSourceDistributionPower() const override {
     return params_.exponent;
   }
@@ -216,6 +270,7 @@ private:
   const NumericType thetaRMin_; // in rad
   const NumericType thetaRMax_; // in  rad
   const NumericType aSum_;
+  const NumericType tiltAngle_; // in rad
 };
 } // namespace impl
 
@@ -238,7 +293,7 @@ public:
           ::viennaps::impl::IBESurfaceModel<NumericType>::redepositionLabel);
     }
 
-    if (params_.tiltAngle != 0.) {
+    if (params_.tiltAngle != 0. && !params_.rotatingWafer) {
       Vec3D<NumericType> direction{0., 0., 0.};
       direction[0] = std::sin(constants::degToRad(params_.tiltAngle));
       direction[D - 1] = -std::cos(constants::degToRad(params_.tiltAngle));
@@ -285,6 +340,10 @@ public:
     deviceParams.redepositionThreshold =
         static_cast<float>(params_.redepositionThreshold);
 
+    deviceParams.tiltAngle =
+        static_cast<float>(constants::degToRad(params_.tiltAngle));
+    deviceParams.rotating = params_.rotatingWafer;
+
     // upload process params
     this->processData.alloc(sizeof(impl::IonParams));
     this->processData.upload(&deviceParams, 1);
@@ -305,6 +364,8 @@ public:
     this->processMetaData = params_.toProcessMetaData();
     this->hasGPU = true;
   }
+
+  ~IonBeamEtching() override { this->processData.free(); }
 
 private:
   std::vector<Material> maskMaterials_;
@@ -345,8 +406,10 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
-    return SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
+    auto model = SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
         params_, maskMaterials_);
+    model->setProcessName(this->getProcessName().value());
+    return model;
   }
 #endif
 

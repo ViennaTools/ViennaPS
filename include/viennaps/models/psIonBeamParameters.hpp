@@ -20,6 +20,7 @@ template <typename NumericType> struct IBEParameters {
   NumericType minAngle = 85;     // degree
   NumericType tiltAngle = 0;     // degree
   NumericType exponent = 100;
+  bool rotatingWafer = false;
 
   // Either use the yieldFunction or the Cos4 parameters. If cos4Yield.isDefined
   // is true, the yieldFunction will be ignored.

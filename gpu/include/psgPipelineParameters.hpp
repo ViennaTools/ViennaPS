@@ -4,6 +4,9 @@
 
 namespace viennaps::gpu::impl {
 struct IonParams {
+  // Angle
+  float tiltAngle = 0.f; // in rad
+  bool rotating = false;
 
   // Sticking
   float thetaRMin = 0.f;

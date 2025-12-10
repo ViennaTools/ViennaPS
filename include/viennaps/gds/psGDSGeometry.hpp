@@ -360,6 +360,35 @@ private:
           auto maxPoint_x = sref.refPoint[0] + refStr->boundingBox[1][0];
           auto maxPoint_y = sref.refPoint[1] + refStr->boundingBox[1][1];
 
+          if (sref.flipped) {
+            minPoint_x = -minPoint_x;
+            maxPoint_x = -maxPoint_x;
+            if (minPoint_x > maxPoint_x) {
+              std::swap(minPoint_x, maxPoint_x);
+            }
+          }
+
+          if (sref.magnification != 0.) {
+            maxPoint_x *= sref.magnification;
+            maxPoint_y *= sref.magnification;
+          }
+
+          if (sref.angle != 0) {
+            double rad = deg2rad(sref.angle);
+            double cosA = std::cos(rad);
+            double sinA = std::sin(rad);
+            minPoint_x = minPoint_x * cosA - minPoint_y * sinA;
+            minPoint_y = minPoint_x * sinA + minPoint_y * cosA;
+            maxPoint_x = maxPoint_x * cosA - maxPoint_y * sinA;
+            maxPoint_y = maxPoint_x * sinA + maxPoint_y * cosA;
+            if (minPoint_x > maxPoint_x) {
+              std::swap(minPoint_x, maxPoint_x);
+            }
+            if (minPoint_y > maxPoint_y) {
+              std::swap(minPoint_y, maxPoint_y);
+            }
+          }
+
           if (minPoint_x < structures[i].boundingBox[0][0]) {
             structures[i].boundingBox[0][0] = minPoint_x;
           }
@@ -402,6 +431,11 @@ private:
       bounds_[4] = -1.;
       bounds_[5] = 1.;
     }
+
+    VIENNACORE_LOG_DEBUG(
+        "GDS Geometry: Calculated bounds: (" + std::to_string(bounds_[0]) +
+        ", " + std::to_string(bounds_[2]) + ") - (" +
+        std::to_string(bounds_[1]) + ", " + std::to_string(bounds_[3]) + ")");
   }
 
   void addBox(lsDomainType2D layer2D, GDS::Element<NumericType> &element,
@@ -410,25 +444,39 @@ private:
     assert(element.elementType == GDS::ElementType::elBox);
     assert(element.pointCloud.size() == 4); // GDSII box is a rectangle
 
-    using VectorType = viennals::VectorType<NumericType, 2>;
-
     // The corners in GDS are typically ordered clockwise or counter-clockwise
-    VectorType minCorner{
+    VectorType<NumericType, 2> minCorner{
         std::min({element.pointCloud[0][0], element.pointCloud[1][0],
-                  element.pointCloud[2][0], element.pointCloud[3][0]}),
+                  element.pointCloud[2][0], element.pointCloud[3][0]}) +
+            xOffset,
         std::min({element.pointCloud[0][1], element.pointCloud[1][1],
-                  element.pointCloud[2][1], element.pointCloud[3][1]})};
+                  element.pointCloud[2][1], element.pointCloud[3][1]}) +
+            yOffset};
 
-    VectorType maxCorner{
+    VectorType<NumericType, 2> maxCorner{
         std::max({element.pointCloud[0][0], element.pointCloud[1][0],
-                  element.pointCloud[2][0], element.pointCloud[3][0]}),
+                  element.pointCloud[2][0], element.pointCloud[3][0]}) +
+            xOffset,
         std::max({element.pointCloud[0][1], element.pointCloud[1][1],
-                  element.pointCloud[2][1], element.pointCloud[3][1]})};
+                  element.pointCloud[2][1], element.pointCloud[3][1]}) +
+            yOffset};
 
     // Generate a level set box using MakeGeometry
+    lsDomainType2D tmpLS = lsDomainType2D::New(layer2D);
     viennals::MakeGeometry<NumericType, 2>(
-        layer2D, viennals::Box<NumericType, 2>::New(minCorner, maxCorner))
+        tmpLS, viennals::Box<NumericType, 2>::New(minCorner, maxCorner))
         .apply();
+
+    viennals::BooleanOperation<NumericType, 2>(
+        layer2D, tmpLS, viennals::BooleanOperationEnum::UNION)
+        .apply();
+
+    VIENNACORE_LOG_DEBUG("GDS Geometry: Added box to layer " +
+                         std::to_string(element.layer) + " with corners (" +
+                         std::to_string(minCorner[0] + xOffset) + ", " +
+                         std::to_string(minCorner[1] + yOffset) + ") - (" +
+                         std::to_string(maxCorner[0] + xOffset) + ", " +
+                         std::to_string(maxCorner[1] + yOffset) + ")");
   }
 
   void addPolygon(lsDomainType2D layer2D,
@@ -440,9 +488,22 @@ private:
     lsDomainType2D tmpLS = lsDomainType2D::New(layer2D);
     viennals::FromSurfaceMesh<NumericType, 2>(tmpLS, mesh).apply();
 
+    if (tmpLS->getDomain().getNumberOfPoints() == 0) {
+      VIENNACORE_LOG_WARNING("GDS Geometry: Polygon on layer " +
+                             std::to_string(element.layer) + " with " +
+                             std::to_string(element.pointCloud.size()) +
+                             " points resulted in empty level set. Skipping.");
+      return;
+    }
+
     viennals::BooleanOperation<NumericType, 2>(
         layer2D, tmpLS, viennals::BooleanOperationEnum::UNION)
         .apply();
+
+    VIENNACORE_LOG_DEBUG("GDS Geometry: Added polygon to layer " +
+                         std::to_string(element.layer) + " with " +
+                         std::to_string(element.pointCloud.size()) +
+                         " points.");
   }
 
   SmartPointer<viennals::Mesh<NumericType>>
