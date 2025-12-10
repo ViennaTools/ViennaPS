@@ -75,8 +75,8 @@ public:
   }
 };
 
-template <typename NumericType, typename MeshNT = NumericType, bool d2 = true,
-          bool d4 = true>
+template <typename NumericType, typename MeshNT, typename ResultType,
+          bool d2 = true, bool d4 = true>
 class ElementToPointDataBase {
 protected:
   const IndexMap indexMap_;
@@ -111,7 +111,7 @@ public:
     const auto elementNormals = surfaceMesh_->cellData.getVectorData("Normals");
 
     // retrieve data from device
-    std::vector<MeshNT> elementData;
+    std::vector<ResultType> elementData;
     flattenElementData(elementData);
     assert(elementData.size() == numData * numElements);
 
@@ -199,7 +199,8 @@ public:
   }
 
 protected:
-  virtual void flattenElementData(std::vector<MeshNT> &elementData) const = 0;
+  virtual void
+  flattenElementData(std::vector<ResultType> &elementData) const = 0;
 
 private:
   // Helper function to find min/max values and their indices
@@ -216,7 +217,7 @@ private:
   static MinMaxInfo findMinMaxValues(
       const std::vector<double> &weights,
       const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
-      const std::vector<MeshNT> &elementData, unsigned j,
+      const std::vector<ResultType> &elementData, unsigned j,
       unsigned numElements) {
     MinMaxInfo info;
 
@@ -255,8 +256,8 @@ private:
   static auto discardOutliers(
       const std::vector<double> &weights,
       const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
-      const std::vector<MeshNT> &elementData, unsigned j, unsigned numElements,
-      unsigned numClosePoints) {
+      const std::vector<ResultType> &elementData, unsigned j,
+      unsigned numElements, unsigned numClosePoints) {
 
     // copy weights to modify
     auto weightsCopy = weights;
@@ -296,10 +297,10 @@ private:
   }
 };
 
-template <typename NumericType, typename MeshNT = NumericType, bool d2 = true,
-          bool d4 = true>
+template <typename NumericType, typename MeshNT, typename ResultType,
+          bool d2 = true, bool d4 = true>
 class ElementToPointData
-    : public ElementToPointDataBase<NumericType, MeshNT, d2, d4> {
+    : public ElementToPointDataBase<NumericType, MeshNT, ResultType, d2, d4> {
 public:
   ElementToPointData(
       const std::vector<std::vector<NumericType>> &elementData,
@@ -309,9 +310,10 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
-            indexMap, pointData, elementKdTree, diskMesh, surfMesh,
-            conversionRadius),
+      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
+                                           d4>(indexMap, pointData,
+                                               elementKdTree, diskMesh,
+                                               surfMesh, conversionRadius),
         elementData_(elementData) {}
 
   ElementToPointData(
@@ -323,13 +325,14 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
-            viennaps::IndexMap(particles), pointData, elementKdTree, diskMesh,
-            surfMesh, conversionRadius),
+      : viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
+                                         d4>(viennaps::IndexMap(particles),
+                                             pointData, elementKdTree, diskMesh,
+                                             surfMesh, conversionRadius),
         elementData_(elementData) {}
 
 protected:
-  void flattenElementData(std::vector<MeshNT> &elementData) const override {
+  void flattenElementData(std::vector<ResultType> &elementData) const override {
     const auto numData = elementData_.size();
     assert(elementData_.size() > 0);
     const auto numElements = elementData_[0].size();
@@ -350,10 +353,10 @@ private:
 
 #ifdef VIENNACORE_COMPILE_GPU
 namespace gpu {
-template <typename NumericType, typename MeshNT = NumericType, bool d2 = true,
-          bool d4 = true>
+template <typename NumericType, typename MeshNT, typename ResultType,
+          bool d2 = true, bool d4 = true>
 class ElementToPointData
-    : public ElementToPointDataBase<NumericType, MeshNT, d2, d4> {
+    : public ElementToPointDataBase<NumericType, MeshNT, ResultType, d2, d4> {
 public:
   ElementToPointData(
       CudaBuffer &d_elementData,
@@ -363,9 +366,10 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
-            indexMap, pointData, elementKdTree, diskMesh, surfMesh,
-            conversionRadius),
+      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
+                                           d4>(indexMap, pointData,
+                                               elementKdTree, diskMesh,
+                                               surfMesh, conversionRadius),
         d_elementData_(d_elementData) {}
 
   ElementToPointData(
@@ -376,13 +380,14 @@ public:
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : viennaps::ElementToPointDataBase<NumericType, MeshNT, d2, d4>(
-            viennaps::IndexMap(particles), pointData, elementKdTree, diskMesh,
-            surfMesh, conversionRadius),
+      : viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
+                                         d4>(viennaps::IndexMap(particles),
+                                             pointData, elementKdTree, diskMesh,
+                                             surfMesh, conversionRadius),
         d_elementData_(d_elementData) {}
 
 protected:
-  void flattenElementData(std::vector<MeshNT> &elementData) const override {
+  void flattenElementData(std::vector<ResultType> &elementData) const override {
     const auto numData = this->indexMap_.getNumberOfData();
     const auto numElements = this->elementKdTree_->getNumberOfPoints();
 

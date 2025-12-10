@@ -272,7 +272,7 @@ private:
     }
 
     // map fluxes on points
-    ElementToPointData<NumericType, float, true, D == 3>(
+    ElementToPointData<NumericType, float, NumericType, true, D == 3>(
         elementFluxes, fluxes, model->getParticleTypes(), elementKdTree_,
         context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *

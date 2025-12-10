@@ -83,9 +83,9 @@ int main() {
   tracer.apply();
 
   auto pointData = viennals::PointData<NumericType>::New();
-  gpu::ElementToPointData<NumericType>(tracer.getResults(), pointData,
-                                       tracer.getParticles(), elementKdTree,
-                                       diskMesh, surfMesh, GRID_DELTA)
+  gpu::ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
+      tracer.getResults(), pointData, tracer.getParticles(), elementKdTree,
+      diskMesh, surfMesh, GRID_DELTA)
       .apply();
 
   downloadResultsToPointData(tracer, surfMesh->getCellData());

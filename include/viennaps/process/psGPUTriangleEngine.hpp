@@ -221,7 +221,8 @@ public:
     rayTracer_.normalizeResults();
 
     // extract fluxes on points
-    gpu::ElementToPointData<NumericType, float, true, D == 3>(
+    gpu::ElementToPointData<NumericType, float, viennaray::gpu::ResultType,
+                            true, D == 3>(
         rayTracer_.getResults(), fluxes, rayTracer_.getParticles(),
         elementKdTree_, context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *
@@ -277,7 +278,7 @@ private:
     assert(numRates > 0);
     assert(numPoints == surfaceMesh_->getElements<3>().size());
     auto &valueBuffer = rayTracer_.getResults();
-    std::vector<float> tmpBuffer(numRates * numPoints);
+    std::vector<viennaray::gpu::ResultType> tmpBuffer(numRates * numPoints);
     valueBuffer.download(tmpBuffer.data(), numPoints * numRates);
     auto particles = rayTracer_.getParticles();
 
@@ -288,8 +289,11 @@ private:
         auto name = particles[pIdx].dataLabels[dIdx];
 
         std::vector<float> values(numPoints);
-        std::memcpy(values.data(), &tmpBuffer[tmpOffset * numPoints],
-                    numPoints * sizeof(float));
+        for (unsigned i = 0; i < numPoints; ++i) {
+          values[i] = static_cast<float>(tmpBuffer[tmpOffset * numPoints + i]);
+        }
+        // std::memcpy(values.data(), &tmpBuffer[tmpOffset * numPoints],
+        // numPoints * sizeof(double));
 
         pointData.insertReplaceScalarData(std::move(values), name);
       }

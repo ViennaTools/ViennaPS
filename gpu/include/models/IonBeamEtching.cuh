@@ -41,13 +41,13 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
     // flux array
     atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
                                          prd->primIDs[i]],
-              prd->rayWeight * yield);
+              (viennaray::gpu::ResultType)prd->rayWeight * yield);
 
     if (redepositionEnabled) {
       // redeposition array
       atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
                                            prd->primIDs[i]],
-                prd->load);
+                (viennaray::gpu::ResultType)prd->load);
     }
   }
 }
