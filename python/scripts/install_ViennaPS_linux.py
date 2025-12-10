@@ -9,8 +9,8 @@ from pathlib import Path
 
 REQUIRED_GCC = "12"
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.2.0"
-
+# UPDATED: Pointing to local directory instead of git URL
+VIENNALS_LOCAL_PATH = "/home/filipov/Software/GPU/ViennaLS"
 
 def run(cmd, **kwargs):
     print("+", " ".join(cmd))
@@ -46,10 +46,6 @@ def parse_nvcc_version():
     sys.exit("Could not parse nvcc version. Need CUDA >= 12.0.")
 
 
-def ensure_git():
-    which_or_fail("git")
-
-
 def ensure_compilers():
     which_or_fail(f"gcc-{REQUIRED_GCC}")
     which_or_fail(f"g++-{REQUIRED_GCC}")
@@ -78,65 +74,49 @@ def venv_paths(venv_dir: Path):
     return python, pip
 
 
-def pip_show_version(pip_path: Path, pkg: str):
-    try:
-        out = run_capture([str(pip_path), "show", pkg])
-    except subprocess.CalledProcessError:
-        return None
-    for line in out.splitlines():
-        if line.startswith("Version:"):
-            return line.split(":", 1)[1].strip()
-    return None
+def install_build_deps(pip_path: Path):
+    """
+    Installs build dependencies required for --no-build-isolation.
+    """
+    print("Installing build dependencies (scikit-build-core, pybind11, cmake, ninja)...")
+    run([
+        str(pip_path), 
+        "install", 
+        "scikit-build-core", 
+        "pybind11", 
+        "cmake", 
+        "ninja",
+        "pathspec", 
+        "packaging"
+    ])
 
 
-def install_viennals(
-    pip_path: Path, viennals_dir: Path | None, required_version: str, verbose: bool
-):
+def install_viennals(pip_path: Path, verbose: bool):
+    """
+    Installs ViennaLS directly from the local directory using pip.
+    """
     env = os.environ.copy()
     env["CC"] = f"gcc-{REQUIRED_GCC}"
     env["CXX"] = f"g++-{REQUIRED_GCC}"
 
-    current = pip_show_version(pip_path, "ViennaLS")
-    if current is None:
-        print("ViennaLS not installed. A local build is required.")
-        if viennals_dir is None:
-            ensure_git()
-            print(f"Cloning ViennaLS v{required_version}…")
-            with tempfile.TemporaryDirectory(prefix="ViennaLS_tmp_install_") as tmp:
-                tmp_path = Path(tmp)
-                run(
-                    [
-                        "git",
-                        "clone",
-                        "https://github.com/ViennaTools/ViennaLS.git",
-                        str(tmp_path),
-                    ],
-                    env=env,
-                )
-                run(["git", "checkout", f"v{required_version}"], cwd=tmp_path, env=env)
-                cmd = [str(pip_path), "install", "."]
-                if verbose:
-                    cmd.append("-v")
-                run(cmd, cwd=tmp_path, env=env)
-        else:
-            if not (
-                viennals_dir.exists() and (viennals_dir / "CMakeLists.txt").exists()
-            ):
-                sys.exit(f"ViennaLS directory not valid: {viennals_dir}")
-            cmd = [str(pip_path), "install", "."]
-            if verbose:
-                cmd.append("-v")
-            run(cmd, cwd=viennals_dir, env=env)
-    else:
-        print(
-            f"ViennaLS already installed ({current}). Local build is required and version should be {required_version}."
-        )
-        if current != required_version:
-            sys.exit(
-                f"Version mismatch. Please change to the required version {required_version}.\n"
-                "Then re-run this script."
-            )
-        print("Proceeding with the currently installed ViennaLS.")
+    print(f"Installing ViennaLS from: {VIENNALS_LOCAL_PATH}")
+
+    # Use pip to handle the install logic internally.
+    # --no-build-isolation ensures it uses the build deps we just installed.
+    # --force-reinstall ensuring we overwrite any old versions.
+    cmd = [
+        str(pip_path),
+        "install",
+        VIENNALS_LOCAL_PATH,
+        "--force-reinstall",
+        "--no-cache-dir",
+        "--no-build-isolation",
+    ]
+
+    if verbose:
+        cmd.append("-v")
+
+    run(cmd, env=env)
 
 
 def get_viennaps_dir(viennaps_dir_arg: str | None) -> Path:
@@ -147,7 +127,6 @@ def get_viennaps_dir(viennaps_dir_arg: str | None) -> Path:
         if cwd.name == "ViennaPS":
             viennaps_dir = cwd
         else:
-            # try location of this script
             script_path = Path(__file__).resolve()
             cwd = script_path.parent.parent
             if cwd.name == "ViennaPS":
@@ -179,14 +158,22 @@ def install_viennaps(
         sys.exit(
             f"{viennaps_dir} does not look like a ViennaPS source directory (missing CMakeLists.txt)."
         )
+
+    # # --- CRITICAL FIX: Clean Build Directory ---
+    # # This prevents the "poisoned cache" issue where CMake remembers the old ViennaLS path.
+    # build_dir = viennaps_dir / "build"
+    # if build_dir.exists():
+    #     print(f"Removing dirty build directory: {build_dir}")
+    #     shutil.rmtree(build_dir)
+    # -------------------------------------------
+
     env = os.environ.copy()
     env["CC"] = f"gcc-{REQUIRED_GCC}"
     env["CXX"] = f"g++-{REQUIRED_GCC}"
 
-    # GPU on
     cmake_args = []
     if gpu_build:
-        cmake_args = ["-DVIENNAPS_USE_GPU=ON"]
+        cmake_args.append("-DVIENNAPS_USE_GPU=ON")
 
     if debug_build:
         print("Enabling debug build.")
@@ -196,10 +183,20 @@ def install_viennaps(
     if optix_dir is not None:
         env["OptiX_INSTALL_DIR"] = str(optix_dir)
 
-    env["CMAKE_ARGS"] = " ".join(cmake_args)
-    cmd = [str(pip_path), "install", "."]
+    if cmake_args:
+        env["CMAKE_ARGS"] = " ".join(cmake_args)
+
+    cmd = [
+        str(pip_path), 
+        "install", 
+        ".", 
+        "--force-reinstall", 
+        "--no-cache-dir", 
+        "--no-build-isolation"
+    ]
     if verbose:
         cmd.append("-v")
+    
     run(cmd, cwd=viennaps_dir, env=env)
 
 
@@ -213,16 +210,10 @@ def main():
     parser.add_argument(
         "--venv", default=".venv", help="Path to the virtual environment directory."
     )
-    parser.add_argument(
-        "--viennals-dir",
-        default=None,
-        help="Path to a local ViennaLS checkout (optional).",
-    )
-    parser.add_argument(
-        "--viennals-version",
-        default=DEFAULT_VIENNALS_VERSION,
-        help="ViennaLS version tag to use if cloning.",
-    )
+    # These args are ignored now as we force the local path, but kept for compatibility
+    parser.add_argument("--viennals-dir", default=None, help="Ignored: Using local path.")
+    parser.add_argument("--viennals-version", default=None, help="Ignored: Using local path.")
+    
     parser.add_argument(
         "--viennaps-dir",
         default=None,
@@ -231,7 +222,7 @@ def main():
     parser.add_argument(
         "--optix",
         default=None,
-        help="Path to OptiX installation directory (optional - will auto-download OptiX headers if not provided).",
+        help="Path to OptiX installation directory (optional).",
     )
     parser.add_argument(
         "--debug-build",
@@ -241,7 +232,7 @@ def main():
     parser.add_argument(
         "--skip-toolchain-check",
         action="store_true",
-        help="Skip checking for required compilers and CUDA (use with caution).",
+        help="Skip checking for required compilers and CUDA.",
     )
     parser.add_argument(
         "--no-gpu",
@@ -255,20 +246,10 @@ def main():
         ensure_compilers()
         ensure_cuda()
 
-    # OptiX dir
     if not args.no_gpu:
         optix_dir = args.optix or os.environ.get("OptiX_INSTALL_DIR")
         if not optix_dir:
             print("No OptiX directory provided. Will auto-download OptiX headers.")
-            print("\nWARNING: OptiX uses a different license than ViennaPS.")
-            print(
-                "By proceeding with auto-download, you agree to the NVIDIA OptiX license terms."
-            )
-            print(
-                "Please review the OptiX license at: https://developer.nvidia.com/designworks/sdk-samples-tools-software-license-agreement"
-            )
-            print("If you do not agree, abort now (Ctrl+C).")
-            input("Press Enter to continue...")
             optix_dir = None
         else:
             optix_dir = Path(optix_dir).expanduser().resolve()
@@ -283,11 +264,11 @@ def main():
     create_or_reuse_venv(venv_dir)
     venv_python, venv_pip = venv_paths(venv_dir)
 
-    # ViennaLS
-    viennals_dir = (
-        Path(args.viennals_dir).expanduser().resolve() if args.viennals_dir else None
-    )
-    install_viennals(venv_pip, viennals_dir, args.viennals_version, args.verbose)
+    # 1. Install Build Dependencies
+    install_build_deps(venv_pip)
+
+    # 2. Install ViennaLS from Local Path
+    install_viennals(venv_pip, args.verbose)
 
     # ViennaPS dir
     viennaps_dir = get_viennaps_dir(args.viennaps_dir)
@@ -302,17 +283,10 @@ def main():
         args.verbose,
     )
 
-    # Final info
-    bindir = "Scripts" if os.name == "nt" else "bin"
-    activate_hint = (
-        venv_dir / bindir / ("activate" if os.name != "nt" else "activate.bat")
-    )
     print("\nInstallation complete.")
-    if os.name == "nt":
-        print(f"Activate the virtual environment:\n  {activate_hint}")
-    else:
-        print(f"Activate the virtual environment:\n  source {activate_hint}")
-    print("To deactivate:\n  deactivate")
+    bindir = "Scripts" if os.name == "nt" else "bin"
+    activate_hint = venv_dir / bindir / ("activate" if os.name != "nt" else "activate.bat")
+    print(f"Activate: source {activate_hint}")
 
 
 if __name__ == "__main__":

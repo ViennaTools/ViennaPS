@@ -29,7 +29,8 @@ public:
         (intSchem != IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER &&
          intSchem != IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER &&
          intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
-         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER)) {
+         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER &&
+         intSchem != IntegrationScheme::WENO_5TH_ORDER)) {
       VIENNACORE_LOG_WARNING(
           "Translation field method not supported in combination "
           "with integration scheme.");
