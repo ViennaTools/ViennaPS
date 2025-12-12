@@ -17,7 +17,7 @@ nav_order: 1
 
 The GPU ray tracing module is implemented using [**OptiX 8.0**](https://developer.nvidia.com/rtx/ray-tracing/optix). To use it, ensure your system meets the following requirements:
 
-- **NVIDIA Driver:** Version 550 or higher
+- **NVIDIA Driver:** Version 570 or higher
 - **CUDA Toolkit:** Version 12.0
 - **GCC:** Version 12.0 
 
@@ -26,14 +26,14 @@ The GPU ray tracing module is implemented using [**OptiX 8.0**](https://develope
 
 ---
 
-## Python Binding Installation
+## Python Bindings Installation
 
-For convenient setup, a helper script is provided. It builds **ViennaPS** and **ViennaLS** with GPU support directly from source inside the `ViennaTools` folder.
+For a convenient setup, a helper script is provided. It builds **ViennaPS** and **ViennaLS** with GPU support directly from source inside the `ViennaTools` folder.
 
 Run:
 
 ```sh
-wget https://raw.githubusercontent.com/ViennaTools/ViennaPS/refs/tags/v4.0.0/gpu/scripts/install_ViennaTools.py && python3 install_ViennaTools.py
+wget https://raw.githubusercontent.com/ViennaTools/ViennaPS/refs/tags/v4.1.2/gpu/scripts/install_ViennaTools.py && python3 install_ViennaTools.py
 ```
 
 The script performs the following steps:
@@ -105,7 +105,26 @@ To enable GPU support, follow these steps:
    - `VIENNAPS_BUILD_EXAMPLES=ON`
    - `VIENNAPS_BUILD_TESTS=ON`
 
-## Python Build Instructions
+### CMake Example Project
+
+Here is an example CMake project that demonstrates how to link against the ViennaPS GPU module using CPM to download ViennaPS:
+
+```cmake
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+project("ExampleProject")
+
+include("cmake/cpm.cmake") # Include CPM.cmake (get from: https://github.com/cpm-cmake/CPM.cmake/releases)
+
+CPMFindPackage(
+  NAME ViennaPS
+  VERSION 4.1.2
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaPS"
+  OPTIONS "VIENNAPS_USE_GPU ON")
+
+add_gpu_executable(example target_name example.cpp)
+```
+
+## Custom Python Build Instructions
 
 For building the Python GPU module:
 

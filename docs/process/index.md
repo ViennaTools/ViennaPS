@@ -132,6 +132,7 @@ All advanced parameters are set via `setParameters(...)`.
 | `checkDissipation`  | `bool`                  | `true`                     | Enable dissipation check.          |
 | `velocityOutput`    | `bool`                  | `false`                    | Write velocity per step.           |
 | `ignoreVoids`       | `bool`                  | `false`                    | Ignore void regions.               |
+| `adaptiveTimeStepping` | `bool`           | `false`                    | Enable adaptive time stepping when approaching material interfaces during etching.     |
 
 ### `RayTracingParameters`
 
@@ -140,7 +141,7 @@ All advanced parameters are set via `setParameters(...)`.
 | `normalizationType`    | `NormalizationType` | `SOURCE` | Normalization (`SOURCE` or `MAX`). |
 | `ignoreFluxBoundaries` | `bool`              | `false`  | Ignore BCs in tracing (CPU only).  |
 | `useRandomSeeds`       | `bool`              | `true`   | Random seeding.                    |
-| `rngSeed`              | `unsigned`          | `0`      | Fixed seed for the RNG.            |
+| `rngSeed`              | `unsigned`          | `0`      | Fixed seed for the RNG. (`useRandomSeeds` must be `false` to use this.)            |
 | `raysPerPoint`         | `unsigned`          | `1000`   | Rays per surface point.            |
 | `smoothingNeighbors`   | `int`               | `1`      | Post-trace flux smoothing.         |
 | `diskRadius`           | `double`            | `0`      | Disk radius; `0` = auto.           |
@@ -243,6 +244,12 @@ void setParameters(const AtomicLayerProcessParameters<NumericType>&)
         
 ```c++
 void setFluxEngineType(FluxEngineType type)
+```
+
+### Set intermediate output path
+Path for writing intermediate results, if enabled. See [Logging]({% link misc/logging.md %}). for details.
+```c++
+void setIntermediateOutputPath(const std::string &path)
 ```
 
 ### Run the process

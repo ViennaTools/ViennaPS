@@ -16,8 +16,8 @@ In the C++ version of ViennaPS, the simulation dimensionality is determined **at
 For example:
 
 ```cpp
-ps::Domain<double, 3> domain3D;  // 3D simulation
-ps::Domain<double, 2> domain2D;  // 2D simulation
+viennaps::Domain<double, 3> domain3D;  // 3D simulation
+viennaps::Domain<double, 2> domain2D;  // 2D simulation
 ```
 
 Because the dimensionality is a compile-time parameter, **2D and 3D classes cannot be mixed** within the same simulation. Once chosen, the dimensionality remains fixed for all components of that simulation.
@@ -29,14 +29,14 @@ In the Python bindings, the simulation dimensionality is organized into two dedi
 By default, ViennaPS operates in **2D mode**. To switch to 3D, call:
 
 ```python
-ps.setDimension(3)
+viennaps.setDimension(3)
 ```
 
 Alternatively, the dimensional modules can be accessed explicitly:
 
 ```python
-ps.d2.Domain   # 2D domain
-ps.d3.Domain   # 3D domain
+viennaps.d2.Domain   # 2D domain
+viennaps.d3.Domain   # 3D domain
 ```
 
 

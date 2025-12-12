@@ -34,23 +34,25 @@ By adjusting the **`IBEParameters`** and mask configuration, the model can repli
 
 ---
 
-| Parameter               | Type       | Description                                                                                          | Units / Range                   | Default |
-|-------------------------|------------|------------------------------------------------------------------------------------------------------|----------------------------------|---------|
-| `planeWaferRate`        | double     | Base etch rate for a reference (plane) wafer surface.                                                | User-defined (e.g., nm/min)      | 1.0     |
-| `materialPlaneWaferRate`| map        | Material-specific plane wafer rates overriding `planeWaferRate`.                                     | User-defined per `Material`      | —       |
-| `meanEnergy`            | double     | Mean ion energy in the beam.                                                                         | eV                               | 250     |
-| `sigmaEnergy`           | double     | Standard deviation of the ion energy distribution.                                                   | eV                               | 10      |
-| `thresholdEnergy`       | double     | Minimum ion energy required for sputtering.                                                          | eV                               | 20      |
-| `exponent`              | double     | Exponent controlling the angular distribution of the ion source.                                     | > 1                              | 100     |
-| `n_l`                   | double     | Shape parameter for the reflection energy distribution.                                              | > 1                              | 10      |
-| `inflectAngle`          | double     | Inflection angle for energy reflection behavior.                                                      | degrees                          | 89      |
-| `minAngle`              | double     | Minimum angle for coned reflection.                                                                  | degrees                          | 85      |
-| `tiltAngle`             | double     | Tilt angle of the incoming ion beam relative to surface normal.                                      | degrees                          | 0       |
-| `yieldFunction`         | function   | User-defined sputter yield as a function of incidence angle `θ` (in radians).                        | —                                | `1.0`   |
-| `redepositionThreshold` | double     | Minimum sputtered particle energy or yield before redeposition is considered.                        | User-defined                     | 0.1     |
-| `redepositionRate`      | double     | Fraction of sputtered material redeposited on the surface.                                           | 0.0 – 1.0                        | 0.0     |
+| Parameter               | Type       | Description                                                                      | Units / Range                    | Default |
+|-------------------------|------------|----------------------------------------------------------------------------------|----------------------------------|---------|
+| `planeWaferRate`        | double     | Base etch rate for a reference (plane) wafer surface.                            | User-defined (e.g., nm/min)      | 1.0     |
+| `materialPlaneWaferRate`| map        | Material-specific plane wafer rates overriding `planeWaferRate`.                 | User-defined per `Material`      | —       |
+| `meanEnergy`            | double     | Mean ion energy in the beam.                                                     | eV                               | 250     |
+| `sigmaEnergy`           | double     | Standard deviation of the ion energy distribution.                               | eV                               | 10      |
+| `thresholdEnergy`       | double     | Minimum ion energy required for sputtering.                                      | eV                               | 20      |
+| `exponent`              | double     | Exponent controlling the angular distribution of the ion source.                 | > 1                              | 100     |
+| `n_l`                   | double     | Shape parameter for the reflection energy distribution.                          | > 1                              | 10      |
+| `inflectAngle`          | double     | Inflection angle for energy reflection behavior.                                 | degrees                          | 89      |
+| `minAngle`              | double     | Minimum angle for coned reflection.                                              | degrees                          | 85      |
+| `tiltAngle`             | double     | Tilt angle of the incoming ion beam relative to surface normal.                  | degrees                          | 0       |
+| `yieldFunction`         | function   | User-defined sputter yield as a function of incidence angle `θ` (in radians).    | —                                | `1.0`   |
+| `redepositionThreshold` | double     | Minimum sputtered particle energy or yield before redeposition is considered.    | User-defined                     | 0.1     |
+| `redepositionRate`      | double     | Fraction of sputtered material redeposited on the surface.                       | 0.0 – 1.0                        | 0.0     |
+| `rotatingWafer`         | bool       | Enables wafer rotation during etching.                                           | true / false                     | false   |
 
 
 ## Related Examples
 
+* [Ion Beam Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/ionBeamEtching)
 * [Blazed Gratings Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/blazedGratingsEtching)

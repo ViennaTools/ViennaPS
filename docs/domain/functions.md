@@ -44,6 +44,7 @@ void duplicateTopLevelSet(Material material);
 void removeTopLevelSet();
 void removeLevelSet(unsigned int idx, bool removeWrapped = true);
 void removeMaterial(Material material);
+void removeStrayPoints();
 ```
 
 Insert, duplicate, or remove Level-Sets. Materials can be assigned during insertion.

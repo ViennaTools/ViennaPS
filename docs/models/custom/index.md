@@ -42,10 +42,10 @@ All components are assembled in a `ProcessModelCPU` (or `ProcessModelGPU`) insta
 ## Example
 
 ```cpp
-#include <psProcessModel.hpp>
-#include <psSurfaceModel.hpp>
-#include <psVelocityField.hpp>
-#include <psProcess.hpp>
+#include <process/psProcessModel.hpp>
+#include <process/psSurfaceModel.hpp>
+#include <process/psVelocityField.hpp>
+#include <process/psProcess.hpp>
 
 int main()
 {
