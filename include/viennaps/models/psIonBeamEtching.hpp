@@ -5,12 +5,12 @@
 #include "../psMaterials.hpp"
 #include "psIonBeamParameters.hpp"
 #include "psIonModelUtil.hpp"
+#include "psPipelineParameters.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <psgPipelineParameters.hpp>
 #include <raygCallableConfig.hpp>
 #endif
 
