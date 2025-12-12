@@ -221,9 +221,9 @@ public:
     rayTracer_.normalizeResults();
 
     // extract fluxes on points
-    gpu::ElementToPointData<NumericType, float, viennaray::gpu::ResultType,
-                            true, D == 3>(
-        rayTracer_.getResults(), fluxes, rayTracer_.getParticles(),
+    ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
+                       D == 3>(
+        IndexMap(rayTracer_.getParticles()), rayTracer_.getResults(), fluxes,
         elementKdTree_, context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *
             (context.rayTracingParams.smoothingNeighbors + 1))
@@ -236,7 +236,7 @@ public:
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
                           surfaceMesh_->getElements<3>().size());
       }
-      downloadResultsToPointData(surfaceMesh_->getCellData());
+      saveResultsToPointData(surfaceMesh_->getCellData());
       viennals::VTKWriter<float>(
           surfaceMesh_, context.intermediateOutputPath +
                             context.getProcessName() + "_flux_" +
@@ -272,28 +272,23 @@ private:
     delete temp;
   }
 
-  void downloadResultsToPointData(viennals::PointData<float> &pointData) {
-    const auto numRates = rayTracer_.getNumberOfRates();
+  void saveResultsToPointData(viennals::PointData<float> &pointData) {
     const auto numPoints = rayTracer_.getNumberOfElements();
-    assert(numRates > 0);
     assert(numPoints == surfaceMesh_->getElements<3>().size());
-    auto &valueBuffer = rayTracer_.getResults();
-    std::vector<viennaray::gpu::ResultType> tmpBuffer(numRates * numPoints);
-    valueBuffer.download(tmpBuffer.data(), numPoints * numRates);
+    auto const &results = rayTracer_.getResults();
     auto particles = rayTracer_.getParticles();
 
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        int tmpOffset = offset + dIdx;
         auto name = particles[pIdx].dataLabels[dIdx];
+        assert(offset + dIdx < results.size());
+        const auto &data = results[offset + dIdx];
 
         std::vector<float> values(numPoints);
         for (unsigned i = 0; i < numPoints; ++i) {
-          values[i] = static_cast<float>(tmpBuffer[tmpOffset * numPoints + i]);
+          values[i] = static_cast<float>(data[i]);
         }
-        // std::memcpy(values.data(), &tmpBuffer[tmpOffset * numPoints],
-        // numPoints * sizeof(double));
 
         pointData.insertReplaceScalarData(std::move(values), name);
       }
