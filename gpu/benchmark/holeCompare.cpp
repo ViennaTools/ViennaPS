@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
   MakeHole<NumericType, D>(geometry, 0.175,
                            0.0, // holeDepth
                            0.0, // holeTaperAngle
-                           1.2, 1.2, HoleShape::FULL)
+                           1.2, 1.2, HoleShape::HALF)
       .apply();
 
   constexpr std::array<FluxEngineType, 4> fluxEngines = {
@@ -60,8 +60,7 @@ int main(int argc, char *argv[]) {
     auto model = SmartPointer<SF6O2Etching<NumericType, D>>::New(modelParams);
 
     for (const auto &fluxEngine : fluxEngines) {
-      auto copy = Domain<NumericType, D>::New(geometry);
-      runBenchmark<NumericType, D>(copy, model, fluxEngine,
+      runBenchmark<NumericType, D>(geometry, model, fluxEngine,
                                    "result_PE_" + to_string(fluxEngine) +
                                        ".vtp");
     }
@@ -72,8 +71,7 @@ int main(int argc, char *argv[]) {
         -1.0, 1.0, 100.0, Material::Mask);
 
     for (const auto &fluxEngine : fluxEngines) {
-      auto copy = Domain<NumericType, D>::New(geometry);
-      runBenchmark<NumericType, D>(copy, model, fluxEngine,
+      runBenchmark<NumericType, D>(geometry, model, fluxEngine,
                                    "result_SP_" + to_string(fluxEngine) +
                                        ".vtp");
     }
@@ -91,8 +89,7 @@ int main(int argc, char *argv[]) {
     auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New(ibeParams);
 
     for (const auto &fluxEngine : fluxEngines) {
-      auto copy = Domain<NumericType, D>::New(geometry);
-      runBenchmark<NumericType, D>(copy, model, fluxEngine,
+      runBenchmark<NumericType, D>(geometry, model, fluxEngine,
                                    "result_IBE_" + to_string(fluxEngine) +
                                        ".vtp");
     }
@@ -111,31 +108,13 @@ int main(int argc, char *argv[]) {
     NumericType thetaRMax = 90.;
     NumericType minAngle = 80.;
 
-    Timer timer;
-    for (int i = 0; i < 2; ++i) {
-      auto copy = Domain<NumericType, D>::New(geometry);
+    auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
+    model->addIonParticle(100.0, thetaRMin, thetaRMax, minAngle);
+    model->setRateFunction(rateFunc);
 
-      auto model =
-          SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New();
-      model->addIonParticle(100.0, thetaRMin, thetaRMax, minAngle);
-      model->setRateFunction(rateFunc);
-      model->setProcessName(to_string(fluxEngines[i]));
-
-      runBenchmark<NumericType, D>(copy, model, fluxEngines[i],
-                                   "result_MP_" + to_string(fluxEngines[i]) +
-                                       ".vtp");
-    }
-
-    for (int i = 2; i < 4; ++i) {
-      auto copy = Domain<NumericType, D>::New(geometry);
-
-      auto model = SmartPointer<MultiParticleProcess<NumericType, D>>::New();
-      model->addIonParticle(100.0, thetaRMin, thetaRMax, minAngle);
-      model->setRateFunction(rateFunc);
-      model->setProcessName(to_string(fluxEngines[i]));
-
-      runBenchmark<NumericType, D>(copy, model, fluxEngines[i],
-                                   "result_MP_" + to_string(fluxEngines[i]) +
+    for (const auto &fluxEngine : fluxEngines) {
+      runBenchmark<NumericType, D>(geometry, model, fluxEngine,
+                                   "result_MP_" + to_string(fluxEngine) +
                                        ".vtp");
     }
   }
