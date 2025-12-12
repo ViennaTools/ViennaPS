@@ -81,7 +81,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
                                  (params->thetaRMax - params->thetaRMin));
   }
 
-  if (sticking >= 1. && prd->load <= 0.) {
+  if (sticking >= 1.f && prd->load <= 0.f) {
     prd->rayWeight = 0.f; // terminate particle
     return;
   }

@@ -5,8 +5,11 @@
 #include <rayBoundary.hpp>
 
 #include <regex>
+#include <sstream>
 #include <string>
 #include <unordered_map>
+
+#include "psMaterials.hpp"
 
 // Use viennacore here to avoid conflicts with other namespaces
 namespace viennacore::util {
@@ -101,15 +104,30 @@ convertIntegrationSchemeToString(viennals::IntegrationSchemeEnum scheme) {
   return viennaray::BoundaryCondition::IGNORE;
 }
 
+template <typename T> [[nodiscard]] std::string toString(const T &value) {
+  if constexpr (std::is_same_v<T, bool>)
+    return value ? "true" : "false";
+  else if constexpr (std::is_same_v<T, viennals::IntegrationSchemeEnum>)
+    return convertIntegrationSchemeToString(
+        static_cast<viennals::IntegrationSchemeEnum>(value));
+  else if constexpr (std::is_same_v<T, viennaps::Material>) {
+    std::string mat = viennaps::to_string_view(value);
+    return mat;
+  } else if constexpr (std::is_same_v<T, std::string>)
+    return value;
+  else
+    return std::to_string(value);
+}
+
 [[nodiscard]] inline std::string metaDataToString(
     const std::unordered_map<std::string, std::vector<double>> &metaData) {
-  std::string result;
+  std::stringstream str;
   for (const auto &item : metaData) {
-    result += "\n" + item.first + ": ";
+    str << "\n" << item.first << ": ";
     for (const auto &value : item.second) {
-      result += std::to_string(value) + " ";
+      str << value << " ";
     }
   }
-  return result;
+  return str.str();
 }
 }; // namespace viennacore::util
