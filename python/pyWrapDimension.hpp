@@ -1244,6 +1244,28 @@ template <int D> void bindApi(py::module &module) {
       .def(py::init<DomainType>(), py::arg("domain"))
       .def(py::init<DomainType, SmartPointer<ProcessModelBase<T, D>>, T>(),
            py::arg("domain"), py::arg("model"), py::arg("duration") = 0.)
+      .def(py::init([](DomainType domain,
+                       SmartPointer<ProcessModelBase<T, D>> model, T duration,
+                       py::args args) {
+             ProcessTD process(domain, model, duration);
+             for (auto arg : args) {
+               if (py::isinstance<AdvectionParameters>(arg)) {
+                 process.setParameters(arg.cast<AdvectionParameters>());
+               } else if (py::isinstance<RayTracingParameters>(arg)) {
+                 process.setParameters(arg.cast<RayTracingParameters>());
+               } else if (py::isinstance<CoverageParameters>(arg)) {
+                 process.setParameters(arg.cast<CoverageParameters>());
+               } else if (py::isinstance<AtomicLayerProcessParameters>(arg)) {
+                 process.setParameters(
+                     arg.cast<AtomicLayerProcessParameters>());
+               } else {
+                 throw py::type_error(
+                     "Unsupported parameter type for Process constructor");
+               }
+             }
+             return process;
+           }),
+           py::arg("domain"), py::arg("model"), py::arg("duration") = 0.)
       // methods
       .def("apply", &ProcessTD::apply,
            //  py::call_guard<py::gil_scoped_release>(),

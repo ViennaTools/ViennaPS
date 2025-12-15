@@ -36,6 +36,8 @@ convertIntegrationScheme(const std::string &s) {
   if (s == "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "SLLF_1")
     return viennals::IntegrationSchemeEnum::
         STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  if (s == "WENO_5TH_ORDER" || s == "WENO_5")
+    return viennals::IntegrationSchemeEnum::WENO_5TH_ORDER;
   throw std::invalid_argument(
       "The value must be one of the following: "
       "ENGQUIST_OSHER_1ST_ORDER, ENGQUIST_OSHER_2ND_ORDER, "
@@ -45,7 +47,8 @@ convertIntegrationScheme(const std::string &s) {
       "LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER, "
       "LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
       "LOCAL_LAX_FRIEDRICHS_2ND_ORDER, "
-      "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER");
+      "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
+      "WENO_5TH_ORDER");
 }
 
 [[nodiscard]] inline std::string
@@ -72,6 +75,8 @@ convertIntegrationSchemeToString(viennals::IntegrationSchemeEnum scheme) {
     return "LOCAL_LAX_FRIEDRICHS_2ND_ORDER";
   case viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
     return "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
+  case viennals::IntegrationSchemeEnum::WENO_5TH_ORDER:
+    return "WENO_5TH_ORDER";
   default:
     throw std::invalid_argument("Unknown integration scheme.");
   }

@@ -55,9 +55,11 @@ struct AdvectionParameters {
       IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER;
   double timeStepRatio = 0.4999;
   double dissipationAlpha = 1.0;
+  double adaptiveTimeStepThreshold = 0.05;
   bool checkDissipation = true;
   bool velocityOutput = false;
   bool ignoreVoids = false;
+  bool adaptiveTimeStepping = false;
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;

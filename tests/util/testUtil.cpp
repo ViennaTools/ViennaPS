@@ -11,6 +11,12 @@ void TestIntegrationSchemeConversion() {
   VC_TEST_ASSERT(convertIntegrationScheme("EO_1") ==
                  viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
 
+  // Test string to enum
+  VC_TEST_ASSERT(convertIntegrationScheme("WENO_5TH_ORDER") ==
+                 viennals::IntegrationSchemeEnum::WENO_5TH_ORDER);
+  VC_TEST_ASSERT(convertIntegrationScheme("WENO_5") ==
+                 viennals::IntegrationSchemeEnum::WENO_5TH_ORDER);
+
   // Test enum to string
   VC_TEST_ASSERT(
       convertIntegrationSchemeToString(
