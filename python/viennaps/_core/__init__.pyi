@@ -7,10 +7,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
-import viennaps.d3
+from viennaps import d2
 from viennaps import d3
+import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
@@ -65,6 +65,7 @@ __all__: list[str] = [
 
 class AdvectionParameters:
     adaptiveTimeStepping: bool
+    checkDissipation: bool
     ignoreVoids: bool
     integrationScheme: viennals._core.IntegrationSchemeEnum
     velocityOutput: bool
@@ -79,6 +80,10 @@ class AdvectionParameters:
         Convert the advection parameters to a metadata string.
         """
 
+    @property
+    def adaptiveTimeStepThreshold(self) -> float: ...
+    @adaptiveTimeStepThreshold.setter
+    def adaptiveTimeStepThreshold(self, arg0: typing.SupportsFloat) -> None: ...
     @property
     def dissipationAlpha(self) -> float: ...
     @dissipationAlpha.setter

@@ -9,7 +9,7 @@ from pathlib import Path
 
 REQUIRED_GCC = "12"
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.2.1"
+DEFAULT_VIENNALS_VERSION = "5.3.0"
 
 
 def run(cmd, **kwargs):
