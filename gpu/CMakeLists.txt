@@ -19,9 +19,9 @@ else()
 endif()
 
 #### Set variables
-set(VIENNAPS_GPU_INCLUDE
-    "${PROJECT_SOURCE_DIR}/include"
-    CACHE STRING "Includes for ViennaPS GPU processing.")
+set(VIENNAPS_GPU_MODELS
+    "${PROJECT_SOURCE_DIR}/models"
+    CACHE STRING "ModelsViennaPS GPU process models.")
 set(VIENNAPS_CUDA_KERNELS
     ""
     CACHE STRING "ViennaPS CUDA kernel source files.")

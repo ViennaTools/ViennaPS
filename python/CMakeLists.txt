@@ -68,11 +68,10 @@ set_target_properties(
 
 if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps' python package")
-  include("../cmake/generate_ptx.cmake")
 
   # Include pipelines of models
   generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNAPS_GPU_INCLUDE}/models/CallableWrapper.cu")
+                    "${VIENNAPS_GPU_MODELS}/CallableWrapper.cu")
 
   # ViennaRay general pipelines
   generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
@@ -87,8 +86,7 @@ if(VIENNAPS_USE_GPU)
 
   # Include ViennaPS GPU and OptiX headers
   target_sources(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${generated_files})
-  target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${VIENNAPS_GPU_INCLUDE}
-                                                                    ${VIENNARAY_GPU_INCLUDE})
+  target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${VIENNARAY_GPU_INCLUDE})
   target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                              PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
 

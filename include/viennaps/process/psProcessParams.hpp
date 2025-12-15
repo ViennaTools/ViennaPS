@@ -42,11 +42,9 @@ struct RayTracingParameters {
   }
 
   auto toMetaDataString() const {
-    return "\nRaysPerPoint: " + std::to_string(raysPerPoint) +
-           "\nDiskRadius: " + std::to_string(diskRadius) +
-           "\nSmoothingNeighbors: " + std::to_string(smoothingNeighbors) +
-           "\nMinNodeDistanceFactor: " + std::to_string(minNodeDistanceFactor) +
-           "\nUseRandomSeeds: " + util::boolString(useRandomSeeds);
+    auto metaData = util::metaDataToString(toMetaData());
+    return metaData + "\nUseRandomSeeds: " + util::toString(useRandomSeeds) +
+           "\nIgnoreFluxBoundaries: " + util::toString(ignoreFluxBoundaries);
   }
 };
 
@@ -70,13 +68,13 @@ struct AdvectionParameters {
   }
 
   auto toMetaDataString() const {
-    return "\nIntegrationScheme: " +
-           util::convertIntegrationSchemeToString(integrationScheme) +
-           "\nTimeStepRatio: " + std::to_string(timeStepRatio) +
-           "\nDissipationAlpha: " + std::to_string(dissipationAlpha) +
-           "\nCheckDissipation: " + util::boolString(checkDissipation) +
-           "\nVelocityOutput: " + util::boolString(velocityOutput) +
-           "\nIgnoreVoids: " + util::boolString(ignoreVoids);
+    return "\nIntegrationScheme: " + util::toString(integrationScheme) +
+           "\nTimeStepRatio: " + util::toString(timeStepRatio) +
+           "\nDissipationAlpha: " + util::toString(dissipationAlpha) +
+           "\nCheckDissipation: " + util::toString(checkDissipation) +
+           "\nVelocityOutput: " + util::toString(velocityOutput) +
+           "\nIgnoreVoids: " + util::toString(ignoreVoids) +
+           "\nAdaptiveTimeStepping: " + util::toString(adaptiveTimeStepping);
   }
 };
 
@@ -92,10 +90,7 @@ struct CoverageParameters {
     return metaData;
   }
 
-  auto toMetaDataString() const {
-    return "\nCoverageTolerance: " + std::to_string(tolerance) +
-           "\nCoverageMaxIterations: " + std::to_string(maxIterations);
-  }
+  auto toMetaDataString() const { return util::metaDataToString(toMetaData()); }
 };
 
 struct AtomicLayerProcessParameters {
@@ -113,12 +108,7 @@ struct AtomicLayerProcessParameters {
     return metaData;
   }
 
-  auto toMetaDataString() const {
-    return "\nNumCycles: " + std::to_string(numCycles) +
-           "\nPulseTime: " + std::to_string(pulseTime) +
-           "\nCoverageTimeStep: " + std::to_string(coverageTimeStep) +
-           "\nPurgePulseTime: " + std::to_string(purgePulseTime);
-  }
+  auto toMetaDataString() const { return util::metaDataToString(toMetaData()); }
 };
 
 template <typename NumericType> class ProcessParams {

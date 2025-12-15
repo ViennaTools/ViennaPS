@@ -186,9 +186,9 @@ int main() {
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));
         }
-        ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
-            fluxResultVec, pointData, particles, elementKdTree, diskMesh,
-            surfMesh, domain->getGridDelta() * 2.0f)
+        ElementToPointData<NumericType, float, float>(
+            IndexMap(particles), fluxResultVec, pointData, elementKdTree,
+            diskMesh, surfMesh, domain->getGridDelta() * 2.0f)
             .apply();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(
             std::move(*pointData->getScalarData(fluxLabel)));

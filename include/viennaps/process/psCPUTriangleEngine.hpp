@@ -273,8 +273,8 @@ private:
 
     // map fluxes on points
     ElementToPointData<NumericType, float, NumericType, true, D == 3>(
-        elementFluxes, fluxes, model->getParticleTypes(), elementKdTree_,
-        context.diskMesh, surfaceMesh_,
+        IndexMap(model->getParticleTypes()), elementFluxes, fluxes,
+        elementKdTree_, context.diskMesh, surfaceMesh_,
         context.domain->getGridDelta() *
             (context.rayTracingParams.smoothingNeighbors + 1))
         .apply();
