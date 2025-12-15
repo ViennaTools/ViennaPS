@@ -41,10 +41,12 @@ public:
   Process(SmartPointer<Domain<NumericType, D>> domain) : context_{domain} {
     initializeStrategies();
   }
+  template <typename... ParamArgs>
   Process(SmartPointer<Domain<NumericType, D>> domain,
           SmartPointer<ProcessModelBase<NumericType, D>> model,
-          NumericType processDuration = 0.)
+          NumericType processDuration = 0., ParamArgs... params)
       : context_{domain, model, processDuration} {
+    (setParameters(params), ...);
     initializeStrategies();
   }
 

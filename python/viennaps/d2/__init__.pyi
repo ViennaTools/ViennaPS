@@ -1200,6 +1200,14 @@ class Process:
         model: ProcessModelBase,
         duration: typing.SupportsFloat = 0.0,
     ) -> None: ...
+    @typing.overload
+    def __init__(
+        self,
+        domain: Domain,
+        model: ProcessModelBase,
+        duration: typing.SupportsFloat = 0.0,
+        *args,
+    ) -> None: ...
     def apply(self) -> None:
         """
         Run the process.
