@@ -650,6 +650,11 @@ class Domain:
         Setup the domain.
         """
 
+    def show(self) -> None:
+        """
+        Render the domain using VTK.
+        """
+
 class DomainSetup:
     @typing.overload
     def __init__(self) -> None: ...

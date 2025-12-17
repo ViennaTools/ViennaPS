@@ -531,6 +531,7 @@ template <int D> void bindApi(py::module &module) {
           "print",
           [](Domain<T, D> &self, bool hrle) { self.print(std::cout, hrle); },
           "Print the domain information.", py::arg("hrleInfo") = false)
+      .def("show", &Domain<T, D>::show, "Render the domain using VTK.")
       .def("getLevelSetMesh", &Domain<T, D>::getLevelSetMesh,
            py::arg("width") = 1,
            "Get the level set grids of layers in the domain.")
