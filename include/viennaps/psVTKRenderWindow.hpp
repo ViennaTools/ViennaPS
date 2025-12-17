@@ -24,6 +24,8 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkTextActor.h>
+#include <vtkTextProperty.h>
 
 #ifndef VIENNALS_VTK_MODULE_INIT
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
@@ -55,7 +57,16 @@ public:
     initialize();
   }
 
-  ~VTKRenderWindow();
+  ~VTKRenderWindow() {
+    if (interactor) {
+      interactor->SetInteractorStyle(nullptr);
+      interactor->SetRenderWindow(nullptr);
+    }
+    if (renderWindow) {
+      renderWindow->SetInteractor(nullptr);
+      renderWindow->RemoveRenderer(renderer);
+    }
+  }
 
   void setBackgroundColor(const std::array<double, 3> &color) {
     backgroundColor = color;
@@ -74,15 +85,15 @@ public:
 
   // Update the display without starting a new event loop (for use during
   // interaction)
-  void updateDisplay() {
-    updateRenderer();
+  void updateDisplay(bool useCache = false) {
+    updateRenderer(useCache);
     renderWindow->Render();
   }
 
 private:
   void initialize();
 
-  void updateRenderer() {
+  void updateRenderer(bool useCache = false) {
     if (!domain) {
       VIENNACORE_LOG_WARNING("No domain set for rendering.");
       return;
@@ -93,16 +104,32 @@ private:
 
     switch (renderMode) {
     case RenderMode::SURFACE: {
-      auto surfaceMesh = domain->getSurfaceMesh();
+      SmartPointer<viennals::Mesh<T>> surfaceMesh;
+      if (useCache && cachedSurfaceMesh) {
+        surfaceMesh = cachedSurfaceMesh;
+      } else {
+        surfaceMesh = domain->getSurfaceMesh();
+        cachedSurfaceMesh = surfaceMesh;
+      }
       updatePolyData(surfaceMesh);
       break;
     }
     case RenderMode::INTERFACE: {
-      auto interfaceMesh = domain->getSurfaceMesh(true);
+      SmartPointer<viennals::Mesh<T>> interfaceMesh;
+      if (useCache && cachedInterfaceMesh) {
+        interfaceMesh = cachedInterfaceMesh;
+      } else {
+        interfaceMesh = domain->getSurfaceMesh(true);
+        cachedInterfaceMesh = interfaceMesh;
+      }
       updatePolyData(interfaceMesh);
       break;
     }
     case RenderMode::VOLUME: {
+      if (useCache && cachedVolumeMesh) {
+        updateVolumeMesh(cachedVolumeMesh, cachedMinMatId, cachedMaxMatId);
+        break;
+      }
       viennals::WriteVisualizationMesh<T, D> writer;
       auto matMap = domain->getMaterialMap();
       auto levelSets = domain->getLevelSets();
@@ -122,6 +149,9 @@ private:
       writer.apply();
 
       auto volumeMesh = writer.getVolumeMesh();
+      cachedVolumeMesh = volumeMesh;
+      cachedMinMatId = minMatId;
+      cachedMaxMatId = maxMatId;
       updateVolumeMesh(volumeMesh, minMatId, maxMatId);
       break;
     }
@@ -274,8 +304,44 @@ private:
   std::array<int, 2> windowSize = {800, 600};
 
   RenderMode renderMode = RenderMode::INTERFACE;
+
+  // cached meshes
+  SmartPointer<viennals::Mesh<T>> cachedSurfaceMesh;
+  SmartPointer<viennals::Mesh<T>> cachedInterfaceMesh;
+  vtkSmartPointer<vtkUnstructuredGrid> cachedVolumeMesh;
+  int cachedMinMatId = -1;
+  int cachedMaxMatId = -1;
 };
 
+namespace impl {
+template <typename T, int D>
+void InteractorOnChar(vtkRenderWindowInteractor *rwi,
+                      VTKRenderWindow<T, D> *window) {
+
+  if (!window || !rwi || rwi->GetDone())
+    return;
+
+  switch (rwi->GetKeyCode()) {
+  case '1':
+    window->setRenderMode(RenderMode::SURFACE);
+    window->updateDisplay(true);
+    return;
+  case '2':
+    window->setRenderMode(RenderMode::INTERFACE);
+    window->updateDisplay(true);
+    return;
+  case '3':
+    window->setRenderMode(RenderMode::VOLUME);
+    window->updateDisplay(true);
+    return;
+  case 'e':
+    [[fallthrough]];
+  case 'q':
+    rwi->TerminateApp();
+    return;
+  }
+}
+} // namespace impl
 } // namespace viennaps
 
 // Full definition of Custom3DInteractorStyle after VTKRenderWindow is complete
@@ -284,37 +350,18 @@ public:
   static Custom3DInteractorStyle *New();
   vtkTypeMacro(Custom3DInteractorStyle, vtkInteractorStyleTrackballCamera);
 
-  virtual void OnChar() {
-    if (Window == nullptr)
-      return;
-
+  void OnChar() {
     vtkRenderWindowInteractor *rwi = this->Interactor;
-    if (!rwi || rwi->GetDone())
-      return;
-
-    switch (rwi->GetKeyCode()) {
-    case '1':
-      Window->setRenderMode(viennaps::RenderMode::SURFACE);
-      Window->updateDisplay();
-      return;
-    case '2':
-      Window->setRenderMode(viennaps::RenderMode::INTERFACE);
-      Window->updateDisplay();
-      return;
-    case '3':
-      Window->setRenderMode(viennaps::RenderMode::VOLUME);
-      Window->updateDisplay();
-      return;
-    }
+    viennaps::impl::InteractorOnChar(rwi, Window);
   }
 
   void setRenderWindow(viennaps::VTKRenderWindow<double, 3> *window) {
-    this->Window = window;
+    Window = window;
   }
 
 private:
   viennaps::VTKRenderWindow<double, 3> *Window = nullptr;
-};
+}; // namespace viennaps
 
 vtkStandardNewMacro(Custom3DInteractorStyle);
 
@@ -327,37 +374,18 @@ public:
 
   void OnLeftButtonUp() override { this->EndPan(); }
 
-  virtual void OnChar() {
-    if (Window == nullptr)
-      return;
-
+  void OnChar() {
     vtkRenderWindowInteractor *rwi = this->Interactor;
-    if (!rwi || rwi->GetDone())
-      return;
-
-    switch (rwi->GetKeyCode()) {
-    case '1':
-      Window->setRenderMode(viennaps::RenderMode::SURFACE);
-      Window->updateDisplay();
-      return;
-    case '2':
-      Window->setRenderMode(viennaps::RenderMode::INTERFACE);
-      Window->updateDisplay();
-      return;
-    case '3':
-      Window->setRenderMode(viennaps::RenderMode::VOLUME);
-      Window->updateDisplay();
-      return;
-    }
+    viennaps::impl::InteractorOnChar(rwi, Window);
   }
 
   void setRenderWindow(viennaps::VTKRenderWindow<double, 2> *window) {
-    this->Window = window;
+    Window = window;
   }
 
 private:
   viennaps::VTKRenderWindow<double, 2> *Window = nullptr;
-};
+}; // namespace viennaps
 
 vtkStandardNewMacro(Custom2DInteractorStyle);
 
@@ -365,24 +393,18 @@ vtkStandardNewMacro(Custom2DInteractorStyle);
 // Custom3DInteractorStyle
 namespace viennaps {
 
-template <typename T, int D> VTKRenderWindow<T, D>::~VTKRenderWindow() {
-  if (interactor) {
-    if (auto *customStyle = Custom3DInteractorStyle::SafeDownCast(
-            interactor->GetInteractorStyle())) {
-      customStyle->setRenderWindow(nullptr);
-    }
-    interactor->SetInteractorStyle(nullptr);
-    interactor->SetRenderWindow(nullptr);
-  }
-  if (renderWindow) {
-    renderWindow->SetInteractor(nullptr);
-    renderWindow->RemoveRenderer(renderer);
-  }
-}
-
 template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
   renderer = vtkSmartPointer<vtkRenderer>::New();
   renderer->SetBackground(backgroundColor.data());
+
+  // add text actor for instructions
+  auto instructions = vtkSmartPointer<vtkTextActor>::New();
+  instructions->SetInput(
+      "Press 1: Surface | 2: Interface | 3: Volume | q/e: Quit");
+  instructions->GetTextProperty()->SetFontSize(14);
+  instructions->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
+  instructions->SetPosition(10, 10);
+  renderer->AddActor(instructions);
 
   renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
   renderWindow->SetWindowName("ViennaPS Render Window");
