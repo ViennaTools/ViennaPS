@@ -4,6 +4,7 @@
 #include "psMaterials.hpp"
 #include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
+#include "psVTKRenderWindow.hpp"
 #include "psVersion.hpp"
 
 #include <lsBooleanOperation.hpp>
@@ -599,6 +600,16 @@ public:
           levelSets_.at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
           .apply();
     }
+  }
+
+  void show() const {
+#ifdef VIENNALS_VTK_RENDERING
+    auto thisDomain = SmartPointer<Domain<NumericType, D>>::New(*this);
+    VTKRenderWindow<NumericType, D>(thisDomain).render();
+#else
+    VIENNACORE_LOG_ERROR("VTK rendering is disabled. Please enable "
+                         "VIENNALS_VTK_RENDERING to use this feature.");
+#endif
   }
 
   void clear() {
