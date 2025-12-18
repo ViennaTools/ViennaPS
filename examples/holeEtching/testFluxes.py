@@ -57,7 +57,7 @@ params.Mask.rho = params.Substrate.rho * 10.0
 processDuration = 3  # min
 
 advParams = ps.AdvectionParameters()
-advParams.integrationScheme = ps.IntegrationScheme.ENGQUIST_OSHER_2ND_ORDER
+advParams.discretizationScheme = ps.DiscretizationScheme.ENGQUIST_OSHER_2ND_ORDER
 
 rayParams = ps.RayTracingParameters()
 rayParams.raysPerPoint = int(1000)

@@ -104,12 +104,12 @@ public:
     rayTracingParams_.raysPerPoint = numRays;
   }
 
-  // Set the integration scheme for solving the level-set equation.
-  // Possible integration schemes are specified in
-  // viennals::IntegrationSchemeEnum.
-  void setIntegrationScheme(
-      viennals::IntegrationSchemeEnum passedIntegrationScheme) {
-    advectionParams_.integrationScheme = passedIntegrationScheme;
+  // Set the discretization scheme for solving the level-set equation.
+  // Possible discretization schemes are specified in
+  // viennals::DiscretizationSchemeEnum.
+  void setDiscretizationScheme(
+      viennals::DiscretizationSchemeEnum passedDiscretizationScheme) {
+    advectionParams_.discretizationScheme = passedDiscretizationScheme;
   }
 
   // Enable the use of random seeds for ray tracing. This is useful to
@@ -156,7 +156,8 @@ public:
 
     viennals::Advect<NumericType, D> advectionKernel;
     advectionKernel.setVelocityField(transField);
-    advectionKernel.setIntegrationScheme(advectionParams_.integrationScheme);
+    advectionKernel.setDiscretizationScheme(
+        advectionParams_.discretizationScheme);
     advectionKernel.setTimeStepRatio(advectionParams_.timeStepRatio);
     advectionKernel.setSaveAdvectionVelocities(advectionParams_.velocityOutput);
     advectionKernel.setDissipationAlpha(advectionParams_.dissipationAlpha);

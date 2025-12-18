@@ -60,8 +60,8 @@ int main(int argc, char **argv) {
 
   // Advection parameters
   AdvectionParameters advectionParams;
-  advectionParams.integrationScheme = util::convertIntegrationScheme(
-      params.get<std::string>("integrationScheme"));
+  advectionParams.discretizationScheme = util::convertDiscretizationScheme(
+      params.get<std::string>("discretizationScheme"));
 
   RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");

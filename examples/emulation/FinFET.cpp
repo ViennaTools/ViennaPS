@@ -220,8 +220,8 @@ int main() {
     auto model =
         SmartPointer<IsotropicProcess<NumericType, D>>::New(-1., masks);
     AdvectionParameters advectionParams;
-    advectionParams.integrationScheme =
-        viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+    advectionParams.discretizationScheme =
+        viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
     Process<NumericType, D> process(domain, model, 5.);
     process.setParameters(advectionParams);
     process.apply();
@@ -236,8 +236,8 @@ int main() {
     domain->duplicateTopLevelSet(Material::SiGe);
     Logger::setLogLevel(LogLevel::INFO);
     AdvectionParameters advectionParams;
-    advectionParams.integrationScheme =
-        viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+    advectionParams.discretizationScheme = viennals::DiscretizationSchemeEnum::
+        STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
     lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,
                                                 1>::setMaxDissipation(100);
 

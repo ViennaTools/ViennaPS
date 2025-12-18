@@ -148,7 +148,7 @@ private:
       VIENNACORE_LOG_INFO("Cycle: " + std::to_string(cycle + 1) + "/" +
                           std::to_string(numCycles));
 
-      // Prepare advection (expand level set based on integration scheme)
+      // Prepare advection (expand level set based on discretization scheme)
       advectionHandler_.prepareAdvection(context);
 
       updateState(context);

@@ -48,8 +48,8 @@ int main(int argc, char *argv[]) {
       params.get("R111"), params.get("R100"));
 
   ps::AdvectionParameters advectionParams;
-  advectionParams.integrationScheme =
-      viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  advectionParams.discretizationScheme = viennals::DiscretizationSchemeEnum::
+      STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   // advectionParams.velocityOutput = true;
   lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,
                                               1>::setMaxDissipation(1000);

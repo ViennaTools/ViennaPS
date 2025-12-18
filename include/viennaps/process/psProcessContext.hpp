@@ -96,18 +96,19 @@ template <typename NumericType, int D> struct ProcessContext {
   }
 
   bool needsExtendedVelocities() const {
-    return advectionParams.integrationScheme ==
-               IntegrationScheme::LAX_FRIEDRICHS_1ST_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LAX_FRIEDRICHS_2ND_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_2ND_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+    return advectionParams.discretizationScheme ==
+               DiscretizationScheme::LAX_FRIEDRICHS_1ST_ORDER ||
+           advectionParams.discretizationScheme ==
+               DiscretizationScheme::LAX_FRIEDRICHS_2ND_ORDER ||
+           advectionParams.discretizationScheme ==
+               DiscretizationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
+           advectionParams.discretizationScheme ==
+               DiscretizationScheme::LOCAL_LAX_FRIEDRICHS_2ND_ORDER ||
+           advectionParams.discretizationScheme ==
+               DiscretizationScheme::
+                   LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER ||
+           advectionParams.discretizationScheme ==
+               DiscretizationScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   }
 };
 

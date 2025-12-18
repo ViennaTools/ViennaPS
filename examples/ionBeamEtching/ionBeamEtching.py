@@ -59,7 +59,7 @@ direction[args.dim - 1] = -np.cos(ibeParams.tiltAngle * np.pi / 180.0)
 model.setPrimaryDirection(direction)
 
 advParams = ps.AdvectionParameters()
-advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
+advParams.discretizationScheme = ps.DiscretizationScheme.LAX_FRIEDRICHS_2ND_ORDER
 
 process = ps.Process(geometry, model)
 process.setProcessDuration(params["processTime"])

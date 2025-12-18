@@ -24,16 +24,18 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
-    auto &intSchem = context.advectionParams.integrationScheme;
+    auto &discSchem = context.advectionParams.discretizationScheme;
     if (translationMethod == 1 &&
-        (intSchem != IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER &&
-         intSchem != IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER &&
-         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
-         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER &&
-         intSchem != IntegrationScheme::WENO_5TH_ORDER)) {
+        (discSchem != DiscretizationScheme::ENGQUIST_OSHER_1ST_ORDER &&
+         discSchem != DiscretizationScheme::ENGQUIST_OSHER_2ND_ORDER &&
+         discSchem !=
+             DiscretizationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
+         discSchem !=
+             DiscretizationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER &&
+         discSchem != DiscretizationScheme::WENO_5TH_ORDER)) {
       VIENNACORE_LOG_WARNING(
           "Translation field method not supported in combination "
-          "with integration scheme.");
+          "with discretization scheme.");
       return ProcessResult::INVALID_INPUT;
     }
 
@@ -41,8 +43,8 @@ public:
 
     advectionKernel_.setSingleStep(true);
     advectionKernel_.setVelocityField(context.translationField);
-    advectionKernel_.setIntegrationScheme(
-        context.advectionParams.integrationScheme);
+    advectionKernel_.setDiscretizationScheme(
+        context.advectionParams.discretizationScheme);
     advectionKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
     advectionKernel_.setSaveAdvectionVelocities(
         context.advectionParams.velocityOutput);

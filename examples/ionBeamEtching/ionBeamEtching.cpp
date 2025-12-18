@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
   model->setPrimaryDirection(direction);
 
   AdvectionParameters advectionParams;
-  advectionParams.integrationScheme =
-      viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+  advectionParams.discretizationScheme =
+      viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
 
   Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("processTime"));

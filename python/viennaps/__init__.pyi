@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys as _sys
 import viennals as ls
 from viennals._core import BoundaryConditionEnum as BoundaryType
-from viennals._core import IntegrationSchemeEnum as IntegrationScheme
+from viennals._core import DiscretizationSchemeEnum as DiscretizationScheme
 from viennals._core import LogLevel
 from viennaps._core import AdvectionParameters
 from viennaps._core import AtomicLayerProcessParameters
@@ -139,7 +139,7 @@ __all__: list[str] = [
     "HoleShape",
     "IBEParameters",
     "IBEParametersCos4Yield",
-    "IntegrationScheme",
+    "DiscretizationScheme",
     "Interpolation",
     "IonBeamEtching",
     "IsotropicProcess",

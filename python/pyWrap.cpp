@@ -455,8 +455,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // AdvectionParameters
   py::class_<AdvectionParameters>(module, "AdvectionParameters")
       .def(py::init<>())
-      .def_readwrite("integrationScheme",
-                     &AdvectionParameters::integrationScheme)
+      .def_readwrite("discretizationScheme",
+                     &AdvectionParameters::discretizationScheme)
       .def_readwrite("timeStepRatio", &AdvectionParameters::timeStepRatio)
       .def_readwrite("dissipationAlpha", &AdvectionParameters::dissipationAlpha)
       .def_readwrite("checkDissipation", &AdvectionParameters::checkDissipation)
@@ -518,8 +518,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");
-  m_util.def("convertIntegrationScheme", &util::convertIntegrationScheme,
-             "Convert a string to an integration scheme.");
+  m_util.def("convertDiscretizationScheme", &util::convertDiscretizationScheme,
+             "Convert a string to an discretization scheme.");
 
   //   ***************************************************************************
   //                                  MAIN API
