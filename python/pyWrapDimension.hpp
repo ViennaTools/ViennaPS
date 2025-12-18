@@ -517,6 +517,8 @@ template <int D> void bindApi(py::module &module) {
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
+      .def("getMaterialsInDomain", &Domain<T, D>::getMaterialsInDomain,
+           "Get the material IDs present in the domain.")
       .def("getSurface", &Domain<T, D>::getSurface,
            "Get the surface level set.")
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
@@ -1332,8 +1334,9 @@ template <int D> void bindApi(py::module &module) {
   py::class_<VTKRenderWindow<T, D>>(module, "VTKRenderWindow")
       .def(py::init<>())
       .def(py::init<DomainType>(), py::arg("domain"))
-      .def("setDomain", &VTKRenderWindow<T, D>::setDomain,
-           "Set the domain to be visualized.")
+      .def("insertNextDomain", &VTKRenderWindow<T, D>::insertNextDomain,
+           "Insert domain to be visualized.", py::arg("domain"),
+           py::arg("offset") = std::array<double, 3>{0., 0., 0.})
       .def("render", &VTKRenderWindow<T, D>::render,
            "Render the current domain state.")
       .def("setBackgroundColor", &VTKRenderWindow<T, D>::setBackgroundColor,
@@ -1343,7 +1346,9 @@ template <int D> void bindApi(py::module &module) {
       .def("setRenderMode", &VTKRenderWindow<T, D>::setRenderMode,
            "Set the render mode (surface, interfaces, volume).")
       .def("setScreenshotScale", &VTKRenderWindow<T, D>::setScreenshotScale,
-           "Set the scale factor for screenshots taken.");
+           "Set the scale factor for screenshots taken.")
+      .def("setDomainOffset", &VTKRenderWindow<T, D>::setDomainOffset,
+           "Set an offset to be applied to the domain during rendering.");
 #endif
 
   // ***************************************************************************

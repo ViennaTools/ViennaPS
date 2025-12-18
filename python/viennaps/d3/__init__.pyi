@@ -535,6 +535,11 @@ class Domain:
 
     def getLevelSets(self) -> list[viennals.d3.Domain]: ...
     def getMaterialMap(self) -> viennaps._core.MaterialMap: ...
+    def getMaterialsInDomain(self) -> set[viennaps._core.Material]:
+        """
+        Get the material IDs present in the domain.
+        """
+
     def getMetaData(self) -> dict[str, list[float]]:
         """
         Get meta data (e.g. process data) stored in the domain
@@ -1502,6 +1507,17 @@ class VTKRenderWindow:
     def __init__(self) -> None: ...
     @typing.overload
     def __init__(self, domain: Domain) -> None: ...
+    def insertNextDomain(
+        self,
+        domain: Domain,
+        offset: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ] = [0.0, 0.0, 0.0],
+    ) -> None:
+        """
+        Insert domain to be visualized.
+        """
+
     def render(self) -> None:
         """
         Render the current domain state.
@@ -1517,9 +1533,15 @@ class VTKRenderWindow:
         Set the background color of the render window.
         """
 
-    def setDomain(self, arg0: Domain) -> None:
+    def setDomainOffset(
+        self,
+        arg0: typing.SupportsInt,
+        arg1: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ],
+    ) -> None:
         """
-        Set the domain to be visualized.
+        Set an offset to be applied to the domain during rendering.
         """
 
     def setRenderMode(self, arg0: ...) -> None:

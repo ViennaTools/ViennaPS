@@ -446,6 +446,16 @@ public:
     return levelSets_.back()->getGrid().getBoundaryConditions();
   }
 
+  auto getMaterialsInDomain() const {
+    std::set<Material> materials;
+    if (materialMap_) {
+      for (std::size_t i = 0; i < materialMap_->size(); i++) {
+        materials.insert(materialMap_->getMaterialAtIdx(i));
+      }
+    }
+    return materials;
+  }
+
   void print(std::ostream &out = std::cout, bool hrle = false) const {
     constexpr std::string_view separator =
         "*****************************************\n";

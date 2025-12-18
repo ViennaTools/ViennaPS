@@ -28,6 +28,9 @@
 #include <vtkRendererCollection.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
+#include <vtkTransform.h>
+#include <vtkTransformFilter.h>
+#include <vtkTransformPolyDataFilter.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkWindowToImageFilter.h>
 
@@ -56,10 +59,9 @@ template <typename T, int D> class Domain;
 
 template <typename T, int D> class VTKRenderWindow {
 public:
-  VTKRenderWindow() { initialize(); }
-  VTKRenderWindow(SmartPointer<Domain<T, D>> passedDomain)
-      : domain(passedDomain) {
-    initialize();
+  VTKRenderWindow() = default;
+  VTKRenderWindow(SmartPointer<Domain<T, D>> passedDomain) {
+    insertNextDomain(passedDomain);
   }
 
   ~VTKRenderWindow() {
@@ -73,8 +75,19 @@ public:
     }
   }
 
-  void setDomain(SmartPointer<Domain<T, D>> passedDomain) {
-    domain = passedDomain;
+  void insertNextDomain(SmartPointer<Domain<T, D>> passedDomain,
+                        const std::array<double, 3> &offset = {0.0, 0.0, 0.0}) {
+    domains.push_back(passedDomain);
+    domainOffsets.push_back(offset);
+  }
+
+  void setDomainOffset(std::size_t domainIndex,
+                       const std::array<double, 3> &offset) {
+    if (domainIndex >= domainOffsets.size()) {
+      VIENNACORE_LOG_ERROR("Domain index out of range.");
+      return;
+    }
+    domainOffsets[domainIndex] = offset;
   }
 
   void setBackgroundColor(const std::array<double, 3> &color) {
@@ -98,8 +111,8 @@ public:
   int getScreenshotScale() const { return screenshotScale; }
 
   void render() {
+    initialize();
     updateDisplay();
-    interactor->Initialize();
     interactor->Start();
   }
 
@@ -115,8 +128,8 @@ private:
   void initialize();
 
   void updateRenderer(bool useCache = false) {
-    if (!domain) {
-      VIENNACORE_LOG_WARNING("No domain set for rendering.");
+    if (domains.empty()) {
+      VIENNACORE_LOG_WARNING("No domains set for rendering.");
       return;
     }
 
@@ -124,67 +137,87 @@ private:
     renderer->RemoveAllViewProps();
     renderer->AddActor(instructionsActor);
 
-    switch (renderMode) {
-    case RenderMode::SURFACE: {
-      SmartPointer<viennals::Mesh<T>> surfaceMesh;
-      if (useCache && cachedSurfaceMesh) {
-        surfaceMesh = cachedSurfaceMesh;
-      } else {
-        surfaceMesh = domain->getSurfaceMesh();
-        cachedSurfaceMesh = surfaceMesh;
+    // Get min and max material IDs present in the domains
+    materialMinId = std::numeric_limits<int>::max();
+    materialMaxId = 0;
+    for (const auto &domain : domains) {
+      if (domain->getLevelSets().empty()) {
+        VIENNACORE_LOG_WARNING("Domain has no level sets for rendering.");
+        continue;
       }
-      updatePolyData(surfaceMesh);
-      break;
-    }
-    case RenderMode::INTERFACE: {
-      SmartPointer<viennals::Mesh<T>> interfaceMesh;
-      if (useCache && cachedInterfaceMesh) {
-        interfaceMesh = cachedInterfaceMesh;
+      auto materialsInDomain = domain->getMaterialsInDomain();
+      if (!materialsInDomain.empty()) {
+        materialMinId = std::min(materialMinId,
+                                 static_cast<int>(*materialsInDomain.begin()));
+        materialMaxId = std::max(materialMaxId,
+                                 static_cast<int>(*materialsInDomain.rbegin()));
       } else {
-        interfaceMesh = domain->getSurfaceMesh(true);
-        cachedInterfaceMesh = interfaceMesh;
+        materialMinId = 0;
+        materialMaxId = std::max(
+            materialMaxId, static_cast<int>(domain->getLevelSets().size() - 1));
       }
-      updatePolyData(interfaceMesh);
-      break;
     }
-    case RenderMode::VOLUME: {
-      if (useCache && cachedVolumeMesh) {
-        updateVolumeMesh(cachedVolumeMesh, cachedMinMatId, cachedMaxMatId);
+
+    cachedSurfaceMesh.resize(domains.size());
+    cachedInterfaceMesh.resize(domains.size());
+    cachedVolumeMesh.resize(domains.size());
+
+    for (std::size_t i{0}; i < domains.size(); ++i) {
+      switch (renderMode) {
+      case RenderMode::SURFACE: {
+        SmartPointer<viennals::Mesh<T>> surfaceMesh;
+        if (useCache && cachedSurfaceMesh[i]) {
+          surfaceMesh = cachedSurfaceMesh[i];
+        } else {
+          surfaceMesh = domains[i]->getSurfaceMesh();
+          cachedSurfaceMesh[i] = surfaceMesh;
+        }
+        updatePolyData(surfaceMesh, domainOffsets[i]);
         break;
       }
-      viennals::WriteVisualizationMesh<T, D> writer;
-      auto matMap = domain->getMaterialMap();
-      auto levelSets = domain->getLevelSets();
-      int minMatId = std::numeric_limits<int>::max();
-      int maxMatId = std::numeric_limits<int>::min();
-      for (auto i{0u}; i < domain->getNumberOfLevelSets(); ++i) {
-        writer.insertNextLevelSet(levelSets[i]);
-        if (matMap) {
-          int lsMinId = static_cast<int>(matMap->getMaterialAtIdx(i));
-          int lsMaxId = static_cast<int>(matMap->getMaterialAtIdx(i));
-          minMatId = std::min(minMatId, lsMinId);
-          maxMatId = std::max(maxMatId, lsMaxId);
+      case RenderMode::INTERFACE: {
+        SmartPointer<viennals::Mesh<T>> interfaceMesh;
+        if (useCache && cachedInterfaceMesh[i]) {
+          interfaceMesh = cachedInterfaceMesh[i];
+        } else {
+          interfaceMesh = domains[i]->getSurfaceMesh(true);
+          cachedInterfaceMesh[i] = interfaceMesh;
         }
+        updatePolyData(interfaceMesh, domainOffsets[i]);
+        break;
       }
-      writer.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
-      writer.setWriteToFile(false);
-      writer.apply();
+      case RenderMode::VOLUME: {
+        if (useCache && cachedVolumeMesh[i]) {
+          updateVolumeMesh(cachedVolumeMesh[i], domainOffsets[i]);
+          break;
+        }
+        viennals::WriteVisualizationMesh<T, D> writer;
+        auto const &levelSets = domains[i]->getLevelSets();
+        for (auto ls : levelSets) {
+          writer.insertNextLevelSet(ls);
+        }
+        writer.setMaterialMap(domains[i]->getMaterialMap()->getMaterialMap());
+        writer.setWriteToFile(false);
+        writer.apply();
 
-      auto volumeMesh = writer.getVolumeMesh();
-      cachedVolumeMesh = volumeMesh;
-      cachedMinMatId = minMatId;
-      cachedMaxMatId = maxMatId;
-      updateVolumeMesh(volumeMesh, minMatId, maxMatId);
-      break;
+        auto volumeMesh = writer.getVolumeMesh();
+        cachedVolumeMesh[i] = volumeMesh;
+        updateVolumeMesh(volumeMesh, domainOffsets[i]);
+        break;
+      }
+      default:
+        assert(false && "Unknown render mode.");
+      }
     }
-    default:
-      assert(false && "Unknown render mode.");
-    }
+
+    renderer->ResetCamera();
   }
 
 private:
-  void updatePolyData(SmartPointer<viennals::Mesh<T>> mesh) {
+  void updatePolyData(SmartPointer<viennals::Mesh<T>> mesh,
+                      const std::array<double, 3> &offset) {
     if (mesh == nullptr) {
+      assert(false && "Mesh is null.");
       return;
     }
 
@@ -242,42 +275,37 @@ private:
     bool useMaterialIds =
         materialIds &&
         (materialIds->size() == mesh->lines.size() + mesh->triangles.size());
-    int minId = std::numeric_limits<int>::max();
-    int maxId = std::numeric_limits<int>::min();
     if (useMaterialIds) {
       vtkSmartPointer<vtkIntArray> matIdArray =
           vtkSmartPointer<vtkIntArray>::New();
       matIdArray->SetName("MaterialIds");
       for (const auto &id : *materialIds) {
-        int mId = static_cast<int>(id);
-        matIdArray->InsertNextValue(mId);
-        minId = std::min(minId, mId);
-        maxId = std::max(maxId, mId);
+        matIdArray->InsertNextValue(static_cast<int>(id));
       }
       polyData->GetCellData()->AddArray(matIdArray);
       polyData->GetCellData()->SetActiveScalars("MaterialIds");
       VIENNACORE_LOG_DEBUG("Added MaterialIds array to cell data.");
     }
 
+    vtkSmartPointer<vtkTransform> transform =
+        vtkSmartPointer<vtkTransform>::New();
+    transform->Translate(offset.data());
+    vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter =
+        vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transformFilter->SetTransform(transform);
+    transformFilter->SetInputData(polyData);
+    transformFilter->Update();
+
     auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputData(polyData);
+    mapper->SetInputData(transformFilter->GetOutput());
 
     if (useMaterialIds) {
       mapper->SetScalarModeToUseCellData();
       mapper->ScalarVisibilityOn();
       mapper->SelectColorArray("MaterialIds");
-
-      vtkSmartPointer<vtkLookupTable> lut =
-          vtkSmartPointer<vtkLookupTable>::New();
-
-      lut->SetNumberOfTableValues(256);
-      lut->SetHueRange(0.667, 0.0); // blue → red
-      lut->SetSaturationRange(1.0, 1.0);
-      lut->SetValueRange(1.0, 1.0);
-      lut->Build();
-
       mapper->SetLookupTable(lut);
-      mapper->SetScalarRange(minId, maxId);
+      assert(materialMinId != -1 && materialMaxId != -1);
+      mapper->SetScalarRange(materialMinId, materialMaxId);
     }
 
     auto actor = vtkSmartPointer<vtkActor>::New();
@@ -285,42 +313,47 @@ private:
     actor->GetProperty()->SetLineWidth(3.0); // Thicker lines
 
     renderer->AddActor(actor);
-    renderer->ResetCamera();
   }
 
   void updateVolumeMesh(vtkSmartPointer<vtkUnstructuredGrid> volumeMesh,
-                        int minMatId = 0, int maxMatId = 100) {
+                        const std::array<double, 3> &offset) {
+    if (volumeMesh == nullptr) {
+      assert(false && "Volume mesh is null.");
+      return;
+    }
+
+    vtkSmartPointer<vtkTransform> transform =
+        vtkSmartPointer<vtkTransform>::New();
+    transform->Translate(offset.data());
+    vtkSmartPointer<vtkTransformFilter> transformFilter =
+        vtkSmartPointer<vtkTransformFilter>::New();
+    transformFilter->SetTransform(transform);
+    transformFilter->SetInputData(volumeMesh);
+    transformFilter->Update();
+
     auto mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-    mapper->SetInputData(volumeMesh);
+    mapper->SetInputData(transformFilter->GetOutput());
     mapper->SetScalarModeToUseCellData();
     mapper->ScalarVisibilityOn();
     mapper->SelectColorArray("Material");
 
-    vtkSmartPointer<vtkLookupTable> lut =
-        vtkSmartPointer<vtkLookupTable>::New();
-
-    lut->SetNumberOfTableValues(256);
-    lut->SetHueRange(0.667, 0.0); // blue → red
-    lut->SetSaturationRange(1.0, 1.0);
-    lut->SetValueRange(1.0, 1.0);
-    lut->Build();
-
     mapper->SetLookupTable(lut);
-    mapper->SetScalarRange(minMatId, maxMatId);
+    mapper->SetScalarRange(materialMinId, materialMaxId);
 
     auto actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     renderer->AddActor(actor);
-    renderer->ResetCamera();
   }
 
 private:
-  SmartPointer<Domain<T, D>> domain;
+  std::vector<SmartPointer<Domain<T, D>>> domains;
+  std::vector<std::array<double, 3>> domainOffsets;
 
   vtkSmartPointer<vtkRenderer> renderer;
   vtkSmartPointer<vtkRenderWindow> renderWindow;
   vtkSmartPointer<vtkRenderWindowInteractor> interactor;
+  vtkSmartPointer<vtkLookupTable> lut;
 
   // text
   vtkSmartPointer<vtkTextActor> instructionsActor;
@@ -332,11 +365,11 @@ private:
   RenderMode renderMode = RenderMode::INTERFACE;
 
   // cached meshes
-  SmartPointer<viennals::Mesh<T>> cachedSurfaceMesh;
-  SmartPointer<viennals::Mesh<T>> cachedInterfaceMesh;
-  vtkSmartPointer<vtkUnstructuredGrid> cachedVolumeMesh;
-  int cachedMinMatId = -1;
-  int cachedMaxMatId = -1;
+  std::vector<SmartPointer<viennals::Mesh<T>>> cachedSurfaceMesh;
+  std::vector<SmartPointer<viennals::Mesh<T>>> cachedInterfaceMesh;
+  std::vector<vtkSmartPointer<vtkUnstructuredGrid>> cachedVolumeMesh;
+  int materialMinId = -1;
+  int materialMaxId = -1;
 };
 
 namespace impl {
@@ -499,6 +532,16 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
     style->SetDefaultRenderer(renderer);
     style->SetCurrentRenderer(renderer);
   }
+
+  interactor->Initialize();
+
+  lut = vtkSmartPointer<vtkLookupTable>::New();
+
+  lut->SetNumberOfTableValues(256);
+  lut->SetHueRange(0.667, 0.0); // blue → red
+  lut->SetSaturationRange(1.0, 1.0);
+  lut->SetValueRange(.5, 1.0);
+  lut->Build();
 }
 } // namespace viennaps
 
