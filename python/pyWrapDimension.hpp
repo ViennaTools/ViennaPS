@@ -72,6 +72,7 @@
 
 // visualization
 #include <psToDiskMesh.hpp>
+#include <psVTKRenderWindow.hpp>
 
 // other
 #include <csDenseCellSet.hpp>
@@ -1326,6 +1327,24 @@ template <int D> void bindApi(py::module &module) {
   //      "level-set point IDs to mesh point IDs.")
   // .def("getTranslator", &ToDiskMesh<T, D>::getTranslator,
   //      "Retrieve the translator from the mesh converter.");
+
+#ifdef VIENNALS_VTK_RENDERING
+  py::class_<VTKRenderWindow<T, D>>(module, "VTKRenderWindow")
+      .def(py::init<>())
+      .def(py::init<DomainType>(), py::arg("domain"))
+      .def("setDomain", &VTKRenderWindow<T, D>::setDomain,
+           "Set the domain to be visualized.")
+      .def("render", &VTKRenderWindow<T, D>::render,
+           "Render the current domain state.")
+      .def("setBackgroundColor", &VTKRenderWindow<T, D>::setBackgroundColor,
+           "Set the background color of the render window.")
+      .def("setWindowSize", &VTKRenderWindow<T, D>::setWindowSize,
+           "Set the size of the render window.")
+      .def("setRenderMode", &VTKRenderWindow<T, D>::setRenderMode,
+           "Set the render mode (surface, interfaces, volume).")
+      .def("setScreenshotScale", &VTKRenderWindow<T, D>::setScreenshotScale,
+           "Set the scale factor for screenshots taken.");
+#endif
 
   // ***************************************************************************
   //                                 IO OPERATIONS

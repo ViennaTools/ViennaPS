@@ -53,6 +53,7 @@ __all__: list[str] = [
     "TEOSDeposition",
     "TEOSPECVD",
     "ToDiskMesh",
+    "VTKRenderWindow",
     "WetEtching",
     "Writer",
     "gpu",
@@ -1489,6 +1490,51 @@ class ToDiskMesh:
     def setMesh(self, arg0: viennals._core.Mesh) -> None:
         """
         Set the mesh in the mesh converter
+        """
+
+class VTKRenderWindow:
+    @typing.overload
+    def __init__(self) -> None: ...
+    @typing.overload
+    def __init__(self, domain: Domain) -> None: ...
+    def render(self) -> None:
+        """
+        Render the current domain state.
+        """
+
+    def setBackgroundColor(
+        self,
+        arg0: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ],
+    ) -> None:
+        """
+        Set the background color of the render window.
+        """
+
+    def setDomain(self, arg0: Domain) -> None:
+        """
+        Set the domain to be visualized.
+        """
+
+    def setRenderMode(self, arg0: ...) -> None:
+        """
+        Set the render mode (surface, interfaces, volume).
+        """
+
+    def setScreenshotScale(self, arg0: typing.SupportsInt) -> None:
+        """
+        Set the scale factor for screenshots taken.
+        """
+
+    def setWindowSize(
+        self,
+        arg0: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsInt], "FixedSize(2)"
+        ],
+    ) -> None:
+        """
+        Set the size of the render window.
         """
 
 class WetEtching(ProcessModel):

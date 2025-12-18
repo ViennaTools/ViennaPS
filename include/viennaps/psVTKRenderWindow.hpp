@@ -7,7 +7,7 @@
 #include <lsWriteVisualizationMesh.hpp>
 
 #include <vtkActor.h>
-#include <vtkAutoInit.h>
+#include <vtkActorCollection.h>
 #include <vtkCallbackCommand.h>
 #include <vtkCamera.h>
 #include <vtkCellArray.h>
@@ -17,6 +17,7 @@
 #include <vtkInteractorStyleImage.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkLookupTable.h>
+#include <vtkPNGWriter.h>
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
@@ -24,10 +25,14 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkRendererCollection.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkWindowToImageFilter.h>
 
 #ifndef VIENNALS_VTK_MODULE_INIT
+#include <vtkAutoInit.h>
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
 VTK_MODULE_INIT(vtkRenderingFreeType);
@@ -68,6 +73,10 @@ public:
     }
   }
 
+  void setDomain(SmartPointer<Domain<T, D>> passedDomain) {
+    domain = passedDomain;
+  }
+
   void setBackgroundColor(const std::array<double, 3> &color) {
     backgroundColor = color;
     if (renderer) {
@@ -75,7 +84,18 @@ public:
     }
   }
 
+  void setWindowSize(const std::array<int, 2> &size) {
+    windowSize = size;
+    if (renderWindow) {
+      renderWindow->SetSize(windowSize[0], windowSize[1]);
+    }
+  }
+
   void setRenderMode(RenderMode mode) { renderMode = mode; }
+
+  void setScreenshotScale(int scale) { screenshotScale = scale; }
+
+  int getScreenshotScale() const { return screenshotScale; }
 
   void render() {
     updateDisplay();
@@ -91,6 +111,7 @@ public:
   }
 
 private:
+  // forward declaration, requires full definition of Interactor styles
   void initialize();
 
   void updateRenderer(bool useCache = false) {
@@ -101,6 +122,7 @@ private:
 
     // Clear previous actors
     renderer->RemoveAllViewProps();
+    renderer->AddActor(instructionsActor);
 
     switch (renderMode) {
     case RenderMode::SURFACE: {
@@ -300,8 +322,12 @@ private:
   vtkSmartPointer<vtkRenderWindow> renderWindow;
   vtkSmartPointer<vtkRenderWindowInteractor> interactor;
 
+  // text
+  vtkSmartPointer<vtkTextActor> instructionsActor;
+
   std::array<double, 3> backgroundColor = {84.0 / 255, 89.0 / 255, 109.0 / 255};
   std::array<int, 2> windowSize = {800, 600};
+  int screenshotScale = 1;
 
   RenderMode renderMode = RenderMode::INTERFACE;
 
@@ -321,6 +347,9 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
   if (!window || !rwi || rwi->GetDone())
     return;
 
+  auto renderer = rwi->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
+  auto camera = renderer->GetActiveCamera();
+
   switch (rwi->GetKeyCode()) {
   case '1':
     window->setRenderMode(RenderMode::SURFACE);
@@ -339,6 +368,50 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
   case 'q':
     rwi->TerminateApp();
     return;
+  case 'x':
+    camera->SetPosition(500.0, 0, 0); // Positive X
+    camera->SetFocalPoint(0.0, 0.0, 0.0);
+    camera->SetViewUp(0.0, 1.0, 0.0);
+    renderer->ResetCamera();
+    rwi->GetRenderWindow()->Render();
+    return;
+  case 'y':
+    camera->SetPosition(0, 500.0, 0); // Positive Y
+    camera->SetFocalPoint(0.0, 0.0, 0.0);
+    camera->SetViewUp(0.0, 0.0, 1.0);
+    renderer->ResetCamera();
+    rwi->GetRenderWindow()->Render();
+    return;
+  case 'z':
+    camera->SetPosition(0, 0, 500.0); // Positive Z
+    camera->SetFocalPoint(0.0, 0.0, 0.0);
+    camera->SetViewUp(0.0, 1.0, 0.0);
+    renderer->ResetCamera();
+    rwi->GetRenderWindow()->Render();
+    return;
+  case 's': {
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+        vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImageFilter->SetInput(rwi->GetRenderWindow());
+    windowToImageFilter->SetScale(
+        window->getScreenshotScale()); // image quality
+    windowToImageFilter->Update();
+
+    auto time_t =
+        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    char timeStamp[20];
+    std::strftime(timeStamp, sizeof(timeStamp), "%Y-%m-%d_%H-%M-%S",
+                  std::localtime(&time_t));
+    const std::string fileName =
+        "screenshot_" + std::string(timeStamp) + ".png";
+    VIENNACORE_LOG_INFO("Saving screenshot '" + fileName + "'");
+
+    vtkSmartPointer<vtkPNGWriter> writer = vtkSmartPointer<vtkPNGWriter>::New();
+    writer->SetFileName(fileName.c_str());
+    writer->SetInputData(windowToImageFilter->GetOutput());
+    writer->Write();
+    return;
+  }
   }
 }
 } // namespace impl
@@ -350,10 +423,7 @@ public:
   static Custom3DInteractorStyle *New();
   vtkTypeMacro(Custom3DInteractorStyle, vtkInteractorStyleTrackballCamera);
 
-  void OnChar() {
-    vtkRenderWindowInteractor *rwi = this->Interactor;
-    viennaps::impl::InteractorOnChar(rwi, Window);
-  }
+  void OnChar() { viennaps::impl::InteractorOnChar(this->Interactor, Window); }
 
   void setRenderWindow(viennaps::VTKRenderWindow<double, 3> *window) {
     Window = window;
@@ -374,10 +444,7 @@ public:
 
   void OnLeftButtonUp() override { this->EndPan(); }
 
-  void OnChar() {
-    vtkRenderWindowInteractor *rwi = this->Interactor;
-    viennaps::impl::InteractorOnChar(rwi, Window);
-  }
+  void OnChar() { viennaps::impl::InteractorOnChar(this->Interactor, Window); }
 
   void setRenderWindow(viennaps::VTKRenderWindow<double, 2> *window) {
     Window = window;
@@ -398,13 +465,12 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
   renderer->SetBackground(backgroundColor.data());
 
   // add text actor for instructions
-  auto instructions = vtkSmartPointer<vtkTextActor>::New();
-  instructions->SetInput(
-      "Press 1: Surface | 2: Interface | 3: Volume | q/e: Quit");
-  instructions->GetTextProperty()->SetFontSize(14);
-  instructions->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
-  instructions->SetPosition(10, 10);
-  renderer->AddActor(instructions);
+  instructionsActor = vtkSmartPointer<vtkTextActor>::New();
+  instructionsActor->SetInput("Press 1: Surface | 2: Interface | 3: Volume | "
+                              "x/y/z: View | s: Screenshot | q/e: Quit");
+  instructionsActor->GetTextProperty()->SetFontSize(14);
+  instructionsActor->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
+  instructionsActor->SetPosition(10, 10);
 
   renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
   renderWindow->SetWindowName("ViennaPS Render Window");

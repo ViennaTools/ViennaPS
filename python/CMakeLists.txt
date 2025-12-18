@@ -59,6 +59,25 @@ target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ViennaPS)
 target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                            PRIVATE VIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME})
 
+# To prevent symbol clashes when multiple python which use VTK modules are loaded, the modules are initialized here
+if(VIENNALS_VTK_RENDERING)
+  # We need to find VTK again here to get the proper module targets
+  # TODO: Refactor to avoid multiple finds
+  CPMFindPackage(
+    NAME VTK
+    GIT_TAG v9.3.1
+    VERSION 9.0.0
+    GIT_REPOSITORY "https://gitlab.kitware.com/vtk/vtk")
+
+  # These modules need to be initialized for VTK rendering to work properly
+  vtk_module_autoinit(
+    TARGETS
+    ${VIENNAPS_PYTHON_MODULE_NAME}
+    MODULES
+    ${VTK_LIBRARIES})
+  target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE VIENNALS_VTK_MODULE_INIT)
+endif()
+
 # Put the built .so in build/<pkg> for convenience
 set_target_properties(
   ${VIENNAPS_PYTHON_MODULE_NAME}
