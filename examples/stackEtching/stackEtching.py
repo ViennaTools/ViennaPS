@@ -83,7 +83,7 @@ covParams.maxIterations = 10
 covParams.tolerance = 1e-4
 
 advParams = vps.AdvectionParameters()
-advParams.integrationScheme = vps.IntegrationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+advParams.discretizationScheme = vps.DiscretizationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 
 process = vps.d2.Process()
 process.setDomain(geometry)

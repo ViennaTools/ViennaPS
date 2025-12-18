@@ -12,7 +12,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-using IntegrationScheme = viennals::IntegrationSchemeEnum;
+using DiscretizationScheme = viennals::DiscretizationSchemeEnum;
 
 struct RayTracingParameters {
   viennaray::NormalizationType normalizationType =
@@ -51,8 +51,8 @@ struct RayTracingParameters {
 };
 
 struct AdvectionParameters {
-  IntegrationScheme integrationScheme =
-      IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER;
+  DiscretizationScheme discretizationScheme =
+      DiscretizationScheme::ENGQUIST_OSHER_1ST_ORDER;
   double timeStepRatio = 0.4999;
   double dissipationAlpha = 1.0;
   double adaptiveTimeStepThreshold = 0.05;
@@ -63,15 +63,16 @@ struct AdvectionParameters {
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
-    metaData["IntegrationScheme"] = {static_cast<double>(integrationScheme)};
+    metaData["DiscretizationScheme"] = {
+        static_cast<double>(discretizationScheme)};
     metaData["TimeStepRatio"] = {timeStepRatio};
     metaData["DissipationAlpha"] = {dissipationAlpha};
     return metaData;
   }
 
   auto toMetaDataString() const {
-    return "\nIntegrationScheme: " +
-           util::convertIntegrationSchemeToString(integrationScheme) +
+    return "\nDiscretizationScheme: " +
+           util::convertDiscretizationSchemeToString(discretizationScheme) +
            "\nTimeStepRatio: " + std::to_string(timeStepRatio) +
            "\nDissipationAlpha: " + std::to_string(dissipationAlpha) +
            "\nCheckDissipation: " + util::boolString(checkDissipation) +

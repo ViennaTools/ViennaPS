@@ -46,8 +46,8 @@ int main(int argc, char *argv[]) {
       cageParams, maskMaterials);
 
   ps::AdvectionParameters advectionParams;
-  advectionParams.integrationScheme =
-      ps::IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  advectionParams.discretizationScheme =
+      ps::DiscretizationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
 
   ps::RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");

@@ -223,7 +223,7 @@ private:
   }
 
   ProcessResult processTimeStep(ProcessContext<NumericType, D> &context) {
-    // Prepare advection (expand level set based on integration scheme)
+    // Prepare advection (expand level set based on discretization scheme)
     advectionHandler_.prepareAdvection(context);
 
     // Update surface for flux calculation

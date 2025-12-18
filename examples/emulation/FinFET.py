@@ -183,7 +183,7 @@ print("Fin-Release ...", end="", flush=True)
 masks = [ps.Material.PolySi, ps.Material.SiO2, ps.Material.Si3N4]
 model = ps.IsotropicProcess(rate=-1.0, maskMaterial=masks)
 advParams = ps.AdvectionParameters()
-advParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
+advParams.discretizationScheme = ps.DiscretizationScheme.LAX_FRIEDRICHS_2ND_ORDER
 process = ps.Process(domain, model, 5.0)
 process.setParameters(advParams)
 process.apply()
@@ -195,8 +195,8 @@ writeVolume(domain)
 print("S/D Epitaxy ...", end="", flush=True)
 domain.duplicateTopLevelSet(ps.Material.SiGe)
 advectionParams = ps.AdvectionParameters()
-advectionParams.integrationScheme = (
-    ps.IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+advectionParams.discretizationScheme = (
+    ps.DiscretizationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 ps.StencilLocalLaxFriedrichsScalar.setMaxDissipation(1000)
 material = [

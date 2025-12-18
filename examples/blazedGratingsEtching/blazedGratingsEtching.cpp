@@ -32,8 +32,8 @@ int main(int argc, char **argv) {
   geometry->saveSurfaceMesh("initial");
 
   AdvectionParameters advParams;
-  advParams.integrationScheme =
-      viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+  advParams.discretizationScheme =
+      viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
   advParams.timeStepRatio = 0.25;
 
   RayTracingParameters rayTracingParams;

@@ -107,7 +107,7 @@ private:
   }
 
   ProcessResult processTimeStep(ProcessContext<NumericType, D> &context) {
-    // Prepare advection based on integration scheme
+    // Prepare advection based on discretization scheme
     // Initialize model
     advectionHandler_.prepareAdvection(context);
 

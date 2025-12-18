@@ -10,34 +10,34 @@
 
 // Use viennacore here to avoid conflicts with other namespaces
 namespace viennacore::util {
-[[nodiscard]] inline viennals::IntegrationSchemeEnum
-convertIntegrationScheme(const std::string &s) {
+[[nodiscard]] inline viennals::DiscretizationSchemeEnum
+convertDiscretizationScheme(const std::string &s) {
   if (s == "ENGQUIST_OSHER_1ST_ORDER" || s == "EO_1")
-    return viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+    return viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   if (s == "ENGQUIST_OSHER_2ND_ORDER" || s == "EO_2")
-    return viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER;
+    return viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER;
   if (s == "LAX_FRIEDRICHS_1ST_ORDER" || s == "LF_1")
-    return viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER;
+    return viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER;
   if (s == "LAX_FRIEDRICHS_2ND_ORDER" || s == "LF_2")
-    return viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+    return viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
   if (s == "LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER" || s == "LLFA_1")
-    return viennals::IntegrationSchemeEnum::
+    return viennals::DiscretizationSchemeEnum::
         LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER;
   if (s == "LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "LLLF_1")
-    return viennals::IntegrationSchemeEnum::
+    return viennals::DiscretizationSchemeEnum::
         LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   if (s == "LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER" || s == "LLLF_2")
-    return viennals::IntegrationSchemeEnum::
+    return viennals::DiscretizationSchemeEnum::
         LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER;
   if (s == "LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "LLF_1")
-    return viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+    return viennals::DiscretizationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   if (s == "LOCAL_LAX_FRIEDRICHS_2ND_ORDER" || s == "LLF_2")
-    return viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER;
+    return viennals::DiscretizationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER;
   if (s == "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "SLLF_1")
-    return viennals::IntegrationSchemeEnum::
+    return viennals::DiscretizationSchemeEnum::
         STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   if (s == "WENO_5TH_ORDER" || s == "WENO_5")
-    return viennals::IntegrationSchemeEnum::WENO_5TH_ORDER;
+    return viennals::DiscretizationSchemeEnum::WENO_5TH_ORDER;
   throw std::invalid_argument(
       "The value must be one of the following: "
       "ENGQUIST_OSHER_1ST_ORDER, ENGQUIST_OSHER_2ND_ORDER, "
@@ -52,33 +52,34 @@ convertIntegrationScheme(const std::string &s) {
 }
 
 [[nodiscard]] inline std::string
-convertIntegrationSchemeToString(viennals::IntegrationSchemeEnum scheme) {
+convertDiscretizationSchemeToString(viennals::DiscretizationSchemeEnum scheme) {
   switch (scheme) {
-  case viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER:
+  case viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER:
     return "ENGQUIST_OSHER_1ST_ORDER";
-  case viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER:
+  case viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER:
     return "ENGQUIST_OSHER_2ND_ORDER";
-  case viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER:
+  case viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER:
     return "LAX_FRIEDRICHS_1ST_ORDER";
-  case viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER:
+  case viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER:
     return "LAX_FRIEDRICHS_2ND_ORDER";
-  case viennals::IntegrationSchemeEnum::
+  case viennals::DiscretizationSchemeEnum::
       LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER:
     return "LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER";
-  case viennals::IntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+  case viennals::DiscretizationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
     return "LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
-  case viennals::IntegrationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+  case viennals::DiscretizationSchemeEnum::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
     return "LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER";
-  case viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+  case viennals::DiscretizationSchemeEnum::LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
     return "LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
-  case viennals::IntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
+  case viennals::DiscretizationSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER:
     return "LOCAL_LAX_FRIEDRICHS_2ND_ORDER";
-  case viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
+  case viennals::DiscretizationSchemeEnum::
+      STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
     return "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
-  case viennals::IntegrationSchemeEnum::WENO_5TH_ORDER:
+  case viennals::DiscretizationSchemeEnum::WENO_5TH_ORDER:
     return "WENO_5TH_ORDER";
   default:
-    throw std::invalid_argument("Unknown integration scheme.");
+    throw std::invalid_argument("Unknown discretization scheme.");
   }
 }
 

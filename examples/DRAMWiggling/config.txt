@@ -17,7 +17,7 @@ ionExponent=1000
 meanEnergy=200 # eV
 sigmaEnergy=10 # eV
 
-integrationScheme=LF_2
+discretizationScheme=LF_2
 
 numSteps=100
 raysPerPoint=1000

@@ -40,7 +40,7 @@ if _sys.platform == "win32":
 
 
 import viennals as ls
-from viennals import IntegrationSchemeEnum as IntegrationScheme
+from viennals import DiscretizationSchemeEnum as DiscretizationScheme
 from viennals import BoundaryConditionEnum as BoundaryType
 from viennals import LogLevel as LogLevel
 from . import _core as _C  # the binary inside the package

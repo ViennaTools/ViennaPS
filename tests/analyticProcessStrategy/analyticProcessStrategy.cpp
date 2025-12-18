@@ -115,8 +115,8 @@ createBasicContext(SmartPointer<Domain<NumericType, D>> domain,
       (model->getAdvectionCallback() != nullptr);
 
   // Set default advection parameters
-  context.advectionParams.integrationScheme =
-      viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  context.advectionParams.discretizationScheme =
+      viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
   context.advectionParams.timeStepRatio = 0.4999;
   context.advectionParams.velocityOutput = false;
   context.advectionParams.dissipationAlpha = 0.0;

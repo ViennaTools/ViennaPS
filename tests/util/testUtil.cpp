@@ -4,29 +4,29 @@
 
 using namespace viennacore::util;
 
-void TestIntegrationSchemeConversion() {
+void TestDiscretizationSchemeConversion() {
   // Test string to enum
-  VC_TEST_ASSERT(convertIntegrationScheme("ENGQUIST_OSHER_1ST_ORDER") ==
-                 viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
-  VC_TEST_ASSERT(convertIntegrationScheme("EO_1") ==
-                 viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
+  VC_TEST_ASSERT(convertDiscretizationScheme("ENGQUIST_OSHER_1ST_ORDER") ==
+                 viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
+  VC_TEST_ASSERT(convertDiscretizationScheme("EO_1") ==
+                 viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
 
   // Test string to enum
-  VC_TEST_ASSERT(convertIntegrationScheme("WENO_5TH_ORDER") ==
-                 viennals::IntegrationSchemeEnum::WENO_5TH_ORDER);
-  VC_TEST_ASSERT(convertIntegrationScheme("WENO_5") ==
-                 viennals::IntegrationSchemeEnum::WENO_5TH_ORDER);
+  VC_TEST_ASSERT(convertDiscretizationScheme("WENO_5TH_ORDER") ==
+                 viennals::DiscretizationSchemeEnum::WENO_5TH_ORDER);
+  VC_TEST_ASSERT(convertDiscretizationScheme("WENO_5") ==
+                 viennals::DiscretizationSchemeEnum::WENO_5TH_ORDER);
 
   // Test enum to string
   VC_TEST_ASSERT(
-      convertIntegrationSchemeToString(
-          viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER) ==
+      convertDiscretizationSchemeToString(
+          viennals::DiscretizationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER) ==
       "ENGQUIST_OSHER_1ST_ORDER");
 
   // Test round trip
-  auto scheme = viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
-  VC_TEST_ASSERT(convertIntegrationScheme(
-                     convertIntegrationSchemeToString(scheme)) == scheme);
+  auto scheme = viennals::DiscretizationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+  VC_TEST_ASSERT(convertDiscretizationScheme(
+                     convertDiscretizationSchemeToString(scheme)) == scheme);
 }
 
 void TestBoundaryConditionConversion() {
@@ -47,7 +47,7 @@ void TestMetaDataToString() {
 }
 
 int main() {
-  TestIntegrationSchemeConversion();
+  TestDiscretizationSchemeConversion();
   TestBoundaryConditionConversion();
   TestMetaDataToString();
   std::cout << "Util tests passed!" << std::endl;
