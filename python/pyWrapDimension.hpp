@@ -1361,14 +1361,12 @@ template <int D> void bindApi(py::module &module) {
            "Print the current camera settings to the console.")
       .def("saveScreenshot", &VTKRenderWindow<T, D>::saveScreenshot,
            "Save a screenshot of the current render window.",
-           py::arg("fileName"))
+           py::arg("fileName"), py::arg("scale") = 1)
       .def("toggleInstructionText",
            &VTKRenderWindow<T, D>::toggleInstructionText,
            "Toggle the instruction text overlay on/off.")
       .def("render", &VTKRenderWindow<T, D>::render,
-           "Render the current domain state.")
-      .def("setScreenshotScale", &VTKRenderWindow<T, D>::setScreenshotScale,
-           "Set the scale factor for screenshots taken.");
+           "Render the current domain state.");
 #endif
 
   // ***************************************************************************

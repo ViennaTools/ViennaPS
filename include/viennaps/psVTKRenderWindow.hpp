@@ -22,6 +22,7 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkRendererCollection.h>
+#include <vtkScalarBarActor.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
 #include <vtkTransform.h>
@@ -164,13 +165,11 @@ public:
     }
   }
 
-  void setScreenshotScale(int scale) { screenshotScale = scale; }
-
-  void saveScreenshot(const std::string &fileName) {
+  void saveScreenshot(const std::string &fileName, int scale = 1) {
     vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
         vtkSmartPointer<vtkWindowToImageFilter>::New();
     windowToImageFilter->SetInput(renderWindow);
-    windowToImageFilter->SetScale(screenshotScale); // image quality
+    windowToImageFilter->SetScale(scale); // image quality
     windowToImageFilter->Update();
 
     VIENNACORE_LOG_INFO("Saving screenshot '" + fileName + "'");
@@ -204,6 +203,17 @@ public:
     renderWindow->Render();
   }
 
+  void toggleScalarBar() {
+    if (showScalarBar) {
+      renderer->RemoveActor(scalarBar);
+      showScalarBar = false;
+    } else {
+      renderer->AddActor(scalarBar);
+      showScalarBar = true;
+    }
+    renderWindow->Render();
+  }
+
 private:
   // forward declaration, requires full definition of Interactor styles
   void initialize();
@@ -219,25 +229,44 @@ private:
     renderer->AddActor(instructionsActor);
 
     // Get min and max material IDs present in the domains
-    materialMinId = std::numeric_limits<int>::max();
-    materialMaxId = 0;
+    std::set<Material> uniqueMaterialIds;
     for (const auto &domain : domains) {
       if (domain->getLevelSets().empty()) {
         VIENNACORE_LOG_WARNING("Domain has no level sets for rendering.");
         continue;
       }
       auto materialsInDomain = domain->getMaterialsInDomain();
-      if (!materialsInDomain.empty()) {
-        materialMinId = std::min(materialMinId,
-                                 static_cast<int>(*materialsInDomain.begin()));
-        materialMaxId = std::max(materialMaxId,
-                                 static_cast<int>(*materialsInDomain.rbegin()));
-      } else {
-        materialMinId = 0;
-        materialMaxId = std::max(
-            materialMaxId, static_cast<int>(domain->getLevelSets().size() - 1));
-      }
+      uniqueMaterialIds.insert(materialsInDomain.begin(),
+                               materialsInDomain.end());
     }
+
+    // Build annotated LUT for material IDs (categorical)
+    lut->SetNumberOfTableValues(uniqueMaterialIds.size());
+    lut->IndexedLookupOn();
+    lut->ResetAnnotations();
+    materialMinId = std::numeric_limits<int>::max();
+    materialMaxId = std::numeric_limits<int>::min();
+    int index = 0;
+    for (const auto &materialId : uniqueMaterialIds) {
+      auto colorHex = color(materialId);
+      double r = ((colorHex >> 16) & 0xFF) / 255.0;
+      double g = ((colorHex >> 8) & 0xFF) / 255.0;
+      double b = (colorHex & 0xFF) / 255.0;
+      lut->SetTableValue(index, r, g, b, 1.0);
+      auto label = to_string_view(materialId);
+      int id = static_cast<int>(materialId);
+      lut->SetAnnotation(id, label.data());
+      ++index;
+
+      materialMinId = std::min(materialMinId, id);
+      materialMaxId = std::max(materialMaxId, id);
+    }
+    lut->Build();
+    scalarBar->SetLookupTable(lut);
+    scalarBar->SetMaximumNumberOfColors(uniqueMaterialIds.size());
+    // When using annotations (categorical), don't draw numeric labels
+    scalarBar->SetNumberOfLabels(0);
+    scalarBar->SetTitle("Materials");
 
     cachedSurfaceMesh.resize(domains.size());
     cachedInterfaceMesh.resize(domains.size());
@@ -385,8 +414,10 @@ private:
       mapper->ScalarVisibilityOn();
       mapper->SelectColorArray("MaterialIds");
       mapper->SetLookupTable(lut);
-      assert(materialMinId != -1 && materialMaxId != -1);
       mapper->SetScalarRange(materialMinId, materialMaxId);
+
+      if (showScalarBar)
+        renderer->AddActor(scalarBar);
     }
 
     auto actor = vtkSmartPointer<vtkActor>::New();
@@ -425,6 +456,10 @@ private:
     actor->SetMapper(mapper);
 
     renderer->AddActor(actor);
+
+    // Add scalar bar
+    if (showScalarBar)
+      renderer->AddActor(scalarBar);
   }
 
 private:
@@ -435,17 +470,18 @@ private:
   vtkSmartPointer<vtkRenderWindow> renderWindow;
   vtkSmartPointer<vtkRenderWindowInteractor> interactor;
   vtkSmartPointer<vtkLookupTable> lut;
+  vtkSmartPointer<vtkScalarBarActor> scalarBar;
 
   // text
   const std::string instructionsText =
       "Press 1: Surface | 2: Interface | 3: Volume | "
-      "x/y/z: View | s: Screenshot | h: Show/Hide Instructions | q/e: Quit";
+      "x/y/z: View | s: Screenshot | h: Show/Hide Instructions | b: Show/Hide "
+      "Scalar Bar | q/e: Quit";
   vtkSmartPointer<vtkTextActor> instructionsActor;
   bool instructionsAdded = false;
 
   std::array<double, 3> backgroundColor = {84.0 / 255, 89.0 / 255, 109.0 / 255};
   std::array<int, 2> windowSize = {800, 600};
-  int screenshotScale = 1;
 
   RenderMode renderMode = RenderMode::INTERFACE;
 
@@ -455,6 +491,7 @@ private:
   std::vector<vtkSmartPointer<vtkUnstructuredGrid>> cachedVolumeMesh;
   int materialMinId = -1;
   int materialMaxId = -1;
+  bool showScalarBar = true;
 };
 
 namespace impl {
@@ -514,6 +551,9 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
   }
   case 'h':
     window->toggleInstructionText();
+    return;
+  case 'b':
+    window->toggleScalarBar();
     return;
   case 'p':
     window->printCameraInfo();
@@ -615,11 +655,26 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
 
   lut = vtkSmartPointer<vtkLookupTable>::New();
 
-  lut->SetNumberOfTableValues(256);
-  lut->SetHueRange(0.667, 0.0); // blue → red
-  lut->SetSaturationRange(1.0, 1.0);
-  lut->SetValueRange(.5, 1.0);
-  lut->Build();
+  // lut->SetNumberOfTableValues(256);
+  // lut->SetHueRange(0.667, 0.0); // blue → red
+  // lut->SetSaturationRange(1.0, 1.0);
+  // lut->SetValueRange(.5, 1.0);
+  // lut->Build();
+
+  scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
+  // Make scalar bar smaller and labels larger by default
+  scalarBar->SetOrientationToVertical();
+  // Position in normalized viewport coordinates (x,y)
+  scalarBar->SetPosition(0.88, 0.15);
+  // Size in normalized viewport coordinates (width,height)
+  scalarBar->SetPosition2(0.08, 0.70);
+  // Make the color swatch thinner relative to the actor box
+  scalarBar->SetBarRatio(0.20);
+  // Increase annotation (label) and title font sizes
+  scalarBar->GetLabelTextProperty()->SetFontSize(18);
+  scalarBar->GetTitleTextProperty()->SetFontSize(20);
+  scalarBar->GetLabelTextProperty()->BoldOn();
+  scalarBar->GetTitleTextProperty()->BoldOn();
 }
 } // namespace viennaps
 
