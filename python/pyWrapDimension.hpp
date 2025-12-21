@@ -1289,23 +1289,27 @@ template <int D> void bindApi(py::module &module) {
            py::arg("path"),
            "Set the path for intermediate output files during the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const AdvectionParameters &)) &
-               ProcessTD::template setParameters<AdvectionParameters>,
+           (void (ProcessTD::*)(
+               const AdvectionParameters
+                   &))&ProcessTD::template setParameters<AdvectionParameters>,
            py::arg("parameters"),
            "Set the advection parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const RayTracingParameters &)) &
-               ProcessTD::template setParameters<RayTracingParameters>,
+           (void (ProcessTD::*)(
+               const RayTracingParameters
+                   &))&ProcessTD::template setParameters<RayTracingParameters>,
            py::arg("parameters"),
            "Set the ray tracing parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const CoverageParameters &)) &
-               ProcessTD::template setParameters<CoverageParameters>,
+           (void (ProcessTD::*)(
+               const CoverageParameters
+                   &))&ProcessTD::template setParameters<CoverageParameters>,
            py::arg("parameters"),
            "Set the coverage parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const AtomicLayerProcessParameters &)) &
-               ProcessTD::template setParameters<AtomicLayerProcessParameters>,
+           (void (ProcessTD::*)(
+               const AtomicLayerProcessParameters &))&ProcessTD::
+               template setParameters<AtomicLayerProcessParameters>,
            py::arg("parameters"),
            "Set the atomic layer parameters for the process.");
 
@@ -1337,18 +1341,34 @@ template <int D> void bindApi(py::module &module) {
       .def("insertNextDomain", &VTKRenderWindow<T, D>::insertNextDomain,
            "Insert domain to be visualized.", py::arg("domain"),
            py::arg("offset") = std::array<double, 3>{0., 0., 0.})
-      .def("render", &VTKRenderWindow<T, D>::render,
-           "Render the current domain state.")
+      .def("setDomainOffset", &VTKRenderWindow<T, D>::setDomainOffset,
+           "Set an offset to be applied to the domain during rendering.")
       .def("setBackgroundColor", &VTKRenderWindow<T, D>::setBackgroundColor,
            "Set the background color of the render window.")
       .def("setWindowSize", &VTKRenderWindow<T, D>::setWindowSize,
            "Set the size of the render window.")
       .def("setRenderMode", &VTKRenderWindow<T, D>::setRenderMode,
            "Set the render mode (surface, interfaces, volume).")
+      .def("setCameraPosition", &VTKRenderWindow<T, D>::setCameraPosition,
+           "Set the camera position in world coordinates.")
+      .def("setCameraFocalPoint", &VTKRenderWindow<T, D>::setCameraFocalPoint,
+           "Set the camera focal point in world coordinates.")
+      .def("setCameraViewUp", &VTKRenderWindow<T, D>::setCameraViewUp,
+           "Set the camera view up vector.")
+      .def("setCameraView", &VTKRenderWindow<T, D>::setCameraView,
+           "Set the camera view along an axix (x,y,z)", py::arg("axis"))
+      .def("printCameraInfo", &VTKRenderWindow<T, D>::printCameraInfo,
+           "Print the current camera settings to the console.")
+      .def("saveScreenshot", &VTKRenderWindow<T, D>::saveScreenshot,
+           "Save a screenshot of the current render window.",
+           py::arg("fileName"))
+      .def("toggleInstructionText",
+           &VTKRenderWindow<T, D>::toggleInstructionText,
+           "Toggle the instruction text overlay on/off.")
+      .def("render", &VTKRenderWindow<T, D>::render,
+           "Render the current domain state.")
       .def("setScreenshotScale", &VTKRenderWindow<T, D>::setScreenshotScale,
-           "Set the scale factor for screenshots taken.")
-      .def("setDomainOffset", &VTKRenderWindow<T, D>::setDomainOffset,
-           "Set an offset to be applied to the domain during rendering.");
+           "Set the scale factor for screenshots taken.");
 #endif
 
   // ***************************************************************************

@@ -6,13 +6,9 @@
 #include <lsMesh.hpp>
 #include <lsWriteVisualizationMesh.hpp>
 
-#include <vtkActor.h>
-#include <vtkActorCollection.h>
-#include <vtkCallbackCommand.h>
 #include <vtkCamera.h>
 #include <vtkCellArray.h>
 #include <vtkCellData.h>
-#include <vtkCommand.h>
 #include <vtkDataSetMapper.h>
 #include <vtkInteractorStyleImage.h>
 #include <vtkInteractorStyleTrackballCamera.h>
@@ -42,25 +38,21 @@ VTK_MODULE_INIT(vtkRenderingFreeType);
 VTK_MODULE_INIT(vtkRenderingUI);
 #endif
 
-namespace viennaps {
-template <typename NumericType, int D> class VTKRenderWindow;
-
-enum class RenderMode { SURFACE, INTERFACE, VOLUME };
-} // namespace viennaps
-
 // Forward declaration - full definition after VTKRenderWindow
 class Custom3DInteractorStyle;
 class Custom2DInteractorStyle;
 
 namespace viennaps {
+enum class RenderMode { SURFACE, INTERFACE, VOLUME };
 
 // forward declaration of Domain
 template <typename T, int D> class Domain;
 
 template <typename T, int D> class VTKRenderWindow {
 public:
-  VTKRenderWindow() = default;
+  VTKRenderWindow() { initialize(); }
   VTKRenderWindow(SmartPointer<Domain<T, D>> passedDomain) {
+    initialize();
     insertNextDomain(passedDomain);
   }
 
@@ -106,20 +98,109 @@ public:
 
   void setRenderMode(RenderMode mode) { renderMode = mode; }
 
+  void setCameraPosition(const std::array<double, 3> &position) {
+    if (renderer) {
+      renderer->GetActiveCamera()->SetPosition(position.data());
+    }
+  }
+
+  void setCameraViewUp(const std::array<double, 3> &viewUp) {
+    if (renderer) {
+      renderer->GetActiveCamera()->SetViewUp(viewUp.data());
+    }
+  }
+
+  void setCameraFocalPoint(const std::array<double, 3> &focalPoint) {
+    if (renderer) {
+      renderer->GetActiveCamera()->SetFocalPoint(focalPoint.data());
+    }
+  }
+
+  void setCameraView(int axis) {
+    if (renderer) {
+      vtkCamera *camera = renderer->GetActiveCamera();
+      switch (axis) {
+      case 0: // X
+        camera->SetPosition(1, 0, 0);
+        camera->SetFocalPoint(0, 0, 0);
+        camera->SetViewUp(0, 0, 1);
+        break;
+      case 1: // Y
+        camera->SetPosition(0, 1, 0);
+        camera->SetFocalPoint(0, 0, 0);
+        camera->SetViewUp(0, 0, 1);
+        break;
+      case 2: // Z
+        camera->SetPosition(0, 0, 1);
+        camera->SetFocalPoint(0, 0, 0);
+        camera->SetViewUp(0, 1, 0);
+        break;
+      default:
+        VIENNACORE_LOG_WARNING("Invalid axis for camera view.");
+      }
+    }
+  }
+
+  void printCameraInfo() {
+    if (renderer) {
+      vtkCamera *camera = renderer->GetActiveCamera();
+      double position[3];
+      camera->GetPosition(position);
+      double focalPoint[3];
+      camera->GetFocalPoint(focalPoint);
+      double viewUp[3];
+      camera->GetViewUp(viewUp);
+
+      VIENNACORE_LOG_INFO("Camera Position: (" + std::to_string(position[0]) +
+                          ", " + std::to_string(position[1]) + ", " +
+                          std::to_string(position[2]) + ")");
+      VIENNACORE_LOG_INFO("Camera Focal Point: (" +
+                          std::to_string(focalPoint[0]) + ", " +
+                          std::to_string(focalPoint[1]) + ", " +
+                          std::to_string(focalPoint[2]) + ")");
+      VIENNACORE_LOG_INFO("Camera View Up: (" + std::to_string(viewUp[0]) +
+                          ", " + std::to_string(viewUp[1]) + ", " +
+                          std::to_string(viewUp[2]) + ")");
+    }
+  }
+
   void setScreenshotScale(int scale) { screenshotScale = scale; }
 
-  int getScreenshotScale() const { return screenshotScale; }
+  void saveScreenshot(const std::string &fileName) {
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+        vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImageFilter->SetInput(renderWindow);
+    windowToImageFilter->SetScale(screenshotScale); // image quality
+    windowToImageFilter->Update();
+
+    VIENNACORE_LOG_INFO("Saving screenshot '" + fileName + "'");
+
+    vtkSmartPointer<vtkPNGWriter> writer = vtkSmartPointer<vtkPNGWriter>::New();
+    writer->SetFileName(fileName.c_str());
+    writer->SetInputData(windowToImageFilter->GetOutput());
+    writer->Write();
+  }
 
   void render() {
-    initialize();
     updateDisplay();
     interactor->Start();
   }
 
   // Update the display without starting a new event loop (for use during
   // interaction)
-  void updateDisplay(bool useCache = false) {
+  void updateDisplay(bool useCache = true) {
     updateRenderer(useCache);
+    renderWindow->Render();
+  }
+
+  void toggleInstructionText() {
+    if (instructionsAdded) {
+      instructionsActor->SetInput("");
+      instructionsAdded = false;
+    } else {
+      instructionsActor->SetInput(instructionsText.c_str());
+      instructionsAdded = true;
+    }
     renderWindow->Render();
   }
 
@@ -127,7 +208,7 @@ private:
   // forward declaration, requires full definition of Interactor styles
   void initialize();
 
-  void updateRenderer(bool useCache = false) {
+  void updateRenderer(bool useCache = true) {
     if (domains.empty()) {
       VIENNACORE_LOG_WARNING("No domains set for rendering.");
       return;
@@ -356,7 +437,11 @@ private:
   vtkSmartPointer<vtkLookupTable> lut;
 
   // text
+  const std::string instructionsText =
+      "Press 1: Surface | 2: Interface | 3: Volume | "
+      "x/y/z: View | s: Screenshot | h: Show/Hide Instructions | q/e: Quit";
   vtkSmartPointer<vtkTextActor> instructionsActor;
+  bool instructionsAdded = false;
 
   std::array<double, 3> backgroundColor = {84.0 / 255, 89.0 / 255, 109.0 / 255};
   std::array<int, 2> windowSize = {800, 600};
@@ -402,34 +487,21 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
     rwi->TerminateApp();
     return;
   case 'x':
-    camera->SetPosition(500.0, 0, 0); // Positive X
-    camera->SetFocalPoint(0.0, 0.0, 0.0);
-    camera->SetViewUp(0.0, 1.0, 0.0);
+    window->setCameraView(0);
     renderer->ResetCamera();
     rwi->GetRenderWindow()->Render();
     return;
   case 'y':
-    camera->SetPosition(0, 500.0, 0); // Positive Y
-    camera->SetFocalPoint(0.0, 0.0, 0.0);
-    camera->SetViewUp(0.0, 0.0, 1.0);
+    window->setCameraView(1);
     renderer->ResetCamera();
     rwi->GetRenderWindow()->Render();
     return;
   case 'z':
-    camera->SetPosition(0, 0, 500.0); // Positive Z
-    camera->SetFocalPoint(0.0, 0.0, 0.0);
-    camera->SetViewUp(0.0, 1.0, 0.0);
+    window->setCameraView(2);
     renderer->ResetCamera();
     rwi->GetRenderWindow()->Render();
     return;
   case 's': {
-    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
-        vtkSmartPointer<vtkWindowToImageFilter>::New();
-    windowToImageFilter->SetInput(rwi->GetRenderWindow());
-    windowToImageFilter->SetScale(
-        window->getScreenshotScale()); // image quality
-    windowToImageFilter->Update();
-
     auto time_t =
         std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     char timeStamp[20];
@@ -437,14 +509,15 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
                   std::localtime(&time_t));
     const std::string fileName =
         "screenshot_" + std::string(timeStamp) + ".png";
-    VIENNACORE_LOG_INFO("Saving screenshot '" + fileName + "'");
-
-    vtkSmartPointer<vtkPNGWriter> writer = vtkSmartPointer<vtkPNGWriter>::New();
-    writer->SetFileName(fileName.c_str());
-    writer->SetInputData(windowToImageFilter->GetOutput());
-    writer->Write();
+    window->saveScreenshot(fileName);
     return;
   }
+  case 'h':
+    window->toggleInstructionText();
+    return;
+  case 'p':
+    window->printCameraInfo();
+    return;
   }
 }
 } // namespace impl
@@ -456,7 +529,9 @@ public:
   static Custom3DInteractorStyle *New();
   vtkTypeMacro(Custom3DInteractorStyle, vtkInteractorStyleTrackballCamera);
 
-  void OnChar() { viennaps::impl::InteractorOnChar(this->Interactor, Window); }
+  void OnChar() override {
+    viennaps::impl::InteractorOnChar(this->Interactor, Window);
+  }
 
   void setRenderWindow(viennaps::VTKRenderWindow<double, 3> *window) {
     Window = window;
@@ -477,7 +552,9 @@ public:
 
   void OnLeftButtonUp() override { this->EndPan(); }
 
-  void OnChar() { viennaps::impl::InteractorOnChar(this->Interactor, Window); }
+  void OnChar() override {
+    viennaps::impl::InteractorOnChar(this->Interactor, Window);
+  }
 
   void setRenderWindow(viennaps::VTKRenderWindow<double, 2> *window) {
     Window = window;
@@ -499,14 +576,14 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
 
   // add text actor for instructions
   instructionsActor = vtkSmartPointer<vtkTextActor>::New();
-  instructionsActor->SetInput("Press 1: Surface | 2: Interface | 3: Volume | "
-                              "x/y/z: View | s: Screenshot | q/e: Quit");
   instructionsActor->GetTextProperty()->SetFontSize(14);
   instructionsActor->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
   instructionsActor->SetPosition(10, 10);
+  instructionsActor->SetInput(instructionsText.c_str());
+  instructionsAdded = true;
 
   renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-  renderWindow->SetWindowName("ViennaPS Render Window");
+  renderWindow->SetWindowName("ViennaPS");
   renderWindow->SetSize(windowSize.data());
   renderWindow->AddRenderer(renderer);
 
@@ -520,6 +597,7 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
     style->setRenderWindow(this);
     interactor->SetInteractorStyle(style);
   } else {
+    setCameraView(1); // Default view along Y axis
     auto style = vtkSmartPointer<Custom3DInteractorStyle>::New();
     style->setRenderWindow(this);
     interactor->SetInteractorStyle(style);

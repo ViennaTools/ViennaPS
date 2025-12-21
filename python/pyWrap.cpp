@@ -71,6 +71,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("FULL", MetaDataLevel::FULL)
       .finalize();
 
+  // Render Mode Enum
+  py::native_enum<RenderMode>(module, "RenderMode", "enum.IntEnum")
+      .value("SURFACE", RenderMode::SURFACE)
+      .value("INTERFACE", RenderMode::INTERFACE)
+      .value("VOLUME", RenderMode::VOLUME)
+      .finalize();
+
   // HoleShape Enum
   py::native_enum<HoleShape>(module, "HoleShape", "enum.IntEnum")
       .value("FULL", HoleShape::FULL)
