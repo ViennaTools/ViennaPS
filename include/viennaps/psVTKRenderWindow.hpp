@@ -6,6 +6,8 @@
 #include <lsMesh.hpp>
 #include <lsWriteVisualizationMesh.hpp>
 
+#include "psUtil.hpp"
+
 #include <vtkCamera.h>
 #include <vtkCellArray.h>
 #include <vtkCellData.h>
@@ -249,9 +251,7 @@ private:
     int index = 0;
     for (const auto &materialId : uniqueMaterialIds) {
       auto colorHex = color(materialId);
-      double r = ((colorHex >> 16) & 0xFF) / 255.0;
-      double g = ((colorHex >> 8) & 0xFF) / 255.0;
-      double b = (colorHex & 0xFF) / 255.0;
+      auto [r, g, b] = util::hexToRGBArray(colorHex);
       lut->SetTableValue(index, r, g, b, 1.0);
       auto label = to_string_view(materialId);
       int id = static_cast<int>(materialId);
