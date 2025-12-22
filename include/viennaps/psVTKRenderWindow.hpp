@@ -51,6 +51,12 @@ enum class RenderMode { SURFACE, INTERFACE, VOLUME };
 // forward declaration of Domain
 template <typename T, int D> class Domain;
 
+/// Lightweight VTK-based viewer for one or more ViennaPS domains.
+///
+/// Wraps a renderer, window, and interactor to visualize level-set derived
+/// meshes either as surfaces, interfaces, or volume cells. Provides helpers to
+/// manage camera presets, toggle overlays, and capture screenshots without the
+/// caller dealing with raw VTK plumbing.
 template <typename T, int D> class VTKRenderWindow {
 public:
   VTKRenderWindow() { initialize(); }
@@ -70,12 +76,14 @@ public:
     }
   }
 
+  /// Queue a domain for rendering with an optional translation offset.
   void insertNextDomain(SmartPointer<Domain<T, D>> passedDomain,
                         const std::array<double, 3> &offset = {0.0, 0.0, 0.0}) {
     domains.push_back(passedDomain);
     domainOffsets.push_back(offset);
   }
 
+  /// Adjust the translation offset of an already enqueued domain.
   void setDomainOffset(std::size_t domainIndex,
                        const std::array<double, 3> &offset) {
     if (domainIndex >= domainOffsets.size()) {
@@ -85,6 +93,7 @@ public:
     domainOffsets[domainIndex] = offset;
   }
 
+  /// Set the renderer background color (RGB in [0,1]).
   void setBackgroundColor(const std::array<double, 3> &color) {
     backgroundColor = color;
     if (renderer) {
@@ -92,6 +101,7 @@ public:
     }
   }
 
+  /// Set the render window size in pixels.
   void setWindowSize(const std::array<int, 2> &size) {
     windowSize = size;
     if (renderWindow) {
@@ -99,26 +109,31 @@ public:
     }
   }
 
+  /// Choose whether to render surfaces, interfaces, or volume cells.
   void setRenderMode(RenderMode mode) { renderMode = mode; }
 
+  /// Convenience setter for the active camera position.
   void setCameraPosition(const std::array<double, 3> &position) {
     if (renderer) {
       renderer->GetActiveCamera()->SetPosition(position.data());
     }
   }
 
+  /// Convenience setter for the active camera view-up vector.
   void setCameraViewUp(const std::array<double, 3> &viewUp) {
     if (renderer) {
       renderer->GetActiveCamera()->SetViewUp(viewUp.data());
     }
   }
 
+  /// Convenience setter for the active camera focal point.
   void setCameraFocalPoint(const std::array<double, 3> &focalPoint) {
     if (renderer) {
       renderer->GetActiveCamera()->SetFocalPoint(focalPoint.data());
     }
   }
 
+  /// Snap camera to axis-aligned views (0=x, 1=y, 2=z).
   void setCameraView(int axis) {
     if (renderer) {
       vtkCamera *camera = renderer->GetActiveCamera();
@@ -144,6 +159,7 @@ public:
     }
   }
 
+  /// Log current camera position, focal point, and view-up vector.
   void printCameraInfo() {
     if (renderer) {
       vtkCamera *camera = renderer->GetActiveCamera();
@@ -167,6 +183,7 @@ public:
     }
   }
 
+  /// Capture the current framebuffer to a PNG file.
   void saveScreenshot(const std::string &fileName, int scale = 1) {
     vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
         vtkSmartPointer<vtkWindowToImageFilter>::New();
@@ -182,6 +199,7 @@ public:
     writer->Write();
   }
 
+  /// Render and enter the VTK event loop.
   void render() {
     updateDisplay();
     interactor->Start();
@@ -189,11 +207,13 @@ public:
 
   // Update the display without starting a new event loop (for use during
   // interaction)
+  /// Refresh the scene; optionally reuse cached meshes.
   void updateDisplay(bool useCache = true) {
     updateRenderer(useCache);
     renderWindow->Render();
   }
 
+  /// Toggle the on-screen keyboard instruction overlay.
   void toggleInstructionText() {
     if (instructionsAdded) {
       instructionsActor->SetInput("");
@@ -205,6 +225,7 @@ public:
     renderWindow->Render();
   }
 
+  /// Toggle the material lookup-table legend.
   void toggleScalarBar() {
     if (showScalarBar) {
       renderer->RemoveActor(scalarBar);
