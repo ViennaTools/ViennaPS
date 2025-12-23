@@ -53,23 +53,32 @@ ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org
 
 * C++17 Compiler with OpenMP support
 
-### Dependencies (installed automatically)
+### ViennaTools Dependencies (installed automatically)
+
+ViennaPS is part of the ViennaTools ecosystem and depends on several lightweight, header-only ViennaTools libraries. During configuration, CMake will look for them and fetch them automatically as part of the ViennaPS build. No separate installation step is required:
 
 * [ViennaCore](https://github.com/ViennaTools/viennacore) 
-
 * [ViennaLS](https://github.com/ViennaTools/viennals) 
-  * [ViennaHRLE](https://github.com/ViennaTools/viennahrle) 
-  * [VTK](https://vtk.org/) (9.0.0+)
-
+* [ViennaHRLE](https://github.com/ViennaTools/viennahrle) 
 * [ViennaRay](https://github.com/ViennaTools/viennaray) 
-  * [Embree](https://www.embree.org/) (4.0.0+)
-
 * [ViennaCS](https://github.com/ViennaTools/viennacs)
 
-* [pybind11](https://github.com/pybind/pybind11) (3.0.0+, only for building Python libs)
+### External Dependencies
 
-The CMake configuration automatically checks if the dependencies are installed.
-If the dependencies are not found on the system, they will be built from source. To use local installations of the dependencies, the `VIENNAPS_LOOKUP_DIRS` variable can be set to the installation path of the dependencies.
+The following external dependencies are required to build ViennaPS. On most systems, installing them via a package manager (e.g. `apt`, `brew`, or `vcpkg`) is the fastest option:
+
+* [VTK](https://vtk.org/) (9.0.0+)
+* [Embree](https://www.embree.org/) (4.0.0+)
+
+CMake automatically checks for these dependencies during configuration. If they are not found, they can be built from source as part of the build.
+
+To prefer a specific local installation, point CMake to it via `VIENNAPS_LOOKUP_DIRS` (a semicolon-separated list of prefixes):
+
+```bash
+cmake -B build -DVIENNAPS_LOOKUP_DIRS="/path/to/vtk;/path/to/embree"
+```
+
+Alternatively (or additionally), you can use `CMAKE_PREFIX_PATH` if that better matches your local setup.
 
 ## Installing
 

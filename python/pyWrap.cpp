@@ -43,7 +43,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   auto matEnum =
       py::native_enum<Material>(module, "Material", "enum.IntEnum",
                                 "Material types for domain and level sets");
-#define ENUM_BIND(id, sym, cat, dens, cond) matEnum.value(#sym, Material::sym);
+#define ENUM_BIND(id, sym, cat, dens, cond, color)                             \
+  matEnum.value(#sym, Material::sym);
   MATERIAL_LIST(ENUM_BIND)
 #undef ENUM_BIND
   matEnum.finalize();
@@ -69,6 +70,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("GRID", MetaDataLevel::GRID)
       .value("PROCESS", MetaDataLevel::PROCESS)
       .value("FULL", MetaDataLevel::FULL)
+      .finalize();
+
+  // Render Mode Enum
+  py::native_enum<RenderMode>(module, "RenderMode", "enum.IntEnum")
+      .value("SURFACE", RenderMode::SURFACE)
+      .value("INTERFACE", RenderMode::INTERFACE)
+      .value("VOLUME", RenderMode::VOLUME)
       .finalize();
 
   // HoleShape Enum

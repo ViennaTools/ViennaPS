@@ -35,9 +35,7 @@ ps.MakeTrench(
 # copy top layer to capture deposition
 geometry.duplicateTopLevelSet(ps.Material.SiO2)
 
-model = ps.SphereDistribution(
-    radius=params["layerThickness"], gridDelta=params["gridDelta"]
-)
+model = ps.SphereDistribution(radius=params["layerThickness"])
 
 geometry.saveHullMesh("initial")
 

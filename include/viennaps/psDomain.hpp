@@ -4,6 +4,7 @@
 #include "psMaterials.hpp"
 #include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
+#include "psVTKRenderWindow.hpp"
 #include "psVersion.hpp"
 
 #include <lsBooleanOperation.hpp>
@@ -445,6 +446,16 @@ public:
     return levelSets_.back()->getGrid().getBoundaryConditions();
   }
 
+  auto getMaterialsInDomain() const {
+    std::set<Material> materials;
+    if (materialMap_) {
+      for (std::size_t i = 0; i < materialMap_->size(); i++) {
+        materials.insert(materialMap_->getMaterialAtIdx(i));
+      }
+    }
+    return materials;
+  }
+
   void print(std::ostream &out = std::cout, bool hrle = false) const {
     constexpr std::string_view separator =
         "*****************************************\n";
@@ -599,6 +610,16 @@ public:
           levelSets_.at(i), fileName + "_layer" + std::to_string(i) + ".lvst")
           .apply();
     }
+  }
+
+  void show() const {
+#ifdef VIENNALS_VTK_RENDERING
+    auto thisDomain = SmartPointer<Domain<NumericType, D>>::New(*this);
+    VTKRenderWindow<NumericType, D>(thisDomain).render();
+#else
+    VIENNACORE_LOG_ERROR("VTK rendering is disabled. Please enable "
+                         "VIENNALS_VTK_RENDERING to use this feature.");
+#endif
   }
 
   void clear() {
