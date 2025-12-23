@@ -84,26 +84,11 @@ set_target_properties(
 if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps' python package")
 
-  # Include pipelines of models
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNAPS_GPU_MODELS}/CallableWrapper.cu")
-
-  # ViennaRay general pipelines
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNARAY_PIPELINE_DIR}/GeneralPipelineDisk.cu")
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNARAY_PIPELINE_DIR}/GeneralPipelineTriangle.cu")
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNARAY_PIPELINE_DIR}/GeneralPipelineLine.cu")
-
-  # Generate CUDA kernels
-  generate_kernel(${VIENNAPS_PYTHON_MODULE_NAME} generated_files ${VIENNARAY_CUDA_KERNELS})
-
-  # Include ViennaPS GPU and OptiX headers
-  target_sources(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${generated_files})
+  # Include ViennaRay GPU and OptiX headers
   target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${VIENNARAY_GPU_INCLUDE})
   target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                              PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
+  add_dependencies(${VIENNAPS_PYTHON_MODULE_NAME} ${VIENNAPS_GPU_DEPENDENCIES})
 
   # Install PTX files
   install(DIRECTORY "${VIENNACORE_PTX_DIR}/" DESTINATION "${VIENNAPS_PYTHON_PACKAGE_NAME}/ptx")
