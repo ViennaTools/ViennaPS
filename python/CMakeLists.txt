@@ -70,11 +70,7 @@ if(VIENNALS_VTK_RENDERING)
     GIT_REPOSITORY "https://gitlab.kitware.com/vtk/vtk")
 
   # These modules need to be initialized for VTK rendering to work properly
-  vtk_module_autoinit(
-    TARGETS
-    ${VIENNAPS_PYTHON_MODULE_NAME}
-    MODULES
-    ${VTK_LIBRARIES})
+  vtk_module_autoinit(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME} MODULES ${VTK_LIBRARIES})
   target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE VIENNALS_VTK_MODULE_INIT)
 endif()
 

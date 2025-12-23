@@ -150,7 +150,7 @@ constexpr std::array<MaterialInfo, kMaterialMaxId + 1> kMaterialTable = [] {
   // default fill
   for (auto &e : t)
     e = {"Undefined", MaterialCategory::Generic, 0.0, false, 0xcccccc};
-  // populate
+    // populate
 #define FILL_ROW(id, sym, cat, dens, cond, color)                              \
   t[id] = {#sym, MaterialCategory::cat, dens, cond, color};
   MATERIAL_LIST(FILL_ROW)
