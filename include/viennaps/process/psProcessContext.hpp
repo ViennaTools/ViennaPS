@@ -107,7 +107,9 @@ template <typename NumericType, int D> struct ProcessContext {
            advectionParams.integrationScheme ==
                IntegrationScheme::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER ||
            advectionParams.integrationScheme ==
-               IntegrationScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+               IntegrationScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
+           advectionParams.temporalScheme ==
+               TemporalScheme::RUNGE_KUTTA_3RD_ORDER;
   }
 };
 

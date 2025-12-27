@@ -4,13 +4,14 @@
 #include "psTranslationField.hpp"
 
 #include <lsAdvect.hpp>
+#include <lsAdvectRungeKutta3.hpp>
 
 #include <vcTimer.hpp>
 
 namespace viennaps {
 
 template <typename NumericType, int D> class AdvectionHandler {
-  viennals::Advect<NumericType, D> advectionKernel_;
+  SmartPointer<viennals::Advect<NumericType, D>> advectionKernel_;
   viennacore::Timer<> timer_;
   unsigned lsVelOutputCounter = 0;
 
@@ -39,44 +40,52 @@ public:
 
     context.resetTime();
 
-    advectionKernel_.setSingleStep(true);
-    advectionKernel_.setVelocityField(context.translationField);
-    advectionKernel_.setIntegrationScheme(
+    if (context.advectionParams.temporalScheme ==
+        TemporalScheme::RUNGE_KUTTA_3RD_ORDER) {
+      advectionKernel_ =
+          SmartPointer<viennals::AdvectRungeKutta3<NumericType, D>>::New();
+    } else {
+      advectionKernel_ = SmartPointer<viennals::Advect<NumericType, D>>::New();
+    }
+
+    advectionKernel_->setSingleStep(true);
+    advectionKernel_->setVelocityField(context.translationField);
+    advectionKernel_->setIntegrationScheme(
         context.advectionParams.integrationScheme);
-    advectionKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
-    advectionKernel_.setSaveAdvectionVelocities(
+    advectionKernel_->setTimeStepRatio(context.advectionParams.timeStepRatio);
+    advectionKernel_->setSaveAdvectionVelocities(
         context.advectionParams.velocityOutput);
-    advectionKernel_.setDissipationAlpha(
+    advectionKernel_->setDissipationAlpha(
         context.advectionParams.dissipationAlpha);
-    advectionKernel_.setIgnoreVoids(context.advectionParams.ignoreVoids);
-    advectionKernel_.setCheckDissipation(
+    advectionKernel_->setIgnoreVoids(context.advectionParams.ignoreVoids);
+    advectionKernel_->setCheckDissipation(
         context.advectionParams.checkDissipation);
-    advectionKernel_.setAdaptiveTimeStepping(
+    advectionKernel_->setAdaptiveTimeStepping(
         context.advectionParams.adaptiveTimeStepping);
     advectionKernel_.setAdaptiveTimeStepThreshold(
         context.advectionParams.adaptiveTimeStepThreshold);
 
     // normals vectors are only necessary for analytical velocity fields
     if (translationMethod > 0)
-      advectionKernel_.setCalculateNormalVectors(false);
+      advectionKernel_->setCalculateNormalVectors(false);
 
-    advectionKernel_.clearLevelSets();
+    advectionKernel_->clearLevelSets();
     for (auto &dom : context.domain->getLevelSets()) {
-      advectionKernel_.insertNextLevelSet(dom);
+      advectionKernel_->insertNextLevelSet(dom);
     }
 
     return ProcessResult::SUCCESS;
   }
 
   void setAdvectionTime(double time) {
-    advectionKernel_.setAdvectionTime(time);
+    advectionKernel_->setAdvectionTime(time);
   }
 
-  void disableSingleStep() { advectionKernel_.setSingleStep(false); }
+  void disableSingleStep() { advectionKernel_->setSingleStep(false); }
 
   void prepareAdvection(const ProcessContext<NumericType, D> &context) {
     // Prepare for advection step
-    advectionKernel_.prepareLS();
+    advectionKernel_->prepareLS();
     context.model->initialize(context.domain, context.processTime);
   }
 
@@ -85,12 +94,12 @@ public:
 
     // Set the maximum advection time.
     if (!context.flags.isALP) {
-      advectionKernel_.setAdvectionTime(context.processDuration -
-                                        context.processTime);
+      advectionKernel_->setAdvectionTime(context.processDuration -
+                                         context.processTime);
     }
 
     timer_.start();
-    advectionKernel_.apply();
+    advectionKernel_->apply();
     timer_.finish();
 
     if (context.advectionParams.velocityOutput) {
@@ -104,7 +113,7 @@ public:
           .apply();
     }
 
-    context.timeStep = advectionKernel_.getAdvectedTime();
+    context.timeStep = advectionKernel_->getAdvectedTime();
     if (context.timeStep == std::numeric_limits<double>::max()) {
       VIENNACORE_LOG_WARNING(
           "Process terminated early: Velocities are zero everywhere.");

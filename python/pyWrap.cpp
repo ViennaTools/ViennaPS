@@ -457,6 +457,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(py::init<>())
       .def_readwrite("integrationScheme",
                      &AdvectionParameters::integrationScheme)
+      .def_readwrite("temporalScheme",
+                     &AdvectionParameters::temporalScheme)
       .def_readwrite("timeStepRatio", &AdvectionParameters::timeStepRatio)
       .def_readwrite("dissipationAlpha", &AdvectionParameters::dissipationAlpha)
       .def_readwrite("checkDissipation", &AdvectionParameters::checkDissipation)
@@ -520,6 +522,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   auto m_util = module.def_submodule("util", "Utility functions.");
   m_util.def("convertIntegrationScheme", &util::convertIntegrationScheme,
              "Convert a string to an integration scheme.");
+  m_util.def("convertTemporalScheme", &util::convertTemporalScheme,
+             "Convert a string to a time integration scheme.");
 
   //   ***************************************************************************
   //                                  MAIN API

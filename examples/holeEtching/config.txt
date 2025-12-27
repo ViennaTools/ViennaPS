@@ -29,6 +29,7 @@ A_Si=7         # Si yield constant
 
 etchStopDepth=-10   # maximum etching depth
 integrationScheme=EO_1
+temporalScheme=RK3
 
 raysPerPoint=1000
 

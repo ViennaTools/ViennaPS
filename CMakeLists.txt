@@ -101,7 +101,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.7.4
+  VERSION 1.8.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -113,7 +113,7 @@ CPMAddPackage(
 
 CPMFindPackage(
   NAME ViennaRay
-  VERSION 3.9.0
+  VERSION 3.9.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -121,6 +121,7 @@ CPMFindPackage(
 CPMFindPackage(
   NAME ViennaLS
   VERSION 5.3.0
+  GIT_TAG fix_material_interface
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
@@ -177,8 +178,6 @@ endif()
 if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
   message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
-  target_include_directories(${PROJECT_NAME}
-                             INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/include>)
 else()
   message(STATUS "[ViennaPS] Disabled GPU Support")
   set(VIENNAPS_USE_GPU OFF)

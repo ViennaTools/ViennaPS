@@ -13,6 +13,7 @@ namespace viennaps {
 using namespace viennacore;
 
 using IntegrationScheme = viennals::IntegrationSchemeEnum;
+using TemporalScheme = viennals::TemporalSchemeEnum;
 
 struct RayTracingParameters {
   viennaray::NormalizationType normalizationType =
@@ -53,6 +54,8 @@ struct RayTracingParameters {
 struct AdvectionParameters {
   IntegrationScheme integrationScheme =
       IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER;
+  TemporalScheme temporalScheme =
+      TemporalScheme::FORWARD_EULER;
   double timeStepRatio = 0.4999;
   double dissipationAlpha = 1.0;
   double adaptiveTimeStepThreshold = 0.05;
@@ -64,6 +67,7 @@ struct AdvectionParameters {
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
     metaData["IntegrationScheme"] = {static_cast<double>(integrationScheme)};
+    metaData["TemporalScheme"] = {static_cast<double>(temporalScheme)};
     metaData["TimeStepRatio"] = {timeStepRatio};
     metaData["DissipationAlpha"] = {dissipationAlpha};
     return metaData;
@@ -72,6 +76,8 @@ struct AdvectionParameters {
   auto toMetaDataString() const {
     return "\nIntegrationScheme: " +
            util::convertIntegrationSchemeToString(integrationScheme) +
+           "\nTemporalScheme: " +
+           util::convertTemporalSchemeToString(temporalScheme) +
            "\nTimeStepRatio: " + std::to_string(timeStepRatio) +
            "\nDissipationAlpha: " + std::to_string(dissipationAlpha) +
            "\nCheckDissipation: " + util::boolString(checkDissipation) +

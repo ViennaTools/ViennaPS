@@ -51,6 +51,17 @@ convertIntegrationScheme(const std::string &s) {
       "WENO_5TH_ORDER");
 }
 
+[[nodiscard]] inline viennals::TemporalSchemeEnum
+convertTemporalScheme(const std::string &s) {
+  if (s == "FORWARD_EULER" || s == "FE")
+    return viennals::TemporalSchemeEnum::FORWARD_EULER;
+  if (s == "RUNGE_KUTTA_3RD_ORDER" || s == "RK3")
+    return viennals::TemporalSchemeEnum::RUNGE_KUTTA_3RD_ORDER;
+  throw std::invalid_argument(
+      "The value must be one of the following: "
+      "FORWARD_EULER, RUNGE_KUTTA_3RD_ORDER");
+}
+
 [[nodiscard]] inline std::string
 convertIntegrationSchemeToString(viennals::IntegrationSchemeEnum scheme) {
   switch (scheme) {
@@ -79,6 +90,18 @@ convertIntegrationSchemeToString(viennals::IntegrationSchemeEnum scheme) {
     return "WENO_5TH_ORDER";
   default:
     throw std::invalid_argument("Unknown integration scheme.");
+  }
+}
+
+[[nodiscard]] inline std::string
+convertTemporalSchemeToString(viennals::TemporalSchemeEnum scheme) {
+  switch (scheme) {
+  case viennals::TemporalSchemeEnum::FORWARD_EULER:
+    return "FORWARD_EULER";
+  case viennals::TemporalSchemeEnum::RUNGE_KUTTA_3RD_ORDER:
+    return "RUNGE_KUTTA_3RD_ORDER";
+  default:
+    throw std::invalid_argument("Unknown temporal integration scheme.");
   }
 }
 

@@ -13,7 +13,10 @@ using namespace viennaps;
 template <class NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
 
-  {
+  const std::vector<TemporalScheme> schemes = {
+      TemporalScheme::FORWARD_EULER, TemporalScheme::RUNGE_KUTTA_3RD_ORDER};
+
+  for (const auto scheme : schemes) {
     auto domain = Domain<NumericType, D>::New();
     MakeTrench<NumericType, D>(domain, 1., 10., 10., 2.5, 5., 10., 1., false,
                                true, Material::Si)
@@ -36,10 +39,14 @@ template <class NumericType, int D> void RunTest() {
         });
 
     RayTracingParameters rayParams;
-    rayParams.raysPerPoint = 10;
+    rayParams.raysPerPoint = 100;
+
+    AdvectionParameters advectionParams;
+    advectionParams.temporalScheme = scheme;
 
     Process<NumericType, D> process(domain, model, 1.);
     process.setParameters(rayParams);
+    process.setParameters(advectionParams);
     process.setFluxEngineType(FluxEngineType::CPU_DISK);
     process.apply();
 
