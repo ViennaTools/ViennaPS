@@ -72,6 +72,7 @@
 
 // visualization
 #include <psToDiskMesh.hpp>
+#include <psVTKRenderWindow.hpp>
 
 // other
 #include <csDenseCellSet.hpp>
@@ -516,6 +517,8 @@ template <int D> void bindApi(py::module &module) {
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
+      .def("getMaterialsInDomain", &Domain<T, D>::getMaterialsInDomain,
+           "Get the material IDs present in the domain.")
       .def("getSurface", &Domain<T, D>::getSurface,
            "Get the surface level set.")
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
@@ -531,6 +534,7 @@ template <int D> void bindApi(py::module &module) {
           "print",
           [](Domain<T, D> &self, bool hrle) { self.print(std::cout, hrle); },
           "Print the domain information.", py::arg("hrleInfo") = false)
+      .def("show", &Domain<T, D>::show, "Render the domain using VTK.")
       .def("getLevelSetMesh", &Domain<T, D>::getLevelSetMesh,
            py::arg("width") = 1,
            "Get the level set grids of layers in the domain.")
@@ -1325,6 +1329,41 @@ template <int D> void bindApi(py::module &module) {
   //      "level-set point IDs to mesh point IDs.")
   // .def("getTranslator", &ToDiskMesh<T, D>::getTranslator,
   //      "Retrieve the translator from the mesh converter.");
+
+#ifdef VIENNALS_VTK_RENDERING
+  py::class_<VTKRenderWindow<T, D>>(module, "VTKRenderWindow")
+      .def(py::init<>())
+      .def(py::init<DomainType>(), py::arg("domain"))
+      .def("insertNextDomain", &VTKRenderWindow<T, D>::insertNextDomain,
+           "Insert domain to be visualized.", py::arg("domain"),
+           py::arg("offset") = std::array<double, 3>{0., 0., 0.})
+      .def("setDomainOffset", &VTKRenderWindow<T, D>::setDomainOffset,
+           "Set an offset to be applied to the domain during rendering.")
+      .def("setBackgroundColor", &VTKRenderWindow<T, D>::setBackgroundColor,
+           "Set the background color of the render window.")
+      .def("setWindowSize", &VTKRenderWindow<T, D>::setWindowSize,
+           "Set the size of the render window.")
+      .def("setRenderMode", &VTKRenderWindow<T, D>::setRenderMode,
+           "Set the render mode (surface, interfaces, volume).")
+      .def("setCameraPosition", &VTKRenderWindow<T, D>::setCameraPosition,
+           "Set the camera position in world coordinates.")
+      .def("setCameraFocalPoint", &VTKRenderWindow<T, D>::setCameraFocalPoint,
+           "Set the camera focal point in world coordinates.")
+      .def("setCameraViewUp", &VTKRenderWindow<T, D>::setCameraViewUp,
+           "Set the camera view up vector.")
+      .def("setCameraView", &VTKRenderWindow<T, D>::setCameraView,
+           "Set the camera view along an axix (x,y,z)", py::arg("axis"))
+      .def("printCameraInfo", &VTKRenderWindow<T, D>::printCameraInfo,
+           "Print the current camera settings to the console.")
+      .def("saveScreenshot", &VTKRenderWindow<T, D>::saveScreenshot,
+           "Save a screenshot of the current render window.",
+           py::arg("fileName"), py::arg("scale") = 1)
+      .def("toggleInstructionText",
+           &VTKRenderWindow<T, D>::toggleInstructionText,
+           "Toggle the instruction text overlay on/off.")
+      .def("render", &VTKRenderWindow<T, D>::render,
+           "Render the current domain state.");
+#endif
 
   // ***************************************************************************
   //                                 IO OPERATIONS

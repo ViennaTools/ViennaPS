@@ -38,9 +38,7 @@ direction = [0.0, 0.0, 0.0]
 direction[args.dim - 1] = -1.0
 
 # Geometric advection model for deposition
-depoModel = ps.SphereDistribution(
-    radius=params["depositionThickness"], gridDelta=params["gridDelta"]
-)
+depoModel = ps.SphereDistribution(radius=params["depositionThickness"])
 
 # Define purely directional rate for depo removal
 etchDir = ps.RateSet(

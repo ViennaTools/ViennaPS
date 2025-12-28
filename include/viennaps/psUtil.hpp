@@ -156,4 +156,13 @@ template <typename T> [[nodiscard]] std::string toString(const T &value) {
   }
   return str.str();
 }
+
+[[nodiscard]] inline std::array<double, 3>
+hexToRGBArray(const uint32_t hexColor) {
+  std::array<double, 3> rgb;
+  rgb[0] = static_cast<double>((hexColor >> 16) & 0xFF) / 255.0;
+  rgb[1] = static_cast<double>((hexColor >> 8) & 0xFF) / 255.0;
+  rgb[2] = static_cast<double>(hexColor & 0xFF) / 255.0;
+  return rgb;
+}
 }; // namespace viennacore::util

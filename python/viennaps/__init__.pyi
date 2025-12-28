@@ -98,6 +98,7 @@ from viennaps.d2 import StencilLocalLaxFriedrichsScalar
 from viennaps.d2 import TEOSDeposition
 from viennaps.d2 import TEOSPECVD
 from viennaps.d2 import ToDiskMesh
+from viennaps.d2 import VTKRenderWindow
 from viennaps.d2 import WetEtching
 from viennaps.d2 import Writer
 from . import _core
@@ -187,6 +188,7 @@ __all__: list[str] = [
     "Time",
     "TimeUnit",
     "ToDiskMesh",
+    "VTKRenderWindow",
     "WetEtching",
     "Writer",
     "constants",

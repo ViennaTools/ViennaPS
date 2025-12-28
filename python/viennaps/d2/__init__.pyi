@@ -53,6 +53,7 @@ __all__: list[str] = [
     "TEOSDeposition",
     "TEOSPECVD",
     "ToDiskMesh",
+    "VTKRenderWindow",
     "WetEtching",
     "Writer",
     "gpu",
@@ -534,6 +535,11 @@ class Domain:
 
     def getLevelSets(self) -> list[viennals.d2.Domain]: ...
     def getMaterialMap(self) -> viennaps._core.MaterialMap: ...
+    def getMaterialsInDomain(self) -> set[viennaps._core.Material]:
+        """
+        Get the material IDs present in the domain.
+        """
+
     def getMetaData(self) -> dict[str, list[float]]:
         """
         Get meta data (e.g. process data) stored in the domain
@@ -648,6 +654,11 @@ class Domain:
     ) -> None:
         """
         Setup the domain.
+        """
+
+    def show(self) -> None:
+        """
+        Render the domain using VTK.
         """
 
 class DomainSetup:
@@ -1484,6 +1495,68 @@ class ToDiskMesh:
     def setMesh(self, arg0: viennals._core.Mesh) -> None:
         """
         Set the mesh in the mesh converter
+        """
+
+class VTKRenderWindow:
+    @typing.overload
+    def __init__(self) -> None: ...
+    @typing.overload
+    def __init__(self, domain: Domain) -> None: ...
+    def insertNextDomain(
+        self,
+        domain: Domain,
+        offset: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ] = [0.0, 0.0, 0.0],
+    ) -> None:
+        """
+        Insert domain to be visualized.
+        """
+
+    def render(self) -> None:
+        """
+        Render the current domain state.
+        """
+
+    def setBackgroundColor(
+        self,
+        arg0: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ],
+    ) -> None:
+        """
+        Set the background color of the render window.
+        """
+
+    def setDomainOffset(
+        self,
+        arg0: typing.SupportsInt,
+        arg1: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ],
+    ) -> None:
+        """
+        Set an offset to be applied to the domain during rendering.
+        """
+
+    def setRenderMode(self, arg0: ...) -> None:
+        """
+        Set the render mode (surface, interfaces, volume).
+        """
+
+    def setScreenshotScale(self, arg0: typing.SupportsInt) -> None:
+        """
+        Set the scale factor for screenshots taken.
+        """
+
+    def setWindowSize(
+        self,
+        arg0: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsInt], "FixedSize(2)"
+        ],
+    ) -> None:
+        """
+        Set the size of the render window.
         """
 
 class WetEtching(ProcessModel):
