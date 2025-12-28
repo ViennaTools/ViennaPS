@@ -111,8 +111,8 @@ int main() {
         auto pointData = viennals::PointData<NumericType>::New();
         tracer.normalizeResults();
         // tracer.downloadResults();
-        gpu::ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
-            tracer.getResults(), pointData, tracer.getParticles(),
+        ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
+            IndexMap(tracer.getParticles()), tracer.getResults(), pointData,
             elementKdTree, diskMesh, surfMesh, domain->getGridDelta() * 2.0f)
             .apply();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(

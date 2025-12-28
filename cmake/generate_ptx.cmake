@@ -8,7 +8,7 @@ function(generate_pipeline target_name generated_files_output)
   cuda_include_directories(${OptiX_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS})
 
   # Include ViennaRay headers which are used in pipelines
-  cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
+  cuda_include_directories(${VIENNARAY_GPU_INCLUDE})
   cuda_include_directories(${ViennaPS_SOURCE_DIR}/include/viennaps)
   cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
@@ -55,7 +55,7 @@ function(generate_kernel target_name generated_files_output)
 
   cuda_include_directories(${OptiX_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS})
   cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
-  cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
+  cuda_include_directories(${VIENNARAY_GPU_INCLUDE})
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
   if(VIENNARAY_GPU_DOUBLE_PRECISION)
     add_compile_definitions(VIENNARAY_GPU_DOUBLE_PRECISION)
@@ -76,11 +76,8 @@ function(generate_kernel target_name generated_files_output)
 endfunction()
 
 # In CMake, functions have their own scope, whereas macros use the scope of the caller.
-function(add_GPU_executable target_name_base target_name_var)
+function(add_GPU_executable target_name_base)
   set(target_name ${target_name_base})
-  set(${target_name_var}
-      ${target_name}
-      PARENT_SCOPE)
 
   # Separate the sources from the CMake and CUDA options fed to the macro.  This code
   # comes from the CUDA_COMPILE_PTX macro found in FindCUDA.cmake.  We are copying the
@@ -102,7 +99,7 @@ function(add_GPU_executable target_name_base target_name_var)
   cuda_include_directories(${OptiX_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS})
 
   # Include ViennaRay headers which are used in pipelines
-  cuda_include_directories(${VIENNARAY_GPU_INCLUDE} ${VIENNAPS_GPU_INCLUDE})
+  cuda_include_directories(${VIENNARAY_GPU_INCLUDE})
   cuda_include_directories(${ViennaPS_SOURCE_DIR}/include/viennaps)
   cuda_include_directories(${ViennaCore_SOURCE_DIR}/include/viennacore)
   add_compile_definitions(VIENNACORE_COMPILE_GPU)
@@ -125,7 +122,7 @@ function(add_GPU_executable target_name_base target_name_var)
   list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineDisk.cu)
   list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineTriangle.cu)
   list(APPEND cu_optix_source_files ${VIENNARAY_PIPELINE_DIR}/GeneralPipelineLine.cu)
-  list(APPEND cu_optix_source_files ${VIENNAPS_GPU_INCLUDE}/models/CallableWrapper.cu)
+  list(APPEND cu_optix_source_files ${VIENNAPS_GPU_MODELS}/CallableWrapper.cu)
 
   # Wrap OptiX pipeline files.
   if(VIENNAPS_GENERATE_OPTIXIR)
@@ -156,8 +153,7 @@ function(add_GPU_executable target_name_base target_name_var)
   # the cmake_options parsed out of the arguments.
   message(STATUS "Adding GPU target: ${target_name}")
   add_executable(${target_name} ${source_files} ${generated_files} ${cmake_options})
-  target_include_directories(${target_name} PRIVATE ${VIENNARAY_GPU_INCLUDE}
-                                                    ${VIENNAPS_GPU_INCLUDE})
+  target_include_directories(${target_name} PRIVATE ${VIENNARAY_GPU_INCLUDE})
   target_link_libraries(${target_name} PRIVATE ViennaPS)
   target_compile_definitions(${target_name}
                              PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})

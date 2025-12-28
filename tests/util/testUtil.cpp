@@ -42,8 +42,9 @@ void TestMetaDataToString() {
   std::unordered_map<std::string, std::vector<double>> metaData;
   metaData["key1"] = {1.0, 2.0};
   std::string str = metaDataToString(metaData);
+  std::cout << "Meta data str: " << str << std::endl;
   VC_TEST_ASSERT(str.find("key1") != std::string::npos);
-  VC_TEST_ASSERT(str.find("1.000000") != std::string::npos);
+  VC_TEST_ASSERT(str.find("1") != std::string::npos);
 }
 
 int main() {

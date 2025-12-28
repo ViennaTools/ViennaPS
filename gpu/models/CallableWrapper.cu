@@ -6,6 +6,7 @@
 #include "PlasmaEtching.cuh"
 #include "SingleParticle.cuh"
 #include "SingleParticleALD.cuh"
+#include "TEOSPECVD.cuh"
 
 //
 // --- Direct Callables wrapper
@@ -146,4 +147,14 @@ extern "C" __device__ void
 __direct_callable__faradayCollision(const void *sbtData,
                                     viennaray::gpu::PerRayData *prd) {
   faradayIonCollision(sbtData, prd);
+}
+
+//
+// --- TEOSPECVD pipeline
+//
+
+extern "C" __device__ void
+__direct_callable__TEOSPECVDIonReflection(const void *sbtData,
+                                          viennaray::gpu::PerRayData *prd) {
+  TEOSPECVDIonReflection(sbtData, prd);
 }

@@ -1,6 +1,6 @@
 function(viennaps_add_executable target_name source_file)
   if(VIENNAPS_USE_GPU)
-    add_gpu_executable(${target_name} _unused_target_var ${source_file})
+    add_gpu_executable(${target_name} ${source_file})
   else()
     add_executable(${target_name} ${source_file})
     target_link_libraries(${target_name} PRIVATE ViennaPS)

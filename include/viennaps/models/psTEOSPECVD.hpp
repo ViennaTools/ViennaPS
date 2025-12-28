@@ -93,13 +93,79 @@ private:
 };
 } // namespace impl
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+template <class NumericType, int D>
+class TEOSPECVD : public ProcessModelGPU<NumericType, D> {
+public:
+  TEOSPECVD(NumericType radicalSticking, NumericType radicalRate,
+            NumericType ionRate, NumericType ionExponent,
+            NumericType ionSticking = 1., NumericType radicalOrder = 1.,
+            NumericType ionOrder = 1., NumericType ionMinAngle = 85.) {
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+    this->setVelocityField(velField);
+
+    // particles
+    viennaray::gpu::Particle<NumericType> radical{.name = "Radical",
+                                                  .sticking = radicalSticking};
+    radical.dataLabels.push_back("radicalFlux");
+    viennaray::gpu::Particle<NumericType> ion{.name = "Ion",
+                                              .cosineExponent = ionExponent};
+    ion.dataLabels.push_back("ionFlux");
+
+    // Callables
+    std::unordered_map<std::string, unsigned> pMap = {{"Radical", 0},
+                                                      {"Ion", 1}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__singleNeutralCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__singleNeutralReflection"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__singleNeutralCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__TEOSPECVDIonReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
+    this->setCallableFileName("CallableWrapper");
+
+    float minAngleRad = constants::degToRad(ionMinAngle);
+    this->processData.allocUploadSingle(minAngleRad);
+
+    // surface model
+    auto surfModel =
+        SmartPointer<::viennaps::impl::PECVDSurfaceModel<NumericType>>::New(
+            radicalRate, radicalOrder, ionRate, ionOrder);
+
+    this->setSurfaceModel(surfModel);
+    this->insertNextParticleType(radical);
+    this->insertNextParticleType(ion);
+    this->setProcessName("TEOSPECVD");
+    this->hasGPU = true;
+
+    this->processMetaData["RadicalSticking"] = {radicalSticking};
+    this->processMetaData["RadicalRate"] = {radicalRate};
+    this->processMetaData["RadicalOrder"] = {radicalOrder};
+    this->processMetaData["IonRate"] = {ionRate};
+    this->processMetaData["IonSticking"] = {ionSticking};
+    this->processMetaData["IonExponent"] = {ionExponent};
+    this->processMetaData["IonOrder"] = {ionOrder};
+    this->processMetaData["IonMinAngle"] = {ionMinAngle};
+  }
+
+  ~TEOSPECVD() { this->processData.free(); }
+};
+} // namespace gpu
+#endif
+
 template <class NumericType, int D>
 class TEOSPECVD : public ProcessModelCPU<NumericType, D> {
 public:
   TEOSPECVD(NumericType radicalSticking, NumericType radicalRate,
             NumericType ionRate, NumericType ionExponent,
             NumericType ionSticking = 1., NumericType radicalOrder = 1.,
-            NumericType ionOrder = 1., NumericType ionMinAngle = 0.) {
+            NumericType ionOrder = 1., NumericType ionMinAngle = 85.) {
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
     this->setVelocityField(velField);
@@ -118,16 +184,33 @@ public:
     this->insertNextParticleType(radical);
     this->insertNextParticleType(ion);
     this->setProcessName("TEOSPECVD");
+    this->hasGPU = true;
 
-    this->processMetaData["RadicalSticking"] = {radicalSticking};
-    this->processMetaData["RadicalRate"] = {radicalRate};
-    this->processMetaData["RadicalOrder"] = {radicalOrder};
-    this->processMetaData["IonRate"] = {ionRate};
-    this->processMetaData["IonSticking"] = {ionSticking};
-    this->processMetaData["IonExponent"] = {ionExponent};
-    this->processMetaData["IonOrder"] = {ionOrder};
-    this->processMetaData["IonMinAngle"] = {ionMinAngle};
+    processMetaData["RadicalSticking"] = {radicalSticking};
+    processMetaData["RadicalRate"] = {radicalRate};
+    processMetaData["RadicalOrder"] = {radicalOrder};
+    processMetaData["IonRate"] = {ionRate};
+    processMetaData["IonSticking"] = {ionSticking};
+    processMetaData["IonExponent"] = {ionExponent};
+    processMetaData["IonOrder"] = {ionOrder};
+    processMetaData["IonMinAngle"] = {ionMinAngle};
   }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
+    auto model = SmartPointer<gpu::TEOSPECVD<NumericType, D>>::New(
+        processMetaData["RadicalSticking"][0],
+        processMetaData["RadicalRate"][0], processMetaData["IonRate"][0],
+        processMetaData["IonExponent"][0], processMetaData["IonSticking"][0],
+        processMetaData["RadicalOrder"][0], processMetaData["IonOrder"][0],
+        processMetaData["IonMinAngle"][0]);
+    model->setProcessName(this->getProcessName().value());
+    return model;
+  }
+#endif
+
+private:
+  using ProcessModelCPU<NumericType, D>::processMetaData;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(TEOSPECVD)

@@ -77,9 +77,9 @@ public:
 
 template <typename NumericType, typename MeshNT, typename ResultType,
           bool d2 = true, bool d4 = true>
-class ElementToPointDataBase {
-protected:
+class ElementToPointData {
   const IndexMap indexMap_;
+  std::vector<std::vector<ResultType>> const &elementDataArrays_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
@@ -90,17 +90,18 @@ protected:
   static constexpr bool discard4 = d4;
 
 public:
-  virtual ~ElementToPointDataBase() = default;
-  ElementToPointDataBase(
+  ElementToPointData(
       IndexMap indexMap,
+      std::vector<std::vector<ResultType>> const &elementDataArrays,
       SmartPointer<viennals::PointData<NumericType>> pointData,
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : indexMap_(std::move(indexMap)), pointData_(pointData),
-        elementKdTree_(elementKdTree), diskMesh_(diskMesh),
-        surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
+      : indexMap_(std::move(indexMap)), elementDataArrays_(elementDataArrays),
+        pointData_(pointData), elementKdTree_(elementKdTree),
+        diskMesh_(diskMesh), surfaceMesh_(surfMesh),
+        conversionRadius_(conversionRadius) {}
 
   void apply() {
     const auto numData = indexMap_.getNumberOfData();
@@ -110,11 +111,6 @@ public:
     const auto normals = diskMesh_->cellData.getVectorData("Normals");
     const auto elementNormals = surfaceMesh_->cellData.getVectorData("Normals");
 
-    // retrieve data from device
-    std::vector<ResultType> elementData;
-    flattenElementData(elementData);
-    assert(elementData.size() == numData * numElements);
-
     // prepare point data container
     pointData_->clear();
     for (const auto &label : indexMap_) {
@@ -122,7 +118,7 @@ public:
       pointData_->insertNextScalarData(std::move(data), label);
     }
 
-    if (pointData_->getScalarDataSize() != numData) {
+    if (elementDataArrays_.size() != numData) {
       VIENNACORE_LOG_ERROR(
           "ElementToPointData: "
           "Number of data arrays does not match expected count.");
@@ -161,13 +157,14 @@ public:
 
       for (unsigned j = 0; j < numData; ++j) {
         NumericType value = NumericType(0);
+        const auto &elementData = elementDataArrays_[j];
+        auto pointData = pointData_->getScalarData(j);
 
         if (numClosePoints > 0) {
 
           // Discard outlier values if enabled
-          const auto weightsCopy =
-              discardOutliers(weights, closeElements, elementData, j,
-                              numElements, numClosePoints);
+          const auto weightsCopy = discardOutliers(weights, closeElements,
+                                                   elementData, numClosePoints);
 
           // Compute weighted average
           const double sum =
@@ -176,31 +173,25 @@ public:
           if (sum > 1e-6) {
             for (std::size_t k = 0; k < closeElements.size(); ++k) {
               if (weightsCopy[k] > 0.0) {
-                const unsigned flattIdx =
-                    closeElements[k].first + j * numElements;
-                value += weightsCopy[k] * elementData[flattIdx];
+                value += weightsCopy[k] * elementData[closeElements[k].first];
               }
             }
             value /= sum;
           } else {
             // Fallback if all weights were discarded
             auto nearestPoint = elementKdTree_->findNearest(points[i]);
-            value = elementData[nearestPoint->first + j * numElements];
+            value = elementData[nearestPoint->first];
           }
         } else {
           // Fallback to nearest point
           assert(numClosePoints == 0);
-          value = elementData[nearestIdx + j * numElements];
+          value = elementData[nearestIdx];
         }
 
-        pointData_->getScalarData(j)->at(i) = value;
+        pointData->at(i) = value;
       }
     }
   }
-
-protected:
-  virtual void
-  flattenElementData(std::vector<ResultType> &elementData) const = 0;
 
 private:
   // Helper function to find min/max values and their indices
@@ -217,14 +208,12 @@ private:
   static MinMaxInfo findMinMaxValues(
       const std::vector<double> &weights,
       const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
-      const std::vector<ResultType> &elementData, unsigned j,
-      unsigned numElements) {
+      const std::vector<ResultType> &elementData) {
     MinMaxInfo info;
 
     for (std::size_t k = 0; k < closePoints.size(); ++k) {
       if (weights[k] > 0.0) {
-        const unsigned elementIdx = closePoints[k].first + j * numElements;
-        const auto value = elementData[elementIdx];
+        const auto value = elementData[closePoints[k].first];
 
         // Update min values
         if (value < info.min1) {
@@ -256,15 +245,13 @@ private:
   static auto discardOutliers(
       const std::vector<double> &weights,
       const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
-      const std::vector<ResultType> &elementData, unsigned j,
-      unsigned numElements, unsigned numClosePoints) {
+      const std::vector<ResultType> &elementData, unsigned numClosePoints) {
 
     // copy weights to modify
     auto weightsCopy = weights;
 
     if (discard4 && numClosePoints > 4) {
-      const auto info =
-          findMinMaxValues(weights, closePoints, elementData, j, numElements);
+      const auto info = findMinMaxValues(weights, closePoints, elementData);
 
       if (info.maxIdx1 != -1 && info.maxIdx2 != -1 && info.minIdx1 != -1 &&
           info.minIdx2 != -1) {
@@ -274,8 +261,7 @@ private:
         weightsCopy[info.maxIdx2] = 0.0;
       }
     } else if (discard2 && numClosePoints > 2) {
-      const auto info =
-          findMinMaxValues(weights, closePoints, elementData, j, numElements);
+      const auto info = findMinMaxValues(weights, closePoints, elementData);
 
       if (info.minIdx1 != -1 && info.maxIdx1 != -1) {
         weightsCopy[info.minIdx1] = 0.0;
@@ -286,120 +272,14 @@ private:
     return weightsCopy;
   }
 
-  template <class AT, class BT, std::size_t D>
-  AT DotProductNT(const std::array<AT, D> &pVecA,
-                  const std::array<BT, D> &pVecB) {
-    AT dot = 0;
-    for (size_t i = 0; i < D; ++i) {
+  template <class AT, class BT>
+  static double DotProductNT(const std::array<AT, 3> &pVecA,
+                             const std::array<BT, 3> &pVecB) {
+    double dot = 0.0;
+    for (size_t i = 0; i < 3; ++i)
       dot += pVecA[i] * pVecB[i];
-    }
     return dot;
   }
 };
-
-template <typename NumericType, typename MeshNT, typename ResultType,
-          bool d2 = true, bool d4 = true>
-class ElementToPointData
-    : public ElementToPointDataBase<NumericType, MeshNT, ResultType, d2, d4> {
-public:
-  ElementToPointData(
-      const std::vector<std::vector<NumericType>> &elementData,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      const IndexMap &indexMap,
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
-      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
-      const NumericType conversionRadius)
-      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
-                                           d4>(indexMap, pointData,
-                                               elementKdTree, diskMesh,
-                                               surfMesh, conversionRadius),
-        elementData_(elementData) {}
-
-  ElementToPointData(
-      const std::vector<std::vector<NumericType>> &elementData,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      const std::vector<
-          std::unique_ptr<viennaray::AbstractParticle<NumericType>>> &particles,
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
-      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
-      const NumericType conversionRadius)
-      : viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
-                                         d4>(viennaps::IndexMap(particles),
-                                             pointData, elementKdTree, diskMesh,
-                                             surfMesh, conversionRadius),
-        elementData_(elementData) {}
-
-protected:
-  void flattenElementData(std::vector<ResultType> &elementData) const override {
-    const auto numData = elementData_.size();
-    assert(elementData_.size() > 0);
-    const auto numElements = elementData_[0].size();
-
-    elementData.resize(numData * numElements);
-#pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < numData; ++i) {
-      const unsigned offset = i * numElements;
-      for (unsigned j = 0; j < numElements; ++j) {
-        elementData[offset + j] = elementData_[i][j];
-      }
-    }
-  }
-
-private:
-  const std::vector<std::vector<NumericType>> &elementData_;
-};
-
-#ifdef VIENNACORE_COMPILE_GPU
-namespace gpu {
-template <typename NumericType, typename MeshNT, typename ResultType,
-          bool d2 = true, bool d4 = true>
-class ElementToPointData
-    : public ElementToPointDataBase<NumericType, MeshNT, ResultType, d2, d4> {
-public:
-  ElementToPointData(
-      CudaBuffer &d_elementData,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      const IndexMap &indexMap,
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
-      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
-      const NumericType conversionRadius)
-      : ::viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
-                                           d4>(indexMap, pointData,
-                                               elementKdTree, diskMesh,
-                                               surfMesh, conversionRadius),
-        d_elementData_(d_elementData) {}
-
-  ElementToPointData(
-      CudaBuffer &d_elementData,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      const std::vector<viennaray::gpu::Particle<NumericType>> &particles,
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
-      SmartPointer<viennals::Mesh<NumericType>> diskMesh,
-      SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
-      const NumericType conversionRadius)
-      : viennaps::ElementToPointDataBase<NumericType, MeshNT, ResultType, d2,
-                                         d4>(viennaps::IndexMap(particles),
-                                             pointData, elementKdTree, diskMesh,
-                                             surfMesh, conversionRadius),
-        d_elementData_(d_elementData) {}
-
-protected:
-  void flattenElementData(std::vector<ResultType> &elementData) const override {
-    const auto numData = this->indexMap_.getNumberOfData();
-    const auto numElements = this->elementKdTree_->getNumberOfPoints();
-
-    // retrieve data from device
-    elementData.resize(numData * numElements);
-    d_elementData_.download(elementData.data(), numData * numElements);
-  }
-
-private:
-  CudaBuffer &d_elementData_;
-};
-} // namespace gpu
-#endif
 
 } // namespace viennaps

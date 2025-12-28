@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef VIENNACORE_COMPILE_GPU
 #include <vcRNG.hpp>
 
 namespace viennaps::gpu::impl {
@@ -100,8 +101,7 @@ initNormalDistEnergy(viennaray::gpu::PerRayData *prd, const float mean,
     energy = mean;
   } else {
     do {
-      const float u = viennacore::getNormalDistRand(&prd->RNGstate);
-      energy = mean + sigma * u;
+      energy = mean + sigma * viennacore::getNormalDistRand(&prd->RNGstate);
     } while (energy < 0.f);
   }
   prd->energy = energy;
@@ -119,3 +119,4 @@ initNormalDistEnergy(viennaray::gpu::PerRayData *prd, const float mean,
 #endif
 
 } // namespace viennaps::gpu::impl
+#endif

@@ -1,14 +1,11 @@
 #pragma once
 
 #include "psIonBeamEtching.hpp"
+#include "psPipelineParameters.hpp"
 
 #include "../process/psProcessModel.hpp"
 #include "../psMaterials.hpp"
 #include "../psUtil.hpp"
-
-#ifdef VIENNACORE_COMPILE_GPU
-#include <psgPipelineParameters.hpp>
-#endif
 
 #include <random>
 
