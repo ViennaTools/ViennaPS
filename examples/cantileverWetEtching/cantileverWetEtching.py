@@ -1,6 +1,6 @@
 # This example only works in 3D mode
 import viennaps.d3 as psd
-from viennaps import BoundaryType, Material, AdvectionParameters, IntegrationScheme
+from viennaps import BoundaryType, Material, AdvectionParameters, SpatialScheme
 
 maskFileName = "cantilever_mask.gds"
 
@@ -56,8 +56,8 @@ model = psd.WetEtching(
 )
 
 advectionParams = AdvectionParameters()
-advectionParams.integrationScheme = (
-    IntegrationScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+advectionParams.spatialScheme = (
+    SpatialScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 )
 
 process = psd.Process()

@@ -12,7 +12,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-using IntegrationScheme = viennals::IntegrationSchemeEnum;
+using SpatialScheme = viennals::SpatialSchemeEnum;
 using TemporalScheme = viennals::TemporalSchemeEnum;
 
 struct RayTracingParameters {
@@ -50,10 +50,18 @@ struct RayTracingParameters {
 };
 
 struct AdvectionParameters {
-  IntegrationScheme integrationScheme =
-      IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER;
-  TemporalScheme temporalScheme =
-      TemporalScheme::FORWARD_EULER;
+  // Union to support legacy integrationScheme parameter
+  // will be removed in a future release
+  union {
+    SpatialScheme spatialScheme = SpatialScheme::ENGQUIST_OSHER_1ST_ORDER;
+    [[deprecated("Use spatialScheme instead")]] SpatialScheme integrationScheme;
+  };
+  // Legacy type alias for the integration scheme
+  // will be removed in a future release
+  using IntegrationScheme [[deprecated("Use SpatialScheme instead")]] =
+      SpatialScheme;
+
+  TemporalScheme temporalScheme = TemporalScheme::FORWARD_EULER;
   double timeStepRatio = 0.4999;
   double dissipationAlpha = 1.0;
   unsigned adaptiveTimeStepSubdivisions = 20;
@@ -64,7 +72,7 @@ struct AdvectionParameters {
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
-    metaData["IntegrationScheme"] = {static_cast<double>(integrationScheme)};
+    metaData["SpatialScheme"] = {static_cast<double>(spatialScheme)};
     metaData["TemporalScheme"] = {static_cast<double>(temporalScheme)};
     metaData["TimeStepRatio"] = {timeStepRatio};
     metaData["DissipationAlpha"] = {dissipationAlpha};
@@ -72,7 +80,8 @@ struct AdvectionParameters {
   }
 
   auto toMetaDataString() const {
-    return "\nIntegrationScheme: " + util::toString(integrationScheme) +
+    return "\nSpatialScheme: " +
+           util::convertSpatialSchemeToString(spatialScheme) +
            "\nTemporalScheme: " + util::toString(temporalScheme) +
            "\nTimeStepRatio: " + util::toString(timeStepRatio) +
            "\nDissipationAlpha: " + util::toString(dissipationAlpha) +

@@ -5,9 +5,9 @@ Utility functions.
 from __future__ import annotations
 import viennals._core
 
-__all__: list[str] = ["convertIntegrationScheme"]
+__all__: list[str] = ["convertSpatialScheme"]
 
-def convertIntegrationScheme(arg0: str) -> viennals._core.IntegrationSchemeEnum:
+def convertSpatialScheme(arg0: str) -> viennals._core.SpatialSchemeEnum:
     """
-    Convert a string to an integration scheme.
+    Convert a string to an discretization scheme.
     """

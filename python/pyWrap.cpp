@@ -463,10 +463,25 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // AdvectionParameters
   py::class_<AdvectionParameters>(module, "AdvectionParameters")
       .def(py::init<>())
-      .def_readwrite("integrationScheme",
-                     &AdvectionParameters::integrationScheme)
-      .def_readwrite("temporalScheme",
-                     &AdvectionParameters::temporalScheme)
+      .def_readwrite("spatialScheme", &AdvectionParameters::spatialScheme)
+      // integrationScheme is depreciated
+      .def_property(
+          "integrationScheme",
+          [](AdvectionParameters &self) {
+            VIENNACORE_LOG_WARNING("The parameter 'integrationScheme' is "
+                                   "deprecated and will be removed in a future "
+                                   "release. Please use 'spatialScheme' "
+                                   "instead.");
+            return self.spatialScheme;
+          },
+          [](AdvectionParameters &self, viennals::SpatialSchemeEnum scheme) {
+            VIENNACORE_LOG_WARNING("The parameter 'integrationScheme' is "
+                                   "deprecated and will be removed in a future "
+                                   "release. Please use 'spatialScheme' "
+                                   "instead.");
+            self.spatialScheme = scheme;
+          })
+      .def_readwrite("temporalScheme", &AdvectionParameters::temporalScheme)
       .def_readwrite("timeStepRatio", &AdvectionParameters::timeStepRatio)
       .def_readwrite("dissipationAlpha", &AdvectionParameters::dissipationAlpha)
       .def_readwrite("checkDissipation", &AdvectionParameters::checkDissipation)
@@ -474,8 +489,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("ignoreVoids", &AdvectionParameters::ignoreVoids)
       .def_readwrite("adaptiveTimeStepping",
                      &AdvectionParameters::adaptiveTimeStepping)
-      .def_readwrite("adaptiveTimeStepThreshold",
-                     &AdvectionParameters::adaptiveTimeStepThreshold)
+      .def_readwrite("adaptiveTimeStepSubdivisions",
+                     &AdvectionParameters::adaptiveTimeStepSubdivisions)
       .def("toMetaData", &AdvectionParameters::toMetaData,
            "Convert the advection parameters to a metadata dict.")
       .def("toMetaDataString", &AdvectionParameters::toMetaDataString,
@@ -528,8 +543,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");
-  m_util.def("convertIntegrationScheme", &util::convertIntegrationScheme,
-             "Convert a string to an integration scheme.");
+  m_util.def("convertSpatialScheme", &util::convertSpatialScheme,
+             "Convert a string to an discretization scheme.");
+  // convertIntegrationScheme is deprecated
+  m_util.attr("convertIntegrationScheme") = m_util.attr("convertSpatialScheme");
   m_util.def("convertTemporalScheme", &util::convertTemporalScheme,
              "Convert a string to a time integration scheme.");
 

@@ -96,18 +96,18 @@ template <typename NumericType, int D> struct ProcessContext {
   }
 
   bool needsExtendedVelocities() const {
-    return advectionParams.integrationScheme ==
-               IntegrationScheme::LAX_FRIEDRICHS_1ST_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LAX_FRIEDRICHS_2ND_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_2ND_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER ||
-           advectionParams.integrationScheme ==
-               IntegrationScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
+    return advectionParams.spatialScheme ==
+               SpatialScheme::LAX_FRIEDRICHS_1ST_ORDER ||
+           advectionParams.spatialScheme ==
+               SpatialScheme::LAX_FRIEDRICHS_2ND_ORDER ||
+           advectionParams.spatialScheme ==
+               SpatialScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
+           advectionParams.spatialScheme ==
+               SpatialScheme::LOCAL_LAX_FRIEDRICHS_2ND_ORDER ||
+           advectionParams.spatialScheme ==
+               SpatialScheme::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER ||
+           advectionParams.spatialScheme ==
+               SpatialScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
            advectionParams.temporalScheme ==
                TemporalScheme::RUNGE_KUTTA_3RD_ORDER;
   }

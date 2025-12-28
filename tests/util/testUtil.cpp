@@ -4,29 +4,28 @@
 
 using namespace viennacore::util;
 
-void TestIntegrationSchemeConversion() {
+void TestSpatialSchemeConversion() {
   // Test string to enum
-  VC_TEST_ASSERT(convertIntegrationScheme("ENGQUIST_OSHER_1ST_ORDER") ==
-                 viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
-  VC_TEST_ASSERT(convertIntegrationScheme("EO_1") ==
-                 viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
+  VC_TEST_ASSERT(convertSpatialScheme("ENGQUIST_OSHER_1ST_ORDER") ==
+                 viennals::SpatialSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
+  VC_TEST_ASSERT(convertSpatialScheme("EO_1") ==
+                 viennals::SpatialSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
 
   // Test string to enum
-  VC_TEST_ASSERT(convertIntegrationScheme("WENO_5TH_ORDER") ==
-                 viennals::IntegrationSchemeEnum::WENO_5TH_ORDER);
-  VC_TEST_ASSERT(convertIntegrationScheme("WENO_5") ==
-                 viennals::IntegrationSchemeEnum::WENO_5TH_ORDER);
+  VC_TEST_ASSERT(convertSpatialScheme("WENO_5TH_ORDER") ==
+                 viennals::SpatialSchemeEnum::WENO_5TH_ORDER);
+  VC_TEST_ASSERT(convertSpatialScheme("WENO_5") ==
+                 viennals::SpatialSchemeEnum::WENO_5TH_ORDER);
 
   // Test enum to string
-  VC_TEST_ASSERT(
-      convertIntegrationSchemeToString(
-          viennals::IntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER) ==
-      "ENGQUIST_OSHER_1ST_ORDER");
+  VC_TEST_ASSERT(convertSpatialSchemeToString(
+                     viennals::SpatialSchemeEnum::ENGQUIST_OSHER_1ST_ORDER) ==
+                 "ENGQUIST_OSHER_1ST_ORDER");
 
   // Test round trip
-  auto scheme = viennals::IntegrationSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
-  VC_TEST_ASSERT(convertIntegrationScheme(
-                     convertIntegrationSchemeToString(scheme)) == scheme);
+  auto scheme = viennals::SpatialSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
+  VC_TEST_ASSERT(convertSpatialScheme(convertSpatialSchemeToString(scheme)) ==
+                 scheme);
 }
 
 void TestBoundaryConditionConversion() {
@@ -48,7 +47,7 @@ void TestMetaDataToString() {
 }
 
 int main() {
-  TestIntegrationSchemeConversion();
+  TestSpatialSchemeConversion();
   TestBoundaryConditionConversion();
   TestMetaDataToString();
   std::cout << "Util tests passed!" << std::endl;

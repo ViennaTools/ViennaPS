@@ -67,7 +67,7 @@ class AdvectionParameters:
     adaptiveTimeStepping: bool
     checkDissipation: bool
     ignoreVoids: bool
-    integrationScheme: viennals._core.IntegrationSchemeEnum
+    spatialScheme: viennals._core.SpatialSchemeEnum
     velocityOutput: bool
     def __init__(self) -> None: ...
     def toMetaData(self) -> dict[str, list[float]]:
