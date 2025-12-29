@@ -67,10 +67,13 @@ convertIntegrationScheme(const std::string &s) {
 convertTemporalScheme(const std::string &s) {
   if (s == "FORWARD_EULER" || s == "FE")
     return viennals::TemporalSchemeEnum::FORWARD_EULER;
+  if (s == "RUNGE_KUTTA_2ND_ORDER" || s == "RK2")
+    return viennals::TemporalSchemeEnum::RUNGE_KUTTA_2ND_ORDER;
   if (s == "RUNGE_KUTTA_3RD_ORDER" || s == "RK3")
     return viennals::TemporalSchemeEnum::RUNGE_KUTTA_3RD_ORDER;
   throw std::invalid_argument("The value must be one of the following: "
-                              "FORWARD_EULER, RUNGE_KUTTA_3RD_ORDER");
+                              "FORWARD_EULER, RUNGE_KUTTA_2ND_ORDER, "
+                              "RUNGE_KUTTA_3RD_ORDER");
 }
 
 [[nodiscard]] inline std::string
@@ -108,6 +111,8 @@ convertTemporalSchemeToString(viennals::TemporalSchemeEnum scheme) {
   switch (scheme) {
   case viennals::TemporalSchemeEnum::FORWARD_EULER:
     return "FORWARD_EULER";
+  case viennals::TemporalSchemeEnum::RUNGE_KUTTA_2ND_ORDER:
+    return "RUNGE_KUTTA_2ND_ORDER";
   case viennals::TemporalSchemeEnum::RUNGE_KUTTA_3RD_ORDER:
     return "RUNGE_KUTTA_3RD_ORDER";
   default:

@@ -14,7 +14,8 @@ template <class NumericType, int D> void RunTest() {
   Logger::setLogLevel(LogLevel::WARNING);
 
   const std::vector<TemporalScheme> schemes = {
-      TemporalScheme::FORWARD_EULER, TemporalScheme::RUNGE_KUTTA_3RD_ORDER};
+      TemporalScheme::FORWARD_EULER, TemporalScheme::RUNGE_KUTTA_2ND_ORDER,
+      TemporalScheme::RUNGE_KUTTA_3RD_ORDER};
 
   for (const auto scheme : schemes) {
     auto domain = Domain<NumericType, D>::New();

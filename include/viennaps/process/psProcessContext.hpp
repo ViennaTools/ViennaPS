@@ -109,6 +109,8 @@ template <typename NumericType, int D> struct ProcessContext {
            advectionParams.spatialScheme ==
                SpatialScheme::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER ||
            advectionParams.temporalScheme ==
+               TemporalScheme::RUNGE_KUTTA_2ND_ORDER ||
+           advectionParams.temporalScheme ==
                TemporalScheme::RUNGE_KUTTA_3RD_ORDER;
   }
 };
