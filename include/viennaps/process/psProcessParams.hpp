@@ -90,7 +90,8 @@ struct AdvectionParameters {
            "\nVelocityOutput: " + util::toString(velocityOutput) +
            "\nIgnoreVoids: " + util::toString(ignoreVoids) +
            "\nAdaptiveTimeStepping: " + util::toString(adaptiveTimeStepping) +
-           "\nCalculateIntermediateVelocities: " + util::toString(calculateIntermediateVelocities);
+           "\nCalculateIntermediateVelocities: " +
+           util::toString(calculateIntermediateVelocities);
   }
 };
 

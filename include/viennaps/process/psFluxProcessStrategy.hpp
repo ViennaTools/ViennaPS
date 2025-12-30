@@ -168,13 +168,14 @@ private:
     // Register velocity update callback for high-order time integration
     if (context.advectionParams.calculateIntermediateVelocities) {
       advectionHandler_.setVelocityUpdateCallback(
-          [this, &context](
-              SmartPointer<viennals::Domain<NumericType, D>> domain) {
-            // Update the mesh and translator based on the intermediate level set
+          [this,
+           &context](SmartPointer<viennals::Domain<NumericType, D>> domain) {
+            // Update the mesh and translator based on the intermediate level
+            // set
             this->updateState(context);
 
-            // If coverages are used, map them from the grid (which holds t^n data)
-            // to the new intermediate surface
+            // If coverages are used, map them from the grid (which holds t^n
+            // data) to the new intermediate surface
             if (context.flags.useCoverages) {
               this->advectionHandler_.updateCoveragesFromAdvectedSurface(
                   context, this->translator_);
@@ -193,8 +194,8 @@ private:
 
             // Calculate velocities
             auto velocities = this->calculateVelocities(context, fluxes);
-            context.model->getVelocityField()->prepare(context.domain, velocities,
-                                                       context.processTime);
+            context.model->getVelocityField()->prepare(
+                context.domain, velocities, context.processTime);
 
             return true;
           });

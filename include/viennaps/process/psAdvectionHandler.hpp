@@ -73,7 +73,8 @@ public:
   }
 
   void setVelocityUpdateCallback(
-      std::function<bool(SmartPointer<viennals::Domain<NumericType, D>>)> callback) {
+      std::function<bool(SmartPointer<viennals::Domain<NumericType, D>>)>
+          callback) {
     advectionKernel_.setVelocityUpdateCallback(callback);
   }
 

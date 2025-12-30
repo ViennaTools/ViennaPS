@@ -491,6 +491,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &AdvectionParameters::adaptiveTimeStepping)
       .def_readwrite("adaptiveTimeStepSubdivisions",
                      &AdvectionParameters::adaptiveTimeStepSubdivisions)
+      .def_readwrite("calculateIntermediateVelocities",
+                     &AdvectionParameters::calculateIntermediateVelocities)
       .def("toMetaData", &AdvectionParameters::toMetaData,
            "Convert the advection parameters to a metadata dict.")
       .def("toMetaDataString", &AdvectionParameters::toMetaDataString,
