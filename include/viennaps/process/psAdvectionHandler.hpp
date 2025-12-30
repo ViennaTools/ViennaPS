@@ -72,6 +72,11 @@ public:
     advectionKernel_.setAdvectionTime(time);
   }
 
+  void setVelocityUpdateCallback(
+      std::function<bool(SmartPointer<viennals::Domain<NumericType, D>>)> callback) {
+    advectionKernel_.setVelocityUpdateCallback(callback);
+  }
+
   void disableSingleStep() { advectionKernel_.setSingleStep(false); }
 
   void prepareAdvection(const ProcessContext<NumericType, D> &context) {
