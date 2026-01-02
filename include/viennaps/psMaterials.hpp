@@ -32,7 +32,7 @@ enum class MaterialCategory : uint8_t {
 #define MATERIAL_LIST(X)                                                       \
   /* id, sym, cat, density_gcm3, conductive, color (hex) */                    \
   X(0, Mask, Hardmask, 500.0, false, 0x555555)                                 \
-  X(1, Polymer, Generic, 1.2, false, 0xffd54f)                                 \
+  X(1, Polymer, Generic, 1.2, false, 0xed3b13)                                 \
   X(2, Air, Generic, 0.0012, false, 0x87ceeb)                                  \
   X(3, GAS, Generic, 0.001, false, 0xb0e0e6)                                   \
   X(4, Dielectric, Generic, 2.2, false, 0xaed6f1)                              \
@@ -40,10 +40,10 @@ enum class MaterialCategory : uint8_t {
   X(6, Undefined, Generic, 0.0, false, 0xcccccc)                               \
   /* Silicon and derivatives */                                                \
   X(10, Si, Silicon, 2.33, false, 0xc79a08)                                    \
-  X(11, PolySi, Silicon, 2.33, false, 0x888888)                                \
-  X(12, aSi, Silicon, 2.2, false, 0x666666)                                    \
-  X(13, SiGe, Silicon, 4.0, false, 0x9e9e9e)                                   \
-  X(14, SiC, Silicon, 3.21, false, 0x4f4f4f)                                   \
+  X(11, PolySi, Silicon, 2.33, false, 0xed8713)                                \
+  X(12, aSi, Silicon, 2.2, false, 0xfee315)                                    \
+  X(13, SiGe, Silicon, 4.0, false, 0xd66604)                                   \
+  X(14, SiC, Silicon, 3.21, false, 0x989300)                                   \
   X(15, SiN, OxideNitride, 3.1, false, 0x00bfa5)                               \
   X(16, Si3N4, OxideNitride, 3.1, false, 0x00a8a8)                             \
   X(17, SiON, OxideNitride, 2.4, false, 0x33cccc)                              \
@@ -85,7 +85,7 @@ enum class MaterialCategory : uint8_t {
   X(76, Ta, Metal, 16.7, true, 0x8d909b)                                       \
   X(77, TaN, Metal, 14.3, true, 0x6b6f7b)                                      \
   X(78, Ti, Metal, 4.5, true, 0xc0c0c0)                                        \
-  X(79, TiN, Metal, 5.4, true, 0xc5a200)                                       \
+  X(79, TiN, Metal, 5.4, true, 0xadb5bd)                                       \
   X(80, Mo, Metal, 10.3, true, 0x8f8f8f)                                       \
   X(81, Ir, Metal, 22.6, true, 0xdfe0e2)                                       \
   X(82, Rh, Metal, 12.4, true, 0xd1d1d1)                                       \
