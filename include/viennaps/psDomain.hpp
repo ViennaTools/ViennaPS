@@ -564,6 +564,7 @@ public:
     auto mesh =
         getSurfaceMesh(addInterfaces, wrappingLayerEpsilon, boolMaterials);
     viennals::VTKWriter<NumericType> writer(mesh, fileName);
+    writer.setLookupTable(createVTKLookUpTable());
     writer.setMetaData(metaData_);
     writer.apply();
   }
@@ -661,6 +662,26 @@ private:
       }
       metaData_["Boundary Conditions"] = boundaryConds;
     }
+  }
+
+  auto createVTKLookUpTable() const {
+    auto lut = vtkSmartPointer<vtkLookupTable>::New();
+    auto uniqueMaterialIds = getMaterialsInDomain();
+    // Build annotated LUT for material IDs (categorical)
+    lut->SetNumberOfTableValues(uniqueMaterialIds.size());
+    lut->IndexedLookupOn();
+    int index = 0;
+    for (const auto &materialId : uniqueMaterialIds) {
+      auto colorHex = color(materialId);
+      auto [r, g, b] = util::hexToRGBArray(colorHex);
+      lut->SetTableValue(index, r, g, b, 1.0);
+      auto label = to_string_view(materialId);
+      int id = static_cast<int>(materialId);
+      lut->SetAnnotation(id, label.data());
+      ++index;
+    }
+    lut->Build();
+    return lut;
   }
 
 private:

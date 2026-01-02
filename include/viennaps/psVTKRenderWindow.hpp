@@ -363,8 +363,7 @@ private:
 
     // Vertices
     if (!mesh->vertices.empty()) {
-      vtkSmartPointer<vtkCellArray> verts =
-          vtkSmartPointer<vtkCellArray>::New();
+      auto verts = vtkSmartPointer<vtkCellArray>::New();
       for (const auto &vertex : mesh->vertices) {
         verts->InsertNextCell(1);
         verts->InsertCellPoint(vertex[0]);
@@ -374,8 +373,7 @@ private:
 
     // Lines
     if (!mesh->lines.empty()) {
-      vtkSmartPointer<vtkCellArray> lines =
-          vtkSmartPointer<vtkCellArray>::New();
+      auto lines = vtkSmartPointer<vtkCellArray>::New();
       for (const auto &line : mesh->lines) {
         lines->InsertNextCell(2);
         lines->InsertCellPoint(line[0]);
@@ -390,8 +388,7 @@ private:
         VIENNACORE_LOG_WARNING("Adding triangles to a 2D mesh.");
       }
 
-      vtkSmartPointer<vtkCellArray> polys =
-          vtkSmartPointer<vtkCellArray>::New();
+      auto polys = vtkSmartPointer<vtkCellArray>::New();
       for (const auto &triangle : mesh->triangles) {
         polys->InsertNextCell(3);
         polys->InsertCellPoint(triangle[0]);
@@ -402,15 +399,14 @@ private:
     }
 
     // Material IDs as cell data
-    auto materialIds = mesh->getCellData().getScalarData("MaterialIds", true);
+    auto const &materialIds = mesh->getMaterialIds();
     bool useMaterialIds =
-        materialIds &&
-        (materialIds->size() == mesh->lines.size() + mesh->triangles.size());
+        !materialIds.empty() &&
+        (materialIds.size() == mesh->lines.size() + mesh->triangles.size());
     if (useMaterialIds) {
-      vtkSmartPointer<vtkIntArray> matIdArray =
-          vtkSmartPointer<vtkIntArray>::New();
+      auto matIdArray = vtkSmartPointer<vtkIntArray>::New();
       matIdArray->SetName("MaterialIds");
-      for (const auto &id : *materialIds) {
+      for (const auto &id : materialIds) {
         matIdArray->InsertNextValue(static_cast<int>(id));
       }
       polyData->GetCellData()->AddArray(matIdArray);
@@ -418,11 +414,9 @@ private:
       VIENNACORE_LOG_DEBUG("Added MaterialIds array to cell data.");
     }
 
-    vtkSmartPointer<vtkTransform> transform =
-        vtkSmartPointer<vtkTransform>::New();
+    auto transform = vtkSmartPointer<vtkTransform>::New();
     transform->Translate(offset.data());
-    vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter =
-        vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    auto transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transformFilter->SetTransform(transform);
     transformFilter->SetInputData(polyData);
     transformFilter->Update();
@@ -443,7 +437,7 @@ private:
 
     auto actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
-    actor->GetProperty()->SetLineWidth(3.0); // Thicker lines
+    actor->GetProperty()->SetLineWidth(2.0); // Thicker lines
 
     renderer->AddActor(actor);
   }
