@@ -128,7 +128,6 @@ public:
         {1, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__TEOSPECVDIonReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     float minAngleRad = constants::degToRad(ionMinAngle);
     this->processData.allocUploadSingle(minAngleRad);

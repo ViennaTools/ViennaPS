@@ -84,7 +84,6 @@ private:
         {2, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__plasmaNeutralReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     this->setUseMaterialIds(true);
     precomputeSqrtEnergies();

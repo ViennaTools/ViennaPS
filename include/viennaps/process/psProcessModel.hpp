@@ -170,7 +170,7 @@ class ProcessModelGPU : public ProcessModelBase<NumericType, D> {
 private:
   std::vector<viennaray::gpu::Particle<NumericType>> particles;
   std::optional<std::array<NumericType, 3>> primaryDirection = std::nullopt;
-  std::string callableFileName;
+  std::string callableFileName = "ViennaPSCallableWrapper";
   bool materialIds = false;
   std::unordered_map<std::string, unsigned> particleMap_;
   std::vector<viennaray::gpu::CallableConfig> callableMap_;

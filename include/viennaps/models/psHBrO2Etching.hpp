@@ -86,7 +86,6 @@ private:
         {2, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__plasmaNeutralReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
     this->processData.upload(&deviceParams, 1);

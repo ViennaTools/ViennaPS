@@ -310,7 +310,6 @@ public:
          "__direct_callable__IBEReflection"},
         {0, viennaray::gpu::CallableSlot::INIT, "__direct_callable__IBEInit"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     // Parameters to upload to device
     impl::IonParams deviceParams;

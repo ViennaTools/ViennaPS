@@ -107,7 +107,6 @@ public:
         {0, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__singleNeutralReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     // surface model
     auto surfModel = SmartPointer<::viennaps::impl::SingleParticleSurfaceModel<

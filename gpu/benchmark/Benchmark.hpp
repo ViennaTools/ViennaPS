@@ -303,7 +303,7 @@ void postProcessLineData(
 
     if (numClosePoints == 0) { // fallback to nearest point
       auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
-      closePointsArray.emplace_back(nearestPoint->first, NumericType(1));
+      closePointsArray.emplace_back(static_cast<unsigned>(nearestPoint->first), NumericType(1));
     }
 
     // Compute weighted average

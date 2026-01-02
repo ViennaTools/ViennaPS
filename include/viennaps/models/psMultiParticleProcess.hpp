@@ -247,7 +247,6 @@ public:
         {1, viennaray::gpu::CallableSlot::INIT,
          "__direct_callable__multiIonInit"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
   }
 
   MultiParticleProcess(
