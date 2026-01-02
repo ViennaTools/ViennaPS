@@ -60,8 +60,10 @@ int main(int argc, char *argv[]) {
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
 
   AdvectionParameters advectionParams;
-  advectionParams.integrationScheme = util::convertIntegrationScheme(
-      params.get<std::string>("integrationScheme"));
+  advectionParams.spatialScheme =
+      util::convertSpatialScheme(params.get<std::string>("spatialScheme"));
+  advectionParams.temporalScheme =
+      util::convertTemporalScheme(params.get<std::string>("temporalScheme"));
 
   // process setup
   Process<NumericType, D> process(geometry, model);

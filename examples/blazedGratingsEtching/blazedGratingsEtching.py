@@ -54,7 +54,7 @@ geometry.saveSurfaceMesh("initial", True)
 
 # ----- Model Setup ----- #
 advectionParams = ps.AdvectionParameters()
-advectionParams.integrationScheme = ps.IntegrationScheme.LAX_FRIEDRICHS_2ND_ORDER
+advectionParams.spatialScheme = ps.SpatialScheme.LAX_FRIEDRICHS_2ND_ORDER
 advectionParams.timeStepRatio = 0.25
 
 rayTracingParams = ps.RayTracingParameters()

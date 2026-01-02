@@ -71,8 +71,8 @@ int main(int argc, char **argv) {
           {ps::Material::Si, -1.}});
 
   ps::AdvectionParameters advectionParams;
-  advectionParams.integrationScheme =
-      viennals::IntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  advectionParams.spatialScheme =
+      viennals::SpatialSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
 
   ps::Process<NumericType, D> process;
   process.setDomain(geometry);

@@ -24,25 +24,26 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
-    auto &intSchem = context.advectionParams.integrationScheme;
+    auto &discSchem = context.advectionParams.spatialScheme;
     if (translationMethod == 1 &&
-        (intSchem != IntegrationScheme::ENGQUIST_OSHER_1ST_ORDER &&
-         intSchem != IntegrationScheme::ENGQUIST_OSHER_2ND_ORDER &&
-         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
-         intSchem != IntegrationScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER &&
-         intSchem != IntegrationScheme::WENO_5TH_ORDER)) {
+        (discSchem != SpatialScheme::ENGQUIST_OSHER_1ST_ORDER &&
+         discSchem != SpatialScheme::ENGQUIST_OSHER_2ND_ORDER &&
+         discSchem != SpatialScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
+         discSchem != SpatialScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER &&
+         discSchem != SpatialScheme::WENO_5TH_ORDER)) {
       VIENNACORE_LOG_WARNING(
           "Translation field method not supported in combination "
-          "with integration scheme.");
+          "with discretization scheme.");
       return ProcessResult::INVALID_INPUT;
     }
 
     context.resetTime();
 
+    advectionKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
+
     advectionKernel_.setSingleStep(true);
     advectionKernel_.setVelocityField(context.translationField);
-    advectionKernel_.setIntegrationScheme(
-        context.advectionParams.integrationScheme);
+    advectionKernel_.setSpatialScheme(context.advectionParams.spatialScheme);
     advectionKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
     advectionKernel_.setSaveAdvectionVelocities(
         context.advectionParams.velocityOutput);
@@ -52,9 +53,8 @@ public:
     advectionKernel_.setCheckDissipation(
         context.advectionParams.checkDissipation);
     advectionKernel_.setAdaptiveTimeStepping(
-        context.advectionParams.adaptiveTimeStepping);
-    advectionKernel_.setAdaptiveTimeStepThreshold(
-        context.advectionParams.adaptiveTimeStepThreshold);
+        context.advectionParams.adaptiveTimeStepping,
+        context.advectionParams.adaptiveTimeStepSubdivisions);
 
     // normals vectors are only necessary for analytical velocity fields
     if (translationMethod > 0)

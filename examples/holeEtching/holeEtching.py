@@ -55,8 +55,8 @@ rayParams.raysPerPoint = int(params["raysPerPoint"])
 rayParams.smoothingNeighbors = 2
 
 advParams = ps.AdvectionParameters()
-advParams.integrationScheme = ps.util.convertIntegrationScheme(
-    params["integrationScheme"]
+advParams.spatialScheme = ps.util.convertSpatialScheme(
+    params["spatialScheme"]
 )
 
 # process setup

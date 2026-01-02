@@ -40,7 +40,9 @@ if _sys.platform == "win32":
 
 
 import viennals as ls
-from viennals import IntegrationSchemeEnum as IntegrationScheme
+
+# Use old enum for now. TODO: migrate to new enum when ViennaLS is updated.
+from viennals import IntegrationSchemeEnum as SpatialScheme
 from viennals import BoundaryConditionEnum as BoundaryType
 from viennals import LogLevel as LogLevel
 from . import _core as _C  # the binary inside the package

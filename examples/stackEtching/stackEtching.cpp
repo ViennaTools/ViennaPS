@@ -70,8 +70,7 @@ int main(int argc, char *argv[]) {
       SmartPointer<FluorocarbonEtching<NumericType, D>>::New(parameters);
 
   AdvectionParameters advectionParams;
-  advectionParams.integrationScheme =
-      IntegrationScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  advectionParams.spatialScheme = SpatialScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
   advectionParams.timeStepRatio = 0.25;
 
   CoverageParameters coverageParams;

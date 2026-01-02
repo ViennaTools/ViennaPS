@@ -57,8 +57,8 @@ rayTracingParams = ps.RayTracingParameters()
 rayTracingParams.raysPerPoint = int(params["raysPerPoint"])
 
 advectionParams = ps.AdvectionParameters()
-advectionParams.integrationScheme = ps.util.convertIntegrationScheme(
-    params["integrationScheme"]
+advectionParams.spatialScheme = ps.util.convertSpatialScheme(
+    params["spatialScheme"]
 )
 
 # process setup

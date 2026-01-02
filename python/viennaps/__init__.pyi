@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys as _sys
 import viennals as ls
 from viennals._core import BoundaryConditionEnum as BoundaryType
-from viennals._core import IntegrationSchemeEnum as IntegrationScheme
+from viennals._core import SpatialSchemeEnum as SpatialScheme
 from viennals._core import LogLevel
 from viennaps._core import AdvectionParameters
 from viennaps._core import AtomicLayerProcessParameters
@@ -98,6 +98,7 @@ from viennaps.d2 import StencilLocalLaxFriedrichsScalar
 from viennaps.d2 import TEOSDeposition
 from viennaps.d2 import TEOSPECVD
 from viennaps.d2 import ToDiskMesh
+from viennaps.d2 import VTKRenderWindow
 from viennaps.d2 import WetEtching
 from viennaps.d2 import Writer
 from . import _core
@@ -139,7 +140,7 @@ __all__: list[str] = [
     "HoleShape",
     "IBEParameters",
     "IBEParametersCos4Yield",
-    "IntegrationScheme",
+    "SpatialScheme",
     "Interpolation",
     "IonBeamEtching",
     "IsotropicProcess",
@@ -187,6 +188,7 @@ __all__: list[str] = [
     "Time",
     "TimeUnit",
     "ToDiskMesh",
+    "VTKRenderWindow",
     "WetEtching",
     "Writer",
     "constants",

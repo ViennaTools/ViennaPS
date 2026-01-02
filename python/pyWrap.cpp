@@ -1,5 +1,22 @@
 #include "pyWrapDimension.hpp"
 
+struct MaterialInfoPy {
+  MaterialInfoPy(Material m)
+      : name(info(m).name), category(info(m).category),
+        density_gcm3(info(m).density_gcm3), conductive(info(m).conductive),
+        colorHex(info(m).colorHex) {}
+  MaterialInfoPy(MaterialInfo info)
+      : name(info.name), category(info.category),
+        density_gcm3(info.density_gcm3), conductive(info.conductive),
+        colorHex(info.colorHex) {}
+
+  std::string name;
+  MaterialCategory category;
+  double density_gcm3;
+  bool conductive;
+  uint32_t colorHex;
+};
+
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
       "ViennaPS is a header-only C++ process simulation library which "
@@ -43,10 +60,41 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   auto matEnum =
       py::native_enum<Material>(module, "Material", "enum.IntEnum",
                                 "Material types for domain and level sets");
-#define ENUM_BIND(id, sym, cat, dens, cond) matEnum.value(#sym, Material::sym);
+#define ENUM_BIND(id, sym, cat, dens, cond, color)                             \
+  matEnum.value(#sym, Material::sym);
   MATERIAL_LIST(ENUM_BIND)
 #undef ENUM_BIND
   matEnum.finalize();
+
+  // Material category enum
+  py::native_enum<MaterialCategory>(module, "MaterialCategory", "enum.IntEnum")
+      .value("Generic", MaterialCategory::Generic)
+      .value("Silicon", MaterialCategory::Silicon)
+      .value("OxideNitride", MaterialCategory::OxideNitride)
+      .value("Hardmask", MaterialCategory::Hardmask)
+      .value("Metal", MaterialCategory::Metal)
+      .value("Silicide", MaterialCategory::Silicide)
+      .value("Compound", MaterialCategory::Compound)
+      .value("TwoD", MaterialCategory::TwoD)
+      .value("TCO", MaterialCategory::TCO)
+      .value("Misc", MaterialCategory::Misc)
+      .finalize();
+
+  // MaterialInfo (immutable/read-only)
+  py::class_<MaterialInfoPy>(module, "MaterialInfo")
+      .def(py::init<Material>())
+      .def_readonly("name", &MaterialInfoPy::name)
+      .def_readonly("category", &MaterialInfoPy::category)
+      .def_readonly("density_gcm3", &MaterialInfoPy::density_gcm3)
+      .def_readonly("conductive", &MaterialInfoPy::conductive)
+      .def_readonly("color_hex", &MaterialInfoPy::colorHex)
+      // convenience: "#RRGGBB"
+      .def_property_readonly("color_rgb", [](const MaterialInfoPy &x) {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "#%06x",
+                      (unsigned)(x.colorHex & 0xFFFFFFu));
+        return std::string(buf);
+      });
 
   // MaterialMap
   py::class_<MaterialMap, SmartPointer<MaterialMap>>(module, "MaterialMap")
@@ -69,6 +117,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("GRID", MetaDataLevel::GRID)
       .value("PROCESS", MetaDataLevel::PROCESS)
       .value("FULL", MetaDataLevel::FULL)
+      .finalize();
+
+  // Render Mode Enum
+  py::native_enum<RenderMode>(module, "RenderMode", "enum.IntEnum")
+      .value("SURFACE", RenderMode::SURFACE)
+      .value("INTERFACE", RenderMode::INTERFACE)
+      .value("VOLUME", RenderMode::VOLUME)
       .finalize();
 
   // HoleShape Enum
@@ -455,8 +510,25 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // AdvectionParameters
   py::class_<AdvectionParameters>(module, "AdvectionParameters")
       .def(py::init<>())
-      .def_readwrite("integrationScheme",
-                     &AdvectionParameters::integrationScheme)
+      .def_readwrite("spatialScheme", &AdvectionParameters::spatialScheme)
+      // integrationScheme is depreciated
+      .def_property(
+          "integrationScheme",
+          [](AdvectionParameters &self) {
+            VIENNACORE_LOG_WARNING("The parameter 'integrationScheme' is "
+                                   "deprecated and will be removed in a future "
+                                   "release. Please use 'spatialScheme' "
+                                   "instead.");
+            return self.spatialScheme;
+          },
+          [](AdvectionParameters &self, viennals::SpatialSchemeEnum scheme) {
+            VIENNACORE_LOG_WARNING("The parameter 'integrationScheme' is "
+                                   "deprecated and will be removed in a future "
+                                   "release. Please use 'spatialScheme' "
+                                   "instead.");
+            self.spatialScheme = scheme;
+          })
+      .def_readwrite("temporalScheme", &AdvectionParameters::temporalScheme)
       .def_readwrite("timeStepRatio", &AdvectionParameters::timeStepRatio)
       .def_readwrite("dissipationAlpha", &AdvectionParameters::dissipationAlpha)
       .def_readwrite("checkDissipation", &AdvectionParameters::checkDissipation)
@@ -464,8 +536,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("ignoreVoids", &AdvectionParameters::ignoreVoids)
       .def_readwrite("adaptiveTimeStepping",
                      &AdvectionParameters::adaptiveTimeStepping)
-      .def_readwrite("adaptiveTimeStepThreshold",
-                     &AdvectionParameters::adaptiveTimeStepThreshold)
+      .def_readwrite("adaptiveTimeStepSubdivisions",
+                     &AdvectionParameters::adaptiveTimeStepSubdivisions)
       .def("toMetaData", &AdvectionParameters::toMetaData,
            "Convert the advection parameters to a metadata dict.")
       .def("toMetaDataString", &AdvectionParameters::toMetaDataString,
@@ -518,8 +590,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");
-  m_util.def("convertIntegrationScheme", &util::convertIntegrationScheme,
-             "Convert a string to an integration scheme.");
+  m_util.def("convertSpatialScheme", &util::convertSpatialScheme,
+             "Convert a string to an discretization scheme.");
+  // convertIntegrationScheme is deprecated
+  m_util.attr("convertIntegrationScheme") = m_util.attr("convertSpatialScheme");
+  m_util.def("convertTemporalScheme", &util::convertTemporalScheme,
+             "Convert a string to a time integration scheme.");
 
   //   ***************************************************************************
   //                                  MAIN API

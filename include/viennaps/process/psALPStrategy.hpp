@@ -93,7 +93,9 @@ private:
 
     // Initialize translation field. Converts points ids from level set points
     // to surface points
-    const int translationMethod = context.needsExtendedVelocities() ? 2 : 1;
+    /// TODO: find out why translationMethod 1 does not work properly
+    const int translationMethod =
+        2; //  context.needsExtendedVelocities() ? 2 : 1;
     context.translationField =
         SmartPointer<TranslationField<NumericType, D>>::New(
             context.model->getVelocityField(), context.domain->getMaterialMap(),
@@ -148,7 +150,7 @@ private:
       VIENNACORE_LOG_INFO("Cycle: " + std::to_string(cycle + 1) + "/" +
                           std::to_string(numCycles));
 
-      // Prepare advection (expand level set based on integration scheme)
+      // Prepare advection (expand level set based on discretization scheme)
       advectionHandler_.prepareAdvection(context);
 
       updateState(context);

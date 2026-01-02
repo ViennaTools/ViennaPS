@@ -7,10 +7,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
-from viennaps import d3
+import viennaps.d2
 import viennaps.d3
+from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
@@ -67,7 +67,7 @@ class AdvectionParameters:
     adaptiveTimeStepping: bool
     checkDissipation: bool
     ignoreVoids: bool
-    integrationScheme: viennals._core.IntegrationSchemeEnum
+    spatialScheme: viennals._core.SpatialSchemeEnum
     velocityOutput: bool
     def __init__(self) -> None: ...
     def toMetaData(self) -> dict[str, list[float]]:
