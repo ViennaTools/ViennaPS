@@ -7,8 +7,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
@@ -38,6 +38,8 @@ __all__: list[str] = [
     "LengthUnit",
     "Logger",
     "Material",
+    "MaterialCategory",
+    "MaterialInfo",
     "MaterialMap",
     "MetaDataLevel",
     "NormalizationType",
@@ -50,6 +52,7 @@ __all__: list[str] = [
     "ProcessParams",
     "RateSet",
     "RayTracingParameters",
+    "RenderMode",
     "Slice",
     "Time",
     "TimeUnit",
@@ -67,7 +70,9 @@ class AdvectionParameters:
     adaptiveTimeStepping: bool
     checkDissipation: bool
     ignoreVoids: bool
-    spatialScheme: viennals._core.SpatialSchemeEnum
+    integrationScheme: ...
+    spatialScheme: ...
+    temporalScheme: ...
     velocityOutput: bool
     def __init__(self) -> None: ...
     def toMetaData(self) -> dict[str, list[float]]:
@@ -81,9 +86,9 @@ class AdvectionParameters:
         """
 
     @property
-    def adaptiveTimeStepThreshold(self) -> float: ...
-    @adaptiveTimeStepThreshold.setter
-    def adaptiveTimeStepThreshold(self, arg0: typing.SupportsFloat) -> None: ...
+    def adaptiveTimeStepSubdivisions(self) -> int: ...
+    @adaptiveTimeStepSubdivisions.setter
+    def adaptiveTimeStepSubdivisions(self, arg0: typing.SupportsInt) -> None: ...
     @property
     def dissipationAlpha(self) -> float: ...
     @dissipationAlpha.setter
@@ -795,6 +800,47 @@ class Material(enum.IntEnum):
         Convert to a string according to format_spec.
         """
 
+class MaterialCategory(enum.IntEnum):
+    Compound: typing.ClassVar[
+        MaterialCategory
+    ]  # value = <MaterialCategory.Compound: 6>
+    Generic: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.Generic: 0>
+    Hardmask: typing.ClassVar[
+        MaterialCategory
+    ]  # value = <MaterialCategory.Hardmask: 3>
+    Metal: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.Metal: 4>
+    Misc: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.Misc: 9>
+    OxideNitride: typing.ClassVar[
+        MaterialCategory
+    ]  # value = <MaterialCategory.OxideNitride: 2>
+    Silicide: typing.ClassVar[
+        MaterialCategory
+    ]  # value = <MaterialCategory.Silicide: 5>
+    Silicon: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.Silicon: 1>
+    TCO: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.TCO: 8>
+    TwoD: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.TwoD: 7>
+    @classmethod
+    def __new__(cls, value): ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
+
+class MaterialInfo:
+    def __init__(self, arg0: Material) -> None: ...
+    @property
+    def category(self) -> MaterialCategory: ...
+    @property
+    def color_hex(self) -> int: ...
+    @property
+    def color_rgb(self) -> str: ...
+    @property
+    def conductive(self) -> bool: ...
+    @property
+    def density_gcm3(self) -> float: ...
+    @property
+    def name(self) -> str: ...
+
 class MaterialMap:
     @staticmethod
     def isMaterial(arg0: typing.SupportsFloat, arg1: Material) -> bool: ...
@@ -1090,6 +1136,17 @@ class RayTracingParameters:
     def smoothingNeighbors(self) -> int: ...
     @smoothingNeighbors.setter
     def smoothingNeighbors(self, arg0: typing.SupportsInt) -> None: ...
+
+class RenderMode(enum.IntEnum):
+    INTERFACE: typing.ClassVar[RenderMode]  # value = <RenderMode.INTERFACE: 1>
+    SURFACE: typing.ClassVar[RenderMode]  # value = <RenderMode.SURFACE: 0>
+    VOLUME: typing.ClassVar[RenderMode]  # value = <RenderMode.VOLUME: 2>
+    @classmethod
+    def __new__(cls, value): ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 
 class Slice:
     @typing.overload

@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys as _sys
 import viennals as ls
 from viennals._core import BoundaryConditionEnum as BoundaryType
-from viennals._core import SpatialSchemeEnum as SpatialScheme
+from viennals._core import IntegrationSchemeEnum as SpatialScheme
 from viennals._core import LogLevel
 from viennaps._core import AdvectionParameters
 from viennaps._core import AtomicLayerProcessParameters
@@ -37,6 +37,8 @@ from viennaps._core import Length
 from viennaps._core import LengthUnit
 from viennaps._core import Logger
 from viennaps._core import Material
+from viennaps._core import MaterialCategory
+from viennaps._core import MaterialInfo
 from viennaps._core import MaterialMap
 from viennaps._core import MetaDataLevel
 from viennaps._core import NormalizationType
@@ -49,6 +51,7 @@ from viennaps._core import PlasmaEtchingParametersSubstrate
 from viennaps._core import ProcessParams
 from viennaps._core import RateSet
 from viennaps._core import RayTracingParameters
+from viennaps._core import RenderMode
 from viennaps._core import Slice
 from viennaps._core import Time
 from viennaps._core import TimeUnit
@@ -140,7 +143,6 @@ __all__: list[str] = [
     "HoleShape",
     "IBEParameters",
     "IBEParametersCos4Yield",
-    "SpatialScheme",
     "Interpolation",
     "IonBeamEtching",
     "IsotropicProcess",
@@ -154,6 +156,8 @@ __all__: list[str] = [
     "MakeStack",
     "MakeTrench",
     "Material",
+    "MaterialCategory",
+    "MaterialInfo",
     "MaterialMap",
     "MetaDataLevel",
     "MultiParticleProcess",
@@ -175,12 +179,14 @@ __all__: list[str] = [
     "RateSet",
     "RayTracingParameters",
     "Reader",
+    "RenderMode",
     "SF6C4F8Etching",
     "SF6O2Etching",
     "SelectiveEpitaxy",
     "SingleParticleALD",
     "SingleParticleProcess",
     "Slice",
+    "SpatialScheme",
     "SphereDistribution",
     "StencilLocalLaxFriedrichsScalar",
     "TEOSDeposition",

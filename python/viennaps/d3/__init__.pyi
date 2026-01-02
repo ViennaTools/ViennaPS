@@ -1518,9 +1518,19 @@ class VTKRenderWindow:
         Insert domain to be visualized.
         """
 
+    def printCameraInfo(self) -> None:
+        """
+        Print the current camera settings to the console.
+        """
+
     def render(self) -> None:
         """
         Render the current domain state.
+        """
+
+    def saveScreenshot(self, fileName: str, scale: typing.SupportsInt = 1) -> None:
+        """
+        Save a screenshot of the current render window.
         """
 
     def setBackgroundColor(
@@ -1531,6 +1541,41 @@ class VTKRenderWindow:
     ) -> None:
         """
         Set the background color of the render window.
+        """
+
+    def setCameraFocalPoint(
+        self,
+        arg0: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ],
+    ) -> None:
+        """
+        Set the camera focal point in world coordinates.
+        """
+
+    def setCameraPosition(
+        self,
+        arg0: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ],
+    ) -> None:
+        """
+        Set the camera position in world coordinates.
+        """
+
+    def setCameraView(self, axis: typing.SupportsInt) -> None:
+        """
+        Set the camera view along an axix (x,y,z)
+        """
+
+    def setCameraViewUp(
+        self,
+        arg0: typing.Annotated[
+            collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"
+        ],
+    ) -> None:
+        """
+        Set the camera view up vector.
         """
 
     def setDomainOffset(
@@ -1544,14 +1589,9 @@ class VTKRenderWindow:
         Set an offset to be applied to the domain during rendering.
         """
 
-    def setRenderMode(self, arg0: ...) -> None:
+    def setRenderMode(self, arg0: viennaps._core.RenderMode) -> None:
         """
         Set the render mode (surface, interfaces, volume).
-        """
-
-    def setScreenshotScale(self, arg0: typing.SupportsInt) -> None:
-        """
-        Set the scale factor for screenshots taken.
         """
 
     def setWindowSize(
@@ -1562,6 +1602,11 @@ class VTKRenderWindow:
     ) -> None:
         """
         Set the size of the render window.
+        """
+
+    def toggleInstructionText(self) -> None:
+        """
+        Toggle the instruction text overlay on/off.
         """
 
 class WetEtching(ProcessModel):

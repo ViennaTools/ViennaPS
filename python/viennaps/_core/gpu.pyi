@@ -10,7 +10,7 @@ __all__: list[str] = ["Context", "Path"]
 class Context:
     @staticmethod
     def createContext(
-        modulePath: Path = "",
+        modulePath: Path,
         deviceID: typing.SupportsInt = 0,
         registerInGlobal: bool = True,
     ) -> Context:
@@ -42,11 +42,7 @@ class Context:
         Add a module to the context.
         """
 
-    def create(
-        self,
-        modulePath: Path = "",
-        deviceID: typing.SupportsInt = 0,
-    ) -> None:
+    def create(self, modulePath: Path, deviceID: typing.SupportsInt = 0) -> None:
         """
         Create a new context.
         """
