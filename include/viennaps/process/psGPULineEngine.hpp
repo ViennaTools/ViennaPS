@@ -327,7 +327,8 @@ private:
 
       if (numClosePoints == 0) { // fallback to nearest point
         auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
-        closePointsArray.emplace_back(static_cast<unsigned>(nearestPoint->first), NumericType(1));
+        closePointsArray.emplace_back(
+            static_cast<unsigned>(nearestPoint->first), NumericType(1));
       }
 
       // Compute weighted average
@@ -337,14 +338,15 @@ private:
       if (sum > NumericType(0)) {
         for (std::size_t k = 0; k < closePoints.size(); ++k) {
           if (weights[k] > NumericType(0)) {
-            closePointsArray.emplace_back(static_cast<unsigned>(closePoints[k].first),
-                                          weights[k] / sum);
+            closePointsArray.emplace_back(
+                static_cast<unsigned>(closePoints[k].first), weights[k] / sum);
           }
         }
       } else {
         // Fallback if all weights were discarded
         auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
-        closePointsArray.emplace_back(static_cast<unsigned>(nearestPoint->first), NumericType(1));
+        closePointsArray.emplace_back(
+            static_cast<unsigned>(nearestPoint->first), NumericType(1));
       }
 
       elementsToPoint.push_back(closePointsArray);

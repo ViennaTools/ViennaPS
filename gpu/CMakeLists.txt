@@ -4,10 +4,10 @@ set(VIENNAPS_GPU_MODELS
     CACHE STRING "ViennaPS GPU process models.")
 
 # Incldue directories for PTX and optix-ir compilation (force cache to update with new entries)
-if (NOT VIENNAPS_PASSED_FIRST_CONFIGURE)
-    set(VIENNACORE_PTX_INCLUDE_DIRS
-        ${VIENNACORE_PTX_INCLUDE_DIRS} "${CMAKE_SOURCE_DIR}/include/viennaps"
-        CACHE STRING "PTX include directories" FORCE)
+if(NOT VIENNAPS_PASSED_FIRST_CONFIGURE)
+  set(VIENNACORE_PTX_INCLUDE_DIRS
+      ${VIENNACORE_PTX_INCLUDE_DIRS} "${CMAKE_SOURCE_DIR}/include/viennaps"
+      CACHE STRING "PTX include directories" FORCE)
 endif()
 
 # Add the callable wrapper
@@ -22,4 +22,6 @@ if(VIENNAPS_BUILD_EXAMPLES)
   add_subdirectory(benchmark)
 endif(VIENNAPS_BUILD_EXAMPLES)
 
-set(VIENNAPS_PASSED_FIRST_CONFIGURE ON CACHE INTERNAL "")
+set(VIENNAPS_PASSED_FIRST_CONFIGURE
+    ON
+    CACHE INTERNAL "")

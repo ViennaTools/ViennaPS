@@ -2,11 +2,11 @@
 
 #include <psConstants.hpp>
 #include <psDomain.hpp>
+#include <psExtrude.hpp>
 #include <psReader.hpp>
+#include <psSlice.hpp>
 #include <psUnits.hpp>
 #include <psWriter.hpp>
-#include <psSlice.hpp>
-#include <psExtrude.hpp>
 
 #include <psPlanarize.hpp>
 

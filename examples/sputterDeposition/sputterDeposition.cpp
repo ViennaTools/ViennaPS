@@ -1,4 +1,4 @@
-#include <viennaps.hpp>     
+#include <viennaps.hpp>
 
 using namespace viennaps;
 
