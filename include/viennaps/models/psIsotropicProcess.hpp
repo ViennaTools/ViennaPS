@@ -74,16 +74,7 @@ private:
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
-    // velocity field
-    auto velField =
-        SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
-            rate, std::move(materialRates));
-
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("IsotropicProcess");
-
-    // store process data
+    // store process data (before moving materialRates)
     addMetaData("IsotropicRate", rate);
     if (!materialRates.empty()) {
       for (const auto &materialRate : materialRates) {
@@ -92,6 +83,15 @@ private:
                     materialRate.second);
       }
     }
+
+    // velocity field
+    auto velField =
+        SmartPointer<impl::IsotropicVelocityField<NumericType, D>>::New(
+            rate, std::move(materialRates));
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("IsotropicProcess");
   }
 
   using ProcessModelCPU<NumericType, D>::processMetaData;
