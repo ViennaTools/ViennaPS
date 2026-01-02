@@ -142,9 +142,9 @@ convertTemporalSchemeToString(viennals::TemporalSchemeEnum scheme) {
 template <typename T> [[nodiscard]] std::string toString(const T &value) {
   if constexpr (std::is_same_v<T, bool>)
     return value ? "true" : "false";
-  else if constexpr (std::is_same_v<T, viennals::IntegrationSchemeEnum>)
+  else if constexpr (std::is_same_v<T, viennals::SpatialSchemeEnum>)
     return convertSpatialSchemeToString(
-        static_cast<viennals::IntegrationSchemeEnum>(value));
+        static_cast<viennals::SpatialSchemeEnum>(value));
   else if constexpr (std::is_same_v<T, viennals::TemporalSchemeEnum>)
     return convertTemporalSchemeToString(
         static_cast<viennals::TemporalSchemeEnum>(value));
