@@ -1,12 +1,12 @@
 #### Set variables
 set(VIENNAPS_GPU_MODELS
-    "${CMAKE_SOURCE_DIR}/gpu/models"
+    "${PROJECT_SOURCE_DIR}/gpu/models"
     CACHE STRING "ViennaPS GPU process models.")
 
 # Incldue directories for PTX and optix-ir compilation (force cache to update with new entries)
 if(NOT VIENNAPS_PASSED_FIRST_CONFIGURE)
   set(VIENNACORE_NVCC_INCLUDE_DIRS
-      ${VIENNACORE_NVCC_INCLUDE_DIRS} "${CMAKE_SOURCE_DIR}/include/viennaps"
+      ${VIENNACORE_NVCC_INCLUDE_DIRS} "${PROJECT_SOURCE_DIR}/include/viennaps"
       CACHE STRING "PTX include directories" FORCE)
 endif()
 

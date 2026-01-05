@@ -269,7 +269,7 @@ private:
       elementData.insertReplaceScalarData(values, covName);
     }
 
-    delete temp;
+    delete[] temp;
   }
 
   void saveResultsToPointData(viennals::PointData<float> &pointData) {
