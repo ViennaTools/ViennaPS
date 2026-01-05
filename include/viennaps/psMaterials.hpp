@@ -31,7 +31,7 @@ enum class MaterialCategory : uint8_t {
 
 #define MATERIAL_LIST(X)                                                       \
   /* id, sym, cat, density_gcm3, conductive, color (hex) */                    \
-  X(0, Mask, Hardmask, 500.0, false, 0x555555)                                 \
+  X(0, Mask, Hardmask, 500.0, false, 0x333333)                                 \
   X(1, Polymer, Generic, 1.2, false, 0xed3b13)                                 \
   X(2, Air, Generic, 0.0012, false, 0x87ceeb)                                  \
   X(3, GAS, Generic, 0.001, false, 0xb0e0e6)                                   \

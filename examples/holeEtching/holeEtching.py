@@ -55,9 +55,7 @@ rayParams.raysPerPoint = int(params["raysPerPoint"])
 rayParams.smoothingNeighbors = 2
 
 advParams = ps.AdvectionParameters()
-advParams.spatialScheme = ps.util.convertSpatialScheme(
-    params["spatialScheme"]
-)
+advParams.spatialScheme = ps.util.convertSpatialScheme(params["spatialScheme"])
 
 # process setup
 process = ps.Process(geometry, model)

@@ -6,8 +6,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -18,9 +18,9 @@ class AdvectionParameters:
     adaptiveTimeStepping: bool
     checkDissipation: bool
     ignoreVoids: bool
-    integrationScheme: ...
-    spatialScheme: ...
-    temporalScheme: ...
+    integrationScheme: viennals._core.SpatialSchemeEnum
+    spatialScheme: viennals._core.SpatialSchemeEnum
+    temporalScheme: viennals._core.TemporalSchemeEnum
     velocityOutput: bool
     def __init__(self) -> None:
         ...
