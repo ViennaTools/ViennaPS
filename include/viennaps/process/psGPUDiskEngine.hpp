@@ -8,7 +8,7 @@
 
 #include <vcContext.hpp>
 
-#include <raygTraceDisk.hpp>
+#include <gpu/raygTraceDisk.hpp>
 
 namespace viennaps {
 

@@ -5,6 +5,17 @@ project(
   VERSION 4.1.3)
 
 # --------------------------------------------------------------------------------------------------------
+# Include guards
+# --------------------------------------------------------------------------------------------------------
+
+if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+  message(
+    FATAL_ERROR
+      "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
+  )
+endif()
+
+# --------------------------------------------------------------------------------------------------------
 # Library switches
 # --------------------------------------------------------------------------------------------------------
 
@@ -25,7 +36,7 @@ option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish whe
 
 set(VIENNAPS_LOOKUP_DIRS
     ""
-    CACHE STRING "Directories to account for when searching installed dependencies")
+    CACHE STRING "Directories to account for when searching installed dependencies (VTK or embree)")
 
 list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 
@@ -105,7 +116,7 @@ CPMAddPackage(
   VERSION 1.13.0
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
-CPMFindPackage(
+CPMAddPackage(
   NAME ViennaRay
   VERSION 3.9.1
   GIT_TAG refactor-cuda-setup
@@ -169,8 +180,7 @@ endif()
 # Setup GPU
 # --------------------------------------------------------------------------------------------------------
 
-# If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
-if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
 else()

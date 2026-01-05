@@ -13,7 +13,7 @@
 
 #include <lsMesh.hpp>
 
-#include <raygTraceTriangle.hpp>
+#include <gpu/raygTraceTriangle.hpp>
 
 namespace viennaps {
 

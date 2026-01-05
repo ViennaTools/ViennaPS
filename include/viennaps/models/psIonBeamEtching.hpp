@@ -11,7 +11,7 @@
 #include <rayReflection.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <raygCallableConfig.hpp>
+#include <gpu/raygCallableConfig.hpp>
 #endif
 
 namespace viennaps {

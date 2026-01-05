@@ -3,12 +3,12 @@
 
 #include <process/psProcess.hpp>
 
+#include <gpu/raygTraceDisk.hpp>
+#include <gpu/raygTraceLine.hpp>
+#include <gpu/raygTraceTriangle.hpp>
 #include <psCreateSurfaceMesh.hpp>
 #include <psElementToPointData.hpp>
 #include <rayMesh.hpp>
-#include <raygTraceDisk.hpp>
-#include <raygTraceLine.hpp>
-#include <raygTraceTriangle.hpp>
 #include <vcContext.hpp>
 
 #include "Benchmark.hpp"

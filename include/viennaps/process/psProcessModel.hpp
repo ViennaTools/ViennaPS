@@ -12,7 +12,7 @@
 #include <raySource.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <raygCallableConfig.hpp>
+#include <gpu/raygCallableConfig.hpp>
 #include <vcCudaBuffer.hpp>
 #endif
 

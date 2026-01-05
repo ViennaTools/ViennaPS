@@ -11,7 +11,7 @@
 
 #include <lsMesh.hpp>
 
-#include <raygTraceLine.hpp>
+#include <gpu/raygTraceLine.hpp>
 
 namespace viennaps {
 
