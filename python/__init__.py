@@ -52,7 +52,6 @@ d2 = _C.d2
 d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
-ptxPath = _module_ptx_path()
 PROXY_DIM = 2  # default dimension is 2D
 
 
