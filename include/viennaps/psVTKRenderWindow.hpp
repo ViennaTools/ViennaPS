@@ -601,7 +601,7 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
   case 'p':
     window->printCameraInfo();
     return;
-  case default:
+  default:
     return;
   }
 }
