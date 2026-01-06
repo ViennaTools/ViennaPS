@@ -41,8 +41,8 @@ if _sys.platform == "win32":
 
 import viennals as ls
 
-# Use old enum for now. TODO: migrate to new enum when ViennaLS is updated.
-from viennals import IntegrationSchemeEnum as SpatialScheme
+# Convenience imports
+from viennals import SpatialSchemeEnum as SpatialScheme
 from viennals import TemporalSchemeEnum as TemporalScheme
 from viennals import BoundaryConditionEnum as BoundaryType
 from viennals import LogLevel as LogLevel
