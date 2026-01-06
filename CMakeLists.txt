@@ -153,8 +153,7 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
 
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
   target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)
-  target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp" "lib/specializationsModels.cpp"
-                                     "lib/specializationsGeometries.cpp")
+  target_sources(${LIB_NAME} PRIVATE "lib/specializations.cpp")
 
   set_target_properties(
     ${LIB_NAME}

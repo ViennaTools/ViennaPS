@@ -677,17 +677,22 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
   // Initialize interactor
   interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 
-  if constexpr (D == 2) {
-    vtkCamera *cam = renderer->GetActiveCamera();
-    cam->ParallelProjectionOn();
-    auto style = vtkSmartPointer<Custom2DInteractorStyle>::New();
-    style->setRenderWindow(this);
-    interactor->SetInteractorStyle(style);
+  if constexpr (std::is_same_v<T, double>) {
+    if constexpr (D == 2) {
+      vtkCamera *cam = renderer->GetActiveCamera();
+      cam->ParallelProjectionOn();
+      auto style = vtkSmartPointer<Custom2DInteractorStyle>::New();
+      style->setRenderWindow(this);
+      interactor->SetInteractorStyle(style);
+    } else {
+      setCameraView(1); // Default view along Y axis
+      auto style = vtkSmartPointer<Custom3DInteractorStyle>::New();
+      style->setRenderWindow(this);
+      interactor->SetInteractorStyle(style);
+    }
   } else {
-    setCameraView(1); // Default view along Y axis
-    auto style = vtkSmartPointer<Custom3DInteractorStyle>::New();
-    style->setRenderWindow(this);
-    interactor->SetInteractorStyle(style);
+    VIENNACORE_LOG_WARNING("VTKRenderWindow with float precision does not have "
+                           "custom interactor.");
   }
 
   interactor->SetRenderWindow(renderWindow);
