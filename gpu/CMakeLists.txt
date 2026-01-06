@@ -1,33 +1,27 @@
-project(ViennaPS-GPU)
-
-option(VIENNAPS_ENABLE_OPTIXIR_SUPPORT
-       "Enable support for generating OptiX-IR targeted input files" ON)
-
-if(CUDA_VERSION VERSION_LESS 11.7)
-  if(VIENNAPS_ENABLE_OPTIXIR_SUPPORT)
-    message(
-      SEND_ERROR "VIENNAPS_ENABLE_OPTIXIR_SUPPORT is not supported in CUDA versions less than 11.7")
-  endif()
-endif()
-
-if(VIENNAPS_ENABLE_OPTIXIR_SUPPORT)
-  option(VIENNAPS_GENERATE_OPTIXIR "Generate Optix-IR OptiX shaders" ON)
-  option(VIENNAPS_GENERATE_PTX "Generate PTX OptiX shaders" OFF)
-else()
-  option(VIENNAPS_GENERATE_OPTIXIR "Generate Optix-IR OptiX shaders" OFF)
-  option(VIENNAPS_GENERATE_PTX "Generate PTX OptiX shaders" ON)
-endif()
-
 #### Set variables
 set(VIENNAPS_GPU_MODELS
-    "${PROJECT_SOURCE_DIR}/models"
-    CACHE STRING "ModelsViennaPS GPU process models.")
-set(VIENNAPS_CUDA_KERNELS
-    ""
-    CACHE STRING "ViennaPS CUDA kernel source files.")
-include("../cmake/generate_ptx.cmake")
+    "${PROJECT_SOURCE_DIR}/gpu/models"
+    CACHE STRING "ViennaPS GPU process models.")
+
+# Incldue directories for PTX and optix-ir compilation (force cache to update with new entries)
+if(NOT VIENNAPS_PASSED_FIRST_CONFIGURE)
+  set(VIENNACORE_NVCC_INCLUDE_DIRS
+      ${VIENNACORE_NVCC_INCLUDE_DIRS} "${PROJECT_SOURCE_DIR}/include/viennaps"
+      CACHE STRING "PTX include directories" FORCE)
+endif()
+
+# Add the callable wrapper
+viennacore_add_optixir(ViennaPSCallableWrapper ${VIENNAPS_GPU_MODELS}/CallableWrapper.cu)
+
+set(VIENNAPS_GPU_DEPENDENCIES
+    ViennaPSCallableWrapper ${VIENNARAY_GPU_DEPENDENCIES}
+    CACHE STRING "GPU-related dependencies for ViennaPS targets")
 
 if(VIENNAPS_BUILD_EXAMPLES)
   message(STATUS "[ViennaPS] Adding GPU Benchmarks")
   add_subdirectory(benchmark)
 endif(VIENNAPS_BUILD_EXAMPLES)
+
+set(VIENNAPS_PASSED_FIRST_CONFIGURE
+    ON
+    CACHE INTERNAL "")

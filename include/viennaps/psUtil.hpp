@@ -124,19 +124,19 @@ convertTemporalSchemeToString(viennals::TemporalSchemeEnum scheme) {
     viennals::BoundaryConditionEnum originalBoundaryCondition) {
   switch (originalBoundaryCondition) {
   case viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY:
-    return viennaray::BoundaryCondition::REFLECTIVE;
+    return viennaray::BoundaryCondition::REFLECTIVE_BOUNDARY;
 
   case viennals::BoundaryConditionEnum::INFINITE_BOUNDARY:
-    return viennaray::BoundaryCondition::IGNORE;
+    return viennaray::BoundaryCondition::IGNORE_BOUNDARY;
 
   case viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY:
-    return viennaray::BoundaryCondition::PERIODIC;
+    return viennaray::BoundaryCondition::PERIODIC_BOUNDARY;
 
   case viennals::BoundaryConditionEnum::POS_INFINITE_BOUNDARY:
   case viennals::BoundaryConditionEnum::NEG_INFINITE_BOUNDARY:
-    return viennaray::BoundaryCondition::IGNORE;
+    return viennaray::BoundaryCondition::IGNORE_BOUNDARY;
   }
-  return viennaray::BoundaryCondition::IGNORE;
+  return viennaray::BoundaryCondition::IGNORE_BOUNDARY;
 }
 
 template <typename T> [[nodiscard]] std::string toString(const T &value) {
@@ -171,7 +171,7 @@ template <typename T> [[nodiscard]] std::string toString(const T &value) {
 
 [[nodiscard]] inline std::array<double, 3>
 hexToRGBArray(const uint32_t hexColor) {
-  std::array<double, 3> rgb;
+  std::array<double, 3> rgb{};
   rgb[0] = static_cast<double>((hexColor >> 16) & 0xFF) / 255.0;
   rgb[1] = static_cast<double>((hexColor >> 8) & 0xFF) / 255.0;
   rgb[2] = static_cast<double>(hexColor & 0xFF) / 255.0;

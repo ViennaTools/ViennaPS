@@ -59,7 +59,7 @@ target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ViennaPS)
 target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                            PRIVATE VIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME})
 
-# To prevent symbol clashes when multiple python which use VTK modules are loaded, the modules are initialized here
+# To prevent symbol clashes when multiple python scripts which use VTK modules are loaded, the modules have to be initialized here
 if(VIENNALS_VTK_RENDERING)
   # We need to find VTK again here to get the proper module targets
   # TODO: Refactor to avoid multiple finds
@@ -83,30 +83,16 @@ set_target_properties(
 
 if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Adding GPU bindings for 'viennaps' python package")
+  add_dependencies(${VIENNAPS_PYTHON_MODULE_NAME} ${VIENNAPS_GPU_DEPENDENCIES})
 
-  # Include pipelines of models
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNAPS_GPU_MODELS}/CallableWrapper.cu")
-
-  # ViennaRay general pipelines
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNARAY_PIPELINE_DIR}/GeneralPipelineDisk.cu")
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNARAY_PIPELINE_DIR}/GeneralPipelineTriangle.cu")
-  generate_pipeline(${VIENNAPS_PYTHON_MODULE_NAME} generated_files
-                    "${VIENNARAY_PIPELINE_DIR}/GeneralPipelineLine.cu")
-
-  # Generate CUDA kernels
-  generate_kernel(${VIENNAPS_PYTHON_MODULE_NAME} generated_files ${VIENNARAY_CUDA_KERNELS})
-
-  # Include ViennaPS GPU and OptiX headers
-  target_sources(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${generated_files})
-  target_include_directories(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ${VIENNARAY_GPU_INCLUDE})
-  target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
-                             PRIVATE VIENNACORE_KERNELS_PATH_DEFINE=${VIENNACORE_PTX_DIR})
+  # Set PTX path override for runtime kernel loading from site-packages/<pkg>/ptx.
+  # ABSOLUTE path enforced with dynamic module path.
+  target_compile_definitions(
+    ${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE VIENNACORE_KERNELS_PATH_OVERRIDE=ptx
+                                           VIENNACORE_DYNAMIC_MODULE_PATH=1)
 
   # Install PTX files
-  install(DIRECTORY "${VIENNACORE_PTX_DIR}/" DESTINATION "${VIENNAPS_PYTHON_PACKAGE_NAME}/ptx")
+  install(DIRECTORY "${VIENNACORE_NVCC_PTX_DIR}/" DESTINATION "${VIENNAPS_PYTHON_PACKAGE_NAME}/ptx")
 endif()
 
 # Install into site-packages/<pkg>/  (RELATIVE path!)

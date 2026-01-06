@@ -1,16 +1,13 @@
 #pragma once
 
 #include <lsMesh.hpp>
-
 #include <rayParticle.hpp>
-
-#include <utility>
-#include <vcCudaBuffer.hpp>
 #include <vcKDTree.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <numeric>
+#include <utility>
 
 namespace viennaps {
 

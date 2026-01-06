@@ -13,7 +13,7 @@
 
 #include <lsMesh.hpp>
 
-#include <raygTraceTriangle.hpp>
+#include <gpu/raygTraceTriangle.hpp>
 
 namespace viennaps {
 
@@ -26,7 +26,7 @@ class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using MeshType = SmartPointer<viennals::Mesh<float>>;
 
 public:
-  GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
+  explicit GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
@@ -120,10 +120,10 @@ public:
       lineMesh.nodes = surfaceMesh_->nodes;
       lineMesh.minimumExtent = surfaceMesh_->minimumExtent;
       lineMesh.maximumExtent = surfaceMesh_->maximumExtent;
-      assert(lineMesh.lines.size() > 0);
+      assert(!lineMesh.lines.empty());
 
       triangleMesh = convertLinesToTriangles(lineMesh);
-      assert(triangleMesh.triangles.size() > 0);
+      assert(!triangleMesh.triangles.empty());
 
       std::vector<Vec3D<NumericType>> triangleCenters;
       triangleCenters.reserve(triangleMesh.triangles.size());
@@ -269,7 +269,7 @@ private:
       elementData.insertReplaceScalarData(values, covName);
     }
 
-    delete temp;
+    delete[] temp;
   }
 
   void saveResultsToPointData(viennals::PointData<float> &pointData) {

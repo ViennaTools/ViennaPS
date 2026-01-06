@@ -1,14 +1,14 @@
 #pragma once
 
-#include <vcContext.hpp>
-#include <vcVectorType.hpp>
+#include "vcContext.hpp"
+#include "vcVectorType.hpp"
 
-#include <raygLaunchParams.hpp>
-#include <raygReflection.hpp>
+#include "raygLaunchParams.hpp"
+#include "raygReflection.hpp"
 
-#include <models/psPipelineParameters.hpp>
-#include <models/psPlasmaEtchingParameters.hpp>
-#include <psMaterials.hpp>
+#include "models/psPipelineParameters.hpp"
+#include "models/psPlasmaEtchingParameters.hpp"
+#include "psMaterials.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 

@@ -13,7 +13,7 @@ except ImportError:
 if __name__ == "__main__":
     # parse dim
     parser = argparse.ArgumentParser()
-    parser.add_argument("-dir", type=str, default=".")
+    parser.add_argument("-dir", type=str, default="python")
     args = parser.parse_args()
 
     # Don't create __pycache__ directory

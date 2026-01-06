@@ -35,7 +35,7 @@ template <class NumericType, int D> class GDSGeometry {
 
   using PointType =
       typename viennals::Domain<NumericType, 2>::PointValueVectorType;
-  using IndexType = typename viennahrle::Index<2>;
+  using IndexType = viennahrle::Index<2>;
 
 public:
   GDSGeometry() {}
@@ -73,13 +73,13 @@ public:
   }
 
   // 2D version
-  template <int Dim = D, typename std::enable_if<Dim == 2, int>::type = 0>
+  template <int Dim = D, std::enable_if_t<Dim == 2, int> = 0>
   lsDomainType layerToLevelSet(const int16_t layer, bool blurLayer = true) {
     return getMaskLevelSet(layer, blurLayer);
   }
 
   // 3D version
-  template <int Dim = D, typename std::enable_if<Dim == 3, int>::type = 0>
+  template <int Dim = D, std::enable_if_t<Dim == 3, int> = 0>
   lsDomainType layerToLevelSet(const int16_t layer,
                                const NumericType baseHeight = 0.,
                                const NumericType height = 1., bool mask = false,
@@ -311,9 +311,7 @@ private:
   void checkReferences() {
     for (auto &str : structures) {
       for (auto &sref : str.sRefs) {
-        auto refStr = getStructure(sref.strName);
-        if (refStr) {
-
+        if (auto refStr = getStructure(sref.strName)) {
           refStr->isRef = true;
         } else {
           VIENNACORE_LOG_WARNING("Missing referenced structure: " +

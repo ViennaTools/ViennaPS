@@ -84,7 +84,6 @@ private:
         {2, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__plasmaNeutralReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     this->setUseMaterialIds(true);
     precomputeSqrtEnergies();
@@ -147,7 +146,7 @@ public:
     initializeModel();
   }
 
-  SF6O2Etching(const PlasmaEtchingParameters<NumericType> &parameters)
+  explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &parameters)
       : params(parameters) {
     initializeModel();
   }
@@ -224,8 +223,8 @@ public:
 private:
   void initializeModel() {
     // check if units have been set
-    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
-        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+    if (units::Length::getUnit() == units::Length::UNDEFINED ||
+        units::Time::getUnit() == units::Time::UNDEFINED) {
       VIENNACORE_LOG_ERROR("Units have not been set.");
     }
 
@@ -264,9 +263,9 @@ private:
 
     this->processMetaData = params.toProcessMetaData();
     // add units
-    this->processMetaData["Units"] = std::vector<double>{
-        static_cast<double>(units::Length::getInstance().getUnit()),
-        static_cast<double>(units::Time::getInstance().getUnit())};
+    this->processMetaData["Units"] =
+        std::vector<double>{static_cast<double>(units::Length::getUnit()),
+                            static_cast<double>(units::Time::getUnit())};
   }
 
   PlasmaEtchingParameters<NumericType> params;

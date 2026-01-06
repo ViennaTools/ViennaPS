@@ -1,9 +1,4 @@
-#include <gds/psGDSReader.hpp>
-#include <geometries/psMakePlane.hpp>
-#include <models/psHBrO2Etching.hpp>
-#include <process/psProcess.hpp>
-#include <psDomain.hpp>
-#include <psUtil.hpp>
+#include <viennaps.hpp>
 
 using namespace viennaps;
 

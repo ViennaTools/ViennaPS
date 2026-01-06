@@ -8,7 +8,7 @@
 
 #include <vcContext.hpp>
 
-#include <raygTraceDisk.hpp>
+#include <gpu/raygTraceDisk.hpp>
 
 namespace viennaps {
 
@@ -227,7 +227,7 @@ private:
       elementData.insertReplaceScalarData(std::move(valuesCasted), covName);
     }
 
-    delete temp;
+    delete[] temp;
   }
 
   void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,

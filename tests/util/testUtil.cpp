@@ -31,10 +31,10 @@ void TestSpatialSchemeConversion() {
 void TestBoundaryConditionConversion() {
   VC_TEST_ASSERT(convertBoundaryCondition(
                      viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY) ==
-                 viennaray::BoundaryCondition::REFLECTIVE);
+                 viennaray::BoundaryCondition::REFLECTIVE_BOUNDARY);
   VC_TEST_ASSERT(convertBoundaryCondition(
                      viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY) ==
-                 viennaray::BoundaryCondition::PERIODIC);
+                 viennaray::BoundaryCondition::PERIODIC_BOUNDARY);
 }
 
 void TestMetaDataToString() {

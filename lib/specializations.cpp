@@ -1,3 +1,43 @@
+#include <gds/psGDSGeometry.hpp>
+#include <gds/psGDSReader.hpp>
+
+#include <process/psProcess.hpp>
+#include <process/psProcessModel.hpp>
+
+#include <psDomain.hpp>
+#include <psDomainSetup.hpp>
+#include <psExtrude.hpp>
+#include <psPlanarize.hpp>
+#include <psRateGrid.hpp>
+#include <psReader.hpp>
+#include <psSlice.hpp>
+#include <psToDiskMesh.hpp>
+#include <psWriter.hpp>
+
+#include <lsPreCompileMacros.hpp>
+
+namespace viennaps {
+
+// Precompile specializations for commonly used classes
+PRECOMPILE_SPECIALIZE(Domain)
+PRECOMPILE_SPECIALIZE(Process)
+PRECOMPILE_SPECIALIZE(Planarize)
+PRECOMPILE_SPECIALIZE(ProcessModelCPU)
+PRECOMPILE_SPECIALIZE(Reader)
+PRECOMPILE_SPECIALIZE(Writer)
+PRECOMPILE_SPECIALIZE(GDSGeometry)
+PRECOMPILE_SPECIALIZE(GDSReader)
+PRECOMPILE_SPECIALIZE(ToDiskMesh)
+PRECOMPILE_SPECIALIZE(RateGrid)
+PRECOMPILE_SPECIALIZE_PRECISION(Extrude)
+PRECOMPILE_SPECIALIZE_PRECISION(Slice)
+
+} // namespace viennaps
+
+// ----------------------------------------------------------------
+// Specializations for process models
+// ----------------------------------------------------------------
+
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -58,5 +98,28 @@ PRECOMPILE_SPECIALIZE(SingleParticleALD)
 
 // Other Models
 PRECOMPILE_SPECIALIZE(OxideRegrowth)
+
+} // namespace viennaps
+
+// ----------------------------------------------------------------
+// Specializations for geometries
+// ----------------------------------------------------------------
+
+#include <geometries/psGeometryFactory.hpp>
+#include <geometries/psMakeFin.hpp>
+#include <geometries/psMakeHole.hpp>
+#include <geometries/psMakePlane.hpp>
+#include <geometries/psMakeStack.hpp>
+#include <geometries/psMakeTrench.hpp>
+
+namespace viennaps {
+
+// Precompile specializations for geometries
+PRECOMPILE_SPECIALIZE(GeometryFactory)
+PRECOMPILE_SPECIALIZE(MakeFin)
+PRECOMPILE_SPECIALIZE(MakeHole)
+PRECOMPILE_SPECIALIZE(MakePlane)
+PRECOMPILE_SPECIALIZE(MakeStack)
+PRECOMPILE_SPECIALIZE(MakeTrench)
 
 } // namespace viennaps
