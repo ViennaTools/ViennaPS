@@ -274,7 +274,7 @@ private:
     }
 
     // Build annotated LUT for material IDs (categorical)
-    lut->SetNumberOfTableValues(uniqueMaterialIds.size());
+    lut->SetNumberOfTableValues(static_cast<int>(uniqueMaterialIds.size()));
     lut->IndexedLookupOn();
     lut->ResetAnnotations();
     materialMinId = std::numeric_limits<int>::max();
@@ -294,7 +294,8 @@ private:
     }
     lut->Build();
     scalarBar->SetLookupTable(lut);
-    scalarBar->SetMaximumNumberOfColors(uniqueMaterialIds.size());
+    scalarBar->SetMaximumNumberOfColors(
+        static_cast<int>(uniqueMaterialIds.size()));
     // When using annotations (categorical), don't draw numeric labels
     scalarBar->SetNumberOfLabels(0);
     scalarBar->SetTitle("Materials");
@@ -546,7 +547,6 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
     return;
 
   auto renderer = rwi->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
-  auto camera = renderer->GetActiveCamera();
 
   switch (rwi->GetKeyCode()) {
   case '1':
@@ -600,6 +600,8 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
     return;
   case 'p':
     window->printCameraInfo();
+    return;
+  case default:
     return;
   }
 }

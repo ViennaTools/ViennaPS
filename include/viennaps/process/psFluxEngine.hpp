@@ -17,7 +17,7 @@ enum class FluxEngineType {
   // GPU_LEVEL_SET // Future implementations
 };
 
-inline std::string to_string(FluxEngineType type) {
+inline std::string to_string(const FluxEngineType type) {
   switch (type) {
   case FluxEngineType::AUTO:
     return "AUTO";

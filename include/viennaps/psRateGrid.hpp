@@ -229,13 +229,15 @@ private:
       dists.emplace_back(dist, pt[D - 1]);
     }
 
-    std::partial_sort(dists.begin(),
-                      dists.begin() + std::min(idwNeighbors, (int)dists.size()),
-                      dists.end());
+    std::partial_sort(
+        dists.begin(),
+        dists.begin() + std::min(idwNeighbors, static_cast<int>(dists.size())),
+        dists.end());
 
     NumericType wSum = 0.0;
     NumericType wrSum = 0.0;
-    for (int i = 0; i < std::min(idwNeighbors, (int)dists.size()); ++i) {
+    for (int i = 0; i < std::min(idwNeighbors, static_cast<int>(dists.size()));
+         ++i) {
       auto [dist, val] = dists[i];
       if (dist < epsilon)
         return val;
