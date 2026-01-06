@@ -203,6 +203,7 @@ public:
   void render() {
     updateDisplay();
     interactor->Start();
+    finalize();
   }
 
   // Update the display without starting a new event loop (for use during
@@ -240,6 +241,15 @@ public:
 private:
   // forward declaration, requires full definition of Interactor styles
   void initialize();
+
+  void finalize() {
+    // Save window size and position for next initialization
+    auto size = renderWindow->GetSize();
+    windowSize = {size[0], size[1]};
+
+    auto position = renderWindow->GetPosition();
+    windowPosition = {position[0], position[1]};
+  }
 
   void updateRenderer(bool useCache = true) {
     if (domains.empty()) {
@@ -499,12 +509,13 @@ private:
       "x/y/z: View | s: Screenshot | h: Show/Hide Instructions | b: Show/Hide "
       "Scalar Bar | q/e: Quit";
   vtkSmartPointer<vtkTextActor> instructionsActor;
-  bool instructionsAdded = false;
+  bool instructionsAdded = true;
 
-  std::array<double, 3> backgroundColor = {84.0 / 255, 89.0 / 255, 109.0 / 255};
-  std::array<int, 2> windowSize = {800, 600};
-
-  RenderMode renderMode = RenderMode::INTERFACE;
+  // static settings
+  static std::array<double, 3> backgroundColor;
+  static std::array<int, 2> windowSize;
+  static std::array<int, 2> windowPosition;
+  static RenderMode renderMode;
 
   // cached meshes
   std::vector<SmartPointer<viennals::Mesh<T>>> cachedSurfaceMesh;
@@ -514,6 +525,17 @@ private:
   int materialMaxId = -1;
   bool showScalarBar = true;
 };
+
+// Static member definitions
+template <typename T, int D>
+std::array<double, 3> VTKRenderWindow<T, D>::backgroundColor = {
+    84.0 / 255, 89.0 / 255, 109.0 / 255}; // ParaView default background
+template <typename T, int D>
+std::array<int, 2> VTKRenderWindow<T, D>::windowSize = {900, 700};
+template <typename T, int D>
+std::array<int, 2> VTKRenderWindow<T, D>::windowPosition = {100, 100};
+template <typename T, int D>
+RenderMode VTKRenderWindow<T, D>::renderMode = RenderMode::INTERFACE;
 
 namespace impl {
 template <typename T, int D>
@@ -640,12 +662,16 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
   instructionsActor->GetTextProperty()->SetFontSize(14);
   instructionsActor->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
   instructionsActor->SetPosition(10, 10);
-  instructionsActor->SetInput(instructionsText.c_str());
-  instructionsAdded = true;
+  if (instructionsAdded) {
+    instructionsActor->SetInput(instructionsText.c_str());
+  } else {
+    instructionsActor->SetInput("");
+  }
 
   renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
   renderWindow->SetWindowName("ViennaPS");
   renderWindow->SetSize(windowSize.data());
+  renderWindow->SetPosition(windowPosition.data());
   renderWindow->AddRenderer(renderer);
 
   // Initialize interactor
