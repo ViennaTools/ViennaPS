@@ -6,9 +6,6 @@ int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::ERROR);
-  omp_set_num_threads(12);
-
   // Parse the parameters
   util::Parameters params;
   if (argc > 1) {
@@ -27,7 +24,7 @@ int main(int argc, char **argv) {
   units::Length::setUnit(params.get<std::string>("lengthUnit"));
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
-  constexpr NumericType gridDelta = 0.01 * (1. + 1e-12);
+  constexpr NumericType gridDelta = 0.012 * (1. + 1e-12);
   BoundaryType boundaryConds[D] = {BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::INFINITE_BOUNDARY};
@@ -51,6 +48,7 @@ int main(int argc, char **argv) {
   modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Ions.n_l = 200;
+  modelParams.Substrate.B_sp = 0.75;
   auto model = SmartPointer<HBrO2Etching<NumericType, D>>::New(modelParams);
 
   // Advection parameters

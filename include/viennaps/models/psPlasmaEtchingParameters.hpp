@@ -4,8 +4,6 @@
 
 #include <unordered_map>
 
-#define FLOAT_CAST(dest, x) dest.x = static_cast<float>(x);
-
 namespace viennaps {
 
 template <typename NumericType> struct PlasmaEtchingParameters {
@@ -148,61 +146,53 @@ template <typename NumericType> struct PlasmaEtchingParameters {
 
     return processData;
   }
-
-  PlasmaEtchingParameters<float> convertToFloat() const {
-    PlasmaEtchingParameters<float> pParams;
-    if constexpr (std::is_same_v<NumericType, float>) {
-      pParams = *this;
-    } else {
-      FLOAT_CAST(pParams, ionFlux);
-      FLOAT_CAST(pParams, etchantFlux);
-      FLOAT_CAST(pParams, passivationFlux);
-
-      for (auto &pair : beta_E) {
-        pParams.beta_E[pair.first] = static_cast<float>(pair.second);
-      }
-      for (auto &pair : beta_P) {
-        pParams.beta_P[pair.first] = static_cast<float>(pair.second);
-      }
-
-      FLOAT_CAST(pParams, etchStopDepth);
-
-      FLOAT_CAST(pParams, Mask.A_sp);
-      FLOAT_CAST(pParams, Mask.B_sp);
-      FLOAT_CAST(pParams, Mask.Eth_sp);
-      FLOAT_CAST(pParams, Mask.rho);
-
-      FLOAT_CAST(pParams, Polymer.A_sp);
-      FLOAT_CAST(pParams, Polymer.B_sp);
-      FLOAT_CAST(pParams, Polymer.Eth_sp);
-      FLOAT_CAST(pParams, Polymer.rho);
-
-      FLOAT_CAST(pParams, Substrate.A_ie);
-      FLOAT_CAST(pParams, Substrate.A_sp);
-      FLOAT_CAST(pParams, Substrate.B_ie);
-      FLOAT_CAST(pParams, Substrate.B_sp);
-      FLOAT_CAST(pParams, Substrate.Eth_ie);
-      FLOAT_CAST(pParams, Substrate.Eth_sp);
-      FLOAT_CAST(pParams, Substrate.k_sigma);
-      FLOAT_CAST(pParams, Substrate.beta_sigma);
-      FLOAT_CAST(pParams, Substrate.rho);
-
-      FLOAT_CAST(pParams, Passivation.A_ie);
-      FLOAT_CAST(pParams, Passivation.Eth_ie);
-
-      FLOAT_CAST(pParams, Ions.exponent);
-      FLOAT_CAST(pParams, Ions.meanEnergy);
-      FLOAT_CAST(pParams, Ions.sigmaEnergy);
-      FLOAT_CAST(pParams, Ions.inflectAngle);
-      FLOAT_CAST(pParams, Ions.n_l);
-      FLOAT_CAST(pParams, Ions.minAngle);
-      FLOAT_CAST(pParams, Ions.thetaRMin);
-      FLOAT_CAST(pParams, Ions.thetaRMax);
-    }
-    return pParams;
-  }
 };
 
-} // namespace viennaps
+#ifdef VIENNACORE_COMPILE_GPU
+struct PlasmaEtchingParametersGPU {
+  PlasmaEtchingParametersGPU() = default;
+  template <typename NumericType>
+  PlasmaEtchingParametersGPU(
+      const PlasmaEtchingParameters<NumericType> &parameters) {
+    Mask.A_sp = static_cast<float>(parameters.Mask.A_sp);
+    Mask.B_sp = static_cast<float>(parameters.Mask.B_sp);
+    Mask.Eth_sp = static_cast<float>(parameters.Mask.Eth_sp);
+    Mask.rho = static_cast<float>(parameters.Mask.rho);
 
-#undef FLOAT_CAST
+    Polymer.A_sp = static_cast<float>(parameters.Polymer.A_sp);
+    Polymer.B_sp = static_cast<float>(parameters.Polymer.B_sp);
+    Polymer.Eth_sp = static_cast<float>(parameters.Polymer.Eth_sp);
+    Polymer.rho = static_cast<float>(parameters.Polymer.rho);
+
+    Substrate.rho = static_cast<float>(parameters.Substrate.rho);
+    Substrate.Eth_sp = static_cast<float>(parameters.Substrate.Eth_sp);
+    Substrate.Eth_ie = static_cast<float>(parameters.Substrate.Eth_ie);
+    Substrate.A_sp = static_cast<float>(parameters.Substrate.A_sp);
+    Substrate.B_sp = static_cast<float>(parameters.Substrate.B_sp);
+    Substrate.A_ie = static_cast<float>(parameters.Substrate.A_ie);
+    Substrate.B_ie = static_cast<float>(parameters.Substrate.B_ie);
+    Substrate.k_sigma = static_cast<float>(parameters.Substrate.k_sigma);
+    Substrate.beta_sigma = static_cast<float>(parameters.Substrate.beta_sigma);
+
+    Passivation.Eth_ie = static_cast<float>(parameters.Passivation.Eth_ie);
+    Passivation.A_ie = static_cast<float>(parameters.Passivation.A_ie);
+
+    Ions.meanEnergy = static_cast<float>(parameters.Ions.meanEnergy);
+    Ions.sigmaEnergy = static_cast<float>(parameters.Ions.sigmaEnergy);
+    Ions.exponent = static_cast<float>(parameters.Ions.exponent);
+    Ions.inflectAngle = static_cast<float>(parameters.Ions.inflectAngle);
+    Ions.n_l = static_cast<float>(parameters.Ions.n_l);
+    Ions.minAngle = static_cast<float>(parameters.Ions.minAngle);
+    Ions.thetaRMin = static_cast<float>(parameters.Ions.thetaRMin);
+    Ions.thetaRMax = static_cast<float>(parameters.Ions.thetaRMax);
+  }
+
+  PlasmaEtchingParameters<float>::MaskType Mask;
+  PlasmaEtchingParameters<float>::PolymerType Polymer;
+  PlasmaEtchingParameters<float>::MaterialType Substrate;
+  PlasmaEtchingParameters<float>::PassivationType Passivation;
+  PlasmaEtchingParameters<float>::IonType Ions;
+};
+#endif
+
+} // namespace viennaps
