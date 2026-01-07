@@ -153,8 +153,10 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
 
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
-  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED=1 VIENNACORE_COMPILE_SHARED_LIB=1)
-  target_sources(${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModels.cpp")
+  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED=1
+                                                 VIENNACORE_COMPILE_SHARED_LIB=1)
+  target_sources(${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp"
+                                     "lib/specModels.cpp")
 
   set_target_properties(
     ${LIB_NAME}
