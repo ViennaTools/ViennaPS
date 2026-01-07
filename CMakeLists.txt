@@ -105,8 +105,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.9.0
-  GIT_TAG fix-shared-lib
+  VERSION 1.9.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -229,4 +228,4 @@ packageProject(
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS;OpenMP")
+  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")
