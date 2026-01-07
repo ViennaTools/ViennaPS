@@ -106,6 +106,7 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 1.9.0
+  GIT_TAG fix-shared-lib
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -122,13 +123,13 @@ CPMAddPackage(
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
-CPMFindPackage(
+CPMAddPackage(
   NAME ViennaLS
   VERSION 5.4.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-CPMFindPackage(
+CPMAddPackage(
   NAME ViennaCS
   VERSION 1.1.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
@@ -143,6 +144,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTo
 
 if(VIENNAPS_PRECOMPILE_HEADERS)
   set(VIENNAPS_LINKAGE SHARED)
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
   if(VIENNAPS_STATIC_BUILD)
     set(VIENNAPS_LINKAGE STATIC)
@@ -152,8 +154,8 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
 
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
-  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)
-  target_sources(${LIB_NAME} PRIVATE "lib/specializations.cpp")
+  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED=1 VIENNACORE_COMPILE_SHARED_LIB=1)
+  target_sources(${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModels.cpp")
 
   set_target_properties(
     ${LIB_NAME}
