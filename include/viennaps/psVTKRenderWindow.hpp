@@ -611,7 +611,9 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
 // Full definition of Custom3DInteractorStyle after VTKRenderWindow is complete
 class Custom3DInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
-  static Custom3DInteractorStyle *New();
+  static Custom3DInteractorStyle *New() {
+    VTK_STANDARD_NEW_BODY(Custom3DInteractorStyle);
+  }
   vtkTypeMacro(Custom3DInteractorStyle, vtkInteractorStyleTrackballCamera);
 
   void OnChar() override {
@@ -626,11 +628,13 @@ private:
   viennaps::VTKRenderWindow<double, 3> *Window = nullptr;
 }; // namespace viennaps
 
-vtkStandardNewMacro(Custom3DInteractorStyle);
+// vtkStandardNewMacro(Custom3DInteractorStyle);
 
 class Custom2DInteractorStyle : public vtkInteractorStyleImage {
 public:
-  static Custom2DInteractorStyle *New();
+  static Custom2DInteractorStyle *New() {
+    VTK_STANDARD_NEW_BODY(Custom2DInteractorStyle);
+  }
   vtkTypeMacro(Custom2DInteractorStyle, vtkInteractorStyleImage);
 
   void OnLeftButtonDown() override { this->StartPan(); }
@@ -649,7 +653,7 @@ private:
   viennaps::VTKRenderWindow<double, 2> *Window = nullptr;
 }; // namespace viennaps
 
-vtkStandardNewMacro(Custom2DInteractorStyle);
+// vtkStandardNewMacro(Custom2DInteractorStyle);
 
 // VTKRenderWindow::initialize() implementation - defined after
 // Custom3DInteractorStyle
