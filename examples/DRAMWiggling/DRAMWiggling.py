@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 ps.setDimension(3)
 
-gridDelta = 0.015 * (1.0 + 1e-12)
+gridDelta = 0.01 * (1.0 + 1e-12)
 boundaryConds = [
     ps.BoundaryType.REFLECTIVE_BOUNDARY,
     ps.BoundaryType.REFLECTIVE_BOUNDARY,

@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
   units::Length::setUnit(params.get<std::string>("lengthUnit"));
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
-  constexpr NumericType gridDelta = 0.012 * (1. + 1e-12);
+  constexpr NumericType gridDelta = 0.01 * (1. + 1e-12);
   BoundaryType boundaryConds[D] = {BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::INFINITE_BOUNDARY};
