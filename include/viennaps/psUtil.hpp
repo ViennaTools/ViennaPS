@@ -12,6 +12,17 @@
 
 #include "psMaterials.hpp"
 
+namespace viennaps {
+enum class FluxEngineType {
+  AUTO,         // Automatic selection
+  CPU_DISK,     // CPU, Disk-based
+  CPU_TRIANGLE, // CPU, Triangle-based
+  GPU_DISK,     // GPU, Disk-based
+  GPU_TRIANGLE, // GPU, Triangle-based
+  GPU_LINE      // GPU, Line-based
+};
+}
+
 // Use viennacore here to avoid conflicts with other namespaces
 namespace viennacore::util {
 [[nodiscard]] inline viennals::SpatialSchemeEnum
@@ -63,6 +74,23 @@ convertIntegrationScheme(const std::string &s) {
   return convertSpatialScheme(s);
 }
 
+[[nodiscard]] inline viennaps::FluxEngineType
+convertFluxEngineType(const std::string &s) {
+  if (s == "AUTO")
+    return viennaps::FluxEngineType::AUTO;
+  if (s == "CPU_DISK" || s == "CD")
+    return viennaps::FluxEngineType::CPU_DISK;
+  if (s == "CPU_TRIANGLE" || s == "CT")
+    return viennaps::FluxEngineType::CPU_TRIANGLE;
+  if (s == "GPU_DISK" || s == "GD")
+    return viennaps::FluxEngineType::GPU_DISK;
+  if (s == "GPU_TRIANGLE" || s == "GT")
+    return viennaps::FluxEngineType::GPU_TRIANGLE;
+  if (s == "GPU_LINE" || s == "GL")
+    return viennaps::FluxEngineType::GPU_LINE;
+  throw std::invalid_argument("Unknown FluxEngineType: " + s);
+}
+
 [[nodiscard]] inline viennals::TemporalSchemeEnum
 convertTemporalScheme(const std::string &s) {
   if (s == "FORWARD_EULER" || s == "FE")
@@ -103,6 +131,26 @@ convertSpatialSchemeToString(viennals::SpatialSchemeEnum scheme) {
     return "WENO_5TH_ORDER";
   default:
     throw std::invalid_argument("Unknown discretization scheme.");
+  }
+}
+
+[[nodiscard]] inline std::string
+convertFluxEngineTypeToString(viennaps::FluxEngineType type) {
+  switch (type) {
+  case viennaps::FluxEngineType::AUTO:
+    return "AUTO";
+  case viennaps::FluxEngineType::CPU_DISK:
+    return "CPU_DISK";
+  case viennaps::FluxEngineType::CPU_TRIANGLE:
+    return "CPU_TRIANGLE";
+  case viennaps::FluxEngineType::GPU_DISK:
+    return "GPU_DISK";
+  case viennaps::FluxEngineType::GPU_TRIANGLE:
+    return "GPU_TRIANGLE";
+  case viennaps::FluxEngineType::GPU_LINE:
+    return "GPU_LINE";
+  default:
+    return "UNKNOWN";
   }
 }
 
@@ -151,6 +199,8 @@ template <typename T> [[nodiscard]] std::string toString(const T &value) {
   else if constexpr (std::is_same_v<T, viennaps::Material>) {
     std::string mat = viennaps::to_string_view(value);
     return mat;
+  } else if constexpr (std::is_same_v<T, viennaps::FluxEngineType>) {
+    return convertFluxEngineTypeToString(value);
   } else if constexpr (std::is_same_v<T, std::string>)
     return value;
   else
@@ -178,3 +228,9 @@ hexToRGBArray(const uint32_t hexColor) {
   return rgb;
 }
 }; // namespace viennacore::util
+
+namespace viennaps {
+[[nodiscard]] inline std::string to_string(FluxEngineType type) {
+  return viennacore::util::convertFluxEngineTypeToString(type);
+}
+} // namespace viennaps

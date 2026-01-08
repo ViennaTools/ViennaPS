@@ -21,4 +21,6 @@ spatialScheme=LF_2
 
 numSteps=20
 raysPerPoint=1000
+fluxEngine=CD
+
 gdsFile=wiggle_full.gds

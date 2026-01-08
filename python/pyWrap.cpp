@@ -594,6 +594,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
              "Convert a string to an discretization scheme.");
   // convertIntegrationScheme is deprecated
   m_util.attr("convertIntegrationScheme") = m_util.attr("convertSpatialScheme");
+  m_util.def("convertFluxEngineType", &util::convertFluxEngineType,
+             "Convert a string to a flux engine type.");
   m_util.def("convertTemporalScheme", &util::convertTemporalScheme,
              "Convert a string to a time integration scheme.");
 
