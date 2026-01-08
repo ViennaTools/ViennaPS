@@ -3,6 +3,7 @@
 #include <models/psSingleParticleProcess.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
+#include <psUtil.hpp>
 
 namespace ps = viennaps;
 
@@ -30,7 +31,11 @@ int main() {
   NumericType processTime = 1.0;
 
   auto runSimulation = [&](ps::TemporalScheme temporalScheme,
-                           bool calcIntermediate, std::string suffix) {
+                           bool calcIntermediate) {
+    std::string suffix = viennacore::util::toString(temporalScheme);
+    if (calcIntermediate) {
+      suffix += "_recalc";
+    }
     auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
         gridDelta, xExtent, yExtent);
 
@@ -66,10 +71,11 @@ int main() {
     domain->saveSurfaceMesh("simpleEtching_" + suffix + ".vtp");
   };
 
-  runSimulation(ps::TemporalScheme::FORWARD_EULER, false, "FE");
-  runSimulation(ps::TemporalScheme::RUNGE_KUTTA_2ND_ORDER, false, "RK2");
-  runSimulation(ps::TemporalScheme::RUNGE_KUTTA_3RD_ORDER, false, "RK3");
-  runSimulation(ps::TemporalScheme::RUNGE_KUTTA_3RD_ORDER, true, "RK3_recalc");
+  runSimulation(ps::TemporalScheme::FORWARD_EULER, false);
+  runSimulation(ps::TemporalScheme::RUNGE_KUTTA_2ND_ORDER, false);
+  runSimulation(ps::TemporalScheme::RUNGE_KUTTA_2ND_ORDER, true);
+  runSimulation(ps::TemporalScheme::RUNGE_KUTTA_3RD_ORDER, false);
+  runSimulation(ps::TemporalScheme::RUNGE_KUTTA_3RD_ORDER, true);
 
   return 0;
 }

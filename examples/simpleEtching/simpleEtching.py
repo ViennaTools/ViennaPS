@@ -23,7 +23,10 @@ def main():
     source_power = 1.0
     process_time = 1.0
 
-    def run_simulation(temporal_scheme, calc_intermediate, suffix):
+    def run_simulation(temporal_scheme, calc_intermediate):
+        suffix = str(temporal_scheme).split(".")[-1]
+        if calc_intermediate:
+            suffix += "_recalc"
         if D == 3:
             # Create a Hole in 3D
             domain = vps3.Domain(grid_delta, x_extent, y_extent)
@@ -53,10 +56,11 @@ def main():
 
         domain.saveSurfaceMesh(f"simpleEtching_{suffix}.vtp")
 
-    run_simulation(viennaps.util.convertTemporalScheme("FORWARD_EULER"), False, "FE")
-    run_simulation(viennaps.util.convertTemporalScheme("RUNGE_KUTTA_2ND_ORDER"), False, "RK2")
-    run_simulation(viennaps.util.convertTemporalScheme("RUNGE_KUTTA_3RD_ORDER"), False, "RK3")
-    run_simulation(viennaps.util.convertTemporalScheme("RUNGE_KUTTA_3RD_ORDER"), True, "RK3_recalc")
+    run_simulation(viennaps.util.convertTemporalScheme("FORWARD_EULER"), False)
+    run_simulation(viennaps.util.convertTemporalScheme("RUNGE_KUTTA_2ND_ORDER"), False)
+    run_simulation(viennaps.util.convertTemporalScheme("RUNGE_KUTTA_2ND_ORDER"), True)
+    run_simulation(viennaps.util.convertTemporalScheme("RUNGE_KUTTA_3RD_ORDER"), False)
+    run_simulation(viennaps.util.convertTemporalScheme("RUNGE_KUTTA_3RD_ORDER"), True)
 
 if __name__ == "__main__":
     main()
