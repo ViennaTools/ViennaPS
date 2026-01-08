@@ -6,6 +6,9 @@ int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
 
+  Logger::setLogLevel(LogLevel::INFO);
+  omp_set_num_threads(12);
+
   // Parse the parameters
   util::Parameters params;
   if (argc > 1) {
@@ -59,8 +62,11 @@ int main(int argc, char **argv) {
   RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");
 
+  const std::string fluxEngineStr = params.get<std::string>("fluxEngine");
+  const auto fluxEngine = util::convertFluxEngineType(fluxEngineStr);
+
   CoverageParameters coverageParams;
-  coverageParams.maxIterations = 10;
+  coverageParams.tolerance = 1e-5;
 
   // Process setup
   Process<NumericType, D> process(geometry, model, params.get("processTime"));
@@ -68,16 +74,18 @@ int main(int argc, char **argv) {
   process.setParameters(rayParams);
   process.setParameters(coverageParams);
 
+  process.setFluxEngineType(fluxEngine);
   // print initial surface
-  geometry->saveSurfaceMesh("DRAM_Initial.vtp");
+  geometry->saveSurfaceMesh("DRAM_Initial_" + fluxEngineStr + ".vtp");
 
   const int numSteps = params.get("numSteps");
   for (int i = 0; i < numSteps; ++i) {
     process.apply();
-    geometry->saveSurfaceMesh("DRAM_Etched_" + std::to_string(i + 1) + ".vtp");
+    geometry->saveSurfaceMesh("DRAM_Etched_" + fluxEngineStr + "_" +
+                              std::to_string(i + 1) + ".vtp");
   }
 
-  geometry->saveHullMesh("DRAM_Final");
+  geometry->saveHullMesh("DRAM_Final_" + fluxEngineStr);
 
   return 0;
 }
