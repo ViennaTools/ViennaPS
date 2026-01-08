@@ -81,7 +81,8 @@ int main(int argc, char **argv) {
   const int numSteps = params.get("numSteps");
   for (int i = 0; i < numSteps; ++i) {
     process.apply();
-    geometry->saveSurfaceMesh("DRAM_Etched_" + fluxEngineStr + "_" + std::to_string(i + 1) + ".vtp");
+    geometry->saveSurfaceMesh("DRAM_Etched_" + fluxEngineStr + "_" +
+                              std::to_string(i + 1) + ".vtp");
   }
 
   geometry->saveHullMesh("DRAM_Final_" + fluxEngineStr);

@@ -24,43 +24,6 @@ option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
 
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 
-if(VIENNAPS_USE_GPU)
-  function(detect_native_sm)
-    find_program(NVIDIA_SMI_EXECUTABLE nvidia-smi)
-
-    if(NOT NVIDIA_SMI_EXECUTABLE)
-      message(WARNING "[ViennaPS] nvidia-smi not found. Cannot detect native SM.")
-      return()
-    endif()
-
-    execute_process(
-      COMMAND ${NVIDIA_SMI_EXECUTABLE} --query-gpu=compute_cap --format=csv,noheader
-      OUTPUT_VARIABLE _cc
-      RESULT_VARIABLE _res
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-    if(NOT _res EQUAL 0 OR _cc STREQUAL "")
-      message(WARNING "[ViennaPS] Failed to query compute capability via nvidia-smi.")
-      return()
-    endif()
-
-    # Example: "8.6" -> "86"
-    string(REPLACE "." "" _cc_nodot "${_cc}")
-
-    set(VIENNACORE_NATIVE_SM "${_cc_nodot}" PARENT_SCOPE)
-    message(STATUS "[ViennaPS] Detected native SM: ${_cc_nodot}")
-  endfunction()
-
-  set(DEFAULT_CUDA_ARCH "89")
-  detect_native_sm()
-
-  if(DEFINED VIENNACORE_NATIVE_SM AND VIENNACORE_NATIVE_SM LESS 89)
-    set(DEFAULT_CUDA_ARCH "${VIENNACORE_NATIVE_SM}")
-  endif()
-
-  set(VIENNACORE_CUDA_ARCH "${DEFAULT_CUDA_ARCH}" CACHE STRING "CUDA architecture for ViennaCore")
-endif()
-
 option(VIENNAPS_BUILD_EXAMPLES "Build examples" OFF)
 option(VIENNAPS_BUILD_TESTS "Build tests" OFF)
 
