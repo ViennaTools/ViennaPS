@@ -11,7 +11,17 @@ if(NOT VIENNAPS_PASSED_FIRST_CONFIGURE)
 endif()
 
 # Add the callable wrapper
-viennacore_add_optixir(ViennaPSCallableWrapper ${VIENNAPS_GPU_MODELS}/CallableWrapper.cu)
+viennacore_add_optixir(
+  ViennaPSCallableWrapper
+  ${VIENNAPS_GPU_MODELS}/CallableWrapper.cu
+  DEPENDS
+  "${VIENNAPS_GPU_MODELS}/FaradayCage.cuh"
+  "${VIENNAPS_GPU_MODELS}/IonBeamEtching.cuh"
+  "${VIENNAPS_GPU_MODELS}/MultiParticle.cuh"
+  "${VIENNAPS_GPU_MODELS}/PlasmaEtching.cuh"
+  "${VIENNAPS_GPU_MODELS}/SingleParticle.cuh"
+  "${VIENNAPS_GPU_MODELS}/SingleParticleALD.cuh"
+  "${VIENNAPS_GPU_MODELS}/TEOSPECVD.cuh")
 
 set(VIENNAPS_GPU_DEPENDENCIES
     ViennaPSCallableWrapper ${VIENNARAY_GPU_DEPENDENCIES}

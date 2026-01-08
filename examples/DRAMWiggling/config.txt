@@ -19,6 +19,6 @@ sigmaEnergy=10 # eV
 
 spatialScheme=LF_2
 
-numSteps=100
+numSteps=20
 raysPerPoint=1000
 gdsFile=wiggle_full.gds

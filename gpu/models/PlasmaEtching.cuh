@@ -33,8 +33,8 @@ plasmaNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   float *coverages = (float *)baseData->cellData;
   const auto &phi_E = coverages[prd->primID];
   const auto &phi_P = coverages[prd->primID + launchParams.numElements];
-  int material = launchParams.materialIds[prd->primID];
-  float sticking = launchParams.materialSticking[material];
+  int id = launchParams.materialIds[prd->primID]; // consecutive ID, not enum
+  float sticking = launchParams.materialSticking[id];
   float Seff = sticking * max(1.f - phi_E - phi_P, 0.f);
   prd->rayWeight -= prd->rayWeight * Seff;
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
@@ -63,11 +63,12 @@ plasmaNeutralReflectionNoPassivation(const void *sbtData,
 
 __forceinline__ __device__ void
 plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::PlasmaEtchingParameters<float> *params =
-      reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
+  viennaps::PlasmaEtchingParametersGPU *params =
+      reinterpret_cast<viennaps::PlasmaEtchingParametersGPU *>(
           launchParams.customData);
   for (int i = 0; i < prd->ISCount; ++i) {
-    int material = launchParams.materialIds[prd->primIDs[i]];
+    int id = launchParams.materialIds[prd->primIDs[i]]; // consecutive ID
+    int material = launchParams.materialMap[id];        // mapped to enum
     auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
@@ -104,22 +105,22 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     atomicAdd(&launchParams
                    .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
                                  prd->primIDs[i]],
-              Y_sp * prd->rayWeight);
+              static_cast<viennaray::gpu::ResultType>(Y_sp * prd->rayWeight));
     atomicAdd(&launchParams
                    .resultBuffer[viennaray::gpu::getIdxOffset(1, launchParams) +
                                  prd->primIDs[i]],
-              Y_Si * prd->rayWeight);
+              static_cast<viennaray::gpu::ResultType>(Y_Si * prd->rayWeight));
     atomicAdd(&launchParams
                    .resultBuffer[viennaray::gpu::getIdxOffset(2, launchParams) +
                                  prd->primIDs[i]],
-              Y_P * prd->rayWeight);
+              static_cast<viennaray::gpu::ResultType>(Y_P * prd->rayWeight));
   }
 }
 
 __forceinline__ __device__ void
 plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::PlasmaEtchingParameters<float> *params =
-      reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
+  viennaps::PlasmaEtchingParametersGPU *params =
+      reinterpret_cast<viennaps::PlasmaEtchingParametersGPU *>(
           launchParams.customData);
   auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(
@@ -153,8 +154,8 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 }
 
 __forceinline__ __device__ void plasmaIonInit(viennaray::gpu::PerRayData *prd) {
-  viennaps::PlasmaEtchingParameters<float> *params =
-      reinterpret_cast<viennaps::PlasmaEtchingParameters<float> *>(
+  viennaps::PlasmaEtchingParametersGPU *params =
+      reinterpret_cast<viennaps::PlasmaEtchingParametersGPU *>(
           launchParams.customData);
   viennaps::gpu::impl::initNormalDistEnergy(prd, params->Ions.meanEnergy,
                                             params->Ions.sigmaEnergy);

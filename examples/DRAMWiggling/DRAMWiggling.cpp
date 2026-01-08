@@ -6,9 +6,6 @@ int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
 
-  Logger::setLogLevel(LogLevel::ERROR);
-  omp_set_num_threads(12);
-
   // Parse the parameters
   util::Parameters params;
   if (argc > 1) {
@@ -51,6 +48,7 @@ int main(int argc, char **argv) {
   modelParams.Ions.sigmaEnergy = params.get("sigmaEnergy");
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Ions.n_l = 200;
+  modelParams.Substrate.B_sp = 0.75;
   auto model = SmartPointer<HBrO2Etching<NumericType, D>>::New(modelParams);
 
   // Advection parameters
