@@ -125,6 +125,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME ViennaLS
   VERSION 5.4.0
+  GIT_TAG int-velocities
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
