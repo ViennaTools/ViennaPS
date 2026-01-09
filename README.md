@@ -26,7 +26,7 @@ To install ViennaPS for Python, simply run:
 pip install ViennaPS
 ```
 
-To use ViennaPS in C++, clone the repository and follow the installation steps below.
+To use ViennaPS in C++ follow the CMake instructions below. A ready-to-use CMake template is also available for a quick start: [ViennaPS CMake Template](https://viennatools.github.io/ViennaPS/inst/#cmake-template).
 
 For full documentation, visit [ViennaPS Documentation](https://viennatools.github.io/ViennaPS/).
 
@@ -45,17 +45,17 @@ ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org
 
 * Linux (g++ / clang)
 
-* macOS (XCode)
+* macOS (clang)
 
 * Windows (Visual Studio)
 
 ### System Requirements
 
-* C++17 Compiler with OpenMP support
+* C++20 Compiler with OpenMP support
 
 ### ViennaTools Dependencies (installed automatically)
 
-ViennaPS is part of the ViennaTools ecosystem and depends on several lightweight, header-only ViennaTools libraries. During configuration, CMake will look for them and fetch them automatically as part of the ViennaPS build. No separate installation step is required:
+ViennaPS is part of the ViennaTools ecosystem and depends on several lightweight, header-only ViennaTools libraries. During configuration, CMake will look for them and fetch them automatically as part of the ViennaPS build. No separate installation step is required for these dependencies:
 
 * [ViennaCore](https://github.com/ViennaTools/viennacore) 
 * [ViennaLS](https://github.com/ViennaTools/viennals) 
@@ -85,19 +85,9 @@ Alternatively (or additionally), you can use `CMAKE_PREFIX_PATH` if that better 
 > [!NOTE]  
 > __For more detailed installation instructions and troubleshooting tips, have a look at the ViennaPS [documentation](https://viennatools.github.io/ViennaPS/inst/).__
 
-ViennaPS is a header-only library, so no formal installation is required. However, following the steps below helps organize and manage dependencies more effectively:
+ViennaPS is a header-only library, so no formal installation is required. To use ViennaPS in your C++ project, refer to the [Integration in CMake projects](#integration-in-cmake-projects) section below.
 
-```bash
-git clone https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-
-cmake -B build && cmake --build build
-cmake --install build --prefix "/path/to/your/custom/install/"
-```
-
-This will install the necessary headers and CMake files to the specified path. If `--prefix` is not specified, it will be installed to the standard path for your system, usually `/usr/local/` on Linux-based systems.
-
-## Building the Python package
+## Building the Python package locally
 
 The Python package can be built and installed using the `pip` command:
 
@@ -132,7 +122,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@4.1.3")
+  CPMAddPackage("gh:viennatools/viennaps@4.2.0")
   ```
 
 * With a local installation
@@ -144,6 +134,8 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
     find_package(ViennaPS)
     target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
     ```
+
+    > Note: If you installed ViennaPS to a custom location, GPU kernels can not be built, since the CMake configuration does not support this setup. If you need GPU support, please use CPM.cmake.
 
 ### Shared Library
 
@@ -157,7 +149,7 @@ If ViennaPS was built with shared libraries and you use ViennaPS in your project
 
 ## GPU Acceleration (Experimental)
 
-As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental and may not work on all systems. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/gpu.html).
+As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/gpu.html).
 
 ## Basic Examples
 

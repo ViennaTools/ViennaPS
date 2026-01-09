@@ -9,7 +9,7 @@ from pathlib import Path
 
 REQUIRED_GCC = "12"
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.3.0"
+DEFAULT_VIENNALS_VERSION = "5.4.0"
 
 
 def run(cmd, **kwargs):
@@ -197,7 +197,7 @@ def install_viennaps(
         env["OptiX_INSTALL_DIR"] = str(optix_dir)
 
     env["CMAKE_ARGS"] = " ".join(cmake_args)
-    cmd = [str(pip_path), "install", "."]
+    cmd = [str(pip_path), "install", "--no-deps", "."]
     if verbose:
         cmd.append("-v")
     run(cmd, cwd=viennaps_dir, env=env)

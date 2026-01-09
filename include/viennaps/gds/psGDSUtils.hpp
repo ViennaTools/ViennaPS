@@ -106,8 +106,8 @@ enum class RecordNumbers {
 };
 
 template <class T> struct Element {
-  ElementType elementType;
-  int16_t layer;
+  ElementType elementType{};
+  int16_t layer{};
   int32_t plexNumber = -1;
   std::vector<Vec3D<T>> pointCloud;
 };
@@ -126,7 +126,7 @@ template <class T> struct ARef {
   T magnification = 0;
   bool flipped = false;
   std::array<Vec3D<T>, 3> refPoints;
-  std::array<int16_t, 2> arrayDims;
+  std::array<int16_t, 2> arrayDims{};
 };
 
 template <class T> struct Structure {

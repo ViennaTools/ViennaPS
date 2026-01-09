@@ -3,12 +3,12 @@
 
 #include <process/psProcess.hpp>
 
+#include <gpu/raygTraceDisk.hpp>
+#include <gpu/raygTraceLine.hpp>
+#include <gpu/raygTraceTriangle.hpp>
 #include <psCreateSurfaceMesh.hpp>
 #include <psElementToPointData.hpp>
 #include <rayMesh.hpp>
-#include <raygTraceDisk.hpp>
-#include <raygTraceLine.hpp>
-#include <raygTraceTriangle.hpp>
 #include <vcContext.hpp>
 
 #include "Benchmark.hpp"
@@ -45,7 +45,7 @@ int main() {
     if (FIXED_RAYS)
       tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
-    tracer.setCallables("CallableWrapper", context->modulePath);
+    tracer.setCallables("ViennaPSCallableWrapper", context->modulePath);
     auto particleConfig = makeGPUParticle<NumericType, D>();
     tracer.insertNextParticle(std::get<0>(particleConfig));
     tracer.setParticleCallableMap(
@@ -142,7 +142,7 @@ int main() {
     if (FIXED_RAYS)
       tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
-    tracer.setCallables("CallableWrapper", context->modulePath);
+    tracer.setCallables("ViennaPSCallableWrapper", context->modulePath);
     auto particleConfig = makeGPUParticle<NumericType, D>();
     tracer.insertNextParticle(std::get<0>(particleConfig));
     tracer.setParticleCallableMap(
@@ -238,7 +238,7 @@ int main() {
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
     // tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
-    tracer.setCallables("CallableWrapper", context->modulePath);
+    tracer.setCallables("ViennaPSCallableWrapper", context->modulePath);
     auto particleConfig = makeGPUParticle<NumericType, D>();
     tracer.insertNextParticle(std::get<0>(particleConfig));
     tracer.setParticleCallableMap(

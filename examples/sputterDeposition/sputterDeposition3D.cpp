@@ -1,9 +1,4 @@
-#include <geometries/psMakeHole.hpp>
-#include <models/psCSVFileProcess.hpp>
-#include <process/psProcess.hpp>
-#include <process/psVelocityField.hpp>
-#include <psMaterials.hpp>
-#include <psUtil.hpp>
+#include <viennaps.hpp>
 
 using namespace viennaps;
 constexpr int D = 3;

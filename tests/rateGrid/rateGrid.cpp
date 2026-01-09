@@ -69,7 +69,8 @@ template <typename NumericType, int D> void RunTest() {
 
     if (mode == RateGrid<NumericType, D>::Interpolation::CUSTOM) {
       grid.setCustomInterpolator([](const Vec3D<NumericType> &coord) {
-        return 1.0 + 0.1 * std::cos(coord[0] + coord[1]);
+        return static_cast<NumericType>(1.0 +
+                                        0.1 * std::cos(coord[0] + coord[1]));
       });
     } else if (mode == RateGrid<NumericType, D>::Interpolation::IDW) {
       grid.setIDWNeighbors(4);

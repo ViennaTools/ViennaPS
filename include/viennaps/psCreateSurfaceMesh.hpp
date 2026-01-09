@@ -2,6 +2,7 @@
 
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
+#include <lsToSurfaceMesh.hpp>
 
 #include <rayMesh.hpp>
 

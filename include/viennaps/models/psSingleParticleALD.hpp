@@ -159,7 +159,6 @@ public:
         {0, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__singleALDNeutralReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     NumericType gpc = totalCycles / numCycles * growthPerCycle;
 

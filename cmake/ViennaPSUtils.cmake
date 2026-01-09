@@ -1,9 +1,8 @@
 function(viennaps_add_executable target_name source_file)
+  add_executable(${target_name} ${source_file})
+  target_link_libraries(${target_name} PRIVATE ViennaPS)
   if(VIENNAPS_USE_GPU)
-    add_gpu_executable(${target_name} ${source_file})
-  else()
-    add_executable(${target_name} ${source_file})
-    target_link_libraries(${target_name} PRIVATE ViennaPS)
+    add_dependencies(${target_name} ${VIENNAPS_GPU_DEPENDENCIES})
   endif()
 endfunction()
 

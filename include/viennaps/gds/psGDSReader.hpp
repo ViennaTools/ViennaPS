@@ -47,24 +47,24 @@ private:
   GDS::Structure<NumericType> currentStructure;
 
   int16_t currentRecordLen = 0;
-  int16_t currentLayer;
-  int16_t currentDataType;
-  int16_t currentPlexNumber;
-  int16_t currentSTrans;
+  int16_t currentLayer = 0;
+  int16_t currentDataType = 0;
+  int16_t currentPlexNumber = 0;
+  int16_t currentSTrans = 0;
   double currentMag = 0;
   double currentAngle = 0;
-  int16_t arrayCols, arrayRows;
+  int16_t arrayCols = 0, arrayRows = 0;
   bool ignore = false;
-  GDS::ElementType currentElement;
-  double units; // units in micron
-  double userUnits;
+  GDS::ElementType currentElement{};
+  double units{}; // units in micron
+  double userUnits{};
 
   // unused
-  float currentWidth;
-  char *tempStr;
+  float currentWidth = 0;
+  char *tempStr = nullptr;
 
-  bool contains(int32_t X, int32_t Y,
-                const std::vector<std::array<int32_t, 2>> &uniPoints) {
+  static bool contains(int32_t X, int32_t Y,
+                       const std::vector<std::array<int32_t, 2>> &uniPoints) {
     for (const auto &p : uniPoints) {
       if (p[0] == X && p[1] == Y)
         return true;
@@ -163,14 +163,12 @@ private:
   }
 
   void parseHeader() {
-    short version;
-    version = readTwoByteSignedInt();
+    const short version = readTwoByteSignedInt();
     VIENNACORE_LOG_DEBUG("GDS Version: " + std::to_string(version));
   }
 
   void parseLibName() {
-    char *str;
-    str = readAsciiString();
+    char *str = readAsciiString();
     VIENNACORE_LOG_DEBUG("GDS Library name: " + std::string(str));
     delete[] str;
   }
@@ -204,22 +202,21 @@ private:
   }
 
   void parseXYBoundary() {
-    float X, Y;
-    unsigned int numPoints = currentRecordLen / 8;
+    const unsigned int numPoints = currentRecordLen / 8;
     auto &currentElPointCloud = currentStructure.elements.back().pointCloud;
     std::vector<std::array<int32_t, 2>> uniquePoints;
 
     // do not include the last point since it
     // is just a copy of the first
     for (unsigned int i = 0; i < numPoints - 1; i++) {
-      auto pX = readFourByteSignedInt();
-      auto pY = readFourByteSignedInt();
+      const auto pX = readFourByteSignedInt();
+      const auto pY = readFourByteSignedInt();
 
       if (!contains(pX, pY, uniquePoints)) {
         uniquePoints.push_back({pX, pY});
 
-        X = units * (float)pX;
-        Y = units * (float)pY;
+        float X = units * static_cast<float>(pX);
+        float Y = units * static_cast<float>(pY);
 
         currentElPointCloud.push_back({X, Y, 0.});
 
@@ -251,13 +248,13 @@ private:
   void parseXYRef() {
     bool flipped = false;
     if (parseFlip) {
-      /// TODO: this sometimes yield true when it should not
+      /// TODO: this sometimes yield true when it should not (strange)
       flipped = ((uint16_t)(currentSTrans & 0x8000) == (uint16_t)0x8000);
     }
 
     if (currentElement == GDS::ElementType::elSRef) {
-      float X = units * (float)readFourByteSignedInt();
-      float Y = units * (float)readFourByteSignedInt();
+      float X = units * static_cast<float>(readFourByteSignedInt());
+      float Y = units * static_cast<float>(readFourByteSignedInt());
       currentStructure.sRefs.back().refPoint[0] = static_cast<NumericType>(X);
       currentStructure.sRefs.back().refPoint[1] = static_cast<NumericType>(Y);
       currentStructure.sRefs.back().refPoint[2] = static_cast<NumericType>(0);
@@ -269,8 +266,8 @@ private:
       currentStructure.sRefs.back().flipped = flipped;
     } else {
       for (size_t i = 0; i < 3; i++) {
-        float X = units * (float)readFourByteSignedInt();
-        float Y = units * (float)readFourByteSignedInt();
+        float X = units * static_cast<float>(readFourByteSignedInt());
+        float Y = units * static_cast<float>(readFourByteSignedInt());
         currentStructure.aRefs.back().refPoints[i][0] =
             static_cast<NumericType>(X);
         currentStructure.aRefs.back().refPoints[i][1] =
@@ -359,14 +356,14 @@ private:
         currentStructure.elements.push_back(
             GDS::Element<NumericType>{GDS::ElementType::elBoundary});
         currentElement = GDS::ElementType::elBoundary;
-        currentStructure.boundaryElements++;
+        ++currentStructure.boundaryElements;
         break;
 
       case GDS::RecordNumbers::Box:
         currentStructure.elements.push_back(
             GDS::Element<NumericType>{GDS::ElementType::elBox});
         currentElement = GDS::ElementType::elBox;
-        currentStructure.boxElements++;
+        ++currentStructure.boxElements;
         break;
 
       case GDS::RecordNumbers::BoxType: // ignore
@@ -461,7 +458,7 @@ private:
         break;
 
       case GDS::RecordNumbers::Width: // ignore (only used in path and text)
-        currentWidth = (float)readFourByteSignedInt();
+        currentWidth = static_cast<float>(readFourByteSignedInt());
         if (currentWidth > 0) {
           currentWidth *= units;
         }

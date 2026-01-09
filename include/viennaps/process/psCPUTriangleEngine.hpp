@@ -35,7 +35,7 @@ public:
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     if (context.rayTracingParams.ignoreFluxBoundaries) {
       for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE;
+        rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE_BOUNDARY;
     } else {
       for (unsigned i = 0; i < D; ++i)
         rayBoundaryCondition[i] = util::convertBoundaryCondition(

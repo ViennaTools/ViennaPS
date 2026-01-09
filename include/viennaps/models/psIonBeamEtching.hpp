@@ -11,7 +11,7 @@
 #include <rayReflection.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <raygCallableConfig.hpp>
+#include <gpu/raygCallableConfig.hpp>
 #endif
 
 namespace viennaps {
@@ -310,7 +310,6 @@ public:
          "__direct_callable__IBEReflection"},
         {0, viennaray::gpu::CallableSlot::INIT, "__direct_callable__IBEInit"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     // Parameters to upload to device
     impl::IonParams deviceParams;

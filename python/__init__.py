@@ -40,7 +40,10 @@ if _sys.platform == "win32":
 
 
 import viennals as ls
+
+# Convenience imports
 from viennals import SpatialSchemeEnum as SpatialScheme
+from viennals import TemporalSchemeEnum as TemporalScheme
 from viennals import BoundaryConditionEnum as BoundaryType
 from viennals import LogLevel as LogLevel
 from . import _core as _C  # the binary inside the package
@@ -50,7 +53,6 @@ d2 = _C.d2
 d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
-ptxPath = _module_ptx_path()
 PROXY_DIM = 2  # default dimension is 2D
 
 

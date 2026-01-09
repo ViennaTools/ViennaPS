@@ -1,9 +1,4 @@
-#include <geometries/psMakeTrench.hpp>
-#include <models/psDirectionalProcess.hpp>
-#include <models/psGeometricDistributionModels.hpp>
-#include <models/psIsotropicProcess.hpp>
-#include <process/psProcess.hpp>
-#include <psUtil.hpp>
+#include <viennaps.hpp>
 
 using namespace viennaps;
 constexpr int D = 2;

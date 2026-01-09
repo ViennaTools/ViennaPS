@@ -21,7 +21,7 @@ template <typename NumericType, int D>
 class SF6O2Etching final : public ProcessModelGPU<NumericType, D> {
 public:
   explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
-      : params(pParams), deviceParams(pParams.convertToFloat()) {
+      : params(pParams), deviceParams(pParams) {
     initializeModel();
   }
 
@@ -84,11 +84,10 @@ private:
         {2, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__plasmaNeutralReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     this->setUseMaterialIds(true);
     precomputeSqrtEnergies();
-    this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
+    this->processData.alloc(sizeof(PlasmaEtchingParametersGPU));
     this->processData.upload(&deviceParams, 1);
     this->hasGPU = true;
 
@@ -97,14 +96,14 @@ private:
 
   void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
     params = pParams;
-    deviceParams = pParams.convertToFloat();
+    deviceParams = PlasmaEtchingParametersGPU(pParams);
     precomputeSqrtEnergies();
     this->processData.upload(&deviceParams, 1);
   }
 
 private:
   PlasmaEtchingParameters<NumericType> params;
-  PlasmaEtchingParameters<float> deviceParams;
+  PlasmaEtchingParametersGPU deviceParams;
 
   void precomputeSqrtEnergies() {
     deviceParams.Substrate.Eth_ie = std::sqrt(deviceParams.Substrate.Eth_ie);
@@ -147,7 +146,7 @@ public:
     initializeModel();
   }
 
-  SF6O2Etching(const PlasmaEtchingParameters<NumericType> &parameters)
+  explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &parameters)
       : params(parameters) {
     initializeModel();
   }
@@ -177,8 +176,10 @@ public:
     defParams.passivationFlux = 1.0e2;
 
     // sticking probabilities
-    defParams.beta_E = {{1, 0.7}, {0, 0.7}};
-    defParams.beta_P = {{1, 1.}, {0, 1.}};
+    defParams.beta_E = {{static_cast<int>(Material::Si), 0.7},
+                        {static_cast<int>(Material::Mask), 0.7}};
+    defParams.beta_P = {{static_cast<int>(Material::Si), 1.},
+                        {static_cast<int>(Material::Mask), 1.}};
 
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
@@ -224,8 +225,8 @@ public:
 private:
   void initializeModel() {
     // check if units have been set
-    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
-        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+    if (units::Length::getUnit() == units::Length::UNDEFINED ||
+        units::Time::getUnit() == units::Time::UNDEFINED) {
       VIENNACORE_LOG_ERROR("Units have not been set.");
     }
 
@@ -264,9 +265,9 @@ private:
 
     this->processMetaData = params.toProcessMetaData();
     // add units
-    this->processMetaData["Units"] = std::vector<double>{
-        static_cast<double>(units::Length::getInstance().getUnit()),
-        static_cast<double>(units::Time::getInstance().getUnit())};
+    this->processMetaData["Units"] =
+        std::vector<double>{static_cast<double>(units::Length::getUnit()),
+                            static_cast<double>(units::Time::getUnit())};
   }
 
   PlasmaEtchingParameters<NumericType> params;

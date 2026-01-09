@@ -22,7 +22,7 @@ template <typename NumericType, int D>
 class HBrO2Etching final : public ProcessModelGPU<NumericType, D> {
 public:
   explicit HBrO2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
-      : params(pParams), deviceParams(pParams.convertToFloat()) {
+      : params(pParams), deviceParams(pParams) {
     initializeModel();
   }
 
@@ -86,24 +86,35 @@ private:
         {2, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__plasmaNeutralReflection"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
-
-    this->processData.alloc(sizeof(PlasmaEtchingParameters<float>));
-    this->processData.upload(&deviceParams, 1);
 
     this->setUseMaterialIds(true);
+    precomputeSqrtEnergies();
+    this->processData.alloc(sizeof(PlasmaEtchingParametersGPU));
+    this->processData.upload(&deviceParams, 1);
+    this->hasGPU = true;
+
     this->processMetaData = params.toProcessMetaData();
   }
 
   void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
     params = pParams;
-    deviceParams = pParams.convertToFloat();
+    deviceParams = PlasmaEtchingParametersGPU(pParams);
+    precomputeSqrtEnergies();
     this->processData.upload(&deviceParams, 1);
   }
 
 private:
   PlasmaEtchingParameters<NumericType> params;
-  PlasmaEtchingParameters<float> deviceParams;
+  PlasmaEtchingParametersGPU deviceParams;
+
+  void precomputeSqrtEnergies() {
+    deviceParams.Substrate.Eth_ie = std::sqrt(deviceParams.Substrate.Eth_ie);
+    deviceParams.Passivation.Eth_ie =
+        std::sqrt(deviceParams.Passivation.Eth_ie);
+    deviceParams.Substrate.Eth_sp = std::sqrt(deviceParams.Substrate.Eth_sp);
+    deviceParams.Mask.Eth_sp = std::sqrt(deviceParams.Mask.Eth_sp);
+    deviceParams.Polymer.Eth_sp = std::sqrt(deviceParams.Polymer.Eth_sp);
+  }
 };
 } // namespace gpu
 #endif
@@ -165,8 +176,10 @@ public:
     defParams.passivationFlux = 1.0e2;
 
     // sticking probabilities
-    defParams.beta_E = {{1, 0.1}, {0, 0.1}};
-    defParams.beta_P = {{1, 1.}, {0, 1.}};
+    defParams.beta_E = {{static_cast<int>(Material::Si), 0.1},
+                        {static_cast<int>(Material::Mask), 0.1}};
+    defParams.beta_P = {{static_cast<int>(Material::Si), 1.},
+                        {static_cast<int>(Material::Mask), 1.}};
 
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
 

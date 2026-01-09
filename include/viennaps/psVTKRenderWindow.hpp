@@ -203,6 +203,7 @@ public:
   void render() {
     updateDisplay();
     interactor->Start();
+    finalize();
   }
 
   // Update the display without starting a new event loop (for use during
@@ -241,6 +242,15 @@ private:
   // forward declaration, requires full definition of Interactor styles
   void initialize();
 
+  void finalize() {
+    // Save window size and position for next initialization
+    auto size = renderWindow->GetSize();
+    windowSize = {size[0], size[1]};
+
+    auto position = renderWindow->GetPosition();
+    windowPosition = {position[0], position[1]};
+  }
+
   void updateRenderer(bool useCache = true) {
     if (domains.empty()) {
       VIENNACORE_LOG_WARNING("No domains set for rendering.");
@@ -264,7 +274,7 @@ private:
     }
 
     // Build annotated LUT for material IDs (categorical)
-    lut->SetNumberOfTableValues(uniqueMaterialIds.size());
+    lut->SetNumberOfTableValues(static_cast<int>(uniqueMaterialIds.size()));
     lut->IndexedLookupOn();
     lut->ResetAnnotations();
     materialMinId = std::numeric_limits<int>::max();
@@ -284,7 +294,8 @@ private:
     }
     lut->Build();
     scalarBar->SetLookupTable(lut);
-    scalarBar->SetMaximumNumberOfColors(uniqueMaterialIds.size());
+    scalarBar->SetMaximumNumberOfColors(
+        static_cast<int>(uniqueMaterialIds.size()));
     // When using annotations (categorical), don't draw numeric labels
     scalarBar->SetNumberOfLabels(0);
     scalarBar->SetTitle("Materials");
@@ -499,12 +510,13 @@ private:
       "x/y/z: View | s: Screenshot | h: Show/Hide Instructions | b: Show/Hide "
       "Scalar Bar | q/e: Quit";
   vtkSmartPointer<vtkTextActor> instructionsActor;
-  bool instructionsAdded = false;
+  bool instructionsAdded = true;
 
-  std::array<double, 3> backgroundColor = {84.0 / 255, 89.0 / 255, 109.0 / 255};
-  std::array<int, 2> windowSize = {800, 600};
-
-  RenderMode renderMode = RenderMode::INTERFACE;
+  // static settings
+  static std::array<double, 3> backgroundColor;
+  static std::array<int, 2> windowSize;
+  static std::array<int, 2> windowPosition;
+  static RenderMode renderMode;
 
   // cached meshes
   std::vector<SmartPointer<viennals::Mesh<T>>> cachedSurfaceMesh;
@@ -515,6 +527,17 @@ private:
   bool showScalarBar = true;
 };
 
+// Static member definitions
+template <typename T, int D>
+std::array<double, 3> VTKRenderWindow<T, D>::backgroundColor = {
+    84.0 / 255, 89.0 / 255, 109.0 / 255}; // ParaView default background
+template <typename T, int D>
+std::array<int, 2> VTKRenderWindow<T, D>::windowSize = {900, 700};
+template <typename T, int D>
+std::array<int, 2> VTKRenderWindow<T, D>::windowPosition = {100, 100};
+template <typename T, int D>
+RenderMode VTKRenderWindow<T, D>::renderMode = RenderMode::INTERFACE;
+
 namespace impl {
 template <typename T, int D>
 void InteractorOnChar(vtkRenderWindowInteractor *rwi,
@@ -524,7 +547,6 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
     return;
 
   auto renderer = rwi->GetRenderWindow()->GetRenderers()->GetFirstRenderer();
-  auto camera = renderer->GetActiveCamera();
 
   switch (rwi->GetKeyCode()) {
   case '1':
@@ -579,6 +601,8 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
   case 'p':
     window->printCameraInfo();
     return;
+  default:
+    return;
   }
 }
 } // namespace impl
@@ -587,7 +611,9 @@ void InteractorOnChar(vtkRenderWindowInteractor *rwi,
 // Full definition of Custom3DInteractorStyle after VTKRenderWindow is complete
 class Custom3DInteractorStyle : public vtkInteractorStyleTrackballCamera {
 public:
-  static Custom3DInteractorStyle *New();
+  static Custom3DInteractorStyle *New() {
+    VTK_STANDARD_NEW_BODY(Custom3DInteractorStyle);
+  }
   vtkTypeMacro(Custom3DInteractorStyle, vtkInteractorStyleTrackballCamera);
 
   void OnChar() override {
@@ -602,11 +628,13 @@ private:
   viennaps::VTKRenderWindow<double, 3> *Window = nullptr;
 }; // namespace viennaps
 
-vtkStandardNewMacro(Custom3DInteractorStyle);
+// vtkStandardNewMacro(Custom3DInteractorStyle);
 
 class Custom2DInteractorStyle : public vtkInteractorStyleImage {
 public:
-  static Custom2DInteractorStyle *New();
+  static Custom2DInteractorStyle *New() {
+    VTK_STANDARD_NEW_BODY(Custom2DInteractorStyle);
+  }
   vtkTypeMacro(Custom2DInteractorStyle, vtkInteractorStyleImage);
 
   void OnLeftButtonDown() override { this->StartPan(); }
@@ -625,7 +653,7 @@ private:
   viennaps::VTKRenderWindow<double, 2> *Window = nullptr;
 }; // namespace viennaps
 
-vtkStandardNewMacro(Custom2DInteractorStyle);
+// vtkStandardNewMacro(Custom2DInteractorStyle);
 
 // VTKRenderWindow::initialize() implementation - defined after
 // Custom3DInteractorStyle
@@ -640,28 +668,37 @@ template <typename T, int D> void VTKRenderWindow<T, D>::initialize() {
   instructionsActor->GetTextProperty()->SetFontSize(14);
   instructionsActor->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
   instructionsActor->SetPosition(10, 10);
-  instructionsActor->SetInput(instructionsText.c_str());
-  instructionsAdded = true;
+  if (instructionsAdded) {
+    instructionsActor->SetInput(instructionsText.c_str());
+  } else {
+    instructionsActor->SetInput("");
+  }
 
   renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
   renderWindow->SetWindowName("ViennaPS");
   renderWindow->SetSize(windowSize.data());
+  renderWindow->SetPosition(windowPosition.data());
   renderWindow->AddRenderer(renderer);
 
   // Initialize interactor
   interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 
-  if constexpr (D == 2) {
-    vtkCamera *cam = renderer->GetActiveCamera();
-    cam->ParallelProjectionOn();
-    auto style = vtkSmartPointer<Custom2DInteractorStyle>::New();
-    style->setRenderWindow(this);
-    interactor->SetInteractorStyle(style);
+  if constexpr (std::is_same_v<T, double>) {
+    if constexpr (D == 2) {
+      vtkCamera *cam = renderer->GetActiveCamera();
+      cam->ParallelProjectionOn();
+      auto style = vtkSmartPointer<Custom2DInteractorStyle>::New();
+      style->setRenderWindow(this);
+      interactor->SetInteractorStyle(style);
+    } else {
+      setCameraView(1); // Default view along Y axis
+      auto style = vtkSmartPointer<Custom3DInteractorStyle>::New();
+      style->setRenderWindow(this);
+      interactor->SetInteractorStyle(style);
+    }
   } else {
-    setCameraView(1); // Default view along Y axis
-    auto style = vtkSmartPointer<Custom3DInteractorStyle>::New();
-    style->setRenderWindow(this);
-    interactor->SetInteractorStyle(style);
+    VIENNACORE_LOG_WARNING("VTKRenderWindow with float precision does not have "
+                           "custom interactor.");
   }
 
   interactor->SetRenderWindow(renderWindow);

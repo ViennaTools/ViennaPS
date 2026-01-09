@@ -27,8 +27,8 @@ public:
   GDSMaskProximity(DomainType2D inputLS, int delta,
                    const std::vector<NumericType> &sigmas,
                    const std::vector<NumericType> &weights)
-      : inputLevelSet(inputLS), deltaRatio(delta), sigmas(sigmas),
-        weights(weights) {
+      : sigmas(sigmas), weights(weights), deltaRatio(delta),
+        inputLevelSet(inputLS) {
     assert(sigmas.size() == weights.size());
     assert(inputLS != nullptr);
     initializeGrid();
@@ -244,23 +244,19 @@ private:
     return output;
   }
 
-  bool applyBoundaryCondition(
+  static bool applyBoundaryCondition(
       int &x, int &y, int maxX, int maxY,
       const std::array<BoundaryType, 2> &boundaryConditions) {
     // X
     if (x < 0) {
-      if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
+      if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
         x = -x;
       else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
         x = maxX - 1;
       else
         return false;
     } else if (x > maxX) {
-      if (boundaryConditions[0] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
+      if (boundaryConditions[0] == BoundaryType::REFLECTIVE_BOUNDARY)
         x = 2 * maxX - x - 1;
       else if (boundaryConditions[0] == BoundaryType::PERIODIC_BOUNDARY)
         x = 0;
@@ -270,18 +266,14 @@ private:
 
     // Y
     if (y < 0) {
-      if (boundaryConditions[1] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
+      if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
         y = -y;
       else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
         y = maxY - 1;
       else
         return false;
     } else if (y > maxY) {
-      if (boundaryConditions[1] == BoundaryType::INFINITE_BOUNDARY)
-        return false;
-      else if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
+      if (boundaryConditions[1] == BoundaryType::REFLECTIVE_BOUNDARY)
         y = 2 * maxY - y - 1;
       else if (boundaryConditions[1] == BoundaryType::PERIODIC_BOUNDARY)
         y = 0;

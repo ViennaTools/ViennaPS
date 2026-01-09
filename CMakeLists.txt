@@ -2,7 +2,18 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 4.1.3)
+  VERSION 4.2.0)
+
+# --------------------------------------------------------------------------------------------------------
+# Include guards
+# --------------------------------------------------------------------------------------------------------
+
+if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+  message(
+    FATAL_ERROR
+      "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
+  )
+endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Library switches
@@ -25,7 +36,7 @@ option(VIENNAPS_PACKAGE_PYTHON "Build python bindings with intent to publish whe
 
 set(VIENNAPS_LOOKUP_DIRS
     ""
-    CACHE STRING "Directories to account for when searching installed dependencies")
+    CACHE STRING "Directories to account for when searching installed dependencies (VTK or embree)")
 
 list(APPEND CMAKE_PREFIX_PATH ${VIENNAPS_LOOKUP_DIRS})
 
@@ -67,20 +78,13 @@ endif()
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(ViennaTools::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
+target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 set_target_properties(
   ${PROJECT_NAME}
-  PROPERTIES CXX_STANDARD 17
+  PROPERTIES CXX_STANDARD 20
              CXX_EXTENSIONS OFF
              CXX_STANDARD_REQUIRED ON
              WINDOWS_EXPORT_ALL_SYMBOLS ON)
-
-if(MSVC)
-  # https://learn.microsoft.com/cpp/c-runtime-library/math-constants TODO: In case C++20 is adopted
-  # any time soon: https://cppreference.com/w/cpp/numeric/constants
-
-  target_compile_definitions(${PROJECT_NAME} INTERFACE _USE_MATH_DEFINES=1)
-endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Include directories
@@ -101,7 +105,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.8.0
+  VERSION 1.9.2
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -111,21 +115,20 @@ CPMAddPackage(
   VERSION 1.13.0
   GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
 
-CPMFindPackage(
+CPMAddPackage(
   NAME ViennaRay
-  VERSION 3.9.1
+  VERSION 3.10.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
-CPMFindPackage(
+CPMAddPackage(
   NAME ViennaLS
-  VERSION 5.3.0
-  GIT_TAG int-velocities
+  VERSION 5.4.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-CPMFindPackage(
+CPMAddPackage(
   NAME ViennaCS
   VERSION 1.1.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
@@ -140,6 +143,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTo
 
 if(VIENNAPS_PRECOMPILE_HEADERS)
   set(VIENNAPS_LINKAGE SHARED)
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
   if(VIENNAPS_STATIC_BUILD)
     set(VIENNAPS_LINKAGE STATIC)
@@ -149,9 +153,10 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   add_library(${LIB_NAME} ${VIENNAPS_LINKAGE})
 
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
-  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED)
-  target_sources(${LIB_NAME} PRIVATE "lib/specializationsMain.cpp" "lib/specializationsModels.cpp"
-                                     "lib/specializationsGeometries.cpp")
+  target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED=1
+                                                 VIENNACORE_COMPILE_SHARED_LIB=1)
+  target_sources(${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp"
+                                     "lib/specModels.cpp")
 
   set_target_properties(
     ${LIB_NAME}
@@ -174,8 +179,7 @@ endif()
 # Setup GPU
 # --------------------------------------------------------------------------------------------------------
 
-# If CUDA or OptiX is not found in ViennaCore, VIENNACORE_PTX_DIR is not set
-if(VIENNAPS_USE_GPU AND VIENNACORE_PTX_DIR)
+if(VIENNAPS_USE_GPU)
   message(STATUS "[ViennaPS] Enabled GPU Support")
   add_subdirectory(gpu)
 else()
@@ -226,4 +230,4 @@ packageProject(
   INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/viennaps
   INCLUDE_DESTINATION include/viennaps-${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS;OpenMP")
+  DEPENDENCIES "ViennaCore;ViennaLS;ViennaRay;ViennaCS")

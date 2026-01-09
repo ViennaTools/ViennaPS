@@ -2,7 +2,7 @@
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
-#include <rayUtil.hpp>
+#include <utility>
 
 #include "../process/psSurfaceModel.hpp"
 #include "../psUnits.hpp"
@@ -86,8 +86,7 @@ public:
 
     // The etch rate is calculated in nm/s
     const double unitConversion =
-        units::Time::getInstance().convertSecond() /
-        units::Length::getInstance().convertNanometer();
+        units::Time::convertSecond() / units::Length::convertNanometer();
 
 #pragma omp parallel for reduction(|| : stop)
     for (size_t i = 0; i < numPoints; ++i) {
@@ -340,11 +339,11 @@ class PlasmaEtchingNeutral
   const int numCoverages;
 
 public:
-  PlasmaEtchingNeutral(const std::string &pFluxLabel,
+  PlasmaEtchingNeutral(std::string pFluxLabel,
                        std::unordered_map<int, NumericType> &pBetaMap,
                        const int pNumCoverages)
-      : fluxLabel(pFluxLabel), beta_map(pBetaMap), numCoverages(pNumCoverages) {
-  }
+      : fluxLabel(std::move(pFluxLabel)), beta_map(pBetaMap),
+        numCoverages(pNumCoverages) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,

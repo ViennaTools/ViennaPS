@@ -16,6 +16,9 @@
 
 #include <lsPreCompileMacros.hpp>
 
+// this include may only appear in a single source file:
+#include <optix_function_table_definition.h>
+
 namespace viennaps {
 
 // Precompile specializations for commonly used classes

@@ -11,7 +11,7 @@
 #include <rayReflection.hpp>
 
 #ifdef VIENNACORE_COMPILE_GPU
-#include <raygCallableConfig.hpp>
+#include <gpu/raygCallableConfig.hpp>
 #endif
 
 #include <numeric>
@@ -247,7 +247,6 @@ public:
         {1, viennaray::gpu::CallableSlot::INIT,
          "__direct_callable__multiIonInit"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
   }
 
   MultiParticleProcess(
@@ -285,7 +284,6 @@ public:
         {1, viennaray::gpu::CallableSlot::INIT,
          "__direct_callable__multiIonInit"}};
     this->setParticleCallableMap(pMap, cMap);
-    this->setCallableFileName("CallableWrapper");
 
     for (auto const &label : fluxDataLabels) {
       if (label.find("ion") != std::string::npos) {

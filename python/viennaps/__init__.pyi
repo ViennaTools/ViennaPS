@@ -8,13 +8,14 @@ which includes surface and volume representations,
 a ray tracer, and physical models for the simulation of
 microelectronic fabrication processes.
 """
-
 from __future__ import annotations
 import sys as _sys
 import viennals as ls
 from viennals._core import BoundaryConditionEnum as BoundaryType
 from viennals._core import SpatialSchemeEnum as SpatialScheme
 from viennals._core import LogLevel
+from viennals._core import SpatialSchemeEnum as SpatialScheme
+from viennals._core import TemporalSchemeEnum as TemporalScheme
 from viennaps._core import AdvectionParameters
 from viennaps._core import AtomicLayerProcessParameters
 from viennaps._core import CF4O2Parameters
@@ -37,6 +38,8 @@ from viennaps._core import Length
 from viennaps._core import LengthUnit
 from viennaps._core import Logger
 from viennaps._core import Material
+from viennaps._core import MaterialCategory
+from viennaps._core import MaterialInfo
 from viennaps._core import MaterialMap
 from viennaps._core import MetaDataLevel
 from viennaps._core import NormalizationType
@@ -49,6 +52,7 @@ from viennaps._core import PlasmaEtchingParametersSubstrate
 from viennaps._core import ProcessParams
 from viennaps._core import RateSet
 from viennaps._core import RayTracingParameters
+from viennaps._core import RenderMode
 from viennaps._core import Slice
 from viennaps._core import Time
 from viennaps._core import TimeUnit
@@ -140,7 +144,7 @@ __all__: list[str] = [
     "HoleShape",
     "IBEParameters",
     "IBEParametersCos4Yield",
-    "SpatialScheme",
+    "IntegrationScheme",
     "Interpolation",
     "IonBeamEtching",
     "IsotropicProcess",
@@ -175,6 +179,7 @@ __all__: list[str] = [
     "RateSet",
     "RayTracingParameters",
     "Reader",
+    "RenderMode",
     "SF6C4F8Etching",
     "SF6O2Etching",
     "SelectiveEpitaxy",
@@ -183,6 +188,7 @@ __all__: list[str] = [
     "Slice",
     "SphereDistribution",
     "StencilLocalLaxFriedrichsScalar",
+    "TemporalScheme",
     "TEOSDeposition",
     "TEOSPECVD",
     "Time",
@@ -212,32 +218,29 @@ def _windows_dll_path(): ...
 def readConfigFile(fileName: str):
     """
     Read a config file in the ViennaPS standard config file format.
-
+    
         Parameters
         ----------
         fileName: str
                     Name of the config file.
-
+    
         Returns
         -------
         dict
             A dictionary containing the parameters from the config file.
-
+        
     """
-
 def setDimension(d: int):
     """
     Set the dimension of the simulation (2 or 3).
-
+    
         Parameters
         ----------
         d: int
             Dimension of the simulation (2 or 3).
-
+        
     """
-
 PROXY_DIM: int = 2
-__version__: str = "4.1.3"
-ptxPath: str = ""
-version: str = "4.1.3"
+__version__: str = '4.2.0'
+version: str = '4.2.0'
 _C = _core

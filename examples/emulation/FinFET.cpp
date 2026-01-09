@@ -1,13 +1,4 @@
-#include <geometries/psMakePlane.hpp>
-#include <models/psDirectionalProcess.hpp>
-#include <models/psGeometricDistributionModels.hpp>
-#include <models/psIsotropicProcess.hpp>
-#include <models/psSelectiveEpitaxy.hpp>
-#include <process/psProcess.hpp>
-#include <psDomain.hpp>
-#include <psPlanarize.hpp>
-#include <psReader.hpp>
-#include <psWriter.hpp>
+#include <viennaps.hpp>
 
 #include <lsReader.hpp>
 

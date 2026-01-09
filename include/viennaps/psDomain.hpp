@@ -29,7 +29,7 @@ namespace viennaps {
 using namespace viennacore;
 
 enum class MetaDataLevel {
-  NONE = 0,    // No metadata add to ouptut
+  NONE = 0,    // No metadata add to output
   GRID = 1,    // Domain-specific metadata (grid delta, boundary conditions)
   PROCESS = 2, // Process-specific metadata (e.g., process parameters)
   FULL = 3     // Full metadata including all available information (advection
@@ -281,14 +281,14 @@ public:
     if (removeWrapped) {
       auto remove = levelSets_.at(idx);
 
-      for (int i = idx - 1; i >= 0; i--) {
+      for (int i = static_cast<int>(idx) - 1; i >= 0; i--) {
         viennals::BooleanOperation<NumericType, D>(
             remove, levelSets_.at(i),
             viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
             .apply();
       }
 
-      for (int i = idx + 1; i < levelSets_.size(); i++) {
+      for (int i = static_cast<int>(idx) + 1; i < levelSets_.size(); i++) {
         viennals::BooleanOperation<NumericType, D>(
             levelSets_.at(i), remove,
             viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
