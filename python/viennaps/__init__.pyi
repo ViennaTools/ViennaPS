@@ -1,5 +1,4 @@
 """
-
 ViennaPS
 ========
 
@@ -8,239 +7,122 @@ which includes surface and volume representations,
 a ray tracer, and physical models for the simulation of
 microelectronic fabrication processes.
 """
-from __future__ import annotations
+
+
+def _windows_dll_path():
+    import os
+
+    additional_paths = [
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "viennaps.libs")
+    ]
+
+    for path in additional_paths:
+        if not os.path.exists(path):
+            continue
+
+        os.add_dll_directory(path)
+        os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
+
+
+def _module_ptx_path():
+    from importlib.util import find_spec
+    import os
+
+    spec = find_spec("viennaps")
+    install_path = os.path.dirname(os.path.abspath(spec.origin))
+    return os.path.join(install_path, "ptx")
+
+
 import sys as _sys
+
+if _sys.platform == "win32":
+    _windows_dll_path()
+
+
 import viennals as ls
-from viennals._core import BoundaryConditionEnum as BoundaryType
-from viennals._core import SpatialSchemeEnum as SpatialScheme
-from viennals._core import LogLevel
-from viennals._core import SpatialSchemeEnum as SpatialScheme
-from viennals._core import TemporalSchemeEnum as TemporalScheme
-from viennaps._core import AdvectionParameters
-from viennaps._core import AtomicLayerProcessParameters
-from viennaps._core import CF4O2Parameters
-from viennaps._core import CF4O2ParametersIons
-from viennaps._core import CF4O2ParametersMask
-from viennaps._core import CF4O2ParametersPassivation
-from viennaps._core import CF4O2ParametersSi
-from viennaps._core import CF4O2ParametersSiGe
-from viennaps._core import CoverageParameters
-from viennaps._core import Extrude
-from viennaps._core import FaradayCageParameters
-from viennaps._core import FluorocarbonMaterialParameters
-from viennaps._core import FluorocarbonParameters
-from viennaps._core import FluorocarbonParametersIons
-from viennaps._core import FluxEngineType
-from viennaps._core import HoleShape
-from viennaps._core import IBEParameters
-from viennaps._core import IBEParametersCos4Yield
-from viennaps._core import Length
-from viennaps._core import LengthUnit
-from viennaps._core import Logger
-from viennaps._core import Material
-from viennaps._core import MaterialCategory
-from viennaps._core import MaterialInfo
-from viennaps._core import MaterialMap
-from viennaps._core import MetaDataLevel
-from viennaps._core import NormalizationType
-from viennaps._core import PlasmaEtchingParameters
-from viennaps._core import PlasmaEtchingParametersIons
-from viennaps._core import PlasmaEtchingParametersMask
-from viennaps._core import PlasmaEtchingParametersPassivation
-from viennaps._core import PlasmaEtchingParametersPolymer
-from viennaps._core import PlasmaEtchingParametersSubstrate
-from viennaps._core import ProcessParams
-from viennaps._core import RateSet
-from viennaps._core import RayTracingParameters
-from viennaps._core import RenderMode
-from viennaps._core import Slice
-from viennaps._core import Time
-from viennaps._core import TimeUnit
-from viennaps._core import constants
-from viennaps._core import gpu
-from viennaps._core import gpuAvailable
-from viennaps._core import setNumThreads
-from viennaps._core import util
-from viennaps.d2 import AdvectionCallback
-from viennaps.d2 import BoxDistribution
-from viennaps.d2 import CF4O2Etching
-from viennaps.d2 import CSVFileProcess
-from viennaps.d2 import DenseCellSet
-from viennaps.d2 import DirectionalProcess
-from viennaps.d2 import Domain
-from viennaps.d2 import DomainSetup
-from viennaps.d2 import FaradayCageEtching
-from viennaps.d2 import FluorocarbonEtching
-from viennaps.d2 import GDSGeometry
-from viennaps.d2 import GDSReader
-from viennaps.d2 import GeometricTrenchDeposition
-from viennaps.d2 import GeometryFactory
-from viennaps.d2 import HBrO2Etching
-from viennaps.d2 import Interpolation
-from viennaps.d2 import IonBeamEtching
-from viennaps.d2 import IsotropicProcess
-from viennaps.d2 import MakeFin
-from viennaps.d2 import MakeHole
-from viennaps.d2 import MakePlane
-from viennaps.d2 import MakeStack
-from viennaps.d2 import MakeTrench
-from viennaps.d2 import MultiParticleProcess
-from viennaps.d2 import OxideRegrowth
-from viennaps.d2 import Planarize
-from viennaps.d2 import Process
-from viennaps.d2 import ProcessModel
-from viennaps.d2 import ProcessModelBase
-from viennaps.d2 import RateGrid
-from viennaps.d2 import Reader
-from viennaps.d2 import SF6C4F8Etching
-from viennaps.d2 import SF6O2Etching
-from viennaps.d2 import SelectiveEpitaxy
-from viennaps.d2 import SingleParticleALD
-from viennaps.d2 import SingleParticleProcess
-from viennaps.d2 import SphereDistribution
-from viennaps.d2 import StencilLocalLaxFriedrichsScalar
-from viennaps.d2 import TEOSDeposition
-from viennaps.d2 import TEOSPECVD
-from viennaps.d2 import ToDiskMesh
-from viennaps.d2 import VTKRenderWindow
-from viennaps.d2 import WetEtching
-from viennaps.d2 import Writer
-from . import _core
-from . import d2
-from . import d3
 
-__all__: list[str] = [
-    "AdvectionCallback",
-    "AdvectionParameters",
-    "AtomicLayerProcessParameters",
-    "BoundaryType",
-    "BoxDistribution",
-    "CF4O2Etching",
-    "CF4O2Parameters",
-    "CF4O2ParametersIons",
-    "CF4O2ParametersMask",
-    "CF4O2ParametersPassivation",
-    "CF4O2ParametersSi",
-    "CF4O2ParametersSiGe",
-    "CSVFileProcess",
-    "CoverageParameters",
-    "DenseCellSet",
-    "DirectionalProcess",
-    "Domain",
-    "DomainSetup",
-    "Extrude",
-    "FaradayCageEtching",
-    "FaradayCageParameters",
-    "FluorocarbonEtching",
-    "FluorocarbonMaterialParameters",
-    "FluorocarbonParameters",
-    "FluorocarbonParametersIons",
-    "FluxEngineType",
-    "GDSGeometry",
-    "GDSReader",
-    "GeometricTrenchDeposition",
-    "GeometryFactory",
-    "HBrO2Etching",
-    "HoleShape",
-    "IBEParameters",
-    "IBEParametersCos4Yield",
-    "IntegrationScheme",
-    "Interpolation",
-    "IonBeamEtching",
-    "IsotropicProcess",
-    "Length",
-    "LengthUnit",
-    "LogLevel",
-    "Logger",
-    "MakeFin",
-    "MakeHole",
-    "MakePlane",
-    "MakeStack",
-    "MakeTrench",
-    "Material",
-    "MaterialMap",
-    "MetaDataLevel",
-    "MultiParticleProcess",
-    "NormalizationType",
-    "OxideRegrowth",
-    "PROXY_DIM",
-    "Planarize",
-    "PlasmaEtchingParameters",
-    "PlasmaEtchingParametersIons",
-    "PlasmaEtchingParametersMask",
-    "PlasmaEtchingParametersPassivation",
-    "PlasmaEtchingParametersPolymer",
-    "PlasmaEtchingParametersSubstrate",
-    "Process",
-    "ProcessModel",
-    "ProcessModelBase",
-    "ProcessParams",
-    "RateGrid",
-    "RateSet",
-    "RayTracingParameters",
-    "Reader",
-    "RenderMode",
-    "SF6C4F8Etching",
-    "SF6O2Etching",
-    "SelectiveEpitaxy",
-    "SingleParticleALD",
-    "SingleParticleProcess",
-    "Slice",
-    "SphereDistribution",
-    "StencilLocalLaxFriedrichsScalar",
-    "TemporalScheme",
-    "TEOSDeposition",
-    "TEOSPECVD",
-    "Time",
-    "TimeUnit",
-    "ToDiskMesh",
-    "VTKRenderWindow",
-    "WetEtching",
-    "Writer",
-    "constants",
-    "d2",
-    "d3",
-    "gpu",
-    "gpuAvailable",
-    "ls",
-    "ptxPath",
-    "readConfigFile",
-    "setDimension",
-    "setNumThreads",
-    "util",
-    "version",
-]
+# Convenience imports
+from viennals import SpatialSchemeEnum as SpatialScheme
+from viennals import TemporalSchemeEnum as TemporalScheme
+from viennals import BoundaryConditionEnum as BoundaryType
+from viennals import LogLevel as LogLevel
+from . import _core as _C  # the binary inside the package
 
-def __dir__(): ...
-def __getattr__(name): ...
-def _module_ptx_path(): ...
-def _windows_dll_path(): ...
-def readConfigFile(fileName: str):
-    """
-    Read a config file in the ViennaPS standard config file format.
-    
-        Parameters
-        ----------
-        fileName: str
-                    Name of the config file.
-    
-        Returns
-        -------
-        dict
-            A dictionary containing the parameters from the config file.
-        
-    """
+# bring d2 and d3 into the top-level namespace
+d2 = _C.d2
+d3 = _C.d3
+_sys.modules[__name__ + ".d2"] = d2
+_sys.modules[__name__ + ".d3"] = d3
+PROXY_DIM = 2  # default dimension is 2D
+
+
 def setDimension(d: int):
+    """Set the dimension of the simulation (2 or 3).
+
+    Parameters
+    ----------
+    d: int
+        Dimension of the simulation (2 or 3).
     """
-    Set the dimension of the simulation (2 or 3).
-    
-        Parameters
-        ----------
-        d: int
-            Dimension of the simulation (2 or 3).
-        
+    global PROXY_DIM
+    if d == 2 or d == 3:
+        PROXY_DIM = d
+        ls.setDimension(d)
+    else:
+        raise ValueError("Dimension must be 2 or 3.")
+
+
+# Config file reader helper function
+def readConfigFile(fileName: str):
+    """Read a config file in the ViennaPS standard config file format.
+
+    Parameters
+    ----------
+    fileName: str
+                Name of the config file.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the parameters from the config file.
     """
-PROXY_DIM: int = 2
-__version__: str = '4.2.0'
-version: str = '4.2.0'
-_C = _core
+    par_dict = {}
+
+    with open(fileName, "r") as file:
+        lines = file.readlines()
+        for line in lines:
+
+            line = line[: line.find("#")]  # remove comments
+
+            if len(line) > 0:
+                par_name = line[: line.find("=")].strip(" ")
+                par_value = line[line.find("=") + 1 :]
+
+                try:
+                    val = float(par_value)
+                except:
+                    val = par_value
+
+                par_dict[par_name] = val
+
+    return par_dict
+
+
+def __getattr__(name):
+    # 1) common/top-level from _core
+    try:
+        return getattr(_C, name)
+    except AttributeError as e_core:
+        pass
+    # 2) fallback to current default dimension
+    m = d2 if PROXY_DIM == 2 else d3
+    try:
+        return getattr(m, name)
+    except AttributeError:
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        ) from e_core
+
+
+def __dir__():
+    return sorted(set(globals()) | set(dir(_C)) | set(dir(d2)) | set(dir(d3)))

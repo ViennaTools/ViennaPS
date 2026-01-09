@@ -8,14 +8,15 @@ import typing
 import viennals._core
 from viennaps import d2
 import viennaps.d2
-import viennaps.d3
 from viennaps import d3
+import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
 __all__: list[str] = ['AdvectionParameters', 'AtomicLayerProcessParameters', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialMap', 'MetaDataLevel', 'NormalizationType', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'Slice', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'setNumThreads', 'util', 'version']
 class AdvectionParameters:
     adaptiveTimeStepping: bool
+    calculateIntermediateVelocities: bool
     checkDissipation: bool
     ignoreVoids: bool
     integrationScheme: viennals._core.SpatialSchemeEnum
@@ -361,6 +362,12 @@ class CoverageParameters:
         ...
     @maxIterations.setter
     def maxIterations(self, arg0: typing.SupportsInt) -> None:
+        ...
+    @property
+    def initialized(self) -> bool:
+        ...
+    @initialized.setter
+    def initialized(self, arg0: bool) -> None:
         ...
     @property
     def tolerance(self) -> float:

@@ -62,8 +62,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                                 "Material types for domain and level sets");
 #define ENUM_BIND(id, sym, cat, dens, cond, color)                             \
   matEnum.value(#sym, Material::sym);
-#define ENUM_BIND(id, sym, cat, dens, cond, color)                             \
-  matEnum.value(#sym, Material::sym);
   MATERIAL_LIST(ENUM_BIND)
 #undef ENUM_BIND
   matEnum.finalize();
@@ -119,13 +117,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("GRID", MetaDataLevel::GRID)
       .value("PROCESS", MetaDataLevel::PROCESS)
       .value("FULL", MetaDataLevel::FULL)
-      .finalize();
-
-  // Render Mode Enum
-  py::native_enum<RenderMode>(module, "RenderMode", "enum.IntEnum")
-      .value("SURFACE", RenderMode::SURFACE)
-      .value("INTERFACE", RenderMode::INTERFACE)
-      .value("VOLUME", RenderMode::VOLUME)
       .finalize();
 
   // Render Mode Enum
@@ -559,6 +550,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(py::init<>())
       .def_readwrite("tolerance", &CoverageParameters::tolerance)
       .def_readwrite("maxIterations", &CoverageParameters::maxIterations)
+      .def_readwrite("initialized", &CoverageParameters::initialized)
       .def("toMetaData", &CoverageParameters::toMetaData,
            "Convert the coverage parameters to a metadata dict.")
       .def("toMetaDataString", &CoverageParameters::toMetaDataString,

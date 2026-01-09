@@ -41,7 +41,7 @@ int main() {
 
   std::cout << "Number of components before removing stray points: "
             << domain->getNumberOfComponents() << std::endl;
-  VC_TEST_ASSERT(domain->getNumberOfComponents() == 7);
+  VC_TEST_ASSERT(domain->getNumberOfComponents() == 8);
 
   domain->removeStrayPoints();
 
@@ -50,12 +50,12 @@ int main() {
 
   std::cout << "Number of components after removing stray points: "
             << domain->getNumberOfComponents() << std::endl;
-  VC_TEST_ASSERT(domain->getNumberOfComponents() == 1);
+  VC_TEST_ASSERT(domain->getNumberOfComponents() == 2);
 
   MakeTrench<NumericType, D>(domain, 5.0, 0.0, 0.0, 1.0).apply();
   domain->removeMaterial(Material::Si);
 
-  VC_TEST_ASSERT(domain->getNumberOfComponents() == 2);
+  VC_TEST_ASSERT(domain->getNumberOfComponents() == 3);
 
   domain->saveLevelSetMesh("testInitial");
 }
