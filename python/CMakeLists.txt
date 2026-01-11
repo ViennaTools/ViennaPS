@@ -86,10 +86,12 @@ if(VIENNAPS_USE_GPU)
   add_dependencies(${VIENNAPS_PYTHON_MODULE_NAME} ${VIENNAPS_GPU_DEPENDENCIES})
 
   # Set PTX path override for runtime kernel loading from site-packages/<pkg>/ptx.
-  # ABSOLUTE path enforced with dynamic module path.
-  target_compile_definitions(
-    ${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE VIENNACORE_KERNELS_PATH_OVERRIDE=ptx
-                                           VIENNACORE_DYNAMIC_MODULE_PATH=1)
+  # ABSOLUTE path enforced with dynamic module path. Only works on Linux based systems.
+  if (NOT MSVC)
+    target_compile_definitions(
+        ${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE VIENNACORE_KERNELS_PATH_OVERRIDE=ptx
+                                               VIENNACORE_DYNAMIC_MODULE_PATH=1)
+  endif()
 
   # Install PTX files
   install(DIRECTORY "${VIENNACORE_NVCC_PTX_DIR}/" DESTINATION "${VIENNAPS_PYTHON_PACKAGE_NAME}/ptx")
