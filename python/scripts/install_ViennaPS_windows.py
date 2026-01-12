@@ -209,10 +209,6 @@ def install_viennaps(
     else:
         cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
 
-    # If you want to force Ninja on Windows, you can add:
-    # cmake_args.append("-G Ninja")
-    # (Only do this if Ninja is guaranteed to be available.)
-
     env["CMAKE_ARGS"] = " ".join(cmake_args)
 
     cmd = [str(pip_path), "install", "--no-deps", "."]
