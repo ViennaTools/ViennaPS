@@ -35,9 +35,6 @@ geometry.insertNextLevelSetAsMaterial(maskLS, ps.Material.Mask)
 # Add plane
 ps.MakePlane(geometry, 0.0, ps.Material.Si, True).apply()
 
-# print intermediate output surfaces during the process
-ps.Logger.setLogLevel(ps.LogLevel.INFO)
-
 ps.Length.setUnit(params["lengthUnit"])
 ps.Time.setUnit(params["timeUnit"])
 
@@ -58,9 +55,7 @@ rayTracingParams = ps.RayTracingParameters()
 rayTracingParams.raysPerPoint = int(params["raysPerPoint"])
 
 advectionParams = ps.AdvectionParameters()
-advectionParams.spatialScheme = ps.util.convertSpatialScheme(
-    params["spatialScheme"]
-)
+advectionParams.spatialScheme = ps.util.convertSpatialScheme(params["spatialScheme"])
 
 fluxEngineStr = params["fluxEngine"]
 fluxEngine = ps.util.convertFluxEngineType(fluxEngineStr)
