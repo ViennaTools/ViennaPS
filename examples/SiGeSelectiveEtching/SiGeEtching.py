@@ -1,7 +1,7 @@
-import viennaps.d2 as psd
 import viennaps as ps
 from SiGeStackGeometry import CreateGeometry
 
+ps.setDimension(2)
 ps.setNumThreads(16)
 
 # create initial geometry
@@ -71,7 +71,7 @@ modelParams.gamma_C_oxidized = {
     ps.Material.SiGe: 0.7,
 }
 
-model = psd.CF4O2Etching(modelParams)
+model = ps.CF4O2Etching(modelParams)
 parameters = model.getParameters()
 
 covParams = ps.CoverageParameters()
@@ -85,7 +85,7 @@ advParams = ps.AdvectionParameters()
 advParams.timeStepRatio = 0.2
 
 # process setup
-process = psd.Process()
+process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(params["processTime"])  # seconds

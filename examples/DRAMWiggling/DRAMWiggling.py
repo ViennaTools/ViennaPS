@@ -46,6 +46,7 @@ modelParams.Ions.meanEnergy = params["meanEnergy"]
 modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
 modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Ions.n_l = 200
+modelParams.Substrate.B_sp = 0.75
 model = ps.HBrO2Etching(modelParams)
 
 coverageParameters = ps.CoverageParameters()

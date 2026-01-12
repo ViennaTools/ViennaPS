@@ -195,9 +195,7 @@ writeVolume(domain)
 print("S/D Epitaxy ...", end="", flush=True)
 domain.duplicateTopLevelSet(ps.Material.SiGe)
 advectionParams = ps.AdvectionParameters()
-advectionParams.spatialScheme = (
-    ps.SpatialScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
-)
+advectionParams.spatialScheme = ps.SpatialScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 ps.StencilLocalLaxFriedrichsScalar.setMaxDissipation(1000)
 material = [
     (ps.Material.Si, 1.0),
