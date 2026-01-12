@@ -70,38 +70,53 @@ ibeParams.cos4Yield.a1 = params["yieldFactor"]
 ibeParams.cos4Yield.a2 = -1.55
 ibeParams.cos4Yield.a3 = 0.65
 
-model = ps.IonBeamEtching()
+ps.Logger.setLogLevel(ps.LogLevel.INTERMEDIATE)
+
 
 # ----- ANSGM Etch ----- #
-angle = params["phi1"]
-direction = [0.0, 0.0, 0.0]
-direction[0] = -np.sin(np.deg2rad(angle))
-direction[1] = -np.cos(np.deg2rad(angle))
-ibeParams.tiltAngle = angle
-model.setPrimaryDirection(direction)
-model.setParameters(ibeParams)
+def ANSGM_Etch():
+    angle = params["phi1"]
+    direction = [0.0, 0.0, 0.0]
+    direction[0] = -np.sin(np.deg2rad(angle))
+    direction[1] = -np.cos(np.deg2rad(angle))
+    ibeParams.tiltAngle = angle
+    model = ps.IonBeamEtching(ibeParams, maskMaterials=[])
+    model.setPrimaryDirection(direction)
+    model.setProcessName("ANSGM_Etch")
 
-process = ps.Process(geometry, model, 0.0)
-process.setParameters(advectionParams)
-process.setParameters(rayTracingParams)
+    process = ps.Process(geometry, model, params["ANSGM_Depth"])
+    process.setParameters(advectionParams)
+    process.setParameters(rayTracingParams)
+    process.apply()
+    geometry.saveSurfaceMesh("ANSGM_Etch", True)
 
-process.setProcessDuration(params["ANSGM_Depth"])
-process.apply()
-geometry.saveSurfaceMesh("ANSGM_Etch", True)
+
+ANSGM_Etch()
 
 # remove mask
 geometry.removeTopLevelSet()
 geometry.saveSurfaceMesh("ANSGM", True)
 
-# ------ Blazed Gratins Etch ------ #
-angle = params["phi2"]
-direction[0] = -np.sin(np.deg2rad(angle))
-direction[1] = -np.cos(np.deg2rad(angle))
-ibeParams.tiltAngle = angle
-model.setPrimaryDirection(direction)
-model.setParameters(ibeParams)
 
-for i in range(1, 5):
-    process.setProcessDuration(params["etchTimeP" + str(i)])
-    process.apply()
-    geometry.saveSurfaceMesh("BlazedGratingsEtch_P" + str(i))
+# ------ Blazed Gratins Etch ------ #
+def BlazedGratings_Etch():
+    angle = params["phi2"]
+    direction = [0.0, 0.0, 0.0]
+    direction[0] = -np.sin(np.deg2rad(angle))
+    direction[1] = -np.cos(np.deg2rad(angle))
+    ibeParams.tiltAngle = angle
+    model = ps.IonBeamEtching(ibeParams, maskMaterials=[])
+    model.setPrimaryDirection(direction)
+    model.setProcessName("BlazedGratings_Etch")
+
+    process = ps.Process(geometry, model)
+    process.setParameters(advectionParams)
+    process.setParameters(rayTracingParams)
+
+    for i in range(1, 2):
+        process.setProcessDuration(params["etchTimeP" + str(i)])
+        process.apply()
+        geometry.saveSurfaceMesh("BlazedGratingsEtch_P" + str(i))
+
+
+BlazedGratings_Etch()
