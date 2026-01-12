@@ -86,12 +86,8 @@ public:
 
   void apply() {
 
-    if (!checkInput())
+    if (!checkInputUpdateContext())
       return;
-
-    // Update context with current state
-    context_.updateFlags();
-    context_.printFlags();
 
     // Find appropriate strategy
     auto strategy = findStrategy();
@@ -120,10 +116,9 @@ public:
   }
 
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
-    if (!checkInput())
+    if (!checkInputUpdateContext())
       return nullptr;
 
-    context_.updateFlags();
     const auto name = context_.getProcessName();
     if (!context_.flags.useFluxEngine) {
       VIENNACORE_LOG_ERROR("Process model '" + name +
@@ -267,7 +262,7 @@ private:
 #endif
 
 public:
-  bool checkInput() {
+  bool checkInputUpdateContext() {
     if (!context_.domain) {
       VIENNACORE_LOG_ERROR("No domain passed to Process.");
       return false;
@@ -283,10 +278,19 @@ public:
       return false;
     }
 
+    // Update context with current state
+    context_.updateFlags();
+    context_.printFlags();
+
     // Auto-select engine type
     if (fluxEngineType_ == FluxEngineType::AUTO) {
       if (gpuAvailable() && context_.model->hasGPUModel()) {
-        fluxEngineType_ = FluxEngineType::GPU_TRIANGLE;
+        // Prefer disks if boundary is periodic in any direction
+        if (context_.flags.hasPeriodicBoundaries) {
+          fluxEngineType_ = FluxEngineType::GPU_DISK;
+        } else {
+          fluxEngineType_ = FluxEngineType::GPU_TRIANGLE;
+        }
       } else {
         fluxEngineType_ = FluxEngineType::CPU_DISK;
       }

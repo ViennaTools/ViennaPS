@@ -48,9 +48,12 @@ template <typename NumericType, int D> struct ProcessContext {
     bool isALP = false;
     bool isAnalytic = false;
     bool isGeometric = false;
+    bool hasPeriodicBoundaries = false;
   } flags;
 
   void updateFlags() {
+    assert(model && "Process model must be set before updating flags.");
+    assert(domain && "Domain must be set before updating flags.");
     flags.isGeometric = model->getGeometricModel() != nullptr;
     flags.useFluxEngine = model->useFluxEngine();
     flags.useAdvectionCallback = model->getAdvectionCallback() != nullptr;
@@ -60,6 +63,15 @@ template <typename NumericType, int D> struct ProcessContext {
     flags.isAnalytic = model->getVelocityField() && !model->useFluxEngine();
     flags.isALP = model->isALPModel();
     flags.useCoverages = flags.isALP || flags.useCoverages;
+
+    const auto &grid = domain->getGrid();
+    for (unsigned i = 0; i < D; ++i) {
+      if (grid.getBoundaryConditions(i) ==
+          viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY) {
+        flags.hasPeriodicBoundaries = true;
+        break;
+      }
+    }
   }
 
   void printFlags() const {
@@ -76,7 +88,9 @@ template <typename NumericType, int D> struct ProcessContext {
            << util::boolString(flags.useProcessParams)
            << "\n\tuseCoverages: " << util::boolString(flags.useCoverages)
            << "\n\tisALP: " << util::boolString(flags.isALP)
-           << "\n\tisAnalytic: " << util::boolString(flags.isAnalytic);
+           << "\n\tisAnalytic: " << util::boolString(flags.isAnalytic)
+           << "\n\thasPeriodicBoundaries: "
+           << util::boolString(flags.hasPeriodicBoundaries);
     if (model) {
       stream << "\nProcess Name: "
              << model->getProcessName().value_or("default");

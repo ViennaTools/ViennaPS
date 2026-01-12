@@ -8,6 +8,7 @@ using namespace viennaps;
 
 int main(int argc, char **argv) {
   omp_set_num_threads(16);
+  Logger::setLogLevel(LogLevel::DEBUG);
 
   // Parse the parameters
   util::Parameters params;
