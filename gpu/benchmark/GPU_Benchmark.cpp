@@ -55,6 +55,9 @@ int main() {
     }
     tracer.prepareParticlePrograms();
 
+    std::vector<std::string> dataLabels =
+        std::get<0>(particleConfig).dataLabels;
+
     std::cout << "Starting Triangle Benchmark\n";
 
     for (auto gd : gridDeltaValues) {
@@ -109,12 +112,14 @@ int main() {
         // POSTPROCESSING
         timer.start();
         auto pointData = viennals::PointData<NumericType>::New();
+        ElementToPointData<NumericType, float, viennaray::gpu::ResultType> post(
+            dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
+            domain->getGridDelta() * 2.0f);
+        post.prepare();
         tracer.normalizeResults();
+        post.setElementDataArrays(tracer.getResults());
+        post.convert();
         // tracer.downloadResults();
-        ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
-            IndexMap(tracer.getParticles()), tracer.getResults(), pointData,
-            elementKdTree, diskMesh, surfMesh, domain->getGridDelta() * 2.0f)
-            .apply();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(
             std::move(*pointData->getScalarData("flux")));
         velocityField->prepare(domain, velocities, 0.);

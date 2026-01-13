@@ -13,69 +13,10 @@ namespace viennaps {
 
 using namespace viennacore;
 
-class IndexMap {
-  std::vector<std::string> dataLabels;
-
-public:
-  IndexMap() = default;
-
-#ifdef VIENNACORE_COMPILE_GPU
-  template <class T>
-  explicit IndexMap(const std::vector<viennaray::gpu::Particle<T>> &particles) {
-    for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
-      for (size_t dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        dataLabels.push_back(particles[pIdx].dataLabels[dIdx]);
-      }
-    }
-  }
-#endif
-
-  template <class T>
-  explicit IndexMap(
-      const std::vector<std::unique_ptr<viennaray::AbstractParticle<T>>>
-          &particles) {
-    for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
-      auto labels = particles[pIdx]->getLocalDataLabels();
-      for (size_t dIdx = 0; dIdx < labels.size(); dIdx++) {
-        dataLabels.push_back(labels[dIdx]);
-      }
-    }
-  }
-
-  void insertNextDataLabel(std::string dataLabel) {
-    dataLabels.push_back(std::move(dataLabel));
-  }
-
-  std::size_t getIndex(const std::string &label) const {
-    for (std::size_t idx = 0; idx < dataLabels.size(); idx++) {
-      if (dataLabels[idx] == label) {
-        return idx;
-      }
-    }
-    assert(false && "Data label not found");
-    return 0;
-  }
-
-  [[nodiscard]] const std::string &getLabel(std::size_t idx) const {
-    assert(idx < dataLabels.size());
-    return dataLabels[idx];
-  }
-
-  std::size_t getNumberOfData() const { return dataLabels.size(); }
-
-  std::vector<std::string>::const_iterator begin() const {
-    return dataLabels.cbegin();
-  }
-
-  std::vector<std::string>::const_iterator end() const {
-    return dataLabels.cend();
-  }
-};
-
 template <typename NumericType, typename MeshNT, typename ResultType,
           bool d2 = true, bool d4 = true>
 class ElementToPointData {
-  const IndexMap indexMap_;
+  const std::vector<std::string> dataLabels_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
@@ -91,14 +32,14 @@ class ElementToPointData {
 
 public:
   ElementToPointData(
-      IndexMap indexMap,
+      const std::vector<std::string> &dataLabels,
       SmartPointer<viennals::PointData<NumericType>>
           pointData, // target point data
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : indexMap_(std::move(indexMap)), pointData_(pointData),
+      : dataLabels_(dataLabels), pointData_(pointData),
         elementKdTree_(elementKdTree), diskMesh_(diskMesh),
         surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
 
@@ -108,7 +49,7 @@ public:
   }
 
   void prepare() {
-    const auto numData = indexMap_.getNumberOfData();
+    const auto numData = dataLabels_.size();
     const auto &points = diskMesh_->nodes;
     const auto numPoints = points.size();
     const auto numElements = elementKdTree_->getNumberOfPoints();
@@ -117,7 +58,7 @@ public:
 
     // prepare point data container
     pointData_->clear();
-    for (const auto &label : indexMap_) {
+    for (const auto &label : dataLabels_) {
       std::vector<NumericType> data(numPoints, 0.);
       pointData_->insertNextScalarData(std::move(data), label);
     }
@@ -158,7 +99,7 @@ public:
   }
 
   void convert() {
-    const auto numData = indexMap_.getNumberOfData();
+    const auto numData = dataLabels_.size();
     const auto &points = diskMesh_->nodes;
     const auto numPoints = points.size();
 

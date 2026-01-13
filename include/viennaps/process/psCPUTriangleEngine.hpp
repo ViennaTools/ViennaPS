@@ -18,6 +18,8 @@ class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;
+  using PostProcessingType =
+      ElementToPointData<NumericType, float, NumericType, true, D == 3>;
 
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
@@ -27,6 +29,7 @@ public:
       VIENNACORE_LOG_WARNING("Invalid process model.");
       return ProcessResult::INVALID_INPUT;
     }
+    model_ = model;
     return ProcessResult::SUCCESS;
   }
 
@@ -55,20 +58,17 @@ public:
     if (!context.rayTracingParams.useRandomSeeds)
       rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
 
-    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
-        context.model);
-
-    if (auto source = model->getSource()) {
+    if (auto source = model_->getSource()) {
       rayTracer_.setSource(source);
       VIENNACORE_LOG_INFO("Using custom source.");
     }
-    if (auto primaryDirection = model->getPrimaryDirection()) {
+    if (auto primaryDirection = model_->getPrimaryDirection()) {
       VIENNACORE_LOG_INFO("Using primary direction: " +
                           util::arrayToString(primaryDirection.value()));
       rayTracer_.setPrimaryDirection(primaryDirection.value());
     }
 
-    model->initializeParticleDataLogs();
+    model_->initializeParticleDataLogs();
 
     return ProcessResult::SUCCESS;
   }
@@ -91,8 +91,8 @@ public:
     if constexpr (D == 2) {
       viennaray::LineMesh lineMesh;
       lineMesh.gridDelta = static_cast<float>(context.domain->getGridDelta());
-      lineMesh.lines = surfaceMesh_->lines;
-      lineMesh.nodes = surfaceMesh_->nodes;
+      lineMesh.lines = std::move(surfaceMesh_->lines);
+      lineMesh.nodes = std::move(surfaceMesh_->nodes);
       lineMesh.minimumExtent = surfaceMesh_->minimumExtent;
       lineMesh.maximumExtent = surfaceMesh_->maximumExtent;
 
@@ -218,14 +218,11 @@ private:
     assert(fluxes != nullptr);
     fluxes->clear();
 
-    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
-        context.model);
-
     std::vector<std::vector<NumericType>> elementFluxes;
 
     unsigned particleIdx = 0;
-    for (auto &particle : model->getParticleTypes()) {
-      int dataLogSize = model->getParticleLogSize(particleIdx);
+    for (auto &particle : model_->getParticleTypes()) {
+      int dataLogSize = model_->getParticleLogSize(particleIdx);
       if (dataLogSize > 0) {
         rayTracer_.getDataLog().data.resize(1);
         rayTracer_.getDataLog().data[0].resize(dataLogSize, 0.);
@@ -267,16 +264,16 @@ private:
         elementFluxes.push_back(std::move(flux));
       }
 
-      model->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
+      model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
       ++particleIdx;
     }
 
     // map fluxes to points
-    ElementToPointData<NumericType, float, NumericType, true, D == 3>
-        postProcessing(IndexMap(model->getParticleTypes()), fluxes,
-                       elementKdTree_, context.diskMesh, surfaceMesh_,
-                       context.domain->getGridDelta() *
-                           (context.rayTracingParams.smoothingNeighbors + 1));
+    PostProcessingType postProcessing(
+        model_->getParticleDataLabels(), fluxes, elementKdTree_,
+        context.diskMesh, surfaceMesh_,
+        context.domain->getGridDelta() *
+            (context.rayTracingParams.smoothingNeighbors + 1));
     postProcessing.setElementDataArrays(std::move(elementFluxes));
     postProcessing.apply();
   }
@@ -298,6 +295,7 @@ private:
 
 private:
   viennaray::TraceTriangle<NumericType, D> rayTracer_;
+  SmartPointer<ProcessModelCPU<NumericType, D>> model_;
 
   KDTreeType elementKdTree_;
   MeshType surfaceMesh_;

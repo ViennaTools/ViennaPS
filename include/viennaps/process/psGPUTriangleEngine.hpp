@@ -26,6 +26,9 @@ class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;
+  using PostProcessingType =
+      ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
+                         D == 3>;
 
 public:
   explicit GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
@@ -203,21 +206,20 @@ public:
       rayTracer_.setElementData(d_coverages, numCov);
     }
 
-    // Prepare post-processing
-    ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
-                       D == 3>
-        postProcessing(IndexMap(rayTracer_.getParticles()), fluxes,
-                       elementKdTree_, context.diskMesh, surfaceMesh_,
-                       context.domain->getGridDelta() *
-                           (context.rayTracingParams.smoothingNeighbors + 1));
-
     // run the ray tracer
     rayTracer_.apply(); // device detach point here
+
+    // Prepare post-processing
+    PostProcessingType postProcessing(
+        model_->getParticleDataLabels(), fluxes, elementKdTree_,
+        context.diskMesh, surfaceMesh_,
+        context.domain->getGridDelta() *
+            (context.rayTracingParams.smoothingNeighbors + 1));
     postProcessing.prepare();
 
     rayTracer_.normalizeResults(); // device sync point here
     postProcessing.setElementDataArrays(rayTracer_.getResults());
-    postProcessing.convert();
+    postProcessing.convert(); // run post-processing
 
     // output
     if (Logger::hasIntermediate()) {

@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
                            0.0, // holeDepth
                            0.0, // holeTaperAngle
                            params.get("maskHeight"), params.get("taperAngle"),
-                           HoleShape::QUARTER)
+                           HoleShape::HALF)
       .apply();
 
   // use pre-defined model SF6O2 etching model
