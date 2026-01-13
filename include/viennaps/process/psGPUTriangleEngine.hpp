@@ -212,10 +212,10 @@ public:
                            (context.rayTracingParams.smoothingNeighbors + 1));
 
     // run the ray tracer
-    rayTracer_.apply();
+    rayTracer_.apply(); // device detach point here
     postProcessing.prepare();
 
-    rayTracer_.normalizeResults();
+    rayTracer_.normalizeResults(); // device sync point here
     postProcessing.setElementDataArrays(rayTracer_.getResults());
     postProcessing.convert();
 
