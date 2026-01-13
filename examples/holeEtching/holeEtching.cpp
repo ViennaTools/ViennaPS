@@ -79,6 +79,5 @@ int main(int argc, char *argv[]) {
   process.apply();
 
   // print final surface
-  geometry->saveSurfaceMesh(params.get<std::string>("outputFile"), true, 0.01,
-                            true);
+  geometry->saveSurfaceMesh("final.vtp", true, 0.01, true);
 }

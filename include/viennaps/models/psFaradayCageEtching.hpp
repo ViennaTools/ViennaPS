@@ -27,6 +27,28 @@ template <typename NumericType> struct FaradayCageParameters {
 };
 
 namespace impl {
+template <typename NumericType, int D>
+auto getFaradayCageSourceDirections(NumericType tiltAngle,
+                                    NumericType cageAngle) {
+  NumericType cosTilt = std::cos(tiltAngle * M_PI / 180.);
+  NumericType sinTilt = std::sin(tiltAngle * M_PI / 180.);
+  NumericType cage_y = std::cos(cageAngle * M_PI / 180.);
+  NumericType cage_x = std::sin(cageAngle * M_PI / 180.);
+
+  Vec3D<NumericType> direction1{-cosTilt * cage_x, cosTilt * cage_y, -sinTilt};
+  if constexpr (D == 2)
+    std::swap(direction1[1], direction1[2]);
+  VIENNACORE_LOG_DEBUG("FaradayCageEtching: Source direction 1: " +
+                       util::arrayToString(direction1));
+
+  Vec3D<NumericType> direction2{cosTilt * cage_x, -cosTilt * cage_y, -sinTilt};
+  if constexpr (D == 2)
+    std::swap(direction2[1], direction2[2]);
+  VIENNACORE_LOG_DEBUG("FaradayCageEtching: Source direction 2: " +
+                       util::arrayToString(direction2));
+
+  return std::make_pair(direction1, direction2);
+}
 
 template <typename NumericType, int D>
 class PeriodicSource : public viennaray::Source<NumericType> {
@@ -40,33 +62,10 @@ public:
         zPos_(boundingBox[1][D - 1] + 2 * gridDelta), gridDelta_(gridDelta),
         ee_{2 / (cosinePower + 1)} {
 
-    NumericType cage_x = std::cos(cageAngle * M_PI / 180.);
-    NumericType cage_y = std::sin(cageAngle * M_PI / 180.);
-    NumericType cosTilt = std::cos(tiltAngle * M_PI / 180.);
-    NumericType sinTilt = std::sin(tiltAngle * M_PI / 180.);
-
-    Vec3D<NumericType> direction;
-    direction[0] = -cosTilt * cage_y;
-    direction[1] = cosTilt * cage_x;
-    direction[2] = -sinTilt;
-    if constexpr (D == 2)
-      std::swap(direction[1], direction[2]);
-
-    VIENNACORE_LOG_DEBUG("FaradayCageEtching: Source direction 1: " +
-                         util::arrayToString(direction));
-
-    orthoBasis1_ = rayInternal::getOrthonormalBasis(direction);
-
-    direction[0] = cosTilt * cage_y;
-    direction[1] = -cosTilt * cage_x;
-    direction[2] = -sinTilt;
-    if constexpr (D == 2)
-      std::swap(direction[1], direction[2]);
-
-    VIENNACORE_LOG_DEBUG("FaradayCageEtching: Source direction 2: " +
-                         util::arrayToString(direction));
-
-    orthoBasis2_ = rayInternal::getOrthonormalBasis(direction);
+    auto [direction1, direction2] =
+        getFaradayCageSourceDirections<NumericType, D>(tiltAngle, cageAngle);
+    orthoBasis1_ = rayInternal::getOrthonormalBasis(direction1);
+    orthoBasis2_ = rayInternal::getOrthonormalBasis(direction2);
   }
 
   std::array<Vec3D<NumericType>, 2>
@@ -186,17 +185,14 @@ public:
                      const std::vector<Material> &maskMaterials)
       : params_(params), maskMaterials_(maskMaterials) {
 
-    NumericType cosTilt = std::cos(params.ibeParams.tiltAngle * M_PIf / 180.f);
-    NumericType sinTilt = std::sin(params.ibeParams.tiltAngle * M_PIf / 180.f);
-    NumericType cage_y = std::cos(params.cageAngle * M_PIf / 180.f);
-    NumericType cage_x = std::sin(params.cageAngle * M_PIf / 180.f);
-
+    auto [direction1, direction2] =
+        ::viennaps::impl::getFaradayCageSourceDirections<NumericType, D>(
+            params.ibeParams.tiltAngle, params.cageAngle);
     viennaray::gpu::Particle<NumericType> particle1{
         .name = "Ion1",
         .cosineExponent = params.ibeParams.exponent,
         .useCustomDirection = true,
-        .direction =
-            Vec3D<NumericType>{-cage_x * cosTilt, cage_y * cosTilt, -sinTilt}};
+        .direction = direction1};
     particle1.dataLabels.push_back(
         ::viennaps::impl::IBESurfaceModel<NumericType>::fluxLabel);
     if (params.ibeParams.redepositionRate > 0.) {
@@ -209,8 +205,7 @@ public:
         .name = "Ion2",
         .cosineExponent = params.ibeParams.exponent,
         .useCustomDirection = true,
-        .direction =
-            Vec3D<NumericType>{cage_x * cosTilt, -cage_y * cosTilt, -sinTilt}};
+        .direction = direction2};
     // NO ADDITIONAL FLUX ARRAY NEEDED, ALL PARTICLES WRITE TO THE SAME
     this->insertNextParticleType(particle2);
 

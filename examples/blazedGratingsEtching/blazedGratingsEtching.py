@@ -70,8 +70,6 @@ ibeParams.cos4Yield.a1 = params["yieldFactor"]
 ibeParams.cos4Yield.a2 = -1.55
 ibeParams.cos4Yield.a3 = 0.65
 
-ps.Logger.setLogLevel(ps.LogLevel.INTERMEDIATE)
-
 
 # ----- ANSGM Etch ----- #
 def ANSGM_Etch():
@@ -113,7 +111,7 @@ def BlazedGratings_Etch():
     process.setParameters(advectionParams)
     process.setParameters(rayTracingParams)
 
-    for i in range(1, 2):
+    for i in range(1, 5):
         process.setProcessDuration(params["etchTimeP" + str(i)])
         process.apply()
         geometry.saveSurfaceMesh("BlazedGratingsEtch_P" + str(i))
