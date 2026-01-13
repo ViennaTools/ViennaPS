@@ -41,31 +41,15 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
+    model_ = model;
+
     return ProcessResult::SUCCESS;
   }
 
   ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
-    auto model =
-        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
-            context.model);
     if (!rayTracerInitialized_) {
-      // Check for periodic boundary conditions
-      bool periodicBoundary = false;
-      if (context.rayTracingParams.ignoreFluxBoundaries) {
-        rayTracer_.setIgnoreBoundary(true);
-      } else {
-        const auto &grid = context.domain->getGrid();
-        for (unsigned i = 0; i < D; ++i) {
-          if (grid.getBoundaryConditions(i) ==
-              viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY) {
-            periodicBoundary = true;
-            break;
-          }
-        }
-      }
-
-      rayTracer_.setParticleCallableMap(model->getParticleCallableMap());
-      rayTracer_.setCallables(model->getCallableFileName(),
+      rayTracer_.setParticleCallableMap(model_->getParticleCallableMap());
+      rayTracer_.setCallables(model_->getCallableFileName(),
                               deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
       rayTracer_.setMaxBoundaryHits(context.rayTracingParams.maxBoundaryHits);
@@ -74,15 +58,20 @@ public:
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
-      rayTracer_.setPeriodicBoundary(periodicBoundary);
-      rayTracer_.setIgnoreBoundary(
-          context.rayTracingParams.ignoreFluxBoundaries);
-      for (auto &particle : model->getParticleTypes()) {
+      for (auto &particle : model_->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }
+
+      // Check boundary conditions
+      if (context.rayTracingParams.ignoreFluxBoundaries) {
+        rayTracer_.setIgnoreBoundary(true);
+      } else if (context.flags.domainHasPeriodicBoundaries) {
+        rayTracer_.setPeriodicBoundary(true);
+      }
+
       rayTracer_.prepareParticlePrograms();
     }
-    rayTracer_.setParameters(model->getProcessDataDPtr());
+    rayTracer_.setParameters(model_->getProcessDataDPtr());
     rayTracerInitialized_ = true;
 
     return ProcessResult::SUCCESS;
@@ -135,10 +124,7 @@ public:
 
     rayTracer_.setGeometry(diskMeshRay);
 
-    auto model =
-        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
-            context.model);
-    if (model->useMaterialIds()) {
+    if (model_->useMaterialIds()) {
       auto const &materialIds =
           *diskMesh->getCellData().getScalarData("MaterialIds");
       rayTracer_.setMaterialIds(materialIds);
@@ -154,13 +140,10 @@ public:
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
-    auto model =
-        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
-            context.model);
 
     CudaBuffer d_coverages; // device buffer for coverages
     if (context.flags.useCoverages) {
-      auto coverages = model->getSurfaceModel()->getCoverages();
+      auto coverages = model_->getSurfaceModel()->getCoverages();
       assert(coverages);
       assert(context.diskMesh);
       auto numCov = coverages->getScalarDataSize();
@@ -187,7 +170,7 @@ public:
     // output
     if (Logger::hasIntermediate()) {
       if (context.flags.useCoverages) {
-        auto coverages = model->getSurfaceModel()->getCoverages();
+        auto coverages = model_->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, context.diskMesh->getCellData(),
                           coverages, context.diskMesh->getNodes().size());
       }
@@ -254,6 +237,7 @@ private:
 private:
   std::shared_ptr<DeviceContext> deviceContext_;
   viennaray::gpu::TraceDisk<NumericType, D> rayTracer_;
+  SmartPointer<gpu::ProcessModelGPU<NumericType, D>> model_;
 
   bool rayTracerInitialized_ = false;
 };

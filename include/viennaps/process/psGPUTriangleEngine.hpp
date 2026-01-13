@@ -15,6 +15,8 @@
 
 #include <gpu/raygTraceTriangle.hpp>
 
+#include <cassert>
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -27,7 +29,10 @@ class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
 
 public:
   explicit GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
-      : deviceContext_(deviceContext), rayTracer_(deviceContext) {}
+      : deviceContext_(deviceContext), rayTracer_(deviceContext) {
+    surfaceMesh_ = MeshType::New();
+    elementKdTree_ = KDTreeType::New();
+  }
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
 
@@ -50,31 +55,16 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
+    model_ = model;
+
     return ProcessResult::SUCCESS;
   }
 
   ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
-    auto model =
-        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
-            context.model);
+    assert(model_ && "Model not set.");
     if (!rayTracerInitialized_) {
-      // Check for periodic boundary conditions
-      bool periodicBoundary = false;
-      if (context.rayTracingParams.ignoreFluxBoundaries) {
-        rayTracer_.setIgnoreBoundary(true);
-      } else {
-        const auto &grid = context.domain->getGrid();
-        for (unsigned i = 0; i < D; ++i) {
-          if (grid.getBoundaryConditions(i) ==
-              viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY) {
-            periodicBoundary = true;
-            break;
-          }
-        }
-      }
-
-      rayTracer_.setParticleCallableMap(model->getParticleCallableMap());
-      rayTracer_.setCallables(model->getCallableFileName(),
+      rayTracer_.setParticleCallableMap(model_->getParticleCallableMap());
+      rayTracer_.setCallables(model_->getCallableFileName(),
                               deviceContext_->modulePath);
       rayTracer_.setNumberOfRaysPerPoint(context.rayTracingParams.raysPerPoint);
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
@@ -83,15 +73,20 @@ public:
         rayTracer_.setMaxReflections(context.rayTracingParams.maxReflections);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
-      rayTracer_.setPeriodicBoundary(periodicBoundary);
-      rayTracer_.setIgnoreBoundary(
-          context.rayTracingParams.ignoreFluxBoundaries);
-      for (auto &particle : model->getParticleTypes()) {
+      for (auto &particle : model_->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }
+
+      // Check boundary conditions
+      if (context.rayTracingParams.ignoreFluxBoundaries) {
+        rayTracer_.setIgnoreBoundary(true);
+      } else if (context.flags.domainHasPeriodicBoundaries) {
+        rayTracer_.setPeriodicBoundary(true);
+      }
+
       rayTracer_.prepareParticlePrograms();
     }
-    rayTracer_.setParameters(model->getProcessDataDPtr());
+    rayTracer_.setParameters(model_->getProcessDataDPtr());
     rayTracerInitialized_ = true;
 
     return ProcessResult::SUCCESS;
@@ -100,11 +95,9 @@ public:
   ProcessResult
   updateSurface(ProcessContext<NumericType, D> &context) override {
     this->timer_.start();
-    if (!surfaceMesh_)
-      surfaceMesh_ = MeshType::New();
-    if (!elementKdTree_)
-      elementKdTree_ = KDTreeType::New();
 
+    assert(surfaceMesh_ && "Surface mesh not initialized.");
+    assert(elementKdTree_ && "Element KDTree not initialized.");
     CreateSurfaceMesh<NumericType, float, D>(
         context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
         context.rayTracingParams.minNodeDistanceFactor)
@@ -116,8 +109,8 @@ public:
     if constexpr (D == 2) {
       viennaray::LineMesh lineMesh;
       lineMesh.gridDelta = static_cast<float>(context.domain->getGridDelta());
-      lineMesh.lines = surfaceMesh_->lines;
-      lineMesh.nodes = surfaceMesh_->nodes;
+      lineMesh.lines = std::move(surfaceMesh_->lines);
+      lineMesh.nodes = std::move(surfaceMesh_->nodes);
       lineMesh.minimumExtent = surfaceMesh_->minimumExtent;
       lineMesh.maximumExtent = surfaceMesh_->maximumExtent;
       assert(!lineMesh.lines.empty());
@@ -156,10 +149,7 @@ public:
       surfaceMesh_->maximumExtent = triangleMesh.maximumExtent;
     }
 
-    auto model =
-        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
-            context.model);
-    if (model->useMaterialIds()) {
+    if (model_->useMaterialIds()) {
       auto const &pointMaterialIds =
           *context.diskMesh->getCellData().getScalarData("MaterialIds");
       std::vector<int> elementMaterialIds;
@@ -190,13 +180,10 @@ public:
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
-    auto model =
-        std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
-            context.model);
 
     CudaBuffer d_coverages; // device buffer for coverages
     if (context.flags.useCoverages) {
-      auto coverages = model->getSurfaceModel()->getCoverages();
+      auto coverages = model_->getSurfaceModel()->getCoverages();
       assert(coverages);
       assert(context.diskMesh);
       assert(context.translationField);
@@ -232,7 +219,7 @@ public:
     // output
     if (Logger::hasIntermediate()) {
       if (context.flags.useCoverages) {
-        auto coverages = model->getSurfaceModel()->getCoverages();
+        auto coverages = model_->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
                           surfaceMesh_->getElements<3>().size());
       }
@@ -299,6 +286,7 @@ private:
 private:
   std::shared_ptr<DeviceContext> deviceContext_;
   viennaray::gpu::TraceTriangle<NumericType, D> rayTracer_;
+  SmartPointer<gpu::ProcessModelGPU<NumericType, D>> model_;
 
   KDTreeType elementKdTree_;
   MeshType surfaceMesh_;

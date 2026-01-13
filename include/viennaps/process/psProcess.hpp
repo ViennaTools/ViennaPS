@@ -286,7 +286,7 @@ public:
     if (fluxEngineType_ == FluxEngineType::AUTO) {
       if (gpuAvailable() && context_.model->hasGPUModel()) {
         // Prefer disks if boundary is periodic in any direction
-        if (context_.flags.hasPeriodicBoundaries) {
+        if (context_.flags.domainHasPeriodicBoundaries) {
           fluxEngineType_ = FluxEngineType::GPU_DISK;
         } else {
           fluxEngineType_ = FluxEngineType::GPU_TRIANGLE;

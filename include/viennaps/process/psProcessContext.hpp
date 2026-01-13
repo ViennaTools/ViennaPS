@@ -48,7 +48,7 @@ template <typename NumericType, int D> struct ProcessContext {
     bool isALP = false;
     bool isAnalytic = false;
     bool isGeometric = false;
-    bool hasPeriodicBoundaries = false;
+    bool domainHasPeriodicBoundaries = false;
   } flags;
 
   void updateFlags() {
@@ -68,7 +68,7 @@ template <typename NumericType, int D> struct ProcessContext {
     for (unsigned i = 0; i < D; ++i) {
       if (grid.getBoundaryConditions(i) ==
           viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY) {
-        flags.hasPeriodicBoundaries = true;
+        flags.domainHasPeriodicBoundaries = true;
         break;
       }
     }
@@ -89,8 +89,8 @@ template <typename NumericType, int D> struct ProcessContext {
            << "\n\tuseCoverages: " << util::boolString(flags.useCoverages)
            << "\n\tisALP: " << util::boolString(flags.isALP)
            << "\n\tisAnalytic: " << util::boolString(flags.isAnalytic)
-           << "\n\thasPeriodicBoundaries: "
-           << util::boolString(flags.hasPeriodicBoundaries);
+           << "\n\tdomainHasPeriodicBoundaries: "
+           << util::boolString(flags.domainHasPeriodicBoundaries);
     if (model) {
       stream << "\nProcess Name: "
              << model->getProcessName().value_or("default");
