@@ -203,18 +203,21 @@ public:
       rayTracer_.setElementData(d_coverages, numCov);
     }
 
+    // Prepare post-processing
+    ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
+                       D == 3>
+        postProcessing(IndexMap(rayTracer_.getParticles()), fluxes,
+                       elementKdTree_, context.diskMesh, surfaceMesh_,
+                       context.domain->getGridDelta() *
+                           (context.rayTracingParams.smoothingNeighbors + 1));
+
     // run the ray tracer
     rayTracer_.apply();
-    rayTracer_.normalizeResults();
+    postProcessing.prepare();
 
-    // extract fluxes on points
-    ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
-                       D == 3>(
-        IndexMap(rayTracer_.getParticles()), rayTracer_.getResults(), fluxes,
-        elementKdTree_, context.diskMesh, surfaceMesh_,
-        context.domain->getGridDelta() *
-            (context.rayTracingParams.smoothingNeighbors + 1))
-        .apply();
+    rayTracer_.normalizeResults();
+    postProcessing.setElementDataArrays(rayTracer_.getResults());
+    postProcessing.convert();
 
     // output
     if (Logger::hasIntermediate()) {

@@ -76,12 +76,15 @@ template <typename NumericType, typename MeshNT, typename ResultType,
           bool d2 = true, bool d4 = true>
 class ElementToPointData {
   const IndexMap indexMap_;
-  std::vector<std::vector<ResultType>> const &elementDataArrays_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
   const NumericType conversionRadius_;
+
+  std::vector<std::vector<ResultType>> elementDataArrays_;
+  std::vector<std::tuple<std::vector<size_t>, std::vector<double>, unsigned>>
+      closeElements_;
 
   static constexpr bool discard2 = d2;
   static constexpr bool discard4 = d4;
@@ -89,18 +92,22 @@ class ElementToPointData {
 public:
   ElementToPointData(
       IndexMap indexMap,
-      std::vector<std::vector<ResultType>> const &elementDataArrays,
-      SmartPointer<viennals::PointData<NumericType>> pointData,
+      SmartPointer<viennals::PointData<NumericType>>
+          pointData, // target point data
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
-      : indexMap_(std::move(indexMap)), elementDataArrays_(elementDataArrays),
-        pointData_(pointData), elementKdTree_(elementKdTree),
-        diskMesh_(diskMesh), surfaceMesh_(surfMesh),
-        conversionRadius_(conversionRadius) {}
+      : indexMap_(std::move(indexMap)), pointData_(pointData),
+        elementKdTree_(elementKdTree), diskMesh_(diskMesh),
+        surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
 
-  void apply() {
+  void setElementDataArrays(
+      std::vector<std::vector<ResultType>> &&elementDataArrays) {
+    elementDataArrays_ = std::move(elementDataArrays);
+  }
+
+  void prepare() {
     const auto numData = indexMap_.getNumberOfData();
     const auto &points = diskMesh_->nodes;
     const auto numPoints = points.size();
@@ -115,11 +122,7 @@ public:
       pointData_->insertNextScalarData(std::move(data), label);
     }
 
-    if (elementDataArrays_.size() != numData) {
-      VIENNACORE_LOG_ERROR(
-          "ElementToPointData: "
-          "Number of data arrays does not match expected count.");
-    }
+    closeElements_.resize(numPoints);
 
 #pragma omp parallel for schedule(static)
     for (unsigned i = 0; i < numPoints; i++) {
@@ -130,6 +133,7 @@ public:
               .value();
 
       std::vector<double> weights(closeElements.size(), 0.);
+      std::vector<size_t> elementIndices(closeElements.size(), 0);
 
       // compute weights based on normal alignment
       unsigned numClosePoints = 0;
@@ -142,52 +146,67 @@ public:
 
         if (weight > 1e-6 && !std::isnan(weight)) {
           weights[n] = weight;
+          elementIndices[n] = p.first;
           ++numClosePoints;
         }
       }
 
-      std::size_t nearestIdx = 0;
-      if (numClosePoints == 0) { // fallback to nearest point
-        auto nearestPoint = elementKdTree_->findNearest(points[i]);
-        nearestIdx = nearestPoint->first;
-      }
+      assert(!weights.empty() && !elementIndices.empty());
+      closeElements_[i] =
+          std::make_tuple(elementIndices, weights, numClosePoints);
+    }
+  }
+
+  void convert() {
+    const auto numData = indexMap_.getNumberOfData();
+    const auto &points = diskMesh_->nodes;
+    const auto numPoints = points.size();
+
+    if (elementDataArrays_.size() != numData) {
+      VIENNACORE_LOG_ERROR(
+          "ElementToPointData: "
+          "Number of data arrays does not match expected count.");
+    }
+
+#pragma omp parallel for schedule(static)
+    for (unsigned i = 0; i < numPoints; i++) {
+
+      const auto &[closeElements, weights, numClosePoints] = closeElements_[i];
 
       for (unsigned j = 0; j < numData; ++j) {
         NumericType value = NumericType(0);
         const auto &elementData = elementDataArrays_[j];
         auto pointData = pointData_->getScalarData(j);
 
-        if (numClosePoints > 0) {
+        // Discard outlier values if enabled
+        const auto weightsCopy = discardOutliers(weights, closeElements,
+                                                 elementData, numClosePoints);
 
-          // Discard outlier values if enabled
-          const auto weightsCopy = discardOutliers(weights, closeElements,
-                                                   elementData, numClosePoints);
+        // Compute weighted average
+        const double sum =
+            std::accumulate(weightsCopy.cbegin(), weightsCopy.cend(), 0.0);
 
-          // Compute weighted average
-          const double sum =
-              std::accumulate(weightsCopy.cbegin(), weightsCopy.cend(), 0.0);
-
-          if (sum > 1e-6) {
-            for (std::size_t k = 0; k < closeElements.size(); ++k) {
-              if (weightsCopy[k] > 0.0) {
-                value += weightsCopy[k] * elementData[closeElements[k].first];
-              }
+        if (sum > 1e-6) {
+          for (size_t k = 0; k < closeElements.size(); ++k) {
+            if (weightsCopy[k] > 0.0) {
+              value += weightsCopy[k] * elementData[closeElements[k]];
             }
-            value /= sum;
-          } else {
-            // Fallback if all weights were discarded
-            auto nearestPoint = elementKdTree_->findNearest(points[i]);
-            value = elementData[nearestPoint->first];
           }
+          value /= sum;
         } else {
-          // Fallback to nearest point
-          assert(numClosePoints == 0);
-          value = elementData[nearestIdx];
+          // Fallback if all weights were discarded
+          auto nearestPoint = elementKdTree_->findNearest(points[i]);
+          value = elementData[nearestPoint->first];
         }
 
         pointData->at(i) = value;
       }
     }
+  }
+
+  void apply() {
+    prepare();
+    convert();
   }
 
 private:
@@ -202,15 +221,15 @@ private:
           minIdx1(-1), minIdx2(-1), maxIdx1(-1), maxIdx2(-1) {}
   };
 
-  static MinMaxInfo findMinMaxValues(
-      const std::vector<double> &weights,
-      const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
-      const std::vector<ResultType> &elementData) {
+  static MinMaxInfo
+  findMinMaxValues(const std::vector<double> &weights,
+                   const std::vector<size_t> &closePoints,
+                   const std::vector<ResultType> &elementData) {
     MinMaxInfo info;
 
     for (std::size_t k = 0; k < closePoints.size(); ++k) {
       if (weights[k] > 0.0) {
-        const auto value = elementData[closePoints[k].first];
+        const auto value = elementData[closePoints[k]];
 
         // Update min values
         if (value < info.min1) {
@@ -239,10 +258,10 @@ private:
     return info;
   }
 
-  static auto discardOutliers(
-      const std::vector<double> &weights,
-      const std::vector<std::pair<std::size_t, NumericType>> &closePoints,
-      const std::vector<ResultType> &elementData, unsigned numClosePoints) {
+  static auto discardOutliers(const std::vector<double> &weights,
+                              const std::vector<size_t> &closePoints,
+                              const std::vector<ResultType> &elementData,
+                              unsigned numClosePoints) {
 
     // copy weights to modify
     auto weightsCopy = weights;

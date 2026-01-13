@@ -271,13 +271,14 @@ private:
       ++particleIdx;
     }
 
-    // map fluxes on points
-    ElementToPointData<NumericType, float, NumericType, true, D == 3>(
-        IndexMap(model->getParticleTypes()), elementFluxes, fluxes,
-        elementKdTree_, context.diskMesh, surfaceMesh_,
-        context.domain->getGridDelta() *
-            (context.rayTracingParams.smoothingNeighbors + 1))
-        .apply();
+    // map fluxes to points
+    ElementToPointData<NumericType, float, NumericType, true, D == 3>
+        postProcessing(IndexMap(model->getParticleTypes()), fluxes,
+                       elementKdTree_, context.diskMesh, surfaceMesh_,
+                       context.domain->getGridDelta() *
+                           (context.rayTracingParams.smoothingNeighbors + 1));
+    postProcessing.setElementDataArrays(std::move(elementFluxes));
+    postProcessing.apply();
   }
 
   static viennaray::TracingData<NumericType>
