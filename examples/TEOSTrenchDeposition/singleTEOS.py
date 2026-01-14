@@ -51,8 +51,8 @@ process.setProcessModel(model)
 process.setParameters(rayParams)
 process.setProcessDuration(params["processTime"])
 
-geometry.saveVolumeMesh("SingleTEOS_initial.vtp")
+geometry.saveVolumeMesh("SingleTEOS_initial")
 
 process.apply()
 
-geometry.saveVolumeMesh("SingleTEOS_final.vtp")
+geometry.saveVolumeMesh("SingleTEOS_final")
