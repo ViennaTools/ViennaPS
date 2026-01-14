@@ -2,6 +2,7 @@
 layout: default
 title: Running a Process
 nav_order: 8
+has_children: true
 ---
 
 # Running a Process
@@ -122,47 +123,6 @@ process.apply()
 
 All advanced parameters are set via `setParameters(...)`.
 
-### `AdvectionParameters`
-
-| Field               | Type                    | Default                    | Description                        |
-| ------------------- | ----------------------- | -------------------------- | ---------------------------------- |
-| `integrationScheme` | `IntegrationScheme`     | `ENGQUIST_OSHER_1ST_ORDER` | Level-set integration scheme.      |
-| `timeStepRatio`     | `double`                | `0.4999`                   | CFL ratio.                         |
-| `dissipationAlpha`  | `double`                | `1.0`                      | Lax–Friedrichs dissipation factor. |
-| `checkDissipation`  | `bool`                  | `true`                     | Enable dissipation check.          |
-| `velocityOutput`    | `bool`                  | `false`                    | Write velocity per step.           |
-| `ignoreVoids`       | `bool`                  | `false`                    | Ignore void regions.               |
-| `adaptiveTimeStepping` | `bool`           | `false`                    | Enable adaptive time stepping when approaching material interfaces during etching.     |
-
-### `RayTracingParameters`
-
-| Field                  | Type                | Default  | Description                        |
-| ---------------------- | ------------------- | -------- | ---------------------------------- |
-| `normalizationType`    | `NormalizationType` | `SOURCE` | Normalization (`SOURCE` or `MAX`). |
-| `ignoreFluxBoundaries` | `bool`              | `false`  | Ignore BCs in tracing (CPU only).  |
-| `useRandomSeeds`       | `bool`              | `true`   | Random seeding.                    |
-| `rngSeed`              | `unsigned`          | `0`      | Fixed seed for the RNG. (`useRandomSeeds` must be `false` to use this.)            |
-| `raysPerPoint`         | `unsigned`          | `1000`   | Rays per surface point.            |
-| `smoothingNeighbors`   | `int`               | `1`      | Post-trace flux smoothing.         |
-| `diskRadius`           | `double`            | `0`      | Disk radius; `0` = auto.           |
-| `minNodeDistanceFactor`| `double`           | `0.05`  | Factor for triangle mesh generation. A higher factor creates a coarser mesh. |
-
-### `CoverageParameters`
-
-| Field                    | Type          | Default | Description                       |
-| ------------------------ | ------------- | ------- | --------------------------------- |
-| `maxIterations`          | `unsigned`    | `10`    | Max iterations for coverage init. |
-| `tolerance`              | `double`      | `0`     | Convergence threshold.            |
-
-### `AtomicLayerProcessParameters`
-
-| Field              | Type          | Default | Description           |
-| ------------------ | ------------- | ------- | --------------------- |
-| `numCycles`        | `unsigned`    | `1`     | Number of ALP cycles. |
-| `pulseTime`        | `double`      | `1.0`   | Pulse duration.       |
-| `coverageTimeStep` | `double`      | `1.0`   | Coverage update step. |
-| `purgePulseTime`   | `double`      | `0.0`   | Purge duration.       |
-
 ---
 
 ## Flux engine
@@ -257,7 +217,6 @@ void setIntermediateOutputPath(const std::string &path)
 ```c++
 void apply()
 ```
-
 
 {: .note }
 Direct parameter field access is deprecated since **4.0.0**. Use the parameter structs with `setParameters(...)`.
