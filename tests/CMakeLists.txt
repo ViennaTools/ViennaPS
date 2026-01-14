@@ -1,27 +1,10 @@
-cmake_minimum_required(VERSION 3.14)
+add_custom_target(ViennaPS_Tests ALL)
 
-project(ViennaPSTests)
+if(WIN32)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${PROJECT_BINARY_DIR}/tests>)
+  viennacore_setup_embree_env(ViennaPS_Tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  viennacore_setup_vtk_env(ViennaPS_Tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  viennacore_setup_tbb_env(ViennaPS_Tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endif()
 
-include("${CMAKE_SOURCE_DIR}/cmake/prepare.cmake")
-
-# Point find_package to the binary directory instead of the install location
-find_package(ViennaPS REQUIRED CONFIG PATHS ${ViennaPS_BINARY_DIR} NO_DEFAULT_PATH)
-
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS})
-
-# Add subfolders to the include directories, since during installation the directory structure is
-# flattened, but in the source tree - which we are using here - it is not.
-list(PREPEND VIENNAPS_INCLUDE_DIRS ${VIENNAPS_BUILD_INCLUDE_DIRS}/cellSet
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/geometries ${VIENNAPS_BUILD_INCLUDE_DIRS}/models
-     ${VIENNAPS_BUILD_INCLUDE_DIRS}/compact)
-
-set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL TRUE)
-
-add_custom_target(buildTests DEPENDS ${VIENNAPS_DEPENDENCIES})
-
-subdirlist(TEST_DIRS ${CMAKE_CURRENT_LIST_DIR})
-
-# add all tests
-foreach(subdir ${TEST_DIRS})
-  add_subdirectory(${subdir})
-endforeach()
+viennacore_add_subdirs(${CMAKE_CURRENT_LIST_DIR})

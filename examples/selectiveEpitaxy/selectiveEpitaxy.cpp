@@ -1,67 +1,79 @@
+#include <geometries/psMakeFin.hpp>
+#include <geometries/psMakeHole.hpp>
 #include <geometries/psMakePlane.hpp>
-#include <models/psAnisotropicProcess.hpp>
-#include <psProcess.hpp>
-#include <psUtils.hpp>
+#include <models/psIsotropicProcess.hpp>
+#include <models/psSelectiveEpitaxy.hpp>
+#include <process/psProcess.hpp>
 
-#include "parameters.hpp"
+namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::util::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
+    params.readConfigFile(argv[1]);
+  } else {
+    // Try default config file
+    params.readConfigFile("config.txt");
+    if (params.m.empty()) {
+      std::cout << "No configuration file provided!" << std::endl;
+      std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+      return 1;
     }
-    params.fromMap(config);
   }
 
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto geometry = ps::Domain<NumericType, D>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+
   // substrate
-  psMakePlane<NumericType, D>(geometry, params.gridDelta, params.xExtent,
-                              params.yExtent, 0., false, psMaterial::Mask)
+  ps::MakeFin<NumericType, D>(geometry, params.get("finWidth"),
+                              params.get("finHeight"))
       .apply();
-  // create fin on substrate
-  {
-    auto fin = psSmartPointer<lsDomain<NumericType, D>>::New(
-        geometry->getLevelSets()->back()->getGrid());
-    NumericType minPoint[3] = {-params.finWidth / 2., -params.finLength / 2.,
-                               -params.gridDelta};
-    NumericType maxPoint[3] = {params.finWidth / 2., params.finLength / 2.,
-                               params.finHeight};
-    if constexpr (D == 2) {
-      minPoint[1] = -params.gridDelta;
-      maxPoint[1] = params.finHeight;
-    }
-    lsMakeGeometry<NumericType, D>(
-        fin, psSmartPointer<lsBox<NumericType, D>>::New(minPoint, maxPoint))
-        .apply();
-    geometry->insertNextLevelSetAsMaterial(fin, psMaterial::Si);
-    geometry->saveSurfaceMesh("fin.vtp");
-  }
+
+  // oxide layer
+  ps::MakePlane<NumericType, D>(geometry, params.get("oxideHeight"),
+                                ps::Material::SiO2, true)
+      .apply();
 
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet(psMaterial::SiGe);
+  geometry->duplicateTopLevelSet(ps::Material::SiGe);
 
-  auto model = psSmartPointer<psAnisotropicProcess<NumericType, D>>::New(
-      std::vector<std::pair<psMaterial, NumericType>>{
-          {psMaterial::Si, params.epitaxyRate},
-          {psMaterial::SiGe, params.epitaxyRate}});
+  auto model = ps::SmartPointer<ps::SelectiveEpitaxy<NumericType, D>>::New(
+      std::vector<std::pair<ps::Material, NumericType>>{
+          {ps::Material::Si, params.get("epitaxyRate")},
+          {ps::Material::SiGe, params.get("epitaxyRate")}},
+      params.get("R111"), params.get("R100"));
 
-  psProcess<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
-  process.setProcessDuration(params.processTime);
-  process.setIntegrationScheme(
-      lsIntegrationSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER);
+  ps::AdvectionParameters advectionParams;
+  advectionParams.spatialScheme =
+      viennals::SpatialSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  // advectionParams.velocityOutput = true;
+  lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,
+                                              1>::setMaxDissipation(1000);
 
-  geometry->saveVolumeMesh("initial");
+  ps::Process<NumericType, D> process(geometry, model,
+                                      params.get("processTime"));
+  process.setParameters(advectionParams);
+
+  geometry->saveVolumeMesh("initial_fin");
 
   process.apply();
 
-  geometry->saveVolumeMesh("final");
+  geometry->saveVolumeMesh("final_fin");
+
+  geometry->clear();
+  ps::MakeTrench(geometry, params.get("finWidth"), 0., 0.,
+                 params.get("finHeight"), 0., false, ps::Material::Si,
+                 ps::Material::SiO2)
+      .apply();
+  geometry->duplicateTopLevelSet(ps::Material::SiGe);
+
+  geometry->saveVolumeMesh("initial_trench");
+
+  process.apply();
+
+  geometry->saveVolumeMesh("final_trench");
 }

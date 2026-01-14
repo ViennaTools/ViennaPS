@@ -1,9 +1,9 @@
-#include <psMakeStack.hpp>
-#include <psProcess.hpp>
+#include <geometries/psMakeStack.hpp>
+#include <process/psProcess.hpp>
 
-#include <psOxideRegrowth.hpp>
+#include <models/psOxideRegrowth.hpp>
 
-#include "parameters.hpp"
+namespace ps = viennaps;
 
 int main(int argc, char **argv) {
   using NumericType = double;
@@ -11,40 +11,49 @@ int main(int argc, char **argv) {
   omp_set_num_threads(12);
   constexpr int D = 2;
 
-  psLogger::setLogLevel(psLogLevel::INTERMEDIATE);
+  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
 
-  Parameters<NumericType> params;
+  // Parse the parameters
+  ps::util::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
+    params.readConfigFile(argv[1]);
+  } else {
+    // Try default config file
+    params.readConfigFile("config.txt");
+    if (params.m.empty()) {
+      std::cout << "No configuration file provided!" << std::endl;
+      std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+      return 1;
     }
-    params.fromMap(config);
   }
 
   const NumericType stability =
-      2 * params.diffusionCoefficient /
-      std::max(params.centerVelocity, params.scallopVelocity);
+      2 * params.get("diffusionCoefficient") /
+      std::max(params.get("centerVelocity"), params.get("scallopVelocity"));
   std::cout << "Stability: " << stability << std::endl;
   constexpr NumericType timeStabilityFactor = D == 2 ? 0.245 : 0.145;
-  if (0.5 * stability <= params.gridDelta) {
+  if (0.5 * stability <= params.get("gridDelta")) {
     std::cout << "Unstable parameters. Reduce grid spacing!" << std::endl;
     return -1;
   }
 
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeStack<NumericType, D>(domain, params.gridDelta, params.xExtent,
-                              params.yExtent, params.numLayers,
-                              params.layerHeight, params.substrateHeight,
-                              0. /*hole radius*/, params.trenchWidth, 0., false)
+  auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  ps::MakeStack<NumericType, D>(domain, params.get<int>("numLayers"),
+                                params.get("layerHeight"),
+                                params.get("substrateHeight"),
+                                0.0, // holeRadius
+                                params.get("trenchWidth"),
+                                0.0 // maskHeight
+                                )
       .apply();
   // copy top layer for deposition
-  domain->duplicateTopLevelSet(psMaterial::Polymer);
+  domain->duplicateTopLevelSet(ps::Material::Polymer);
 
-  domain->generateCellSet(params.substrateHeight +
-                              params.numLayers * params.layerHeight + 10.,
-                          true /* true means cell set above surface */);
+  domain->generateCellSet(
+      params.get("substrateHeight") +
+          params.get("numLayers") * params.get("layerHeight") + 10.,
+      ps::Material::GAS, true /* true means cell set above surface */);
   auto &cellSet = domain->getCellSet();
   cellSet->addScalarData("byproductSum", 0.);
   cellSet->writeVTU("initial.vtu");
@@ -60,21 +69,25 @@ int main(int argc, char **argv) {
   // The redeposition model captures byproducts from the selective etching
   // process in the cell set. The byproducts are then distributed by solving a
   // convection-diffusion equation on the cell set.
-  auto model = psSmartPointer<psOxideRegrowth<NumericType, D>>::New(
-      params.nitrideEtchRate / 60., params.oxideEtchRate / 60.,
-      params.redepositionRate, params.redepositionThreshold,
-      params.redepositionTimeInt, params.diffusionCoefficient, params.sink,
-      params.scallopVelocity, params.centerVelocity,
-      params.substrateHeight + params.numLayers * params.layerHeight,
-      params.trenchWidth, timeStabilityFactor);
+  auto model = ps::SmartPointer<ps::OxideRegrowth<NumericType, D>>::New(
+      params.get("nitrideEtchRate") / 60., params.get("oxideEtchRate") / 60.,
+      params.get("redepositionRate"), params.get("redepositionThreshold"),
+      params.get("redepositionTimeInt"), params.get("diffusionCoefficient"),
+      params.get("sink"), params.get("scallopVelocity"),
+      params.get("centerVelocity"),
+      params.get("substrateHeight") +
+          params.get("numLayers") * params.get("layerHeight"),
+      params.get("trenchWidth"), timeStabilityFactor);
 
-  psProcess<NumericType, D> process;
+  ps::AdvectionParameters advParams;
+  advParams.ignoreVoids = true;
+
+  ps::Process<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
-  process.setProcessDuration(params.targetEtchDepth / params.nitrideEtchRate *
-                             60.);
-  process.setPrintTimeInterval(30);
-
+  process.setProcessDuration(params.get("targetEtchDepth") /
+                             params.get("nitrideEtchRate") * 60.);
+  process.setParameters(advParams);
   process.apply();
 
   domain->saveVolumeMesh("finalStack");

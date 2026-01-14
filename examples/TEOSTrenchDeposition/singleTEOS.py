@@ -1,60 +1,58 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
-    prog="multiTEOS",
-    description="Run a multi TEOS deposition process on a trench geometry.",
+    prog="trenchDeposition",
+    description="Run a deposition process on a trench geometry.",
 )
 parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-# switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
+    ps.setDimension(2)
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+    ps.setDimension(3)
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
-geometry = vps.Domain()
-vps.MakeTrench(
-    domain=geometry,
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+ps.MakeTrench(
+    domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
-    taperingAngle=params["taperAngle"],
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=False,
-    material=vps.Material.Si,
+    trenchTaperAngle=params["taperAngle"],
 ).apply()
 
+
 # copy top layer to capture deposition
-geometry.duplicateTopLevelSet(vps.Material.SiO2)
+geometry.duplicateTopLevelSet(ps.Material.SiO2)
 
 # process model encompasses surface model and particle types
-model = vps.TEOSDeposition(
+model = ps.TEOSDeposition(
     stickingProbabilityP1=params["stickingProbabilityP1"],
     rateP1=params["depositionRateP1"],
     orderP1=params["reactionOrderP1"],
 )
 
-process = vps.Process()
+rayParams = ps.RayTracingParameters()
+rayParams.raysPerPoint = int(params["numRaysPerPoint"])
+
+process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
-process.setNumberOfRaysPerPoint(int(params["numRaysPerPoint"]))
+process.setParameters(rayParams)
 process.setProcessDuration(params["processTime"])
 
-geometry.saveSurface("SingleTEOS_initial.vtp")
+geometry.saveVolumeMesh("SingleTEOS_initial")
 
 process.apply()
 
-geometry.saveSurface("SingleTEOS_final.vtp")
-
-if args.dim == 2:
-    geometry.saveVolume("SingleTEOS_final.vtu")
+geometry.saveVolumeMesh("SingleTEOS_final")

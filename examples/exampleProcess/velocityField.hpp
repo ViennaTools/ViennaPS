@@ -1,31 +1,33 @@
 #pragma once
 
-#include <iostream>
+#include <process/psVelocityField.hpp>
 #include <psMaterials.hpp>
-#include <psSmartPointer.hpp>
-#include <psVelocityField.hpp>
 #include <vector>
 
-template <class T> class VelocityField : public psVelocityField<T> {
+template <class T, int D>
+class VelocityField : public viennaps::VelocityField<T, D> {
 public:
-  VelocityField() {}
+  VelocityField() = default;
 
-  T getScalarVelocity(const std::array<T, 3> & /*coordinate*/, int material,
-                      const std::array<T, 3> & /*normalVector*/,
+  T getScalarVelocity(const viennaps::Vec3D<T> &coordinate, int material,
+                      const viennaps::Vec3D<T> &normalVector,
                       unsigned long pointID) override {
     // implement material specific etching/deposition here
     T velocity = 0.;
-    if (psMaterialMap::mapToMaterial(material) != psMaterial::Mask) {
+    if (viennaps::MaterialMap::mapToMaterial(material) !=
+        viennaps::Material::Mask) {
       velocity = -velocities->at(pointID);
     }
     return velocity;
   }
 
-  void setVelocities(psSmartPointer<std::vector<T>> passedVelocities) override {
-    // additional alterations can be made to the velocities here
+  void prepare(viennaps::SmartPointer<viennaps::Domain<T, D>> domain,
+               viennaps::SmartPointer<std::vector<T>> passedVelocities,
+               const T processTime) override {
+    // additional preparation steps can be done here
     velocities = passedVelocities;
   }
 
 private:
-  psSmartPointer<std::vector<T>> velocities = nullptr;
+  viennaps::SmartPointer<std::vector<T>> velocities = nullptr;
 };

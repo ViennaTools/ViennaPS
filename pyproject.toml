@@ -1,0 +1,24 @@
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+version = "4.2.0"
+name = "ViennaPS"
+readme = "README.md"
+license = { file = "LICENSE" }
+description = "Topography simulation library for microelectronic fabrication processes"
+dependencies = ["ViennaLS>=5.4.0"]
+
+[project.urls]
+Homepage = "https://viennatools.github.io/ViennaPS/"
+Documentation = "https://viennatools.github.io/ViennaPS/"
+Repository = "https://github.com/ViennaTools/ViennaPS"
+Issues = "https://github.com/ViennaTools/ViennaPS/issues"
+
+[tool.scikit-build]
+build-dir = "build"
+cmake.build-type = "Release"
+cmake.args = ["-DVIENNAPS_BUILD_PYTHON=ON"]
+sdist.exclude = ["tests", "examples", "lib", "assets"]
+wheel.packages = ["python/viennaps"]

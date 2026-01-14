@@ -1,47 +1,69 @@
+#include <gds/psGDSReader.hpp>
 #include <psDomain.hpp>
-#include <psGDSReader.hpp>
-#include <psProcess.hpp>
-#include <psToDiskMesh.hpp>
-#include <psVTKWriter.hpp>
+
+namespace ps = viennaps;
+namespace ls = viennals;
 
 int main(int argc, char **argv) {
   using NumericType = double;
   constexpr int D = 3;
 
   // read GDS mask file
-  const NumericType gridDelta = 0.01;
-  lsBoundaryConditionEnum<D> boundaryConds[D] = {
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::REFLECTIVE_BOUNDARY,
-      lsBoundaryConditionEnum<D>::INFINITE_BOUNDARY};
-  auto mask = psSmartPointer<psGDSGeometry<NumericType, D>>::New(gridDelta);
-  mask->setBoundaryConditions(boundaryConds);
-  psGDSReader<NumericType, D>(mask, "mask.gds").apply();
+  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
+
+  constexpr NumericType gridDelta = 0.01;
+  constexpr NumericType exposureDelta = 0.005;
+  double forwardSigma = 5.;
+  double backsSigma = 50.;
+
+  ls::BoundaryConditionEnum boundaryConds[D] = {
+      ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+      ls::BoundaryConditionEnum::INFINITE_BOUNDARY};
+
+  auto mask = ps::SmartPointer<ps::GDSGeometry<NumericType, D>>::New(
+      gridDelta, boundaryConds);
+  mask->setBoundaryPadding(0.1, 0.1);
+  mask->addBlur({forwardSigma, backsSigma}, // Gaussian sigmas
+                {0.8, 0.2},                 // Weights
+                0.5,                        // Threshold
+                exposureDelta);             // Exposure grid delta
+  ps::GDSReader<NumericType, D>(mask, "mask.gds").apply();
 
   // geometry setup
-  double *bounds = mask->getBounds();
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
 
   // substrate plane
+  auto bounds = mask->getBounds();
   NumericType origin[D] = {0., 0., 0.};
   NumericType normal[D] = {0., 0., 1.};
-  auto plane = psSmartPointer<lsDomain<NumericType, D>>::New(
+  auto plane = ps::SmartPointer<ls::Domain<NumericType, D>>::New(
       bounds, boundaryConds, gridDelta);
-  lsMakeGeometry<NumericType, D>(
-      plane, psSmartPointer<lsPlane<NumericType, D>>::New(origin, normal))
+  ls::MakeGeometry<NumericType, D>(
+      plane, ps::SmartPointer<ls::Plane<NumericType, D>>::New(origin, normal))
       .apply();
+  geometry->insertNextLevelSetAsMaterial(plane, ps::Material::Si);
+  geometry->saveSurfaceMesh("Substrate.vtp");
 
-  geometry->insertNextLevelSet(plane);
+  auto layer0 = mask->layerToLevelSet(0, 0.0, 0.1, false, false); // no blur
+  geometry->insertNextLevelSetAsMaterial(layer0, ps::Material::SiGe);
 
-  auto layer0 =
-      mask->layerToLevelSet(0 /*layer*/, 0 /*base z position*/, 0.1 /*height*/);
-  geometry->insertNextLevelSet(layer0);
+  auto layer1 = mask->layerToLevelSet(1, 0.0, 0.3, false, false); // no blur
+  geometry->insertNextLevelSetAsMaterial(layer1, ps::Material::SiO2);
 
-  auto layer1 = mask->layerToLevelSet(1 /*layer*/, -0.15 /*base z position*/,
-                                      0.45 /*height*/);
-  geometry->insertNextLevelSet(layer1);
+  auto layer2 = mask->layerToLevelSet(2, 0., 0.05, false, true); // no blur
+  geometry->insertNextLevelSetAsMaterial(layer2, ps::Material::Si3N4);
 
-  geometry->saveSurfaceMesh("Geometry.vtp", true /* add material IDs */);
+  //   auto layer3 = mask->layerToLevelSet(3, 0, 0.25);
+  //   geometry->insertNextLevelSetAsMaterial(layer3, ps::Material::Cu);
+
+  //   auto layer4 = mask->layerToLevelSet(4, 0, 0.4, false, false); // no blur
+  //   geometry->insertNextLevelSetAsMaterial(layer4, ps::Material::W);
+
+  //   auto layer5 = mask->layerToLevelSet(5, 0, 0.2);
+  //   geometry->insertNextLevelSetAsMaterial(layer5, ps::Material::PolySi);
+
+  geometry->saveSurfaceMesh("Geometry.vtp");
 
   return 0;
 }

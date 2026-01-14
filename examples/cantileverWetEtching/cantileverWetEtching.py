@@ -1,6 +1,6 @@
 # This example only works in 3D mode
-import viennaps3d as vps
-import viennals3d as vls
+import viennaps.d3 as psd
+from viennaps import BoundaryType, Material, AdvectionParameters, SpatialScheme
 
 maskFileName = "cantilever_mask.gds"
 
@@ -22,52 +22,53 @@ gridDelta = 5.0  # um
 
 # read GDS mask file
 boundaryConditions = [
-    vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.lsBoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vls.lsBoundaryConditionEnum.INFINITE_BOUNDARY,
+    BoundaryType.REFLECTIVE_BOUNDARY,
+    BoundaryType.REFLECTIVE_BOUNDARY,
+    BoundaryType.INFINITE_BOUNDARY,
 ]
 
-gds_mask = vps.GDSGeometry(gridDelta)
+gds_mask = psd.GDSGeometry(gridDelta)
 gds_mask.setBoundaryConditions(boundaryConditions)
 gds_mask.setBoundaryPadding(x_add, y_add)
-vps.GDSReader(gds_mask, maskFileName).apply()
+psd.GDSReader(gds_mask, maskFileName).apply()
 
 # convert GDS geometry to level set
-mask = gds_mask.layerToLevelSet(1, 0.0, 4 * gridDelta, True)
-
-# create plane geometry as substrate
-bounds = gds_mask.getBounds()
-plane = vls.lsDomain(bounds, boundaryConditions, gridDelta)
-vls.lsMakeGeometry(plane, vls.lsPlane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0])).apply()
+mask = gds_mask.layerToLevelSet(1, 0.0, 4 * gridDelta, True, False)
 
 # set up domain
-geometry = vps.Domain()
-geometry.insertNextLevelSet(mask)
-geometry.insertNextLevelSet(plane)
-geometry.saveSurface("initialGeometry.vtp", True)
+geometry = psd.Domain()
+geometry.insertNextLevelSetAsMaterial(mask, Material.Mask)
+
+# create plane substrate under mask
+psd.MakePlane(geometry, 0.0, Material.Si, True).apply()
+
+geometry.saveSurfaceMesh("initialGeometry.vtp", True)
 
 # wet etch process
-model = vps.AnisotropicProcess(
+model = psd.WetEtching(
     direction100=direction100,
     direction010=direction010,
     rate100=r100,
     rate110=r110,
     rate111=r111,
     rate311=r311,
-    materials=[(vps.Material.Si, -1.0)],
+    materialRates=[(Material.Si, -1.0)],
 )
 
-process = vps.Process()
+advectionParams = AdvectionParameters()
+advectionParams.spatialScheme = (
+    SpatialScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+)
+
+process = psd.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
 process.setProcessDuration(5.0 * 60.0)  # 5 minutes of etching
-process.setIntegrationScheme(
-    vls.lsIntegrationSchemeEnum.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
-)
+process.setParameters(advectionParams)
 
 for n in range(minutes):
     # run process
     process.apply()
-    geometry.saveSurface("wetEtchingSurface_" + str(n) + ".vtp", True)
+    geometry.saveSurfaceMesh("wetEtchingSurface_" + str(n) + ".vtp", True)
 
-geometry.saveSurface("finalGeometry.vtp", True)
+geometry.saveSurfaceMesh("finalGeometry.vtp", True)

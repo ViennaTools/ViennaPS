@@ -1,0 +1,59 @@
+name: 🏗️ Setup Environment
+description: Install Dependencies & Deploy Workarounds
+
+inputs:
+  os:
+    required: true
+    description: Operating System used
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: 🩹 Enable Long Paths
+      shell: bash
+      if: ${{ inputs.os == 'windows-latest' }}
+      run: git config --system core.longpaths true
+
+    - name: 🖥️ Enable MSVC Dev Console
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: 📋 Install OpenMP
+      shell: bash
+      if: ${{ inputs.os == 'macos-latest' }}
+      run: |
+        # brew reinstall --build-from-source --formula ./.github/homebrew/libomp.rb
+        brew install libomp
+        echo "OpenMP_ROOT=$(brew --prefix)/opt/libomp" >> $GITHUB_ENV
+
+    - name: Install Git LFS and configure (Windows)
+      if: ${{ inputs.os == 'windows-latest' }}
+      shell: bash
+      run: |
+        git lfs version || choco install git-lfs -y
+        git lfs install --system
+        git config --global core.autocrlf false
+        echo "GIT_LFS_SKIP_SMUDGE=1" >> "$GITHUB_ENV"
+        echo "CMAKE_GIT_COMMAND=$(which git)" >> "$GITHUB_ENV"
+
+    - name: Install Git LFS and configure (macOS)
+      if: ${{ inputs.os == 'macos-latest' }}
+      shell: bash
+      run: |
+        brew install git-lfs || true
+        sudo git lfs install --system
+        git config --global core.autocrlf false
+        echo "GIT_LFS_SKIP_SMUDGE=1" >> "$GITHUB_ENV"
+        echo "CMAKE_GIT_COMMAND=$(which git)" >> "$GITHUB_ENV"
+
+    - name: 🐍 Install Python (windows)
+      if: ${{ inputs.os == 'windows-latest' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: 🐍 Install Python (macOS)
+      if: ${{ inputs.os == 'macos-latest' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"

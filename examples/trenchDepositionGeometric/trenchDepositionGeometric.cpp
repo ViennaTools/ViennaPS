@@ -1,47 +1,49 @@
 #include <geometries/psMakeTrench.hpp>
-#include <psGeometricDistributionModels.hpp>
-#include <psProcess.hpp>
-#include <psUtils.hpp>
+#include <models/psGeometricDistributionModels.hpp>
 
-#include "parameters.hpp"
+#include <process/psProcess.hpp>
+#include <psUtil.hpp>
+
+namespace ps = viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
   static constexpr int D = 2;
 
   // Parse the parameters
-  Parameters<NumericType> params;
+  ps::util::Parameters params;
   if (argc > 1) {
-    auto config = psUtils::readConfigFile(argv[1]);
-    if (config.empty()) {
-      std::cerr << "Empty config provided" << std::endl;
-      return -1;
+    params.readConfigFile(argv[1]);
+  } else {
+    // Try default config file
+    params.readConfigFile("config.txt");
+    if (params.m.empty()) {
+      std::cout << "No configuration file provided!" << std::endl;
+      std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
+      return 1;
     }
-    params.fromMap(config);
   }
 
-  auto geometry = psSmartPointer<psDomain<NumericType, D>>::New();
-  psMakeTrench<NumericType, D>(geometry, params.gridDelta, params.xExtent,
-                               params.yExtent, params.trenchWidth,
-                               params.trenchHeight)
+  auto geometry = ps::SmartPointer<ps::Domain<NumericType, D>>::New(
+      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+  ps::MakeTrench<NumericType, D>(geometry, params.get("trenchWidth"),
+                                 params.get("trenchHeight"),
+                                 params.get("taperAngle"))
       .apply();
 
   // copy top layer to capture deposition
-  geometry->duplicateTopLevelSet();
+  geometry->duplicateTopLevelSet(ps::Material::SiO2);
 
-  auto model = psSmartPointer<psSphereDistribution<NumericType, D>>::New(
-      params.layerThickness, params.gridDelta);
+  auto model = ps::SmartPointer<ps::SphereDistribution<NumericType, D>>::New(
+      params.get("layerThickness"));
 
-  psProcess<NumericType, D> process;
+  ps::Process<NumericType, D> process;
   process.setDomain(geometry);
   process.setProcessModel(model);
 
-  geometry->saveSurfaceMesh("initial.vtp");
+  geometry->saveHullMesh("initial");
 
   process.apply();
 
-  geometry->saveSurfaceMesh("final.vtp");
-
-  if constexpr (D == 2)
-    geometry->saveVolumeMesh("final");
+  geometry->saveHullMesh("final");
 }

@@ -1,0 +1,18 @@
+# Geometry
+gridDelta = 0.1
+xExtent = 15
+yExtent = 15
+
+offsetX = 12.
+offsetY = 15.
+holeRadius = 2.0
+holeDepth = 7.5
+taperingAngle = 1.5
+
+# Process
+depositionTime = 1.5
+numCycles = 10
+
+interpolationMode=linear
+
+ratesFile = rates3D.csv

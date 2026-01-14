@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(prog="holeEtching", description="Run a hole etching process.")
@@ -9,54 +10,65 @@ args = parser.parse_args()
 # switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+ps.setDimension(args.dim)
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
-# print intermediate output surfaces during the process
-vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
+ps.Length.setUnit(params["lengthUnit"])
+ps.Time.setUnit(params["timeUnit"])
 
 # geometry setup, all units in um
-geometry = vps.Domain()
-vps.MakeHole(
-    domain=geometry,
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+ps.MakeHole(
+    domain=geometry,
     holeRadius=params["holeRadius"],
-    holeDepth=params["maskHeight"],
-    taperingAngle=params["taperAngle"],
-    makeMask=True,
-    material=vps.Material.Si,
+    holeDepth=0.0,
+    maskHeight=params["maskHeight"],
+    maskTaperAngle=params["taperAngle"],
+    holeShape=ps.HoleShape.HALF,
 ).apply()
 
 # use pre-defined model SF6O2 etching model
-model = vps.SF6O2Etching(
-    ionFlux=params["ionFlux"],
-    etchantFlux=params["etchantFlux"],
-    oxygenFlux=params["oxygenFlux"],
-    meanIonEnergy=params["meanEnergy"],
-    sigmaIonEnergy=params["sigmaEnergy"],
-    oxySputterYield=params["A_O"],
-    etchStopDepth=params["etchStopDepth"],
-)
+modelParams = ps.SF6O2Etching.defaultParameters()
+modelParams.ionFlux = params["ionFlux"]
+modelParams.etchantFlux = params["etchantFlux"]
+modelParams.passivationFlux = params["oxygenFlux"]
+modelParams.Ions.meanEnergy = params["meanEnergy"]
+modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
+modelParams.Ions.exponent = params["ionExponent"]
+modelParams.Passivation.A_ie = params["A_O"]
+modelParams.Substrate.A_ie = params["A_Si"]
+modelParams.etchStopDepth = params["etchStopDepth"]
+model = ps.SF6O2Etching(modelParams)
+
+covParams = ps.CoverageParameters()
+covParams.tolerance = 1e-4
+
+rayParams = ps.RayTracingParameters()
+rayParams.raysPerPoint = int(params["raysPerPoint"])
+rayParams.smoothingNeighbors = 2
+
+advParams = ps.AdvectionParameters()
+advParams.spatialScheme = ps.util.convertSpatialScheme(params["spatialScheme"])
 
 # process setup
-process = vps.Process()
-process.setDomain(geometry)
-process.setProcessModel(model)
-process.setMaxCoverageInitIterations(10)
-process.setNumberOfRaysPerPoint(int(params["raysPerPoint"]))
+process = ps.Process(geometry, model)
 process.setProcessDuration(params["processTime"])  # seconds
+process.setParameters(covParams)
+process.setParameters(rayParams)
+process.setParameters(advParams)
 
 # print initial surface
-geometry.saveSurface(filename="initial.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="initial.vtp")
 
 # run the process
 process.apply()
 
 # print final surface
-geometry.saveSurface(filename="final.vtp", addMaterialIds=True)
+geometry.saveSurfaceMesh(filename="final.vtp", addInterfaces=True)

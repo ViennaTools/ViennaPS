@@ -1,0 +1,42 @@
+name: 🔍 Check Formatting
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      debug:
+        type: boolean
+        description: Enable Debugging
+
+jobs:
+  check-coding-style:
+    runs-on: ubuntu-latest
+    container: ghcr.io/viennatools/vienna-builder:suite-python
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          set-safe-directory: true
+
+      - name: 📋 Install additional dependencies
+        if: ${{ github.event.inputs.debug == 'true' }}
+        run: apk add tmate
+
+      - name: 🐛 Debug Issues
+        if: ${{ github.event.inputs.debug == 'true' }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          install-dependencies: false
+          limit-access-to-actor: true
+
+      - name: 🔍 Check Format
+        run: |
+          git config --global --add safe.directory $(pwd) # "set-safe-directory" seems bugged in actions/checkout@v4
+          cmake -B build
+          cmake --build build --target format-check

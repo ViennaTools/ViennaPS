@@ -1,0 +1,44 @@
+# Geometry
+holeShape = Half
+# all length units are in micrometers (um)
+gridDelta=0.025  # um
+xExtent=3.5      # um
+yExtent=3.5      # um
+
+holeRadius=1.0   # um
+maskHeight=0.6   # um
+taperAngle=0.0   # degree
+
+# Model parameters
+ionSourceExponent = 1000
+numCycles = 10
+
+# Deposition step parameters
+# Sticking
+stickingDep = 0.1
+# Fluxes
+Flux_ionD = 3.125e15    # atoms/cm^2.s
+Flux_neuD = 2.0e18      # atoms/cm^2.s
+# Effective deposition rates
+alphaDep = 10.          # A^3/atom
+betaDep  = 0.5          # A^3/atom
+# Time
+depTime = 5             # s
+
+# Etching step parameters
+# Sticking
+stickingEtchPoly = 0.1
+stickingEtchMask = 0.2
+stickingEtchSubs = 0.2
+# Fluxes
+Flux_ionE = 4.375e15    # atoms/cm^2.s
+Flux_neuE = 1.0e19      # atoms/cm^2.s
+# Effective etch rates
+alphaPoly = -125        # A^3/atom
+alphaSubs = -270        # A^3/atom
+alphaMask = -13.5       # A^3/atom
+betaPoly  = -0.03       # A^3/atom
+betaSubs  = -0.9        # A^3/atom
+betaMask  = -0.045      # A^3/atom
+# Time
+etchTime = 11           # s

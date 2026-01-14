@@ -1,0 +1,64 @@
+name: 🧪 Run Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        config:
+          - Release
+          - Debug
+
+        os:
+          - macos-latest
+          - windows-latest
+
+        include:
+          - os: ubuntu-latest
+            config: Release
+            container: ghcr.io/viennatools/vienna-builder:suite
+          - os: ubuntu-latest
+            config: Debug
+            container: ghcr.io/viennatools/vienna-builder:suite
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+
+    name: "🧪 Test on ${{ matrix.os }} (⚙️: ${{ matrix.config }}, 💿: ${{ matrix.container || matrix.os }})"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🖥️ Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          os: ${{ matrix.os }}
+
+      - name: 📋 Install MacOS Dependencies
+        shell: bash
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install embree tbb vtk
+
+      - name: 🦥 Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          key: test-${{ matrix.os }}-${{ matrix.config }}
+          path: build
+
+      - name: 🏗️ Compile
+        run: cmake -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build --config ${{ matrix.config }}
+
+      - name: 🧪 Test
+        run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build

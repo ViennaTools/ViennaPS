@@ -1,0 +1,186 @@
+#pragma once
+
+#include <cmath>
+#include <random>
+
+#include <vcRNG.hpp>
+#include <vcUtil.hpp>
+
+namespace viennaps::impl {
+
+using namespace viennacore;
+
+template <class NumericType>
+inline NumericType getCosTheta(const Vec3D<NumericType> &rayDir,
+                               const Vec3D<NumericType> &geomNormal) {
+  // Calculate the cosine of the angle between ray direction and surface normal
+  // and clamp it to [0,1] to avoid numerical issues
+  return util::saturate(-DotProduct(rayDir, geomNormal));
+}
+
+inline double erfcinvApprox(double y) {
+  // Approx by Mike Giles, accurate ~1e-9 in double. Domain y in (0,2).
+  // See M. Giles, “Approximating the erfinv function.” In  GPU Computing Gems
+  // Jade Edition, pp. 109-116. 2011.
+  double w = -std::log((2.0 - y) * y);
+  double p;
+  if (w < 5.0) {
+    w = w - 2.5;
+    p = 2.81022636e-08;
+    p = 3.43273939e-07 + p * w;
+    p = -3.5233877e-06 + p * w;
+    p = -4.39150654e-06 + p * w;
+    p = 0.00021858087 + p * w;
+    p = -0.00125372503 + p * w;
+    p = -0.00417768164 + p * w;
+    p = 0.246640727 + p * w;
+    p = 1.50140941 + p * w;
+  } else {
+    w = std::sqrt(w) - 3.0;
+    p = -0.000200214257;
+    p = 0.000100950558 + p * w;
+    p = 0.00134934322 + p * w;
+    p = -0.00367342844 + p * w;
+    p = 0.00573950773 + p * w;
+    p = -0.0076224613 + p * w;
+    p = 0.00943887047 + p * w;
+    p = 1.00167406 + p * w;
+    p = 2.83297682 + p * w;
+  }
+  return p;
+}
+
+inline double norm_inv_from_cdf(double p) {
+  // Φ^{-1}(p) = -√2 * erfcinv(2p)
+  return util::saturate(-1.4142135623730951 * erfcinvApprox(2.0 * p));
+}
+
+inline double Phi_from_x(double x) {
+  // Φ(x) = 0.5 * erfc(-x/√2)
+  return 0.5 * std::erfc(-x * 0.7071067811865476);
+}
+
+template <class NumericType>
+inline NumericType sampleTruncatedNormal(RNG &rng, NumericType mu,
+                                         NumericType sigma, NumericType L,
+                                         NumericType U) {
+  if (sigma <= NumericType(0))
+    return std::min(std::max(mu, L), U);
+
+  const double a = (double(L) - double(mu)) / double(sigma);
+  const double b = (double(U) - double(mu)) / double(sigma);
+  const double Fa = Phi_from_x(a);
+  const double Fb = Phi_from_x(b);
+  double w = Fb - Fa;
+
+  if (w <= 1e-12) {
+    const double pmid = Fa + 0.5 * w;
+    return NumericType(double(mu) + double(sigma) * norm_inv_from_cdf(pmid));
+  }
+
+  std::uniform_real_distribution<double> uni(Fa, Fb);
+  const double p = uni(rng);
+  const double z = norm_inv_from_cdf(p);
+#ifndef NDEBUG
+  const double energy = double(mu) + double(sigma) * z;
+  if (energy < double(L) || energy > double(U) || !std::isfinite(energy)) {
+    std::cout << "Sampled out-of-bounds truncated normal: " << energy
+              << " not in [" << L << ", " << U << "]" << std::endl;
+    std::cout << " mu: " << mu << ", sigma: " << sigma << ", a: " << a
+              << ", b: " << b << ", Fa: " << Fa << ", Fb: " << Fb
+              << ", p: " << p << ", z: " << z << std::endl;
+  }
+#endif
+  return NumericType(double(mu) + double(sigma) * z);
+}
+
+template <class NumericType>
+inline NumericType updateEnergy(RNG &rng, NumericType E, NumericType incAngle,
+                                NumericType A_energy,
+                                const NumericType inflectAngle,
+                                const NumericType n_l) {
+  // Small incident angles are reflected with the energy fraction centered at
+  // 0
+  NumericType Eref_peak; // between 0 and 1
+  if (incAngle >= inflectAngle) {
+    Eref_peak = NumericType(1) - (NumericType(1) - A_energy) *
+                                     (NumericType(M_PI_2) - incAngle) /
+                                     (NumericType(M_PI_2) - inflectAngle);
+  } else {
+    Eref_peak = A_energy * std::pow(incAngle / inflectAngle, n_l);
+  }
+  assert(Eref_peak >= NumericType(0) && Eref_peak <= NumericType(1) &&
+         "Eref_peak out of bounds");
+
+  // Normal distribution around the Eref_peak
+  std::normal_distribution<NumericType> normalDist(Eref_peak * E, 0.1 * E);
+  NumericType newEnergy = normalDist(rng);
+  while (newEnergy < NumericType(0) || newEnergy > E) {
+    newEnergy = normalDist(rng);
+  }
+  return newEnergy;
+
+  //   const NumericType a = (NumericType(0) - Eref_peak) / sigma;
+  //   const NumericType b = (NumericType(1) - Eref_peak) / sigma;
+
+  //   const NumericType Fa = Phi_from_x(a);
+  //   const NumericType Fb = Phi_from_x(b);
+  //   const NumericType width = Fb - Fa;
+
+  //   // Guard extreme tails to avoid Fb==Fa
+  //   NumericType dist;
+  //   if (width <= NumericType(1e-7)) {
+  //     // pick midpoint in CDF space
+  //     const NumericType pmid = Fa + NumericType(0.5) * width;
+  //     dist = Eref_peak + sigma * norm_inv_from_cdf(pmid);
+  //   } else {
+  //     std::uniform_real_distribution<NumericType> uni(NumericType(0), width);
+  //     const NumericType p = uni(rng) + Fa;        // Fa + u*(Fb-Fa)
+  //     const NumericType z = norm_inv_from_cdf(p); // z in (a,b)
+  //     dist = Eref_peak + sigma * z;               // ∈ (0,1)
+  // #ifndef NDEBUG
+  //     if (dist < NumericType(0) || dist > NumericType(1) ||
+  //         !std::isfinite(double(dist))) {
+  //       std::cout << "Sampled out-of-bounds truncated normal: " << dist
+  //                 << " not in [" << NumericType(0) << ", " << NumericType(1)
+  //                 << "]" << std::endl;
+  //       std::cout << " mu: " << Eref_peak << ", sigma: " << sigma << ", a: "
+  //       << a
+  //                 << ", b: " << b << ", Fa: " << Fa << ", Fb: " << Fb
+  //                 << ", p: " << p << ", z: " << z << std::endl;
+  //     }
+  // #endif
+  //   }
+
+  //   return E * dist;
+}
+
+template <typename T> inline T initNormalDistEnergy(RNG &rng, T mean, T sigma) {
+  if (sigma <= T(0))
+    return mean;
+
+  T energy_;
+  std::normal_distribution<T> normalDist(mean, sigma);
+  do {
+    energy_ = normalDist(rng);
+  } while (energy_ < T(0));
+
+  //   const T a = (threshold - mean) / sigma;
+  //   const T Phi_a = Phi_from_x(a);
+
+  //   std::uniform_real_distribution<T> uni(T(0), T(1));
+  //   const T u = uni(rng);
+  //   const T up = Phi_a + (T(1) - Phi_a) * u;
+
+  //   const T z = norm_inv_from_cdf(up);
+  //   const T energy_ = mean + sigma * z;
+  // #ifndef NDEBUG
+  //   if (energy_ < 0. || !std::isfinite(energy_)) {
+  //     std::cout << "Initialized invalid energy_: " << energy_ << std::endl;
+  //     std::cout << " u " << u << " up " << up << " z " << z << std::endl;
+  //   }
+  // #endif
+  return energy_;
+}
+
+} // namespace viennaps::impl

@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import viennaps as ps
 
 # parse config file name and simulation dimension
 parser = ArgumentParser(
@@ -9,43 +10,38 @@ parser.add_argument("-D", "-DIM", dest="dim", type=int, default=2)
 parser.add_argument("filename")
 args = parser.parse_args()
 
-# switch between 2D and 3D mode
 if args.dim == 2:
     print("Running 2D simulation.")
-    import viennaps2d as vps
 else:
     print("Running 3D simulation.")
-    import viennaps3d as vps
+ps.setDimension(args.dim)
 
-params = vps.ReadConfigFile(args.filename)
+params = ps.readConfigFile(args.filename)
 
-geometry = vps.Domain()
-vps.MakeTrench(
-    domain=geometry,
+geometry = ps.Domain(
     gridDelta=params["gridDelta"],
     xExtent=params["xExtent"],
     yExtent=params["yExtent"],
+)
+ps.MakeTrench(
+    domain=geometry,
     trenchWidth=params["trenchWidth"],
     trenchDepth=params["trenchHeight"],
-    taperingAngle=params["taperAngle"],
-    baseHeight=0.0,
-    periodicBoundary=False,
-    makeMask=False,
-    material=vps.Material.Si,
+    trenchTaperAngle=params["taperAngle"],
 ).apply()
 
-geometry.duplicateTopLevelSet(vps.Material.SiO2)
+geometry.duplicateTopLevelSet(ps.Material.SiO2)
 
-model = vps.SingleParticleProcess(
+model = ps.SingleParticleProcess(
     stickingProbability=params["stickingProbability"],
     sourceExponent=params["sourcePower"],
 )
 
-geometry.saveSurface("initial.vtp")
+geometry.saveHullMesh("initial")
 
-vps.Process(geometry, model, params["processTime"]).apply()
+process = ps.Process(geometry, model)
+process.setProcessDuration(params["processTime"])
 
-geometry.saveSurface("final.vtp")
+process.apply()
 
-if args.dim == 2:
-    geometry.saveVolume("final")
+geometry.saveHullMesh("final")

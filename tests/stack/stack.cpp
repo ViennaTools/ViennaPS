@@ -1,19 +1,38 @@
+#include <geometries/psMakeStack.hpp>
+#include <lsTestAsserts.hpp>
 #include <psDomain.hpp>
-#include <psMakeStack.hpp>
-#include <psTestAssert.hpp>
+#include <vcTestAsserts.hpp>
 
-template <class NumericType, int D> void psRunTest() {
-  auto domain = psSmartPointer<psDomain<NumericType, D>>::New();
+namespace viennacore {
 
-  psMakeStack<NumericType, D>(domain, 1., 10., 10., 3 /*num layers*/, 3., 2.,
-                              0., 0., 10, true)
+using namespace viennaps;
+
+template <class NumericType, int D> void RunTest() {
+  Logger::setLogLevel(LogLevel::DEBUG);
+#ifdef _OPENMP
+  omp_set_num_threads(1);
+#endif
+  auto domain = Domain<NumericType, D>::New();
+  MakeStack<NumericType, D>(domain, 1.0, 10., 10., 5 /*num layers*/, 3., 2., 2.,
+                            2., 0., true)
       .apply();
+  domain->saveLevelSetMesh("stack_1_" + std::to_string(D) + "D");
 
-  PSTEST_ASSERT(domain->getLevelSets());
-  PSTEST_ASSERT(domain->getLevelSets()->size() == 5);
-  PSTEST_ASSERT(domain->getMaterialMap());
+  VC_TEST_ASSERT(domain->getLevelSets().size() == 6);
+  VC_TEST_ASSERT(domain->getMaterialMap());
 
-  LSTEST_ASSERT_VALID_LS(domain->getLevelSets()->back(), NumericType, D);
+  LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
+
+  domain->setup(1.0, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
+  MakeStack<NumericType, D>(domain, 5, 1., 2., 0., 5., 3., 10., true).apply();
+  domain->saveLevelSetMesh("stack_2_" + std::to_string(D) + "D");
+
+  VC_TEST_ASSERT(domain->getLevelSets().size() == 7);
+  VC_TEST_ASSERT(domain->getMaterialMap());
+
+  LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
 }
 
-int main() { PSRUN_ALL_TESTS }
+} // namespace viennacore
+
+int main() { VC_RUN_ALL_TESTS }

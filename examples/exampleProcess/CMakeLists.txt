@@ -1,9 +1,7 @@
-cmake_minimum_required(VERSION 3.4)
+project(exampleProcess LANGUAGES CXX)
 
-project("exampleProcess")
+add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cpp")
+target_link_libraries(${PROJECT_NAME} PRIVATE ViennaPS)
 
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNAPS_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNAPS_LIBRARIES})
-
-add_dependencies(buildExamples ${PROJECT_NAME})
+add_dependencies(ViennaPS_Examples ${PROJECT_NAME})
+viennacore_setup_bat(${PROJECT_NAME} ${VIENNAPS_ARTIFACTS_DIRECTORY})
