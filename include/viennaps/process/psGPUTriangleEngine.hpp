@@ -136,8 +136,9 @@ public:
       elementKdTree_->setPoints(triangleCenters);
       elementKdTree_->build();
     } else {
-      triangleMesh = CreateTriangleMesh(
-          static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
+      CopyTriangleMesh(static_cast<float>(context.domain->getGridDelta()),
+                       surfaceMesh_, triangleMesh);
+      // preserves surfaceMesh_
     }
 
     rayTracer_.setGeometry(triangleMesh);
@@ -228,7 +229,8 @@ public:
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
                           surfaceMesh_->getElements<3>().size());
       }
-      saveResultsToPointData(surfaceMesh_->getCellData());
+      saveResultsToPointData(
+          surfaceMesh_->getCellData()); // save fluxes to elements
       viennals::VTKWriter<float>(
           surfaceMesh_, context.intermediateOutputPath +
                             context.getProcessName() + "_flux_" +
@@ -269,22 +271,20 @@ private:
     assert(numPoints == surfaceMesh_->getElements<3>().size());
     auto const &results = rayTracer_.getResults();
     auto particles = rayTracer_.getParticles();
+    const auto &dataLabels = model_->getParticleDataLabels();
 
-    int offset = 0;
-    for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
-      for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        auto name = particles[pIdx].dataLabels[dIdx];
-        assert(offset + dIdx < results.size());
-        const auto &data = results[offset + dIdx];
+    assert(dataLabels.size() == results.size());
 
-        std::vector<float> values(numPoints);
-        for (unsigned i = 0; i < numPoints; ++i) {
-          values[i] = static_cast<float>(data[i]);
-        }
+    for (int dIdx = 0; dIdx < dataLabels.size(); dIdx++) {
+      const auto &name = dataLabels[dIdx];
+      const auto &data = results[dIdx];
 
-        pointData.insertReplaceScalarData(std::move(values), name);
+      std::vector<float> values(numPoints);
+      for (unsigned i = 0; i < numPoints; ++i) {
+        values[i] = static_cast<float>(data[i]);
       }
-      offset += particles[pIdx].dataLabels.size();
+
+      pointData.insertReplaceScalarData(std::move(values), name);
     }
   }
 

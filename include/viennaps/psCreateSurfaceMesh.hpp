@@ -24,7 +24,18 @@ CreateTriangleMesh(const float gridDelta,
   triangleMesh.maximumExtent = mesh->maximumExtent;
   triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
 
-  return triangleMesh;
+  return std::move(triangleMesh);
+}
+
+inline void CopyTriangleMesh(const float gridDelta,
+                             const SmartPointer<viennals::Mesh<float>> &mesh,
+                             viennaray::TriangleMesh &triangleMesh) {
+  triangleMesh.gridDelta = gridDelta;
+  triangleMesh.triangles = mesh->triangles;
+  triangleMesh.nodes = mesh->nodes;
+  triangleMesh.minimumExtent = mesh->minimumExtent;
+  triangleMesh.maximumExtent = mesh->maximumExtent;
+  triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
 }
 
 template <class LsNT, class MeshNT = LsNT, int D = 3> class CreateSurfaceMesh {

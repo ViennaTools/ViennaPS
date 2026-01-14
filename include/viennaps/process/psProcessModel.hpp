@@ -174,8 +174,6 @@ public:
 #ifdef VIENNACORE_COMPILE_GPU
 namespace viennaps::gpu {
 
-using namespace viennacore;
-
 template <class NumericType, int D>
 class ProcessModelGPU : public ProcessModelBase<NumericType, D> {
 private:
@@ -187,7 +185,7 @@ private:
   std::vector<viennaray::gpu::CallableConfig> callableMap_;
 
 public:
-  CudaBuffer processData;
+  viennacore::CudaBuffer processData;
   auto &getParticleTypes() { return particles; }
   auto getProcessDataDPtr() const { return processData.dPointer(); }
   bool useMaterialIds() const { return materialIds; }
