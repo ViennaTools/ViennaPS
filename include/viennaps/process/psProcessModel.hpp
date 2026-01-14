@@ -156,6 +156,17 @@ public:
   void setSource(SmartPointer<viennaray::Source<NumericType>> passedSource) {
     source = passedSource;
   }
+
+  auto getParticleDataLabels() const {
+    std::vector<std::string> dataLabels;
+    for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
+      auto labels = particles[pIdx]->getLocalDataLabels();
+      for (size_t dIdx = 0; dIdx < labels.size(); dIdx++) {
+        dataLabels.push_back(labels[dIdx]);
+      }
+    }
+    return dataLabels;
+  }
 };
 
 } // namespace viennaps
@@ -217,6 +228,16 @@ public:
   virtual void
   setPrimaryDirection(const std::array<NumericType, 3> passedPrimaryDirection) {
     primaryDirection = Normalize(passedPrimaryDirection);
+  }
+
+  auto getParticleDataLabels() const {
+    std::vector<std::string> dataLabels;
+    for (size_t pIdx = 0; pIdx < particles.size(); pIdx++) {
+      for (size_t dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
+        dataLabels.push_back(particles[pIdx].dataLabels[dIdx]);
+      }
+    }
+    return dataLabels;
   }
 };
 

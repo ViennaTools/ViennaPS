@@ -42,12 +42,16 @@ parameters.cageAngle = params["cageAngle"]
 parameters.ibeParams.tiltAngle = params["tiltAngle"]
 mask = [ps.Material.Mask]
 
-model = ps.FaradayCageEtching(mask, parameters)
+model = ps.FaradayCageEtching(parameters, mask)
+
+advParams = ps.AdvectionParameters()
+advParams.spatialScheme = ps.SpatialScheme.LAX_FRIEDRICHS_1ST_ORDER
 
 # process setup
 process = ps.Process()
 process.setDomain(geometry)
 process.setProcessModel(model)
+process.setParameters(advParams)
 process.setProcessDuration(params["etchTime"])  # seconds
 
 # print initial surface

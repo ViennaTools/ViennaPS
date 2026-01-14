@@ -19,11 +19,12 @@ struct MaterialInfoPy {
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
-      "ViennaPS is a header-only C++ process simulation library which "
-      "includes surface and volume representations, a ray tracer, and physical "
-      "models for the simulation of microelectronic fabrication processes. The "
-      "main design goals are simplicity and efficiency, tailored towards "
-      "scientific simulations.";
+      "ViennaPS is a topography simulation library for microelectronic "
+      "fabrication processes. It models the evolution of 2D and 3D surfaces "
+      "during etching, deposition, and related steps, combining advanced "
+      "level-set methods for surface evolution with Monte Carlo ray tracing "
+      "for flux calculation. This allows accurate, feature-scale simulation of "
+      "complex fabrication geometries.";
 
   // set version string of python module
   module.attr("__version__") = versionString();

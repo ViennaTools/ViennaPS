@@ -47,7 +47,7 @@ ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org
 
 * macOS (clang)
 
-* Windows (Visual Studio)
+* Windows (MSVC)
 
 ### System Requirements
 
@@ -55,7 +55,7 @@ ViennaPS is also available on the [Python Package Index (PyPI)](https://pypi.org
 
 ### ViennaTools Dependencies (installed automatically)
 
-ViennaPS is part of the ViennaTools ecosystem and depends on several lightweight, header-only ViennaTools libraries. During configuration, CMake will look for them and fetch them automatically as part of the ViennaPS build. No separate installation step is required for these dependencies:
+ViennaPS is part of the ViennaTools ecosystem and depends on several lightweight, header-only ViennaTools libraries. During configuration, CMake will fetch them automatically as part of the ViennaPS build. No separate installation step is required for these dependencies:
 
 * [ViennaCore](https://github.com/ViennaTools/viennacore) 
 * [ViennaLS](https://github.com/ViennaTools/viennals) 
@@ -97,6 +97,14 @@ cd ViennaPS
 
 pip install .
 ```
+
+To build the Python package with **GPU** support, use the install script in `python/scripts` folder. On Linux, e.g., run:
+```bash
+python3 -m venv .venv # create virtual environment (optional, but recommended)
+source .venv/bin/activate # activate virtual environment 
+python python/scripts/install_ViennaPS.py
+```
+A CUDA toolkit and driver compatible with your GPU must be installed on your system to use the GPU functionality.
 
 > Some features of the ViennaPS Python module depend on the ViennaLS Python module. The ViennaLS is installed automatically as a dependency.
 > Note: A locally built ViennaPS Python module is typically not compatible with the ViennaLS package from PyPI. For details and troubleshooting, see [this guide](https://viennatools.github.io/ViennaPS/inst/troubleshooting.html#python-importerror).

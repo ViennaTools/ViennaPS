@@ -32,5 +32,3 @@ spatialScheme=EO_1
 temporalScheme=RK3
 
 raysPerPoint=1000
-
-outputFile=final_y0p62

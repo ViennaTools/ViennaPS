@@ -43,7 +43,7 @@ maxPoint = [params["openingWidth"] / 2.0 + params["gapLength"], params["gapHeigh
 ls.MakeGeometry(horiBox, ls.Box(minPoint, maxPoint)).apply()
 geometry.applyBooleanOperation(horiBox, ls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
-geometry.saveVolumeMesh("SingleParticleALD_initial.vtu")
+geometry.saveVolumeMesh("SingleParticleALD_initial")
 
 geometry.duplicateTopLevelSet(ps.Material.Al2O3)
 
@@ -81,4 +81,4 @@ ALP.apply()
 #   MeasureProfile<NumericType, D>(domain, params.get("gapHeight") / 2.)
 #       .save(params.get<std::string>("outputFile"));
 
-geometry.saveVolumeMesh("SingleParticleALD_final.vtu")
+geometry.saveVolumeMesh("SingleParticleALD_final")

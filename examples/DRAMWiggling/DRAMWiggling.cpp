@@ -3,8 +3,6 @@
 using namespace viennaps;
 
 int main(int argc, char **argv) {
-  using NumericType = double;
-  constexpr int D = 3;
 
   Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(12);
@@ -27,23 +25,22 @@ int main(int argc, char **argv) {
   units::Length::setUnit(params.get<std::string>("lengthUnit"));
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
-  constexpr NumericType gridDelta = 0.01 * (1. + 1e-12);
-  BoundaryType boundaryConds[D] = {BoundaryType::REFLECTIVE_BOUNDARY,
+  constexpr double gridDelta = 0.01 * (1. + 1e-12);
+  BoundaryType boundaryConds[3] = {BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::REFLECTIVE_BOUNDARY,
                                    BoundaryType::INFINITE_BOUNDARY};
 
-  auto mask =
-      SmartPointer<GDSGeometry<NumericType, D>>::New(gridDelta, boundaryConds);
+  auto mask = SmartPointer<GDSGeometry_double_3>::New(gridDelta, boundaryConds);
   mask->setBoundaryPadding(0.1, 0.1);
-  GDSReader<NumericType, D>(mask, params.get<std::string>("gdsFile")).apply();
+  GDSReader_double_3(mask, params.get<std::string>("gdsFile")).apply();
 
   // geometry setup
-  auto geometry = Domain<NumericType, D>::New();
+  auto geometry = Domain_double_3::New();
   auto maskLS = mask->layerToLevelSet(0, 0.0, 0.18);
   geometry->insertNextLevelSetAsMaterial(maskLS, Material::Mask);
-  MakePlane<NumericType, D>(geometry, 0.0, Material::Si, true).apply();
+  MakePlane_double_3(geometry, 0.0, Material::Si, true).apply();
 
-  auto modelParams = HBrO2Etching<NumericType, D>::defaultParameters();
+  auto modelParams = HBrO2Etching_double_3::defaultParameters();
   modelParams.ionFlux = params.get("ionFlux");
   modelParams.etchantFlux = params.get("etchantFlux");
   modelParams.passivationFlux = params.get("oxygenFlux");
@@ -52,7 +49,7 @@ int main(int argc, char **argv) {
   modelParams.Ions.exponent = params.get("ionExponent");
   modelParams.Ions.n_l = 200;
   modelParams.Substrate.B_sp = 0.75;
-  auto model = SmartPointer<HBrO2Etching<NumericType, D>>::New(modelParams);
+  auto model = SmartPointer<HBrO2Etching_double_3>::New(modelParams);
 
   // Advection parameters
   AdvectionParameters advectionParams;
@@ -69,7 +66,7 @@ int main(int argc, char **argv) {
   coverageParams.tolerance = 1e-5;
 
   // Process setup
-  Process<NumericType, D> process(geometry, model, params.get("processTime"));
+  Process_double_3 process(geometry, model, params.get("processTime"));
   process.setParameters(advectionParams);
   process.setParameters(rayParams);
   process.setParameters(coverageParams);

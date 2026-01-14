@@ -10,7 +10,6 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
 
-  ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
   omp_set_num_threads(16);
 
   // Parse the parameters
@@ -46,20 +45,15 @@ int main(int argc, char *argv[]) {
       cageParams, maskMaterials);
 
   ps::AdvectionParameters advectionParams;
-  advectionParams.spatialScheme =
-      ps::SpatialScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
-
-  ps::RayTracingParameters rayParams;
-  rayParams.raysPerPoint = params.get<int>("raysPerPoint");
+  advectionParams.spatialScheme = ps::SpatialScheme::LAX_FRIEDRICHS_1ST_ORDER;
 
   // process setup
   ps::Process<NumericType, D> process(geometry, model);
   process.setProcessDuration(params.get("etchTime"));
-  process.setParameters(rayParams);
   process.setParameters(advectionParams);
 
   // print initial surface
-  geometry->saveHullMesh("initial.vtp");
+  geometry->saveHullMesh("initial");
 
   // run the process
   process.apply();

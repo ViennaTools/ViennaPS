@@ -125,6 +125,8 @@ int main() {
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
 
+    std::vector<std::string> dataLabels = particle->getLocalDataLabels();
+
     for (int i = 0; i < gridDeltaValues.size(); i++) {
       std::cout << "  Grid Delta: " << gridDeltaValues[i] << "\n";
       auto domain = MAKE_GEO<NumericType>(gridDeltaValues[i]);
@@ -186,10 +188,11 @@ int main() {
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));
         }
-        ElementToPointData<NumericType, float, float>(
-            IndexMap(particles), fluxResultVec, pointData, elementKdTree,
-            diskMesh, surfMesh, domain->getGridDelta() * 2.0f)
-            .apply();
+        ElementToPointData<NumericType, float, float> post(
+            dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
+            domain->getGridDelta() * 2.0f);
+        post.setElementDataArrays(std::move(fluxResultVec));
+        post.apply();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(
             std::move(*pointData->getScalarData(fluxLabel)));
         velocityField->prepare(domain, velocities, 0.);

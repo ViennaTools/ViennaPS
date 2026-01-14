@@ -53,8 +53,8 @@ process.setProcessModel(model)
 process.setParameters(rayParams)
 process.setProcessDuration(params["processTime"])
 
-geometry.saveVolumeMesh("MultiTEOS_initial.vtp")
+geometry.saveVolumeMesh("MultiTEOS_initial")
 
 process.apply()
 
-geometry.saveVolumeMesh("MultiTEOS_final.vtp")
+geometry.saveVolumeMesh("MultiTEOS_final")

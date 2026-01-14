@@ -35,9 +35,6 @@ geometry.insertNextLevelSetAsMaterial(maskLS, ps.Material.Mask)
 # Add plane
 ps.MakePlane(geometry, 0.0, ps.Material.Si, True).apply()
 
-# print intermediate output surfaces during the process
-ps.Logger.setLogLevel(ps.LogLevel.INFO)
-
 ps.Length.setUnit(params["lengthUnit"])
 ps.Time.setUnit(params["timeUnit"])
 
@@ -49,6 +46,7 @@ modelParams.Ions.meanEnergy = params["meanEnergy"]
 modelParams.Ions.sigmaEnergy = params["sigmaEnergy"]
 modelParams.Ions.exponent = params["ionExponent"]
 modelParams.Ions.n_l = 200
+modelParams.Substrate.B_sp = 0.75
 model = ps.HBrO2Etching(modelParams)
 
 coverageParameters = ps.CoverageParameters()
@@ -58,9 +56,7 @@ rayTracingParams = ps.RayTracingParameters()
 rayTracingParams.raysPerPoint = int(params["raysPerPoint"])
 
 advectionParams = ps.AdvectionParameters()
-advectionParams.spatialScheme = ps.util.convertSpatialScheme(
-    params["spatialScheme"]
-)
+advectionParams.spatialScheme = ps.util.convertSpatialScheme(params["spatialScheme"])
 
 fluxEngineStr = params["fluxEngine"]
 fluxEngine = ps.util.convertFluxEngineType(fluxEngineStr)
