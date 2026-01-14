@@ -40,7 +40,7 @@ template <class T, int D> void RunTest() {
           1.0, 1.0, 1.0);
 
   for (const auto &engineType : engineTypes) {
-    std::cout << "Testing flux engine: " << viennaps::to_string(engineType)
+    std::cout << "Testing flux engine: " << viennaps::util::toString(engineType)
               << " in " << D << "D" << std::endl;
     auto domain = viennaps::Domain<T, D>::New(1.0, 10.0, 10.0);
 
@@ -58,7 +58,7 @@ template <class T, int D> void RunTest() {
 
     domain->saveSurfaceMesh("fluxEngineTest_" +
                             std::to_string(static_cast<int>(D)) + "D_" +
-                            viennaps::to_string(engineType) + ".vtp");
+                            viennaps::util::toString(engineType) + ".vtp");
 
     checkSurfaceHeight<T, D>(domain, 1.0);
   }

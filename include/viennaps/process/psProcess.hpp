@@ -99,7 +99,7 @@ public:
     VIENNACORE_LOG_DEBUG("Using strategy: " + std::string(strategy->name()));
 
     if (strategy->requiresFluxEngine()) {
-      VIENNACORE_LOG_DEBUG("Setting up " + to_string(fluxEngineType_) +
+      VIENNACORE_LOG_DEBUG("Setting up " + util::toString(fluxEngineType_) +
                            " flux engine for strategy.");
       strategy->setFluxEngine(createFluxEngine());
     }
@@ -191,7 +191,7 @@ private:
     assert(fluxEngineType_ != FluxEngineType::AUTO &&
            "Flux engine type must be specified before creation.");
     VIENNACORE_LOG_DEBUG("Creating flux engine of type: " +
-                         to_string(fluxEngineType_));
+                         util::toString(fluxEngineType_));
     // Create CPU engine
     if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
@@ -295,7 +295,7 @@ public:
         fluxEngineType_ = FluxEngineType::CPU_DISK;
       }
       VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
-                           to_string(fluxEngineType_));
+                           util::toString(fluxEngineType_));
     }
 
 #ifdef VIENNACORE_COMPILE_GPU

@@ -114,8 +114,8 @@ public:
       elementKdTree_->setPoints(triangleCenters);
       elementKdTree_->build();
     } else {
-      triangleMesh = CreateTriangleMesh(
-          static_cast<float>(context.domain->getGridDelta()), surfaceMesh_);
+      CopyTriangleMesh(static_cast<float>(context.domain->getGridDelta()),
+                       surfaceMesh_, triangleMesh);
     }
 
     rayTracer_.setGeometry(triangleMesh);
