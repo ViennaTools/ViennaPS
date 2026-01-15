@@ -11,4 +11,3 @@ tiltAngle = 60.0
 cageAngle = 90.0
 
 etchTime = 7.0
-raysPerPoint = 1000

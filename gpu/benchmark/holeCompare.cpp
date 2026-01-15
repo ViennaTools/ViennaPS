@@ -23,7 +23,7 @@ void runBenchmark(SmartPointer<Domain<NumericType, D>> geometry,
   process.apply();
   timer.finish();
 
-  std::cout << "Flux Engine: " << to_string(fluxEngine)
+  std::cout << "Flux Engine: " << util::toString(fluxEngine)
             << ", Time taken: " << timer.currentDuration / 1e9 << " s"
             << std::endl;
   copy->saveSurfaceMesh(outputFilename);
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     for (const auto &fluxEngine : fluxEngines) {
       runBenchmark<NumericType, D>(geometry, model, fluxEngine,
-                                   "result_PE_" + to_string(fluxEngine) +
+                                   "result_PE_" + util::toString(fluxEngine) +
                                        ".vtp");
     }
   }
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
     for (const auto &fluxEngine : fluxEngines) {
       runBenchmark<NumericType, D>(geometry, model, fluxEngine,
-                                   "result_SP_" + to_string(fluxEngine) +
+                                   "result_SP_" + util::toString(fluxEngine) +
                                        ".vtp");
     }
   }
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
 
     for (const auto &fluxEngine : fluxEngines) {
       runBenchmark<NumericType, D>(geometry, model, fluxEngine,
-                                   "result_IBE_" + to_string(fluxEngine) +
+                                   "result_IBE_" + util::toString(fluxEngine) +
                                        ".vtp");
     }
   }
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     for (const auto &fluxEngine : fluxEngines) {
       runBenchmark<NumericType, D>(geometry, model, fluxEngine,
-                                   "result_MP_" + to_string(fluxEngine) +
+                                   "result_MP_" + util::toString(fluxEngine) +
                                        ".vtp");
     }
   }

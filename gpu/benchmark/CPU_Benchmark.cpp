@@ -7,19 +7,10 @@
 
 #include "Benchmark.hpp"
 
-using namespace viennaps;
-
 int main() {
   omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = DIM;
-
-  // const std::array<NumericType, 4> gridDeltaValues = {0.05f, 0.1f, 0.2f,
-  // 0.4f};
-  auto gridDeltaValues = linspace<NumericType, 8>(0.01f, 0.4f);
-  const int numRuns = 20;
-  const int raysPerPoint = 1000;
-  const int numRays = int(1.4e8);
 
   auto particle = makeCPUParticle<NumericType, D>();
   std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
@@ -27,7 +18,7 @@ int main() {
   particles.push_back(particle->clone());
   std::string fluxLabel = particleType == 0 ? "flux" : "ionFlux";
 
-  { // Disk
+  if constexpr (runDisk) { // Disk
     std::ofstream file("CPU_Benchmark_Disk.txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
@@ -112,7 +103,7 @@ int main() {
     file.close();
   }
 
-  { // Triangle
+  if constexpr (runTriangle) { // Triangle
     std::ofstream file("CPU_Benchmark_Triangle.txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
@@ -124,6 +115,8 @@ int main() {
       tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
+
+    const auto &dataLabels = particle->getLocalDataLabels();
 
     for (int i = 0; i < gridDeltaValues.size(); i++) {
       std::cout << "  Grid Delta: " << gridDeltaValues[i] << "\n";
@@ -186,10 +179,11 @@ int main() {
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));
         }
-        ElementToPointData<NumericType, float, float>(
-            IndexMap(particles), fluxResultVec, pointData, elementKdTree,
-            diskMesh, surfMesh, domain->getGridDelta() * 2.0f)
-            .apply();
+        ElementToPointData<NumericType, float, float> post(
+            dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
+            domain->getGridDelta() * 2.0f);
+        post.setElementDataArrays(std::move(fluxResultVec));
+        post.apply();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(
             std::move(*pointData->getScalarData(fluxLabel)));
         velocityField->prepare(domain, velocities, 0.);

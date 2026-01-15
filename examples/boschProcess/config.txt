@@ -1,7 +1,7 @@
 # Geometry
 gridDelta = 0.025
 xExtent = 3.5
-yExtent = 3.5
+yExtent = 1.5
 
 trenchWidth = 2.0
 maskHeight = 0.6

@@ -13,21 +13,10 @@
 
 #include "Benchmark.hpp"
 
-using namespace viennaps;
-
 int main() {
   omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = DIM;
-
-  const NumericType cSticking = DEFAULT_STICKING;
-  // const std::array<NumericType, 4> gridDeltaValues = {0.05f, 0.1f, 0.2f,
-  // 0.4f};
-  auto gridDeltaValues = linspace<NumericType, 8>(0.01f, 0.4f);
-  const int numRuns = 20;
-  const int raysPerPoint = 1000;
-  const int numRays = int(1.4e8);
-
   auto context = DeviceContext::createContext();
 
   CudaBuffer deviceParamsBuffer;
@@ -36,7 +25,7 @@ int main() {
     deviceParamsBuffer.allocUploadSingle(deviceParams);
   }
 
-  { // Triangle
+  if constexpr (runTriangle) { // Triangle
     std::ofstream file("GPU_Benchmark_Triangle.txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
@@ -54,6 +43,8 @@ int main() {
       tracer.setParameters(deviceParamsBuffer.dPointer());
     }
     tracer.prepareParticlePrograms();
+
+    const auto &dataLabels = std::get<0>(particleConfig).dataLabels;
 
     std::cout << "Starting Triangle Benchmark\n";
 
@@ -109,12 +100,14 @@ int main() {
         // POSTPROCESSING
         timer.start();
         auto pointData = viennals::PointData<NumericType>::New();
+        ElementToPointData<NumericType, float, viennaray::gpu::ResultType> post(
+            dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
+            domain->getGridDelta() * 2.0f);
+        post.prepare();
         tracer.normalizeResults();
+        post.setElementDataArrays(tracer.getResults());
+        post.convert();
         // tracer.downloadResults();
-        ElementToPointData<NumericType, float, viennaray::gpu::ResultType>(
-            IndexMap(tracer.getParticles()), tracer.getResults(), pointData,
-            elementKdTree, diskMesh, surfMesh, domain->getGridDelta() * 2.0f)
-            .apply();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(
             std::move(*pointData->getScalarData("flux")));
         velocityField->prepare(domain, velocities, 0.);
@@ -133,7 +126,7 @@ int main() {
     file.close();
   }
 
-  { // Disk
+  if constexpr (runDisk) { // Disk
     std::ofstream file("GPU_Benchmark_Disk.txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
@@ -181,7 +174,6 @@ int main() {
       for (int j = 0; j < numRuns; j++) {
         std::cout << "    Process Step: " << j + 1 << "\n";
         advectionKernel.prepareLS();
-        file << cSticking << ";";
 
         Timer timer;
 
@@ -230,7 +222,7 @@ int main() {
     file.close();
   }
 
-  if constexpr (D == 2) { // Line
+  if constexpr (D == 2 && runLine) { // Line
     std::ofstream file("GPU_Benchmark_Line.txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 

@@ -48,9 +48,7 @@ model = ps.SelectiveEpitaxy(
 )
 
 advectionParams = ps.AdvectionParameters()
-advectionParams.spatialScheme = (
-    ps.SpatialScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
-)
+advectionParams.spatialScheme = ps.SpatialScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 
 process = ps.Process(geometry, model, params["processTime"])
 process.setParameters(advectionParams)

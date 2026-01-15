@@ -110,10 +110,11 @@ def readConfigFile(fileName: str):
 
 def __getattr__(name):
     # 1) common/top-level from _core
+    e_core = None
     try:
         return getattr(_C, name)
-    except AttributeError as e_core:
-        pass
+    except AttributeError as e:
+        e_core = e
     # 2) fallback to current default dimension
     m = d2 if PROXY_DIM == 2 else d3
     try:

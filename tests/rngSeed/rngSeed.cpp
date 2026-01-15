@@ -33,8 +33,8 @@ template <typename T, int D> void testRngSeed() {
                                     // here, also when rngSeed is set
 
   for (const auto &engineType : engineTypes) {
-    std::cout << "Testing rng seed: " << to_string(engineType) << " in " << D
-              << "D" << std::endl;
+    std::cout << "Testing rng seed: " << util::toString(engineType) << " in "
+              << D << "D" << std::endl;
 
     std::vector<T> flux1, flux2;
     {

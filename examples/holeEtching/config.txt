@@ -33,5 +33,3 @@ temporalScheme=RK3
 fluxEngine=CD
 
 raysPerPoint=1000
-
-outputFile=final_y0p62

@@ -196,11 +196,9 @@ template <typename T> [[nodiscard]] std::string toString(const T &value) {
   if constexpr (std::is_same_v<T, bool>)
     return value ? "true" : "false";
   else if constexpr (std::is_same_v<T, viennals::SpatialSchemeEnum>)
-    return convertSpatialSchemeToString(
-        static_cast<viennals::SpatialSchemeEnum>(value));
+    return convertSpatialSchemeToString(value);
   else if constexpr (std::is_same_v<T, viennals::TemporalSchemeEnum>)
-    return convertTemporalSchemeToString(
-        static_cast<viennals::TemporalSchemeEnum>(value));
+    return convertTemporalSchemeToString(value);
   else if constexpr (std::is_same_v<T, viennaps::Material>) {
     std::string mat = viennaps::to_string_view(value);
     return mat;
@@ -233,9 +231,3 @@ hexToRGBArray(const uint32_t hexColor) {
   return rgb;
 }
 }; // namespace viennacore::util
-
-namespace viennaps {
-[[nodiscard]] inline std::string to_string(FluxEngineType type) {
-  return viennacore::util::convertFluxEngineTypeToString(type);
-}
-} // namespace viennaps
