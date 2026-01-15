@@ -626,7 +626,7 @@ public:
 
 private:
   viennaps::VTKRenderWindow<double, 3> *Window = nullptr;
-}; // namespace viennaps
+};
 
 // vtkStandardNewMacro(Custom3DInteractorStyle);
 
@@ -651,7 +651,7 @@ public:
 
 private:
   viennaps::VTKRenderWindow<double, 2> *Window = nullptr;
-}; // namespace viennaps
+};
 
 // vtkStandardNewMacro(Custom2DInteractorStyle);
 
