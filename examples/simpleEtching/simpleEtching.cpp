@@ -58,11 +58,14 @@ int main() {
 
     ps::Process<NumericType, D> process(domain, model, processTime);
 
+    const auto fluxEngine = viennacore::util::convertFluxEngineType("CT");
+
     ps::AdvectionParameters advectionParams;
-    advectionParams.spatialScheme = ps::SpatialScheme::WENO_5TH_ORDER;
+    advectionParams.spatialScheme = ps::SpatialScheme::WENO_3RD_ORDER;
     advectionParams.temporalScheme = temporalScheme;
     advectionParams.calculateIntermediateVelocities = calcIntermediate;
     process.setParameters(advectionParams);
+    process.setFluxEngineType(fluxEngine);
 
     ps::Logger::getInstance().addInfo("Running simulation: " + suffix).print();
 

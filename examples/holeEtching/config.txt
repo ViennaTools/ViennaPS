@@ -30,6 +30,7 @@ A_Si=7         # Si yield constant
 etchStopDepth=-10   # maximum etching depth
 spatialScheme=EO_1
 temporalScheme=RK3
+fluxEngine=CD
 
 raysPerPoint=1000
 

@@ -69,11 +69,15 @@ int main(int argc, char *argv[]) {
     advectionParams.calculateIntermediateVelocities = intermediateVelocities;
 
     // process setup
+    const std::string fluxEngineStr = params.get<std::string>("fluxEngine");
+    const auto fluxEngine = util::convertFluxEngineType(fluxEngineStr);
+
     Process<NumericType, D> process(geometry, model);
     process.setProcessDuration(params.get("processTime"));
     process.setParameters(coverageParams);
     process.setParameters(rayTracingParams);
     process.setParameters(advectionParams);
+    process.setFluxEngineType(fluxEngine);
 
     // print initial surface
     if (suffix == "_noIntermediate")

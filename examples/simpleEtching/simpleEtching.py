@@ -51,6 +51,9 @@ def main():
         advection_params.calculateIntermediateVelocities = calc_intermediate
         process.setParameters(advection_params)
 
+        fluxEngine = viennaps.util.convertFluxEngineType("GT")
+        process.setFluxEngineType(fluxEngine)
+
         viennaps.Logger.getInstance().addInfo(f"Running simulation: {suffix}").print()
         process.apply()
 

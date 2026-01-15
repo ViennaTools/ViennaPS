@@ -29,6 +29,7 @@ public:
          discSchem != SpatialScheme::ENGQUIST_OSHER_2ND_ORDER &&
          discSchem != SpatialScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
          discSchem != SpatialScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER &&
+         discSchem != SpatialScheme::WENO_3RD_ORDER && 
          discSchem != SpatialScheme::WENO_5TH_ORDER)) {
       VIENNACORE_LOG_WARNING(
           "Translation field method not supported in combination "

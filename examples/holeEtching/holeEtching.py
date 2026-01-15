@@ -74,6 +74,10 @@ def run_simulation(intermediate_velocities, suffix):
     process.setParameters(rayParams)
     process.setParameters(advParams)
 
+    fluxEngineStr = params["fluxEngine"]
+    fluxEngine = ps.util.convertFluxEngineType(fluxEngineStr)
+    process.setFluxEngineType(fluxEngine)
+
     # print initial surface
     if suffix == "_noIntermediate":
         geometry.saveSurfaceMesh(filename="initial.vtp")
