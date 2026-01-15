@@ -21,6 +21,7 @@ endif()
 
 option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
 option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
+option(VIENNAPS_ENABLE_SANITIZER "Enable sanitizers" OFF)
 
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 
@@ -68,7 +69,7 @@ if(VIENNAPS_BUILD_PYTHON)
 endif()
 
 if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:llvm /bigobj")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp:llvm /bigobj")
 endif()
 
 # --------------------------------------------------------------------------------------------------------
@@ -105,7 +106,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.9.2
+  VERSION 1.9.3
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -136,6 +137,19 @@ CPMAddPackage(
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Sanitizer
+# --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_ENABLE_SANITIZER)
+  if(VIENNAPS_USE_GPU)
+    message(WARNING "[ViennaPS] Sanitizers cannot be used with GPU support enabled!")
+  else()
+    viennacore_enable_sanitizer()
+    message(STATUS "[ViennaPS] Enabled Sanitizers")
+  endif()
+endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Shared/Static Library
