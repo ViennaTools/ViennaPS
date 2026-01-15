@@ -8,9 +8,10 @@ using namespace viennaps;
 
 int main(int argc, char *argv[]) {
   using NumericType = double;
-  constexpr int D = 3;
+  constexpr int D = 2;
 
-  omp_set_num_threads(16);
+  Logger::setLogLevel(LogLevel::ERROR);
+  omp_set_num_threads(8);
 
   // Parse the parameters
   util::Parameters params;
