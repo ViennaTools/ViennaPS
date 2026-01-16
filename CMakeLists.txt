@@ -128,7 +128,8 @@ CPMAddPackage(
   NAME ViennaLS
   VERSION 5.4.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+  OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}")
 
 CPMAddPackage(
   NAME ViennaCS
@@ -180,8 +181,9 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
   target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED=1
                                                  VIENNACORE_COMPILE_SHARED_LIB=1)
-  target_sources(${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp"
-                                     "lib/specModels.cpp")
+  target_sources(
+    ${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModelsEmulation.cpp"
+                        "lib/specModelsSimulation.cpp" "lib/specProcess.cpp")
 
   set_target_properties(
     ${LIB_NAME}

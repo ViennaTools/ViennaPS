@@ -169,6 +169,8 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(ProcessModelCPU)
+
 } // namespace viennaps
 
 #ifdef VIENNACORE_COMPILE_GPU
@@ -238,6 +240,8 @@ public:
     return dataLabels;
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(ProcessModelGPU)
 
 } // namespace viennaps::gpu
 #endif
