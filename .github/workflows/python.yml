@@ -48,11 +48,18 @@ jobs:
         run: |
           brew install embree tbb vtk
 
-      - name: 🦥 Cache Dependencies
+      - name: 🦥 Cache Dependencies (non-Windows only)
+        if: ${{ matrix.os != 'windows-latest' }}
         uses: actions/cache@v4
         with:
-          key: python-${{ matrix.os }}
+          key: python-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'pyproject.toml') }}
           path: build
+
+      # - name: 🦥 Cache Dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     key: python-${{ matrix.os }}
+      #     path: build
 
       - name: 🛠️ Disable IPO (Alpine)
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -60,13 +67,22 @@ jobs:
           sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DUSE_IPO=off"/g' pyproject.toml
           cat pyproject.toml
 
+      # - name: 🐍 Build and check Python Module (Windows)
+      #   if: ${{ matrix.os == 'windows-latest' }}
+      #   run: |
+      #     python -m venv venv
+      #     ./venv/Scripts/activate.bat
+      #     pip install .
+      #     python -c "import viennaps; print(viennaps.__doc__)"
+
       - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
         run: |
           python -m venv venv
-          ./venv/Scripts/activate.bat
-          pip install .
-          python -c "import viennaps; print(viennaps.__doc__)"
+          .\venv\Scripts\python -m pip install -U pip
+          .\venv\Scripts\python -m pip install .
+          .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 🐍 Build and check Python Module (Other)
         if: ${{ matrix.os != 'windows-latest' }}
