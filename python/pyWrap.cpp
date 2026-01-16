@@ -539,6 +539,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &AdvectionParameters::adaptiveTimeStepping)
       .def_readwrite("adaptiveTimeStepSubdivisions",
                      &AdvectionParameters::adaptiveTimeStepSubdivisions)
+      .def_readwrite("calculateIntermediateVelocities",
+                     &AdvectionParameters::calculateIntermediateVelocities)
       .def("toMetaData", &AdvectionParameters::toMetaData,
            "Convert the advection parameters to a metadata dict.")
       .def("toMetaDataString", &AdvectionParameters::toMetaDataString,
@@ -549,6 +551,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(py::init<>())
       .def_readwrite("tolerance", &CoverageParameters::tolerance)
       .def_readwrite("maxIterations", &CoverageParameters::maxIterations)
+      .def_readwrite("initialized", &CoverageParameters::initialized)
       .def("toMetaData", &CoverageParameters::toMetaData,
            "Convert the coverage parameters to a metadata dict.")
       .def("toMetaDataString", &CoverageParameters::toMetaDataString,
