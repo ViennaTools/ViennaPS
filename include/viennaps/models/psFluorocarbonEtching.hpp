@@ -346,7 +346,7 @@ class FluorocarbonIon
   const FluorocarbonParameters<NumericType> &p;
   const NumericType A;
   NumericType minEnergy = std::numeric_limits<NumericType>::max();
-  NumericType E;
+  NumericType E = 0.;
 
 public:
   FluorocarbonIon(const FluorocarbonParameters<NumericType> &parameters)

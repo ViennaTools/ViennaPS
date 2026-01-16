@@ -16,8 +16,10 @@
 
 #include <lsPreCompileMacros.hpp>
 
+#ifdef VIENNACORE_COMPILE_GPU
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
+#endif
 
 namespace viennaps {
 

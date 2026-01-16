@@ -22,6 +22,7 @@ endif()
 option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
 option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
 option(VIENNAPS_ENABLE_SANITIZER "Enable sanitizers" OFF)
+option(VIENNAPS_ENABLE_CLANG_TIDY "Run clang-tidy during build" OFF)
 
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 
@@ -139,7 +140,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTo
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
 
 # --------------------------------------------------------------------------------------------------------
-# Setup Sanitizer
+# Setup Sanitizer or Clang-Tidy
 # --------------------------------------------------------------------------------------------------------
 
 if(VIENNAPS_ENABLE_SANITIZER)
@@ -149,6 +150,16 @@ if(VIENNAPS_ENABLE_SANITIZER)
     viennacore_enable_sanitizer()
     message(STATUS "[ViennaPS] Enabled Sanitizers")
   endif()
+endif()
+
+if(VIENNAPS_ENABLE_CLANG_TIDY)
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+  find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+  if(NOT CLANG_TIDY_EXE)
+    message(FATAL_ERROR "clang-tidy not found")
+  endif()
+
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}" "--quiet" "--warnings-as-errors=*")
 endif()
 
 # --------------------------------------------------------------------------------------------------------
