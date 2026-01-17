@@ -195,15 +195,6 @@ private:
     // Default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
-    // Velocity field with multiple rate sets
-    auto velField =
-        SmartPointer<impl::DirectionalVelocityField<NumericType, D>>::New(
-            std::move(rateSets));
-
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("DirectionalProcess");
-
     // Store process data
     processMetaData["DirectionalVelocity"] = std::vector<double>();
     processMetaData["IsotropicVelocity"] = std::vector<double>();
@@ -223,6 +214,15 @@ private:
       processMetaData["Direction " + std::to_string(i++)] = std::vector<double>{
           rateSet.direction[0], rateSet.direction[1], rateSet.direction[2]};
     }
+
+    // Velocity field with multiple rate sets
+    auto velField =
+        SmartPointer<impl::DirectionalVelocityField<NumericType, D>>::New(
+            std::move(rateSets));
+
+    this->setVelocityField(velField);
+    this->setSurfaceModel(surfModel);
+    this->setProcessName("DirectionalProcess");
   }
 
   using ProcessModelCPU<NumericType, D>::processMetaData;

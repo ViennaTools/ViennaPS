@@ -3,6 +3,7 @@
 #include "psDomain.hpp"
 #include "psPreCompileMacros.hpp"
 
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <utility>
@@ -66,7 +67,7 @@ public:
     // Check identifier
     char identifier[8];
     fin.read(identifier, 8);
-    if (std::string(identifier).compare(0, 8, "psDomain")) {
+    if (std::memcmp(identifier, "psDomain", 8) != 0) {
       VIENNACORE_LOG_ERROR(
           "Reading domain from stream failed. Header could not be found.");
       return;

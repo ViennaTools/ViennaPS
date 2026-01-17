@@ -1,9 +1,6 @@
 #include <gds/psGDSGeometry.hpp>
 #include <gds/psGDSReader.hpp>
 
-#include <process/psProcess.hpp>
-#include <process/psProcessModel.hpp>
-
 #include <psDomain.hpp>
 #include <psDomainSetup.hpp>
 #include <psExtrude.hpp>
@@ -16,16 +13,16 @@
 
 #include <lsPreCompileMacros.hpp>
 
+#ifdef VIENNACORE_COMPILE_GPU
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
+#endif
 
 namespace viennaps {
 
 // Precompile specializations for commonly used classes
 PRECOMPILE_SPECIALIZE(Domain)
-PRECOMPILE_SPECIALIZE(Process)
 PRECOMPILE_SPECIALIZE(Planarize)
-PRECOMPILE_SPECIALIZE(ProcessModelCPU)
 PRECOMPILE_SPECIALIZE(Reader)
 PRECOMPILE_SPECIALIZE(Writer)
 PRECOMPILE_SPECIALIZE(GDSGeometry)

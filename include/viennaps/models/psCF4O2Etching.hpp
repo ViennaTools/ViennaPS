@@ -344,7 +344,7 @@ private:
   const NumericType sqrt_E_th_ie_C;
   const NumericType sqrt_E_th_ie_Si;
 
-  NumericType E;
+  NumericType E = 0.;
 };
 
 template <typename NumericType, int D>

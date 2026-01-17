@@ -216,6 +216,10 @@ public:
   }
 
   static inline Material mapToMaterial(const int matId) {
+    if (matId < 0 || matId > static_cast<int>(kMaterialMaxId)) {
+      VIENNACORE_LOG_ERROR("Invalid material id " + std::to_string(matId));
+      return Material::GAS;
+    }
     return static_cast<Material>(matId);
   }
 

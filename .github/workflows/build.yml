@@ -64,7 +64,7 @@ jobs:
           if (Test-Path build/_deps) { Remove-Item -Recurse -Force build/_deps }
 
       - name: 🏗️ Compile
-        run: cmake -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build --config ${{ matrix.config }}
+        run: cmake -DVIENNAPS_BUILD_TESTS=ON -DVIENNAPS_ENABLE_SANITIZER=ON -B build && cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
         run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
