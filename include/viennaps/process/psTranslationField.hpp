@@ -23,15 +23,18 @@ public:
       SmartPointer<::viennaps::VelocityField<NumericType, D>> velocityField,
       SmartPointer<MaterialMap> const &materialMap, int translationMethod)
       : modelVelocityField_(velocityField), materialMap_(materialMap),
-        translationMethod_(translationMethod) {}
+        translationMethod_(translationMethod) {
+    if (!materialMap_) {
+      VIENNACORE_LOG_ERROR("TranslationField: material map is required.");
+    }
+  }
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material,
                                 const Vec3D<NumericType> &normalVector,
                                 unsigned long pointId) override {
     translateLsId(pointId, coordinate);
-    if (materialMap_)
-      material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
+    material = materialMap_->getMaterialIdAtIdx(material);
     return modelVelocityField_->getScalarVelocity(coordinate, material,
                                                   normalVector, pointId);
   }
@@ -41,8 +44,7 @@ public:
                                        const Vec3D<NumericType> &normalVector,
                                        unsigned long pointId) override {
     translateLsId(pointId, coordinate);
-    if (materialMap_)
-      material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
+    material = materialMap_->getMaterialIdAtIdx(material);
     return modelVelocityField_->getVectorVelocity(coordinate, material,
                                                   normalVector, pointId);
   }
@@ -50,8 +52,7 @@ public:
   NumericType
   getDissipationAlpha(int direction, int material,
                       const Vec3D<NumericType> &centralDifferences) override {
-    if (materialMap_)
-      material = static_cast<int>(materialMap_->getMaterialAtIdx(material));
+    material = materialMap_->getMaterialIdAtIdx(material);
     return modelVelocityField_->getDissipationAlpha(direction, material,
                                                     centralDifferences);
   }

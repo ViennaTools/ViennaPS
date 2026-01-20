@@ -13,7 +13,7 @@ namespace viennaps {
 VIENNAPS_TEMPLATE_ND
 class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
-  static constexpr char *materialIdsLabel = "MaterialIds";
+  static constexpr const char *materialIdsLabel = "MaterialIds";
 
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;

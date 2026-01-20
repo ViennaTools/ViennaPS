@@ -192,11 +192,14 @@ public:
 
   // Returns the material at the given index. If the index is out of bounds, it
   // returns Material::GAS.
-  [[nodiscard]] Material getMaterialAtIdx(std::size_t idx) const {
+  [[nodiscard]] int getMaterialIdAtIdx(std::size_t idx) const {
     if (idx >= size())
-      return Material::GAS;
-    int matId = map_->getMaterialId(idx);
-    return mapToMaterial(matId);
+      return static_cast<int>(Material::GAS);
+    return map_->getMaterialId(idx);
+  }
+
+  [[nodiscard]] Material getMaterialAtIdx(std::size_t idx) const {
+    return mapToMaterial(getMaterialIdAtIdx(idx));
   }
 
   void setMaterialAtIdx(std::size_t idx, const Material material) {

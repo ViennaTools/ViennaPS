@@ -149,14 +149,10 @@ public:
     }
 
     // Copy material map.
-    if (domain->materialMap_) {
-      materialMap_ = MaterialMapType::New();
-      for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
-        materialMap_->insertNextMaterial(
-            domain->materialMap_->getMaterialAtIdx(i));
-      }
-    } else {
-      materialMap_ = nullptr;
+    materialMap_ = MaterialMapType::New();
+    for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
+      materialMap_->insertNextMaterial(
+          domain->materialMap_->getMaterialAtIdx(i));
     }
 
     // Copy Cell-Set.
@@ -166,28 +162,6 @@ public:
                                    cellSetDepth);
     } else {
       cellSet_ = nullptr;
-    }
-  }
-
-  // Will be deprecated in the future. Please use insertNextLevelSetAsMaterial
-  // instead.
-  void insertNextLevelSet(lsDomainType levelSet,
-                          bool wrapLowerLevelSet = true) {
-    if (levelSets_.empty() && setup_.gridDelta() == 0.0) {
-      setup_.init(levelSet->getGrid());
-      initMetaData();
-    }
-    if (!levelSets_.empty() && wrapLowerLevelSet) {
-      viennals::BooleanOperation<NumericType, D>(
-          levelSet, levelSets_.back(), viennals::BooleanOperationEnum::UNION)
-          .apply();
-    }
-    levelSets_.push_back(levelSet);
-    if (materialMap_) {
-      VIENNACORE_LOG_WARNING(
-          "Inserting non-material specific Level-Set in domain with material "
-          "mapping.");
-      materialMapCheck();
     }
   }
 
@@ -235,9 +209,8 @@ public:
     }
 
     levelSets_.pop_back();
-    if (materialMap_) {
-      materialMap_->removeMaterial();
-    }
+    materialMap_->removeMaterial();
+    materialMapCheck();
   }
 
   // Apply a boolean operation with the passed Level-Set to all
@@ -268,16 +241,14 @@ public:
       return;
     }
 
-    if (materialMap_) {
-      auto newMatMap = MaterialMapType::New();
-      for (std::size_t i = 0; i < levelSets_.size(); i++) {
-        if (i == idx)
-          continue;
+    auto newMatMap = MaterialMapType::New();
+    for (std::size_t i = 0; i < levelSets_.size(); i++) {
+      if (i == idx)
+        continue;
 
-        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
-      }
-      materialMap_ = newMatMap;
+      newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
     }
+    materialMap_ = newMatMap;
 
     if (removeWrapped) {
       auto remove = levelSets_.at(idx);
@@ -302,10 +273,7 @@ public:
   }
 
   void removeMaterial(const Material material) {
-    if (!materialMap_) {
-      return;
-    }
-
+    assert(materialMap_ != nullptr);
     for (int i = 0; i < materialMap_->size(); i++) {
       if (materialMap_->getMaterialAtIdx(i) == material) {
         removeLevelSet(i);
@@ -375,9 +343,7 @@ public:
 
   // Set the material of a specific Level-Set in the domain.
   void setMaterial(unsigned int lsId, const Material material) {
-    if (materialMap_) {
-      materialMap_ = MaterialMapType::New();
-    }
+    assert(materialMap_ != nullptr);
     materialMap_->setMaterialAtIdx(lsId, material);
     materialMapCheck();
   }
@@ -449,10 +415,8 @@ public:
 
   auto getMaterialsInDomain() const {
     std::set<Material> materials;
-    if (materialMap_) {
-      for (std::size_t i = 0; i < materialMap_->size(); i++) {
-        materials.insert(materialMap_->getMaterialAtIdx(i));
-      }
+    for (std::size_t i = 0; i < materialMap_->size(); i++) {
+      materials.insert(materialMap_->getMaterialAtIdx(i));
     }
     return materials;
   }
@@ -462,14 +426,10 @@ public:
         "*****************************************\n";
     out << "Process Simulation Domain:\n" << separator;
     out << "Number of Level-Sets: " << levelSets_.size() << "\n";
-    if (materialMap_) {
-      out << "Materials:\n";
-      for (std::size_t i = 0; i < materialMap_->size(); i++) {
-        out << "\t" << i << ": "
-            << MaterialMap::toString(materialMap_->getMaterialAtIdx(i)) << "\n";
-      }
-    } else {
-      out << "No Material Map available.\n";
+    out << "Materials:\n";
+    for (std::size_t i = 0; i < materialMap_->size(); i++) {
+      out << "\t" << i << ": "
+          << MaterialMap::toString(materialMap_->getMaterialAtIdx(i)) << "\n";
     }
     auto bb = getBoundingBox();
     out << "Bounding Box: [" << bb[0][0] << ", " << bb[0][1] << ", " << bb[0][2]
@@ -534,15 +494,13 @@ public:
         }
         meshConverter.insertNextLevelSet(lsCopy);
       }
-      if (materialMap_)
-        meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+      meshConverter.setMaterialMap(materialMap_->getMaterialMap());
       meshConverter.apply();
     } else {
       // Add material IDs to surface point data
       viennals::ToDiskMesh<NumericType, D> meshConverter;
       meshConverter.setMesh(mesh);
-      if (materialMap_)
-        meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+      meshConverter.setMaterialMap(materialMap_->getMaterialMap());
       for (const auto ls : levelSets_) {
         meshConverter.insertNextLevelSet(ls);
       }
@@ -579,8 +537,7 @@ public:
     for (auto &ls : levelSets_) {
       writer.insertNextLevelSet(ls);
     }
-    if (materialMap_)
-      writer.setMaterialMap(materialMap_->getMaterialMap());
+    writer.setMaterialMap(materialMap_->getMaterialMap());
     writer.setMetaData(metaData_);
     writer.apply();
   }
@@ -596,8 +553,7 @@ public:
     for (auto &ls : levelSets_) {
       writer.insertNextLevelSet(ls);
     }
-    if (materialMap_)
-      writer.setMaterialMap(materialMap_->getMaterialMap());
+    writer.setMaterialMap(materialMap_->getMaterialMap());
     writer.setMetaData(metaData_);
     writer.apply();
   }
@@ -627,8 +583,7 @@ public:
     levelSets_.clear();
     if (cellSet_)
       cellSet_ = csDomainType::New();
-    if (materialMap_)
-      materialMap_ = MaterialMapType::New();
+    materialMap_ = MaterialMapType::New();
     clearMetaData(true);
   }
 
@@ -640,9 +595,6 @@ public:
 
 private:
   void materialMapCheck() const {
-    if (!materialMap_)
-      return;
-
     if (materialMap_->size() != levelSets_.size()) {
       VIENNACORE_LOG_WARNING(
           "Size mismatch in material map and number of Level-Sets in domain.");

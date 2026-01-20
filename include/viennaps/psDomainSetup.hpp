@@ -1,7 +1,7 @@
 #pragma once
 
-#include "psUtil.hpp"
 #include "psPreCompileMacros.hpp"
+#include "psUtil.hpp"
 
 #include <hrleGrid.hpp>
 #include <vcLogger.hpp>
