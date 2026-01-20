@@ -9,7 +9,7 @@
 namespace viennaps {
 using namespace viennacore;
 
-template <class NumericType> class Extrude {
+template <Numeric NumericType> class Extrude {
   SmartPointer<Domain<NumericType, 2>> inputDomain;
   SmartPointer<Domain<NumericType, 3>> outputDomain;
   Vec2D<NumericType> extent{NumericType(0)};

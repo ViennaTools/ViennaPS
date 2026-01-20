@@ -4,7 +4,7 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D> class CoverageManager {
+VIENNAPS_TEMPLATE_ND class CoverageManager {
   std::ofstream covMetricFile_;
   SmartPointer<viennals::PointData<NumericType>> previousCoverages_;
 

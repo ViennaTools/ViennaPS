@@ -10,9 +10,10 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND
 class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
+  static constexpr char *materialIdsLabel = "MaterialIds";
 
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;
@@ -262,7 +263,7 @@ private:
     // Prepare advection (expand level set based on discretization scheme)
     advectionHandler_.prepareAdvection(context);
 
-    // Update surface for flux calculation
+    // Update surface mesh for flux calculation
     updateState(context);
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
@@ -374,7 +375,7 @@ private:
     auto const &points = context.diskMesh->getNodes();
     assert(points.size() > 0);
     auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+        *context.diskMesh->getCellData().getScalarData(materialIdsLabel);
     return context.model->getSurfaceModel()->calculateVelocities(fluxes, points,
                                                                  materialIds);
   }
@@ -386,10 +387,10 @@ private:
     assert(surfaceModel->getCoverages() != nullptr);
 
     assert(context.diskMesh != nullptr);
-    assert(context.diskMesh->getCellData().getScalarData("MaterialIds") !=
+    assert(context.diskMesh->getCellData().getScalarData(materialIdsLabel) !=
            nullptr);
     auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+        *context.diskMesh->getCellData().getScalarData(materialIdsLabel);
 
     surfaceModel->updateCoverages(fluxes, materialIds);
   }

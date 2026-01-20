@@ -17,7 +17,7 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D> class ProcessStrategy {
+VIENNAPS_TEMPLATE_ND class ProcessStrategy {
 public:
   virtual ~ProcessStrategy() = default;
 

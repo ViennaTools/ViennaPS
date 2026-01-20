@@ -32,3 +32,15 @@
   typedef className<float> className##_float;
 
 #endif
+
+#include <type_traits>
+
+template <typename T>
+concept Numeric = std::is_same_v<T, float> || std::is_same_v<T, double>;
+
+template <int D>
+concept Dimension = (D == 2 || D == 3);
+
+#define VIENNAPS_TEMPLATE_ND                                                   \
+  template <Numeric NumericType, int D>                                        \
+    requires Dimension<D>

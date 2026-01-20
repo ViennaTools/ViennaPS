@@ -19,7 +19,7 @@ using namespace viennacore;
 ///  This class handles serializing a Process Simulation Domain (Domain) to a
 ///  binary file. The file format (.vpsd - ViennaPS Domain) contains all
 ///  levelSets, cell data, material mappings and domain setup information.
-template <class NumericType, int D> class Writer {
+VIENNAPS_TEMPLATE_ND class Writer {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
   std::string fileName;

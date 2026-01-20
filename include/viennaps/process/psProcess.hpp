@@ -22,15 +22,15 @@ namespace viennaps {
 
 using namespace viennacore;
 
+inline consteval bool gpuAvailable() {
 #ifdef VIENNACORE_COMPILE_GPU
-inline constexpr bool gpuAvailable() { return true; }
+  return true;
 #else
-inline constexpr bool gpuAvailable() { return false; }
+  return false;
 #endif
+}
 
-template <typename T> constexpr bool always_false = false;
-
-template <typename NumericType, int D> class Process {
+VIENNAPS_TEMPLATE_ND class Process {
 private:
   ProcessContext<NumericType, D> context_;
   std::vector<std::unique_ptr<ProcessStrategy<NumericType, D>>> strategies_;
@@ -62,7 +62,8 @@ public:
     context_.processDuration = duration;
   }
 
-  template <typename ParamType> void setParameters(const ParamType &params) {
+  template <ProcessParam ParamType>
+  void setParameters(const ParamType &params) {
     if constexpr (std::is_same_v<ParamType, RayTracingParameters>) {
       context_.rayTracingParams = params;
     } else if constexpr (std::is_same_v<ParamType, AdvectionParameters>) {
@@ -72,9 +73,6 @@ public:
     } else if constexpr (std::is_same_v<ParamType,
                                         AtomicLayerProcessParameters>) {
       context_.atomicLayerParams = params;
-    } else {
-      static_assert(always_false<ParamType>,
-                    "Unsupported parameter type for Process.");
     }
   }
 

@@ -8,7 +8,7 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND
 class ALPStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 

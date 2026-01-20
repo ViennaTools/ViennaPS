@@ -1,5 +1,7 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
+
 #include <hrleSparseIterator.hpp>
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
@@ -12,7 +14,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, int D> class SurfacePointValuesToLevelSet {
+VIENNAPS_TEMPLATE_ND class SurfacePointValuesToLevelSet {
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
 
   lsDomainType levelSet;

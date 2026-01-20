@@ -17,7 +17,7 @@ enum class ProcessResult {
   NOT_IMPLEMENTED
 };
 
-template <typename NumericType, int D> struct ProcessContext {
+VIENNAPS_TEMPLATE_ND struct ProcessContext {
   // Core components
   SmartPointer<Domain<NumericType, D>> domain;
   SmartPointer<ProcessModelBase<NumericType, D>> model;

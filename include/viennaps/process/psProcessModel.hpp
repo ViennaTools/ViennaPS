@@ -24,7 +24,7 @@ using namespace viennacore;
 
 /// The process model combines all models (particle types, surface model,
 /// geometric model, advection callback)
-template <typename NumericType, int D> class ProcessModelBase {
+VIENNAPS_TEMPLATE_ND class ProcessModelBase {
 protected:
   SmartPointer<SurfaceModel<NumericType>> surfaceModel = nullptr;
   SmartPointer<AdvectionCallback<NumericType, D>> advectionCallback = nullptr;
@@ -82,7 +82,7 @@ public:
 };
 
 /// Process model for CPU-based particle tracing (or no particle tracing)
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND
 class ProcessModelCPU : public ProcessModelBase<NumericType, D> {
 protected:
   std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
@@ -176,7 +176,7 @@ PS_PRECOMPILE_PRECISION_DIMENSION(ProcessModelCPU)
 #ifdef VIENNACORE_COMPILE_GPU
 namespace viennaps::gpu {
 
-template <class NumericType, int D>
+VIENNAPS_TEMPLATE_ND
 class ProcessModelGPU : public ProcessModelBase<NumericType, D> {
 private:
   std::vector<viennaray::gpu::Particle<NumericType>> particles;

@@ -8,7 +8,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D> class GeometricModel {
+VIENNAPS_TEMPLATE_ND class GeometricModel {
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
   SmartPointer<viennals::GeometricAdvectDistribution<NumericType, D>> dist =
       nullptr;

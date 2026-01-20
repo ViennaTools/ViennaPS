@@ -1,6 +1,7 @@
 #pragma once
 
 #include "psUtil.hpp"
+#include "psPreCompileMacros.hpp"
 
 #include <hrleGrid.hpp>
 #include <vcLogger.hpp>
@@ -10,7 +11,9 @@ namespace viennaps {
 using namespace viennacore;
 using BoundaryType = viennahrle::BoundaryType;
 
-template <int D> class DomainSetup {
+template <int D>
+  requires Dimension<D>
+class DomainSetup {
   double gridDelta_;
   double bounds_[2 * D] = {0.};
   BoundaryType boundaryCons_[D] = {};

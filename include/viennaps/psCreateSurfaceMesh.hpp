@@ -1,5 +1,7 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
+
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
@@ -38,11 +40,14 @@ inline void CopyTriangleMesh(const float gridDelta,
   triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
 }
 
-template <class LsNT, class MeshNT = LsNT, int D = 3> class CreateSurfaceMesh {
+template <Numeric LsNT, Numeric MeshNT, int D>
+  requires Dimension<D>
+class CreateSurfaceMesh {
 
-  typedef viennals::Domain<LsNT, D> lsDomainType;
-  typedef typename viennals::Domain<LsNT, D>::DomainType hrleDomainType;
-  typedef KDTree<LsNT, std::array<LsNT, 3>> kdTreeType;
+  using lsDomainType = viennals::Domain<LsNT, D>;
+  using CellIteratorType = viennahrle::ConstSparseCellIterator<
+      typename viennals::Domain<LsNT, D>::DomainType>;
+  using kdTreeType = KDTree<LsNT, std::array<LsNT, 3>>;
 
   SmartPointer<lsDomainType> levelSet = nullptr;
   SmartPointer<viennals::Mesh<MeshNT>> mesh = nullptr;
@@ -141,9 +146,8 @@ public:
     };
 
     // iterate over all active surface points
-    for (viennahrle::ConstSparseCellIterator<hrleDomainType> cellIt(
-             levelSet->getDomain());
-         !cellIt.isFinished(); cellIt.next()) {
+    for (CellIteratorType cellIt(levelSet->getDomain()); !cellIt.isFinished();
+         cellIt.next()) {
 
       for (int u = 0; u < D; u++) {
         while (!nodes[u].empty() &&

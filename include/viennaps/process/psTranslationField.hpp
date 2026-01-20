@@ -14,7 +14,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND
 class TranslationField final : public viennals::VelocityField<NumericType> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 

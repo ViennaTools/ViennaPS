@@ -9,7 +9,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND
 class CPUDiskEngine final : public FluxEngine<NumericType, D> {
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
