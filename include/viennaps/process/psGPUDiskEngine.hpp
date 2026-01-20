@@ -14,7 +14,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class GPUDiskEngine final : public FluxEngine<NumericType, D> {
 public:
   explicit GPUDiskEngine(std::shared_ptr<DeviceContext> deviceContext)

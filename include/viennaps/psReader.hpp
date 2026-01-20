@@ -22,7 +22,7 @@ using namespace viennacore;
 ///
 /// This class handles reading a Process Simulation Domain (Domain) from a
 /// binary file previously created with psWriter.
-VIENNAPS_TEMPLATE_ND class Reader {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Reader {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
   std::string fileName;

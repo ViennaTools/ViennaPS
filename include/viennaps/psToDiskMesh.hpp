@@ -9,7 +9,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND class ToDiskMesh {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class ToDiskMesh {
   using translatorType =
       SmartPointer<std::unordered_map<unsigned long, unsigned long>>;
   using psDomainType = SmartPointer<Domain<NumericType, D>>;

@@ -8,7 +8,7 @@
 
 namespace viennaps {
 
-VIENNAPS_TEMPLATE_ND class AdvectionHandler {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
   viennacore::Timer<> timer_;
   unsigned lsVelOutputCounter = 0;

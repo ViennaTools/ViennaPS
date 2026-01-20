@@ -10,7 +10,7 @@
 
 namespace viennaps {
 
-VIENNAPS_TEMPLATE_ND
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
   static constexpr const char *materialIdsLabel = "MaterialIds";

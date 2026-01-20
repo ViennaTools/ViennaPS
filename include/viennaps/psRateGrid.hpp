@@ -13,7 +13,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND class RateGrid {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class RateGrid {
 public:
   enum class Interpolation { LINEAR, IDW, CUSTOM };
 

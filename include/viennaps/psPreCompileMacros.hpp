@@ -41,6 +41,6 @@ concept Numeric = std::is_same_v<T, float> || std::is_same_v<T, double>;
 template <int D>
 concept Dimension = (D == 2 || D == 3);
 
-#define VIENNAPS_TEMPLATE_ND                                                   \
-  template <Numeric NumericType, int D>                                        \
+#define VIENNAPS_TEMPLATE_ND(N, D)                                             \
+  template <Numeric N, int D>                                                  \
     requires Dimension<D>

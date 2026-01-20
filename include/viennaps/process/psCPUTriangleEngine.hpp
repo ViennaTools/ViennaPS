@@ -13,7 +13,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;

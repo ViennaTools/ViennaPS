@@ -6,7 +6,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND class VelocityField {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class VelocityField {
 public:
   virtual ~VelocityField() = default;
 
@@ -38,7 +38,7 @@ public:
           const NumericType processTime) {}
 };
 
-VIENNAPS_TEMPLATE_ND
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class DefaultVelocityField : public VelocityField<NumericType, D> {
 public:
   DefaultVelocityField() = default;

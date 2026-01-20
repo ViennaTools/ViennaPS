@@ -30,7 +30,7 @@ inline consteval bool gpuAvailable() {
 #endif
 }
 
-VIENNAPS_TEMPLATE_ND class Process {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Process {
 private:
   ProcessContext<NumericType, D> context_;
   std::vector<std::unique_ptr<ProcessStrategy<NumericType, D>>> strategies_;

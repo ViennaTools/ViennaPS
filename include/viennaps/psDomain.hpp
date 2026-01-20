@@ -47,7 +47,7 @@ enum class MetaDataLevel {
 // If specified, each Level-Set is assigned a specific material,
 // which can be used in a process to implement material specific rates or
 // similar.
-VIENNAPS_TEMPLATE_ND class Domain {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Domain {
 public:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using lsDomainsType = std::vector<lsDomainType>;

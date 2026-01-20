@@ -6,7 +6,7 @@
 
 namespace viennaps {
 
-VIENNAPS_TEMPLATE_ND
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class AnalyticProcessStrategy final : public ProcessStrategy<NumericType, D> {
   viennals::ToDiskMesh<NumericType, D> meshConverter_;
   AdvectionHandler<NumericType, D> advectionHandler_;

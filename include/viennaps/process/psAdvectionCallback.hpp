@@ -6,7 +6,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND class AdvectionCallback {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionCallback {
 protected:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
 

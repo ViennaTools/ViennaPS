@@ -14,7 +14,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND class SurfacePointValuesToLevelSet {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class SurfacePointValuesToLevelSet {
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
 
   lsDomainType levelSet;

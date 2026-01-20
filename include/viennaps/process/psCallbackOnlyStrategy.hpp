@@ -4,7 +4,7 @@
 
 namespace viennaps {
 
-VIENNAPS_TEMPLATE_ND
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class CallbackOnlyStrategy : public ProcessStrategy<NumericType, D> {
 public:
   DEFINE_CLASS_NAME(CallbackOnlyStrategy)
