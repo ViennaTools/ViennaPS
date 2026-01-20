@@ -19,6 +19,7 @@ public:
       VIENNACORE_LOG_WARNING("Invalid process model.");
       return ProcessResult::INVALID_INPUT;
     }
+    model_ = model;
     return ProcessResult::SUCCESS;
   }
 
@@ -47,20 +48,17 @@ public:
     if (!context.rayTracingParams.useRandomSeeds)
       rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
 
-    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
-        context.model);
-
-    if (auto source = model->getSource()) {
+    if (auto source = model_->getSource()) {
       rayTracer_.setSource(source);
       VIENNACORE_LOG_INFO("Using custom source.");
     }
-    if (auto primaryDirection = model->getPrimaryDirection()) {
+    if (auto primaryDirection = model_->getPrimaryDirection()) {
       VIENNACORE_LOG_INFO("Using primary direction: " +
                           util::arrayToString(primaryDirection.value()));
       rayTracer_.setPrimaryDirection(primaryDirection.value());
     }
 
-    model->initializeParticleDataLogs();
+    model_->initializeParticleDataLogs();
 
     return ProcessResult::SUCCESS;
   }
@@ -131,12 +129,9 @@ private:
     assert(fluxes != nullptr);
     fluxes->clear();
 
-    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
-        context.model);
-
     unsigned particleIdx = 0;
-    for (auto &particle : model->getParticleTypes()) {
-      int dataLogSize = model->getParticleLogSize(particleIdx);
+    for (auto &particle : model_->getParticleTypes()) {
+      int dataLogSize = model_->getParticleLogSize(particleIdx);
       if (dataLogSize > 0) {
         rayTracer_.getDataLog().data.resize(1);
         rayTracer_.getDataLog().data[0].resize(dataLogSize, 0.);
@@ -172,7 +167,7 @@ private:
                                      localData.getVectorDataLabel(i));
       }
 
-      model->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
+      model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
       ++particleIdx;
     }
   }
@@ -203,6 +198,7 @@ private:
 
 private:
   viennaray::TraceDisk<NumericType, D> rayTracer_;
+  SmartPointer<ProcessModelCPU<NumericType, D>> model_;
 };
 
 } // namespace viennaps

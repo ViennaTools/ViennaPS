@@ -101,8 +101,7 @@ public:
 
     if (context.advectionParams.velocityOutput) {
       auto mesh = viennals::Mesh<NumericType>::New();
-      viennals::ToMesh<NumericType, D>(context.domain->getLevelSets().back(),
-                                       mesh)
+      viennals::ToMesh<NumericType, D>(context.domain->getSurface(), mesh)
           .apply();
       viennals::VTKWriter<NumericType>(
           mesh,
@@ -127,25 +126,31 @@ public:
       SmartPointer<std::unordered_map<unsigned long, unsigned long>> const
           &translator) {
     // Move coverages to the top level set
-    auto topLS = context.domain->getLevelSets().back();
+    auto topLS = context.domain->getSurface();
     auto coverages = context.model->getSurfaceModel()->getCoverages();
     assert(coverages != nullptr);
     assert(translator != nullptr);
 
-    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
+    std::vector<std::vector<NumericType>> levelSetCoverages(
+        coverages->getScalarDataSize());
+
+#pragma omp parallel for
+    for (unsigned i = 0; i < levelSetCoverages.size(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
       auto cov = coverages->getScalarData(covName);
-      for (const auto iter : *translator.get()) {
-        levelSetData[iter.first] = cov->at(iter.second);
+
+      for (const auto &[lsId, surfaceId] : *translator) {
+        levelSetData[lsId] = cov->at(surfaceId);
       }
-      if (auto data = topLS->getPointData().getScalarData(covName, true);
-          data != nullptr) {
-        *data = std::move(levelSetData);
-      } else {
-        topLS->getPointData().insertNextScalarData(std::move(levelSetData),
-                                                   covName);
-      }
+
+      levelSetCoverages[i] = std::move(levelSetData);
+    }
+
+    for (unsigned i = 0; i < levelSetCoverages.size(); i++) {
+      auto covName = coverages->getScalarDataLabel(i);
+      topLS->getPointData().insertReplaceScalarData(
+          std::move(levelSetCoverages[i]), covName);
     }
 
     return ProcessResult::SUCCESS;
@@ -156,17 +161,22 @@ public:
       SmartPointer<std::unordered_map<unsigned long, unsigned long>> const
           &translator) {
     // Update coverages from the advected surface
-    auto topLS = context.domain->getLevelSets().back();
+    auto topLS = context.domain->getSurface();
     auto coverages = context.model->getSurfaceModel()->getCoverages();
+    assert(coverages != nullptr);
+    assert(translator != nullptr);
+
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       auto levelSetData = topLS->getPointData().getScalarData(covName);
       auto covData = coverages->getScalarData(covName);
       covData->resize(translator->size());
-      for (const auto it : *translator.get()) {
-        covData->at(it.second) = levelSetData->at(it.first);
+
+      for (const auto &[lsId, surfaceId] : *translator) {
+        covData->at(surfaceId) = levelSetData->at(lsId);
       }
     }
+
     return ProcessResult::SUCCESS;
   }
   auto &getTimer() const { return timer_; }
