@@ -29,6 +29,7 @@ public:
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("particleFlux");
+    assert(flux && velocity->size() == flux->size());
 
 #pragma omp parallel for
     for (size_t i = 0; i < velocity->size(); i++) {

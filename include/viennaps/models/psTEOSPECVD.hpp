@@ -41,7 +41,7 @@ public:
           ionRate_ * std::pow(particleFluxIon->at(i), ionReactionOrder_);
     }
 
-    return SmartPointer<std::vector<NumericType>>::New(velocity);
+    return SmartPointer<std::vector<NumericType>>::New(std::move(velocity));
   }
 };
 
