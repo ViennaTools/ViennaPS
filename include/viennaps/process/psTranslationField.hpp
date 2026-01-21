@@ -35,6 +35,7 @@ public:
                                 unsigned long pointId) override {
     translateLsId(pointId, coordinate);
     material = materialMap_->getMaterialIdAtIdx(material);
+    assert(material >= 0);
     return modelVelocityField_->getScalarVelocity(coordinate, material,
                                                   normalVector, pointId);
   }
@@ -45,6 +46,7 @@ public:
                                        unsigned long pointId) override {
     translateLsId(pointId, coordinate);
     material = materialMap_->getMaterialIdAtIdx(material);
+    assert(material >= 0);
     return modelVelocityField_->getVectorVelocity(coordinate, material,
                                                   normalVector, pointId);
   }
@@ -53,6 +55,7 @@ public:
   getDissipationAlpha(int direction, int material,
                       const Vec3D<NumericType> &centralDifferences) override {
     material = materialMap_->getMaterialIdAtIdx(material);
+    assert(material >= 0);
     return modelVelocityField_->getDissipationAlpha(direction, material,
                                                     centralDifferences);
   }
