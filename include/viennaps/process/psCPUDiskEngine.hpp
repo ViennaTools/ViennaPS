@@ -162,8 +162,9 @@ private:
         // normalize and smooth
         rayTracer_.normalizeFlux(flux,
                                  context.rayTracingParams.normalizationType);
-        rayTracer_.smoothFlux(flux,
-                              context.rayTracingParams.smoothingNeighbors);
+        if (context.rayTracingParams.smoothingNeighbors > 0)
+          rayTracer_.smoothFlux(flux,
+                                context.rayTracingParams.smoothingNeighbors);
 
         fluxes->insertNextScalarData(std::move(flux),
                                      localData.getVectorDataLabel(i));

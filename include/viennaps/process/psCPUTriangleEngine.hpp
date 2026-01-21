@@ -246,7 +246,7 @@ private:
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
       for (int i = 0; i < numFluxes; ++i) {
-        auto flux = std::move(localData.getVectorData(i));
+        auto &flux = localData.getVectorData(i);
 
         // normalize
         rayTracer_.normalizeFlux(flux,
