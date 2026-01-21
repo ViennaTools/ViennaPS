@@ -129,10 +129,11 @@ struct AtomicLayerProcessParameters {
 };
 
 template <class ParamType>
-concept ProcessParam = std::is_same_v<ParamType, RayTracingParameters> ||
-                       std::is_same_v<ParamType, AdvectionParameters> ||
-                       std::is_same_v<ParamType, CoverageParameters> ||
-                       std::is_same_v<ParamType, AtomicLayerProcessParameters>;
+concept ProcessParamConcept =
+    std::is_same_v<ParamType, RayTracingParameters> ||
+    std::is_same_v<ParamType, AdvectionParameters> ||
+    std::is_same_v<ParamType, CoverageParameters> ||
+    std::is_same_v<ParamType, AtomicLayerProcessParameters>;
 
 template <typename NumericType> class ProcessParams {
 private:

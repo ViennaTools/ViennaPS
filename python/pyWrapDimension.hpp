@@ -489,9 +489,6 @@ template <int D> void bindApi(py::module &module) {
            "Setup the domain.")
       .def("getSetup", &Domain<T, D>::getSetup, "Get the domain setup.")
       .def("deepCopy", &Domain<T, D>::deepCopy)
-      .def("insertNextLevelSet", &Domain<T, D>::insertNextLevelSet,
-           py::arg("levelset"), py::arg("wrapLowerLevelSet") = true,
-           "Insert a level set to domain.")
       .def("insertNextLevelSetAsMaterial",
            &Domain<T, D>::insertNextLevelSetAsMaterial, py::arg("levelSet"),
            py::arg("material"), py::arg("wrapLowerLevelSet") = true,

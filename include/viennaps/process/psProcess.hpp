@@ -22,7 +22,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-inline consteval bool gpuAvailable() {
+inline constexpr bool gpuAvailable() {
 #ifdef VIENNACORE_COMPILE_GPU
   return true;
 #else
@@ -62,7 +62,7 @@ public:
     context_.processDuration = duration;
   }
 
-  template <ProcessParam ParamType>
+  template <ProcessParamConcept ParamType>
   void setParameters(const ParamType &params) {
     if constexpr (std::is_same_v<ParamType, RayTracingParameters>) {
       context_.rayTracingParams = params;
