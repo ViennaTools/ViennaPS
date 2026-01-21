@@ -68,6 +68,7 @@ public:
     this->timer_.start();
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
+    assert(model_ != nullptr);
 
     auto points = diskMesh->getNodes();
     auto normals = *diskMesh->getCellData().getVectorData("Normals");
@@ -90,6 +91,7 @@ public:
   ProcessResult calculateFluxes(
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+    assert(model_ != nullptr);
     this->timer_.start();
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
@@ -127,6 +129,7 @@ private:
   void runRayTracer(ProcessContext<NumericType, D> const &context,
                     SmartPointer<viennals::PointData<NumericType>> &fluxes) {
     assert(fluxes != nullptr);
+    assert(model_ != nullptr);
     fluxes->clear();
 
     unsigned particleIdx = 0;
@@ -154,14 +157,13 @@ private:
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
       for (int i = 0; i < numFluxes; ++i) {
-        auto flux = std::move(localData.getVectorData(i));
+        auto &flux = localData.getVectorData(i);
 
         // normalize and smooth
         rayTracer_.normalizeFlux(flux,
                                  context.rayTracingParams.normalizationType);
-        if (context.rayTracingParams.smoothingNeighbors > 0)
-          rayTracer_.smoothFlux(flux,
-                                context.rayTracingParams.smoothingNeighbors);
+        rayTracer_.smoothFlux(flux,
+                              context.rayTracingParams.smoothingNeighbors);
 
         fluxes->insertNextScalarData(std::move(flux),
                                      localData.getVectorDataLabel(i));
@@ -182,8 +184,7 @@ private:
       rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
                             label);
     }
-
-    return std::move(rayData);
+    return rayData;
   }
 
   static void moveRayDataToPointData(

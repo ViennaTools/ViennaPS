@@ -17,6 +17,8 @@ using namespace viennacore;
 inline viennaray::TriangleMesh
 CreateTriangleMesh(const float gridDelta,
                    const SmartPointer<viennals::Mesh<float>> &mesh) {
+  assert(mesh->getCellData().getVectorData("Normals") != nullptr &&
+         "Mesh normals not found in cell data under label 'Normals'.");
   viennaray::TriangleMesh triangleMesh;
 
   triangleMesh.gridDelta = gridDelta;
@@ -26,7 +28,7 @@ CreateTriangleMesh(const float gridDelta,
   triangleMesh.maximumExtent = mesh->maximumExtent;
   triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
 
-  return std::move(triangleMesh);
+  return triangleMesh;
 }
 
 inline void CopyTriangleMesh(const float gridDelta,
@@ -95,7 +97,6 @@ public:
     }
 
     mesh->clear();
-    const auto gridDelta = levelSet->getGrid().getGridDelta();
     mesh->minimumExtent = Vec3D<MeshNT>{std::numeric_limits<MeshNT>::max(),
                                         std::numeric_limits<MeshNT>::max(),
                                         std::numeric_limits<MeshNT>::max()};
@@ -118,10 +119,9 @@ public:
     typedef std::map<viennahrle::Index<D>, unsigned> nodeContainerType;
 
     nodeContainerType nodes[D];
-    const MeshNT minNodeDistance = gridDelta * minNodeDistanceFactor;
+    const auto gridDelta = levelSet->getGrid().getGridDelta();
+    const MeshNT invMinNodeDistance = 1. / (gridDelta * minNodeDistanceFactor);
     std::unordered_map<I3, unsigned, I3Hash> nodeIdByBin;
-
-    typename nodeContainerType::iterator nodeIt;
 
     std::vector<Vec3D<LsNT>> triangleCenters;
     std::vector<Vec3D<MeshNT>> normals;
@@ -136,13 +136,13 @@ public:
       nodeIdByBin.reserve(estimatedTriangles * 4);
     }
 
-    const bool buildKdTreeFlag = kdTree != nullptr;
+    const bool buildKdTreeFlag = kdTree != nullptr && D == 3;
     const bool checkNodeFlag = minNodeDistanceFactor > 0;
 
     auto quantize = [&](const Vec3D<MeshNT> &p) -> I3 {
-      const MeshNT inv = MeshNT(1) / minNodeDistance;
-      return {(int)std::llround(p[0] * inv), (int)std::llround(p[1] * inv),
-              (int)std::llround(p[2] * inv)};
+      return {(int)std::llround(p[0] * invMinNodeDistance),
+              (int)std::llround(p[1] * invMinNodeDistance),
+              (int)std::llround(p[2] * invMinNodeDistance)};
     };
 
     // iterate over all active surface points
@@ -194,8 +194,7 @@ public:
           auto p0B = viennahrle::BitMaskToIndex<D>(p0);
           d += p0B;
 
-          nodeIt = nodes[dir].find(d);
-          if (nodeIt != nodes[dir].end()) {
+          if (auto nodeIt = nodes[dir].find(d); nodeIt != nodes[dir].end()) {
             nod_numbers[n] = nodeIt->second;
           } else {
             // if node does not exist yet
@@ -225,7 +224,7 @@ public:
                 cc[z] = std::max(cc[z], cellIt.getIndices(z) + epsilon);
                 cc[z] = std::min(cc[z], (cellIt.getIndices(z) + 1) - epsilon);
               }
-              cc[z] = gridDelta * cc[z];
+              cc[z] *= gridDelta;
             }
 
             int nodeIdx = -1;
@@ -239,82 +238,58 @@ public:
               nod_numbers[n] = nodeIdx;
             } else {
               // insert new node
-              nod_numbers[n] =
-                  mesh->insertNextNode(cc); // insert new surface node
+              nod_numbers[n] = mesh->insertNextNode(cc);
               nodes[dir][d] = nod_numbers[n];
               if (checkNodeFlag)
                 nodeIdByBin.emplace(quantize(cc), nod_numbers[n]);
 
+              // update mesh extents
               for (int a = 0; a < D; a++) {
-                if (cc[a] < mesh->minimumExtent[a])
-                  mesh->minimumExtent[a] = cc[a];
-                if (cc[a] > mesh->maximumExtent[a])
-                  mesh->maximumExtent[a] = cc[a];
+                mesh->minimumExtent[a] =
+                    std::min(mesh->minimumExtent[a], cc[a]);
+                mesh->maximumExtent[a] =
+                    std::max(mesh->maximumExtent[a], cc[a]);
               }
             }
           }
         }
 
-        if constexpr (D == 2) {
-          if (nod_numbers[0] != nod_numbers[1]) {
-            auto const &p0 = mesh->nodes[nod_numbers[0]];
-            auto const &p1 = mesh->nodes[nod_numbers[1]];
-            auto const dd = p1 - p0;
-            auto normal = Vec3D<MeshNT>{-dd[1], dd[0], MeshNT(0)};
-            auto n2 = Norm2(normal);
-            if (n2 > epsilon) {
-              MeshNT invn =
-                  static_cast<MeshNT>(1.) / std::sqrt(static_cast<MeshNT>(n2));
-              for (int d = 0; d < D; d++) {
-                normal[d] *= invn;
-              }
-              normals.push_back(normal);
-              mesh->insertNextElement(
-                  nod_numbers); // insert new surface element
+        if (!triangleMisformed(nod_numbers)) {
+          auto normal = calculateNormal(mesh->nodes, nod_numbers);
+          auto n2 = Norm2(normal);
+          if (n2 > epsilon) {
+            MeshNT invn = static_cast<MeshNT>(1. / std::sqrt(n2));
+            for (int d = 0; d < D; d++) {
+              normal[d] *= invn;
             }
-          }
-        } else {
-          if (!triangleMisformed(nod_numbers)) {
-            auto normal = calculateNormal(mesh->nodes[nod_numbers[0]],
-                                          mesh->nodes[nod_numbers[1]],
-                                          mesh->nodes[nod_numbers[2]]);
-            auto n2 = Norm2(normal);
-            if (n2 > epsilon) {
-              mesh->insertNextElement(
-                  nod_numbers); // insert new surface element
-              MeshNT invn =
-                  static_cast<MeshNT>(1.) / std::sqrt(static_cast<MeshNT>(n2));
-              for (int d = 0; d < D; d++) {
-                normal[d] *= invn;
-              }
-              normals.push_back(normal);
+            normals.push_back(normal);
+            mesh->insertNextElement(nod_numbers); // insert new surface element
 
-              if (buildKdTreeFlag) {
-                triangleCenters.push_back(
-                    {static_cast<LsNT>(mesh->nodes[nod_numbers[0]][0] +
-                                       mesh->nodes[nod_numbers[1]][0] +
-                                       mesh->nodes[nod_numbers[2]][0]) /
-                         static_cast<LsNT>(3.),
-                     static_cast<LsNT>(mesh->nodes[nod_numbers[0]][1] +
-                                       mesh->nodes[nod_numbers[1]][1] +
-                                       mesh->nodes[nod_numbers[2]][1]) /
-                         static_cast<LsNT>(3.),
-                     static_cast<LsNT>(mesh->nodes[nod_numbers[0]][2] +
-                                       mesh->nodes[nod_numbers[1]][2] +
-                                       mesh->nodes[nod_numbers[2]][2]) /
-                         static_cast<LsNT>(3.)});
-              }
+            if (buildKdTreeFlag) {
+              triangleCenters.push_back(
+                  {static_cast<LsNT>((mesh->nodes[nod_numbers[0]][0] +
+                                      mesh->nodes[nod_numbers[1]][0] +
+                                      mesh->nodes[nod_numbers[2]][0]) /
+                                     3.),
+                   static_cast<LsNT>((mesh->nodes[nod_numbers[0]][1] +
+                                      mesh->nodes[nod_numbers[1]][1] +
+                                      mesh->nodes[nod_numbers[2]][1]) /
+                                     3.),
+                   static_cast<LsNT>((mesh->nodes[nod_numbers[0]][2] +
+                                      mesh->nodes[nod_numbers[1]][2] +
+                                      mesh->nodes[nod_numbers[2]][2]) /
+                                     3.)});
             }
           }
         }
-      }
-    }
+      } // for each triangle
+    } // for each active cell
 
     mesh->cellData.insertNextVectorData(normals, "Normals");
     mesh->nodes.shrink_to_fit();
     mesh->triangles.shrink_to_fit();
 
-    if (D == 3 && buildKdTreeFlag) {
+    if (buildKdTreeFlag) {
       kdTree->setPoints(triangleCenters);
       kdTree->build();
     }
@@ -323,19 +298,26 @@ public:
 private:
   static inline bool
   triangleMisformed(const std::array<unsigned, D> &nod_numbers) noexcept {
-    if constexpr (D == 3) {
+    if constexpr (D == 2) {
+      return nod_numbers[0] == nod_numbers[1];
+    } else {
       return nod_numbers[0] == nod_numbers[1] ||
              nod_numbers[0] == nod_numbers[2] ||
              nod_numbers[1] == nod_numbers[2];
-    } else {
-      return nod_numbers[0] == nod_numbers[1];
     }
   }
 
   static inline Vec3D<MeshNT>
-  calculateNormal(const Vec3D<MeshNT> &nodeA, const Vec3D<MeshNT> &nodeB,
-                  const Vec3D<MeshNT> &nodeC) noexcept {
-    return CrossProduct(nodeB - nodeA, nodeC - nodeA);
+  calculateNormal(const std::vector<Vec3D<MeshNT>> &nodes,
+                  const std::array<unsigned, D> &nod_numbers) noexcept {
+    if constexpr (D == 2) {
+      auto const &p0 = nodes[nod_numbers[0]];
+      auto const &p1 = nodes[nod_numbers[1]];
+      return Vec3D<MeshNT>{-(p1[1] - p0[1]), (p1[0] - p0[0]), MeshNT(0)};
+    } else {
+      return CrossProduct(nodes[nod_numbers[1]] - nodes[nod_numbers[0]],
+                          nodes[nod_numbers[2]] - nodes[nod_numbers[0]]);
+    }
   }
 };
 

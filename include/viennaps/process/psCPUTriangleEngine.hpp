@@ -34,6 +34,7 @@ public:
   }
 
   ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
+    assert(model_ != nullptr);
     // Map the domain boundary to the ray tracing boundaries
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     if (context.rayTracingParams.ignoreFluxBoundaries) {
