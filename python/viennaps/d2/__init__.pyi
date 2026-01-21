@@ -334,10 +334,6 @@ class Domain:
         """
         Get the surface mesh of the domain
         """
-    def insertNextLevelSet(self, levelset: viennals.d2.Domain, wrapLowerLevelSet: bool = True) -> None:
-        """
-        Insert a level set to domain.
-        """
     def insertNextLevelSetAsMaterial(self, levelSet: viennals.d2.Domain, material: viennaps._core.Material, wrapLowerLevelSet: bool = True) -> None:
         """
         Insert a level set to domain as a material.
