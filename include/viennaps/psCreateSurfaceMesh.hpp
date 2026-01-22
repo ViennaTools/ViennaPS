@@ -282,8 +282,8 @@ public:
             }
           }
         }
-      } // for each triangle
-    } // for each active cell
+      }
+    }
 
     mesh->cellData.insertNextVectorData(normals, "Normals");
     mesh->nodes.shrink_to_fit();
