@@ -6,10 +6,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
-import viennaps.d3
+from viennaps import d2
 from viennaps import d3
+import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
@@ -347,6 +347,7 @@ class CF4O2ParametersSiGe:
     def x(self, arg0: typing.SupportsFloat) -> None:
         ...
 class CoverageParameters:
+    initialized: bool
     def __init__(self) -> None:
         ...
     def toMetaData(self) -> dict[str, list[float]]:
@@ -362,12 +363,6 @@ class CoverageParameters:
         ...
     @maxIterations.setter
     def maxIterations(self, arg0: typing.SupportsInt) -> None:
-        ...
-    @property
-    def initialized(self) -> bool:
-        ...
-    @initialized.setter
-    def initialized(self, arg0: bool) -> None:
         ...
     @property
     def tolerance(self) -> float:
@@ -960,9 +955,11 @@ class MaterialMap:
         ...
     def getMaterialAtIdx(self, arg0: typing.SupportsInt) -> Material:
         ...
+    def getMaterialIdAtIdx(self, arg0: typing.SupportsInt) -> int:
+        ...
     def getMaterialMap(self) -> viennals._core.MaterialMap:
         ...
-    def insertNextMaterial(self, material: Material = ...) -> None:
+    def insertNextMaterial(self, material: Material) -> None:
         ...
     def size(self) -> int:
         ...

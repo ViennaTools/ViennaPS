@@ -1,5 +1,7 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
+
 #include <lsMesh.hpp>
 
 #include <vcCudaBuffer.hpp>
@@ -13,7 +15,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, class MeshNT = NumericType>
+template <Numeric NumericType, Numeric MeshNT = NumericType>
 class PointToElementDataBase {
 protected:
   viennals::PointData<NumericType> &pointData_;
@@ -36,11 +38,12 @@ public:
     const auto numData = pointData_.getScalarDataSize();
     const auto &elements = surfaceMesh_->triangles;
     const auto numElements = elements.size();
+    const bool insertToMesh = insertToMesh_;
     std::vector<unsigned> dataIdx(numData);
 
     prepareData();
 
-    if (insertToMesh_) {
+    if (insertToMesh) {
       for (unsigned i = 0; i < numData; ++i) {
         std::vector<MeshNT> data(numElements);
         const auto label = pointData_.getScalarDataLabel(i);
@@ -63,11 +66,10 @@ public:
       closestPoints[i] = closestPoint->first;
 #endif
 
-      const auto pointIdx = closestPoint->first;
       for (unsigned j = 0; j < numData; ++j) {
-        const auto value = pointData_.getScalarData(j)->at(pointIdx);
+        const auto value = pointData_.getScalarData(j)->at(closestPoint->first);
         setDataAtElement(i, j, value);
-        if (insertToMesh_) {
+        if (insertToMesh) {
           surfaceMesh_->getCellData().getScalarData(dataIdx[j])->at(i) =
               static_cast<MeshNT>(value);
         }

@@ -22,7 +22,7 @@ using namespace viennacore;
 ///
 /// This class handles reading a Process Simulation Domain (Domain) from a
 /// binary file previously created with psWriter.
-template <class NumericType, int D> class Reader {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Reader {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
   std::string fileName;
@@ -96,11 +96,13 @@ public:
     fin.read(reinterpret_cast<char *>(&numLevelSets), sizeof(uint32_t));
 
     // Read each level set
+    std::vector<SmartPointer<viennals::Domain<NumericType, D>>> levelSets;
     for (uint32_t i = 0; i < numLevelSets; i++) {
       auto ls = viennals::Domain<NumericType, D>::New();
       ls->deserialize(fin);
-      domain->insertNextLevelSet(ls, false); // Don't wrap lower level sets
+      levelSets.push_back(ls);
     }
+    assert(levelSets.size() == numLevelSets);
 
     // Read material map if it exists
     char hasMaterialMap;
@@ -110,18 +112,18 @@ public:
       // Read number of materials
       uint32_t numMaterials;
       fin.read(reinterpret_cast<char *>(&numMaterials), sizeof(uint32_t));
+      assert(numMaterials == numLevelSets);
 
-      // Create new material map
-      auto materialMap = SmartPointer<MaterialMap>::New();
-
-      // Read each material ID
+      // Read each material ID and insert corresponding level set
       for (uint32_t i = 0; i < numMaterials; i++) {
         int materialId;
         fin.read(reinterpret_cast<char *>(&materialId), sizeof(int));
-        materialMap->insertNextMaterial(static_cast<Material>(materialId));
+        domain->insertNextLevelSetAsMaterial(
+            levelSets[i], static_cast<Material>(materialId), false);
       }
 
-      domain->setMaterialMap(materialMap);
+    } else {
+      VIENNACORE_LOG_ERROR("No material map found in the file.");
     }
 
     // Check if cell set exists

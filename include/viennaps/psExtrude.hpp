@@ -9,7 +9,7 @@
 namespace viennaps {
 using namespace viennacore;
 
-template <class NumericType> class Extrude {
+template <Numeric NumericType> class Extrude {
   SmartPointer<Domain<NumericType, 2>> inputDomain;
   SmartPointer<Domain<NumericType, 3>> outputDomain;
   Vec2D<NumericType> extent{NumericType(0)};
@@ -57,16 +57,17 @@ public:
   }
 
   void apply() {
-    if (inputDomain == nullptr) {
+    if (!inputDomain) {
       VIENNACORE_LOG_ERROR("No input domain supplied to Extrude.");
       return;
     }
-    if (outputDomain == nullptr) {
+    if (!outputDomain) {
       VIENNACORE_LOG_ERROR("No output domain supplied to Extrude.");
       return;
     }
 
     auto materialMap = inputDomain->getMaterialMap();
+    assert(materialMap != nullptr);
     outputDomain->clear();
 
     for (std::size_t i = 0; i < inputDomain->getLevelSets().size(); i++) {
@@ -83,12 +84,8 @@ public:
             .apply();
       }
 
-      if (materialMap) {
-        auto material = materialMap->getMaterialAtIdx(i);
-        outputDomain->insertNextLevelSetAsMaterial(tmpLS, material, false);
-      } else {
-        outputDomain->insertNextLevelSet(tmpLS, false);
-      }
+      auto material = materialMap->getMaterialAtIdx(i);
+      outputDomain->insertNextLevelSetAsMaterial(tmpLS, material, false);
     }
   }
 };

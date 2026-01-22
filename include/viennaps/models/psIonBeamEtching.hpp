@@ -40,6 +40,7 @@ public:
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData(fluxLabel);
+    assert(flux && flux->size() == materialIds.size());
     std::vector<NumericType> redeposition(materialIds.size(), 0.);
     if (params_.redepositionRate > 0.) {
       redeposition = *rates->getScalarData(redepositionLabel);

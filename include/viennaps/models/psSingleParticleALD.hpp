@@ -46,6 +46,7 @@ public:
     std::vector<NumericType> depoRate(numPoints, 0.);
 
     auto Coverage = coverages->getScalarData("Coverage");
+    assert(Coverage && Coverage->size() == numPoints);
 
     for (size_t i = 0; i < numPoints; ++i) {
       depoRate[i] = gpc_ * Coverage->at(i);

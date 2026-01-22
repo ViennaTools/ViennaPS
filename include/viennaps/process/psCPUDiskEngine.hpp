@@ -9,7 +9,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class CPUDiskEngine final : public FluxEngine<NumericType, D> {
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
@@ -19,6 +19,7 @@ public:
       VIENNACORE_LOG_WARNING("Invalid process model.");
       return ProcessResult::INVALID_INPUT;
     }
+    model_ = model;
     return ProcessResult::SUCCESS;
   }
 
@@ -47,20 +48,17 @@ public:
     if (!context.rayTracingParams.useRandomSeeds)
       rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
 
-    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
-        context.model);
-
-    if (auto source = model->getSource()) {
+    if (auto source = model_->getSource()) {
       rayTracer_.setSource(source);
       VIENNACORE_LOG_INFO("Using custom source.");
     }
-    if (auto primaryDirection = model->getPrimaryDirection()) {
+    if (auto primaryDirection = model_->getPrimaryDirection()) {
       VIENNACORE_LOG_INFO("Using primary direction: " +
                           util::arrayToString(primaryDirection.value()));
       rayTracer_.setPrimaryDirection(primaryDirection.value());
     }
 
-    model->initializeParticleDataLogs();
+    model_->initializeParticleDataLogs();
 
     return ProcessResult::SUCCESS;
   }
@@ -70,6 +68,7 @@ public:
     this->timer_.start();
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
+    assert(model_ != nullptr);
 
     auto points = diskMesh->getNodes();
     auto normals = *diskMesh->getCellData().getVectorData("Normals");
@@ -92,6 +91,7 @@ public:
   ProcessResult calculateFluxes(
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+    assert(model_ != nullptr);
     this->timer_.start();
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
@@ -129,14 +129,12 @@ private:
   void runRayTracer(ProcessContext<NumericType, D> const &context,
                     SmartPointer<viennals::PointData<NumericType>> &fluxes) {
     assert(fluxes != nullptr);
+    assert(model_ != nullptr);
     fluxes->clear();
 
-    auto model = std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
-        context.model);
-
     unsigned particleIdx = 0;
-    for (auto &particle : model->getParticleTypes()) {
-      int dataLogSize = model->getParticleLogSize(particleIdx);
+    for (auto &particle : model_->getParticleTypes()) {
+      int dataLogSize = model_->getParticleLogSize(particleIdx);
       if (dataLogSize > 0) {
         rayTracer_.getDataLog().data.resize(1);
         rayTracer_.getDataLog().data[0].resize(dataLogSize, 0.);
@@ -159,7 +157,7 @@ private:
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
       for (int i = 0; i < numFluxes; ++i) {
-        auto flux = std::move(localData.getVectorData(i));
+        auto &flux = localData.getVectorData(i);
 
         // normalize and smooth
         rayTracer_.normalizeFlux(flux,
@@ -172,7 +170,7 @@ private:
                                      localData.getVectorDataLabel(i));
       }
 
-      model->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
+      model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
       ++particleIdx;
     }
   }
@@ -187,8 +185,7 @@ private:
       rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
                             label);
     }
-
-    return std::move(rayData);
+    return rayData;
   }
 
   static void moveRayDataToPointData(
@@ -203,6 +200,7 @@ private:
 
 private:
   viennaray::TraceDisk<NumericType, D> rayTracer_;
+  SmartPointer<ProcessModelCPU<NumericType, D>> model_;
 };
 
 } // namespace viennaps

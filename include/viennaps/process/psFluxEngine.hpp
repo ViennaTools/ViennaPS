@@ -6,7 +6,7 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D> class FluxEngine {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class FluxEngine {
 protected:
   viennacore::Timer<> timer_;
 

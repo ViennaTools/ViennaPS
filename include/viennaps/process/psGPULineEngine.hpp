@@ -17,7 +17,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class GPULineEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
