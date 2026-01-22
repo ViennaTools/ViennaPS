@@ -9,7 +9,7 @@ import viennals._core
 import viennals.d2
 import viennaps._core
 from . import gpu
-__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'Delaunay2D', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
     domain: Domain
     def __init__(self) -> None:
@@ -54,6 +54,27 @@ class CSVFileProcess(ProcessModel):
         ...
     def setOffset(self, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"]) -> None:
         ...
+class Delaunay2D:
+    def __init__(self) -> None:
+        ...
+    def apply(self) -> None:
+        """
+        Perform the Delaunay triangulation.
+        """
+    def setBottomExtent(self, extent: typing.SupportsInt) -> None:
+        """
+        Set the bottom extent of the triangulation domain.
+        """
+    def setDomain(self, arg0: Domain) -> None:
+        ...
+    def setMaxTriangeSize(self, maxSize: typing.SupportsFloat) -> None:
+        """
+        Set the maximum allowed triangle size during triangulation.
+        """
+    def setMesh(self, mesh: viennals._core.Mesh) -> None:
+        """
+        Set the mesh to be used for triangulation.
+        """
 class DenseCellSet:
     def __init__(self) -> None:
         ...

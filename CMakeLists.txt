@@ -127,6 +127,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME ViennaLS
   VERSION 5.5.0
+  GIT_TAG delaunay
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}")
@@ -137,6 +138,9 @@ CPMAddPackage(
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
+find_package(CGAL REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} INTERFACE CGAL::CGAL)
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
 

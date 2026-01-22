@@ -71,6 +71,7 @@
 #include <models/psWetEtching.hpp>
 
 // visualization
+#include <psDelaunay2D.hpp>
 #include <psToDiskMesh.hpp>
 #include <psVTKRenderWindow.hpp>
 
@@ -1483,6 +1484,24 @@ template <int D> void bindApi(py::module &module) {
       .def("setFileName", &GDSReader<T, D>::setFileName,
            "Set name of the GDS file.")
       .def("apply", &GDSReader<T, D>::apply, "Parse the GDS file.");
+
+  if constexpr (D == 2) {
+    py::class_<Delaunay2D<T>>(module, "Delaunay2D")
+        .def(py::init())
+        //    .def(py::init<SmartPointer<Domain<T, 2>>,
+        //    SmartPointer<Mesh<T>>>())
+        .def("setDomain", &Delaunay2D<T>::setDomain)
+        .def("setMesh", &Delaunay2D<T>::setMesh, py::arg("mesh"),
+             "Set the mesh to be used for triangulation.")
+        .def("setMaxTriangeSize", &Delaunay2D<T>::setMaxTriangleSize,
+             py::arg("maxSize"),
+             "Set the maximum allowed triangle size during triangulation.")
+        .def("setBottomExtent", &Delaunay2D<T>::setBottomExtent,
+             py::arg("extent"),
+             "Set the bottom extent of the triangulation domain.")
+        .def("apply", &Delaunay2D<T>::apply,
+             "Perform the Delaunay triangulation.");
+  }
 
   // ***************************************************************************
   //                                 GPU MODELS
