@@ -1493,12 +1493,16 @@ template <int D> void bindApi(py::module &module) {
         .def("setDomain", &Delaunay2D<T>::setDomain)
         .def("setMesh", &Delaunay2D<T>::setMesh, py::arg("mesh"),
              "Set the mesh to be used for triangulation.")
-        .def("setMaxTriangeSize", &Delaunay2D<T>::setMaxTriangleSize,
+        .def("setMaxTriangleSize", &Delaunay2D<T>::setMaxTriangleSize,
              py::arg("maxSize"),
              "Set the maximum allowed triangle size during triangulation.")
         .def("setBottomExtent", &Delaunay2D<T>::setBottomExtent,
              py::arg("extent"),
              "Set the bottom extent of the triangulation domain.")
+        .def("setBottomMaterial", &Delaunay2D<T>::setBottomMaterial,
+             py::arg("material"),
+             "Set the material type for the bottom of the triangulation "
+             "domain.")
         .def("apply", &Delaunay2D<T>::apply,
              "Perform the Delaunay triangulation.");
   }

@@ -65,9 +65,13 @@ class Delaunay2D:
         """
         Set the bottom extent of the triangulation domain.
         """
+    def setBottomMaterial(self, material: viennaps._core.Material) -> None:
+        """
+        Set the material type for the bottom of the triangulation domain.
+        """
     def setDomain(self, arg0: Domain) -> None:
         ...
-    def setMaxTriangeSize(self, maxSize: typing.SupportsFloat) -> None:
+    def setMaxTriangleSize(self, maxSize: typing.SupportsFloat) -> None:
         """
         Set the maximum allowed triangle size during triangulation.
         """

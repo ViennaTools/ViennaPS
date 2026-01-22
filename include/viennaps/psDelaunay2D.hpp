@@ -15,6 +15,7 @@ template <typename T> class Delaunay2D {
   SmartPointer<viennals::Mesh<T>> mesh_;
   double maxTriangleSize_ = 0.0;
   int bottomExtent_ = 0;
+  Material bottomMaterial_ = Material::Undefined;
 
 public:
   Delaunay2D() = default;
@@ -31,6 +32,10 @@ public:
 
   void setBottomExtent(int bottomExtent) { bottomExtent_ = bottomExtent; }
 
+  void setBottomMaterial(Material bottomMaterial) {
+    bottomMaterial_ = bottomMaterial;
+  }
+
   void apply() {
     viennals::Delaunay2D<T> delaunay;
     delaunay.setMesh(mesh_);
@@ -40,6 +45,7 @@ public:
     delaunay.setMaxTriangleSize(maxTriangleSize_);
     delaunay.setBottomExtent(bottomExtent_);
     delaunay.setMaterialMap(domain_->getMaterialMap()->getMaterialMap());
+    delaunay.setBottomLayerMaterialId(static_cast<int>(bottomMaterial_));
     delaunay.apply();
   }
 };
