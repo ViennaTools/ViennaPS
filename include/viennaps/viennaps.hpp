@@ -1,6 +1,7 @@
 #pragma once
 
 #include <psConstants.hpp>
+#include <psDelaunay2D.hpp>
 #include <psDomain.hpp>
 #include <psExtrude.hpp>
 #include <psReader.hpp>

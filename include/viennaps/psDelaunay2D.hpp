@@ -8,45 +8,26 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename T> class Delaunay2D {
-  using DomainType = Domain<T, 2>;
-
-  SmartPointer<DomainType> domain_;
-  SmartPointer<viennals::Mesh<T>> mesh_;
-  double maxTriangleSize_ = 0.0;
-  int bottomExtent_ = 0;
-  Material bottomMaterial_ = Material::Undefined;
-
+template <typename T> class Delaunay2D : public viennals::Delaunay2D<T> {
 public:
   Delaunay2D() = default;
-  //   Delaunay2D(SmartPointer<DomainType> domain, SmartPointer<Mesh<T>> mesh)
-  //   : domain_(domain), mesh_(mesh) {}
+  Delaunay2D(SmartPointer<viennals::Mesh<T>> mesh)
+      : viennals::Delaunay2D<T>(mesh) {}
 
-  void setDomain(SmartPointer<DomainType> domain) { domain_ = domain; }
-
-  void setMesh(SmartPointer<viennals::Mesh<T>> mesh) { mesh_ = mesh; }
-
-  void setMaxTriangleSize(double maxTriangleSize) {
-    maxTriangleSize_ = maxTriangleSize;
+  void setDomain(SmartPointer<Domain<T, 2>> domain) {
+    this->clear();
+    for (const auto &d : domain->getLevelSets()) {
+      this->insertNextLevelSet(d);
+    }
+    this->setMaterialMap(domain->getMaterialMap()->getMaterialMap());
   }
-
-  void setBottomExtent(int bottomExtent) { bottomExtent_ = bottomExtent; }
 
   void setBottomMaterial(Material bottomMaterial) {
-    bottomMaterial_ = bottomMaterial;
+    this->setBottomLayerMaterialId(static_cast<int>(bottomMaterial));
   }
 
-  void apply() {
-    viennals::Delaunay2D<T> delaunay;
-    delaunay.setMesh(mesh_);
-    for (auto &ls : domain_->getLevelSets()) {
-      delaunay.insertNextLevelSet(ls);
-    }
-    delaunay.setMaxTriangleSize(maxTriangleSize_);
-    delaunay.setBottomExtent(bottomExtent_);
-    delaunay.setMaterialMap(domain_->getMaterialMap()->getMaterialMap());
-    delaunay.setBottomLayerMaterialId(static_cast<int>(bottomMaterial_));
-    delaunay.apply();
+  void setVoidMaterial(Material voidMaterial) {
+    this->setVoidMaterialId(static_cast<int>(voidMaterial));
   }
 };
 } // namespace viennaps
