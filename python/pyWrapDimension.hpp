@@ -1485,11 +1485,12 @@ template <int D> void bindApi(py::module &module) {
            "Set name of the GDS file.")
       .def("apply", &GDSReader<T, D>::apply, "Parse the GDS file.");
 
+#ifdef VIENNALS_USE_CGAL
   if constexpr (D == 2) {
+    // Delaunay Triangulation 2D
     py::class_<Delaunay2D<T>>(module, "Delaunay2D")
         .def(py::init())
-        //    .def(py::init<SmartPointer<Domain<T, 2>>,
-        //    SmartPointer<Mesh<T>>>())
+        .def(py::init<SmartPointer<viennals::Mesh<T>>>())
         .def("setDomain", &Delaunay2D<T>::setDomain)
         .def("setMesh", &Delaunay2D<T>::setMesh, py::arg("mesh"),
              "Set the mesh to be used for triangulation.")
@@ -1503,9 +1504,41 @@ template <int D> void bindApi(py::module &module) {
              py::arg("material"),
              "Set the material type for the bottom of the triangulation "
              "domain.")
+        .def("setVoidMaterial", &Delaunay2D<T>::setVoidMaterial,
+             py::arg("material"),
+             "Set the material type for void regions in the triangulation "
+             "domain.")
+        .def("setCloseDomain", &Delaunay2D<T>::setCloseDomain,
+             py::arg("closeDomain"),
+             "Set whether the triangulation domain should be closed at "
+             "the sides.")
+        .def("setCleanConstraints", &Delaunay2D<T>::setCleanConstraints,
+             py::arg("cleanConstraints"),
+             "Set whether constraint edges should be cleaned before "
+             "triangulation.")
+        .def("setVerboseConstraintCleaning",
+             &Delaunay2D<T>::setVerboseConstraintCleaning, py::arg("verbose"),
+             "Set whether constraint cleaning should output detailed "
+             "information to the console.")
+        .def("setConstraintTargetSpacing",
+             &Delaunay2D<T>::setConstraintTargetSpacing, py::arg("spacing"),
+             "Set target edge spacing for constraint cleaning (auto if < 0).")
+        .def("setConstraintMergeThreshold",
+             &Delaunay2D<T>::setConstraintMergeThreshold, py::arg("threshold"),
+             "Set merge threshold for near-duplicate vertices (auto if < 0).")
+        .def("setConstraintMinEdgeLength",
+             &Delaunay2D<T>::setConstraintMinEdgeLength, py::arg("length"),
+             "Set minimum edge length for constraint cleaning (auto if < 0).")
+        .def("setSurfaceMeshMinNodeDistanceFactor",
+             &Delaunay2D<T>::setSurfaceMeshMinNodeDistanceFactor,
+             py::arg("factor"),
+             "Set minimum node distance factor for surface mesh generation.")
+        .def("clear", &Delaunay2D<T>::clear,
+             "Clear all previously added domains.")
         .def("apply", &Delaunay2D<T>::apply,
              "Perform the Delaunay triangulation.");
   }
+#endif
 
   // ***************************************************************************
   //                                 GPU MODELS
