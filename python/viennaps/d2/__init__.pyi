@@ -1060,3 +1060,7 @@ class Writer:
         """
         Set the output file name (should end with .vpsd).
         """
+    def setMeshOutput(self, arg0: bool) -> None:
+        """
+        Set wether Domain should be further processed in the ViennaMesh mesher.
+        """
