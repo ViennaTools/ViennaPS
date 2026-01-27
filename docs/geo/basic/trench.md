@@ -25,7 +25,7 @@ mask material.
 ```c++
 // namespace viennaps
 // with DomainSetup configured (v3.3.0)
-MakeTrench(psDomainType domain, 
+MakeTrench(viennaps::Domain domain, 
            NumericType trenchWidth,
            NumericType trenchDepth, 
            NumericType trenchTaperAngle = 0,
@@ -36,7 +36,7 @@ MakeTrench(psDomainType domain,
            Material maskMaterial = Material::Mask)
 
 
-MakeTrench(DomainType domain, 
+MakeTrench(viennaps::Domain domain, 
            NumericType gridDelta,
            NumericType xExtent, 
            NumericType yExtent,
@@ -72,7 +72,7 @@ C++
 </summary>
 ```c++
 // namespace viennaps
-auto domain = SmartPointer<Domain<NumericType, D>>::New();
+auto domain = Domain<NumericType, D>::New();
 MakeTrench<NumericType, D>(domain, 0.5, 10.0, 10.0, 5.0, 5.0, 10., 0.,
                             false, false, Material::Si)
     .apply();

@@ -17,8 +17,8 @@ nav_order: 1
 An isotropic etching or deposition process applies to all materials in the domain except the mask material, which defaults to `Material::Undefined` (no mask). A negative rate etches the material, while a positive rate deposits the material of the top level set. To deposit a different material, call `duplicateTopLevelSet` on the domain before running the process.
 
 ```c++
-psIsotropicProcess(const NumericType rate,
-                   const Material maskMaterial = Material::Undefined)
+IsotropicProcess(const NumericType rate,
+                 const Material maskMaterial = Material::Undefined)
 ```
 
 | Parameter | Description | Type |
@@ -44,7 +44,7 @@ int main() {
   using NumericType = double;
   constexpr int D = 2;
 
-  auto domain = SmartPointer<Domain<NumericType, D>>::New();
+  auto domain = Domain<NumericType, D>::New();
   MakeTrench<NumericType, D>(domain, 0.1 /*gridDelta*/, 20. /*xExtent*/,
                              20. /*yExtent*/, 10. /*trenchWidth*/,
                              10. /*trenchDepth*/, 0., 0., false, false,

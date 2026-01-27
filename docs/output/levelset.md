@@ -26,7 +26,7 @@ C++
 {: .label .label-blue }
 </summary>
 ```c++
-auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New();
+auto domain = ps::Domain<NumericType, D>::New();
 ...
 // create geometry in domain
 ...

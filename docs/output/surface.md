@@ -62,7 +62,7 @@ C++
 </summary>
 
 ```c++
-auto domain = ps::SmartPointer<ps::Domain<double, 3>>::New();
+auto domain = ps::Domain<double, 3>::New();
 // ... create geometry in domain ...
 
 // Save top-level surface only

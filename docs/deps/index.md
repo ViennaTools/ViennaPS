@@ -11,6 +11,7 @@ nav_order: 2
 
 ![]({% link assets/images/ViennaPS_framework.png %})
 
+ViennaPS is part of the ViennaTools ecosystem and depends on several lightweight, header-only ViennaTools libraries. During configuration, CMake will fetch them automatically as part of the ViennaPS build. **No separate installation step is required for these dependencies**:
 
 ## [ViennaLS](https://github.com/ViennaTools/ViennaLS)
 

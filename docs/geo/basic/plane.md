@@ -19,12 +19,12 @@ The `MakePlane` class offers a straightforward approach to generate a plane as a
 
 ```c++
 // namespace viennaps
-MakePlane(psDomainType domain, 
+MakePlane(viennaps::Domain domain, 
           NumericType baseHeight = 0.,
           Material material = Material::Si, 
           bool addToExisting = false)
 
-MakePlane(psDomainType domain, 
+MakePlane(viennaps::Domain domain, 
           NumericType gridDelta, 
           NumericType xExtent,
           NumericType yExtent, 
@@ -62,7 +62,7 @@ C++
 </summary>
 ```c++
 // namespace viennaps
-auto domain = SmartPointer<Domain<NumericType, D>>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
+auto domain = Domain<NumericType, D>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
 MakePlane<NumericType, D>(domain, 0.0, Material::Si).apply();
 ```
 </details>

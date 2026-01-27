@@ -20,7 +20,7 @@ The `MakeFin` class generates a fin geometry extending in the z (3D) or y (2D) d
 // namespace viennaps
 
 // with DomainSetup configured (v3.3.0)
-MakeFin(DomainType domain,
+MakeFin(viennaps::Domain domain,
         NumericType finWidth,
         NumericType finHeight,
         NumericType finTaperAngle,
@@ -30,7 +30,7 @@ MakeFin(DomainType domain,
         Material material = Material::Si,
         Material maskMaterial = Material::Mask)
 
-MakeFin(DomainType domain,
+MakeFin(viennaps::Domain domain,
         const NumericType gridDelta,
         const NumericType xExtent, 
         const NumericType yExtent,
@@ -75,11 +75,11 @@ C++
 ```c++
 // namespace viennaps
 // recomended with DomainSetup configured (v3.3.0)
-auto domain = SmartPointer<Domain<NumericType, D>>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
+auto domain = Domain<NumericType, D>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
 MakeFin(domain, 2.5, 5.0, 10., 0., 0., false, Material::Si, Material::Mask).apply();
 
 // without DomainSetup
-auto domain = SmartPointer<Domain<NumericType, D>>::New();
+auto domain = Domain<NumericType, D>::New();
 MakeFin<NumericType, D>(domain, 0.5, 10.0, 10.0, 5.0, 5.0, 0., false, false,
                         Material::Si)
     .apply();

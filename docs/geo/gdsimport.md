@@ -41,11 +41,11 @@ To parse a GDSII file using ViennaPS, follow these steps:
 
     ```cpp
     // Create new domain
-    auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New(); 
+    auto domain = ps::Domain<NumericType, D>::New(); 
 
     // Convert the layer to a level set and add it to the domain.
     auto layer = mask->layerToLevelSet(0 /*layer*/, 0 /*base z position*/, 0.5 /*height*/);
-    domain->insertNextLevelSet(layer);
+    domain->insertNextLevelSetAsMaterial(layer, ps::Material::Mask);
     ```
 
    Replace `layerNumber` with the GDSII layer number you wish to access.
@@ -53,7 +53,7 @@ To parse a GDSII file using ViennaPS, follow these steps:
    Layers can also be inverted to be used a mask.
     ```cpp
     // Create new domain
-    auto domain = ps::SmartPointer<ps::Domain<NumericType, D>>::New(); 
+    auto domain = ps::Domain<NumericType, D>::New(); 
 
     // Convert the inverted layer to a level set and add it to the domain.
     auto layer = mask->layerToLevelSet(0 /*layer*/, 0 /*base z position*/, 
@@ -61,7 +61,7 @@ To parse a GDSII file using ViennaPS, follow these steps:
     domain->insertNextLevelSetAsMaterial(layer, ps::Material::Mask);
 
     // Create substrate underneath the mask
-    ps::MakePlane<NumericType, D>(domain, 0. /*base z position*/, ps::Material::Si).apply();
+    ps::MakePlane<NumericType, D>(domain, 0. /*base z position*/, ps::Material::Si, true /*add to existing domain*/).apply();
     ```
 
 ## Related Examples

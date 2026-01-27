@@ -16,9 +16,9 @@ has_children: true
 
 ---
 
-The `Process` class is the main simulation interface. It holds the domain, the process model, the duration, and advanced parameters. Configure it, then call `apply()`.
+The `Process` class is the main simulation interface. It holds the domain, the process model, the duration, and advanced parameters. Configure it, then call `apply()`. The passed domain is modified in place.
 
-## What’s new in 4.0.0
+<!-- ## What’s new in 4.0.0
 
 * **Flux engine switch** on the process via `setFluxEngineType(...)`.
 
@@ -28,7 +28,7 @@ The `Process` class is the main simulation interface. It holds the domain, the p
 
   * Supported structs: `AdvectionParameters`, `RayTracingParameters`, `CoverageParameters`, `AtomicLayerProcessParameters`.
 * **AtomicLayerProcess removed**. The standard `Process()` detects ALP behavior from the selected model.
-* **Python bindings unified**. Use `viennaps` (with `viennaps.d2` / `viennaps.d3`). Change default dimension via `viennaps.setDimension()`.
+* **Python bindings unified**. Use `viennaps` (with `viennaps.d2` / `viennaps.d3`). Change default dimension via `viennaps.setDimension()`. -->
 
 ---
 
@@ -218,7 +218,3 @@ void setIntermediateOutputPath(const std::string &path)
 void apply()
 ```
 
-{: .note }
-Direct parameter field access is deprecated since **4.0.0**. Use the parameter structs with `setParameters(...)`.
-Atomic-layer behavior is handled by the selected model within `Process()`.
-The flux engine is selectable at runtime via `setFluxEngineType(...)`.

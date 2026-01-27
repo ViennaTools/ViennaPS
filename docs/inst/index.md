@@ -28,7 +28,7 @@ include(cmake/CPM.cmake) # Download from https://github.com/cpm-cmake/CPM.cmake/
 
 CPMAddPackage(
     NAME ViennaPS
-    VERSION 4.1.2
+    VERSION 4.2.1
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaPS.git")
 
 add_executable(my_executable main.cpp)
@@ -52,7 +52,7 @@ On macOS, you can install Embree using Homebrew with the command: `brew install 
 
 ## System Requirements
 
-* C++17 Compiler with OpenMP support
+* C++20 Compiler with OpenMP support
 
 ## Installing
 
@@ -91,7 +91,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@4.0.0")
+  CPMAddPackage("gh:viennatools/viennaps@4.2.1")
   ```
 
 * With a local installation

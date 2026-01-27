@@ -13,9 +13,9 @@ nav_order: 3
 ## Constructors
 
 * `Domain()` – Default constructor
-* `Domain(SmartPointer<Domain>)` – Deep copy from another domain
-* `Domain(lsDomainType)` – Initialize from a single Level-Set
-* `Domain(lsDomainsType)` – Initialize from multiple Level-Sets
+* `Domain(viennaps::Domain)` – Deep copy from another domain
+* `Domain(viennals::Domain)` – Initialize from a single Level-Set
+* `Domain(std::vector<viennals::Domain>)` – Initialize from multiple Level-Sets
 * `Domain(gridDelta, xExtent, yExtent = 0.0, boundary)` – Rectangular grid initialization
 * `Domain(bounds[], boundaryConditions[], gridDelta)` – Bounding box initialization
 * `Domain(const Setup &setup)` – From preconfigured domain setup
@@ -38,23 +38,36 @@ Initialize or reconfigure the simulation domain.
 ### Level-Set Management
 
 ```cpp
-void insertNextLevelSet(lsDomainType levelSet, bool wrap = true);
-void insertNextLevelSetAsMaterial(lsDomainType levelSet, Material material, bool wrap = true);
+// Insert single level-set and assign material
+void insertNextLevelSetAsMaterial(viennals::Domain levelSet, Material material, bool wrap = true);
+// Dubplicate the top level-set and assign material
 void duplicateTopLevelSet(Material material);
+// Remove top level-set
 void removeTopLevelSet();
+// Remove level-set at index
 void removeLevelSet(unsigned int idx, bool removeWrapped = true);
+// Remove all level-sets with given material
 void removeMaterial(Material material);
-void removeStrayPoints();
 ```
 
-Insert, duplicate, or remove Level-Sets. Materials can be assigned during insertion.
+Insert, duplicate, or remove Level-Sets. Materials have to be assigned during insertion.
 
 ---
+
+### Topology Operations
+
+```cpp
+void removeStrayPoints();
+void getNumberOfComponents() const;
+```
+Analyze and clean up surface topology in the domain.
+
+--- 
 
 ### Boolean Operations
 
 ```cpp
-void applyBooleanOperation(lsDomainType levelSet, viennals::BooleanOperationEnum op);
+void applyBooleanOperation(viennals::Domain levelSet, viennals::BooleanOperationEnum op);
 ```
 
 Apply a Boolean operation (e.g., union, intersection) across all Level-Sets in the domain.
@@ -74,7 +87,6 @@ Convert Level-Set stack into a Cell-Set for volume process modeling.
 ### Material Mapping
 
 ```cpp
-void setMaterialMap(materialMapType map);
 void setMaterial(unsigned int lsId, Material material);
 ```
 
@@ -94,6 +106,8 @@ auto getGridDelta() const;
 auto& getSetup();
 auto getBoundingBox() const;
 auto getBoundaryConditions() const;
+auto getMetaData() const;
+auto getMaterialsInDomain() const; // returns std::set<Material>
 ```
 
 Access the surface Level-Set, grid, bounding box, material map, and setup.
@@ -108,10 +122,12 @@ void saveSurfaceMesh(std::string fileName, bool addInterfaces = true,
                      double wrappingLayerEpsilon = 0.01, bool boolMaterials = false);
 auto getSurfaceMesh(bool addInterfaces = false, double wrappingLayerEpsilon = 0.01,
                     bool boolMaterials = false);
+auto getLevelSetMesh(int width = 1);
 void saveVolumeMesh(std::string fileName, double wrappingEps = 1e-2) const;
 void saveHullMesh(std::string fileName, double wrappingEps = 1e-2) const;
 void saveLevelSets(std::string prefix) const;
 void print() const;
+void show() const;
 ```
 
 Save surface or volume meshes in VTK formats or print domain state to `stdout`.
@@ -123,6 +139,7 @@ Save surface or volume meshes in VTK formats or print domain state to `stdout`.
 ```cpp
 void deepCopy(SmartPointer<Domain> other);
 void clear();
+void clearMetaData();
 ```
 
 Clone another domain or clear all internal data.

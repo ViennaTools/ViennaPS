@@ -19,7 +19,7 @@ The `MakeStack` generates a stack of alternating SiO<sub>2</sub>/Si<sub>3</sub>N
 ```c++
 // namespace viennaps
 // with DomainSetup configured (v3.3.0)
-MakeStack(psDomainType domain, 
+MakeStack(viennaps::Domain domain, 
           int numLayers, 
           NumericType layerHeight,
           NumericType substrateHeight, 
@@ -30,7 +30,7 @@ MakeStack(psDomainType domain,
           bool halfStack = false,
           Material maskMaterial = Material::Mask)
 
-MakeStack(DomainType domain, 
+MakeStack(viennaps::Domain domain, 
           NumericType gridDelta,
           NumericType xExtent, 
           NumericType yExtent,
@@ -69,7 +69,7 @@ C++
 </summary>
 ```c++
 // namespace viennaps
-auto domain = SmartPointer<Domain<NumericType, D>>::New();
+auto domain = Domain<NumericType, D>::New();
 MakeStack<NumericType, D>(domain, 0.5, 10.0, 10.0, 5, 5.0, 10., 0.0, 5.0,
                             0.0, false)
     .apply();

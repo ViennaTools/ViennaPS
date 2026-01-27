@@ -21,7 +21,7 @@ Additionally, the hole can serve as a mask, with the specified material only app
 // namespace viennaps
 
 // with DomainSetup configured (v3.3.0)
-MakeHole(psDomainType domain, 
+MakeHole(pviennaps::Domain domain, 
          NumericType holeRadius, 
          NumericType holeDepth,
          NumericType holeTaperAngle = 0., 
@@ -31,7 +31,7 @@ MakeHole(psDomainType domain,
          Material material = Material::Si,
          Material maskMaterial = Material::Mask)
 
-MakeHole(DomainType domain,
+MakeHole(viennaps::Domain domain,
          NumericType gridDelta,
          NumericType xExtent, 
          NumericType yExtent,
@@ -80,12 +80,12 @@ C++
 // namespace viennaps
 
 // with DomainSetup configured (v3.3.0)
-auto domain = SmartPointer<Domain<NumericType, D>>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
+auto domain = Domain<NumericType, D>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
 MakeHole<NumericType, D>(domain, 5.0, 5.0, 10., 0., 0., HoleShape::Quarter, Material::Si, Material::Mask)
     .apply();
 
 // without DomainSetup
-auto domain = SmartPointer<Domain<NumericType, D>>::New();
+auto domain = Domain<NumericType, D>::New();
 MakeHole<NumericType, D>(domain, 0.5, 10.0, 10.0, 2.5, 5.0, 10., 0., false,
                          false, Material::Si)
     .apply();
