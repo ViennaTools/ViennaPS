@@ -1,0 +1,33 @@
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[[package]]
+name = "viennals"
+version = "5.5.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dc/51/1f099d8c0c1c8dd503b4eaa323ea10baf41c60fab6fede441ffeb55375e7/viennals-5.5.0-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:970cbcb6633284c04df4ce7878571487fb4d8a3142a0a15cea92c22b6190dd9b", size = 36969712, upload-time = "2026-01-15T23:16:00.05Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/2d/4a8b2fdff3683062ff4557846ef75b9378e559600f597245e7eac0ac0ea8/viennals-5.5.0-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1f4e34ae8c02efee8d03fb6838fa9abae4c219a63ebc219d6fd92ca5ccc1ff70", size = 29503421, upload-time = "2026-01-15T23:16:03.476Z" },
+    { url = "https://files.pythonhosted.org/packages/62/85/2fdac10cf48f859e03d074708a4b1fea14f3abd4876dc426b3b7686eeccb/viennals-5.5.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:73f44d1a7e676a9ef1285f7decebb81685e0766b6079e3895bb7e909a8b9f43c", size = 28225571, upload-time = "2026-01-15T23:16:06.714Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/7a/e5bf2ea618f2611656fc0a0d221de9b0d12ea087968f043f1122a7f2310a/viennals-5.5.0-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:cffb5688c892088947d500a674c1ed9f3fe3717af4fd99d28db0dc605a7862ea", size = 32770885, upload-time = "2026-01-15T23:16:09.916Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/ad/c06b42e0193c5cdc586ba858f5e863ec7fb46f5e0bbde5da1f58dd542bde/viennals-5.5.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:f120d1e8574aab8b2541822e863573afee86d2131e40f831a9933b119f12bc16", size = 30871156, upload-time = "2026-01-15T23:16:13.683Z" },
+    { url = "https://files.pythonhosted.org/packages/58/74/31d51c49bed82cfb0307e6d1b2e04660cfce6b7f9e90c9546b8cd7258f7f/viennals-5.5.0-cp312-cp312-win_amd64.whl", hash = "sha256:16e1a7ac5d666901bf9b0670521a0864b13e654526076fc34e3e80e9d347280d", size = 15820310, upload-time = "2026-01-15T23:16:17.208Z" },
+    { url = "https://files.pythonhosted.org/packages/df/a2/04ade1abd79acf11cfe732d632fd704e5ec414d66cd1dd56f76cc165c5e3/viennals-5.5.0-cp313-cp313-macosx_15_0_arm64.whl", hash = "sha256:18694b877e4cce97ad9b376162c647c31397bec6ddb9d5b124eb7c7d8965dd17", size = 36969630, upload-time = "2026-01-15T23:16:20.738Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/3b/3f928df6e69dcba2470500ea19bf4f1710713eeada374b0bb1a89b3b3223/viennals-5.5.0-cp313-cp313-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7fb16c5b29c42e2cb07e598f86766b9491aba60b5777377f5c19312e084dc66a", size = 29502427, upload-time = "2026-01-15T23:16:24.112Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/65/40e070eedcbb4d9e284a8913b94e1a233756272db4342d52e9d5f0f401c4/viennals-5.5.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:17231cab8475e100fda5e18c9839179efb4cda25fef663b170f451198dd3a7d6", size = 28225701, upload-time = "2026-01-15T23:16:27.27Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/7a/649e91805c64ae1f2a61c195cc790493629f3756ea76e13a37870cddcf67/viennals-5.5.0-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:aa7b9e47076af17c63376c82429792ce4cda03d221a65addfd38d01ec5ab6e19", size = 32770816, upload-time = "2026-01-15T23:16:30.223Z" },
+    { url = "https://files.pythonhosted.org/packages/03/89/d0ec2bc9b41f6afa8ca1d7f0e49586f72646b460e736ecc230a93e487470/viennals-5.5.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:cc9642a9a162d764d1f4dd5c8ee3f63c8e9ca8f14f2ad53f9b6b6aff1b21f0e2", size = 30871313, upload-time = "2026-01-15T23:16:33.516Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/77/6e04f5856352b6f8fa0086c6d31dac6551f7aa39824e2a02d49563ddc742/viennals-5.5.0-cp313-cp313-win_amd64.whl", hash = "sha256:0d2428d5914ff7c5f1521d8d5abb4aa63c51751daf615520bcb34f784e6c58d3", size = 15820436, upload-time = "2026-01-15T23:16:36.229Z" },
+]
+
+[[package]]
+name = "viennaps"
+version = "4.2.1"
+source = { editable = "." }
+dependencies = [
+    { name = "viennals" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "viennals", specifier = ">=5.5.0" }]

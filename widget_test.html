@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ViennaPS Interactive Widget Test</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #1f77b4;
+            padding-bottom: 10px;
+        }
+        .widget-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .widget-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+        .widget-label {
+            min-width: 150px;
+            font-weight: 500;
+            color: #555;
+        }
+        .widget-input {
+            flex: 1;
+            max-width: 300px;
+        }
+        .widget-value {
+            min-width: 80px;
+            font-family: monospace;
+            color: #1f77b4;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            -webkit-appearance: none;
+            background: #ddd;
+            border-radius: 4px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #1f77b4;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary {
+            background: #1f77b4;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1565a0;
+        }
+        .btn-secondary {
+            background: #ff7f0e;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #e06c00;
+        }
+        .btn-reset {
+            background: #666;
+            color: white;
+        }
+        .btn-reset:hover {
+            background: #555;
+        }
+        #plot-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-bar {
+            background: #333;
+            color: #0f0;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            color: #1f77b4;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .param-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .param-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .log-panel {
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+        .log-entry.info { color: #0ff; }
+        .log-entry.success { color: #0f0; }
+        .log-entry.warning { color: #ff0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ViennaPS Interactive Widget Test</h1>
+
+        <div class="status-bar" id="status">
+            Status: Ready | Parameters: Default | Process: Not started
+        </div>
+
+        <div class="param-grid">
+            <div class="widget-panel">
+                <div class="section-title">📐 Geometry Parameters</div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Grid Delta (μm):</span>
+                    <div class="widget-input">
+                        <input type="range" id="grid_delta" min="0.1" max="2.0" step="0.1" value="0.5">
+                    </div>
+                    <span class="widget-value" id="grid_delta_val">0.5</span>
+                </div>
+
+                <div class="widget-row">
+                    <span class="widget-label">X Extent (μm):</span>
+                    <div class="widget-input">
+                        <input type="range" id="x_extent" min="5" max="50" step="1" value="20">
+                    </div>
+                    <span class="widget-value" id="x_extent_val">20</span>
+                </div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Y Extent (μm):</span>
+                    <div class="widget-input">
+                        <input type="range" id="y_extent" min="5" max="30" step="1" value="15">
+                    </div>
+                    <span class="widget-value" id="y_extent_val">15</span>
+                </div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Trench Width (μm):</span>
+                    <div class="widget-input">
+                        <input type="range" id="trench_width" min="2" max="15" step="0.5" value="6">
+                    </div>
+                    <span class="widget-value" id="trench_width_val">6</span>
+                </div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Trench Depth (μm):</span>
+                    <div class="widget-input">
+                        <input type="range" id="trench_depth" min="2" max="15" step="0.5" value="8">
+                    </div>
+                    <span class="widget-value" id="trench_depth_val">8</span>
+                </div>
+            </div>
+
+            <div class="widget-panel">
+                <div class="section-title">⚙️ Process Parameters</div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Process Type:</span>
+                    <div class="widget-input">
+                        <select id="process_type">
+                            <option value="isotropic_etch">Isotropic Etch</option>
+                            <option value="deposition" selected>Deposition</option>
+                            <option value="directional_etch">Directional Etch</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Process Rate (μm/s):</span>
+                    <div class="widget-input">
+                        <input type="range" id="rate" min="0.1" max="2.0" step="0.1" value="0.5">
+                    </div>
+                    <span class="widget-value" id="rate_val">0.5</span>
+                </div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Process Time (s):</span>
+                    <div class="widget-input">
+                        <input type="range" id="time" min="1" max="30" step="1" value="10">
+                    </div>
+                    <span class="widget-value" id="time_val">10</span>
+                </div>
+
+                <div class="widget-row">
+                    <span class="widget-label">Sticking Prob.:</span>
+                    <div class="widget-input">
+                        <input type="range" id="sticking" min="0.01" max="1.0" step="0.01" value="0.1">
+                    </div>
+                    <span class="widget-value" id="sticking_val">0.10</span>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-primary" id="btn-simulate" onclick="runSimulation()">▶ Run Simulation</button>
+                    <button class="btn-secondary" id="btn-compare" onclick="showComparison()">📊 Compare</button>
+                    <button class="btn-reset" onclick="resetParameters()">↺ Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="plot-container">
+            <div id="plot" style="width:100%; height:500px;"></div>
+        </div>
+
+        <div class="widget-panel">
+            <div class="section-title">📋 Event Log</div>
+            <div class="log-panel" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let params = {
+            grid_delta: 0.5,
+            x_extent: 20,
+            y_extent: 15,
+            trench_width: 6,
+            trench_depth: 8,
+            process_type: 'deposition',
+            rate: 0.5,
+            time: 10,
+            sticking: 0.1
+        };
+
+        let simulationCount = 0;
+        let initialProfile = null;
+        let currentProfile = null;
+
+        // Logging
+        function log(message, type = 'info') {
+            const logPanel = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        // Update status bar
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        // Bind all sliders
+        function bindSlider(id) {
+            const slider = document.getElementById(id);
+            const valueSpan = document.getElementById(id + '_val');
+
+            slider.addEventListener('input', function() {
+                let val = parseFloat(this.value);
+                params[id] = val;
+
+                // Format display value
+                if (id === 'sticking') {
+                    valueSpan.textContent = val.toFixed(2);
+                } else if (['grid_delta', 'rate'].includes(id)) {
+                    valueSpan.textContent = val.toFixed(1);
+                } else {
+                    valueSpan.textContent = val;
+                }
+
+                log(`Parameter '${id}' changed to ${val}`, 'info');
+                updateStatus(`Status: Modified | ${id} = ${val}`);
+            });
+        }
+
+        // Bind process type dropdown
+        document.getElementById('process_type').addEventListener('change', function() {
+            params.process_type = this.value;
+            log(`Process type changed to: ${this.value}`, 'info');
+            updateStatus(`Status: Modified | Process = ${this.value}`);
+        });
+
+        // Initialize all sliders
+        ['grid_delta', 'x_extent', 'y_extent', 'trench_width', 'trench_depth', 'rate', 'time', 'sticking'].forEach(bindSlider);
+
+        // Generate trench profile based on parameters
+        function generateTrenchProfile(p) {
+            const points = [];
+            const hw = p.trench_width / 2;
+            const depth = p.trench_depth;
+            const extent = p.x_extent / 2;
+
+            // Left flat
+            for (let x = -extent; x <= -hw; x += p.grid_delta) {
+                points.push({x: x, y: 0});
+            }
+            // Left wall
+            points.push({x: -hw, y: 0});
+            points.push({x: -hw, y: -depth});
+            // Bottom
+            for (let x = -hw; x <= hw; x += p.grid_delta) {
+                points.push({x: x, y: -depth});
+            }
+            // Right wall
+            points.push({x: hw, y: -depth});
+            points.push({x: hw, y: 0});
+            // Right flat
+            for (let x = hw; x <= extent; x += p.grid_delta) {
+                points.push({x: x, y: 0});
+            }
+
+            return points;
+        }
+
+        // Simulate deposition/etch
+        function simulateProcess(profile, p) {
+            const result = [];
+            const processEffect = p.rate * p.time;
+
+            profile.forEach(pt => {
+                let newY = pt.y;
+
+                if (p.process_type === 'deposition') {
+                    // Deposition adds material (positive y direction)
+                    // More material accumulates at bottom of trenches
+                    const depthFactor = Math.abs(pt.y) / p.trench_depth;
+                    const coverage = 1 - (1 - p.sticking) * depthFactor;
+                    newY = pt.y + processEffect * coverage;
+                } else if (p.process_type === 'isotropic_etch') {
+                    // Isotropic etch removes material uniformly
+                    newY = pt.y - processEffect;
+                } else if (p.process_type === 'directional_etch') {
+                    // Directional etch - more effect at horizontal surfaces
+                    const horizontalFactor = 0.3;
+                    newY = pt.y - processEffect * (1 - horizontalFactor * Math.abs(pt.y) / p.trench_depth);
+                }
+
+                result.push({x: pt.x, y: newY});
+            });
+
+            return result;
+        }
+
+        // Run simulation
+        function runSimulation() {
+            simulationCount++;
+            log(`Starting simulation #${simulationCount}...`, 'info');
+            updateStatus(`Status: Running | Simulation #${simulationCount}`);
+
+            // Disable button during "simulation"
+            const btn = document.getElementById('btn-simulate');
+            btn.disabled = true;
+            btn.textContent = '⏳ Running...';
+
+            setTimeout(() => {
+                // Generate profiles
+                initialProfile = generateTrenchProfile(params);
+                currentProfile = simulateProcess(initialProfile, params);
+
+                // Plot results
+                const traces = [
+                    {
+                        x: initialProfile.map(p => p.x),
+                        y: initialProfile.map(p => p.y),
+                        mode: 'lines',
+                        name: 'Initial',
+                        line: {color: '#1f77b4', width: 2, dash: 'dash'}
+                    },
+                    {
+                        x: currentProfile.map(p => p.x),
+                        y: currentProfile.map(p => p.y),
+                        mode: 'lines',
+                        name: `After ${params.process_type}`,
+                        line: {color: '#ff7f0e', width: 2}
+                    }
+                ];
+
+                const layout = {
+                    title: `Simulation #${simulationCount}: ${params.process_type} (rate=${params.rate}, time=${params.time}s)`,
+                    xaxis: {title: 'X (μm)', range: [-params.x_extent/2 - 2, params.x_extent/2 + 2]},
+                    yaxis: {title: 'Y (μm)', scaleanchor: 'x'},
+                    showlegend: true,
+                    legend: {x: 0.02, y: 0.98}
+                };
+
+                Plotly.newPlot('plot', traces, layout);
+
+                // Calculate metrics
+                let maxChange = 0, sumChange = 0;
+                for (let i = 0; i < initialProfile.length; i++) {
+                    const change = Math.abs(currentProfile[i].y - initialProfile[i].y);
+                    maxChange = Math.max(maxChange, change);
+                    sumChange += change;
+                }
+                const meanChange = sumChange / initialProfile.length;
+
+                log(`Simulation complete! Max change: ${maxChange.toFixed(3)} μm, Mean: ${meanChange.toFixed(3)} μm`, 'success');
+                updateStatus(`Status: Complete | Max Δ = ${maxChange.toFixed(2)} μm | Mean Δ = ${meanChange.toFixed(2)} μm`);
+
+                btn.disabled = false;
+                btn.textContent = '▶ Run Simulation';
+            }, 500);  // Simulate processing time
+        }
+
+        // Show comparison view
+        function showComparison() {
+            if (!initialProfile || !currentProfile) {
+                log('No simulation data. Run a simulation first!', 'warning');
+                return;
+            }
+
+            log('Generating comparison view...', 'info');
+
+            // Side-by-side comparison
+            const traces = [
+                {
+                    x: initialProfile.map(p => p.x),
+                    y: initialProfile.map(p => p.y),
+                    mode: 'lines+markers',
+                    name: 'Initial',
+                    line: {color: '#1f77b4', width: 2},
+                    marker: {size: 4},
+                    xaxis: 'x',
+                    yaxis: 'y'
+                },
+                {
+                    x: currentProfile.map(p => p.x),
+                    y: currentProfile.map(p => p.y),
+                    mode: 'lines+markers',
+                    name: 'Final',
+                    line: {color: '#ff7f0e', width: 2},
+                    marker: {size: 4},
+                    xaxis: 'x2',
+                    yaxis: 'y2'
+                }
+            ];
+
+            const layout = {
+                title: 'Side-by-Side Comparison',
+                grid: {rows: 1, columns: 2, pattern: 'independent'},
+                xaxis: {title: 'X (μm)', anchor: 'y'},
+                yaxis: {title: 'Y (μm)', scaleanchor: 'x'},
+                xaxis2: {title: 'X (μm)', anchor: 'y2'},
+                yaxis2: {title: 'Y (μm)', scaleanchor: 'x2'},
+                showlegend: true,
+                annotations: [
+                    {text: 'Before', x: 0.2, y: 1.05, xref: 'paper', yref: 'paper', showarrow: false, font: {size: 14}},
+                    {text: 'After', x: 0.8, y: 1.05, xref: 'paper', yref: 'paper', showarrow: false, font: {size: 14}}
+                ]
+            };
+
+            Plotly.newPlot('plot', traces, layout);
+            log('Comparison view ready', 'success');
+        }
+
+        // Reset parameters
+        function resetParameters() {
+            const defaults = {
+                grid_delta: 0.5,
+                x_extent: 20,
+                y_extent: 15,
+                trench_width: 6,
+                trench_depth: 8,
+                rate: 0.5,
+                time: 10,
+                sticking: 0.1
+            };
+
+            Object.keys(defaults).forEach(key => {
+                params[key] = defaults[key];
+                const slider = document.getElementById(key);
+                const valueSpan = document.getElementById(key + '_val');
+                if (slider && valueSpan) {
+                    slider.value = defaults[key];
+                    if (key === 'sticking') {
+                        valueSpan.textContent = defaults[key].toFixed(2);
+                    } else if (['grid_delta', 'rate'].includes(key)) {
+                        valueSpan.textContent = defaults[key].toFixed(1);
+                    } else {
+                        valueSpan.textContent = defaults[key];
+                    }
+                }
+            });
+
+            params.process_type = 'deposition';
+            document.getElementById('process_type').value = 'deposition';
+
+            log('Parameters reset to defaults', 'info');
+            updateStatus('Status: Ready | Parameters: Default');
+        }
+
+        // Initial plot
+        log('Widget test page initialized', 'success');
+        initialProfile = generateTrenchProfile(params);
+
+        Plotly.newPlot('plot', [{
+            x: initialProfile.map(p => p.x),
+            y: initialProfile.map(p => p.y),
+            mode: 'lines',
+            name: 'Initial Profile',
+            line: {color: '#1f77b4', width: 2}
+        }], {
+            title: 'Initial Trench Profile (click "Run Simulation" to start)',
+            xaxis: {title: 'X (μm)'},
+            yaxis: {title: 'Y (μm)', scaleanchor: 'x'},
+            showlegend: true
+        });
+    </script>
+</body>
+</html>
