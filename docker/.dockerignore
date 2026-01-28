@@ -1,0 +1,30 @@
+# Docker build context exclusions
+
+# Build directories
+build/
+_skbuild/
+wheelhouse/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.github/
+
+# Context directory (conductor)
+.context/
+
+# Test outputs
+*.vtk
+*.vtu
+*.pvd

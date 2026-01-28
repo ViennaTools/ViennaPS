@@ -1,0 +1,41 @@
+# ViennaPS Development Container (Build from Source)
+#
+# This Dockerfile builds ViennaPS from the local source code.
+# Use this for development or when you need the latest changes.
+#
+# Build:
+#   docker build -t viennaps-dev -f docker/Dockerfile.dev .
+#
+# Run interactively:
+#   docker run -it viennaps-dev
+#
+# See: https://github.com/ViennaTools/ViennaPS
+
+FROM ghcr.io/viennatools/vienna-builder:suite-python
+
+LABEL org.opencontainers.image.title="ViennaPS-Dev"
+LABEL org.opencontainers.image.description="ViennaPS development build from source"
+
+WORKDIR /workspace
+
+# Copy source code
+COPY . /workspace/viennaps-src
+
+WORKDIR /workspace/viennaps-src
+
+# Create virtual environment and build from source
+# CMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF required for Alpine/musl
+RUN python -m venv /opt/venv && \
+    CMAKE_ARGS="-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF" \
+    /opt/venv/bin/pip install .
+
+# Set PATH to use the virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Return to workspace
+WORKDIR /workspace
+
+# Verify installation
+RUN python -c "import viennaps as vps; print('ViennaPS (dev) installed successfully')"
+
+CMD ["python"]
