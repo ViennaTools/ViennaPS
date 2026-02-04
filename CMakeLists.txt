@@ -120,6 +120,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME ViennaRay
   VERSION 3.10.2
+  GIT_TAG fix-2D-phi
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")

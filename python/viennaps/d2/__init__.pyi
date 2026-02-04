@@ -9,7 +9,7 @@ import viennals._core
 import viennals.d2
 import viennaps._core
 from . import gpu
-__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'Delaunay2D', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
     domain: Domain
     def __init__(self) -> None:
@@ -54,71 +54,6 @@ class CSVFileProcess(ProcessModel):
         ...
     def setOffset(self, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"]) -> None:
         ...
-class Delaunay2D:
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: viennals._core.Mesh) -> None:
-        ...
-    def apply(self) -> None:
-        """
-        Perform the Delaunay triangulation.
-        """
-    def clear(self) -> None:
-        """
-        Clear all previously added domains.
-        """
-    def setBottomExtent(self, extent: typing.SupportsInt) -> None:
-        """
-        Set the bottom extent of the triangulation domain.
-        """
-    def setBottomMaterial(self, material: viennaps._core.Material) -> None:
-        """
-        Set the material type for the bottom of the triangulation domain.
-        """
-    def setCleanConstraints(self, cleanConstraints: bool) -> None:
-        """
-        Set whether constraint edges should be cleaned before triangulation.
-        """
-    def setCloseDomain(self, closeDomain: bool) -> None:
-        """
-        Set whether the triangulation domain should be closed at the sides.
-        """
-    def setConstraintMergeThreshold(self, threshold: typing.SupportsFloat) -> None:
-        """
-        Set merge threshold for near-duplicate vertices (auto if < 0).
-        """
-    def setConstraintMinEdgeLength(self, length: typing.SupportsFloat) -> None:
-        """
-        Set minimum edge length for constraint cleaning (auto if < 0).
-        """
-    def setConstraintTargetSpacing(self, spacing: typing.SupportsFloat) -> None:
-        """
-        Set target edge spacing for constraint cleaning (auto if < 0).
-        """
-    def setDomain(self, arg0: Domain) -> None:
-        ...
-    def setMaxTriangleSize(self, maxSize: typing.SupportsFloat) -> None:
-        """
-        Set the maximum allowed triangle size during triangulation.
-        """
-    def setMesh(self, mesh: viennals._core.Mesh) -> None:
-        """
-        Set the mesh to be used for triangulation.
-        """
-    def setSurfaceMeshMinNodeDistanceFactor(self, factor: typing.SupportsFloat) -> None:
-        """
-        Set minimum node distance factor for surface mesh generation.
-        """
-    def setVerboseConstraintCleaning(self, verbose: bool) -> None:
-        """
-        Set whether constraint cleaning should output detailed information to the console.
-        """
-    def setVoidMaterial(self, material: viennaps._core.Material) -> None:
-        """
-        Set the material type for void regions in the triangulation domain.
-        """
 class DenseCellSet:
     def __init__(self) -> None:
         ...

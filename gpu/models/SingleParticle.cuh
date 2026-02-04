@@ -26,5 +26,5 @@ __forceinline__ __device__ void
 singleNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   prd->rayWeight -= prd->rayWeight * launchParams.sticking;
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
-  viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
+  viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
