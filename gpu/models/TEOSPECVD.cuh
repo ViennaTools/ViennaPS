@@ -27,6 +27,6 @@ TEOSPECVDIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
       -viennacore::DotProduct(prd->dir, geoNormal)); // clamp to [0,1]
   float theta = acosf(cosTheta);
 
-  viennaray::gpu::conedCosineReflection(
-      prd, geoNormal, M_PI_2f - min(theta, minAngle), launchParams.D);
+  viennaray::gpu::conedCosineReflection(prd, geoNormal,
+                                        M_PI_2f - min(theta, minAngle));
 }

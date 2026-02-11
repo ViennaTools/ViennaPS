@@ -22,5 +22,5 @@ singleALDNeutralReflection(const void *sbtData,
   const float Seff = launchParams.sticking * max(1.f - coverage, 0.f);
   prd->rayWeight -= prd->rayWeight * Seff;
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
-  viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
+  viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
