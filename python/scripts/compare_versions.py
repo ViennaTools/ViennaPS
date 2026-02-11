@@ -41,6 +41,20 @@ EXAMPLES = [
         "args": ["-D", "2", "config.txt"],
         "output_file": "boschProcessEmulate_final_volume.vtu",
     },
+    {
+        "name": "Ion_Beam_Etching",
+        "dir": "examples/ionBeamEtching",
+        "script": "ionBeamEtching.py",
+        "args": ["-D", "2", "config.txt"],
+        "output_file": "final_hull.vtp",
+    },
+    {
+        "name": "Faraday_Cage_Etching",
+        "dir": "examples/faradayCageEtching",
+        "script": "faradayCageEtching.py",
+        "args": ["-D", "2", "config.txt"],
+        "output_file": "final_hull.vtp",
+    },
 ]
 
 
@@ -111,36 +125,49 @@ def render_comparison(file1, file2, title, output_path):
             r2 = out2.GetCellData().GetArray("Material").GetRange()
             scalar_range = (min(r1[0], r2[0]), max(r1[1], r2[1]))
 
-    # Left Viewport (Version 1)
-    renderer1 = vtk.vtkRenderer()
-    renderer1.SetViewport(0.0, 0.0, 0.5, 1.0)
-    renderer1.SetBackground(1.0, 1.0, 1.0)  # White background
     actor1 = create_actor(reader1, (0.8, 0.3, 0.3), scalar_range)  # Reddish
-    renderer1.AddActor(actor1)
-
-    # Right Viewport (Version 2)
-    renderer2 = vtk.vtkRenderer()
-    renderer2.SetViewport(0.5, 0.0, 1.0, 1.0)
-    renderer2.SetBackground(1.0, 1.0, 1.0)
     actor2 = create_actor(reader2, (0.3, 0.3, 0.8), scalar_range)  # Blueish
-    renderer2.AddActor(actor2)
 
     render_window = vtk.vtkRenderWindow()
     render_window.SetSize(1200, 600)
-    render_window.AddRenderer(renderer1)
-    render_window.AddRenderer(renderer2)
     render_window.SetOffScreenRendering(1)
 
-    # Reset cameras to fit geometry
-    renderer1.ResetCamera()
-    renderer2.ResetCamera()
+    if file1.endswith(".vtp"):
+        # Overlay View (single viewport)
+        renderer = vtk.vtkRenderer()
+        renderer.SetViewport(0.0, 0.0, 1.0, 1.0)
+        renderer.SetBackground(1.0, 1.0, 1.0)
+        renderer.AddActor(actor1)
+        renderer.AddActor(actor2)
+        render_window.AddRenderer(renderer)
+        renderer.ResetCamera()
+    else:
+        # Side-by-side View
+        # Left Viewport (Version 1)
+        renderer1 = vtk.vtkRenderer()
+        renderer1.SetViewport(0.0, 0.0, 0.5, 1.0)
+        renderer1.SetBackground(1.0, 1.0, 1.0)  # White background
+        renderer1.AddActor(actor1)
 
-    # Sync cameras
-    cam1 = renderer1.GetActiveCamera()
-    cam2 = renderer2.GetActiveCamera()
-    cam2.SetPosition(cam1.GetPosition())
-    cam2.SetFocalPoint(cam1.GetFocalPoint())
-    cam2.SetViewUp(cam1.GetViewUp())
+        # Right Viewport (Version 2)
+        renderer2 = vtk.vtkRenderer()
+        renderer2.SetViewport(0.5, 0.0, 1.0, 1.0)
+        renderer2.SetBackground(1.0, 1.0, 1.0)
+        renderer2.AddActor(actor2)
+
+        render_window.AddRenderer(renderer1)
+        render_window.AddRenderer(renderer2)
+
+        # Reset cameras to fit geometry
+        renderer1.ResetCamera()
+        renderer2.ResetCamera()
+
+        # Sync cameras
+        cam1 = renderer1.GetActiveCamera()
+        cam2 = renderer2.GetActiveCamera()
+        cam2.SetPosition(cam1.GetPosition())
+        cam2.SetFocalPoint(cam1.GetFocalPoint())
+        cam2.SetViewUp(cam1.GetViewUp())
 
     # # Zoom to decrease visual distance (reduce whitespace)
     # cam1.Zoom(1.4)
