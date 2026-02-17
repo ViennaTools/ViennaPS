@@ -46,7 +46,7 @@ template <class NumericType, int D> void RunTest() {
   double timeStepRatio = 0.49;
   bool adaptiveTimeStepping = false;
   bool intermediateVelocityCalculations = true;
-  auto spatialScheme = viennals::SpatialSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+  auto spatialScheme = viennals::SpatialSchemeEnum::LAX_FRIEDRICHS_1ST_ORDER;
   auto temporalScheme = viennals::TemporalSchemeEnum::RUNGE_KUTTA_2ND_ORDER;
   auto fluxEngineType = FluxEngineType::CPU_TRIANGLE;
 
