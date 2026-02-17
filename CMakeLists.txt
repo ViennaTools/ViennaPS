@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 4.2.0)
+  VERSION 4.2.1)
 
 # --------------------------------------------------------------------------------------------------------
 # Include guards
@@ -21,6 +21,8 @@ endif()
 
 option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
 option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
+option(VIENNAPS_ENABLE_SANITIZER "Enable sanitizers" OFF)
+option(VIENNAPS_ENABLE_CLANG_TIDY "Run clang-tidy during build" OFF)
 
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 
@@ -68,7 +70,7 @@ if(VIENNAPS_BUILD_PYTHON)
 endif()
 
 if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:llvm /bigobj")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp:llvm /bigobj")
 endif()
 
 # --------------------------------------------------------------------------------------------------------
@@ -105,7 +107,7 @@ include("cmake/cpm.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 1.9.4
+  VERSION 1.9.5
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -117,7 +119,7 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME ViennaRay
-  VERSION 3.10.2
+  VERSION 3.11.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -126,7 +128,8 @@ CPMAddPackage(
   NAME ViennaLS
   VERSION 5.5.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
+  OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}")
 
 CPMAddPackage(
   NAME ViennaCS
@@ -136,6 +139,29 @@ CPMAddPackage(
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaTools::ViennaCore ViennaTools::ViennaLS
                                                 ViennaTools::ViennaRay ViennaTools::ViennaCS)
+
+# --------------------------------------------------------------------------------------------------------
+# Setup Sanitizer or Clang-Tidy
+# --------------------------------------------------------------------------------------------------------
+
+if(VIENNAPS_ENABLE_SANITIZER)
+  if(VIENNAPS_USE_GPU)
+    message(WARNING "[ViennaPS] Sanitizers cannot be used with GPU support enabled!")
+  else()
+    viennacore_enable_sanitizer()
+    message(STATUS "[ViennaPS] Enabled Sanitizers")
+  endif()
+endif()
+
+if(VIENNAPS_ENABLE_CLANG_TIDY)
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+  find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+  if(NOT CLANG_TIDY_EXE)
+    message(FATAL_ERROR "clang-tidy not found")
+  endif()
+
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}" "--quiet" "--warnings-as-errors=*")
+endif()
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Shared/Static Library
@@ -155,8 +181,9 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   target_link_libraries(${LIB_NAME} PRIVATE ${PROJECT_NAME})
   target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED=1
                                                  VIENNACORE_COMPILE_SHARED_LIB=1)
-  target_sources(${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp"
-                                     "lib/specModels.cpp")
+  target_sources(
+    ${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModelsEmulation.cpp"
+                        "lib/specModelsSimulation.cpp" "lib/specProcess.cpp")
 
   set_target_properties(
     ${LIB_NAME}

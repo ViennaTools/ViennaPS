@@ -9,7 +9,7 @@
 namespace viennaps {
 using namespace viennacore;
 
-template <class NumericType> class Slice {
+template <Numeric NumericType> class Slice {
   SmartPointer<Domain<NumericType, 3>> inputDomain;
   SmartPointer<Domain<NumericType, 2>> outputDomain;
   int sliceDimension = 0;
@@ -57,6 +57,7 @@ public:
     }
 
     auto materialMap = inputDomain->getMaterialMap();
+    assert(materialMap != nullptr);
     outputDomain->clear();
 
     for (std::size_t i = 0; i < inputDomain->getLevelSets().size(); i++) {
@@ -75,12 +76,8 @@ public:
             .apply();
       }
 
-      if (materialMap) {
-        auto material = materialMap->getMaterialAtIdx(i);
-        outputDomain->insertNextLevelSetAsMaterial(tmpLS, material, false);
-      } else {
-        outputDomain->insertNextLevelSet(tmpLS, false);
-      }
+      auto material = materialMap->getMaterialAtIdx(i);
+      outputDomain->insertNextLevelSetAsMaterial(tmpLS, material, false);
     }
   }
 };

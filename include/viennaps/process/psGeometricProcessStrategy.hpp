@@ -4,7 +4,7 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class GeometricProcessStrategy : public ProcessStrategy<NumericType, D> {
 public:
   DEFINE_CLASS_NAME(GeometricProcessStrategy)

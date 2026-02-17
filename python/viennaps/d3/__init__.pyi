@@ -334,10 +334,6 @@ class Domain:
         """
         Get the surface mesh of the domain
         """
-    def insertNextLevelSet(self, levelset: viennals.d3.Domain, wrapLowerLevelSet: bool = True) -> None:
-        """
-        Insert a level set to domain.
-        """
     def insertNextLevelSetAsMaterial(self, levelSet: viennals.d3.Domain, material: viennaps._core.Material, wrapLowerLevelSet: bool = True) -> None:
         """
         Insert a level set to domain as a material.
@@ -998,4 +994,8 @@ class Writer:
     def setFileName(self, arg0: str) -> None:
         """
         Set the output file name (should end with .vpsd).
+        """
+    def setMeshOutput(self, arg0: bool) -> None:
+        """
+        Set wether Domain should be further processed in the ViennaMesh mesher.
         """

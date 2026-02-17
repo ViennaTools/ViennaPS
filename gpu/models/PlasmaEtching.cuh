@@ -38,7 +38,7 @@ plasmaNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   float Seff = sticking * max(1.f - phi_E - phi_P, 0.f);
   prd->rayWeight -= prd->rayWeight * Seff;
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
-  viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
+  viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
 
 // Specialized neutral reflection for models without passivation (e.g., SF6C4F8)
@@ -54,7 +54,7 @@ plasmaNeutralReflectionNoPassivation(const void *sbtData,
   float Seff = sticking * max(1.f - phi_E, 0.f);
   prd->rayWeight -= prd->rayWeight * Seff;
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
-  viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
+  viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
 
 //
@@ -146,8 +146,7 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   if (prd->energy > minEnergy) {
     prd->rayWeight -= prd->rayWeight * sticking;
     viennaray::gpu::conedCosineReflection(
-        prd, geomNormal, M_PI_2f - min(angle, params->Ions.minAngle),
-        launchParams.D);
+        prd, geomNormal, M_PI_2f - min(angle, params->Ions.minAngle));
   } else {
     prd->rayWeight = 0.f; // terminate particle
   }

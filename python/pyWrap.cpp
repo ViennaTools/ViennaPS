@@ -101,7 +101,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   py::class_<MaterialMap, SmartPointer<MaterialMap>>(module, "MaterialMap")
       .def(py::init<>())
       .def("insertNextMaterial", &MaterialMap::insertNextMaterial,
-           py::arg("material") = Material::Undefined)
+           py::arg("material"))
+      .def("getMaterialIdAtIdx", &MaterialMap::getMaterialIdAtIdx)
       .def("getMaterialAtIdx", &MaterialMap::getMaterialAtIdx)
       .def("getMaterialMap", &MaterialMap::getMaterialMap)
       .def("size", &MaterialMap::size)

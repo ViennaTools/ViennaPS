@@ -4,7 +4,7 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D> class CoverageManager {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class CoverageManager {
   std::ofstream covMetricFile_;
   SmartPointer<viennals::PointData<NumericType>> previousCoverages_;
 
@@ -43,16 +43,18 @@ public:
     assert(
         deltaMetric.size() ==
         context.model->getSurfaceModel()->getCoverages()->getScalarDataSize());
-    logMetric(deltaMetric);
 
-    std::stringstream stream;
-    stream << std::setprecision(4) << std::fixed;
-    stream << "Coverage delta metric: ";
-    for (int i = 0; i < coverages->getScalarDataSize(); i++) {
-      stream << coverages->getScalarDataLabel(i) << ": " << deltaMetric[i]
-             << "\t";
+    if (Logger::hasInfo()) {
+      logMetric(deltaMetric);
+      std::stringstream stream;
+      stream << std::setprecision(4) << std::fixed;
+      stream << "Coverage delta metric: ";
+      for (int i = 0; i < coverages->getScalarDataSize(); i++) {
+        stream << coverages->getScalarDataLabel(i) << ": " << deltaMetric[i]
+               << "\t";
+      }
+      VIENNACORE_LOG_INFO(stream.str());
     }
-    VIENNACORE_LOG_INFO(stream.str());
 
     for (auto val : deltaMetric) {
       if (val > context.coverageParams.tolerance)

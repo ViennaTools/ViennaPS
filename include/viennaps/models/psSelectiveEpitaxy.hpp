@@ -30,7 +30,7 @@ public:
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material, const Vec3D<NumericType> &nv,
                                 unsigned long pointID) override {
-    for (auto epitaxyMaterial : materials) {
+    for (auto const &epitaxyMaterial : materials) {
       if (MaterialMap::isMaterial(material, epitaxyMaterial.first)) {
         double vel = std::max(std::abs(nv[0]), std::abs(nv[D - 1]));
         vel = (vel - low) * factor + R111;

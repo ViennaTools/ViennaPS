@@ -180,23 +180,27 @@ class MaterialMap {
 public:
   MaterialMap() { map_ = SmartPointer<viennals::MaterialMap>::New(); };
 
-  void insertNextMaterial(Material material = Material::Undefined) {
+  void insertNextMaterial(Material material) {
     map_->insertNextMaterial(static_cast<int>(material));
   }
 
-  void removeMaterial() {
-    if (map_) {
-      map_->removeLastMaterial();
-    }
+  void removeMaterial() { map_->removeLastMaterial(); }
+
+  // Returns the material **ID** at the given index. If the index is out of
+  // bounds, it returns -1
+  [[nodiscard]] int getMaterialIdAtIdx(std::size_t idx) const {
+    return map_->getMaterialId(idx);
   }
 
-  // Returns the material at the given index. If the index is out of bounds, it
-  // returns Material::GAS.
+  // Returns the material **enum** at the given index. If the index is out of
+  // bounds, it returns Material::Undefined
   [[nodiscard]] Material getMaterialAtIdx(std::size_t idx) const {
-    if (idx >= size())
-      return Material::GAS;
-    int matId = map_->getMaterialId(idx);
-    return mapToMaterial(matId);
+    if (int id = getMaterialIdAtIdx(idx); id < 0) {
+      VIENNACORE_LOG_WARNING("Getting material with out-of-bounds index.");
+      return Material::Undefined;
+    } else {
+      return mapToMaterial(id);
+    }
   }
 
   void setMaterialAtIdx(std::size_t idx, const Material material) {
@@ -215,8 +219,25 @@ public:
     return map_->getNumberOfLayers();
   }
 
+  static inline bool isValidMaterial(const Material mat) {
+    switch (mat) {
+#define ENUM_ELEM(id, sym, cat, dens, cond, color)                             \
+  case Material::sym:                                                          \
+    return true;
+      MATERIAL_LIST(ENUM_ELEM)
+#undef ENUM_ELEM
+    default:
+      return false;
+    }
+  }
+
   static inline Material mapToMaterial(const int matId) {
-    return static_cast<Material>(matId);
+    auto mat = static_cast<Material>(matId);
+    if (Logger::hasDebug() && !isValidMaterial(mat)) {
+      VIENNACORE_LOG_DEBUG("mapToMaterial: Invalid material id " +
+                           std::to_string(matId) + " mapped to Undefined.");
+    }
+    return mat;
   }
 
   template <class T> static inline Material mapToMaterial(const T matId) {

@@ -13,7 +13,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
@@ -34,6 +34,7 @@ public:
   }
 
   ProcessResult initialize(ProcessContext<NumericType, D> &context) override {
+    assert(model_ != nullptr);
     // Map the domain boundary to the ray tracing boundaries
     viennaray::BoundaryCondition rayBoundaryCondition[D];
     if (context.rayTracingParams.ignoreFluxBoundaries) {
@@ -245,7 +246,7 @@ private:
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
       for (int i = 0; i < numFluxes; ++i) {
-        auto flux = std::move(localData.getVectorData(i));
+        auto &flux = localData.getVectorData(i);
 
         // normalize
         rayTracer_.normalizeFlux(flux,

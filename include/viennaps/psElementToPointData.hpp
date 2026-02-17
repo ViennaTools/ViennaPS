@@ -1,5 +1,7 @@
 #pragma once
 
+#include "psPreCompileMacros.hpp"
+
 #include <lsMesh.hpp>
 #include <rayParticle.hpp>
 #include <vcKDTree.hpp>
@@ -13,7 +15,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, typename MeshNT, typename ResultType,
+template <Numeric NumericType, Numeric MeshNT, Numeric ResultType,
           bool d2 = true, bool d4 = true>
 class ElementToPointData {
   const std::vector<std::string> dataLabels_;
@@ -23,10 +25,14 @@ class ElementToPointData {
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
   const NumericType conversionRadius_;
 
-  std::vector<std::vector<ResultType>> elementDataArrays_;
-  std::vector<std::tuple<std::vector<size_t>, std::vector<double>, unsigned>>
-      closeElements_;
+  struct CloseElements {
+    std::vector<size_t> indices;
+    std::vector<double> weights;
+    unsigned numClosePoints;
+  };
 
+  std::vector<std::vector<ResultType>> elementDataArrays_;
+  std::vector<CloseElements> closeElements_;
   static constexpr bool discard2 = d2;
   static constexpr bool discard4 = d4;
 
@@ -92,9 +98,11 @@ public:
         }
       }
 
-      assert(!weights.empty() && !elementIndices.empty());
-      closeElements_[i] =
-          std::make_tuple(elementIndices, weights, numClosePoints);
+      assert(!weights.empty() && !elementIndices.empty() &&
+             "Weights and element indices should not be empty here.");
+      closeElements_[i].indices = std::move(elementIndices);
+      closeElements_[i].weights = std::move(weights);
+      closeElements_[i].numClosePoints = numClosePoints;
     }
   }
 
@@ -112,7 +120,7 @@ public:
 #pragma omp parallel for schedule(static)
     for (unsigned i = 0; i < numPoints; i++) {
 
-      const auto &[closeElements, weights, numClosePoints] = closeElements_[i];
+      const auto &[indices, weights, numClosePoints] = closeElements_[i];
 
       for (unsigned j = 0; j < numData; ++j) {
         NumericType value = NumericType(0);
@@ -120,17 +128,17 @@ public:
         auto pointData = pointData_->getScalarData(j);
 
         // Discard outlier values if enabled
-        const auto weightsCopy = discardOutliers(weights, closeElements,
-                                                 elementData, numClosePoints);
+        const auto weightsCopy =
+            discardOutliers(weights, indices, elementData, numClosePoints);
 
         // Compute weighted average
         const double sum =
             std::accumulate(weightsCopy.cbegin(), weightsCopy.cend(), 0.0);
 
-        if (sum > 1e-6) {
-          for (size_t k = 0; k < closeElements.size(); ++k) {
+        if (sum > 1e-6) [[likely]] {
+          for (size_t k = 0; k < indices.size(); ++k) {
             if (weightsCopy[k] > 0.0) {
-              value += weightsCopy[k] * elementData[closeElements[k]];
+              value += weightsCopy[k] * elementData[indices[k]];
             }
           }
           value /= sum;

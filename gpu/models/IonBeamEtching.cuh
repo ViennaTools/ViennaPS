@@ -94,8 +94,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
       prd->load > params->redepositionThreshold) {
     prd->rayWeight -= prd->rayWeight * sticking;
     viennaray::gpu::conedCosineReflection(
-        prd, geomNormal, M_PI_2f - min(theta, params->minAngle),
-        launchParams.D);
+        prd, geomNormal, M_PI_2f - min(theta, params->minAngle));
   } else {
     prd->rayWeight = 0.f; // terminate particle
   }

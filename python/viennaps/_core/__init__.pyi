@@ -1,13 +1,13 @@
 """
-ViennaPS is a header-only C++ process simulation library which includes surface and volume representations, a ray tracer, and physical models for the simulation of microelectronic fabrication processes. The main design goals are simplicity and efficiency, tailored towards scientific simulations.
+ViennaPS is a topography simulation library for microelectronic fabrication processes. It models the evolution of 2D and 3D surfaces during etching, deposition, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation. This allows accurate, feature-scale simulation of complex fabrication geometries.
 """
 from __future__ import annotations
 import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -347,6 +347,7 @@ class CF4O2ParametersSiGe:
     def x(self, arg0: typing.SupportsFloat) -> None:
         ...
 class CoverageParameters:
+    initialized: bool
     def __init__(self) -> None:
         ...
     def toMetaData(self) -> dict[str, list[float]]:
@@ -960,9 +961,11 @@ class MaterialMap:
         ...
     def getMaterialAtIdx(self, arg0: typing.SupportsInt) -> Material:
         ...
+    def getMaterialIdAtIdx(self, arg0: typing.SupportsInt) -> int:
+        ...
     def getMaterialMap(self) -> viennals._core.MaterialMap:
         ...
-    def insertNextMaterial(self, material: Material = ...) -> None:
+    def insertNextMaterial(self, material: Material) -> None:
         ...
     def size(self) -> int:
         ...
@@ -1400,5 +1403,5 @@ def gpuAvailable() -> bool:
     """
 def setNumThreads(arg0: typing.SupportsInt) -> None:
     ...
-__version__: str = '4.2.0'
-version: str = '4.2.0'
+__version__: str = '4.2.1'
+version: str = '4.2.1'

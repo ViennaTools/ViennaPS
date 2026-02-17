@@ -49,7 +49,7 @@ namespace viennaps {
 enum class RenderMode { SURFACE, INTERFACE, VOLUME };
 
 // forward declaration of Domain
-template <typename T, int D> class Domain;
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Domain;
 
 /// Lightweight VTK-based viewer for one or more ViennaPS domains.
 ///
@@ -626,7 +626,7 @@ public:
 
 private:
   viennaps::VTKRenderWindow<double, 3> *Window = nullptr;
-}; // namespace viennaps
+};
 
 // vtkStandardNewMacro(Custom3DInteractorStyle);
 
@@ -651,7 +651,7 @@ public:
 
 private:
   viennaps::VTKRenderWindow<double, 2> *Window = nullptr;
-}; // namespace viennaps
+};
 
 // vtkStandardNewMacro(Custom2DInteractorStyle);
 

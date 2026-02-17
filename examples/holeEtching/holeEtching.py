@@ -20,6 +20,7 @@ params = ps.readConfigFile(args.filename)
 ps.Length.setUnit(params["lengthUnit"])
 ps.Time.setUnit(params["timeUnit"])
 
+
 def run_simulation(intermediate_velocities, suffix):
     # geometry setup, all units in um
     geometry = ps.Domain(
@@ -27,8 +28,6 @@ def run_simulation(intermediate_velocities, suffix):
         xExtent=params["xExtent"],
         yExtent=params["yExtent"],
     )
-    
-    hole_shape = ps.HoleShape.QUARTER if args.dim == 3 else ps.HoleShape.HALF
 
     ps.MakeHole(
         domain=geometry,
@@ -36,7 +35,7 @@ def run_simulation(intermediate_velocities, suffix):
         holeDepth=0.0,
         maskHeight=params["maskHeight"],
         maskTaperAngle=params["taperAngle"],
-        holeShape=hole_shape,
+        holeShape=ps.HoleShape.QUARTER,
     ).apply()
 
     # use pre-defined model SF6O2 etching model
@@ -59,12 +58,8 @@ def run_simulation(intermediate_velocities, suffix):
     rayParams.raysPerPoint = int(params["raysPerPoint"])
 
     advParams = ps.AdvectionParameters()
-    advParams.spatialScheme = ps.util.convertSpatialScheme(
-        params["spatialScheme"]
-    )
-    advParams.temporalScheme = ps.util.convertTemporalScheme(
-        params["temporalScheme"]
-    )
+    advParams.spatialScheme = ps.util.convertSpatialScheme(params["spatialScheme"])
+    advParams.temporalScheme = ps.util.convertTemporalScheme(params["temporalScheme"])
     advParams.calculateIntermediateVelocities = intermediate_velocities
 
     # process setup
@@ -93,7 +88,10 @@ def run_simulation(intermediate_velocities, suffix):
     else:
         output_file += suffix
 
-    geometry.saveSurfaceMesh(filename=output_file, addInterfaces=True, boolMaterials=True)
+    geometry.saveSurfaceMesh(
+        filename=output_file, addInterfaces=True, boolMaterials=True
+    )
+
 
 print("Running simulation without intermediate velocity calculation...")
 run_simulation(False, "_noIntermediate")
