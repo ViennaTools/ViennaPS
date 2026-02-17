@@ -107,8 +107,7 @@ install(
   ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
 
 # Package files
-install(FILES ${CMAKE_SOURCE_DIR}/python/__init__.py DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
-
+install(FILES ${PROJECT_SOURCE_DIR}/__init__.py DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
 add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME})
 
 # --------------------------------------------------------------------------------------------------------
@@ -117,7 +116,6 @@ add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME})
 
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}.libs")
 
-# Not required for both targets, one will suffice
 viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
 viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
 viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")

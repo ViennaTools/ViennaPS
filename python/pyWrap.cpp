@@ -282,6 +282,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Mask", &PlasmaEtchingParameters<T>::Mask)
       .def_readwrite("Substrate", &PlasmaEtchingParameters<T>::Substrate)
       .def_readwrite("Passivation", &PlasmaEtchingParameters<T>::Passivation)
+      .def_readwrite("Polymer", &PlasmaEtchingParameters<T>::Polymer)
       .def_readwrite("Ions", &PlasmaEtchingParameters<T>::Ions);
 
   // CF4O2 Parameters

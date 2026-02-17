@@ -6,8 +6,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
+import viennaps.d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -37,19 +37,19 @@ class AdvectionParameters:
     def adaptiveTimeStepSubdivisions(self) -> int:
         ...
     @adaptiveTimeStepSubdivisions.setter
-    def adaptiveTimeStepSubdivisions(self, arg0: typing.SupportsInt) -> None:
+    def adaptiveTimeStepSubdivisions(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def dissipationAlpha(self) -> float:
         ...
     @dissipationAlpha.setter
-    def dissipationAlpha(self, arg0: typing.SupportsFloat) -> None:
+    def dissipationAlpha(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def timeStepRatio(self) -> float:
         ...
     @timeStepRatio.setter
-    def timeStepRatio(self, arg0: typing.SupportsFloat) -> None:
+    def timeStepRatio(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class AtomicLayerProcessParameters:
     def __init__(self) -> None:
@@ -66,25 +66,25 @@ class AtomicLayerProcessParameters:
     def coverageTimeStep(self) -> float:
         ...
     @coverageTimeStep.setter
-    def coverageTimeStep(self, arg0: typing.SupportsFloat) -> None:
+    def coverageTimeStep(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def numCycles(self) -> int:
         ...
     @numCycles.setter
-    def numCycles(self, arg0: typing.SupportsInt) -> None:
+    def numCycles(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def pulseTime(self) -> float:
         ...
     @pulseTime.setter
-    def pulseTime(self, arg0: typing.SupportsFloat) -> None:
+    def pulseTime(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def purgePulseTime(self) -> float:
         ...
     @purgePulseTime.setter
-    def purgePulseTime(self, arg0: typing.SupportsFloat) -> None:
+    def purgePulseTime(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class CF4O2Parameters:
     Ions: CF4O2ParametersIons
@@ -99,67 +99,67 @@ class CF4O2Parameters:
     def etchStopDepth(self) -> float:
         ...
     @etchStopDepth.setter
-    def etchStopDepth(self, arg0: typing.SupportsFloat) -> None:
+    def etchStopDepth(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def etchantFlux(self) -> float:
         ...
     @etchantFlux.setter
-    def etchantFlux(self, arg0: typing.SupportsFloat) -> None:
+    def etchantFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def gamma_C(self) -> dict[Material, float]:
         ...
     @gamma_C.setter
-    def gamma_C(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat]) -> None:
+    def gamma_C(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def gamma_C_oxidized(self) -> dict[Material, float]:
         ...
     @gamma_C_oxidized.setter
-    def gamma_C_oxidized(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat]) -> None:
+    def gamma_C_oxidized(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def gamma_F(self) -> dict[Material, float]:
         ...
     @gamma_F.setter
-    def gamma_F(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat]) -> None:
+    def gamma_F(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def gamma_F_oxidized(self) -> dict[Material, float]:
         ...
     @gamma_F_oxidized.setter
-    def gamma_F_oxidized(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat]) -> None:
+    def gamma_F_oxidized(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def gamma_O(self) -> dict[Material, float]:
         ...
     @gamma_O.setter
-    def gamma_O(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat]) -> None:
+    def gamma_O(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def gamma_O_passivated(self) -> dict[Material, float]:
         ...
     @gamma_O_passivated.setter
-    def gamma_O_passivated(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat]) -> None:
+    def gamma_O_passivated(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def ionFlux(self) -> float:
         ...
     @ionFlux.setter
-    def ionFlux(self, arg0: typing.SupportsFloat) -> None:
+    def ionFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def oxygenFlux(self) -> float:
         ...
     @oxygenFlux.setter
-    def oxygenFlux(self, arg0: typing.SupportsFloat) -> None:
+    def oxygenFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def polymerFlux(self) -> float:
         ...
     @polymerFlux.setter
-    def polymerFlux(self, arg0: typing.SupportsFloat) -> None:
+    def polymerFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class CF4O2ParametersIons:
     def __init__(self) -> None:
@@ -168,37 +168,37 @@ class CF4O2ParametersIons:
     def exponent(self) -> float:
         ...
     @exponent.setter
-    def exponent(self, arg0: typing.SupportsFloat) -> None:
+    def exponent(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def inflectAngle(self) -> float:
         ...
     @inflectAngle.setter
-    def inflectAngle(self, arg0: typing.SupportsFloat) -> None:
+    def inflectAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def meanEnergy(self) -> float:
         ...
     @meanEnergy.setter
-    def meanEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def meanEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def minAngle(self) -> float:
         ...
     @minAngle.setter
-    def minAngle(self, arg0: typing.SupportsFloat) -> None:
+    def minAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def n_l(self) -> float:
         ...
     @n_l.setter
-    def n_l(self, arg0: typing.SupportsFloat) -> None:
+    def n_l(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def sigmaEnergy(self) -> float:
         ...
     @sigmaEnergy.setter
-    def sigmaEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def sigmaEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class CF4O2ParametersMask:
     def __init__(self) -> None:
@@ -207,19 +207,19 @@ class CF4O2ParametersMask:
     def A_sp(self) -> float:
         ...
     @A_sp.setter
-    def A_sp(self, arg0: typing.SupportsFloat) -> None:
+    def A_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_sp(self) -> float:
         ...
     @Eth_sp.setter
-    def Eth_sp(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def rho(self) -> float:
         ...
     @rho.setter
-    def rho(self, arg0: typing.SupportsFloat) -> None:
+    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class CF4O2ParametersPassivation:
     def __init__(self) -> None:
@@ -228,25 +228,25 @@ class CF4O2ParametersPassivation:
     def A_C_ie(self) -> float:
         ...
     @A_C_ie.setter
-    def A_C_ie(self, arg0: typing.SupportsFloat) -> None:
+    def A_C_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def A_O_ie(self) -> float:
         ...
     @A_O_ie.setter
-    def A_O_ie(self, arg0: typing.SupportsFloat) -> None:
+    def A_O_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_C_ie(self) -> float:
         ...
     @Eth_C_ie.setter
-    def Eth_C_ie(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_C_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_O_ie(self) -> float:
         ...
     @Eth_O_ie.setter
-    def Eth_O_ie(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_O_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class CF4O2ParametersSi:
     def __init__(self) -> None:
@@ -255,96 +255,96 @@ class CF4O2ParametersSi:
     def A_ie(self) -> float:
         ...
     @A_ie.setter
-    def A_ie(self, arg0: typing.SupportsFloat) -> None:
+    def A_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def A_sp(self) -> float:
         ...
     @A_sp.setter
-    def A_sp(self, arg0: typing.SupportsFloat) -> None:
+    def A_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_ie(self) -> float:
         ...
     @Eth_ie.setter
-    def Eth_ie(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_sp(self) -> float:
         ...
     @Eth_sp.setter
-    def Eth_sp(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def beta_sigma(self) -> float:
         ...
     @beta_sigma.setter
-    def beta_sigma(self, arg0: typing.SupportsFloat) -> None:
+    def beta_sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def k_sigma(self) -> float:
         ...
     @k_sigma.setter
-    def k_sigma(self, arg0: typing.SupportsFloat) -> None:
+    def k_sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def rho(self) -> float:
         ...
     @rho.setter
-    def rho(self, arg0: typing.SupportsFloat) -> None:
+    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class CF4O2ParametersSiGe:
     def __init__(self) -> None:
         ...
-    def k_sigma_SiGe(self, arg0: typing.SupportsFloat) -> float:
+    def k_sigma_SiGe(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> float:
         ...
     @property
     def A_ie(self) -> float:
         ...
     @A_ie.setter
-    def A_ie(self, arg0: typing.SupportsFloat) -> None:
+    def A_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def A_sp(self) -> float:
         ...
     @A_sp.setter
-    def A_sp(self, arg0: typing.SupportsFloat) -> None:
+    def A_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_ie(self) -> float:
         ...
     @Eth_ie.setter
-    def Eth_ie(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_sp(self) -> float:
         ...
     @Eth_sp.setter
-    def Eth_sp(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def beta_sigma(self) -> float:
         ...
     @beta_sigma.setter
-    def beta_sigma(self, arg0: typing.SupportsFloat) -> None:
+    def beta_sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def k_sigma(self) -> float:
         ...
     @k_sigma.setter
-    def k_sigma(self, arg0: typing.SupportsFloat) -> None:
+    def k_sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def rho(self) -> float:
         ...
     @rho.setter
-    def rho(self, arg0: typing.SupportsFloat) -> None:
+    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def x(self) -> float:
         ...
     @x.setter
-    def x(self, arg0: typing.SupportsFloat) -> None:
+    def x(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class CoverageParameters:
     initialized: bool
@@ -362,20 +362,20 @@ class CoverageParameters:
     def maxIterations(self) -> int:
         ...
     @maxIterations.setter
-    def maxIterations(self, arg0: typing.SupportsInt) -> None:
+    def maxIterations(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def tolerance(self) -> float:
         ...
     @tolerance.setter
-    def tolerance(self, arg0: typing.SupportsFloat) -> None:
+    def tolerance(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class Extrude:
     @typing.overload
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, inputDomain: viennaps.d2.Domain, outputDomain: viennaps.d3.Domain, extent: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"], extrusionAxis: typing.SupportsInt, boundaryConditions: typing.Annotated[collections.abc.Sequence[viennals._core.BoundaryConditionEnum], "FixedSize(3)"]) -> None:
+    def __init__(self, inputDomain: viennaps.d2.Domain, outputDomain: viennaps.d3.Domain, extent: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"], extrusionAxis: typing.SupportsInt | typing.SupportsIndex, boundaryConditions: typing.Annotated[collections.abc.Sequence[viennals._core.BoundaryConditionEnum], "FixedSize(3)"]) -> None:
         ...
     def apply(self) -> None:
         """
@@ -385,11 +385,11 @@ class Extrude:
         """
         Set the boundary conditions in the extruded domain.
         """
-    def setExtent(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"]) -> None:
+    def setExtent(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"]) -> None:
         """
         Set the min and max extent in the extruded dimension.
         """
-    def setExtrusionAxis(self, arg0: typing.SupportsInt) -> None:
+    def setExtrusionAxis(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Set the axis along which to extrude (0, 1, or 2).
         """
@@ -409,7 +409,7 @@ class FaradayCageParameters:
     def cageAngle(self) -> float:
         ...
     @cageAngle.setter
-    def cageAngle(self, arg0: typing.SupportsFloat) -> None:
+    def cageAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class FluorocarbonMaterialParameters:
     id: Material
@@ -419,61 +419,61 @@ class FluorocarbonMaterialParameters:
     def A_ie(self) -> float:
         ...
     @A_ie.setter
-    def A_ie(self, arg0: typing.SupportsFloat) -> None:
+    def A_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def A_sp(self) -> float:
         ...
     @A_sp.setter
-    def A_sp(self, arg0: typing.SupportsFloat) -> None:
+    def A_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def B_sp(self) -> float:
         ...
     @B_sp.setter
-    def B_sp(self, arg0: typing.SupportsFloat) -> None:
+    def B_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def E_a(self) -> float:
         ...
     @E_a.setter
-    def E_a(self, arg0: typing.SupportsFloat) -> None:
+    def E_a(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_ie(self) -> float:
         ...
     @Eth_ie.setter
-    def Eth_ie(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_sp(self) -> float:
         ...
     @Eth_sp.setter
-    def Eth_sp(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def K(self) -> float:
         ...
     @K.setter
-    def K(self, arg0: typing.SupportsFloat) -> None:
+    def K(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def beta_e(self) -> float:
         ...
     @beta_e.setter
-    def beta_e(self, arg0: typing.SupportsFloat) -> None:
+    def beta_e(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def beta_p(self) -> float:
         ...
     @beta_p.setter
-    def beta_p(self, arg0: typing.SupportsFloat) -> None:
+    def beta_p(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def density(self) -> float:
         ...
     @density.setter
-    def density(self, arg0: typing.SupportsFloat) -> None:
+    def density(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class FluorocarbonParameters:
     Ions: FluorocarbonParametersIons
@@ -487,49 +487,49 @@ class FluorocarbonParameters:
     def delta_p(self) -> float:
         ...
     @delta_p.setter
-    def delta_p(self, arg0: typing.SupportsFloat) -> None:
+    def delta_p(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def etchStopDepth(self) -> float:
         ...
     @etchStopDepth.setter
-    def etchStopDepth(self, arg0: typing.SupportsFloat) -> None:
+    def etchStopDepth(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def etchantFlux(self) -> float:
         ...
     @etchantFlux.setter
-    def etchantFlux(self, arg0: typing.SupportsFloat) -> None:
+    def etchantFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def ionFlux(self) -> float:
         ...
     @ionFlux.setter
-    def ionFlux(self, arg0: typing.SupportsFloat) -> None:
+    def ionFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def k_ev(self) -> float:
         ...
     @k_ev.setter
-    def k_ev(self, arg0: typing.SupportsFloat) -> None:
+    def k_ev(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def k_ie(self) -> float:
         ...
     @k_ie.setter
-    def k_ie(self, arg0: typing.SupportsFloat) -> None:
+    def k_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def polyFlux(self) -> float:
         ...
     @polyFlux.setter
-    def polyFlux(self, arg0: typing.SupportsFloat) -> None:
+    def polyFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def temperature(self) -> float:
         ...
     @temperature.setter
-    def temperature(self, arg0: typing.SupportsFloat) -> None:
+    def temperature(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class FluorocarbonParametersIons:
     def __init__(self) -> None:
@@ -538,37 +538,37 @@ class FluorocarbonParametersIons:
     def exponent(self) -> float:
         ...
     @exponent.setter
-    def exponent(self, arg0: typing.SupportsFloat) -> None:
+    def exponent(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def inflectAngle(self) -> float:
         ...
     @inflectAngle.setter
-    def inflectAngle(self, arg0: typing.SupportsFloat) -> None:
+    def inflectAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def meanEnergy(self) -> float:
         ...
     @meanEnergy.setter
-    def meanEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def meanEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def minAngle(self) -> float:
         ...
     @minAngle.setter
-    def minAngle(self, arg0: typing.SupportsFloat) -> None:
+    def minAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def n_l(self) -> float:
         ...
     @n_l.setter
-    def n_l(self, arg0: typing.SupportsFloat) -> None:
+    def n_l(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def sigmaEnergy(self) -> float:
         ...
     @sigmaEnergy.setter
-    def sigmaEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def sigmaEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class FluxEngineType(enum.IntEnum):
     AUTO: typing.ClassVar[FluxEngineType]  # value = <FluxEngineType.AUTO: 0>
@@ -607,85 +607,85 @@ class IBEParameters:
     def exponent(self) -> float:
         ...
     @exponent.setter
-    def exponent(self, arg0: typing.SupportsFloat) -> None:
+    def exponent(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def inflectAngle(self) -> float:
         ...
     @inflectAngle.setter
-    def inflectAngle(self, arg0: typing.SupportsFloat) -> None:
+    def inflectAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def materialPlaneWaferRate(self) -> dict[Material, float]:
         ...
     @materialPlaneWaferRate.setter
-    def materialPlaneWaferRate(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat]) -> None:
+    def materialPlaneWaferRate(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def meanEnergy(self) -> float:
         ...
     @meanEnergy.setter
-    def meanEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def meanEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def minAngle(self) -> float:
         ...
     @minAngle.setter
-    def minAngle(self, arg0: typing.SupportsFloat) -> None:
+    def minAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def n_l(self) -> float:
         ...
     @n_l.setter
-    def n_l(self, arg0: typing.SupportsFloat) -> None:
+    def n_l(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def planeWaferRate(self) -> float:
         ...
     @planeWaferRate.setter
-    def planeWaferRate(self, arg0: typing.SupportsFloat) -> None:
+    def planeWaferRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def redepositionRate(self) -> float:
         ...
     @redepositionRate.setter
-    def redepositionRate(self, arg0: typing.SupportsFloat) -> None:
+    def redepositionRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def redepositionThreshold(self) -> float:
         ...
     @redepositionThreshold.setter
-    def redepositionThreshold(self, arg0: typing.SupportsFloat) -> None:
+    def redepositionThreshold(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def sigmaEnergy(self) -> float:
         ...
     @sigmaEnergy.setter
-    def sigmaEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def sigmaEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def thetaRMax(self) -> float:
         ...
     @thetaRMax.setter
-    def thetaRMax(self, arg0: typing.SupportsFloat) -> None:
+    def thetaRMax(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def thetaRMin(self) -> float:
         ...
     @thetaRMin.setter
-    def thetaRMin(self, arg0: typing.SupportsFloat) -> None:
+    def thetaRMin(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def thresholdEnergy(self) -> float:
         ...
     @thresholdEnergy.setter
-    def thresholdEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def thresholdEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def tiltAngle(self) -> float:
         ...
     @tiltAngle.setter
-    def tiltAngle(self, arg0: typing.SupportsFloat) -> None:
+    def tiltAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class IBEParametersCos4Yield:
     isDefined: bool
@@ -697,25 +697,25 @@ class IBEParametersCos4Yield:
     def a1(self) -> float:
         ...
     @a1.setter
-    def a1(self, arg0: typing.SupportsFloat) -> None:
+    def a1(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def a2(self) -> float:
         ...
     @a2.setter
-    def a2(self, arg0: typing.SupportsFloat) -> None:
+    def a2(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def a3(self) -> float:
         ...
     @a3.setter
-    def a3(self, arg0: typing.SupportsFloat) -> None:
+    def a3(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def a4(self) -> float:
         ...
     @a4.setter
-    def a4(self, arg0: typing.SupportsFloat) -> None:
+    def a4(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class Length:
     @staticmethod
@@ -789,10 +789,10 @@ class Logger:
     def addInfo(self, arg0: str) -> Logger:
         ...
     @typing.overload
-    def addTiming(self, arg0: str, arg1: typing.SupportsFloat) -> Logger:
+    def addTiming(self, arg0: str, arg1: typing.SupportsFloat | typing.SupportsIndex) -> Logger:
         ...
     @typing.overload
-    def addTiming(self, arg0: str, arg1: typing.SupportsFloat, arg2: typing.SupportsFloat) -> Logger:
+    def addTiming(self, arg0: str, arg1: typing.SupportsFloat | typing.SupportsIndex, arg2: typing.SupportsFloat | typing.SupportsIndex) -> Logger:
         ...
     def addWarning(self, arg0: str) -> Logger:
         ...
@@ -939,10 +939,10 @@ class MaterialInfo:
         ...
 class MaterialMap:
     @staticmethod
-    def isMaterial(arg0: typing.SupportsFloat, arg1: Material) -> bool:
+    def isMaterial(arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: Material) -> bool:
         ...
     @staticmethod
-    def mapToMaterial(arg0: typing.SupportsFloat) -> Material:
+    def mapToMaterial(arg0: typing.SupportsFloat | typing.SupportsIndex) -> Material:
         """
         Map a float to a material.
         """
@@ -953,9 +953,9 @@ class MaterialMap:
         """
     def __init__(self) -> None:
         ...
-    def getMaterialAtIdx(self, arg0: typing.SupportsInt) -> Material:
+    def getMaterialAtIdx(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> Material:
         ...
-    def getMaterialIdAtIdx(self, arg0: typing.SupportsInt) -> int:
+    def getMaterialIdAtIdx(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> int:
         ...
     def getMaterialMap(self) -> viennals._core.MaterialMap:
         ...
@@ -989,6 +989,7 @@ class PlasmaEtchingParameters:
     Ions: PlasmaEtchingParametersIons
     Mask: PlasmaEtchingParametersMask
     Passivation: PlasmaEtchingParametersPassivation
+    Polymer: PlasmaEtchingParametersPolymer
     Substrate: PlasmaEtchingParametersSubstrate
     def __init__(self) -> None:
         ...
@@ -996,37 +997,37 @@ class PlasmaEtchingParameters:
     def beta_E(self) -> dict[int, float]:
         ...
     @beta_E.setter
-    def beta_E(self, arg0: collections.abc.Mapping[typing.SupportsInt, typing.SupportsFloat]) -> None:
+    def beta_E(self, arg0: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def beta_P(self) -> dict[int, float]:
         ...
     @beta_P.setter
-    def beta_P(self, arg0: collections.abc.Mapping[typing.SupportsInt, typing.SupportsFloat]) -> None:
+    def beta_P(self, arg0: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def etchStopDepth(self) -> float:
         ...
     @etchStopDepth.setter
-    def etchStopDepth(self, arg0: typing.SupportsFloat) -> None:
+    def etchStopDepth(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def etchantFlux(self) -> float:
         ...
     @etchantFlux.setter
-    def etchantFlux(self, arg0: typing.SupportsFloat) -> None:
+    def etchantFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def ionFlux(self) -> float:
         ...
     @ionFlux.setter
-    def ionFlux(self, arg0: typing.SupportsFloat) -> None:
+    def ionFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def passivationFlux(self) -> float:
         ...
     @passivationFlux.setter
-    def passivationFlux(self, arg0: typing.SupportsFloat) -> None:
+    def passivationFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class PlasmaEtchingParametersIons:
     def __init__(self) -> None:
@@ -1035,49 +1036,49 @@ class PlasmaEtchingParametersIons:
     def exponent(self) -> float:
         ...
     @exponent.setter
-    def exponent(self, arg0: typing.SupportsFloat) -> None:
+    def exponent(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def inflectAngle(self) -> float:
         ...
     @inflectAngle.setter
-    def inflectAngle(self, arg0: typing.SupportsFloat) -> None:
+    def inflectAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def meanEnergy(self) -> float:
         ...
     @meanEnergy.setter
-    def meanEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def meanEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def minAngle(self) -> float:
         ...
     @minAngle.setter
-    def minAngle(self, arg0: typing.SupportsFloat) -> None:
+    def minAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def n_l(self) -> float:
         ...
     @n_l.setter
-    def n_l(self, arg0: typing.SupportsFloat) -> None:
+    def n_l(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def sigmaEnergy(self) -> float:
         ...
     @sigmaEnergy.setter
-    def sigmaEnergy(self, arg0: typing.SupportsFloat) -> None:
+    def sigmaEnergy(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def thetaRMax(self) -> float:
         ...
     @thetaRMax.setter
-    def thetaRMax(self, arg0: typing.SupportsFloat) -> None:
+    def thetaRMax(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def thetaRMin(self) -> float:
         ...
     @thetaRMin.setter
-    def thetaRMin(self, arg0: typing.SupportsFloat) -> None:
+    def thetaRMin(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class PlasmaEtchingParametersMask:
     def __init__(self) -> None:
@@ -1086,25 +1087,25 @@ class PlasmaEtchingParametersMask:
     def A_sp(self) -> float:
         ...
     @A_sp.setter
-    def A_sp(self, arg0: typing.SupportsFloat) -> None:
+    def A_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def B_sp(self) -> float:
         ...
     @B_sp.setter
-    def B_sp(self, arg0: typing.SupportsFloat) -> None:
+    def B_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_sp(self) -> float:
         ...
     @Eth_sp.setter
-    def Eth_sp(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def rho(self) -> float:
         ...
     @rho.setter
-    def rho(self, arg0: typing.SupportsFloat) -> None:
+    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class PlasmaEtchingParametersPassivation:
     def __init__(self) -> None:
@@ -1113,13 +1114,13 @@ class PlasmaEtchingParametersPassivation:
     def A_ie(self) -> float:
         ...
     @A_ie.setter
-    def A_ie(self, arg0: typing.SupportsFloat) -> None:
+    def A_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_ie(self) -> float:
         ...
     @Eth_ie.setter
-    def Eth_ie(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class PlasmaEtchingParametersPolymer:
     def __init__(self) -> None:
@@ -1128,25 +1129,25 @@ class PlasmaEtchingParametersPolymer:
     def A_sp(self) -> float:
         ...
     @A_sp.setter
-    def A_sp(self, arg0: typing.SupportsFloat) -> None:
+    def A_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def B_sp(self) -> float:
         ...
     @B_sp.setter
-    def B_sp(self, arg0: typing.SupportsFloat) -> None:
+    def B_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_sp(self) -> float:
         ...
     @Eth_sp.setter
-    def Eth_sp(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def rho(self) -> float:
         ...
     @rho.setter
-    def rho(self, arg0: typing.SupportsFloat) -> None:
+    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class PlasmaEtchingParametersSubstrate:
     def __init__(self) -> None:
@@ -1155,64 +1156,64 @@ class PlasmaEtchingParametersSubstrate:
     def A_ie(self) -> float:
         ...
     @A_ie.setter
-    def A_ie(self, arg0: typing.SupportsFloat) -> None:
+    def A_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def A_sp(self) -> float:
         ...
     @A_sp.setter
-    def A_sp(self, arg0: typing.SupportsFloat) -> None:
+    def A_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def B_ie(self) -> float:
         ...
     @B_ie.setter
-    def B_ie(self, arg0: typing.SupportsFloat) -> None:
+    def B_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def B_sp(self) -> float:
         ...
     @B_sp.setter
-    def B_sp(self, arg0: typing.SupportsFloat) -> None:
+    def B_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_ie(self) -> float:
         ...
     @Eth_ie.setter
-    def Eth_ie(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def Eth_sp(self) -> float:
         ...
     @Eth_sp.setter
-    def Eth_sp(self, arg0: typing.SupportsFloat) -> None:
+    def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def beta_sigma(self) -> float:
         ...
     @beta_sigma.setter
-    def beta_sigma(self, arg0: typing.SupportsFloat) -> None:
+    def beta_sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def k_sigma(self) -> float:
         ...
     @k_sigma.setter
-    def k_sigma(self, arg0: typing.SupportsFloat) -> None:
+    def k_sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def rho(self) -> float:
         ...
     @rho.setter
-    def rho(self, arg0: typing.SupportsFloat) -> None:
+    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class ProcessParams:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def getScalarData(self, arg0: typing.SupportsInt) -> float:
+    def getScalarData(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> float:
         ...
     @typing.overload
-    def getScalarData(self, arg0: typing.SupportsInt) -> float:
+    def getScalarData(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> float:
         ...
     @typing.overload
     def getScalarData(self, arg0: str) -> float:
@@ -1225,13 +1226,13 @@ class ProcessParams:
         ...
     def getScalarDataIndex(self, arg0: str) -> int:
         ...
-    def getScalarDataLabel(self, arg0: typing.SupportsInt) -> str:
+    def getScalarDataLabel(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> str:
         ...
-    def insertNextScalar(self, arg0: typing.SupportsFloat, arg1: str) -> None:
+    def insertNextScalar(self, arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: str) -> None:
         ...
 class RateSet:
     calculateVisibility: bool
-    def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"] = [0.0, 0.0, 0.0], directionalVelocity: typing.SupportsFloat = 0.0, isotropicVelocity: typing.SupportsFloat = 0.0, maskMaterials: collections.abc.Sequence[Material] = ..., calculateVisibility: bool = True) -> None:
+    def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"] = [0.0, 0.0, 0.0], directionalVelocity: typing.SupportsFloat | typing.SupportsIndex = 0.0, isotropicVelocity: typing.SupportsFloat | typing.SupportsIndex = 0.0, maskMaterials: collections.abc.Sequence[Material] = ..., calculateVisibility: bool = True) -> None:
         ...
     def print(self) -> None:
         ...
@@ -1239,19 +1240,19 @@ class RateSet:
     def direction(self) -> typing.Annotated[list[float], "FixedSize(3)"]:
         ...
     @direction.setter
-    def direction(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
+    def direction(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         ...
     @property
     def directionalVelocity(self) -> float:
         ...
     @directionalVelocity.setter
-    def directionalVelocity(self, arg0: typing.SupportsFloat) -> None:
+    def directionalVelocity(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def isotropicVelocity(self) -> float:
         ...
     @isotropicVelocity.setter
-    def isotropicVelocity(self, arg0: typing.SupportsFloat) -> None:
+    def isotropicVelocity(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def maskMaterials(self) -> list[Material]:
@@ -1277,43 +1278,43 @@ class RayTracingParameters:
     def diskRadius(self) -> float:
         ...
     @diskRadius.setter
-    def diskRadius(self, arg0: typing.SupportsFloat) -> None:
+    def diskRadius(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def maxBoundaryHits(self) -> int:
         ...
     @maxBoundaryHits.setter
-    def maxBoundaryHits(self, arg0: typing.SupportsInt) -> None:
+    def maxBoundaryHits(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def maxReflections(self) -> int:
         ...
     @maxReflections.setter
-    def maxReflections(self, arg0: typing.SupportsInt) -> None:
+    def maxReflections(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def minNodeDistanceFactor(self) -> float:
         ...
     @minNodeDistanceFactor.setter
-    def minNodeDistanceFactor(self, arg0: typing.SupportsFloat) -> None:
+    def minNodeDistanceFactor(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def raysPerPoint(self) -> int:
         ...
     @raysPerPoint.setter
-    def raysPerPoint(self, arg0: typing.SupportsInt) -> None:
+    def raysPerPoint(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def rngSeed(self) -> int:
         ...
     @rngSeed.setter
-    def rngSeed(self, arg0: typing.SupportsInt) -> None:
+    def rngSeed(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def smoothingNeighbors(self) -> int:
         ...
     @smoothingNeighbors.setter
-    def smoothingNeighbors(self, arg0: typing.SupportsInt) -> None:
+    def smoothingNeighbors(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
 class RenderMode(enum.IntEnum):
     INTERFACE: typing.ClassVar[RenderMode]  # value = <RenderMode.INTERFACE: 1>
@@ -1331,7 +1332,7 @@ class Slice:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, inputDomain: viennaps.d3.Domain, outputDomain: viennaps.d2.Domain, sliceDimension: typing.SupportsInt, slicePosition: typing.SupportsFloat) -> None:
+    def __init__(self, inputDomain: viennaps.d3.Domain, outputDomain: viennaps.d2.Domain, sliceDimension: typing.SupportsInt | typing.SupportsIndex, slicePosition: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     def apply(self) -> None:
         """
@@ -1349,11 +1350,11 @@ class Slice:
         """
         Set whether to reflect the slice along the X axis.
         """
-    def setSliceDimension(self, arg0: typing.SupportsInt) -> None:
+    def setSliceDimension(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Set the dimension along which to slice (0, 1).
         """
-    def setSlicePosition(self, arg0: typing.SupportsFloat) -> None:
+    def setSlicePosition(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Set the position along the slice dimension at which to slice.
         """
@@ -1395,7 +1396,7 @@ def gpuAvailable() -> bool:
     """
     Check if ViennaPS was compiled with GPU support.
     """
-def setNumThreads(arg0: typing.SupportsInt) -> None:
+def setNumThreads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     ...
 __version__: str = '4.2.1'
 version: str = '4.2.1'
