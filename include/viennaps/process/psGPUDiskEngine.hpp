@@ -166,6 +166,7 @@ public:
     rayTracer_.normalizeResults();
     downloadResultsToPointData(*fluxes,
                                context.rayTracingParams.smoothingNeighbors);
+    ++this->fluxCalculationsCount_;
 
     // output
     if (Logger::hasIntermediate()) {

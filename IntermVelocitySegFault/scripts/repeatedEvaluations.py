@@ -9,7 +9,7 @@ import csv
 import time
 
 vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
-# vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
+vps.Logger.setLogLevel(vps.LogLevel.DEBUG)
 
 initialDomain = vps.Domain()
 
@@ -59,9 +59,9 @@ spatialSchemes = [
 ]
 
 temporalSchemes = [
-    # vps.TemporalScheme.FORWARD_EULER,
+    vps.TemporalScheme.FORWARD_EULER,
     vps.TemporalScheme.RUNGE_KUTTA_2ND_ORDER,
-    # vps.TemporalScheme.RUNGE_KUTTA_3RD_ORDER,
+    vps.TemporalScheme.RUNGE_KUTTA_3RD_ORDER,
 ]
 intermediateVelocityCalculations = [True]
 

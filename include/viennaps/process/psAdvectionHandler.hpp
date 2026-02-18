@@ -12,6 +12,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
   viennacore::Timer<> timer_;
   unsigned lsVelOutputCounter = 0;
+  unsigned totalAdvectionSteps = 0;
 
 public:
   ProcessResult initialize(ProcessContext<NumericType, D> &context) {
@@ -65,6 +66,8 @@ public:
       advectionKernel_.insertNextLevelSet(dom);
     }
 
+    totalAdvectionSteps = 0;
+
     return ProcessResult::SUCCESS;
   }
 
@@ -77,6 +80,8 @@ public:
           callback) {
     advectionKernel_.setVelocityUpdateCallback(callback);
   }
+
+  auto getTotalAdvectionSteps() const { return totalAdvectionSteps; }
 
   void disableSingleStep() { advectionKernel_.setSingleStep(false); }
 
@@ -99,6 +104,7 @@ public:
     advectionKernel_.apply();
     timer_.finish();
 
+    ++totalAdvectionSteps;
     if (context.advectionParams.velocityOutput) {
       auto mesh = viennals::Mesh<NumericType>::New();
       viennals::ToMesh<NumericType, D>(context.domain->getSurface(), mesh)

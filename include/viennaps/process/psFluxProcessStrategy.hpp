@@ -245,6 +245,15 @@ private:
     processTimer.finish();
     logProcessingTimes(context, processTimer);
 
+    if (Logger::hasDebug()) {
+      auto numAdvectionSteps = advectionHandler_.getTotalAdvectionSteps();
+      VIENNACORE_LOG_DEBUG("Total advection steps: " +
+                           std::to_string(numAdvectionSteps));
+      auto numFluxCalculations = fluxEngine_->getFluxCalculationsCount();
+      VIENNACORE_LOG_DEBUG("Total flux calculations: " +
+                           std::to_string(numFluxCalculations));
+    }
+
     if (static_cast<int>(context.domain->getMetaDataLevel()) > 1) {
       context.domain->addMetaData("ProcessTime", context.processTime);
     }

@@ -141,6 +141,7 @@ private:
       }
       rayTracer_.setParticleType(particle);
       rayTracer_.apply();
+      ++this->fluxCalculationsCount_;
 
       auto info = rayTracer_.getRayTraceInfo();
 

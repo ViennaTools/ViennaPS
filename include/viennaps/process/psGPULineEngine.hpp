@@ -217,6 +217,7 @@ public:
     downloadResultsToPointData(*fluxes, context.diskMesh,
                                context.rayTracingParams.smoothingNeighbors,
                                context.domain->getGridDelta());
+    ++this->fluxCalculationsCount_;
 
     // output
     if (Logger::hasIntermediate()) {

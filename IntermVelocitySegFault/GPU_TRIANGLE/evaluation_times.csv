@@ -1,2 +1,4 @@
 Surface Mesh Filename,Evaluation Time (seconds)
-r1000-s2-t0.4-adaTrue-intLAX_FRIEDRICHS_1ST_ORDER-tempRUNGE_KUTTA_2ND_ORDER-intVelTrue--eval001.vtp,2.909765
+r1000-s2-t0.4-adaTrue-intLAX_FRIEDRICHS_1ST_ORDER-tempFORWARD_EULER-intVelTrue--eval001.vtp,1.315202
+r1000-s2-t0.4-adaTrue-intLAX_FRIEDRICHS_1ST_ORDER-tempRUNGE_KUTTA_2ND_ORDER-intVelTrue--eval001.vtp,2.622736
+r1000-s2-t0.4-adaTrue-intLAX_FRIEDRICHS_1ST_ORDER-tempRUNGE_KUTTA_3RD_ORDER-intVelTrue--eval001.vtp,4.520529
