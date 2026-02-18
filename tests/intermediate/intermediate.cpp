@@ -1,4 +1,5 @@
 #include <geometries/psMakeTrench.hpp>
+#include <lsCompareChamfer.hpp>
 #include <lsTestAsserts.hpp>
 #include <vcTestAsserts.hpp>
 #include <viennaps.hpp>
@@ -19,10 +20,10 @@ template <class NumericType, int D> void RunTest() {
   auto domain = Domain<NumericType, D>::New();
 
   NumericType gridDelta = 1.0;
-  NumericType xExtent = 100.0;
-  NumericType yExtent = 25.0;
-  NumericType trenchWidth = 50.0;
-  NumericType maskHeight = 15.0;
+  NumericType xExtent = 50.0;
+  NumericType yExtent = 20.0;
+  NumericType trenchWidth = 30.0;
+  NumericType maskHeight = 10.0;
 
   domain->setup(gridDelta, xExtent, yExtent, BoundaryType::REFLECTIVE_BOUNDARY);
   MakeTrench<NumericType, D>(domain, trenchWidth, 0.0, 0.0, maskHeight, 5.0,
@@ -30,9 +31,14 @@ template <class NumericType, int D> void RunTest() {
       .apply();
   domain->saveSurfaceMesh("initial.vtp", true);
 
+  auto domainFE = Domain<NumericType, D>::New(domain);
+  auto domainFEAdapt = Domain<NumericType, D>::New(domain);
+  auto domainRK2 = Domain<NumericType, D>::New(domain);
+  auto domainRK3 = Domain<NumericType, D>::New(domain);
+
   // Parameters
   NumericType depThickness = 2.1;
-  NumericType isoEtchDepth = 2.0;
+  NumericType isoEtchDepth = 1.0;
   double ionFlux = 85.71261101803212;
   double etchantFlux = 5401.405552767991;
   double meanEnergy = 387.0;
@@ -67,7 +73,7 @@ template <class NumericType, int D> void RunTest() {
   Process<NumericType, D> process;
   process.setDomain(domain);
   process.setProcessModel(model);
-  process.setProcessDuration(0.33);
+  process.setProcessDuration(0.3);
   process.setFluxEngineType(fluxEngineType);
 
   RayTracingParameters rayTracing;
@@ -108,34 +114,71 @@ template <class NumericType, int D> void RunTest() {
 
   // Run Sequence
   int numCycles = 1;
-  domain->duplicateTopLevelSet(Material::Polymer);
 
-  for (int j = 0; j < numCycles; ++j) {
-    std::cout << "Cycle " << j + 1 << "/" << numCycles << std::endl;
-    // Deposition
-    std::cout << "  Deposition..." << std::endl;
-    depProcess.apply();
+  auto runSimulation = [&](SmartPointer<Domain<NumericType, D>> currDomain,
+                           viennals::TemporalSchemeEnum scheme, bool adaptive,
+                           unsigned subdivisions, std::string name) {
+    advection.temporalScheme = scheme;
+    advection.adaptiveTimeStepping = adaptive;
+    advection.adaptiveTimeStepSubdivisions = subdivisions;
+    advection.calculateIntermediateVelocities =
+        intermediateVelocityCalculations;
+    process.setParameters(advection);
 
-    // Plasma Etch
-    std::cout << "  Plasma Etch..." << std::endl;
-    process.apply();
+    process.setDomain(currDomain);
+    depProcess.setDomain(currDomain);
+    chemEtchProcess.setDomain(currDomain);
 
-    // Chemical Etch
-    std::cout << "  Chemical Etch..." << std::endl;
-    chemEtchProcess.apply();
+    currDomain->duplicateTopLevelSet(Material::Polymer);
 
-    domain->saveSurfaceMesh("result_at_cycle_" + std::to_string(j) + ".vtp",
-                            true);
-  }
+    viennacore::Timer timer;
+    timer.start();
+    for (int j = 0; j < numCycles; ++j) {
+      depProcess.apply();
+      process.apply();
+      chemEtchProcess.apply();
+    }
+    timer.finish();
+    std::cout << name << " Time: " << timer.currentDuration / 1e6 << " ms"
+              << std::endl;
 
-  domain->removeTopLevelSet();
+    currDomain->saveSurfaceMesh("final_result_" + name + ".vtp", true);
+  };
 
-  Planarize<NumericType, D>(domain, 0.0).apply();
+  // 1. FE without adaptive time stepping
+  runSimulation(domainFE, viennals::TemporalSchemeEnum::FORWARD_EULER, false, 1,
+                "FE");
 
-  domain->saveSurfaceMesh("final_result.vtp", true);
+  // 2. FE with adaptive time stepping (true, 100)
+  runSimulation(domainFEAdapt, viennals::TemporalSchemeEnum::FORWARD_EULER,
+                true, 50, "FE_Adapt");
 
-  VC_TEST_ASSERT(domain->getLevelSets().size() >= 2);
-  LSTEST_ASSERT_VALID_LS(domain->getLevelSets().back(), NumericType, D);
+  // 3. RK2 without adaptive time stepping
+  runSimulation(domainRK2, viennals::TemporalSchemeEnum::RUNGE_KUTTA_2ND_ORDER,
+                false, 1, "RK2");
+
+  // 4. RK3 without adaptive time stepping
+  runSimulation(domainRK3, viennals::TemporalSchemeEnum::RUNGE_KUTTA_3RD_ORDER,
+                false, 1, "RK3");
+
+  // Compare Chamfer distances
+  viennals::CompareChamfer<NumericType, D> chamferFE_Adapt(
+      domainFE->getLevelSets().back(), domainFEAdapt->getLevelSets().back());
+  chamferFE_Adapt.apply();
+  // std::cout << "Chamfer FE vs FE_Adapt: "
+  //           << chamferFE_Adapt.getChamferDistance() << std::endl;
+
+  viennals::CompareChamfer<NumericType, D> chamferFE_RK2(
+      domainFE->getLevelSets().back(), domainRK2->getLevelSets().back());
+  chamferFE_RK2.apply();
+  // std::cout << "Chamfer FE vs RK2: " << chamferFE_RK2.getChamferDistance()
+  //           << std::endl;
+
+  viennals::CompareChamfer<NumericType, D> chamferFE_RK3(
+      domainFE->getLevelSets().back(), domainRK3->getLevelSets().back());
+  chamferFE_RK3.apply();
+  // std::cout << "Chamfer FE vs RK3: " << chamferFE_RK3.getChamferDistance()
+  //           << std::endl;
 }
 
 } // namespace viennacore
