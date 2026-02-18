@@ -370,6 +370,22 @@ template <int D> void bindApi(py::module &module) {
       .def("getScalarData", &viennacs::DenseCellSet<T, D>::getScalarData,
            "Get the data stored at each cell. WARNING: This function only "
            "returns a copy of the data")
+      .def("setScalarData",
+           [](viennacs::DenseCellSet<T, D> &self, std::string name,
+              const std::vector<T> &data) {
+             auto *ptr = self.getScalarData(name);
+             if (ptr) *ptr = data;
+           },
+           py::arg("name"), py::arg("newData"),
+           "Set the scalar data for a given label.")
+      .def("setVectorData",
+           [](viennacs::DenseCellSet<T, D> &self, std::string name,
+              const std::vector<std::array<T, 3>> &data) {
+             auto *ptr = self.getVectorData(name);
+             if (ptr) *ptr = data;
+           },
+           py::arg("name"), py::arg("newData"),
+           "Set the vector data for a given label.")
       .def("getScalarDataLabels",
            &viennacs::DenseCellSet<T, D>::getScalarDataLabels,
            "Get the labels of the scalar data stored in the cell set.")
