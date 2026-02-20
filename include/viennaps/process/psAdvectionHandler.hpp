@@ -56,6 +56,8 @@ public:
         context.advectionParams.adaptiveTimeStepping,
         context.advectionParams.adaptiveTimeStepSubdivisions);
 
+    advectionKernel_.setVelocityUpdateCallback(nullptr);
+
     // normals vectors are only necessary for analytical velocity fields
     if (translationMethod > 0)
       advectionKernel_.setCalculateNormalVectors(false);
