@@ -137,8 +137,7 @@ private:
         translator_ = SmartPointer<TranslatorType>::New();
       meshGenerator_.setTranslator(translator_);
       context.translationField->setTranslator(translator_);
-    }
-    if (translationMethod == 2) {
+    } else if (translationMethod == 2) {
       if (!kdTree_)
         kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
       context.translationField->setKdTree(kdTree_);
@@ -243,7 +242,10 @@ private:
     context.model->finalize(context.domain, context.processTime);
 
     processTimer.finish();
-    logProcessingTimes(context, processTimer);
+
+    if (Logger::hasTiming()) {
+      logProcessingTimes(context, processTimer);
+    }
 
     if (Logger::hasDebug()) {
       auto numAdvectionSteps = advectionHandler_.getTotalAdvectionSteps();
@@ -277,7 +279,7 @@ private:
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
     // Calculate fluxes
-    auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+    auto fluxes = viennals::PointData<NumericType>::New();
     PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
 
     // Update coverages if needed
@@ -303,7 +305,9 @@ private:
           advectionHandler_.copyCoveragesToLevelSet(context, translator_));
     }
 
-    outputIntermediateResults(context, velocities, fluxes);
+    if (Logger::hasIntermediate()) {
+      outputIntermediateResults(context, velocities, fluxes);
+    }
 
     // Perform advection, updates processTime, reduces level set to width 1
     PROCESS_CHECK(advectionHandler_.performAdvection(context));
@@ -331,35 +335,6 @@ private:
     }
 
     return ProcessResult::SUCCESS;
-  }
-
-  void outputIntermediateResults(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<std::vector<NumericType>> &velocities,
-      const SmartPointer<viennals::PointData<NumericType>> &fluxes) {
-    if (Logger::hasIntermediate()) {
-      auto const name = context.getProcessName();
-      auto surfaceModel = context.model->getSurfaceModel();
-      context.diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                           "velocities");
-      if (context.flags.useCoverages) {
-        mergeScalarData(context.diskMesh->getCellData(),
-                        surfaceModel->getCoverages());
-      }
-      if (auto surfaceData = surfaceModel->getSurfaceData())
-        mergeScalarData(context.diskMesh->getCellData(), surfaceData);
-      mergeScalarData(context.diskMesh->getCellData(), fluxes);
-      viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.intermediateOutputPath + name + "_" +
-                                std::to_string(context.currentIteration) +
-                                ".vtp")
-          .apply();
-      if (context.domain->getCellSet()) {
-        context.domain->getCellSet()->writeVTU(
-            context.intermediateOutputPath + name + "_cellSet_" +
-            std::to_string(context.currentIteration) + ".vtu");
-      }
-    }
   }
 
   bool applyPreAdvectionCallback(ProcessContext<NumericType, D> &context) {
@@ -407,9 +382,7 @@ private:
   void updateState(ProcessContext<NumericType, D> &context) {
     meshGenerator_.apply();
 
-    auto const translationMethod =
-        context.translationField->getTranslationMethod();
-    if (translationMethod == 2) {
+    if (context.translationField->getTranslationMethod() == 2) {
       kdTree_->setPoints(context.diskMesh->getNodes());
       kdTree_->build();
     }
@@ -480,11 +453,34 @@ private:
     }
   }
 
+  void outputIntermediateResults(
+      const ProcessContext<NumericType, D> &context,
+      const SmartPointer<std::vector<NumericType>> &velocities,
+      const SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+    auto const name = context.getProcessName();
+    auto surfaceModel = context.model->getSurfaceModel();
+    context.diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                         "velocities");
+    if (context.flags.useCoverages) {
+      mergeScalarData(context.diskMesh->getCellData(),
+                      surfaceModel->getCoverages());
+    }
+    if (auto surfaceData = surfaceModel->getSurfaceData())
+      mergeScalarData(context.diskMesh->getCellData(), surfaceData);
+    mergeScalarData(context.diskMesh->getCellData(), fluxes);
+    viennals::VTKWriter<NumericType>(
+        context.diskMesh, context.intermediateOutputPath + name + "_" +
+                              std::to_string(context.currentIteration) + ".vtp")
+        .apply();
+    if (context.domain->getCellSet()) {
+      context.domain->getCellSet()->writeVTU(
+          context.intermediateOutputPath + name + "_cellSet_" +
+          std::to_string(context.currentIteration) + ".vtu");
+    }
+  }
+
   void logProcessingTimes(const ProcessContext<NumericType, D> &context,
                           const viennacore::Timer<> &processTimer) {
-    if (!Logger::hasTiming())
-      return;
-
     Logger::getInstance()
         .addTiming("\nProcess " + context.getProcessName(),
                    processTimer.currentDuration * 1e-9)
