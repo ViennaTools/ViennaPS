@@ -19,7 +19,7 @@ template <class NumericType, int D> void RunTest() {
   // Load initial domain
   auto domain = Domain<NumericType, D>::New();
 
-  NumericType gridDelta = 1.0;
+  NumericType gridDelta = 1.5;
   NumericType xExtent = 50.0;
   NumericType yExtent = 20.0;
   NumericType trenchWidth = 30.0;
@@ -88,6 +88,10 @@ template <class NumericType, int D> void RunTest() {
   advection.temporalScheme = temporalScheme;
   advection.calculateIntermediateVelocities = intermediateVelocityCalculations;
   process.setParameters(advection);
+
+  CoverageParameters coverage;
+  coverage.tolerance = 1e-4;
+  process.setParameters(coverage);
 
   // Setup Isotropic Deposition
   auto isoDepModel = SmartPointer<IsotropicProcess<NumericType, D>>::New(1.0);
@@ -183,4 +187,4 @@ template <class NumericType, int D> void RunTest() {
 
 } // namespace viennacore
 
-int main() { VC_RUN_2D_TESTS }
+int main() { viennacore::RunTest<double, 2>(); }
