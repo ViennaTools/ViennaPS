@@ -209,6 +209,7 @@ public:
 
     // run the ray tracer
     rayTracer_.apply(); // device detach point here
+    ++this->fluxCalculationsCount_;
 
     // Prepare post-processing
     PostProcessingType postProcessing(

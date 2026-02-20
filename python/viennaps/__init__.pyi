@@ -8,6 +8,7 @@ which includes surface and volume representations,
 a ray tracer, and physical models for the simulation of
 microelectronic fabrication processes.
 """
+
 from __future__ import annotations
 import sys as _sys
 import viennals as ls
@@ -107,41 +108,142 @@ from viennaps.d2 import Writer
 from . import _core
 from . import d2
 from . import d3
-__all__: list[str] = ['AdvectionCallback', 'AdvectionParameters', 'AtomicLayerProcessParameters', 'BoundaryType', 'BoxDistribution', 'CF4O2Etching', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CSVFileProcess', 'CoverageParameters', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'Extrude', 'FaradayCageEtching', 'FaradayCageParameters', 'FluorocarbonEtching', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'Length', 'LengthUnit', 'LogLevel', 'Logger', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialMap', 'MetaDataLevel', 'MultiParticleProcess', 'NormalizationType', 'OxideRegrowth', 'PROXY_DIM', 'Planarize', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'Process', 'ProcessModel', 'ProcessModelBase', 'ProcessParams', 'RateGrid', 'RateSet', 'RayTracingParameters', 'Reader', 'RenderMode', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'Slice', 'SpatialScheme', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'TemporalScheme', 'Time', 'TimeUnit', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'ls', 'readConfigFile', 'setDimension', 'setNumThreads', 'util', 'version']
-def __dir__():
-    ...
-def __getattr__(name):
-    ...
-def _module_ptx_path():
-    ...
-def _windows_dll_path():
-    ...
+
+__all__: list[str] = [
+    "AdvectionCallback",
+    "AdvectionParameters",
+    "AtomicLayerProcessParameters",
+    "BoundaryType",
+    "BoxDistribution",
+    "CF4O2Etching",
+    "CF4O2Parameters",
+    "CF4O2ParametersIons",
+    "CF4O2ParametersMask",
+    "CF4O2ParametersPassivation",
+    "CF4O2ParametersSi",
+    "CF4O2ParametersSiGe",
+    "CSVFileProcess",
+    "CoverageParameters",
+    "DenseCellSet",
+    "DirectionalProcess",
+    "Domain",
+    "DomainSetup",
+    "Extrude",
+    "FaradayCageEtching",
+    "FaradayCageParameters",
+    "FluorocarbonEtching",
+    "FluorocarbonMaterialParameters",
+    "FluorocarbonParameters",
+    "FluorocarbonParametersIons",
+    "FluxEngineType",
+    "GDSGeometry",
+    "GDSReader",
+    "GeometricTrenchDeposition",
+    "GeometryFactory",
+    "HBrO2Etching",
+    "HoleShape",
+    "IBEParameters",
+    "IBEParametersCos4Yield",
+    "Interpolation",
+    "IonBeamEtching",
+    "IsotropicProcess",
+    "Length",
+    "LengthUnit",
+    "LogLevel",
+    "Logger",
+    "MakeFin",
+    "MakeHole",
+    "MakePlane",
+    "MakeStack",
+    "MakeTrench",
+    "Material",
+    "MaterialCategory",
+    "MaterialInfo",
+    "MaterialMap",
+    "MetaDataLevel",
+    "MultiParticleProcess",
+    "NormalizationType",
+    "OxideRegrowth",
+    "PROXY_DIM",
+    "Planarize",
+    "PlasmaEtchingParameters",
+    "PlasmaEtchingParametersIons",
+    "PlasmaEtchingParametersMask",
+    "PlasmaEtchingParametersPassivation",
+    "PlasmaEtchingParametersPolymer",
+    "PlasmaEtchingParametersSubstrate",
+    "Process",
+    "ProcessModel",
+    "ProcessModelBase",
+    "ProcessParams",
+    "RateGrid",
+    "RateSet",
+    "RayTracingParameters",
+    "Reader",
+    "RenderMode",
+    "SF6C4F8Etching",
+    "SF6O2Etching",
+    "SelectiveEpitaxy",
+    "SingleParticleALD",
+    "SingleParticleProcess",
+    "Slice",
+    "SpatialScheme",
+    "SphereDistribution",
+    "StencilLocalLaxFriedrichsScalar",
+    "TEOSDeposition",
+    "TEOSPECVD",
+    "TemporalScheme",
+    "Time",
+    "TimeUnit",
+    "ToDiskMesh",
+    "VTKRenderWindow",
+    "WetEtching",
+    "Writer",
+    "constants",
+    "d2",
+    "d3",
+    "gpu",
+    "gpuAvailable",
+    "ls",
+    "readConfigFile",
+    "setDimension",
+    "setNumThreads",
+    "util",
+    "version",
+]
+
+def __dir__(): ...
+def __getattr__(name): ...
+def _module_ptx_path(): ...
+def _windows_dll_path(): ...
 def readConfigFile(fileName: str):
     """
     Read a config file in the ViennaPS standard config file format.
-    
+
         Parameters
         ----------
         fileName: str
                     Name of the config file.
-    
+
         Returns
         -------
         dict
             A dictionary containing the parameters from the config file.
-        
+
     """
+
 def setDimension(d: int):
     """
     Set the dimension of the simulation (2 or 3).
-    
+
         Parameters
         ----------
         d: int
             Dimension of the simulation (2 or 3).
-        
+
     """
+
 PROXY_DIM: int = 2
-__version__: str = '4.2.1'
-version: str = '4.2.1'
+__version__: str = "4.2.2"
+version: str = "4.2.2"
 _C = _core

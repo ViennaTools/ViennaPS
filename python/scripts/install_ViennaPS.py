@@ -199,7 +199,8 @@ def ensure_cuda():
 
 
 def create_or_reuse_venv(venv_dir: Path):
-    if venv_dir.exists():
+    _, pip = venv_paths(venv_dir)
+    if venv_dir.exists() and pip.exists():
         print(f"{venv_dir} already exists. Reusing the existing virtual environment.")
     else:
         print(f"Creating virtual environment at {venv_dir}")
@@ -234,37 +235,37 @@ def install_viennals(
         env["CC"] = f"gcc-{REQUIRED_GCC}"
         env["CXX"] = f"g++-{REQUIRED_GCC}"
 
+    if viennals_dir is not None:
+        print(f"Installing ViennaLS from local directory: {viennals_dir}")
+        if not (viennals_dir.exists() and (viennals_dir / "CMakeLists.txt").exists()):
+            sys.exit(f"ViennaLS directory not valid: {viennals_dir}")
+        cmd = [str(pip_path), "install", ".", "--force-reinstall", "--no-deps"]
+        if verbose:
+            cmd.append("-v")
+        run(cmd, cwd=viennals_dir, env=env)
+        return
+
     current = pip_show_version(pip_path, "ViennaLS")
     if current is None:
         print("ViennaLS not installed. A local build is required.")
-        if viennals_dir is None:
-            which_or_fail("git")  # git is required to clone
-            print(f"Cloning ViennaLS v{required_version}…")
-            with tempfile.TemporaryDirectory(prefix="ViennaLS_tmp_install_") as tmp:
-                tmp_path = Path(tmp)
-                run(
-                    [
-                        "git",
-                        "clone",
-                        "https://github.com/ViennaTools/ViennaLS.git",
-                        str(tmp_path),
-                    ],
-                    env=env,
-                )
-                run(["git", "checkout", f"v{required_version}"], cwd=tmp_path, env=env)
-                cmd = [str(pip_path), "install", "."]
-                if verbose:
-                    cmd.append("-v")
-                run(cmd, cwd=tmp_path, env=env)
-        else:
-            if not (
-                viennals_dir.exists() and (viennals_dir / "CMakeLists.txt").exists()
-            ):
-                sys.exit(f"ViennaLS directory not valid: {viennals_dir}")
+        which_or_fail("git")  # git is required to clone
+        print(f"Cloning ViennaLS v{required_version}…")
+        with tempfile.TemporaryDirectory(prefix="ViennaLS_tmp_install_") as tmp:
+            tmp_path = Path(tmp)
+            run(
+                [
+                    "git",
+                    "clone",
+                    "https://github.com/ViennaTools/ViennaLS.git",
+                    str(tmp_path),
+                ],
+                env=env,
+            )
+            run(["git", "checkout", f"v{required_version}"], cwd=tmp_path, env=env)
             cmd = [str(pip_path), "install", "."]
             if verbose:
                 cmd.append("-v")
-            run(cmd, cwd=viennals_dir, env=env)
+            run(cmd, cwd=tmp_path, env=env)
     else:
         print(
             f"ViennaLS already installed ({current}). "
@@ -306,9 +307,11 @@ def get_viennaps_dir(viennaps_dir_arg: str | None) -> Path:
 def install_viennaps(
     pip_path: Path,
     viennaps_dir: Path,
+    viennals_dir: Path | None,
     debug_build: bool,
     gpu_build: bool,
     verbose: bool,
+    sanitize: bool = False,
 ):
     if not viennaps_dir.exists():
         sys.exit(f"ViennaPS directory not found: {viennaps_dir}")
@@ -331,6 +334,14 @@ def install_viennaps(
         cmake_args.append("-DVIENNAPS_USE_GPU=ON")
     else:
         cmake_args.append("-DVIENNAPS_USE_GPU=OFF")
+
+    if viennals_dir:
+        cmake_args.append(f'-DCPM_ViennaLS_SOURCE="{str(viennals_dir)}"')
+
+    if sanitize:
+        cmake_args.append(
+            "-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer"
+        )
 
     env["CMAKE_ARGS"] = " ".join(cmake_args)
 
@@ -355,7 +366,9 @@ def main():
         "--verbose", "-v", action="store_true", help="Enable verbose pip builds."
     )
     parser.add_argument(
-        "--venv", default=".venv", help="Path to the virtual environment directory."
+        "--venv",
+        default=os.environ.get("VIRTUAL_ENV", ".venv"),
+        help="Path to the virtual environment directory.",
     )
     parser.add_argument(
         "--viennals-dir",
@@ -387,6 +400,11 @@ def main():
         action="store_true",
         help="Disable GPU support.",
     )
+    parser.add_argument(
+        "--sanitize",
+        action="store_true",
+        help="Build with AddressSanitizer (-fsanitize=address).",
+    )
     args = parser.parse_args()
 
     if not args.skip_toolchain_check or not args.no_gpu:
@@ -410,9 +428,11 @@ def main():
     install_viennaps(
         venv_pip,
         viennaps_dir,
+        viennals_dir,
         args.debug_build,
         not args.no_gpu,
         args.verbose,
+        args.sanitize,
     )
 
     # Final info

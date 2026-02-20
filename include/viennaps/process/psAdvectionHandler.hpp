@@ -11,7 +11,8 @@ namespace viennaps {
 VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
   viennacore::Timer<> timer_;
-  unsigned lsVelOutputCounter = 0;
+  unsigned lsVelOutputCounter_ = 0;
+  unsigned totalAdvectionSteps_ = 0;
 
 public:
   ProcessResult initialize(ProcessContext<NumericType, D> &context) {
@@ -39,11 +40,10 @@ public:
 
     context.resetTime();
 
-    advectionKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
-
     advectionKernel_.setSingleStep(true);
-    advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setSpatialScheme(context.advectionParams.spatialScheme);
+    advectionKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
+    advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
     advectionKernel_.setSaveAdvectionVelocities(
         context.advectionParams.velocityOutput);
@@ -56,6 +56,8 @@ public:
         context.advectionParams.adaptiveTimeStepping,
         context.advectionParams.adaptiveTimeStepSubdivisions);
 
+    advectionKernel_.setVelocityUpdateCallback(nullptr);
+
     // normals vectors are only necessary for analytical velocity fields
     if (translationMethod > 0)
       advectionKernel_.setCalculateNormalVectors(false);
@@ -64,6 +66,8 @@ public:
     for (auto &dom : context.domain->getLevelSets()) {
       advectionKernel_.insertNextLevelSet(dom);
     }
+
+    totalAdvectionSteps_ = 0;
 
     return ProcessResult::SUCCESS;
   }
@@ -77,6 +81,8 @@ public:
           callback) {
     advectionKernel_.setVelocityUpdateCallback(callback);
   }
+
+  auto getTotalAdvectionSteps() const { return totalAdvectionSteps_; }
 
   void disableSingleStep() { advectionKernel_.setSingleStep(false); }
 
@@ -99,13 +105,14 @@ public:
     advectionKernel_.apply();
     timer_.finish();
 
+    ++totalAdvectionSteps_;
     if (context.advectionParams.velocityOutput) {
       auto mesh = viennals::Mesh<NumericType>::New();
       viennals::ToMesh<NumericType, D>(context.domain->getSurface(), mesh)
           .apply();
       viennals::VTKWriter<NumericType>(
           mesh,
-          "ls_velocities_" + std::to_string(lsVelOutputCounter++) + ".vtp")
+          "ls_velocities_" + std::to_string(lsVelOutputCounter_++) + ".vtp")
           .apply();
     }
 
