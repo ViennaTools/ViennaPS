@@ -15,7 +15,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class classType, class MeshNT, class ResultType, bool d2 = true,
+template <class NumericType, class MeshNT, class ResultType, bool d2 = true,
           bool d4 = true>
 class ElementToPointData {
   const std::vector<std::string> dataLabels_;
