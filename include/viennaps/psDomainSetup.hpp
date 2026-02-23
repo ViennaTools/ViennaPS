@@ -11,9 +11,7 @@ namespace viennaps {
 using namespace viennacore;
 using BoundaryType = viennahrle::BoundaryType;
 
-template <int D>
-  requires Dimension<D>
-class DomainSetup {
+template <int D> class DomainSetup {
   double gridDelta_;
   double bounds_[2 * D] = {0.};
   BoundaryType boundaryCons_[D] = {};
