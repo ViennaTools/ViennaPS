@@ -15,8 +15,8 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <Numeric NumericType, Numeric MeshNT, Numeric ResultType,
-          bool d2 = true, bool d4 = true>
+template <class classType, class MeshNT, class ResultType, bool d2 = true,
+          bool d4 = true>
 class ElementToPointData {
   const std::vector<std::string> dataLabels_;
   SmartPointer<viennals::PointData<NumericType>> pointData_;

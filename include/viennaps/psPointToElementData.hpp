@@ -15,7 +15,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <Numeric NumericType, Numeric MeshNT = NumericType>
+template <class NumericType, class MeshNT = NumericType>
 class PointToElementDataBase {
 protected:
   viennals::PointData<NumericType> &pointData_;

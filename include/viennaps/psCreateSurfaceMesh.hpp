@@ -42,7 +42,7 @@ inline void CopyTriangleMesh(const float gridDelta,
   triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
 }
 
-template <Numeric LsNT, Numeric MeshNT, int D> class CreateSurfaceMesh {
+template <class LsNT, class MeshNT, int D> class CreateSurfaceMesh {
 
   using lsDomainType = viennals::Domain<LsNT, D>;
   using CellIteratorType = viennahrle::ConstSparseCellIterator<

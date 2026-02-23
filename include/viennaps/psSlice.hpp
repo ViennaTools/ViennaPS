@@ -9,7 +9,7 @@
 namespace viennaps {
 using namespace viennacore;
 
-template <Numeric NumericType> class Slice {
+template <class NumericType> class Slice {
   SmartPointer<Domain<NumericType, 3>> inputDomain;
   SmartPointer<Domain<NumericType, 2>> outputDomain;
   int sliceDimension = 0;
