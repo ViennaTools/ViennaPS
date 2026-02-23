@@ -1286,23 +1286,23 @@ template <int D> void bindApi(py::module &module) {
            py::arg("path"),
            "Set the path for intermediate output files during the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const AdvectionParameters &)) &
-               ProcessTD::template setParameters<AdvectionParameters>,
+           py::overload_cast<const AdvectionParameters &>(
+               &ProcessTD::setParameters),
            py::arg("parameters"),
            "Set the advection parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const RayTracingParameters &)) &
-               ProcessTD::template setParameters<RayTracingParameters>,
+           py::overload_cast<const RayTracingParameters &>(
+               &ProcessTD::setParameters),
            py::arg("parameters"),
            "Set the ray tracing parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const CoverageParameters &)) &
-               ProcessTD::template setParameters<CoverageParameters>,
+           py::overload_cast<const CoverageParameters &>(
+               &ProcessTD::setParameters),
            py::arg("parameters"),
            "Set the coverage parameters for the process.")
       .def("setParameters",
-           (void(ProcessTD::*)(const AtomicLayerProcessParameters &)) &
-               ProcessTD::template setParameters<AtomicLayerProcessParameters>,
+           py::overload_cast<const AtomicLayerProcessParameters &>(
+               &ProcessTD::setParameters),
            py::arg("parameters"),
            "Set the atomic layer parameters for the process.");
 

@@ -62,18 +62,20 @@ public:
     context_.processDuration = duration;
   }
 
-  template <ProcessParamConcept ParamType>
-  void setParameters(const ParamType &params) {
-    if constexpr (std::is_same_v<ParamType, RayTracingParameters>) {
-      context_.rayTracingParams = params;
-    } else if constexpr (std::is_same_v<ParamType, AdvectionParameters>) {
-      context_.advectionParams = params;
-    } else if constexpr (std::is_same_v<ParamType, CoverageParameters>) {
-      context_.coverageParams = params;
-    } else if constexpr (std::is_same_v<ParamType,
-                                        AtomicLayerProcessParameters>) {
-      context_.atomicLayerParams = params;
-    }
+  void setParameters(const RayTracingParameters &p) {
+    context_.rayTracingParams = p;
+  }
+
+  void setParameters(const AdvectionParameters &p) {
+    context_.advectionParams = p;
+  }
+
+  void setParameters(const CoverageParameters &p) {
+    context_.coverageParams = p;
+  }
+
+  void setParameters(const AtomicLayerProcessParameters &p) {
+    context_.atomicLayerParams = p;
   }
 
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }

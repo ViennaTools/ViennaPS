@@ -128,13 +128,6 @@ struct AtomicLayerProcessParameters {
   auto toMetaDataString() const { return util::metaDataToString(toMetaData()); }
 };
 
-template <class ParamType>
-concept ProcessParamConcept =
-    std::is_same_v<ParamType, RayTracingParameters> ||
-    std::is_same_v<ParamType, AdvectionParameters> ||
-    std::is_same_v<ParamType, CoverageParameters> ||
-    std::is_same_v<ParamType, AtomicLayerProcessParameters>;
-
 template <typename NumericType> class ProcessParams {
 private:
   std::vector<NumericType> scalarData;
