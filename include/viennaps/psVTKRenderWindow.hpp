@@ -49,7 +49,7 @@ namespace viennaps {
 enum class RenderMode { SURFACE, INTERFACE, VOLUME };
 
 // forward declaration of Domain
-VIENNAPS_TEMPLATE_ND_FWD(NumericType, D) class Domain;
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Domain;
 
 /// Lightweight VTK-based viewer for one or more ViennaPS domains.
 ///

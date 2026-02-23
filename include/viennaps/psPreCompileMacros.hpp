@@ -48,29 +48,10 @@ concept Dimension = (D == 2 || D == 3);
   template <Numeric NTypeName, int DName>                                      \
     requires Dimension<DName>
 
-#define VIENNAPS_TEMPLATE_ND_FWD(NTypeName, DName)                             \
-  template <Numeric NTypeName, int DName>                                      \
-    requires Dimension<DName>
-
 #else
 
 // Fallback path (no concepts)
-template <typename T>
-inline constexpr bool Numeric_v =
-    std::is_same_v<T, float> || std::is_same_v<T, double>;
-
-template <int D> inline constexpr bool Dimension_v = (D == 2 || D == 3);
-
-// No default argument here -> avoids "redefinition of default argument"
 #define VIENNAPS_TEMPLATE_ND(NTypeName, DName)                                 \
-  template <typename NTypeName, int DName,                                     \
-            std::enable_if_t<Numeric_v<NTypeName> && Dimension_v<DName>, int>  \
-                SFINAE>
-
-// Forward-decl helper that supplies a concrete SFINAE argument
-#define VIENNAPS_TEMPLATE_ND_FWD(NTypeName, DName)                             \
-  template <                                                                   \
-      typename NTypeName, int DName,                                           \
-      std::enable_if_t<Numeric_v<NTypeName> && Dimension_v<DName>, int> = 0>
+  template <typename NTypeName, int DName>
 
 #endif
