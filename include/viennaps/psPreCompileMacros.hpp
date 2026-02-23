@@ -35,12 +35,31 @@
 
 #include <type_traits>
 
+#if defined(__cpp_concepts) && (__cpp_concepts >= 201907L)
+
+// C++20 concepts path
 template <typename T>
 concept Numeric = std::is_same_v<T, float> || std::is_same_v<T, double>;
 
 template <int D>
 concept Dimension = (D == 2 || D == 3);
 
-#define VIENNAPS_TEMPLATE_ND(N, D)                                             \
-  template <Numeric N, int D>                                                  \
-    requires Dimension<D>
+#define VIENNAPS_TEMPLATE_ND(NTypeName, DName)                                 \
+  template <Numeric NTypeName, int DName>                                      \
+    requires Dimension<DName>
+
+#else
+
+// Fallback path (no concepts)
+template <typename T>
+inline constexpr bool Numeric_v =
+    std::is_same_v<T, float> || std::is_same_v<T, double>;
+
+template <int D> inline constexpr bool Dimension_v = (D == 2 || D == 3);
+
+#define VIENNAPS_TEMPLATE_ND(NTypeName, DName)                                 \
+  template <                                                                   \
+      typename NTypeName, int DName,                                           \
+      std::enable_if_t<Numeric_v<NTypeName> && Dimension_v<DName>, int> = 0>
+
+#endif
