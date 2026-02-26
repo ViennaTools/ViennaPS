@@ -13,6 +13,7 @@
 #include <lsExpand.hpp>
 #include <lsRemoveStrayPoints.hpp>
 #include <lsToDiskMesh.hpp>
+#include <lsToHullMesh.hpp>
 #include <lsToMesh.hpp>
 #include <lsToMultiSurfaceMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
@@ -516,6 +517,22 @@ public:
     return mesh;
   }
 
+  auto getHullMesh(double bottomExtension = 0.0,
+                   bool sharpCorners = false) const {
+    auto mesh = viennals::Mesh<NumericType>::New();
+    viennals::ToHullMesh<NumericType, D> hullConverter(mesh);
+    if (bottomExtension > 0.0) {
+      hullConverter.setBottomExtension(bottomExtension);
+    }
+    hullConverter.setSharpCorners(sharpCorners);
+    for (unsigned i = 0; i < levelSets_.size(); i++) {
+      hullConverter.insertNextLevelSet(levelSets_.at(i));
+    }
+    hullConverter.setMaterialMap(materialMap_->getMaterialMap());
+    hullConverter.apply();
+    return mesh;
+  }
+
   // Print the top Level-Set (surface) in a VTK file format (vtp).
   void saveSurfaceMesh(std::string fileName, bool addInterfaces = true,
                        double wrappingLayerEpsilon = 0.01,
@@ -542,18 +559,10 @@ public:
     writer.apply();
   }
 
-  void
-  saveHullMesh(std::string fileName,
-               double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
-    viennals::WriteVisualizationMesh<NumericType, D> writer;
-    writer.setFileName(fileName);
-    writer.setWrappingLayerEpsilon(wrappingLayerEpsilon);
-    writer.setExtractHullMesh(true);
-    writer.setExtractVolumeMesh(false);
-    for (auto &ls : levelSets_) {
-      writer.insertNextLevelSet(ls);
-    }
-    writer.setMaterialMap(materialMap_->getMaterialMap());
+  void saveHullMesh(std::string fileName, double bottomExtension = 0.0,
+                    bool sharpCorners = false) const {
+    auto mesh = getHullMesh(bottomExtension, sharpCorners);
+    viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();
   }

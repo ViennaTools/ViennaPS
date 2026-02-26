@@ -543,6 +543,9 @@ template <int D> void bindApi(py::module &module) {
            py::arg("wrappingLayerEpsilon") = 1e-2,
            py::arg("boolMaterials") = false,
            "Get the surface mesh of the domain")
+      .def("getHullMesh", &Domain<T, D>::getHullMesh,
+           py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false,
+           "Get the hull mesh of the domain.")
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
            py::arg("filename"), py::arg("addInterfaces") = false,
            py::arg("wrappingLayerEpsilon") = 1e-2,
@@ -551,7 +554,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
       .def("saveHullMesh", &Domain<T, D>::saveHullMesh, py::arg("filename"),
-           py::arg("wrappingLayerEpsilon") = 1e-2,
+           py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false,
            "Save the hull of the domain.")
       .def("saveLevelSets", &Domain<T, D>::saveLevelSets, py::arg("filename"))
       .def("clear", &Domain<T, D>::clear)
