@@ -37,6 +37,13 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     NumericType Eth_sp = 15.; // eV
     NumericType A_sp = 0.02;
     NumericType B_sp = 8.5;
+
+    // polynomial cosine angular yield form
+    bool usePolyCosThetaYield = false;
+    NumericType a1 = -0.26;
+    NumericType a2 = 2.72;
+    NumericType a3 = -4.3;
+    NumericType a4 = 1.95;
   } Polymer;
 
   // Etching material
@@ -112,6 +119,14 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     processData["Polymer Eth_sp"] = {Polymer.Eth_sp};
     processData["Polymer A_sp"] = {Polymer.A_sp};
     processData["Polymer B_sp"] = {Polymer.B_sp};
+    processData["Polymer UsePolyCosThetaYield"] = {
+        (double)Polymer.usePolyCosThetaYield};
+    if (Polymer.usePolyCosThetaYield) {
+      processData["Polymer a1"] = {(double)Polymer.a1};
+      processData["Polymer a2"] = {(double)Polymer.a2};
+      processData["Polymer a3"] = {(double)Polymer.a3};
+      processData["Polymer a4"] = {(double)Polymer.a4};
+    }
 
     // Material
     processData["Substrate Rho"] = {Substrate.rho};
@@ -163,6 +178,11 @@ struct PlasmaEtchingParametersGPU {
     Polymer.B_sp = static_cast<float>(parameters.Polymer.B_sp);
     Polymer.Eth_sp = static_cast<float>(parameters.Polymer.Eth_sp);
     Polymer.rho = static_cast<float>(parameters.Polymer.rho);
+    Polymer.usePolyCosThetaYield = parameters.Polymer.usePolyCosThetaYield;
+    Polymer.a1 = static_cast<float>(parameters.Polymer.a1);
+    Polymer.a2 = static_cast<float>(parameters.Polymer.a2);
+    Polymer.a3 = static_cast<float>(parameters.Polymer.a3);
+    Polymer.a4 = static_cast<float>(parameters.Polymer.a4);
 
     Substrate.rho = static_cast<float>(parameters.Substrate.rho);
     Substrate.Eth_sp = static_cast<float>(parameters.Substrate.Eth_sp);

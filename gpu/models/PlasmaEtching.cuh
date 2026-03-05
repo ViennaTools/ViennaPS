@@ -88,8 +88,22 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
       Eth_sp = params->Polymer.Eth_sp;
     }
 
-    float f_sp_theta =
-        max((1.f + B_sp * (1.f - cosTheta * cosTheta)) * cosTheta, 0.f);
+    float f_sp_theta;
+    if (static_cast<viennaps::Material>(material) ==
+            viennaps::Material::Polymer &&
+        params->Polymer.usePolyCosThetaYield) {
+      const float c = cosTheta;
+      const float sum = params->Polymer.a1 + params->Polymer.a2 +
+                        params->Polymer.a3 + params->Polymer.a4;
+      f_sp_theta = (params->Polymer.a1 * c + params->Polymer.a2 * c * c +
+                    params->Polymer.a3 * c * c * c +
+                    params->Polymer.a4 * c * c * c * c) /
+                   sum;
+      f_sp_theta = max(f_sp_theta, 0.f);
+    } else {
+      f_sp_theta =
+          max((1.f + B_sp * (1.f - cosTheta * cosTheta)) * cosTheta, 0.f);
+    }
 
     float f_ie_theta = 1.f;
     if (cosTheta < 0.5f)

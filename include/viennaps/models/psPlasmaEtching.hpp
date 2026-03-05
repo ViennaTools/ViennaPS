@@ -239,9 +239,20 @@ public:
       Eth_sp = params.Polymer.Eth_sp;
     }
 
-    // NumericType f_sp_theta = 1.;
-    NumericType f_sp_theta =
-        std::max((1. + B_sp * (1. - cosTheta * cosTheta)) * cosTheta, 0.);
+    NumericType f_sp_theta;
+    if (MaterialMap::isMaterial(materialId, Material::Polymer) &&
+        params.Polymer.usePolyCosThetaYield) {
+      const auto c = cosTheta;
+      const auto &p = params.Polymer;
+      const auto sum = p.a1 + p.a2 + p.a3 + p.a4;
+      f_sp_theta =
+          (p.a1 * c + p.a2 * c * c + p.a3 * c * c * c + p.a4 * c * c * c * c) /
+          sum;
+      f_sp_theta = std::max(f_sp_theta, NumericType(0));
+    } else {
+      f_sp_theta =
+          std::max((1. + B_sp * (1. - cosTheta * cosTheta)) * cosTheta, 0.);
+    }
 
     NumericType f_ie_theta = 1.;
     if (cosTheta < 0.5) {
