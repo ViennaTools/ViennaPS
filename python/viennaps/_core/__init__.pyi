@@ -6,8 +6,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -1123,6 +1123,7 @@ class PlasmaEtchingParametersPassivation:
     def Eth_ie(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class PlasmaEtchingParametersPolymer:
+    usePolyCosThetaYield: bool
     def __init__(self) -> None:
         ...
     @property
@@ -1142,18 +1143,6 @@ class PlasmaEtchingParametersPolymer:
         ...
     @Eth_sp.setter
     def Eth_sp(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def rho(self) -> float:
-        ...
-    @rho.setter
-    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def usePolyCosThetaYield(self) -> bool:
-        ...
-    @usePolyCosThetaYield.setter
-    def usePolyCosThetaYield(self, arg0: bool) -> None:
         ...
     @property
     def a1(self) -> float:
@@ -1178,6 +1167,12 @@ class PlasmaEtchingParametersPolymer:
         ...
     @a4.setter
     def a4(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def rho(self) -> float:
+        ...
+    @rho.setter
+    def rho(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class PlasmaEtchingParametersSubstrate:
     def __init__(self) -> None:
@@ -1428,5 +1423,5 @@ def gpuAvailable() -> bool:
     """
 def setNumThreads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     ...
-__version__: str = '4.2.2'
-version: str = '4.2.2'
+__version__: str = '4.3.0'
+version: str = '4.3.0'

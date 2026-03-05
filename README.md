@@ -130,7 +130,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@4.2.2")
+  CPMAddPackage("gh:viennatools/viennaps@4.3.0")
   ```
 
 * With a local installation
@@ -251,7 +251,6 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSR
 </div>
 
 
-
 ## Tests
 
 ViennaPS uses CTest to run its tests. In order to check whether ViennaPS runs without issues on your system, you can run:
@@ -277,8 +276,6 @@ cmake --build build --target format
 
 ## Authors
 
-Current contributors: Tobias Reiter, Lado Filipovic, Roman Kostal, Noah Karnel
-
 Contact us via: viennatools@iue.tuwien.ac.at
 
 ViennaPS was developed under the aegis of the 'Institute for Microelectronics' at the 'TU Wien'.
@@ -286,7 +283,7 @@ http://www.iue.tuwien.ac.at/
 
 ## License
 
-ViennaPS is licensed under the [MIT License](./LICENSE).
+Versions < 4.3.0 were released under MIT License. Starting with version 4.3.0, the project is licensed under GPL-3.0 License. For more details, please refer to the [LICENSE](./LICENSE) file in the base directory of the repository.
 
-Some third-party libraries used by ViennaPS are under their own permissive licenses (MIT, BSD, Apache-2.0).  
+Some third-party libraries used by ViennaPS are under their own permissive licenses (BSD, Apache-2.0).  
 See [`THIRD_PARTY_LICENSES.md`](./THIRD_PARTY_LICENSES.md) for details.
