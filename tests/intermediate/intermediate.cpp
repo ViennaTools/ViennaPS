@@ -19,7 +19,7 @@ template <class NumericType, int D> void RunTest() {
   // Load initial domain
   auto domain = Domain<NumericType, D>::New();
 
-  NumericType gridDelta = 1.5;
+  NumericType gridDelta = 1.9;
   NumericType xExtent = 50.0;
   NumericType yExtent = 20.0;
   NumericType trenchWidth = 30.0;

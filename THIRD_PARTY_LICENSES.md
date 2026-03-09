@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-ViennaPS is licensed under the MIT License.  
+ViennaPS is licensed under the GPL-3.0 License.  
 This file lists third-party libraries used by ViennaPS and their respective licenses.
 
 Some dependencies are optional (e.g., GPU acceleration via NVIDIA OptiX) and may be subject to additional terms.
@@ -9,19 +9,19 @@ Some dependencies are optional (e.g., GPU acceleration via NVIDIA OptiX) and may
 
 ### ViennaCore
 
-**License:** MIT
+**License:** GPL-3.0
 **URL:** [https://github.com/ViennaTools/viennacore](https://github.com/ViennaTools/viennacore)
 
 ---
 
 ### ViennaLS
 
-**License:** MIT
+**License:** GPL-3.0
 **URL:** [https://github.com/ViennaTools/viennals](https://github.com/ViennaTools/viennals)
 
 #### ViennaHRLE
 
-**License:** MIT
+**License:** GPL-3.0
 **URL:** [https://github.com/ViennaTools/viennahrle](https://github.com/ViennaTools/viennahrle)
 
 #### VTK (Visualization Toolkit)
@@ -34,7 +34,7 @@ Some dependencies are optional (e.g., GPU acceleration via NVIDIA OptiX) and may
 
 ### ViennaRay
 
-**License:** MIT
+**License:** GPL-3.0
 **URL:** [https://github.com/ViennaTools/viennaray](https://github.com/ViennaTools/viennaray)
 
 #### Embree
@@ -47,7 +47,7 @@ Some dependencies are optional (e.g., GPU acceleration via NVIDIA OptiX) and may
 
 ### ViennaCS
 
-**License:** MIT
+**License:** GPL-3.0
 **URL:** [https://github.com/ViennaTools/viennacs](https://github.com/ViennaTools/viennacs)
 
 ---
