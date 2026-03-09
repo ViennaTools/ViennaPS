@@ -294,6 +294,8 @@ class Domain:
         """
         Get the grid delta.
         """
+    def getHullMesh(self, bottomExtension: typing.SupportsFloat | typing.SupportsIndex = 0.0, sharpCorners: bool = False) -> viennals._core.Mesh:
+        ...
     def getLevelSetMesh(self, width: typing.SupportsInt | typing.SupportsIndex = 1) -> list[viennals._core.Mesh]:
         """
         Get the level set grids of layers in the domain.
@@ -330,7 +332,7 @@ class Domain:
         """
         Get the surface level set.
         """
-    def getSurfaceMesh(self, addInterfaces: bool = False, wrappingLayerEpsilon: typing.SupportsFloat | typing.SupportsIndex = 0.01, boolMaterials: bool = False) -> viennals._core.Mesh:
+    def getSurfaceMesh(self, addInterfaces: bool = False, sharpCorners: bool = False, wrappingLayerEpsilon: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> viennals._core.Mesh:
         """
         Get the surface mesh of the domain
         """
@@ -350,7 +352,7 @@ class Domain:
         ...
     def removeTopLevelSet(self) -> None:
         ...
-    def saveHullMesh(self, filename: str, wrappingLayerEpsilon: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> None:
+    def saveHullMesh(self, filename: str, bottomExtension: typing.SupportsFloat | typing.SupportsIndex = 0.0, sharpCorners: bool = False) -> None:
         """
         Save the hull of the domain.
         """
@@ -360,7 +362,7 @@ class Domain:
         """
     def saveLevelSets(self, filename: str) -> None:
         ...
-    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = False, wrappingLayerEpsilon: typing.SupportsFloat | typing.SupportsIndex = 0.01, boolMaterials: bool = False) -> None:
+    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = False, sharpCorners: typing.SupportsFloat | typing.SupportsIndex = False, wrappingLayerEpsilon: bool = 0.01) -> None:
         """
         Save the surface of the domain.
         """
