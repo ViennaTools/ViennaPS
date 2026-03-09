@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     } else {
       outputFile += suffix;
     }
-    geometry->saveSurfaceMesh(outputFile, true, 0.01, true);
+    geometry->saveSurfaceMesh(outputFile);
   };
 
   std::cout << "Running simulation without intermediate velocity calculation..."

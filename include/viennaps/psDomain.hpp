@@ -469,11 +469,11 @@ public:
 
   SmartPointer<viennals::Mesh<NumericType>>
   getSurfaceMesh(bool addInterfaces = false, bool sharpCorners = false,
-                 double wrappingLayerEpsilon = 0.01) const {
+                 double minNodeDistanceFactor = 0.01) const {
     auto mesh = viennals::Mesh<NumericType>::New();
     if (addInterfaces) {
       viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(
-          mesh, 1e-12, wrappingLayerEpsilon);
+          mesh, minNodeDistanceFactor);
       for (const auto &ls : levelSets_) {
         meshConverter.insertNextLevelSet(ls);
       }
@@ -532,9 +532,9 @@ public:
   // Print the top Level-Set (surface) in a VTK file format (vtp).
   void saveSurfaceMesh(const std::string &fileName, bool addInterfaces = true,
                        bool sharpCorners = false,
-                       double wrappingLayerEpsilon = 0.01) const {
+                       double minNodeDistanceFactor = 0.01) const {
     auto mesh =
-        getSurfaceMesh(addInterfaces, sharpCorners, wrappingLayerEpsilon);
+        getSurfaceMesh(addInterfaces, sharpCorners, minNodeDistanceFactor);
     viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();

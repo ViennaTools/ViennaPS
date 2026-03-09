@@ -538,7 +538,7 @@ template <int D> void bindApi(py::module &module) {
            "Get the level set grids of layers in the domain.")
       .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
            py::arg("addInterfaces") = false, py::arg("sharpCorners") = false,
-           py::arg("wrappingLayerEpsilon") = 0.01,
+           py::arg("minNodeDistanceFactor") = 0.01,
            "Get the surface mesh of the domain")
       .def("getHullMesh", &Domain<T, D>::getHullMesh,
            py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false)
@@ -549,7 +549,7 @@ template <int D> void bindApi(py::module &module) {
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
            py::arg("filename"), py::arg("addInterfaces") = false,
            py::arg("sharpCorners") = false,
-           py::arg("wrappingLayerEpsilon") = 1e-2,
+           py::arg("minNodeDistanceFactor") = 0.01,
            "Save the surface of the domain.")
       .def("saveHullMesh", &Domain<T, D>::saveHullMesh, py::arg("filename"),
            py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false,
