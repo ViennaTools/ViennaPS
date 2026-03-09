@@ -531,10 +531,10 @@ public:
 
   // Print the top Level-Set (surface) in a VTK file format (vtp).
   void saveSurfaceMesh(const std::string &fileName, bool addInterfaces = true,
-                       double wrappingLayerEpsilon = 0.01,
-                       bool boolMaterials = false) const {
+                       bool sharpCorners = false,
+                       double wrappingLayerEpsilon = 0.01) const {
     auto mesh =
-        getSurfaceMesh(addInterfaces, wrappingLayerEpsilon, boolMaterials);
+        getSurfaceMesh(addInterfaces, sharpCorners, wrappingLayerEpsilon);
     viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();
