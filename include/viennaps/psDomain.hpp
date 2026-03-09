@@ -467,34 +467,17 @@ public:
     return meshes;
   }
 
-  // Save the level set as a VTK file.
-  void saveLevelSetMesh(const std::string &fileName, int width = 1) {
-    auto meshes = getLevelSetMesh(width);
-    for (int i = 0; i < meshes.size(); i++) {
-      viennals::VTKWriter<NumericType> writer(
-          meshes[i], fileName + "_layer" + std::to_string(i) + ".vtp");
-      writer.setMetaData(metaData_);
-      writer.apply();
-    }
-  }
-
   SmartPointer<viennals::Mesh<NumericType>>
-  getSurfaceMesh(bool addInterfaces = false, double wrappingLayerEpsilon = 0.01,
-                 bool boolMaterials = false) const {
+  getSurfaceMesh(bool addInterfaces = false, bool sharpCorners = false,
+                 double wrappingLayerEpsilon = 0.01) const {
     auto mesh = viennals::Mesh<NumericType>::New();
     if (addInterfaces) {
       viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(
           mesh, 1e-12, wrappingLayerEpsilon);
-      for (unsigned i = 0; i < levelSets_.size(); i++) {
-        auto lsCopy = lsDomainType::New(levelSets_.at(i));
-        if (i > 0 && boolMaterials) {
-          viennals::BooleanOperation<NumericType, D>(
-              lsCopy, levelSets_.at(i - 1),
-              viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-              .apply();
-        }
-        meshConverter.insertNextLevelSet(lsCopy);
+      for (const auto &ls : levelSets_) {
+        meshConverter.insertNextLevelSet(ls);
       }
+      meshConverter.setSharpCorners(sharpCorners);
       meshConverter.setMaterialMap(materialMap_->getMaterialMap());
       meshConverter.apply();
     } else {
@@ -511,30 +494,43 @@ public:
                                                    {"MaterialIds"})
           .apply();
 
-      viennals::ToSurfaceMesh<NumericType, D>(levelSets_.back(), mesh).apply();
+      viennals::ToSurfaceMesh<NumericType, D> surfMesher(levelSets_.back(),
+                                                         mesh);
+      surfMesher.setSharpCorners(sharpCorners);
+      surfMesher.apply();
     }
 
     return mesh;
   }
 
-  auto getHullMesh(double bottomExtension = 0.0,
-                   bool sharpCorners = false) const {
+  SmartPointer<viennals::Mesh<NumericType>>
+  getHullMesh(NumericType bottomExtension = 0.0,
+              bool sharpCorners = false) const {
     auto mesh = viennals::Mesh<NumericType>::New();
-    viennals::ToHullMesh<NumericType, D> hullConverter(mesh);
-    if (bottomExtension > 0.0) {
-      hullConverter.setBottomExtension(bottomExtension);
-    }
-    hullConverter.setSharpCorners(sharpCorners);
+    viennals::ToHullMesh<NumericType, D> meshConverter(mesh);
     for (unsigned i = 0; i < levelSets_.size(); i++) {
-      hullConverter.insertNextLevelSet(levelSets_.at(i));
+      meshConverter.insertNextLevelSet(levelSets_.at(i));
     }
-    hullConverter.setMaterialMap(materialMap_->getMaterialMap());
-    hullConverter.apply();
+    meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+    meshConverter.setSharpCorners(sharpCorners);
+    meshConverter.setBottomExtension(bottomExtension);
+    meshConverter.apply();
     return mesh;
+  }
+
+  // Save the level set as a VTK file.
+  void saveLevelSetMesh(const std::string &fileName, int width = 1) {
+    auto meshes = getLevelSetMesh(width);
+    for (int i = 0; i < meshes.size(); i++) {
+      viennals::VTKWriter<NumericType> writer(
+          meshes[i], fileName + "_layer" + std::to_string(i) + ".vtp");
+      writer.setMetaData(metaData_);
+      writer.apply();
+    }
   }
 
   // Print the top Level-Set (surface) in a VTK file format (vtp).
-  void saveSurfaceMesh(std::string fileName, bool addInterfaces = true,
+  void saveSurfaceMesh(const std::string &fileName, bool addInterfaces = true,
                        double wrappingLayerEpsilon = 0.01,
                        bool boolMaterials = false) const {
     auto mesh =
@@ -544,9 +540,18 @@ public:
     writer.apply();
   }
 
+  void saveHullMesh(const std::string &fileName,
+                    NumericType bottomExtension = 0.0,
+                    bool sharpCorners = false) const {
+    auto mesh = getHullMesh(bottomExtension, sharpCorners);
+    viennals::VTKWriter<NumericType> writer(mesh, fileName);
+    writer.setMetaData(metaData_);
+    writer.apply();
+  }
+
   // Save the domain as a volume mesh
   void
-  saveVolumeMesh(std::string fileName,
+  saveVolumeMesh(const std::string &fileName,
                  double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
     viennals::WriteVisualizationMesh<NumericType, D> writer;
     writer.setFileName(fileName);
@@ -555,14 +560,6 @@ public:
       writer.insertNextLevelSet(ls);
     }
     writer.setMaterialMap(materialMap_->getMaterialMap());
-    writer.setMetaData(metaData_);
-    writer.apply();
-  }
-
-  void saveHullMesh(std::string fileName, double bottomExtension = 0.0,
-                    bool sharpCorners = false) const {
-    auto mesh = getHullMesh(bottomExtension, sharpCorners);
-    viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();
   }

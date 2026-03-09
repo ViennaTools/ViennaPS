@@ -532,30 +532,31 @@ template <int D> void bindApi(py::module &module) {
           [](Domain<T, D> &self, bool hrle) { self.print(std::cout, hrle); },
           "Print the domain information.", py::arg("hrleInfo") = false)
       .def("show", &Domain<T, D>::show, "Render the domain using VTK.")
+      // Mesh generation
       .def("getLevelSetMesh", &Domain<T, D>::getLevelSetMesh,
            py::arg("width") = 1,
            "Get the level set grids of layers in the domain.")
+      .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
+           py::arg("addInterfaces") = false, py::arg("sharpCorners") = false,
+           py::arg("wrappingLayerEpsilon") = 0.01,
+           "Get the surface mesh of the domain")
+      .def("getHullMesh", &Domain<T, D>::getHullMesh,
+           py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false)
+      // Save to file
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            py::arg("filename"), py::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
-      .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
-           py::arg("addInterfaces") = false,
-           py::arg("wrappingLayerEpsilon") = 1e-2,
-           py::arg("boolMaterials") = false,
-           "Get the surface mesh of the domain")
-      .def("getHullMesh", &Domain<T, D>::getHullMesh,
-           py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false,
-           "Get the hull mesh of the domain.")
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
            py::arg("filename"), py::arg("addInterfaces") = false,
+           py::arg("sharpCorners") = false,
            py::arg("wrappingLayerEpsilon") = 1e-2,
-           py::arg("boolMaterials") = false, "Save the surface of the domain.")
-      .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh, py::arg("filename"),
-           py::arg("wrappingLayerEpsilon") = 1e-2,
-           "Save the volume representation of the domain.")
+           "Save the surface of the domain.")
       .def("saveHullMesh", &Domain<T, D>::saveHullMesh, py::arg("filename"),
            py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false,
            "Save the hull of the domain.")
+      .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh, py::arg("filename"),
+           py::arg("wrappingLayerEpsilon") = 1e-2,
+           "Save the volume representation of the domain.")
       .def("saveLevelSets", &Domain<T, D>::saveLevelSets, py::arg("filename"))
       .def("clear", &Domain<T, D>::clear)
       .def("clearMetaData", &Domain<T, D>::clearMetaData,
