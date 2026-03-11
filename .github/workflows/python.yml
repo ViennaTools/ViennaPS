@@ -24,7 +24,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            container: ghcr.io/viennatools/vienna-builder:suite-python
+            container: ghcr.io/viennatools/vienna-builder:cuda-suite-python
           - os: windows-latest
           - os: macos-latest
 
@@ -52,18 +52,12 @@ jobs:
         uses: actions/cache@v4
         with:
           key: python-${{ matrix.os }}
-          path: build
+          path: build/_deps/
 
-      # - name: 🧹 Clean FetchContent deps (Windows)
-      #   if: ${{ matrix.os == 'windows-latest' }}
-      #   shell: pwsh
-      #   run: |
-      #     if (Test-Path build/_deps) { Remove-Item -Recurse -Force build/_deps }
-
-      - name: 🛠️ Disable IPO (Alpine)
+      - name: 🛠️ Enable GPU Bindings on Linux
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DUSE_IPO=off"/g' pyproject.toml
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
           cat pyproject.toml
 
       - name: 🐍 Build and check Python Module (Windows)
@@ -78,7 +72,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . # Alpine does not like LTO
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install .
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
@@ -95,7 +89,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            container: ghcr.io/viennatools/vienna-builder:python
+            container: ghcr.io/viennatools/vienna-builder:cuda-python
             skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-*"
 
           - os: windows-latest
@@ -136,7 +130,7 @@ jobs:
       - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON", "-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
           cat pyproject.toml
 
       - name: 🏗️ Build Wheels
