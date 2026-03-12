@@ -22,14 +22,9 @@ namespace viennaps {
 
 using namespace viennacore;
 
-inline bool gpuAvailable() {
+inline constexpr bool gpuAvailable() {
 #ifdef VIENNACORE_COMPILE_GPU
-  auto deviceContext = DeviceContext::getContextFromRegistry();
-  if (deviceContext)
-    return deviceContext->foundCuda();
-
-  deviceContext = DeviceContext::createContext();
-  return deviceContext != nullptr && deviceContext->foundCuda();
+  return true;
 #else
   return false;
 #endif
