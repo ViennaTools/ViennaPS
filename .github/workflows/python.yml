@@ -89,8 +89,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            container: ghcr.io/viennatools/vienna-builder:cuda-python
-            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-* *-manylinux_i686 *-musllinux_*"
 
           - os: windows-latest
             skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-*"
@@ -99,7 +98,6 @@ jobs:
             skip: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-* pp38-* pp39-* pp310-*"
 
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
 
     name: "🐍 Package Bindings on ${{ matrix.os }}"
 
@@ -113,7 +111,7 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: 🛞 CIBuildWheel
-        run: pip install cibuildwheel==2.17.0 --break-system-packages
+        run: pip install cibuildwheel==3.4.0 --break-system-packages
 
       - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'windows-latest' }}
@@ -133,11 +131,19 @@ jobs:
           sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON", "-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
           cat pyproject.toml
 
-      - name: 🏗️ Build Wheels
+      - name: 🏗️ Build Wheels (Linux)
+        if: ${{ matrix.os != 'ubuntu-latest' }}
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_SKIP: ${{ matrix.skip }}
-          CIBW_ARCHS: auto64
+          CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/viennatools/vienna-builder:cuda-python
+
+      - name: 🏗️ Build Wheels (Other)
+        if: ${{ matrix.os != 'ubuntu-latest' }}
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_SKIP: ${{ matrix.skip }}
+          CIBW_ARCHS_WINDOWS: auto64
 
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v4
@@ -165,3 +171,5 @@ jobs:
 
       - name: 🚀 Publish Wheels
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
