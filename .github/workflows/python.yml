@@ -132,7 +132,7 @@ jobs:
           cat pyproject.toml
 
       - name: 🏗️ Build Wheels (Linux)
-        if: ${{ matrix.os != 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_SKIP: ${{ matrix.skip }}
