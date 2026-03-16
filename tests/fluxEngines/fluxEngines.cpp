@@ -18,7 +18,12 @@ void checkSurfaceHeight(SmartPointer<viennaps::Domain<T, D>> &domain,
                         const T height) {
   auto surfaceMesh = domain->getSurfaceMesh();
   for (const auto &node : surfaceMesh->nodes) {
-    VC_TEST_ASSERT(std::abs(node[D - 1] - height) < 0.15);
+    if (std::abs(node[D - 1] - height) >= 0.15) {
+      std::cerr << "Dim " << D << ": ";
+      std::cerr << "Node at " << node << " is not close to expected height "
+                << height << std::endl;
+    }
+    VC_TEST_ASSERT(std::abs(node[D - 1] - height) < 0.1);
   }
 }
 
@@ -48,6 +53,7 @@ template <class T, int D> void RunTest() {
 
     viennaps::RayTracingParameters rayParams;
     rayParams.rngSeed = 42;
+    rayParams.useRandomSeeds = false;
 
     viennaps::Process<T, D> process(domain, model);
     process.setFluxEngineType(engineType);
