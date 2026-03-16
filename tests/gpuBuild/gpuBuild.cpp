@@ -5,6 +5,10 @@
 #include <vcTestAsserts.hpp>
 
 int main() {
+  if (viennaps::gpuAvailable()) {
+    return 0;
+  }
+
   {
     auto context = viennaps::DeviceContext::createContext();
     VC_TEST_ASSERT(!context);
