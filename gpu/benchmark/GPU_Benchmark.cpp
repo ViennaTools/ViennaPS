@@ -94,20 +94,20 @@ int main() {
         // TRACING
         timer.start();
         tracer.apply();
-        timer.finish();
-        file << timer.currentDuration << ";";
-
-        // POSTPROCESSING
-        timer.start();
         auto pointData = viennals::PointData<NumericType>::New();
         ElementToPointData<NumericType, float, viennaray::gpu::ResultType> post(
             dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
             domain->getGridDelta() * 2.0f);
         post.prepare();
+        tracer.syncStreams();
+        timer.finish();
+        file << timer.currentDuration << ";";
+
+        // POSTPROCESSING
+        timer.start();
         tracer.normalizeResults();
         post.setElementDataArrays(tracer.getResults());
         post.convert();
-        // tracer.downloadResults();
         auto velocities = SmartPointer<std::vector<NumericType>>::New(
             std::move(*pointData->getScalarData("flux")));
         velocityField->prepare(domain, velocities, 0.);
