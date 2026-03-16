@@ -513,7 +513,8 @@ public:
     }
     meshConverter.setMaterialMap(materialMap_->getMaterialMap());
     meshConverter.setSharpCorners(sharpCorners);
-    meshConverter.setBottomExtension(bottomExtension);
+    if (bottomExtension > 0.0)
+      meshConverter.setBottomExtension(bottomExtension);
     meshConverter.apply();
     return mesh;
   }

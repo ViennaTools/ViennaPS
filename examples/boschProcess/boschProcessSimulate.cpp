@@ -61,7 +61,7 @@ void ash(SmartPointer<Domain<NumericType, D>> domain, int &n) {
 
 int main(int argc, char **argv) {
 
-  Logger::setLogLevel(LogLevel::ERROR);
+  Logger::setLogLevel(LogLevel::DEBUG);
   omp_set_num_threads(16);
 
   // Parse the parameters

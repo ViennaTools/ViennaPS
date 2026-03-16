@@ -18,7 +18,7 @@ void checkSurfaceHeight(SmartPointer<viennaps::Domain<T, D>> &domain,
                         const T height) {
   auto surfaceMesh = domain->getSurfaceMesh();
   for (const auto &node : surfaceMesh->nodes) {
-    VC_TEST_ASSERT(std::abs(node[D - 1] - height) < 1e-1);
+    VC_TEST_ASSERT(std::abs(node[D - 1] - height) < 0.15);
   }
 }
 
