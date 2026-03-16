@@ -89,13 +89,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-* *-manylinux_i686 *-musllinux_*"
+            skip: "cp38-* cp39-* pp38-* pp39-* pp310-* *-manylinux_i686 *-musllinux_*"
 
           - os: windows-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-* pp38-* pp39-* pp310-*"
 
           - os: macos-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-* cp310-* pp38-* pp39-* pp310-*"
 
     runs-on: ${{ matrix.os }}
 
