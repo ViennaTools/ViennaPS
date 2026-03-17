@@ -79,6 +79,8 @@ template <class NumericType, int D> void RunTest() {
   RayTracingParameters rayTracing;
   rayTracing.raysPerPoint = rpp;
   rayTracing.smoothingNeighbors = smoothingNeighbors;
+  rayTracing.rngSeed = 42;
+  rayTracing.useRandomSeeds = false;
   process.setParameters(rayTracing);
 
   AdvectionParameters advection;
