@@ -31,6 +31,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
 
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
+
     name: "🐍 Test Bindings on ${{ matrix.os }}"
 
     steps:
@@ -43,18 +46,28 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: 📋 Install MacOS Dependencies
-        shell: bash
         if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          brew install embree tbb vtk
+        run: brew install embree tbb vtk
 
-      - name: 🦥 Cache Dependencies
+      - name: Create vcpkg binary cache dir
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+
+      - name: 🦥 Cache vcpkg binary
+        if: ${{ matrix.os == 'windows-latest' }}
         uses: actions/cache@v4
         with:
-          key: python-${{ matrix.os }}
-          path: build/_deps/
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ matrix.os }}-Release
 
-      - name: 🛠️ Enable GPU Bindings on Linux
+      - name: 🛠️ Build Dependencies (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          ./vcpkg/vcpkg install vtk embree
+
+      - name: 🛠️ Enable GPU Bindings (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
@@ -62,11 +75,14 @@ jobs:
 
       - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
         run: |
           python -m venv venv
-          ./venv/Scripts/activate.bat
-          pip install .
-          python -c "import viennaps; print(viennaps.__doc__)"
+          $toolchain = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake".Replace('\', '/')
+
+          .\venv\Scripts\python -m pip install --upgrade pip
+          .\venv\Scripts\python -m pip install . --config-settings=cmake.args="-DCMAKE_TOOLCHAIN_FILE=$toolchain"
+          .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 🐍 Build and check Python Module (Other)
         if: ${{ matrix.os != 'windows-latest' }}
@@ -89,13 +105,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-* *-manylinux_i686 *-musllinux_*"
+            skip: "cp38-* cp39-* pp38-* pp39-* pp310-* *-manylinux_i686 *-musllinux_*"
 
           - os: windows-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-* pp38-* pp39-* pp310-*"
 
           - os: macos-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-* cp310-* pp38-* pp39-* pp310-*"
 
     runs-on: ${{ matrix.os }}
 

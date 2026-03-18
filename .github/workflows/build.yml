@@ -34,6 +34,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
 
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
+
     name: "🧪 Test on ${{ matrix.os }} (⚙️: ${{ matrix.config }}, 💿: ${{ matrix.container || matrix.os }})"
 
     steps:
@@ -46,19 +49,38 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: 📋 Install MacOS Dependencies
-        shell: bash
         if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          brew install embree tbb vtk
+        run: brew install vtk embree tbb
 
-      - name: 🦥 Cache Dependencies
+      - name: Create vcpkg binary cache dir (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+
+      - name: 🦥 Cache vcpkg binary (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
         uses: actions/cache@v4
         with:
-          key: test-${{ matrix.os }}-${{ matrix.config }}
-          path: build/_deps/
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ matrix.os }}-${{ matrix.config }}
 
-      - name: 🏗️ Compile
-        run: cmake -DVIENNAPS_BUILD_TESTS=ON -DVIENNAPS_ENABLE_SANITIZER=ON -B build && cmake --build build --config ${{ matrix.config }}
+      - name: 🛠️ Build Dependencies (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          ./vcpkg/vcpkg install vtk embree
+
+      - name: 🏗️ Compile (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          cmake -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -B build
+          cmake --build build --config ${{ matrix.config }}
+
+      - name: 🏗️ Compile (other)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          cmake -DVIENNAPS_BUILD_TESTS=ON -DVIENNAPS_ENABLE_SANITIZER=ON -B build
+          cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
-        run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+        run: ctest --output-on-failure -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build

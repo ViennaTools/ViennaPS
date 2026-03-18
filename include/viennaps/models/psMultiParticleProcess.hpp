@@ -288,19 +288,27 @@ public:
          "__direct_callable__multiIonInit"}};
     this->setParticleCallableMap(pMap, cMap);
 
+    if (ions.size() > 1) {
+      VIENNACORE_LOG_WARNING(
+          "GPU MultiParticleProcess currently only supports one ion particle "
+          "type. Additional ion particles will be ignored.");
+    }
+    bool ionAdded = false;
+    std::vector<bool> neutralAdded(neutrals.size(), false);
+
     for (auto const &label : fluxDataLabels) {
-      for (const auto &ion : ions) {
-        if (label == ion.dataLabel_) {
-          addIonParticle(ion.sourcePower_, ion.thetaRMin_, ion.thetaRMax_,
-                         ion.minAngle_, ion.B_sp_, ion.meanEnergy_,
-                         ion.sigmaEnergy_, ion.thresholdEnergy_,
-                         ion.inflectAngle_, ion.n_, ion.dataLabel_);
-          break;
-        }
+      if (!ions.empty() && label == ions.front().dataLabel_) {
+        const auto &ion = ions.front();
+        addIonParticle(ion.sourcePower_, ion.thetaRMin_, ion.thetaRMax_,
+                       ion.minAngle_, ion.B_sp_, ion.meanEnergy_,
+                       ion.sigmaEnergy_, ion.thresholdEnergy_,
+                       ion.inflectAngle_, ion.n_, ion.dataLabel_);
+        ionAdded = true;
       }
 
-      for (const auto &neutral : neutrals) {
-        if (label == neutral.dataLabel_) {
+      for (std::size_t i = 0; i < neutrals.size(); ++i) {
+        if (!neutralAdded[i] && label == neutrals[i].dataLabel_) {
+          const auto &neutral = neutrals[i];
           if (neutral.materialSticking_.empty()) {
             addNeutralParticle(neutral.stickingProbability_,
                                neutral.dataLabel_);
@@ -309,9 +317,45 @@ public:
                                neutral.stickingProbability_,
                                neutral.dataLabel_);
           }
+          neutralAdded[i] = true;
+          break;
         }
       }
     }
+
+    if (!ions.empty() && !ionAdded) {
+      const auto &ion = ions.front();
+      VIENNACORE_LOG_WARNING(
+          "Ion label was not found in flux label ordering during CPU->GPU "
+          "conversion. Falling back to first ion particle.");
+      addIonParticle(ion.sourcePower_, ion.thetaRMin_, ion.thetaRMax_,
+                     ion.minAngle_, ion.B_sp_, ion.meanEnergy_,
+                     ion.sigmaEnergy_, ion.thresholdEnergy_, ion.inflectAngle_,
+                     ion.n_, ion.dataLabel_);
+    }
+
+    for (std::size_t i = 0; i < neutrals.size(); ++i) {
+      if (neutralAdded[i]) {
+        continue;
+      }
+
+      const auto &neutral = neutrals[i];
+      VIENNACORE_LOG_WARNING(
+          "Neutral label was not found in flux label ordering during CPU->GPU "
+          "conversion. Appending neutral particle with label: " +
+          neutral.dataLabel_);
+      if (neutral.materialSticking_.empty()) {
+        addNeutralParticle(neutral.stickingProbability_, neutral.dataLabel_);
+      } else {
+        addNeutralParticle(neutral.materialSticking_,
+                           neutral.stickingProbability_, neutral.dataLabel_);
+      }
+    }
+
+    VIENNACORE_LOG_DEBUG("GPU MultiParticleProcess conversion completed with " +
+                         std::to_string(ionCount_) + " ion particle(s) and " +
+                         std::to_string(neutralCount_) +
+                         " neutral particle(s).");
   }
 
   void addNeutralParticle(NumericType stickingProbability,
@@ -329,6 +373,7 @@ public:
     this->setUseMaterialIds(true);
 
     addStickingData(stickingProbability);
+    ++neutralCount_;
     VIENNACORE_LOG_DEBUG("Added neutral particle with sticking probability: " +
                          std::to_string(stickingProbability));
   }
@@ -352,6 +397,7 @@ public:
     this->setUseMaterialIds(true);
 
     addStickingData(defaultStickingProbability);
+    ++neutralCount_;
     VIENNACORE_LOG_DEBUG(
         "Added neutral particle with default sticking probability: " +
         std::to_string(defaultStickingProbability) +
@@ -431,6 +477,7 @@ private:
   std::vector<std::string> fluxDataLabels_;
   using ProcessModelBase<NumericType, D>::processMetaData;
   unsigned int ionCount_ = 0;
+  unsigned int neutralCount_ = 0;
 
   void setDirection(viennaray::gpu::Particle<NumericType> &particle) {
     auto direction = this->getPrimaryDirection();
@@ -565,16 +612,24 @@ public:
           "GPU MultiParticleProcess currently only supports one ion particle "
           "type. Only the first ion particle will be converted.");
     }
-    if (!neutralParticles_.empty() && neutralParticles_.size() > 1) {
-      VIENNACORE_LOG_WARNING(
-          "GPU MultiParticleProcess currently only supports one neutral "
-          "particle "
-          "type. Only the first neutral particle will be converted.");
-    }
 
     auto surfModel = std::dynamic_pointer_cast<
         impl::MultiParticleSurfaceModel<NumericType, D>>(
         this->getSurfaceModel());
+    if (!surfModel) {
+      VIENNACORE_LOG_WARNING(
+          "Failed to access MultiParticleSurfaceModel during CPU->GPU "
+          "conversion.");
+      return nullptr;
+    }
+
+    VIENNACORE_LOG_DEBUG(
+        "Converting MultiParticleProcess to GPU with " +
+        std::to_string(std::min<std::size_t>(ionParticles_.size(), 1)) +
+        " ion and " + std::to_string(neutralParticles_.size()) +
+        " neutral particle(s); flux labels: " +
+        std::to_string(fluxDataLabels_.size()));
+
     auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New(
         fluxDataLabels_, ionParticles_, neutralParticles_,
         surfModel->rateFunction_);
