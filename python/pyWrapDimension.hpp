@@ -493,6 +493,11 @@ template <int D> void bindApi(py::module &module) {
            &Domain<T, D>::insertNextLevelSetAsMaterial, py::arg("levelSet"),
            py::arg("material"), py::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
+      .def("insertMask", &Domain<T, D>::insertMask, py::arg("mask"),
+           py::arg("material") = Material::Mask,
+           "Insert a mask level set to the domain. The mask is inserted at the "
+           "front of the level set vector and can be used to exclude areas "
+           "from processes.")
       .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet,
            "Duplicate the top level set. Should be used before a deposition "
            "process.")

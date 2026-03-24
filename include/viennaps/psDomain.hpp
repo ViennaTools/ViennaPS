@@ -191,6 +191,26 @@ public:
     materialMapCheck();
   }
 
+  void insertMask(lsDomainType mask, const Material material = Material::Mask) {
+    // insert mask at front of level set vector
+    levelSets_.insert(levelSets_.begin(), mask);
+    for (std::size_t i = 1; i < levelSets_.size(); i++) {
+      viennals::BooleanOperation<NumericType, D>(
+          levelSets_.at(i), mask, viennals::BooleanOperationEnum::UNION)
+          .apply();
+    }
+
+    auto newMatMap = MaterialMapType::New();
+    newMatMap->insertNextMaterial(material);
+    if (materialMap_) {
+      for (std::size_t i = 0; i < materialMap_->size(); i++) {
+        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
+      }
+    }
+    materialMap_ = newMatMap;
+    materialMapCheck();
+  }
+
   // Copy the top Level-Set and insert it in the domain (e.g. in order to
   // capture depositing material on top of the surface).
   void duplicateTopLevelSet(const Material material) {
