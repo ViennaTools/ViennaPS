@@ -199,6 +199,9 @@ class DenseCellSet:
         """
 class DirectionalProcess(ProcessModel):
     @typing.overload
+    def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], materialRates: collections.abc.Mapping[viennaps._core.Material, tuple[typing.SupportsFloat | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex]], defaultDirectionalRate: typing.SupportsFloat | typing.SupportsIndex = 0.0, defaultIsotropicRate: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        ...
+    @typing.overload
     def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], directionalVelocity: typing.SupportsFloat | typing.SupportsIndex, isotropicVelocity: typing.SupportsFloat | typing.SupportsIndex = 0.0, maskMaterial: viennaps._core.Material = ..., calculateVisibility: bool = True) -> None:
         ...
     @typing.overload
@@ -335,6 +338,10 @@ class Domain:
     def getSurfaceMesh(self, addInterfaces: bool = False, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> viennals._core.Mesh:
         """
         Get the surface mesh of the domain
+        """
+    def insertMask(self, mask: viennals.d3.Domain, material: viennaps._core.Material = ...) -> None:
+        """
+        Insert a mask level set to the domain. The mask is inserted at the front of the level set vector and can be used to exclude areas from processes.
         """
     def insertNextLevelSetAsMaterial(self, levelSet: viennals.d3.Domain, material: viennaps._core.Material, wrapLowerLevelSet: bool = True) -> None:
         """

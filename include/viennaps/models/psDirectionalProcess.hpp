@@ -145,6 +145,36 @@ protected:
   }
 };
 
+template <class NumericType, int D>
+class DirectionalVelocityFieldSimple : public VelocityField<NumericType, D> {
+  using MaterialRateMap = MaterialValueMap<std::pair<NumericType, NumericType>>;
+  const Vec3D<NumericType> direction_;
+  const MaterialRateMap materialRates_;
+
+public:
+  DirectionalVelocityFieldSimple(const MaterialRateMap &materialRates,
+                                 const Vec3D<NumericType> &direction)
+      : materialRates_(materialRates), direction_(direction) {}
+
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
+                                int material,
+                                const Vec3D<NumericType> &normalVector,
+                                unsigned long pointId) override {
+    const auto &rate =
+        materialRates_.getRef(MaterialMap::mapToMaterial(material));
+    return rate.second; // isotropic velocity
+  }
+
+  Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
+                                       int material,
+                                       const Vec3D<NumericType> &normalVector,
+                                       unsigned long pointId) override {
+    const auto &rate =
+        materialRates_.getRef(MaterialMap::mapToMaterial(material));
+    return direction_ * rate.first; // directional velocity
+  }
+};
+
 } // namespace impl
 
 /// Directional rate with multiple rate sets and masking materials.
@@ -152,6 +182,18 @@ template <typename NumericType, int D>
 class DirectionalProcess : public ProcessModelCPU<NumericType, D> {
 public:
   using RateSet = impl::RateSet<NumericType>;
+  using RateMap = MaterialValueMap<std::pair<NumericType, NumericType>>;
+
+  DirectionalProcess(
+      const Vec3D<NumericType> &direction,
+      std::unordered_map<Material, std::pair<NumericType, NumericType>>
+          materialRates,
+      NumericType defaultDirectionalRate = 0.,
+      NumericType defaultIsotropicRate = 0.) {
+    RateMap rateMap(std::move(materialRates));
+    rateMap.setDefault({defaultDirectionalRate, defaultIsotropicRate});
+    initialize(std::move(rateMap), direction);
+  }
 
   DirectionalProcess(const Vec3D<NumericType> &direction,
                      NumericType directionalVelocity,
@@ -191,10 +233,20 @@ public:
   }
 
 private:
-  void initialize(std::vector<RateSet> &&rateSets) {
-    // Default surface model
-    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
+  void initialize(RateMap &&rateMap, const Vec3D<NumericType> &direction) {
+    // Store process data
+    // TODO
 
+    // Velocity field with rate map
+    auto velField =
+        SmartPointer<impl::DirectionalVelocityFieldSimple<NumericType, D>>::New(
+            rateMap, direction);
+    this->setVelocityField(velField);
+
+    baseData();
+  }
+
+  void initialize(std::vector<RateSet> &&rateSets) {
     // Store process data
     processMetaData["DirectionalVelocity"] = std::vector<double>();
     processMetaData["IsotropicVelocity"] = std::vector<double>();
@@ -219,8 +271,14 @@ private:
     auto velField =
         SmartPointer<impl::DirectionalVelocityField<NumericType, D>>::New(
             std::move(rateSets));
-
     this->setVelocityField(velField);
+
+    baseData();
+  }
+
+  void baseData() {
+    // Default surface model
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
     this->setSurfaceModel(surfModel);
     this->setProcessName("DirectionalProcess");
   }

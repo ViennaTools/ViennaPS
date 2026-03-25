@@ -810,6 +810,7 @@ class Material(enum.IntEnum):
     Au: typing.ClassVar[Material]  # value = <Material.Au: 91>
     BN: typing.ClassVar[Material]  # value = <Material.BN: 39>
     BPSG: typing.ClassVar[Material]  # value = <Material.BPSG: 54>
+    BulkSi: typing.ClassVar[Material]  # value = <Material.BulkSi: 22>
     C: typing.ClassVar[Material]  # value = <Material.C: 50>
     Co: typing.ClassVar[Material]  # value = <Material.Co: 72>
     CoW: typing.ClassVar[Material]  # value = <Material.CoW: 85>

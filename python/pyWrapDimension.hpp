@@ -929,6 +929,11 @@ template <int D> void bindApi(py::module &module) {
   // DirectionalProcess
   py::class_<DirectionalProcess<T, D>, SmartPointer<DirectionalProcess<T, D>>>(
       module, "DirectionalProcess", processModel)
+      .def(py::init<const Vec3D<T> &,
+                    std::unordered_map<Material, std::pair<T, T>>, T, T>(),
+           py::arg("direction"), py::arg("materialRates"),
+           py::arg("defaultDirectionalRate") = 0.,
+           py::arg("defaultIsotropicRate") = 0.)
       .def(py::init<const Vec3D<T> &, T, T, Material, bool>(),
            py::arg("direction"), py::arg("directionalVelocity"),
            py::arg("isotropicVelocity") = 0.,

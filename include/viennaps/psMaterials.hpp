@@ -51,6 +51,7 @@ enum class MaterialCategory : uint8_t {
   X(19, SiBCN, OxideNitride, 2.3, false, 0x00897b)                             \
   X(20, SiCOH, OxideNitride, 1.9, false, 0x26c6da)                             \
   X(21, SiOCN, OxideNitride, 2.1, false, 0x00acc1)                             \
+  X(22, BulkSi, Silicon, 2.33, false, 0xc79a08)                                \
   /* Oxides and nitrides */                                                    \
   X(30, SiO2, OxideNitride, 2.2, false, 0x66ccff)                              \
   X(31, Al2O3, OxideNitride, 3.95, false, 0x90caf9)                            \
@@ -169,6 +170,78 @@ constexpr MaterialCategory categoryOf(Material m) { return info(m).category; }
 constexpr double density(Material m) { return info(m).density_gcm3; }
 constexpr bool isConductive(Material m) { return info(m).conductive; }
 constexpr uint32_t color(Material m) { return info(m).colorHex; }
+
+template <class T> class MaterialValueMap {
+public:
+  using Value = T;
+
+  MaterialValueMap() = default;
+
+  // constructor from unordered_map
+  MaterialValueMap(const std::unordered_map<Material, T> &map) {
+    for (const auto &[key, value] : map) {
+      set(key, value);
+    }
+  }
+
+  // generic constructor (works with map, vector<pair>, initializer_list, etc.)
+  template <class MapLike> explicit MaterialValueMap(const MapLike &mapLike) {
+    for (const auto &[key, value] : mapLike) {
+      set(key, value);
+    }
+  }
+
+  // set value for a material
+  void set(Material m, const T &value) {
+    auto idx = toIndex(m);
+    values_[idx] = value;
+    isSet_[idx] = true;
+  }
+
+  // perfect-forwarding overload
+  template <class... Args> void emplace(Material m, Args &&...args) {
+    auto idx = toIndex(m);
+    values_[idx] = T(std::forward<Args>(args)...);
+    isSet_[idx] = true;
+  }
+
+  // get value or default T{}
+  [[nodiscard]] T get(Material m) const {
+    auto idx = toIndex(m);
+    return isSet_[idx] ? values_[idx] : T{};
+  }
+
+  // get reference (no copy)
+  [[nodiscard]] const T &getRef(Material m) const {
+    auto idx = toIndex(m);
+    return isSet_[idx] ? values_[idx] : default_;
+  }
+
+  void setDefault(const T &v) { default_ = v; }
+
+  // check if user provided a value
+  [[nodiscard]] bool has(Material m) const { return isSet_[toIndex(m)]; }
+
+  // remove value -> fallback to default
+  void clear(Material m) { isSet_[toIndex(m)] = false; }
+
+  void clearAll() {
+    for (auto &b : isSet_) {
+      b = false;
+    }
+  }
+
+private:
+  static constexpr std::size_t toIndex(Material m) {
+    return static_cast<std::uint16_t>(m);
+  }
+
+  std::array<T, kMaterialMaxId + 1> values_{};
+  std::array<bool, kMaterialMaxId + 1> isSet_{};
+
+  // default instance used for reference return
+  T default_{};
+};
 
 #ifndef __CUDACC__
 /// A class that wraps the viennals MaterialMap class and provides a more user
