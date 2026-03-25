@@ -177,13 +177,6 @@ public:
 
   MaterialValueMap() = default;
 
-  // constructor from unordered_map
-  MaterialValueMap(const std::unordered_map<Material, T> &map) {
-    for (const auto &[key, value] : map) {
-      set(key, value);
-    }
-  }
-
   // generic constructor (works with map, vector<pair>, initializer_list, etc.)
   template <class MapLike> explicit MaterialValueMap(const MapLike &mapLike) {
     for (const auto &[key, value] : mapLike) {
@@ -219,6 +212,8 @@ public:
 
   void setDefault(const T &v) { default_ = v; }
 
+  [[nodiscard]] const T &getDefault() const { return default_; }
+
   // check if user provided a value
   [[nodiscard]] bool has(Material m) const { return isSet_[toIndex(m)]; }
 
@@ -230,6 +225,52 @@ public:
       b = false;
     }
   }
+
+  // ================= ITERATOR =================
+  struct Entry {
+    Material material;
+    const T *value;
+    bool set;
+
+    [[nodiscard]] bool isSet() const { return set; }
+    [[nodiscard]] const T &getValue() const { return *value; }
+    [[nodiscard]] Material getMaterial() const { return material; }
+  };
+
+  class Iterator {
+  public:
+    Iterator(const MaterialValueMap *map, std::size_t idx)
+        : map_(map), idx_(idx) {
+      advanceToValid();
+    }
+
+    Iterator &operator++() {
+      ++idx_;
+      advanceToValid();
+      return *this;
+    }
+
+    bool operator!=(const Iterator &other) const { return idx_ != other.idx_; }
+
+    Entry operator*() const {
+      return Entry{static_cast<Material>(idx_), &map_->values_[idx_],
+                   map_->isSet_[idx_]};
+    }
+
+  private:
+    void advanceToValid() {
+      while (idx_ < map_->values_.size() && !map_->isSet_[idx_]) {
+        ++idx_;
+      }
+    }
+
+    const MaterialValueMap *map_;
+    std::size_t idx_;
+  };
+
+  Iterator begin() const { return Iterator(this, 0); }
+
+  Iterator end() const { return Iterator(this, values_.size()); }
 
 private:
   static constexpr std::size_t toIndex(Material m) {
