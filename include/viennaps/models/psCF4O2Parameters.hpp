@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../materials/psMaterials.hpp"
 #include "../psConstants.hpp"
-#include "../psMaterials.hpp"
 #include <unordered_map>
 
 namespace viennaps {

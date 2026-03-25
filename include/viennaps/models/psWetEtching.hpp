@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../materials/psMaterials.hpp"
 #include "../process/psProcessModel.hpp"
-#include "../psMaterials.hpp"
 
 #include <vcVectorType.hpp>
 

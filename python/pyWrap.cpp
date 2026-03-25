@@ -57,15 +57,65 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            py::arg("shouldAbort") = true)
       .def("print", [](Logger &instance) { instance.print(std::cout); });
 
-  // Material enum
-  auto matEnum =
-      py::native_enum<Material>(module, "Material", "enum.IntEnum",
-                                "Material types for domain and level sets");
+  // Built-in material enum
+  auto builtInMatEnum = py::native_enum<BuiltInMaterial>(
+      module, "BuiltInMaterial", "enum.IntEnum",
+      "Fixed built-in material types for domain and level sets");
 #define ENUM_BIND(id, sym, cat, dens, cond, color)                             \
-  matEnum.value(#sym, Material::sym);
-  MATERIAL_LIST(ENUM_BIND)
+  builtInMatEnum.value(#sym, BuiltInMaterial::sym);
+  BUILTIN_MATERIAL_LIST(ENUM_BIND)
 #undef ENUM_BIND
-  matEnum.finalize();
+  builtInMatEnum.finalize();
+
+  // Unified material handle
+  auto materialClass = py::class_<Material>(module, "Material");
+  materialClass.def(py::init<>())
+      .def(py::init<BuiltInMaterial>())
+      .def(py::init<int>())
+      .def_static("custom", &Material::custom, py::arg("id"))
+      .def("isBuiltIn", &Material::isBuiltIn)
+      .def("isCustom", &Material::isCustom)
+      .def("builtIn", &Material::builtIn)
+      .def("customId", &Material::customId)
+      .def("legacyId", &Material::legacyId)
+      .def("kind", &Material::kind)
+      .def("__int__", [](const Material &m) { return static_cast<int>(m); })
+      .def("__hash__",
+           [](const Material &m) { return std::hash<Material>{}(m); })
+      .def("__repr__",
+           [](const Material &m) {
+             return "Material('" + MaterialMap::toString(m) + "')";
+           })
+      .def(py::self == py::self)
+      .def(py::self != py::self);
+
+#define MATERIAL_CONST(id, sym, cat, dens, cond, color)                        \
+  materialClass.attr(#sym) = py::cast(Material::sym);
+  BUILTIN_MATERIAL_LIST(MATERIAL_CONST)
+#undef MATERIAL_CONST
+
+  py::implicitly_convertible<BuiltInMaterial, Material>();
+
+  py::native_enum<Material::Kind>(module, "MaterialKind", "enum.IntEnum")
+      .value("BuiltIn", Material::Kind::BuiltIn)
+      .value("Custom", Material::Kind::Custom)
+      .finalize();
+
+  py::class_<MaterialRegistry>(module, "MaterialRegistry")
+      .def(py::init<>())
+      .def("registerMaterial", &MaterialRegistry::registerMaterial,
+           py::arg("name"))
+      .def("hasMaterial", &MaterialRegistry::hasMaterial, py::arg("name"))
+      .def("findMaterial", &MaterialRegistry::findMaterial, py::arg("name"))
+      .def("getMaterial", &MaterialRegistry::getMaterial, py::arg("name"))
+      .def(
+          "getName",
+          [](const MaterialRegistry &registry, const Material material) {
+            return std::string(registry.getName(material));
+          },
+          py::arg("material"))
+      .def("isBuiltIn", &MaterialRegistry::isBuiltIn, py::arg("material"))
+      .def("customMaterialCount", &MaterialRegistry::customMaterialCount);
 
   // Material category enum
   py::native_enum<MaterialCategory>(module, "MaterialCategory", "enum.IntEnum")
@@ -109,6 +159,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
       .def_static("isMaterial", &MaterialMap::isMaterial<T>)
+      .def_static("fromString", &MaterialMap::fromString, py::arg("name"),
+                  py::arg("registry"),
+                  "Resolve built-in or register custom material by name.")
       .def_static("toString",
                   py::overload_cast<const Material>(&MaterialMap::toString),
                   "Get the name of a material.");

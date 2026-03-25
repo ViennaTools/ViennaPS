@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../materials/psMaterials.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../process/psSurfaceModel.hpp"
 #include "../psDomain.hpp"
-#include "../psMaterials.hpp"
 #include "../psRateGrid.hpp"
 
 #include <lsCalculateVisibilities.hpp>

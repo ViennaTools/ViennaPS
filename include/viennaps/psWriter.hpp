@@ -74,8 +74,8 @@ public:
       fout << "ForMesher";
     }
 
-    // Write version number (starting with 0)
-    char formatVersion = 0;
+    // Version 1 serializes materials by stable names.
+    char formatVersion = 1;
     fout.write(&formatVersion, 1);
 
     // Write domain setup
@@ -105,10 +105,22 @@ public:
       fout.write(reinterpret_cast<const char *>(&numMaterials),
                  sizeof(uint32_t));
 
-      // Write each material ID
+      // Write each material by canonical name for stable cross-run I/O.
       for (size_t i = 0; i < numMaterials; i++) {
-        int materialId = static_cast<int>(materialMap->getMaterialAtIdx(i));
-        fout.write(reinterpret_cast<const char *>(&materialId), sizeof(int));
+        const auto material = materialMap->getMaterialAtIdx(i);
+        std::string materialName;
+        if (material.isBuiltIn()) {
+          materialName = MaterialMap::toString(material);
+        } else {
+          materialName =
+              std::string(domain->getMaterialRegistry().getName(material));
+        }
+
+        const auto nameLength = static_cast<uint32_t>(materialName.size());
+        fout.write(reinterpret_cast<const char *>(&nameLength),
+                   sizeof(uint32_t));
+        fout.write(materialName.data(),
+                   static_cast<std::streamsize>(nameLength));
       }
     }
 

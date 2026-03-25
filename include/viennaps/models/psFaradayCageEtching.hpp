@@ -3,8 +3,8 @@
 #include "psIonBeamEtching.hpp"
 #include "psPipelineParameters.hpp"
 
+#include "../materials/psMaterials.hpp"
 #include "../process/psProcessModel.hpp"
-#include "../psMaterials.hpp"
 #include "../psUtil.hpp"
 
 #include <random>

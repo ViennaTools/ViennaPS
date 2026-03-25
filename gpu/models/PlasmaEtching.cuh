@@ -6,9 +6,9 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
+#include "materials/psMaterials.hpp"
 #include "models/psPipelineParameters.hpp"
 #include "models/psPlasmaEtchingParameters.hpp"
-#include "psMaterials.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -69,6 +69,8 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   for (int i = 0; i < prd->ISCount; ++i) {
     int id = launchParams.materialIds[prd->primIDs[i]]; // consecutive ID
     int material = launchParams.materialMap[id];        // mapped to enum
+    const int maskId = static_cast<int>(viennaps::BuiltInMaterial::Mask);
+    const int polymerId = static_cast<int>(viennaps::BuiltInMaterial::Polymer);
     auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
@@ -77,21 +79,18 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     float A_sp = params->Substrate.A_sp;
     float B_sp = params->Substrate.B_sp;
     float Eth_sp = params->Substrate.Eth_sp;
-    if (static_cast<viennaps::Material>(material) == viennaps::Material::Mask) {
+    if (material == maskId) {
       A_sp = params->Mask.A_sp;
       B_sp = params->Mask.B_sp;
       Eth_sp = params->Mask.Eth_sp;
-    } else if (static_cast<viennaps::Material>(material) ==
-               viennaps::Material::Polymer) {
+    } else if (material == polymerId) {
       A_sp = params->Polymer.A_sp;
       B_sp = params->Polymer.B_sp;
       Eth_sp = params->Polymer.Eth_sp;
     }
 
     float f_sp_theta;
-    if (static_cast<viennaps::Material>(material) ==
-            viennaps::Material::Polymer &&
-        params->Polymer.usePolyCosThetaYield) {
+    if (material == polymerId && params->Polymer.usePolyCosThetaYield) {
       const float c = cosTheta;
       const float sum = params->Polymer.a1 + params->Polymer.a2 +
                         params->Polymer.a3 + params->Polymer.a4;

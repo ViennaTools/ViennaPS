@@ -1,20 +1,11 @@
 #pragma once
 
-#ifndef __CUDACC__
-#include <lsMaterialMap.hpp>
-#endif
-
-#include <vcLogger.hpp>
-#include <vcSmartPointer.hpp>
-
 #include <array>
 #include <cstdint>
-#include <string>
+#include <stdexcept>
 #include <string_view>
 
 namespace viennaps {
-
-using namespace viennacore;
 
 enum class MaterialCategory : uint8_t {
   Generic,
@@ -29,7 +20,7 @@ enum class MaterialCategory : uint8_t {
   Misc
 };
 
-#define MATERIAL_LIST(X)                                                       \
+#define BUILTIN_MATERIAL_LIST(X)                                               \
   /* id, sym, cat, density_gcm3, conductive, color (hex) */                    \
   X(0, Mask, Hardmask, 500.0, false, 0x333333)                                 \
   X(1, Polymer, Generic, 1.2, false, 0xed3b13)                                 \
@@ -129,252 +120,100 @@ enum class MaterialCategory : uint8_t {
   X(172, SiC_HM, Hardmask, 3.2, false, 0x4f4f4f)                               \
   X(173, TiO, Misc, 4.9, false, 0x64b5f6)                                      \
   X(174, ZrO, Misc, 5.2, false, 0x5c6bc0)                                      \
-  X(175, SiO2_HM, Hardmask, 2.2, false, 0x66ccff)
-enum class Material : uint16_t {
+  X(175, SiO2_HM, Hardmask, 2.2, false, 0x66ccff)                              \
+  X(176, Custom, Generic, 0.0, false, 0xffffff)
+
+#ifndef MATERIAL_LIST
+#define MATERIAL_LIST(X) BUILTIN_MATERIAL_LIST(X)
+#endif
+
+enum class BuiltInMaterial : uint16_t {
 #define ENUM_ELEM(id, sym, cat, dens, cond, color) sym = id,
-  MATERIAL_LIST(ENUM_ELEM)
+  BUILTIN_MATERIAL_LIST(ENUM_ELEM)
 #undef ENUM_ELEM
 };
 
-struct MaterialInfo {
+struct BuiltInMaterialInfo {
   std::string_view name;
   MaterialCategory category;
-  double density_gcm3; // nominal; tune per PDK
+  double density_gcm3;
   bool conductive;
-  uint32_t colorHex; // 0xRRGGBB
+  uint32_t colorHex;
 };
 
-constexpr uint16_t kMaterialMaxId = 175;
+constexpr uint16_t kBuiltInMaterialMaxId = 176;
 
-constexpr std::array<MaterialInfo, kMaterialMaxId + 1> kMaterialTable = [] {
-  std::array<MaterialInfo, kMaterialMaxId + 1> t{};
-  // default fill
-  for (auto &e : t)
-    e = {"Undefined", MaterialCategory::Generic, 0.0, false, 0xcccccc};
-    // populate
+constexpr std::array<BuiltInMaterialInfo, kBuiltInMaterialMaxId + 1>
+    kBuiltInMaterialTable = [] {
+      std::array<BuiltInMaterialInfo, kBuiltInMaterialMaxId + 1> table{};
+      for (auto &entry : table) {
+        entry = {"Undefined", MaterialCategory::Generic, 0.0, false, 0xcccccc};
+      }
 #define FILL_ROW(id, sym, cat, dens, cond, color)                              \
-  t[id] = {#sym, MaterialCategory::cat, dens, cond, color};
-  MATERIAL_LIST(FILL_ROW)
+  table[id] = {#sym, MaterialCategory::cat, dens, cond, color};
+      BUILTIN_MATERIAL_LIST(FILL_ROW)
 #undef FILL_ROW
-  return t;
-}();
+      return table;
+    }();
 
-constexpr const MaterialInfo &info(Material m) {
-  auto id = static_cast<uint16_t>(m);
-  return kMaterialTable[id <= kMaterialMaxId ? id : 0]; // 0 == Mask or change
-                                                        // to Undefined id
+[[nodiscard]] constexpr bool isValidBuiltInMaterialId(uint16_t id) {
+  return id <= kBuiltInMaterialMaxId;
 }
 
-constexpr std::string_view to_string_view(Material m) { return info(m).name; }
-constexpr MaterialCategory categoryOf(Material m) { return info(m).category; }
-constexpr double density(Material m) { return info(m).density_gcm3; }
-constexpr bool isConductive(Material m) { return info(m).conductive; }
-constexpr uint32_t color(Material m) { return info(m).colorHex; }
+[[nodiscard]] constexpr bool isValidBuiltInMaterial(BuiltInMaterial material) {
+  return isValidBuiltInMaterialId(static_cast<uint16_t>(material));
+}
 
-template <class T> class MaterialValueMap {
-public:
-  using Value = T;
+[[nodiscard]] constexpr const BuiltInMaterialInfo &
+getBuiltInMaterialInfo(BuiltInMaterial material) {
+  const auto id = static_cast<uint16_t>(material);
+  return kBuiltInMaterialTable[isValidBuiltInMaterialId(id)
+                                   ? id
+                                   : static_cast<uint16_t>(
+                                         BuiltInMaterial::Undefined)];
+}
 
-  MaterialValueMap() = default;
+[[nodiscard]] constexpr std::string_view
+builtInMaterialToString(BuiltInMaterial material) {
+  return getBuiltInMaterialInfo(material).name;
+}
 
-  // generic constructor (works with map, vector<pair>, initializer_list, etc.)
-  template <class MapLike> explicit MaterialValueMap(const MapLike &mapLike) {
-    for (const auto &[key, value] : mapLike) {
-      set(key, value);
-    }
+[[nodiscard]] constexpr MaterialCategory categoryOf(BuiltInMaterial material) {
+  return getBuiltInMaterialInfo(material).category;
+}
+
+[[nodiscard]] constexpr double density(BuiltInMaterial material) {
+  return getBuiltInMaterialInfo(material).density_gcm3;
+}
+
+[[nodiscard]] constexpr bool isConductive(BuiltInMaterial material) {
+  return getBuiltInMaterialInfo(material).conductive;
+}
+
+[[nodiscard]] constexpr uint32_t color(BuiltInMaterial material) {
+  return getBuiltInMaterialInfo(material).colorHex;
+}
+
+[[nodiscard]] inline bool tryBuiltInMaterialFromString(std::string_view name,
+                                                       BuiltInMaterial &out) {
+#define MATCH_NAME(id, sym, cat, dens, cond, color)                            \
+  if (name == std::string_view(#sym)) {                                        \
+    out = BuiltInMaterial::sym;                                                \
+    return true;                                                               \
   }
+  BUILTIN_MATERIAL_LIST(MATCH_NAME)
+#undef MATCH_NAME
+  return false;
+}
 
-  // set value for a material
-  void set(Material m, const T &value) {
-    auto idx = toIndex(m);
-    values_[idx] = value;
-    isSet_[idx] = true;
+[[nodiscard]] inline BuiltInMaterial
+builtInMaterialFromString(std::string_view name) {
+  BuiltInMaterial material = BuiltInMaterial::Undefined;
+  if (!tryBuiltInMaterialFromString(name, material)) {
+    throw std::invalid_argument("Unknown built-in material name: " +
+                                std::string(name));
   }
-
-  // perfect-forwarding overload
-  template <class... Args> void emplace(Material m, Args &&...args) {
-    auto idx = toIndex(m);
-    values_[idx] = T(std::forward<Args>(args)...);
-    isSet_[idx] = true;
-  }
-
-  // get value or default T{}
-  [[nodiscard]] T get(Material m) const {
-    auto idx = toIndex(m);
-    return isSet_[idx] ? values_[idx] : T{};
-  }
-
-  // get reference (no copy)
-  [[nodiscard]] const T &getRef(Material m) const {
-    auto idx = toIndex(m);
-    return isSet_[idx] ? values_[idx] : default_;
-  }
-
-  void setDefault(const T &v) { default_ = v; }
-
-  [[nodiscard]] const T &getDefault() const { return default_; }
-
-  // check if user provided a value
-  [[nodiscard]] bool has(Material m) const { return isSet_[toIndex(m)]; }
-
-  // remove value -> fallback to default
-  void clear(Material m) { isSet_[toIndex(m)] = false; }
-
-  void clearAll() {
-    for (auto &b : isSet_) {
-      b = false;
-    }
-  }
-
-  // ================= ITERATOR =================
-  struct Entry {
-    Material material;
-    const T *value;
-    bool set;
-
-    [[nodiscard]] bool isSet() const { return set; }
-    [[nodiscard]] const T &getValue() const { return *value; }
-    [[nodiscard]] Material getMaterial() const { return material; }
-  };
-
-  class Iterator {
-  public:
-    Iterator(const MaterialValueMap *map, std::size_t idx)
-        : map_(map), idx_(idx) {
-      advanceToValid();
-    }
-
-    Iterator &operator++() {
-      ++idx_;
-      advanceToValid();
-      return *this;
-    }
-
-    bool operator!=(const Iterator &other) const { return idx_ != other.idx_; }
-
-    Entry operator*() const {
-      return Entry{static_cast<Material>(idx_), &map_->values_[idx_],
-                   map_->isSet_[idx_]};
-    }
-
-  private:
-    void advanceToValid() {
-      while (idx_ < map_->values_.size() && !map_->isSet_[idx_]) {
-        ++idx_;
-      }
-    }
-
-    const MaterialValueMap *map_;
-    std::size_t idx_;
-  };
-
-  Iterator begin() const { return Iterator(this, 0); }
-
-  Iterator end() const { return Iterator(this, values_.size()); }
-
-private:
-  static constexpr std::size_t toIndex(Material m) {
-    return static_cast<std::uint16_t>(m);
-  }
-
-  std::array<T, kMaterialMaxId + 1> values_{};
-  std::array<bool, kMaterialMaxId + 1> isSet_{};
-
-  // default instance used for reference return
-  T default_{};
-};
-
-#ifndef __CUDACC__
-/// A class that wraps the viennals MaterialMap class and provides a more user
-/// friendly interface. It also provides a mapping from the integer material id
-/// to the Material enum.
-class MaterialMap {
-  SmartPointer<viennals::MaterialMap> map_;
-
-public:
-  MaterialMap() { map_ = SmartPointer<viennals::MaterialMap>::New(); };
-
-  void insertNextMaterial(Material material) {
-    map_->insertNextMaterial(static_cast<int>(material));
-  }
-
-  void removeMaterial() { map_->removeLastMaterial(); }
-
-  // Returns the material **ID** at the given index. If the index is out of
-  // bounds, it returns -1
-  [[nodiscard]] int getMaterialIdAtIdx(std::size_t idx) const {
-    return map_->getMaterialId(idx);
-  }
-
-  // Returns the material **enum** at the given index. If the index is out of
-  // bounds, it returns Material::Undefined
-  [[nodiscard]] Material getMaterialAtIdx(std::size_t idx) const {
-    if (int id = getMaterialIdAtIdx(idx); id < 0) {
-      VIENNACORE_LOG_WARNING("Getting material with out-of-bounds index.");
-      return Material::Undefined;
-    } else {
-      return mapToMaterial(id);
-    }
-  }
-
-  void setMaterialAtIdx(std::size_t idx, const Material material) {
-    if (idx >= size()) {
-      VIENNACORE_LOG_ERROR("Setting material with out-of-bounds index.");
-      return;
-    }
-    map_->setMaterialId(idx, static_cast<int>(material));
-  }
-
-  [[nodiscard]] SmartPointer<viennals::MaterialMap> getMaterialMap() const {
-    return map_;
-  }
-
-  [[nodiscard]] inline std::size_t size() const {
-    return map_->getNumberOfLayers();
-  }
-
-  static inline bool isValidMaterial(const Material mat) {
-    switch (mat) {
-#define ENUM_ELEM(id, sym, cat, dens, cond, color)                             \
-  case Material::sym:                                                          \
-    return true;
-      MATERIAL_LIST(ENUM_ELEM)
-#undef ENUM_ELEM
-    default:
-      return false;
-    }
-  }
-
-  static inline Material mapToMaterial(const int matId) {
-    auto mat = static_cast<Material>(matId);
-    if (Logger::hasDebug() && !isValidMaterial(mat)) {
-      VIENNACORE_LOG_DEBUG("mapToMaterial: Invalid material id " +
-                           std::to_string(matId) + " mapped to Undefined.");
-    }
-    return mat;
-  }
-
-  template <class T> static inline Material mapToMaterial(const T matId) {
-    return mapToMaterial(static_cast<int>(matId));
-  }
-
-  template <class T>
-  static inline bool isMaterial(const T matId, const Material material) {
-    return mapToMaterial(matId) == material;
-  }
-
-  template <class T> static inline bool isHardmask(const T matId) {
-    return categoryOf(mapToMaterial(matId)) == MaterialCategory::Hardmask;
-  }
-
-  static inline std::string toString(const Material matId) {
-    return std::string(to_string_view(matId));
-  }
-
-  static inline std::string toString(const int matId) {
-    return std::string(to_string_view(mapToMaterial(matId)));
-  }
-};
-#endif
+  return material;
+}
 
 } // namespace viennaps

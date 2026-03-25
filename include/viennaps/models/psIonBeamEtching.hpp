@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../materials/psMaterials.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
-#include "../psMaterials.hpp"
 #include "psIonBeamParameters.hpp"
 #include "psIonModelUtil.hpp"
 #include "psPipelineParameters.hpp"

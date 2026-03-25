@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../materials/psMaterialValueMap.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../process/psSurfaceModel.hpp"
 #include "../process/psVelocityField.hpp"
-#include "../psMaterials.hpp"
 
 #include <vcSmartPointer.hpp>
 

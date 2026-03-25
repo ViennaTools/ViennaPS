@@ -181,7 +181,8 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
                                                  VIENNACORE_COMPILE_SHARED_LIB=1)
   target_sources(
     ${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModelsEmulation.cpp"
-                        "lib/specModelsSimulation.cpp" "lib/specProcess.cpp")
+                        "lib/specModelsSimulation.cpp" "lib/specProcess.cpp"
+                        "lib/MaterialRegistry.cpp")
 
   set_target_properties(
     ${LIB_NAME}

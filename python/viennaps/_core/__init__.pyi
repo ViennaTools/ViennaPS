@@ -6,14 +6,14 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
-from viennaps import d3
+from viennaps import d2
 import viennaps.d3
+from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
-__all__: list[str] = ['AdvectionParameters', 'AtomicLayerProcessParameters', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialMap', 'MetaDataLevel', 'NormalizationType', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'Slice', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionParameters', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MetaDataLevel', 'NormalizationType', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'Slice', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'setNumThreads', 'util', 'version']
 class AdvectionParameters:
     adaptiveTimeStepping: bool
     calculateIntermediateVelocities: bool
@@ -86,6 +86,108 @@ class AtomicLayerProcessParameters:
     @purgePulseTime.setter
     def purgePulseTime(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+class BuiltInMaterial(enum.IntEnum):
+    """
+    Fixed built-in material types for domain and level sets
+    """
+    ARC: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.ARC: 57>
+    AZO: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.AZO: 152>
+    Air: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Air: 2>
+    Al2O3: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Al2O3: 31>
+    AlN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.AlN: 37>
+    Au: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Au: 91>
+    BN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.BN: 39>
+    BPSG: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.BPSG: 54>
+    BulkSi: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.BulkSi: 22>
+    C: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.C: 50>
+    Co: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Co: 72>
+    CoW: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.CoW: 85>
+    Cr: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Cr: 92>
+    Cu: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Cu: 71>
+    Custom: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Custom: 176>
+    Dielectric: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Dielectric: 4>
+    GAS: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.GAS: 3>
+    GST: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.GST: 135>
+    GaAs: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.GaAs: 112>
+    GaN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.GaN: 111>
+    Ge: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Ge: 110>
+    Graphene: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Graphene: 130>
+    HSQ: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.HSQ: 60>
+    HfO2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.HfO2: 32>
+    ITO: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.ITO: 150>
+    InGaAs: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.InGaAs: 114>
+    InP: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.InP: 113>
+    Ir: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Ir: 81>
+    La2O3: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.La2O3: 36>
+    Mask: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Mask: 0>
+    Metal: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Metal: 5>
+    Mn: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Mn: 88>
+    MnN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.MnN: 90>
+    MnO: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.MnO: 89>
+    Mo: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Mo: 80>
+    MoS2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.MoS2: 131>
+    MoSi2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.MoSi2: 102>
+    Ni: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Ni: 74>
+    NiW: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.NiW: 86>
+    PHS: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.PHS: 59>
+    PMMA: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.PMMA: 58>
+    PSG: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.PSG: 55>
+    Pd: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Pd: 83>
+    PolySi: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.PolySi: 11>
+    Polymer: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Polymer: 1>
+    Pt: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Pt: 75>
+    Rh: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Rh: 82>
+    Ru: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Ru: 73>
+    RuTa: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.RuTa: 84>
+    SOC: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SOC: 52>
+    SOG: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SOG: 53>
+    Si: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Si: 10>
+    Si3N4: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Si3N4: 16>
+    SiBCN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiBCN: 19>
+    SiC: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiC: 14>
+    SiCN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiCN: 18>
+    SiCOH: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiCOH: 20>
+    SiC_HM: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiC_HM: 172>
+    SiGaN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiGaN: 115>
+    SiGe: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiGe: 13>
+    SiLK: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiLK: 56>
+    SiN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiN: 15>
+    SiN_HM: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiN_HM: 171>
+    SiO2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiO2: 30>
+    SiO2_HM: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiO2_HM: 175>
+    SiOCH: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiOCH: 116>
+    SiOCN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiOCN: 21>
+    SiON: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiON: 17>
+    SiON_HM: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.SiON_HM: 170>
+    Ta: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Ta: 76>
+    Ta2O5: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Ta2O5: 38>
+    TaN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.TaN: 77>
+    Ti: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Ti: 78>
+    TiAlN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.TiAlN: 87>
+    TiN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.TiN: 79>
+    TiO: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.TiO: 173>
+    TiO2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.TiO2: 34>
+    TiSi2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.TiSi2: 101>
+    Undefined: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Undefined: 6>
+    VO2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.VO2: 134>
+    W: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.W: 70>
+    WS2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.WS2: 132>
+    WSe2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.WSe2: 133>
+    WSi2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.WSi2: 100>
+    Y2O3: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.Y2O3: 35>
+    ZnO: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.ZnO: 151>
+    ZrO: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.ZrO: 174>
+    ZrO2: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.ZrO2: 33>
+    aC: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.aC: 51>
+    aSi: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.aSi: 12>
+    hBN: typing.ClassVar[BuiltInMaterial]  # value = <BuiltInMaterial.hBN: 40>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 class CF4O2Parameters:
     Ions: CF4O2ParametersIons
     Mask: CF4O2ParametersMask
@@ -798,107 +900,132 @@ class Logger:
         ...
     def print(self) -> None:
         ...
-class Material(enum.IntEnum):
-    """
-    Material types for domain and level sets
-    """
-    ARC: typing.ClassVar[Material]  # value = <Material.ARC: 57>
-    AZO: typing.ClassVar[Material]  # value = <Material.AZO: 152>
-    Air: typing.ClassVar[Material]  # value = <Material.Air: 2>
-    Al2O3: typing.ClassVar[Material]  # value = <Material.Al2O3: 31>
-    AlN: typing.ClassVar[Material]  # value = <Material.AlN: 37>
-    Au: typing.ClassVar[Material]  # value = <Material.Au: 91>
-    BN: typing.ClassVar[Material]  # value = <Material.BN: 39>
-    BPSG: typing.ClassVar[Material]  # value = <Material.BPSG: 54>
-    BulkSi: typing.ClassVar[Material]  # value = <Material.BulkSi: 22>
-    C: typing.ClassVar[Material]  # value = <Material.C: 50>
-    Co: typing.ClassVar[Material]  # value = <Material.Co: 72>
-    CoW: typing.ClassVar[Material]  # value = <Material.CoW: 85>
-    Cr: typing.ClassVar[Material]  # value = <Material.Cr: 92>
-    Cu: typing.ClassVar[Material]  # value = <Material.Cu: 71>
-    Dielectric: typing.ClassVar[Material]  # value = <Material.Dielectric: 4>
-    GAS: typing.ClassVar[Material]  # value = <Material.GAS: 3>
-    GST: typing.ClassVar[Material]  # value = <Material.GST: 135>
-    GaAs: typing.ClassVar[Material]  # value = <Material.GaAs: 112>
-    GaN: typing.ClassVar[Material]  # value = <Material.GaN: 111>
-    Ge: typing.ClassVar[Material]  # value = <Material.Ge: 110>
-    Graphene: typing.ClassVar[Material]  # value = <Material.Graphene: 130>
-    HSQ: typing.ClassVar[Material]  # value = <Material.HSQ: 60>
-    HfO2: typing.ClassVar[Material]  # value = <Material.HfO2: 32>
-    ITO: typing.ClassVar[Material]  # value = <Material.ITO: 150>
-    InGaAs: typing.ClassVar[Material]  # value = <Material.InGaAs: 114>
-    InP: typing.ClassVar[Material]  # value = <Material.InP: 113>
-    Ir: typing.ClassVar[Material]  # value = <Material.Ir: 81>
-    La2O3: typing.ClassVar[Material]  # value = <Material.La2O3: 36>
-    Mask: typing.ClassVar[Material]  # value = <Material.Mask: 0>
-    Metal: typing.ClassVar[Material]  # value = <Material.Metal: 5>
-    Mn: typing.ClassVar[Material]  # value = <Material.Mn: 88>
-    MnN: typing.ClassVar[Material]  # value = <Material.MnN: 90>
-    MnO: typing.ClassVar[Material]  # value = <Material.MnO: 89>
-    Mo: typing.ClassVar[Material]  # value = <Material.Mo: 80>
-    MoS2: typing.ClassVar[Material]  # value = <Material.MoS2: 131>
-    MoSi2: typing.ClassVar[Material]  # value = <Material.MoSi2: 102>
-    Ni: typing.ClassVar[Material]  # value = <Material.Ni: 74>
-    NiW: typing.ClassVar[Material]  # value = <Material.NiW: 86>
-    PHS: typing.ClassVar[Material]  # value = <Material.PHS: 59>
-    PMMA: typing.ClassVar[Material]  # value = <Material.PMMA: 58>
-    PSG: typing.ClassVar[Material]  # value = <Material.PSG: 55>
-    Pd: typing.ClassVar[Material]  # value = <Material.Pd: 83>
-    PolySi: typing.ClassVar[Material]  # value = <Material.PolySi: 11>
-    Polymer: typing.ClassVar[Material]  # value = <Material.Polymer: 1>
-    Pt: typing.ClassVar[Material]  # value = <Material.Pt: 75>
-    Rh: typing.ClassVar[Material]  # value = <Material.Rh: 82>
-    Ru: typing.ClassVar[Material]  # value = <Material.Ru: 73>
-    RuTa: typing.ClassVar[Material]  # value = <Material.RuTa: 84>
-    SOC: typing.ClassVar[Material]  # value = <Material.SOC: 52>
-    SOG: typing.ClassVar[Material]  # value = <Material.SOG: 53>
-    Si: typing.ClassVar[Material]  # value = <Material.Si: 10>
-    Si3N4: typing.ClassVar[Material]  # value = <Material.Si3N4: 16>
-    SiBCN: typing.ClassVar[Material]  # value = <Material.SiBCN: 19>
-    SiC: typing.ClassVar[Material]  # value = <Material.SiC: 14>
-    SiCN: typing.ClassVar[Material]  # value = <Material.SiCN: 18>
-    SiCOH: typing.ClassVar[Material]  # value = <Material.SiCOH: 20>
-    SiC_HM: typing.ClassVar[Material]  # value = <Material.SiC_HM: 172>
-    SiGaN: typing.ClassVar[Material]  # value = <Material.SiGaN: 115>
-    SiGe: typing.ClassVar[Material]  # value = <Material.SiGe: 13>
-    SiLK: typing.ClassVar[Material]  # value = <Material.SiLK: 56>
-    SiN: typing.ClassVar[Material]  # value = <Material.SiN: 15>
-    SiN_HM: typing.ClassVar[Material]  # value = <Material.SiN_HM: 171>
-    SiO2: typing.ClassVar[Material]  # value = <Material.SiO2: 30>
-    SiO2_HM: typing.ClassVar[Material]  # value = <Material.SiO2_HM: 175>
-    SiOCH: typing.ClassVar[Material]  # value = <Material.SiOCH: 116>
-    SiOCN: typing.ClassVar[Material]  # value = <Material.SiOCN: 21>
-    SiON: typing.ClassVar[Material]  # value = <Material.SiON: 17>
-    SiON_HM: typing.ClassVar[Material]  # value = <Material.SiON_HM: 170>
-    Ta: typing.ClassVar[Material]  # value = <Material.Ta: 76>
-    Ta2O5: typing.ClassVar[Material]  # value = <Material.Ta2O5: 38>
-    TaN: typing.ClassVar[Material]  # value = <Material.TaN: 77>
-    Ti: typing.ClassVar[Material]  # value = <Material.Ti: 78>
-    TiAlN: typing.ClassVar[Material]  # value = <Material.TiAlN: 87>
-    TiN: typing.ClassVar[Material]  # value = <Material.TiN: 79>
-    TiO: typing.ClassVar[Material]  # value = <Material.TiO: 173>
-    TiO2: typing.ClassVar[Material]  # value = <Material.TiO2: 34>
-    TiSi2: typing.ClassVar[Material]  # value = <Material.TiSi2: 101>
-    Undefined: typing.ClassVar[Material]  # value = <Material.Undefined: 6>
-    VO2: typing.ClassVar[Material]  # value = <Material.VO2: 134>
-    W: typing.ClassVar[Material]  # value = <Material.W: 70>
-    WS2: typing.ClassVar[Material]  # value = <Material.WS2: 132>
-    WSe2: typing.ClassVar[Material]  # value = <Material.WSe2: 133>
-    WSi2: typing.ClassVar[Material]  # value = <Material.WSi2: 100>
-    Y2O3: typing.ClassVar[Material]  # value = <Material.Y2O3: 35>
-    ZnO: typing.ClassVar[Material]  # value = <Material.ZnO: 151>
-    ZrO: typing.ClassVar[Material]  # value = <Material.ZrO: 174>
-    ZrO2: typing.ClassVar[Material]  # value = <Material.ZrO2: 33>
-    aC: typing.ClassVar[Material]  # value = <Material.aC: 51>
-    aSi: typing.ClassVar[Material]  # value = <Material.aSi: 12>
-    hBN: typing.ClassVar[Material]  # value = <Material.hBN: 40>
-    @classmethod
-    def __new__(cls, value):
+class Material:
+    ARC: typing.ClassVar[Material]  # value = Material('ARC')
+    AZO: typing.ClassVar[Material]  # value = Material('AZO')
+    Air: typing.ClassVar[Material]  # value = Material('Air')
+    Al2O3: typing.ClassVar[Material]  # value = Material('Al2O3')
+    AlN: typing.ClassVar[Material]  # value = Material('AlN')
+    Au: typing.ClassVar[Material]  # value = Material('Au')
+    BN: typing.ClassVar[Material]  # value = Material('BN')
+    BPSG: typing.ClassVar[Material]  # value = Material('BPSG')
+    BulkSi: typing.ClassVar[Material]  # value = Material('BulkSi')
+    C: typing.ClassVar[Material]  # value = Material('C')
+    Co: typing.ClassVar[Material]  # value = Material('Co')
+    CoW: typing.ClassVar[Material]  # value = Material('CoW')
+    Cr: typing.ClassVar[Material]  # value = Material('Cr')
+    Cu: typing.ClassVar[Material]  # value = Material('Cu')
+    Custom: typing.ClassVar[Material]  # value = Material('Custom')
+    Dielectric: typing.ClassVar[Material]  # value = Material('Dielectric')
+    GAS: typing.ClassVar[Material]  # value = Material('GAS')
+    GST: typing.ClassVar[Material]  # value = Material('GST')
+    GaAs: typing.ClassVar[Material]  # value = Material('GaAs')
+    GaN: typing.ClassVar[Material]  # value = Material('GaN')
+    Ge: typing.ClassVar[Material]  # value = Material('Ge')
+    Graphene: typing.ClassVar[Material]  # value = Material('Graphene')
+    HSQ: typing.ClassVar[Material]  # value = Material('HSQ')
+    HfO2: typing.ClassVar[Material]  # value = Material('HfO2')
+    ITO: typing.ClassVar[Material]  # value = Material('ITO')
+    InGaAs: typing.ClassVar[Material]  # value = Material('InGaAs')
+    InP: typing.ClassVar[Material]  # value = Material('InP')
+    Ir: typing.ClassVar[Material]  # value = Material('Ir')
+    La2O3: typing.ClassVar[Material]  # value = Material('La2O3')
+    Mask: typing.ClassVar[Material]  # value = Material('Mask')
+    Metal: typing.ClassVar[Material]  # value = Material('Metal')
+    Mn: typing.ClassVar[Material]  # value = Material('Mn')
+    MnN: typing.ClassVar[Material]  # value = Material('MnN')
+    MnO: typing.ClassVar[Material]  # value = Material('MnO')
+    Mo: typing.ClassVar[Material]  # value = Material('Mo')
+    MoS2: typing.ClassVar[Material]  # value = Material('MoS2')
+    MoSi2: typing.ClassVar[Material]  # value = Material('MoSi2')
+    Ni: typing.ClassVar[Material]  # value = Material('Ni')
+    NiW: typing.ClassVar[Material]  # value = Material('NiW')
+    PHS: typing.ClassVar[Material]  # value = Material('PHS')
+    PMMA: typing.ClassVar[Material]  # value = Material('PMMA')
+    PSG: typing.ClassVar[Material]  # value = Material('PSG')
+    Pd: typing.ClassVar[Material]  # value = Material('Pd')
+    PolySi: typing.ClassVar[Material]  # value = Material('PolySi')
+    Polymer: typing.ClassVar[Material]  # value = Material('Polymer')
+    Pt: typing.ClassVar[Material]  # value = Material('Pt')
+    Rh: typing.ClassVar[Material]  # value = Material('Rh')
+    Ru: typing.ClassVar[Material]  # value = Material('Ru')
+    RuTa: typing.ClassVar[Material]  # value = Material('RuTa')
+    SOC: typing.ClassVar[Material]  # value = Material('SOC')
+    SOG: typing.ClassVar[Material]  # value = Material('SOG')
+    Si: typing.ClassVar[Material]  # value = Material('Si')
+    Si3N4: typing.ClassVar[Material]  # value = Material('Si3N4')
+    SiBCN: typing.ClassVar[Material]  # value = Material('SiBCN')
+    SiC: typing.ClassVar[Material]  # value = Material('SiC')
+    SiCN: typing.ClassVar[Material]  # value = Material('SiCN')
+    SiCOH: typing.ClassVar[Material]  # value = Material('SiCOH')
+    SiC_HM: typing.ClassVar[Material]  # value = Material('SiC_HM')
+    SiGaN: typing.ClassVar[Material]  # value = Material('SiGaN')
+    SiGe: typing.ClassVar[Material]  # value = Material('SiGe')
+    SiLK: typing.ClassVar[Material]  # value = Material('SiLK')
+    SiN: typing.ClassVar[Material]  # value = Material('SiN')
+    SiN_HM: typing.ClassVar[Material]  # value = Material('SiN_HM')
+    SiO2: typing.ClassVar[Material]  # value = Material('SiO2')
+    SiO2_HM: typing.ClassVar[Material]  # value = Material('SiO2_HM')
+    SiOCH: typing.ClassVar[Material]  # value = Material('SiOCH')
+    SiOCN: typing.ClassVar[Material]  # value = Material('SiOCN')
+    SiON: typing.ClassVar[Material]  # value = Material('SiON')
+    SiON_HM: typing.ClassVar[Material]  # value = Material('SiON_HM')
+    Ta: typing.ClassVar[Material]  # value = Material('Ta')
+    Ta2O5: typing.ClassVar[Material]  # value = Material('Ta2O5')
+    TaN: typing.ClassVar[Material]  # value = Material('TaN')
+    Ti: typing.ClassVar[Material]  # value = Material('Ti')
+    TiAlN: typing.ClassVar[Material]  # value = Material('TiAlN')
+    TiN: typing.ClassVar[Material]  # value = Material('TiN')
+    TiO: typing.ClassVar[Material]  # value = Material('TiO')
+    TiO2: typing.ClassVar[Material]  # value = Material('TiO2')
+    TiSi2: typing.ClassVar[Material]  # value = Material('TiSi2')
+    Undefined: typing.ClassVar[Material]  # value = Material('Undefined')
+    VO2: typing.ClassVar[Material]  # value = Material('VO2')
+    W: typing.ClassVar[Material]  # value = Material('W')
+    WS2: typing.ClassVar[Material]  # value = Material('WS2')
+    WSe2: typing.ClassVar[Material]  # value = Material('WSe2')
+    WSi2: typing.ClassVar[Material]  # value = Material('WSi2')
+    Y2O3: typing.ClassVar[Material]  # value = Material('Y2O3')
+    ZnO: typing.ClassVar[Material]  # value = Material('ZnO')
+    ZrO: typing.ClassVar[Material]  # value = Material('ZrO')
+    ZrO2: typing.ClassVar[Material]  # value = Material('ZrO2')
+    aC: typing.ClassVar[Material]  # value = Material('aC')
+    aSi: typing.ClassVar[Material]  # value = Material('aSi')
+    hBN: typing.ClassVar[Material]  # value = Material('hBN')
+    @staticmethod
+    def custom(id: typing.SupportsInt | typing.SupportsIndex) -> Material:
         ...
-    def __format__(self, format_spec):
-        """
-        Convert to a string according to format_spec.
-        """
+    def __eq__(self, arg0: Material) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: BuiltInMaterial) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    def __ne__(self, arg0: Material) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def builtIn(self) -> BuiltInMaterial:
+        ...
+    def customId(self) -> int:
+        ...
+    def isBuiltIn(self) -> bool:
+        ...
+    def isCustom(self) -> bool:
+        ...
+    def kind(self) -> ...:
+        ...
+    def legacyId(self) -> int:
+        ...
 class MaterialCategory(enum.IntEnum):
     Compound: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.Compound: 6>
     Generic: typing.ClassVar[MaterialCategory]  # value = <MaterialCategory.Generic: 0>
@@ -938,7 +1065,22 @@ class MaterialInfo:
     @property
     def name(self) -> str:
         ...
+class MaterialKind(enum.IntEnum):
+    BuiltIn: typing.ClassVar[MaterialKind]  # value = <MaterialKind.BuiltIn: 0>
+    Custom: typing.ClassVar[MaterialKind]  # value = <MaterialKind.Custom: 1>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 class MaterialMap:
+    @staticmethod
+    def fromString(name: str, registry: MaterialRegistry) -> Material:
+        """
+        Resolve built-in or register custom material by name.
+        """
     @staticmethod
     def isMaterial(arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: Material) -> bool:
         ...
@@ -963,6 +1105,23 @@ class MaterialMap:
     def insertNextMaterial(self, material: Material) -> None:
         ...
     def size(self) -> int:
+        ...
+class MaterialRegistry:
+    def __init__(self) -> None:
+        ...
+    def customMaterialCount(self) -> int:
+        ...
+    def findMaterial(self, name: str) -> viennaps._core.Material | None:
+        ...
+    def getMaterial(self, name: str) -> Material:
+        ...
+    def getName(self, material: Material) -> str:
+        ...
+    def hasMaterial(self, name: str) -> bool:
+        ...
+    def isBuiltIn(self, material: Material) -> bool:
+        ...
+    def registerMaterial(self, name: str) -> Material:
         ...
 class MetaDataLevel(enum.IntEnum):
     FULL: typing.ClassVar[MetaDataLevel]  # value = <MetaDataLevel.FULL: 3>

@@ -76,10 +76,10 @@ public:
     // Check format version
     char formatVersion;
     fin.read(&formatVersion, 1);
-    if (formatVersion > 0) { // Update this when version changes
+    if (formatVersion > 1) {
       VIENNACORE_LOG_ERROR("Reading domain of version " +
                            std::to_string(formatVersion) +
-                           " with reader of version 0 failed.");
+                           " with reader of version 1 failed.");
       return;
     }
 
@@ -114,12 +114,25 @@ public:
       fin.read(reinterpret_cast<char *>(&numMaterials), sizeof(uint32_t));
       assert(numMaterials == numLevelSets);
 
-      // Read each material ID and insert corresponding level set
+      // Read each material and insert corresponding level set.
       for (uint32_t i = 0; i < numMaterials; i++) {
-        int materialId;
-        fin.read(reinterpret_cast<char *>(&materialId), sizeof(int));
-        domain->insertNextLevelSetAsMaterial(
-            levelSets[i], static_cast<Material>(materialId), false);
+        Material material = Material::Undefined;
+
+        if (formatVersion == 0) {
+          int materialId;
+          fin.read(reinterpret_cast<char *>(&materialId), sizeof(int));
+          material = Material::fromLegacyId(materialId);
+        } else {
+          uint32_t nameLength = 0;
+          fin.read(reinterpret_cast<char *>(&nameLength), sizeof(uint32_t));
+          std::string materialName(nameLength, '\0');
+          fin.read(materialName.data(),
+                   static_cast<std::streamsize>(nameLength));
+          material = MaterialMap::fromString(materialName,
+                                             domain->getMaterialRegistry());
+        }
+
+        domain->insertNextLevelSetAsMaterial(levelSets[i], material, false);
       }
 
     } else {

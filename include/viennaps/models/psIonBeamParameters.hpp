@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../psMaterials.hpp"
+#include "../materials/psMaterials.hpp"
 
 #include <functional>
 #include <unordered_map>

@@ -14,6 +14,7 @@
 #include <pybind11/iostream.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/numpy.h>
+#include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
@@ -516,6 +517,37 @@ template <int D> void bindApi(py::module &module) {
            "Get the number of level sets in the domain.")
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
+      .def("getMaterialRegistry",
+           py::overload_cast<>(&Domain<T, D>::getMaterialRegistry),
+           py::return_value_policy::reference_internal,
+           "Get the domain-local material registry.")
+      .def(
+          "registerMaterial",
+          [](Domain<T, D> &self, const std::string &name) {
+            return self.getMaterialRegistry().registerMaterial(name);
+          },
+          py::arg("name"),
+          "Register a material by name in this domain and return handle.")
+      .def(
+          "hasMaterial",
+          [](const Domain<T, D> &self, const std::string &name) {
+            return self.getMaterialRegistry().hasMaterial(name);
+          },
+          py::arg("name"),
+          "Check whether material name resolves in this domain.")
+      .def(
+          "getMaterialByName",
+          [](const Domain<T, D> &self, const std::string &name) {
+            return self.getMaterialRegistry().getMaterial(name);
+          },
+          py::arg("name"), "Resolve material by name in this domain.")
+      .def(
+          "getMaterialName",
+          [](const Domain<T, D> &self, const Material material) {
+            return std::string(self.getMaterialRegistry().getName(material));
+          },
+          py::arg("material"),
+          "Resolve canonical material name in this domain.")
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
