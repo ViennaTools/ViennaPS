@@ -905,20 +905,15 @@ template <int D> void bindApi(py::module &module) {
   // Isotropic Process
   py::class_<IsotropicProcess<T, D>, SmartPointer<IsotropicProcess<T, D>>>(
       module, "IsotropicProcess", processModel)
-      .def(py::init([](const T rate, const Material mask) {
-             return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
-           }),
-           py::arg("rate") = 1., py::arg("maskMaterial") = Material::Undefined)
-      .def(py::init([](const T rate, const std::vector<Material> mask) {
-             return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
-           }),
-           py::arg("rate"), py::arg("maskMaterial"))
-      .def(py::init([](std::unordered_map<Material, T> materialRates,
-                       T defaultRate) {
-             return SmartPointer<IsotropicProcess<T, D>>::New(materialRates,
-                                                              defaultRate);
-           }),
-           py::arg("materialRates"), py::arg("defaultRate") = 0.);
+      .def(py::init<T, Material>(), py::arg("rate") = 1.,
+           py::arg("maskMaterial") = Material::Undefined)
+      .def(py::init<T, std::vector<Material> const &>(), py::arg("rate") = 1.,
+           py::arg("maskMaterials"))
+      .def(py::init<std::unordered_map<Material, T>, T>(),
+           py::arg("materialRates"), py::arg("defaultRate") = 0.)
+      .def("setIsotropicRate", &IsotropicProcess<T, D>::setIsotropicRate)
+      .def("setMaterialRate", &IsotropicProcess<T, D>::setMaterialRate,
+           py::arg("material"), py::arg("rate"));
 
   // DirectionalProcess
   py::class_<DirectionalProcess<T, D>, SmartPointer<DirectionalProcess<T, D>>>(

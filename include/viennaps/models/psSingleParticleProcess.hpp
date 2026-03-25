@@ -13,11 +13,10 @@ using namespace viennacore;
 namespace impl {
 template <typename NumericType, int D>
 class SingleParticleSurfaceModel : public viennaps::SurfaceModel<NumericType> {
-  using MaterialRateMap = MaterialValueMap<NumericType>;
-  const MaterialRateMap materialRates_;
+  MaterialValueMap<NumericType> &materialRates_;
 
 public:
-  SingleParticleSurfaceModel(MaterialRateMap const &materialRates)
+  SingleParticleSurfaceModel(MaterialValueMap<NumericType> &materialRates)
       : materialRates_(materialRates) {}
 
   SmartPointer<std::vector<NumericType>>
