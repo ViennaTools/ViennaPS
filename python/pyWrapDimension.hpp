@@ -733,24 +733,18 @@ template <int D> void bindApi(py::module &module) {
   py::class_<SingleParticleProcess<T, D>,
              SmartPointer<SingleParticleProcess<T, D>>>(
       module, "SingleParticleProcess", processModel)
-      .def(py::init([](const T rate, const T sticking, const T power,
-                       const Material mask) {
-             return SmartPointer<SingleParticleProcess<T, D>>::New(
-                 rate, sticking, power, mask);
-           }),
-           py::arg("rate") = 1., py::arg("stickingProbability") = 1.,
-           py::arg("sourceExponent") = 1.,
+      .def(py::init<T, T, T, Material>(), py::arg("rate") = 1.,
+           py::arg("stickingProbability") = 1., py::arg("sourceExponent") = 1.,
            py::arg("maskMaterial") = Material::Undefined)
-      .def(py::init([](const T rate, const T sticking, const T power,
-                       const std::vector<Material> &mask) {
-             return SmartPointer<SingleParticleProcess<T, D>>::New(
-                 rate, sticking, power, mask);
-           }),
-           py::arg("rate"), py::arg("stickingProbability"),
-           py::arg("sourceExponent"), py::arg("maskMaterials"))
+      .def(py::init<T, T, T, std::vector<Material>>(), py::arg("rate"),
+           py::arg("stickingProbability"), py::arg("sourceExponent"),
+           py::arg("maskMaterials"))
       .def(py::init<std::unordered_map<Material, T>, T, T>(),
            py::arg("materialRates"), py::arg("stickingProbability"),
-           py::arg("sourceExponent"));
+           py::arg("sourceExponent"))
+      .def("setDefaultRate", &SingleParticleProcess<T, D>::setDefaultRate)
+      .def("setMaterialRate", &SingleParticleProcess<T, D>::setMaterialRate,
+           py::arg("material"), py::arg("rate"));
 
   // Multi Particle Process
   py::class_<MultiParticleProcess<T, D>,
@@ -1516,9 +1510,9 @@ template <int D> void bindApi(py::module &module) {
   py::class_<gpu::SingleParticleProcess<T, D>,
              SmartPointer<gpu::SingleParticleProcess<T, D>>>(
       m_gpu, "SingleParticleProcess", processModel_gpu)
-      .def(py::init<std::unordered_map<Material, T>, T, T, T>(),
-           py::arg("materialRates"), py::arg("rate"),
-           py::arg("stickingProbability"), py::arg("sourceExponent"));
+      .def(py::init<MaterialValueMap<T> const &, T, T>(),
+           py::arg("materialRates"), py::arg("stickingProbability"),
+           py::arg("sourceExponent"));
 
   // Multi Particle Process
   py::class_<gpu::MultiParticleProcess<T, D>,

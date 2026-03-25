@@ -180,15 +180,6 @@ public:
     initialize();
   }
 
-#ifdef VIENNACORE_COMPILE_GPU
-  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
-    auto model = SmartPointer<gpu::SingleParticleProcess<NumericType, D>>::New(
-        materialRates_, stickingProbability_, sourceDistributionPower_);
-    model->setProcessName(this->getProcessName().value_or("default"));
-    return model;
-  }
-#endif
-
   void setDefaultRate(NumericType rate) {
     materialRates_.setDefault(rate);
     this->processMetaData["Default Rate"] = std::vector<double>{rate};
@@ -199,6 +190,15 @@ public:
     this->processMetaData[MaterialMap::toString(material) + " Rate"] =
         std::vector<double>{rate};
   }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
+    auto model = SmartPointer<gpu::SingleParticleProcess<NumericType, D>>::New(
+        materialRates_, stickingProbability_, sourceDistributionPower_);
+    model->setProcessName(this->getProcessName().value_or("default"));
+    return model;
+  }
+#endif
 
 private:
   void initialize() {

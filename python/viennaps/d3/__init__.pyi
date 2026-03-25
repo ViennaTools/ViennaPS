@@ -882,6 +882,10 @@ class SingleParticleProcess(ProcessModel):
     @typing.overload
     def __init__(self, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], stickingProbability: typing.SupportsFloat | typing.SupportsIndex, sourceExponent: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+    def setDefaultRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class SphereDistribution(ProcessModel):
     @typing.overload
     def __init__(self, radius: typing.SupportsFloat | typing.SupportsIndex, mask: viennals.d3.Domain) -> None:
