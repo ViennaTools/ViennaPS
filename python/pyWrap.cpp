@@ -158,7 +158,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("size", &MaterialMap::size)
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
-      .def_static("isMaterial", &MaterialMap::isMaterial<T>)
+      .def_static("isMaterial", py::overload_cast<const T, const Material>(
+                                    &MaterialMap::isMaterial<T>))
+      .def_static("isMaterial",
+                  py::overload_cast<const T, const std::span<const Material>>(
+                      &MaterialMap::isMaterial<T>))
       .def_static("fromString", &MaterialMap::fromString, py::arg("name"),
                   py::arg("registry"),
                   "Resolve built-in or register custom material by name.")

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../materials/psMaterialValueMap.hpp"
 #include "../psConstants.hpp"
 
 #include <unordered_map>
@@ -13,8 +14,8 @@ template <typename NumericType> struct PlasmaEtchingParameters {
   NumericType passivationFlux = 1.0e2;
 
   // sticking probabilities
-  std::unordered_map<int, NumericType> beta_E;
-  std::unordered_map<int, NumericType> beta_P;
+  MaterialValueMap<NumericType> beta_E;
+  MaterialValueMap<NumericType> beta_P;
 
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
@@ -98,11 +99,13 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     processData["Etchant Flux"] = {etchantFlux};
     processData["Passivation Flux"] = {passivationFlux};
 
-    for (const auto &pair : beta_E) {
-      processData["Beta_E " + std::to_string(pair.first)] = {pair.second};
+    for (auto entry : beta_E) {
+      processData["Beta_E " + to_string(entry.getMaterial())] =
+          std::vector<double>{entry.getValue()};
     }
-    for (const auto &pair : beta_P) {
-      processData["Beta_P " + std::to_string(pair.first)] = {pair.second};
+    for (auto entry : beta_P) {
+      processData["Beta_P " + to_string(entry.getMaterial())] =
+          std::vector<double>{entry.getValue()};
     }
 
     if (etchStopDepth != std::numeric_limits<NumericType>::lowest())

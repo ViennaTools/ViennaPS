@@ -6,8 +6,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
+import viennaps.d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
@@ -1082,7 +1082,12 @@ class MaterialMap:
         Resolve built-in or register custom material by name.
         """
     @staticmethod
+    @typing.overload
     def isMaterial(arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: Material) -> bool:
+        ...
+    @staticmethod
+    @typing.overload
+    def isMaterial(*args, **kwargs) -> bool:
         ...
     @staticmethod
     def mapToMaterial(arg0: typing.SupportsFloat | typing.SupportsIndex) -> Material:
@@ -1151,19 +1156,9 @@ class PlasmaEtchingParameters:
     Passivation: PlasmaEtchingParametersPassivation
     Polymer: PlasmaEtchingParametersPolymer
     Substrate: PlasmaEtchingParametersSubstrate
+    beta_E: ...
+    beta_P: ...
     def __init__(self) -> None:
-        ...
-    @property
-    def beta_E(self) -> dict[int, float]:
-        ...
-    @beta_E.setter
-    def beta_E(self, arg0: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex]) -> None:
-        ...
-    @property
-    def beta_P(self) -> dict[int, float]:
-        ...
-    @beta_P.setter
-    def beta_P(self, arg0: collections.abc.Mapping[typing.SupportsInt | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def etchStopDepth(self) -> float:

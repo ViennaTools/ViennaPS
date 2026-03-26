@@ -145,6 +145,8 @@ public:
 
   Iterator end() const { return Iterator(this, values_.size()); }
 
+  auto getCustomMaterialValues() const { return customValues_; }
+
 private:
   static constexpr std::size_t toIndex(BuiltInMaterial m) {
     return static_cast<std::uint16_t>(m);

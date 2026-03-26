@@ -4,6 +4,7 @@
 #include <rayReflection.hpp>
 #include <utility>
 
+#include "../materials/psMaterialValueMap.hpp"
 #include "../process/psSurfaceModel.hpp"
 #include "../psUnits.hpp"
 
@@ -222,7 +223,7 @@ public:
     auto cosTheta = getCosTheta(rayDir, geomNormal);
     NumericType angle = std::acos(cosTheta);
 
-    assert(cosTheta >= 0 && "Hit backside of disc");
+    assert(cosTheta >= 0 && "Hit backside of element");
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
     assert(rayWeight > 0. && "Invalid ray weight");
 
@@ -243,11 +244,11 @@ public:
     if (MaterialMap::isMaterial(materialId, Material::Polymer) &&
         params.Polymer.usePolyCosThetaYield) {
       const auto c = cosTheta;
+      const auto c2 = c * c;
       const auto &p = params.Polymer;
       const auto sum = p.a1 + p.a2 + p.a3 + p.a4;
       f_sp_theta =
-          (p.a1 * c + p.a2 * c * c + p.a3 * c * c * c + p.a4 * c * c * c * c) /
-          sum;
+          (p.a1 * c + p.a2 * c2 + p.a3 * c2 * c + p.a4 * c2 * c2) / sum;
       f_sp_theta = std::max(f_sp_theta, NumericType(0));
     } else {
       f_sp_theta =
@@ -346,14 +347,14 @@ class PlasmaEtchingNeutral
     : public viennaray::Particle<PlasmaEtchingNeutral<NumericType, D>,
                                  NumericType> {
   const std::string fluxLabel;
-  const std::unordered_map<int, NumericType> &beta_map;
+  const MaterialValueMap<NumericType> &stickingMap;
   const int numCoverages;
 
 public:
   PlasmaEtchingNeutral(std::string pFluxLabel,
-                       std::unordered_map<int, NumericType> &pBetaMap,
+                       const MaterialValueMap<NumericType> &pBetaMap,
                        const int pNumCoverages)
-      : fluxLabel(std::move(pFluxLabel)), beta_map(pBetaMap),
+      : fluxLabel(std::move(pFluxLabel)), stickingMap(pBetaMap),
         numCoverages(pNumCoverages) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
@@ -378,7 +379,7 @@ public:
     if (S_eff < 0.) {
       S_eff = 0.;
     } else {
-      S_eff *= sticking(materialId);
+      S_eff *= stickingMap.get(Material::fromLegacyId(materialId));
     }
 
     auto direction =
@@ -388,16 +389,6 @@ public:
   NumericType getSourceDistributionPower() const override final { return 1.; }
   std::vector<std::string> getLocalDataLabels() const override final {
     return {fluxLabel};
-  }
-
-private:
-  NumericType sticking(const int matieralId) const {
-    auto beta = beta_map.find(matieralId);
-    if (beta != beta_map.end())
-      return beta->second;
-
-    // default value
-    return 1.0;
   }
 };
 } // namespace viennaps::impl

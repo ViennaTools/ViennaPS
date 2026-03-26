@@ -170,7 +170,7 @@ public:
         matId, std::span<const Material>(materials.begin(), materials.size()));
   }
 
-  template <class T> __both__ static inline bool isHardmask(const T matId) {
+  template <class T> static inline bool isHardmask(const T matId) {
     const auto material = mapToMaterial(matId);
     if (!material.isBuiltIn()) {
       return false;
