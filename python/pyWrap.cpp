@@ -243,6 +243,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toString", &units::Time::toString)
       .def("toShortString", &units::Time::toShortString);
 
+  // MaterialValueMap
+  py::class_<MaterialValueMap<T>>(module, "MaterialValueMap")
+      .def(py::init<>())
+      .def("set", &MaterialValueMap<T>::set, py::arg("material"),
+           py::arg("value"))
+      .def("get",
+           py::overload_cast<Material>(&MaterialValueMap<T>::get, py::const_),
+           py::arg("material"))
+      .def("getDefault", &MaterialValueMap<T>::getDefault)
+      .def("setDefault", &MaterialValueMap<T>::setDefault, py::arg("value"))
+      .def("clearAll", &MaterialValueMap<T>::clearAll);
+
   // ProcessParams
   py::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(module,
                                                                "ProcessParams")
@@ -340,6 +352,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &PlasmaEtchingParameters<T>::passivationFlux)
       .def_readwrite("etchStopDepth",
                      &PlasmaEtchingParameters<T>::etchStopDepth)
+      .def_readwrite("rateFactors", &PlasmaEtchingParameters<T>::rateFactors)
       .def_readwrite("beta_E", &PlasmaEtchingParameters<T>::beta_E)
       .def_readwrite("beta_P", &PlasmaEtchingParameters<T>::beta_P)
       .def_readwrite("Mask", &PlasmaEtchingParameters<T>::Mask)

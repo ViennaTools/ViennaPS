@@ -17,6 +17,7 @@ template <typename NumericType> struct PlasmaEtchingParameters {
   MaterialValueMap<NumericType> beta_E;
   MaterialValueMap<NumericType> beta_P;
 
+  MaterialValueMap<NumericType> rateFactors;
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
   // Mask

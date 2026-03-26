@@ -126,6 +126,9 @@ public:
           chRate->at(i) = chemicalRate;
         }
       }
+
+      etchRate[i] *=
+          params.rateFactors.get(Material::fromLegacyId(materialIds[i]));
     }
 
     if (stop) {

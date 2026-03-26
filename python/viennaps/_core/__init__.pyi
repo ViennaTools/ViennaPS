@@ -6,14 +6,14 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
-__all__: list[str] = ['AdvectionParameters', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MetaDataLevel', 'NormalizationType', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'Slice', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionParameters', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NormalizationType', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'Slice', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'setNumThreads', 'util', 'version']
 class AdvectionParameters:
     adaptiveTimeStepping: bool
     calculateIntermediateVelocities: bool
@@ -1128,6 +1128,19 @@ class MaterialRegistry:
         ...
     def registerMaterial(self, name: str) -> Material:
         ...
+class MaterialValueMap:
+    def __init__(self) -> None:
+        ...
+    def clearAll(self) -> None:
+        ...
+    def get(self, material: Material) -> float:
+        ...
+    def getDefault(self) -> float:
+        ...
+    def set(self, material: Material, value: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefault(self, value: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class MetaDataLevel(enum.IntEnum):
     FULL: typing.ClassVar[MetaDataLevel]  # value = <MetaDataLevel.FULL: 3>
     GRID: typing.ClassVar[MetaDataLevel]  # value = <MetaDataLevel.GRID: 1>
@@ -1156,8 +1169,9 @@ class PlasmaEtchingParameters:
     Passivation: PlasmaEtchingParametersPassivation
     Polymer: PlasmaEtchingParametersPolymer
     Substrate: PlasmaEtchingParametersSubstrate
-    beta_E: ...
-    beta_P: ...
+    beta_E: MaterialValueMap
+    beta_P: MaterialValueMap
+    rateFactors: MaterialValueMap
     def __init__(self) -> None:
         ...
     @property
