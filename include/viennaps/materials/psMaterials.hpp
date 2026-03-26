@@ -11,9 +11,11 @@
 #include <vcLogger.hpp>
 #include <vcSmartPointer.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -78,11 +80,11 @@ to_string_view(const Material material) {
   return std::string(registry.getName(material));
 }
 
-#ifndef __CUDACC__
 /// A class that wraps the viennals MaterialMap class and provides a more user
 /// friendly interface. It also provides a mapping from the integer material id
 /// to the Material enum.
 class MaterialMap {
+#ifndef __CUDACC__
   SmartPointer<viennals::MaterialMap> map_;
 
 public:
@@ -126,29 +128,49 @@ public:
   [[nodiscard]] inline std::size_t size() const {
     return map_->getNumberOfLayers();
   }
+#endif
 
-  static inline bool isValidMaterial(const Material mat) {
+public:
+  __both__ static inline bool isValidMaterial(const Material mat) {
     if (mat.isBuiltIn()) {
       return isValidBuiltInMaterial(mat.builtIn());
     }
     return true;
   }
 
-  static inline Material mapToMaterial(const int matId) {
+  __both__ static inline Material mapToMaterial(const int matId) {
     auto mat = Material::fromLegacyId(matId);
     return mat;
   }
 
-  template <class T> static inline Material mapToMaterial(const T matId) {
+  template <class T>
+  __both__ static inline Material mapToMaterial(const T matId) {
     return mapToMaterial(static_cast<int>(matId));
   }
 
   template <class T>
-  static inline bool isMaterial(const T matId, const Material material) {
+  __both__ static inline bool isMaterial(const T matId,
+                                         const Material material) {
     return mapToMaterial(matId) == material;
   }
 
-  template <class T> static inline bool isHardmask(const T matId) {
+  template <class T>
+  __both__ static inline bool isMaterial(T matId,
+                                         std::span<const Material> materials) {
+    const auto material = mapToMaterial(matId);
+
+    return std::any_of(materials.begin(), materials.end(),
+                       [&](const Material &m) { return material == m; });
+  }
+
+  template <class T>
+  __both__ static inline bool
+  isMaterial(T matId, std::initializer_list<Material> materials) {
+    return isMaterial(
+        matId, std::span<const Material>(materials.begin(), materials.size()));
+  }
+
+  template <class T> __both__ static inline bool isHardmask(const T matId) {
     const auto material = mapToMaterial(matId);
     if (!material.isBuiltIn()) {
       return false;
@@ -178,6 +200,5 @@ public:
     return registry.registerMaterial(std::string(name));
   }
 };
-#endif
 
 } // namespace viennaps

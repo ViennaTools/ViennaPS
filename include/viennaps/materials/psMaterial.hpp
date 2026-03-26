@@ -1,7 +1,9 @@
 #pragma once
 
 #include "psBuiltInMaterial.hpp"
+#include <vcUtil.hpp>
 
+#include <cassert>
 #include <compare>
 #include <cstdint>
 #include <functional>
@@ -15,21 +17,25 @@ public:
 
   enum class Kind : std::uint8_t { BuiltIn = 0, Custom = 1 };
 
-  constexpr Material() noexcept = default;
+  __both__ constexpr Material() noexcept = default;
 
-  constexpr Material(BuiltInMaterial material) noexcept
+  __both__ constexpr Material(BuiltInMaterial material) noexcept
       : kind_(Kind::BuiltIn), value_(static_cast<ValueType>(material)) {}
 
-  constexpr Material(int legacyId) noexcept { *this = fromLegacyId(legacyId); }
+  __both__ constexpr Material(int legacyId) noexcept {
+    *this = fromLegacyId(legacyId);
+  }
 
-  [[nodiscard]] static constexpr Material custom(ValueType id) noexcept {
+  [[nodiscard]] __both__ static constexpr Material
+  custom(ValueType id) noexcept {
     Material material;
     material.kind_ = Kind::Custom;
     material.value_ = id;
     return material;
   }
 
-  [[nodiscard]] static constexpr Material fromLegacyId(int id) noexcept {
+  [[nodiscard]] __both__ static constexpr Material
+  fromLegacyId(int id) noexcept {
     if (id < 0) {
       return Material(BuiltInMaterial::Undefined);
     }
@@ -43,49 +49,61 @@ public:
                             static_cast<ValueType>(kBuiltInMaterialMaxId) - 1u);
   }
 
-  [[nodiscard]] constexpr Kind kind() const noexcept { return kind_; }
+  [[nodiscard]] __both__ constexpr Kind kind() const noexcept { return kind_; }
 
-  [[nodiscard]] constexpr bool isBuiltIn() const noexcept {
+  [[nodiscard]] __both__ constexpr bool isBuiltIn() const noexcept {
     return kind_ == Kind::BuiltIn;
   }
 
-  [[nodiscard]] constexpr bool isCustom() const noexcept {
+  [[nodiscard]] __both__ constexpr bool isCustom() const noexcept {
     return kind_ == Kind::Custom;
   }
 
-  [[nodiscard]] constexpr BuiltInMaterial builtIn() const {
+  [[nodiscard]] __both__ constexpr BuiltInMaterial builtIn() const {
     if (!isBuiltIn()) {
+#ifdef __CUDA_ARCH__
+      assert(false && "Material is not built-in.");
+      return BuiltInMaterial::Undefined;
+#else
       throw std::logic_error("Material is not built-in.");
+#endif
     }
     return static_cast<BuiltInMaterial>(value_);
   }
 
-  [[nodiscard]] constexpr ValueType customId() const {
+  [[nodiscard]] __both__ constexpr ValueType customId() const {
     if (!isCustom()) {
+#ifdef __CUDA_ARCH__
+      assert(false && "Material is not custom.");
+      return 0;
+#else
       throw std::logic_error("Material is not custom.");
+#endif
     }
     return value_;
   }
 
-  [[nodiscard]] constexpr ValueType legacyId() const noexcept {
+  [[nodiscard]] __both__ constexpr ValueType legacyId() const noexcept {
     if (isBuiltIn()) {
       return value_;
     }
     return static_cast<ValueType>(kBuiltInMaterialMaxId) + 1u + value_;
   }
 
-  constexpr operator ValueType() const noexcept { return legacyId(); }
+  __both__ constexpr operator ValueType() const noexcept { return legacyId(); }
 
-  explicit constexpr operator int() const noexcept {
+  __both__ explicit constexpr operator int() const noexcept {
     return static_cast<int>(legacyId());
   }
 
-  [[nodiscard]] constexpr ValueType value() const noexcept { return value_; }
+  [[nodiscard]] __both__ constexpr ValueType value() const noexcept {
+    return value_;
+  }
 
-  [[nodiscard]] constexpr bool
+  [[nodiscard]] __both__ constexpr bool
   operator==(const Material &) const noexcept = default;
 
-  [[nodiscard]] constexpr auto
+  [[nodiscard]] __both__ constexpr auto
   operator<=>(const Material &) const noexcept = default;
 
 #define MATERIAL_CONST(id, sym, cat, dens, cond, color)                        \
@@ -98,20 +116,22 @@ private:
   ValueType value_{static_cast<ValueType>(BuiltInMaterial::Undefined)};
 };
 
-[[nodiscard]] inline constexpr bool isBuiltIn(const Material material) {
+[[nodiscard]] __both__ inline constexpr bool
+isBuiltIn(const Material material) {
   return material.isBuiltIn();
 }
 
-[[nodiscard]] inline constexpr bool isCustom(const Material material) {
+[[nodiscard]] __both__ inline constexpr bool isCustom(const Material material) {
   return material.isCustom();
 }
 
-[[nodiscard]] inline BuiltInMaterial
+[[nodiscard]] __both__ inline BuiltInMaterial
 toBuiltInMaterial(const Material material) {
   return material.builtIn();
 }
 
-[[nodiscard]] inline constexpr Material toMaterial(BuiltInMaterial material) {
+[[nodiscard]] __both__ inline constexpr Material
+toMaterial(BuiltInMaterial material) {
   return Material(material);
 }
 
