@@ -166,7 +166,8 @@ public:
     defParams.passivationFlux = 0.; // No passivation
 
     // sticking probabilities
-    defParams.beta_E = {{1, 0.7}, {0, 0.7}};
+    defParams.beta_E = {{static_cast<int>(Material::Si), 0.7},
+                        {static_cast<int>(Material::Mask), 0.7}};
     // No beta_P needed since passivationFlux = 0
 
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
