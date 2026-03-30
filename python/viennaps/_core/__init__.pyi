@@ -699,6 +699,7 @@ class HoleShape(enum.IntEnum):
         """
 class IBEParameters:
     cos4Yield: IBEParametersCos4Yield
+    materialPlaneWaferRate: MaterialValueMap
     def __init__(self) -> None:
         ...
     def toProcessMetaData(self) -> dict[str, list[float]]:
@@ -716,12 +717,6 @@ class IBEParameters:
         ...
     @inflectAngle.setter
     def inflectAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def materialPlaneWaferRate(self) -> dict[Material, float]:
-        ...
-    @materialPlaneWaferRate.setter
-    def materialPlaneWaferRate(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def meanEnergy(self) -> float:
@@ -1077,7 +1072,7 @@ class MaterialKind(enum.IntEnum):
         """
 class MaterialMap:
     @staticmethod
-    def fromString(name: str, registry: MaterialRegistry) -> Material:
+    def fromString(name: str) -> Material:
         """
         Resolve built-in or register custom material by name.
         """
@@ -1112,7 +1107,8 @@ class MaterialMap:
     def size(self) -> int:
         ...
 class MaterialRegistry:
-    def __init__(self) -> None:
+    @staticmethod
+    def instance() -> MaterialRegistry:
         ...
     def customMaterialCount(self) -> int:
         ...

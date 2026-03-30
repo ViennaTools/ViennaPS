@@ -392,6 +392,8 @@ public:
     this->hasGPU = true;
   }
 
+  static auto defaultParameters() { return IBEParameters<NumericType>(); }
+
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
     auto model =

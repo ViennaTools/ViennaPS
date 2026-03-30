@@ -265,7 +265,13 @@ class Domain:
         """
         Disable adding meta data to domain.
         """
+    @typing.overload
     def duplicateTopLevelSet(self, arg0: viennaps._core.Material) -> None:
+        """
+        Duplicate the top level set. Should be used before a deposition process.
+        """
+    @typing.overload
+    def duplicateTopLevelSet(self, arg0: str) -> None:
         """
         Duplicate the top level set. Should be used before a deposition process.
         """
@@ -305,20 +311,8 @@ class Domain:
         """
     def getLevelSets(self) -> list[viennals.d3.Domain]:
         ...
-    def getMaterialByName(self, name: str) -> viennaps._core.Material:
-        """
-        Resolve material by name in this domain.
-        """
     def getMaterialMap(self) -> viennaps._core.MaterialMap:
         ...
-    def getMaterialName(self, material: viennaps._core.Material) -> str:
-        """
-        Resolve canonical material name in this domain.
-        """
-    def getMaterialRegistry(self) -> viennaps._core.MaterialRegistry:
-        """
-        Get the domain-local material registry.
-        """
     def getMaterialsInDomain(self) -> set[viennaps._core.Material]:
         """
         Get the material IDs present in the domain.
@@ -347,18 +341,20 @@ class Domain:
         """
         Get the surface level set.
         """
-    def getSurfaceMesh(self, addInterfaces: bool = False, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> viennals._core.Mesh:
+    def getSurfaceMesh(self, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> viennals._core.Mesh:
         """
         Get the surface mesh of the domain
-        """
-    def hasMaterial(self, name: str) -> bool:
-        """
-        Check whether material name resolves in this domain.
         """
     def insertMask(self, mask: viennals.d3.Domain, material: viennaps._core.Material = ...) -> None:
         """
         Insert a mask level set to the domain. The mask is inserted at the front of the level set vector and can be used to exclude areas from processes.
         """
+    @typing.overload
+    def insertNextLevelSetAsMaterial(self, levelSet: viennals.d3.Domain, material: str, wrapLowerLevelSet: bool = True) -> None:
+        """
+        Insert a level set to domain as a material.
+        """
+    @typing.overload
     def insertNextLevelSetAsMaterial(self, levelSet: viennals.d3.Domain, material: viennaps._core.Material, wrapLowerLevelSet: bool = True) -> None:
         """
         Insert a level set to domain as a material.
@@ -366,10 +362,6 @@ class Domain:
     def print(self, hrleInfo: bool = False) -> None:
         """
         Print the domain information.
-        """
-    def registerMaterial(self, name: str) -> viennaps._core.Material:
-        """
-        Register a material by name in this domain and return handle.
         """
     def removeLevelSet(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: bool) -> None:
         ...
@@ -389,7 +381,7 @@ class Domain:
         """
     def saveLevelSets(self, filename: str) -> None:
         ...
-    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = False, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> None:
+    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> None:
         """
         Save the surface of the domain.
         """
@@ -558,6 +550,13 @@ class Interpolation(enum.IntEnum):
         Convert to a string according to format_spec.
         """
 class IonBeamEtching(ProcessModel):
+    @staticmethod
+    def defaultParameters() -> viennaps._core.IBEParameters:
+        ...
+    @typing.overload
+    def __init__(self, parameters: viennaps._core.IBEParameters) -> None:
+        ...
+    @typing.overload
     def __init__(self, parameters: viennaps._core.IBEParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
 class IsotropicProcess(ProcessModel):

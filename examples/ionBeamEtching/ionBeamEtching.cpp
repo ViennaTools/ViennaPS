@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   // copy top layer to capture deposition
   geometry->duplicateTopLevelSet(Material::Polymer);
 
-  IBEParameters<NumericType> ibeParams;
+  auto ibeParams = IonBeamEtching<NumericType, D>::defaultParameters();
   ibeParams.tiltAngle = params.get("angle");
   ibeParams.exponent = params.get("exponent");
   ibeParams.thetaRMin = 0.;

@@ -8,13 +8,13 @@ import viennaps._core
 import viennaps.d3
 __all__: list[str] = ['FaradayCageEtching', 'HBrO2Etching', 'IonBeamEtching', 'MultiParticleProcess', 'ProcessModelGPU', 'SF6O2Etching', 'SingleParticleProcess']
 class FaradayCageEtching(viennaps.d3.ProcessModel):
-    def __init__(self, parameters: viennaps._core.FaradayCageParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, parameters: viennaps._core.FaradayCageParameters) -> None:
         ...
 class HBrO2Etching(ProcessModelGPU):
     def __init__(self, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
 class IonBeamEtching(viennaps.d3.ProcessModel):
-    def __init__(self, parameters: viennaps._core.IBEParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, parameters: viennaps._core.IBEParameters) -> None:
         ...
 class MultiParticleProcess(ProcessModelGPU):
     def __init__(self) -> None:
