@@ -34,7 +34,7 @@ int main() {
   VC_TEST_ASSERT(Material::Si.isBuiltIn());
 
   // Custom material registration checks
-  MaterialRegistry registry;
+  auto &registry = MaterialRegistry::instance();
   const auto customA = registry.registerMaterial("MyCustom");
   const auto customA2 = registry.registerMaterial("MyCustom");
   const auto customB = registry.registerMaterial("AnotherCustom");

@@ -533,10 +533,6 @@ template <int D> void bindApi(py::module &module) {
            "Get the number of level sets in the domain.")
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
-      .def("getMaterialRegistry",
-           py::overload_cast<>(&Domain<T, D>::getMaterialRegistry),
-           py::return_value_policy::reference_internal,
-           "Get the domain-local material registry.")
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)

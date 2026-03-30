@@ -102,7 +102,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .finalize();
 
   py::class_<MaterialRegistry>(module, "MaterialRegistry")
-      .def(py::init<>())
+      .def_static(
+          "instance",
+          []() -> MaterialRegistry & { return MaterialRegistry::instance(); },
+          py::return_value_policy::reference)
       .def("registerMaterial", &MaterialRegistry::registerMaterial,
            py::arg("name"))
       .def("hasMaterial", &MaterialRegistry::hasMaterial, py::arg("name"))
@@ -164,7 +167,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   py::overload_cast<const T, const std::span<const Material>>(
                       &MaterialMap::isMaterial<T>))
       .def_static("fromString", &MaterialMap::fromString, py::arg("name"),
-                  py::arg("registry"),
                   "Resolve built-in or register custom material by name.")
       .def_static("toString",
                   py::overload_cast<const Material>(&MaterialMap::toString),

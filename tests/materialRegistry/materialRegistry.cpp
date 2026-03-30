@@ -9,7 +9,7 @@
 using namespace viennaps;
 
 void testMaterialRegistry() {
-  MaterialRegistry registry;
+  auto &registry = MaterialRegistry::instance();
 
   const auto builtIn = registry.registerMaterial("Si");
   VC_TEST_ASSERT(builtIn.isBuiltIn());
@@ -54,7 +54,7 @@ void testCustomMaterialMap() {
   domain->saveSurfaceMesh("testCustomMaterialMap_1");
 
   auto customMaterial =
-      domain->getMaterialRegistry().getMaterial("CustomMaterial");
+      MaterialRegistry::instance().getMaterial("CustomMaterial");
   std::unordered_map<Material, std::pair<double, double>> materialRates;
   materialRates[Material::Mask] = {0.0, 0.0};
   materialRates[customMaterial] = {1.0, 0.0};

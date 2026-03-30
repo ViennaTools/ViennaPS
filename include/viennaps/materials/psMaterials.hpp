@@ -191,13 +191,12 @@ public:
     return toString(mapToMaterial(matId));
   }
 
-  static inline Material fromString(std::string_view name,
-                                    MaterialRegistry &registry) {
+  static inline Material fromString(std::string_view name) {
     BuiltInMaterial builtIn = BuiltInMaterial::Undefined;
     if (tryBuiltInMaterialFromString(name, builtIn)) {
       return Material(builtIn);
     }
-    return registry.registerMaterial(std::string(name));
+    return MaterialRegistry::instance().registerMaterial(std::string(name));
   }
 };
 

@@ -14,31 +14,22 @@ namespace viennaps {
 
 struct CustomMaterialInfo {
   std::string name;
+  double density = 0.0;
 };
 
 class MaterialRegistry {
 public:
-  MaterialRegistry() = default;
-
-  MaterialRegistry(const MaterialRegistry &other) {
-    std::scoped_lock lock(other.mutex_);
-    nameToCustomId_ = other.nameToCustomId_;
-    materials_ = other.materials_;
+  [[nodiscard]] static MaterialRegistry &instance() {
+    static MaterialRegistry registry;
+    return registry;
   }
 
-  MaterialRegistry &operator=(const MaterialRegistry &other) {
-    if (this == &other) {
-      return *this;
-    }
-
-    std::scoped_lock lock(mutex_, other.mutex_);
-    nameToCustomId_ = other.nameToCustomId_;
-    materials_ = other.materials_;
-    return *this;
-  }
+  MaterialRegistry(const MaterialRegistry &) = delete;
+  MaterialRegistry &operator=(const MaterialRegistry &) = delete;
+  MaterialRegistry(MaterialRegistry &&) = delete;
+  MaterialRegistry &operator=(MaterialRegistry &&) = delete;
 
   [[nodiscard]] Material registerMaterial(std::string name) {
-    std::lock_guard<std::mutex> lock(mutex_);
 
     if (name.empty()) {
       throw std::invalid_argument("Material name must not be empty.");
@@ -61,7 +52,6 @@ public:
   }
 
   [[nodiscard]] bool hasMaterial(std::string_view name) const {
-    std::lock_guard<std::mutex> lock(mutex_);
 
     BuiltInMaterial builtIn = BuiltInMaterial::Undefined;
     if (tryBuiltInMaterialFromString(name, builtIn)) {
@@ -73,7 +63,6 @@ public:
 
   [[nodiscard]] std::optional<Material>
   findMaterial(std::string_view name) const {
-    std::lock_guard<std::mutex> lock(mutex_);
 
     BuiltInMaterial builtIn = BuiltInMaterial::Undefined;
     if (tryBuiltInMaterialFromString(name, builtIn)) {
@@ -101,7 +90,6 @@ public:
       return builtInMaterialToString(material.builtIn());
     }
 
-    std::lock_guard<std::mutex> lock(mutex_);
     const auto customId = material.customId();
     if (customId >= materials_.size()) {
       throw std::out_of_range("Unknown custom material id.");
@@ -120,7 +108,6 @@ public:
           "Built-in materials do not have registry-owned metadata.");
     }
 
-    std::lock_guard<std::mutex> lock(mutex_);
     const auto customId = material.customId();
     if (customId >= materials_.size()) {
       throw std::out_of_range("Unknown custom material id.");
@@ -130,12 +117,12 @@ public:
   }
 
   [[nodiscard]] std::size_t customMaterialCount() const {
-    std::lock_guard<std::mutex> lock(mutex_);
     return materials_.size();
   }
 
 private:
-  mutable std::mutex mutex_;
+  MaterialRegistry() = default;
+
   std::unordered_map<std::string, Material::ValueType> nameToCustomId_;
   std::vector<CustomMaterialInfo> materials_;
 };

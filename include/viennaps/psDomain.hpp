@@ -64,7 +64,6 @@ private:
   lsDomainsType levelSets_;
   csDomainType cellSet_ = nullptr;
   MaterialMapType materialMap_ = nullptr;
-  MaterialRegistry materialRegistry_;
   MetaDataLevel metaDataLevel_ = MetaDataLevel::NONE;
   MetaDataType metaData_;
 
@@ -144,7 +143,6 @@ public:
     clear();
     setup_ = domain->setup_;
     metaData_ = domain->metaData_;
-    materialRegistry_ = domain->materialRegistry_;
 
     // Copy all Level-Sets.
     for (auto &ls : domain->levelSets_) {
@@ -171,7 +169,8 @@ public:
   void insertNextLevelSetAsMaterial(lsDomainType levelSet,
                                     std::string materialName,
                                     bool wrapLowerLevelSet = true) {
-    auto material = materialRegistry_.registerMaterial(std::move(materialName));
+    auto material =
+        MaterialRegistry::instance().registerMaterial(std::move(materialName));
     insertNextLevelSetAsMaterial(levelSet, material, wrapLowerLevelSet);
   }
 
@@ -233,7 +232,7 @@ public:
   }
 
   void duplicateTopLevelSet(const std::string &materialName) {
-    auto material = materialRegistry_.registerMaterial(materialName);
+    auto material = MaterialRegistry::instance().registerMaterial(materialName);
     duplicateTopLevelSet(material);
   }
 
@@ -415,14 +414,6 @@ public:
   // Returns the material map which contains the specified material for each
   // Level-Set in the domain.
   [[nodiscard]] auto &getMaterialMap() const { return materialMap_; }
-
-  [[nodiscard]] MaterialRegistry &getMaterialRegistry() {
-    return materialRegistry_;
-  }
-
-  [[nodiscard]] const MaterialRegistry &getMaterialRegistry() const {
-    return materialRegistry_;
-  }
 
   [[nodiscard]] auto &getCellSet() const { return cellSet_; }
 

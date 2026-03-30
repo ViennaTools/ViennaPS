@@ -113,7 +113,7 @@ public:
           materialName = MaterialMap::toString(material);
         } else {
           materialName =
-              std::string(domain->getMaterialRegistry().getName(material));
+              std::string(MaterialRegistry::instance().getName(material));
         }
 
         const auto nameLength = static_cast<uint32_t>(materialName.size());

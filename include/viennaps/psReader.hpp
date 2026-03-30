@@ -128,8 +128,7 @@ public:
           std::string materialName(nameLength, '\0');
           fin.read(materialName.data(),
                    static_cast<std::streamsize>(nameLength));
-          material = MaterialMap::fromString(materialName,
-                                             domain->getMaterialRegistry());
+          material = MaterialMap::fromString(materialName);
         }
 
         domain->insertNextLevelSetAsMaterial(levelSets[i], material, false);
