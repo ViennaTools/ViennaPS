@@ -50,7 +50,8 @@ template <class NumericType> struct RateSet {
 template <class NumericType, int D>
 class DirectionalVelocityField : public VelocityField<NumericType, D> {
   const std::vector<RateSet<NumericType>> rateSets_;
-  std::unordered_map<unsigned, std::vector<NumericType>> visibilities_;
+  std::vector<std::vector<NumericType>>
+      visibilities_; // Indexed by rateSetID and pointId
 
 public:
   DirectionalVelocityField(std::vector<RateSet<NumericType>> &&rateSets)
@@ -63,7 +64,7 @@ public:
     NumericType scalarVelocity = 0.0;
 
     for (const auto &rateSet : rateSets_) {
-      if (isMaskMaterial(material, rateSet.maskMaterials)) {
+      if (MaterialMap::isMaterial(material, rateSet.maskMaterials)) {
         continue; // Skip this rate set if material is masked
       }
       // Accumulate isotropic velocities
@@ -81,7 +82,7 @@ public:
 
     for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
       const auto &rateSet = rateSets_[rateSetID];
-      if (isMaskMaterial(material, rateSet.maskMaterials)) {
+      if (MaterialMap::isMaterial(material, rateSet.maskMaterials)) {
         continue; // Skip this rate set if material is masked
       }
 
@@ -108,6 +109,7 @@ public:
                const NumericType processTime) override {
 
     visibilities_.clear();
+    visibilities_.resize(rateSets_.size());
 
     // Calculate visibilities for each rate set
     auto surfaceLS = domain->getLevelSets().back();
@@ -128,20 +130,8 @@ public:
   const std::vector<RateSet<NumericType>> &getRateSets() const {
     return rateSets_;
   }
-  const std::unordered_map<unsigned, std::vector<NumericType>> &
-  getVisibilities() const {
+  const std::vector<std::vector<NumericType>> &getVisibilities() const {
     return visibilities_;
-  }
-
-protected:
-  static bool isMaskMaterial(const int material,
-                             const std::vector<Material> &maskMaterials) {
-    for (const auto &maskMaterial : maskMaterials) {
-      if (MaterialMap::isMaterial(material, maskMaterial)) {
-        return true;
-      }
-    }
-    return false;
   }
 };
 
