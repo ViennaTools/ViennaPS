@@ -169,6 +169,13 @@ public:
   }
 
   void insertNextLevelSetAsMaterial(lsDomainType levelSet,
+                                    std::string materialName,
+                                    bool wrapLowerLevelSet = true) {
+    auto material = materialRegistry_.registerMaterial(std::move(materialName));
+    insertNextLevelSetAsMaterial(levelSet, material, wrapLowerLevelSet);
+  }
+
+  void insertNextLevelSetAsMaterial(lsDomainType levelSet,
                                     const Material material,
                                     bool wrapLowerLevelSet = true) {
     if (levelSets_.empty()) {
@@ -223,6 +230,11 @@ public:
 
     auto copy = lsDomainType::New(levelSets_.back());
     insertNextLevelSetAsMaterial(copy, material, false);
+  }
+
+  void duplicateTopLevelSet(const std::string &materialName) {
+    auto material = materialRegistry_.registerMaterial(materialName);
+    duplicateTopLevelSet(material);
   }
 
   // Remove the top (last inserted) Level-Set.

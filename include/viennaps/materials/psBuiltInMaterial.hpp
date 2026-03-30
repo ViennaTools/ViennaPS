@@ -141,7 +141,7 @@ struct BuiltInMaterialInfo {
   uint32_t colorHex;
 };
 
-constexpr uint16_t kBuiltInMaterialMaxId = 176;
+inline constexpr uint16_t kBuiltInMaterialMaxId = 176;
 
 constexpr std::array<BuiltInMaterialInfo, kBuiltInMaterialMaxId + 1>
     kBuiltInMaterialTable = [] {

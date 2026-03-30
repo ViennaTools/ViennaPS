@@ -1,10 +1,14 @@
-#include "materials/psMaterials.hpp"
+#include <geometries/psMakeTrench.hpp>
+#include <models/psDirectionalProcess.hpp>
+#include <models/psIsotropicProcess.hpp>
+#include <process/psProcess.hpp>
+#include <psDomain.hpp>
 
 #include <vcTestAsserts.hpp>
 
 using namespace viennaps;
 
-int main() {
+void testMaterialRegistry() {
   MaterialRegistry registry;
 
   const auto builtIn = registry.registerMaterial("Si");
@@ -29,6 +33,46 @@ int main() {
 
   const auto maybeMissing = registry.findMaterial("DoesNotExist");
   VC_TEST_ASSERT(!maybeMissing.has_value());
+}
+
+void testCustomMaterialMap() {
+  auto domain =
+      Domain<double, 2>::New(0.5, 50.0, BoundaryType::REFLECTIVE_BOUNDARY);
+  MakeTrench<double, 2>(domain, 15.0, 0.0, 0.0, 3.0).apply();
+
+  auto isoEtch =
+      SmartPointer<IsotropicProcess<double, 2>>::New(-1.0, Material::Mask);
+  Process<double, 2>(domain, isoEtch, 10.0).apply();
+
+  domain->saveSurfaceMesh("testCustomMaterialMap_0");
+
+  domain->duplicateTopLevelSet("CustomMaterial");
+
+  auto isoDep = SmartPointer<IsotropicProcess<double, 2>>::New(1.0);
+  Process<double, 2>(domain, isoDep, 2.0).apply();
+
+  domain->saveSurfaceMesh("testCustomMaterialMap_1");
+
+  auto customMaterial =
+      domain->getMaterialRegistry().getMaterial("CustomMaterial");
+  std::unordered_map<Material, std::pair<double, double>> materialRates;
+  materialRates[Material::Mask] = {0.0, 0.0};
+  materialRates[customMaterial] = {1.0, 0.0};
+  materialRates[Material::Si] = {0.5, -0.5};
+
+  Logger::setLogLevel(LogLevel::DEBUG);
+
+  auto directionalProcess = SmartPointer<DirectionalProcess<double, 2>>::New(
+      Vec3Dd{0.0, -1.0, 0.0}, materialRates);
+  Process<double, 2>(domain, directionalProcess, 5.0).apply();
+
+  domain->saveSurfaceMesh("testCustomMaterialMap_2");
+}
+
+int main() {
+
+  testMaterialRegistry();
+  testCustomMaterialMap();
 
   return 0;
 }

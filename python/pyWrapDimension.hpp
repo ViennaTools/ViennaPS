@@ -434,6 +434,7 @@ template <int D> void bindApi(py::module &module) {
    *                               DOMAIN                                    *
    ****************************************************************************/
   using DomainType = SmartPointer<Domain<T, D>>;
+  using lsDomainType = SmartPointer<::viennals::Domain<T, D>>;
 
   // Domain Setup
   py::class_<DomainSetup<D>>(module, "DomainSetup")
@@ -491,15 +492,30 @@ template <int D> void bindApi(py::module &module) {
       .def("getSetup", &Domain<T, D>::getSetup, "Get the domain setup.")
       .def("deepCopy", &Domain<T, D>::deepCopy)
       .def("insertNextLevelSetAsMaterial",
-           &Domain<T, D>::insertNextLevelSetAsMaterial, py::arg("levelSet"),
-           py::arg("material"), py::arg("wrapLowerLevelSet") = true,
+           py::overload_cast<lsDomainType, std::string, bool>(
+               &Domain<T, D>::insertNextLevelSetAsMaterial),
+           py::arg("levelSet"), py::arg("material"),
+           py::arg("wrapLowerLevelSet") = true,
+           "Insert a level set to domain as a material.")
+      .def("insertNextLevelSetAsMaterial",
+           py::overload_cast<lsDomainType, const Material, bool>(
+               &Domain<T, D>::insertNextLevelSetAsMaterial),
+           py::arg("levelSet"), py::arg("material"),
+           py::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
       .def("insertMask", &Domain<T, D>::insertMask, py::arg("mask"),
            py::arg("material") = Material::Mask,
            "Insert a mask level set to the domain. The mask is inserted at the "
            "front of the level set vector and can be used to exclude areas "
            "from processes.")
-      .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet,
+      .def("duplicateTopLevelSet",
+           py::overload_cast<const Material>(
+               &Domain<T, D>::duplicateTopLevelSet),
+           "Duplicate the top level set. Should be used before a deposition "
+           "process.")
+      .def("duplicateTopLevelSet",
+           py::overload_cast<const std::string &>(
+               &Domain<T, D>::duplicateTopLevelSet),
            "Duplicate the top level set. Should be used before a deposition "
            "process.")
       .def("removeTopLevelSet", &Domain<T, D>::removeTopLevelSet)
@@ -521,33 +537,6 @@ template <int D> void bindApi(py::module &module) {
            py::overload_cast<>(&Domain<T, D>::getMaterialRegistry),
            py::return_value_policy::reference_internal,
            "Get the domain-local material registry.")
-      .def(
-          "registerMaterial",
-          [](Domain<T, D> &self, const std::string &name) {
-            return self.getMaterialRegistry().registerMaterial(name);
-          },
-          py::arg("name"),
-          "Register a material by name in this domain and return handle.")
-      .def(
-          "hasMaterial",
-          [](const Domain<T, D> &self, const std::string &name) {
-            return self.getMaterialRegistry().hasMaterial(name);
-          },
-          py::arg("name"),
-          "Check whether material name resolves in this domain.")
-      .def(
-          "getMaterialByName",
-          [](const Domain<T, D> &self, const std::string &name) {
-            return self.getMaterialRegistry().getMaterial(name);
-          },
-          py::arg("name"), "Resolve material by name in this domain.")
-      .def(
-          "getMaterialName",
-          [](const Domain<T, D> &self, const Material material) {
-            return std::string(self.getMaterialRegistry().getName(material));
-          },
-          py::arg("material"),
-          "Resolve canonical material name in this domain.")
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
@@ -574,7 +563,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("width") = 1,
            "Get the level set grids of layers in the domain.")
       .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
-           py::arg("addInterfaces") = false, py::arg("sharpCorners") = false,
+           py::arg("addInterfaces") = true, py::arg("sharpCorners") = false,
            py::arg("minNodeDistanceFactor") = 0.01,
            "Get the surface mesh of the domain")
       .def("getHullMesh", &Domain<T, D>::getHullMesh,
@@ -584,7 +573,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("filename"), py::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
-           py::arg("filename"), py::arg("addInterfaces") = false,
+           py::arg("filename"), py::arg("addInterfaces") = true,
            py::arg("sharpCorners") = false,
            py::arg("minNodeDistanceFactor") = 0.01,
            "Save the surface of the domain.")

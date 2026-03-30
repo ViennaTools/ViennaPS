@@ -49,7 +49,10 @@ public:
     return it == customValues_.end() ? default_ : it->second;
   }
 
-  [[nodiscard]] T get(BuiltInMaterial m) const { return get(Material(m)); }
+  [[nodiscard]] T get(BuiltInMaterial m) const {
+    auto idx = toIndex(m);
+    return isSet_[idx] ? values_[idx] : default_;
+  }
 
   // get reference (no copy)
   [[nodiscard]] const T &getRef(Material material) const {
@@ -63,7 +66,8 @@ public:
   }
 
   [[nodiscard]] const T &getRef(BuiltInMaterial m) const {
-    return getRef(Material(m));
+    auto idx = toIndex(m);
+    return isSet_[idx] ? values_[idx] : default_;
   }
 
   void setDefault(const T &v) { default_ = v; }
