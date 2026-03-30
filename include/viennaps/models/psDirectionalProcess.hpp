@@ -116,7 +116,6 @@ public:
     for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
       auto &rateSet = rateSets_[rateSetID];
       if (rateSet.calculateVisibility) {
-
         std::string label = "Visibilities_" + std::to_string(rateSetID);
         viennals::CalculateVisibilities<NumericType, D>(
             surfaceLS, rateSet.direction, label)
