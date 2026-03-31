@@ -146,8 +146,6 @@ public:
                                             weights);
     proximity.apply();
 
-    PointType pointData;
-    PointType pointDataAll;
     constexpr std::array<std::pair<int, int>, 8> directions = {{
         {-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, 1}, {1, -1}
         // 8-neighbor stencil
@@ -165,46 +163,85 @@ public:
     const int yEnd =
         std::ceil((maxBounds[1] + boundaryPadding[1]) / gridDelta_);
 
-    for (int y = yStart; y <= yEnd; ++y) {
-      for (int x = xStart; x <= xEnd; ++x) {
+    PointType pointDataAll;
+    int width = xEnd - xStart + 1;
+    if (Logger::hasDebug())
+      pointDataAll.resize((yEnd - yStart + 1) * width);
 
-        const double xReal = x * gridDelta_ + xOffset;
-        const double yReal = y * gridDelta_ + yOffset;
-        const double current = proximity.exposureAt(xReal, yReal);
+#ifdef _OPENMP
+    const int numThreads = omp_get_max_threads();
+#else
+    const int numThreads = 1;
+#endif
 
-        IndexType pos(x, y);
-        if (Logger::hasDebug())
-          pointDataAll.emplace_back(pos, current);
+    std::vector<PointType> threadPointData(numThreads);
 
-        // Check if current is on the contour
-        if (std::abs(current - threshold) < thresholdEps) {
-          pointData.emplace_back(pos, 0.);
-          continue;
-        }
+#pragma omp parallel
+    {
+#ifdef _OPENMP
+      const int threadId = omp_get_thread_num();
+#else
+      const int threadId = 0;
+#endif
 
-        double minDist = std::numeric_limits<double>::max();
-        for (auto [dy, dx] : directions) {
-          int nx = x + dx;
-          int ny = y + dy;
-          double nxReal = nx * gridDelta_ + xOffset;
-          double nyReal = ny * gridDelta_ + yOffset;
+      auto &pointData = threadPointData[threadId];
 
-          double neighbor = proximity.exposureAt(nxReal, nyReal);
+#pragma omp for collapse(2)
+      for (int y = yStart; y <= yEnd; ++y) {
+        for (int x = xStart; x <= xEnd; ++x) {
 
-          // Check if neighbor is on opposite side of the contour
-          if ((current - threshold) * (neighbor - threshold) < 0) {
-            // Interpolate sub-cell distance
-            double dist =
-                std::abs((threshold - current) / (neighbor - current));
-            minDist = std::min(minDist, dist);
+          const double xReal = x * gridDelta_ + xOffset;
+          const double yReal = y * gridDelta_ + yOffset;
+          const double current = proximity.exposureAt(xReal, yReal);
+
+          IndexType pos(x, y);
+          if (Logger::hasDebug()) {
+            pointDataAll[(y - yStart) * width + (x - xStart)] =
+                std::make_pair(pos, current);
+          }
+
+          // Check if current is on the contour
+          if (std::abs(current - threshold) < thresholdEps) {
+            pointData.emplace_back(pos, 0.);
+            continue;
+          }
+
+          double minDist = std::numeric_limits<double>::max();
+          for (auto [dy, dx] : directions) {
+            int nx = x + dx;
+            int ny = y + dy;
+            double nxReal = nx * gridDelta_ + xOffset;
+            double nyReal = ny * gridDelta_ + yOffset;
+
+            double neighbor = proximity.exposureAt(nxReal, nyReal);
+
+            // Check if neighbor is on opposite side of the contour
+            if ((current - threshold) * (neighbor - threshold) < 0) {
+              // Interpolate sub-cell distance
+              double dist =
+                  std::abs((threshold - current) / (neighbor - current));
+              minDist = std::min(minDist, dist);
+            }
+          }
+
+          if (minDist < 1.0) {
+            double sign = (current < threshold) ? 1.0 : -1.0;
+            pointData.emplace_back(pos, sign * minDist);
           }
         }
-
-        if (minDist < 1.0) {
-          double sign = (current < threshold) ? 1.0 : -1.0;
-          pointData.emplace_back(pos, sign * minDist);
-        }
       }
+    } // end parallel region
+
+    PointType pointData;
+    // reduce
+    size_t totalSize = 0;
+    for (const auto &vec : threadPointData) {
+      totalSize += vec.size();
+    }
+    pointData.reserve(totalSize);
+    for (auto &vec : threadPointData) {
+      pointData.insert(pointData.end(), std::make_move_iterator(vec.begin()),
+                       std::make_move_iterator(vec.end()));
     }
 
     if (Logger::hasDebug()) {
