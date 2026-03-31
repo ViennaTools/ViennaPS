@@ -22,9 +22,9 @@ public:
       auto idx = toIndex(material.builtIn());
       values_[idx] = value;
       isSet_[idx] = true;
-      return;
+    } else {
+      customValues_[material.customId()] = value;
     }
-    customValues_[material.customId()] = value;
   }
 
   // perfect-forwarding overload
@@ -42,7 +42,7 @@ public:
   [[nodiscard]] T get(Material material) const {
     if (material.isBuiltIn()) {
       auto idx = toIndex(material.builtIn());
-      return isSet_[idx] ? values_[idx] : default_;
+      return getBuiltInValue(idx);
     }
 
     const auto it = customValues_.find(material.customId());
@@ -51,14 +51,14 @@ public:
 
   [[nodiscard]] T get(BuiltInMaterial m) const {
     auto idx = toIndex(m);
-    return isSet_[idx] ? values_[idx] : default_;
+    return getBuiltInValue(idx);
   }
 
   // get reference (no copy)
   [[nodiscard]] const T &getRef(Material material) const {
     if (material.isBuiltIn()) {
       auto idx = toIndex(material.builtIn());
-      return isSet_[idx] ? values_[idx] : default_;
+      return getBuiltInValue(idx);
     }
 
     const auto it = customValues_.find(material.customId());
@@ -67,7 +67,7 @@ public:
 
   [[nodiscard]] const T &getRef(BuiltInMaterial m) const {
     auto idx = toIndex(m);
-    return isSet_[idx] ? values_[idx] : default_;
+    return getBuiltInValue(idx);
   }
 
   void setDefault(const T &v) { default_ = v; }
@@ -156,6 +156,10 @@ public:
 private:
   static constexpr std::size_t toIndex(BuiltInMaterial m) {
     return static_cast<std::uint16_t>(m);
+  }
+
+  const T &getBuiltInValue(std::size_t idx) const {
+    return isSet_[idx] ? values_[idx] : default_;
   }
 
   std::array<T, kBuiltInMaterialMaxId + 1> values_{};
