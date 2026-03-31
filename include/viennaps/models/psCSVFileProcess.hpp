@@ -49,7 +49,7 @@ public:
                                 int material,
                                 const Vec3D<NumericType> &normalVector,
                                 unsigned long pointId) override {
-    if (isMaskMaterial(material))
+    if (MaterialMap::isMaterial(material, maskMaterials))
       return 0.;
 
     if (calculateVisibility &&
@@ -63,7 +63,7 @@ public:
                                        int material,
                                        const Vec3D<NumericType> &normalVector,
                                        unsigned long pointId) override {
-    if (isMaskMaterial(material))
+    if (MaterialMap::isMaterial(material, maskMaterials))
       return {0., 0., 0.};
 
     if (calculateVisibility &&
@@ -127,13 +127,6 @@ private:
   NumericType directionalScale;
 
   RateGrid<NumericType, D> rateGrid;
-
-  bool isMaskMaterial(const int material) const {
-    for (const auto &mask : maskMaterials)
-      if (MaterialMap::isMaterial(material, mask))
-        return true;
-    return false;
-  }
 };
 
 } // namespace impl
