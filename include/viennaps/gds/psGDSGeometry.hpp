@@ -146,17 +146,16 @@ public:
                                             weights);
     proximity.apply();
 
-    // exposureGrid is the final blurred grid to be used for SDF calculation
-    // auto exposureGrid = proximity.getExposedGrid();
-    if (Logger::hasDebug())
-      proximity.saveGridToCSV("finalGrid.csv");
-
     PointType pointData;
-    constexpr std::array<std::pair<int, int>, 4> directions = {{
-        {-1, 0}, {1, 0}, {0, -1}, {0, 1} // 4-neighbor stencil
+    PointType pointDataAll;
+    constexpr std::array<std::pair<int, int>, 8> directions = {{
+        {-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, 1}, {1, -1}
+        // 8-neighbor stencil
     }};
 
     // Calculate grid bounds
+    const double xOffset = boundaryPadding[0] - minBounds[0];
+    const double yOffset = boundaryPadding[1] - minBounds[1];
     const int xStart =
         std::floor((minBounds[0] - boundaryPadding[0]) / gridDelta_);
     const int xEnd =
@@ -169,77 +168,82 @@ public:
     for (int y = yStart; y <= yEnd; ++y) {
       for (int x = xStart; x <= xEnd; ++x) {
 
-        double xReal = x * gridDelta_ + (boundaryPadding[0] - minBounds[0]);
-        double yReal = y * gridDelta_ + (boundaryPadding[1] - minBounds[1]);
+        const double xReal = x * gridDelta_ + xOffset;
+        const double yReal = y * gridDelta_ + yOffset;
+        const double current = proximity.exposureAt(xReal, yReal);
 
-        double current = proximity.exposureAt(xReal, yReal);
+        IndexType pos(x, y);
+        if (Logger::hasDebug())
+          pointDataAll.emplace_back(pos, current);
+
         // Check if current is on the contour
         if (std::abs(current - threshold) < thresholdEps) {
-          IndexType pos;
-          pos[0] = x;
-          pos[1] = y;
           pointData.emplace_back(pos, 0.);
-          break;
+          continue;
         }
 
         double minDist = std::numeric_limits<double>::max();
-        int bestNx = -1, bestNy = -1;
-        bool found = false;
-
         for (auto [dy, dx] : directions) {
           int nx = x + dx;
           int ny = y + dy;
-          double nxReal = nx * gridDelta_ + (boundaryPadding[0] - minBounds[0]);
-          double nyReal = ny * gridDelta_ + (boundaryPadding[1] - minBounds[1]);
+          double nxReal = nx * gridDelta_ + xOffset;
+          double nyReal = ny * gridDelta_ + yOffset;
 
           double neighbor = proximity.exposureAt(nxReal, nyReal);
-
-          // Check if neighbor is on the contour
-          // If so, skip checks and add neighbor when it becomes "current"
-          if (std::abs(neighbor - threshold) < thresholdEps)
-            break;
 
           // Check if neighbor is on opposite side of the contour
           if ((current - threshold) * (neighbor - threshold) < 0) {
             // Interpolate sub-cell distance
             double dist =
                 std::abs((threshold - current) / (neighbor - current));
-            if (dist < minDist) {
-              minDist = dist;
-              bestNx = nx;
-              bestNy = ny;
-              found = true;
-            }
+            minDist = std::min(minDist, dist);
           }
         }
-        if ((minDist < 1.0) && found) {
-          double sdfCurrent = minDist; // * gridDelta_;
-          IndexType pos;
-          pos[0] = x;
-          pos[1] = y;
+
+        if (minDist < 1.0) {
           double sign = (current < threshold) ? 1.0 : -1.0;
-          pointData.emplace_back(pos, sign * sdfCurrent);
+          pointData.emplace_back(pos, sign * minDist);
         }
       }
     }
 
-    auto mesh = viennals::Mesh<NumericType>::New();
-    mesh->nodes.reserve(pointData.size());
-    mesh->getCellData().insertNextScalarData(
-        std::vector<NumericType>(pointData.size(), 0.0), "SDF");
-    auto data = mesh->getCellData().getScalarData(0);
-    int ii = 0;
-    for (const auto &p : pointData) {
+    if (Logger::hasDebug()) {
+      auto mesh = viennals::Mesh<NumericType>::New();
+      mesh->nodes.reserve(pointData.size());
+      mesh->getCellData().insertNextScalarData(
+          std::vector<NumericType>(pointData.size(), 0.0), "SDF");
+      auto data = mesh->getCellData().getScalarData(0);
+      int ii = 0;
+      for (const auto &p : pointData) {
+        mesh->nodes.push_back(Vec3D<NumericType>{p.first[0] * gridDelta_,
+                                                 p.first[1] * gridDelta_, 0});
 
-      mesh->nodes.push_back(Vec3D<NumericType>{p.first[0] * gridDelta_,
-                                               p.first[1] * gridDelta_, 0});
+        mesh->insertNextVertex(
+            {static_cast<unsigned int>(mesh->nodes.size() - 1)});
+        data->at(ii) = p.second;
+        ii++;
+      }
 
-      mesh->insertNextVertex(
-          {static_cast<unsigned int>(mesh->nodes.size() - 1)});
-      data->at(ii) = p.second;
-      ii++;
+      viennals::VTKWriter<NumericType>(mesh, "blurredLSGrid.vtp").apply();
+
+      mesh->clear();
+      mesh->nodes.reserve(pointDataAll.size());
+      mesh->getCellData().insertNextScalarData(
+          std::vector<NumericType>(pointDataAll.size(), 0.0), "Exposure");
+      data = mesh->getCellData().getScalarData(0);
+      ii = 0;
+      for (const auto &p : pointDataAll) {
+        mesh->nodes.push_back(Vec3D<NumericType>{p.first[0] * gridDelta_,
+                                                 p.first[1] * gridDelta_, 0});
+
+        mesh->insertNextVertex(
+            {static_cast<unsigned int>(mesh->nodes.size() - 1)});
+        data->at(ii) = p.second;
+        ii++;
+      }
+
+      viennals::VTKWriter<NumericType>(mesh, "exposureGrid.vtp").apply();
     }
-    viennals::VTKWriter<NumericType>(mesh, "blurredLSGrid.vtp").apply();
 
     return pointData;
   }
@@ -630,6 +634,14 @@ private:
     }
 
     if (blurring) {
+      if (Logger::hasDebug()) {
+        auto mesh = viennals::Mesh<NumericType>::New();
+        viennals::ToMesh<NumericType, 2>(GDSLevelSet, mesh).apply();
+        viennals::VTKWriter<NumericType>(
+            mesh, "GDS_layer_no_blur_" + std::to_string(layer) + ".vtp")
+            .apply();
+      }
+
       lsDomainType2D maskLS =
           lsDomainType2D::New(bounds_, boundaryConds_.data(), gridDelta_);
       PointType pointData = applyBlur(GDSLevelSet);
@@ -641,6 +653,11 @@ private:
         viennals::ToMesh<NumericType, 2>(maskLS, mesh).apply();
         viennals::VTKWriter<NumericType>(
             mesh, "GDS_layer_blurred_" + std::to_string(layer) + ".vtp")
+            .apply();
+
+        viennals::ToSurfaceMesh<NumericType, 2>(maskLS, mesh).apply();
+        viennals::VTKWriter<NumericType>(
+            mesh, "GDS_layer_blurred_contour_" + std::to_string(layer) + ".vtp")
             .apply();
       }
       // viennals::Expand<double, 2>(maskLS, 2).apply();
