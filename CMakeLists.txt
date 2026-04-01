@@ -107,6 +107,7 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 2.1.1
+  GIT_TAG main
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -180,8 +181,9 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   target_compile_definitions(${LIB_NAME} PRIVATE VIENNAPS_USE_PRECOMPILED=1
                                                  VIENNACORE_COMPILE_SHARED_LIB=1)
   target_sources(
-    ${LIB_NAME} PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModelsEmulation.cpp"
-                        "lib/specModelsSimulation.cpp" "lib/specProcess.cpp")
+    ${LIB_NAME}
+    PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModelsEmulation.cpp"
+            "lib/specModelsSimulation.cpp" "lib/specProcess.cpp" "lib/MaterialRegistry.cpp")
 
   set_target_properties(
     ${LIB_NAME}

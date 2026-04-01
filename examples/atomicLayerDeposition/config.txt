@@ -1,7 +1,7 @@
 # all length units in micrometers
 
 # Geometry
-gridDelta = 0.2
+gridDelta = 0.1
 openingDepth = 0.5
 openingWidth = 90
 gapLength = 800

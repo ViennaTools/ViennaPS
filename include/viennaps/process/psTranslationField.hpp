@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../psMaterials.hpp"
+#include "../materials/psMaterials.hpp"
 #include "psVelocityField.hpp"
 
 #include <lsVelocityField.hpp>

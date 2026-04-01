@@ -83,8 +83,8 @@ int main(int argc, char *argv[]) {
     ibeParams.cos4Yield.a1 = 1.075;
     ibeParams.cos4Yield.a2 = -1.55;
     ibeParams.cos4Yield.a3 = 0.65;
-    ibeParams.materialPlaneWaferRate[Material::Si] = 2.0;
-    ibeParams.materialPlaneWaferRate[Material::Mask] = 0.15;
+    ibeParams.materialPlaneWaferRate.set(Material::Si, 2.0);
+    ibeParams.materialPlaneWaferRate.set(Material::Mask, 0.15);
     ibeParams.thetaRMin = 60;
     auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New(ibeParams);
 

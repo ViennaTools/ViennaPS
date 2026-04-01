@@ -199,6 +199,9 @@ class DenseCellSet:
         """
 class DirectionalProcess(ProcessModel):
     @typing.overload
+    def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], materialRates: collections.abc.Mapping[viennaps._core.Material, tuple[typing.SupportsFloat | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex]], defaultDirectionalRate: typing.SupportsFloat | typing.SupportsIndex = 0.0, defaultIsotropicRate: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        ...
+    @typing.overload
     def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], directionalVelocity: typing.SupportsFloat | typing.SupportsIndex, isotropicVelocity: typing.SupportsFloat | typing.SupportsIndex = 0.0, maskMaterial: viennaps._core.Material = ..., calculateVisibility: bool = True) -> None:
         ...
     @typing.overload
@@ -262,7 +265,13 @@ class Domain:
         """
         Disable adding meta data to domain.
         """
+    @typing.overload
     def duplicateTopLevelSet(self, arg0: viennaps._core.Material) -> None:
+        """
+        Duplicate the top level set. Should be used before a deposition process.
+        """
+    @typing.overload
+    def duplicateTopLevelSet(self, arg0: str) -> None:
         """
         Duplicate the top level set. Should be used before a deposition process.
         """
@@ -332,10 +341,20 @@ class Domain:
         """
         Get the surface level set.
         """
-    def getSurfaceMesh(self, addInterfaces: bool = False, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> viennals._core.Mesh:
+    def getSurfaceMesh(self, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> viennals._core.Mesh:
         """
         Get the surface mesh of the domain
         """
+    def insertMask(self, mask: viennals.d2.Domain, material: viennaps._core.Material = ...) -> None:
+        """
+        Insert a mask level set to the domain. The mask is inserted at the front of the level set vector and can be used to exclude areas from processes.
+        """
+    @typing.overload
+    def insertNextLevelSetAsMaterial(self, levelSet: viennals.d2.Domain, material: str, wrapLowerLevelSet: bool = True) -> None:
+        """
+        Insert a level set to domain as a material.
+        """
+    @typing.overload
     def insertNextLevelSetAsMaterial(self, levelSet: viennals.d2.Domain, material: viennaps._core.Material, wrapLowerLevelSet: bool = True) -> None:
         """
         Insert a level set to domain as a material.
@@ -362,7 +381,7 @@ class Domain:
         """
     def saveLevelSets(self, filename: str) -> None:
         ...
-    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = False, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> None:
+    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> None:
         """
         Save the surface of the domain.
         """
@@ -531,6 +550,13 @@ class Interpolation(enum.IntEnum):
         Convert to a string according to format_spec.
         """
 class IonBeamEtching(ProcessModel):
+    @staticmethod
+    def defaultParameters() -> viennaps._core.IBEParameters:
+        ...
+    @typing.overload
+    def __init__(self, parameters: viennaps._core.IBEParameters) -> None:
+        ...
+    @typing.overload
     def __init__(self, parameters: viennaps._core.IBEParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
 class IsotropicProcess(ProcessModel):
@@ -538,10 +564,14 @@ class IsotropicProcess(ProcessModel):
     def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex = 1.0, maskMaterial: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex, maskMaterial: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex = 1.0, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
     @typing.overload
     def __init__(self, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], defaultRate: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        ...
+    def setIsotropicRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class MakeFin:
     @typing.overload
@@ -874,6 +904,10 @@ class SingleParticleProcess(ProcessModel):
         ...
     @typing.overload
     def __init__(self, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], stickingProbability: typing.SupportsFloat | typing.SupportsIndex, sourceExponent: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefaultRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class SphereDistribution(ProcessModel):
     @typing.overload

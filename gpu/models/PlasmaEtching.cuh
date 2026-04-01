@@ -6,9 +6,9 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
+#include "materials/psMaterials.hpp"
 #include "models/psPipelineParameters.hpp"
 #include "models/psPlasmaEtchingParameters.hpp"
-#include "psMaterials.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -63,9 +63,9 @@ plasmaNeutralReflectionNoPassivation(const void *sbtData,
 
 __forceinline__ __device__ void
 plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::PlasmaEtchingParametersGPU *params =
-      reinterpret_cast<viennaps::PlasmaEtchingParametersGPU *>(
-          launchParams.customData);
+  using namespace viennaps;
+  PlasmaEtchingParametersGPU *params =
+      reinterpret_cast<PlasmaEtchingParametersGPU *>(launchParams.customData);
   for (int i = 0; i < prd->ISCount; ++i) {
     int id = launchParams.materialIds[prd->primIDs[i]]; // consecutive ID
     int material = launchParams.materialMap[id];        // mapped to enum
@@ -77,20 +77,19 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     float A_sp = params->Substrate.A_sp;
     float B_sp = params->Substrate.B_sp;
     float Eth_sp = params->Substrate.Eth_sp;
-    if (static_cast<viennaps::Material>(material) == viennaps::Material::Mask) {
+    if (static_cast<BuiltInMaterial>(material) == BuiltInMaterial::Mask) {
       A_sp = params->Mask.A_sp;
       B_sp = params->Mask.B_sp;
       Eth_sp = params->Mask.Eth_sp;
-    } else if (static_cast<viennaps::Material>(material) ==
-               viennaps::Material::Polymer) {
+    } else if (static_cast<BuiltInMaterial>(material) ==
+               BuiltInMaterial::Polymer) {
       A_sp = params->Polymer.A_sp;
       B_sp = params->Polymer.B_sp;
       Eth_sp = params->Polymer.Eth_sp;
     }
 
     float f_sp_theta;
-    if (static_cast<viennaps::Material>(material) ==
-            viennaps::Material::Polymer &&
+    if (static_cast<BuiltInMaterial>(material) == BuiltInMaterial::Polymer &&
         params->Polymer.usePolyCosThetaYield) {
       const float c = cosTheta;
       const float sum = params->Polymer.a1 + params->Polymer.a2 +

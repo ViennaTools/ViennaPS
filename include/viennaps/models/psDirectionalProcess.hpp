@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../materials/psMaterialValueMap.hpp"
 #include "../process/psProcessModel.hpp"
-#include "../psMaterials.hpp"
 
 #include <lsCalculateVisibilities.hpp>
 #include <vcVectorType.hpp>
@@ -50,7 +50,8 @@ template <class NumericType> struct RateSet {
 template <class NumericType, int D>
 class DirectionalVelocityField : public VelocityField<NumericType, D> {
   const std::vector<RateSet<NumericType>> rateSets_;
-  std::unordered_map<unsigned, std::vector<NumericType>> visibilities_;
+  std::vector<std::vector<NumericType>>
+      visibilities_; // Indexed by rateSetID and pointId
 
 public:
   DirectionalVelocityField(std::vector<RateSet<NumericType>> &&rateSets)
@@ -63,7 +64,7 @@ public:
     NumericType scalarVelocity = 0.0;
 
     for (const auto &rateSet : rateSets_) {
-      if (isMaskMaterial(material, rateSet.maskMaterials)) {
+      if (MaterialMap::isMaterial(material, rateSet.maskMaterials)) {
         continue; // Skip this rate set if material is masked
       }
       // Accumulate isotropic velocities
@@ -81,7 +82,7 @@ public:
 
     for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
       const auto &rateSet = rateSets_[rateSetID];
-      if (isMaskMaterial(material, rateSet.maskMaterials)) {
+      if (MaterialMap::isMaterial(material, rateSet.maskMaterials)) {
         continue; // Skip this rate set if material is masked
       }
 
@@ -108,13 +109,13 @@ public:
                const NumericType processTime) override {
 
     visibilities_.clear();
+    visibilities_.resize(rateSets_.size());
 
     // Calculate visibilities for each rate set
     auto surfaceLS = domain->getLevelSets().back();
     for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
       auto &rateSet = rateSets_[rateSetID];
       if (rateSet.calculateVisibility) {
-
         std::string label = "Visibilities_" + std::to_string(rateSetID);
         viennals::CalculateVisibilities<NumericType, D>(
             surfaceLS, rateSet.direction, label)
@@ -128,20 +129,38 @@ public:
   const std::vector<RateSet<NumericType>> &getRateSets() const {
     return rateSets_;
   }
-  const std::unordered_map<unsigned, std::vector<NumericType>> &
-  getVisibilities() const {
+  const std::vector<std::vector<NumericType>> &getVisibilities() const {
     return visibilities_;
   }
+};
 
-protected:
-  static bool isMaskMaterial(const int material,
-                             const std::vector<Material> &maskMaterials) {
-    for (const auto &maskMaterial : maskMaterials) {
-      if (MaterialMap::isMaterial(material, maskMaterial)) {
-        return true;
-      }
-    }
-    return false;
+template <class NumericType, int D>
+class DirectionalVelocityFieldSimple : public VelocityField<NumericType, D> {
+  using MaterialRateMap = MaterialValueMap<std::pair<NumericType, NumericType>>;
+  const Vec3D<NumericType> direction_;
+  const MaterialRateMap materialRates_;
+
+public:
+  DirectionalVelocityFieldSimple(const MaterialRateMap &materialRates,
+                                 const Vec3D<NumericType> &direction)
+      : materialRates_(materialRates), direction_(direction) {}
+
+  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
+                                int material,
+                                const Vec3D<NumericType> &normalVector,
+                                unsigned long pointId) override {
+    const auto &rate =
+        materialRates_.getRef(MaterialMap::mapToMaterial(material));
+    return rate.second; // isotropic velocity
+  }
+
+  Vec3D<NumericType> getVectorVelocity(const Vec3D<NumericType> &coordinate,
+                                       int material,
+                                       const Vec3D<NumericType> &normalVector,
+                                       unsigned long pointId) override {
+    const auto &rate =
+        materialRates_.getRef(MaterialMap::mapToMaterial(material));
+    return direction_ * rate.first; // directional velocity
   }
 };
 
@@ -152,6 +171,18 @@ template <typename NumericType, int D>
 class DirectionalProcess : public ProcessModelCPU<NumericType, D> {
 public:
   using RateSet = impl::RateSet<NumericType>;
+  using RateMap = MaterialValueMap<std::pair<NumericType, NumericType>>;
+
+  DirectionalProcess(
+      const Vec3D<NumericType> &direction,
+      std::unordered_map<Material, std::pair<NumericType, NumericType>>
+          materialRates,
+      NumericType defaultDirectionalRate = 0.,
+      NumericType defaultIsotropicRate = 0.) {
+    RateMap rateMap(std::move(materialRates));
+    rateMap.setDefault({defaultDirectionalRate, defaultIsotropicRate});
+    initialize(std::move(rateMap), direction);
+  }
 
   DirectionalProcess(const Vec3D<NumericType> &direction,
                      NumericType directionalVelocity,
@@ -191,10 +222,20 @@ public:
   }
 
 private:
-  void initialize(std::vector<RateSet> &&rateSets) {
-    // Default surface model
-    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
+  void initialize(RateMap &&rateMap, const Vec3D<NumericType> &direction) {
+    // Store process data
+    // TODO
 
+    // Velocity field with rate map
+    auto velField =
+        SmartPointer<impl::DirectionalVelocityFieldSimple<NumericType, D>>::New(
+            rateMap, direction);
+    this->setVelocityField(velField);
+
+    baseData();
+  }
+
+  void initialize(std::vector<RateSet> &&rateSets) {
     // Store process data
     processMetaData["DirectionalVelocity"] = std::vector<double>();
     processMetaData["IsotropicVelocity"] = std::vector<double>();
@@ -219,8 +260,14 @@ private:
     auto velField =
         SmartPointer<impl::DirectionalVelocityField<NumericType, D>>::New(
             std::move(rateSets));
-
     this->setVelocityField(velField);
+
+    baseData();
+  }
+
+  void baseData() {
+    // Default surface model
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
     this->setSurfaceModel(surfModel);
     this->setProcessName("DirectionalProcess");
   }

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../psMaterials.hpp"
+#include "../materials/psMaterialValueMap.hpp"
+#include "../materials/psMaterials.hpp"
 
 #include <functional>
 #include <unordered_map>
@@ -10,7 +11,7 @@ template <typename NumericType> struct IBEParameters {
 
   // Rates
   NumericType planeWaferRate = 1.;
-  std::unordered_map<Material, NumericType> materialPlaneWaferRate;
+  MaterialValueMap<NumericType> materialPlaneWaferRate;
 
   NumericType meanEnergy = 250;     // eV
   NumericType sigmaEnergy = 10;     // eV
@@ -49,8 +50,9 @@ template <typename NumericType> struct IBEParameters {
     std::unordered_map<std::string, std::vector<double>> processData;
 
     processData["Default PWR"] = {planeWaferRate};
-    for (const auto &pair : materialPlaneWaferRate) {
-      processData[MaterialMap::toString(pair.first) + " PWR"] = {pair.second};
+    for (const auto &entry : materialPlaneWaferRate) {
+      processData[MaterialMap::toString(entry.getMaterial()) + " PWR"] = {
+          entry.getValue()};
     }
 
     processData["Mean Energy"] = {meanEnergy};

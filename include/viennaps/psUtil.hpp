@@ -10,7 +10,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "psMaterials.hpp"
+#include "materials/psMaterials.hpp"
 
 namespace viennaps {
 enum class FluxEngineType {
@@ -200,8 +200,7 @@ template <typename T> [[nodiscard]] std::string toString(const T &value) {
   else if constexpr (std::is_same_v<T, viennals::TemporalSchemeEnum>)
     return convertTemporalSchemeToString(value);
   else if constexpr (std::is_same_v<T, viennaps::Material>) {
-    std::string mat = viennaps::to_string_view(value);
-    return mat;
+    return viennaps::MaterialMap::toString(value);
   } else if constexpr (std::is_same_v<T, viennaps::FluxEngineType>) {
     return convertFluxEngineTypeToString(value);
   } else if constexpr (std::is_same_v<T, std::string>)

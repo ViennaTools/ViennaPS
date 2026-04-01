@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../materials/psMaterials.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
-#include "../psMaterials.hpp"
 #include "psIonBeamParameters.hpp"
 #include "psIonModelUtil.hpp"
 #include "psPipelineParameters.hpp"
@@ -21,24 +21,21 @@ using namespace viennacore;
 namespace impl {
 template <typename NumericType>
 class IBESurfaceModel : public SurfaceModel<NumericType> {
-  const IBEParameters<NumericType> params_;
-  const std::vector<Material> maskMaterials_;
+  const IBEParameters<NumericType> &params_;
 
 public:
   constexpr static const char *fluxLabel = "ionFlux";
   constexpr static const char *redepositionLabel = "redepositionFlux";
 
-  IBESurfaceModel(const IBEParameters<NumericType> &params,
-                  const std::vector<Material> &mask)
-      : params_(params), maskMaterials_(mask) {}
+  IBESurfaceModel(const IBEParameters<NumericType> &params) : params_(params) {}
 
   SmartPointer<std::vector<NumericType>>
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
 
-    auto velocity =
-        SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
+    std::vector<NumericType> etchRate(materialIds.size(), 0.);
+
     auto flux = rates->getScalarData(fluxLabel);
     assert(flux && flux->size() == materialIds.size());
     std::vector<NumericType> redeposition(materialIds.size(), 0.);
@@ -66,30 +63,18 @@ public:
          yield);
 
 #pragma omp parallel for
-    for (size_t i = 0; i < velocity->size(); i++) {
-      if (!isMaskMaterial(materialIds[i])) {
-        NumericType rate = params_.planeWaferRate;
-        if (auto material = MaterialMap::mapToMaterial(materialIds[i]);
-            params_.materialPlaneWaferRate.find(material) !=
-            params_.materialPlaneWaferRate.end()) {
-          rate = params_.materialPlaneWaferRate.at(material);
-        }
+    for (size_t i = 0; i < etchRate.size(); i++) {
+      NumericType rate = params_.materialPlaneWaferRate.get(
+          Material::fromLegacyId(materialIds[i]));
 
-        velocity->at(i) = -flux->at(i) * norm * rate;
-        velocity->at(i) += redeposition.at(i) * params_.redepositionRate;
-      }
+      if (rate == 0.)
+        continue;
+
+      etchRate[i] = -flux->at(i) * norm * rate;
+      etchRate[i] += redeposition.at(i) * params_.redepositionRate;
     }
 
-    return velocity;
-  }
-
-private:
-  bool isMaskMaterial(const NumericType &material) const {
-    for (const auto &mat : maskMaterials_) {
-      if (MaterialMap::isMaterial(material, mat))
-        return true;
-    }
-    return false;
+    return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 };
 
@@ -281,9 +266,7 @@ namespace gpu {
 template <typename NumericType, int D>
 class IonBeamEtching : public ProcessModelGPU<NumericType, D> {
 public:
-  IonBeamEtching(const IBEParameters<NumericType> &params,
-                 const std::vector<Material> &maskMaterial)
-      : maskMaterials_(maskMaterial), params_(params) {
+  IonBeamEtching(const IBEParameters<NumericType> &params) : params_(params) {
     // particles
     viennaray::gpu::Particle<NumericType> particle{
         .name = "IBEIon", .cosineExponent = params_.exponent};
@@ -351,7 +334,7 @@ public:
     // surface model
     auto surfModel =
         SmartPointer<::viennaps::impl::IBESurfaceModel<NumericType>>::New(
-            params_, maskMaterials_);
+            params_);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -368,7 +351,6 @@ public:
   ~IonBeamEtching() override { this->processData.free(); }
 
 private:
-  std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };
 
@@ -383,15 +365,21 @@ public:
 
   IonBeamEtching(const IBEParameters<NumericType> &params,
                  const std::vector<Material> &maskMaterial)
-      : maskMaterials_(maskMaterial), params_(params) {
+      : params_(params) {
+
+    // material-specific plane wafer rates and mask
+    params_.materialPlaneWaferRate.setDefault(params_.planeWaferRate);
+    for (const auto &mask : maskMaterial) {
+      params_.materialPlaneWaferRate.set(mask, 0.);
+    }
 
     // particles
     auto particle =
         std::make_unique<impl::IBEIonWithRedeposition<NumericType, D>>(params_);
 
     // surface model
-    auto surfModel = SmartPointer<impl::IBESurfaceModel<NumericType>>::New(
-        params_, maskMaterials_);
+    auto surfModel =
+        SmartPointer<impl::IBESurfaceModel<NumericType>>::New(params_);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -404,17 +392,18 @@ public:
     this->hasGPU = true;
   }
 
+  static auto defaultParameters() { return IBEParameters<NumericType>(); }
+
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
-    auto model = SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(
-        params_, maskMaterials_);
+    auto model =
+        SmartPointer<gpu::IonBeamEtching<NumericType, D>>::New(params_);
     model->setProcessName(this->getProcessName().value());
     return model;
   }
 #endif
 
 private:
-  std::vector<Material> maskMaterials_;
   IBEParameters<NumericType> params_;
 };
 

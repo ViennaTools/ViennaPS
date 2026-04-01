@@ -1,7 +1,7 @@
 #pragma once
 
+#include "materials/psMaterials.hpp"
 #include "psDomainSetup.hpp"
-#include "psMaterials.hpp"
 #include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
 #include "psUtil.hpp"
@@ -167,6 +167,14 @@ public:
   }
 
   void insertNextLevelSetAsMaterial(lsDomainType levelSet,
+                                    std::string materialName,
+                                    bool wrapLowerLevelSet = true) {
+    auto material =
+        MaterialRegistry::instance().registerMaterial(std::move(materialName));
+    insertNextLevelSetAsMaterial(levelSet, material, wrapLowerLevelSet);
+  }
+
+  void insertNextLevelSetAsMaterial(lsDomainType levelSet,
                                     const Material material,
                                     bool wrapLowerLevelSet = true) {
     if (levelSets_.empty()) {
@@ -191,6 +199,26 @@ public:
     materialMapCheck();
   }
 
+  void insertMask(lsDomainType mask, const Material material = Material::Mask) {
+    // insert mask at front of level set vector
+    levelSets_.insert(levelSets_.begin(), mask);
+    for (std::size_t i = 1; i < levelSets_.size(); i++) {
+      viennals::BooleanOperation<NumericType, D>(
+          levelSets_.at(i), mask, viennals::BooleanOperationEnum::UNION)
+          .apply();
+    }
+
+    auto newMatMap = MaterialMapType::New();
+    newMatMap->insertNextMaterial(material);
+    if (materialMap_) {
+      for (std::size_t i = 0; i < materialMap_->size(); i++) {
+        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
+      }
+    }
+    materialMap_ = newMatMap;
+    materialMapCheck();
+  }
+
   // Copy the top Level-Set and insert it in the domain (e.g. in order to
   // capture depositing material on top of the surface).
   void duplicateTopLevelSet(const Material material) {
@@ -201,6 +229,11 @@ public:
 
     auto copy = lsDomainType::New(levelSets_.back());
     insertNextLevelSetAsMaterial(copy, material, false);
+  }
+
+  void duplicateTopLevelSet(const std::string &materialName) {
+    auto material = MaterialRegistry::instance().registerMaterial(materialName);
+    duplicateTopLevelSet(material);
   }
 
   // Remove the top (last inserted) Level-Set.

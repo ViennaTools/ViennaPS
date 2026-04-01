@@ -28,10 +28,10 @@ int main(int argc, char *argv[]) {
 
     // use pre-defined model SF6O2 etching model
     auto modelParams = SF6O2Etching<NumericType, D>::defaultParameters();
-    modelParams.beta_E[static_cast<int>(Material::Si)] = 1.0;
-    modelParams.beta_E[static_cast<int>(Material::Mask)] = 1.0;
-    modelParams.beta_P[static_cast<int>(Material::Si)] = 1.0;
-    modelParams.beta_P[static_cast<int>(Material::Mask)] = 1.0;
+    modelParams.beta_E[Material::Si] = 1.0;
+    modelParams.beta_E[Material::Mask] = 1.0;
+    modelParams.beta_P[Material::Si] = 1.0;
+    modelParams.beta_P[Material::Mask] = 1.0;
 
     modelParams.ionFlux = 1.;
     modelParams.etchantFlux = 4.5e3;

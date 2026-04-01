@@ -8,13 +8,13 @@ import viennaps._core
 import viennaps.d2
 __all__: list[str] = ['FaradayCageEtching', 'HBrO2Etching', 'IonBeamEtching', 'MultiParticleProcess', 'ProcessModelGPU', 'SF6O2Etching', 'SingleParticleProcess']
 class FaradayCageEtching(viennaps.d2.ProcessModel):
-    def __init__(self, parameters: viennaps._core.FaradayCageParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, parameters: viennaps._core.FaradayCageParameters) -> None:
         ...
 class HBrO2Etching(ProcessModelGPU):
     def __init__(self, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
 class IonBeamEtching(viennaps.d2.ProcessModel):
-    def __init__(self, parameters: viennaps._core.IBEParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, parameters: viennaps._core.IBEParameters) -> None:
         ...
 class MultiParticleProcess(ProcessModelGPU):
     def __init__(self) -> None:
@@ -35,5 +35,5 @@ class SF6O2Etching(ProcessModelGPU):
     def __init__(self, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
 class SingleParticleProcess(ProcessModelGPU):
-    def __init__(self, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], rate: typing.SupportsFloat | typing.SupportsIndex, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, sourceExponent: typing.SupportsFloat | typing.SupportsIndex) -> None:
+    def __init__(self, materialRates: viennaps._core.MaterialValueMap, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, sourceExponent: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...

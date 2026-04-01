@@ -14,6 +14,7 @@
 #include <pybind11/iostream.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/numpy.h>
+#include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
@@ -433,6 +434,7 @@ template <int D> void bindApi(py::module &module) {
    *                               DOMAIN                                    *
    ****************************************************************************/
   using DomainType = SmartPointer<Domain<T, D>>;
+  using lsDomainType = SmartPointer<::viennals::Domain<T, D>>;
 
   // Domain Setup
   py::class_<DomainSetup<D>>(module, "DomainSetup")
@@ -490,10 +492,30 @@ template <int D> void bindApi(py::module &module) {
       .def("getSetup", &Domain<T, D>::getSetup, "Get the domain setup.")
       .def("deepCopy", &Domain<T, D>::deepCopy)
       .def("insertNextLevelSetAsMaterial",
-           &Domain<T, D>::insertNextLevelSetAsMaterial, py::arg("levelSet"),
-           py::arg("material"), py::arg("wrapLowerLevelSet") = true,
+           py::overload_cast<lsDomainType, std::string, bool>(
+               &Domain<T, D>::insertNextLevelSetAsMaterial),
+           py::arg("levelSet"), py::arg("material"),
+           py::arg("wrapLowerLevelSet") = true,
            "Insert a level set to domain as a material.")
-      .def("duplicateTopLevelSet", &Domain<T, D>::duplicateTopLevelSet,
+      .def("insertNextLevelSetAsMaterial",
+           py::overload_cast<lsDomainType, const Material, bool>(
+               &Domain<T, D>::insertNextLevelSetAsMaterial),
+           py::arg("levelSet"), py::arg("material"),
+           py::arg("wrapLowerLevelSet") = true,
+           "Insert a level set to domain as a material.")
+      .def("insertMask", &Domain<T, D>::insertMask, py::arg("mask"),
+           py::arg("material") = Material::Mask,
+           "Insert a mask level set to the domain. The mask is inserted at the "
+           "front of the level set vector and can be used to exclude areas "
+           "from processes.")
+      .def("duplicateTopLevelSet",
+           py::overload_cast<const Material>(
+               &Domain<T, D>::duplicateTopLevelSet),
+           "Duplicate the top level set. Should be used before a deposition "
+           "process.")
+      .def("duplicateTopLevelSet",
+           py::overload_cast<const std::string &>(
+               &Domain<T, D>::duplicateTopLevelSet),
            "Duplicate the top level set. Should be used before a deposition "
            "process.")
       .def("removeTopLevelSet", &Domain<T, D>::removeTopLevelSet)
@@ -537,7 +559,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("width") = 1,
            "Get the level set grids of layers in the domain.")
       .def("getSurfaceMesh", &Domain<T, D>::getSurfaceMesh,
-           py::arg("addInterfaces") = false, py::arg("sharpCorners") = false,
+           py::arg("addInterfaces") = true, py::arg("sharpCorners") = false,
            py::arg("minNodeDistanceFactor") = 0.01,
            "Get the surface mesh of the domain")
       .def("getHullMesh", &Domain<T, D>::getHullMesh,
@@ -547,7 +569,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("filename"), py::arg("width") = 1,
            "Save the level set grids of layers in the domain.")
       .def("saveSurfaceMesh", &Domain<T, D>::saveSurfaceMesh,
-           py::arg("filename"), py::arg("addInterfaces") = false,
+           py::arg("filename"), py::arg("addInterfaces") = true,
            py::arg("sharpCorners") = false,
            py::arg("minNodeDistanceFactor") = 0.01,
            "Save the surface of the domain.")
@@ -728,24 +750,18 @@ template <int D> void bindApi(py::module &module) {
   py::class_<SingleParticleProcess<T, D>,
              SmartPointer<SingleParticleProcess<T, D>>>(
       module, "SingleParticleProcess", processModel)
-      .def(py::init([](const T rate, const T sticking, const T power,
-                       const Material mask) {
-             return SmartPointer<SingleParticleProcess<T, D>>::New(
-                 rate, sticking, power, mask);
-           }),
-           py::arg("rate") = 1., py::arg("stickingProbability") = 1.,
-           py::arg("sourceExponent") = 1.,
+      .def(py::init<T, T, T, Material>(), py::arg("rate") = 1.,
+           py::arg("stickingProbability") = 1., py::arg("sourceExponent") = 1.,
            py::arg("maskMaterial") = Material::Undefined)
-      .def(py::init([](const T rate, const T sticking, const T power,
-                       const std::vector<Material> &mask) {
-             return SmartPointer<SingleParticleProcess<T, D>>::New(
-                 rate, sticking, power, mask);
-           }),
-           py::arg("rate"), py::arg("stickingProbability"),
-           py::arg("sourceExponent"), py::arg("maskMaterials"))
+      .def(py::init<T, T, T, std::vector<Material>>(), py::arg("rate"),
+           py::arg("stickingProbability"), py::arg("sourceExponent"),
+           py::arg("maskMaterials"))
       .def(py::init<std::unordered_map<Material, T>, T, T>(),
            py::arg("materialRates"), py::arg("stickingProbability"),
-           py::arg("sourceExponent"));
+           py::arg("sourceExponent"))
+      .def("setDefaultRate", &SingleParticleProcess<T, D>::setDefaultRate)
+      .def("setMaterialRate", &SingleParticleProcess<T, D>::setMaterialRate,
+           py::arg("material"), py::arg("rate"));
 
   // Multi Particle Process
   py::class_<MultiParticleProcess<T, D>,
@@ -892,8 +908,13 @@ template <int D> void bindApi(py::module &module) {
   py::class_<IonBeamEtching<T, D>, SmartPointer<IonBeamEtching<T, D>>>(
       module, "IonBeamEtching", processModel)
       .def(py::init(&SmartPointer<IonBeamEtching<T, D>>::template New<
+                    const IBEParameters<T> &>),
+           py::arg("parameters"))
+      .def(py::init(&SmartPointer<IonBeamEtching<T, D>>::template New<
                     const IBEParameters<T> &, const std::vector<Material> &>),
-           py::arg("parameters"), py::arg("maskMaterials"));
+           py::arg("parameters"), py::arg("maskMaterials"))
+      .def_static("defaultParameters",
+                  &IonBeamEtching<T, D>::defaultParameters);
 
   // Faraday Cage Etching
   py::class_<FaradayCageEtching<T, D>, SmartPointer<FaradayCageEtching<T, D>>>(
@@ -906,24 +927,24 @@ template <int D> void bindApi(py::module &module) {
   // Isotropic Process
   py::class_<IsotropicProcess<T, D>, SmartPointer<IsotropicProcess<T, D>>>(
       module, "IsotropicProcess", processModel)
-      .def(py::init([](const T rate, const Material mask) {
-             return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
-           }),
-           py::arg("rate") = 1., py::arg("maskMaterial") = Material::Undefined)
-      .def(py::init([](const T rate, const std::vector<Material> mask) {
-             return SmartPointer<IsotropicProcess<T, D>>::New(rate, mask);
-           }),
-           py::arg("rate"), py::arg("maskMaterial"))
-      .def(py::init([](std::unordered_map<Material, T> materialRates,
-                       T defaultRate) {
-             return SmartPointer<IsotropicProcess<T, D>>::New(materialRates,
-                                                              defaultRate);
-           }),
-           py::arg("materialRates"), py::arg("defaultRate") = 0.);
+      .def(py::init<T, Material>(), py::arg("rate") = 1.,
+           py::arg("maskMaterial") = Material::Undefined)
+      .def(py::init<T, std::vector<Material> const &>(), py::arg("rate") = 1.,
+           py::arg("maskMaterials"))
+      .def(py::init<std::unordered_map<Material, T>, T>(),
+           py::arg("materialRates"), py::arg("defaultRate") = 0.)
+      .def("setIsotropicRate", &IsotropicProcess<T, D>::setIsotropicRate)
+      .def("setMaterialRate", &IsotropicProcess<T, D>::setMaterialRate,
+           py::arg("material"), py::arg("rate"));
 
   // DirectionalProcess
   py::class_<DirectionalProcess<T, D>, SmartPointer<DirectionalProcess<T, D>>>(
       module, "DirectionalProcess", processModel)
+      .def(py::init<const Vec3D<T> &,
+                    std::unordered_map<Material, std::pair<T, T>>, T, T>(),
+           py::arg("direction"), py::arg("materialRates"),
+           py::arg("defaultDirectionalRate") = 0.,
+           py::arg("defaultIsotropicRate") = 0.)
       .def(py::init<const Vec3D<T> &, T, T, Material, bool>(),
            py::arg("direction"), py::arg("directionalVelocity"),
            py::arg("isotropicVelocity") = 0.,
@@ -1506,9 +1527,9 @@ template <int D> void bindApi(py::module &module) {
   py::class_<gpu::SingleParticleProcess<T, D>,
              SmartPointer<gpu::SingleParticleProcess<T, D>>>(
       m_gpu, "SingleParticleProcess", processModel_gpu)
-      .def(py::init<std::unordered_map<Material, T>, T, T, T>(),
-           py::arg("materialRates"), py::arg("rate"),
-           py::arg("stickingProbability"), py::arg("sourceExponent"));
+      .def(py::init<MaterialValueMap<T> const &, T, T>(),
+           py::arg("materialRates"), py::arg("stickingProbability"),
+           py::arg("sourceExponent"));
 
   // Multi Particle Process
   py::class_<gpu::MultiParticleProcess<T, D>,
@@ -1555,16 +1576,15 @@ template <int D> void bindApi(py::module &module) {
              SmartPointer<gpu::IonBeamEtching<T, D>>>(m_gpu, "IonBeamEtching",
                                                       processModel)
       .def(py::init(&SmartPointer<gpu::IonBeamEtching<T, D>>::template New<
-                    const IBEParameters<T> &, const std::vector<Material> &>),
-           py::arg("parameters"), py::arg("maskMaterials"));
+                    const IBEParameters<T> &>),
+           py::arg("parameters"));
 
   // Faraday Cage Etching
   py::class_<gpu::FaradayCageEtching<T, D>,
              SmartPointer<gpu::FaradayCageEtching<T, D>>>(
       m_gpu, "FaradayCageEtching", processModel)
       .def(py::init(&SmartPointer<gpu::FaradayCageEtching<T, D>>::template New<
-                    const FaradayCageParameters<T> &,
-                    const std::vector<Material> &>),
-           py::arg("parameters"), py::arg("maskMaterials"));
+                    const FaradayCageParameters<T> &>),
+           py::arg("parameters"));
 #endif
 }
