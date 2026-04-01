@@ -1,4 +1,5 @@
 #include <materials/psMaterialValueMap.hpp>
+#include <vcTestAsserts.hpp>
 
 #include <algorithm>
 #include <vector>
@@ -11,9 +12,9 @@ void testBuiltInMaterial() {
   map.set(Material::Si, 1);
   map.set(Material::SiO2, 2);
 
-  assert(map.get(Material::Si) == 1);
-  assert(map.get(Material::SiO2) == 2);
-  assert(map.get(Material::Si3N4) == -1); // default
+  VC_TEST_ASSERT(map.get(Material::Si) == 1);
+  VC_TEST_ASSERT(map.get(Material::SiO2) == 2);
+  VC_TEST_ASSERT(map.get(Material::Si3N4) == -1); // default
 }
 
 void testCustomMaterial() {
@@ -22,38 +23,44 @@ void testCustomMaterial() {
   Material customMat = MaterialMap::fromString("custom");
   map.set(customMat, 3);
 
-  assert(map.get(customMat) == 3);
-  assert(map.get(Material::Si) == 0); // default
+  VC_TEST_ASSERT(map.get(customMat) == 3);
+  VC_TEST_ASSERT(map.get(Material::Si) == 0); // default
 
   Material customMat2 = MaterialMap::fromString("custom2");
-  assert(map.get(customMat2) == 0); // default
+  VC_TEST_ASSERT(map.get(customMat2) == 0); // default
 
   // test operator[]
   map[customMat2] = 4;
-  assert(map.get(customMat2) == 4);
+  VC_TEST_ASSERT(map.get(customMat2) == 4);
 }
 
 void testIteration() {
   MaterialValueMap<int> map;
+  auto customMat = MaterialMap::fromString("custom");
   map.set(Material::Si, 1);
   map.set(Material::SiO2, 2);
-  map.set(Material::custom(42), 7);
+  map.set(customMat, 7);
 
   std::vector<std::pair<Material, int>> expected = {
       {Material::Si, 1},
       {Material::SiO2, 2},
-      {Material::custom(42), 7},
+      {customMat, 7},
   };
 
-  std::vector<std::pair<Material, int>> actual;
-  for (auto entry : map) {
-    actual.emplace_back(entry.material, entry.value);
+  size_t idx = 0;
+  for (const auto &[material, value] : map) {
+    VC_TEST_ASSERT(idx < expected.size());
+    VC_TEST_ASSERT(material == expected[idx].first);
+    VC_TEST_ASSERT(value == expected[idx].second);
+    std::cout << "Material: " << MaterialMap::toString(material) << "("
+              << material.legacyId() << ")" << ", Value: " << value
+              << std::endl;
+    ++idx;
   }
 
-  assert(actual.size() == expected.size());
-  for (const auto &item : expected) {
-    assert(std::find(actual.begin(), actual.end(), item) != actual.end());
-  }
+  VC_TEST_ASSERT(map.getEntryByIndex(0) == 1);
+  VC_TEST_ASSERT(map.getEntryByIndex(1) == 2);
+  VC_TEST_ASSERT(map.getEntryByIndex(2) == 7);
 }
 
 int main() {

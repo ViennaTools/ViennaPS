@@ -79,6 +79,14 @@ public:
     return getBuiltInValue(idx);
   }
 
+  const T getEntryByIndex(std::size_t idx) const {
+    if (auto it = begin().goToIndex(idx); it != end()) {
+      return (*it).value;
+    } else {
+      throw std::out_of_range("Index out of range in MaterialValueMap.");
+    }
+  }
+
   void setDefault(const T &v) { default_ = v; }
 
   [[nodiscard]] const T &getDefault() const { return default_; }
@@ -127,6 +135,19 @@ public:
       if (!isEnd) {
         advanceToValid();
       }
+    }
+
+    Iterator goToIndex(std::size_t targetIdx) {
+      idx_ = 0;
+      phase_ = Phase::BuiltIn;
+      advanceToValid();
+
+      size_t idx = 0;
+      while (phase_ != Phase::End && idx != targetIdx) {
+        ++(*this);
+        ++idx;
+      }
+      return *this;
     }
 
     Iterator &operator++() {
