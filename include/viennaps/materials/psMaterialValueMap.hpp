@@ -38,6 +38,15 @@ public:
     set(material, T(std::forward<Args>(args)...));
   }
 
+  T &operator[](Material material) {
+    if (material.isBuiltIn()) {
+      auto idx = toIndex(material.builtIn());
+      isSet_[idx] = true;
+      return values_[idx];
+    }
+    return customValues_[material.customId()];
+  }
+
   // get value or default T{}
   [[nodiscard]] T get(Material material) const {
     if (material.isBuiltIn()) {
