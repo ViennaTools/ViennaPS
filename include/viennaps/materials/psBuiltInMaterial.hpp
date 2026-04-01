@@ -20,13 +20,18 @@ enum class MaterialCategory : uint8_t {
   Misc
 };
 
-struct MaterialInfo {
-  std::string_view name;
+template <bool IsBuiltIn> struct MaterialInfoType {
+  using StringType =
+      std::conditional_t<IsBuiltIn, std::string_view, std::string>;
+  StringType name;
   MaterialCategory category;
   double density_gcm3;
   bool conductive;
   uint32_t colorHex;
 };
+
+using BuiltInMaterialInfo = MaterialInfoType<true>;
+using MaterialInfo = MaterialInfoType<false>;
 
 #define BUILTIN_MATERIAL_LIST(X)                                               \
   /* id, sym, cat, density_gcm3, conductive, color (hex) */                    \
@@ -143,9 +148,9 @@ enum class BuiltInMaterial : uint16_t {
 
 inline constexpr uint16_t kBuiltInMaterialMaxId = 176;
 
-constexpr std::array<MaterialInfo, kBuiltInMaterialMaxId + 1>
+constexpr std::array<BuiltInMaterialInfo, kBuiltInMaterialMaxId + 1>
     kBuiltInMaterialTable = [] {
-      std::array<MaterialInfo, kBuiltInMaterialMaxId + 1> table{};
+      std::array<BuiltInMaterialInfo, kBuiltInMaterialMaxId + 1> table{};
       for (auto &entry : table) {
         entry = {"Undefined", MaterialCategory::Generic, 0.0, false, 0xcccccc};
       }
@@ -164,7 +169,7 @@ constexpr std::array<MaterialInfo, kBuiltInMaterialMaxId + 1>
   return isValidBuiltInMaterialId(static_cast<uint16_t>(material));
 }
 
-[[nodiscard]] constexpr const MaterialInfo &
+[[nodiscard]] constexpr const BuiltInMaterialInfo &
 getBuiltInMaterialInfo(BuiltInMaterial material) {
   const auto id = static_cast<uint16_t>(material);
   return kBuiltInMaterialTable[isValidBuiltInMaterialId(id)

@@ -23,33 +23,21 @@ namespace viennaps {
 
 using namespace viennacore;
 
-[[nodiscard]] constexpr MaterialInfo info(const Material material) {
-  if (!material.isBuiltIn()) {
-    return MaterialRegistry::instance().getInfo(material);
-  }
-  const auto &builtIn = getBuiltInMaterialInfo(material.builtIn());
-  return {builtIn.name, builtIn.category, builtIn.density_gcm3,
-          builtIn.conductive, builtIn.colorHex};
-}
-
 [[nodiscard]] constexpr MaterialCategory categoryOf(const Material material) {
   return material.isBuiltIn() ? categoryOf(material.builtIn())
-                              : info(material).category;
+                              : MaterialCategory::Generic;
 }
 
 [[nodiscard]] constexpr double density(const Material material) {
-  return material.isBuiltIn() ? density(material.builtIn())
-                              : info(material).density_gcm3;
+  return material.isBuiltIn() ? density(material.builtIn()) : 0.0;
 }
 
 [[nodiscard]] constexpr bool isConductive(const Material material) {
-  return material.isBuiltIn() ? isConductive(material.builtIn())
-                              : info(material).conductive;
+  return material.isBuiltIn() ? isConductive(material.builtIn()) : false;
 }
 
 [[nodiscard]] constexpr uint32_t color(const Material material) {
-  return material.isBuiltIn() ? color(material.builtIn())
-                              : info(material).colorHex;
+  return material.isBuiltIn() ? color(material.builtIn()) : 0xffffff;
 }
 
 /// A class that wraps the viennals MaterialMap class and provides a more user

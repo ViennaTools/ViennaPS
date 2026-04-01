@@ -280,11 +280,12 @@ private:
     materialMinId = std::numeric_limits<int>::max();
     materialMaxId = std::numeric_limits<int>::min();
     int index = 0;
+    auto &registry = MaterialRegistry::instance();
     for (const auto &materialId : uniqueMaterialIds) {
-      auto colorHex = color(materialId);
-      auto [r, g, b] = util::hexToRGBArray(colorHex);
+      auto info = registry.getInfo(materialId);
+      auto [r, g, b] = util::hexToRGBArray(info.colorHex);
       lut->SetTableValue(index, r, g, b, 1.0);
-      auto label = MaterialMap::toString(materialId);
+      auto &label = info.name;
       int id = static_cast<int>(materialId);
       lut->SetAnnotation(id, label.data());
       ++index;

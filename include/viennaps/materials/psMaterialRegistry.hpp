@@ -40,6 +40,7 @@ public:
       return Material::custom(it->second);
     }
 
+    // register new custom material
     const auto customId = static_cast<Material::ValueType>(materials_.size());
     nameToCustomId_.emplace(name, customId);
     materials_.push_back(MaterialInfo{
@@ -106,9 +107,11 @@ public:
     return material.isBuiltIn();
   }
 
-  [[nodiscard]] const MaterialInfo &getInfo(Material material) const {
+  [[nodiscard]] MaterialInfo getInfo(Material material) const {
     if (material.isBuiltIn()) {
-      return getBuiltInMaterialInfo(material.builtIn());
+      auto info = getBuiltInMaterialInfo(material.builtIn());
+      return MaterialInfo{std::string(info.name), info.category,
+                          info.density_gcm3, info.conductive, info.colorHex};
     }
 
     const auto customId = material.customId();
