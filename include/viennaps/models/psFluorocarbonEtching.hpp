@@ -7,7 +7,6 @@
 #include "../psConstants.hpp"
 #include "../psUnits.hpp"
 
-
 #include "psIonModelUtil.hpp"
 
 #include <rayParticle.hpp>
