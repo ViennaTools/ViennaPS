@@ -284,7 +284,7 @@ private:
       auto colorHex = color(materialId);
       auto [r, g, b] = util::hexToRGBArray(colorHex);
       lut->SetTableValue(index, r, g, b, 1.0);
-      auto label = to_string_view(materialId);
+      auto label = MaterialMap::toString(materialId);
       int id = static_cast<int>(materialId);
       lut->SetAnnotation(id, label.data());
       ++index;

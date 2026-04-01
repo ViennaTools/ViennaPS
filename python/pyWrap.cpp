@@ -1,22 +1,5 @@
 #include "pyWrapDimension.hpp"
 
-struct MaterialInfoPy {
-  MaterialInfoPy(Material m)
-      : name(info(m).name), category(info(m).category),
-        density_gcm3(info(m).density_gcm3), conductive(info(m).conductive),
-        colorHex(info(m).colorHex) {}
-  MaterialInfoPy(MaterialInfo info)
-      : name(info.name), category(info.category),
-        density_gcm3(info.density_gcm3), conductive(info.conductive),
-        colorHex(info.colorHex) {}
-
-  std::string name;
-  MaterialCategory category;
-  double density_gcm3;
-  bool conductive;
-  uint32_t colorHex;
-};
-
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
       "ViennaPS is a topography simulation library for microelectronic "
@@ -101,6 +84,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("Custom", Material::Kind::Custom)
       .finalize();
 
+  // MaterialInfo
+  py::class_<MaterialInfo>(module, "MaterialInfo")
+      .def_readwrite("name", &MaterialInfo::name)
+      .def_readwrite("category", &MaterialInfo::category)
+      .def_readwrite("density_gcm3", &MaterialInfo::density_gcm3)
+      .def_readwrite("conductive", &MaterialInfo::conductive)
+      .def_readwrite("color_hex", &MaterialInfo::colorHex)
+      // convenience: "#RRGGBB"
+      .def_property_readonly("color_rgb", [](const MaterialInfo &x) {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "#%06x",
+                      (unsigned)(x.colorHex & 0xFFFFFFu));
+        return std::string(buf);
+      });
+
   py::class_<MaterialRegistry>(module, "MaterialRegistry")
       .def_static(
           "instance",
@@ -108,7 +106,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           py::return_value_policy::reference)
       .def("registerMaterial", &MaterialRegistry::registerMaterial,
            py::arg("name"))
-      .def("hasMaterial", &MaterialRegistry::hasMaterial, py::arg("name"))
+      .def("hasMaterial", (bool(MaterialRegistry::*)(std::string_view) const) &
+                              MaterialRegistry::hasMaterial)
+      .def("hasMaterial", (bool(MaterialRegistry::*)(Material) const) &
+                              MaterialRegistry::hasMaterial)
       .def("findMaterial", &MaterialRegistry::findMaterial, py::arg("name"))
       .def("getMaterial", &MaterialRegistry::getMaterial, py::arg("name"))
       .def(
@@ -118,6 +119,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           },
           py::arg("material"))
       .def("isBuiltIn", &MaterialRegistry::isBuiltIn, py::arg("material"))
+      .def("getInfo", &MaterialRegistry::getInfo)
+      .def("setInfo", &MaterialRegistry::setInfo)
       .def("customMaterialCount", &MaterialRegistry::customMaterialCount);
 
   // Material category enum
@@ -133,22 +136,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("TCO", MaterialCategory::TCO)
       .value("Misc", MaterialCategory::Misc)
       .finalize();
-
-  // MaterialInfo (immutable/read-only)
-  py::class_<MaterialInfoPy>(module, "MaterialInfo")
-      .def(py::init<Material>())
-      .def_readonly("name", &MaterialInfoPy::name)
-      .def_readonly("category", &MaterialInfoPy::category)
-      .def_readonly("density_gcm3", &MaterialInfoPy::density_gcm3)
-      .def_readonly("conductive", &MaterialInfoPy::conductive)
-      .def_readonly("color_hex", &MaterialInfoPy::colorHex)
-      // convenience: "#RRGGBB"
-      .def_property_readonly("color_rgb", [](const MaterialInfoPy &x) {
-        char buf[8];
-        std::snprintf(buf, sizeof(buf), "#%06x",
-                      (unsigned)(x.colorHex & 0xFFFFFFu));
-        return std::string(buf);
-      });
 
   // MaterialMap
   py::class_<MaterialMap, SmartPointer<MaterialMap>>(module, "MaterialMap")
@@ -170,6 +157,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Resolve built-in or register custom material by name.")
       .def_static("toString",
                   py::overload_cast<const Material>(&MaterialMap::toString),
+                  "Get the name of a material.")
+      .def_static("toString",
+                  py::overload_cast<const int>(&MaterialMap::toString),
                   "Get the name of a material.");
 
   // Meta Data Enum
@@ -251,7 +241,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("set", &MaterialValueMap<T>::set, py::arg("material"),
            py::arg("value"))
       .def("get",
-           py::overload_cast<Material>(&MaterialValueMap<T>::get, py::const_),
+           (T(MaterialValueMap<T>::*)(Material) const) &
+               MaterialValueMap<T>::get,
            py::arg("material"))
       .def("getDefault", &MaterialValueMap<T>::getDefault)
       .def("setDefault", &MaterialValueMap<T>::setDefault, py::arg("value"))

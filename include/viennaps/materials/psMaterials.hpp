@@ -14,28 +14,18 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <utility>
 
 namespace viennaps {
 
 using namespace viennacore;
 
-struct MaterialInfo {
-  std::string_view name;
-  MaterialCategory category;
-  double density_gcm3;
-  bool conductive;
-  uint32_t colorHex;
-};
-
 [[nodiscard]] constexpr MaterialInfo info(const Material material) {
   if (!material.isBuiltIn()) {
-    return {"Custom", MaterialCategory::Generic, 0.0, false, 0xffffff};
+    return MaterialRegistry::instance().getInfo(material);
   }
   const auto &builtIn = getBuiltInMaterialInfo(material.builtIn());
   return {builtIn.name, builtIn.category, builtIn.density_gcm3,
@@ -44,40 +34,22 @@ struct MaterialInfo {
 
 [[nodiscard]] constexpr MaterialCategory categoryOf(const Material material) {
   return material.isBuiltIn() ? categoryOf(material.builtIn())
-                              : MaterialCategory::Generic;
+                              : info(material).category;
 }
 
 [[nodiscard]] constexpr double density(const Material material) {
-  return material.isBuiltIn() ? density(material.builtIn()) : 0.0;
+  return material.isBuiltIn() ? density(material.builtIn())
+                              : info(material).density_gcm3;
 }
 
 [[nodiscard]] constexpr bool isConductive(const Material material) {
-  return material.isBuiltIn() ? isConductive(material.builtIn()) : false;
+  return material.isBuiltIn() ? isConductive(material.builtIn())
+                              : info(material).conductive;
 }
 
 [[nodiscard]] constexpr uint32_t color(const Material material) {
-  return material.isBuiltIn() ? color(material.builtIn()) : 0xffffff;
-}
-
-[[nodiscard]] constexpr std::string_view
-to_string_view(const Material material) {
-  return material.isBuiltIn() ? builtInMaterialToString(material.builtIn())
-                              : std::string_view("Custom");
-}
-
-[[nodiscard]] inline std::string to_string(const Material material) {
-  if (material.isBuiltIn()) {
-    return std::string(builtInMaterialToString(material.builtIn()));
-  }
-  return "Custom#" + std::to_string(material.customId());
-}
-
-[[nodiscard]] inline std::string to_string(const Material material,
-                                           const MaterialRegistry &registry) {
-  if (material.isBuiltIn()) {
-    return std::string(builtInMaterialToString(material.builtIn()));
-  }
-  return std::string(registry.getName(material));
+  return material.isBuiltIn() ? color(material.builtIn())
+                              : info(material).colorHex;
 }
 
 /// A class that wraps the viennals MaterialMap class and provides a more user
@@ -158,7 +130,6 @@ public:
   __both__ static inline bool isMaterial(T matId,
                                          std::span<const Material> materials) {
     const auto material = mapToMaterial(matId);
-
     return std::any_of(materials.begin(), materials.end(),
                        [&](const Material &m) { return material == m; });
   }
@@ -170,21 +141,24 @@ public:
         matId, std::span<const Material>(materials.begin(), materials.size()));
   }
 
+  static inline bool isHardmask(const Material material) {
+    return categoryOf(material) == MaterialCategory::Hardmask;
+  }
+
   template <class T> static inline bool isHardmask(const T matId) {
     const auto material = mapToMaterial(matId);
-    if (!material.isBuiltIn()) {
-      return false;
+    return isHardmask(material);
+  }
+
+  static inline std::string toString(const Material material) {
+    if (material.isBuiltIn()) {
+      return std::string(builtInMaterialToString(material.builtIn()));
     }
-    return categoryOf(material.builtIn()) == MaterialCategory::Hardmask;
-  }
-
-  static inline std::string toString(const Material matId) {
-    return to_string(matId);
-  }
-
-  static inline std::string toString(const Material matId,
-                                     const MaterialRegistry &registry) {
-    return to_string(matId, registry);
+    auto &registry = MaterialRegistry::instance();
+    if (registry.hasMaterial(material)) {
+      return std::string(registry.getName(material));
+    }
+    return "Custom#" + std::to_string(material.customId());
   }
 
   static inline std::string toString(const int matId) {

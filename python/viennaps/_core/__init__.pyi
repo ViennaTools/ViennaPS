@@ -6,10 +6,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
-import viennaps.d3
+import viennaps.d2
 from viennaps import d3
+import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
@@ -1040,25 +1040,23 @@ class MaterialCategory(enum.IntEnum):
         Convert to a string according to format_spec.
         """
 class MaterialInfo:
-    def __init__(self, arg0: Material) -> None:
-        ...
-    @property
-    def category(self) -> MaterialCategory:
-        ...
+    category: ...
+    conductive: bool
+    name: str
     @property
     def color_hex(self) -> int:
+        ...
+    @color_hex.setter
+    def color_hex(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @property
     def color_rgb(self) -> str:
         ...
     @property
-    def conductive(self) -> bool:
-        ...
-    @property
     def density_gcm3(self) -> float:
         ...
-    @property
-    def name(self) -> str:
+    @density_gcm3.setter
+    def density_gcm3(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class MaterialKind(enum.IntEnum):
     BuiltIn: typing.ClassVar[MaterialKind]  # value = <MaterialKind.BuiltIn: 0>
@@ -1090,7 +1088,14 @@ class MaterialMap:
         Map a float to a material.
         """
     @staticmethod
+    @typing.overload
     def toString(arg0: Material) -> str:
+        """
+        Get the name of a material.
+        """
+    @staticmethod
+    @typing.overload
+    def toString(arg0: typing.SupportsInt | typing.SupportsIndex) -> str:
         """
         Get the name of a material.
         """
@@ -1114,15 +1119,23 @@ class MaterialRegistry:
         ...
     def findMaterial(self, name: str) -> viennaps._core.Material | None:
         ...
+    def getInfo(self, arg0: Material) -> MaterialInfo:
+        ...
     def getMaterial(self, name: str) -> Material:
         ...
     def getName(self, material: Material) -> str:
         ...
-    def hasMaterial(self, name: str) -> bool:
+    @typing.overload
+    def hasMaterial(self, arg0: str) -> bool:
+        ...
+    @typing.overload
+    def hasMaterial(self, arg0: Material) -> bool:
         ...
     def isBuiltIn(self, material: Material) -> bool:
         ...
     def registerMaterial(self, name: str) -> Material:
+        ...
+    def setInfo(self, arg0: Material, arg1: MaterialInfo) -> None:
         ...
 class MaterialValueMap:
     def __init__(self) -> None:

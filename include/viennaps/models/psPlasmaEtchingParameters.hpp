@@ -101,11 +101,11 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     processData["Passivation Flux"] = {passivationFlux};
 
     for (auto entry : beta_E) {
-      processData["Beta_E " + to_string(entry.getMaterial())] =
+      processData["Beta_E " + MaterialMap::toString(entry.getMaterial())] =
           std::vector<double>{entry.getValue()};
     }
     for (auto entry : beta_P) {
-      processData["Beta_P " + to_string(entry.getMaterial())] =
+      processData["Beta_P " + MaterialMap::toString(entry.getMaterial())] =
           std::vector<double>{entry.getValue()};
     }
 

@@ -12,11 +12,6 @@
 
 namespace viennaps {
 
-struct CustomMaterialInfo {
-  std::string name;
-  double density = 0.0;
-};
-
 class MaterialRegistry {
 public:
   [[nodiscard]] static MaterialRegistry &instance() {
@@ -47,7 +42,8 @@ public:
 
     const auto customId = static_cast<Material::ValueType>(materials_.size());
     nameToCustomId_.emplace(name, customId);
-    materials_.push_back(CustomMaterialInfo{std::move(name)});
+    materials_.push_back(MaterialInfo{
+        std::move(name), MaterialCategory::Generic, 0.0, false, 0xffffff});
     return Material::custom(customId);
   }
 
@@ -59,6 +55,14 @@ public:
     }
 
     return nameToCustomId_.find(std::string(name)) != nameToCustomId_.end();
+  }
+
+  [[nodiscard]] bool hasMaterial(Material material) const {
+    if (material.isBuiltIn()) {
+      return true;
+    }
+    const auto customId = material.customId();
+    return customId < materials_.size();
   }
 
   [[nodiscard]] std::optional<Material>
@@ -102,10 +106,9 @@ public:
     return material.isBuiltIn();
   }
 
-  [[nodiscard]] const CustomMaterialInfo &getInfo(Material material) const {
+  [[nodiscard]] const MaterialInfo &getInfo(Material material) const {
     if (material.isBuiltIn()) {
-      throw std::invalid_argument(
-          "Built-in materials do not have registry-owned metadata.");
+      return getBuiltInMaterialInfo(material.builtIn());
     }
 
     const auto customId = material.customId();
@@ -116,6 +119,20 @@ public:
     return materials_[customId];
   }
 
+  void setInfo(Material material, const MaterialInfo &info) {
+    if (material.isBuiltIn()) {
+      throw std::invalid_argument(
+          "Cannot set metadata for built-in materials.");
+    }
+
+    const auto customId = material.customId();
+    if (customId >= materials_.size()) {
+      throw std::out_of_range("Unknown custom material id.");
+    }
+
+    materials_[customId] = info;
+  }
+
   [[nodiscard]] std::size_t customMaterialCount() const {
     return materials_.size();
   }
@@ -124,7 +141,7 @@ private:
   MaterialRegistry() = default;
 
   std::unordered_map<std::string, Material::ValueType> nameToCustomId_;
-  std::vector<CustomMaterialInfo> materials_;
+  std::vector<MaterialInfo> materials_;
 };
 
 } // namespace viennaps
