@@ -552,6 +552,18 @@ public:
     return mesh;
   }
 
+  SmartPointer<viennals::Mesh<NumericType>> getDiskMesh() const {
+    auto mesh = viennals::Mesh<NumericType>::New();
+    viennals::ToDiskMesh<NumericType, D> meshConverter;
+    meshConverter.setMesh(mesh);
+    meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+    for (const auto ls : levelSets_) {
+      meshConverter.insertNextLevelSet(ls);
+    }
+    meshConverter.apply();
+    return mesh;
+  }
+
   // Save the level set as a VTK file.
   void saveLevelSetMesh(const std::string &fileName, int width = 1) {
     auto meshes = getLevelSetMesh(width);
@@ -578,6 +590,13 @@ public:
                     NumericType bottomExtension = 0.0,
                     bool sharpCorners = false) const {
     auto mesh = getHullMesh(bottomExtension, sharpCorners);
+    viennals::VTKWriter<NumericType> writer(mesh, fileName);
+    writer.setMetaData(metaData_);
+    writer.apply();
+  }
+
+  void saveDiskMesh(const std::string &fileName) const {
+    auto mesh = getDiskMesh();
     viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();
