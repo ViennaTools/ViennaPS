@@ -11,19 +11,9 @@ using DomainType = SmartPointer<Domain<NumericType, D>>;
 using IsotropicProcessGeometric = SmartPointer<SphereDistribution<double, D>>;
 constexpr bool volumeOutput = false;
 
-void writeVolume(DomainType domain) {
-  if (!volumeOutput)
-    return;
-  static int volumeNum = 0;
-  std::cout << "Writing volume mesh ..." << std::flush;
-  domain->saveVolumeMesh("FinFET_" + std::to_string(volumeNum), 0.05);
-  std::cout << " done" << std::endl;
-  ++volumeNum;
-}
-
 void writeSurface(DomainType domain) {
   static int outputNum = 0;
-  domain->saveSurfaceMesh("FinFET_" + std::to_string(outputNum) + ".vtp", true);
+  domain->saveSurfaceMesh("FinFET_" + std::to_string(outputNum) + ".vtp");
   ++outputNum;
 }
 
@@ -60,7 +50,7 @@ int main() {
   { // DP-Depo
     std::cout << "DP-Depo ..." << std::flush;
     const NumericType thickness = 4; // nm
-    domain->duplicateTopLevelSet(Material::Metal);
+    domain->duplicateTopLevelSet(Material::SiO2_HM);
     auto dist = IsotropicProcessGeometric::New(thickness);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
@@ -81,19 +71,21 @@ int main() {
   // Remove mask with boolean operation
   domain->removeMaterial(Material::Mask);
   writeSurface(domain);
-  writeVolume(domain);
 
   // pattern si
   {
     std::cout << "Si-Patterning ..." << std::flush;
     const NumericType etchDepth = 90.; // nm
-    Vec3D<NumericType> direction = {0, 0, 1};
-    auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(
-        direction, 1.1, 0.1, Material::Metal, false);
+    Vec3D<NumericType> direction = {0, 0, -1};
+    DirectionalProcess<NumericType, D>::RateMap rates;
+    rates.set(Material::Si,
+              {1., 0.1});       // directional and isotropic rates for silicon
+    rates.setDefault({0., 0.}); // default rates for non-silicon materials
+    auto model =
+        SmartPointer<DirectionalProcess<NumericType, D>>::New(direction, rates);
     Process<NumericType, D>(domain, model, etchDepth).apply();
     std::cout << " done" << std::endl;
   }
-  writeVolume(domain);
   writeSurface(domain);
 
   // Remove DP mask (metal)
@@ -113,7 +105,7 @@ int main() {
 
   // CMP at 80
   Planarize<NumericType, D>(domain, 80.0).apply();
-  writeVolume(domain);
+  writeSurface(domain);
 
   // pattern STI material
   {
@@ -124,7 +116,6 @@ int main() {
     std::cout << " done" << std::endl;
   }
   writeSurface(domain);
-  writeVolume(domain);
 
   // deposit gate material
   {
@@ -179,7 +170,6 @@ int main() {
   // Remove mask
   domain->removeTopLevelSet();
   writeSurface(domain);
-  writeVolume(domain);
 
   // Spacer Deposition and Etch
   { // spacer depo
@@ -194,22 +184,20 @@ int main() {
 
   { // spacer etch
     std::cout << "Spacer Etch ..." << std::flush;
-    auto ls = domain->getLevelSets()[domain->getLevelSets().size() - 2];
+    auto mask = domain->getLevelSets()[domain->getLevelSets().size() - 2];
     auto dist = SmartPointer<BoxDistribution<double, D>>::New(
-        std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, ls);
+        std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, mask);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
   writeSurface(domain);
-  writeVolume(domain);
 
   // isotropic etch (fin-release)
   {
     std::cout << "Fin-Release ..." << std::flush;
-    std::vector<Material> masks = {Material::PolySi, Material::SiO2,
-                                   Material::Si3N4};
-    auto model =
-        SmartPointer<IsotropicProcess<NumericType, D>>::New(-1., masks);
+    auto model = SmartPointer<IsotropicProcess<NumericType, D>>::New(0.0);
+    model->setMaterialRate(Material::Si, -1.);
+
     AdvectionParameters advectionParams;
     advectionParams.spatialScheme =
         viennals::SpatialSchemeEnum::LAX_FRIEDRICHS_2ND_ORDER;
@@ -219,22 +207,21 @@ int main() {
     std::cout << " done" << std::endl;
   }
   writeSurface(domain);
-  writeVolume(domain);
 
   // source/drain epitaxy
   {
     std::cout << "S/D Epitaxy ..." << std::flush;
     domain->duplicateTopLevelSet(Material::SiGe);
-    Logger::setLogLevel(LogLevel::INFO);
     AdvectionParameters advectionParams;
     advectionParams.spatialScheme =
         viennals::SpatialSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
     lsInternal::StencilLocalLaxFriedrichsScalar<NumericType, D,
                                                 1>::setMaxDissipation(100);
 
-    std::vector<std::pair<Material, NumericType>> material = {
-        {Material::Si, 1.}, {Material::SiGe, 1.}};
-    auto model = SmartPointer<SelectiveEpitaxy<NumericType, D>>::New(material);
+    auto model = SmartPointer<SelectiveEpitaxy<NumericType, D>>::New();
+    model->setMaterialRate(Material::Si, 1.);
+    model->setMaterialRate(Material::SiGe, 1.);
+
     Process<NumericType, D> proc(domain, model, 14.);
     proc.setParameters(advectionParams);
     proc.apply();
@@ -242,7 +229,6 @@ int main() {
     std::cout << " done" << std::endl;
   }
   writeSurface(domain);
-  writeVolume(domain);
 
   // deposit dielectric
   {
@@ -257,12 +243,11 @@ int main() {
 
   // CMP at 90
   Planarize<NumericType, D>(domain, 90.0).apply();
-  writeVolume(domain);
+  writeSurface(domain);
 
-  // now remove gate and add new gate materials
+  // now remove dummy gate and add new gate materials
   domain->removeMaterial(Material::PolySi);
   writeSurface(domain);
-  writeVolume(domain);
 
   // now deposit TiN and PolySi as replacement gate
   {
@@ -283,10 +268,11 @@ int main() {
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
+  writeSurface(domain);
 
   // CMP at 90
   Planarize<NumericType, D>(domain, 90.0).apply();
-  writeVolume(domain);
+  writeSurface(domain);
 
   domain->saveVolumeMesh("FinFET_Final", 0.05);
 }

@@ -38,7 +38,6 @@ domain = ps.Domain(bounds, boundaryConds, gridDelta)
 ps.MakePlane(domain, 70.0, ps.Material.Si).apply()
 writeSurface(domain)
 
-
 # Add double patterning mask
 box = ps.ls.Domain(domain.getGrid())
 minPoints = [30.0, -10.0, 69.9]
@@ -60,7 +59,7 @@ writeSurface(domain)
 print("DP-Patterning ...", end="", flush=True)
 etchDepth = 6.0  # nm
 dist = ps.BoxDistribution(
-    [-gridDelta, -gridDelta, -etchDepth], domain.getLevelSets()[0]
+    halfAxes=[-gridDelta, -gridDelta, -etchDepth], mask=domain.getLevelSets()[0]
 )
 ps.Process(domain, dist, 0).apply()
 print(" done")
@@ -69,22 +68,16 @@ writeSurface(domain)
 # Remove mask with boolean operation
 domain.removeMaterial(ps.Material.Mask)
 writeSurface(domain)
-writeVolume(domain)
 
 # pattern si
 print("Si-Patterning ...", end="", flush=True)
 etchDepth = 90.0  # nm
-direction = [0.0, 0.0, 1.0]
 model = ps.DirectionalProcess(
-    direction=direction,
-    directionalVelocity=1.1,
-    isotropicVelocity=0.1,
-    maskMaterial=ps.Material.Metal,
-    calculateVisibility=False,
+    direction=[0.0, 0.0, -1.0],
+    materialRates={ps.Material.Si: [1.0, 0.1]},
 )
 ps.Process(domain, model, etchDepth).apply()
 print(" done")
-writeVolume(domain)
 writeSurface(domain)
 
 # Remove DP mask (metal)
@@ -102,7 +95,7 @@ writeSurface(domain)
 
 # CMP at 80
 ps.Planarize(domain, 80.0).apply()
-writeVolume(domain)
+writeSurface(domain)
 
 # pattern STI material
 print("STI Patterning ...", end="", flush=True)
@@ -110,7 +103,6 @@ dist = ps.SphereDistribution(radius=-35, mask=domain.getLevelSets()[0])
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
-writeVolume(domain)
 
 # deposit gate material
 print("Gate Deposition HfO2 ...", end="", flush=True)
@@ -131,6 +123,7 @@ writeSurface(domain)
 
 # CMP at 150
 ps.Planarize(domain, 150.0).apply()
+writeSurface(domain)
 
 # dummy gate mask addition
 box = ps.ls.Domain(domain.getGrid())
@@ -158,7 +151,6 @@ writeSurface(domain)
 # Remove mask
 domain.removeTopLevelSet()
 writeSurface(domain)
-writeVolume(domain)
 
 # Spacer Deposition and Etch
 print("Spacer Deposition and Etch ...", end="", flush=True)
@@ -180,8 +172,8 @@ writeVolume(domain)
 
 # isotropic etch (fin-release)
 print("Fin-Release ...", end="", flush=True)
-masks = [ps.Material.PolySi, ps.Material.SiO2, ps.Material.Si3N4]
-model = ps.IsotropicProcess(rate=-1.0, maskMaterial=masks)
+model = ps.IsotropicProcess(rate=0.0)
+model.setMaterialRate(ps.Material.Si, -1.0)
 advParams = ps.AdvectionParameters()
 advParams.spatialScheme = ps.SpatialScheme.LAX_FRIEDRICHS_2ND_ORDER
 process = ps.Process(domain, model, 5.0)
@@ -196,18 +188,15 @@ print("S/D Epitaxy ...", end="", flush=True)
 domain.duplicateTopLevelSet(ps.Material.SiGe)
 advectionParams = ps.AdvectionParameters()
 advectionParams.spatialScheme = ps.SpatialScheme.STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER
-ps.StencilLocalLaxFriedrichsScalar.setMaxDissipation(1000)
-material = [
-    (ps.Material.Si, 1.0),
-    (ps.Material.SiGe, 1.0),
-]
-model = ps.SelectiveEpitaxy(materialRates=material)
+ps.StencilLocalLaxFriedrichsScalar.setMaxDissipation(100)
+model = ps.SelectiveEpitaxy()
+model.setMaterialRate(ps.Material.SiGe, 1.0)
+model.setMaterialRate(ps.Material.Si, 1.0)
 process = ps.Process(domain, model, 14.0)
 process.setParameters(advectionParams)
 process.apply()
 print(" done")
 writeSurface(domain)
-writeVolume(domain)
 
 # deposit dielectric
 print("Dielectric Deposition ...", end="", flush=True)
@@ -220,12 +209,11 @@ writeSurface(domain)
 
 # CMP at 90
 ps.Planarize(domain, 90.0).apply()
-writeVolume(domain)
+writeSurface(domain)
 
 # now remove gate and add new gate materials
 domain.removeMaterial(ps.Material.PolySi)
 writeSurface(domain)
-writeVolume(domain)
 
 # now deposit TiN and PolySi as replacement gate
 print("Gate Deposition TiN ...", end="", flush=True)
@@ -242,9 +230,10 @@ domain.duplicateTopLevelSet(ps.Material.PolySi)
 dist = ps.SphereDistribution(radius=thickness)
 ps.Process(domain, dist, 0).apply()
 print(" done")
+writeSurface(domain)
 
 # CMP at 90
 ps.Planarize(domain, 90.0).apply()
-writeVolume(domain)
+writeSurface(domain)
 
 domain.saveVolumeMesh("FinFET_Final", 0.05)

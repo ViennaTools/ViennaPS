@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../materials/psMaterialValueMap.hpp"
 #include "../materials/psMaterials.hpp"
 #include "../process/psProcessModel.hpp"
 
@@ -18,29 +19,28 @@ class EpitaxyVelocityField : public VelocityField<NumericType, D> {
   static constexpr double high = 1.0;
   const double factor;
 
-  const std::vector<std::pair<Material, NumericType>> &materials;
+  const MaterialValueMap<NumericType> &materialRates;
 
 public:
-  EpitaxyVelocityField(
-      const std::vector<std::pair<Material, NumericType>> &passedmaterials,
-      NumericType r111, NumericType r100)
+  EpitaxyVelocityField(const MaterialValueMap<NumericType> &materials,
+                       NumericType r111, NumericType r100)
       : R111(r111), R100(r100), factor((R100 - R111) / (high - low)),
-        materials(passedmaterials) {}
+        materialRates(materials) {}
 
-  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
-                                int material, const Vec3D<NumericType> &nv,
-                                unsigned long pointID) override {
-    for (auto const &epitaxyMaterial : materials) {
-      if (MaterialMap::isMaterial(material, epitaxyMaterial.first)) {
-        double vel = std::max(std::abs(nv[0]), std::abs(nv[D - 1]));
-        vel = (vel - low) * factor + R111;
+  NumericType getScalarVelocity(const Vec3D<NumericType> &, int material,
+                                const Vec3D<NumericType> &nv,
+                                unsigned long) override {
 
-        if (std::abs(nv[0]) < std::abs(nv[D - 1])) {
-          vel *= 2.;
-        }
+    auto rate = materialRates.get(Material::fromLegacyId(material));
+    if (rate > 0) {
+      double vel = std::max(std::abs(nv[0]), std::abs(nv[D - 1]));
+      vel = (vel - low) * factor + R111;
 
-        return -vel * epitaxyMaterial.second;
+      if (std::abs(nv[0]) < std::abs(nv[D - 1])) {
+        vel *= 2.;
       }
+
+      return -vel * rate;
     }
 
     // not an epitaxy material
@@ -53,23 +53,34 @@ public:
 template <typename NumericType, int D>
 class SelectiveEpitaxy : public ProcessModelCPU<NumericType, D> {
 public:
+  SelectiveEpitaxy(NumericType rate111 = 0.5, NumericType rate100 = 1.)
+      : SelectiveEpitaxy(std::vector<std::pair<Material, NumericType>>{},
+                         rate111, rate100) {}
+
   // The constructor expects the materials where epitaxy is allowed including
   // the corresponding rates.
   SelectiveEpitaxy(
       const std::vector<std::pair<Material, NumericType>> pMaterials,
-      NumericType rate111 = 0.5, NumericType rate100 = 1.)
-      : materials(pMaterials) {
+      NumericType rate111 = 0.5, NumericType rate100 = 1.) {
+    for (const auto &[material, rate] : pMaterials) {
+      materialRates.set(material, rate);
+    }
+
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
     auto velField =
         SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
-            materials, rate111, rate100);
+            materialRates, rate111, rate100);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("SelectiveEpitaxy");
+  }
+
+  void setMaterialRate(Material material, NumericType rate) {
+    materialRates.set(material, rate);
   }
 
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
@@ -107,12 +118,6 @@ public:
               maskLayer, lsCopy,
               viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
               .apply();
-
-          // auto mesh = viennals::Mesh<NumericType>::New();
-          // viennals::ToSurfaceMesh(lsCopy, mesh).apply();
-          // viennals::VTKWriter<NumericType>(mesh, "SelectiveEpitaxyMask_" +
-          //                                            std::to_string(i))
-          //     .apply();
         }
       }
 
@@ -138,16 +143,12 @@ public:
   }
 
 private:
-  std::vector<std::pair<Material, NumericType>> materials;
+  MaterialValueMap<NumericType> materialRates;
   SmartPointer<Domain<NumericType, D>> domainCopy;
   bool firstInit = true;
 
   bool isEpitaxyMaterial(const Material &material) const {
-    for (const auto &epitaxyMaterial : materials) {
-      if (MaterialMap::isMaterial(material, epitaxyMaterial.first))
-        return true;
-    }
-    return false;
+    return materialRates.get(material) != NumericType(0);
   }
 };
 

@@ -101,6 +101,15 @@ public:
 
   [[nodiscard]] bool has(BuiltInMaterial m) const { return has(Material(m)); }
 
+  bool empty() const {
+    for (const auto &b : isSet_) {
+      if (b) {
+        return false;
+      }
+    }
+    return customValues_.empty();
+  }
+
   // remove value -> fallback to default
   void clear(Material material) {
     if (material.isBuiltIn()) {

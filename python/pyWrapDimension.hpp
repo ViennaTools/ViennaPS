@@ -1106,10 +1106,14 @@ template <int D> void bindApi(py::module &module) {
   // Selective Epitaxy Process
   py::class_<SelectiveEpitaxy<T, D>, SmartPointer<SelectiveEpitaxy<T, D>>>(
       module, "SelectiveEpitaxy", processModel)
+      .def(py::init(&SmartPointer<SelectiveEpitaxy<T, D>>::template New<T, T>),
+           py::arg("rate111") = 0.5, py::arg("rate100") = 1.0)
       .def(py::init(&SmartPointer<SelectiveEpitaxy<T, D>>::template New<
                     const std::vector<std::pair<Material, T>>, T, T>),
            py::arg("materialRates"), py::arg("rate111") = 0.5,
-           py::arg("rate100") = 1.0);
+           py::arg("rate100") = 1.0)
+      .def("setMaterialRate", &SelectiveEpitaxy<T, D>::setMaterialRate,
+           py::arg("material"), py::arg("rate"));
 
   // Single Particle ALD
   py::class_<SingleParticleALD<T, D>, SmartPointer<SingleParticleALD<T, D>>>(
