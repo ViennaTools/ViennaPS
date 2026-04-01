@@ -262,13 +262,8 @@ public:
     surfaceModelParams.materialPlaneWaferRate.setDefault(
         surfaceModelParams.planeWaferRate);
     for (auto entry : surfaceModelParams.materialPlaneWaferRate) {
-      surfaceModelParams.materialPlaneWaferRate.set(entry.getMaterial(),
-                                                    entry.getValue() * 0.5);
-    }
-    auto &customMaterialRates =
-        surfaceModelParams.materialPlaneWaferRate.customMaterialRates();
-    for (auto &mat : customMaterialRates) {
-      mat.second *= 0.5;
+      surfaceModelParams.materialPlaneWaferRate.set(entry.material,
+                                                    entry.value * 0.5);
     }
     surfaceModelParams.redepositionRate *= 0.5;
     auto surfModel =

@@ -113,54 +113,89 @@ public:
 
   // ================= ITERATOR =================
   struct Entry {
-    BuiltInMaterial material;
-    const T *value;
-    bool set;
-
-    [[nodiscard]] bool isSet() const { return set; }
-    [[nodiscard]] const T &getValue() const { return *value; }
-    [[nodiscard]] BuiltInMaterial getMaterial() const { return material; }
+    Material material;
+    const T &value;
   };
 
   class Iterator {
   public:
-    Iterator(const MaterialValueMap *map, std::size_t idx)
-        : map_(map), idx_(idx) {
-      advanceToValid();
+    using CustomIterator =
+        typename std::unordered_map<Material::ValueType, T>::const_iterator;
+
+    Iterator(const MaterialValueMap *map, bool isEnd)
+        : map_(map), phase_(isEnd ? Phase::End : Phase::BuiltIn), idx_(0) {
+      if (!isEnd) {
+        advanceToValid();
+      }
     }
 
     Iterator &operator++() {
-      ++idx_;
-      advanceToValid();
+      if (phase_ == Phase::BuiltIn) {
+        ++idx_;
+        advanceToValid();
+      } else if (phase_ == Phase::Custom) {
+        ++customIt_;
+        if (customIt_ == map_->customValues_.cend()) {
+          phase_ = Phase::End;
+        }
+      }
       return *this;
     }
 
-    bool operator!=(const Iterator &other) const { return idx_ != other.idx_; }
+    bool operator!=(const Iterator &other) const {
+      if (phase_ != other.phase_) {
+        return true;
+      }
+
+      switch (phase_) {
+      case Phase::BuiltIn:
+        return idx_ != other.idx_;
+      case Phase::Custom:
+        return customIt_ != other.customIt_;
+      case Phase::End:
+        return false;
+      }
+      return false;
+    }
 
     Entry operator*() const {
-      return Entry{static_cast<BuiltInMaterial>(idx_), &map_->values_[idx_],
-                   map_->isSet_[idx_]};
+      if (phase_ == Phase::BuiltIn) {
+        return Entry{Material(static_cast<BuiltInMaterial>(idx_)),
+                     map_->values_[idx_]};
+      }
+
+      return Entry{Material::custom(customIt_->first), customIt_->second};
     }
 
   private:
+    enum class Phase { BuiltIn, Custom, End };
+
     void advanceToValid() {
       while (idx_ < map_->values_.size() && !map_->isSet_[idx_]) {
         ++idx_;
       }
+
+      if (idx_ >= map_->values_.size()) {
+        phase_ = Phase::Custom;
+        customIt_ = map_->customValues_.cbegin();
+        if (customIt_ == map_->customValues_.cend()) {
+          phase_ = Phase::End;
+        }
+      }
     }
 
     const MaterialValueMap *map_;
+    Phase phase_;
     std::size_t idx_;
+    CustomIterator customIt_{};
   };
 
-  // iterators over built-in materials with user-provided values
-  Iterator begin() const { return Iterator(this, 0); }
+  // iterators over set built-in materials and custom materials
+  Iterator begin() const { return Iterator(this, false); }
 
-  Iterator end() const { return Iterator(this, values_.size()); }
+  Iterator end() const { return Iterator(this, true); }
 
   const auto &getCustomMaterialValues() const { return customValues_; }
-
-  auto &customMaterialRates() { return customValues_; }
 
 private:
   static constexpr std::size_t toIndex(BuiltInMaterial m) {

@@ -73,9 +73,9 @@ private:
 
     // store process data (before moving materialRates)
     addMetaData("Isotropic Rate", materialRates.getDefault());
-    for (const auto &materialRate : materialRates) {
-      addMetaData("Rate " + MaterialMap::toString(materialRate.getMaterial()),
-                  materialRate.getValue());
+    for (auto materialRate : materialRates) {
+      addMetaData("Rate " + MaterialMap::toString(materialRate.material),
+                  materialRate.value);
     }
 
     // velocity field

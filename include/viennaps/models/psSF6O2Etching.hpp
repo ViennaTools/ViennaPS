@@ -43,11 +43,7 @@ private:
     etchant.dataLabels.push_back("etchantFlux");
     etchant.cosineExponent = 1.f;
     for (auto entry : params.beta_E) {
-      etchant.materialSticking[static_cast<int>(entry.getMaterial())] =
-          entry.getValue();
-    }
-    for (auto &entry : params.beta_E.getCustomMaterialValues()) {
-      etchant.materialSticking[entry.first] = entry.second;
+      etchant.materialSticking[static_cast<int>(entry.material)] = entry.value;
     }
 
     viennaray::gpu::Particle<NumericType> oxygen;
@@ -55,11 +51,7 @@ private:
     oxygen.dataLabels.push_back("passivationFlux");
     oxygen.cosineExponent = 1.f;
     for (auto entry : params.beta_P) {
-      oxygen.materialSticking[static_cast<int>(entry.getMaterial())] =
-          entry.getValue();
-    }
-    for (auto &entry : params.beta_P.getCustomMaterialValues()) {
-      oxygen.materialSticking[entry.first] = entry.second;
+      oxygen.materialSticking[static_cast<int>(entry.material)] = entry.value;
     }
 
     // surface model

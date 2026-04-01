@@ -51,8 +51,8 @@ template <typename NumericType> struct IBEParameters {
 
     processData["Default PWR"] = {planeWaferRate};
     for (const auto &entry : materialPlaneWaferRate) {
-      processData[MaterialMap::toString(entry.getMaterial()) + " PWR"] = {
-          entry.getValue()};
+      processData[MaterialMap::toString(entry.material) + " PWR"] = {
+          entry.value};
     }
 
     processData["Mean Energy"] = {meanEnergy};

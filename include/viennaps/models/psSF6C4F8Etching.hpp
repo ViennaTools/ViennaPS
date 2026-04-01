@@ -43,11 +43,7 @@ private:
     etchant.dataLabels.push_back("etchantFlux");
     etchant.cosineExponent = 1.f;
     for (auto entry : params.beta_E) {
-      etchant.materialSticking[static_cast<int>(entry.getMaterial())] =
-          entry.getValue();
-    }
-    for (auto &entry : params.beta_E.getCustomMaterialValues()) {
-      etchant.materialSticking[entry.first] = entry.second;
+      etchant.materialSticking[static_cast<int>(entry.material)] = entry.value;
     }
 
     // No oxygen/passivation particle for SF6C4F8
