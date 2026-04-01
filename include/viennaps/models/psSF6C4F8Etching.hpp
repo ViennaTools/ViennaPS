@@ -173,7 +173,8 @@ public:
 
     // sticking probabilities
     defParams.beta_E.set(Material::Si, 0.7);
-    defParams.beta_E.set(Material::Mask, 0.7);
+    defParams.beta_E.set(Material::Mask, 0.02);
+    defParams.beta_E.set(Material::Polymer, 0.02);
     defParams.beta_E.setDefault(1.0);
     // No beta_P needed since passivationFlux = 0
 
