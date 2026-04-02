@@ -257,18 +257,18 @@ public:
 
     // surface model
     // adjust rate here since we trace two particles per point
-    auto surfaceModelParams = params_.ibeParams;
-    surfaceModelParams.planeWaferRate *= 0.5;
-    surfaceModelParams.materialPlaneWaferRate.setDefault(
-        surfaceModelParams.planeWaferRate);
-    for (auto entry : surfaceModelParams.materialPlaneWaferRate) {
-      surfaceModelParams.materialPlaneWaferRate.set(entry.material,
-                                                    entry.value * 0.5);
+    surfaceModelParams_ = params_.ibeParams;
+    surfaceModelParams_.planeWaferRate *= 0.5;
+    surfaceModelParams_.materialPlaneWaferRate.setDefault(
+        surfaceModelParams_.planeWaferRate);
+    for (auto entry : params_.ibeParams.materialPlaneWaferRate) {
+      surfaceModelParams_.materialPlaneWaferRate.set(entry.material,
+                                                     entry.value * 0.5);
     }
-    surfaceModelParams.redepositionRate *= 0.5;
+    surfaceModelParams_.redepositionRate *= 0.5;
     auto surfModel =
         SmartPointer<::viennaps::impl::IBESurfaceModel<NumericType>>::New(
-            surfaceModelParams);
+            surfaceModelParams_);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -284,6 +284,7 @@ public:
 
 private:
   FaradayCageParameters<NumericType> params_;
+  IBEParameters<NumericType> surfaceModelParams_;
 };
 } // namespace gpu
 #endif

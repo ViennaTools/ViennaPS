@@ -64,7 +64,8 @@ rayTracingParams.smoothingNeighbors = 1
 ibeParams = ps.IBEParameters()
 ibeParams.exponent = params["exponent"]
 ibeParams.meanEnergy = params["meanEnergy"]
-ibeParams.materialPlaneWaferRate = {ps.Material.SiO2: 1, ps.Material.Mask: 1 / 11}
+ibeParams.materialPlaneWaferRate.set(ps.Material.SiO2, 1.0)
+ibeParams.materialPlaneWaferRate.set(ps.Material.Mask, 1.0 / 11.0)
 ibeParams.cos4Yield.isDefined = True
 ibeParams.cos4Yield.a1 = params["yieldFactor"]
 ibeParams.cos4Yield.a2 = -1.55
