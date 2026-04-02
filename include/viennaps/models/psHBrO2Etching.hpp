@@ -188,6 +188,8 @@ public:
     defParams.beta_P.set(Material::Mask, 1.);
     defParams.beta_P.setDefault(1.0);
 
+    defParams.rateFactors.setDefault(1.0);
+
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
     // Mask
