@@ -1,19 +1,7 @@
 import viennaps as ps
 
 ps.setDimension(3)
-volumeOutput = False
-volumeNum = 0
 surfaceNum = 0
-
-
-def writeVolume(domain):
-    if not volumeOutput:
-        return
-    global volumeNum
-    print("Writing volume mesh ...", end="", flush=True)
-    domain.saveVolumeMesh("FinFET_" + str(volumeNum))
-    print(" done")
-    volumeNum += 1
 
 
 def writeSurface(domain):
@@ -168,7 +156,6 @@ dist = ps.BoxDistribution(halfAxes=[-gridDelta, -gridDelta, -50], mask=ls)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
-writeVolume(domain)
 
 # isotropic etch (fin-release)
 print("Fin-Release ...", end="", flush=True)
@@ -181,7 +168,6 @@ process.setParameters(advParams)
 process.apply()
 print(" done")
 writeSurface(domain)
-writeVolume(domain)
 
 # source/drain epitaxy
 print("S/D Epitaxy ...", end="", flush=True)

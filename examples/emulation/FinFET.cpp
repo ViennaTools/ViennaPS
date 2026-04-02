@@ -1,7 +1,5 @@
 #include <viennaps.hpp>
 
-#include <lsReader.hpp>
-
 using namespace viennaps;
 
 constexpr int D = 3;
