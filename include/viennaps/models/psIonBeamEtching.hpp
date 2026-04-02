@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../materials/psMaterials.hpp"
+#include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
 #include "psIonBeamParameters.hpp"

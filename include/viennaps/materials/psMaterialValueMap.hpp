@@ -1,6 +1,6 @@
 #pragma once
 
-#include "psMaterials.hpp"
+#include "psMaterial.hpp"
 
 namespace viennaps {
 

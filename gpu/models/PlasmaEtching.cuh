@@ -6,7 +6,7 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
-#include "materials/psMaterials.hpp"
+#include "materials/psMaterialMap.hpp"
 #include "models/psPipelineParameters.hpp"
 #include "models/psPlasmaEtchingParameters.hpp"
 

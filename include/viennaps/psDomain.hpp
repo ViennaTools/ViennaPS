@@ -1,6 +1,6 @@
 #pragma once
 
-#include "materials/psMaterials.hpp"
+#include "materials/psMaterialMap.hpp"
 #include "psDomainSetup.hpp"
 #include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"

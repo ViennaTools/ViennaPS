@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../materials/psMaterialMap.hpp"
 #include "../materials/psMaterialValueMap.hpp"
-#include "../materials/psMaterials.hpp"
 #include "../process/psProcessModel.hpp"
 
 namespace viennaps {
