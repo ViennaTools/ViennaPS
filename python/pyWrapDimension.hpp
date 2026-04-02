@@ -1549,7 +1549,7 @@ template <int D> void bindApi(py::module &module) {
                &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
            py::arg("stickingProbability"), py::arg("label") = "neutralFlux")
       .def("addNeutralParticle",
-           py::overload_cast<const std::unordered_map<Material, T> &, T,
+           py::overload_cast<const MaterialValueMap<T> &, T,
                              const std::string &>(
                &gpu::MultiParticleProcess<T, D>::addNeutralParticle),
            py::arg("materialSticking"),
