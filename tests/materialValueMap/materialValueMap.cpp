@@ -53,9 +53,6 @@ void testIteration() {
     VC_TEST_ASSERT(idx < expected.size());
     VC_TEST_ASSERT(material == expected[idx].first);
     VC_TEST_ASSERT(value == expected[idx].second);
-    std::cout << "Material: " << MaterialMap::toString(material) << "("
-              << material.legacyId() << ")" << ", Value: " << value
-              << std::endl;
     ++idx;
   }
 
