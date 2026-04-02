@@ -18,14 +18,16 @@ class EpitaxyVelocityField : public VelocityField<NumericType, D> {
       (D > 2) ? 0.5773502691896257 : 0.7071067811865476;
   static constexpr double high = 1.0;
   const double factor;
+  const Vec3D<NumericType> nvFactors;
 
   const MaterialValueMap<NumericType> &materialRates;
 
 public:
   EpitaxyVelocityField(const MaterialValueMap<NumericType> &materials,
-                       NumericType r111, NumericType r100)
+                       NumericType r111, NumericType r100,
+                       const Vec3D<NumericType> &rates)
       : R111(r111), R100(r100), factor((R100 - R111) / (high - low)),
-        materialRates(materials) {}
+        materialRates(materials), nvFactors(rates) {}
 
   NumericType getScalarVelocity(const Vec3D<NumericType> &, int material,
                                 const Vec3D<NumericType> &nv,
@@ -33,14 +35,9 @@ public:
 
     auto rate = materialRates.get(Material::fromLegacyId(material));
     if (rate > 0) {
-      double vel = std::max(std::abs(nv[0]), std::abs(nv[D - 1]));
+      double vel = MaxElement(Abs(nvFactors * nv));
       vel = (vel - low) * factor + R111;
-
-      if (std::abs(nv[0]) < std::abs(nv[D - 1])) {
-        vel *= 2.;
-      }
-
-      return -vel * rate;
+      return std::min(-vel * rate, 0.0);
     }
 
     // not an epitaxy material
@@ -63,24 +60,25 @@ public:
       const std::vector<std::pair<Material, NumericType>> pMaterials,
       NumericType rate111 = 0.5, NumericType rate100 = 1.) {
     for (const auto &[material, rate] : pMaterials) {
-      materialRates.set(material, rate);
+      materialRates_.set(material, rate);
     }
 
-    // default surface model
-    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
+    // default nvFactors
+    nvFactors_.fill(0.);
+    nvFactors_[0] = 0.5;
+    nvFactors_[D - 1] = 1.0;
 
-    // velocity field
-    auto velField =
-        SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
-            materialRates, rate111, rate100);
+    setup(rate111, rate100);
+  }
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("SelectiveEpitaxy");
+  SelectiveEpitaxy(const Vec3D<NumericType> &nvFactors,
+                   NumericType rate111 = 0.5, NumericType rate100 = 1.)
+      : nvFactors_(nvFactors) {
+    setup(rate111, rate100);
   }
 
   void setMaterialRate(Material material, NumericType rate) {
-    materialRates.set(material, rate);
+    materialRates_.set(material, rate);
   }
 
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
@@ -143,12 +141,27 @@ public:
   }
 
 private:
-  MaterialValueMap<NumericType> materialRates;
+  MaterialValueMap<NumericType> materialRates_;
+  Vec3D<NumericType> nvFactors_;
   SmartPointer<Domain<NumericType, D>> domainCopy;
   bool firstInit = true;
 
+  void setup(const NumericType rate111, const NumericType rate100) {
+    // default surface model
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
+
+    // velocity field
+    auto velField =
+        SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
+            materialRates_, rate111, rate100, nvFactors_);
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("SelectiveEpitaxy");
+  }
+
   bool isEpitaxyMaterial(const Material &material) const {
-    return materialRates.get(material) != NumericType(0);
+    return materialRates_.get(material) != NumericType(0);
   }
 };
 

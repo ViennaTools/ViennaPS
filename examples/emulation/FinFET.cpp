@@ -219,8 +219,8 @@ int main() {
                                                 1>::setMaxDissipation(100);
 
     auto model = SmartPointer<SelectiveEpitaxy<NumericType, D>>::New();
-    model->setMaterialRate(Material::Si, 1.);
-    model->setMaterialRate(Material::SiGe, 1.);
+    model->setMaterialRate(Material::Si, 2.);
+    model->setMaterialRate(Material::SiGe, 2.);
 
     Process<NumericType, D> proc(domain, model, 14.);
     proc.setParameters(advectionParams);

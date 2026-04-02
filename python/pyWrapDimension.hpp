@@ -1112,6 +1112,10 @@ template <int D> void bindApi(py::module &module) {
                     const std::vector<std::pair<Material, T>>, T, T>),
            py::arg("materialRates"), py::arg("rate111") = 0.5,
            py::arg("rate100") = 1.0)
+      .def(py::init(&SmartPointer<SelectiveEpitaxy<T, D>>::template New<
+                    const Vec3D<T> &, T, T>),
+           py::arg("nvFactors"), py::arg("rate111") = 0.5,
+           py::arg("rate100") = 1.0)
       .def("setMaterialRate", &SelectiveEpitaxy<T, D>::setMaterialRate,
            py::arg("material"), py::arg("rate"));
 

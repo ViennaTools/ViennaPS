@@ -6,8 +6,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 from viennaps import d3
 import viennaps.d3
 from . import constants
@@ -195,6 +195,12 @@ class CF4O2Parameters:
     Si: CF4O2ParametersSi
     SiGe: CF4O2ParametersSiGe
     fluxIncludeSticking: bool
+    gamma_C: MaterialValueMap
+    gamma_C_oxidized: MaterialValueMap
+    gamma_F: MaterialValueMap
+    gamma_F_oxidized: MaterialValueMap
+    gamma_O: MaterialValueMap
+    gamma_O_passivated: MaterialValueMap
     def __init__(self) -> None:
         ...
     @property
@@ -208,42 +214,6 @@ class CF4O2Parameters:
         ...
     @etchantFlux.setter
     def etchantFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        ...
-    @property
-    def gamma_C(self) -> dict[Material, float]:
-        ...
-    @gamma_C.setter
-    def gamma_C(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
-        ...
-    @property
-    def gamma_C_oxidized(self) -> dict[Material, float]:
-        ...
-    @gamma_C_oxidized.setter
-    def gamma_C_oxidized(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
-        ...
-    @property
-    def gamma_F(self) -> dict[Material, float]:
-        ...
-    @gamma_F.setter
-    def gamma_F(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
-        ...
-    @property
-    def gamma_F_oxidized(self) -> dict[Material, float]:
-        ...
-    @gamma_F_oxidized.setter
-    def gamma_F_oxidized(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
-        ...
-    @property
-    def gamma_O(self) -> dict[Material, float]:
-        ...
-    @gamma_O.setter
-    def gamma_O(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
-        ...
-    @property
-    def gamma_O_passivated(self) -> dict[Material, float]:
-        ...
-    @gamma_O_passivated.setter
-    def gamma_O_passivated(self, arg0: collections.abc.Mapping[Material, typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
     @property
     def ionFlux(self) -> float:

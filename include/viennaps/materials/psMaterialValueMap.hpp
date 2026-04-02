@@ -11,10 +11,18 @@ public:
   MaterialValueMap() = default;
 
   // generic constructor (works with map, vector<pair>, initializer_list, etc.)
-  template <class MapLike> explicit MaterialValueMap(const MapLike &mapLike) {
+  template <class MapLike>
+  explicit MaterialValueMap(const MapLike &mapLike, T defaultValue = T{})
+      : default_(defaultValue) {
     for (const auto &[key, value] : mapLike) {
       set(key, value);
     }
+  }
+
+  static MaterialValueMap fromDefault(T defaultValue) {
+    MaterialValueMap map;
+    map.setDefault(defaultValue);
+    return map;
   }
 
   void set(Material material, const T &value) {

@@ -1,3 +1,4 @@
+#include <materials/psMaterialMap.hpp>
 #include <materials/psMaterialValueMap.hpp>
 #include <vcTestAsserts.hpp>
 

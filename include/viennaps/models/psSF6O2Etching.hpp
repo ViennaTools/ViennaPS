@@ -182,13 +182,9 @@ public:
     // sticking probabilities
     defParams.beta_E.set(Material::Si, 0.7);
     defParams.beta_E.set(Material::Mask, 0.7);
-    defParams.beta_E.setDefault(1.0);
 
     defParams.beta_P.set(Material::Si, 1.);
     defParams.beta_P.set(Material::Mask, 1.);
-    defParams.beta_P.setDefault(1.0);
-
-    defParams.rateFactors.setDefault(1.0);
 
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
