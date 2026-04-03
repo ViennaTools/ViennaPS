@@ -890,7 +890,16 @@ class SF6O2Etching(ProcessModel):
     def setParameters(self, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
 class SelectiveEpitaxy(ProcessModel):
+    @typing.overload
+    def __init__(self, rate111: typing.SupportsFloat | typing.SupportsIndex = 0.5, rate100: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
+        ...
+    @typing.overload
     def __init__(self, materialRates: collections.abc.Sequence[tuple[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex]], rate111: typing.SupportsFloat | typing.SupportsIndex = 0.5, rate100: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
+        ...
+    @typing.overload
+    def __init__(self, nvFactors: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], rate111: typing.SupportsFloat | typing.SupportsIndex = 0.5, rate100: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
+        ...
+    def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class SingleParticleALD(ProcessModel):
     def __init__(self, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, numCycles: typing.SupportsInt | typing.SupportsIndex, growthPerCycle: typing.SupportsFloat | typing.SupportsIndex, totalCycles: typing.SupportsInt | typing.SupportsIndex, coverageTimeStep: typing.SupportsFloat | typing.SupportsIndex, evFlux: typing.SupportsFloat | typing.SupportsIndex, inFlux: typing.SupportsFloat | typing.SupportsIndex, s0: typing.SupportsFloat | typing.SupportsIndex, gasMFP: typing.SupportsFloat | typing.SupportsIndex) -> None:

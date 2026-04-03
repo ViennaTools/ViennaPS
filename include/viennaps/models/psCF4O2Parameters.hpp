@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../materials/psMaterials.hpp"
+#include "../materials/psMaterialMap.hpp"
+#include "../materials/psMaterialValueMap.hpp"
 #include "../psConstants.hpp"
 #include <unordered_map>
 
@@ -14,18 +15,44 @@ template <typename NumericType> struct CF4O2Parameters {
   NumericType polymerFlux = 1.0e2;
 
   // sticking probabilities
-  std::unordered_map<Material, NumericType> gamma_F = {
-      {Material::Mask, 0.7}, {Material::Si, 0.7}, {Material::SiGe, 0.7}};
-  std::unordered_map<Material, NumericType> gamma_F_oxidized = {
-      {Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
-  std::unordered_map<Material, NumericType> gamma_O = {
-      {Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}};
-  std::unordered_map<Material, NumericType> gamma_O_passivated = {
-      {Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
-  std::unordered_map<Material, NumericType> gamma_C = {
-      {Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}};
-  std::unordered_map<Material, NumericType> gamma_C_oxidized = {
-      {Material::Mask, 0.3}, {Material::Si, 0.3}, {Material::SiGe, 0.3}};
+  MaterialValueMap<NumericType> gamma_F = MaterialValueMap<NumericType>(
+      std::initializer_list<std::pair<Material, NumericType>>{
+          {Material::Mask, 0.7}, {Material::Si, 0.7}, {Material::SiGe, 0.7}},
+      1.0);
+
+  MaterialValueMap<NumericType> gamma_F_oxidized =
+      MaterialValueMap<NumericType>(
+          std::initializer_list<std::pair<Material, NumericType>>{
+              {Material::Mask, 0.3},
+              {Material::Si, 0.3},
+              {Material::SiGe, 0.3}},
+          1.0);
+
+  MaterialValueMap<NumericType> gamma_O = MaterialValueMap<NumericType>(
+      std::initializer_list<std::pair<Material, NumericType>>{
+          {Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}},
+      1.0);
+
+  MaterialValueMap<NumericType> gamma_O_passivated =
+      MaterialValueMap<NumericType>(
+          std::initializer_list<std::pair<Material, NumericType>>{
+              {Material::Mask, 0.3},
+              {Material::Si, 0.3},
+              {Material::SiGe, 0.3}},
+          1.0);
+
+  MaterialValueMap<NumericType> gamma_C = MaterialValueMap<NumericType>(
+      std::initializer_list<std::pair<Material, NumericType>>{
+          {Material::Mask, 1.0}, {Material::Si, 1.0}, {Material::SiGe, 1.0}},
+      1.0);
+
+  MaterialValueMap<NumericType> gamma_C_oxidized =
+      MaterialValueMap<NumericType>(
+          std::initializer_list<std::pair<Material, NumericType>>{
+              {Material::Mask, 0.3},
+              {Material::Si, 0.3},
+              {Material::SiGe, 0.3}},
+          1.0);
 
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
   bool fluxIncludeSticking = false;
@@ -136,28 +163,28 @@ template <typename NumericType> struct CF4O2Parameters {
 
     // sticking probabilities
     for (const auto &gamma : gamma_F) {
-      metaData["gamma_F_" + MaterialMap::toString(gamma.first)] = {
-          gamma.second};
+      metaData["gamma_F_" + MaterialMap::toString(gamma.material)] = {
+          gamma.value};
     }
     for (const auto &gamma : gamma_F_oxidized) {
-      metaData["gamma_F_oxidized_" + MaterialMap::toString(gamma.first)] = {
-          gamma.second};
+      metaData["gamma_F_oxidized_" + MaterialMap::toString(gamma.material)] = {
+          gamma.value};
     }
     for (const auto &gamma : gamma_O) {
-      metaData["gamma_O_" + MaterialMap::toString(gamma.first)] = {
-          gamma.second};
+      metaData["gamma_O_" + MaterialMap::toString(gamma.material)] = {
+          gamma.value};
     }
     for (const auto &gamma : gamma_O_passivated) {
-      metaData["gamma_O_passivated_" + MaterialMap::toString(gamma.first)] = {
-          gamma.second};
+      metaData["gamma_O_passivated_" + MaterialMap::toString(gamma.material)] =
+          {gamma.value};
     }
     for (const auto &gamma : gamma_C) {
-      metaData["gamma_C_" + MaterialMap::toString(gamma.first)] = {
-          gamma.second};
+      metaData["gamma_C_" + MaterialMap::toString(gamma.material)] = {
+          gamma.value};
     }
     for (const auto &gamma : gamma_C_oxidized) {
-      metaData["gamma_C_oxidized_" + MaterialMap::toString(gamma.first)] = {
-          gamma.second};
+      metaData["gamma_C_oxidized_" + MaterialMap::toString(gamma.material)] = {
+          gamma.value};
     }
 
     return metaData;

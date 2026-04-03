@@ -35,7 +35,7 @@ ps.MakeTrench(
 # copy top layer to capture deposition
 geometry.duplicateTopLevelSet(ps.Material.Polymer)
 
-ibeParams = ps.IonBeamEtching.defaultParamters()
+ibeParams = ps.IonBeamEtching.defaultParameters()
 ibeParams.tiltAngle = params["angle"]
 ibeParams.exponent = params["exponent"]
 ibeParams.thetaRMin = 0.0

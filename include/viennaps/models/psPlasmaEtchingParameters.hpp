@@ -14,10 +14,14 @@ template <typename NumericType> struct PlasmaEtchingParameters {
   NumericType passivationFlux = 1.0e2;
 
   // sticking probabilities
-  MaterialValueMap<NumericType> beta_E;
-  MaterialValueMap<NumericType> beta_P;
+  MaterialValueMap<NumericType> beta_E =
+      MaterialValueMap<NumericType>::fromDefault(1.0);
+  MaterialValueMap<NumericType> beta_P =
+      MaterialValueMap<NumericType>::fromDefault(1.0);
 
-  MaterialValueMap<NumericType> rateFactors;
+  MaterialValueMap<NumericType> rateFactors =
+      MaterialValueMap<NumericType>::fromDefault(
+          1.0); // default to 1.0 for all materials
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
   // Mask
@@ -101,12 +105,12 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     processData["Passivation Flux"] = {passivationFlux};
 
     for (auto entry : beta_E) {
-      processData["Beta_E " + MaterialMap::toString(entry.getMaterial())] =
-          std::vector<double>{entry.getValue()};
+      processData["Beta_E " + MaterialMap::toString(entry.material)] =
+          std::vector<double>{entry.value};
     }
     for (auto entry : beta_P) {
-      processData["Beta_P " + MaterialMap::toString(entry.getMaterial())] =
-          std::vector<double>{entry.getValue()};
+      processData["Beta_P " + MaterialMap::toString(entry.material)] =
+          std::vector<double>{entry.value};
     }
 
     if (etchStopDepth != std::numeric_limits<NumericType>::lowest())

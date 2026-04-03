@@ -173,6 +173,11 @@ public:
   using RateSet = impl::RateSet<NumericType>;
   using RateMap = MaterialValueMap<std::pair<NumericType, NumericType>>;
 
+  DirectionalProcess(const Vec3D<NumericType> &direction,
+                     RateMap materialRates) {
+    initialize(std::move(materialRates), direction);
+  }
+
   DirectionalProcess(
       const Vec3D<NumericType> &direction,
       std::unordered_map<Material, std::pair<NumericType, NumericType>>

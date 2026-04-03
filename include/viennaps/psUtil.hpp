@@ -10,7 +10,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "materials/psMaterials.hpp"
+#include "materials/psMaterialMap.hpp"
 
 namespace viennaps {
 enum class FluxEngineType {
