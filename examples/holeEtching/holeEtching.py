@@ -89,7 +89,8 @@ def run_simulation(intermediate_velocities, suffix):
         output_file += suffix
 
     geometry.saveSurfaceMesh(
-        filename=output_file, addInterfaces=True, boolMaterials=True
+        filename=output_file,
+        addInterfaces=True,
     )
 
 

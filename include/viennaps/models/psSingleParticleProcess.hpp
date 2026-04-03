@@ -129,8 +129,8 @@ public:
     this->processMetaData["Source Exponent"] =
         std::vector<double>{sourceDistributionPower_};
     for (auto rate : materialRates_) {
-      this->processMetaData[MaterialMap::toString(rate.getMaterial()) +
-                            " Rate"] = std::vector<double>{rate.getValue()};
+      this->processMetaData[MaterialMap::toString(rate.material) + " Rate"] =
+          std::vector<double>{rate.value};
     }
   }
 };
@@ -226,8 +226,8 @@ private:
     this->processMetaData["Source Exponent"] =
         std::vector<double>{sourceDistributionPower_};
     for (auto mrate : materialRates_) {
-      this->processMetaData[MaterialMap::toString(mrate.getMaterial()) +
-                            " Rate"] = std::vector<double>{mrate.getValue()};
+      this->processMetaData[MaterialMap::toString(mrate.material) + " Rate"] =
+          std::vector<double>{mrate.value};
     }
   }
 };

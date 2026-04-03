@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../materials/psMaterials.hpp"
+#include "../materials/psMaterialMap.hpp"
+#include "../materials/psMaterialValueMap.hpp"
 #include "../process/psProcessModel.hpp"
 
 namespace viennaps {
@@ -17,30 +18,26 @@ class EpitaxyVelocityField : public VelocityField<NumericType, D> {
       (D > 2) ? 0.5773502691896257 : 0.7071067811865476;
   static constexpr double high = 1.0;
   const double factor;
+  const Vec3D<NumericType> nvFactors;
 
-  const std::vector<std::pair<Material, NumericType>> &materials;
+  const MaterialValueMap<NumericType> &materialRates;
 
 public:
-  EpitaxyVelocityField(
-      const std::vector<std::pair<Material, NumericType>> &passedmaterials,
-      NumericType r111, NumericType r100)
+  EpitaxyVelocityField(const MaterialValueMap<NumericType> &materials,
+                       NumericType r111, NumericType r100,
+                       const Vec3D<NumericType> &rates)
       : R111(r111), R100(r100), factor((R100 - R111) / (high - low)),
-        materials(passedmaterials) {}
+        materialRates(materials), nvFactors(rates) {}
 
-  NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
-                                int material, const Vec3D<NumericType> &nv,
-                                unsigned long pointID) override {
-    for (auto const &epitaxyMaterial : materials) {
-      if (MaterialMap::isMaterial(material, epitaxyMaterial.first)) {
-        double vel = std::max(std::abs(nv[0]), std::abs(nv[D - 1]));
-        vel = (vel - low) * factor + R111;
+  NumericType getScalarVelocity(const Vec3D<NumericType> &, int material,
+                                const Vec3D<NumericType> &nv,
+                                unsigned long) override {
 
-        if (std::abs(nv[0]) < std::abs(nv[D - 1])) {
-          vel *= 2.;
-        }
-
-        return -vel * epitaxyMaterial.second;
-      }
+    auto rate = materialRates.get(Material::fromLegacyId(material));
+    if (rate > 0) {
+      double vel = MaxElement(Abs(nvFactors * nv));
+      vel = (vel - low) * factor + R111;
+      return std::min(-vel * rate, 0.0);
     }
 
     // not an epitaxy material
@@ -53,23 +50,35 @@ public:
 template <typename NumericType, int D>
 class SelectiveEpitaxy : public ProcessModelCPU<NumericType, D> {
 public:
+  SelectiveEpitaxy(NumericType rate111 = 0.5, NumericType rate100 = 1.)
+      : SelectiveEpitaxy(std::vector<std::pair<Material, NumericType>>{},
+                         rate111, rate100) {}
+
   // The constructor expects the materials where epitaxy is allowed including
   // the corresponding rates.
   SelectiveEpitaxy(
       const std::vector<std::pair<Material, NumericType>> pMaterials,
-      NumericType rate111 = 0.5, NumericType rate100 = 1.)
-      : materials(pMaterials) {
-    // default surface model
-    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
+      NumericType rate111 = 0.5, NumericType rate100 = 1.) {
+    for (const auto &[material, rate] : pMaterials) {
+      materialRates_.set(material, rate);
+    }
 
-    // velocity field
-    auto velField =
-        SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
-            materials, rate111, rate100);
+    // default nvFactors
+    nvFactors_.fill(0.);
+    nvFactors_[0] = 0.5;
+    nvFactors_[D - 1] = 1.0;
 
-    this->setSurfaceModel(surfModel);
-    this->setVelocityField(velField);
-    this->setProcessName("SelectiveEpitaxy");
+    setup(rate111, rate100);
+  }
+
+  SelectiveEpitaxy(const Vec3D<NumericType> &nvFactors,
+                   NumericType rate111 = 0.5, NumericType rate100 = 1.)
+      : nvFactors_(nvFactors) {
+    setup(rate111, rate100);
+  }
+
+  void setMaterialRate(Material material, NumericType rate) {
+    materialRates_.set(material, rate);
   }
 
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
@@ -107,12 +116,6 @@ public:
               maskLayer, lsCopy,
               viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
               .apply();
-
-          // auto mesh = viennals::Mesh<NumericType>::New();
-          // viennals::ToSurfaceMesh(lsCopy, mesh).apply();
-          // viennals::VTKWriter<NumericType>(mesh, "SelectiveEpitaxyMask_" +
-          //                                            std::to_string(i))
-          //     .apply();
         }
       }
 
@@ -138,16 +141,27 @@ public:
   }
 
 private:
-  std::vector<std::pair<Material, NumericType>> materials;
+  MaterialValueMap<NumericType> materialRates_;
+  Vec3D<NumericType> nvFactors_;
   SmartPointer<Domain<NumericType, D>> domainCopy;
   bool firstInit = true;
 
+  void setup(const NumericType rate111, const NumericType rate100) {
+    // default surface model
+    auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
+
+    // velocity field
+    auto velField =
+        SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
+            materialRates_, rate111, rate100, nvFactors_);
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("SelectiveEpitaxy");
+  }
+
   bool isEpitaxyMaterial(const Material &material) const {
-    for (const auto &epitaxyMaterial : materials) {
-      if (MaterialMap::isMaterial(material, epitaxyMaterial.first))
-        return true;
-    }
-    return false;
+    return materialRates_.get(material) != NumericType(0);
   }
 };
 

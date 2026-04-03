@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../materials/psMaterials.hpp"
+#include "../materials/psMaterialMap.hpp"
+#include "../materials/psMaterialValueMap.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
 #include "../psUtil.hpp"
@@ -170,14 +171,12 @@ template <typename NumericType, int D>
 class DiffuseParticle
     : public viennaray::Particle<DiffuseParticle<NumericType, D>, NumericType> {
 public:
-  DiffuseParticle(NumericType stickingProbability, const std::string &dataLabel)
-      : stickingProbability_(stickingProbability), dataLabel_(dataLabel) {}
-
-  DiffuseParticle(NumericType stickingProbability,
-                  std::unordered_map<Material, NumericType> materialSticking,
-                  const std::string &dataLabel)
-      : materialSticking_(materialSticking),
-        stickingProbability_(stickingProbability), dataLabel_(dataLabel) {}
+  DiffuseParticle(
+      NumericType defaultStickingProbability,
+      const std::unordered_map<Material, NumericType> &materialSticking,
+      const std::string &dataLabel)
+      : materialSticking_(materialSticking, defaultStickingProbability),
+        dataLabel_(dataLabel) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -193,13 +192,7 @@ public:
                     const int materialId,
                     const viennaray::TracingData<NumericType> *,
                     RNG &rngState) override final {
-    NumericType sticking = stickingProbability_;
-    if (auto mat =
-            materialSticking_.find(MaterialMap::mapToMaterial(materialId));
-        mat != materialSticking_.end()) {
-      sticking = mat->second;
-    }
-
+    auto sticking = materialSticking_.get(Material::fromLegacyId(materialId));
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
@@ -209,8 +202,7 @@ public:
   }
 
 public:
-  const std::unordered_map<Material, NumericType> materialSticking_;
-  const NumericType stickingProbability_;
+  const MaterialValueMap<NumericType> materialSticking_;
   const std::string dataLabel_;
 };
 } // namespace impl
@@ -310,11 +302,11 @@ public:
         if (!neutralAdded[i] && label == neutrals[i].dataLabel_) {
           const auto &neutral = neutrals[i];
           if (neutral.materialSticking_.empty()) {
-            addNeutralParticle(neutral.stickingProbability_,
+            addNeutralParticle(neutral.materialSticking_.getDefault(),
                                neutral.dataLabel_);
           } else {
             addNeutralParticle(neutral.materialSticking_,
-                               neutral.stickingProbability_,
+                               neutral.materialSticking_.getDefault(),
                                neutral.dataLabel_);
           }
           neutralAdded[i] = true;
@@ -345,10 +337,12 @@ public:
           "conversion. Appending neutral particle with label: " +
           neutral.dataLabel_);
       if (neutral.materialSticking_.empty()) {
-        addNeutralParticle(neutral.stickingProbability_, neutral.dataLabel_);
+        addNeutralParticle(neutral.materialSticking_.getDefault(),
+                           neutral.dataLabel_);
       } else {
         addNeutralParticle(neutral.materialSticking_,
-                           neutral.stickingProbability_, neutral.dataLabel_);
+                           neutral.materialSticking_.getDefault(),
+                           neutral.dataLabel_);
       }
     }
 
@@ -378,10 +372,9 @@ public:
                          std::to_string(stickingProbability));
   }
 
-  void addNeutralParticle(
-      const std::unordered_map<Material, NumericType> &materialSticking,
-      NumericType defaultStickingProbability = 1.,
-      const std::string &label = "neutralFlux") {
+  void addNeutralParticle(const MaterialValueMap<NumericType> &materialSticking,
+                          NumericType defaultStickingProbability = 1.,
+                          const std::string &label = "neutralFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
 
@@ -389,8 +382,8 @@ public:
     particle.name = "Neutral";
     particle.sticking = defaultStickingProbability;
     particle.dataLabels.push_back(dataLabel);
-    for (auto &mat : materialSticking) {
-      particle.materialSticking[static_cast<int>(mat.first)] = mat.second;
+    for (auto entry : materialSticking) {
+      particle.materialSticking[static_cast<int>(entry.material)] = entry.value;
     }
 
     this->insertNextParticleType(particle);
@@ -535,12 +528,16 @@ public:
                           const std::string &label = "neutralFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
+    std::unordered_map<Material, NumericType>
+        materialSticking; // empty map will use default sticking for all
+                          // materials
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
-        stickingProbability, dataLabel);
+        stickingProbability, materialSticking, dataLabel);
     this->insertNextParticleType(particle);
 
     addStickingData(stickingProbability);
-    neutralParticles_.emplace_back(stickingProbability, dataLabel);
+    neutralParticles_.emplace_back(stickingProbability, materialSticking,
+                                   dataLabel);
   }
 
   void addNeutralParticle(
