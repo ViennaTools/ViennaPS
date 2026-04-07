@@ -59,8 +59,8 @@ int main() {
     std::cout << "DP-Patterning ..." << std::flush;
     const NumericType etchDepth = 6; // nm
     auto dist = SmartPointer<BoxDistribution<double, D>>::New(
-        std::array<NumericType, D>{-gridDelta, -gridDelta, -etchDepth},
-        domain->getLevelSets().front());
+        std::array<NumericType, D>{-gridDelta, -gridDelta, -etchDepth});
+    dist->addMaskMaterial(Material::Si);
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -108,8 +108,8 @@ int main() {
   // pattern STI material
   {
     std::cout << "STI Patterning ..." << std::flush;
-    auto dist =
-        IsotropicProcessGeometric::New(-35, domain->getLevelSets().front());
+    auto dist = IsotropicProcessGeometric::New(-35);
+    dist->addMaskMaterial(Material::Si); // protect silicon during etch
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
@@ -155,12 +155,15 @@ int main() {
   // gate patterning
   {
     std::cout << "Dummy Gate Patterning ..." << std::flush;
-    Vec3D<NumericType> direction = {0, 0, 1};
     std::vector<Material> masks = {Material::Mask, Material::Si,
                                    Material::SiO2};
-    auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(
-        direction, 1.0, 0., masks, false);
-    Process<NumericType, D>(domain, model, 110.).apply();
+    const NumericType etchDepth = 110; // nm
+    auto dist = SmartPointer<BoxDistribution<double, D>>::New(
+        std::array<NumericType, D>{-gridDelta, -gridDelta, -etchDepth});
+    for (const auto &maskMaterial : masks) {
+      dist->addMaskMaterial(maskMaterial);
+    }
+    Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
   writeSurface(domain);
@@ -182,9 +185,15 @@ int main() {
 
   { // spacer etch
     std::cout << "Spacer Etch ..." << std::flush;
-    auto mask = domain->getLevelSets()[domain->getLevelSets().size() - 2];
+    auto materialsInDomain = domain->getMaterialsInDomain();
+    materialsInDomain.erase(
+        Material::Si3N4);             // protect spacer material during etch
+    const NumericType etchDepth = 50; // nm
     auto dist = SmartPointer<BoxDistribution<double, D>>::New(
-        std::array<NumericType, D>{-gridDelta, -gridDelta, -50}, mask);
+        std::array<NumericType, D>{-gridDelta, -gridDelta, -etchDepth});
+    for (const auto &maskMaterial : materialsInDomain) {
+      dist->addMaskMaterial(maskMaterial);
+    }
     Process<NumericType, D>(domain, dist).apply();
     std::cout << " done" << std::endl;
   }
