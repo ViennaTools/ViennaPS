@@ -2,7 +2,7 @@
 
 #include <lsGeometricAdvect.hpp>
 
-#include "../psDomain.hpp"
+#include "../materials/psMaterial.hpp"
 
 namespace viennaps {
 
@@ -12,6 +12,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) class GeometricModel {
   SmartPointer<viennals::GeometricAdvectDistribution<NumericType, D>> dist =
       nullptr;
   SmartPointer<viennals::Domain<NumericType, D>> mask = nullptr;
+  std::vector<Material> maskMaterials;
 
 public:
   GeometricModel() = default;
@@ -32,8 +33,17 @@ public:
     mask = passedMask;
   }
 
+  void addMaskMaterial(const Material material) {
+    maskMaterials.push_back(material);
+  }
+
+  void setMaskMaterials(const std::vector<Material> &materials) {
+    maskMaterials = materials;
+  }
+
   auto &getDistribution() const { return dist; }
   auto &getMask() const { return mask; }
+  auto &getMaskMaterials() const { return maskMaterials; }
 };
 
 } // namespace viennaps
