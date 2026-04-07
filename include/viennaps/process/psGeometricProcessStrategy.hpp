@@ -18,8 +18,28 @@ public:
     }
 
     auto geometricModel = context.model->getGeometricModel();
-    geometricModel->setDomain(context.domain);
-    geometricModel->apply();
+    assert(geometricModel);
+
+    auto dist = geometricModel->getDistribution();
+    if (!dist) {
+      VIENNACORE_LOG_ERROR(
+          "No GeometricAdvectDistribution passed to GeometricModel.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    auto mask = geometricModel->getMask();
+    viennals::GeometricAdvect<NumericType, D>(
+        context.domain->getLevelSets().back(), dist, mask)
+        .apply();
+
+    // Intersect all other level sets with the last one to keep them consistent
+    for (int i = context.domain->getNumberOfLevelSets() - 1; i >= 0; --i) {
+      viennals::BooleanOperation<NumericType, D>(
+          context.domain->getLevelSets()[i],
+          context.domain->getLevelSets().back(),
+          viennals::BooleanOperationEnum::INTERSECT)
+          .apply();
+    }
 
     return ProcessResult::SUCCESS;
   }
