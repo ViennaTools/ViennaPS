@@ -25,6 +25,12 @@ public:
     this->setProcessName("SphereDistribution");
     this->processMetaData["Radius"] = std::vector<double>{radius};
   }
+
+  void addMaskMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->addMaskMaterial(material);
+  }
 };
 
 template <typename NumericType, int D>
@@ -46,6 +52,12 @@ public:
         static_cast<double>(halfAxes[0]), static_cast<double>(halfAxes[1]),
         static_cast<double>(halfAxes[2])};
   }
+
+  void addMaskMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->addMaskMaterial(material);
+  }
 };
 
 template <typename NumericType, int D>
@@ -64,6 +76,12 @@ public:
 
     this->setGeometricModel(geomModel);
     this->setProcessName("CustomSphereDistribution");
+  }
+
+  void addMaskMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->addMaskMaterial(material);
   }
 };
 

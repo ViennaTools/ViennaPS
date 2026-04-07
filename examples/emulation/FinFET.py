@@ -46,10 +46,9 @@ writeSurface(domain)
 # DP-Patterning
 print("DP-Patterning ...", end="", flush=True)
 etchDepth = 6.0  # nm
-dist = ps.BoxDistribution(
-    halfAxes=[-gridDelta, -gridDelta, -etchDepth], mask=domain.getLevelSets()[0]
-)
-ps.Process(domain, dist, 0).apply()
+dist = ps.BoxDistribution(halfAxes=[-gridDelta, -gridDelta, -etchDepth])
+dist.addMaskMaterial(ps.Material.Si)
+ps.Process(domain, dist).apply()
 print(" done")
 writeSurface(domain)
 
@@ -87,7 +86,8 @@ writeSurface(domain)
 
 # pattern STI material
 print("STI Patterning ...", end="", flush=True)
-dist = ps.SphereDistribution(radius=-35, mask=domain.getLevelSets()[0])
+dist = ps.SphereDistribution(radius=-35.0)
+dist.addMaskMaterial(ps.Material.Si)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)
@@ -125,13 +125,9 @@ writeSurface(domain)
 print("Dummy Gate Patterning ...", end="", flush=True)
 direction = [0.0, 0.0, 1.0]
 masks = [ps.Material.Mask, ps.Material.Si, ps.Material.SiO2]
-model = ps.DirectionalProcess(
-    direction=direction,
-    directionalVelocity=1.0,
-    isotropicVelocity=0.0,
-    maskMaterial=masks,
-    calculateVisibility=False,
-)
+model = ps.BoxDistribution(halfAxes=[-gridDelta, -gridDelta, -110.0])
+for mask in masks:
+    model.addMaskMaterial(mask)
 ps.Process(domain, model, 110.0).apply()
 print(" done")
 writeSurface(domain)
@@ -151,8 +147,11 @@ writeSurface(domain)
 
 # Spacer Etch
 print("Spacer Etch ...", end="", flush=True)
-ls = domain.getLevelSets()[-2]
-dist = ps.BoxDistribution(halfAxes=[-gridDelta, -gridDelta, -50], mask=ls)
+masks = domain.getMaterialsInDomain()
+masks.remove(ps.Material.Si3N4)
+dist = ps.BoxDistribution(halfAxes=[-gridDelta, -gridDelta, -50])
+for material in masks:
+    dist.addMaskMaterial(material)
 ps.Process(domain, dist, 0).apply()
 print(" done")
 writeSurface(domain)

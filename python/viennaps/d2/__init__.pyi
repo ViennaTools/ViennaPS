@@ -9,7 +9,7 @@ import viennals._core
 import viennals.d2
 import viennaps._core
 from . import gpu
-__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
     domain: Domain
     def __init__(self) -> None:
@@ -24,6 +24,8 @@ class BoxDistribution(ProcessModel):
         ...
     @typing.overload
     def __init__(self, halfAxes: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
+        ...
+    def addMaskMaterial(self, material: viennaps._core.Material) -> None:
         ...
 class CF4O2Etching(ProcessModel):
     @typing.overload
@@ -53,6 +55,11 @@ class CSVFileProcess(ProcessModel):
     def setInterpolationMode(self, mode: str) -> None:
         ...
     def setOffset(self, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"]) -> None:
+        ...
+class CustomSphereDistribution(ProcessModel):
+    def __init__(self, radii: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], mask: viennals.d2.Domain = None) -> None:
+        ...
+    def addMaskMaterial(self, material: viennaps._core.Material) -> None:
         ...
 class DenseCellSet:
     def __init__(self) -> None:
@@ -924,6 +931,8 @@ class SphereDistribution(ProcessModel):
         ...
     @typing.overload
     def __init__(self, radius: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def addMaskMaterial(self, material: viennaps._core.Material) -> None:
         ...
 class StencilLocalLaxFriedrichsScalar:
     @staticmethod

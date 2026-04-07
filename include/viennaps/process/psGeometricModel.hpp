@@ -2,17 +2,19 @@
 
 #include <lsGeometricAdvect.hpp>
 
-#include "../psDomain.hpp"
+#include "../psPreCompileMacros.hpp"
+
+#include "../materials/psMaterial.hpp"
 
 namespace viennaps {
 
 using namespace viennacore;
 
 VIENNAPS_TEMPLATE_ND(NumericType, D) class GeometricModel {
-  SmartPointer<Domain<NumericType, D>> domain = nullptr;
   SmartPointer<viennals::GeometricAdvectDistribution<NumericType, D>> dist =
       nullptr;
   SmartPointer<viennals::Domain<NumericType, D>> mask = nullptr;
+  std::vector<Material> maskMaterials;
 
 public:
   GeometricModel() = default;
@@ -22,10 +24,6 @@ public:
           passedDist,
       SmartPointer<viennals::Domain<NumericType, D>> passedMask = nullptr)
       : dist(passedDist), mask(passedMask) {}
-
-  void setDomain(SmartPointer<Domain<NumericType, D>> passedDomain) {
-    domain = passedDomain;
-  }
 
   void setDistribution(
       SmartPointer<viennals::GeometricAdvectDistribution<NumericType, D>>
@@ -37,24 +35,17 @@ public:
     mask = passedMask;
   }
 
-  void apply() {
-    if (!dist) {
-      VIENNACORE_LOG_ERROR(
-          "No GeometricAdvectDistribution passed to GeometricModel.");
-      return;
-    }
-
-    viennals::GeometricAdvect<NumericType, D>(domain->getLevelSets().back(),
-                                              dist, mask)
-        .apply();
-
-    for (int i = domain->getNumberOfLevelSets() - 1; i >= 0; --i) {
-      viennals::BooleanOperation<NumericType, D>(
-          domain->getLevelSets()[i], domain->getLevelSets().back(),
-          viennals::BooleanOperationEnum::INTERSECT)
-          .apply();
-    }
+  void addMaskMaterial(const Material material) {
+    maskMaterials.push_back(material);
   }
+
+  void setMaskMaterials(const std::vector<Material> &materials) {
+    maskMaterials = materials;
+  }
+
+  auto &getDistribution() const { return dist; }
+  auto &getMask() const { return mask; }
+  auto &getMaskMaterials() const { return maskMaterials; }
 };
 
 } // namespace viennaps

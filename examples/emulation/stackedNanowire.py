@@ -74,10 +74,10 @@ n += 1
 # Deposit dummy gate material
 print("Depositing dummy gate material ...")
 domain.duplicateTopLevelSet(ps.Material.PolySi)
-ps.Process(domain, growth, 55.0).apply()
+ps.Process(domain, growth, 85.0).apply()
 
-# CMP at 80nm height
-ps.Planarize(domain, 80.0).apply()
+# CMP at 100nm height
+ps.Planarize(domain, 100.0).apply()
 
 domain.saveSurfaceMesh("StackedNanowire_" + str(n))
 n += 1
@@ -85,20 +85,20 @@ n += 1
 # Dummy gate mask addition
 print("Adding dummy gate mask ...")
 mask = ps.ls.Domain(bounds, boundaryConds, gridDelta)
-geo = ps.ls.MakeGeometry(mask, ps.ls.Box([-10, 30, 75], [80, 70, 80]))
+geo = ps.ls.MakeGeometry(mask, ps.ls.Box([-10, 30, 99], [80, 70, 105]))
 geo.setIgnoreBoundaryConditions(True)
 geo.apply()
+domain.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
+domain.saveSurfaceMesh("StackedNanowire_" + str(n))
+n += 1
 
-ps.ls.BooleanOperation(
-    mask, domain.getLevelSets()[-2], ps.ls.BooleanOperationEnum.UNION
-).apply()
+masks = domain.getMaterialsInDomain()
+masks.remove(ps.Material.PolySi)
+geometricEtch = ps.BoxDistribution([-gridDelta, -gridDelta, -100])
+for material in masks:
+    geometricEtch.addMaskMaterial(material)
 
-tmpDomain = ps.Domain()
-tmpDomain.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
-tmpDomain.insertNextLevelSetAsMaterial(domain.getLevelSets()[-1], ps.Material.PolySi)
-
-geometricEtch = ps.BoxDistribution([-gridDelta, -gridDelta, -80], mask)
-ps.Process(tmpDomain, geometricEtch, 1.0).apply()
+ps.Process(domain, geometricEtch).apply()
 
 domain.removeMaterial(ps.Material.Mask)
 domain.saveSurfaceMesh("StackedNanowire_" + str(n))
@@ -107,7 +107,7 @@ n += 1
 # Spacer Deposition
 print("Depositing spacer material ...")
 domain.duplicateTopLevelSet(ps.Material.Si3N4)
-ps.Process(domain, growth, 12.0).apply()
+ps.Process(domain, growth, 10.0).apply()
 domain.saveSurfaceMesh("StackedNanowire_" + str(n))
 n += 1
 

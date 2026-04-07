@@ -18,8 +18,94 @@ public:
     }
 
     auto geometricModel = context.model->getGeometricModel();
-    geometricModel->setDomain(context.domain);
-    geometricModel->apply();
+    assert(geometricModel);
+
+    auto dist = geometricModel->getDistribution();
+    if (!dist) {
+      VIENNACORE_LOG_ERROR(
+          "No GeometricAdvectDistribution passed to GeometricModel.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    auto mask = geometricModel->getMask();
+    if (!mask) {
+      // check if mask materials are set, if so create a mask level set from the
+      // domain
+      auto maskMaterials = geometricModel->getMaskMaterials();
+      if (!maskMaterials.empty()) {
+        auto domain = context.domain;
+        auto materialMap = domain->getMaterialMap();
+        if (!materialMap) {
+          VIENNACORE_LOG_ERROR("Domain does not have a material map, cannot "
+                               "create mask level set "
+                               "from mask materials.");
+          return ProcessResult::INVALID_INPUT;
+        }
+
+        auto maskLevelSet = SmartPointer<viennals::Domain<NumericType, D>>::New(
+            domain->getGrid());
+        bool foundMaterial = false;
+
+        auto const &levelSets = domain->getLevelSets();
+        for (auto &material : maskMaterials) {
+          for (int j = 0; j < levelSets.size(); ++j) {
+            if (materialMap->getMaterialAtIdx(j) == material) {
+              auto lsCopy = SmartPointer<viennals::Domain<NumericType, D>>::New(
+                  levelSets[j]);
+
+              // remove all lower level sets that are not mask materials
+              for (int k = j - 1; k >= 0; --k) {
+                if (MaterialMap::isMaterial(materialMap->getMaterialAtIdx(k),
+                                            maskMaterials))
+                  continue;
+
+                viennals::BooleanOperation<NumericType, D>(
+                    lsCopy, levelSets[k],
+                    viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+                    .apply();
+              }
+
+              if (foundMaterial) {
+                // union with mask level set
+                viennals::BooleanOperation<NumericType, D>(
+                    maskLevelSet, lsCopy, viennals::BooleanOperationEnum::UNION)
+                    .apply();
+              } else {
+                maskLevelSet = lsCopy;
+                foundMaterial = true;
+              }
+            }
+          }
+        }
+
+        if (maskLevelSet->getNumberOfPoints() > 0) {
+          mask = maskLevelSet;
+          if (Logger::hasDebug()) {
+            auto dbgMesh = viennals::Mesh<NumericType>::New();
+            viennals::ToMesh<NumericType, D>(mask, dbgMesh).apply();
+            viennals::VTKWriter<NumericType>(dbgMesh, "geometric_mask_debug")
+                .apply();
+          }
+        } else {
+          VIENNACORE_LOG_WARNING(
+              "None of the specified mask materials were found in the domain, "
+              "cannot create mask level set from mask materials.");
+        }
+      }
+    }
+
+    viennals::GeometricAdvect<NumericType, D>(
+        context.domain->getLevelSets().back(), dist, mask)
+        .apply();
+
+    // Intersect all other level sets with the last one to keep them consistent
+    for (int i = context.domain->getNumberOfLevelSets() - 1; i >= 0; --i) {
+      viennals::BooleanOperation<NumericType, D>(
+          context.domain->getLevelSets()[i],
+          context.domain->getLevelSets().back(),
+          viennals::BooleanOperationEnum::INTERSECT)
+          .apply();
+    }
 
     return ProcessResult::SUCCESS;
   }

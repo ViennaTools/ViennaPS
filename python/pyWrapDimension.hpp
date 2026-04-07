@@ -1053,7 +1053,9 @@ template <int D> void bindApi(py::module &module) {
              return SmartPointer<SphereDistribution<T, D>>::New(radius,
                                                                 nullptr);
            }),
-           py::arg("radius"));
+           py::arg("radius"))
+      .def("addMaskMaterial", &SphereDistribution<T, D>::addMaskMaterial,
+           py::arg("material"));
 
   // Box Distribution
   py::class_<BoxDistribution<T, D>, SmartPointer<BoxDistribution<T, D>>>(
@@ -1066,7 +1068,22 @@ template <int D> void bindApi(py::module &module) {
       .def(py::init([](const std::array<T, 3> &halfAxes) {
              return SmartPointer<BoxDistribution<T, D>>::New(halfAxes, nullptr);
            }),
-           py::arg("halfAxes"));
+           py::arg("halfAxes"))
+      .def("addMaskMaterial", &BoxDistribution<T, D>::addMaskMaterial,
+           py::arg("material"));
+
+  // Custom Sphere Distribution
+  py::class_<CustomSphereDistribution<T, D>,
+             SmartPointer<CustomSphereDistribution<T, D>>>(
+      module, "CustomSphereDistribution", processModel)
+      .def(py::init([](const std::vector<T> &radii,
+                       SmartPointer<viennals::Domain<T, D>> mask) {
+             return SmartPointer<CustomSphereDistribution<T, D>>::New(radii,
+                                                                      mask);
+           }),
+           py::arg("radii"), py::arg("mask") = nullptr)
+      .def("addMaskMaterial", &CustomSphereDistribution<T, D>::addMaskMaterial,
+           py::arg("material"));
 
   py::class_<GeometricTrenchDeposition<T, D>,
              SmartPointer<GeometricTrenchDeposition<T, D>>>(
