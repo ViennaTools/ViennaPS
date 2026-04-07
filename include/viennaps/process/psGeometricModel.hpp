@@ -2,6 +2,8 @@
 
 #include <lsGeometricAdvect.hpp>
 
+#include "../psPreCompileMacros.hpp"
+
 #include "../materials/psMaterial.hpp"
 
 namespace viennaps {
