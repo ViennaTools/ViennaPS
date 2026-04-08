@@ -137,7 +137,13 @@ CPMAddPackage(
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
-target_link_libraries(${PROJECT_NAME} INTERFACE ViennaCore ViennaLS ViennaRay ViennaCS)
+CPMAddPackage(
+  NAME nlohmann_json
+  VERSION 3.11.3
+  GITHUB_REPOSITORY nlohmann/json)
+
+target_link_libraries(${PROJECT_NAME} INTERFACE ViennaCore ViennaLS ViennaRay ViennaCS
+                                                nlohmann_json::nlohmann_json)
 
 # --------------------------------------------------------------------------------------------------------
 # Setup Sanitizer or Clang-Tidy

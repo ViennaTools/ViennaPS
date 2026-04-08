@@ -44,7 +44,7 @@ public:
     const auto customId = static_cast<Material::ValueType>(materials_.size());
     nameToCustomId_.emplace(name, customId);
     materials_.push_back(MaterialInfo{
-        std::move(name), MaterialCategory::Generic, 0.0, false, 0xffffff});
+        std::move(name), MaterialCategory::Generic, 0.0, 0xffffff});
     return Material::custom(customId);
   }
 
@@ -111,7 +111,7 @@ public:
     if (material.isBuiltIn()) {
       auto info = getBuiltInMaterialInfo(material.builtIn());
       return MaterialInfo{std::string(info.name), info.category,
-                          info.density_gcm3, info.conductive, info.colorHex};
+                          info.density_gcm3, info.colorHex};
     }
 
     const auto customId = material.customId();

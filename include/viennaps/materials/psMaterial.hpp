@@ -106,8 +106,7 @@ public:
   [[nodiscard]] __both__ constexpr auto
   operator<=>(const Material &) const noexcept = default;
 
-#define MATERIAL_CONST(id, sym, cat, dens, cond, color)                        \
-  static const Material sym;
+#define MATERIAL_CONST(id, sym, cat, dens, color) static const Material sym;
   BUILTIN_MATERIAL_LIST(MATERIAL_CONST)
 #undef MATERIAL_CONST
 
@@ -139,7 +138,7 @@ toMaterial(BuiltInMaterial material) {
 
 namespace viennaps {
 
-#define MATERIAL_CONST_DEF(id, sym, cat, dens, cond, color)                    \
+#define MATERIAL_CONST_DEF(id, sym, cat, dens, color)                          \
   inline constexpr Material Material::sym{BuiltInMaterial::sym};
 BUILTIN_MATERIAL_LIST(MATERIAL_CONST_DEF)
 #undef MATERIAL_CONST_DEF

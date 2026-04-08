@@ -192,6 +192,70 @@ convertTemporalSchemeToString(viennals::TemporalSchemeEnum scheme) {
   return viennaray::BoundaryCondition::IGNORE_BOUNDARY;
 }
 
+inline std::string
+convertMaterialCategoryToString(::viennaps::MaterialCategory category) {
+  switch (category) {
+  case ::viennaps::MaterialCategory::Generic:
+    return "Generic";
+  case ::viennaps::MaterialCategory::Silicon:
+    return "Silicon";
+  case ::viennaps::MaterialCategory::OxideNitride:
+    return "OxideNitride";
+  case ::viennaps::MaterialCategory::Hardmask:
+    return "Hardmask";
+  case ::viennaps::MaterialCategory::Metal:
+    return "Metal";
+  case ::viennaps::MaterialCategory::Silicide:
+    return "Silicide";
+  case ::viennaps::MaterialCategory::Compound:
+    return "Compound";
+  case ::viennaps::MaterialCategory::TwoD:
+    return "TwoD";
+  case ::viennaps::MaterialCategory::TCO:
+    return "TCO";
+  case ::viennaps::MaterialCategory::Misc:
+    return "Misc";
+  }
+  VIENNACORE_LOG_ERROR("Unknown material category value.");
+  return "";
+}
+
+inline ::viennaps::MaterialCategory
+convertMaterialCategoryFromString(const std::string &value) {
+  if (value == "Generic") {
+    return ::viennaps::MaterialCategory::Generic;
+  }
+  if (value == "Silicon") {
+    return ::viennaps::MaterialCategory::Silicon;
+  }
+  if (value == "OxideNitride") {
+    return ::viennaps::MaterialCategory::OxideNitride;
+  }
+  if (value == "Hardmask") {
+    return ::viennaps::MaterialCategory::Hardmask;
+  }
+  if (value == "Metal") {
+    return ::viennaps::MaterialCategory::Metal;
+  }
+  if (value == "Silicide") {
+    return ::viennaps::MaterialCategory::Silicide;
+  }
+  if (value == "Compound") {
+    return ::viennaps::MaterialCategory::Compound;
+  }
+  if (value == "TwoD") {
+    return ::viennaps::MaterialCategory::TwoD;
+  }
+  if (value == "TCO") {
+    return ::viennaps::MaterialCategory::TCO;
+  }
+  if (value == "Misc") {
+    return ::viennaps::MaterialCategory::Misc;
+  }
+  VIENNACORE_LOG_ERROR("Invalid material category: '" + value + "'.");
+  return ::viennaps::MaterialCategory::Generic;
+}
+
 template <typename T> [[nodiscard]] std::string toString(const T &value) {
   if constexpr (std::is_same_v<T, bool>)
     return value ? "true" : "false";
