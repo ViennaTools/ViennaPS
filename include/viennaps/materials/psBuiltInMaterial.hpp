@@ -133,8 +133,7 @@ using MaterialInfo = MaterialInfoType<false>;
   X(172, SiC_HM, Hardmask, 3.2, false, 0x4f4f4f)                               \
   X(173, TiO, Misc, 4.9, false, 0x64b5f6)                                      \
   X(174, ZrO, Misc, 5.2, false, 0x5c6bc0)                                      \
-  X(175, SiO2_HM, Hardmask, 2.2, false, 0x66ccff)                              \
-  X(176, Custom, Generic, 0.0, false, 0xffffff)
+  X(175, SiO2_HM, Hardmask, 2.2, false, 0x66ccff)
 
 #ifndef MATERIAL_LIST
 #define MATERIAL_LIST(X) BUILTIN_MATERIAL_LIST(X)
@@ -146,7 +145,7 @@ enum class BuiltInMaterial : uint16_t {
 #undef ENUM_ELEM
 };
 
-inline constexpr uint16_t kBuiltInMaterialMaxId = 176;
+inline constexpr uint16_t kBuiltInMaterialMaxId = 175;
 
 constexpr std::array<BuiltInMaterialInfo, kBuiltInMaterialMaxId + 1>
     kBuiltInMaterialTable = [] {

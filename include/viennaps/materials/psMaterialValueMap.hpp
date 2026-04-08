@@ -87,7 +87,7 @@ public:
     return getBuiltInValue(idx);
   }
 
-  const T getEntryByIndex(std::size_t idx) const {
+  [[nodiscard]] const T getEntryByIndex(std::size_t idx) const {
     if (auto it = begin().goToIndex(idx); it != end()) {
       return (*it).value;
     } else {
@@ -130,20 +130,18 @@ public:
   void clear(BuiltInMaterial m) { clear(Material(m)); }
 
   void clearAll() {
-    for (auto &b : isSet_) {
-      b = false;
-    }
+    isSet_.fill(false);
     customValues_.clear();
   }
 
   // ================= ITERATOR =================
-  struct Entry {
-    Material material;
-    const T &value;
-  };
-
   class Iterator {
   public:
+    struct Entry {
+      Material material;
+      const T &value;
+    };
+
     using CustomIterator =
         typename std::unordered_map<Material::ValueType, T>::const_iterator;
 
