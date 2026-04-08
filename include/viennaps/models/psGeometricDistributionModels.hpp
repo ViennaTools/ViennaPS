@@ -31,6 +31,12 @@ public:
     assert(geomModel != nullptr);
     geomModel->addMaskMaterial(material);
   }
+
+  void setMaskMaterials(const std::vector<Material> &materials) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->setMaskMaterials(materials);
+  }
 };
 
 template <typename NumericType, int D>
@@ -58,6 +64,12 @@ public:
     assert(geomModel != nullptr);
     geomModel->addMaskMaterial(material);
   }
+
+  void setMaskMaterials(const std::vector<Material> &materials) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->setMaskMaterials(materials);
+  }
 };
 
 template <typename NumericType, int D>
@@ -82,6 +94,12 @@ public:
     auto geomModel = this->getGeometricModel();
     assert(geomModel != nullptr);
     geomModel->addMaskMaterial(material);
+  }
+
+  void setMaskMaterials(const std::vector<Material> &materials) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->setMaskMaterials(materials);
   }
 };
 
