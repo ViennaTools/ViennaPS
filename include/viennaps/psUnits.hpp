@@ -39,7 +39,7 @@ public:
     } else if (unit == "angstrom" || unit == "A") {
       unit_ = ANGSTROM;
     } else {
-      throw std::invalid_argument(
+      VIENNACORE_LOG_ERROR(
           "The value must be one of the following: meter, centimeter, "
           "millimeter, micrometer, nanometer, angstrom");
     }
