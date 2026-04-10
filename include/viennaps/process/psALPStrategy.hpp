@@ -162,12 +162,18 @@ private:
 
       double time = 0.;
       unsigned pulseIteration = 0;
-      while (std::fabs(time - pulseTime) > 1e-6) {
+      const double coverageTimeStep =
+          context.atomicLayerParams.coverageTimeStep;
+      while (time < pulseTime - coverageTimeStep * 1e-4) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
         // Check for user interruption
         if (PyErr_CheckSignals() != 0)
           return ProcessResult::USER_INTERRUPTED;
 #endif
+
+        // Clamp last step to land exactly on pulseTime
+        double dt = std::min(coverageTimeStep, pulseTime - time);
+        context.model->getSurfaceModel()->setTimeStep(dt);
 
         // Calculate fluxes
         auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
@@ -178,7 +184,7 @@ private:
 
         outputIntermediateResults(context, fluxes, pulseIteration);
 
-        time += context.atomicLayerParams.coverageTimeStep;
+        time += dt;
         pulseIteration++;
 
         if (Logger::hasInfo()) {
