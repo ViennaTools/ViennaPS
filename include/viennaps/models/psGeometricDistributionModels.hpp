@@ -20,6 +20,7 @@ public:
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
+    geomModel->setDeposition(radius > 0);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
@@ -45,6 +46,13 @@ public:
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
+    geomModel->setDeposition(true);
+    for (const auto &halfAxis : halfAxes) {
+      if (halfAxis < 0) {
+        geomModel->setDeposition(false);
+        break;
+      }
+    }
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");
@@ -73,6 +81,13 @@ public:
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
+    geomModel->setDeposition(true);
+    for (const auto &radius : radii) {
+      if (radius < 0) {
+        geomModel->setDeposition(false);
+        break;
+      }
+    }
 
     this->setGeometricModel(geomModel);
     this->setProcessName("CustomSphereDistribution");

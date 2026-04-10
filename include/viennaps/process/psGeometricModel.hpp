@@ -15,6 +15,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) class GeometricModel {
       nullptr;
   SmartPointer<viennals::Domain<NumericType, D>> mask = nullptr;
   std::vector<Material> maskMaterials;
+  bool isDepo = false;
 
 public:
   GeometricModel() = default;
@@ -46,6 +47,8 @@ public:
   auto &getDistribution() const { return dist; }
   auto &getMask() const { return mask; }
   auto &getMaskMaterials() const { return maskMaterials; }
+  auto isDeposition() const { return isDepo; }
+  void setDeposition(bool deposition) { isDepo = deposition; }
 };
 
 } // namespace viennaps

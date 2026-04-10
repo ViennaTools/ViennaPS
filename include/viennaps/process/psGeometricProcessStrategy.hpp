@@ -6,6 +6,8 @@ namespace viennaps {
 
 VIENNAPS_TEMPLATE_ND(NumericType, D)
 class GeometricProcessStrategy : public ProcessStrategy<NumericType, D> {
+  using GeometricKernel = viennals::GeometricAdvect<NumericType, D>;
+
 public:
   DEFINE_CLASS_NAME(GeometricProcessStrategy)
 
@@ -94,17 +96,19 @@ public:
       }
     }
 
-    viennals::GeometricAdvect<NumericType, D>(
-        context.domain->getLevelSets().back(), dist, mask)
-        .apply();
+    GeometricKernel(context.domain->getSurface(), dist, mask).apply();
 
-    // Intersect all other level sets with the last one to keep them consistent
-    for (int i = context.domain->getNumberOfLevelSets() - 1; i >= 0; --i) {
-      viennals::BooleanOperation<NumericType, D>(
-          context.domain->getLevelSets()[i],
-          context.domain->getLevelSets().back(),
-          viennals::BooleanOperationEnum::INTERSECT)
-          .apply();
+    if (!geometricModel->isDeposition()) {
+      // If the top level set was etched, we need to make sure that the
+      // other level sets are still consistent by intersecting them with the
+      // last level set.
+      for (int i = context.domain->getNumberOfLevelSets() - 1; i >= 0; --i) {
+        viennals::BooleanOperation<NumericType, D>(
+            context.domain->getLevelSets()[i],
+            context.domain->getLevelSets().back(),
+            viennals::BooleanOperationEnum::INTERSECT)
+            .apply();
+      }
     }
 
     return ProcessResult::SUCCESS;
