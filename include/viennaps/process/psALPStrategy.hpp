@@ -171,6 +171,10 @@ private:
           return ProcessResult::USER_INTERRUPTED;
 #endif
 
+        // Clamp last step to land exactly on pulseTime
+        double dt = std::min(coverageTimeStep, pulseTime - time);
+        context.model->getSurfaceModel()->setTimeStep(dt);
+
         // Calculate fluxes
         auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
         PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
@@ -180,7 +184,7 @@ private:
 
         outputIntermediateResults(context, fluxes, pulseIteration);
 
-        time += coverageTimeStep;
+        time += dt;
         pulseIteration++;
 
         if (Logger::hasInfo()) {

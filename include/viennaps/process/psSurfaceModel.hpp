@@ -32,6 +32,8 @@ public:
     // if no surface data get initialized here, they won't be used at all
   }
 
+  virtual void setTimeStep(NumericType dt) {}
+
   virtual SmartPointer<std::vector<NumericType>>
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
