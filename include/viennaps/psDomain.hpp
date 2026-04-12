@@ -447,12 +447,52 @@ public:
     return levelSets_.back()->getGrid().getBoundaryConditions();
   }
 
+  // Returns a set of all materials present in the domain.
   auto getMaterialsInDomain() const {
     std::set<Material> materials;
     for (std::size_t i = 0; i < materialMap_->size(); i++) {
       materials.insert(materialMap_->getMaterialAtIdx(i));
     }
     return materials;
+  }
+
+  // Returns a Level-Set representing the specified material in the domain. If
+  // the material is not present in the domain, it returns an empty Level-Set.
+  auto getMaterialLevelSet(const Material material) const {
+    lsDomainType levelSet;
+    bool foundMaterial = false;
+
+    for (int i = 0; i < levelSets_.size(); i++) {
+      if (materialMap_->getMaterialAtIdx(i) == material) {
+        auto lsCopy =
+            SmartPointer<viennals::Domain<NumericType, D>>::New(levelSets_[i]);
+
+        // remove all lower level sets
+        for (int k = i - 1; k >= 0; --k) {
+          viennals::BooleanOperation<NumericType, D>(
+              lsCopy, levelSets_[k],
+              viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+              .apply();
+        }
+
+        if (foundMaterial) {
+          // add to level set
+          viennals::BooleanOperation<NumericType, D>(
+              levelSet, lsCopy, viennals::BooleanOperationEnum::UNION)
+              .apply();
+        } else {
+          levelSet = lsCopy;
+          foundMaterial = true;
+        }
+      }
+    }
+
+    if (!foundMaterial) {
+      VIENNACORE_LOG_WARNING("Material " + MaterialMap::toString(material) +
+                             " not found in domain.");
+    }
+
+    return levelSet;
   }
 
   void print(std::ostream &out = std::cout, bool hrle = false) const {
@@ -655,8 +695,8 @@ public:
 private:
   void materialMapCheck() const {
     if (materialMap_->size() != levelSets_.size()) {
-      VIENNACORE_LOG_WARNING(
-          "Size mismatch in material map and number of Level-Sets in domain.");
+      VIENNACORE_LOG_WARNING("Size mismatch in material map and number of "
+                             "Level-Sets in domain.");
     }
   }
 

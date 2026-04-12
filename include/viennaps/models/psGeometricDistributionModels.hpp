@@ -32,6 +32,14 @@ public:
     assert(geomModel != nullptr);
     geomModel->addMaskMaterial(material);
   }
+
+  void applyToSingleMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->setSingleMaterial(true);
+    geomModel->getMaskMaterials().clear();
+    geomModel->addMaskMaterial(material);
+  }
 };
 
 template <typename NumericType, int D>
@@ -64,6 +72,14 @@ public:
   void addMaskMaterial(const Material material) {
     auto geomModel = this->getGeometricModel();
     assert(geomModel != nullptr);
+    geomModel->addMaskMaterial(material);
+  }
+
+  void applyToSingleMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->setSingleMaterial(true);
+    geomModel->getMaskMaterials().clear();
     geomModel->addMaskMaterial(material);
   }
 };
