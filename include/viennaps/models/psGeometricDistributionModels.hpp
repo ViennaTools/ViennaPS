@@ -37,7 +37,6 @@ public:
     auto geomModel = this->getGeometricModel();
     assert(geomModel != nullptr);
     geomModel->setSingleMaterial(true);
-    geomModel->getMaskMaterials().clear();
     geomModel->addMaskMaterial(material);
   }
 };
@@ -79,7 +78,6 @@ public:
     auto geomModel = this->getGeometricModel();
     assert(geomModel != nullptr);
     geomModel->setSingleMaterial(true);
-    geomModel->getMaskMaterials().clear();
     geomModel->addMaskMaterial(material);
   }
 };

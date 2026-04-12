@@ -1055,6 +1055,9 @@ template <int D> void bindApi(py::module &module) {
            }),
            py::arg("radius"))
       .def("addMaskMaterial", &SphereDistribution<T, D>::addMaskMaterial,
+           py::arg("material"))
+      .def("applyToSingleMaterial",
+           &SphereDistribution<T, D>::applyToSingleMaterial,
            py::arg("material"));
 
   // Box Distribution
@@ -1070,7 +1073,9 @@ template <int D> void bindApi(py::module &module) {
            }),
            py::arg("halfAxes"))
       .def("addMaskMaterial", &BoxDistribution<T, D>::addMaskMaterial,
-           py::arg("material"));
+           py::arg("material"))
+      .def("applyToSingleMaterial",
+           &BoxDistribution<T, D>::applyToSingleMaterial, py::arg("material"));
 
   // Custom Sphere Distribution
   py::class_<CustomSphereDistribution<T, D>,
