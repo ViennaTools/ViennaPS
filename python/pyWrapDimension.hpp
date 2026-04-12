@@ -564,6 +564,7 @@ template <int D> void bindApi(py::module &module) {
            "Get the surface mesh of the domain")
       .def("getHullMesh", &Domain<T, D>::getHullMesh,
            py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false)
+      .def("getDiskMesh", &Domain<T, D>::getDiskMesh)
       // Save to file
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            py::arg("filename"), py::arg("width") = 1,
@@ -576,6 +577,7 @@ template <int D> void bindApi(py::module &module) {
       .def("saveHullMesh", &Domain<T, D>::saveHullMesh, py::arg("filename"),
            py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false,
            "Save the hull of the domain.")
+      .def("saveDiskMesh", &Domain<T, D>::saveDiskMesh, py::arg("filename"))
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh, py::arg("filename"),
            py::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")

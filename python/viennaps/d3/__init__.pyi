@@ -304,6 +304,8 @@ class Domain:
         """
         Get the cell set.
         """
+    def getDiskMesh(self) -> viennals._core.Mesh:
+        ...
     def getGrid(self) -> viennals.d3.hrleGrid:
         """
         Get the grid
@@ -379,6 +381,8 @@ class Domain:
     def removeStrayPoints(self) -> None:
         ...
     def removeTopLevelSet(self) -> None:
+        ...
+    def saveDiskMesh(self, filename: str) -> None:
         ...
     def saveHullMesh(self, filename: str, bottomExtension: typing.SupportsFloat | typing.SupportsIndex = 0.0, sharpCorners: bool = False) -> None:
         """
