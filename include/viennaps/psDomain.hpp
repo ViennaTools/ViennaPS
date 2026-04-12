@@ -459,35 +459,33 @@ public:
   // Returns a Level-Set representing the specified material in the domain. If
   // the material is not present in the domain, it returns an empty Level-Set.
   auto getMaterialLevelSet(const Material material) const {
-    lsDomainType levelSet;
-    bool foundMaterial = false;
+    lsDomainType levelSet = nullptr;
 
     for (int i = 0; i < levelSets_.size(); i++) {
       if (materialMap_->getMaterialAtIdx(i) == material) {
         auto lsCopy =
             SmartPointer<viennals::Domain<NumericType, D>>::New(levelSets_[i]);
 
-        // remove all lower level sets
-        for (int k = i - 1; k >= 0; --k) {
+        // remove lower level set
+        if (i > 0) {
           viennals::BooleanOperation<NumericType, D>(
-              lsCopy, levelSets_[k],
+              lsCopy, levelSets_[i - 1],
               viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
               .apply();
         }
 
-        if (foundMaterial) {
+        if (levelSet) {
           // add to level set
           viennals::BooleanOperation<NumericType, D>(
               levelSet, lsCopy, viennals::BooleanOperationEnum::UNION)
               .apply();
         } else {
           levelSet = lsCopy;
-          foundMaterial = true;
         }
       }
     }
 
-    if (!foundMaterial) {
+    if (!levelSet) {
       VIENNACORE_LOG_WARNING("Material " + MaterialMap::toString(material) +
                              " not found in domain.");
     }

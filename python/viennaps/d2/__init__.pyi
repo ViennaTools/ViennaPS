@@ -322,6 +322,10 @@ class Domain:
         """
     def getLevelSets(self) -> list[viennals.d2.Domain]:
         ...
+    def getMaterialLevelSet(self, material: viennaps._core.Material) -> viennals.d2.Domain:
+        """
+        Returns a Level-Set representing the specified material in the domain.
+        """
     def getMaterialMap(self) -> viennaps._core.MaterialMap:
         ...
     def getMaterialsInDomain(self) -> set[viennaps._core.Material]:

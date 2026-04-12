@@ -538,6 +538,10 @@ template <int D> void bindApi(py::module &module) {
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
       .def("getMaterialsInDomain", &Domain<T, D>::getMaterialsInDomain,
            "Get the material IDs present in the domain.")
+      .def("getMaterialLevelSet", &Domain<T, D>::getMaterialLevelSet,
+           py::arg("material"),
+           "Returns a Level-Set representing the specified material in the "
+           "domain.")
       .def("getSurface", &Domain<T, D>::getSurface,
            "Get the surface level set.")
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
