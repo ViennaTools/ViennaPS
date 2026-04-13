@@ -44,7 +44,7 @@ template <typename NumericType> class Delaunay2D {
 
   SmartPointer<viennaps::Domain<NumericType, 2>> domain;
   double maxTriangleSize = 1.;
-  double minNodeDistance = 0.05;
+  double minNodeDistance = 0.02;
   int bottomExtent = 1;
   int bottomLayerMaterialId = -1;
   int voidMaterialId = -1;
@@ -179,8 +179,12 @@ public:
     }
     auto materialMap = domain->getMaterialMap()->getMaterialMap();
 
+    if (Logger::hasDebug()) {
+      verbose = true;
+    }
+
     auto mesh = viennals::Mesh<NumericType>::New();
-    viennals::ToMultiSurfaceMesh<NumericType, 2> mesher(1e-12, minNodeDistance);
+    viennals::ToMultiSurfaceMesh<NumericType, 2> mesher(minNodeDistance);
     viennals::WriteVisualizationMesh<NumericType, 2> visMesh;
     mesher.setMesh(mesh);
     if (verbose) {
@@ -350,8 +354,7 @@ public:
             p3[1] < minExtent[1]) {
           // below level set domain
           if (bottomLayerMaterialId == -1) {
-            cdtMesh.materialIds.push_back(
-                materialMap ? materialMap->getMaterialId(0) : 0.0);
+            cdtMesh.materialIds.push_back(materialMap->getMaterialId(0));
           } else {
             cdtMesh.materialIds.push_back(
                 static_cast<NumericType>(bottomLayerMaterialId));
@@ -363,10 +366,8 @@ public:
       } else {
         // cell found
         NumericType materialId = materials->GetTuple1(cellId);
-        if (materialMap) {
-          materialId =
-              materialMap->getMaterialId(static_cast<size_t>(materialId));
-        }
+        materialId =
+            materialMap->getMaterialId(static_cast<size_t>(materialId));
         cdtMesh.materialIds.push_back(materialId);
       }
     }
