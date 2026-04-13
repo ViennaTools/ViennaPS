@@ -139,6 +139,14 @@ CPMAddPackage(
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaCore ViennaLS ViennaRay ViennaCS)
 
+set(CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE
+    ON
+    CACHE BOOL "" FORCE)
+    
+find_package(CGAL REQUIRED COMPONENTS Core)
+message(STATUS "[ViennaMesh] Found CGAL version ${CGAL_VERSION}")
+target_link_libraries(${PROJECT_NAME} INTERFACE CGAL::CGAL)
+
 # --------------------------------------------------------------------------------------------------------
 # Setup Sanitizer or Clang-Tidy
 # --------------------------------------------------------------------------------------------------------

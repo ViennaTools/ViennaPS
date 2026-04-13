@@ -1,5 +1,7 @@
 #include "pyWrapDimension.hpp"
 
+#include <mesh/psDelaunay2D.hpp>
+
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
       "ViennaPS is a topography simulation library for microelectronic "
@@ -730,6 +732,58 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("setReflectX", &Slice<T>::setReflectX,
            "Set whether to reflect the slice along the X axis.")
       .def("apply", &Slice<T>::apply, "Run the slicing.");
+
+  // Meshing
+  py::class_<Mesh2DResult>(module, "Mesh2DResult")
+      .def_readonly("nodes", &Mesh2DResult::nodes)
+      .def_readonly("triangles", &Mesh2DResult::triangles)
+      .def_readonly("lines", &Mesh2DResult::lines)
+      .def_readonly("materialIds", &Mesh2DResult::materialIds);
+
+  py::class_<Delaunay2D<T>>(module, "Delaunay2D")
+      .def(py::init())
+      .def("setDomain", &Delaunay2D<T>::setDomain, py::arg("domain"),
+           "Set the domain to be meshed.")
+      .def("setTargetEdgeLengthFactor",
+           &Delaunay2D<T>::setTargetEdgeLengthFactor, py::arg("factor"),
+           "Set the maximum allowed triangle size during triangulation (factor "
+           "* gridDelta).")
+      .def("setBottomExtent", &Delaunay2D<T>::setBottomExtent,
+           py::arg("extent"),
+           "Set the bottom extent of the triangulation domain.")
+      .def("setBottomMaterialId", &Delaunay2D<T>::setBottomMaterialId,
+           py::arg("material"),
+           "Set the material type for the bottom of the triangulation "
+           "domain.")
+      .def("setVoidMaterialId", &Delaunay2D<T>::setVoidMaterialId,
+           py::arg("material"),
+           "Set the material type for void regions in the triangulation "
+           "domain.")
+      .def("setCloseDomain", &Delaunay2D<T>::setCloseDomain,
+           py::arg("closeDomain"),
+           "Set whether the triangulation domain should be closed at "
+           "the sides.")
+      .def("setCleanConstraints", &Delaunay2D<T>::setCleanConstraints,
+           py::arg("cleanConstraints"),
+           "Set whether constraint edges should be cleaned before "
+           "triangulation.")
+      .def("setVerboseOutput", &Delaunay2D<T>::setVerboseOutput,
+           py::arg("verbose"), "Set whether verbose output is enabled.")
+      .def("setConstraintTargetSpacing",
+           &Delaunay2D<T>::setConstraintTargetSpacing, py::arg("spacing"),
+           "Set target edge spacing for constraint cleaning (auto if < 0).")
+      .def("setConstraintMergeThreshold",
+           &Delaunay2D<T>::setConstraintMergeThreshold, py::arg("threshold"),
+           "Set merge threshold for near-duplicate vertices (auto if < 0).")
+      .def("setConstraintMinEdgeLength",
+           &Delaunay2D<T>::setConstraintMinEdgeLength, py::arg("length"),
+           "Set minimum edge length for constraint cleaning (auto if < 0).")
+      .def("setSurfaceMeshMinNodeDistanceFactor",
+           &Delaunay2D<T>::setSurfaceMeshMinNodeDistanceFactor,
+           py::arg("factor"),
+           "Set minimum node distance factor for surface mesh generation.")
+      .def("apply", &Delaunay2D<T>::apply,
+           "Perform the Delaunay triangulation.");
 
   // ***************************************************************************
   //                                 GPU SUPPORT
