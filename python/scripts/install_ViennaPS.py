@@ -304,6 +304,24 @@ def get_viennaps_dir(viennaps_dir_arg: str | None) -> Path:
     return viennaps_dir
 
 
+def normalize_cmake_arg_tokens(argv: list[str]) -> list[str]:
+    """
+    Normalize CLI tokens so values passed to --cmake-arg are accepted even
+    when they start with '-'.
+    """
+    normalized: list[str] = []
+    i = 0
+    while i < len(argv):
+        token = argv[i]
+        if token == "--cmake-arg" and i + 1 < len(argv):
+            normalized.append(f"--cmake-arg={argv[i + 1]}")
+            i += 2
+            continue
+        normalized.append(token)
+        i += 1
+    return normalized
+
+
 def install_viennaps(
     pip_path: Path,
     viennaps_dir: Path,
@@ -312,6 +330,7 @@ def install_viennaps(
     gpu_build: bool,
     verbose: bool,
     sanitize: bool = False,
+    extra_cmake_args: list[str] | None = None,
 ):
     if not viennaps_dir.exists():
         sys.exit(f"ViennaPS directory not found: {viennaps_dir}")
@@ -342,6 +361,9 @@ def install_viennaps(
         cmake_args.append(
             "-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer"
         )
+
+    if extra_cmake_args:
+        cmake_args.extend(extra_cmake_args)
 
     env["CMAKE_ARGS"] = " ".join(cmake_args)
 
@@ -405,7 +427,16 @@ def main():
         action="store_true",
         help="Build with AddressSanitizer (-fsanitize=address).",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--cmake-arg",
+        action="append",
+        default=[],
+        help=(
+            "Additional CMake configure argument for the ViennaPS build. "
+            "Repeat this option to pass multiple arguments."
+        ),
+    )
+    args = parser.parse_args(normalize_cmake_arg_tokens(sys.argv[1:]))
 
     if not args.skip_toolchain_check or not args.no_gpu:
         print("Checking toolchain...")
@@ -433,6 +464,7 @@ def main():
         not args.no_gpu,
         args.verbose,
         args.sanitize,
+        args.cmake_arg,
     )
 
     # Final info
