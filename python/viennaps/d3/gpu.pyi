@@ -35,5 +35,9 @@ class SF6O2Etching(ProcessModelGPU):
     def __init__(self, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
 class SingleParticleProcess(ProcessModelGPU):
+    @typing.overload
     def __init__(self, materialRates: viennaps._core.MaterialValueMap, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, sourceExponent: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @typing.overload
+    def __init__(self, materialRates: viennaps._core.MaterialValueMap, stickingProbabilities: viennaps._core.MaterialValueMap, sourceExponent: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...

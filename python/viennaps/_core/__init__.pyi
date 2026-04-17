@@ -1272,6 +1272,7 @@ class PlasmaEtchingParametersPassivation:
         ...
 class PlasmaEtchingParametersPolymer:
     usePolyCosThetaYield: bool
+    useConstantYield: bool
     def __init__(self) -> None:
         ...
     @property
