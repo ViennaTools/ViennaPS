@@ -245,7 +245,10 @@ public:
 
     NumericType f_sp_theta;
     if (MaterialMap::isMaterial(materialId, Material::Polymer) &&
-        params.Polymer.usePolyCosThetaYield) {
+        params.Polymer.useConstantYield) {
+      f_sp_theta = 1.;
+    } else if (MaterialMap::isMaterial(materialId, Material::Polymer) &&
+               params.Polymer.usePolyCosThetaYield) {
       const auto c = cosTheta;
       const auto c2 = c * c;
       const auto &p = params.Polymer;

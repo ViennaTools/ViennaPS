@@ -289,7 +289,9 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("a1", &PlasmaEtchingParameters<T>::PolymerType::a1)
       .def_readwrite("a2", &PlasmaEtchingParameters<T>::PolymerType::a2)
       .def_readwrite("a3", &PlasmaEtchingParameters<T>::PolymerType::a3)
-      .def_readwrite("a4", &PlasmaEtchingParameters<T>::PolymerType::a4);
+      .def_readwrite("a4", &PlasmaEtchingParameters<T>::PolymerType::a4)
+      .def_readwrite("useConstantYield",
+                     &PlasmaEtchingParameters<T>::PolymerType::useConstantYield);
 
   py::class_<PlasmaEtchingParameters<T>::MaterialType>(
       module, "PlasmaEtchingParametersSubstrate")

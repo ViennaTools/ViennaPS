@@ -50,6 +50,9 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     NumericType a2 = 2.72;
     NumericType a3 = -4.3;
     NumericType a4 = 1.95;
+
+    // constant angular yield (f_sp_theta = 1)
+    bool useConstantYield = false;
   } Polymer;
 
   // Etching material
@@ -135,6 +138,8 @@ template <typename NumericType> struct PlasmaEtchingParameters {
       processData["Polymer a3"] = {(double)Polymer.a3};
       processData["Polymer a4"] = {(double)Polymer.a4};
     }
+    processData["Polymer UseConstantYield"] = {
+        (double)Polymer.useConstantYield};
 
     // Material
     processData["Substrate Rho"] = {Substrate.rho};
@@ -191,6 +196,7 @@ struct PlasmaEtchingParametersGPU {
     Polymer.a2 = static_cast<float>(parameters.Polymer.a2);
     Polymer.a3 = static_cast<float>(parameters.Polymer.a3);
     Polymer.a4 = static_cast<float>(parameters.Polymer.a4);
+    Polymer.useConstantYield = parameters.Polymer.useConstantYield;
 
     Substrate.rho = static_cast<float>(parameters.Substrate.rho);
     Substrate.Eth_sp = static_cast<float>(parameters.Substrate.Eth_sp);

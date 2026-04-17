@@ -90,7 +90,11 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
     float f_sp_theta;
     if (static_cast<BuiltInMaterial>(material) == BuiltInMaterial::Polymer &&
-        params->Polymer.usePolyCosThetaYield) {
+        params->Polymer.useConstantYield) {
+      f_sp_theta = 1.f;
+    } else if (static_cast<BuiltInMaterial>(material) ==
+                   BuiltInMaterial::Polymer &&
+               params->Polymer.usePolyCosThetaYield) {
       const float c = cosTheta;
       const float sum = params->Polymer.a1 + params->Polymer.a2 +
                         params->Polymer.a3 + params->Polymer.a4;
