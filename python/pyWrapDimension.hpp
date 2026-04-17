@@ -761,7 +761,13 @@ template <int D> void bindApi(py::module &module) {
            py::arg("sourceExponent"))
       .def("setDefaultRate", &SingleParticleProcess<T, D>::setDefaultRate)
       .def("setMaterialRate", &SingleParticleProcess<T, D>::setMaterialRate,
-           py::arg("material"), py::arg("rate"));
+           py::arg("material"), py::arg("rate"))
+      .def("setDefaultStickingProbability",
+           &SingleParticleProcess<T, D>::setDefaultStickingProbability,
+           py::arg("sticking"))
+      .def("setMaterialStickingProbability",
+           &SingleParticleProcess<T, D>::setMaterialStickingProbability,
+           py::arg("material"), py::arg("sticking"));
 
   // Multi Particle Process
   py::class_<MultiParticleProcess<T, D>,
@@ -1554,6 +1560,10 @@ template <int D> void bindApi(py::module &module) {
       m_gpu, "SingleParticleProcess", processModel_gpu)
       .def(py::init<MaterialValueMap<T> const &, T, T>(),
            py::arg("materialRates"), py::arg("stickingProbability"),
+           py::arg("sourceExponent"))
+      .def(py::init<MaterialValueMap<T> const &, MaterialValueMap<T> const &,
+                    T>(),
+           py::arg("materialRates"), py::arg("stickingProbabilities"),
            py::arg("sourceExponent"));
 
   // Multi Particle Process

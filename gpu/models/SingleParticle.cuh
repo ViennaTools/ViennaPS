@@ -28,3 +28,13 @@ singleNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
   viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
+
+__forceinline__ __device__ void
+singleNeutralReflectionPerMaterial(const void *sbtData,
+                                   viennaray::gpu::PerRayData *prd) {
+  int material = launchParams.materialIds[prd->primID];
+  float sticking = launchParams.materialSticking[material];
+  prd->rayWeight -= prd->rayWeight * sticking;
+  auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  viennaray::gpu::diffuseReflection(prd, geoNormal);
+}
