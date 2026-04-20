@@ -27,6 +27,8 @@ class BoxDistribution(ProcessModel):
         ...
     def addMaskMaterial(self, material: viennaps._core.Material) -> None:
         ...
+    def applyToSingleMaterial(self, material: viennaps._core.Material) -> None:
+        ...
 class CF4O2Etching(ProcessModel):
     @typing.overload
     def __init__(self) -> None:
@@ -302,6 +304,8 @@ class Domain:
         """
         Get the cell set.
         """
+    def getDiskMesh(self) -> viennals._core.Mesh:
+        ...
     def getGrid(self) -> viennals.d3.hrleGrid:
         """
         Get the grid
@@ -318,6 +322,10 @@ class Domain:
         """
     def getLevelSets(self) -> list[viennals.d3.Domain]:
         ...
+    def getMaterialLevelSet(self, material: viennaps._core.Material) -> viennals.d3.Domain:
+        """
+        Returns a Level-Set representing the specified material in the domain.
+        """
     def getMaterialMap(self) -> viennaps._core.MaterialMap:
         ...
     def getMaterialsInDomain(self) -> set[viennaps._core.Material]:
@@ -377,6 +385,8 @@ class Domain:
     def removeStrayPoints(self) -> None:
         ...
     def removeTopLevelSet(self) -> None:
+        ...
+    def saveDiskMesh(self, filename: str) -> None:
         ...
     def saveHullMesh(self, filename: str, bottomExtension: typing.SupportsFloat | typing.SupportsIndex = 0.0, sharpCorners: bool = False) -> None:
         """
@@ -933,6 +943,8 @@ class SphereDistribution(ProcessModel):
     def __init__(self, radius: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     def addMaskMaterial(self, material: viennaps._core.Material) -> None:
+        ...
+    def applyToSingleMaterial(self, material: viennaps._core.Material) -> None:
         ...
 class StencilLocalLaxFriedrichsScalar:
     @staticmethod

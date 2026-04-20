@@ -538,6 +538,10 @@ template <int D> void bindApi(py::module &module) {
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
       .def("getMaterialsInDomain", &Domain<T, D>::getMaterialsInDomain,
            "Get the material IDs present in the domain.")
+      .def("getMaterialLevelSet", &Domain<T, D>::getMaterialLevelSet,
+           py::arg("material"),
+           "Returns a Level-Set representing the specified material in the "
+           "domain.")
       .def("getSurface", &Domain<T, D>::getSurface,
            "Get the surface level set.")
       .def("getCellSet", &Domain<T, D>::getCellSet, "Get the cell set.")
@@ -564,6 +568,7 @@ template <int D> void bindApi(py::module &module) {
            "Get the surface mesh of the domain")
       .def("getHullMesh", &Domain<T, D>::getHullMesh,
            py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false)
+      .def("getDiskMesh", &Domain<T, D>::getDiskMesh)
       // Save to file
       .def("saveLevelSetMesh", &Domain<T, D>::saveLevelSetMesh,
            py::arg("filename"), py::arg("width") = 1,
@@ -576,6 +581,7 @@ template <int D> void bindApi(py::module &module) {
       .def("saveHullMesh", &Domain<T, D>::saveHullMesh, py::arg("filename"),
            py::arg("bottomExtension") = 0.0, py::arg("sharpCorners") = false,
            "Save the hull of the domain.")
+      .def("saveDiskMesh", &Domain<T, D>::saveDiskMesh, py::arg("filename"))
       .def("saveVolumeMesh", &Domain<T, D>::saveVolumeMesh, py::arg("filename"),
            py::arg("wrappingLayerEpsilon") = 1e-2,
            "Save the volume representation of the domain.")
@@ -1055,6 +1061,9 @@ template <int D> void bindApi(py::module &module) {
            }),
            py::arg("radius"))
       .def("addMaskMaterial", &SphereDistribution<T, D>::addMaskMaterial,
+           py::arg("material"))
+      .def("applyToSingleMaterial",
+           &SphereDistribution<T, D>::applyToSingleMaterial,
            py::arg("material"));
 
   // Box Distribution
@@ -1070,7 +1079,9 @@ template <int D> void bindApi(py::module &module) {
            }),
            py::arg("halfAxes"))
       .def("addMaskMaterial", &BoxDistribution<T, D>::addMaskMaterial,
-           py::arg("material"));
+           py::arg("material"))
+      .def("applyToSingleMaterial",
+           &BoxDistribution<T, D>::applyToSingleMaterial, py::arg("material"));
 
   // Custom Sphere Distribution
   py::class_<CustomSphereDistribution<T, D>,

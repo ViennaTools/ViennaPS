@@ -44,54 +44,71 @@ public:
           return ProcessResult::INVALID_INPUT;
         }
 
-        auto maskLevelSet = SmartPointer<viennals::Domain<NumericType, D>>::New(
-            domain->getGrid());
-        bool foundMaterial = false;
+        if (geometricModel->isSingleMaterial() && maskMaterials.size() == 1) {
+          // operation should be applied to a single material, so we use the
+          // surface as mask and exclude the material from the surface
+          mask = viennals::Domain<NumericType, D>::New(domain->getSurface());
+          auto materialLS = domain->getMaterialLevelSet(maskMaterials[0]);
+          if (materialLS) {
+            viennals::BooleanOperation<NumericType, D>(
+                mask, materialLS,
+                viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+                .apply();
+            VIENNACORE_LOG_DEBUG(
+                "Created mask level set from single mask material: " +
+                materialMap->toString(maskMaterials[0]));
+          }
+        } else {
+          auto maskLevelSet =
+              viennals::Domain<NumericType, D>::New(domain->getGrid());
+          bool foundMaterial = false;
+          auto const &levelSets = domain->getLevelSets();
+          for (auto &material : maskMaterials) {
+            for (int j = 0; j < levelSets.size(); ++j) {
+              if (materialMap->getMaterialAtIdx(j) == material) {
+                auto lsCopy =
+                    viennals::Domain<NumericType, D>::New(levelSets[j]);
 
-        auto const &levelSets = domain->getLevelSets();
-        for (auto &material : maskMaterials) {
-          for (int j = 0; j < levelSets.size(); ++j) {
-            if (materialMap->getMaterialAtIdx(j) == material) {
-              auto lsCopy = SmartPointer<viennals::Domain<NumericType, D>>::New(
-                  levelSets[j]);
+                // remove all lower level sets that are not mask materials
+                for (int k = j - 1; k >= 0; --k) {
+                  if (MaterialMap::isMaterial(materialMap->getMaterialAtIdx(k),
+                                              maskMaterials))
+                    continue;
 
-              // remove all lower level sets that are not mask materials
-              for (int k = j - 1; k >= 0; --k) {
-                if (MaterialMap::isMaterial(materialMap->getMaterialAtIdx(k),
-                                            maskMaterials))
-                  continue;
+                  viennals::BooleanOperation<NumericType, D>(
+                      lsCopy, levelSets[k],
+                      viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+                      .apply();
+                }
 
-                viennals::BooleanOperation<NumericType, D>(
-                    lsCopy, levelSets[k],
-                    viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-                    .apply();
-              }
-
-              if (foundMaterial) {
-                // union with mask level set
-                viennals::BooleanOperation<NumericType, D>(
-                    maskLevelSet, lsCopy, viennals::BooleanOperationEnum::UNION)
-                    .apply();
-              } else {
-                maskLevelSet = lsCopy;
-                foundMaterial = true;
+                if (foundMaterial) {
+                  // union with mask level set
+                  viennals::BooleanOperation<NumericType, D>(
+                      maskLevelSet, lsCopy,
+                      viennals::BooleanOperationEnum::UNION)
+                      .apply();
+                } else {
+                  maskLevelSet = lsCopy;
+                  foundMaterial = true;
+                }
               }
             }
           }
-        }
 
-        if (maskLevelSet->getNumberOfPoints() > 0) {
-          mask = maskLevelSet;
-          if (Logger::hasDebug()) {
-            auto dbgMesh = viennals::Mesh<NumericType>::New();
-            viennals::ToMesh<NumericType, D>(mask, dbgMesh).apply();
-            viennals::VTKWriter<NumericType>(dbgMesh, "geometric_mask_debug")
-                .apply();
+          if (maskLevelSet->getNumberOfPoints() > 0) {
+            mask = maskLevelSet;
+            if (Logger::hasDebug()) {
+              auto dbgMesh = viennals::Mesh<NumericType>::New();
+              viennals::ToMesh<NumericType, D>(mask, dbgMesh).apply();
+              viennals::VTKWriter<NumericType>(dbgMesh, "geometric_mask_debug")
+                  .apply();
+            }
+          } else {
+            VIENNACORE_LOG_WARNING(
+                "None of the specified mask materials were found in the "
+                "domain, "
+                "cannot create mask level set from mask materials.");
           }
-        } else {
-          VIENNACORE_LOG_WARNING(
-              "None of the specified mask materials were found in the domain, "
-              "cannot create mask level set from mask materials.");
         }
       }
     }
@@ -104,8 +121,7 @@ public:
       // last level set.
       for (int i = context.domain->getNumberOfLevelSets() - 1; i >= 0; --i) {
         viennals::BooleanOperation<NumericType, D>(
-            context.domain->getLevelSets()[i],
-            context.domain->getLevelSets().back(),
+            context.domain->getLevelSets()[i], context.domain->getSurface(),
             viennals::BooleanOperationEnum::INTERSECT)
             .apply();
       }
