@@ -23,7 +23,6 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) class Writer {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
   std::string fileName;
-  bool meshOutput = false;
 
 public:
   Writer() = default;
@@ -44,8 +43,6 @@ public:
     fileName = std::move(passedFileName);
   }
 
-  void setMeshOutput(bool meshOutputFlag) { meshOutput = meshOutputFlag; }
-
   void apply() {
     // check domain
     if (domain == nullptr) {
@@ -60,8 +57,7 @@ public:
     }
 
     if (fileName.find(".vpsd") != fileName.length() - 5) {
-      VIENNACORE_LOG_WARNING(
-          "File name does not end in '.vpsd', appending it.");
+      VIENNACORE_LOG_INFO("File name does not end in '.vpsd', appending it.");
       fileName.append(".vpsd");
     }
 
@@ -70,19 +66,18 @@ public:
 
     // Write header identifier
     fout << "psDomain";
-    if (meshOutput) {
-      fout << "ForMesher";
-    }
 
-    // Version 1 serializes materials by stable names.
-    char formatVersion = 1;
+    // Write format version for future compatibility.
+    char formatVersion = 2;
     fout.write(&formatVersion, 1);
 
+    // Since version 2: write dimension
+    char dimension = static_cast<char>(D);
+    fout.write(&dimension, 1);
+
     // Write domain setup
-    if (!meshOutput) {
-      auto &setup = domain->getSetup();
-      fout.write(reinterpret_cast<const char *>(&setup), sizeof(setup));
-    }
+    auto &setup = domain->getSetup();
+    setup.serialize(fout);
 
     // Write number of level sets
     auto &levelSets = domain->getLevelSets();
@@ -108,14 +103,7 @@ public:
       // Write each material by canonical name for stable cross-run I/O.
       for (size_t i = 0; i < numMaterials; i++) {
         const auto material = materialMap->getMaterialAtIdx(i);
-        std::string materialName;
-        if (material.isBuiltIn()) {
-          materialName = MaterialMap::toString(material);
-        } else {
-          materialName =
-              std::string(MaterialRegistry::instance().getName(material));
-        }
-
+        std::string materialName = MaterialMap::toString(material);
         const auto nameLength = static_cast<uint32_t>(materialName.size());
         fout.write(reinterpret_cast<const char *>(&nameLength),
                    sizeof(uint32_t));

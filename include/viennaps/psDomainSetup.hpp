@@ -3,8 +3,12 @@
 #include "psPreCompileMacros.hpp"
 #include "psUtil.hpp"
 
+#include <cstdint>
 #include <hrleGrid.hpp>
 #include <vcLogger.hpp>
+
+#include <istream>
+#include <ostream>
 
 namespace viennaps {
 
@@ -166,6 +170,31 @@ public:
       print();
       VIENNACORE_LOG_ERROR("Domain setup is not correctly initialized.");
     }
+  }
+
+  void serialize(std::ostream &out) const {
+    out.write(reinterpret_cast<const char *>(&gridDelta_), sizeof(gridDelta_));
+
+    out.write(reinterpret_cast<const char *>(bounds_), sizeof(double) * 2 * D);
+
+    for (int i = 0; i < D; i++) {
+      const auto boundary = static_cast<int32_t>(boundaryCons_[i]);
+      out.write(reinterpret_cast<const char *>(&boundary), sizeof(boundary));
+    }
+  }
+
+  void deserialize(std::istream &in) {
+    in.read(reinterpret_cast<char *>(&gridDelta_), sizeof(gridDelta_));
+
+    in.read(reinterpret_cast<char *>(bounds_), sizeof(double) * 2 * D);
+
+    for (int i = 0; i < D; i++) {
+      int32_t boundary = 0;
+      in.read(reinterpret_cast<char *>(&boundary), sizeof(boundary));
+      boundaryCons_[i] = static_cast<BoundaryType>(boundary);
+    }
+
+    init();
   }
 };
 
