@@ -1437,9 +1437,6 @@ template <int D> void bindApi(py::module &module) {
            "Set the domain to be written to a file.")
       .def("setFileName", &Writer<T, D>::setFileName,
            "Set the output file name (should end with .vpsd).")
-      .def("setMeshOutput", &Writer<T, D>::setMeshOutput,
-           "Set wether Domain should be further processed in the ViennaMesh "
-           "mesher.")
       .def("apply", &Writer<T, D>::apply,
            "Write the domain to the specified file.");
 
