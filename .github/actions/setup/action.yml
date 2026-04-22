@@ -55,5 +55,9 @@ runs:
       shell: bash
       if: ${{ inputs.os == 'windows-latest' }}
       run: |
+        unset VCPKG_ROOT
         git clone https://github.com/microsoft/vcpkg.git
-        ./vcpkg/bootstrap-vcpkg.bat
+        cd vcpkg
+        git checkout "$VCPKG_COMMIT"
+        ./bootstrap-vcpkg.bat
+        echo "VCPKG_ROOT=${GITHUB_WORKSPACE}/vcpkg" >> "$GITHUB_ENV"
