@@ -35,6 +35,7 @@ jobs:
     container: ${{ matrix.container }}
 
     env:
+      VCPKG_COMMIT: c3867e714dd3a51c272826eea77267876517ed99
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     name: "🧪 Test on ${{ matrix.os }} (⚙️: ${{ matrix.config }}, 💿: ${{ matrix.container || matrix.os }})"
@@ -63,17 +64,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: vcpkg-${{ matrix.os }}-${{ matrix.config }}
+          key: vcpkg-${{ matrix.os }}-${{ matrix.config }}-${{ env.VCPKG_COMMIT }}
 
       - name: 🛠️ Build Dependencies (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
         run: |
-          ./vcpkg/vcpkg install vtk embree
+          ./vcpkg/vcpkg install --triplet x64-windows
 
       - name: 🏗️ Compile (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          cmake -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -B build
+          cmake -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows -B build
           cmake --build build --config ${{ matrix.config }}
 
       - name: 🏗️ Compile (other)
@@ -83,4 +85,5 @@ jobs:
           cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
-        run: ctest --output-on-failure -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+        run: |
+          ctest --output-on-failure -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build

@@ -17,11 +17,11 @@ def _windows_dll_path():
     ]
 
     for path in additional_paths:
-        if not os.path.exists(path):
-            continue
-
-        os.add_dll_directory(path)
-        os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
+        if os.path.isdir(path):
+            os.add_dll_directory(path)
+            os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
+        else:
+            print(f"Warning: DLL path {path} does not exist.")
 
 
 def _module_ptx_path():

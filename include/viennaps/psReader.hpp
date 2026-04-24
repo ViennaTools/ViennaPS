@@ -64,6 +64,9 @@ public:
       return;
     }
 
+    // Clear existing domain data
+    domain->clear();
+
     // Check identifier
     char identifier[8];
     fin.read(identifier, 8);
@@ -76,19 +79,34 @@ public:
     // Check format version
     char formatVersion;
     fin.read(&formatVersion, 1);
-    if (formatVersion > 1) {
+    if (formatVersion > 2) {
       VIENNACORE_LOG_ERROR("Reading domain of version " +
                            std::to_string(formatVersion) +
-                           " with reader of version 1 failed.");
+                           " with reader of version 2 failed.");
       return;
     }
 
-    // Clear existing domain data
-    domain->clear();
+    if (formatVersion >= 2) {
+      // Read dimension and check it matches the reader's dimension
+      char dimension;
+      fin.read(&dimension, 1);
+      if (dimension != D) {
+        VIENNACORE_LOG_ERROR("Reading domain failed. Domain dimension " +
+                             std::to_string(dimension) +
+                             " does not match reader dimension " +
+                             std::to_string(D) + ".");
+        return;
+      }
+    }
 
     // Read domain setup
     typename Domain<NumericType, D>::Setup setup;
-    fin.read(reinterpret_cast<char *>(&setup), sizeof(setup));
+    if (formatVersion >= 2) {
+      setup.deserialize(fin);
+    } else {
+      // Legacy formats store setup as a raw object dump.
+      fin.read(reinterpret_cast<char *>(&setup), sizeof(setup));
+    }
     domain->setup(setup);
 
     // Read number of level sets
