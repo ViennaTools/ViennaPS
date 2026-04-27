@@ -1571,5 +1571,5 @@ def gpuAvailable() -> bool:
     """
 def setNumThreads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     ...
-__version__: str = '4.3.0'
-version: str = '4.3.0'
+__version__: str = '4.4.0'
+version: str = '4.4.0'

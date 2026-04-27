@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 4.3.0)
+  VERSION 4.4.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Include guards
@@ -126,7 +126,6 @@ CPMAddPackage(
 CPMAddPackage(
   NAME ViennaLS
   VERSION 5.7.1
-  GIT_TAG master
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}")
@@ -183,7 +182,7 @@ if(VIENNAPS_PRECOMPILE_HEADERS)
   target_sources(
     ${LIB_NAME}
     PRIVATE "lib/specMain.cpp" "lib/specGeometries.cpp" "lib/specModelsEmulation.cpp"
-            "lib/specModelsSimulation.cpp" "lib/specProcess.cpp" "lib/MaterialRegistry.cpp")
+            "lib/specModelsSimulation.cpp" "lib/specProcess.cpp")
 
   set_target_properties(
     ${LIB_NAME}
