@@ -46,15 +46,23 @@ jobs:
         with:
           os: ${{ matrix.os }}
 
+      - name: 🖥️ Setup vcpkg (Windows)
+        shell: pwsh
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          Remove-Item Env:VCPKG_ROOT -ErrorAction SilentlyContinue
+
+          git clone https://github.com/microsoft/vcpkg.git
+          git -C vcpkg checkout $env:VCPKG_COMMIT
+          & .\vcpkg\bootstrap-vcpkg.bat
+
+          "VCPKG_ROOT=$($env:GITHUB_WORKSPACE)\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+
       - name: 📋 Install MacOS Dependencies
         if: ${{ matrix.os == 'macos-latest' }}
         run: brew install embree tbb vtk
-
-      - name: Create vcpkg binary cache dir
-        if: ${{ matrix.os == 'windows-latest' }}
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
 
       - name: 🦥 Cache vcpkg binary
         if: ${{ matrix.os == 'windows-latest' }}
