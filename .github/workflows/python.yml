@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🖥️ Setup Environment
         uses: ./.github/actions/setup
@@ -58,7 +58,7 @@ jobs:
 
       - name: 🦥 Cache vcpkg binary
         if: ${{ matrix.os == 'windows-latest' }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
           key: vcpkg-${{ matrix.os }}-Release-${{ env.VCPKG_COMMIT }}
@@ -96,7 +96,7 @@ jobs:
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Pre-Built (${{ matrix.os }})
           path: venv
@@ -123,7 +123,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🖥️ Setup Environment
         uses: ./.github/actions/setup
@@ -166,7 +166,7 @@ jobs:
           CIBW_ARCHS_WINDOWS: auto64
 
       - name: 📦 Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -183,7 +183,7 @@ jobs:
 
     steps:
       - name: 📦 Download Wheels
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
           path: dist
