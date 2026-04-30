@@ -32,6 +32,9 @@ public:
     // if no surface data get initialized here, they won't be used at all
   }
 
+  virtual void
+  setSurfaceCoordinates(const std::vector<Vec3D<NumericType>> &coordinates) {}
+
   virtual void setTimeStep(NumericType dt) {}
 
   virtual SmartPointer<std::vector<NumericType>>

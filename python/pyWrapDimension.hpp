@@ -61,6 +61,7 @@
 #include <models/psIonBeamEtching.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
+#include <models/psNeutralTransport.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>
@@ -793,6 +794,17 @@ template <int D> void bindApi(py::module &module) {
            py::arg("inflectAngle") = 0., py::arg("n") = 1,
            py::arg("label") = "ionFlux")
       .def("setRateFunction", &MultiParticleProcess<T, D>::setRateFunction);
+
+  // Neutral Transport
+  py::class_<NeutralTransport<T, D>, SmartPointer<NeutralTransport<T, D>>>(
+      module, "NeutralTransport", processModel)
+      .def(py::init<>())
+      .def(py::init(&SmartPointer<NeutralTransport<T, D>>::template New<
+                    const NeutralTransportParameters<T> &>),
+           py::arg("parameters"))
+      .def("setParameters", &NeutralTransport<T, D>::setParameters)
+      .def("getParameters", &NeutralTransport<T, D>::getParameters,
+           py::return_value_policy::reference_internal);
 
   // TEOS Deposition
   py::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(

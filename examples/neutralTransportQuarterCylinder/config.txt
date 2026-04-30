@@ -1,0 +1,46 @@
+# Neutral transport benchmark on a 3D quarter-cylinder geometry
+
+# Units
+lengthUnit=um
+timeUnit=s
+
+# Domain
+gridDelta=0.015
+xExtent=1.0
+yExtent=1.0
+
+# Geometry
+holeRadius=0.175
+holeDepth=0.75
+maskHeight=1.2
+maskTaperAngle=0.0
+
+# Process
+processTime=0.25
+fluxEngine=CT
+raysPerPoint=800
+spatialScheme=EO_2
+temporalScheme=RK2
+calculateIntermediateVelocities=false
+
+# Neutral transport parameters
+incomingFlux=1.0
+zeroCoverageSticking=0.1
+etchFrontSticking=1.0
+desorptionRate=50.0
+surfaceSiteDensity=1.66e-5
+coverageTimeStep=0.01
+useSteadyStateCoverage=true
+# 5e-9 m^2/s = 5e3 um^2/s
+surfaceDiffusionCoefficient=5000.0
+surfaceDiffusionRadius=0.175
+surfaceDiffusionTolerance=0.03
+etchRate=-1.0
+sourceExponent=1.0
+
+# Coverage initialization
+coverageInitIterations=8
+coverageTolerance=1e-4
+
+# Output
+outputFile=neutralTransportQuarterCylinder_final.vtp

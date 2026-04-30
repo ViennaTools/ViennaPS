@@ -297,6 +297,7 @@ public:
 
         // move coverages back to model
         moveRayDataToPointData(surfaceModel->getCoverages(), rayTraceCoverages);
+        surfaceModel->setSurfaceCoordinates(points);
         surfaceModel->updateCoverages(fluxes, materialIds);
 
         // print intermediate output
@@ -373,6 +374,7 @@ public:
           ++particleIdx;
         }
 
+        surfaceModel->setSurfaceCoordinates(points);
         surfaceModel->updateCoverages(purgeFluxes, materialIds);
 
       } // end of purge pulse

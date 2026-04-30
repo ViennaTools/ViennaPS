@@ -267,6 +267,40 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                ProcessParams<T>::getScalarData)
       .def("getScalarDataLabel", &ProcessParams<T>::getScalarDataLabel);
 
+  // Neutral Transport Parameters
+  py::class_<NeutralTransportParameters<T>>(module,
+                                            "NeutralTransportParameters")
+      .def(py::init<>())
+      .def_readwrite("incomingFlux",
+                     &NeutralTransportParameters<T>::incomingFlux)
+      .def_readwrite("zeroCoverageSticking",
+                     &NeutralTransportParameters<T>::zeroCoverageSticking)
+      .def_readwrite("etchFrontSticking",
+                     &NeutralTransportParameters<T>::etchFrontSticking)
+      .def_readwrite("desorptionRate",
+                     &NeutralTransportParameters<T>::desorptionRate)
+      .def_readwrite("surfaceSiteDensity",
+                     &NeutralTransportParameters<T>::surfaceSiteDensity)
+      .def_readwrite("coverageTimeStep",
+                     &NeutralTransportParameters<T>::coverageTimeStep)
+      .def_readwrite("useSteadyStateCoverage",
+                     &NeutralTransportParameters<T>::useSteadyStateCoverage)
+      .def_readwrite(
+          "surfaceDiffusionCoefficient",
+          &NeutralTransportParameters<T>::surfaceDiffusionCoefficient)
+      .def_readwrite("surfaceDiffusionRadius",
+                     &NeutralTransportParameters<T>::surfaceDiffusionRadius)
+      .def_readwrite("surfaceDiffusionTolerance",
+                     &NeutralTransportParameters<T>::surfaceDiffusionTolerance)
+      .def_readwrite("etchRate", &NeutralTransportParameters<T>::etchRate)
+      .def_readwrite("sourceDistributionPower",
+                     &NeutralTransportParameters<T>::sourceDistributionPower)
+      .def_readwrite("etchFrontMaterial",
+                     &NeutralTransportParameters<T>::etchFrontMaterial)
+      .def_readwrite("fluxLabel", &NeutralTransportParameters<T>::fluxLabel)
+      .def_readwrite("coverageLabel",
+                     &NeutralTransportParameters<T>::coverageLabel);
+
   // Plasma Etching Parameters
   py::class_<PlasmaEtchingParameters<T>::MaskType>(
       module, "PlasmaEtchingParametersMask")

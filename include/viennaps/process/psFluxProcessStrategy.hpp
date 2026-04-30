@@ -371,6 +371,7 @@ private:
     assert(surfaceModel->getCoverages() != nullptr);
 
     assert(context.diskMesh != nullptr);
+    surfaceModel->setSurfaceCoordinates(context.diskMesh->getNodes());
     assert(context.diskMesh->getCellData().getScalarData(materialIdsLabel) !=
            nullptr);
     auto const &materialIds =
