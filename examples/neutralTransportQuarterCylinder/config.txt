@@ -11,7 +11,6 @@ yExtent=1.0
 
 # Geometry
 holeRadius=0.175
-holeDepth=0.75
 maskHeight=1.2
 maskTaperAngle=0.0
 
@@ -42,5 +41,7 @@ sourceExponent=1.0
 coverageInitIterations=8
 coverageTolerance=1e-4
 
+# Input
+initialFile=neutralTransportQuarterCylinder_initial.vtp
 # Output
 outputFile=neutralTransportQuarterCylinder_final.vtp

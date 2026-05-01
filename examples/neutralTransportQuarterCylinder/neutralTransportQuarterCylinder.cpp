@@ -32,8 +32,9 @@ int main(int argc, char *argv[]) {
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
 
   ps::MakeHole<NumericType, D>(
-      geometry, params.get("holeRadius"), params.get("holeDepth"),
-      0.0, // no taper in the benchmark geometry
+      geometry, params.get("holeRadius"),
+      0.0, // start from a flat substrate; only open the mask
+      0.0, // no taper in the substrate etch front
       params.get("maskHeight"), params.get("maskTaperAngle"),
       ps::HoleShape::QUARTER)
       .apply();
@@ -80,6 +81,9 @@ int main(int argc, char *argv[]) {
   process.setParameters(advectionParams);
   process.setFluxEngineType(
       ps::util::convertFluxEngineType(params.get<std::string>("fluxEngine")));
+
+  auto initialFile = params.get<std::string>("initialFile");
+  geometry->saveSurfaceMesh(initialFile);
 
   process.apply();
 
