@@ -5,26 +5,26 @@ lengthUnit=um
 timeUnit=s
 
 # Domain
-gridDelta=0.015
-xExtent=1.0
-yExtent=1.0
+gridDelta=0.005
+xExtent=0.15
+yExtent=0.15
 
 # Geometry
-holeRadius=0.175
-maskHeight=1.2
+holeRadius=0.05
+maskHeight=1.
 maskTaperAngle=0.0
 
 # Process
-processTime=0.25
-fluxEngine=CT
+processTime=0.01
+fluxEngine=GT
 raysPerPoint=800
 spatialScheme=EO_2
-temporalScheme=RK2
+temporalScheme=FE
 calculateIntermediateVelocities=false
 
 # Neutral transport parameters
 incomingFlux=1.0
-zeroCoverageSticking=0.1
+zeroCoverageSticking=0.01
 etchFrontSticking=1.0
 desorptionRate=50.0
 surfaceSiteDensity=1.66e-5

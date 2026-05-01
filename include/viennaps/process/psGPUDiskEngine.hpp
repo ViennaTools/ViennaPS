@@ -5,6 +5,7 @@
 #include "../psDomain.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
+#include "psDesorptionSource.hpp"
 
 #include <vcContext.hpp>
 
@@ -121,6 +122,7 @@ public:
       diskMeshRay.radius =
           static_cast<float>(context.rayTracingParams.diskRadius);
     }
+    diskRadius_ = diskMeshRay.radius;
 
     rayTracer_.setGeometry(diskMeshRay);
 
@@ -161,11 +163,25 @@ public:
       rayTracer_.setElementData(d_coverages, numCov);
     }
 
+    std::vector<NumericType> desorptionWeights;
+    if (auto materialIds =
+            context.diskMesh->getCellData().getScalarData("MaterialIds")) {
+      desorptionWeights =
+          model_->getSurfaceModel()->getDesorptionWeights(*materialIds);
+    }
+
     // run the ray tracer
+    rayTracer_.clearSurfaceSource();
     rayTracer_.apply();
     rayTracer_.normalizeResults();
-    downloadResultsToPointData(*fluxes,
-                               context.rayTracingParams.smoothingNeighbors);
+    auto combinedResults = rayTracer_.getResults();
+
+    if (desorptionWeights.size() == context.diskMesh->getNodes().size()) {
+      addDesorptionFlux(context, desorptionWeights, combinedResults);
+    }
+
+    downloadResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
+                               combinedResults);
     ++this->fluxCalculationsCount_;
 
     // output
@@ -176,7 +192,8 @@ public:
                           coverages, context.diskMesh->getNodes().size());
       }
       downloadResultsToPointData(context.diskMesh->getCellData(),
-                                 context.rayTracingParams.smoothingNeighbors);
+                                 context.rayTracingParams.smoothingNeighbors,
+                                 combinedResults);
       viennals::VTKWriter<NumericType>(
           context.diskMesh,
           context.intermediateOutputPath + context.getProcessName() + "_flux_" +
@@ -215,7 +232,9 @@ private:
   }
 
   void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
-                                  int smoothingNeighbors) {
+                                  int smoothingNeighbors,
+                                  std::vector<std::vector<
+                                      viennaray::gpu::ResultType>> results) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
@@ -224,7 +243,10 @@ private:
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        auto diskFlux = rayTracer_.getFlux(pIdx, dIdx, smoothingNeighbors);
+        auto diskFlux = results[offset + dIdx];
+        if (smoothingNeighbors > 0) {
+          rayTracer_.smoothFlux(diskFlux, smoothingNeighbors);
+        }
         auto name = particles[pIdx].dataLabels[dIdx];
 
         std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
@@ -235,12 +257,45 @@ private:
     }
   }
 
+  void addDesorptionFlux(
+      ProcessContext<NumericType, D> &context,
+      const std::vector<NumericType> &desorptionWeights,
+      std::vector<std::vector<viennaray::gpu::ResultType>> &combinedResults) {
+    const auto &nodes = context.diskMesh->getNodes();
+    const auto normals =
+        context.diskMesh->getCellData().getVectorData("Normals");
+    if (normals == nullptr) {
+      return;
+    }
+
+    auto sourceData = makeDiskDesorptionSourceData<float, NumericType, D>(
+        nodes, *normals, desorptionWeights, context.domain->getGridDelta(),
+        static_cast<NumericType>(diskRadius_), true);
+    if (!sourceData.hasSource)
+      return;
+
+    rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
+                                sourceData.weights, sourceData.sourceArea,
+                                sourceData.sourceOffset);
+    rayTracer_.apply();
+    rayTracer_.normalizeResults();
+    auto desorptionResults = rayTracer_.getResults();
+    rayTracer_.clearSurfaceSource();
+
+    for (std::size_t dataIdx = 0; dataIdx < combinedResults.size(); ++dataIdx) {
+      for (std::size_t i = 0; i < combinedResults[dataIdx].size(); ++i) {
+        combinedResults[dataIdx][i] += desorptionResults[dataIdx][i];
+      }
+    }
+  }
+
 private:
   std::shared_ptr<DeviceContext> deviceContext_;
   viennaray::gpu::TraceDisk<NumericType, D> rayTracer_;
   SmartPointer<gpu::ProcessModelGPU<NumericType, D>> model_;
 
   bool rayTracerInitialized_ = false;
+  float diskRadius_ = 0.f;
 };
 
 } // namespace viennaps

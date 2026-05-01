@@ -16,6 +16,7 @@
 #include <gpu/raygTraceTriangle.hpp>
 
 #include <cassert>
+#include <cmath>
 
 namespace viennaps {
 
@@ -207,7 +208,15 @@ public:
       rayTracer_.setElementData(d_coverages, numCov);
     }
 
+    std::vector<NumericType> desorptionWeights;
+    if (auto materialIds =
+            context.diskMesh->getCellData().getScalarData("MaterialIds")) {
+      desorptionWeights =
+          model_->getSurfaceModel()->getDesorptionWeights(*materialIds);
+    }
+
     // run the ray tracer
+    rayTracer_.clearSurfaceSource();
     rayTracer_.apply(); // device detach point here
     ++this->fluxCalculationsCount_;
 
@@ -220,18 +229,24 @@ public:
     postProcessing.prepare();
 
     rayTracer_.normalizeResults(); // device sync point here
-    postProcessing.setElementDataArrays(rayTracer_.getResults());
+    auto combinedResults = rayTracer_.getResults();
+    if (desorptionWeights.size() == context.diskMesh->getNodes().size()) {
+      addDesorptionFlux(context, desorptionWeights, combinedResults);
+    }
+
+    // always persist per-triangle flux so callers can access it
+    saveResultsToPointData(surfaceMesh_->getCellData(), combinedResults);
+    context.triangleMesh = surfaceMesh_;
+
+    postProcessing.setElementDataArrays(std::move(combinedResults));
     postProcessing.convert(); // run post-processing
 
-    // output
     if (Logger::hasIntermediate()) {
       if (context.flags.useCoverages) {
         auto coverages = model_->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
                           surfaceMesh_->getElements<3>().size());
       }
-      saveResultsToPointData(
-          surfaceMesh_->getCellData()); // save fluxes to elements
       viennals::VTKWriter<float>(
           surfaceMesh_, context.intermediateOutputPath +
                             context.getProcessName() + "_flux_" +
@@ -267,10 +282,11 @@ private:
     delete[] temp;
   }
 
-  void saveResultsToPointData(viennals::PointData<float> &pointData) {
+  void saveResultsToPointData(
+      viennals::PointData<float> &pointData,
+      const std::vector<std::vector<viennaray::gpu::ResultType>> &results) {
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numPoints == surfaceMesh_->getElements<3>().size());
-    auto const &results = rayTracer_.getResults();
     auto particles = rayTracer_.getParticles();
     const auto &dataLabels = model_->getParticleDataLabels();
 
@@ -286,6 +302,91 @@ private:
       }
 
       pointData.insertReplaceScalarData(std::move(values), name);
+    }
+  }
+
+  void addDesorptionFlux(
+      ProcessContext<NumericType, D> &context,
+      const std::vector<NumericType> &diskDesorptionWeights,
+      std::vector<std::vector<viennaray::gpu::ResultType>> &combinedResults) {
+    auto &pointKdTree = context.translationField->getKdTree();
+    if (!pointKdTree) {
+      pointKdTree = KDTreeType::New();
+      context.translationField->setKdTree(pointKdTree);
+    }
+    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
+      pointKdTree->setPoints(context.diskMesh->nodes);
+      pointKdTree->build();
+    }
+
+    std::vector<float> elementWeights;
+    PointToElementDataSingle<NumericType, NumericType, float, float>(
+        diskDesorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
+        .apply();
+
+    const auto &triangles = surfaceMesh_->triangles;
+    const auto &nodes = surfaceMesh_->nodes;
+    const auto meshNormals = surfaceMesh_->getCellData().getVectorData("Normals");
+
+    std::vector<Vec3Df> sourcePositions(triangles.size());
+    std::vector<Vec3Df> sourceNormals(triangles.size());
+    std::vector<float> sourceWeights(triangles.size(), 0.f);
+    std::vector<float> areas(triangles.size(), 0.f);
+
+    float sourceArea = 0.f;
+    for (std::size_t i = 0; i < triangles.size(); ++i) {
+      const auto &tri = triangles[i];
+      const Vec3Df v0{nodes[tri[0]][0], nodes[tri[0]][1], nodes[tri[0]][2]};
+      const Vec3Df v1{nodes[tri[1]][0], nodes[tri[1]][1], nodes[tri[1]][2]};
+      const Vec3Df v2{nodes[tri[2]][0], nodes[tri[2]][1], nodes[tri[2]][2]};
+      sourcePositions[i] = (v0 + v1 + v2) / 3.f;
+
+      const auto a = v1 - v0;
+      const auto b = v2 - v0;
+      Vec3Df cross{a[1] * b[2] - a[2] * b[1],
+                   a[2] * b[0] - a[0] * b[2],
+                   a[0] * b[1] - a[1] * b[0]};
+      areas[i] = 0.5f * std::sqrt(DotProduct(cross, cross));
+      sourceArea += areas[i];
+
+      if (meshNormals != nullptr && meshNormals->size() == triangles.size()) {
+        const auto &n = meshNormals->at(i);
+        sourceNormals[i] = Vec3Df{n[0], n[1], n[2]};
+      } else {
+        viennacore::Normalize(cross);
+        sourceNormals[i] = cross;
+      }
+    }
+
+    if (sourceArea <= 0.f || triangles.empty()) {
+      return;
+    }
+
+    const float averageArea = sourceArea / static_cast<float>(triangles.size());
+    bool hasSource = false;
+    for (std::size_t i = 0; i < sourceWeights.size(); ++i) {
+      sourceWeights[i] = elementWeights[i] * areas[i] / averageArea;
+      if (sourceWeights[i] > 0.f) {
+        hasSource = true;
+      }
+    }
+    if (!hasSource) {
+      return;
+    }
+
+    const float sourceOffset =
+        static_cast<float>(context.domain->getGridDelta() * 1e-4);
+    rayTracer_.setSurfaceSource(sourcePositions, sourceNormals, sourceWeights,
+                                sourceArea, sourceOffset);
+    rayTracer_.apply();
+    rayTracer_.normalizeResults();
+    auto desorptionResults = rayTracer_.getResults();
+    rayTracer_.clearSurfaceSource();
+
+    for (std::size_t dataIdx = 0; dataIdx < combinedResults.size(); ++dataIdx) {
+      for (std::size_t i = 0; i < combinedResults[dataIdx].size(); ++i) {
+        combinedResults[dataIdx][i] += desorptionResults[dataIdx][i];
+      }
     }
   }
 

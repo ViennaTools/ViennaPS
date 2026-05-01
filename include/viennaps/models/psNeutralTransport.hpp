@@ -51,6 +51,28 @@ template <typename NumericType> struct NeutralTransportParameters {
   std::string coverageLabel = "neutralCoverage";
 };
 
+#ifdef VIENNACORE_COMPILE_GPU
+struct NeutralTransportParametersGPU {
+  NeutralTransportParametersGPU() = default;
+  template <typename NumericType>
+  explicit NeutralTransportParametersGPU(
+      const NeutralTransportParameters<NumericType> &p)
+      : etchFrontSticking(static_cast<float>(p.etchFrontSticking)),
+        zeroCoverageSticking(static_cast<float>(p.zeroCoverageSticking)),
+        etchFrontMaterialId(static_cast<int>(p.etchFrontMaterial.legacyId())),
+        desorptionRate(static_cast<float>(p.desorptionRate)),
+        surfaceSiteDensity(static_cast<float>(p.surfaceSiteDensity)),
+        incomingFlux(static_cast<float>(p.incomingFlux)) {}
+
+  float etchFrontSticking = 1.f;
+  float zeroCoverageSticking = 0.1f;
+  int etchFrontMaterialId = 10; // Material::Si.legacyId()
+  float desorptionRate = 0.f;
+  float surfaceSiteDensity = 1.66e-5f;
+  float incomingFlux = 1.f;
+};
+#endif
+
 namespace impl {
 
 template <typename NumericType> constexpr NumericType avogadroNumber() {
@@ -200,6 +222,43 @@ public:
         }
       }
     }
+
+  }
+
+  std::vector<NumericType> getDesorptionWeights(
+      const std::vector<NumericType> &materialIds) const override {
+    if (params.desorptionRate <= 0. || params.surfaceSiteDensity <= 0. ||
+        params.incomingFlux <= 0. || coverages == nullptr) {
+      return {};
+    }
+
+    const auto coverage = coverages->getScalarData(params.coverageLabel);
+    if (coverage == nullptr || coverage->size() != materialIds.size()) {
+      return {};
+    }
+
+    std::vector<NumericType> weights(materialIds.size(), 0.);
+    bool hasNonZeroWeight = false;
+
+#pragma omp parallel for
+    for (size_t i = 0; i < materialIds.size(); ++i) {
+      if (!MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)) {
+        const auto theta =
+            std::clamp(coverage->at(i), NumericType(0.), NumericType(1.));
+        weights[i] = params.desorptionRate * theta *
+                     params.surfaceSiteDensity *
+                     avogadroNumber<NumericType>() / params.incomingFlux;
+      }
+    }
+
+    for (const auto weight : weights) {
+      if (weight > NumericType(0.)) {
+        hasNonZeroWeight = true;
+        break;
+      }
+    }
+
+    return hasNonZeroWeight ? weights : std::vector<NumericType>{};
   }
 
 private:
@@ -377,6 +436,72 @@ private:
 
 } // namespace impl
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+
+template <typename NumericType, int D>
+class NeutralTransport final : public ProcessModelGPU<NumericType, D> {
+public:
+  explicit NeutralTransport(
+      const NeutralTransportParameters<NumericType> &pParams)
+      : params(pParams), deviceParams(pParams) {
+    initializeModel();
+  }
+
+  ~NeutralTransport() override { this->processData.free(); }
+
+private:
+  void initializeModel() {
+    viennaray::gpu::Particle<NumericType> particle{
+        .name = "NeutralTransport",
+        .sticking = 0.f, // callable owns all sticking logic
+        .cosineExponent =
+            static_cast<float>(params.sourceDistributionPower)};
+    particle.dataLabels.push_back(params.fluxLabel);
+
+    std::unordered_map<std::string, unsigned> pMap = {
+        {"NeutralTransport", 0}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__neutralTransportCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__neutralTransportReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
+
+    auto surfModel =
+        SmartPointer<::viennaps::impl::NeutralTransportSurfaceModel<
+            NumericType, D>>::New(params);
+    auto velField =
+        SmartPointer<::viennaps::DefaultVelocityField<NumericType, D>>::New();
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->insertNextParticleType(particle);
+    this->setProcessName("NeutralTransport");
+    this->setUseMaterialIds(true);
+    this->hasGPU = true;
+
+    this->processData.alloc(sizeof(NeutralTransportParametersGPU));
+    this->processData.upload(&deviceParams, 1);
+
+    this->processMetaData["Incoming Flux"] = {params.incomingFlux};
+    this->processMetaData["Zero Coverage Sticking"] = {
+        params.zeroCoverageSticking};
+    this->processMetaData["Etch Front Sticking"] = {params.etchFrontSticking};
+    this->processMetaData["Desorption Rate"] = {params.desorptionRate};
+    this->processMetaData["Surface Site Density"] = {params.surfaceSiteDensity};
+    this->processMetaData["Coverage Time Step"] = {params.coverageTimeStep};
+    this->processMetaData["Etch Rate"] = {params.etchRate};
+    this->processMetaData["Source Exponent"] = {params.sourceDistributionPower};
+  }
+
+  NeutralTransportParameters<NumericType> params;
+  NeutralTransportParametersGPU deviceParams;
+};
+
+} // namespace gpu
+#endif
+
 template <typename NumericType, int D>
 class NeutralTransport : public ProcessModelCPU<NumericType, D> {
 public:
@@ -394,6 +519,16 @@ public:
   }
 
   NeutralTransportParameters<NumericType> &getParameters() { return params; }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
+    auto model =
+        SmartPointer<gpu::NeutralTransport<NumericType, D>>::New(params);
+    model->setProcessName(
+        this->getProcessName().value_or("NeutralTransport"));
+    return model;
+  }
+#endif
 
 private:
   void initializeModel() {
@@ -414,6 +549,8 @@ private:
     this->particles.clear();
     this->particleLogSize.clear();
     this->insertNextParticleType(particle);
+
+    this->hasGPU = true;
 
     this->processMetaData.clear();
     this->processMetaData["Incoming Flux"] = {params.incomingFlux};

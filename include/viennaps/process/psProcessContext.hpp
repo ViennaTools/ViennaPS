@@ -37,6 +37,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
   // Simulation state
   unsigned currentIteration = 0;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh;
+  SmartPointer<viennals::Mesh<float>> triangleMesh; // set by GPU triangle engine
   SmartPointer<TranslationField<NumericType, D>> translationField;
 
   // Computed flags (derived from model state)

@@ -18,6 +18,7 @@ viennacore_add_optixir(
   "${VIENNAPS_GPU_MODELS}/FaradayCage.cuh"
   "${VIENNAPS_GPU_MODELS}/IonBeamEtching.cuh"
   "${VIENNAPS_GPU_MODELS}/MultiParticle.cuh"
+  "${VIENNAPS_GPU_MODELS}/NeutralTransport.cuh"
   "${VIENNAPS_GPU_MODELS}/PlasmaEtching.cuh"
   "${VIENNAPS_GPU_MODELS}/SingleParticle.cuh"
   "${VIENNAPS_GPU_MODELS}/SingleParticleALD.cuh"

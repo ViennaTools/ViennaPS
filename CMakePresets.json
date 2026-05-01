@@ -1,0 +1,34 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "gpu-local-viennaray",
+      "displayName": "GPU build with local ViennaRay",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc-12",
+        "CMAKE_CXX_COMPILER": "g++-12",
+        "VIENNAPS_USE_GPU": "ON",
+        "VIENNAPS_BUILD_EXAMPLES": "ON",
+        "VIENNAPS_VIENNARAY_BRANCH": "feature/gpu-surface-source",
+        "CPM_ViennaRay_SOURCE": "${sourceDir}/../ViennaRay"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "neutral-transport-quarter-cylinder",
+      "configurePreset": "gpu-local-viennaray",
+      "targets": [
+        "neutralTransportQuarterCylinder"
+      ],
+      "jobs": 4
+    }
+  ]
+}

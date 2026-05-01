@@ -3,6 +3,7 @@
 #include "FaradayCage.cuh"
 #include "IonBeamEtching.cuh"
 #include "MultiParticle.cuh"
+#include "NeutralTransport.cuh"
 #include "PlasmaEtching.cuh"
 #include "SingleParticle.cuh"
 #include "SingleParticleALD.cuh"
@@ -21,6 +22,22 @@ extern "C" __device__ void __direct_callable__noop(void *, void *) {
   // does nothing
   // If a reflection is linked to this function, the program
   // will run indefinitely
+}
+
+//
+// --- NeutralTransport pipeline
+//
+
+extern "C" __device__ void
+__direct_callable__neutralTransportCollision(const void *sbtData,
+                                             viennaray::gpu::PerRayData *prd) {
+  neutralTransportCollision(prd);
+}
+
+extern "C" __device__ void
+__direct_callable__neutralTransportReflection(
+    const void *sbtData, viennaray::gpu::PerRayData *prd) {
+  neutralTransportReflection(sbtData, prd);
 }
 
 //

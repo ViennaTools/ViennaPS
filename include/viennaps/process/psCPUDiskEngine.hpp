@@ -1,5 +1,6 @@
 #pragma once
 
+#include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
@@ -95,9 +96,14 @@ public:
     this->timer_.start();
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
+    std::vector<NumericType> desorptionWeights;
 
     // move coverages to the ray tracer
     if (context.flags.useCoverages) {
+      if (auto materialIds =
+              context.diskMesh->getCellData().getScalarData("MaterialIds")) {
+        desorptionWeights = surfaceModel->getDesorptionWeights(*materialIds);
+      }
       rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
     }
 
@@ -115,7 +121,7 @@ public:
     if (context.flags.useCoverages || context.flags.useProcessParams)
       rayTracer_.setGlobalData(rayTracingData);
 
-    runRayTracer(context, fluxes);
+    runRayTracer(context, fluxes, desorptionWeights);
 
     // move coverages back in the model
     if (context.flags.useCoverages)
@@ -126,11 +132,20 @@ public:
   }
 
 private:
-  void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+  void runRayTracer(
+      ProcessContext<NumericType, D> const &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes,
+      const std::vector<NumericType> &desorptionWeights) {
     assert(fluxes != nullptr);
     assert(model_ != nullptr);
     fluxes->clear();
+
+    const bool hasDesorption =
+        desorptionWeights.size() == context.diskMesh->getNodes().size();
+    const auto normals =
+        hasDesorption
+            ? context.diskMesh->getCellData().getVectorData("Normals")
+            : nullptr;
 
     unsigned particleIdx = 0;
     for (auto &particle : model_->getParticleTypes()) {
@@ -157,8 +172,13 @@ private:
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
+      std::vector<std::vector<NumericType>> particleFluxes;
+      std::vector<std::string> particleFluxLabels;
+      particleFluxes.reserve(numFluxes);
+      particleFluxLabels.reserve(numFluxes);
+
       for (int i = 0; i < numFluxes; ++i) {
-        auto &flux = localData.getVectorData(i);
+        auto flux = std::move(localData.getVectorData(i));
 
         // normalize and smooth
         rayTracer_.normalizeFlux(flux,
@@ -167,11 +187,58 @@ private:
           rayTracer_.smoothFlux(flux,
                                 context.rayTracingParams.smoothingNeighbors);
 
-        fluxes->insertNextScalarData(std::move(flux),
-                                     localData.getVectorDataLabel(i));
+        particleFluxLabels.push_back(localData.getVectorDataLabel(i));
+        particleFluxes.push_back(std::move(flux));
       }
 
       model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
+
+      if (hasDesorption && normals != nullptr) {
+        const auto gridDelta = context.domain->getGrid().getGridDelta();
+        const auto diskRadius =
+            context.rayTracingParams.diskRadius == 0.
+                ? static_cast<NumericType>(gridDelta *
+                                           rayInternal::DiskFactor<D>)
+                : static_cast<NumericType>(context.rayTracingParams.diskRadius);
+        auto source =
+            std::make_shared<DesorptionSource<NumericType, D>>(
+                context.diskMesh->getNodes(), *normals, desorptionWeights,
+                gridDelta, diskRadius, context.rayTracingParams.raysPerPoint);
+
+        rayTracer_.setSource(source);
+        rayTracer_.apply();
+        ++this->fluxCalculationsCount_;
+
+        auto &desorptionData = rayTracer_.getLocalData();
+        for (int i = 0; i < numFluxes; ++i) {
+          auto desorptionFlux = std::move(desorptionData.getVectorData(i));
+          rayTracer_.normalizeFlux(
+              desorptionFlux, context.rayTracingParams.normalizationType);
+          if (context.rayTracingParams.smoothingNeighbors > 0) {
+            rayTracer_.smoothFlux(
+                desorptionFlux, context.rayTracingParams.smoothingNeighbors);
+          }
+
+          if (desorptionFlux.size() == particleFluxes[i].size()) {
+#pragma omp parallel for
+            for (std::size_t j = 0; j < desorptionFlux.size(); ++j) {
+              particleFluxes[i][j] += desorptionFlux[j];
+            }
+          }
+        }
+
+        if (auto source = model_->getSource()) {
+          rayTracer_.setSource(source);
+        } else {
+          rayTracer_.resetSource();
+        }
+      }
+
+      for (int i = 0; i < numFluxes; ++i) {
+        fluxes->insertNextScalarData(std::move(particleFluxes[i]),
+                                     particleFluxLabels[i]);
+      }
+
       ++particleIdx;
     }
   }
