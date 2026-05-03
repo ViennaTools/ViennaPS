@@ -4,9 +4,11 @@
 #include <process/psProcess.hpp>
 #include <psUtil.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <limits>
+#include <vector>
 
 namespace ps = viennaps;
 
@@ -15,7 +17,7 @@ namespace {
 template <typename NumericType>
 void printBottomTransmissionProbabilityTriangles(
     ps::SmartPointer<viennals::Mesh<float>> triangleMesh,
-    NumericType holeRadius, NumericType gridDelta,
+    NumericType bottomRadius, NumericType topRadius, NumericType gridDelta,
     const std::string &fluxLabel) {
   if (triangleMesh == nullptr) {
     std::cout << "Triangle transmission probability: mesh unavailable "
@@ -35,22 +37,26 @@ void printBottomTransmissionProbabilityTriangles(
   const auto &nodes = triangleMesh->nodes;
   const auto &tris = triangleMesh->triangles;
 
-  // find the z extents
-  float bottomZ = std::numeric_limits<float>::max();
-  float topZ = std::numeric_limits<float>::lowest();
-  for (const auto &n : nodes) {
-    bottomZ = std::min(bottomZ, n[2]);
-    topZ = std::max(topZ, n[2]);
-  }
-
   const float tol = static_cast<float>(gridDelta);
-  const float rMax = static_cast<float>(holeRadius) + tol;
+  const float bottomRMax = static_cast<float>(bottomRadius) + tol;
+  const double quarterCircleArea =
+      M_PI * static_cast<double>(topRadius) * static_cast<double>(topRadius) /
+      4.;
 
-  struct Group {
-    double fluxTimesArea = 0.;
-    double area = 0.;
-    std::size_t count = 0;
-  } bottom, top;
+  struct TriangleInfo {
+    float cx = 0.f;
+    float cy = 0.f;
+    float cz = 0.f;
+    float radialPosition = 0.f;
+    float normalZAbs = 0.f;
+    float area = 0.f;
+    float flux = 0.f;
+  };
+
+  std::vector<TriangleInfo> triangleInfos;
+  triangleInfos.reserve(tris.size());
+
+  float bottomZ = std::numeric_limits<float>::max();
 
   for (std::size_t i = 0; i < tris.size(); ++i) {
     const auto &t = tris[i];
@@ -74,35 +80,57 @@ void printBottomTransmissionProbabilityTriangles(
                          (e1x * e2y - e1y * e2x) * (e1x * e2y - e1y * e2x));
 
     const float f = flux->at(i);
+    const float radialPosition = std::sqrt(cx * cx + cy * cy);
+    const float normalMagnitude = 2.f * area;
+    const float normalZAbs =
+        normalMagnitude > 0.f
+            ? std::abs(e1x * e2y - e1y * e2x) / normalMagnitude
+            : 0.f;
 
-    if (std::abs(cz - bottomZ) <= tol &&
-        std::sqrt(cx * cx + cy * cy) <= rMax) {
-      bottom.fluxTimesArea += static_cast<double>(f) * area;
-      bottom.area += area;
-      ++bottom.count;
-    } else if (std::abs(cz - topZ) <= tol) {
-      top.fluxTimesArea += static_cast<double>(f) * area;
-      top.area += area;
-      ++top.count;
+    triangleInfos.push_back(
+        {cx, cy, cz, radialPosition, normalZAbs, area, f});
+
+    if (normalZAbs > 0.5f && radialPosition <= bottomRMax) {
+      bottomZ = std::min(bottomZ, cz);
     }
   }
 
-  if (bottom.area == 0. || top.area == 0.) {
+  if (bottomZ == std::numeric_limits<float>::max() ||
+      quarterCircleArea <= 0.) {
     std::cout << "Triangle transmission probability: could not identify "
-                 "bottom or top triangles."
+                 "bottom triangles or aperture area."
               << std::endl;
     return;
   }
 
-  const double bottomDensity = bottom.fluxTimesArea / bottom.area;
-  const double topDensity = top.fluxTimesArea / top.area;
-  const double transmission = bottomDensity / topDensity;
+  double bottomFluxIntegral = 0.;
+  double bottomArea = 0.;
+  std::size_t bottomCount = 0;
+
+  for (const auto &info : triangleInfos) {
+    if (std::abs(info.cz - bottomZ) <= tol && info.normalZAbs > 0.5f &&
+        info.radialPosition <= bottomRMax) {
+      bottomFluxIntegral += static_cast<double>(info.flux) * info.area;
+      bottomArea += info.area;
+      ++bottomCount;
+    }
+  }
+
+  if (bottomArea == 0.) {
+    std::cout << "Triangle transmission probability: could not identify "
+                 "bottom etch-front triangles."
+              << std::endl;
+    return;
+  }
+
+  const double bottomDensity = bottomFluxIntegral / bottomArea;
+  const double transmission = bottomFluxIntegral / quarterCircleArea;
 
   std::cout << std::setprecision(6) << std::scientific
             << "Bottom transmission probability (triangles): " << transmission
-            << " (bottom flux density " << bottomDensity << " from "
-            << bottom.count << " triangles, top flux density " << topDensity
-            << " from " << top.count << " triangles)" << std::endl;
+            << " (bottom integral " << bottomFluxIntegral << ", aperture area "
+            << quarterCircleArea << ", bottom flux density " << bottomDensity
+            << " from " << bottomCount << " triangles)" << std::endl;
 }
 
 } // namespace
@@ -150,6 +178,8 @@ int main(int argc, char *argv[]) {
   modelParams.zeroCoverageSticking = params.get("zeroCoverageSticking");
   modelParams.etchFrontSticking = params.get("etchFrontSticking");
   modelParams.desorptionRate = params.get("desorptionRate");
+  modelParams.desorptionMaterial =
+      ps::MaterialMap::fromString(params.get<std::string>("desorptionMaterial"));
   modelParams.kEtch = params.get("kEtch");
   modelParams.surfaceSiteDensity = params.get("surfaceSiteDensity");
   modelParams.siliconDensity = params.get("siliconDensity");
@@ -187,8 +217,12 @@ int main(int argc, char *argv[]) {
   diagnosticProcess.setFluxEngineType(
       ps::util::convertFluxEngineType(params.get<std::string>("fluxEngine")));
   diagnosticProcess.calculateFlux();
+  const auto topRadius =
+      params.get<NumericType>("holeRadius") +
+      std::tan(params.get<NumericType>("maskTaperAngle") * M_PI / 180.) *
+          params.get<NumericType>("maskHeight");
   printBottomTransmissionProbabilityTriangles(
-      diagnosticProcess.getTriangleMesh(), params.get("holeRadius"),
+      diagnosticProcess.getTriangleMesh(), params.get("holeRadius"), topRadius,
       params.get("gridDelta"), modelParams.fluxLabel);
 
   // ps::Process<NumericType, D> process(geometry, model);

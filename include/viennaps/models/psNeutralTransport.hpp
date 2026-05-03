@@ -65,6 +65,7 @@ template <typename NumericType> struct NeutralTransportParameters {
   NumericType zeroCoverageSticking = 0.1;
   NumericType etchFrontSticking = 1.;
   NumericType desorptionRate = 0.;          // 1 / s
+  Material desorptionMaterial = Material::Mask;
   NumericType kEtch = 0.;                   // 1 / s
   NumericType surfaceSiteDensity = 1.66e-5; // mol / m^2
   NumericType siliconDensity = 8.3e4;       // mol / m^3
@@ -234,7 +235,11 @@ public:
           MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)
               ? params.kEtch
               : NumericType(0.);
-      const auto coverageLossRate = params.desorptionRate + etchLossRate;
+      const auto desorptionLossRate =
+          MaterialMap::isMaterial(materialIds[i], params.desorptionMaterial)
+              ? params.desorptionRate
+              : NumericType(0.);
+      const auto coverageLossRate = desorptionLossRate + etchLossRate;
 
       if (params.useSteadyStateCoverage) {
         const auto denominator = adsorptionCoefficient + coverageLossRate;
@@ -287,6 +292,9 @@ public:
 
 #pragma omp parallel for
     for (size_t i = 0; i < materialIds.size(); ++i) {
+      if (!MaterialMap::isMaterial(materialIds[i], params.desorptionMaterial)) {
+        continue;
+      }
       const auto theta =
           std::clamp(coverage->at(i), NumericType(0.), NumericType(1.));
       weights[i] = params.desorptionRate * theta * params.surfaceSiteDensity *
@@ -535,6 +543,8 @@ private:
         params.zeroCoverageSticking};
     this->processMetaData["Etch Front Sticking"] = {params.etchFrontSticking};
     this->processMetaData["Desorption Rate"] = {params.desorptionRate};
+    this->processMetaData["Desorption Material"] = {
+        static_cast<double>(params.desorptionMaterial.legacyId())};
     this->processMetaData["kEtch"] = {params.kEtch};
     this->processMetaData["Surface Site Density"] = {params.surfaceSiteDensity};
     this->processMetaData["Silicon Density"] = {params.siliconDensity};
@@ -609,6 +619,8 @@ private:
         params.zeroCoverageSticking};
     this->processMetaData["Etch Front Sticking"] = {params.etchFrontSticking};
     this->processMetaData["Desorption Rate"] = {params.desorptionRate};
+    this->processMetaData["Desorption Material"] = {
+        static_cast<double>(params.desorptionMaterial.legacyId())};
     this->processMetaData["kEtch"] = {params.kEtch};
     this->processMetaData["Surface Site Density"] = {params.surfaceSiteDensity};
     this->processMetaData["Silicon Density"] = {params.siliconDensity};
