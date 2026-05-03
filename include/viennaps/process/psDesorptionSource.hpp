@@ -87,7 +87,7 @@ class DesorptionSource : public viennaray::Source<NumericType> {
 
   const std::vector<VecType> positions_;
   const std::vector<VecType> normals_;
-  const std::vector<NumericType> weights_; // d_i per disk, zero for etch front
+  const std::vector<NumericType> weights_; // d_i per disk
   NumericType sourceArea_;
   size_t raysPerPoint_;
   NumericType offset_; // small normal offset to avoid self-intersection

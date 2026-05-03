@@ -2,6 +2,7 @@
 
 #include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
+#include "../psUnits.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -32,7 +33,9 @@ template <typename NumericType> struct NeutralTransportParameters {
   NumericType zeroCoverageSticking = 0.1;
   NumericType etchFrontSticking = 1.;
   NumericType desorptionRate = 0.;          // 1 / s
+  NumericType kEtch = 0.;                   // 1 / s
   NumericType surfaceSiteDensity = 1.66e-5; // mol / m^2
+  NumericType siliconDensity = 8.3e4;       // mol / m^3
   NumericType coverageTimeStep = 1.;        // s
   bool useSteadyStateCoverage = true;
 
@@ -43,7 +46,6 @@ template <typename NumericType> struct NeutralTransportParameters {
   NumericType surfaceDiffusionTolerance = 0.;
 
   // Feature-scale process parameters.
-  NumericType etchRate = 0.;
   NumericType sourceDistributionPower = 1.;
   Material etchFrontMaterial = Material::Si;
 
@@ -61,14 +63,18 @@ struct NeutralTransportParametersGPU {
         zeroCoverageSticking(static_cast<float>(p.zeroCoverageSticking)),
         etchFrontMaterialId(static_cast<int>(p.etchFrontMaterial.legacyId())),
         desorptionRate(static_cast<float>(p.desorptionRate)),
+        kEtch(static_cast<float>(p.kEtch)),
         surfaceSiteDensity(static_cast<float>(p.surfaceSiteDensity)),
+        siliconDensity(static_cast<float>(p.siliconDensity)),
         incomingFlux(static_cast<float>(p.incomingFlux)) {}
 
   float etchFrontSticking = 1.f;
   float zeroCoverageSticking = 0.1f;
   int etchFrontMaterialId = 10; // Material::Si.legacyId()
   float desorptionRate = 0.f;
+  float kEtch = 0.f;
   float surfaceSiteDensity = 1.66e-5f;
+  float siliconDensity = 8.3e4f;
   float incomingFlux = 1.f;
 };
 #endif
@@ -138,7 +144,14 @@ public:
 #pragma omp parallel for
     for (size_t i = 0; i < materialIds.size(); ++i) {
       if (MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)) {
-        velocity->at(i) = params.etchRate * neutralFlux->at(i);
+        const auto etchVelocity =
+            params.siliconDensity > 0.
+                ? params.kEtch * params.surfaceSiteDensity * coverage->at(i) /
+                      params.siliconDensity
+                : NumericType(0.);
+        velocity->at(i) =
+            -etchVelocity * units::Time::convertSecond() /
+            units::Length::convertMeter();
       }
     }
 
@@ -179,26 +192,30 @@ public:
 
 #pragma omp parallel for
     for (size_t i = 0; i < neutralFlux->size(); ++i) {
-      if (MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)) {
-        coverage->at(i) = 0.;
-        continue;
-      }
-
+      const auto sticking =
+          MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)
+              ? params.etchFrontSticking
+              : params.zeroCoverageSticking;
       const auto adsorptionCoefficient =
           params.surfaceSiteDensity > 0.
-              ? params.zeroCoverageSticking * params.incomingFlux *
+              ? sticking * params.incomingFlux *
                     neutralFlux->at(i) /
                     (avogadroNumber<NumericType>() * params.surfaceSiteDensity)
               : NumericType(0.);
+      const auto etchLossRate =
+          MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)
+              ? params.kEtch
+              : NumericType(0.);
+      const auto coverageLossRate = params.desorptionRate + etchLossRate;
 
       if (params.useSteadyStateCoverage) {
-        const auto denominator = adsorptionCoefficient + params.desorptionRate;
+        const auto denominator = adsorptionCoefficient + coverageLossRate;
         coverage->at(i) =
             denominator > 0. ? adsorptionCoefficient / denominator : 0.;
       } else {
         coverage->at(i) += params.coverageTimeStep *
                            (adsorptionCoefficient * (1. - coverage->at(i)) -
-                            params.desorptionRate * coverage->at(i));
+                            coverageLossRate * coverage->at(i));
       }
 
       coverage->at(i) =
@@ -242,13 +259,10 @@ public:
 
 #pragma omp parallel for
     for (size_t i = 0; i < materialIds.size(); ++i) {
-      if (!MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)) {
-        const auto theta =
-            std::clamp(coverage->at(i), NumericType(0.), NumericType(1.));
-        weights[i] = params.desorptionRate * theta *
-                     params.surfaceSiteDensity *
-                     avogadroNumber<NumericType>() / params.incomingFlux;
-      }
+      const auto theta =
+          std::clamp(coverage->at(i), NumericType(0.), NumericType(1.));
+      weights[i] = params.desorptionRate * theta * params.surfaceSiteDensity *
+                   avogadroNumber<NumericType>() / params.incomingFlux;
     }
 
     for (const auto weight : weights) {
@@ -489,9 +503,10 @@ private:
         params.zeroCoverageSticking};
     this->processMetaData["Etch Front Sticking"] = {params.etchFrontSticking};
     this->processMetaData["Desorption Rate"] = {params.desorptionRate};
+    this->processMetaData["kEtch"] = {params.kEtch};
     this->processMetaData["Surface Site Density"] = {params.surfaceSiteDensity};
+    this->processMetaData["Silicon Density"] = {params.siliconDensity};
     this->processMetaData["Coverage Time Step"] = {params.coverageTimeStep};
-    this->processMetaData["Etch Rate"] = {params.etchRate};
     this->processMetaData["Source Exponent"] = {params.sourceDistributionPower};
   }
 
@@ -558,7 +573,9 @@ private:
         params.zeroCoverageSticking};
     this->processMetaData["Etch Front Sticking"] = {params.etchFrontSticking};
     this->processMetaData["Desorption Rate"] = {params.desorptionRate};
+    this->processMetaData["kEtch"] = {params.kEtch};
     this->processMetaData["Surface Site Density"] = {params.surfaceSiteDensity};
+    this->processMetaData["Silicon Density"] = {params.siliconDensity};
     this->processMetaData["Coverage Time Step"] = {params.coverageTimeStep};
     this->processMetaData["Surface Diffusion Coefficient"] = {
         params.surfaceDiffusionCoefficient};
@@ -566,7 +583,6 @@ private:
         params.surfaceDiffusionRadius};
     this->processMetaData["Surface Diffusion Tolerance"] = {
         params.surfaceDiffusionTolerance};
-    this->processMetaData["Etch Rate"] = {params.etchRate};
     this->processMetaData["Source Exponent"] = {params.sourceDistributionPower};
   }
 

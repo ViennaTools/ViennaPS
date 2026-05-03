@@ -15,7 +15,9 @@ struct NeutralTransportParametersGPU {
   float zeroCoverageSticking = 0.1f;
   int etchFrontMaterialId = 10; // Material::Si.legacyId()
   float desorptionRate = 0.f;
+  float kEtch = 0.f;
   float surfaceSiteDensity = 1.66e-5f;
+  float siliconDensity = 8.3e4f;
   float incomingFlux = 1.f;
 };
 

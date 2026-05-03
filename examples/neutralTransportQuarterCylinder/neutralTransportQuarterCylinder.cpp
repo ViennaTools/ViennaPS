@@ -145,7 +145,9 @@ int main(int argc, char *argv[]) {
   modelParams.zeroCoverageSticking = params.get("zeroCoverageSticking");
   modelParams.etchFrontSticking = params.get("etchFrontSticking");
   modelParams.desorptionRate = params.get("desorptionRate");
+  modelParams.kEtch = params.get("kEtch");
   modelParams.surfaceSiteDensity = params.get("surfaceSiteDensity");
+  modelParams.siliconDensity = params.get("siliconDensity");
   modelParams.coverageTimeStep = params.get("coverageTimeStep");
   modelParams.useSteadyStateCoverage =
       params.get<bool>("useSteadyStateCoverage");
@@ -154,7 +156,6 @@ int main(int argc, char *argv[]) {
   modelParams.surfaceDiffusionRadius = params.get("surfaceDiffusionRadius");
   modelParams.surfaceDiffusionTolerance =
       params.get("surfaceDiffusionTolerance");
-  modelParams.etchRate = params.get("etchRate");
   modelParams.sourceDistributionPower = params.get("sourceExponent");
 
   auto model =
