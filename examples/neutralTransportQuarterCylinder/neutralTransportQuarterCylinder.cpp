@@ -141,7 +141,12 @@ int main(int argc, char *argv[]) {
       .apply();
 
   ps::NeutralTransportParameters<NumericType> modelParams;
-  modelParams.incomingFlux = params.get("incomingFlux");
+  modelParams.sourcePressure = params.get("sourcePressure");
+  modelParams.sourceTemperature = params.get("sourceTemperature");
+  modelParams.sourceMolecularMass = params.get("sourceMolecularMass");
+  modelParams.incomingFlux = ps::molecularEffusionFlux(
+      modelParams.sourcePressure, modelParams.sourceTemperature,
+      modelParams.sourceMolecularMass);
   modelParams.zeroCoverageSticking = params.get("zeroCoverageSticking");
   modelParams.etchFrontSticking = params.get("etchFrontSticking");
   modelParams.desorptionRate = params.get("desorptionRate");
@@ -176,11 +181,8 @@ int main(int argc, char *argv[]) {
   advectionParams.calculateIntermediateVelocities =
       params.get<bool>("calculateIntermediateVelocities");
 
-  ps::CoverageParameters diagnosticCoverageParams = coverageParams;
-  diagnosticCoverageParams.maxIterations = 0;
-
   ps::Process<NumericType, D> diagnosticProcess(geometry, model);
-  diagnosticProcess.setParameters(diagnosticCoverageParams);
+  diagnosticProcess.setParameters(coverageParams);
   diagnosticProcess.setParameters(rayTracingParams);
   diagnosticProcess.setFluxEngineType(
       ps::util::convertFluxEngineType(params.get<std::string>("fluxEngine")));

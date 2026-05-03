@@ -23,7 +23,11 @@ temporalScheme=FE
 calculateIntermediateVelocities=false
 
 # Neutral transport parameters
-incomingFlux=1.0
+# Fixed-pressure Maxwellian reservoir boundary. The source flux is computed as
+# Gamma_source = p / sqrt(2*pi*m*kB*T).
+sourcePressure=1.0
+sourceTemperature=300.0
+sourceMolecularMass=18.998
 zeroCoverageSticking=0.0
 etchFrontSticking=1.0
 desorptionRate=50.0
