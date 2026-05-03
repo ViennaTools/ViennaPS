@@ -188,9 +188,14 @@ int main(int argc, char *argv[]) {
       params.get<bool>("useSteadyStateCoverage");
   modelParams.surfaceDiffusionCoefficient =
       params.get("surfaceDiffusionCoefficient");
-  modelParams.surfaceDiffusionRadius = params.get("surfaceDiffusionRadius");
-  modelParams.surfaceDiffusionTolerance =
-      params.get("surfaceDiffusionTolerance");
+  modelParams.surfaceDiffusionMaterial = ps::MaterialMap::fromString(
+      params.get<std::string>("surfaceDiffusionMaterial"));
+  modelParams.surfaceDiffusionNeighborDistance =
+      params.get("surfaceDiffusionNeighborDistance");
+  modelParams.surfaceDiffusionSolverTolerance =
+      params.get("surfaceDiffusionSolverTolerance");
+  modelParams.surfaceDiffusionMaxIterations =
+      params.get<unsigned>("surfaceDiffusionMaxIterations");
   modelParams.sourceDistributionPower = params.get("sourceExponent");
 
   auto model =

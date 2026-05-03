@@ -39,8 +39,11 @@ coverageTimeStep=0.01
 useSteadyStateCoverage=true
 # 5e-9 m^2/s = 5e3 um^2/s
 surfaceDiffusionCoefficient=5000.0
-surfaceDiffusionRadius=0.175
-surfaceDiffusionTolerance=0.03
+surfaceDiffusionMaterial=Mask
+# 0.0 picks a neighbor distance from the surface point spacing.
+surfaceDiffusionNeighborDistance=0.0
+surfaceDiffusionSolverTolerance=1e-8
+surfaceDiffusionMaxIterations=500
 sourceExponent=1.0
 
 # Coverage initialization

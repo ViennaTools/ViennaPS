@@ -5,7 +5,9 @@
 #include "../psUnits.hpp"
 
 #include <rayParticle.hpp>
+#include <rayPointNeighborhood.hpp>
 #include <rayReflection.hpp>
+#include <vcKDTree.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -72,11 +74,13 @@ template <typename NumericType> struct NeutralTransportParameters {
   NumericType coverageTimeStep = 1.;        // s
   bool useSteadyStateCoverage = true;
 
-  // Placeholder for Eq. (9) in the neutral transport paper. The base skeleton
-  // applies a 1D benchmark-only diffusion along a cylinder sidewall band.
+  // Surface diffusion for Eq. (9) in the neutral transport paper. The
+  // coefficient is expressed in the active length unit squared per second.
   NumericType surfaceDiffusionCoefficient = 0.;
-  NumericType surfaceDiffusionRadius = 0.;
-  NumericType surfaceDiffusionTolerance = 0.;
+  Material surfaceDiffusionMaterial = Material::Mask;
+  NumericType surfaceDiffusionNeighborDistance = 0.;
+  NumericType surfaceDiffusionSolverTolerance = 1e-8;
+  unsigned surfaceDiffusionMaxIterations = 500;
 
   // Feature-scale process parameters.
   NumericType sourceDistributionPower = 1.;
@@ -152,6 +156,11 @@ public:
 
   void setSurfaceCoordinates(
       const std::vector<Vec3D<NumericType>> &coordinates) override {
+    if (cachedCoordinates_.size() != coordinates.size() ||
+        !std::equal(cachedCoordinates_.begin(), cachedCoordinates_.end(),
+                    coordinates.begin())) {
+      diffusionGraphValid_ = false;
+    }
     cachedCoordinates_ = coordinates;
     hasCoordinates_ = true;
   }
@@ -255,10 +264,8 @@ public:
           std::clamp(coverage->at(i), NumericType(0.), NumericType(1.));
     }
 
-    if (params.surfaceDiffusionCoefficient > 0. &&
-        params.surfaceDiffusionRadius > 0. &&
-        params.surfaceDiffusionTolerance > 0. && hasCoordinates_) {
-      applyBenchmarkDiffusion(cachedCoordinates_, *coverage);
+    if (params.surfaceDiffusionCoefficient > 0. && hasCoordinates_) {
+      applySurfaceDiffusion(cachedCoordinates_, materialIds, *coverage);
     }
 
     if (stickingData) {
@@ -312,125 +319,270 @@ public:
   }
 
 private:
-  static NumericType pointRadius(const Vec3D<NumericType> &point) {
-    if constexpr (D == 2) {
-      return std::abs(point[0]);
-    } else {
-      NumericType sum = 0.;
-      for (int i = 0; i < D - 1; ++i) {
-        sum += point[i] * point[i];
+  struct DiffusionEdge {
+    size_t index;
+    NumericType weight;
+  };
+
+  static NumericType squaredDistance(const Vec3D<NumericType> &a,
+                                     const Vec3D<NumericType> &b) {
+    NumericType result = 0.;
+    for (int i = 0; i < D; ++i) {
+      const auto diff = a[i] - b[i];
+      result += diff * diff;
+    }
+    return result;
+  }
+
+  static NumericType dotActive(const std::vector<NumericType> &a,
+                               const std::vector<NumericType> &b,
+                               const std::vector<char> &active) {
+    NumericType result = 0.;
+#pragma omp parallel for reduction(+ : result)
+    for (size_t i = 0; i < active.size(); ++i) {
+      if (active[i]) {
+        result += a[i] * b[i];
       }
-      return std::sqrt(sum);
+    }
+    return result;
+  }
+
+  NumericType estimateNeighborDistance(
+      const std::vector<Vec3D<NumericType>> &coordinates) const {
+    if (params.surfaceDiffusionNeighborDistance > NumericType(0.)) {
+      return params.surfaceDiffusionNeighborDistance;
+    }
+
+    NumericType minPositiveDistance2 = std::numeric_limits<NumericType>::max();
+    NumericType sumNearestDistance = 0.;
+    size_t nearestCount = 0;
+
+    KDTree<NumericType, Vec3D<NumericType>> tree;
+    tree.setPoints(coordinates);
+    tree.build();
+
+    const int numNearest = std::min<int>(4, coordinates.size());
+    for (size_t i = 0; i < coordinates.size(); ++i) {
+      const auto nearest = tree.findKNearest(coordinates[i], numNearest);
+      if (!nearest) {
+        continue;
+      }
+
+      NumericType nearestDistance = std::numeric_limits<NumericType>::max();
+      for (const auto &[index, distance] : *nearest) {
+        if (index != i &&
+            distance > std::numeric_limits<NumericType>::epsilon()) {
+          nearestDistance = std::min(nearestDistance, distance);
+          minPositiveDistance2 =
+              std::min(minPositiveDistance2, distance * distance);
+        }
+      }
+      if (nearestDistance < std::numeric_limits<NumericType>::max()) {
+        sumNearestDistance += nearestDistance;
+        ++nearestCount;
+      }
+    }
+
+    if (nearestCount == 0) {
+      return NumericType(0.);
+    }
+
+    const auto averageNearestDistance =
+        sumNearestDistance / static_cast<NumericType>(nearestCount);
+    return std::max(NumericType(1.75) * averageNearestDistance,
+                    NumericType(1.01) * std::sqrt(minPositiveDistance2));
+  }
+
+  void buildDiffusionGraph(
+      const std::vector<Vec3D<NumericType>> &coordinates) const {
+    diffusionGraph_.clear();
+    diffusionGraph_.resize(coordinates.size());
+    diffusionNeighborDistance_ = estimateNeighborDistance(coordinates);
+    if (diffusionNeighborDistance_ <= NumericType(0.)) {
+      diffusionGraphValid_ = true;
+      return;
+    }
+
+    Vec3D<NumericType> minExtent = coordinates.front();
+    Vec3D<NumericType> maxExtent = coordinates.front();
+    for (const auto &point : coordinates) {
+      for (int i = 0; i < D; ++i) {
+        minExtent[i] = std::min(minExtent[i], point[i]);
+        maxExtent[i] = std::max(maxExtent[i], point[i]);
+      }
+    }
+
+    viennaray::PointNeighborhood<NumericType, D> neighborhood;
+    neighborhood.template init<3>(coordinates, diffusionNeighborDistance_,
+                                  minExtent, maxExtent);
+
+    const auto epsilon = std::numeric_limits<NumericType>::epsilon();
+    for (size_t i = 0; i < coordinates.size(); ++i) {
+      for (const auto neighborIndex : neighborhood.getNeighborIndices(i)) {
+        const size_t j = neighborIndex;
+        if (j <= i) {
+          continue;
+        }
+        const auto distance2 = squaredDistance(coordinates[i], coordinates[j]);
+        if (distance2 <= epsilon) {
+          continue;
+        }
+        const auto weight = NumericType(1.) / distance2;
+        diffusionGraph_[i].push_back({j, weight});
+        diffusionGraph_[j].push_back({i, weight});
+      }
+    }
+
+    diffusionGraphValid_ = true;
+  }
+
+  void applyDiffusionMatrix(const std::vector<NumericType> &x,
+                            std::vector<NumericType> &result,
+                            const std::vector<char> &active,
+                            NumericType diffusionStep) const {
+    result.assign(x.size(), NumericType(0.));
+#pragma omp parallel for
+    for (size_t i = 0; i < x.size(); ++i) {
+      if (!active[i]) {
+        result[i] = x[i];
+        continue;
+      }
+
+      NumericType value = x[i];
+      for (const auto &edge : diffusionGraph_[i]) {
+        if (active[edge.index]) {
+          value += diffusionStep * edge.weight * (x[i] - x[edge.index]);
+        }
+      }
+      result[i] = value;
     }
   }
 
   void
-  applyBenchmarkDiffusion(const std::vector<Vec3D<NumericType>> &coordinates,
-                          std::vector<NumericType> &coverage) const {
-    if (coordinates.size() != coverage.size()) {
+  applySurfaceDiffusion(const std::vector<Vec3D<NumericType>> &coordinates,
+                        const std::vector<NumericType> &materialIds,
+                        std::vector<NumericType> &coverage) const {
+    if (coordinates.size() != coverage.size() ||
+        materialIds.size() != coverage.size() ||
+        params.coverageTimeStep <= NumericType(0.)) {
       return;
     }
 
-    struct Candidate {
-      size_t index;
-      NumericType z;
-    };
+    if (!diffusionGraphValid_ || diffusionGraph_.size() != coordinates.size()) {
+      buildDiffusionGraph(coordinates);
+    }
+    if (diffusionGraph_.empty()) {
+      return;
+    }
 
-    std::vector<Candidate> candidates;
-    candidates.reserve(coordinates.size());
+    std::vector<char> active(coverage.size(), false);
+    size_t activeCount = 0;
+    for (size_t i = 0; i < materialIds.size(); ++i) {
+      active[i] = MaterialMap::isMaterial(materialIds[i],
+                                          params.surfaceDiffusionMaterial);
+      if (active[i]) {
+        ++activeCount;
+      }
+    }
+    if (activeCount < 2) {
+      return;
+    }
 
-#ifdef _OPENMP
-    const int numThreads = omp_get_max_threads();
-    std::vector<std::vector<Candidate>> threadLocalCandidates(numThreads);
-
-#pragma omp parallel
-    {
-      const int threadId = omp_get_thread_num();
-      auto &localCandidates = threadLocalCandidates[threadId];
-
-#pragma omp for nowait
-      for (size_t i = 0; i < coordinates.size(); ++i) {
-        const auto radius = pointRadius(coordinates[i]);
-        if (std::abs(radius - params.surfaceDiffusionRadius) <=
-            params.surfaceDiffusionTolerance) {
-          localCandidates.push_back(Candidate{i, coordinates[i][D - 1]});
+    const auto diffusionStep =
+        params.surfaceDiffusionCoefficient * params.coverageTimeStep;
+    std::vector<NumericType> diagonal(coverage.size(), NumericType(1.));
+    bool hasActiveEdge = false;
+    for (size_t i = 0; i < coverage.size(); ++i) {
+      if (!active[i]) {
+        continue;
+      }
+      for (const auto &edge : diffusionGraph_[i]) {
+        if (active[edge.index]) {
+          diagonal[i] += diffusionStep * edge.weight;
+          hasActiveEdge = true;
         }
       }
     }
-
-    for (auto &localCandidates : threadLocalCandidates) {
-      candidates.insert(candidates.end(), localCandidates.begin(),
-                        localCandidates.end());
+    if (!hasActiveEdge) {
+      return;
     }
-#else
-    for (size_t i = 0; i < coordinates.size(); ++i) {
-      const auto radius = pointRadius(coordinates[i]);
-      if (std::abs(radius - params.surfaceDiffusionRadius) <=
-          params.surfaceDiffusionTolerance) {
-        candidates.push_back(Candidate{i, coordinates[i][D - 1]});
+
+    const auto rhs = coverage;
+    auto x = coverage;
+    std::vector<NumericType> matrixTimesX, residual(coverage.size(), 0.),
+        preconditionedResidual(coverage.size(), 0.),
+        direction(coverage.size(), 0.),
+        matrixTimesDirection(coverage.size(), 0.);
+
+    applyDiffusionMatrix(x, matrixTimesX, active, diffusionStep);
+#pragma omp parallel for
+    for (size_t i = 0; i < coverage.size(); ++i) {
+      if (active[i]) {
+        residual[i] = rhs[i] - matrixTimesX[i];
+        preconditionedResidual[i] = residual[i] / diagonal[i];
+        direction[i] = preconditionedResidual[i];
       }
     }
-#endif
 
-    if (candidates.size() < 2) {
-      return;
+    NumericType rz = dotActive(residual, preconditionedResidual, active);
+    const NumericType rhsNorm2 = std::max(dotActive(rhs, rhs, active),
+                                          NumericType(1.));
+    const NumericType tolerance2 =
+        params.surfaceDiffusionSolverTolerance *
+        params.surfaceDiffusionSolverTolerance * rhsNorm2;
+
+    for (unsigned iteration = 0;
+         iteration < params.surfaceDiffusionMaxIterations && rz > tolerance2;
+         ++iteration) {
+      applyDiffusionMatrix(direction, matrixTimesDirection, active,
+                           diffusionStep);
+      const NumericType denominator =
+          dotActive(direction, matrixTimesDirection, active);
+      if (std::abs(denominator) <=
+          std::numeric_limits<NumericType>::epsilon()) {
+        break;
+      }
+
+      const NumericType alpha = rz / denominator;
+#pragma omp parallel for
+      for (size_t i = 0; i < coverage.size(); ++i) {
+        if (active[i]) {
+          x[i] += alpha * direction[i];
+          residual[i] -= alpha * matrixTimesDirection[i];
+          preconditionedResidual[i] = residual[i] / diagonal[i];
+        }
+      }
+
+      const NumericType nextRz =
+          dotActive(residual, preconditionedResidual, active);
+      if (nextRz <= tolerance2) {
+        rz = nextRz;
+        break;
+      }
+      const NumericType beta = nextRz / rz;
+#pragma omp parallel for
+      for (size_t i = 0; i < coverage.size(); ++i) {
+        if (active[i]) {
+          direction[i] = preconditionedResidual[i] + beta * direction[i];
+        }
+      }
+      rz = nextRz;
     }
 
-    std::sort(candidates.begin(), candidates.end(),
-              [](const Candidate &a, const Candidate &b) {
-                if (a.z != b.z)
-                  return a.z < b.z;
-                return a.index < b.index;
-              });
-
-    NumericType avgSpacing = 0.;
-    for (size_t i = 1; i < candidates.size(); ++i) {
-      avgSpacing += std::abs(candidates[i].z - candidates[i - 1].z);
-    }
-    avgSpacing /= static_cast<NumericType>(candidates.size() - 1);
-    if (avgSpacing <= std::numeric_limits<NumericType>::epsilon()) {
-      return;
-    }
-
-    const NumericType r = params.surfaceDiffusionCoefficient *
-                          params.coverageTimeStep / (avgSpacing * avgSpacing);
-    if (r <= NumericType(0.)) {
-      return;
-    }
-
-    const size_t n = candidates.size();
-    std::vector<NumericType> a(n, -r), b(n, 1. + 2. * r), c(n, -r), d(n, 0.),
-        x(n, 0.);
-
-    // Neumann zero-gradient boundary conditions via mirrored ghost points.
-    c[0] = -2. * r;
-    a[n - 1] = -2. * r;
-
-    for (size_t i = 0; i < n; ++i) {
-      d[i] = coverage[candidates[i].index];
-    }
-
-    // Thomas algorithm for the tridiagonal solve.
-    for (size_t i = 1; i < n; ++i) {
-      const NumericType m = a[i] / b[i - 1];
-      b[i] -= m * c[i - 1];
-      d[i] -= m * d[i - 1];
-    }
-
-    x[n - 1] = d[n - 1] / b[n - 1];
-    for (size_t i = n - 1; i-- > 0;) {
-      x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
-    }
-
-    for (size_t i = 0; i < n; ++i) {
-      coverage[candidates[i].index] =
-          std::clamp(x[i], NumericType(0.), NumericType(1.));
+#pragma omp parallel for
+    for (size_t i = 0; i < coverage.size(); ++i) {
+      if (active[i]) {
+        coverage[i] = std::clamp(x[i], NumericType(0.), NumericType(1.));
+      }
     }
   }
 
   const NeutralTransportParameters<NumericType> &params;
   std::vector<Vec3D<NumericType>> cachedCoordinates_{};
   bool hasCoordinates_ = false;
+  mutable std::vector<std::vector<DiffusionEdge>> diffusionGraph_{};
+  mutable NumericType diffusionNeighborDistance_ = 0.;
+  mutable bool diffusionGraphValid_ = false;
 };
 
 template <typename NumericType, int D>
@@ -627,10 +779,14 @@ private:
     this->processMetaData["Coverage Time Step"] = {params.coverageTimeStep};
     this->processMetaData["Surface Diffusion Coefficient"] = {
         params.surfaceDiffusionCoefficient};
-    this->processMetaData["Surface Diffusion Radius"] = {
-        params.surfaceDiffusionRadius};
-    this->processMetaData["Surface Diffusion Tolerance"] = {
-        params.surfaceDiffusionTolerance};
+    this->processMetaData["Surface Diffusion Material"] = {
+        static_cast<double>(params.surfaceDiffusionMaterial.legacyId())};
+    this->processMetaData["Surface Diffusion Neighbor Distance"] = {
+        params.surfaceDiffusionNeighborDistance};
+    this->processMetaData["Surface Diffusion Solver Tolerance"] = {
+        params.surfaceDiffusionSolverTolerance};
+    this->processMetaData["Surface Diffusion Max Iterations"] = {
+        static_cast<double>(params.surfaceDiffusionMaxIterations)};
     this->processMetaData["Source Exponent"] = {params.sourceDistributionPower};
   }
 
