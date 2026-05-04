@@ -27,12 +27,7 @@ public:
       ProcessContext<NumericType, D> &context,
       viennacore::SmartPointer<viennals::PointData<NumericType>> &fluxes) = 0;
 
-  vrirtual
-
-      auto &
-      getTimer() const {
-    return timer_;
-  }
+  auto &getTimer() const { return timer_; }
   void resetTimer() { timer_.reset(); }
   auto getFluxCalculationsCount() const { return fluxCalculationsCount_; }
 };
