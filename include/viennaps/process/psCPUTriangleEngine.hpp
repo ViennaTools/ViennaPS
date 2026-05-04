@@ -275,6 +275,9 @@ private:
       if (desorptionWeights.size() == context.diskMesh->getNodes().size()) {
         addDesorptionFlux(context, desorptionWeights, particleFluxes,
                           numFluxes);
+      } else if (desorptionWeights.size() > 0) {
+        VIENNACORE_LOG_WARNING("Desorption weights size does not match number "
+                               "of mesh nodes. Skipping desorption flux.");
       }
 
       for (int i = 0; i < numFluxes; ++i) {
@@ -299,11 +302,10 @@ private:
     postProcessing.apply();
   }
 
-  void addDesorptionFlux(
-      ProcessContext<NumericType, D> &context,
-      const std::vector<NumericType> &diskDesorptionWeights,
-      std::vector<std::vector<NumericType>> &particleFluxes,
-      int numFluxes) {
+  void addDesorptionFlux(ProcessContext<NumericType, D> &context,
+                         const std::vector<NumericType> &diskDesorptionWeights,
+                         std::vector<std::vector<NumericType>> &particleFluxes,
+                         int numFluxes) {
     auto &pointKdTree = context.translationField->getKdTree();
     if (!pointKdTree) {
       pointKdTree = KDTreeType::New();

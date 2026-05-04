@@ -132,10 +132,9 @@ public:
   }
 
 private:
-  void runRayTracer(
-      ProcessContext<NumericType, D> const &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes,
-      const std::vector<NumericType> &desorptionWeights) {
+  void runRayTracer(ProcessContext<NumericType, D> const &context,
+                    SmartPointer<viennals::PointData<NumericType>> &fluxes,
+                    const std::vector<NumericType> &desorptionWeights) {
     assert(fluxes != nullptr);
     assert(model_ != nullptr);
     fluxes->clear();
@@ -143,9 +142,8 @@ private:
     const bool hasDesorption =
         desorptionWeights.size() == context.diskMesh->getNodes().size();
     const auto normals =
-        hasDesorption
-            ? context.diskMesh->getCellData().getVectorData("Normals")
-            : nullptr;
+        hasDesorption ? context.diskMesh->getCellData().getVectorData("Normals")
+                      : nullptr;
 
     unsigned particleIdx = 0;
     for (auto &particle : model_->getParticleTypes()) {
@@ -205,9 +203,8 @@ private:
                 context.diskMesh->getNodes(), *normals, desorptionWeights,
                 gridDelta, diskRadius, true);
         if (sourceData.hasSource) {
-          auto source =
-              std::make_shared<DesorptionSource<NumericType, D>>(
-                  std::move(sourceData), context.rayTracingParams.raysPerPoint);
+          auto source = std::make_shared<DesorptionSource<NumericType, D>>(
+              std::move(sourceData), context.rayTracingParams.raysPerPoint);
 
           rayTracer_.setSource(source);
           rayTracer_.apply();
@@ -223,11 +220,10 @@ private:
                   desorptionFlux, context.rayTracingParams.smoothingNeighbors);
             }
 
-            if (desorptionFlux.size() == particleFluxes[i].size()) {
+            assert(desorptionFlux.size() == particleFluxes[i].size());
 #pragma omp parallel for
-              for (std::size_t j = 0; j < desorptionFlux.size(); ++j) {
-                particleFluxes[i][j] += desorptionFlux[j];
-              }
+            for (std::size_t j = 0; j < desorptionFlux.size(); ++j) {
+              particleFluxes[i][j] += desorptionFlux[j];
             }
           }
 

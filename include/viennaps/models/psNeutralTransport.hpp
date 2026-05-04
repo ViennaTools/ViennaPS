@@ -66,7 +66,7 @@ template <typename NumericType> struct NeutralTransportParameters {
   // Langmuir adsorption/desorption parameters.
   NumericType zeroCoverageSticking = 0.1;
   NumericType etchFrontSticking = 1.;
-  NumericType desorptionRate = 0.;          // 1 / s
+  NumericType desorptionRate = 0.; // 1 / s
   Material desorptionMaterial = Material::Mask;
   NumericType kEtch = 0.;                   // 1 / s
   NumericType surfaceSiteDensity = 1.66e-5; // mol / m^2
@@ -187,9 +187,8 @@ public:
                 ? params.kEtch * params.surfaceSiteDensity * coverage->at(i) /
                       params.siliconDensity
                 : NumericType(0.);
-        velocity->at(i) =
-            -etchVelocity * units::Time::convertSecond() /
-            units::Length::convertMeter();
+        velocity->at(i) = -etchVelocity * units::Time::convertSecond() /
+                          units::Length::convertMeter();
       }
     }
 
@@ -236,8 +235,7 @@ public:
               : params.zeroCoverageSticking;
       const auto adsorptionCoefficient =
           params.surfaceSiteDensity > 0.
-              ? sticking * params.incomingFlux *
-                    neutralFlux->at(i) /
+              ? sticking * params.incomingFlux * neutralFlux->at(i) /
                     (avogadroNumber<NumericType>() * params.surfaceSiteDensity)
               : NumericType(0.);
       const auto etchLossRate =
@@ -279,7 +277,6 @@ public:
         }
       }
     }
-
   }
 
   std::vector<NumericType> getDesorptionWeights(
@@ -458,10 +455,9 @@ private:
     }
   }
 
-  void
-  applySurfaceDiffusion(const std::vector<Vec3D<NumericType>> &coordinates,
-                        const std::vector<NumericType> &materialIds,
-                        std::vector<NumericType> &coverage) const {
+  void applySurfaceDiffusion(const std::vector<Vec3D<NumericType>> &coordinates,
+                             const std::vector<NumericType> &materialIds,
+                             std::vector<NumericType> &coverage) const {
     if (coordinates.size() != coverage.size() ||
         materialIds.size() != coverage.size() ||
         params.coverageTimeStep <= NumericType(0.)) {
@@ -525,11 +521,11 @@ private:
     }
 
     NumericType rz = dotActive(residual, preconditionedResidual, active);
-    const NumericType rhsNorm2 = std::max(dotActive(rhs, rhs, active),
-                                          NumericType(1.));
-    const NumericType tolerance2 =
-        params.surfaceDiffusionSolverTolerance *
-        params.surfaceDiffusionSolverTolerance * rhsNorm2;
+    const NumericType rhsNorm2 =
+        std::max(dotActive(rhs, rhs, active), NumericType(1.));
+    const NumericType tolerance2 = params.surfaceDiffusionSolverTolerance *
+                                   params.surfaceDiffusionSolverTolerance *
+                                   rhsNorm2;
 
     for (unsigned iteration = 0;
          iteration < params.surfaceDiffusionMaxIterations && rz > tolerance2;
@@ -657,12 +653,10 @@ private:
     viennaray::gpu::Particle<NumericType> particle{
         .name = "NeutralTransport",
         .sticking = 0.f, // callable owns all sticking logic
-        .cosineExponent =
-            static_cast<float>(params.sourceDistributionPower)};
+        .cosineExponent = static_cast<float>(params.sourceDistributionPower)};
     particle.dataLabels.push_back(params.fluxLabel);
 
-    std::unordered_map<std::string, unsigned> pMap = {
-        {"NeutralTransport", 0}};
+    std::unordered_map<std::string, unsigned> pMap = {{"NeutralTransport", 0}};
     std::vector<viennaray::gpu::CallableConfig> cMap = {
         {0, viennaray::gpu::CallableSlot::COLLISION,
          "__direct_callable__neutralTransportCollision"},
@@ -733,8 +727,7 @@ public:
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
     auto model =
         SmartPointer<gpu::NeutralTransport<NumericType, D>>::New(params);
-    model->setProcessName(
-        this->getProcessName().value_or("NeutralTransport"));
+    model->setProcessName(this->getProcessName().value_or("NeutralTransport"));
     return model;
   }
 #endif

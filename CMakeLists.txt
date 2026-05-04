@@ -126,8 +126,7 @@ target_include_directories(
 set(VIENNAPS_VIENNARAY_BRANCH
     "feature/gpu-surface-source"
     CACHE STRING "ViennaRay branch/tag to use when fetching ViennaRay")
-option(VIENNAPS_USE_LOCAL_VIENNARAY
-       "Use a sibling local ViennaRay checkout when available" OFF)
+option(VIENNAPS_USE_LOCAL_VIENNARAY "Use a sibling local ViennaRay checkout when available" OFF)
 set(VIENNAPS_LOCAL_VIENNARAY_DIR
     "${PROJECT_SOURCE_DIR}/../ViennaRay"
     CACHE PATH "Local ViennaRay checkout used by CPM when available")
@@ -148,9 +147,8 @@ if(DEFINED CPM_ViennaRay_SOURCE
     COMMAND git -C "${CPM_ViennaRay_SOURCE}" branch --show-current
     OUTPUT_VARIABLE VIENNAPS_LOCAL_VIENNARAY_BRANCH
     OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-  if(NOT VIENNAPS_LOCAL_VIENNARAY_BRANCH STREQUAL ""
-     AND NOT VIENNAPS_LOCAL_VIENNARAY_BRANCH STREQUAL
-             VIENNAPS_VIENNARAY_BRANCH)
+  if(NOT VIENNAPS_LOCAL_VIENNARAY_BRANCH STREQUAL "" AND NOT VIENNAPS_LOCAL_VIENNARAY_BRANCH
+                                                         STREQUAL VIENNAPS_VIENNARAY_BRANCH)
     message(
       WARNING
         "[ViennaPS] Local ViennaRay is on branch '${VIENNAPS_LOCAL_VIENNARAY_BRANCH}', expected '${VIENNAPS_VIENNARAY_BRANCH}'."

@@ -233,6 +233,9 @@ public:
     auto combinedResults = rayTracer_.getResults();
     if (desorptionWeights.size() == context.diskMesh->getNodes().size()) {
       addDesorptionFlux(context, desorptionWeights, combinedResults);
+    } else if (desorptionWeights.size() > 0) {
+      VIENNACORE_LOG_WARNING("Desorption weights size does not match number "
+                             "of mesh nodes. Skipping desorption flux.");
     }
 
     // always persist per-triangle flux so callers can access it
@@ -327,7 +330,8 @@ private:
 
     const auto &triangles = surfaceMesh_->triangles;
     const auto &nodes = surfaceMesh_->nodes;
-    const auto meshNormals = surfaceMesh_->getCellData().getVectorData("Normals");
+    const auto meshNormals =
+        surfaceMesh_->getCellData().getVectorData("Normals");
     const std::vector<Vec3Df> emptyNormals;
     const auto &normals = meshNormals != nullptr ? *meshNormals : emptyNormals;
 
@@ -335,6 +339,7 @@ private:
         nodes, triangles, normals, elementWeights,
         static_cast<float>(context.domain->getGridDelta()));
     if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
       return;
     }
 

@@ -26,8 +26,7 @@ void printBottomTransmissionProbabilityTriangles(
     return;
   }
 
-  const auto flux =
-      triangleMesh->getCellData().getScalarData(fluxLabel);
+  const auto flux = triangleMesh->getCellData().getScalarData(fluxLabel);
   if (flux == nullptr || flux->size() != triangleMesh->triangles.size()) {
     std::cout << "Triangle transmission probability: flux data unavailable."
               << std::endl;
@@ -39,9 +38,8 @@ void printBottomTransmissionProbabilityTriangles(
 
   const float tol = static_cast<float>(gridDelta);
   const float bottomRMax = static_cast<float>(bottomRadius) + tol;
-  const double topArea =
-      M_PI * static_cast<double>(topRadius) * static_cast<double>(topRadius) /
-      4.;
+  const double topArea = M_PI * static_cast<double>(topRadius) *
+                         static_cast<double>(topRadius) / 4.;
 
   struct TriangleInfo {
     float cx = 0.f;
@@ -70,10 +68,8 @@ void printBottomTransmissionProbabilityTriangles(
     const float cz = (v0[2] + v1[2] + v2[2]) / 3.f;
 
     // triangle area via cross product of edges
-    const float e1x = v1[0] - v0[0], e1y = v1[1] - v0[1],
-                e1z = v1[2] - v0[2];
-    const float e2x = v2[0] - v0[0], e2y = v2[1] - v0[1],
-                e2z = v2[2] - v0[2];
+    const float e1x = v1[0] - v0[0], e1y = v1[1] - v0[1], e1z = v1[2] - v0[2];
+    const float e2x = v2[0] - v0[0], e2y = v2[1] - v0[1], e2z = v2[2] - v0[2];
     const float area =
         0.5f * std::sqrt((e1y * e2z - e1z * e2y) * (e1y * e2z - e1z * e2y) +
                          (e1z * e2x - e1x * e2z) * (e1z * e2x - e1x * e2z) +
@@ -87,16 +83,14 @@ void printBottomTransmissionProbabilityTriangles(
             ? std::abs(e1x * e2y - e1y * e2x) / normalMagnitude
             : 0.f;
 
-    triangleInfos.push_back(
-        {cx, cy, cz, radialPosition, normalZAbs, area, f});
+    triangleInfos.push_back({cx, cy, cz, radialPosition, normalZAbs, area, f});
 
     if (normalZAbs > 0.5f && radialPosition <= bottomRMax) {
       bottomZ = std::min(bottomZ, cz);
     }
   }
 
-  if (bottomZ == std::numeric_limits<float>::max() ||
-      topArea <= 0.) {
+  if (bottomZ == std::numeric_limits<float>::max() || topArea <= 0.) {
     std::cout << "Triangle transmission probability: could not identify "
                  "bottom triangles or aperture area."
               << std::endl;
@@ -129,8 +123,8 @@ void printBottomTransmissionProbabilityTriangles(
   std::cout << std::setprecision(6) << std::scientific
             << "Bottom transmission probability (triangles): " << transmission
             << " (bottom integral " << bottomFluxIntegral << ", aperture area "
-            << topArea << ", bottom flux density " << bottomDensity
-            << " from " << bottomCount << " triangles)" << std::endl;
+            << topArea << ", bottom flux density " << bottomDensity << " from "
+            << bottomCount << " triangles)" << std::endl;
 }
 
 } // namespace
@@ -178,8 +172,8 @@ int main(int argc, char *argv[]) {
   modelParams.zeroCoverageSticking = params.get("zeroCoverageSticking");
   modelParams.etchFrontSticking = params.get("etchFrontSticking");
   modelParams.desorptionRate = params.get("desorptionRate");
-  modelParams.desorptionMaterial =
-      ps::MaterialMap::fromString(params.get<std::string>("desorptionMaterial"));
+  modelParams.desorptionMaterial = ps::MaterialMap::fromString(
+      params.get<std::string>("desorptionMaterial"));
   modelParams.kEtch = params.get("kEtch");
   modelParams.surfaceSiteDensity = params.get("surfaceSiteDensity");
   modelParams.siliconDensity = params.get("siliconDensity");

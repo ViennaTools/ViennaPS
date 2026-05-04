@@ -3,9 +3,9 @@
 #ifdef VIENNACORE_COMPILE_GPU
 
 #include "../psDomain.hpp"
+#include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
-#include "psDesorptionSource.hpp"
 
 #include <vcContext.hpp>
 
@@ -180,8 +180,8 @@ public:
       addDesorptionFlux(context, desorptionWeights, combinedResults);
     }
 
-    downloadResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
-                               combinedResults);
+    downloadResultsToPointData(
+        *fluxes, context.rayTracingParams.smoothingNeighbors, combinedResults);
     ++this->fluxCalculationsCount_;
 
     // output
@@ -231,10 +231,9 @@ private:
     delete[] temp;
   }
 
-  void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
-                                  int smoothingNeighbors,
-                                  std::vector<std::vector<
-                                      viennaray::gpu::ResultType>> results) {
+  void downloadResultsToPointData(
+      viennals::PointData<NumericType> &pointData, int smoothingNeighbors,
+      std::vector<std::vector<viennaray::gpu::ResultType>> results) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
@@ -264,15 +263,15 @@ private:
     const auto &nodes = context.diskMesh->getNodes();
     const auto normals =
         context.diskMesh->getCellData().getVectorData("Normals");
-    if (normals == nullptr) {
-      return;
-    }
+    assert(normals != nullptr);
 
     auto sourceData = makeDiskDesorptionSourceData<float, NumericType, D>(
         nodes, *normals, desorptionWeights, context.domain->getGridDelta(),
         static_cast<NumericType>(diskRadius_), true);
-    if (!sourceData.hasSource)
+    if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
       return;
+    }
 
     rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
                                 sourceData.weights, sourceData.sourceArea,

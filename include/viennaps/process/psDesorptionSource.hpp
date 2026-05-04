@@ -14,7 +14,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType> struct DiskDesorptionSourceData {
+template <typename NumericType> struct DesorptionSourceData {
   using VecType = Vec3D<NumericType>;
 
   std::vector<VecType> positions;
@@ -26,12 +26,12 @@ template <typename NumericType> struct DiskDesorptionSourceData {
 };
 
 template <typename OutputNumericType, typename InputNumericType, int D>
-DiskDesorptionSourceData<OutputNumericType> makeDiskDesorptionSourceData(
+DesorptionSourceData<OutputNumericType> makeDiskDesorptionSourceData(
     const std::vector<Vec3D<InputNumericType>> &positions,
     const std::vector<Vec3D<InputNumericType>> &normals,
     const std::vector<InputNumericType> &weights, InputNumericType gridDelta,
     InputNumericType diskRadius, bool useLineAreaIn2D = false) {
-  DiskDesorptionSourceData<OutputNumericType> data;
+  DesorptionSourceData<OutputNumericType> data;
 
   if (positions.size() != normals.size() || positions.size() != weights.size())
     return data;
@@ -45,10 +45,9 @@ DiskDesorptionSourceData<OutputNumericType> makeDiskDesorptionSourceData(
   for (std::int64_t i = 0; i < static_cast<std::int64_t>(positions.size());
        ++i) {
     const auto idx = static_cast<std::size_t>(i);
-    data.positions[idx] = {
-        static_cast<OutputNumericType>(positions[idx][0]),
-        static_cast<OutputNumericType>(positions[idx][1]),
-        static_cast<OutputNumericType>(positions[idx][2])};
+    data.positions[idx] = {static_cast<OutputNumericType>(positions[idx][0]),
+                           static_cast<OutputNumericType>(positions[idx][1]),
+                           static_cast<OutputNumericType>(positions[idx][2])};
     data.normals[idx] = {static_cast<OutputNumericType>(normals[idx][0]),
                          static_cast<OutputNumericType>(normals[idx][1]),
                          static_cast<OutputNumericType>(normals[idx][2])};
@@ -62,13 +61,10 @@ DiskDesorptionSourceData<OutputNumericType> makeDiskDesorptionSourceData(
     }
   }
 
-  constexpr OutputNumericType pi =
-      static_cast<OutputNumericType>(3.14159265358979323846);
-  const auto radius = static_cast<OutputNumericType>(diskRadius);
-  OutputNumericType areaPerSource = radius * radius * pi;
+  OutputNumericType areaPerSource = diskRadius * diskRadius * M_PI;
   if constexpr (D == 2) {
     if (useLineAreaIn2D)
-      areaPerSource = OutputNumericType(2.) * radius;
+      areaPerSource = OutputNumericType(2.) * diskRadius;
   }
   data.sourceArea =
       static_cast<OutputNumericType>(positions.size()) * areaPerSource;
@@ -79,12 +75,12 @@ DiskDesorptionSourceData<OutputNumericType> makeDiskDesorptionSourceData(
 template <typename OutputNumericType, typename NodeNumericType,
           typename WeightNumericType, typename NormalNumericType,
           typename GridNumericType, typename TriangleType>
-DiskDesorptionSourceData<OutputNumericType> makeTriangleDesorptionSourceData(
+DesorptionSourceData<OutputNumericType> makeTriangleDesorptionSourceData(
     const std::vector<Vec3D<NodeNumericType>> &nodes,
     const std::vector<TriangleType> &triangles,
     const std::vector<Vec3D<NormalNumericType>> &normals,
     const std::vector<WeightNumericType> &weights, GridNumericType gridDelta) {
-  DiskDesorptionSourceData<OutputNumericType> data;
+  DesorptionSourceData<OutputNumericType> data;
 
   if (triangles.empty() || weights.size() != triangles.size())
     return data;
@@ -94,8 +90,7 @@ DiskDesorptionSourceData<OutputNumericType> makeTriangleDesorptionSourceData(
   data.weights.resize(triangles.size(), OutputNumericType(0.));
   data.sourceOffset = static_cast<OutputNumericType>(gridDelta * 1e-4);
 
-  std::vector<OutputNumericType> areas(triangles.size(),
-                                       OutputNumericType(0.));
+  std::vector<OutputNumericType> areas(triangles.size(), OutputNumericType(0.));
   OutputNumericType sourceArea = 0.;
 
   for (std::size_t i = 0; i < triangles.size(); ++i) {
@@ -115,21 +110,15 @@ DiskDesorptionSourceData<OutputNumericType> makeTriangleDesorptionSourceData(
 
     data.positions[i] = (v0 + v1 + v2) / OutputNumericType(3.);
 
-    const auto a = v1 - v0;
-    const auto b = v2 - v0;
-    Vec3D<OutputNumericType> cross{a[1] * b[2] - a[2] * b[1],
-                                   a[2] * b[0] - a[0] * b[2],
-                                   a[0] * b[1] - a[1] * b[0]};
-    areas[i] =
-        OutputNumericType(0.5) * std::sqrt(DotProduct(cross, cross));
+    auto cross = CrossProduct(v1 - v0, v2 - v0);
+    areas[i] = OutputNumericType(0.5) * Norm(cross);
     sourceArea += areas[i];
 
     if (normals.size() == triangles.size()) {
       const auto &normal = normals[i];
-      data.normals[i] = {
-          static_cast<OutputNumericType>(normal[0]),
-          static_cast<OutputNumericType>(normal[1]),
-          static_cast<OutputNumericType>(normal[2])};
+      data.normals[i] = {static_cast<OutputNumericType>(normal[0]),
+                         static_cast<OutputNumericType>(normal[1]),
+                         static_cast<OutputNumericType>(normal[2])};
     } else {
       Normalize(cross);
       data.normals[i] = cross;
@@ -143,8 +132,8 @@ DiskDesorptionSourceData<OutputNumericType> makeTriangleDesorptionSourceData(
   const auto averageArea =
       sourceArea / static_cast<OutputNumericType>(triangles.size());
   for (std::size_t i = 0; i < data.weights.size(); ++i) {
-    data.weights[i] = static_cast<OutputNumericType>(weights[i]) * areas[i] /
-                      averageArea;
+    data.weights[i] =
+        static_cast<OutputNumericType>(weights[i]) * areas[i] / averageArea;
     if (data.weights[i] > OutputNumericType(0.))
       data.hasSource = true;
   }
@@ -169,7 +158,7 @@ class DesorptionSource : public viennaray::Source<NumericType> {
   NumericType offset_; // small normal offset to avoid self-intersection
 
 public:
-  DesorptionSource(DiskDesorptionSourceData<NumericType> sourceData,
+  DesorptionSource(DesorptionSourceData<NumericType> sourceData,
                    size_t raysPerPoint)
       : positions_(std::move(sourceData.positions)),
         normals_(std::move(sourceData.normals)),
@@ -177,23 +166,21 @@ public:
         sourceArea_(sourceData.sourceArea), raysPerPoint_(raysPerPoint),
         offset_(sourceData.sourceOffset) {}
 
-  DesorptionSource(std::vector<VecType> positions,
-                   std::vector<VecType> normals,
+  DesorptionSource(std::vector<VecType> positions, std::vector<VecType> normals,
                    std::vector<NumericType> weights, NumericType gridDelta,
                    NumericType diskRadius, size_t raysPerPoint)
       : DesorptionSource(
-            makeDiskDesorptionSourceData<NumericType, NumericType, D>(
+            makeDesorptionSourceData<NumericType, NumericType, D>(
                 positions, normals, weights, gridDelta, diskRadius),
             raysPerPoint) {}
 
   std::array<VecType, 2> getOriginAndDirection(size_t idx,
-                                                RNG &rng) const override {
+                                               RNG &rng) const override {
     const size_t diskIdx = idx / raysPerPoint_;
     const auto &pos = positions_[diskIdx];
     const auto &norm = normals_[diskIdx];
     VecType origin = pos + norm * offset_;
-    auto direction =
-        viennaray::ReflectionDiffuse<NumericType, D>(norm, rng);
+    auto direction = viennaray::ReflectionDiffuse<NumericType, D>(norm, rng);
     return {origin, direction};
   }
 
