@@ -1,4 +1,4 @@
-# Neutral transport benchmark on a 3D quarter-cylinder geometry
+# Neutral transport benchmark on a 3D cylinder geometry
 
 # Units
 lengthUnit=um
@@ -51,6 +51,6 @@ coverageInitIterations=8
 coverageTolerance=1e-4
 
 # Input
-initialFile=neutralTransportQuarterCylinder_initial.vtp
+initialFile=neutralTransportCylinder_initial.vtp
 # Output
-outputFile=neutralTransportQuarterCylinder_final.vtp
+outputFile=neutralTransportCylinder_final.vtp

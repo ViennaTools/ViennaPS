@@ -76,6 +76,82 @@ DiskDesorptionSourceData<OutputNumericType> makeDiskDesorptionSourceData(
   return data;
 }
 
+template <typename OutputNumericType, typename NodeNumericType,
+          typename WeightNumericType, typename NormalNumericType,
+          typename GridNumericType, typename TriangleType>
+DiskDesorptionSourceData<OutputNumericType> makeTriangleDesorptionSourceData(
+    const std::vector<Vec3D<NodeNumericType>> &nodes,
+    const std::vector<TriangleType> &triangles,
+    const std::vector<Vec3D<NormalNumericType>> &normals,
+    const std::vector<WeightNumericType> &weights, GridNumericType gridDelta) {
+  DiskDesorptionSourceData<OutputNumericType> data;
+
+  if (triangles.empty() || weights.size() != triangles.size())
+    return data;
+
+  data.positions.resize(triangles.size());
+  data.normals.resize(triangles.size());
+  data.weights.resize(triangles.size(), OutputNumericType(0.));
+  data.sourceOffset = static_cast<OutputNumericType>(gridDelta * 1e-4);
+
+  std::vector<OutputNumericType> areas(triangles.size(),
+                                       OutputNumericType(0.));
+  OutputNumericType sourceArea = 0.;
+
+  for (std::size_t i = 0; i < triangles.size(); ++i) {
+    const auto &tri = triangles[i];
+    const Vec3D<OutputNumericType> v0{
+        static_cast<OutputNumericType>(nodes[tri[0]][0]),
+        static_cast<OutputNumericType>(nodes[tri[0]][1]),
+        static_cast<OutputNumericType>(nodes[tri[0]][2])};
+    const Vec3D<OutputNumericType> v1{
+        static_cast<OutputNumericType>(nodes[tri[1]][0]),
+        static_cast<OutputNumericType>(nodes[tri[1]][1]),
+        static_cast<OutputNumericType>(nodes[tri[1]][2])};
+    const Vec3D<OutputNumericType> v2{
+        static_cast<OutputNumericType>(nodes[tri[2]][0]),
+        static_cast<OutputNumericType>(nodes[tri[2]][1]),
+        static_cast<OutputNumericType>(nodes[tri[2]][2])};
+
+    data.positions[i] = (v0 + v1 + v2) / OutputNumericType(3.);
+
+    const auto a = v1 - v0;
+    const auto b = v2 - v0;
+    Vec3D<OutputNumericType> cross{a[1] * b[2] - a[2] * b[1],
+                                   a[2] * b[0] - a[0] * b[2],
+                                   a[0] * b[1] - a[1] * b[0]};
+    areas[i] =
+        OutputNumericType(0.5) * std::sqrt(DotProduct(cross, cross));
+    sourceArea += areas[i];
+
+    if (normals.size() == triangles.size()) {
+      const auto &normal = normals[i];
+      data.normals[i] = {
+          static_cast<OutputNumericType>(normal[0]),
+          static_cast<OutputNumericType>(normal[1]),
+          static_cast<OutputNumericType>(normal[2])};
+    } else {
+      Normalize(cross);
+      data.normals[i] = cross;
+    }
+  }
+
+  if (sourceArea <= OutputNumericType(0.))
+    return data;
+
+  data.sourceArea = sourceArea;
+  const auto averageArea =
+      sourceArea / static_cast<OutputNumericType>(triangles.size());
+  for (std::size_t i = 0; i < data.weights.size(); ++i) {
+    data.weights[i] = static_cast<OutputNumericType>(weights[i]) * areas[i] /
+                      averageArea;
+    if (data.weights[i] > OutputNumericType(0.))
+      data.hasSource = true;
+  }
+
+  return data;
+}
+
 // Viennaray source that emits rays from surface disk positions with initial
 // weights proportional to the local desorption rate r_des * N_A (Eq. 1,
 // Panagopoulos & Lill 2023). Each disk i emits cosine-distributed rays with

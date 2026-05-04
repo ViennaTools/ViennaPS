@@ -1,17 +1,18 @@
-# Neutral Transport Quarter Cylinder
+# Neutral Transport Cylinder
 
 This example is a neutral-species transport benchmark for a high-aspect-ratio
 cylindrical opening. It is intended to compare ViennaPS ray tracing against the
-neutral transport model described by Panagopoulos and Lill (https://doi.org/10.1116/6.0002468), while
-using the generic ViennaPS geometry and flux-engine infrastructure.
+neutral transport model described by Panagopoulos and Lill
+(https://doi.org/10.1116/6.0002468), while using the generic ViennaPS geometry
+and flux-engine infrastructure.
 
 The example currently runs a diagnostic flux calculation and prints the bottom
 transmission probability. The actual level-set advection section is available in
-`neutralTransportQuarterCylinder.cpp`, but is commented out.
+`neutralTransportCylinder.cpp`, but is commented out.
 
 ## Geometry
 
-The geometry is generated with `ps::MakeHole` in 3D quarter-cylinder mode:
+The geometry is generated with `ps::MakeHole` in 3D cylinder mode:
 
 ```cpp
 ps::MakeHole<NumericType, D>(
@@ -151,9 +152,10 @@ For disk tracing, the helper `psDesorptionSource.hpp` prepares the surface
 source data. CPU disk tracing wraps it in the ViennaRay CPU source interface.
 GPU disk tracing passes the same data to ViennaRay's GPU surface-source API.
 
-For GPU triangle tracing, desorption weights are computed on the disk mesh,
-mapped to triangle elements, and emitted from triangle centers with triangle
-normals.
+For triangle tracing, both the CPU and GPU engines map desorption weights to
+triangle elements, emit from triangle centers with triangle normals, and apply
+the same area correction before normalization. The CPU triangle engine also
+records the resulting per-triangle flux for diagnostics.
 
 ## Surface Diffusion
 
@@ -245,7 +247,8 @@ given a negative sign for etching.
 The example prints a bottom transmission probability after
 `diagnosticProcess.calculateFlux()`.
 
-For GPU triangle tracing, the triangle mesh stores per-triangle `neutralFlux`.
+For CPU and GPU triangle tracing, the triangle mesh stores per-triangle
+`neutralFlux`.
 The diagnostic identifies horizontal bottom etch-front triangles inside
 `holeRadius`, integrates `neutralFlux * area`, and divides by the analytic
 quarter-circle source aperture area:
@@ -269,8 +272,9 @@ topRadius = holeRadius + tan(maskTaperAngle) * maskHeight
 Because `neutralFlux` is normalized to the imposed source flux density, the top
 source integral is represented by the aperture area.
 
-The diagnostic currently requires the GPU triangle engine because it reads the
-per-triangle flux mesh via `Process::getTriangleMesh()`.
+The diagnostic currently requires a triangle flux engine because it reads the
+per-triangle flux mesh via `Process::getTriangleMesh()`. Use `CT` for CPU
+triangle tracing or `GT` for GPU triangle tracing.
 
 ## Main Configuration Parameters
 
@@ -284,8 +288,8 @@ Geometry:
 
 Ray tracing:
 
-- `fluxEngine`: use `GT` for GPU triangle tracing and the transmission
-  diagnostic.
+- `fluxEngine`: use `CT` for CPU triangle tracing or `GT` for GPU triangle
+  tracing and the transmission diagnostic.
 - `raysPerPoint`: number of rays per source point.
 - `sourceExponent`: cosine-distribution exponent.
 
@@ -322,32 +326,196 @@ Coverage initialization:
 
 ## Build And Run
 
-From the repository root:
+The commands below assume you are in the ViennaPS repository root.
 
 ```bash
-cmake --build build --target neutralTransportQuarterCylinder -j 4
+cd /path/to/ViennaPS
 ```
 
-From the build output directory, run:
+### Flux Engine Choice
+
+The bottom transmission diagnostic requires a triangle flux engine because it
+reads per-triangle flux data from `Process::getTriangleMesh()`.
+
+Use one of:
+
+```text
+fluxEngine=CT  # CPU triangle engine
+fluxEngine=GT  # GPU triangle engine
+```
+
+The checked-in `config.txt` currently uses `GT`. For CPU-only builds, either
+edit `config.txt` to use `CT` or use the temporary substitution shown below.
+
+By default, ViennaPS fetches ViennaRay from:
+
+```text
+feature/gpu-surface-source
+```
+
+Local sibling ViennaRay checkouts are opt-in through
+`VIENNAPS_USE_LOCAL_VIENNARAY=ON`.
+
+### Available Presets
+
+To list all configure and build presets:
 
 ```bash
-./examples/neutralTransportQuarterCylinder/neutralTransportQuarterCylinder \
-  ../../examples/neutralTransportQuarterCylinder/config.txt
+cmake --list-presets=all
 ```
 
-Or from this example directory, pass `config.txt` explicitly to the built
-executable.
+This repository currently provides:
+
+- configure preset `cpu`, building into `build-cpu` and fetching the required
+  ViennaRay branch;
+- build preset `neutral-transport-cylinder-cpu`;
+- configure preset `gpu-viennaray-branch`, building into `build`;
+- build preset `neutral-transport-cylinder`.
+
+### CPU With Presets
+
+Configure from scratch:
+
+```bash
+rm -rf build-cpu
+cmake --preset cpu
+```
+
+Build this example:
+
+```bash
+cmake --build --preset neutral-transport-cylinder-cpu
+```
+
+Run with CPU triangle diagnostics without editing `config.txt`:
+
+```bash
+cd build-cpu/examples/neutralTransportCylinder
+./neutralTransportCylinder <(sed 's/fluxEngine=GT/fluxEngine=CT/' config.txt)
+```
+
+Alternatively, set this in `config.txt` before running:
+
+```text
+fluxEngine=CT
+```
+
+### GPU With Presets
+
+The `gpu-viennaray-branch` preset enables GPU support, builds examples, uses
+`gcc-12/g++-12`, disables the local ViennaRay override, and fetches ViennaRay
+from the branch:
+
+```text
+feature/gpu-surface-source
+```
+
+Configure from scratch:
+
+```bash
+rm -rf build
+cmake --preset gpu-viennaray-branch
+```
+
+Build this example:
+
+```bash
+cmake --build --preset neutral-transport-cylinder
+```
+
+Run with the default GPU triangle config:
+
+```bash
+cd build/examples/neutralTransportCylinder
+./neutralTransportCylinder config.txt
+```
+
+### CPU Without Presets
+
+Configure from scratch without GPU support:
+
+```bash
+rm -rf build-cpu
+cmake -S . -B build-cpu \
+  -DVIENNAPS_USE_GPU=OFF \
+  -DVIENNAPS_BUILD_EXAMPLES=ON \
+  -DVIENNAPS_USE_LOCAL_VIENNARAY=OFF \
+  -DVIENNAPS_VIENNARAY_BRANCH=feature/gpu-surface-source
+```
+
+Build only this example:
+
+```bash
+cmake --build build-cpu --target neutralTransportCylinder -j 4
+```
+
+Run with CPU triangle diagnostics:
+
+```bash
+cd build-cpu/examples/neutralTransportCylinder
+./neutralTransportCylinder <(sed 's/fluxEngine=GT/fluxEngine=CT/' config.txt)
+```
+
+### GPU Without Presets
+
+For GPU support, use a CUDA-supported host compiler. With CUDA 12.0, GCC 12 is
+safe; GCC 13 triggers NVCC's unsupported compiler check.
+
+Configure from scratch with GPU support and the required ViennaRay branch:
+
+```bash
+rm -rf build
+cmake -S . -B build \
+  -DVIENNAPS_USE_GPU=ON \
+  -DVIENNAPS_BUILD_EXAMPLES=ON \
+  -DVIENNAPS_USE_LOCAL_VIENNARAY=OFF \
+  -DVIENNAPS_VIENNARAY_BRANCH=feature/gpu-surface-source \
+  -DCMAKE_C_COMPILER=gcc-12 \
+  -DCMAKE_CXX_COMPILER=g++-12
+```
+
+Build the example:
+
+```bash
+cmake --build build --target neutralTransportCylinder -j 4
+```
+
+Run with the default GPU triangle flux engine:
+
+```bash
+cd build/examples/neutralTransportCylinder
+./neutralTransportCylinder config.txt
+```
 
 ## Current Benchmark Scope
 
-This example currently covers:
+This example currently implements:
 
 - fixed-pressure molecular effusion input flux,
 - ballistic ray-traced Knudsen transport,
 - coverage-dependent sticking,
-- material-dependent desorption sink and desorption source,
-- surface re-emission of desorbed species,
-- material-dependent etch consumption,
+- material-dependent desorption sink and desorption source emission,
+- secondary ray tracing of desorbed species,
+- material-dependent etch-front consumption,
 - coverage-dependent etch velocity,
 - graph-based surface diffusion on the selected material,
-- bottom transmission probability diagnostic.
+- coverage initialization iterations before the diagnostic flux calculation,
+- CPU and GPU triangle-engine bottom transmission probability diagnostics.
+
+The current diagnostic path is fixed-geometry: it calls
+`diagnosticProcess.calculateFlux()` and prints transmission. The level-set
+advection/etching part is present in the source file but commented out, so this
+example does not currently advance the geometry unless that block is enabled.
+
+Current approximations relative to the paper:
+
+- the geometry is a generic ViennaPS level-set quarter-cylinder, not the
+  paper's dedicated 2D-axisymmetric angular-coefficient discretization;
+- surface diffusion is a graph diffusion solve on disk-surface points, not an
+  area-weighted finite-volume or cotangent Laplace-Beltrami solve on triangles;
+- coverage/reaction and surface diffusion are operator-split;
+- with `useSteadyStateCoverage=true`, the local reaction part is made
+  steady-state first and diffusion is applied afterward, so this is not a fully
+  coupled steady-state reaction-diffusion solve;
+- desorption is material dependent and currently configured for the mask, while
+  etch consumption is configured for the Si etch front;

@@ -127,7 +127,7 @@ set(VIENNAPS_VIENNARAY_BRANCH
     "feature/gpu-surface-source"
     CACHE STRING "ViennaRay branch/tag to use when fetching ViennaRay")
 option(VIENNAPS_USE_LOCAL_VIENNARAY
-       "Use a sibling local ViennaRay checkout when available" ON)
+       "Use a sibling local ViennaRay checkout when available" OFF)
 set(VIENNAPS_LOCAL_VIENNARAY_DIR
     "${PROJECT_SOURCE_DIR}/../ViennaRay"
     CACHE PATH "Local ViennaRay checkout used by CPM when available")

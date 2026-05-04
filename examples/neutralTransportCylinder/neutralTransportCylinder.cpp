@@ -21,7 +21,7 @@ void printBottomTransmissionProbabilityTriangles(
     const std::string &fluxLabel) {
   if (triangleMesh == nullptr) {
     std::cout << "Triangle transmission probability: mesh unavailable "
-                 "(GPU engine required)."
+                 "(triangle flux engine required)."
               << std::endl;
     return;
   }
@@ -39,7 +39,7 @@ void printBottomTransmissionProbabilityTriangles(
 
   const float tol = static_cast<float>(gridDelta);
   const float bottomRMax = static_cast<float>(bottomRadius) + tol;
-  const double quarterCircleArea =
+  const double topArea =
       M_PI * static_cast<double>(topRadius) * static_cast<double>(topRadius) /
       4.;
 
@@ -96,7 +96,7 @@ void printBottomTransmissionProbabilityTriangles(
   }
 
   if (bottomZ == std::numeric_limits<float>::max() ||
-      quarterCircleArea <= 0.) {
+      topArea <= 0.) {
     std::cout << "Triangle transmission probability: could not identify "
                  "bottom triangles or aperture area."
               << std::endl;
@@ -124,12 +124,12 @@ void printBottomTransmissionProbabilityTriangles(
   }
 
   const double bottomDensity = bottomFluxIntegral / bottomArea;
-  const double transmission = bottomFluxIntegral / quarterCircleArea;
+  const double transmission = bottomFluxIntegral / topArea;
 
   std::cout << std::setprecision(6) << std::scientific
             << "Bottom transmission probability (triangles): " << transmission
             << " (bottom integral " << bottomFluxIntegral << ", aperture area "
-            << quarterCircleArea << ", bottom flux density " << bottomDensity
+            << topArea << ", bottom flux density " << bottomDensity
             << " from " << bottomCount << " triangles)" << std::endl;
 }
 

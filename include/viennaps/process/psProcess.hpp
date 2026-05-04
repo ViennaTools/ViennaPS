@@ -139,7 +139,7 @@ public:
   }
 
   // Returns the per-triangle flux mesh from the last calculateFlux() call.
-  // Only populated when using the GPU triangle engine; null otherwise.
+  // Only populated when using a triangle flux engine; null otherwise.
   SmartPointer<viennals::Mesh<float>> getTriangleMesh() const {
     return context_.triangleMesh;
   }

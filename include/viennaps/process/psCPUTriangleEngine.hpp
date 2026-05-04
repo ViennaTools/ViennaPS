@@ -4,10 +4,13 @@
 #include "../psElementToPointData.hpp"
 #include "../psPointToElementData.hpp"
 
+#include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
 #include <rayTraceTriangle.hpp>
+
+#include <cmath>
 
 namespace viennaps {
 
@@ -160,9 +163,15 @@ public:
     this->timer_.start();
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
+    std::vector<NumericType> desorptionWeights;
 
     // copy coverages to the ray tracer
     if (context.flags.useCoverages) {
+      if (auto materialIds =
+              context.diskMesh->getCellData().getScalarData("MaterialIds")) {
+        desorptionWeights = surfaceModel->getDesorptionWeights(*materialIds);
+      }
+
       auto &pointKdTree = context.translationField->getKdTree();
       if (!pointKdTree) {
         pointKdTree = KDTreeType::New();
@@ -197,7 +206,7 @@ public:
     if (context.flags.useCoverages || context.flags.useProcessParams)
       rayTracer_.setGlobalData(rayTracingData);
 
-    runRayTracer(context, fluxes);
+    runRayTracer(context, fluxes, desorptionWeights);
 
     // output
     if (Logger::hasIntermediate() && D == 3) {
@@ -214,12 +223,14 @@ public:
   }
 
 private:
-  void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+  void runRayTracer(ProcessContext<NumericType, D> &context,
+                    SmartPointer<viennals::PointData<NumericType>> &fluxes,
+                    const std::vector<NumericType> &desorptionWeights) {
     assert(fluxes != nullptr);
     fluxes->clear();
 
     std::vector<std::vector<NumericType>> elementFluxes;
+    std::vector<std::string> elementFluxLabels;
 
     unsigned particleIdx = 0;
     for (auto &particle : model_->getParticleTypes()) {
@@ -246,29 +257,37 @@ private:
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
+      std::vector<std::vector<NumericType>> particleFluxes;
+      particleFluxes.reserve(numFluxes);
+      std::vector<std::string> particleFluxLabels;
+      particleFluxLabels.reserve(numFluxes);
       for (int i = 0; i < numFluxes; ++i) {
-        auto &flux = localData.getVectorData(i);
+        auto flux = std::move(localData.getVectorData(i));
 
         // normalize
         rayTracer_.normalizeFlux(flux,
                                  context.rayTracingParams.normalizationType);
 
-        // output
-        if (Logger::hasIntermediate()) {
-          std::vector<float> debugFlux(flux.size());
-          for (size_t j = 0; j < flux.size(); ++j) {
-            debugFlux[j] = static_cast<float>(flux[j]);
-          }
-          surfaceMesh_->getCellData().insertReplaceScalarData(
-              std::move(debugFlux), particle->getLocalDataLabels()[i]);
-        }
+        particleFluxLabels.push_back(localData.getVectorDataLabel(i));
+        particleFluxes.push_back(std::move(flux));
+      }
 
-        elementFluxes.push_back(std::move(flux));
+      if (desorptionWeights.size() == context.diskMesh->getNodes().size()) {
+        addDesorptionFlux(context, desorptionWeights, particleFluxes,
+                          numFluxes);
+      }
+
+      for (int i = 0; i < numFluxes; ++i) {
+        elementFluxLabels.push_back(std::move(particleFluxLabels[i]));
+        elementFluxes.push_back(std::move(particleFluxes[i]));
       }
 
       model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
       ++particleIdx;
     }
+
+    saveElementFluxesToTriangleMesh(elementFluxes, elementFluxLabels);
+    context.triangleMesh = surfaceMesh_;
 
     // map fluxes to points
     PostProcessingType postProcessing(
@@ -278,6 +297,84 @@ private:
             (context.rayTracingParams.smoothingNeighbors + 1));
     postProcessing.setElementDataArrays(std::move(elementFluxes));
     postProcessing.apply();
+  }
+
+  void addDesorptionFlux(
+      ProcessContext<NumericType, D> &context,
+      const std::vector<NumericType> &diskDesorptionWeights,
+      std::vector<std::vector<NumericType>> &particleFluxes,
+      int numFluxes) {
+    auto &pointKdTree = context.translationField->getKdTree();
+    if (!pointKdTree) {
+      pointKdTree = KDTreeType::New();
+      context.translationField->setKdTree(pointKdTree);
+    }
+    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
+      pointKdTree->setPoints(context.diskMesh->nodes);
+      pointKdTree->build();
+    }
+
+    std::vector<NumericType> elementWeights;
+    PointToElementDataSingle<NumericType, NumericType, NumericType, float>(
+        diskDesorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
+        .apply();
+
+    const auto &triangles = surfaceMesh_->triangles;
+    const auto &nodes = surfaceMesh_->nodes;
+    const auto meshNormals =
+        surfaceMesh_->getCellData().getVectorData("Normals");
+    const std::vector<Vec3Df> emptyNormals;
+    const auto &normals = meshNormals != nullptr ? *meshNormals : emptyNormals;
+
+    auto sourceData = makeTriangleDesorptionSourceData<NumericType>(
+        nodes, triangles, normals, elementWeights,
+        static_cast<NumericType>(context.domain->getGridDelta()));
+    if (!sourceData.hasSource) {
+      return;
+    }
+
+    auto source = std::make_shared<DesorptionSource<NumericType, D>>(
+        std::move(sourceData), context.rayTracingParams.raysPerPoint);
+
+    rayTracer_.setSource(source);
+    rayTracer_.apply();
+    ++this->fluxCalculationsCount_;
+
+    auto &desorptionData = rayTracer_.getLocalData();
+    for (int i = 0; i < numFluxes; ++i) {
+      auto desorptionFlux = std::move(desorptionData.getVectorData(i));
+      rayTracer_.normalizeFlux(desorptionFlux,
+                               context.rayTracingParams.normalizationType);
+
+      if (desorptionFlux.size() == particleFluxes[i].size()) {
+#pragma omp parallel for
+        for (std::size_t j = 0; j < desorptionFlux.size(); ++j) {
+          particleFluxes[i][j] += desorptionFlux[j];
+        }
+      }
+    }
+
+    if (auto modelSource = model_->getSource()) {
+      rayTracer_.setSource(modelSource);
+    } else {
+      rayTracer_.resetSource();
+    }
+  }
+
+  void saveElementFluxesToTriangleMesh(
+      const std::vector<std::vector<NumericType>> &elementFluxes,
+      const std::vector<std::string> &elementFluxLabels) {
+    assert(elementFluxes.size() == elementFluxLabels.size());
+
+    for (std::size_t dataIdx = 0; dataIdx < elementFluxes.size(); ++dataIdx) {
+      std::vector<float> values(elementFluxes[dataIdx].size());
+      for (std::size_t i = 0; i < elementFluxes[dataIdx].size(); ++i) {
+        values[i] = static_cast<float>(elementFluxes[dataIdx][i]);
+      }
+
+      surfaceMesh_->getCellData().insertReplaceScalarData(
+          std::move(values), elementFluxLabels[dataIdx]);
+    }
   }
 
   static viennaray::TracingData<NumericType>

@@ -6,6 +6,7 @@
 #include "../psDomain.hpp"
 #include "../psElementToPointData.hpp"
 #include "../psPointToElementData.hpp"
+#include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
@@ -327,57 +328,19 @@ private:
     const auto &triangles = surfaceMesh_->triangles;
     const auto &nodes = surfaceMesh_->nodes;
     const auto meshNormals = surfaceMesh_->getCellData().getVectorData("Normals");
+    const std::vector<Vec3Df> emptyNormals;
+    const auto &normals = meshNormals != nullptr ? *meshNormals : emptyNormals;
 
-    std::vector<Vec3Df> sourcePositions(triangles.size());
-    std::vector<Vec3Df> sourceNormals(triangles.size());
-    std::vector<float> sourceWeights(triangles.size(), 0.f);
-    std::vector<float> areas(triangles.size(), 0.f);
-
-    float sourceArea = 0.f;
-    for (std::size_t i = 0; i < triangles.size(); ++i) {
-      const auto &tri = triangles[i];
-      const Vec3Df v0{nodes[tri[0]][0], nodes[tri[0]][1], nodes[tri[0]][2]};
-      const Vec3Df v1{nodes[tri[1]][0], nodes[tri[1]][1], nodes[tri[1]][2]};
-      const Vec3Df v2{nodes[tri[2]][0], nodes[tri[2]][1], nodes[tri[2]][2]};
-      sourcePositions[i] = (v0 + v1 + v2) / 3.f;
-
-      const auto a = v1 - v0;
-      const auto b = v2 - v0;
-      Vec3Df cross{a[1] * b[2] - a[2] * b[1],
-                   a[2] * b[0] - a[0] * b[2],
-                   a[0] * b[1] - a[1] * b[0]};
-      areas[i] = 0.5f * std::sqrt(DotProduct(cross, cross));
-      sourceArea += areas[i];
-
-      if (meshNormals != nullptr && meshNormals->size() == triangles.size()) {
-        const auto &n = meshNormals->at(i);
-        sourceNormals[i] = Vec3Df{n[0], n[1], n[2]};
-      } else {
-        viennacore::Normalize(cross);
-        sourceNormals[i] = cross;
-      }
-    }
-
-    if (sourceArea <= 0.f || triangles.empty()) {
+    auto sourceData = makeTriangleDesorptionSourceData<float>(
+        nodes, triangles, normals, elementWeights,
+        static_cast<float>(context.domain->getGridDelta()));
+    if (!sourceData.hasSource) {
       return;
     }
 
-    const float averageArea = sourceArea / static_cast<float>(triangles.size());
-    bool hasSource = false;
-    for (std::size_t i = 0; i < sourceWeights.size(); ++i) {
-      sourceWeights[i] = elementWeights[i] * areas[i] / averageArea;
-      if (sourceWeights[i] > 0.f) {
-        hasSource = true;
-      }
-    }
-    if (!hasSource) {
-      return;
-    }
-
-    const float sourceOffset =
-        static_cast<float>(context.domain->getGridDelta() * 1e-4);
-    rayTracer_.setSurfaceSource(sourcePositions, sourceNormals, sourceWeights,
-                                sourceArea, sourceOffset);
+    rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
+                                sourceData.weights, sourceData.sourceArea,
+                                sourceData.sourceOffset);
     rayTracer_.apply();
     rayTracer_.normalizeResults();
     auto desorptionResults = rayTracer_.getResults();

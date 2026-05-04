@@ -200,37 +200,42 @@ private:
                 ? static_cast<NumericType>(gridDelta *
                                            rayInternal::DiskFactor<D>)
                 : static_cast<NumericType>(context.rayTracingParams.diskRadius);
-        auto source =
-            std::make_shared<DesorptionSource<NumericType, D>>(
+        auto sourceData =
+            makeDiskDesorptionSourceData<NumericType, NumericType, D>(
                 context.diskMesh->getNodes(), *normals, desorptionWeights,
-                gridDelta, diskRadius, context.rayTracingParams.raysPerPoint);
+                gridDelta, diskRadius, true);
+        if (sourceData.hasSource) {
+          auto source =
+              std::make_shared<DesorptionSource<NumericType, D>>(
+                  std::move(sourceData), context.rayTracingParams.raysPerPoint);
 
-        rayTracer_.setSource(source);
-        rayTracer_.apply();
-        ++this->fluxCalculationsCount_;
+          rayTracer_.setSource(source);
+          rayTracer_.apply();
+          ++this->fluxCalculationsCount_;
 
-        auto &desorptionData = rayTracer_.getLocalData();
-        for (int i = 0; i < numFluxes; ++i) {
-          auto desorptionFlux = std::move(desorptionData.getVectorData(i));
-          rayTracer_.normalizeFlux(
-              desorptionFlux, context.rayTracingParams.normalizationType);
-          if (context.rayTracingParams.smoothingNeighbors > 0) {
-            rayTracer_.smoothFlux(
-                desorptionFlux, context.rayTracingParams.smoothingNeighbors);
-          }
+          auto &desorptionData = rayTracer_.getLocalData();
+          for (int i = 0; i < numFluxes; ++i) {
+            auto desorptionFlux = std::move(desorptionData.getVectorData(i));
+            rayTracer_.normalizeFlux(
+                desorptionFlux, context.rayTracingParams.normalizationType);
+            if (context.rayTracingParams.smoothingNeighbors > 0) {
+              rayTracer_.smoothFlux(
+                  desorptionFlux, context.rayTracingParams.smoothingNeighbors);
+            }
 
-          if (desorptionFlux.size() == particleFluxes[i].size()) {
+            if (desorptionFlux.size() == particleFluxes[i].size()) {
 #pragma omp parallel for
-            for (std::size_t j = 0; j < desorptionFlux.size(); ++j) {
-              particleFluxes[i][j] += desorptionFlux[j];
+              for (std::size_t j = 0; j < desorptionFlux.size(); ++j) {
+                particleFluxes[i][j] += desorptionFlux[j];
+              }
             }
           }
-        }
 
-        if (auto source = model_->getSource()) {
-          rayTracer_.setSource(source);
-        } else {
-          rayTracer_.resetSource();
+          if (auto source = model_->getSource()) {
+            rayTracer_.setSource(source);
+          } else {
+            rayTracer_.resetSource();
+          }
         }
       }
 

@@ -7,8 +7,20 @@
   },
   "configurePresets": [
     {
-      "name": "gpu-local-viennaray",
-      "displayName": "GPU build with local ViennaRay",
+      "name": "cpu",
+      "displayName": "CPU build",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-cpu",
+      "cacheVariables": {
+        "VIENNAPS_USE_GPU": "OFF",
+        "VIENNAPS_BUILD_EXAMPLES": "ON",
+        "VIENNAPS_USE_LOCAL_VIENNARAY": "OFF",
+        "VIENNAPS_VIENNARAY_BRANCH": "feature/gpu-surface-source"
+      }
+    },
+    {
+      "name": "gpu-viennaray-branch",
+      "displayName": "GPU build with ViennaRay branch",
       "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
@@ -16,17 +28,25 @@
         "CMAKE_CXX_COMPILER": "g++-12",
         "VIENNAPS_USE_GPU": "ON",
         "VIENNAPS_BUILD_EXAMPLES": "ON",
-        "VIENNAPS_VIENNARAY_BRANCH": "feature/gpu-surface-source",
-        "CPM_ViennaRay_SOURCE": "${sourceDir}/../ViennaRay"
+        "VIENNAPS_USE_LOCAL_VIENNARAY": "OFF",
+        "VIENNAPS_VIENNARAY_BRANCH": "feature/gpu-surface-source"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "neutral-transport-quarter-cylinder",
-      "configurePreset": "gpu-local-viennaray",
+      "name": "neutral-transport-cylinder-cpu",
+      "configurePreset": "cpu",
       "targets": [
-        "neutralTransportQuarterCylinder"
+        "neutralTransportCylinder"
+      ],
+      "jobs": 4
+    },
+    {
+      "name": "neutral-transport-cylinder",
+      "configurePreset": "gpu-viennaray-branch",
+      "targets": [
+        "neutralTransportCylinder"
       ],
       "jobs": 4
     }
