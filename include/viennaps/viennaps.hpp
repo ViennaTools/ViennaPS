@@ -19,6 +19,7 @@
 #include <gds/psGDSReader.hpp>
 
 #include <process/psProcess.hpp>
+#include <process/psSurfaceDiffusion.hpp>
 
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
