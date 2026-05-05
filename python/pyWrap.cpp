@@ -288,11 +288,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite(
           "surfaceDiffusionCoefficient",
           &NeutralTransportParameters<T>::surfaceDiffusionCoefficient)
-      .def_readwrite("surfaceDiffusionRadius",
-                     &NeutralTransportParameters<T>::surfaceDiffusionRadius)
-      .def_readwrite("surfaceDiffusionTolerance",
-                     &NeutralTransportParameters<T>::surfaceDiffusionTolerance)
-      .def_readwrite("etchRate", &NeutralTransportParameters<T>::etchRate)
+      //   .def_readwrite("surfaceDiffusionRadius",
+      //                  &NeutralTransportParameters<T>::surfaceDiffusionRadius)
+      //   .def_readwrite("surfaceDiffusionTolerance",
+      //                  &NeutralTransportParameters<T>::surfaceDiffusionTolerance)
+      //   .def_readwrite("etchRate", &NeutralTransportParameters<T>::etchRate)
       .def_readwrite("sourceDistributionPower",
                      &NeutralTransportParameters<T>::sourceDistributionPower)
       .def_readwrite("etchFrontMaterial",

@@ -53,6 +53,11 @@ public:
     return {};
   }
 
+  virtual std::unordered_map<std::string, NumericType>
+  getDiffusionCoefficients() const {
+    return {};
+  }
+
   // non-virtual functions
   auto getCoverages() const { return coverages; }
 

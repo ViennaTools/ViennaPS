@@ -32,6 +32,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
   RayTracingParameters rayTracingParams;
   CoverageParameters coverageParams;
   AtomicLayerProcessParameters atomicLayerParams;
+  SurfaceDiffusionParameters surfaceDiffusionParams;
   std::string intermediateOutputPath = "";
 
   // Simulation state

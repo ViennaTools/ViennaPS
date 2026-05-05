@@ -83,6 +83,10 @@ public:
     context_.atomicLayerParams = p;
   }
 
+  void setParameters(const SurfaceDiffusionParameters &p) {
+    context_.surfaceDiffusionParams = p;
+  }
+
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
 
   void setIntermediateOutputPath(const std::string &path) {

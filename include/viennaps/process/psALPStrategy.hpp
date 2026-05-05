@@ -5,6 +5,7 @@
 #include "psCoverageManager.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessStrategy.hpp"
+#include "psSurfaceDiffusion.hpp"
 
 namespace viennaps {
 
@@ -179,6 +180,13 @@ private:
         auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
         PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
 
+        // Calculate surface diffusion of fluxes
+        if (auto diffusionCoefficients =
+                context.model->getSurfaceModel()->getDiffusionCoefficients();
+            !diffusionCoefficients.empty()) {
+          applySurfaceDiffusion(dt, diffusionCoefficients, context, fluxes);
+        }
+
         // Update coverages
         updateCoverages(context, fluxes);
 
@@ -244,6 +252,49 @@ private:
     }
 
     return ProcessResult::SUCCESS;
+  }
+
+  void applySurfaceDiffusion(
+      double timeStep,
+      const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
+      ProcessContext<NumericType, D> const &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) const {
+    if (timeStep <= 0.)
+      return;
+
+    PointCloud<NumericType> cloud;
+    cloud.positions = context.diskMesh->getNodes();
+    cloud.normals = *context.diskMesh->getCellData().getVectorData("Normals");
+
+    using Solver = SurfaceDiffusionSolver<NumericType>;
+    using Stencil = SurfaceDiffusionStencil<NumericType>;
+
+    typename Stencil::Parameters stencilParams;
+    stencilParams.kNeighbors = context.surfaceDiffusionParams.kNeighbors;
+    stencilParams.radius = context.surfaceDiffusionParams.radius;
+    stencilParams.normalCutoff = context.surfaceDiffusionParams.normalCutoff;
+    stencilParams.sigmaNormal = context.surfaceDiffusionParams.sigmaNormal;
+    stencilParams.normalizeByLocalScale =
+        context.surfaceDiffusionParams.normalizeByLocalScale;
+    stencilParams.symmetrizeWeights =
+        context.surfaceDiffusionParams.symmetrizeWeights;
+
+    Solver solver(Stencil(cloud, stencilParams));
+
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      const double dt =
+          std::min(context.surfaceDiffusionParams.stabilityFactor *
+                       std::pow(context.domain->getGridDelta(), 2.0) /
+                       (4.0 * coefficient),
+                   timeStep);
+      auto currentFlux = *fluxes->getScalarData(name);
+      double diffusionTime = 0.0;
+      while (diffusionTime < timeStep) {
+        currentFlux = solver.stepExplicit(currentFlux, dt, coefficient);
+        diffusionTime += dt;
+      }
+      fluxes->insertReplaceScalarData(std::move(currentFlux), name);
+    }
   }
 
   void outputIntermediateResults(
