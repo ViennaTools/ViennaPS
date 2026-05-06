@@ -293,6 +293,14 @@ private:
     // Update coverages if needed
     if (context.flags.useCoverages) {
       updateCoverages(context, fluxes);
+
+      // Calculate surface diffusion of coverages
+      if (auto diffusionCoefficients =
+              context.model->getSurfaceModel()->getDiffusionCoefficients();
+          !diffusionCoefficients.empty()) {
+        applySurfaceDiffusion(diffusionCoefficients, context,
+                              context.model->getSurfaceModel()->getCoverages());
+      }
     }
 
     // Calculate velocities in model
@@ -348,8 +356,17 @@ private:
   void applySurfaceDiffusion(
       const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
       ProcessContext<NumericType, D> const &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) const {
+      SmartPointer<viennals::PointData<NumericType>> targets) const {
     if (context.timeStep <= 0.)
+      return;
+    bool hasValidTarget = false;
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        hasValidTarget = true;
+        break;
+      }
+    }
+    if (!hasValidTarget)
       return;
 
     PointCloud<NumericType> cloud;
@@ -372,18 +389,21 @@ private:
     Solver solver(Stencil(cloud, stencilParams));
 
     for (const auto &[name, coefficient] : diffusionCoefficients) {
-      const double dt =
-          std::min(context.surfaceDiffusionParams.stabilityFactor *
-                       std::pow(context.domain->getGridDelta(), 2.0) /
-                       (4.0 * coefficient),
-                   context.timeStep);
-      auto currentFlux = *fluxes->getScalarData(name);
-      double diffusionTime = 0.0;
-      while (diffusionTime < context.timeStep) {
-        currentFlux = solver.stepExplicit(currentFlux, dt, coefficient);
-        diffusionTime += dt;
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        const double dt =
+            std::min(context.surfaceDiffusionParams.stabilityFactor *
+                         std::pow(context.domain->getGridDelta(), 2.0) /
+                         (4.0 * coefficient),
+                     context.timeStep);
+
+        auto current = *target;
+        double diffusionTime = 0.0;
+        while (diffusionTime < context.timeStep) {
+          current = solver.stepExplicit(current, dt, coefficient);
+          diffusionTime += dt;
+        }
+        targets->insertReplaceScalarData(std::move(current), name);
       }
-      fluxes->insertReplaceScalarData(std::move(currentFlux), name);
     }
   }
 
