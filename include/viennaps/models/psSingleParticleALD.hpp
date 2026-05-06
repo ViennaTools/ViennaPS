@@ -19,13 +19,15 @@ class SingleParticleALDSurfaceModel : public SurfaceModel<NumericType> {
   const NumericType ev_;
   const NumericType flux_;
   const NumericType sticking_;
+  const NumericType surfaceDiffusionCoefficient_;
 
 public:
   SingleParticleALDSurfaceModel(NumericType dt, NumericType gpc, NumericType ev,
                                 NumericType flux, NumericType sticking,
-                                NumericType s0)
-      : dt_(dt), gpc_(gpc), s0_(s0), ev_(ev), flux_(flux), sticking_(sticking) {
-  }
+                                NumericType s0,
+                                NumericType surfaceDiffusionCoefficient)
+      : dt_(dt), gpc_(gpc), s0_(s0), ev_(ev), flux_(flux), sticking_(sticking),
+        surfaceDiffusionCoefficient_(surfaceDiffusionCoefficient) {}
 
   void initializeCoverages(unsigned numPoints) override {
     if (coverages == nullptr) {
@@ -77,6 +79,11 @@ public:
 
       Coverage->at(i) = std::min(Coverage->at(i), NumericType(1.0));
     }
+  }
+
+  std::unordered_map<std::string, NumericType>
+  getDiffusionCoefficients() const override {
+    return {{"Coverage", surfaceDiffusionCoefficient_}};
   }
 };
 
@@ -141,7 +148,9 @@ public:
       NumericType evFlux,   // evaporation flux
       NumericType inFlux,   // incoming flux
       NumericType s0,       // saturation coverage
-      NumericType gasMFP    // mean free path of the particles in the gas
+      NumericType surfaceDiffusionCoefficient =
+          0,                  // surface diffusion coefficient for coverages
+      NumericType gasMFP = -1 // mean free path of the particles in the gas
   ) {
     if (gasMFP > 0) {
       VIENNACORE_LOG_WARNING(
@@ -169,7 +178,8 @@ public:
     auto surfModel =
         SmartPointer<::viennaps::impl::SingleParticleALDSurfaceModel<
             NumericType>>::New(coverageTimeStep, gpc, evFlux, inFlux,
-                               stickingProbability, s0);
+                               stickingProbability, s0,
+                               surfaceDiffusionCoefficient);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -195,6 +205,8 @@ public:
     this->processMetaData["incomingFlux"] = std::vector<double>{inFlux};
     this->processMetaData["s0"] = std::vector<double>{s0};
     this->processMetaData["gasMeanFreePath"] = std::vector<double>{gasMFP};
+    this->processMetaData["surfaceDiffusionCoefficient"] =
+        std::vector<double>{surfaceDiffusionCoefficient};
   }
 };
 } // namespace gpu
@@ -213,7 +225,9 @@ public:
       NumericType evFlux,   // evaporation flux
       NumericType inFlux,   // incoming flux
       NumericType s0,       // saturation coverage
-      NumericType gasMFP    // mean free path of the particles in the gas
+      NumericType surfaceDiffusionCoefficient =
+          0,                  // surface diffusion coefficient for coverages
+      NumericType gasMFP = -1 // mean free path of the particles in the gas
   ) {
     auto particle =
         std::make_unique<impl::SingleParticleALDParticle<NumericType, D>>(
@@ -224,7 +238,8 @@ public:
     // surface model
     auto surfModel =
         SmartPointer<impl::SingleParticleALDSurfaceModel<NumericType>>::New(
-            coverageTimeStep, gpc, evFlux, inFlux, stickingProbability, s0);
+            coverageTimeStep, gpc, evFlux, inFlux, stickingProbability, s0,
+            surfaceDiffusionCoefficient);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -250,6 +265,8 @@ public:
     this->processMetaData["incomingFlux"] = std::vector<double>{inFlux};
     this->processMetaData["s0"] = std::vector<double>{s0};
     this->processMetaData["gasMeanFreePath"] = std::vector<double>{gasMFP};
+    this->processMetaData["surfaceDiffusionCoefficient"] =
+        std::vector<double>{surfaceDiffusionCoefficient};
   }
 
 #ifdef VIENNACORE_COMPILE_GPU
@@ -263,6 +280,7 @@ public:
         this->processMetaData["evaporationFlux"][0],
         this->processMetaData["incomingFlux"][0],
         this->processMetaData["s0"][0],
+        this->processMetaData["surfaceDiffusionCoefficient"][0],
         this->processMetaData["gasMeanFreePath"][0]);
     model->setProcessName(this->getProcessName().value());
     return model;

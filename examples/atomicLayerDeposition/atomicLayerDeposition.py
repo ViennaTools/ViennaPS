@@ -45,8 +45,6 @@ geometry.applyBooleanOperation(horiBox, ls.BooleanOperationEnum.RELATIVE_COMPLEM
 
 geometry.saveSurfaceMesh("SingleParticleALD_initial")
 
-model = ps.SingleParticleProcess(rate=1.0, stickingProbability=1e-4)
-
 geometry.duplicateTopLevelSet(ps.Material.Al2O3)
 
 gasMFP = ps.constants.gasMeanFreePath(

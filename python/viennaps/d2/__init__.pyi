@@ -9,7 +9,7 @@ import viennals._core
 import viennals.d2
 import viennaps._core
 from . import gpu
-__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'NeutralTransport', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
     domain: Domain
     def __init__(self) -> None:
@@ -716,6 +716,17 @@ class MultiParticleProcess(ProcessModel):
         ...
     def setRateFunction(self, arg0: collections.abc.Callable[[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], viennaps._core.Material], float]) -> None:
         ...
+class NeutralTransport(ProcessModel):
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, parameters: viennaps._core.NeutralTransportParameters) -> None:
+        ...
+    def getParameters(self) -> viennaps._core.NeutralTransportParameters:
+        ...
+    def setParameters(self, arg0: viennaps._core.NeutralTransportParameters) -> None:
+        ...
 class OxideRegrowth(ProcessModel):
     def __init__(self, nitrideEtchRate: typing.SupportsFloat | typing.SupportsIndex, oxideEtchRate: typing.SupportsFloat | typing.SupportsIndex, redepositionRate: typing.SupportsFloat | typing.SupportsIndex, redepositionThreshold: typing.SupportsFloat | typing.SupportsIndex, redepositionTimeInt: typing.SupportsFloat | typing.SupportsIndex, diffusionCoefficient: typing.SupportsFloat | typing.SupportsIndex, sinkStrength: typing.SupportsFloat | typing.SupportsIndex, scallopVelocity: typing.SupportsFloat | typing.SupportsIndex, centerVelocity: typing.SupportsFloat | typing.SupportsIndex, topHeight: typing.SupportsFloat | typing.SupportsIndex, centerWidth: typing.SupportsFloat | typing.SupportsIndex, stabilityFactor: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
@@ -790,6 +801,11 @@ class Process:
     def setParameters(self, parameters: viennaps._core.AtomicLayerProcessParameters) -> None:
         """
         Set the atomic layer parameters for the process.
+        """
+    @typing.overload
+    def setParameters(self, parameters: viennaps._core.SurfaceDiffusionParameters) -> None:
+        """
+        Set the surface diffusion parameters for the process.
         """
     def setProcessDuration(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
@@ -919,7 +935,7 @@ class SelectiveEpitaxy(ProcessModel):
     def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class SingleParticleALD(ProcessModel):
-    def __init__(self, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, numCycles: typing.SupportsInt | typing.SupportsIndex, growthPerCycle: typing.SupportsFloat | typing.SupportsIndex, totalCycles: typing.SupportsInt | typing.SupportsIndex, coverageTimeStep: typing.SupportsFloat | typing.SupportsIndex, evFlux: typing.SupportsFloat | typing.SupportsIndex, inFlux: typing.SupportsFloat | typing.SupportsIndex, s0: typing.SupportsFloat | typing.SupportsIndex, gasMFP: typing.SupportsFloat | typing.SupportsIndex) -> None:
+    def __init__(self, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, numCycles: typing.SupportsInt | typing.SupportsIndex, growthPerCycle: typing.SupportsFloat | typing.SupportsIndex, totalCycles: typing.SupportsInt | typing.SupportsIndex, coverageTimeStep: typing.SupportsFloat | typing.SupportsIndex, evFlux: typing.SupportsFloat | typing.SupportsIndex, inFlux: typing.SupportsFloat | typing.SupportsIndex, s0: typing.SupportsFloat | typing.SupportsIndex, surfaceDiffusionCoefficient: typing.SupportsFloat | typing.SupportsIndex = 0.0, gasMFP: typing.SupportsFloat | typing.SupportsIndex = -1.0) -> None:
         ...
 class SingleParticleProcess(ProcessModel):
     @typing.overload

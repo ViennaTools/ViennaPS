@@ -677,6 +677,24 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toMetaDataString", &AtomicLayerProcessParameters::toMetaDataString,
            "Convert the ALD process parameters to a metadata string.");
 
+  // SurfaceDiffusionParameters
+  py::class_<SurfaceDiffusionParameters>(module, "SurfaceDiffusionParameters")
+      .def(py::init<>())
+      .def_readwrite("stabilityFactor",
+                     &SurfaceDiffusionParameters::stabilityFactor)
+      .def_readwrite("kNeighbors", &SurfaceDiffusionParameters::kNeighbors)
+      .def_readwrite("radius", &SurfaceDiffusionParameters::radius)
+      .def_readwrite("normalCutoff", &SurfaceDiffusionParameters::normalCutoff)
+      .def_readwrite("sigmaNormal", &SurfaceDiffusionParameters::sigmaNormal)
+      .def_readwrite("normalizeByLocalScale",
+                     &SurfaceDiffusionParameters::normalizeByLocalScale)
+      .def_readwrite("symmetrizeWeights",
+                     &SurfaceDiffusionParameters::symmetrizeWeights)
+      .def("toMetaData", &SurfaceDiffusionParameters::toMetaData,
+           "Convert the surface diffusion parameters to a metadata dict.")
+      .def("toMetaDataString", &SurfaceDiffusionParameters::toMetaDataString,
+           "Convert the surface diffusion parameters to a metadata string.");
+
   //   ***************************************************************************
   //                                  OTHER
   //   ***************************************************************************

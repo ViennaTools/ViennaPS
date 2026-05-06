@@ -287,7 +287,8 @@ private:
     if (auto diffusionCoefficients =
             context.model->getSurfaceModel()->getDiffusionCoefficients();
         !diffusionCoefficients.empty()) {
-      applySurfaceDiffusion(diffusionCoefficients, context, fluxes);
+      PROCESS_CHECK(applySurfaceDiffusion(
+          context.timeStep, diffusionCoefficients, context, fluxes));
     }
 
     // Update coverages if needed
@@ -298,8 +299,9 @@ private:
       if (auto diffusionCoefficients =
               context.model->getSurfaceModel()->getDiffusionCoefficients();
           !diffusionCoefficients.empty()) {
-        applySurfaceDiffusion(diffusionCoefficients, context,
-                              context.model->getSurfaceModel()->getCoverages());
+        PROCESS_CHECK(applySurfaceDiffusion(
+            context.timeStep, diffusionCoefficients, context,
+            context.model->getSurfaceModel()->getCoverages()));
       }
     }
 
@@ -351,60 +353,6 @@ private:
     }
 
     return ProcessResult::SUCCESS;
-  }
-
-  void applySurfaceDiffusion(
-      const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
-      ProcessContext<NumericType, D> const &context,
-      SmartPointer<viennals::PointData<NumericType>> targets) const {
-    if (context.timeStep <= 0.)
-      return;
-    bool hasValidTarget = false;
-    for (const auto &[name, coefficient] : diffusionCoefficients) {
-      if (auto target = targets->getScalarData(name, true); target != nullptr) {
-        hasValidTarget = true;
-        break;
-      }
-    }
-    if (!hasValidTarget)
-      return;
-
-    PointCloud<NumericType> cloud;
-    cloud.positions = context.diskMesh->getNodes();
-    cloud.normals = *context.diskMesh->getCellData().getVectorData("Normals");
-
-    using Solver = SurfaceDiffusionSolver<NumericType>;
-    using Stencil = SurfaceDiffusionStencil<NumericType>;
-
-    typename Stencil::Parameters stencilParams;
-    stencilParams.kNeighbors = context.surfaceDiffusionParams.kNeighbors;
-    stencilParams.radius = context.surfaceDiffusionParams.radius;
-    stencilParams.normalCutoff = context.surfaceDiffusionParams.normalCutoff;
-    stencilParams.sigmaNormal = context.surfaceDiffusionParams.sigmaNormal;
-    stencilParams.normalizeByLocalScale =
-        context.surfaceDiffusionParams.normalizeByLocalScale;
-    stencilParams.symmetrizeWeights =
-        context.surfaceDiffusionParams.symmetrizeWeights;
-
-    Solver solver(Stencil(cloud, stencilParams));
-
-    for (const auto &[name, coefficient] : diffusionCoefficients) {
-      if (auto target = targets->getScalarData(name, true); target != nullptr) {
-        const double dt =
-            std::min(context.surfaceDiffusionParams.stabilityFactor *
-                         std::pow(context.domain->getGridDelta(), 2.0) /
-                         (4.0 * coefficient),
-                     context.timeStep);
-
-        auto current = *target;
-        double diffusionTime = 0.0;
-        while (diffusionTime < context.timeStep) {
-          current = solver.stepExplicit(current, dt, coefficient);
-          diffusionTime += dt;
-        }
-        targets->insertReplaceScalarData(std::move(current), name);
-      }
-    }
   }
 
   bool applyPreAdvectionCallback(ProcessContext<NumericType, D> &context) {

@@ -1163,11 +1163,12 @@ template <int D> void bindApi(py::module &module) {
   py::class_<SingleParticleALD<T, D>, SmartPointer<SingleParticleALD<T, D>>>(
       module, "SingleParticleALD", processModel)
       .def(py::init(&SmartPointer<SingleParticleALD<T, D>>::template New<
-                    T, int, T, int, T, T, T, T, T>),
+                    T, int, T, int, T, T, T, T, T, T>),
            py::arg("stickingProbability"), py::arg("numCycles"),
            py::arg("growthPerCycle"), py::arg("totalCycles"),
            py::arg("coverageTimeStep"), py::arg("evFlux"), py::arg("inFlux"),
-           py::arg("s0"), py::arg("gasMFP"));
+           py::arg("s0"), py::arg("surfaceDiffusionCoefficient") = 0.0,
+           py::arg("gasMFP") = -1.0);
 
   // ***************************************************************************
   //                               GEOMETRIES
@@ -1332,6 +1333,8 @@ template <int D> void bindApi(py::module &module) {
                } else if (py::isinstance<AtomicLayerProcessParameters>(arg)) {
                  process.setParameters(
                      arg.cast<AtomicLayerProcessParameters>());
+               } else if (py::isinstance<SurfaceDiffusionParameters>(arg)) {
+                 process.setParameters(arg.cast<SurfaceDiffusionParameters>());
                } else {
                  throw py::type_error(
                      "Unsupported parameter type for Process constructor");
@@ -1377,7 +1380,12 @@ template <int D> void bindApi(py::module &module) {
            py::overload_cast<const AtomicLayerProcessParameters &>(
                &ProcessTD::setParameters),
            py::arg("parameters"),
-           "Set the atomic layer parameters for the process.");
+           "Set the atomic layer parameters for the process.")
+      .def("setParameters",
+           py::overload_cast<const SurfaceDiffusionParameters &>(
+               &ProcessTD::setParameters),
+           py::arg("parameters"),
+           "Set the surface diffusion parameters for the process.");
 
   // ***************************************************************************
   //                                   VISUALIZATION
