@@ -18,31 +18,48 @@ The directional process model emulates anisotropic material removal or depositio
 
 ```c++
 // namespace viennaps
-DirectionalProcess(const std::array<NumericType, 3> &direction,
-                   NumericType directionalVelocity = 1.,
-                   NumericType isotropicVelocity = 0.,
-                   const Material mask = Material::Mask, 
-                   bool calculateVisibility = true)
+using RateMap = MaterialValueMap<std::pair<NumericType, NumericType>>;
+
+DirectionalProcess(const Vec3D<NumericType> &direction,
+                   RateMap materialRates)
+
+DirectionalProcess(const Vec3D<NumericType> &direction,
+                   std::unordered_map<Material,
+                                      std::pair<NumericType, NumericType>>
+                       materialRates,
+                   NumericType defaultDirectionalRate = 0.,
+                   NumericType defaultIsotropicRate = 0.)
 
 DirectionalProcess(const Vec3D<NumericType> &direction,
                    NumericType directionalVelocity,
                    NumericType isotropicVelocity = 0.,
-                   const std::vector<Material> &maskMaterials =
-                        std::vector<Material>{Material::Mask},
-                    bool calculateVisibility = true)
+                   Material maskMaterial = Material::Mask,
+                   bool calculateVisibility = true)
+
+DirectionalProcess(const Vec3D<NumericType> &direction,
+                   NumericType directionalVelocity,
+                   NumericType isotropicVelocity,
+                   const std::vector<Material> &maskMaterials,
+                   bool calculateVisibility = true)
 
 DirectionalProcess(const RateSet &rateSet)
+
+DirectionalProcess(std::vector<RateSet> rateSets)
 ```
 
 | Parameter                 | Description                                       | Type                  |
 |---------------------------|------------------------------------------------|-----------------------|
-| `direction`               | Direction vector for directional process.         | `std::array<NumericType, 3>` |
+| `direction`               | Direction vector for directional process.         | `Vec3D<NumericType>` |
+| `materialRates`           | Material-specific directional and isotropic rates. The pair stores `{directionalRate, isotropicRate}`. | `RateMap` or `std::unordered_map<Material, std::pair<NumericType, NumericType>>` |
+| `defaultDirectionalRate`  | Directional fallback rate for materials not listed in `materialRates`. | `NumericType` |
+| `defaultIsotropicRate`    | Isotropic fallback rate for materials not listed in `materialRates`. | `NumericType` |
 | `directionalVelocity`     | (Optional) Velocity for directional process.      | `NumericType`         |
 | `isotropicVelocity`       | (Optional) Isotropic velocity. Default is set to 0.       | `NumericType`         |
-| `mask`                    | (Optional) Material used as a mask. Default is set to `Material::Mask`. | `Material`          |
+| `maskMaterial`            | (Optional) Material used as a mask. Default is set to `Material::Mask`. | `Material`          |
+| `maskMaterials`           | Materials used as masks for the rate set. | `std::vector<Material>` |
 | `calculateVisibility`     | (Optional) Determines whether the process is limited by visibility constraints. Default is set to `true`.        | `bool`          |
 
-A specialized direction can also specified using a `RateSet` with the following parameters:
+A specialized direction can also be specified using one or more `RateSet` objects with the following parameters:
 
 | Parameter              | Type                        | Description |
 |------------------------|---------------------------|-------------|
@@ -50,7 +67,7 @@ A specialized direction can also specified using a `RateSet` with the following 
 | `directionalVelocity` | `NumericType`             | The etch rate along the specified direction. |
 | `isotropicVelocity`   | `NumericType`             | Velocity applied isotropically. |
 | `maskMaterials`       | `std::vector<Material>`   | List of materials used as a mask. |
-| `calculateVisibility` | `bool`                    | Determines whether the process is limited by visibility constraints. |
+| `calculateVisibility` | `bool`                    | Determines whether the process is limited by visibility constraints. It is automatically disabled when the direction is zero or the directional velocity is zero. |
 
 __Example usage:__
 
@@ -68,7 +85,24 @@ rateSet.isotropicVelocity = 0.;
 rateSet.maskMaterials = {Material::Si, Material::SiO2};
 rateSet.calculateVisibility = true;
 
-auto model = SmartPointer<DirectionalProcess<NumericType, D>>(rateSet);
+auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(rateSet);
+```
+</details>
+
+<details markdown="1">
+<summary markdown="1">
+C++ Material Rates
+{: .label .label-blue }
+</summary>
+```c++
+std::unordered_map<Material, std::pair<NumericType, NumericType>> rates = {
+    {Material::Si, {-1.0, 0.0}},
+    {Material::SiO2, {-0.2, 0.0}},
+    {Material::Mask, {0.0, 0.0}},
+};
+
+auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(
+    Vec3D<NumericType>{0., 0., 1.}, rates);
 ```
 </details>
 
@@ -86,5 +120,21 @@ rateSet.maskMaterials = [vps.Material.Si, vps.Material.SiO2]
 rateSet.calculateVisibility = True
 
 model = vps.DirectionalProcess(rateSet)
+```
+</details>
+
+<details markdown="1">
+<summary markdown="1">
+Python Material Rates
+{: .label .label-green }
+</summary>
+```python
+rates = {
+    vps.Material.Si: (-1.0, 0.0),
+    vps.Material.SiO2: (-0.2, 0.0),
+    vps.Material.Mask: (0.0, 0.0),
+}
+
+model = vps.DirectionalProcess([0., 0., 1.], rates)
 ```
 </details>

@@ -57,10 +57,10 @@ This error is due to a conflict with the _Ninja_ build system and _Unix Makefile
 The following error can occur when trying to import the ViennaPS Python package:
 
 ```
-ImportError: arg(): could not convert default argument 'boundary: viennahrle::BoundaryType' in method '<class 'viennaps2d.viennaps2d.Domain'>.__init__' into a Python object (type not registered yet?)
+ImportError: arg(): could not convert default argument 'boundary: viennahrle::BoundaryType' in method '<class 'viennaps.d2.Domain'>.__init__' into a Python object (type not registered yet?)
 ```
 
-This error indicates the your ViennaPS Python package is not compatible with the installed ViennaLS Python package. This can happen if you have installed the ViennaLS Python package from PyPI and then built the ViennaPS Python package from source. To resolve this issue, you can either uninstall the ViennaPS Python package or build the ViennaLS Python package from source as well.
+This error indicates that your ViennaPS Python package is not compatible with the installed ViennaLS Python package. This can happen if you have installed the ViennaLS Python package from PyPI and then built the ViennaPS Python package from source. To resolve this issue, you can either uninstall the ViennaPS Python package or build the ViennaLS Python package from source as well.
 Alternatively, you can install the ViennaPS Python package from PyPI, which will ensure compatibility with the installed ViennaLS Python package. To do this, run the following command:
 
 ```bash
@@ -83,7 +83,7 @@ Table of compatibility between ViennaPS and ViennaLS versions:
 If you see the following error when importing the ViennaPS Python package:
 
 ```
-ImportError: DLL load failed while importing viennaps2d: The specified module could not be found.
+ImportError: DLL load failed while importing viennaps: The specified module could not be found.
 ```
 
 This usually means that a required shared library (`.dll`) is missing. The most common cause on Windows is a missing OpenMP runtime.

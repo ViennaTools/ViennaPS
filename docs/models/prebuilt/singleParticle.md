@@ -28,7 +28,7 @@ Additionally, mask materials can be specified, where the rate is assumed to be z
 SingleParticleProcess(const NumericType rate = 1.,
                       const NumericType stickingProbability = 1.,
                       const NumericType sourceDistributionPower = 1.,
-                      const Material maskMaterial = Material::None)
+                      const Material maskMaterial = Material::Undefined)
 
 SingleParticleProcess(const NumericType rate,
                       const NumericType stickingProbability,
@@ -49,7 +49,12 @@ SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
 | `maskMaterial`             | Mask material(s)                       | `Material::Undefined`       |
 | `materialRates`            | Map between material and rate for specific materials | `{}`            |
 
-Rates can also be specified for specific materials using a map between material and rate.
+Rates can also be specified for specific materials using a map between material and rate. The default rate and material-specific rates can be changed after construction with:
+
+```c++
+void setDefaultRate(NumericType rate)
+void setMaterialRate(Material material, NumericType rate)
+```
 
 __Example usage__:
 
@@ -88,6 +93,9 @@ model = vps.SingleParticleProcess(rate=1., stickingProbability=0.1, sourceExpone
 # using material specific rates
 rates = {vps.Material.Si: 1., vps.Material.SiO2: 0.5}
 model = vps.SingleParticleProcess(materialRates=rates, stickingProbability=0.1, sourceExponent=1.)
+
+model.setDefaultRate(0.5)
+model.setMaterialRate(vps.Material.Mask, 0.0)
 ...
 ```
 {% endraw %}

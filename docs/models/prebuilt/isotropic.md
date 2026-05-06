@@ -112,7 +112,7 @@ int main() {
   domain->duplicateTopLevelSet(Material::SiO2);
 
   auto model = SmartPointer<IsotropicProcess<NumericType, D>>::New(
-      0.1 /*rate*/, Material::None);
+      0.1 /*rate*/);
 
   domain->saveVolumeMesh("trench_initial");
   Process<NumericType, D>(domain, model, 20.).apply(); // run process for 20s

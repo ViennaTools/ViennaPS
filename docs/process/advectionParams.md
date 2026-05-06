@@ -27,6 +27,7 @@ nav_order: 1
 | `velocityOutput`             | `bool`           | `false`                    | Write velocity output per step (useful for debugging/analysis; may increase I/O). |
 | `ignoreVoids`                | `bool`           | `false`                    | Ignore void regions during advection (model-dependent usefulness). |
 | `adaptiveTimeStepping`       | `bool`           | `false`                    | Enable adaptive time stepping when approaching material interfaces (primarily relevant for etching). |
+| `calculateIntermediateVelocities` | `bool`      | `false`                    | Recalculate/store intermediate velocities during multi-stage time integration. |
 
 ## Enum values
 
