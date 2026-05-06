@@ -2,6 +2,7 @@
 
 #include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
+#include "../psConstants.hpp"
 #include "../psUnits.hpp"
 
 #include <rayParticle.hpp>
@@ -26,35 +27,8 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType> constexpr NumericType avogadroNumber() {
-  return static_cast<NumericType>(6.02214076e23);
-}
-
-template <typename NumericType> constexpr NumericType boltzmannConstant() {
-  return static_cast<NumericType>(1.380649e-23);
-}
-
-template <typename NumericType> constexpr NumericType atomicMassUnit() {
-  return static_cast<NumericType>(1.66053906660e-27);
-}
-
-template <typename NumericType>
-NumericType molecularEffusionFlux(NumericType pressurePa,
-                                  NumericType temperatureK,
-                                  NumericType molecularMassAmu) {
-  if (pressurePa <= NumericType(0.) || temperatureK <= NumericType(0.) ||
-      molecularMassAmu <= NumericType(0.)) {
-    return NumericType(0.);
-  }
-
-  const auto molecularMassKg = molecularMassAmu * atomicMassUnit<NumericType>();
-  return pressurePa /
-         std::sqrt(NumericType(2.) * NumericType(M_PI) * molecularMassKg *
-                   boltzmannConstant<NumericType>() * temperatureK);
-}
-
 template <typename NumericType> struct NeutralTransportParameters {
-  // Gas-phase incoming neutral flux scale in molecules / (m^2 s). The ray
+  // Gas-phase incoming neutral flux scale in 10^20 molecules / (m^2 s). The ray
   // tracer provides the local dimensionless transport factor.
   NumericType incomingFlux = 1.;
 
@@ -236,7 +210,7 @@ public:
       const auto adsorptionCoefficient =
           params.surfaceSiteDensity > 0.
               ? sticking * params.incomingFlux * neutralFlux->at(i) /
-                    (avogadroNumber<NumericType>() * params.surfaceSiteDensity)
+                    (constants::N_A * params.surfaceSiteDensity)
               : NumericType(0.);
       const auto etchLossRate =
           MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)
@@ -302,7 +276,7 @@ public:
       const auto theta =
           std::clamp(coverage->at(i), NumericType(0.), NumericType(1.));
       weights[i] = params.desorptionRate * theta * params.surfaceSiteDensity *
-                   avogadroNumber<NumericType>() / params.incomingFlux;
+                   constants::N_A / params.incomingFlux;
     }
 
     for (const auto weight : weights) {

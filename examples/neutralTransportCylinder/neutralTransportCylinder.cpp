@@ -2,6 +2,7 @@
 #include <models/psNeutralTransport.hpp>
 
 #include <process/psProcess.hpp>
+#include <psConstants.hpp>
 #include <psUtil.hpp>
 
 #include <algorithm>
@@ -11,8 +12,6 @@
 #include <vector>
 
 namespace ps = viennaps;
-
-namespace {
 
 template <typename NumericType>
 void printBottomTransmissionProbabilityTriangles(
@@ -127,8 +126,6 @@ void printBottomTransmissionProbabilityTriangles(
             << bottomCount << " triangles)" << std::endl;
 }
 
-} // namespace
-
 int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 3;
@@ -166,9 +163,9 @@ int main(int argc, char *argv[]) {
   modelParams.sourcePressure = params.get("sourcePressure");
   modelParams.sourceTemperature = params.get("sourceTemperature");
   modelParams.sourceMolecularMass = params.get("sourceMolecularMass");
-  modelParams.incomingFlux = ps::molecularEffusionFlux(
-      modelParams.sourcePressure, modelParams.sourceTemperature,
-      modelParams.sourceMolecularMass);
+  modelParams.incomingFlux = ps::constants::molecularEffusionFlux(
+      modelParams.sourcePressure, modelParams.sourceMolecularMass,
+      modelParams.sourceTemperature); // in 10^20 m^-2 s^-1
   modelParams.zeroCoverageSticking = params.get("zeroCoverageSticking");
   modelParams.etchFrontSticking = params.get("etchFrontSticking");
   modelParams.desorptionRate = params.get("desorptionRate");

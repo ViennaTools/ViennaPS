@@ -29,12 +29,24 @@ inline double gasMeanFreePath(double p, double T, double d) {
 }
 
 // T: temperature in Celsius
-// m: molar mass in amu
+// m: molecular mass in amu
 // Result: mean velocity in um/s
 inline double gasMeanThermalVelocity(double T, double m) {
   T = constants::celsiusToKelvin(T);
   m = m * 1e-3;                                               // amu to kg / mol
   return std::sqrt(8. * constants::R * T / (M_PI * m)) * 1e6; // in um/s
+}
+
+// p: pressure in Pa
+// m: molecular mass in amu
+// T: temperature in K
+// Result: molecular effusion flux in 1/(m^2 s) * 10^20
+inline double molecularEffusionFlux(double p, double m, double T) {
+  // amu -> kg/mol
+  const double molarMass = m * 1e-3;
+
+  return p * constants::N_A /
+         std::sqrt(2. * M_PI * molarMass * constants::R * T);
 }
 
 namespace Si {
