@@ -27,6 +27,7 @@
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psHBrO2Etching.hpp>
+#include <models/psHFCryoEtching.hpp>
 #include <models/psIonBeamEtching.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
