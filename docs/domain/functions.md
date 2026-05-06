@@ -10,15 +10,53 @@ nav_order: 3
 
 ---
 
+## Type Aliases
+
+```cpp
+using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
+using lsDomainsType = std::vector<lsDomainType>;
+using csDomainType = SmartPointer<viennacs::DenseCellSet<NumericType, D>>;
+using MaterialMapType = SmartPointer<MaterialMap>;
+using MetaDataType = std::unordered_map<std::string, std::vector<double>>;
+using Setup = DomainSetup<D>;
+
+static constexpr char materialIdsLabel[] = "MaterialIds";
+```
+
+These aliases are used by the member function signatures below.
+
+---
+
 ## Constructors
 
-* `Domain()` – Default constructor
-* `Domain(viennaps::Domain)` – Deep copy from another domain
-* `Domain(viennals::Domain)` – Initialize from a single Level-Set
-* `Domain(std::vector<viennals::Domain>)` – Initialize from multiple Level-Sets
-* `Domain(gridDelta, xExtent, yExtent = 0.0, boundary)` – Rectangular grid initialization
-* `Domain(bounds[], boundaryConditions[], gridDelta)` – Bounding box initialization
-* `Domain(const Setup &setup)` – From preconfigured domain setup
+```cpp
+Domain()
+explicit Domain(SmartPointer<Domain> domain)
+explicit Domain(lsDomainType levelSet)
+explicit Domain(lsDomainsType levelSets)
+Domain(NumericType gridDelta, NumericType xExtent,
+       BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
+Domain(NumericType gridDelta, NumericType xExtent, NumericType yExtent = 0.0,
+       BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY)
+Domain(double bounds[2 * D], BoundaryType boundaryConditions[D],
+       NumericType gridDelta = 1.0)
+explicit Domain(const Setup &setup)
+
+template <class... Args>
+static auto New(Args &&...args)
+```
+
+| Constructor | Description |
+|-------------|-------------|
+| `Domain()` | Creates an empty domain. |
+| `Domain(SmartPointer<Domain> domain)` | Creates a deep copy of another domain. |
+| `Domain(lsDomainType levelSet)` | Initializes the domain from one ViennaLS Level-Set. |
+| `Domain(lsDomainsType levelSets)` | Initializes the domain from multiple ViennaLS Level-Sets. |
+| `Domain(gridDelta, xExtent, boundary)` | Sets up a domain with the default primary direction. |
+| `Domain(gridDelta, xExtent, yExtent, boundary)` | Sets up a rectangular domain. In 2D, `yExtent` is ignored. |
+| `Domain(bounds, boundaryConditions, gridDelta)` | Sets up a domain from explicit bounds and boundary conditions. |
+| `Domain(const Setup &setup)` | Creates a domain from a `DomainSetup<D>`. |
+| `New(...)` | Convenience factory returning a `SmartPointer<Domain>`. |
 
 ---
 
@@ -28,29 +66,51 @@ nav_order: 3
 
 ```cpp
 void setup(const Setup &setup);
-void setup(NumericType gridDelta, NumericType xExtent, NumericType yExtent = 0.0, BoundaryType boundary);
+void setup(NumericType gridDelta, NumericType xExtent,
+           NumericType yExtent = 0.0,
+           BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY);
 ```
 
 Initialize or reconfigure the simulation domain.
 
 ---
 
+### Metadata
+
+```cpp
+void enableMetaData(MetaDataLevel level = MetaDataLevel::PROCESS);
+void disableMetaData();
+auto getMetaDataLevel() const;
+
+void addMetaData(const std::string &key, const std::vector<double> &values);
+void addMetaData(const std::string &key, double value);
+void addMetaData(const MetaDataType &metaData);
+auto getMetaData() const;
+void clearMetaData(bool clearDomainData = false);
+```
+
+Enable, disable, access, and modify domain metadata. Metadata is written to exported VTK files.
+
+---
+
 ### Level-Set Management
 
 ```cpp
-// Insert single level-set and assign material
-void insertNextLevelSetAsMaterial(viennals::Domain levelSet, Material material, bool wrap = true);
-// Dubplicate the top level-set and assign material
+void insertNextLevelSetAsMaterial(lsDomainType levelSet,
+                                  std::string materialName,
+                                  bool wrapLowerLevelSet = true);
+void insertNextLevelSetAsMaterial(lsDomainType levelSet,
+                                  Material material,
+                                  bool wrapLowerLevelSet = true);
+void insertMask(lsDomainType mask, Material material = Material::Mask);
 void duplicateTopLevelSet(Material material);
-// Remove top level-set
+void duplicateTopLevelSet(const std::string &materialName);
 void removeTopLevelSet();
-// Remove level-set at index
 void removeLevelSet(unsigned int idx, bool removeWrapped = true);
-// Remove all level-sets with given material
 void removeMaterial(Material material);
 ```
 
-Insert, duplicate, or remove Level-Sets. Materials have to be assigned during insertion.
+Insert, duplicate, or remove Level-Sets. Materials are assigned during insertion. With `wrapLowerLevelSet = true`, the inserted Level-Set is unioned with the current top layer. `insertMask` inserts the mask at the bottom of the Level-Set stack and wraps all existing layers against it.
 
 ---
 
@@ -58,8 +118,9 @@ Insert, duplicate, or remove Level-Sets. Materials have to be assigned during in
 
 ```cpp
 void removeStrayPoints();
-void getNumberOfComponents() const;
+std::size_t getNumberOfComponents() const;
 ```
+
 Analyze and clean up surface topology in the domain.
 
 --- 
@@ -67,10 +128,12 @@ Analyze and clean up surface topology in the domain.
 ### Boolean Operations
 
 ```cpp
-void applyBooleanOperation(viennals::Domain levelSet, viennals::BooleanOperationEnum op);
+void applyBooleanOperation(lsDomainType levelSet,
+                           viennals::BooleanOperationEnum operation,
+                           bool applyToAll = true);
 ```
 
-Apply a Boolean operation (e.g., union, intersection) across all Level-Sets in the domain.
+Apply a Boolean operation with another Level-Set. By default, the operation is applied to all Level-Sets; with `applyToAll = false`, only the top Level-Set is modified.
 
 ---
 
@@ -87,10 +150,13 @@ Convert Level-Set stack into a Cell-Set for volume process modeling.
 ### Material Mapping
 
 ```cpp
+void setMaterialMap(const MaterialMapType &materialMap);
 void setMaterial(unsigned int lsId, Material material);
+auto getMaterialsInDomain() const;
+auto getMaterialLevelSet(Material material) const;
 ```
 
-Assign or update material information for Level-Sets.
+Assign or update material information for Level-Sets, query materials, or extract a Level-Set for one material. `getMaterialLevelSet` returns an empty pointer if the material is not present.
 
 ---
 
@@ -99,6 +165,7 @@ Assign or update material information for Level-Sets.
 ```cpp
 auto& getSurface() const;
 auto& getLevelSets() const;
+unsigned int getNumberOfLevelSets() const;
 auto& getMaterialMap() const;
 auto& getCellSet() const;
 auto& getGrid() const;
@@ -106,8 +173,6 @@ auto getGridDelta() const;
 auto& getSetup();
 auto getBoundingBox() const;
 auto getBoundaryConditions() const;
-auto getMetaData() const;
-auto getMaterialsInDomain() const; // returns std::set<Material>
 ```
 
 Access the surface Level-Set, grid, bounding box, material map, and setup.
@@ -117,20 +182,45 @@ Access the surface Level-Set, grid, bounding box, material map, and setup.
 ### Output & Export
 
 ```cpp
-void saveLevelSetMesh(std::string fileName, int width = 1);
-void saveSurfaceMesh(std::string fileName, bool addInterfaces = true,
-                     double wrappingLayerEpsilon = 0.01, bool boolMaterials = false);
-auto getSurfaceMesh(bool addInterfaces = false, double wrappingLayerEpsilon = 0.01,
-                    bool boolMaterials = false);
-auto getLevelSetMesh(int width = 1);
-void saveVolumeMesh(std::string fileName, double wrappingEps = 1e-2) const;
-void saveHullMesh(std::string fileName, double wrappingEps = 1e-2) const;
-void saveLevelSets(std::string prefix) const;
-void print() const;
+std::vector<SmartPointer<viennals::Mesh<NumericType>>>
+getLevelSetMesh(int width = 1);
+
+SmartPointer<viennals::Mesh<NumericType>>
+getSurfaceMesh(bool addInterfaces = false, bool sharpCorners = false,
+               double minNodeDistanceFactor = 0.01) const;
+
+SmartPointer<viennals::Mesh<NumericType>>
+getHullMesh(NumericType bottomExtension = 0.0,
+            bool sharpCorners = false) const;
+
+SmartPointer<viennals::Mesh<NumericType>> getDiskMesh() const;
+
+void saveLevelSetMesh(const std::string &fileName, int width = 1);
+void saveSurfaceMesh(const std::string &fileName,
+                     bool addInterfaces = true,
+                     bool sharpCorners = false,
+                     double minNodeDistanceFactor = 0.01) const;
+void saveHullMesh(const std::string &fileName,
+                  NumericType bottomExtension = 0.0,
+                  bool sharpCorners = false) const;
+void saveDiskMesh(const std::string &fileName) const;
+void saveVolumeMesh(const std::string &fileName,
+                    double wrappingLayerEpsilon = 1e-2) const;
+void saveLevelSets(const std::string &fileName) const;
+void print(std::ostream &out = std::cout, bool hrle = false) const;
 void show() const;
 ```
 
-Save surface or volume meshes in VTK formats or print domain state to `stdout`.
+Create or save surface, hull, disk, volume, or raw Level-Set output. `saveLevelSetMesh` writes one `.vtp` file per Level-Set with the suffix `_layerX.vtp`, while `saveLevelSets` writes raw `.lvst` files with `_layerX.lvst`.
+
+| Parameter | Description |
+|-----------|-------------|
+| `addInterfaces` | Include internal material interfaces in the surface mesh. |
+| `sharpCorners` | Preserve sharp corners during surface, interface, or hull meshing. |
+| `minNodeDistanceFactor` | Minimum node distance factor used for multi-surface interface meshing. |
+| `bottomExtension` | Extends hull meshes downward by the given distance when positive. |
+| `wrappingLayerEpsilon` | Controls wrapping-layer tolerance for volume mesh output. |
+| `hrle` | Also print the underlying HRLE Level-Set data. |
 
 ---
 
@@ -139,10 +229,9 @@ Save surface or volume meshes in VTK formats or print domain state to `stdout`.
 ```cpp
 void deepCopy(SmartPointer<Domain> other);
 void clear();
-void clearMetaData();
 ```
 
-Clone another domain or clear all internal data.
+Clone another domain or clear all internal data. `clear()` removes all Level-Sets and metadata and resets the material map.
 
 ---
 
@@ -170,4 +259,3 @@ domain->saveSurfaceMesh("surface.vtp");
 ## See Also
 
 * [ViennaLS Documentation](https://viennatools.github.io/ViennaLS/)
-

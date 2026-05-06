@@ -10,9 +10,8 @@ nav_order: 2
 
 ---
 
-> From version **4.0.0**, surface mesh export has been extended and renamed for clarity.  
-> The old option `addMaterialIds` has been replaced with **`addInterfaces`**.  
-> Additional options control how multiple materials and level sets are combined.
+> Surface mesh export can write either the top visible surface or all material interfaces.
+> Material IDs are stored in the mesh point data under the `"MaterialIds"` label.
 
 
 ## Overview
@@ -32,21 +31,21 @@ The function can output either:
 ```c++
 SmartPointer<viennals::Mesh<NumericType>>
 getSurfaceMesh(bool addInterfaces = false,
-               double wrappingLayerEpsilon = 0.01,
-               bool boolMaterials = false) const;
-````
+               bool sharpCorners = false,
+               double minNodeDistanceFactor = 0.01) const;
+```
 
 * **`addInterfaces`** — include all internal material interfaces (not only top surface).
-* **`wrappingLayerEpsilon`** — small offset used to generate interface wrapping layers (default: 0.01).
-* **`boolMaterials`** — perform Boolean subtraction between successive level sets.
+* **`sharpCorners`** — preserve sharp features during meshing.
+* **`minNodeDistanceFactor`** — minimum node distance factor used when `addInterfaces` is enabled.
 
 ### Save the surface mesh
 
 ```c++
-void saveSurfaceMesh(std::string fileName,
+void saveSurfaceMesh(const std::string &fileName,
                      bool addInterfaces = true,
-                     double wrappingLayerEpsilon = 0.01,
-                     bool boolMaterials = false) const;
+                     bool sharpCorners = false,
+                     double minNodeDistanceFactor = 0.01) const;
 ```
 
 Writes the resulting triangulated mesh to a `.vtp` file including optional material and metadata information.
@@ -71,8 +70,8 @@ domain->saveSurfaceMesh("surface.vtp", false);
 // Save all material interfaces
 domain->saveSurfaceMesh("interfaces.vtp", true);
 
-// Save with additional Boolean-based material separation
-domain->saveSurfaceMesh("interfaces_bool.vtp", true, 0.01, true);
+// Save all interfaces and preserve sharp corners
+domain->saveSurfaceMesh("interfaces_sharp.vtp", true, true);
 ```
 
 </details>
@@ -90,16 +89,13 @@ domain = vps.Domain()
 # ... create geometry in domain ...
 
 # Save top surface only
-domain.saveSurfaceMesh(fileName="surface.vtp", addInterfaces=False)
+domain.saveSurfaceMesh("surface.vtp", False)
 
 # Save all material interfaces
-domain.saveSurfaceMesh(fileName="interfaces.vtp", addInterfaces=True)
+domain.saveSurfaceMesh("interfaces.vtp", True)
 
-# Save with Boolean material separation
-domain.saveSurfaceMesh(fileName="interfaces_bool.vtp",
-                       addInterfaces=True,
-                       wrappingLayerEpsilon=0.01,
-                       boolMaterials=True)
+# Save all interfaces and preserve sharp corners
+domain.saveSurfaceMesh("interfaces_sharp.vtp", True, True)
 ```
 
 </details>
@@ -122,9 +118,9 @@ writer.apply();
 
 | Option                 | Description                                                    | Default |
 | ---------------------- | -------------------------------------------------------------- | ------- |
-| `addInterfaces`        | Export all material interfaces instead of only the top surface | `true`  |
-| `wrappingLayerEpsilon` | Distance offset for interface wrapping                         | `0.01`  |
-| `boolMaterials`        | Apply Boolean subtraction to separate overlapping level sets   | `false` |
+| `addInterfaces`        | Export all material interfaces instead of only the top surface | `true` for `saveSurfaceMesh`, `false` for `getSurfaceMesh` |
+| `sharpCorners`         | Preserve sharp features during meshing                         | `false` |
+| `minNodeDistanceFactor` | Minimum node distance factor for multi-surface interface meshing | `0.01` |
 
 ---
 
@@ -133,4 +129,3 @@ writer.apply();
 * All exported meshes are in **VTK (.vtp)** format.
 * The mesh includes material IDs and metadata when a `MaterialMap` is present in the domain.
 * Use `getSurfaceMesh()` for programmatic access or `saveSurfaceMesh()` for direct file output.
-

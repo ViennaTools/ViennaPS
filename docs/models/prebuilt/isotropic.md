@@ -14,17 +14,75 @@ nav_order: 1
 ```
 ---
 
-An isotropic etching or deposition process applies to all materials in the domain except the mask material, which defaults to `Material::Undefined` (no mask). A negative rate etches the material, while a positive rate deposits the material of the top level set. To deposit a different material, call `duplicateTopLevelSet` on the domain before running the process.
+An isotropic etching or deposition process moves the surface with a material-dependent normal velocity. A negative rate etches the material, while a positive rate deposits the material of the top level set. To deposit a different material, call `duplicateTopLevelSet` on the domain before running the process.
+
+The simplest constructor applies one default rate to all materials and optionally masks one or more materials by assigning them a rate of `0`. For selective processes, material-specific rates can be passed directly with a default fallback rate for all other materials.
 
 ```c++
-IsotropicProcess(const NumericType rate,
-                 const Material maskMaterial = Material::Undefined)
+IsotropicProcess(NumericType isotropicRate,
+                 Material maskMaterial = Material::Undefined)
+
+IsotropicProcess(NumericType isotropicRate,
+                 const std::vector<Material> &maskMaterials)
+
+IsotropicProcess(std::unordered_map<Material, NumericType> materialRates,
+                 NumericType defaultRate = 0.)
 ```
 
 | Parameter | Description | Type |
 |-----------|-------------|------|
-| `rate` | Rate of the process. | `NumericType` |
-| `maskMaterial` | Material that does not participate in the process. | `Material` |
+| `isotropicRate` | Default rate of the process. | `NumericType` |
+| `maskMaterial` | Material that does not participate in the process. Defaults to `Material::Undefined`. | `Material` |
+| `maskMaterials` | Materials that do not participate in the process. | `std::vector<Material>` |
+| `materialRates` | Material-specific process rates. | `std::unordered_map<Material, NumericType>` |
+| `defaultRate` | Fallback rate for materials not listed in `materialRates`. | `NumericType` |
+
+Material rates can also be changed after construction:
+
+```c++
+void setIsotropicRate(NumericType isotropicRate)
+void setMaterialRate(Material material, NumericType rate)
+```
+
+| Method | Description |
+|--------|-------------|
+| `setIsotropicRate` | Updates the default isotropic rate used for materials without a specific rate. |
+| `setMaterialRate` | Sets or updates the rate for one material. Use a rate of `0` to mask that material. |
+
+__Material-specific example:__
+
+<details markdown="1">
+<summary markdown="1">
+C++
+{: .label .label-blue}
+</summary>
+```c++
+std::unordered_map<Material, NumericType> rates = {
+    {Material::Si, -1.0},
+    {Material::SiO2, -0.2},
+    {Material::Mask, 0.0},
+};
+
+auto model = SmartPointer<IsotropicProcess<NumericType, D>>::New(
+    rates, 0.0 /*defaultRate*/);
+```
+</details>
+
+<details markdown="1">
+<summary markdown="1">
+Python
+{: .label .label-green}
+</summary>
+```python
+rates = {
+    vps.Material.Si: -1.0,
+    vps.Material.SiO2: -0.2,
+    vps.Material.Mask: 0.0,
+}
+
+model = vps.IsotropicProcess(materialRates=rates, defaultRate=0.0)
+```
+</details>
 
 __Deposition example:__
 

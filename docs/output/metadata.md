@@ -2,7 +2,7 @@
 layout: default
 title: VTK Metadata Export
 parent: Geometry Output
-nav_order: 4
+nav_order: 6
 ---
 
 # VTK Metadata Export
@@ -13,13 +13,21 @@ nav_order: 4
 
 ViennaPS supports exporting **metadata** to VTK output files. This feature allows users to embed additional simulation-specific and domain-specific information into the VTK files generated during surface, hull, or volume mesh output. The metadata is useful for post-processing, debugging, visualization, and reproducibility of simulation results.
 
-Metadata can be selectively included in VTK output by setting a **metadata level**, which controls the amount and type of information written. Metadata export is configured at the **Domain** level using the following static method:
+Metadata can be selectively included in VTK output by setting a **metadata level**, which controls the amount and type of information written. Metadata export is configured on each **Domain** instance:
 
 ```cpp
-Domain<NumericType, D>::enableMetaData(const MetaDataLevel level = MetaDataLevel::PROCESS);
+void enableMetaData(MetaDataLevel level = MetaDataLevel::PROCESS);
+void disableMetaData();
+auto getMetaDataLevel() const;
+
+void addMetaData(const std::string &key, const std::vector<double> &values);
+void addMetaData(const std::string &key, double value);
+void addMetaData(const MetaDataType &metaData);
+auto getMetaData() const;
+void clearMetaData(bool clearDomainData = false);
 ```
 
-Once enabled, metadata will be attached to all future VTK output from any domain instance during the current execution.
+Once enabled, metadata will be attached to future VTK output written by that domain.
 
 ---
 
@@ -41,17 +49,15 @@ The default level when enabling metadata is `MetaDataLevel::PROCESS`.
 ## Usage Example
 
 ```cpp
-// Enable metadata export with full detail
-Domain<double, 3>::enableMetaData(MetaDataLevel::FULL);
-
 // Create domain and apply process
 auto domain = Domain<double, 3>::New();
+domain->enableMetaData(MetaDataLevel::FULL);
 ...
 Process<double, 3> process(domain, model);
 process.apply();
 
 // Write output
-domain.saveSurfaceMesh("output_surface.vtp"); // Surface mesh with metadata
+domain->saveSurfaceMesh("output_surface.vtp"); // Surface mesh with metadata
 ```
 
 The resulting VTK file will now contain metadata including grid spacing, boundary conditions, and all relevant parameters from the applied process.
@@ -62,11 +68,9 @@ Python:
 {: .label .label-green }
 </summary>
 ```python
-# Enable metadata export with full detail
-vps.Domain.enableMetaData(vps.MetaDataLevel.FULL)
-
 # Create domain and apply process
 domain = vps.Domain()
+domain.enableMetaData(vps.MetaDataLevel.FULL)
 ...
 process = vps.Process(domain, model)
 process.apply()
@@ -92,16 +96,15 @@ Metadata is supported in the following mesh outputs:
 
 * Surface mesh (`.vtp`)
 * Hull mesh (`.vtp`)
+* Disk mesh (`.vtp`)
+* Level-Set mesh (`.vtp`)
 * Volume mesh (`.vtu`)
 
-Each writer automatically includes the metadata based on the current global setting.
+Each writer includes the metadata stored on the domain.
 
 ---
 
 ## Notes
 
-* The metadata system is **static** and global. Once enabled, it affects all domain instances during the simulation run.
-* For deterministic and reproducible output, it is recommended to enable metadata at the start of the simulation.
-
-
-
+* For deterministic and reproducible output, it is recommended to enable metadata before creating geometry or applying processes.
+* Metadata can also be added manually with `addMetaData`.

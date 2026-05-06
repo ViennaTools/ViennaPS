@@ -14,9 +14,24 @@ nav_order: 1
 
 Level sets within a domain can be saved in the **`.lvst`** file format, which stores the level-set grid and corresponding scalar values in a compact binary representation. These files can later be reloaded using the **`viennals::Reader`** class, allowing seamless continuation or reuse of previously generated geometries.
 
+```c++
+void saveLevelSets(const std::string &fileName) const;
+```
+
+`saveLevelSets` writes one file per Level-Set using the pattern `fileName_layerX.lvst`, where `X` is the layer index.
+
 ## Level Set Grid Export
 
 ViennaPS provides a feature enabling users to save the level set grid points explicitly for each material layer within the domain in the VTK file format. This export includes the level set value associated with each grid point. Users also have the option to specify a width parameter, determining the number of grid points around the zero level set. This functionality enhances the ability to analyze and visualize the level set information in a detailed and customizable manner.
+
+```c++
+std::vector<SmartPointer<viennals::Mesh<NumericType>>>
+getLevelSetMesh(int width = 1);
+
+void saveLevelSetMesh(const std::string &fileName, int width = 1);
+```
+
+`saveLevelSetMesh` writes one `.vtp` file per Level-Set using the pattern `fileName_layerX.vtp`.
 
 __Example usage:__
 
@@ -31,6 +46,9 @@ auto domain = ps::Domain<NumericType, D>::New();
 // create geometry in domain
 ...
 domain->saveLevelSetMesh("fileNamePrefix", 3 /* width */);
+
+// Save raw level-set files
+domain->saveLevelSets("fileNamePrefix");
 ```
 </details>
 
@@ -44,6 +62,9 @@ domain = vps.Domain()
 ...
 # create geometry in domain
 ...
-domain.saveLevelSetMesh(fileName="fileNamePrefix", width=3)
+domain.saveLevelSetMesh("fileNamePrefix", 3)
+
+# Save raw level-set files
+domain.saveLevelSets("fileNamePrefix")
 ```
 </details>
